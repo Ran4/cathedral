@@ -3,12 +3,12 @@
 # requires-python = ">=3.11"
 # dependencies = ["openai", "python-dotenv"]
 # ///
-"""Send a file to the configured LLM (see llm.py / .env) and print the reply."""
+"""Send a file to the configured LLM (see llm_client.py / .env) and print the reply."""
 
 import sys
 from pathlib import Path
 
-import llm
+import llm_client
 
 
 def main() -> None:
@@ -20,7 +20,7 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        result = llm.complete(content)
+        result = llm_client.complete(content)
     except Exception as e:
         print(f"error: API request failed: {e}", file=sys.stderr)
         sys.exit(1)

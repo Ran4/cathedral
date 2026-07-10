@@ -3,7 +3,7 @@
 import json
 import re
 
-from sim import Character, World
+from sim import ITEM_INTERACTION_RADIUS_M, Character, Offer, World
 
 HEADER = (
     "You are a character in a medieval 3d world, that can interact with "
@@ -48,6 +48,10 @@ offer you heard about may be gone, taken by someone else). you_hold, you_offer
 and offered_to_you are the current truth: you can only accept offers listed in
 offered_to_you.
 
+"Nearby" people and speech are within 20 metres. Item offers and their
+acceptance require the people to be within 4 metres; offered_to_you already
+contains only offers you can act on at this moment.
+
 Use ONLY the verbs listed below, spelled exactly as shown (lowercase English).
 There are no other verbs: if what you want to do has no verb here (like walking
 somewhere), express it in speech with say instead of inventing a verb.
@@ -77,8 +81,8 @@ say {"target": "4bfk4", "text": "Conny, do you like fish?"}
 ```"""
 
 
-def _person(actor: Character, c: Character) -> dict:
-    return {
+def _person(actor: Character, c: Character, *, distance_m: float | None = None) -> dict:
+    person = {
         "id": c.id,
         "name": (
             c.name
@@ -86,31 +90,59 @@ def _person(actor: Character, c: Character) -> dict:
             else "(unknown - you don't know the name of this person)"
         ),
     }
+    if distance_m is not None:
+        person["distance_m"] = round(distance_m, 1)
+    return person
 
 
-def render_prompt(world: World, actor: Character) -> str:
+def _distance_m(actor: Character, other: Character) -> float:
+    return actor.position_m.distance_squared(other.position_m) ** 0.5
+
+
+def _offer_sort_key(offer: Offer) -> tuple[int, str]:
+    return offer.created_seq, str(offer.item_id)
+
+
+def render_prompt(
+    world: World,
+    actor: Character,
+    *,
+    since_your_last_turn: list[str] | None = None,
+) -> str:
+    if actor.control != "llm":
+        raise ValueError("the human-controlled player must never receive an LLM prompt")
     people = [
-        _person(actor, c)
-        for c in world.at_location(actor.location, exclude=actor.id)
+        _person(actor, person, distance_m=_distance_m(actor, person))
+        for person in world.characters_within(actor, 20.0, exclude=actor.id)
     ]
     you_offer = []
     offered_to_you = []
-    for item_id, (giver_id, target_id) in world.offers.items():
-        item = {"id": item_id, "name": world.items[item_id].name}
-        if giver_id == actor.id:
+    for offer in sorted(world.offers.values(), key=_offer_sort_key):
+        item_id = offer.item_id
+        item_entity = world.items.get(item_id)
+        if item_entity is None:
+            continue
+        item = {"id": item_id, "name": item_entity.name}
+        if offer.giver_id == actor.id:
+            target = (
+                None
+                if offer.target_id is None
+                else world.characters.get(offer.target_id)
+            )
             you_offer.append(
                 {
                     "item": item,
-                    "to": (
-                        "anyone"
-                        if target_id is None
-                        else _person(actor, world.characters[target_id])
-                    ),
+                    "to": ("anyone" if target is None else _person(actor, target)),
                 }
             )
-        elif target_id is None or target_id == actor.id:
-            giver = world.characters[giver_id]
-            if giver.location != actor.location:
+        elif offer.target_id is None or offer.target_id == actor.id:
+            giver = world.characters.get(offer.giver_id)
+            if giver is None:
+                continue
+            if (
+                actor.position_m.distance_squared(giver.position_m)
+                > ITEM_INTERACTION_RADIUS_M**2
+            ):
                 continue
             offered_to_you.append(
                 {
@@ -119,21 +151,26 @@ def render_prompt(world: World, actor: Character) -> str:
                     "accept_with": f'accept_offered_item {{"item_id": "{item_id}"}}',
                 }
             )
+    events = actor.inbox if since_your_last_turn is None else since_your_last_turn
     sheet = {
         "name": actor.name,
         "back_story": actor.back_story,
-        "you_are": actor.location,
+        "you_are": {
+            "location_description": actor.location_description,
+            "position_m": actor.position_m.to_json(),
+        },
         "you_hold": [
             {"id": item_id, "name": world.items[item_id].name}
             for item_id in actor.holds
+            if item_id in world.items
         ],
         **({"you_offer": you_offer} if you_offer else {}),
         **({"offered_to_you": offered_to_you} if offered_to_you else {}),
         "you_see": {
-            "description": "A few people that are nearby",
+            "description": "People within 20 metres, nearest first",
             "people": people,
         },
-        "since_your_last_turn": actor.inbox or ["nothing"],
+        "since_your_last_turn": events or ["nothing"],
         "stored_memories": actor.memories,
         "the_only_languages_you_know": "English",
         "current_goal": actor.goal,
@@ -141,16 +178,46 @@ def render_prompt(world: World, actor: Character) -> str:
     return f"{HEADER}\n\n```json\n{json.dumps(sheet, indent=4)}\n```\n\n{FOOTER}\n"
 
 
+def render_prompt_and_drain(world: World, actor: Character) -> str:
+    """Move the current inbox into a prompt, leaving a fresh inbox behind."""
+    drained = actor.inbox
+    actor.inbox = []
+    try:
+        return render_prompt(world, actor, since_your_last_turn=drained)
+    except Exception:
+        actor.inbox = drained + actor.inbox
+        raise
+
+
 _ACTION_RE = re.compile(r"^([a-z_]\w*)\s*(\{.*)$", re.IGNORECASE)
 _decoder = json.JSONDecoder()
 
 
-def parse_reply(reply: str) -> tuple[list[tuple[str, dict]], list[str]]:
+def _safe_json_shape(
+    value: object, *, max_depth: int = 64, max_nodes: int = 10_000
+) -> bool:
+    stack = [(value, 0)]
+    nodes = 0
+    while stack:
+        current, depth = stack.pop()
+        nodes += 1
+        if depth > max_depth or nodes > max_nodes:
+            return False
+        if isinstance(current, dict):
+            stack.extend((child, depth + 1) for child in current.values())
+        elif isinstance(current, list):
+            stack.extend((child, depth + 1) for child in current)
+    return True
+
+
+def parse_reply(reply: object) -> tuple[list[tuple[str, dict]], list[str]]:
     """Parse `VERB {json}` lines into (actions, errors).
 
     Trailing `# comments` are handled by raw_decode stopping at the end of
     the JSON object, so `#` inside quoted strings is safe.
     """
+    if not isinstance(reply, str):
+        return [], ["reply must be text"]
     actions: list[tuple[str, dict]] = []
     errors: list[str] = []
     for line in reply.splitlines():
@@ -163,12 +230,19 @@ def parse_reply(reply: str) -> tuple[list[tuple[str, dict]], list[str]]:
             continue
         verb = m.group(1).lower()
         try:
-            args, _ = _decoder.raw_decode(m.group(2))
-        except json.JSONDecodeError as e:
+            args, end = _decoder.raw_decode(m.group(2))
+        except (json.JSONDecodeError, RecursionError) as e:
             errors.append(f"bad JSON in: {stripped} ({e})")
             continue
         if not isinstance(args, dict):
             errors.append(f"args must be a JSON object: {stripped}")
+            continue
+        if not _safe_json_shape(args):
+            errors.append(f"JSON structure is too deeply nested or large in: {verb}")
+            continue
+        trailing = m.group(2)[end:].strip()
+        if trailing and not trailing.startswith("#"):
+            errors.append(f"unexpected text after JSON in: {stripped}")
             continue
         actions.append((verb, args))
     return actions, errors

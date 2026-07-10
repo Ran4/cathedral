@@ -1,7 +1,11 @@
 # Giving things (item transfer)
 
-Status: prototyped in `prompt_playgound/`.
-Do NOT implement in the bevy application yet!
+Status: implemented in the Bevy/Python smart-actor slice; see
+`features/implemented/smart_actors.md`.
+
+The consent and ownership rules below remain normative. References to actors
+being at the same textual location are superseded by the smart-actor feature's
+inclusive 4 m interaction checks and 20 m event-delivery radius.
 
 ## Summary
 

@@ -1,6 +1,6 @@
-Python prototype of the LLM-driven character simulation for cathedralbevy.
-This is where the prompt format, action format, and orchestration loop get
-tuned before being ported to the Bevy app (Rust) in the parent repo.
+Python authority for cathedralbevy's LLM-driven character simulation. The
+terminal prototype and persistent Bevy sidecar share this domain model, prompt
+format, action parser, and orchestration code.
 
 ## How it works
 
@@ -9,16 +9,16 @@ Characters take turns in a round-robin tick loop. Each turn:
 1. `prompt.render_prompt` renders the character's full sheet (backstory,
    location, visible people, held items, memories, goal) plus a
    `since_your_last_turn` field drained from the character's **inbox**.
-2. The prompt is sent to Kimi (`llm.complete`) — one stateless call, no chat
+2. The prompt is sent to Kimi (`llm_client.complete`) — one stateless call, no chat
    history. `stored_memories` and `current_goal` are the only persistence,
    so the prompt tells the model to use `remember`/`forget` deliberately.
 3. The reply is parsed as `VERB {json}` lines (`prompt.parse_reply`) and each
    action is applied to the world (`sim.apply_action`).
 
-"Hearing" = the inbox: `say` appends an event string to the target's inbox
-("Sven said to you: ...") and to bystanders at the same location ("Sven said
-to Conny: ..."). Events accumulate between a character's turns and are
-perceived all at once on their next turn.
+"Hearing" = the inbox: `say` appends an event string to its recipients within
+20 metres (including nearby bystanders). Metric queries use full 3D distance,
+inclusive boundaries, and stable distance/ID ordering. Events accumulate
+between a character's turns and are perceived all at once on their next turn.
 
 Invalid reply lines and failed actions become `system:` events in the actor's
 own inbox so the model can self-correct next turn (also echoed to stderr).
@@ -38,15 +38,16 @@ Format: one action per line, `VERB {json args}`, optional `# comment` after.
 Parsing uses `JSONDecoder.raw_decode`, so `#` inside quoted strings is safe.
 
 - `say {"target": "<id>", "text": "..."}` — target's inbox gets "said to
-  you", bystanders get "said to X". Without `target` (or an invalid one):
-  broadcast to everyone at the location.
+  you", and in-range bystanders get "said to X". Omitted/null `target`
+  broadcasts within 20 m. An invalid or out-of-range explicit target is an
+  error and never falls back to broadcast.
 - `offer_item {"item_id": "<item id>", "target": "<char id>"}` — offer a held
   item; it stays in the giver's `holds` until accepted. Omitted/null `target`
-  = broadcast (anyone at the location may accept, first wins); a bad target
+  = broadcast (anyone within 4 m may accept, first wins); a bad target
   id is an error, NOT a fallback to broadcast. Re-offering replaces the
   pending offer (a jilted target gets a "withdrew" event).
 - `accept_offered_item {"item_id": "<item id>"}` — take an item offered to
-  you (or broadcast) by someone still at your location; moves it giver → you
+  you (or broadcast) by someone still within 4 m; moves it giver → you
   and clears the offer.
 - `decline_offer {"item_id": "<item id>"}` — turn down an offer targeted at
   you; the giver keeps the item. Broadcast offers can only be ignored.
@@ -79,7 +80,13 @@ current. Full design: `../features/giving_things.md`.
   `CharIdStr` (`typing.NewType`) so the type checker keeps them apart.
 - `prompt.py` — prompt rendering + reply parsing (the LLM text format lives
   here and nowhere else).
-- `llm.py` — `complete(prompt) -> str` against the configured provider (see
+- `server.py` — uv inline-script JSON-lines sidecar and protocol state thread.
+- `protocol.py` — strict version-1 envelope parsing and compact encoding.
+- `scheduler.py` — one non-blocking global NPC turn stream with priority and
+  provider backoff.
+- `speech_client.py` — completed-utterance WAV OpenAI STT/TTS adapter; unavailable
+  credentials degrade independently from text cognition.
+- `llm_client.py` — `complete(prompt) -> str` against the configured provider (see
   Configuration below).
 - `kimi.py` — standalone one-shot CLI: send a file to the configured LLM,
   print the reply (`./kimi.py [file]`, default `think.md`).
@@ -88,7 +95,7 @@ current. Full design: `../features/giving_things.md`.
 
 ## Configuration
 
-`llm.py` loads `.env` from this directory (gitignored; real environment
+`llm_client.py` loads `.env` from this directory (gitignored; real environment
 variables take precedence over it):
 
 - `LLM_PROVIDER` — `moonshot` or `openai` (default `moonshot`)
@@ -114,6 +121,13 @@ Every run makes live API calls (a few seconds per tick). stdout is the
 transcript + final state + total run cost in USD (priced from the per-model
 table in `llm_client.PRICING`; cache discounts not modeled); diagnostics go
 to stderr.
+
+The sidecar has a deterministic fake mode for offline integration tests. Run
+the complete Python suite without a project environment or network access:
+
+```
+uv run --offline --no-project python -m unittest discover -s tests -v
+```
 
 ## Known gaps (intentional, for now)
 

@@ -1,6 +1,6 @@
 # Smart actors
 
-Status: specification; not yet implemented.
+Status: implemented on 2026-07-10.
 
 This feature brings the simulation in `prompt_playgound/` into the Bevy game.
 It also supersedes the "Do NOT implement in the bevy application yet" note in
@@ -18,12 +18,13 @@ another autonomously, react to the human player, and can exchange singular item
 entities.
 
 The player is represented in the same Python world as a character, but is
-human-controlled and is never sent to an LLM. With a microphone, the player can
-look at an actor, hold push-to-talk, and speak naturally. The transcription is
-applied as that player's `say` action. For example:
+human-controlled and is never sent to an LLM. With a microphone, voice input is
+enabled by default and the player can simply speak naturally. Voice activity is
+split into completed utterances, and each accepted transcription is applied as
+an open/broadcast player `say` action. For example:
 
-1. Look at Ilse and say, "What's your name?"
-2. Look at her again and say, "Ilse, please offer me a coin."
+1. Say aloud, "What's your name?"
+2. Say aloud, "Ilse, please offer me a coin."
 3. If she chooses `offer_item`, see the coin held above her head and an offer
    card in the HUD.
 4. Press `Y` to accept it or `N` to decline it.
@@ -45,8 +46,8 @@ The first complete slice includes:
 - a persistent non-blocking Rust/Python bridge;
 - Python-owned NPC cognition, world rules, inventories, and offers;
 - metre-based proximity in place of textual "same location" checks;
-- world-space speech text, subtitles, and NPC text-to-speech;
-- optional push-to-talk microphone capture and speech-to-text for the player;
+- world-anchored speech text, subtitles, and NPC text-to-speech;
+- default-on, voice-activated microphone capture and speech-to-text for the player;
 - a player inventory quickbar and gaze-based item offering;
 - Zelda-style offered-item visuals above the giver;
 - the `Y`/`N` incoming-offer HUD; and
@@ -58,7 +59,8 @@ The following are explicitly out of scope:
 - actor combat, animation graphs, lip sync, or production character art;
 - physical collision with actors;
 - hearing occlusion, reverberation zones, or language translation;
-- always-on microphone recording, wake-word detection, or typed chat;
+- wake-word detection, typed chat, retaining ambient audio, or streaming raw
+  microphone audio to a provider;
 - item stacks, currency quantities, atomic barter, theft, or dropped items;
 - save-game persistence, multiplayer, and simulating a remote server;
 - moving LLM calls, prompt rendering, reply parsing, or action execution to
@@ -74,7 +76,7 @@ Bevy units are already metres, so no coordinate conversion is needed.
 | --- | ---: | --- |
 | `HEARING_RADIUS_M` | `20.0` | Maximum distance for speech recipients and nearby-person prompt context. |
 | `ITEM_INTERACTION_RADIUS_M` | `4.0` | Maximum distance for offer, accept, and decline actions. |
-| `PLAYER_SPEECH_MAX_SECONDS` | `15` | Hard cap for one push-to-talk recording. |
+| `PLAYER_SPEECH_MAX_SECONDS` | `15` | Hard cap for one voice-detected utterance. |
 | `PLAYER_SPEECH_MAX_CHARS` | `500` | Maximum accepted transcription or `say` text after trimming. |
 | `POSITION_UPDATE_HZ` | `10` | Maximum player-position update rate sent to Python while moving. |
 
@@ -85,17 +87,17 @@ occlusion in the hearing rule.
 
 | Input | Action |
 | --- | --- |
-| Hold `V` | Push-to-talk; the actor under the crosshair is locked as addressee when recording starts. |
-| Release `V` | Stop, transcribe, and submit the player's `say` action. |
+| `V` | Toggle microphone listening on/off. It is on by default. |
 | Mouse wheel / `1`-`9` | Select a held item in the inventory quickbar. |
 | Right click | Offer the selected item to the actor under the crosshair, if within 4 m. |
 | `Y` | Accept the active incoming offer. |
 | `N` | Decline the active targeted offer, or locally dismiss an open/broadcast offer. |
 | `R` | Retract the player's pending offer of the selected item. |
 
-These actions are active only while the game owns the cursor and the relevant
-HUD control is not waiting for a Python result. Existing movement bindings keep
-their current meaning.
+World/item actions require the game to own the cursor and the relevant HUD
+control not to be waiting for a Python result. `V` remains a direct persistent
+microphone toggle whenever the app receives keyboard input. Existing movement
+bindings keep their current meaning.
 
 ## Authority boundary
 
@@ -301,7 +303,8 @@ parsed as an LLM action reply.
 
 When the player is in `recipient_ids`, Rust immediately:
 
-- shows a world-space speech bubble above the speaking NPC;
+- shows a padded UI speech bubble projected from the speaking NPC's world
+  position, so it renders correctly through the existing 3D camera;
 - adds a bottom-centre subtitle in the form `Ilse: ...`; and
 - queues TTS for that utterance.
 
@@ -402,7 +405,7 @@ neither side derives behavior from their format or an item's display name.
 | --- | --- | --- |
 | `hello` | supported version, player ID, current player position, spatial sequence | Begin handshake. |
 | `spatial_update` | spatial sequence and changed `{actor_id, position_m}` records | Update Python's position mirror. In v1 only the moving player changes after initialization. |
-| `player_recording` | request ID, WAV basename, locked target ID or null, current position, spatial sequence | Ask Python to transcribe and apply one player utterance. |
+| `player_recording` | request ID, WAV basename, null target, current position, spatial sequence | Ask Python to transcribe and apply one open player utterance. |
 | `player_offer` | request ID, target actor ID, item ID, current position, spatial sequence | Invoke `offer_item` for the player. |
 | `player_accept` | request ID, item ID, current position, spatial sequence | Invoke `accept_offered_item` for the player. |
 | `player_decline` | request ID, item ID, current position, spatial sequence | Invoke `decline_offer` for the player. |
@@ -414,6 +417,9 @@ neither side derives behavior from their format or an item's display name.
 Every player action message that depends on range includes the latest player
 position. Python applies that position update before validating the action, so
 a 10 Hz background position stream cannot create a stale boundary exploit.
+For asynchronous transcription, the recording request's action position is
+retained with the task: later movement cannot change who heard an utterance
+that has already finished at the microphone.
 
 ### Python to Rust messages
 
@@ -525,16 +531,15 @@ colliders.
 For gaze targeting, cast the centre-camera ray against only `ActorTarget`
 volumes, choose the nearest hit, and compare it with a lightweight raycast
 against the controller's existing static AABBs so a wall blocks interaction.
-Do not ray-test the thousands of rendered city meshes. Maintain two focus
-ranges:
+Do not ray-test the thousands of rendered city meshes. Gaze focus is used only
+for item interaction and right-click highlighting up to 4 m. Player microphone
+speech is always open: every other character within 20 m hears it, independent
+of where the player is looking.
 
-- up to 20 m for locking a push-to-talk addressee; and
-- up to 4 m for item interaction and right-click highlighting.
-
-The target is locked when `V` is pressed. If no valid actor is focused, the
-utterance is broadcast. If a locked actor becomes invalid or too distant before
-Python applies it, the explicit targeted `say` fails; it does not become a
-broadcast.
+Keep white world dialogue, subtitles, focus hints, microphone status, and toast
+text readable against both the cathedral and sky by placing compact translucent
+neutral-grey backdrops behind the laid-out text. Actor name labels and the
+larger status/inventory/offer panels use the same dark translucent treatment.
 
 ### Offered-item presentation
 
@@ -610,19 +615,25 @@ render thread. Absence, permission denial, disconnection, or an unsupported
 format changes the HUD to a text-only actor experience and does not stop the
 game.
 
-Capture occurs only while `V` is held. The audio callback only converts/copies
-samples into a bounded channel; it performs no disk, network, JSON, or Bevy
-work. A worker writes a valid WAV using the device's negotiated sample rate and
-channel count. Stop at release or 15 seconds, whichever occurs first.
+Listening is enabled by default and `V` toggles it. The audio callback only
+converts/copies samples into a bounded channel; it performs no disk, network,
+JSON, or Bevy work. A worker uses local voice activity detection with bounded
+pre-roll and trailing-silence windows, writes each detected utterance as a valid
+WAV using the negotiated sample rate/channel count, and rearms immediately.
+Each utterance stops at trailing silence or 15 seconds, whichever occurs first.
 
-Pressing `V` fades/stops current NPC speech playback before capture, preventing
-the synthesized voice from being fed straight back into transcription. Show a
-clear `LISTENING` indicator for the entire recording. Empty/silent or failed
-transcription produces no `say` action and shows a short status message.
+Suspend capture while synthesized NPC speech plays so it cannot feed directly
+back into transcription, then automatically resume if the user still has the
+microphone enabled. A player utterance already in progress finishes first, and
+NPC playback waits for the capture worker's suspension acknowledgement. A dead
+audio worker drops optional TTS after a bounded wait instead of freezing input.
+Show a persistent `MIC ON`, `MIC OFF`, or `MIC UNAVAILABLE` indicator.
+Empty/silent or failed transcription produces no `say` action and shows a short
+status message.
 
-The temporary recording is deleted after Python has opened it. The microphone
-is never opened for continuous recording and no audio is retained as game
-state.
+The temporary utterance WAV is deleted after Python has opened it. Ambient
+audio that does not pass voice detection is never written, sent, or retained as
+game state.
 
 ### Python STT/TTS adapter
 
@@ -635,7 +646,7 @@ def synthesize(text: str, voice_key: str, output_wav: Path) -> None: ...
 
 The initial adapter uses the existing Python OpenAI SDK, separately from the
 configured Moonshot/OpenAI text LLM. Use the Audio Transcriptions endpoint for
-the completed push-to-talk WAV and the Speech endpoint with WAV output for NPC
+the completed utterance WAV and the Speech endpoint with WAV output for NPC
 text. Default to a low-latency transcription model and `tts-1`, but make both
 model IDs environment settings so replacing a model never changes the game
 protocol. The current endpoint contracts accept WAV transcription input and
@@ -658,9 +669,9 @@ consistent characters. Never imitate a real person's voice. If the text LLM
 uses Moonshot and no `OPENAI_API_KEY` is present, text cognition still works;
 STT and TTS report unavailable independently.
 
-This first slice uses completed-file transcription, not the Realtime API. It is
-simpler, matches push-to-talk, and keeps one authoritative text utterance per
-player action.
+This slice uses completed-file transcription, not the Realtime API. Local voice
+activity detection still produces one authoritative text utterance per player
+action without streaming ambient microphone input to a provider.
 
 ### Playback
 
@@ -776,7 +787,7 @@ Python snapshot, and an item moves only after acceptance.
 
 ### 5. Add voice
 
-- Add microphone capability detection and push-to-talk capture.
+- Add microphone capability detection and default-on voice-activity capture.
 - Add Python transcription/synthesis adapters and temporary-file lifecycle.
 - Add dynamic spatial WAV playback and degraded text-only behavior.
 
@@ -825,8 +836,8 @@ least:
 
 Provide a deterministic fake mode selectable only by configuration/test build:
 
-1. Inject the player's transcript "What's your name?" while focused on Ilse.
-2. Assert only characters within 20 m receive it and Ilse gets the next turn.
+1. Inject the player's open transcript "What's your name?" without a gaze target.
+2. Assert every character within 20 m receives it and Ilse can answer naturally.
 3. Return a scripted Ilse `say` reply and assert one bubble/subtitle event.
 4. Inject "Please offer me your coin" and return Ilse's `offer_item` action.
 5. Assert the coin remains in Ilse's inventory, appears above her, and produces
@@ -846,12 +857,12 @@ The feature is complete only when all of the following are true:
   renderer or reply parser and commits no inventory mutation on its own.
 - An utterance at `<= 20.0` m enters the listener's next-turn context; one
   outside 20 m does not. Targeted speech is still heard by in-range bystanders.
-- Nearby NPC speech is readable as text and, with TTS configured, audible from
-  the speaker's position. Distant speech produces neither text nor sound for
-  the player.
-- With a microphone, the player can use `V` to speak to the focused actor; the
-  accepted transcript becomes the player's `say` action and never invokes an
-  LLM for the player.
+- Nearby NPC speech is readable as text over a translucent neutral-grey
+  backdrop and, with TTS configured, audible from the speaker's position.
+  Distant speech produces neither text nor sound for the player.
+- With a microphone, voice input is on by default and `V` toggles it. Every
+  accepted transcript becomes an open player `say` action heard by all actors
+  within 20 m, independent of gaze, and never invokes an LLM for the player.
 - Asking Ilse her name and then asking her to offer her coin can produce a
   normal LLM response and offer without bespoke phrase matching.
 - Every pending NPC offer has a faithful item prop above the giver. Several

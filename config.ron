@@ -5,4 +5,10 @@
     width: 1600,
     height: 900,
     resizable: true,
+    smart_actors: (
+        enabled: true,
+        fake_backend: false,
+        uv_binary: "uv",
+        server_script: "prompt_playgound/server.py",
+    ),
 )

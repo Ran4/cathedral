@@ -25,9 +25,15 @@ The first build is large because Bevy and its renderer compile from source.
 ## Configuration
 
 The app starts in borderless fullscreen by default. Edit [config.ron](config.ron)
-to change `fullscreen`, the window dimensions, title, or whether windowed mode
-can be resized. If the file cannot be read or parsed, the app safely uses the
-same fullscreen defaults.
+to change the window or smart-actor sidecar settings. Smart actors start through
+`uv` and degrade to an offline HUD state if Python, a provider key, a microphone,
+or a speech service is unavailable; the cathedral remains playable. Set
+`smart_actors.enabled` to `false` to disable the sidecar entirely. If the file
+cannot be read or parsed, the app safely uses the same defaults.
+
+Set `smart_actors.fake_backend` to `true` for the deterministic offline cast:
+it uses no provider credentials or network calls while exercising the same
+persistent process, protocol, world rules, HUD, and interaction paths.
 
 ## Controls
 
@@ -39,7 +45,25 @@ same fullscreen defaults.
 - `Space` / `Ctrl` — rise / descend while flying
 - `Esc` — release the mouse
 - Left click — recapture the mouse
+- `V` — toggle the microphone on/off (on by default); speech is heard openly
+  by every actor within 20 m
+- Mouse wheel / `1`–`9` — select an inventory item
+- Right click — offer the selected item to the focused actor
+- `Y` / `N` — accept or decline the active incoming offer
+- `R` — retract the selected item's pending offer
 
 Walking uses acceleration, friction, air control, gravity, collision, coyote
 time, and buffered jumping. Flying disables gravity but deliberately keeps
 collision enabled so the architecture still has physical presence.
+
+## Tests
+
+All smart-actor tests are offline; the fake sidecar never contacts a provider:
+
+```sh
+cargo fmt --check
+cargo clippy --all-targets --offline -- -D warnings
+cargo test --offline
+uv run --with openai --with python-dotenv \
+  python -m unittest discover -s prompt_playgound/tests -v
+```

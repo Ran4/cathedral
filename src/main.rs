@@ -2,6 +2,7 @@ mod city;
 mod controller;
 mod materials;
 mod scene;
+mod smart_actors;
 mod ui;
 
 use std::fs;
@@ -12,6 +13,7 @@ use city::CityPlugin;
 use controller::ControllerPlugin;
 use scene::CathedralPlugin;
 use serde::Deserialize;
+use smart_actors::{SmartActorsConfig, SmartActorsPlugin};
 use ui::HudPlugin;
 
 const CONFIG_PATH: &str = "config.ron";
@@ -24,6 +26,7 @@ struct AppConfig {
     width: u32,
     height: u32,
     resizable: bool,
+    smart_actors: SmartActorsConfig,
 }
 
 impl Default for AppConfig {
@@ -34,12 +37,14 @@ impl Default for AppConfig {
             width: 1600,
             height: 900,
             resizable: true,
+            smart_actors: SmartActorsConfig::default(),
         }
     }
 }
 
 fn main() {
     let config = load_config();
+    let smart_actors = config.smart_actors.clone();
     App::new()
         // The procedural atmosphere normally fills the background. This warm,
         // hazy blue is also a useful fallback on GPUs without atmosphere
@@ -61,6 +66,7 @@ fn main() {
             ..default()
         }))
         .add_plugins((ControllerPlugin, CathedralPlugin, CityPlugin, HudPlugin))
+        .add_plugins(SmartActorsPlugin::new(smart_actors))
         .run();
 }
 

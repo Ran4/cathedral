@@ -7,6 +7,7 @@
 use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::{
+    audio::SpatialListener,
     camera::Exposure,
     core_pipeline::tonemapping::Tonemapping,
     input::mouse::AccumulatedMouseMotion,
@@ -15,6 +16,8 @@ use bevy::{
     prelude::*,
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
+
+use crate::smart_actors::model::ActorId;
 
 const FIXED_HZ: f64 = 120.0;
 const PLAYER_SPAWN: Vec3 = Vec3::new(0.0, 0.91, 68.0);
@@ -128,6 +131,35 @@ impl CollisionWorld {
         });
     }
 
+    /// Returns the distance to the first static collision box hit by a ray.
+    ///
+    /// Smart-actor gaze targeting uses the same deliberately coarse geometry
+    /// as player movement. This keeps walls authoritative for interaction
+    /// without ray-testing the city's rendered meshes.
+    pub fn nearest_ray_hit(&self, origin: Vec3, direction: Vec3, max_distance: f32) -> Option<f32> {
+        if !origin.is_finite()
+            || !direction.is_finite()
+            || !max_distance.is_finite()
+            || max_distance <= 0.0
+        {
+            return None;
+        }
+
+        let direction = direction.normalize_or_zero();
+        if direction == Vec3::ZERO {
+            return None;
+        }
+
+        let displacement = direction * max_distance;
+        self.boxes
+            .iter()
+            .filter_map(|solid| {
+                sweep_point_box(origin, displacement, solid.min, solid.max)
+                    .map(|hit| hit.time * max_distance)
+            })
+            .min_by(f32::total_cmp)
+    }
+
     /// Number of coarse static colliders registered by the scene.
     #[cfg(test)]
     pub fn len(&self) -> usize {
@@ -154,7 +186,7 @@ struct PhysicalPosition {
 }
 
 #[derive(Component)]
-struct PlayerCamera;
+pub struct PlayerCamera;
 
 #[derive(Resource, Debug, Default)]
 struct ControllerInput {
@@ -167,6 +199,7 @@ fn spawn_player(mut commands: Commands) {
     commands
         .spawn((
             Name::new("Player"),
+            ActorId("player".into()),
             PlayerController::default(),
             PhysicalPosition {
                 previous: PLAYER_SPAWN,
@@ -179,6 +212,7 @@ fn spawn_player(mut commands: Commands) {
             player.spawn((
                 Name::new("Player camera"),
                 PlayerCamera,
+                SpatialListener::new(0.18),
                 Camera3d::default(),
                 Projection::Perspective(PerspectiveProjection {
                     near: 0.05,
@@ -810,6 +844,19 @@ mod tests {
 
         close(result.position.x, 5.0);
         close(result.position.y, 0.5 + COLLISION_SKIN);
+    }
+
+    #[test]
+    fn static_world_ray_returns_nearest_wall_distance() {
+        let mut world = CollisionWorld::default();
+        world.add_box(Vec3::new(-1.0, -1.0, 3.0), Vec3::new(1.0, 1.0, 3.5));
+        world.add_box(Vec3::new(-1.0, -1.0, 7.0), Vec3::new(1.0, 1.0, 8.0));
+
+        let distance = world
+            .nearest_ray_hit(Vec3::ZERO, Vec3::Z, 20.0)
+            .expect("the ray should hit the near wall");
+        close(distance, 3.0);
+        assert!(world.nearest_ray_hit(Vec3::ZERO, Vec3::X, 20.0).is_none());
     }
 
     #[test]
