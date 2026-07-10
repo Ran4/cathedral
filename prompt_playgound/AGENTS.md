@@ -40,21 +40,38 @@ Parsing uses `JSONDecoder.raw_decode`, so `#` inside quoted strings is safe.
 - `say {"target": "<id>", "text": "..."}` — target's inbox gets "said to
   you", bystanders get "said to X". Without `target` (or an invalid one):
   broadcast to everyone at the location.
-- `set_goal {"goal": "..."}` — replaces `current_goal`.
-- `remember {"memory": "..."}` — appends to memories (deduped).
-- `forget {"memory": "..."}` — removes by exact match, falls back to
-  substring match.
+- `offer_item {"item_id": "<item id>", "target": "<char id>"}` — offer a held
+  item; it stays in the giver's `holds` until accepted. Omitted/null `target`
+  = broadcast (anyone at the location may accept, first wins); a bad target
+  id is an error, NOT a fallback to broadcast. Re-offering replaces the
+  pending offer (a jilted target gets a "withdrew" event).
+- `accept_offered_item {"item_id": "<item id>"}` — take an item offered to
+  you (or broadcast) by someone still at your location; moves it giver → you
+  and clears the offer.
+- `decline_offer {"item_id": "<item id>"}` — turn down an offer targeted at
+  you; the giver keeps the item. Broadcast offers can only be ignored.
+- `retract_offer {"item_id": "<item id>"}` — withdraw your own pending offer
+  (the target, if any, is notified).
+- General concept: omit and null is the same thing, {"foo": null, ...} <=> {...}
+- `item_id` takes ids only — a name like `"fish"` is an error, no fallback.
+
+Pending offers live in `world.offers` (item id → `(giver, target | None)`)
+and are rendered on the character sheet every turn as `you_offer` /
+`offered_to_you`, since inbox events alone would be forgotten. Full design:
+`../features/giving_things.md`.
 
 ## Files
 
-- `main.py` — entry point; tick loop and the seeded demo world (Sven and
-  Conny, who know each other, plus Ilse, a pilgrim stranger, on a town
-  square). uv inline script; `sim`/`prompt`/`llm` are plain modules it
+- `main.py` — entry point; tick loop and the seeded demo world (Sven, who
+  holds a fish and owes Conny two coppers; Conny the fishmonger; and Ilse, a
+  hungry pilgrim stranger holding a copper coin — seeded so a purchase can
+  emerge). uv inline script; `sim`/`prompt`/`llm` are plain modules it
   imports.
 - `sim.py` — `Character`, `Item`, `World`, `apply_action`. Items are world
   entities with ids; `world.add(entity)` takes either a `Character` or an
   `Item`, and `Character.holds` is a list of item ids that the prompt
-  resolves to `{"id", "name"}` objects.
+  resolves to `{"id", "name"}` objects. Id strings are typed as `ItemIdStr` /
+  `CharIdStr` (`typing.NewType`) so the type checker keeps them apart.
 - `prompt.py` — prompt rendering + reply parsing (the LLM text format lives
   here and nowhere else).
 - `llm.py` — `complete(prompt) -> str` against the configured provider (see
@@ -93,7 +110,6 @@ transcript + final state; diagnostics go to stderr.
 
 ## Known gaps (intentional, for now)
 
-- Only the four verbs above are implemented; `move_to`, item transfer, etc.
-  from `think.md` are not — characters may narrate world changes the sim
-  doesn't model (e.g. handing over an item while `holds` stays unchanged).
+- `move_to` and other verbs from `think.md` are not implemented — characters
+  may narrate world changes the sim doesn't model.
 - Models rarely `forget`, so stale memories linger; needs prompt tuning.

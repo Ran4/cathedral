@@ -24,11 +24,22 @@ still talk to them by id. If you want them to know your name, just say it — an
 when someone tells you theirs, store it with remember (e.g.
 remember {"memory": "The pilgrim with id k0fb1 is called Ilse"}).
 
+Items change hands only by consent: offer_item holds an item out (you still
+hold it), and it only moves when the other character accepts it on a later
+turn. Pending offers stay on your sheet under you_offer / offered_to_you until
+accepted, declined, or retracted. item_id always takes an id (like "fzbn9"),
+never a name.
+
 Possible actions (format: `VERB ARGS`), examples:
 
 ```
 say {"target": "4bfk4", "text": "Howdy, stranger!"}  # Say something to for example a person with id 4bfk4
 say {"text": "Fresh fish for sale!"}                 # Without target: said aloud to everyone nearby
+offer_item {"item_id": "fzbn9", "target": "4bfk4"}   # Hold out an item you hold to that person
+offer_item {"item_id": "fzbn9"}                      # Without target: offered to anyone nearby, first to accept gets it
+accept_offered_item {"item_id": "fzbn9"}             # Take an item currently offered to you
+decline_offer {"item_id": "fzbn9"}                   # Turn down an item offered to you (the offerer keeps it)
+retract_offer {"item_id": "fzbn9"}                   # Withdraw an offer you made
 set_goal {"goal": "Eat fish"}
 remember {"memory": "I like ships"}
 forget {"memory": "I like ships"}
@@ -42,18 +53,48 @@ say {"target": "4bfk4", "text": "Conny, do you like fish?"}
 ```"""
 
 
+def _person(actor: Character, c: Character) -> dict:
+    return {
+        "id": c.id,
+        "name": (
+            c.name
+            if c.id in actor.knows
+            else "(unknown - you don't know the name of this person)"
+        ),
+    }
+
+
 def render_prompt(world: World, actor: Character) -> str:
     people = [
-        {
-            "id": c.id,
-            "name": (
-                c.name
-                if c.id in actor.knows
-                else "(unknown - you don't know the name of this person)"
-            ),
-        }
+        _person(actor, c)
         for c in world.at_location(actor.location, exclude=actor.id)
     ]
+    you_offer = []
+    offered_to_you = []
+    for item_id, (giver_id, target_id) in world.offers.items():
+        item = {"id": item_id, "name": world.items[item_id].name}
+        if giver_id == actor.id:
+            you_offer.append(
+                {
+                    "item": item,
+                    "to": (
+                        "anyone"
+                        if target_id is None
+                        else _person(actor, world.characters[target_id])
+                    ),
+                }
+            )
+        elif target_id is None or target_id == actor.id:
+            giver = world.characters[giver_id]
+            if giver.location != actor.location:
+                continue
+            offered_to_you.append(
+                {
+                    "item": item,
+                    "from": _person(actor, giver),
+                    "accept_with": f'accept_offered_item {{"item_id": "{item_id}"}}',
+                }
+            )
     sheet = {
         "name": actor.name,
         "back_story": actor.back_story,
@@ -62,6 +103,8 @@ def render_prompt(world: World, actor: Character) -> str:
             {"id": item_id, "name": world.items[item_id].name}
             for item_id in actor.holds
         ],
+        **({"you_offer": you_offer} if you_offer else {}),
+        **({"offered_to_you": offered_to_you} if offered_to_you else {}),
         "you_see": {
             "description": "A few people that are nearby",
             "people": people,

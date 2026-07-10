@@ -10,7 +10,7 @@ import sys
 
 import llm
 from prompt import parse_reply, render_prompt
-from sim import Character, Item, World, apply_action
+from sim import Character, CharIdStr, Item, ItemIdStr, World, apply_action
 
 
 def take_turn(world: World, actor: Character, verbose: bool = False) -> None:
@@ -40,10 +40,11 @@ def take_turn(world: World, actor: Character, verbose: bool = False) -> None:
 def build_world() -> World:
     square = "On one of the many town squares"
     world = World()
-    world.add(Item(id="fzbn9", name="fish"))
+    world.add(Item(id=ItemIdStr("fzbn9"), name="fish"))
+    world.add(Item(id=ItemIdStr("c0prs"), name="copper coin"))
     world.add(
         Character(
-            id="sv3n1",
+            id=CharIdStr("sv3n1"),
             name="Sven",
             back_story=(
                 "Born poor, you are now a blacksmith apprentice. You live in a "
@@ -51,14 +52,14 @@ def build_world() -> World:
                 "one of the back streets."
             ),
             location=square,
-            holds=["fzbn9"],
+            holds=[ItemIdStr("fzbn9")],
             memories=["I'm going to get some fish"],
-            knows={"cb947"},
+            knows={CharIdStr("cb947")},
         )
     )
     world.add(
         Character(
-            id="cb947",
+            id=CharIdStr("cb947"),
             name="Conny",
             back_story=(
                 "A fisherman who sells his catch on the town square. You know "
@@ -67,12 +68,12 @@ def build_world() -> World:
             ),
             location=square,
             memories=["Sven still owes me two coppers for that fish"],
-            knows={"sv3n1"},
+            knows={CharIdStr("sv3n1")},
         )
     )
     world.add(
         Character(
-            id="k0fb1",
+            id=CharIdStr("k0fb1"),
             name="Ilse",
             back_story=(
                 "A pilgrim who arrived in the citystate this morning to see the "
@@ -80,6 +81,7 @@ def build_world() -> World:
                 "after the long road."
             ),
             location=square,
+            holds=[ItemIdStr("c0prs")],
         )
     )
     return world
@@ -108,9 +110,16 @@ def main() -> None:
     print("\n== final state ==")
     for c in order:
         known = [world.characters[i].name for i in sorted(c.knows) if i in world.characters]
-        print(f"{c.name}: goal={c.goal!r}, knows={known}")
+        holds = [f"{world.items[i].name} ({i})" for i in c.holds]
+        print(f"{c.name}: goal={c.goal!r}, knows={known}, holds={holds}")
         for m in c.memories:
             print(f"  - {m}")
+    for item_id, (giver_id, target_id) in world.offers.items():
+        to = world.characters[target_id].name if target_id else "anyone"
+        print(
+            f"pending offer: {world.characters[giver_id].name} offers "
+            f"{world.items[item_id].name} ({item_id}) to {to}"
+        )
 
 
 if __name__ == "__main__":
