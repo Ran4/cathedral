@@ -1,0 +1,11 @@
+# Rust
+/target
+**/*.rs.bk
+*.pdb
+
+# Secrets
+.env
+
+# Editor/OS
+.DS_Store
+*.swp
