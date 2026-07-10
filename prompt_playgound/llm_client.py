@@ -25,7 +25,15 @@ PROVIDERS = {
     },
 }
 
+# USD per 1M tokens (input, output), as of July 2026. Cache-hit discounts are
+# not modeled, so this is an upper bound.
+PRICING = {
+    "kimi-k2.5": (0.60, 3.00),
+    "gpt-5.6-luna": (1.00, 6.00),
+}
+
 _client: OpenAI | None = None
+_usage: dict[str, list[int]] = {}  # model -> [prompt_tokens, completion_tokens]
 
 
 def _config() -> tuple[str, dict, str]:
@@ -70,4 +78,17 @@ def complete(prompt: str) -> str:
         messages=[{"role": "user", "content": prompt}],
         **cfg["extra"],
     )
+    if resp.usage is not None:
+        tally = _usage.setdefault(model, [0, 0])
+        tally[0] += resp.usage.prompt_tokens
+        tally[1] += resp.usage.completion_tokens
     return resp.choices[0].message.content
+
+
+def run_cost_usd() -> float | None:
+    """Total cost of all complete() calls so far; None if a model lacks pricing."""
+    if not _usage or any(model not in PRICING for model in _usage):
+        return None
+    return sum(
+        (p * PRICING[m][0] + c * PRICING[m][1]) / 1e6 for m, (p, c) in _usage.items()
+    )

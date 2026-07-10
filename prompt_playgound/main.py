@@ -123,6 +123,12 @@ def main() -> None:
             f"{world.items[item_id].name} ({item_id}) to {to}"
         )
 
+    cost = llm_client.run_cost_usd()
+    if cost is None:
+        print("\nRun cost: unknown (no pricing entry for this model)")
+    else:
+        print(f"\nRun cost: {cost:.2f} USD" if cost >= 0.005 else f"\nRun cost: {cost:.4f} USD")
+
 
 if __name__ == "__main__":
     main()
