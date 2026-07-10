@@ -74,11 +74,18 @@ strangers). Item names are public.
 
 | action                | target's inbox                                              | bystanders' inbox               | giver's inbox                     |
 | --------------------- | ----------------------------------------------------------- | ------------------------------- | --------------------------------- |
-| offer_item (targeted) | `Sven holds out a fish (id fzbn9) to you. (accept_offered_item {"item_id": "fzbn9"} to accept)` | `Sven offered a fish to Conny`  | —                                 |
-| offer_item (broadcast)| everyone: `Sven holds out a fish (id fzbn9) to anyone who wants it. (...)` |                        | —                                 |
+| offer_item (targeted) | `Sven held out a fish (id fzbn9) to you`                     | `Sven offered a fish to Conny`  | —                                 |
+| offer_item (broadcast)| everyone: `Sven held out a fish (id fzbn9) to anyone who wanted it` |                         | —                                 |
 | accept_offered_item           | —                                                           | `Conny took a fish from Sven`   | `Conny accepted the fish (id fzbn9) you offered` |
 | decline_offer         | —                                                           | `Ilse declined a fish from Conny` | `Ilse declined the fish (id fzbn9) you offered` |
 | retract_offer         | `Sven withdrew the offered fish (id fzbn9)`                 | —                               | —                                 |
+
+Events are descriptive history, past tense, with **no accept-syntax hint**:
+by the time a character reads them they can be stale (a broadcast offer is
+gone once someone earlier in the round accepts it, and models act on hints in
+stale events). The accept syntax appears only in `offered_to_you` on the
+sheet, which is re-rendered from `world.offers` every turn — so the hint's
+presence always means the accept would actually succeed.
 
 ## Character sheet
 
@@ -89,7 +96,8 @@ pending offer must be visible every turn, not just when it happens:
   on the giver's sheet. `to.name` is rendered through `identify()` (so it
   may be the unknown-marker), exactly like people in `you_see`.
 - `offered_to_you`: `[{"item": {"id", "name"}, "from": {"id", "name"}}]` on
-  the potential accepter's sheet, with the accept syntax hinted.
+  the potential accepter's sheet, with the accept syntax hinted
+  (`accept_with`) — the only place accept syntax appears (see Events).
 
 ## Edge cases
 

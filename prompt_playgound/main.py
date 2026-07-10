@@ -8,7 +8,7 @@
 import argparse
 import sys
 
-import llm
+import llm_client
 from prompt import parse_reply, render_prompt
 from sim import Character, CharIdStr, Item, ItemIdStr, World, apply_action
 
@@ -18,7 +18,7 @@ def take_turn(world: World, actor: Character, verbose: bool = False) -> None:
     actor.inbox.clear()  # drained into the prompt; new events land after this
     if verbose:
         print(f"--- prompt for {actor.name} ---\n{prompt}", file=sys.stderr)
-    reply = llm.complete(prompt)
+    reply = llm_client.complete(prompt)
     if verbose:
         print(f"--- reply from {actor.name} ---\n{reply}", file=sys.stderr)
 
@@ -77,11 +77,11 @@ def build_world() -> World:
             name="Ilse",
             back_story=(
                 "A pilgrim who arrived in the citystate this morning to see the "
-                "great cathedral. You know nobody here, and you are hungry "
-                "after the long road."
+                "great cathedral. You know nobody here"
             ),
             location=square,
             holds=[ItemIdStr("c0prs")],
+            memories=["You are very hungry after the long road here"],
         )
     )
     return world
@@ -109,7 +109,9 @@ def main() -> None:
 
     print("\n== final state ==")
     for c in order:
-        known = [world.characters[i].name for i in sorted(c.knows) if i in world.characters]
+        known = [
+            world.characters[i].name for i in sorted(c.knows) if i in world.characters
+        ]
         holds = [f"{world.items[i].name} ({i})" for i in c.holds]
         print(f"{c.name}: goal={c.goal!r}, knows={known}, holds={holds}")
         for m in c.memories:

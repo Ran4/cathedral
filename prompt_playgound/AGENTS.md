@@ -57,8 +57,11 @@ Parsing uses `JSONDecoder.raw_decode`, so `#` inside quoted strings is safe.
 
 Pending offers live in `world.offers` (item id → `(giver, target | None)`)
 and are rendered on the character sheet every turn as `you_offer` /
-`offered_to_you`, since inbox events alone would be forgotten. Full design:
-`../features/giving_things.md`.
+`offered_to_you`, since inbox events alone would be forgotten. Offer inbox
+events are past-tense history with no accept hint — they can be stale by the
+time they're read (someone earlier in the round may have taken a broadcast
+offer); the accept syntax appears only in `offered_to_you`, which is always
+current. Full design: `../features/giving_things.md`.
 
 ## Files
 

@@ -30,6 +30,11 @@ turn. Pending offers stay on your sheet under you_offer / offered_to_you until
 accepted, declined, or retracted. item_id always takes an id (like "fzbn9"),
 never a name.
 
+since_your_last_turn is history, in order — it can already be out of date (an
+offer you heard about may be gone, taken by someone else). you_hold, you_offer
+and offered_to_you are the current truth: you can only accept offers listed in
+offered_to_you.
+
 Possible actions (format: `VERB ARGS`), examples:
 
 ```

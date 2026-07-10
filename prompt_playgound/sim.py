@@ -111,10 +111,11 @@ def apply_action(world: World, actor: Character, verb: str, args: dict) -> str:
                 jilted.inbox.append(
                     f"{_cap(identify(jilted, actor))} withdrew the offered {item.name} (id {item_id})"
                 )
-        hint = f'(accept_offered_item {{"item_id": "{item_id}"}} to accept)'
+        # Past tense and no accept hint: inbox events can be stale by the time
+        # they're read; accept syntax lives only in the sheet's offered_to_you.
         if target is not None:
             target.inbox.append(
-                f"{_cap(identify(target, actor))} holds out a {item.name} (id {item_id}) to you. {hint}"
+                f"{_cap(identify(target, actor))} held out a {item.name} (id {item_id}) to you"
             )
             for other in world.at_location(actor.location, exclude=actor.id):
                 if other.id != target.id:
@@ -124,8 +125,8 @@ def apply_action(world: World, actor: Character, verb: str, args: dict) -> str:
             return f"{actor.name} offers the {item.name} to {target.name}"
         for other in world.at_location(actor.location, exclude=actor.id):
             other.inbox.append(
-                f"{_cap(identify(other, actor))} holds out a {item.name} (id {item_id}) "
-                f"to anyone who wants it. {hint}"
+                f"{_cap(identify(other, actor))} held out a {item.name} (id {item_id}) "
+                f"to anyone who wanted it"
             )
         return f"{actor.name} offers the {item.name} to anyone nearby"
 
