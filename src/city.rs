@@ -19,6 +19,10 @@ const AVENUE_WIDTH: f32 = 14.0;
 const CEREMONIAL_WIDTH: f32 = 20.0;
 const LANE_WIDTH: f32 = 4.6;
 const CANAL_X: f32 = -480.0;
+const GRAND_FORECOURT_WIDTH: f32 = 154.0;
+const GRAND_FORECOURT_DEPTH: f32 = 104.0;
+const GRAND_APPROACH_WIDTH: f32 = 24.0;
+const GRAND_APPROACH_LENGTH: f32 = 300.0;
 
 const X_ROADS: [f32; 9] = [
     -480.0, -360.0, -240.0, -120.0, 0.0, 120.0, 240.0, 360.0, 480.0,
@@ -49,6 +53,9 @@ struct CityMeshes {
 #[derive(Clone)]
 struct CityMaterials {
     ground: Handle<StandardMaterial>,
+    forecourt_paving: Handle<StandardMaterial>,
+    cathedral_cross_street: Handle<StandardMaterial>,
+    cathedral_approach: Handle<StandardMaterial>,
     limestone: Handle<StandardMaterial>,
     pale_stone: Handle<StandardMaterial>,
     ochre: Handle<StandardMaterial>,
@@ -176,6 +183,8 @@ fn create_materials(
 ) -> CityMaterials {
     let limestone_texture = load_repeating_texture(asset_server, "textures/limestone.png");
     let ground_texture = load_repeating_texture(asset_server, "textures/cathedral_floor.png");
+    let forecourt_texture = load_repeating_texture(asset_server, "textures/city_plaza_paving.png");
+    let street_texture = load_repeating_texture(asset_server, "textures/city_street_cobbles.png");
     let plaster_texture = load_repeating_texture(asset_server, "textures/city_plaster.png");
     let half_timber_texture = load_repeating_texture(asset_server, "textures/city_half_timber.png");
     let fieldstone_texture = load_repeating_texture(asset_server, "textures/city_fieldstone.png");
@@ -191,6 +200,39 @@ fn create_materials(
             )),
             perceptual_roughness: 0.78,
             reflectance: 0.34,
+            ..default()
+        }),
+        forecourt_paving: materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(forecourt_texture),
+            uv_transform: Affine2::from_scale(Vec2::new(
+                GRAND_FORECOURT_WIDTH / FLOOR_TEXTURE_SPAN_METERS,
+                GRAND_FORECOURT_DEPTH / FLOOR_TEXTURE_SPAN_METERS,
+            )),
+            perceptual_roughness: 0.9,
+            reflectance: 0.28,
+            ..default()
+        }),
+        cathedral_cross_street: materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(street_texture.clone()),
+            uv_transform: Affine2::from_scale(Vec2::new(
+                (CITY_MAX_X - CITY_MIN_X) / FLOOR_TEXTURE_SPAN_METERS,
+                CEREMONIAL_WIDTH / FLOOR_TEXTURE_SPAN_METERS,
+            )),
+            perceptual_roughness: 0.92,
+            reflectance: 0.24,
+            ..default()
+        }),
+        cathedral_approach: materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(street_texture),
+            uv_transform: Affine2::from_scale(Vec2::new(
+                GRAND_APPROACH_WIDTH / FLOOR_TEXTURE_SPAN_METERS,
+                GRAND_APPROACH_LENGTH / FLOOR_TEXTURE_SPAN_METERS,
+            )),
+            perceptual_roughness: 0.92,
+            reflectance: 0.24,
             ..default()
         }),
         limestone: materials.add(StandardMaterial {
@@ -426,10 +468,15 @@ fn spawn_horizontal_road(
     length: f32,
     width: f32,
 ) {
+    let material = if z == 100.0 {
+        &materials.cathedral_cross_street
+    } else {
+        &materials.road
+    };
     spawn_box(
         commands,
         meshes,
-        &materials.road,
+        material,
         Vec3::new(x, 0.02, z),
         Vec3::new(length, 0.04, width),
     );
@@ -1129,16 +1176,16 @@ fn build_grand_forecourt(
     spawn_box(
         commands,
         meshes,
-        &materials.marble,
+        &materials.forecourt_paving,
         Vec3::new(0.0, 0.045, 157.0),
-        Vec3::new(154.0, 0.08, 104.0),
+        Vec3::new(GRAND_FORECOURT_WIDTH, 0.08, GRAND_FORECOURT_DEPTH),
     );
     spawn_box(
         commands,
         meshes,
-        &materials.road,
+        &materials.cathedral_approach,
         Vec3::new(0.0, 0.092, 365.0),
-        Vec3::new(24.0, 0.05, 300.0),
+        Vec3::new(GRAND_APPROACH_WIDTH, 0.05, GRAND_APPROACH_LENGTH),
     );
 
     for side in [-1.0, 1.0] {
