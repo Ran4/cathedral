@@ -196,8 +196,29 @@ def apply_action(world: World, actor: Character, verb: str, args: dict) -> str:
                 )
         return f"{actor.name} retracts the offer of the {item.name}"
 
+    if verb == "eat":
+        item_id = ItemIdStr(args["item_id"])
+        if item_id not in actor.holds:
+            raise ValueError(f"you hold no item with id {item_id!r} (item_id takes an id, not a name)")
+        item = world.items[item_id]
+        # You can only offer what you hold, so any pending offer is the eater's own.
+        offer = world.offers.pop(item_id, None)
+        if offer is not None and offer[1] is not None:
+            target = world.characters.get(offer[1])
+            if target is not None:
+                target.inbox.append(
+                    f"{_cap(identify(target, actor))} withdrew the offered {item.name} (id {item_id})"
+                )
+        actor.holds.remove(item_id)
+        del world.items[item_id]
+        for other in world.at_location(actor.location, exclude=actor.id):
+            other.inbox.append(f"{_cap(identify(other, actor))} ate a {item.name}")
+        return f"{actor.name} eats the {item.name}"
+
     if verb == "set_goal":
-        actor.goal = args["goal"]
+        actor.goal = args.get("goal") or "None"
+        if actor.goal == "None":
+            return f"{actor.name} drops their goal"
         return f"{actor.name} now wants: {actor.goal}"
 
     if verb == "remember":

@@ -81,7 +81,7 @@ def build_world() -> World:
             ),
             location=square,
             holds=[ItemIdStr("c0prs")],
-            memories=["You are very hungry after the long road here"],
+            memories=["I am very hungry after the long road here"],
         )
     )
     return world

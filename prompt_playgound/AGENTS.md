@@ -52,6 +52,8 @@ Parsing uses `JSONDecoder.raw_decode`, so `#` inside quoted strings is safe.
   you; the giver keeps the item. Broadcast offers can only be ignored.
 - `retract_offer {"item_id": "<item id>"}` — withdraw your own pending offer
   (the target, if any, is notified).
+- `eat {"item_id": "<item id>"}` — consume a held item: it is removed from the
+  world (any pending offer of it is implicitly retracted, with notification).
 - General concept: omit and null is the same thing, {"foo": null, ...} <=> {...}
 - `item_id` takes ids only — a name like `"fish"` is an error, no fallback.
 
@@ -109,10 +111,16 @@ mode, for speed); openai calls use API defaults. Override per run like
 ```
 
 Every run makes live API calls (a few seconds per tick). stdout is the
-transcript + final state; diagnostics go to stderr.
+transcript + final state + total run cost in USD (priced from the per-model
+table in `llm_client.PRICING`; cache discounts not modeled); diagnostics go
+to stderr.
 
 ## Known gaps (intentional, for now)
 
-- `move_to` and other verbs from `think.md` are not implemented — characters
-  may narrate world changes the sim doesn't model.
-- Models rarely `forget`, so stale memories linger; needs prompt tuning.
+- `move_to` and other verbs from `think.md` are not implemented (`eat` is) —
+  characters may narrate world changes the sim doesn't model (e.g. claiming a
+  fish is sold before it is).
+- Memory/goal hygiene is prompt-enforced only: the prompt tells characters to
+  record outcomes the turn they happen, forget superseded memories, and
+  clear/replace achieved goals (`set_goal {"goal": null}` clears). This works
+  in test runs but nothing in the sim guarantees it.
