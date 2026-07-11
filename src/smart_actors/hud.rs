@@ -11,6 +11,7 @@ const MUTED: Color = Color::srgb(0.70, 0.72, 0.74);
 const ONLINE: Color = Color::srgb(0.58, 0.88, 0.62);
 const DEGRADED: Color = Color::srgb(0.97, 0.74, 0.31);
 const OFFLINE: Color = Color::srgb(0.96, 0.40, 0.36);
+const PLAYER_TRANSCRIPT_LIFETIME: Duration = Duration::from_secs(8);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConnectionUiState {
@@ -61,6 +62,7 @@ pub struct SmartActorHudState {
     pub microphone_enabled: bool,
     pub listening: bool,
     transient: Option<TimedMessage>,
+    player_transcript: Option<TimedMessage>,
 }
 
 impl Default for SmartActorHudState {
@@ -77,6 +79,7 @@ impl Default for SmartActorHudState {
             microphone_enabled: true,
             listening: false,
             transient: None,
+            player_transcript: None,
         }
     }
 }
@@ -93,12 +96,48 @@ impl SmartActorHudState {
         });
     }
 
+    pub fn show_player_transcript(&mut self, transcript: &str) {
+        let transcript = transcript.trim();
+        if transcript.is_empty() {
+            return;
+        }
+        self.set_player_transcript(format!("You: {transcript}"));
+    }
+
+    pub fn show_player_transcript_delivery(&mut self, transcript: &str, recipients: usize) {
+        let transcript = transcript.trim();
+        if transcript.is_empty() {
+            return;
+        }
+        let delivery = match recipients {
+            0 => "nobody nearby".to_string(),
+            1 => "heard by 1 nearby person".to_string(),
+            count => format!("heard by {count} nearby people"),
+        };
+        self.set_player_transcript(format!("You: {transcript}  ·  {delivery}"));
+    }
+
+    fn set_player_transcript(&mut self, text: String) {
+        self.player_transcript = Some(TimedMessage {
+            text,
+            remaining: PLAYER_TRANSCRIPT_LIFETIME,
+        });
+    }
+
+    #[cfg(test)]
+    pub(super) fn player_transcript_text(&self) -> Option<&str> {
+        self.player_transcript
+            .as_ref()
+            .map(|message| message.text.as_str())
+    }
+
     pub fn clear_transients_on_disconnect(&mut self, detail: impl Into<String>) {
         self.connection = ConnectionUiState::Offline;
         self.connection_detail = detail.into();
         self.offer_card.clear();
         self.focus_hint.clear();
         self.subtitle.clear();
+        self.player_transcript = None;
         self.microphone_available = false;
         self.microphone_unavailable = false;
         self.listening = false;
@@ -118,6 +157,10 @@ pub(super) struct OfferCardText;
 pub(super) struct FocusHintText;
 #[derive(Component)]
 pub(super) struct SubtitleText;
+#[derive(Component)]
+pub(super) struct PlayerTranscriptLayer;
+#[derive(Component)]
+pub(super) struct PlayerTranscriptText;
 #[derive(Component)]
 pub(super) struct ListeningText;
 #[derive(Component)]
@@ -229,6 +272,7 @@ pub fn spawn_smart_actor_hud(mut commands: Commands) {
         20.0,
         TEXT,
     );
+    spawn_player_transcript(&mut commands);
     spawn_centered_text(
         &mut commands,
         "Microphone status",
@@ -245,6 +289,45 @@ pub fn spawn_smart_actor_hud(mut commands: Commands) {
         14.0,
         DEGRADED,
     );
+}
+
+fn spawn_player_transcript(commands: &mut Commands) {
+    commands
+        .spawn((
+            Name::new("Player transcript centering layer"),
+            PlayerTranscriptLayer,
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: px(66),
+                left: percent(20),
+                width: percent(60),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            ZIndex(12),
+        ))
+        .with_children(|layer| {
+            layer.spawn((
+                Name::new("Player transcript"),
+                PlayerTranscriptText,
+                Text::new(""),
+                TextFont {
+                    font_size: FontSize::Px(11.0),
+                    ..default()
+                },
+                TextColor(TEXT),
+                TextLayout::justify(Justify::Center),
+                TextShadow::default(),
+                Node {
+                    max_width: percent(100),
+                    padding: UiRect::axes(px(7), px(3)),
+                    border_radius: BorderRadius::all(px(4)),
+                    display: Display::None,
+                    ..default()
+                },
+                BackgroundColor(CENTERED_TEXT_BACKDROP),
+            ));
+        });
 }
 
 fn spawn_centered_text<M: Component>(
@@ -311,6 +394,7 @@ pub fn update_smart_actor_hud(
             Option<&OfferCardText>,
             Option<&FocusHintText>,
             Option<&SubtitleText>,
+            Option<&PlayerTranscriptText>,
             Option<&ListeningText>,
             Option<&ToastText>,
         ),
@@ -321,6 +405,7 @@ pub fn update_smart_actor_hud(
             With<OfferCardText>,
             With<FocusHintText>,
             With<SubtitleText>,
+            With<PlayerTranscriptText>,
             With<ListeningText>,
             With<ToastText>,
         )>,
@@ -330,6 +415,12 @@ pub fn update_smart_actor_hud(
         message.remaining = message.remaining.saturating_sub(time.delta());
         if message.remaining.is_zero() {
             state.transient = None;
+        }
+    }
+    if let Some(message) = state.player_transcript.as_mut() {
+        message.remaining = message.remaining.saturating_sub(time.delta());
+        if message.remaining.is_zero() {
+            state.player_transcript = None;
         }
     }
 
@@ -343,6 +434,10 @@ pub fn update_smart_actor_hud(
         .transient
         .as_ref()
         .map_or("", |message| message.text.as_str());
+    let player_transcript_text = state
+        .player_transcript
+        .as_ref()
+        .map_or("", |message| message.text.as_str());
 
     for (
         mut text,
@@ -354,6 +449,7 @@ pub fn update_smart_actor_hud(
         offer,
         hint,
         subtitle,
+        player_transcript,
         listening,
         toast,
     ) in &mut views
@@ -373,6 +469,8 @@ pub fn update_smart_actor_hud(
             set_optional_text(&state.focus_hint, &mut text, node.as_deref_mut());
         } else if subtitle.is_some() {
             set_optional_text(&state.subtitle, &mut text, node.as_deref_mut());
+        } else if player_transcript.is_some() {
+            set_optional_text(player_transcript_text, &mut text, node.as_deref_mut());
         } else if listening.is_some() {
             if let Some(color) = color.as_deref_mut() {
                 color.0 = if state.microphone_unavailable {
@@ -447,6 +545,26 @@ mod tests {
             .next()
             .expect("subtitle exists");
         assert_eq!(subtitle_background.0, CENTERED_TEXT_BACKDROP);
+
+        let mut caption_query = app
+            .world_mut()
+            .query_filtered::<(&TextFont, &BackgroundColor, &Node), With<PlayerTranscriptText>>();
+        let (caption_font, caption_background, caption_node) = caption_query
+            .iter(app.world())
+            .next()
+            .expect("player transcript exists");
+        assert_eq!(caption_font.font_size, FontSize::Px(11.0));
+        assert_eq!(caption_background.0, CENTERED_TEXT_BACKDROP);
+        assert_eq!(caption_node.display, Display::None);
+
+        let mut caption_layer_query = app
+            .world_mut()
+            .query_filtered::<&Node, With<PlayerTranscriptLayer>>();
+        let caption_layer = caption_layer_query
+            .iter(app.world())
+            .next()
+            .expect("player transcript layer exists");
+        assert_eq!(caption_layer.bottom, px(66));
     }
 
     #[test]
@@ -460,16 +578,46 @@ mod tests {
             listening: true,
             ..default()
         };
+        state.show_player_transcript("Can anyone hear me?");
         state.toast("pending");
         state.clear_transients_on_disconnect("Python exited");
 
         assert_eq!(state.inventory, "[1] copper coin");
         assert!(state.offer_card.is_empty());
         assert!(state.subtitle.is_empty());
+        assert!(state.player_transcript.is_none());
         assert!(!state.microphone_available);
         assert!(!state.microphone_unavailable);
         assert!(!state.listening);
         assert_eq!(state.connection, ConnectionUiState::Offline);
+    }
+
+    #[test]
+    fn player_transcript_is_independent_from_overwrite_prone_toasts() {
+        let mut state = SmartActorHudState::default();
+        state.show_player_transcript("  Hello everyone  ");
+        state.toast("Another event happened");
+
+        assert_eq!(
+            state
+                .player_transcript
+                .as_ref()
+                .map(|message| message.text.as_str()),
+            Some("You: Hello everyone")
+        );
+        assert_eq!(
+            state
+                .transient
+                .as_ref()
+                .map(|message| message.text.as_str()),
+            Some("Another event happened")
+        );
+
+        state.show_player_transcript_delivery("Hello?", 0);
+        assert_eq!(
+            state.player_transcript_text(),
+            Some("You: Hello?  ·  nobody nearby")
+        );
     }
 
     #[test]

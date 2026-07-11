@@ -342,6 +342,8 @@ class SeedAndSnapshotTests(unittest.TestCase):
             world.characters[CharIdStr("player")].knows,
             {CharIdStr("sv3n1"), CharIdStr("cb947"), CharIdStr("k0fb1")},
         )
+        player = world.characters[CharIdStr("player")]
+        self.assertEqual(player.position_m, Vec3(0, 0.91, 95))
         self.assertEqual(
             world.characters[CharIdStr("sv3n1")].position_m, Vec3(-1.8, 0.91, 114)
         )
@@ -350,6 +352,13 @@ class SeedAndSnapshotTests(unittest.TestCase):
         )
         self.assertEqual(
             world.characters[CharIdStr("k0fb1")].position_m, Vec3(1.8, 0.91, 114)
+        )
+        self.assertTrue(
+            all(
+                player.position_m.distance_squared(actor.position_m) <= 20**2
+                for actor in world.characters.values()
+                if actor.control == "llm"
+            )
         )
 
     def test_player_uses_same_action_validator(self) -> None:

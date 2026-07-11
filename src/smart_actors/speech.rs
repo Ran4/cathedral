@@ -40,6 +40,7 @@ pub struct PresentSpeech {
     pub speaker_label: String,
     pub text: String,
     pub speaker_position: Vec3,
+    pub recipient_count: usize,
     pub expect_audio: bool,
 }
 
@@ -132,6 +133,7 @@ pub fn receive_speech_events(
     time: Res<Time>,
     mut messages: MessageReader<PresentSpeech>,
     mut state: ResMut<SpeechPresentationState>,
+    mut hud: ResMut<SmartActorHudState>,
 ) {
     let now = time.elapsed_secs_f64();
     for message in messages.read() {
@@ -142,12 +144,15 @@ pub fn receive_speech_events(
         if text.is_empty() || text.chars().count() > super::PLAYER_SPEECH_MAX_CHARS {
             continue;
         }
+        if message.speaker_id.0 == "player" {
+            // Player STT has its own tiny, immediate bottom caption. Keeping
+            // it out of the NPC subtitle/TTS queue prevents an earlier voiced
+            // line from hiding confirmation that the microphone worked.
+            hud.show_player_transcript_delivery(text, message.recipient_count);
+            continue;
+        }
         let duration = speech_text_seconds(text);
-        let label = if message.speaker_id.0 == "player" {
-            "You"
-        } else {
-            message.speaker_label.as_str()
-        };
+        let label = message.speaker_label.as_str();
         let first_subtitle = state.subtitles.is_empty();
         state.subtitles.push_back(SubtitleLine {
             event_id: message.event_id.clone(),
@@ -157,20 +162,18 @@ pub fn receive_speech_events(
             audio_playing: false,
         });
 
-        if message.speaker_id.0 != "player" {
-            spawn_speech_bubble(
-                &mut commands,
-                message.speaker_position,
-                text,
-                now + f64::from(duration),
-            );
-            if message.expect_audio {
-                state.audio_order.push_back(AudioExpectation {
-                    event_id: message.event_id.clone(),
-                    position: message.speaker_position,
-                    queued_at: now,
-                });
-            }
+        spawn_speech_bubble(
+            &mut commands,
+            message.speaker_position,
+            text,
+            now + f64::from(duration),
+        );
+        if message.expect_audio {
+            state.audio_order.push_back(AudioExpectation {
+                event_id: message.event_id.clone(),
+                position: message.speaker_position,
+                queued_at: now,
+            });
         }
     }
 }
@@ -708,6 +711,41 @@ mod tests {
         assert!(!state.observe_speech_sequence(4));
         assert!(!state.observe_speech_sequence(3));
         assert!(state.observe_speech_sequence(5));
+    }
+
+    #[test]
+    fn player_speech_uses_the_tiny_caption_instead_of_npc_subtitle_queue() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<SpeechPresentationState>()
+            .init_resource::<SmartActorHudState>()
+            .add_message::<PresentSpeech>()
+            .add_systems(Update, receive_speech_events);
+        app.world_mut().write_message(PresentSpeech {
+            event_seq: 1,
+            event_id: "speech-1".into(),
+            speaker_id: ActorId("player".into()),
+            speaker_label: "You".into(),
+            text: "Can anyone hear me?".into(),
+            speaker_position: Vec3::ZERO,
+            recipient_count: 3,
+            expect_audio: false,
+        });
+
+        app.update();
+
+        assert!(
+            app.world()
+                .resource::<SpeechPresentationState>()
+                .subtitles
+                .is_empty()
+        );
+        assert_eq!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .player_transcript_text(),
+            Some("You: Can anyone hear me?  ·  heard by 3 nearby people")
+        );
     }
 
     #[test]

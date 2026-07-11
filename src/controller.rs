@@ -20,7 +20,9 @@ use bevy::{
 use crate::smart_actors::model::ActorId;
 
 const FIXED_HZ: f64 = 120.0;
-const PLAYER_SPAWN: Vec3 = Vec3::new(0.0, 0.91, 68.0);
+// Begin on the open west approach, facing the actor cluster. At 17–19 m the
+// whole initial cast is inside the settled 20 m hearing radius immediately.
+const PLAYER_SPAWN: Vec3 = Vec3::new(0.0, 0.91, 95.0);
 const PLAYER_START_YAW: f32 = PI;
 const PLAYER_HALF_SIZE: Vec3 = Vec3::new(0.35, 0.9, 0.35);
 const EYE_OFFSET: f32 = 0.65;
@@ -741,10 +743,17 @@ mod tests {
     }
 
     #[test]
-    fn player_starts_near_and_facing_the_west_exit() {
-        assert_eq!(PLAYER_SPAWN, Vec3::new(0.0, 0.91, 68.0));
+    fn player_starts_on_the_west_approach_facing_the_actor_cluster() {
+        assert_eq!(PLAYER_SPAWN, Vec3::new(0.0, 0.91, 95.0));
         let initial_forward = Quat::from_rotation_y(PLAYER_START_YAW) * Vec3::NEG_Z;
         assert!(initial_forward.dot(Vec3::Z) > 0.999);
+        for actor_position in [
+            Vec3::new(0.0, 0.91, 112.0),
+            Vec3::new(-1.8, 0.91, 114.0),
+            Vec3::new(1.8, 0.91, 114.0),
+        ] {
+            assert!(PLAYER_SPAWN.distance(actor_position) <= 20.0);
+        }
     }
 
     #[test]

@@ -6,10 +6,11 @@ description = "A walkable, procedural cathedral-city built with Bevy"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-bevy = { version = "0.19", default-features = false, features = ["3d", "ui", "bevy_audio", "wav"] }
+bevy = { version = "0.19", default-features = false, features = ["3d", "ui", "bevy_audio", "png", "wav"] }
 cpal = "0.17.3"
 crossbeam-channel = "0.5.15"
 hound = "3.5.1"
+libc = "0.2.186"
 ron = "0.12"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

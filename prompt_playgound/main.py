@@ -105,7 +105,7 @@ def build_world() -> World:
             back_story="A human visitor exploring the cathedral city.",
             location_description=forecourt,
             # The hello message replaces this with the controller's true spawn.
-            position_m=Vec3(0.0, 0.91, 68.0),
+            position_m=Vec3(0.0, 0.91, 95.0),
             appearance_key="player",
             voice_key=None,
             knows={

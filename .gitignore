@@ -9,3 +9,6 @@
 # Editor/OS
 .DS_Store
 *.swp
+
+# Runtime captures
+screenshots/

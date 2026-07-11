@@ -2,6 +2,7 @@ mod city;
 mod controller;
 mod materials;
 mod scene;
+mod screenshot;
 mod smart_actors;
 mod ui;
 
@@ -12,6 +13,7 @@ use bevy::window::{CursorGrabMode, CursorOptions, MonitorSelection, WindowMode, 
 use city::CityPlugin;
 use controller::ControllerPlugin;
 use scene::CathedralPlugin;
+use screenshot::CathedralScreenshotPlugin;
 use serde::Deserialize;
 use smart_actors::{SmartActorsConfig, SmartActorsPlugin};
 use ui::HudPlugin;
@@ -65,7 +67,13 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((ControllerPlugin, CathedralPlugin, CityPlugin, HudPlugin))
+        .add_plugins((
+            ControllerPlugin,
+            CathedralPlugin,
+            CityPlugin,
+            HudPlugin,
+            CathedralScreenshotPlugin,
+        ))
         .add_plugins(SmartActorsPlugin::new(smart_actors))
         .run();
 }

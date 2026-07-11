@@ -1946,6 +1946,7 @@ dependencies = [
  "cpal",
  "crossbeam-channel",
  "hound",
+ "libc",
  "ron",
  "serde",
  "serde_json",

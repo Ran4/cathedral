@@ -28,9 +28,15 @@ const MINIMUM_VOICE: Duration = Duration::from_millis(140);
 const TRAILING_SILENCE: Duration = Duration::from_millis(700);
 const INITIAL_NOISE_RMS: f32 = 0.0015;
 const MINIMUM_START_RMS: f32 = 0.006;
-const MINIMUM_START_PEAK: f32 = 0.018;
+const MINIMUM_START_PEAK: f32 = 0.035;
 const MINIMUM_CONTINUE_RMS: f32 = 0.0035;
-const MINIMUM_CONTINUE_PEAK: f32 = 0.010;
+const MINIMUM_CONTINUE_PEAK: f32 = 0.030;
+// A single moderately noisy device callback must not make ordinary speech
+// unreachable. Keep learning the actual floor, but cap how far that estimate
+// may raise the detector. The absolute RMS/peak gates and sustained
+// confirmation still reject steady room ambience and brief impulses.
+const MAXIMUM_START_NOISE_RMS: f32 = 0.003;
+const MAXIMUM_CONTINUE_NOISE_RMS: f32 = 0.006;
 const CONFIDENT_UNCALIBRATED_RMS: f32 = 0.012;
 const CONFIDENT_UNCALIBRATED_PEAK: f32 = 0.040;
 
@@ -687,8 +693,9 @@ impl VoiceActivityDetector {
                 return None;
             }
         }
-        let starts_voice = levels.rms >= (self.noise_rms * 4.0).max(MINIMUM_START_RMS)
-            || levels.peak >= (self.noise_rms * 8.0).max(MINIMUM_START_PEAK);
+        let effective_noise_rms = self.noise_rms.min(MAXIMUM_START_NOISE_RMS);
+        let starts_voice = levels.rms >= (effective_noise_rms * 4.0).max(MINIMUM_START_RMS)
+            || levels.peak >= (effective_noise_rms * 8.0).max(MINIMUM_START_PEAK);
         if starts_voice {
             self.candidate_frames = self.candidate_frames.saturating_add(frames);
             if self.candidate_frames >= self.confirmation_frames {
@@ -706,8 +713,9 @@ impl VoiceActivityDetector {
     }
 
     fn continues_voice(&self, levels: AudioLevels) -> bool {
-        levels.rms >= (self.noise_rms * 2.0).max(MINIMUM_CONTINUE_RMS)
-            || levels.peak >= (self.noise_rms * 4.0).max(MINIMUM_CONTINUE_PEAK)
+        let effective_noise_rms = self.noise_rms.min(MAXIMUM_CONTINUE_NOISE_RMS);
+        levels.rms >= (effective_noise_rms * 2.0).max(MINIMUM_CONTINUE_RMS)
+            || levels.peak >= (effective_noise_rms * 4.0).max(MINIMUM_CONTINUE_PEAK)
     }
 
     fn reset_candidate(&mut self) {
@@ -897,6 +905,44 @@ mod tests {
         assert_eq!(detector.observe_idle(voice, 1), Some(80));
         assert!(detector.continues_voice(voice));
         assert!(!detector.continues_voice(quiet));
+    }
+
+    #[test]
+    fn first_moderate_noise_buffer_cannot_hide_ordinary_voice() {
+        let mut detector = VoiceActivityDetector::new(1_000);
+        let moderate_startup_noise = AudioLevels {
+            peak: 0.027,
+            rms: 0.009,
+        };
+        let ordinary_voice = AudioLevels {
+            peak: 0.032,
+            rms: 0.014,
+        };
+
+        assert_eq!(detector.observe_idle(moderate_startup_noise, 100), None);
+        assert_eq!(detector.observe_idle(ordinary_voice, 79), None);
+        assert_eq!(detector.observe_idle(ordinary_voice, 1), Some(80));
+        assert!(detector.continues_voice(ordinary_voice));
+    }
+
+    #[test]
+    fn quiet_baseline_still_detects_quiet_sustained_speech() {
+        let mut detector = VoiceActivityDetector::new(1_000);
+        let quiet = AudioLevels {
+            peak: 0.001,
+            rms: 0.0005,
+        };
+        let quiet_voice = AudioLevels {
+            peak: 0.020,
+            rms: 0.007,
+        };
+
+        for _ in 0..5 {
+            assert_eq!(detector.observe_idle(quiet, 20), None);
+        }
+        assert_eq!(detector.observe_idle(quiet_voice, 79), None);
+        assert_eq!(detector.observe_idle(quiet_voice, 1), Some(80));
+        assert!(detector.continues_voice(quiet_voice));
     }
 
     #[test]

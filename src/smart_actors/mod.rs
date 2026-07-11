@@ -502,6 +502,13 @@ fn process_server_message(
                         .iter()
                         .any(|actor_id| actor_id.0 == "player");
                 if player_heard {
+                    let recipient_count = speech
+                        .recipient_ids
+                        .iter()
+                        .filter(|recipient| {
+                            *recipient != &speech.speaker_id && mirror.actor(recipient).is_some()
+                        })
+                        .count();
                     speech_messages.write(speech::PresentSpeech {
                         event_seq: envelope.event_seq,
                         event_id: speech.event_id,
@@ -509,6 +516,7 @@ fn process_server_message(
                         speaker_label: speech.speaker_name_for_player,
                         text: speech.text,
                         speaker_position: speech.speaker_position_m.into(),
+                        recipient_count,
                         expect_audio: runtime.tts_available && speech.speaker_id.0 != "player",
                     });
                 }
@@ -531,7 +539,10 @@ fn process_server_message(
         "transcription_result" => match serde_json::from_value::<TranscriptionWire>(payload) {
             Ok(result) => {
                 if let Some(text) = result.text.filter(|text| valid_ui_text(text, 500)) {
-                    hud.toast(format!("Heard: {text}"));
+                    // This is the earliest exact confirmation of what STT
+                    // understood. It has a dedicated bottom caption so later
+                    // status/world-event toasts cannot overwrite it.
+                    hud.show_player_transcript(&text);
                 } else if let Some(error) = result.error {
                     hud.toast(truncate_owned(error, 300));
                 }
@@ -1278,6 +1289,12 @@ mod tests {
                 .resource::<hud::SmartActorHudState>()
                 .subtitle
                 .is_empty()
+        );
+        assert_eq!(
+            app.world()
+                .resource::<hud::SmartActorHudState>()
+                .player_transcript_text(),
+            Some("You: What's your name?  ·  heard by 3 nearby people")
         );
 
         app.world_mut().write_message(InjectPlayerTranscript {

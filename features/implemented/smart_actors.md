@@ -238,6 +238,10 @@ be translated slightly if visual inspection finds it intersects architecture,
 but its spacing, easy access from player spawn, and forecourt setting must be
 preserved.
 
+The player begins on the west approach at `(0.0, 0.91, 95.0)`, facing the
+cluster. Each actor is therefore 17–19.1 m away and can hear open speech
+immediately, without requiring the player to walk closer or aim at anyone.
+
 ## Spatial perception and speech
 
 Replace `World.at_location()` with explicit queries. Keep the human-readable
@@ -312,9 +316,13 @@ When the player is in `recipient_ids`, Rust immediately:
 - queues TTS for that utterance.
 
 If the speaker is the player, show `You: ...` as confirmation but do not
-synthesize or play the player's own voice. If the player is absent from the
-recipient list, show no bubble, subtitle, notification, or audio; this prevents
-text from leaking conversations on the other side of the map.
+synthesize or play the player's own voice. Use an independent 11 px caption
+near the bottom of the screen, over a compact translucent grey backing, and
+include whether nobody, one person, or several nearby people received it. It
+must not wait behind NPC subtitles or be overwritten by a status toast. If the
+player is absent from an NPC utterance's recipient list, show no bubble,
+subtitle, notification, or audio; this prevents text from leaking conversations
+on the other side of the map.
 
 Speech bubbles wrap text and remain for `clamp(2 + characters / 15, 3, 10)`
 seconds. If audio begins later, the corresponding subtitle remains until audio

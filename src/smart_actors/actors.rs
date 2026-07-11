@@ -725,7 +725,7 @@ mod tests {
                             id: ActorId("player".into()),
                             name_for_player: "You".into(),
                             control: ActorControl::Player,
-                            position_m: Position::new(0.0, 0.91, 68.0).unwrap(),
+                            position_m: Position::new(0.0, 0.91, 95.0).unwrap(),
                             appearance_key: "player".into(),
                             holds: vec![],
                         },

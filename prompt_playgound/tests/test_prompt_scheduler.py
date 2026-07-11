@@ -25,7 +25,9 @@ class PromptTests(unittest.TestCase):
     def test_metric_people_have_distance_and_perspective_name(self) -> None:
         rendered = sheet(render_prompt(self.world, self.sven))
         people = rendered["you_see"]["people"]
-        self.assertEqual([person["id"] for person in people], ["cb947", "k0fb1"])
+        self.assertEqual(
+            [person["id"] for person in people], ["cb947", "k0fb1", "player"]
+        )
         self.assertEqual(people[0]["name"], "Conny")
         self.assertIn("unknown", people[1]["name"])
         self.assertEqual(people[0]["distance_m"], 2.7)
@@ -34,8 +36,20 @@ class PromptTests(unittest.TestCase):
         )
         self.assertIn("forecourt", rendered["you_are"]["location_description"])
 
-    def test_player_appears_only_when_near_and_never_gets_a_prompt(self) -> None:
+    def test_player_starts_visible_can_leave_range_and_never_gets_a_prompt(
+        self,
+    ) -> None:
         player = self.world.characters[CharIdStr("player")]
+        self.assertIn(
+            "player",
+            [
+                p["id"]
+                for p in sheet(render_prompt(self.world, self.sven))["you_see"][
+                    "people"
+                ]
+            ],
+        )
+        player.position_m = Vec3(0, 0.91, 68)
         self.assertNotIn(
             "player",
             [

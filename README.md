@@ -45,12 +45,19 @@ persistent process, protocol, world rules, HUD, and interaction paths.
 - `Space` / `Ctrl` — rise / descend while flying
 - `Esc` — release the mouse
 - Left click — recapture the mouse
+- `F5` / `´` — save a PNG to
+  `screenshots/session_<session>/cathedral_screenshot_<timestamp>.png` and
+  overwrite `screenshots/cathedral_screenshot_latest.png`
 - `V` — toggle the microphone on/off (on by default); speech is heard openly
-  by every actor within 20 m
+  by every actor within 20 m. Recognized speech appears in tiny text near the
+  bottom with a nearby-recipient count
 - Mouse wheel / `1`–`9` — select an inventory item
 - Right click — offer the selected item to the focused actor
 - `Y` / `N` — accept or decline the active incoming offer
 - `R` — retract the selected item's pending offer
+
+Each game start increments `session` in `cathedral_meta.json` once. Every
+screenshot taken during that run uses the resulting session directory.
 
 Walking uses acceleration, friction, air control, gravity, collision, coyote
 time, and buffered jumping. Flying disables gravity but deliberately keeps
