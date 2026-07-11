@@ -19,10 +19,12 @@ const AVENUE_WIDTH: f32 = 14.0;
 const CEREMONIAL_WIDTH: f32 = 20.0;
 const LANE_WIDTH: f32 = 4.6;
 const CANAL_X: f32 = -480.0;
-const GRAND_FORECOURT_WIDTH: f32 = 154.0;
-const GRAND_FORECOURT_DEPTH: f32 = 104.0;
+const GRAND_FORECOURT_WIDTH: f32 = 77.0;
+const GRAND_FORECOURT_DEPTH: f32 = 52.0;
+const GRAND_FORECOURT_CENTER_Z: f32 = 131.0;
 const GRAND_APPROACH_WIDTH: f32 = 24.0;
-const GRAND_APPROACH_LENGTH: f32 = 300.0;
+const GRAND_APPROACH_LENGTH: f32 = 352.0;
+const GRAND_APPROACH_CENTER_Z: f32 = 339.0;
 
 const X_ROADS: [f32; 9] = [
     -480.0, -360.0, -240.0, -120.0, 0.0, 120.0, 240.0, 360.0, 480.0,
@@ -1127,7 +1129,7 @@ fn build_dense_cathedral_quarter(
 
         // Merchant houses frame the forecourt without turning it into another
         // empty field. The three-metre arcade behind the columns remains open.
-        for (index, z) in [126.0, 149.0, 172.0, 195.0].into_iter().enumerate() {
+        for (index, z) in [117.0, 142.0].into_iter().enumerate() {
             let seed = city_hash(side as i32 * 83, index as i32, 0xf041);
             let bend = [-1.2, 0.8, 1.3, -0.5][index];
             spawn_building(
@@ -1135,7 +1137,7 @@ fn build_dense_cathedral_quarter(
                 meshes,
                 materials,
                 collision_world,
-                Vec2::new(side * (91.0 + bend), z),
+                Vec2::new(side * (51.0 + bend), z),
                 Vec2::new(22.0, 19.0),
                 17.0 + (seed % 700) as f32 / 100.0,
                 -side,
@@ -1177,24 +1179,24 @@ fn build_grand_forecourt(
         commands,
         meshes,
         &materials.forecourt_paving,
-        Vec3::new(0.0, 0.045, 157.0),
+        Vec3::new(0.0, 0.045, GRAND_FORECOURT_CENTER_Z),
         Vec3::new(GRAND_FORECOURT_WIDTH, 0.08, GRAND_FORECOURT_DEPTH),
     );
     spawn_box(
         commands,
         meshes,
         &materials.cathedral_approach,
-        Vec3::new(0.0, 0.092, 365.0),
+        Vec3::new(0.0, 0.092, GRAND_APPROACH_CENTER_Z),
         Vec3::new(GRAND_APPROACH_WIDTH, 0.05, GRAND_APPROACH_LENGTH),
     );
 
     for side in [-1.0, 1.0] {
-        for z in (116..=202).step_by(12) {
+        for z in (111..=153).step_by(6) {
             spawn_cylinder(
                 commands,
                 meshes,
                 &materials.pale_stone,
-                Vec3::new(side * 68.0, 4.2, z as f32),
+                Vec3::new(side * 34.0, 4.2, z as f32),
                 0.75,
                 8.4,
             );
@@ -1202,7 +1204,7 @@ fn build_grand_forecourt(
                 commands,
                 meshes,
                 &materials.pale_stone,
-                Vec3::new(side * 68.0, 8.5, z as f32),
+                Vec3::new(side * 34.0, 8.5, z as f32),
                 Vec3::new(2.1, 0.45, 2.1),
             );
         }
@@ -1210,15 +1212,15 @@ fn build_grand_forecourt(
             commands,
             meshes,
             &materials.pale_stone,
-            Vec3::new(side * 68.0, 9.0, 159.0),
-            Vec3::new(2.0, 0.65, 100.0),
+            Vec3::new(side * 34.0, 9.0, 132.0),
+            Vec3::new(2.0, 0.65, 50.0),
         );
         spawn_fountain(
             commands,
             meshes,
             materials,
             collision_world,
-            Vec3::new(side * 35.0, 0.0, 158.0),
+            Vec3::new(side * 17.5, 0.0, 131.5),
             1.15,
         );
     }
@@ -1836,6 +1838,19 @@ mod tests {
                 assert!(is_reserved_block(Vec2::new(x, z)));
             }
         }
+    }
+
+    #[test]
+    fn grand_forecourt_is_compact_and_still_meets_the_cathedral_approach() {
+        assert_eq!(GRAND_FORECOURT_WIDTH, 77.0);
+        assert_eq!(GRAND_FORECOURT_DEPTH, 52.0);
+
+        let forecourt_near_edge = GRAND_FORECOURT_CENTER_Z - GRAND_FORECOURT_DEPTH * 0.5;
+        let forecourt_far_edge = GRAND_FORECOURT_CENTER_Z + GRAND_FORECOURT_DEPTH * 0.5;
+        let approach_near_edge = GRAND_APPROACH_CENTER_Z - GRAND_APPROACH_LENGTH * 0.5;
+
+        assert_eq!(forecourt_near_edge, 105.0);
+        assert_eq!(approach_near_edge - forecourt_far_edge, 6.0);
     }
 
     #[test]
