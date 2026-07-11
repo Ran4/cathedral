@@ -10,12 +10,12 @@ use bevy::{asset::RenderAssetUsages, mesh::PrimitiveTopology, prelude::*};
 
 use crate::controller::CollisionWorld;
 
-pub const DAWN_BEARER_POSITION: Vec3 = Vec3::new(-72.0, 0.0, 190.0);
-pub const SERAPH_POSITION: Vec3 = Vec3::new(72.0, 0.0, 190.0);
-pub const MONUMENT_HEIGHT: f32 = 30.0;
+const DAWN_BEARER_POSITION: Vec3 = Vec3::new(-72.0, 0.0, 190.0);
+const SERAPH_POSITION: Vec3 = Vec3::new(72.0, 0.0, 190.0);
+const MONUMENT_HEIGHT: f32 = 30.0;
 const MONUMENT_WIDTH: f32 = 10.0;
 
-pub fn build_approach_monuments(
+pub(super) fn build_approach_monuments(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,

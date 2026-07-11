@@ -3,13 +3,16 @@
 //! The city covers roughly 1.2 by 1.0 kilometres. Large, repeated forms create
 //! the distant skyline while street-facing details keep the walkable scale rich.
 
+mod monuments;
+
 use bevy::{math::Affine2, prelude::*};
 
 use crate::{
     controller::CollisionWorld,
     materials::{FLOOR_TEXTURE_SPAN_METERS, load_repeating_texture},
-    monuments::build_approach_monuments,
 };
+
+use monuments::build_approach_monuments;
 
 const CITY_MIN_X: f32 = -520.0;
 const CITY_MAX_X: f32 = 520.0;
