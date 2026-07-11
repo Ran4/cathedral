@@ -238,6 +238,11 @@ smart_actors: (
 )
 ```
 
+Pocket TTS does not expose a native speaking-rate control. Bevy therefore
+applies a fixed `1.05` playback multiplier only to local streaming audio. This
+slightly shortens the line and raises its pitch; cloud WAV playback remains at
+its provider-generated speed.
+
 If the configured mode is unavailable, prefer another free local backend only
 when explicitly configured to do so; otherwise start in `off` and explain the
 unavailable selection in the HUD. Never silently select cloud because an API

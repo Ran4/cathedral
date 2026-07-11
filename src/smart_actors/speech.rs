@@ -32,6 +32,7 @@ const TTS_WAIT_SECONDS: f64 = 600.0;
 const AUDIO_SINK_START_TIMEOUT_SECONDS: f64 = 2.0;
 const AUDIO_PLAYBACK_TIMEOUT_SECONDS: f64 = 60.0;
 const MICROPHONE_SUSPEND_TIMEOUT_SECONDS: f64 = 2.0;
+const LOCAL_TTS_PLAYBACK_SPEED: f32 = 1.05;
 // Rodio applies inverse-square distance attenuation to spatial sources. Our
 // own speech_gain curve already defines the complete 3-20 m loudness policy,
 // so fit the whole hearing radius inside Rodio's unattenuated unit sphere and
@@ -760,7 +761,7 @@ pub fn start_ready_audio(
                     Name::new("NPC streaming spatial voice"),
                     NpcVoice,
                     AudioPlayer(source),
-                    settings,
+                    settings.with_speed(LOCAL_TTS_PLAYBACK_SPEED),
                     Transform::from_translation(position),
                 ))
                 .id()
