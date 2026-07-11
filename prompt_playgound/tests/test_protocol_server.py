@@ -135,7 +135,14 @@ class HandshakeAndStateTests(ServerTestCase):
         ready = self.messages("ready")[0]
         self.assertEqual(ready["event_seq"], 1)
         self.assertEqual(
-            ready["payload"]["capabilities"], {"llm": False, "stt": False, "tts": False}
+            ready["payload"]["capabilities"],
+            {
+                "llm": False,
+                "stt": False,
+                "stt_cloud": False,
+                "stt_local": False,
+                "tts": False,
+            },
         )
         snapshot = ready["payload"]["snapshot"]
         self.assertEqual(snapshot["player_id"], "player")
@@ -152,7 +159,16 @@ class HandshakeAndStateTests(ServerTestCase):
         self.handshake(server)
 
         capabilities = self.messages("ready")[0]["payload"]["capabilities"]
-        self.assertEqual(capabilities, {"llm": False, "stt": True, "tts": False})
+        self.assertEqual(
+            capabilities,
+            {
+                "llm": False,
+                "stt": True,
+                "stt_cloud": False,
+                "stt_local": True,
+                "tts": False,
+            },
+        )
 
     def test_session_mismatch_is_rejected_without_mutation(self) -> None:
         server = self.make_server()

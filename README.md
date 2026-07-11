@@ -54,7 +54,8 @@ persistent process, protocol, world rules, HUD, and interaction paths.
 - `Z` — toggle player transcription between the configured cloud model and
   local `nvidia/canary-qwen-2.5b` in FP16. The first local utterance installs
   the isolated NeMo environment and downloads about 5 GB of model weights;
-  later utterances reuse the GPU-resident model
+  later utterances reuse the GPU-resident model. The bottom-left voice panel
+  shows microphone, download/load, transcription, failure, and ready states
 - Mouse wheel / `1`–`9` — select an inventory item
 - Right click — offer the selected item to the focused actor
 - `Y` / `N` — accept or decline the active incoming offer

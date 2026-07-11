@@ -9,13 +9,13 @@ use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::prelude::*;
 
-use crate::controller::PlayerCamera;
+use crate::{controller::PlayerCamera, fonts::CathedralFonts};
 
 use super::model::{ActorControl, ActorId, ItemId, WorldMirror};
 use super::targeting::ActorTarget;
 
-const NAME_ANCHOR_Y: f32 = 1.24;
-const SPEECH_ANCHOR_Y: f32 = 1.52;
+const NAME_ANCHOR_Y: f32 = 0.84;
+const SPEECH_ANCHOR_Y: f32 = 1.12;
 const OFFER_ANCHOR_Y: f32 = 2.02;
 const OFFER_FAN_SPACING_M: f32 = 0.48;
 const OFFER_BOB_AMPLITUDE_M: f32 = 0.075;
@@ -135,6 +135,7 @@ pub(crate) fn reconcile_actor_views(
     mut commands: Commands,
     mirror: Res<WorldMirror>,
     assets: Res<ActorVisualAssets>,
+    fonts: Option<Res<CathedralFonts>>,
     mut roots: Query<(Entity, &ActorId, &mut Transform), With<ActorView>>,
     mut labels: Query<(Entity, &ActorNameLabel, &mut Text)>,
     mut outfits: Query<(&ActorOutfit, &mut MeshMaterial3d<StandardMaterial>)>,
@@ -152,6 +153,10 @@ pub(crate) fn reconcile_actor_views(
         .map(|actor| (actor.id.clone(), *actor))
         .collect();
 
+    let name_font = fonts
+        .as_deref()
+        .map(CathedralFonts::display)
+        .unwrap_or_default();
     let mut existing_ids = HashSet::new();
     for (entity, actor_id, mut transform) in &mut roots {
         if let Some(actor) = desired_by_id.get(actor_id) {
@@ -168,7 +173,7 @@ pub(crate) fn reconcile_actor_views(
 
     for actor in actor_snapshots {
         if !existing_ids.contains(&actor.id) {
-            spawn_actor(&mut commands, &assets, actor);
+            spawn_actor(&mut commands, &assets, name_font.clone(), actor);
         }
     }
 
@@ -195,6 +200,7 @@ pub(crate) fn reconcile_actor_views(
 fn spawn_actor(
     commands: &mut Commands,
     assets: &ActorVisualAssets,
+    name_font: FontSource,
     actor: &super::model::ActorSnapshot,
 ) {
     let actor_id = actor.id.clone();
@@ -244,6 +250,7 @@ fn spawn_actor(
         ActorNameLabel(actor_id),
         Text::new(actor.name_for_player.clone()),
         TextFont {
+            font: name_font,
             font_size: FontSize::Px(18.0),
             ..default()
         },

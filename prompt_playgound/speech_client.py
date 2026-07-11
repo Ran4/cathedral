@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import subprocess
+import sys
 import threading
 from pathlib import Path
 from typing import Any, Protocol
@@ -153,6 +155,8 @@ class CanaryQwenSpeechBackend:
         *,
         worker_script: Path | None = None,
         uv_binary: str | None = None,
+        python_version: str | None = None,
+        torch_index: str | None = None,
         model: str | None = None,
     ) -> None:
         self.worker_script = (
@@ -165,6 +169,16 @@ class CanaryQwenSpeechBackend:
             or os.environ.get("SMART_ACTORS_UV_BINARY", "").strip()
             or "uv"
         )
+        self.python_version = (
+            python_version
+            or os.environ.get("LOCAL_STT_PYTHON", "").strip()
+            or "3.12"
+        )
+        self.torch_index = (
+            torch_index
+            or os.environ.get("LOCAL_STT_TORCH_INDEX", "").strip()
+            or "https://download.pytorch.org/whl/cu124"
+        )
         self.model = (
             model
             or os.environ.get("LOCAL_STT_MODEL", "").strip()
@@ -173,6 +187,7 @@ class CanaryQwenSpeechBackend:
         self._process: subprocess.Popen[str] | None = None
         self._next_request = 0
         self._lock = threading.Lock()
+        self._statuses: queue.Queue[tuple[str, str]] = queue.Queue(maxsize=1)
 
     @property
     def stt_available(self) -> bool:
@@ -184,6 +199,9 @@ class CanaryQwenSpeechBackend:
             raise ValueError("transcription input must be an existing WAV file")
         with self._lock:
             process = self._ensure_process()
+            self._publish_status(
+                "transcribing", "Transcribing with local Canary-Qwen FP16"
+            )
             self._next_request += 1
             request_id = self._next_request
             assert process.stdin is not None
@@ -237,9 +255,21 @@ class CanaryQwenSpeechBackend:
             raise SpeechUnavailable("local Canary-Qwen worker script is unavailable")
         try:
             process = subprocess.Popen(
-                [self.uv_binary, "run", "--script", str(self.worker_script)],
+                [
+                    self.uv_binary,
+                    "run",
+                    "--python",
+                    self.python_version,
+                    "--resolution",
+                    "highest",
+                    "--index",
+                    self.torch_index,
+                    "--script",
+                    str(self.worker_script),
+                ],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 bufsize=1,
                 env={**os.environ, "LOCAL_STT_MODEL": self.model},
@@ -249,6 +279,16 @@ class CanaryQwenSpeechBackend:
                 "could not start local Canary-Qwen; make sure uv is available"
             ) from error
         self._process = process
+        assert process.stderr is not None
+        threading.Thread(
+            target=self._forward_stderr,
+            args=(process.stderr,),
+            name="canary-qwen-log-reader",
+            daemon=True,
+        ).start()
+        self._publish_status(
+            "loading", "Preparing local dependencies and Canary-Qwen FP16"
+        )
         try:
             response = self._read_message(process)
         except SpeechUnavailable:
@@ -262,6 +302,7 @@ class CanaryQwenSpeechBackend:
                     or "local Canary-Qwen failed to load; check CUDA and available VRAM"
                 )
             )
+        self._publish_status("ready", "Local Canary-Qwen FP16 is loaded")
         return process
 
     @staticmethod
@@ -287,6 +328,33 @@ class CanaryQwenSpeechBackend:
             self._process = None
         if process.poll() is None:
             process.terminate()
+
+    def drain_status(self) -> list[tuple[str, str]]:
+        statuses = []
+        while True:
+            try:
+                statuses.append(self._statuses.get_nowait())
+            except queue.Empty:
+                return statuses
+
+    def _publish_status(self, state: str, message: str) -> None:
+        while True:
+            try:
+                self._statuses.get_nowait()
+            except queue.Empty:
+                break
+        try:
+            self._statuses.put_nowait((state, message[:160]))
+        except queue.Full:
+            pass
+
+    def _forward_stderr(self, stderr: Any) -> None:
+        for line in stderr:
+            sys.stderr.write(line)
+            sys.stderr.flush()
+            detail = " ".join(line.strip().split())
+            if detail.startswith(("Downloading ", "Building ", "Installed ")):
+                self._publish_status("loading", detail)
 
 
 _backend: SpeechBackend | None = None

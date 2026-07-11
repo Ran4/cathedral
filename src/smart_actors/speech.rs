@@ -13,7 +13,7 @@ use bevy::{
 };
 use crossbeam_channel::{Receiver, TryRecvError, bounded};
 
-use crate::{controller::PlayerController, smart_actors::HEARING_RADIUS_M};
+use crate::{controller::PlayerController, fonts::CathedralFonts, smart_actors::HEARING_RADIUS_M};
 
 use super::{
     hud::SmartActorHudState,
@@ -141,8 +141,13 @@ pub fn receive_speech_events(
     mut messages: MessageReader<PresentSpeech>,
     mut state: ResMut<SpeechPresentationState>,
     mut hud: ResMut<SmartActorHudState>,
+    fonts: Option<Res<CathedralFonts>>,
 ) {
     let now = time.elapsed_secs_f64();
+    let speech_font = fonts
+        .as_deref()
+        .map(CathedralFonts::body)
+        .unwrap_or_default();
     for message in messages.read() {
         if !state.observe_speech_sequence(message.event_seq) {
             continue;
@@ -176,6 +181,7 @@ pub fn receive_speech_events(
             message.speaker_position,
             text,
             now + f64::from(duration),
+            speech_font.clone(),
         );
         if message.expect_audio {
             state.audio_order.push_back(AudioExpectation {
@@ -194,8 +200,9 @@ fn spawn_speech_bubble(
     speaker: Vec3,
     text: &str,
     expires_at: f64,
+    font: FontSource,
 ) {
-    let world_position = speaker + Vec3::Y * 1.75;
+    let world_position = speaker + Vec3::Y * 1.35;
     // `Commands::spawn` reserves the entity immediately, so even several
     // messages read in this frame can attach to the same speaker stack.
     let stack_entity = if let Some(entity) = bubble_stacks.get(speaker_id).copied() {
@@ -229,6 +236,7 @@ fn spawn_speech_bubble(
         SpeechBubble { expires_at },
         Text::new(wrap_dialogue(text, 42)),
         TextFont {
+            font,
             font_size: FontSize::Px(24.0),
             ..default()
         },
@@ -695,6 +703,7 @@ mod tests {
                 Vec3::ZERO,
                 "Readable dialogue",
                 10.0,
+                FontSource::default(),
             );
         }
 

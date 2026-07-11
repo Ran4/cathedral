@@ -79,6 +79,7 @@ class FakeCanaryWorker:
                 ]
             )
         )
+        self.stderr = io.StringIO()
         self.terminated = False
 
     def poll(self):
@@ -130,6 +131,20 @@ class SpeechAdapterTests(unittest.TestCase):
             backend.close()
 
         popen.assert_called_once()
+        self.assertEqual(
+            popen.call_args.args[0][:9],
+            [
+                "test-uv",
+                "run",
+                "--python",
+                "3.12",
+                "--resolution",
+                "highest",
+                "--index",
+                "https://download.pytorch.org/whl/cu124",
+                "--script",
+            ],
+        )
         requests = [json.loads(line) for line in worker.stdin.getvalue().splitlines()]
         self.assertEqual([request["request_id"] for request in requests], [1, 2])
         self.assertTrue(worker.terminated)

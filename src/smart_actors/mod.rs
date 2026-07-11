@@ -106,6 +106,7 @@ impl Plugin for SmartActorsPlugin {
             let mut hud = hud::SmartActorHudState::default();
             hud.connection = hud::ConnectionUiState::Disabled;
             hud.connection_detail = "Disabled in config.ron".into();
+            hud.set_transcription_capabilities(false, false);
             app.insert_resource(hud)
                 .add_systems(Update, hud::update_smart_actor_hud);
             return;
@@ -232,6 +233,8 @@ pub struct InjectPlayerTranscript {
 struct CapabilitiesWire {
     llm: bool,
     stt: bool,
+    stt_cloud: bool,
+    stt_local: bool,
     tts: bool,
 }
 
@@ -294,6 +297,7 @@ struct StatusWire {
     state: String,
     actor_id: Option<model::ActorId>,
     message: Option<String>,
+    backend: Option<String>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -634,6 +638,7 @@ fn apply_ready_capabilities(
         hud.microphone_unavailable = true;
     }
     hud.listening = false;
+    hud.set_transcription_capabilities(capabilities.stt_cloud, capabilities.stt_local);
     hud.connection_detail =
         connection_detail_for_capabilities(capabilities.llm, capabilities.stt, capabilities.tts);
 }
@@ -651,6 +656,7 @@ fn mark_handshake_unrecoverable(
     hud.microphone_available = false;
     hud.microphone_unavailable = true;
     hud.listening = false;
+    hud.set_transcription_capabilities(false, false);
     hud.toast("Actor handshake could not recover");
 }
 
@@ -737,6 +743,7 @@ fn apply_status(
     status.subsystem = truncate_owned(status.subsystem, 64);
     status.state = truncate_owned(status.state, 64);
     status.message = status.message.map(|message| truncate_owned(message, 300));
+    status.backend = status.backend.map(|backend| truncate_owned(backend, 16));
     let actor = status
         .actor_id
         .as_ref()
@@ -752,6 +759,11 @@ fn apply_status(
             .unwrap_or_else(|| format!("{}: {state}", status.subsystem)),
     };
     hud.connection_detail = truncate_owned(std::mem::take(&mut hud.connection_detail), 300);
+    if status.subsystem == "stt"
+        && let Some(backend) = status.backend.as_deref()
+    {
+        hud.apply_transcription_status(backend, &status.state, status.message.as_deref());
+    }
     if matches!(status.state.as_str(), "degraded" | "unavailable")
         && let Some(message) = status.message
     {
@@ -1078,7 +1090,13 @@ mod tests {
     #[test]
     fn capabilities_survive_a_malformed_initial_ready_snapshot() {
         let payload = serde_json::json!({
-            "capabilities": {"llm": true, "stt": true, "tts": false},
+            "capabilities": {
+                "llm": true,
+                "stt": true,
+                "stt_cloud": true,
+                "stt_local": true,
+                "tts": false
+            },
             "snapshot": {"world_revision": "not-a-number"}
         });
         assert!(serde_json::from_value::<ReadyWire>(payload.clone()).is_err());

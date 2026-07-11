@@ -662,6 +662,13 @@ show `MIC PAUSED — SYNCING` rather than falsely presenting it as toggled off.
 Empty/silent or failed transcription produces no `say` action and shows a short
 status message.
 
+A compact bottom-left voice panel remains visible throughout startup. It names
+the selected backend and microphone state, shows the current local dependency
+download when available, and animates an indeterminate loader during setup,
+model loading, and transcription. A solid green bar means the selected backend
+is ready; failed and unavailable states remain visible rather than expiring as
+a toast.
+
 The temporary utterance WAV is deleted after transcription finishes or the
 request is rejected. Pending and completed duplicate requests also clean up
 their unconsumed WAVs without deleting the active request's file. Ambient audio
@@ -698,6 +705,8 @@ Configuration belongs in `prompt_playgound/.example.env`:
 OPENAI_API_KEY=
 STT_MODEL=gpt-4o-transcribe
 LOCAL_STT_MODEL=nvidia/canary-qwen-2.5b
+LOCAL_STT_PYTHON=3.12
+LOCAL_STT_TORCH_INDEX=https://download.pytorch.org/whl/cu124
 TTS_MODEL=tts-1
 TTS_VOICE_SVEN=
 TTS_VOICE_CONNY=

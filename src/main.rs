@@ -1,5 +1,6 @@
 mod city;
 mod controller;
+mod fonts;
 mod materials;
 mod scene;
 mod screenshot;
@@ -12,6 +13,7 @@ use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, MonitorSelection, WindowMode, WindowResolution};
 use city::CityPlugin;
 use controller::ControllerPlugin;
+use fonts::CathedralFontsPlugin;
 use scene::CathedralPlugin;
 use screenshot::CathedralScreenshotPlugin;
 use serde::Deserialize;
@@ -68,6 +70,7 @@ fn main() {
             ..default()
         }))
         .add_plugins((
+            CathedralFontsPlugin,
             ControllerPlugin,
             CathedralPlugin,
             CityPlugin,

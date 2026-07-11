@@ -2,8 +2,11 @@
 # /// script
 # requires-python = ">=3.12,<3.13"
 # dependencies = [
+#   "llvmlite==0.43.0",
 #   "nemo_toolkit[asr]==2.7.3",
-#   "torch>=2.6",
+#   "numba==0.60.0",
+#   "numpy==1.26.4",
+#   "torch==2.6.0",
 # ]
 # ///
 """Private persistent FP16 Canary-Qwen transcription worker.

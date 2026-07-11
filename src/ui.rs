@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::controller::PlayerController;
+use crate::{controller::PlayerController, fonts::CathedralFonts};
 
 const PANEL_BACKGROUND: Color = Color::srgba(0.025, 0.03, 0.045, 0.78);
 const TEXT_PRIMARY: Color = Color::srgb(0.94, 0.92, 0.84);
@@ -22,10 +22,10 @@ impl Plugin for HudPlugin {
 #[derive(Component)]
 pub struct FlightStatusText;
 
-fn spawn_hud(mut commands: Commands) {
+fn spawn_hud(mut commands: Commands, fonts: Res<CathedralFonts>) {
     spawn_crosshair(&mut commands);
-    spawn_controls(&mut commands);
-    spawn_flight_status(&mut commands);
+    spawn_controls(&mut commands, &fonts);
+    spawn_flight_status(&mut commands, &fonts);
 }
 
 fn spawn_crosshair(commands: &mut Commands) {
@@ -77,7 +77,7 @@ fn spawn_crosshair(commands: &mut Commands) {
         });
 }
 
-fn spawn_controls(commands: &mut Commands) {
+fn spawn_controls(commands: &mut Commands, fonts: &CathedralFonts) {
     commands
         .spawn((
             Node {
@@ -96,6 +96,7 @@ fn spawn_controls(commands: &mut Commands) {
             panel.spawn((
                 Text::new("THE CATHEDRAL OF IMPOSSIBLE LIGHT"),
                 TextFont {
+                    font: fonts.display(),
                     font_size: FontSize::Px(18.0),
                     ..default()
                 },
@@ -105,6 +106,7 @@ fn spawn_controls(commands: &mut Commands) {
             panel.spawn((
                 Text::new("WASD  move   ·   SHIFT  run   ·   SPACE  jump"),
                 TextFont {
+                    font: fonts.body(),
                     font_size: FontSize::Px(12.5),
                     ..default()
                 },
@@ -114,6 +116,7 @@ fn spawn_controls(commands: &mut Commands) {
             panel.spawn((
                 Text::new("F  toggle flight   ·   ESC  release cursor"),
                 TextFont {
+                    font: fonts.body(),
                     font_size: FontSize::Px(12.5),
                     ..default()
                 },
@@ -122,7 +125,7 @@ fn spawn_controls(commands: &mut Commands) {
         });
 }
 
-fn spawn_flight_status(commands: &mut Commands) {
+fn spawn_flight_status(commands: &mut Commands, fonts: &CathedralFonts) {
     commands
         .spawn((
             Node {
@@ -143,6 +146,7 @@ fn spawn_flight_status(commands: &mut Commands) {
             panel.spawn((
                 Text::new("MOVEMENT"),
                 TextFont {
+                    font: fonts.display(),
                     font_size: FontSize::Px(10.0),
                     ..default()
                 },
@@ -153,6 +157,7 @@ fn spawn_flight_status(commands: &mut Commands) {
                 FlightStatusText,
                 Text::new("WALK"),
                 TextFont {
+                    font: fonts.display(),
                     font_size: FontSize::Px(19.0),
                     ..default()
                 },

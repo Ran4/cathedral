@@ -447,6 +447,7 @@ class SmartActorServer:
             return
         for status in self.scheduler.poll(self._clock()):
             self._send("status", status.to_payload())
+        self._poll_local_stt_status()
         self._poll_transcriptions()
         self._poll_tts()
         self._flush_domain_events()
@@ -526,18 +527,19 @@ class SmartActorServer:
         self.world.update_positions(spatial_seq, [(self.player_id, position)])
         self.session_id = envelope.session_id
         self.handshake_complete = True
+        cloud_stt = bool(self.speech_backend.stt_available)
+        local_stt = bool(
+            self.local_stt_backend is not None
+            and self.local_stt_backend.stt_available
+        )
         self._send(
             "ready",
             {
                 "capabilities": {
                     "llm": self.llm_available,
-                    "stt": bool(
-                        self.speech_backend.stt_available
-                        or (
-                            self.local_stt_backend is not None
-                            and self.local_stt_backend.stt_available
-                        )
-                    ),
+                    "stt": cloud_stt or local_stt,
+                    "stt_cloud": cloud_stt,
+                    "stt_local": local_stt,
                     "tts": bool(self.speech_backend.tts_available),
                 },
                 "snapshot": self.world.public_snapshot(self.player_id),
@@ -805,9 +807,10 @@ class SmartActorServer:
                 "stt",
                 "loading",
                 message="Loading local Canary-Qwen FP16; first use may download about 5 GB",
+                backend="local",
             )
         else:
-            self._send_status("stt", "transcribing")
+            self._send_status("stt", "transcribing", backend="cloud")
 
     def _transcribe_task(self, task: _TranscriptionTask) -> str:
         backend = (
@@ -818,6 +821,16 @@ class SmartActorServer:
         if backend is None:
             raise SpeechUnavailable(f"{task.backend} transcription is unavailable")
         return backend.transcribe(task.wav_path)
+
+    def _poll_local_stt_status(self) -> None:
+        backend = self.local_stt_backend
+        if backend is None:
+            return
+        drain_status = getattr(backend, "drain_status", None)
+        if not callable(drain_status):
+            return
+        for state, message in drain_status():
+            self._send_status("stt", state, message=message, backend="local")
 
     def _poll_transcriptions(self) -> None:
         for result in self._stt_worker.drain():
@@ -848,7 +861,9 @@ class SmartActorServer:
                         "error": error_message,
                     },
                 )
-                self._send_status("stt", "degraded", message=error_message)
+                self._send_status(
+                    "stt", "degraded", message=error_message, backend=task.backend
+                )
                 self._finish_request(
                     task.request_id,
                     False,
@@ -869,7 +884,12 @@ class SmartActorServer:
                         "error": "no speech detected",
                     },
                 )
-                self._send_status("stt", "idle", message="no speech detected")
+                self._send_status(
+                    "stt",
+                    "idle",
+                    message="no speech detected",
+                    backend=task.backend,
+                )
                 self._finish_request(
                     task.request_id, False, "empty_transcription", "no speech detected"
                 )
@@ -883,7 +903,7 @@ class SmartActorServer:
                         "error": "transcription exceeds the 500 character limit",
                     },
                 )
-                self._send_status("stt", "idle")
+                self._send_status("stt", "idle", backend=task.backend)
                 self._finish_request(
                     task.request_id,
                     False,
@@ -909,7 +929,7 @@ class SmartActorServer:
                         "error": "transcription contains unsupported characters",
                     },
                 )
-                self._send_status("stt", "idle")
+                self._send_status("stt", "idle", backend=task.backend)
                 self._finish_request(
                     task.request_id,
                     False,
@@ -941,7 +961,7 @@ class SmartActorServer:
             except Exception as error:
                 self._flush_domain_events()
                 self._send_snapshot_if_changed()
-                self._send_status("stt", "idle")
+                self._send_status("stt", "idle", backend=task.backend)
                 self._finish_request(
                     task.request_id,
                     False,
@@ -951,7 +971,7 @@ class SmartActorServer:
                 continue
             self._flush_domain_events()
             self._send_snapshot_if_changed()
-            self._send_status("stt", "idle")
+            self._send_status("stt", "idle", backend=task.backend)
             self._finish_request(task.request_id, True, "ok", line)
 
     def _synthesize_task(self, task: _TtsTask) -> None:
@@ -1104,12 +1124,15 @@ class SmartActorServer:
         *,
         actor_id: CharIdStr | None = None,
         message: str | None = None,
+        backend: str | None = None,
     ) -> None:
         payload: dict[str, object] = {"subsystem": subsystem, "state": state}
         if actor_id is not None:
             payload["actor_id"] = str(actor_id)
         if message is not None:
             payload["message"] = message[:300]
+        if backend is not None:
+            payload["backend"] = backend
         self._send("status", payload)
 
     def _send(self, message_type: str, payload: Mapping[str, object]) -> None:
