@@ -234,17 +234,17 @@ fn spawn_speech_bubble(
     commands.entity(stack_entity).with_child((
         Name::new("NPC speech bubble"),
         SpeechBubble { expires_at },
-        Text::new(wrap_dialogue(text, 42)),
+        Text::new(wrap_dialogue(text, 53)),
         TextFont {
             font,
-            font_size: FontSize::Px(24.0),
+            font_size: FontSize::Px(28.8),
             ..default()
         },
         TextColor(Color::srgb(1.0, 0.97, 0.87)),
         TextShadow::default(),
         TextLayout::justify(Justify::Center),
         Node {
-            max_width: px(420),
+            max_width: px(525),
             padding: UiRect::axes(px(10), px(6)),
             border_radius: BorderRadius::all(px(6)),
             ..default()
@@ -723,7 +723,7 @@ mod tests {
                 .expect("speech bubble exists");
             assert_eq!(background.0, DIALOGUE_BACKDROP);
             assert_eq!(node.position_type, PositionType::Relative);
-            assert_eq!(node.max_width, px(420));
+            assert_eq!(node.max_width, px(525));
             parent.parent()
         };
         let stack_node = app

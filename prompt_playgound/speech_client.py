@@ -264,6 +264,8 @@ class CanaryQwenSpeechBackend:
                     "highest",
                     "--index",
                     self.torch_index,
+                    "--index-strategy",
+                    "unsafe-best-match",
                     "--script",
                     str(self.worker_script),
                 ],

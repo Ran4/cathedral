@@ -132,7 +132,7 @@ class SpeechAdapterTests(unittest.TestCase):
 
         popen.assert_called_once()
         self.assertEqual(
-            popen.call_args.args[0][:9],
+            popen.call_args.args[0][:11],
             [
                 "test-uv",
                 "run",
@@ -142,6 +142,8 @@ class SpeechAdapterTests(unittest.TestCase):
                 "highest",
                 "--index",
                 "https://download.pytorch.org/whl/cu124",
+                "--index-strategy",
+                "unsafe-best-match",
                 "--script",
             ],
         )

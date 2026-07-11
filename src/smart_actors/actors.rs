@@ -14,8 +14,8 @@ use crate::{controller::PlayerCamera, fonts::CathedralFonts};
 use super::model::{ActorControl, ActorId, ItemId, WorldMirror};
 use super::targeting::ActorTarget;
 
-const NAME_ANCHOR_Y: f32 = 0.84;
-const SPEECH_ANCHOR_Y: f32 = 1.12;
+const NAME_ANCHOR_Y: f32 = 0.9;
+const SPEECH_ANCHOR_Y: f32 = 1.05;
 const OFFER_ANCHOR_Y: f32 = 2.02;
 const OFFER_FAN_SPACING_M: f32 = 0.48;
 const OFFER_BOB_AMPLITUDE_M: f32 = 0.075;
