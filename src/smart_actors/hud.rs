@@ -15,6 +15,8 @@ const DEGRADED: Color = Color::srgb(0.97, 0.74, 0.31);
 const OFFLINE: Color = Color::srgb(0.96, 0.40, 0.36);
 const LOADER_TRACK: Color = Color::srgba(0.24, 0.25, 0.27, 0.92);
 const PLAYER_TRANSCRIPT_LIFETIME: Duration = Duration::from_secs(8);
+const VOICE_PANEL_FONT_SIZE: f32 = 15.6;
+const VOICE_PANEL_CONTROLS_FONT_SIZE: f32 = 11.7;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum VoiceModelUiState {
@@ -292,6 +294,8 @@ pub(super) struct PlayerTranscriptText;
 #[derive(Component)]
 pub(super) struct VoicePanelText;
 #[derive(Component)]
+pub(super) struct VoicePanelControlsText;
+#[derive(Component)]
 pub(super) struct VoiceLoaderFill;
 #[derive(Component)]
 pub(super) struct VoiceStatusPanel;
@@ -452,7 +456,7 @@ fn spawn_voice_status_panel(
                 Text::new("VOICE INPUT\nMODEL   CLOUD\nMIC     CHECKING\nSTATUS  CHECKING"),
                 TextFont {
                     font: body_font,
-                    font_size: FontSize::Px(12.0),
+                    font_size: FontSize::Px(VOICE_PANEL_FONT_SIZE),
                     ..default()
                 },
                 TextColor(DEGRADED),
@@ -484,10 +488,11 @@ fn spawn_voice_status_panel(
                     BackgroundColor(DEGRADED),
                 ));
             panel.spawn((
+                VoicePanelControlsText,
                 Text::new("[V] MICROPHONE     [Z] TRANSCRIPTION MODEL"),
                 TextFont {
                     font: title_font,
-                    font_size: FontSize::Px(9.0),
+                    font_size: FontSize::Px(VOICE_PANEL_CONTROLS_FONT_SIZE),
                     ..default()
                 },
                 TextColor(MUTED),
@@ -870,6 +875,22 @@ mod tests {
         assert_eq!(panel.bottom, px(18));
         assert_eq!(panel.width, px(400));
         assert_eq!(panel.min_height, px(100));
+
+        let mut status_font_query = app
+            .world_mut()
+            .query_filtered::<&TextFont, With<VoicePanelText>>();
+        let status_font = status_font_query
+            .single(app.world())
+            .expect("voice status text exists");
+        assert_eq!(status_font.font_size, FontSize::Px(15.6));
+
+        let mut controls_font_query = app
+            .world_mut()
+            .query_filtered::<&TextFont, With<VoicePanelControlsText>>();
+        let controls_font = controls_font_query
+            .single(app.world())
+            .expect("voice controls text exists");
+        assert_eq!(controls_font.font_size, FontSize::Px(11.7));
 
         let mut loader_query = app
             .world_mut()

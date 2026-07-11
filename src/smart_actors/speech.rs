@@ -234,7 +234,7 @@ fn spawn_speech_bubble(
     commands.entity(stack_entity).with_child((
         Name::new("NPC speech bubble"),
         SpeechBubble { expires_at },
-        Text::new(wrap_dialogue(text, 53)),
+        Text::new(text),
         TextFont {
             font,
             font_size: FontSize::Px(28.8),
@@ -244,7 +244,7 @@ fn spawn_speech_bubble(
         TextShadow::default(),
         TextLayout::justify(Justify::Center),
         Node {
-            max_width: px(525),
+            max_width: px(600),
             padding: UiRect::axes(px(10), px(6)),
             border_radius: BorderRadius::all(px(6)),
             ..default()
@@ -638,24 +638,6 @@ fn valid_wav(bytes: &[u8]) -> bool {
         && bytes.get(8..12) == Some(b"WAVE")
 }
 
-fn wrap_dialogue(text: &str, width: usize) -> String {
-    let mut output = String::with_capacity(text.len());
-    let mut line_len = 0;
-    for word in text.split_whitespace() {
-        let word_len = word.chars().count();
-        if line_len > 0 && line_len + 1 + word_len > width {
-            output.push('\n');
-            line_len = 0;
-        } else if line_len > 0 {
-            output.push(' ');
-            line_len += 1;
-        }
-        output.push_str(word);
-        line_len += word_len;
-    }
-    output
-}
-
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
@@ -695,13 +677,15 @@ mod tests {
 
     #[test]
     fn projected_dialogue_uses_a_padded_neutral_text_backdrop() {
+        const DIALOGUE: &str = "I have no phone, stranger—only a smith's hands and an empty purse.";
+
         fn spawn_test_bubble(mut commands: Commands, mut state: ResMut<SpeechPresentationState>) {
             spawn_speech_bubble(
                 &mut commands,
                 &mut state.bubble_stacks,
                 &ActorId("speaker".into()),
                 Vec3::ZERO,
-                "Readable dialogue",
+                DIALOGUE,
                 10.0,
                 FontSource::default(),
             );
@@ -714,16 +698,17 @@ mod tests {
 
         let stack_entity = {
             let mut query = app.world_mut().query_filtered::<
-                (&BackgroundColor, &TextShadow, &Node, &ChildOf),
+                (&Text, &BackgroundColor, &TextShadow, &Node, &ChildOf),
                 With<SpeechBubble>,
             >();
-            let (background, _shadow, node, parent) = query
+            let (text, background, _shadow, node, parent) = query
                 .iter(app.world())
                 .next()
                 .expect("speech bubble exists");
+            assert_eq!(text.0, DIALOGUE, "wrapping must not inject hard newlines");
             assert_eq!(background.0, DIALOGUE_BACKDROP);
             assert_eq!(node.position_type, PositionType::Relative);
-            assert_eq!(node.max_width, px(525));
+            assert_eq!(node.max_width, px(600));
             parent.parent()
         };
         let stack_node = app
@@ -917,12 +902,6 @@ mod tests {
     fn malformed_audio_is_rejected_before_bevy_decodes_it() {
         assert!(!valid_wav(b"not a wave"));
         assert!(valid_wav(b"RIFF\0\0\0\0WAVE"));
-    }
-
-    #[test]
-    fn wrapping_preserves_dialogue_as_plain_text() {
-        assert_eq!(wrap_dialogue("one two three", 7), "one two\nthree");
-        assert_eq!(wrap_dialogue("<b>literal</b>", 42), "<b>literal</b>");
     }
 
     #[test]

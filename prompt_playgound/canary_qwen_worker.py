@@ -46,6 +46,29 @@ def load_model() -> Any:
     return model
 
 
+def load_mono_audio(model: Any, wav_path: Path) -> tuple[Any, Any]:
+    """Load one WAV in the two-dimensional shape SALM expects.
+
+    Lhotse preserves the channel dimension when every cut in a batch is
+    multichannel. A single stereo microphone recording would consequently be
+    passed to SALM as ``(batch, channels, time)`` even though its perception
+    module requires ``(batch, time)``.
+    """
+    import torch
+    from lhotse import CutSet, Recording
+    from lhotse.dataset.collation import collate_audio
+
+    cuts = CutSet([Recording.from_file(wav_path).to_cut()]).resample(
+        model.sampling_rate
+    )
+    with torch.device("cpu"):
+        audio, audio_lens = collate_audio(cuts, mono_downmix=True)
+    return (
+        audio.to(model.device, non_blocking=True),
+        audio_lens.to(model.device, non_blocking=True),
+    )
+
+
 def transcribe(model: Any, wav_path: Path) -> str:
     import torch
 
@@ -53,11 +76,16 @@ def transcribe(model: Any, wav_path: Path) -> str:
         {
             "role": "user",
             "content": f"Transcribe the following: {model.audio_locator_tag}",
-            "audio": [str(wav_path)],
         }
     ]
+    audio, audio_lens = load_mono_audio(model, wav_path)
     with redirect_stdout(sys.stderr), torch.inference_mode():
-        answer_ids = model.generate(prompts=[prompt], max_new_tokens=256)
+        answer_ids = model.generate(
+            prompts=[prompt],
+            audios=audio,
+            audio_lens=audio_lens,
+            max_new_tokens=256,
+        )
         return model.tokenizer.ids_to_text(answer_ids[0].cpu())
 
 

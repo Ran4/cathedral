@@ -319,7 +319,9 @@ fn listen_for_utterances(
     };
 
     let spec = hound::WavSpec {
-        channels: config.channels(),
+        // Speech models consume mono waveforms. The input callback downmixes
+        // the device's native channels before samples reach this worker.
+        channels: 1,
         sample_rate: config.sample_rate(),
         bits_per_sample: 32,
         sample_format: hound::SampleFormat::Float,
@@ -341,15 +343,11 @@ fn listen_for_utterances(
         return ListenOutcome::Failed;
     }
 
-    let channels = u64::from(config.channels());
     let sample_rate = u64::from(config.sample_rate());
     let pre_roll_limit = duration_frames(PRE_ROLL, sample_rate)
-        .saturating_mul(channels)
         .try_into()
         .unwrap_or(usize::MAX);
-    let max_samples = sample_rate
-        .saturating_mul(channels)
-        .saturating_mul(u64::from(PLAYER_SPEECH_MAX_SECONDS));
+    let max_samples = sample_rate.saturating_mul(u64::from(PLAYER_SPEECH_MAX_SECONDS));
     let trailing_silence_frames = duration_frames(TRAILING_SILENCE, sample_rate);
     let minimum_voice_frames = duration_frames(MINIMUM_VOICE, sample_rate);
     let mut pre_roll = VecDeque::with_capacity(pre_roll_limit);
@@ -409,7 +407,7 @@ fn listen_for_utterances(
             recv(audio_rx) -> captured => match captured {
                 Ok(samples) => {
                     let levels = AudioLevels::from_samples(&samples);
-                    let frames = (samples.len() as u64) / channels;
+                    let frames = samples.len() as u64;
                     if let Some(active) = recording.as_mut() {
                         let voice = detector.continues_voice(levels);
                         if voice {
@@ -764,15 +762,12 @@ where
     T: SizedSample + Copy,
     f32: FromSample<T>,
 {
+    let channels = usize::from(config.channels);
     device
         .build_input_stream(
             config,
             move |input: &[T], _| {
-                let samples = input
-                    .iter()
-                    .copied()
-                    .map(f32::from_sample)
-                    .collect::<Vec<_>>();
+                let samples = downmix_to_mono(input, channels);
                 let _ = captured.try_send(samples);
             },
             move |error| {
@@ -781,6 +776,20 @@ where
             None,
         )
         .map_err(|error| format!("could not open microphone: {error}"))
+}
+
+fn downmix_to_mono<T>(input: &[T], channels: usize) -> Vec<f32>
+where
+    T: Copy,
+    f32: FromSample<T>,
+{
+    if channels == 0 {
+        return Vec::new();
+    }
+    input
+        .chunks_exact(channels)
+        .map(|frame| frame.iter().copied().map(f32::from_sample).sum::<f32>() / channels as f32)
+        .collect()
 }
 
 fn safe_audio_path(runtime_dir: &Path, basename: &str) -> Option<PathBuf> {
@@ -990,6 +999,15 @@ mod tests {
             samples.into_iter().collect::<Vec<_>>(),
             [2.0, 3.0, 4.0, 5.0]
         );
+    }
+
+    #[test]
+    fn microphone_channels_are_downmixed_to_mono_frames() {
+        assert_eq!(
+            downmix_to_mono(&[0.5_f32, -0.25, 1.0, 0.0], 2),
+            [0.125, 0.5]
+        );
+        assert_eq!(downmix_to_mono(&[0.25_f32, -0.5], 1), [0.25, -0.5]);
     }
 
     #[test]

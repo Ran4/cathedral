@@ -3,14 +3,17 @@ from __future__ import annotations
 import io
 import json
 import os
+import sys
 import tempfile
 import unittest
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from support import MODULE_DIR  # noqa: F401
 
+import canary_qwen_worker
 from speech_client import (
     CanaryQwenSpeechBackend,
     OpenAISpeechBackend,
@@ -150,6 +153,44 @@ class SpeechAdapterTests(unittest.TestCase):
         requests = [json.loads(line) for line in worker.stdin.getvalue().splitlines()]
         self.assertEqual([request["request_id"] for request in requests], [1, 2])
         self.assertTrue(worker.terminated)
+
+    def test_canary_transcription_passes_explicit_mono_audio_to_salm(self) -> None:
+        audio = object()
+        audio_lens = object()
+
+        class FakeAnswer:
+            def cpu(self):
+                return self
+
+        class FakeModel:
+            audio_locator_tag = "<audio>"
+            tokenizer = SimpleNamespace(ids_to_text=lambda _answer: "understood")
+
+            def __init__(self):
+                self.calls = []
+
+            def generate(self, **kwargs):
+                self.calls.append(kwargs)
+                return [FakeAnswer()]
+
+        model = FakeModel()
+        fake_torch = SimpleNamespace(inference_mode=nullcontext)
+        with (
+            patch.dict(sys.modules, {"torch": fake_torch}),
+            patch.object(
+                canary_qwen_worker,
+                "load_mono_audio",
+                return_value=(audio, audio_lens),
+            ) as load_audio,
+        ):
+            text = canary_qwen_worker.transcribe(model, self.wav)
+
+        self.assertEqual(text, "understood")
+        load_audio.assert_called_once_with(model, self.wav)
+        self.assertEqual(len(model.calls), 1)
+        self.assertIs(model.calls[0]["audios"], audio)
+        self.assertIs(model.calls[0]["audio_lens"], audio_lens)
+        self.assertNotIn("audio", model.calls[0]["prompts"][0][0])
 
     def test_synthesis_requests_wav_and_distinct_default_voice(self) -> None:
         client = FakeClient()
