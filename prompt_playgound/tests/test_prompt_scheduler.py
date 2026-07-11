@@ -103,6 +103,60 @@ class PromptTests(unittest.TestCase):
             render_prompt_and_drain(self.world, self.sven)
         self.assertEqual(self.sven.inbox, ["must survive"])
 
+    def test_prompt_distinguishes_hearing_from_a_conversational_turn(self) -> None:
+        rendered = render_prompt(self.world, self.sven)
+        compact = " ".join(rendered.split())
+
+        self.assertIn(
+            "Speech in your history is what you could hear, not necessarily speech "
+            "addressed to you.",
+            compact,
+        )
+        self.assertIn(
+            "whether the speaker is talking to you, to the group, or to somebody "
+            "else",
+            compact,
+        )
+        self.assertIn(
+            "Do not answer merely to announce that you are not the named person.",
+            compact,
+        )
+        self.assertIn(
+            'Questions to "anyone", "everyone", or the group are open to relevant '
+            "answers.",
+            compact,
+        )
+
+    def test_prompt_gives_contrastive_audience_examples_and_general_wait_rule(
+        self,
+    ) -> None:
+        rendered = render_prompt(self.world, self.sven)
+        compact = " ".join(rendered.split())
+
+        self.assertIn(
+            'if Ilse hears "Sven, do you have fish?", Ilse normally uses '
+            "`wait {}` alone.",
+            compact,
+        )
+        self.assertIn(
+            'If Sven hears "Sven, do you have fish?", Sven answers if he can.',
+            compact,
+        )
+        self.assertIn(
+            "If Ilse is alone with the speaker and hears them ask for Sven",
+            compact,
+        )
+        self.assertIn(
+            'After "Does anyone have fish?", answer only if you have a relevant '
+            "answer",
+            compact,
+        )
+        self.assertIn(
+            "nothing useful and socially appropriate for you to do, "
+            "even if you just overheard something new.",
+            compact,
+        )
+
     def test_parser_rejects_non_object_and_trailing_garbage(self) -> None:
         actions, errors = parse_reply(
             'say [1]\nsay {"text":"ok"} garbage\nsay {"text":"# safe"} # comment'

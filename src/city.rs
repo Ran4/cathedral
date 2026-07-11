@@ -8,6 +8,7 @@ use bevy::{math::Affine2, prelude::*};
 use crate::{
     controller::CollisionWorld,
     materials::{FLOOR_TEXTURE_SPAN_METERS, load_repeating_texture},
+    monuments::build_approach_monuments,
 };
 
 const CITY_MIN_X: f32 = -520.0;
@@ -110,6 +111,12 @@ fn build_city(
         &mut commands,
         &city_meshes,
         &city_materials,
+        &mut collision_world,
+    );
+    build_approach_monuments(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
         &mut collision_world,
     );
     build_town_squares(

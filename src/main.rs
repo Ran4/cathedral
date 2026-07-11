@@ -2,6 +2,7 @@ mod city;
 mod controller;
 mod fonts;
 mod materials;
+mod monuments;
 mod scene;
 mod screenshot;
 mod smart_actors;
