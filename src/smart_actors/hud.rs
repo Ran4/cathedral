@@ -6,6 +6,8 @@ use bevy::prelude::*;
 
 use crate::fonts::CathedralFonts;
 
+use super::bridge;
+
 const PANEL: Color = Color::srgba(0.025, 0.03, 0.045, 0.88);
 const CENTERED_TEXT_BACKDROP: Color = Color::srgba(0.10, 0.105, 0.11, 0.80);
 const TEXT: Color = Color::srgb(0.96, 0.94, 0.86);
@@ -119,6 +121,7 @@ pub struct SmartActorHudState {
     pub microphone_enabled: bool,
     pub listening: bool,
     pub transcription_backend: String,
+    pub npc_voice_backend: String,
     cloud_voice: VoiceBackendUi,
     local_voice: VoiceBackendUi,
     voice_loader_phase: f32,
@@ -140,6 +143,7 @@ impl Default for SmartActorHudState {
             microphone_enabled: true,
             listening: false,
             transcription_backend: "CLOUD".into(),
+            npc_voice_backend: "CHECKING".into(),
             cloud_voice: VoiceBackendUi::checking(),
             local_voice: VoiceBackendUi::checking(),
             voice_loader_phase: 0.0,
@@ -208,6 +212,7 @@ impl SmartActorHudState {
         self.listening = false;
         self.cloud_voice = VoiceBackendUi::checking();
         self.local_voice = VoiceBackendUi::checking();
+        self.npc_voice_backend = "OFF".into();
         self.transient = None;
     }
 
@@ -233,6 +238,14 @@ impl SmartActorHudState {
                 state: VoiceModelUiState::Unavailable,
                 detail: "Local transcription worker is unavailable".into(),
             }
+        };
+    }
+
+    pub fn set_npc_voice_backend(&mut self, backend: bridge::TtsBackend) {
+        self.npc_voice_backend = match backend {
+            bridge::TtsBackend::Cloud => "OPENAI".into(),
+            bridge::TtsBackend::Local => "POCKET TTS".into(),
+            bridge::TtsBackend::Off => "OFF".into(),
         };
     }
 
@@ -453,7 +466,9 @@ fn spawn_voice_status_panel(
         .with_children(|panel| {
             panel.spawn((
                 VoicePanelText,
-                Text::new("VOICE INPUT\nMODEL   CLOUD\nMIC     CHECKING\nSTATUS  CHECKING"),
+                Text::new(
+                    "VOICE INPUT\nMODEL   CLOUD\nMIC     CHECKING\nNPC VOICES  CHECKING\nSTATUS  CHECKING",
+                ),
                 TextFont {
                     font: body_font,
                     font_size: FontSize::Px(VOICE_PANEL_FONT_SIZE),
@@ -489,7 +504,7 @@ fn spawn_voice_status_panel(
                 ));
             panel.spawn((
                 VoicePanelControlsText,
-                Text::new("[V] MICROPHONE     [Z] TRANSCRIPTION MODEL"),
+                Text::new("[V] MICROPHONE   [Z] TRANSCRIPTION   [X] NPC VOICES"),
                 TextFont {
                     font: title_font,
                     font_size: FontSize::Px(VOICE_PANEL_CONTROLS_FONT_SIZE),
@@ -650,8 +665,9 @@ pub fn update_smart_actor_hud(
         (false, false, _, _) => "CHECKING",
     };
     let voice_panel_text = format!(
-        "VOICE INPUT\nMODEL   {}\nMIC     {microphone}\nSTATUS  {} — {selected_detail}",
+        "VOICE INPUT\nMODEL   {}\nMIC     {microphone}\nNPC VOICES  {}\nSTATUS  {} — {selected_detail}",
         state.transcription_backend,
+        state.npc_voice_backend,
         selected_state.label(),
     );
     if selected_state.busy() {

@@ -10,5 +10,10 @@
         fake_backend: false,
         uv_binary: "uv",
         server_script: "prompt_playgound/server.py",
+        // NPC voice audio: "local" (streaming Pocket TTS), "cloud" (OpenAI), or "off".
+        tts_backend: "local",
+        // false enables full-duplex capture: NPC audio never pauses the microphone,
+        // and microphone activity never interrupts NPC playback.
+        pause_microphone_during_npc_voice: false,
     ),
 )

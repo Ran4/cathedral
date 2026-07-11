@@ -10,6 +10,8 @@ mod microphone;
 mod speech;
 mod targeting;
 
+use bevy::audio::AddAudioSource;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::transform::TransformSystems;
 use serde::Deserialize;
@@ -31,6 +33,8 @@ pub struct SmartActorsConfig {
     pub fake_backend: bool,
     pub uv_binary: String,
     pub server_script: String,
+    pub tts_backend: String,
+    pub pause_microphone_during_npc_voice: bool,
 }
 
 impl Default for SmartActorsConfig {
@@ -40,6 +44,8 @@ impl Default for SmartActorsConfig {
             fake_backend: false,
             uv_binary: "uv".into(),
             server_script: "prompt_playgound/server.py".into(),
+            tts_backend: "local".into(),
+            pause_microphone_during_npc_voice: true,
         }
     }
 }
@@ -51,7 +57,6 @@ enum SmartActorSet {
     UpdateFocus,
     CollectInput,
     Present,
-    StartAudio,
 }
 
 pub struct SmartActorsPlugin {
@@ -68,6 +73,11 @@ pub struct SmartActorRuntime {
     pub resyncing: bool,
     pub stt_available: bool,
     pub tts_available: bool,
+    pub tts_cloud_available: bool,
+    pub tts_local_available: bool,
+    pub tts_selected: bridge::TtsBackend,
+    tts_selection_pending: Option<(String, bridge::TtsBackend)>,
+    next_tts_request: u64,
     pub fake_backend: bool,
     pub mirror_revision: Option<u64>,
 }
@@ -80,6 +90,11 @@ impl SmartActorRuntime {
             resyncing: false,
             stt_available: false,
             tts_available: false,
+            tts_cloud_available: false,
+            tts_local_available: false,
+            tts_selected: bridge::TtsBackend::Off,
+            tts_selection_pending: None,
+            next_tts_request: 0,
             fake_backend,
             mirror_revision: None,
         }
@@ -98,8 +113,15 @@ impl SmartActorsPlugin {
 
 impl Plugin for SmartActorsPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(self.config.clone())
-            .init_resource::<hud::SmartActorHudState>()
+        app.insert_resource(self.config.clone());
+        if app.is_plugin_added::<bevy::audio::AudioPlugin>() {
+            app.add_audio_source::<speech::StreamingPcmSource>();
+        } else {
+            // Headless tests have no audio output, but still need the asset
+            // storage used by the presentation systems.
+            app.init_asset::<speech::StreamingPcmSource>();
+        }
+        app.init_resource::<hud::SmartActorHudState>()
             .add_systems(Startup, hud::spawn_smart_actor_hud);
 
         if !self.config.enabled {
@@ -107,6 +129,7 @@ impl Plugin for SmartActorsPlugin {
             hud.connection = hud::ConnectionUiState::Disabled;
             hud.connection_detail = "Disabled in config.ron".into();
             hud.set_transcription_capabilities(false, false);
+            hud.set_npc_voice_backend(bridge::TtsBackend::Off);
             app.insert_resource(hud)
                 .add_systems(Update, hud::update_smart_actor_hud);
             return;
@@ -122,6 +145,7 @@ impl Plugin for SmartActorsPlugin {
             uv_binary: self.config.uv_binary.clone(),
             server_script: script,
             fake_backend: self.config.fake_backend,
+            tts_backend: self.config.tts_backend.clone(),
         });
         let mut mirror = model::WorldMirror::default();
         mirror
@@ -143,6 +167,9 @@ impl Plugin for SmartActorsPlugin {
             .add_message::<InjectPlayerTranscript>()
             .add_message::<speech::PresentSpeech>()
             .add_message::<speech::TtsClipReady>()
+            .add_message::<speech::TtsClipFailed>()
+            .add_message::<speech::TtsPcmChunkReady>()
+            .add_message::<speech::TtsStreamFinished>()
             .add_message::<speech::StopNpcSpeech>()
             .add_message::<speech::ClearSpeechPresentation>()
             .configure_sets(
@@ -153,7 +180,6 @@ impl Plugin for SmartActorsPlugin {
                     SmartActorSet::UpdateFocus,
                     SmartActorSet::CollectInput,
                     SmartActorSet::Present,
-                    SmartActorSet::StartAudio,
                 )
                     .chain()
                     .after(TransformSystems::Propagate),
@@ -190,6 +216,7 @@ impl Plugin for SmartActorsPlugin {
                     interaction::poll_microphone,
                     interaction::collect_item_interaction_input,
                     interaction::update_microphone_toggle,
+                    update_tts_backend_toggle,
                     collect_injected_transcripts,
                     forward_player_intents,
                 )
@@ -203,6 +230,9 @@ impl Plugin for SmartActorsPlugin {
                     actors::animate_offered_items,
                     speech::receive_speech_events,
                     speech::receive_tts_clips,
+                    speech::receive_tts_pcm_chunks,
+                    speech::receive_tts_stream_ends,
+                    speech::receive_tts_failures,
                     speech::clear_speech_presentation,
                     speech::stop_npc_speech_for_capture,
                     speech::update_speech_bubbles,
@@ -213,8 +243,12 @@ impl Plugin for SmartActorsPlugin {
                     .in_set(SmartActorSet::Present),
             )
             .add_systems(
-                PostUpdate,
-                speech::start_ready_audio.in_set(SmartActorSet::StartAudio),
+                Update,
+                // Creating the player before PostUpdate guarantees Bevy's
+                // audio playback systems see it in that same frame. When this
+                // lived alongside those systems, a completed source handoff
+                // could occasionally miss sink attachment.
+                speech::start_ready_audio,
             );
     }
 }
@@ -236,6 +270,9 @@ struct CapabilitiesWire {
     stt_cloud: bool,
     stt_local: bool,
     tts: bool,
+    tts_cloud: bool,
+    tts_local: bool,
+    tts_selected: bridge::TtsBackend,
 }
 
 #[derive(Resource, Default)]
@@ -300,6 +337,31 @@ struct StatusWire {
     backend: Option<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TtsFailedWire {
+    speech_event_id: String,
+    reason: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TtsStreamEndWire {
+    speech_event_id: String,
+    chunk_count: u32,
+    first_chunk_ms: u32,
+}
+
+#[derive(SystemParam)]
+struct BridgePresentationWriters<'w> {
+    speech: MessageWriter<'w, speech::PresentSpeech>,
+    wav: MessageWriter<'w, speech::TtsClipReady>,
+    pcm: MessageWriter<'w, speech::TtsPcmChunkReady>,
+    failure: MessageWriter<'w, speech::TtsClipFailed>,
+    stream_end: MessageWriter<'w, speech::TtsStreamFinished>,
+    clear: MessageWriter<'w, speech::ClearSpeechPresentation>,
+}
+
 #[allow(clippy::too_many_arguments)]
 fn drain_bridge_messages(
     mut commands: Commands,
@@ -314,9 +376,7 @@ fn drain_bridge_messages(
     mut interaction: ResMut<interaction::InteractionState>,
     mut microphone_input: ResMut<interaction::MicrophoneInputState>,
     mut spatial: ResMut<interaction::PlayerSpatialState>,
-    mut speech_messages: MessageWriter<speech::PresentSpeech>,
-    mut audio_messages: MessageWriter<speech::TtsClipReady>,
-    mut clear_speech: MessageWriter<speech::ClearSpeechPresentation>,
+    mut presentation: BridgePresentationWriters,
 ) {
     // Resource insertions/removals are deferred. Track what this drain pass
     // has queued so several buffered server messages cannot spawn several
@@ -385,7 +445,9 @@ fn drain_bridge_messages(
                     &mut handshake_recovery,
                     &mut hud,
                     &mut interaction,
-                    &mut speech_messages,
+                    &mut presentation.speech,
+                    &mut presentation.failure,
+                    &mut presentation.stream_end,
                 );
                 // Do not open the default input device before the Python
                 // handshake confirms that transcription is configured.
@@ -401,9 +463,24 @@ fn drain_bridge_messages(
                 wav_bytes,
             } => {
                 if runtime.connected {
-                    audio_messages.write(speech::TtsClipReady {
+                    presentation.wav.write(speech::TtsClipReady {
                         event_id: speech_event_id,
                         wav_bytes,
+                    });
+                }
+            }
+            bridge::BridgeEvent::TtsPcmChunk {
+                speech_event_id,
+                chunk_seq,
+                sample_rate,
+                samples,
+            } => {
+                if runtime.connected {
+                    presentation.pcm.write(speech::TtsPcmChunkReady {
+                        event_id: speech_event_id,
+                        chunk_seq,
+                        sample_rate,
+                        samples,
                     });
                 }
             }
@@ -418,11 +495,15 @@ fn drain_bridge_messages(
                 runtime.resyncing = false;
                 runtime.stt_available = false;
                 runtime.tts_available = false;
+                runtime.tts_cloud_available = false;
+                runtime.tts_local_available = false;
+                runtime.tts_selected = bridge::TtsBackend::Off;
+                runtime.tts_selection_pending = None;
                 handshake_recovery.capabilities = None;
                 interaction.clear_pending();
                 microphone_input.clear_on_disconnect();
                 hud.clear_transients_on_disconnect(truncate_owned(message, 300));
-                clear_speech.write(speech::ClearSpeechPresentation);
+                presentation.clear.write(speech::ClearSpeechPresentation);
                 if microphone_present {
                     commands.remove_resource::<microphone::MicrophoneService>();
                     microphone_present = false;
@@ -442,6 +523,8 @@ fn process_server_message(
     hud: &mut hud::SmartActorHudState,
     interaction: &mut interaction::InteractionState,
     speech_messages: &mut MessageWriter<speech::PresentSpeech>,
+    audio_failures: &mut MessageWriter<speech::TtsClipFailed>,
+    stream_ends: &mut MessageWriter<speech::TtsStreamFinished>,
 ) {
     let message_type = envelope.message_type;
     let payload = envelope.payload;
@@ -454,6 +537,13 @@ fn process_server_message(
             let recoverable_capabilities = recoverable_ready_capabilities(&payload);
             match serde_json::from_value::<ReadyWire>(payload) {
                 Ok(ready) => {
+                    if !valid_capabilities(&ready.capabilities) {
+                        let _ = accept_snapshot(handle, mirror, runtime, hud, ready.snapshot);
+                        handshake_recovery.capabilities = None;
+                        mark_handshake_unrecoverable(runtime, hud);
+                        hud.toast("Invalid NPC voice capabilities from Python");
+                        return;
+                    }
                     handshake_recovery.capabilities = Some(ready.capabilities);
                     if accept_snapshot(handle, mirror, runtime, hud, ready.snapshot) {
                         apply_ready_capabilities(runtime, hud, ready.capabilities);
@@ -521,7 +611,8 @@ fn process_server_message(
                         text: speech.text,
                         speaker_position: speech.speaker_position_m.into(),
                         recipient_count,
-                        expect_audio: runtime.tts_available && speech.speaker_id.0 != "player",
+                        expect_audio: tts_selection_is_usable(runtime)
+                            && speech.speaker_id.0 != "player",
                     });
                 }
             }
@@ -561,6 +652,31 @@ fn process_server_message(
                 .map(str::to_owned);
             match serde_json::from_value::<CommandResultWire>(payload) {
                 Ok(result) => {
+                    if runtime
+                        .tts_selection_pending
+                        .as_ref()
+                        .is_some_and(|(request_id, _)| request_id == &result.request_id)
+                    {
+                        let (_, requested) = runtime
+                            .tts_selection_pending
+                            .take()
+                            .expect("pending selection was checked");
+                        if result.success {
+                            runtime.tts_selected = requested;
+                            hud.set_npc_voice_backend(requested);
+                            hud.toast(format!(
+                                "NPC voices: {}",
+                                requested.wire_name().to_uppercase()
+                            ));
+                        } else {
+                            let code = truncate_owned(
+                                result.error_code.unwrap_or_else(|| "error".into()),
+                                64,
+                            );
+                            hud.toast(format!("{code}: {}", truncate_owned(result.message, 260)));
+                        }
+                        return;
+                    }
                     let known = interaction.resolve_command(
                         &result.request_id,
                         result.success,
@@ -574,6 +690,13 @@ fn process_server_message(
                 }
                 Err(error) => {
                     if let Some(request_id) = request_id_hint {
+                        if runtime
+                            .tts_selection_pending
+                            .as_ref()
+                            .is_some_and(|(pending, _)| pending == &request_id)
+                        {
+                            runtime.tts_selection_pending = None;
+                        }
                         interaction.resolve_command(&request_id, false, None);
                     } else {
                         interaction.clear_pending();
@@ -586,6 +709,35 @@ fn process_server_message(
             Ok(status) => apply_status(status, mirror, hud),
             Err(error) => hud.toast(format!("Malformed actor status: {error}")),
         },
+        "tts_failed" => match serde_json::from_value::<TtsFailedWire>(payload) {
+            Ok(failure)
+                if valid_wire_id(&failure.speech_event_id)
+                    && valid_ui_text(&failure.reason, 160) =>
+            {
+                audio_failures.write(speech::TtsClipFailed {
+                    event_id: failure.speech_event_id,
+                    reason: failure.reason,
+                });
+            }
+            Ok(_) => hud.toast("Discarded invalid NPC voice failure data"),
+            Err(error) => hud.toast(format!("Malformed NPC voice failure: {error}")),
+        },
+        "tts_stream_end" => match serde_json::from_value::<TtsStreamEndWire>(payload) {
+            Ok(end)
+                if valid_wire_id(&end.speech_event_id)
+                    && end.chunk_count > 0
+                    && end.first_chunk_ms <= 600_000 =>
+            {
+                stream_ends.write(speech::TtsStreamFinished {
+                    event_id: end.speech_event_id,
+                    chunk_count: end.chunk_count,
+                    first_chunk_ms: end.first_chunk_ms,
+                });
+            }
+            Ok(_) => hud.toast("Discarded invalid NPC stream completion data"),
+            Err(error) => hud.toast(format!("Malformed NPC stream completion: {error}")),
+        },
+        "tts_chunk" => {}
         "tts_ready" => {}
         _ => {
             hud.connection_detail = format!("Ignored unknown actor message: {message_type}");
@@ -598,6 +750,25 @@ fn recoverable_ready_capabilities(payload: &serde_json::Value) -> Option<Capabil
         .get("capabilities")
         .cloned()
         .and_then(|value| serde_json::from_value(value).ok())
+        .filter(valid_capabilities)
+}
+
+fn valid_capabilities(capabilities: &CapabilitiesWire) -> bool {
+    capabilities.stt == (capabilities.stt_cloud || capabilities.stt_local)
+        && capabilities.tts == (capabilities.tts_cloud || capabilities.tts_local)
+        && match capabilities.tts_selected {
+            bridge::TtsBackend::Cloud => capabilities.tts_cloud,
+            bridge::TtsBackend::Local => capabilities.tts_local,
+            bridge::TtsBackend::Off => true,
+        }
+}
+
+fn tts_selection_is_usable(runtime: &SmartActorRuntime) -> bool {
+    match runtime.tts_selected {
+        bridge::TtsBackend::Cloud => runtime.tts_cloud_available,
+        bridge::TtsBackend::Local => runtime.tts_local_available,
+        bridge::TtsBackend::Off => false,
+    }
 }
 
 fn connection_detail_for_capabilities(llm: bool, stt: bool, tts: bool) -> String {
@@ -628,6 +799,10 @@ fn apply_ready_capabilities(
     runtime.resyncing = false;
     runtime.stt_available = capabilities.stt;
     runtime.tts_available = capabilities.tts;
+    runtime.tts_cloud_available = capabilities.tts_cloud;
+    runtime.tts_local_available = capabilities.tts_local;
+    runtime.tts_selected = capabilities.tts_selected;
+    runtime.tts_selection_pending = None;
     hud.connection = hud::ConnectionUiState::Online;
     if capabilities.stt {
         // Preserve an explicit pre-handshake MIC OFF choice; otherwise the
@@ -639,6 +814,7 @@ fn apply_ready_capabilities(
     }
     hud.listening = false;
     hud.set_transcription_capabilities(capabilities.stt_cloud, capabilities.stt_local);
+    hud.set_npc_voice_backend(capabilities.tts_selected);
     hud.connection_detail =
         connection_detail_for_capabilities(capabilities.llm, capabilities.stt, capabilities.tts);
 }
@@ -650,6 +826,10 @@ fn mark_handshake_unrecoverable(
     runtime.ready = false;
     runtime.stt_available = false;
     runtime.tts_available = false;
+    runtime.tts_cloud_available = false;
+    runtime.tts_local_available = false;
+    runtime.tts_selected = bridge::TtsBackend::Off;
+    runtime.tts_selection_pending = None;
     hud.connection = hud::ConnectionUiState::Offline;
     hud.connection_detail =
         "Actor handshake failed: ready capabilities were missing or invalid".into();
@@ -703,6 +883,62 @@ fn request_resync(handle: &bridge::BridgeHandle, mirror: &model::WorldMirror) {
     let _ = handle.try_send(bridge::BridgeCommand::ResyncRequest {
         last_world_revision: mirror.revision().unwrap_or(0),
     });
+}
+
+fn next_tts_backend(runtime: &SmartActorRuntime) -> bridge::TtsBackend {
+    use bridge::TtsBackend::{Cloud, Local, Off};
+    let modes = [Cloud, Local, Off];
+    let current = modes
+        .iter()
+        .position(|mode| *mode == runtime.tts_selected)
+        .unwrap_or(2);
+    for offset in 1..=modes.len() {
+        let candidate = modes[(current + offset) % modes.len()];
+        let available = match candidate {
+            Cloud => runtime.tts_cloud_available,
+            Local => runtime.tts_local_available,
+            Off => true,
+        };
+        if available {
+            return candidate;
+        }
+    }
+    Off
+}
+
+fn update_tts_backend_toggle(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    handle: Res<bridge::BridgeHandle>,
+    mut runtime: ResMut<SmartActorRuntime>,
+    mut hud: ResMut<hud::SmartActorHudState>,
+) {
+    if !keyboard.just_pressed(KeyCode::KeyX) {
+        return;
+    }
+    if !runtime.interactions_enabled() {
+        hud.toast("NPC voice selection is unavailable while actors are offline");
+        return;
+    }
+    if runtime.tts_selection_pending.is_some() {
+        hud.toast("NPC voice selection is still changing");
+        return;
+    }
+    let backend = next_tts_backend(&runtime);
+    runtime.next_tts_request = runtime.next_tts_request.wrapping_add(1).max(1);
+    let request_id = format!("tts-mode-{}", runtime.next_tts_request);
+    match handle.try_send(bridge::BridgeCommand::SetTtsBackend {
+        request_id: request_id.clone(),
+        backend,
+    }) {
+        Ok(()) => {
+            runtime.tts_selection_pending = Some((request_id, backend));
+            hud.toast(format!(
+                "Switching NPC voices to {}…",
+                backend.wire_name().to_uppercase()
+            ));
+        }
+        Err(error) => hud.toast(error),
+    }
 }
 
 /// A full command queue must not strand the mirror in resync mode forever.
@@ -1088,6 +1324,35 @@ mod tests {
     }
 
     #[test]
+    fn npc_voice_cycle_skips_unavailable_backends_and_includes_off() {
+        let mut runtime = SmartActorRuntime::starting(false);
+        runtime.tts_selected = bridge::TtsBackend::Cloud;
+        runtime.tts_cloud_available = true;
+        runtime.tts_local_available = false;
+        assert_eq!(next_tts_backend(&runtime), bridge::TtsBackend::Off);
+
+        runtime.tts_selected = bridge::TtsBackend::Off;
+        assert_eq!(next_tts_backend(&runtime), bridge::TtsBackend::Cloud);
+
+        runtime.tts_local_available = true;
+        runtime.tts_selected = bridge::TtsBackend::Cloud;
+        assert_eq!(next_tts_backend(&runtime), bridge::TtsBackend::Local);
+    }
+
+    #[test]
+    fn npc_speech_only_expects_audio_from_the_acknowledged_usable_mode() {
+        let mut runtime = SmartActorRuntime::starting(false);
+        runtime.tts_cloud_available = true;
+        runtime.tts_local_available = false;
+        runtime.tts_selected = bridge::TtsBackend::Off;
+        assert!(!tts_selection_is_usable(&runtime));
+        runtime.tts_selected = bridge::TtsBackend::Local;
+        assert!(!tts_selection_is_usable(&runtime));
+        runtime.tts_selected = bridge::TtsBackend::Cloud;
+        assert!(tts_selection_is_usable(&runtime));
+    }
+
+    #[test]
     fn capabilities_survive_a_malformed_initial_ready_snapshot() {
         let payload = serde_json::json!({
             "capabilities": {
@@ -1095,7 +1360,10 @@ mod tests {
                 "stt": true,
                 "stt_cloud": true,
                 "stt_local": true,
-                "tts": false
+                "tts": false,
+                "tts_cloud": false,
+                "tts_local": false,
+                "tts_selected": "off"
             },
             "snapshot": {"world_revision": "not-a-number"}
         });
@@ -1264,6 +1532,8 @@ mod tests {
                 .join("prompt_playgound/server.py")
                 .display()
                 .to_string(),
+            tts_backend: "local".into(),
+            pause_microphone_during_npc_voice: true,
         }));
 
         let deadline = std::time::Instant::now() + Duration::from_secs(8);

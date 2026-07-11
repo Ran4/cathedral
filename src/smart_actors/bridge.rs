@@ -17,6 +17,7 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use bevy::prelude::Resource;
 use crossbeam_channel::{Receiver, SendTimeoutError, Sender, TryRecvError, TrySendError, bounded};
 use serde::{Deserialize, Serialize};
@@ -29,6 +30,7 @@ const COMMAND_QUEUE_CAPACITY: usize = 128;
 const EVENT_QUEUE_CAPACITY: usize = 256;
 const MAX_PROTOCOL_LINE_BYTES: usize = 1_000_000;
 const MAX_WAV_BYTES: u64 = 16 * 1024 * 1024;
+const MAX_PCM_CHUNK_BYTES: usize = 256 * 1024;
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(2);
 const CHANNEL_POLL_INTERVAL: Duration = Duration::from_millis(20);
 const WORKER_JOIN_GRACE: Duration = Duration::from_millis(250);
@@ -41,6 +43,7 @@ pub struct BridgeLaunchConfig {
     pub uv_binary: String,
     pub server_script: PathBuf,
     pub fake_backend: bool,
+    pub tts_backend: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -54,6 +57,24 @@ impl TranscriptionBackend {
         match self {
             Self::Cloud => "cloud",
             Self::Local => "local",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TtsBackend {
+    Cloud,
+    Local,
+    Off,
+}
+
+impl TtsBackend {
+    pub fn wire_name(self) -> &'static str {
+        match self {
+            Self::Cloud => "cloud",
+            Self::Local => "local",
+            Self::Off => "off",
         }
     }
 }
@@ -108,6 +129,10 @@ pub enum BridgeCommand {
     AudioConsumed {
         speech_event_id: String,
         wav_basename: String,
+    },
+    SetTtsBackend {
+        request_id: String,
+        backend: TtsBackend,
     },
     ResyncRequest {
         last_world_revision: u64,
@@ -237,6 +262,16 @@ impl BridgeCommand {
                     "wav_basename": wav_basename,
                 }),
             ),
+            Self::SetTtsBackend {
+                request_id,
+                backend,
+            } => (
+                "set_tts_backend",
+                json!({
+                    "request_id": request_id,
+                    "backend": backend.wire_name(),
+                }),
+            ),
             Self::ResyncRequest {
                 last_world_revision,
             } => (
@@ -271,6 +306,12 @@ pub enum BridgeEvent {
     TtsAudio {
         speech_event_id: String,
         wav_bytes: std::sync::Arc<[u8]>,
+    },
+    TtsPcmChunk {
+        speech_event_id: String,
+        chunk_seq: u32,
+        sample_rate: u32,
+        samples: Arc<[i16]>,
     },
     Degraded(String),
     Disconnected(String),
@@ -446,6 +487,7 @@ fn run_bridge_worker(
 
     let mut process = Command::new(&config.uv_binary);
     process.env("SMART_ACTORS_UV_BINARY", &config.uv_binary);
+    process.env("SMART_ACTORS_TTS_BACKEND", &config.tts_backend);
     process.arg("run");
     if config.fake_backend {
         // Fake mode has no SDK imports or provider calls. Avoid resolving the
@@ -727,6 +769,9 @@ fn read_protocol_output(
         let tts = (envelope.message_type == "tts_ready")
             .then(|| serde_json::from_value::<TtsReadyWire>(envelope.payload.clone()))
             .transpose();
+        let tts_chunk = (envelope.message_type == "tts_chunk")
+            .then(|| serde_json::from_value::<TtsChunkWire>(envelope.payload.clone()))
+            .transpose();
         if !events.send(BridgeEvent::Message(envelope)) {
             return;
         }
@@ -776,6 +821,44 @@ fn read_protocol_output(
             Err(error) => {
                 if !events.send(BridgeEvent::Degraded(format!(
                     "invalid tts_ready payload: {error}"
+                ))) {
+                    return;
+                }
+            }
+        }
+        match tts_chunk {
+            Ok(Some(chunk)) if valid_wire_id(&chunk.speech_event_id) => {
+                match decode_pcm_chunk(&chunk) {
+                    Ok(samples) => {
+                        if !events.send(BridgeEvent::TtsPcmChunk {
+                            speech_event_id: chunk.speech_event_id,
+                            chunk_seq: chunk.chunk_seq,
+                            sample_rate: chunk.sample_rate,
+                            samples: samples.into(),
+                        }) {
+                            return;
+                        }
+                    }
+                    Err(error) => {
+                        if !events.send(BridgeEvent::Degraded(format!(
+                            "invalid NPC PCM chunk: {error}"
+                        ))) {
+                            return;
+                        }
+                    }
+                }
+            }
+            Ok(Some(_)) => {
+                if !events.send(BridgeEvent::Degraded(
+                    "invalid speech event ID in tts_chunk".into(),
+                )) {
+                    return;
+                }
+            }
+            Ok(None) => {}
+            Err(error) => {
+                if !events.send(BridgeEvent::Degraded(format!(
+                    "invalid tts_chunk payload: {error}"
                 ))) {
                     return;
                 }
@@ -843,6 +926,35 @@ fn read_bounded_line(
 struct TtsReadyWire {
     speech_event_id: String,
     wav_basename: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TtsChunkWire {
+    speech_event_id: String,
+    chunk_seq: u32,
+    sample_rate: u32,
+    channels: u8,
+    pcm_s16le_base64: String,
+}
+
+fn decode_pcm_chunk(chunk: &TtsChunkWire) -> Result<Vec<i16>, String> {
+    if chunk.channels != 1 || !(8_000..=48_000).contains(&chunk.sample_rate) {
+        return Err("unsupported PCM format".into());
+    }
+    if chunk.pcm_s16le_base64.len() > MAX_PCM_CHUNK_BYTES * 2 {
+        return Err("encoded PCM chunk is oversized".into());
+    }
+    let bytes = BASE64
+        .decode(&chunk.pcm_s16le_base64)
+        .map_err(|_| "PCM chunk is not valid base64".to_string())?;
+    if bytes.is_empty() || bytes.len() > MAX_PCM_CHUNK_BYTES || bytes.len() % 2 != 0 {
+        return Err("PCM chunk has an invalid byte length".into());
+    }
+    Ok(bytes
+        .chunks_exact(2)
+        .map(|sample| i16::from_le_bytes([sample[0], sample[1]]))
+        .collect())
 }
 
 fn read_session_wav(runtime_dir: &Path, basename: &str) -> Result<Vec<u8>, String> {
@@ -1064,6 +1176,24 @@ mod tests {
     }
 
     #[test]
+    fn pcm_chunk_decoding_is_strict_and_little_endian() {
+        let chunk = TtsChunkWire {
+            speech_event_id: "speech-1".into(),
+            chunk_seq: 0,
+            sample_rate: 24_000,
+            channels: 1,
+            pcm_s16le_base64: BASE64.encode([0x34, 0x12, 0x00, 0x80]),
+        };
+        assert_eq!(decode_pcm_chunk(&chunk).unwrap(), [0x1234, i16::MIN]);
+
+        let invalid = TtsChunkWire {
+            pcm_s16le_base64: BASE64.encode([0_u8]),
+            ..chunk
+        };
+        assert!(decode_pcm_chunk(&invalid).is_err());
+    }
+
+    #[test]
     fn recording_fixture_can_only_encode_open_speech() {
         let command = BridgeCommand::PlayerRecording {
             request_id: "request-1".into(),
@@ -1119,6 +1249,20 @@ mod tests {
                 spatial_seq: 2,
             }
             .is_redundant_spatial()
+        );
+    }
+
+    #[test]
+    fn tts_selection_command_has_the_strict_wire_shape() {
+        let (message_type, payload) = BridgeCommand::SetTtsBackend {
+            request_id: "tts-mode-1".into(),
+            backend: TtsBackend::Local,
+        }
+        .wire_parts();
+        assert_eq!(message_type, "set_tts_backend");
+        assert_eq!(
+            payload,
+            serde_json::json!({"request_id": "tts-mode-1", "backend": "local"})
         );
     }
 
@@ -1234,6 +1378,7 @@ mod tests {
             uv_binary: "__cathedralbevy_missing_uv__".into(),
             server_script: PathBuf::from("server.py"),
             fake_backend: false,
+            tts_backend: "off".into(),
         });
         let runtime_dir = handle.runtime_dir().to_path_buf();
         let deadline = Instant::now() + Duration::from_secs(2);
@@ -1269,6 +1414,7 @@ mod tests {
             server_script: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("prompt_playgound/server.py"),
             fake_backend: true,
+            tts_backend: "local".into(),
         });
         let runtime_dir = handle.runtime_dir().to_path_buf();
         let deadline = std::time::Instant::now() + Duration::from_secs(8);

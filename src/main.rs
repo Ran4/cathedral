@@ -116,6 +116,9 @@ mod tests {
                 fullscreen: false,
                 width: 1280,
                 height: 720,
+                smart_actors: (
+                    pause_microphone_during_npc_voice: false,
+                ),
             )"#,
         )
         .expect("test configuration should parse");
@@ -124,6 +127,7 @@ mod tests {
         assert_eq!(config.width, 1280);
         assert_eq!(config.height, 720);
         assert_eq!(config.title, AppConfig::default().title);
+        assert!(!config.smart_actors.pause_microphone_during_npc_voice);
     }
 
     #[test]

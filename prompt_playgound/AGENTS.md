@@ -92,8 +92,9 @@ current. Full design: `../features/giving_things.md`.
 - `protocol.py` — strict version-1 envelope parsing and compact encoding.
 - `scheduler.py` — one non-blocking global NPC turn stream with priority and
   provider backoff.
-- `speech_client.py` — completed-utterance WAV OpenAI STT/TTS adapter; unavailable
-  credentials degrade independently from text cognition.
+- `speech_client.py` — independent completed-utterance OpenAI STT/TTS adapters
+  plus persistent local Canary-Qwen STT and streaming Pocket TTS workers; unavailable
+  credentials degrade independently from text cognition and local speech.
 - `llm_client.py` — `complete(prompt) -> str` against the configured provider (see
   Configuration below).
 - `kimi.py` — standalone one-shot CLI: send a file to the configured LLM,

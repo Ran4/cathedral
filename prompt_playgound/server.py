@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import queue
@@ -49,10 +50,13 @@ from sim import (
 )
 from speech_client import (
     CanaryQwenSpeechBackend,
-    OpenAISpeechBackend,
+    OpenAITranscriptionBackend,
+    OpenAITtsBackend,
+    PocketTtsBackend,
     SpeechBackend,
     SpeechUnavailable,
     TranscriptionBackend,
+    TtsBackend,
 )
 
 MAX_REQUEST_HISTORY = 1_024
@@ -203,10 +207,22 @@ class _TtsTask:
     text: str
     voice_key: str
     wav_path: Path
+    backend_name: str
+    backend: TtsBackend
+
+
+@dataclass(frozen=True, slots=True)
+class _TtsStreamChunk:
+    event_id: str
+    chunk_seq: int
+    sample_rate: int
+    pcm_s16le_base64: str
 
 
 class FakeSpeechBackend:
-    """Deterministic local WAV backend, enabled only by ``--fake``."""
+    """Deterministic offline speech backend enabled only by ``--fake``."""
+
+    name = "fake"
 
     @property
     def stt_available(self) -> bool:
@@ -229,6 +245,18 @@ class FakeSpeechBackend:
             wav.setsampwidth(2)
             wav.setframerate(sample_rate)
             wav.writeframes(struct.pack(f"<{sample_count}h", *([0] * sample_count)))
+
+    def synthesize_stream(
+        self,
+        text: str,
+        voice_key: str,
+        on_chunk: Callable[[int, int, str], None],
+    ) -> tuple[int, int]:
+        sample_rate = 24_000
+        sample_count = min(sample_rate // 4, max(800, len(text) * 40))
+        pcm = struct.pack(f"<{sample_count}h", *([0] * sample_count))
+        on_chunk(0, sample_rate, base64.b64encode(pcm).decode("ascii"))
+        return 1, 1
 
 
 def fake_llm_complete(prompt: str) -> str:
@@ -265,6 +293,9 @@ class SmartActorServer:
         llm_available: bool | None = None,
         speech_backend: SpeechBackend | None = None,
         local_stt_backend: TranscriptionBackend | None = None,
+        cloud_tts_backend: TtsBackend | None = None,
+        local_tts_backend: TtsBackend | None = None,
+        tts_backend: str | None = None,
         output: Callable[[str], None] | None = None,
         fake_mode: bool = False,
         turn_delay_seconds: float | None = None,
@@ -290,7 +321,7 @@ class SmartActorServer:
         self.llm_available = bool(llm_available)
         speech_backend_was_injected = speech_backend is not None
         self.speech_backend = speech_backend or (
-            FakeSpeechBackend() if fake_mode else OpenAISpeechBackend()
+            FakeSpeechBackend() if fake_mode else OpenAITranscriptionBackend()
         )
         if local_stt_backend is not None:
             self.local_stt_backend = local_stt_backend
@@ -302,6 +333,41 @@ class SmartActorServer:
             self.local_stt_backend = None
         else:
             self.local_stt_backend = CanaryQwenSpeechBackend()
+        if cloud_tts_backend is not None:
+            self.cloud_tts_backend = cloud_tts_backend
+        elif fake_mode or speech_backend_was_injected:
+            self.cloud_tts_backend = self.speech_backend
+        else:
+            self.cloud_tts_backend = OpenAITtsBackend()
+        if local_tts_backend is not None:
+            self.local_tts_backend = local_tts_backend
+        elif fake_mode:
+            self.local_tts_backend = self.speech_backend
+        elif speech_backend_was_injected:
+            self.local_tts_backend = None
+        else:
+            self.local_tts_backend = PocketTtsBackend()
+        configured_tts = tts_backend
+        if configured_tts is None:
+            configured_tts = (
+                "cloud"
+                if speech_backend_was_injected
+                else os.environ.get("SMART_ACTORS_TTS_BACKEND", "local")
+            )
+        configured_tts = configured_tts.strip().lower()
+        if configured_tts not in {"cloud", "local", "off"}:
+            configured_tts = "off"
+            self._tts_startup_message = (
+                "Configured NPC voice mode is invalid; voices are off"
+            )
+        elif configured_tts != "off" and not self._tts_backend_available(
+            configured_tts
+        ):
+            self._tts_startup_message = f"Configured {configured_tts} NPC voice backend is unavailable; voices are off"
+            configured_tts = "off"
+        else:
+            self._tts_startup_message = None
+        self.tts_backend = configured_tts
         delay = (
             turn_delay_seconds
             if turn_delay_seconds is not None
@@ -327,12 +393,20 @@ class SmartActorServer:
         self._last_snapshot_revision_sent = -1
         self._pending_tts_paths: set[Path] = set()
         self._generated_audio: dict[tuple[str, str], Path] = {}
+        self._tts_stream_chunks: queue.Queue[_TtsStreamChunk] = queue.Queue(maxsize=64)
+        self._tts_warm_errors: queue.SimpleQueue[Exception] = queue.SimpleQueue()
         self._stt_worker = _DaemonWorker(
             "smart-actor-stt", self._transcribe_task, capacity=4
         )
         self._tts_worker = _DaemonWorker(
             "smart-actor-tts", self._synthesize_task, capacity=SPEECH_QUEUE_CAPACITY
         )
+        if self.tts_backend == "local":
+            threading.Thread(
+                target=self._warm_local_tts,
+                name="smart-actor-tts-warmup",
+                daemon=True,
+            ).start()
 
     @staticmethod
     def _write_stdout(line: str) -> None:
@@ -349,6 +423,14 @@ class SmartActorServer:
             close_local = getattr(self.local_stt_backend, "close", None)
             if callable(close_local):
                 close_local()
+        closed: set[int] = set()
+        for backend in (self.cloud_tts_backend, self.local_tts_backend):
+            if backend is None or id(backend) in closed:
+                continue
+            closed.add(id(backend))
+            close_tts = getattr(backend, "close", None)
+            if callable(close_tts):
+                close_tts()
         self._stt_worker.close()
         self._tts_worker.close()
         pending_audio = set(self._pending_recording_paths.values())
@@ -368,6 +450,11 @@ class SmartActorServer:
         self._generated_audio.clear()
         # Completed tasks may not yet have been polled into _generated_audio.
         for path in self.runtime_dir.glob("speech-*.wav"):
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        for path in self.runtime_dir.glob("*.wav.part"):
             try:
                 path.unlink(missing_ok=True)
             except OSError:
@@ -448,7 +535,10 @@ class SmartActorServer:
         for status in self.scheduler.poll(self._clock()):
             self._send("status", status.to_payload())
         self._poll_local_stt_status()
+        self._poll_local_tts_status()
+        self._poll_tts_warm_errors()
         self._poll_transcriptions()
+        self._poll_tts_stream_chunks()
         self._poll_tts()
         self._flush_domain_events()
         self._send_snapshot_if_changed()
@@ -484,6 +574,8 @@ class SmartActorServer:
             )
         elif message_type == "audio_consumed":
             self._handle_audio_consumed(payload)
+        elif message_type == "set_tts_backend":
+            self._handle_set_tts_backend(payload)
         elif message_type == "resync_request":
             self._handle_resync(payload)
         elif message_type == "shutdown":
@@ -529,9 +621,10 @@ class SmartActorServer:
         self.handshake_complete = True
         cloud_stt = bool(self.speech_backend.stt_available)
         local_stt = bool(
-            self.local_stt_backend is not None
-            and self.local_stt_backend.stt_available
+            self.local_stt_backend is not None and self.local_stt_backend.stt_available
         )
+        cloud_tts = self._tts_backend_available("cloud")
+        local_tts = self._tts_backend_available("local")
         self._send(
             "ready",
             {
@@ -540,7 +633,10 @@ class SmartActorServer:
                     "stt": cloud_stt or local_stt,
                     "stt_cloud": cloud_stt,
                     "stt_local": local_stt,
-                    "tts": bool(self.speech_backend.tts_available),
+                    "tts": cloud_tts or local_tts,
+                    "tts_cloud": cloud_tts,
+                    "tts_local": local_tts,
+                    "tts_selected": self.tts_backend,
                 },
                 "snapshot": self.world.public_snapshot(self.player_id),
             },
@@ -552,6 +648,52 @@ class SmartActorServer:
             self._send_status(
                 "llm", "unavailable", message="text cognition is not configured"
             )
+        if self._tts_startup_message is not None:
+            self._send_status("tts", "unavailable", message=self._tts_startup_message)
+
+    def _tts_backend_for(self, name: str) -> TtsBackend | None:
+        if name == "cloud":
+            return self.cloud_tts_backend
+        if name == "local":
+            return self.local_tts_backend
+        return None
+
+    def _tts_backend_available(self, name: str) -> bool:
+        backend = self._tts_backend_for(name)
+        return backend is not None and bool(backend.tts_available)
+
+    def _handle_set_tts_backend(self, payload: Mapping[str, object]) -> None:
+        _exact_payload(payload, required={"request_id", "backend"})
+        rid = self._begin_request(payload)
+        if rid is None:
+            return
+        backend = payload["backend"]
+        if backend not in {"cloud", "local", "off"}:
+            self._finish_request(
+                rid,
+                False,
+                "invalid_tts_backend",
+                "TTS backend must be cloud, local, or off",
+            )
+            return
+        assert isinstance(backend, str)
+        if backend != "off" and not self._tts_backend_available(backend):
+            self._finish_request(
+                rid,
+                False,
+                "tts_unavailable",
+                f"{backend} NPC voice backend is unavailable",
+            )
+            return
+        self.tts_backend = backend
+        if backend == "local":
+            threading.Thread(
+                target=self._warm_local_tts,
+                name="smart-actor-tts-warmup",
+                daemon=True,
+            ).start()
+        self._finish_request(rid, True, "ok", f"NPC voice backend set to {backend}")
+        self._send_status("tts", "selected", message=backend, backend=backend)
 
     def _handle_spatial_update(self, payload: Mapping[str, object]) -> None:
         _exact_payload(payload, required={"spatial_seq", "updates"})
@@ -814,9 +956,7 @@ class SmartActorServer:
 
     def _transcribe_task(self, task: _TranscriptionTask) -> str:
         backend = (
-            self.speech_backend
-            if task.backend == "cloud"
-            else self.local_stt_backend
+            self.speech_backend if task.backend == "cloud" else self.local_stt_backend
         )
         if backend is None:
             raise SpeechUnavailable(f"{task.backend} transcription is unavailable")
@@ -831,6 +971,16 @@ class SmartActorServer:
             return
         for state, message in drain_status():
             self._send_status("stt", state, message=message, backend="local")
+
+    def _poll_local_tts_status(self) -> None:
+        backend = self.local_tts_backend
+        if backend is None:
+            return
+        drain_status = getattr(backend, "drain_status", None)
+        if not callable(drain_status):
+            return
+        for state, message in drain_status():
+            self._send_status("tts", state, message=message, backend="local")
 
     def _poll_transcriptions(self) -> None:
         for result in self._stt_worker.drain():
@@ -974,8 +1124,63 @@ class SmartActorServer:
             self._send_status("stt", "idle", backend=task.backend)
             self._finish_request(task.request_id, True, "ok", line)
 
-    def _synthesize_task(self, task: _TtsTask) -> None:
-        self.speech_backend.synthesize(task.text, task.voice_key, task.wav_path)
+    def _warm_local_tts(self) -> None:
+        backend = self.local_tts_backend
+        warm = getattr(backend, "warm", None)
+        if not callable(warm):
+            return
+        try:
+            warm()
+        except Exception as error:
+            self._tts_warm_errors.put(error)
+
+    def _poll_tts_warm_errors(self) -> None:
+        while True:
+            try:
+                error = self._tts_warm_errors.get_nowait()
+            except queue.Empty:
+                return
+            message = (
+                str(error)[:160]
+                if isinstance(error, SpeechUnavailable)
+                else "local Pocket TTS warmup failed"
+            )
+            self._send_status("tts", "degraded", message=message, backend="local")
+
+    def _synthesize_task(self, task: _TtsTask) -> tuple[int, int] | None:
+        synthesize_stream = getattr(task.backend, "synthesize_stream", None)
+        if task.backend_name == "local" and callable(synthesize_stream):
+            return synthesize_stream(
+                task.text,
+                task.voice_key,
+                lambda chunk_seq, sample_rate, encoded: self._tts_stream_chunks.put(
+                    _TtsStreamChunk(
+                        task.event_id,
+                        chunk_seq,
+                        sample_rate,
+                        encoded,
+                    )
+                ),
+            )
+        task.backend.synthesize(task.text, task.voice_key, task.wav_path)
+        return None
+
+    def _poll_tts_stream_chunks(self) -> None:
+        while True:
+            try:
+                chunk = self._tts_stream_chunks.get_nowait()
+            except queue.Empty:
+                return
+            self._send(
+                "tts_chunk",
+                {
+                    "speech_event_id": chunk.event_id,
+                    "chunk_seq": chunk.chunk_seq,
+                    "sample_rate": chunk.sample_rate,
+                    "channels": 1,
+                    "pcm_s16le_base64": chunk.pcm_s16le_base64,
+                },
+            )
 
     def _poll_tts(self) -> None:
         for result in self._tts_worker.drain():
@@ -991,12 +1196,86 @@ class SmartActorServer:
                     f"{type(result.error).__name__}",
                     file=sys.stderr,
                 )
-                self._send_status("tts", "degraded", message="speech synthesis failed")
+                if isinstance(result.error, SpeechUnavailable):
+                    error_message = str(result.error)[:160]
+                elif isinstance(result.error, TimeoutError):
+                    error_message = f"{task.backend_name} speech provider timed out"
+                elif isinstance(result.error, ValueError):
+                    error_message = "NPC speech request was rejected before synthesis"
+                else:
+                    error_message = (
+                        f"{task.backend_name} speech provider failed "
+                        f"({type(result.error).__name__})"
+                    )
+                self._send_status(
+                    "tts",
+                    "degraded",
+                    message=error_message,
+                    backend=task.backend_name,
+                )
+                self._send_tts_failed(task.event_id, error_message)
+                continue
+            if task.backend_name == "local" and callable(
+                getattr(task.backend, "synthesize_stream", None)
+            ):
+                completion = result.value
+                if (
+                    not isinstance(completion, tuple)
+                    or len(completion) != 2
+                    or not all(isinstance(value, int) for value in completion)
+                ):
+                    self._send_tts_failed(
+                        task.event_id, "local streaming synthesis returned no completion"
+                    )
+                    continue
+                chunk_count, first_chunk_ms = completion
+                self._send(
+                    "tts_stream_end",
+                    {
+                        "speech_event_id": task.event_id,
+                        "chunk_count": chunk_count,
+                        "first_chunk_ms": first_chunk_ms,
+                    },
+                )
+                self._send_status(
+                    "tts",
+                    "idle",
+                    message=f"First local PCM in {first_chunk_ms} ms",
+                    backend="local",
+                )
                 continue
             if not task.wav_path.is_file():
+                error_message = f"{task.backend_name} synthesis made no WAV"
                 self._send_status(
-                    "tts", "degraded", message="speech synthesis made no WAV"
+                    "tts",
+                    "degraded",
+                    message=error_message,
+                    backend=task.backend_name,
                 )
+                self._send_tts_failed(task.event_id, error_message)
+                continue
+            try:
+                if task.wav_path.stat().st_size > 16 * 1024 * 1024:
+                    raise ValueError("generated WAV exceeds 16 MiB")
+                with wave.open(str(task.wav_path), "rb") as wav:
+                    if (
+                        wav.getnchannels() not in {1, 2}
+                        or wav.getsampwidth() not in {1, 2, 3, 4}
+                        or wav.getframerate() < 8_000
+                        or wav.getframerate() > 192_000
+                        or wav.getnframes() < 1
+                    ):
+                        raise ValueError("generated WAV has unsupported parameters")
+            except (OSError, EOFError, wave.Error, ValueError) as error:
+                task.wav_path.unlink(missing_ok=True)
+                error_message = str(error)[:160] or "generated WAV is invalid"
+                self._send_status(
+                    "tts",
+                    "degraded",
+                    message=error_message,
+                    backend=task.backend_name,
+                )
+                self._send_tts_failed(task.event_id, error_message)
                 continue
             basename = task.wav_path.name
             self._generated_audio[(task.event_id, basename)] = task.wav_path
@@ -1004,7 +1283,7 @@ class SmartActorServer:
                 "tts_ready",
                 {"speech_event_id": task.event_id, "wav_basename": basename},
             )
-            self._send_status("tts", "idle")
+            self._send_status("tts", "idle", backend=task.backend_name)
 
     def _queue_tts(self, event: DomainEvent) -> None:
         speaker = self.world.characters.get(event.actor_id)
@@ -1016,21 +1295,48 @@ class SmartActorServer:
             or self.player_id not in event.recipient_ids
         ):
             return
-        if not self.speech_backend.tts_available:
+        selected = self.tts_backend
+        if selected == "off":
+            return
+        backend = self._tts_backend_for(selected)
+        if backend is None or not backend.tts_available:
+            error_message = f"{selected} NPC voice backend is unavailable"
+            self._send_status(
+                "tts",
+                "unavailable",
+                message=error_message,
+                backend=selected,
+            )
+            self._send_tts_failed(event.event_id, error_message)
             return
         basename = f"{event.event_id}.wav"
         wav_path = self.runtime_dir / basename
         if wav_path in self._reserved_audio_paths():
-            self._send_status(
-                "tts", "degraded", message="speech output path is already in use"
-            )
+            error_message = "speech output path is already in use"
+            self._send_status("tts", "degraded", message=error_message)
+            self._send_tts_failed(event.event_id, error_message)
             return
-        task = _TtsTask(event.event_id, event.text, speaker.voice_key, wav_path)
+        task = _TtsTask(
+            event.event_id,
+            event.text,
+            speaker.voice_key,
+            wav_path,
+            selected,
+            backend,
+        )
         if not self._tts_worker.submit(task):
-            self._send_status("tts", "degraded", message="speech queue is full")
+            error_message = "speech queue is full"
+            self._send_status("tts", "degraded", message=error_message)
+            self._send_tts_failed(event.event_id, error_message)
             return
         self._pending_tts_paths.add(wav_path)
-        self._send_status("tts", "synthesizing", actor_id=speaker.id)
+        self._send_status("tts", "synthesizing", actor_id=speaker.id, backend=selected)
+
+    def _send_tts_failed(self, event_id: str, reason: str) -> None:
+        self._send(
+            "tts_failed",
+            {"speech_event_id": event_id, "reason": reason[:160]},
+        )
 
     def _handle_audio_consumed(self, payload: Mapping[str, object]) -> None:
         _exact_payload(payload, required={"speech_event_id", "wav_basename"})

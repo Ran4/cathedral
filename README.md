@@ -56,6 +56,8 @@ persistent process, protocol, world rules, HUD, and interaction paths.
   the isolated NeMo environment and downloads about 5 GB of model weights;
   later utterances reuse the GPU-resident model. The bottom-left voice panel
   shows microphone, download/load, transcription, failure, and ready states
+- `X` — cycle NPC voice audio through available OpenAI cloud, local Pocket TTS,
+  and off modes
 - Mouse wheel / `1`–`9` — select an inventory item
 - Right click — offer the selected item to the focused actor
 - `Y` / `N` — accept or decline the active incoming offer

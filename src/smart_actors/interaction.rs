@@ -623,6 +623,7 @@ pub fn poll_microphone(
     mut stop_speech: MessageWriter<StopNpcSpeech>,
 ) {
     let Some(microphone) = microphone else { return };
+    let mut recording_started_this_poll = false;
     loop {
         let event = match microphone.poll() {
             MicrophonePoll::Event(event) => event,
@@ -667,7 +668,7 @@ pub fn poll_microphone(
                     wav_basename,
                     stt_backend: microphone_input.stt_backend,
                 });
-                stop_speech.write(StopNpcSpeech);
+                recording_started_this_poll = true;
             }
             MicrophoneEvent::RecordingFinished {
                 wav_basename,
@@ -746,6 +747,20 @@ pub fn poll_microphone(
             }
         }
     }
+    // The worker can report RecordingStarted and RecordingCancelled together
+    // when an NPC stream suspends a fresh VAD candidate. Only interrupt NPC
+    // audio if a recording is still genuinely active after draining the
+    // complete event batch.
+    if should_interrupt_npc_speech(
+        recording_started_this_poll,
+        microphone_input.recording.is_some(),
+    ) {
+        stop_speech.write(StopNpcSpeech);
+    }
+}
+
+fn should_interrupt_npc_speech(started_this_poll: bool, recording_still_active: bool) -> bool {
+    started_this_poll && recording_still_active
 }
 
 pub fn inject_debug_say(
@@ -1054,6 +1069,7 @@ mod tests {
             tts_available: false,
             fake_backend: false,
             mirror_revision: None,
+            ..SmartActorRuntime::starting(false)
         };
         let mut app = App::new();
         app.insert_resource(keyboard)
@@ -1082,6 +1098,7 @@ mod tests {
             tts_available: false,
             fake_backend: false,
             mirror_revision: None,
+            ..SmartActorRuntime::starting(false)
         };
         let mut app = App::new();
         app.insert_resource(keyboard)
@@ -1111,6 +1128,7 @@ mod tests {
             tts_available: false,
             fake_backend: true,
             mirror_revision: Some(1),
+            ..SmartActorRuntime::starting(true)
         };
         let mut hud = SmartActorHudState::default();
         hud.microphone_available = true;
@@ -1255,6 +1273,13 @@ mod tests {
     }
 
     #[test]
+    fn cancelled_microphone_start_does_not_interrupt_npc_audio() {
+        assert!(should_interrupt_npc_speech(true, true));
+        assert!(!should_interrupt_npc_speech(true, false));
+        assert!(!should_interrupt_npc_speech(false, true));
+    }
+
+    #[test]
     fn targeted_offer_cards_precede_broadcasts_and_keep_exact_item_ids() {
         let mirror = offer_mirror(4.0);
         let cards = actionable_offer_cards(
@@ -1298,6 +1323,7 @@ mod tests {
                 tts_available: false,
                 fake_backend: true,
                 mirror_revision: Some(1),
+                ..SmartActorRuntime::starting(true)
             })
             .init_resource::<ActorFocus>()
             .init_resource::<InteractionState>()

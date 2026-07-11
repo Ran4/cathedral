@@ -1,13 +1,15 @@
-//! Ordered speech presentation and dynamic spatial WAV playback.
+//! Ordered speech presentation and dynamic spatial WAV/streaming PCM playback.
 
 use std::{
     collections::{HashMap, VecDeque},
-    sync::Arc,
+    sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use bevy::{
     audio::{
-        AudioPlayer, AudioSinkPlayback, AudioSource, PlaybackSettings, SpatialAudioSink, Volume,
+        AudioPlayer, AudioSinkPlayback, AudioSource, ChannelCount, Decodable, PlaybackSettings,
+        SampleRate, Source, SpatialAudioSink, SpatialScale, Volume,
     },
     prelude::*,
 };
@@ -16,16 +18,25 @@ use crossbeam_channel::{Receiver, TryRecvError, bounded};
 use crate::{controller::PlayerController, fonts::CathedralFonts, smart_actors::HEARING_RADIUS_M};
 
 use super::{
+    SmartActorsConfig,
     hud::SmartActorHudState,
     microphone::{MicrophoneCommand, MicrophoneService},
     model::ActorId,
 };
 
 const MAX_WAV_BYTES: usize = 16 * 1024 * 1024;
-const TTS_WAIT_SECONDS: f64 = 10.0;
+// Initial setup may still be downloading while the persistent Pocket worker
+// warms in the background. A keyed failure releases the line immediately;
+// this is only a last-resort guard for a worker that never responds.
+const TTS_WAIT_SECONDS: f64 = 600.0;
 const AUDIO_SINK_START_TIMEOUT_SECONDS: f64 = 2.0;
 const AUDIO_PLAYBACK_TIMEOUT_SECONDS: f64 = 60.0;
 const MICROPHONE_SUSPEND_TIMEOUT_SECONDS: f64 = 2.0;
+// Rodio applies inverse-square distance attenuation to spatial sources. Our
+// own speech_gain curve already defines the complete 3-20 m loudness policy,
+// so fit the whole hearing radius inside Rodio's unattenuated unit sphere and
+// retain its stereo panning without multiplying in a second falloff.
+const NPC_VOICE_SPATIAL_SCALE: f32 = 1.0 / HEARING_RADIUS_M;
 /// Neutral backing for the world-projected UI panel. This remains translucent
 /// so dialogue feels attached to the world while staying legible against
 /// stone, sky, and the actors' light skin tones.
@@ -49,6 +60,27 @@ pub struct PresentSpeech {
 pub struct TtsClipReady {
     pub event_id: String,
     pub wav_bytes: Arc<[u8]>,
+}
+
+#[derive(Message, Debug, Clone)]
+pub struct TtsClipFailed {
+    pub event_id: String,
+    pub reason: String,
+}
+
+#[derive(Message, Debug, Clone)]
+pub struct TtsPcmChunkReady {
+    pub event_id: String,
+    pub chunk_seq: u32,
+    pub sample_rate: u32,
+    pub samples: Arc<[i16]>,
+}
+
+#[derive(Message, Debug, Clone)]
+pub struct TtsStreamFinished {
+    pub event_id: String,
+    pub chunk_count: u32,
+    pub first_chunk_ms: u32,
 }
 
 #[derive(Message, Debug, Clone, Copy)]
@@ -78,6 +110,101 @@ struct ReadyClip {
     bytes: Arc<[u8]>,
 }
 
+#[derive(Debug, Default)]
+struct PcmBuffer {
+    samples: VecDeque<f32>,
+    finished: bool,
+}
+
+#[derive(Asset, TypePath, Debug, Clone)]
+pub(super) struct StreamingPcmSource {
+    buffer: Arc<Mutex<PcmBuffer>>,
+    sample_rate: u32,
+}
+
+impl StreamingPcmSource {
+    fn new(sample_rate: u32) -> Self {
+        Self {
+            buffer: Arc::new(Mutex::new(PcmBuffer::default())),
+            sample_rate,
+        }
+    }
+
+    fn push(&self, samples: &[i16]) {
+        if let Ok(mut buffer) = self.buffer.lock() {
+            buffer
+                .samples
+                .extend(samples.iter().map(|sample| f32::from(*sample) / 32768.0));
+        }
+    }
+
+    fn finish(&self) {
+        if let Ok(mut buffer) = self.buffer.lock() {
+            buffer.finished = true;
+        }
+    }
+}
+
+pub(super) struct StreamingPcmDecoder {
+    buffer: Arc<Mutex<PcmBuffer>>,
+    sample_rate: u32,
+}
+
+impl Iterator for StreamingPcmDecoder {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Ok(mut buffer) = self.buffer.lock() else {
+            return None;
+        };
+        if let Some(sample) = buffer.samples.pop_front() {
+            Some(sample)
+        } else if buffer.finished {
+            None
+        } else {
+            // Never block the audio callback. Pocket TTS runs faster than
+            // real-time after its first chunk, so this is only an underrun
+            // guard and normally emits no audible gap.
+            Some(0.0)
+        }
+    }
+}
+
+impl Source for StreamingPcmDecoder {
+    fn current_span_len(&self) -> Option<usize> {
+        None
+    }
+
+    fn channels(&self) -> ChannelCount {
+        ChannelCount::new(1).expect("one channel is non-zero")
+    }
+
+    fn sample_rate(&self) -> SampleRate {
+        SampleRate::new(self.sample_rate).expect("validated sample rate is non-zero")
+    }
+
+    fn total_duration(&self) -> Option<Duration> {
+        None
+    }
+}
+
+impl Decodable for StreamingPcmSource {
+    type Decoder = StreamingPcmDecoder;
+
+    fn decoder(&self) -> Self::Decoder {
+        StreamingPcmDecoder {
+            buffer: self.buffer.clone(),
+            sample_rate: self.sample_rate,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct PendingPcmStream {
+    source: StreamingPcmSource,
+    next_chunk_seq: u32,
+}
+
 #[derive(Debug)]
 struct ActiveVoice {
     entity: Entity,
@@ -92,6 +219,7 @@ pub struct SpeechPresentationState {
     subtitles: VecDeque<SubtitleLine>,
     audio_order: VecDeque<AudioExpectation>,
     ready_audio: HashMap<String, ReadyClip>,
+    pcm_streams: HashMap<String, PendingPcmStream>,
     /// One auto-layout root per NPC; its children retain accepted event order.
     bubble_stacks: HashMap<ActorId, Entity>,
     active_voice: Option<ActiveVoice>,
@@ -106,6 +234,10 @@ impl SpeechPresentationState {
         self.subtitles.clear();
         self.audio_order.clear();
         self.ready_audio.clear();
+        for stream in self.pcm_streams.values() {
+            stream.source.finish();
+        }
+        self.pcm_streams.clear();
         self.bubble_stacks.clear();
         self.active_voice = None;
         self.microphone_suspended_for_voice = false;
@@ -130,6 +262,7 @@ pub(super) struct SpeechBubbleStack {
 #[derive(Component, Debug)]
 pub(super) struct SpeechBubble {
     expires_at: f64,
+    event_id: String,
 }
 
 #[derive(Component)]
@@ -180,6 +313,7 @@ pub fn receive_speech_events(
             &message.speaker_id,
             message.speaker_position,
             text,
+            &message.event_id,
             now + f64::from(duration),
             speech_font.clone(),
         );
@@ -193,12 +327,14 @@ pub fn receive_speech_events(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_speech_bubble(
     commands: &mut Commands,
     bubble_stacks: &mut HashMap<ActorId, Entity>,
     speaker_id: &ActorId,
     speaker: Vec3,
     text: &str,
+    event_id: &str,
     expires_at: f64,
     font: FontSource,
 ) {
@@ -233,7 +369,10 @@ fn spawn_speech_bubble(
 
     commands.entity(stack_entity).with_child((
         Name::new("NPC speech bubble"),
-        SpeechBubble { expires_at },
+        SpeechBubble {
+            expires_at,
+            event_id: event_id.to_owned(),
+        },
         Text::new(text),
         TextFont {
             font,
@@ -256,13 +395,22 @@ fn spawn_speech_bubble(
 pub fn update_speech_bubbles(
     mut commands: Commands,
     time: Res<Time>,
+    state: Res<SpeechPresentationState>,
     cameras: Query<(&Camera, &GlobalTransform), With<crate::controller::PlayerCamera>>,
     bubbles: Query<(Entity, &SpeechBubble)>,
     mut stacks: Query<(&SpeechBubbleStack, &mut Node, &mut Visibility)>,
 ) {
     let now = time.elapsed_secs_f64();
     for (entity, bubble) in &bubbles {
-        if now >= bubble.expires_at {
+        let audio_is_live = state
+            .audio_order
+            .iter()
+            .any(|expected| expected.event_id == bubble.event_id)
+            || state
+                .active_voice
+                .as_ref()
+                .is_some_and(|voice| voice.event_id == bubble.event_id);
+        if now >= bubble.expires_at && !audio_is_live {
             commands.entity(entity).despawn();
         }
     }
@@ -288,14 +436,25 @@ pub fn update_speech_bubbles(
 pub fn receive_tts_clips(
     mut messages: MessageReader<TtsClipReady>,
     mut state: ResMut<SpeechPresentationState>,
+    mut hud: Option<ResMut<SmartActorHudState>>,
 ) {
     for message in messages.read() {
-        if !valid_wav(&message.wav_bytes)
-            || !state
-                .audio_order
-                .iter()
-                .any(|expected| expected.event_id == message.event_id)
+        if !valid_wav(&message.wav_bytes) {
+            voice_toast(
+                hud.as_deref_mut(),
+                "NPC voice WAV was invalid; text remains available",
+            );
+            continue;
+        }
+        if !state
+            .audio_order
+            .iter()
+            .any(|expected| expected.event_id == message.event_id)
         {
+            voice_toast(
+                hud.as_deref_mut(),
+                "NPC voice arrived too late; text remains available",
+            );
             continue;
         }
         state.ready_audio.insert(
@@ -307,17 +466,140 @@ pub fn receive_tts_clips(
     }
 }
 
+pub fn receive_tts_failures(
+    mut messages: MessageReader<TtsClipFailed>,
+    mut state: ResMut<SpeechPresentationState>,
+    mut hud: ResMut<SmartActorHudState>,
+) {
+    for message in messages.read() {
+        let before = state.audio_order.len();
+        state
+            .audio_order
+            .retain(|expected| expected.event_id != message.event_id);
+        state.ready_audio.remove(&message.event_id);
+        if let Some(stream) = state.pcm_streams.remove(&message.event_id) {
+            stream.source.finish();
+        }
+        if state.audio_order.len() != before {
+            voice_toast(
+                Some(&mut hud),
+                format!(
+                    "NPC voice failed: {}; text remains available",
+                    message.reason
+                ),
+            );
+        }
+    }
+}
+
+pub fn receive_tts_pcm_chunks(
+    mut messages: MessageReader<TtsPcmChunkReady>,
+    mut state: ResMut<SpeechPresentationState>,
+    mut hud: ResMut<SmartActorHudState>,
+) {
+    for message in messages.read() {
+        let stream_is_live = state.pcm_streams.contains_key(&message.event_id);
+        let audio_is_waiting = state
+            .audio_order
+            .iter()
+            .any(|expected| expected.event_id == message.event_id);
+        if message.samples.is_empty()
+            || !(8_000..=48_000).contains(&message.sample_rate)
+            || (!audio_is_waiting && !stream_is_live)
+        {
+            continue;
+        }
+        let invalid = {
+            let stream = state
+                .pcm_streams
+                .entry(message.event_id.clone())
+                .or_insert_with(|| PendingPcmStream {
+                    source: StreamingPcmSource::new(message.sample_rate),
+                    next_chunk_seq: 0,
+                });
+            if stream.next_chunk_seq != message.chunk_seq
+                || stream.source.sample_rate != message.sample_rate
+            {
+                true
+            } else {
+                stream.source.push(&message.samples);
+                stream.next_chunk_seq += 1;
+                false
+            }
+        };
+        if invalid {
+            if let Some(stream) = state.pcm_streams.remove(&message.event_id) {
+                stream.source.finish();
+            }
+            state
+                .audio_order
+                .retain(|expected| expected.event_id != message.event_id);
+            voice_toast(
+                Some(&mut hud),
+                "NPC PCM stream was out of order; text remains available",
+            );
+        }
+    }
+}
+
+pub fn receive_tts_stream_ends(
+    mut messages: MessageReader<TtsStreamFinished>,
+    mut state: ResMut<SpeechPresentationState>,
+    mut hud: ResMut<SmartActorHudState>,
+) {
+    for message in messages.read() {
+        let Some(received_chunks) = state
+            .pcm_streams
+            .get(&message.event_id)
+            .map(|stream| stream.next_chunk_seq)
+        else {
+            continue;
+        };
+        if received_chunks != message.chunk_count || message.chunk_count == 0 {
+            if let Some(stream) = state.pcm_streams.remove(&message.event_id) {
+                stream.source.finish();
+            }
+            state
+                .audio_order
+                .retain(|expected| expected.event_id != message.event_id);
+            voice_toast(
+                Some(&mut hud),
+                "NPC PCM stream ended incorrectly; text remains available",
+            );
+            continue;
+        }
+        if let Some(stream) = state.pcm_streams.get(&message.event_id) {
+            stream.source.finish();
+        }
+        if message.first_chunk_ms > 300 {
+            voice_toast(
+                Some(&mut hud),
+                format!(
+                    "Local voice first PCM took {} ms (target: <300 ms)",
+                    message.first_chunk_ms
+                ),
+            );
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn start_ready_audio(
     mut commands: Commands,
     time: Res<Time>,
     mut audio_sources: ResMut<Assets<AudioSource>>,
+    mut streaming_sources: Option<ResMut<Assets<StreamingPcmSource>>>,
     mut state: ResMut<SpeechPresentationState>,
     players: Query<&GlobalTransform, With<PlayerController>>,
     sinks: Query<&SpatialAudioSink, With<NpcVoice>>,
     microphone: Option<Res<MicrophoneService>>,
+    config: Res<SmartActorsConfig>,
+    mut hud: Option<ResMut<SmartActorHudState>>,
 ) {
     let now = time.elapsed_secs_f64();
+    if !config.pause_microphone_during_npc_voice {
+        let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
+    }
     if let Some(active) = state.active_voice.as_ref() {
         let age = now - active.started_at;
         let sink = sinks.get(active.entity);
@@ -331,6 +613,14 @@ pub fn start_ready_audio(
             return;
         }
         if sink_start_timed_out || playback_timed_out {
+            voice_toast(
+                hud.as_deref_mut(),
+                if sink_start_timed_out {
+                    "NPC voice could not start; text remains available"
+                } else {
+                    "NPC voice playback timed out; text remains available"
+                },
+            );
             if let Ok(sink) = sink {
                 sink.stop();
             }
@@ -338,6 +628,7 @@ pub fn start_ready_audio(
         }
         let event_id = active.event_id.clone();
         state.active_voice = None;
+        state.pcm_streams.remove(&event_id);
         if let Some(line) = state
             .subtitles
             .iter_mut()
@@ -367,15 +658,23 @@ pub fn start_ready_audio(
             }
             let stale = state.audio_order.pop_front().expect("front exists");
             state.ready_audio.remove(&stale.event_id);
+            if let Some(stream) = state.pcm_streams.remove(&stale.event_id) {
+                stream.source.finish();
+            }
             continue;
         }
 
         let timed_out = now - expected.queued_at > TTS_WAIT_SECONDS;
         let event_id = expected.event_id.clone();
         let position = expected.position;
-        if !state.ready_audio.contains_key(&event_id) {
+        let pcm_ready = state
+            .pcm_streams
+            .get(&event_id)
+            .is_some_and(|stream| stream.next_chunk_seq > 0);
+        if !state.ready_audio.contains_key(&event_id) && !pcm_ready {
             if timed_out {
                 state.audio_order.pop_front();
+                state.pcm_streams.remove(&event_id);
                 continue;
             }
             let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
@@ -389,51 +688,94 @@ pub fn start_ready_audio(
         let distance = player.translation().distance(position);
         let Some(gain) = speech_gain(distance) else {
             state.ready_audio.remove(&event_id);
+            if let Some(stream) = state.pcm_streams.remove(&event_id) {
+                stream.source.finish();
+            }
             state.audio_order.pop_front();
             let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
             return;
         };
-        match microphone_suspension_readiness(&mut state, microphone.as_deref(), now) {
+        match if config.pause_microphone_during_npc_voice {
+            microphone_suspension_readiness(&mut state, microphone.as_deref(), now)
+        } else {
+            MicrophoneSuspensionReadiness::Ready
+        } {
             MicrophoneSuspensionReadiness::Ready => {}
             MicrophoneSuspensionReadiness::Waiting => {
                 // Wait for the worker to confirm that the input stream has
                 // stopped before any NPC audio reaches the output device.
                 return;
             }
-            MicrophoneSuspensionReadiness::Failed => {
+            MicrophoneSuspensionReadiness::Failed(reason) => {
                 // A dead audio worker must not strand subtitles or the mic.
                 // Drop this optional TTS clip and keep the complete text path.
                 state.ready_audio.remove(&event_id);
+                if let Some(stream) = state.pcm_streams.remove(&event_id) {
+                    stream.source.finish();
+                }
                 state.audio_order.pop_front();
                 abandon_microphone_suspension(&mut state, microphone.as_deref());
+                voice_toast(
+                    hud.as_deref_mut(),
+                    format!("NPC voice {event_id} was skipped: {reason}; text remains available"),
+                );
                 return;
             }
         }
-        let clip = state
-            .ready_audio
-            .remove(&event_id)
-            .expect("ready clip was checked above");
         state.audio_order.pop_front();
-        let source = audio_sources.add(AudioSource { bytes: clip.bytes });
-        let entity = commands
-            .spawn((
-                Name::new("NPC spatial voice"),
-                NpcVoice,
-                AudioPlayer::new(source),
-                PlaybackSettings::DESPAWN
-                    .with_spatial(true)
-                    .with_volume(Volume::Linear(gain)),
-                Transform::from_translation(position),
-            ))
-            .id();
+        let settings = PlaybackSettings::DESPAWN
+            .with_spatial(true)
+            .with_spatial_scale(SpatialScale::new(NPC_VOICE_SPATIAL_SCALE))
+            .with_volume(Volume::Linear(gain));
+        let entity = if let Some(clip) = state.ready_audio.remove(&event_id) {
+            let source = audio_sources.add(AudioSource { bytes: clip.bytes });
+            commands
+                .spawn((
+                    Name::new("NPC spatial voice"),
+                    NpcVoice,
+                    AudioPlayer::new(source),
+                    settings,
+                    Transform::from_translation(position),
+                ))
+                .id()
+        } else {
+            let Some(streaming_sources) = streaming_sources.as_deref_mut() else {
+                state.pcm_streams.remove(&event_id);
+                abandon_microphone_suspension(&mut state, microphone.as_deref());
+                voice_toast(
+                    hud.as_deref_mut(),
+                    "Streaming audio output is unavailable; text remains available",
+                );
+                return;
+            };
+            let source = state
+                .pcm_streams
+                .get(&event_id)
+                .expect("PCM readiness was checked")
+                .source
+                .clone();
+            let source = streaming_sources.add(source);
+            commands
+                .spawn((
+                    Name::new("NPC streaming spatial voice"),
+                    NpcVoice,
+                    AudioPlayer(source),
+                    settings,
+                    Transform::from_translation(position),
+                ))
+                .id()
+        };
         if let Some(line) = state.subtitles.front_mut() {
             line.audio_playing = true;
         }
         state.active_voice = Some(ActiveVoice {
             entity,
-            event_id,
+            event_id: event_id.clone(),
             started_at: now,
         });
+        println!(
+            "[smart actors/audio] starting NPC voice {event_id}: distance={distance:.2}m gain={gain:.3}"
+        );
         return;
     }
 }
@@ -442,7 +784,7 @@ pub fn start_ready_audio(
 enum MicrophoneSuspensionReadiness {
     Ready,
     Waiting,
-    Failed,
+    Failed(&'static str),
 }
 
 fn microphone_suspension_readiness(
@@ -458,9 +800,6 @@ fn microphone_suspension_readiness(
     };
 
     let started_at = *state.microphone_suspend_started_at.get_or_insert(now);
-    if now - started_at >= MICROPHONE_SUSPEND_TIMEOUT_SECONDS {
-        return MicrophoneSuspensionReadiness::Failed;
-    }
 
     if !state.microphone_suspended_for_voice {
         let (acknowledged, acknowledgement) = bounded(1);
@@ -468,6 +807,11 @@ fn microphone_suspension_readiness(
             .try_send(MicrophoneCommand::Suspend { acknowledged })
             .is_err()
         {
+            if now - started_at >= MICROPHONE_SUSPEND_TIMEOUT_SECONDS {
+                return MicrophoneSuspensionReadiness::Failed(
+                    "the microphone command queue did not accept Suspend within two seconds",
+                );
+            }
             return MicrophoneSuspensionReadiness::Waiting;
         }
         state.microphone_suspended_for_voice = true;
@@ -483,14 +827,26 @@ fn microphone_suspension_readiness(
         Ok(()) => {
             state.microphone_suspend_ack = None;
             state.microphone_suspend_started_at = None;
+            println!("[smart actors/audio] microphone suspended for NPC playback");
             MicrophoneSuspensionReadiness::Ready
         }
-        Err(TryRecvError::Empty) => MicrophoneSuspensionReadiness::Waiting,
+        Err(TryRecvError::Empty) => {
+            if now - started_at >= MICROPHONE_SUSPEND_TIMEOUT_SECONDS {
+                state.microphone_suspend_ack = None;
+                state.microphone_suspend_started_at = None;
+                MicrophoneSuspensionReadiness::Failed(
+                    "the microphone worker did not acknowledge Suspend within two seconds",
+                )
+            } else {
+                MicrophoneSuspensionReadiness::Waiting
+            }
+        }
         Err(TryRecvError::Disconnected) => {
-            state.microphone_suspended_for_voice = false;
             state.microphone_suspend_ack = None;
             state.microphone_suspend_started_at = None;
-            MicrophoneSuspensionReadiness::Failed
+            MicrophoneSuspensionReadiness::Failed(
+                "the microphone worker dropped its Suspend acknowledgement",
+            )
         }
     }
 }
@@ -519,6 +875,7 @@ fn resume_microphone_after_voice(
     let resumed =
         microphone.is_none_or(|microphone| microphone.try_send(MicrophoneCommand::Resume).is_ok());
     if resumed {
+        println!("[smart actors/audio] microphone resumed after NPC playback");
         state.microphone_suspended_for_voice = false;
         state.microphone_suspend_ack = None;
         state.microphone_suspend_started_at = None;
@@ -571,8 +928,12 @@ pub fn stop_npc_speech_for_capture(
     mut state: ResMut<SpeechPresentationState>,
     sinks: Query<&SpatialAudioSink, With<NpcVoice>>,
     microphone: Option<Res<MicrophoneService>>,
+    config: Res<SmartActorsConfig>,
 ) {
     if messages.read().next().is_none() {
+        return;
+    }
+    if !config.pause_microphone_during_npc_voice {
         return;
     }
     if let Some(active) = state.active_voice.take() {
@@ -638,6 +999,14 @@ fn valid_wav(bytes: &[u8]) -> bool {
         && bytes.get(8..12) == Some(b"WAVE")
 }
 
+fn voice_toast(hud: Option<&mut SmartActorHudState>, message: impl Into<String>) {
+    let message = message.into();
+    println!("[smart actors/audio] {message}");
+    if let Some(hud) = hud {
+        hud.toast(message);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
@@ -686,6 +1055,7 @@ mod tests {
                 &ActorId("speaker".into()),
                 Vec3::ZERO,
                 DIALOGUE,
+                "test-event",
                 10.0,
                 FontSource::default(),
             );
@@ -811,6 +1181,34 @@ mod tests {
     }
 
     #[test]
+    fn expected_audio_holds_its_bubble_past_minimum_reading_time() {
+        let mut app = speech_test_app();
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
+            .add_systems(Update, update_speech_bubbles.after(receive_speech_events));
+        app.world_mut()
+            .resource_mut::<Time<Virtual>>()
+            .set_max_delta(Duration::from_secs(10));
+        let mut message = npc_speech(1, "sven", "short");
+        message.expect_audio = true;
+        app.world_mut().write_message(message);
+        app.update();
+
+        *app.world_mut().resource_mut::<TimeUpdateStrategy>() =
+            TimeUpdateStrategy::ManualDuration(Duration::from_secs(4));
+        app.update();
+        assert_eq!(bubble_count(&mut app), 1);
+
+        app.world_mut()
+            .resource_mut::<SpeechPresentationState>()
+            .audio_order
+            .clear();
+        *app.world_mut().resource_mut::<TimeUpdateStrategy>() =
+            TimeUpdateStrategy::ManualDuration(Duration::ZERO);
+        app.update();
+        assert_eq!(bubble_count(&mut app), 0);
+    }
+
+    #[test]
     fn clearing_speech_removes_stacks_children_and_tracking() {
         let mut app = speech_test_app();
         app.add_message::<ClearSpeechPresentation>().add_systems(
@@ -851,6 +1249,7 @@ mod tests {
         assert_eq!(speech_gain(20.0), Some(0.015));
         assert_eq!(speech_gain(20.001), None);
         assert_eq!(speech_gain(f32::NAN), None);
+        assert_eq!(HEARING_RADIUS_M * NPC_VOICE_SPATIAL_SCALE, 1.0);
     }
 
     #[test]
@@ -886,14 +1285,14 @@ mod tests {
             MicrophoneSuspensionReadiness::Waiting
         );
         let _pending = commands.try_recv().expect("suspend command");
-        assert_eq!(
+        assert!(matches!(
             microphone_suspension_readiness(
                 &mut state,
                 Some(&microphone),
                 4.0 + MICROPHONE_SUSPEND_TIMEOUT_SECONDS,
             ),
-            MicrophoneSuspensionReadiness::Failed
-        );
+            MicrophoneSuspensionReadiness::Failed(_)
+        ));
         abandon_microphone_suspension(&mut state, Some(&microphone));
         assert!(matches!(commands.try_recv(), Ok(MicrophoneCommand::Resume)));
     }
@@ -902,6 +1301,105 @@ mod tests {
     fn malformed_audio_is_rejected_before_bevy_decodes_it() {
         assert!(!valid_wav(b"not a wave"));
         assert!(valid_wav(b"RIFF\0\0\0\0WAVE"));
+    }
+
+    #[test]
+    fn streaming_pcm_decoder_starts_immediately_and_finishes_after_buffer_drains() {
+        let source = StreamingPcmSource::new(24_000);
+        source.push(&[i16::MIN, 0, i16::MAX]);
+        let mut decoder = source.decoder();
+
+        assert_eq!(decoder.next(), Some(-1.0));
+        assert_eq!(decoder.next(), Some(0.0));
+        assert_eq!(decoder.next(), Some(i16::MAX as f32 / 32768.0));
+        assert_eq!(
+            decoder.next(),
+            Some(0.0),
+            "an underrun must not block audio"
+        );
+        source.finish();
+        assert_eq!(decoder.next(), None);
+    }
+
+    #[test]
+    fn out_of_order_pcm_chunk_releases_the_waiting_subtitle() {
+        let mut app = App::new();
+        let mut state = SpeechPresentationState::default();
+        state.audio_order.push_back(AudioExpectation {
+            event_id: "speech-1".into(),
+            position: Vec3::ZERO,
+            queued_at: 0.0,
+        });
+        app.insert_resource(state)
+            .init_resource::<SmartActorHudState>()
+            .add_message::<TtsPcmChunkReady>()
+            .add_systems(Update, receive_tts_pcm_chunks);
+        app.world_mut().write_message(TtsPcmChunkReady {
+            event_id: "speech-1".into(),
+            chunk_seq: 0,
+            sample_rate: 24_000,
+            samples: Arc::from([1_i16, 2]),
+        });
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<SpeechPresentationState>()
+                .pcm_streams["speech-1"]
+                .next_chunk_seq,
+            1
+        );
+
+        app.world_mut().write_message(TtsPcmChunkReady {
+            event_id: "speech-1".into(),
+            chunk_seq: 2,
+            sample_rate: 24_000,
+            samples: Arc::from([3_i16, 4]),
+        });
+        app.update();
+        assert!(
+            app.world()
+                .resource::<SpeechPresentationState>()
+                .audio_order
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn live_pcm_stream_keeps_accepting_chunks_after_playback_starts() {
+        let mut app = App::new();
+        let mut state = SpeechPresentationState::default();
+        let source = StreamingPcmSource::new(24_000);
+        source.push(&[1]);
+        state.pcm_streams.insert(
+            "speech-1".into(),
+            PendingPcmStream {
+                source,
+                next_chunk_seq: 1,
+            },
+        );
+        // start_ready_audio removes the event from audio_order as soon as
+        // chunk zero is handed to the audio sink. Later chunks still belong
+        // to the live stream stored above.
+        app.insert_resource(state)
+            .init_resource::<SmartActorHudState>()
+            .add_message::<TtsPcmChunkReady>()
+            .add_systems(Update, receive_tts_pcm_chunks);
+        app.world_mut().write_message(TtsPcmChunkReady {
+            event_id: "speech-1".into(),
+            chunk_seq: 1,
+            sample_rate: 24_000,
+            samples: Arc::from([2_i16, 3]),
+        });
+
+        app.update();
+
+        assert_eq!(
+            app.world()
+                .resource::<SpeechPresentationState>()
+                .pcm_streams["speech-1"]
+                .next_chunk_seq,
+            2
+        );
     }
 
     #[test]
@@ -986,9 +1484,37 @@ mod tests {
             queued_at: 0.0,
         });
 
-        advance_subtitle_queue(&mut state, 9.9);
+        advance_subtitle_queue(&mut state, 599.9);
         assert_eq!(state.subtitles.len(), 1);
-        advance_subtitle_queue(&mut state, 10.1);
+        advance_subtitle_queue(&mut state, 600.1);
         assert!(state.subtitles.is_empty());
+    }
+
+    #[test]
+    fn keyed_tts_failure_releases_audio_wait_immediately() {
+        let mut app = App::new();
+        let mut state = SpeechPresentationState::default();
+        state.audio_order.push_back(AudioExpectation {
+            event_id: "speech-1".into(),
+            position: Vec3::ZERO,
+            queued_at: 0.0,
+        });
+        app.insert_resource(state)
+            .init_resource::<SmartActorHudState>()
+            .add_message::<TtsClipFailed>()
+            .add_systems(Update, receive_tts_failures);
+        app.world_mut().write_message(TtsClipFailed {
+            event_id: "speech-1".into(),
+            reason: "local model failed".into(),
+        });
+
+        app.update();
+
+        assert!(
+            app.world()
+                .resource::<SpeechPresentationState>()
+                .audio_order
+                .is_empty()
+        );
     }
 }

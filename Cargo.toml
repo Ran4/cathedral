@@ -6,6 +6,7 @@ description = "A walkable, procedural cathedral-city built with Bevy"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+base64 = "0.22.1"
 bevy = { version = "0.19", default-features = false, features = ["3d", "ui", "bevy_audio", "png", "wav"] }
 cpal = "0.17.3"
 crossbeam-channel = "0.5.15"

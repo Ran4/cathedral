@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import base64
+import struct
 import tempfile
 import threading
 import unittest
+import wave
 from pathlib import Path
 
 from support import MODULE_DIR, decode_output, envelope, hello, wait_until  # noqa: F401
@@ -48,7 +51,11 @@ class FakeSpeech:
         if self.tts_error is not None:
             raise self.tts_error
         self.synthesized.append((text, voice_key))
-        output_wav.write_bytes(b"RIFF-fake-wav")
+        with wave.open(str(output_wav), "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(16_000)
+            wav.writeframes(struct.pack("<800h", *([0] * 800)))
 
 
 class BlockingSpeech(FakeSpeech):
@@ -62,6 +69,30 @@ class BlockingSpeech(FakeSpeech):
         if not self.release.wait(timeout=1):
             raise TimeoutError("test did not release transcription")
         return super().transcribe(wav_path)
+
+
+class BlockingTts(FakeSpeech):
+    def __init__(self) -> None:
+        super().__init__()
+        self.started = threading.Event()
+        self.release = threading.Event()
+
+    def synthesize(self, text: str, voice_key: str, output_wav: Path) -> None:
+        self.started.set()
+        if not self.release.wait(timeout=1):
+            raise TimeoutError("test did not release synthesis")
+        super().synthesize(text, voice_key, output_wav)
+
+
+class StreamingTts(FakeSpeech):
+    def synthesize_stream(self, text, voice_key, on_chunk):
+        self.synthesized.append((text, voice_key))
+        encoded = base64.b64encode(struct.pack("<4h", 0, 100, -100, 0)).decode(
+            "ascii"
+        )
+        on_chunk(0, 24_000, encoded)
+        on_chunk(1, 24_000, encoded)
+        return 2, 173
 
 
 class ProtocolPrimitiveTests(unittest.TestCase):
@@ -142,6 +173,9 @@ class HandshakeAndStateTests(ServerTestCase):
                 "stt_cloud": False,
                 "stt_local": False,
                 "tts": False,
+                "tts_cloud": False,
+                "tts_local": False,
+                "tts_selected": "off",
             },
         )
         snapshot = ready["payload"]["snapshot"]
@@ -167,8 +201,26 @@ class HandshakeAndStateTests(ServerTestCase):
                 "stt_cloud": False,
                 "stt_local": True,
                 "tts": False,
+                "tts_cloud": False,
+                "tts_local": False,
+                "tts_selected": "off",
             },
         )
+
+    def test_local_tts_is_available_independently_from_cloud_speech(self) -> None:
+        server = self.make_server(
+            speech_backend=NoSpeech(),
+            local_tts_backend=FakeSpeech(),
+            tts_backend="local",
+        )
+        self.handshake(server)
+
+        capabilities = self.messages("ready")[0]["payload"]["capabilities"]
+        self.assertFalse(capabilities["stt"])
+        self.assertFalse(capabilities["tts_cloud"])
+        self.assertTrue(capabilities["tts_local"])
+        self.assertTrue(capabilities["tts"])
+        self.assertEqual(capabilities["tts_selected"], "local")
 
     def test_session_mismatch_is_rejected_without_mutation(self) -> None:
         server = self.make_server()
@@ -382,8 +434,144 @@ class CommandTests(ServerTestCase):
             ]["payload"]["success"]
         )
 
+    def test_tts_backend_selection_is_strict_acknowledged_and_idempotent(self) -> None:
+        cloud = FakeSpeech()
+        server = self.make_server(
+            cloud_tts_backend=cloud,
+            tts_backend="off",
+        )
+        self.handshake(server)
+        server.handle_envelope(
+            envelope(
+                "set_tts_backend",
+                {"request_id": "tts-select-1", "backend": "cloud"},
+                message_id="tts-command-1",
+            )
+        )
+        result = self.messages("command_result")[-1]["payload"]
+        self.assertTrue(result["success"])
+        self.assertEqual(server.tts_backend, "cloud")
+
+        server.handle_envelope(
+            envelope(
+                "set_tts_backend",
+                {"request_id": "tts-select-1", "backend": "cloud"},
+                message_id="tts-command-2",
+            )
+        )
+        self.assertEqual(self.messages("command_result")[-1]["payload"], result)
+
+        server.handle_envelope(
+            envelope(
+                "set_tts_backend",
+                {"request_id": "tts-select-2", "backend": "automatic"},
+                message_id="tts-command-3",
+            )
+        )
+        self.assertFalse(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(server.tts_backend, "cloud")
+
+    def test_selecting_unavailable_tts_does_not_change_server_state(self) -> None:
+        server = self.make_server(tts_backend="off")
+        self.handshake(server)
+        server.handle_envelope(
+            envelope(
+                "set_tts_backend",
+                {"request_id": "tts-local", "backend": "local"},
+                message_id="tts-local-command",
+            )
+        )
+        result = self.messages("command_result")[-1]["payload"]
+        self.assertFalse(result["success"])
+        self.assertEqual(result["error_code"], "tts_unavailable")
+        self.assertEqual(server.tts_backend, "off")
+
 
 class SpeechWorkerTests(ServerTestCase):
+    def test_local_tts_forwards_pcm_before_stream_completion(self) -> None:
+        backend = StreamingTts()
+        server = self.make_server(
+            local_tts_backend=backend,
+            tts_backend="local",
+        )
+        self.handshake(server)
+        ilse = server.world.characters[CharIdStr("k0fb1")]
+        apply_action(
+            server.world,
+            ilse,
+            "say",
+            {"target": "player", "text": "Stream this"},
+        )
+        wait_until(lambda: bool(self.messages("tts_stream_end")), server.poll)
+
+        chunks = self.messages("tts_chunk")
+        self.assertEqual([item["payload"]["chunk_seq"] for item in chunks], [0, 1])
+        self.assertTrue(all(item["payload"]["channels"] == 1 for item in chunks))
+        end = self.messages("tts_stream_end")[-1]["payload"]
+        self.assertEqual(end["chunk_count"], 2)
+        self.assertEqual(end["first_chunk_ms"], 173)
+        self.assertFalse(self.messages("tts_ready"))
+
+    def test_tts_mode_is_captured_when_each_utterance_is_queued(self) -> None:
+        local = BlockingTts()
+        cloud = FakeSpeech()
+        server = self.make_server(
+            cloud_tts_backend=cloud,
+            local_tts_backend=local,
+            tts_backend="local",
+        )
+        self.handshake(server)
+        ilse = server.world.characters[CharIdStr("k0fb1")]
+        apply_action(
+            server.world,
+            ilse,
+            "say",
+            {"target": "player", "text": "Local line"},
+        )
+        server.poll()
+        self.assertTrue(local.started.wait(timeout=1))
+
+        server.handle_envelope(
+            envelope(
+                "set_tts_backend",
+                {"request_id": "tts-cloud", "backend": "cloud"},
+                message_id="tts-cloud-command",
+            )
+        )
+        apply_action(
+            server.world,
+            ilse,
+            "say",
+            {"target": "player", "text": "Cloud line"},
+        )
+        server.poll()
+        local.release.set()
+        wait_until(lambda: bool(cloud.synthesized), server.poll)
+
+        self.assertEqual([text for text, _ in local.synthesized], ["Local line"])
+        self.assertEqual([text for text, _ in cloud.synthesized], ["Cloud line"])
+
+    def test_off_mode_never_queues_synthesis(self) -> None:
+        cloud = FakeSpeech()
+        local = FakeSpeech()
+        server = self.make_server(
+            cloud_tts_backend=cloud,
+            local_tts_backend=local,
+            tts_backend="off",
+        )
+        self.handshake(server)
+        ilse = server.world.characters[CharIdStr("k0fb1")]
+        apply_action(
+            server.world,
+            ilse,
+            "say",
+            {"target": "player", "text": "Text only"},
+        )
+        server.poll()
+        self.assertFalse(cloud.synthesized)
+        self.assertFalse(local.synthesized)
+        self.assertEqual(self.messages("speech")[-1]["payload"]["text"], "Text only")
+
     def recording_payload(
         self, request_id: str, basename: str, *, stt_backend: str = "cloud"
     ) -> dict:
@@ -868,6 +1056,12 @@ class SpeechWorkerTests(ServerTestCase):
             self.messages("speech")[-1]["payload"]["text"], "Still visible"
         )
         self.assertFalse(self.messages("tts_ready"))
+        failure = self.messages("tts_failed")[-1]["payload"]
+        self.assertEqual(
+            failure["speech_event_id"],
+            self.messages("speech")[-1]["payload"]["event_id"],
+        )
+        self.assertIn("timed out", failure["reason"])
 
 
 if __name__ == "__main__":

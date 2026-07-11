@@ -16,7 +16,11 @@ from support import MODULE_DIR  # noqa: F401
 import canary_qwen_worker
 from speech_client import (
     CanaryQwenSpeechBackend,
+    KokoroTtsBackend,
+    OpenAITranscriptionBackend,
+    OpenAITtsBackend,
     OpenAISpeechBackend,
+    PocketTtsBackend,
     SpeechUnavailable,
 )
 
@@ -69,7 +73,7 @@ class FakeCanaryWorker:
     def __init__(self) -> None:
         self.stdin = io.StringIO()
         self.stdout = io.StringIO(
-            '\n'.join(
+            "\n".join(
                 [
                     json.dumps({"type": "ready"}),
                     json.dumps(
@@ -113,6 +117,16 @@ class SpeechAdapterTests(unittest.TestCase):
         self.assertEqual(client.transcription_calls[0]["model"], "test-transcribe")
         self.assertTrue(client.transcription_calls[0]["file"].closed)
 
+    def test_openai_transcription_and_synthesis_expose_separate_interfaces(
+        self,
+    ) -> None:
+        transcription = OpenAITranscriptionBackend(client=FakeClient())
+        synthesis = OpenAITtsBackend(client=FakeClient())
+        self.assertTrue(transcription.stt_available)
+        self.assertFalse(hasattr(transcription, "tts_available"))
+        self.assertTrue(synthesis.tts_available)
+        self.assertFalse(hasattr(synthesis, "stt_available"))
+
     def test_transcription_defaults_to_high_accuracy_model(self) -> None:
         client = FakeClient(transcript="understood")
         with patch.dict(os.environ, {"STT_MODEL": ""}, clear=False):
@@ -152,6 +166,144 @@ class SpeechAdapterTests(unittest.TestCase):
         )
         requests = [json.loads(line) for line in worker.stdin.getvalue().splitlines()]
         self.assertEqual([request["request_id"] for request in requests], [1, 2])
+        self.assertTrue(worker.terminated)
+
+    def test_kokoro_worker_is_lazy_reused_and_resolves_provider_voices(self) -> None:
+        worker = FakeCanaryWorker()
+        worker.stdout = io.StringIO(
+            "\n".join(
+                [
+                    json.dumps({"type": "ready"}),
+                    json.dumps(
+                        {
+                            "type": "result",
+                            "request_id": 1,
+                            "wav_basename": "first.wav",
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "result",
+                            "request_id": 2,
+                            "wav_basename": "second.wav",
+                        }
+                    ),
+                    "",
+                ]
+            )
+        )
+        worker_script = Path(self.temp.name) / "kokoro.py"
+        worker_script.touch()
+        first = Path(self.temp.name) / "first.wav"
+        second = Path(self.temp.name) / "second.wav"
+        first.touch()
+        second.touch()
+        with patch("speech_client.subprocess.Popen", return_value=worker) as popen:
+            backend = KokoroTtsBackend(
+                Path(self.temp.name),
+                worker_script=worker_script,
+                uv_binary="test-uv",
+            )
+            backend.synthesize("First", "sven", first)
+            backend.synthesize("Second", "ilse", second)
+            backend.close()
+
+        popen.assert_called_once()
+        requests = [json.loads(line) for line in worker.stdin.getvalue().splitlines()]
+        self.assertEqual(
+            [request["voice"] for request in requests], ["am_michael", "af_heart"]
+        )
+        self.assertEqual([request["request_id"] for request in requests], [1, 2])
+        self.assertTrue(worker.terminated)
+
+    def test_dead_kokoro_worker_is_a_safe_unavailable_failure(self) -> None:
+        worker = FakeCanaryWorker()
+        worker.stdout = io.StringIO(json.dumps({"type": "ready"}) + "\n")
+        worker_script = Path(self.temp.name) / "kokoro.py"
+        worker_script.touch()
+        with patch("speech_client.subprocess.Popen", return_value=worker):
+            backend = KokoroTtsBackend(
+                Path(self.temp.name),
+                worker_script=worker_script,
+                uv_binary="test-uv",
+            )
+            with self.assertRaisesRegex(SpeechUnavailable, "worker exited"):
+                backend.synthesize("Hello", "conny", Path(self.temp.name) / "voice.wav")
+            backend.close()
+
+    def test_pocket_worker_streams_chunks_and_is_reused(self) -> None:
+        worker = FakeCanaryWorker()
+        worker.stdout = io.StringIO(
+            "\n".join(
+                [
+                    json.dumps({"type": "ready", "sample_rate": 24_000}),
+                    json.dumps(
+                        {
+                            "type": "chunk",
+                            "request_id": 1,
+                            "chunk_seq": 0,
+                            "sample_rate": 24_000,
+                            "pcm_s16le_base64": "AAAAAA==",
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "result",
+                            "request_id": 1,
+                            "chunk_count": 1,
+                            "first_chunk_ms": 187,
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "chunk",
+                            "request_id": 2,
+                            "chunk_seq": 0,
+                            "sample_rate": 24_000,
+                            "pcm_s16le_base64": "AAAAAA==",
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "type": "result",
+                            "request_id": 2,
+                            "chunk_count": 1,
+                            "first_chunk_ms": 191,
+                        }
+                    ),
+                    "",
+                ]
+            )
+        )
+        worker_script = Path(self.temp.name) / "pocket.py"
+        worker_script.touch()
+        chunks: list[tuple[int, int, str]] = []
+        with patch("speech_client.subprocess.Popen", return_value=worker) as popen:
+            backend = PocketTtsBackend(
+                worker_script=worker_script,
+                uv_binary="test-uv",
+            )
+            self.assertEqual(
+                backend.synthesize_stream(
+                    "First", "sven", lambda *chunk: chunks.append(chunk)
+                ),
+                (1, 187),
+            )
+            self.assertEqual(
+                backend.synthesize_stream(
+                    "Second", "ilse", lambda *chunk: chunks.append(chunk)
+                ),
+                (1, 191),
+            )
+            backend.close()
+
+        popen.assert_called_once()
+        requests = [json.loads(line) for line in worker.stdin.getvalue().splitlines()]
+        self.assertEqual(
+            [request["voice_key"] for request in requests], ["sven", "ilse"]
+        )
+        self.assertEqual([request["request_id"] for request in requests], [1, 2])
+        self.assertEqual([chunk[:2] for chunk in chunks], [(0, 24_000), (0, 24_000)])
         self.assertTrue(worker.terminated)
 
     def test_canary_transcription_passes_explicit_mono_audio_to_salm(self) -> None:

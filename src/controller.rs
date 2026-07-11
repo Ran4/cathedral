@@ -209,6 +209,7 @@ fn spawn_player(mut commands: Commands) {
             },
             Transform::from_translation(PLAYER_SPAWN)
                 .with_rotation(Quat::from_rotation_y(PLAYER_START_YAW)),
+            Visibility::default(),
         ))
         .with_children(|player| {
             player.spawn((

@@ -353,8 +353,6 @@ fn listen_for_utterances(
     let mut pre_roll = VecDeque::with_capacity(pre_roll_limit);
     let mut detector = VoiceActivityDetector::new(sample_rate);
     let mut recording: Option<ActiveRecording> = None;
-    let mut pending_suspensions: Vec<Sender<()>> = Vec::new();
-
     loop {
         select! {
             recv(shutdown) -> _ => {
@@ -367,14 +365,17 @@ fn listen_for_utterances(
                     return ListenOutcome::Disabled;
                 }
                 Ok(MicrophoneCommand::Suspend { acknowledged }) => {
+                    // Once an NPC reply is ready, any simultaneous capture is
+                    // either a stale VAD candidate or a new utterance racing
+                    // that reply. Cancel it so output cannot feed back into an
+                    // open input stream and acknowledge suspension promptly.
                     if recording.is_some() {
-                        // Preserve speech that began before NPC playback asked
-                        // for the microphone. TTS waits for this utterance to
-                        // finish, then receives the suspension acknowledgement.
-                        pending_suspensions.push(acknowledged);
-                    } else {
-                        return ListenOutcome::Suspended(vec![acknowledged]);
+                        println!(
+                            "[smart actors/audio] cancelling active microphone recording before NPC playback"
+                        );
+                        cancel_recording(&mut recording, events);
                     }
+                    return ListenOutcome::Suspended(vec![acknowledged]);
                 }
                 Err(_) => {
                     cancel_recording(&mut recording, events);
@@ -386,16 +387,11 @@ fn listen_for_utterances(
                         .is_some_and(|active| active.wav_basename == wav_basename)
                     {
                         cancel_recording(&mut recording, events);
-                        if !pending_suspensions.is_empty() {
-                            return ListenOutcome::Suspended(std::mem::take(
-                                &mut pending_suspensions,
-                            ));
-                        }
                     } else {
                         remove_recording(runtime_dir, &wav_basename);
                     }
                 }
-                Ok(MicrophoneCommand::Resume) => pending_suspensions.clear(),
+                Ok(MicrophoneCommand::Resume) => {}
                 Ok(MicrophoneCommand::Enable) => {}
             },
             recv(error_rx) -> error => {
@@ -438,11 +434,6 @@ fn listen_for_utterances(
                             }
                             detector.reset_candidate();
                             pre_roll.clear();
-                            if !pending_suspensions.is_empty() {
-                                return ListenOutcome::Suspended(std::mem::take(
-                                    &mut pending_suspensions,
-                                ));
-                            }
                         }
                     } else {
                         push_pre_roll(&mut pre_roll, &samples, pre_roll_limit);

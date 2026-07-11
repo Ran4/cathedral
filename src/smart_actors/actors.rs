@@ -211,6 +211,7 @@ fn spawn_actor(
             ActorView,
             ActorTarget::default(),
             Transform::from_translation(actor.position_m.into()),
+            Visibility::default(),
         ))
         .with_children(|root| {
             root.spawn((
@@ -240,6 +241,7 @@ fn spawn_actor(
                 Name::new("Actor offer anchor"),
                 OfferAnchor(actor_id.clone()),
                 Transform::from_xyz(0.0, OFFER_ANCHOR_Y, 0.0),
+                Visibility::default(),
             ));
         });
 
@@ -489,6 +491,7 @@ fn spawn_offer_visual(
                 phase,
             },
             Transform::from_translation(base_translation),
+            Visibility::default(),
             ChildOf(anchor),
         ))
         .id();
