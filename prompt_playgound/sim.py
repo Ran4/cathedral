@@ -451,6 +451,12 @@ def _world_event(
     )
 
 
+def _notify(recipient: Character, text: str) -> None:
+    """Queue private prose only for actors whose scheduler consumes it."""
+    if recipient.control == "llm":
+        recipient.inbox.append(text)
+
+
 def apply_action(world: World, actor: Character, verb: str, args: object) -> str:
     """Validate and apply one action, returning its terminal transcript line.
 
@@ -487,21 +493,21 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
         if target is not None:
             for recipient in nearby:
                 if recipient.id == target.id:
-                    recipient.inbox.append(
-                        f'{_cap(identify(recipient, actor))} said to you: "{text}"'
+                    _notify(
+                        recipient,
+                        f'{_cap(identify(recipient, actor))} said to you: "{text}"',
                     )
                 else:
-                    recipient.inbox.append(
+                    _notify(
+                        recipient,
                         f"{_cap(identify(recipient, actor))} said to "
-                        f'{identify(recipient, target)}: "{text}"'
+                        f'{identify(recipient, target)}: "{text}"',
                     )
             target_id = target.id
             line = f'{actor.name} -> {target.name}: "{text}"'
         else:
             for recipient in nearby:
-                recipient.inbox.append(
-                    f'{_cap(identify(recipient, actor))} said: "{text}"'
-                )
+                _notify(recipient, f'{_cap(identify(recipient, actor))} said: "{text}"')
             target_id = None
             line = f'{actor.name} (aloud): "{text}"'
 
@@ -550,29 +556,41 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
         ):
             displaced = world.characters.get(old_offer.target_id)
             if displaced is not None and displaced in nearby:
-                displaced.inbox.append(
+                _notify(
+                    displaced,
                     f"{_cap(identify(displaced, actor))} withdrew the offered "
-                    f"{item.name} (id {item_id})"
+                    f"{item.name} (id {item_id})",
+                )
+                _world_event(
+                    world,
+                    "retract_offer",
+                    actor,
+                    [displaced],
+                    target_id=old_offer.target_id,
+                    item_id=item_id,
                 )
 
         if target is not None:
             for observer in nearby:
                 if observer.id == target.id:
-                    observer.inbox.append(
+                    _notify(
+                        observer,
                         f"{_cap(identify(observer, actor))} held out a {item.name} "
-                        f"(id {item_id}) to you"
+                        f"(id {item_id}) to you",
                     )
                 else:
-                    observer.inbox.append(
+                    _notify(
+                        observer,
                         f"{_cap(identify(observer, actor))} offered a {item.name} "
-                        f"to {identify(observer, target)}"
+                        f"to {identify(observer, target)}",
                     )
             line = f"{actor.name} offers the {item.name} to {target.name}"
         else:
             for observer in nearby:
-                observer.inbox.append(
+                _notify(
+                    observer,
                     f"{_cap(identify(observer, actor))} held out a {item.name} "
-                    f"(id {item_id}) to anyone who wanted it"
+                    f"(id {item_id}) to anyone who wanted it",
                 )
             line = f"{actor.name} offers the {item.name} to anyone nearby"
 
@@ -630,14 +648,16 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
         nearby = _nearby(world, actor, HEARING_RADIUS_M)
         for observer in nearby:
             if observer.id == giver.id:
-                observer.inbox.append(
+                _notify(
+                    observer,
                     f"{_cap(identify(observer, actor))} accepted the {item.name} "
-                    f"(id {item_id}) you offered"
+                    f"(id {item_id}) you offered",
                 )
             else:
-                observer.inbox.append(
+                _notify(
+                    observer,
                     f"{_cap(identify(observer, actor))} took a {item.name} "
-                    f"from {identify(observer, giver)}"
+                    f"from {identify(observer, giver)}",
                 )
         _world_event(
             world,
@@ -680,14 +700,16 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
         nearby = _nearby(world, actor, HEARING_RADIUS_M)
         for observer in nearby:
             if observer.id == giver.id:
-                observer.inbox.append(
+                _notify(
+                    observer,
                     f"{_cap(identify(observer, actor))} declined the {item.name} "
-                    f"(id {item_id}) you offered"
+                    f"(id {item_id}) you offered",
                 )
             else:
-                observer.inbox.append(
+                _notify(
+                    observer,
                     f"{_cap(identify(observer, actor))} declined a {item.name} "
-                    f"from {identify(observer, giver)}"
+                    f"from {identify(observer, giver)}",
                 )
         _world_event(
             world,
@@ -724,9 +746,10 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
                 and actor.position_m.distance_squared(target.position_m)
                 <= HEARING_RADIUS_M**2
             ):
-                target.inbox.append(
+                _notify(
+                    target,
                     f"{_cap(identify(target, actor))} withdrew the offered "
-                    f"{item.name} (id {item_id})"
+                    f"{item.name} (id {item_id})",
                 )
                 recipients.append(target)
         _world_event(
@@ -757,16 +780,15 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
         if offer is not None and offer.target_id is not None:
             target = world.characters.get(offer.target_id)
             if target is not None and target in nearby:
-                target.inbox.append(
+                _notify(
+                    target,
                     f"{_cap(identify(target, actor))} withdrew the offered "
-                    f"{item.name} (id {item_id})"
+                    f"{item.name} (id {item_id})",
                 )
         actor.holds.remove(item_id)
         del world.items[item_id]
         for observer in nearby:
-            observer.inbox.append(
-                f"{_cap(identify(observer, actor))} ate a {item.name}"
-            )
+            _notify(observer, f"{_cap(identify(observer, actor))} ate a {item.name}")
         _world_event(world, "eat", actor, nearby, item_id=item_id)
         world.touch_public_state()
         world.assert_invariants()

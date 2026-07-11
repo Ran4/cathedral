@@ -303,8 +303,10 @@ class SmartActorServer:
         self.handshake_complete = False
         self._seen_message_ids: OrderedDict[str, None] = OrderedDict()
         self._pending_requests: set[str] = set()
+        self._pending_recording_paths: dict[str, Path] = {}
         self._completed_requests: OrderedDict[str, dict[str, object]] = OrderedDict()
         self._last_snapshot_revision_sent = -1
+        self._pending_tts_paths: set[Path] = set()
         self._generated_audio: dict[tuple[str, str], Path] = {}
         self._stt_worker = _DaemonWorker(
             "smart-actor-stt", self._transcribe_task, capacity=4
@@ -323,6 +325,15 @@ class SmartActorServer:
         self.scheduler.close()
         self._stt_worker.close()
         self._tts_worker.close()
+        pending_audio = set(self._pending_recording_paths.values())
+        pending_audio.update(self._pending_tts_paths)
+        for path in pending_audio:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        self._pending_recording_paths.clear()
+        self._pending_tts_paths.clear()
         for path in list(self._generated_audio.values()):
             try:
                 path.unlink(missing_ok=True)
@@ -373,6 +384,8 @@ class SmartActorServer:
             return
 
         if envelope.message_id in self._seen_message_ids:
+            if envelope.message_type == "player_recording":
+                self._discard_recording_input(envelope.payload)
             return
         self._seen_message_ids[envelope.message_id] = None
         while len(self._seen_message_ids) > MAX_REQUEST_HISTORY:
@@ -381,18 +394,25 @@ class SmartActorServer:
         try:
             self._dispatch(envelope)
         except (ProtocolError, SpatialUpdateError, ActionError) as error:
+            if envelope.message_type == "player_recording":
+                # Schema/request validation can fail before the recording
+                # handler takes ownership. Do not strand that unconsumed WAV.
+                self._discard_recording_input(envelope.payload)
             print(
                 f"[smart actors] invalid {envelope.message_type}: {error}",
                 file=sys.stderr,
             )
-            rid = envelope.payload.get("request_id")
-            if isinstance(rid, str) and rid and len(rid) <= 128:
-                if (
-                    rid not in self._pending_requests
-                    and rid not in self._completed_requests
-                ):
+            try:
+                rid = request_id(envelope.payload)
+            except ProtocolError:
+                rid = None
+            if rid is not None:
+                completed = self._completed_requests.get(rid)
+                if completed is not None:
+                    self._send("command_result", completed)
+                elif rid not in self._pending_requests:
                     self._pending_requests.add(rid)
-                self._finish_request(rid, False, _error_code(error), str(error))
+                    self._finish_request(rid, False, _error_code(error), str(error))
             elif self.handshake_complete:
                 self._send_status("protocol", "degraded", message=str(error)[:300])
 
@@ -513,6 +533,11 @@ class SmartActorServer:
                 )
             _exact_payload(raw_update, required={"actor_id", "position_m"})
             actor_id = CharIdStr(validated_id(raw_update["actor_id"], "actor_id"))
+            if actor_id != self.player_id:
+                raise ProtocolError(
+                    "protocol v1 spatial updates may only move the player",
+                    "forbidden_actor",
+                )
             updates.append((actor_id, Vec3.from_json(raw_update["position_m"])))
         self.world.update_positions(sequence, updates)
 
@@ -648,6 +673,29 @@ class SmartActorServer:
             )
         return resolved
 
+    def _discard_recording_input(
+        self,
+        payload: Mapping[str, object],
+    ) -> None:
+        """Remove an unconsumed WAV without touching any owned audio path."""
+        try:
+            basename = _safe_basename(payload["wav_basename"])
+            wav_path = self._runtime_input_path(basename)
+        except (KeyError, ProtocolError):
+            return
+        if wav_path in self._reserved_audio_paths():
+            return
+        try:
+            wav_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    def _reserved_audio_paths(self) -> set[Path]:
+        reserved = set(self._pending_recording_paths.values())
+        reserved.update(self._pending_tts_paths)
+        reserved.update(self._generated_audio.values())
+        return reserved
+
     def _handle_player_recording(self, payload: Mapping[str, object]) -> None:
         _exact_payload(
             payload,
@@ -661,11 +709,19 @@ class SmartActorServer:
         )
         rid = self._begin_request(payload)
         if rid is None:
+            self._discard_recording_input(payload)
             return
         wav_path: Path | None = None
+        owns_wav = False
         try:
             basename = _safe_basename(payload["wav_basename"])
             wav_path = self._runtime_input_path(basename)
+            if wav_path in self._reserved_audio_paths():
+                raise ProtocolError(
+                    "recording WAV is already owned by another audio task",
+                    "audio_in_use",
+                )
+            owns_wav = True
             if payload["target_id"] is not None:
                 raise ProtocolError(
                     "player microphone speech must have a null target_id",
@@ -680,8 +736,9 @@ class SmartActorServer:
             task = _TranscriptionTask(rid, wav_path, utterance_position)
             if not self._stt_worker.submit(task):
                 raise ProtocolError("transcription queue is full", "overloaded")
+            self._pending_recording_paths[rid] = wav_path
         except Exception as error:
-            if wav_path is not None:
+            if owns_wav and wav_path is not None:
                 try:
                     wav_path.unlink(missing_ok=True)
                 except OSError:
@@ -710,6 +767,7 @@ class SmartActorServer:
     def _poll_transcriptions(self) -> None:
         for result in self._stt_worker.drain():
             task = result.task
+            self._pending_recording_paths.pop(task.request_id, None)
             try:
                 task.wav_path.unlink(missing_ok=True)
             except OSError as error:
@@ -842,6 +900,7 @@ class SmartActorServer:
     def _poll_tts(self) -> None:
         for result in self._tts_worker.drain():
             task = result.task
+            self._pending_tts_paths.discard(task.wav_path)
             if result.error is not None:
                 try:
                     task.wav_path.unlink(missing_ok=True)
@@ -881,10 +940,16 @@ class SmartActorServer:
             return
         basename = f"{event.event_id}.wav"
         wav_path = self.runtime_dir / basename
+        if wav_path in self._reserved_audio_paths():
+            self._send_status(
+                "tts", "degraded", message="speech output path is already in use"
+            )
+            return
         task = _TtsTask(event.event_id, event.text, speaker.voice_key, wav_path)
         if not self._tts_worker.submit(task):
             self._send_status("tts", "degraded", message="speech queue is full")
             return
+        self._pending_tts_paths.add(wav_path)
         self._send_status("tts", "synthesizing", actor_id=speaker.id)
 
     def _handle_audio_consumed(self, payload: Mapping[str, object]) -> None:

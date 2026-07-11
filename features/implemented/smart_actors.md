@@ -109,7 +109,7 @@ physical game client and keeps a read-only projection of the semantic state.
 | NPC prompts, memories, goals, inboxes, knowledge, and turn scheduling | Python | Rust receives only status needed by the HUD. |
 | Reply parsing and validation of every action | Python | Rust may pre-check an interaction for UX, but a pre-check never commits state. |
 | Item ownership and pending offers | Python | Rust mirrors IDs and current records for visuals, quickbar, and offer cards. |
-| Hearing-recipient selection and NPC inbox delivery | Python | Rust receives the frozen recipient list on each speech event. |
+| Hearing-recipient selection and NPC inbox delivery | Python | Rust receives the frozen recipient list on each speech event; the player does not accumulate an unread Python inbox. |
 | Actor and item stable IDs/profile data | Python | Rust uses typed ID wrappers and snapshot data. |
 | NPC spawn hints | Python | Rust creates the entity at the hint and then owns its actual transform. |
 | Player/NPC transforms, camera, gaze target, and input | Rust | Python receives position snapshots and action intents. |
@@ -199,12 +199,14 @@ Acceptance is the only transfer operation. Re-offering an item replaces its
 old offer exactly as in the prototype, including notifying a displaced target.
 Eating an offered item implicitly retracts it.
 
-Offer, accept, decline, retract, and eat history is delivered to an observer's
-inbox only when that observer is within 20 m as the action happens. The acting
-character knows its own result directly. A distant former target receives no
-magical notification; current `you_offer`, `offered_to_you`, and HUD state still
-reconcile from the authoritative offer table rather than relying on that
-historical event.
+Offer, accept, decline, retract, and eat history is delivered to an
+LLM-controlled observer's inbox only when that observer is within 20 m as the
+action happens. The same frozen nearby set is carried in structured events for
+the human-facing client, without accumulating prose in the unscheduled
+player's inbox. The acting character knows its own result directly. A distant
+former target receives no magical notification; current `you_offer`,
+`offered_to_you`, and HUD state still reconcile from the authoritative offer
+table rather than relying on that historical event.
 
 ### Seed world
 
@@ -264,9 +266,10 @@ Rules:
    20 m. Failure is an action error delivered back to the acting character.
 4. Unlike the prototype's current `say` implementation, a bad, self, or distant
    explicit target must never fall back to broadcast.
-5. The target receives the perspective-specific "said to you" inbox event.
-   Other recipients in range receive the bystander form. Addressing is not
-   privacy.
+5. An LLM-controlled target receives the perspective-specific "said to you"
+   inbox event. Other LLM recipients in range receive the bystander form. The
+   player is represented in the same structured recipient set but does not
+   accumulate an unread Python inbox. Addressing is not privacy.
 6. Recipient membership is frozen when the action is applied. Moving into range
    later does not reveal old text or start delayed audio.
 7. Emit a structured `speech` event even when the player is not a recipient.
@@ -475,10 +478,17 @@ the Rust projection.
   small initial world, send a complete snapshot after each offer/inventory
   mutation rather than designing a delta protocol.
 - Rust accepts a snapshot only if its session matches and its revision is newer
-  than the current mirror. It replaces the mirror atomically, then reconciles
-  ECS visuals and HUD state.
+  than the current mirror, except that an equal-revision full snapshot may
+  complete an explicitly requested resync. It replaces the mirror atomically,
+  then reconciles ECS visuals and HUD state.
 - A sequence gap, malformed snapshot, or failed invariant triggers
   `resync_request`; it never causes Rust to guess the missing mutation.
+- Resync is a hard command barrier: item input, transcript injection, position
+  updates, and completed microphone recordings do not queue behind the request.
+  Input resumes only after an authoritative replacement snapshot is accepted.
+- If the initial `ready` snapshot is malformed but its capabilities are valid,
+  Rust retains those capabilities and completes the handshake after the
+  replacement snapshot arrives.
 - A late LLM result from an old session is discarded. Within the same session,
   returned actions are revalidated against current state.
 
@@ -627,13 +637,17 @@ back into transcription, then automatically resume if the user still has the
 microphone enabled. A player utterance already in progress finishes first, and
 NPC playback waits for the capture worker's suspension acknowledgement. A dead
 audio worker drops optional TTS after a bounded wait instead of freezing input.
-Show a persistent `MIC ON`, `MIC OFF`, or `MIC UNAVAILABLE` indicator.
+Show a persistent `MIC ON`, `MIC OFF`, or `MIC UNAVAILABLE` indicator. During
+the brief hard resync barrier, keep the user's on/off preference intact and
+show `MIC PAUSED — SYNCING` rather than falsely presenting it as toggled off.
 Empty/silent or failed transcription produces no `say` action and shows a short
 status message.
 
-The temporary utterance WAV is deleted after Python has opened it. Ambient
-audio that does not pass voice detection is never written, sent, or retained as
-game state.
+The temporary utterance WAV is deleted after transcription finishes or the
+request is rejected. Pending and completed duplicate requests also clean up
+their unconsumed WAVs without deleting the active request's file. Ambient audio
+that does not pass voice detection is never written, sent, or retained as game
+state.
 
 ### Python STT/TTS adapter
 
@@ -805,14 +819,15 @@ Run Python tooling through `uv`. Cover at least:
 - squared-distance behavior just inside, exactly at, and just outside 20 m and
   4 m;
 - targeted speech, broadcast speech, nearby bystanders, and distant exclusion;
+- structured player delivery without growth of the unscheduled player inbox;
 - explicit bad/distant `say` target failure without broadcast fallback;
 - player actions using the same validators while the scheduler skips player;
 - prompt-time inbox draining with an event arriving during an in-flight fake
   completion;
 - malformed verb arguments never escaping as an uncaught exception;
 - all offer/accept/decline/retract/eat invariants, including multiple offers;
-- monotonic revisions, request deduplication, session rejection, and full
-  snapshot recovery;
+- monotonic revisions, request deduplication (including duplicate-WAV cleanup),
+  session rejection, and full snapshot recovery;
 - fake STT/TTS success, timeout, and failure; and
 - a scripted exchange requiring no network or credentials.
 
@@ -823,6 +838,8 @@ least:
 
 - protocol encode/decode fixtures shared with the Python tests;
 - atomic mirror replacement and rejection of stale session/revision data;
+- interaction gating during resync and initial-ready recovery from a
+  replacement snapshot;
 - actor-only ray targeting, nearest-hit choice, static-wall blocking, and both
   range cutoffs;
 - offered-prop reconciliation for create, replace, accept, decline, retract,

@@ -205,6 +205,31 @@ class HandshakeAndStateTests(ServerTestCase):
         server.handle_envelope(bad)
         self.assertEqual(server.world.spatial_sequence, 0)
 
+        ilse_before = server.world.characters[CharIdStr("k0fb1")].position_m
+        server.handle_envelope(
+            envelope(
+                "spatial_update",
+                {
+                    "spatial_seq": 1,
+                    "updates": [
+                        {
+                            "actor_id": "k0fb1",
+                            "position_m": {"x": 100, "y": 0.91, "z": 100},
+                        }
+                    ],
+                },
+                message_id="spatial-known-npc",
+            )
+        )
+        self.assertIn(
+            "only move the player",
+            self.messages("status")[-1]["payload"]["message"],
+        )
+        self.assertEqual(
+            server.world.characters[CharIdStr("k0fb1")].position_m,
+            ilse_before,
+        )
+
     def test_resync_always_returns_complete_current_snapshot(self) -> None:
         server = self.make_server()
         self.handshake(server)
@@ -364,6 +389,217 @@ class SpeechWorkerTests(ServerTestCase):
             set(speech["recipient_ids"]),
             {"sv3n1", "cb947", "k0fb1"},
         )
+
+    def test_completed_recording_retry_deletes_its_new_wav(self) -> None:
+        server = self.make_server(speech_backend=FakeSpeech(transcript="Only once"))
+        self.handshake(server)
+        original = Path(self.temp.name) / "completed-original.wav"
+        original.write_bytes(b"RIFF-original")
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                self.recording_payload("completed-recording", original.name),
+                message_id="completed-recording-original",
+            )
+        )
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertFalse(original.exists())
+
+        same_message_retry = Path(self.temp.name) / "same-message-retry.wav"
+        same_message_retry.write_bytes(b"RIFF-retry")
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                self.recording_payload("completed-recording", same_message_retry.name),
+                message_id="completed-recording-original",
+            )
+        )
+        self.assertFalse(same_message_retry.exists())
+        self.assertEqual(len(self.messages("command_result")), 1)
+
+        retry = Path(self.temp.name) / "completed-retry.wav"
+        retry.write_bytes(b"RIFF-retry")
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                self.recording_payload("completed-recording", retry.name),
+                message_id="completed-recording-retry",
+            )
+        )
+
+        self.assertFalse(retry.exists())
+        self.assertEqual(len(self.messages("transcription_result")), 1)
+        self.assertEqual(len(self.messages("speech")), 1)
+        self.assertEqual(len(self.messages("command_result")), 2)
+
+        protected_recording = Path(self.temp.name) / "other-recording.wav"
+        protected_tts = Path(self.temp.name) / "pending-speech.wav"
+        generated_tts = Path(self.temp.name) / "generated-speech.wav"
+        for path in (protected_recording, protected_tts, generated_tts):
+            path.write_bytes(b"RIFF-owned")
+        server._pending_recording_paths["other-request"] = protected_recording
+        server._pending_tts_paths.add(protected_tts)
+        server._generated_audio[("speech-event", generated_tts.name)] = generated_tts
+
+        for index, protected in enumerate(
+            (protected_recording, protected_tts, generated_tts)
+        ):
+            server.handle_envelope(
+                envelope(
+                    "player_recording",
+                    self.recording_payload("completed-recording", protected.name),
+                    message_id=f"completed-recording-protected-{index}",
+                )
+            )
+            self.assertTrue(protected.exists())
+
+    def test_pending_recording_retry_preserves_active_wav_and_deletes_distinct_wav(
+        self,
+    ) -> None:
+        backend = BlockingSpeech(transcript="Only once")
+        server = self.make_server(speech_backend=backend)
+        self.handshake(server)
+        active = Path(self.temp.name) / "pending-active.wav"
+        active.write_bytes(b"RIFF-active")
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                self.recording_payload("pending-recording", active.name),
+                message_id="pending-recording-original",
+            )
+        )
+        self.assertTrue(backend.started.wait(timeout=1))
+
+        malformed_retry = Path(self.temp.name) / "pending-malformed-retry.wav"
+        malformed_retry.write_bytes(b"RIFF-retry")
+        malformed_payload = self.recording_payload(
+            "pending-recording", malformed_retry.name
+        )
+        malformed_payload["unexpected"] = True
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                malformed_payload,
+                message_id="pending-recording-malformed",
+            )
+        )
+        self.assertFalse(malformed_retry.exists())
+        self.assertEqual(self.messages("command_result"), [])
+
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                self.recording_payload("pending-recording", active.name),
+                message_id="pending-recording-same-path",
+            )
+        )
+        self.assertTrue(active.exists())
+
+        retry = Path(self.temp.name) / "pending-retry.wav"
+        retry.write_bytes(b"RIFF-retry")
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                self.recording_payload("pending-recording", retry.name),
+                message_id="pending-recording-distinct-path",
+            )
+        )
+        self.assertFalse(retry.exists())
+        self.assertTrue(active.exists())
+
+        backend.release.set()
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertFalse(active.exists())
+        self.assertEqual(len(self.messages("transcription_result")), 1)
+        self.assertEqual(len(self.messages("speech")), 1)
+
+    def test_malformed_recording_payload_cleans_only_unowned_audio(self) -> None:
+        server = self.make_server(speech_backend=FakeSpeech())
+        self.handshake(server)
+        malformed = Path(self.temp.name) / "malformed-recording.wav"
+        malformed.write_bytes(b"RIFF-malformed")
+        payload = self.recording_payload("malformed-recording", malformed.name)
+        payload["unexpected"] = True
+
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                payload,
+                message_id="malformed-recording-message",
+            )
+        )
+        self.assertFalse(malformed.exists())
+        self.assertFalse(self.messages("command_result")[-1]["payload"]["success"])
+
+        protected = Path(self.temp.name) / "protected-recording.wav"
+        protected.write_bytes(b"RIFF-active")
+        server._pending_recording_paths["active-request"] = protected
+        payload = self.recording_payload("other-malformed", protected.name)
+        payload["unexpected"] = True
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                payload,
+                message_id="protected-malformed-message",
+            )
+        )
+        self.assertTrue(protected.exists())
+
+    def test_fresh_recording_request_cannot_claim_reserved_audio(self) -> None:
+        server = self.make_server(speech_backend=FakeSpeech())
+        self.handshake(server)
+        active_recording = Path(self.temp.name) / "active-recording.wav"
+        pending_tts = Path(self.temp.name) / "pending-tts.wav"
+        generated_tts = Path(self.temp.name) / "generated-tts.wav"
+        for path in (active_recording, pending_tts, generated_tts):
+            path.write_bytes(b"RIFF-owned")
+        server._pending_recording_paths["active"] = active_recording
+        server._pending_tts_paths.add(pending_tts)
+        server._generated_audio[("speech", generated_tts.name)] = generated_tts
+
+        for index, protected in enumerate(
+            (active_recording, pending_tts, generated_tts)
+        ):
+            payload = self.recording_payload(f"fresh-{index}", protected.name)
+            if index == 0:
+                payload["target_id"] = "k0fb1"
+            server.handle_envelope(
+                envelope(
+                    "player_recording",
+                    payload,
+                    message_id=f"fresh-reserved-{index}",
+                )
+            )
+            self.assertTrue(protected.exists())
+            result = self.messages("command_result")[-1]["payload"]
+            self.assertFalse(result["success"])
+            self.assertEqual(result["error_code"], "audio_in_use")
+
+    def test_tts_cannot_claim_a_reserved_recording_path(self) -> None:
+        backend = FakeSpeech()
+        server = self.make_server(speech_backend=backend)
+        self.handshake(server)
+        speaker = server.world.characters[CharIdStr("k0fb1")]
+        event = server.world.emit(
+            "speech",
+            "say",
+            speaker.id,
+            text="This must remain text-only",
+            position_m=speaker.position_m,
+            recipient_ids=[server.player_id],
+        )
+        recording = Path(self.temp.name) / f"{event.event_id}.wav"
+        recording.write_bytes(b"RIFF-active-recording")
+        server._pending_recording_paths["active-recording"] = recording
+
+        server._queue_tts(event)
+
+        self.assertEqual(recording.read_bytes(), b"RIFF-active-recording")
+        self.assertNotIn(recording, server._pending_tts_paths)
+        self.assertEqual(backend.synthesized, [])
+        status = self.messages("status")[-1]["payload"]
+        self.assertEqual(status["subsystem"], "tts")
+        self.assertIn("already in use", status["message"])
 
     def test_player_recording_rejects_non_null_target_and_deletes_audio(self) -> None:
         server = self.make_server(speech_backend=FakeSpeech())

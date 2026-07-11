@@ -15,10 +15,12 @@ Characters take turns in a round-robin tick loop. Each turn:
 3. The reply is parsed as `VERB {json}` lines (`prompt.parse_reply`) and each
    action is applied to the world (`sim.apply_action`).
 
-"Hearing" = the inbox: `say` appends an event string to its recipients within
-20 metres (including nearby bystanders). Metric queries use full 3D distance,
-inclusive boundaries, and stable distance/ID ordering. Events accumulate
-between a character's turns and are perceived all at once on their next turn.
+"Hearing" has one authoritative recipient calculation within 20 metres
+(including nearby bystanders). Every recipient ID is retained in the structured
+event consumed by Bevy; LLM-controlled recipients additionally receive a prose
+inbox entry for their next turn. The player is never scheduled, so player prose
+is not accumulated in an unread inbox. Metric queries use full 3D distance,
+inclusive boundaries, and stable distance/ID ordering.
 
 Invalid reply lines and failed actions become `system:` events in the actor's
 own inbox so the model can self-correct next turn (also echoed to stderr).
@@ -37,15 +39,17 @@ Ilse"}`). `knows` is only seeded at world creation.
 Format: one action per line, `VERB {json args}`, optional `# comment` after.
 Parsing uses `JSONDecoder.raw_decode`, so `#` inside quoted strings is safe.
 
-- `say {"target": "<id>", "text": "..."}` — target's inbox gets "said to
-  you", and in-range bystanders get "said to X". Omitted/null `target`
-  broadcasts within 20 m. An invalid or out-of-range explicit target is an
-  error and never falls back to broadcast.
+- `say {"target": "<id>", "text": "..."}` — an LLM target's inbox gets
+  "said to you", and LLM bystanders get "said to X". Structured recipients
+  include the human player without growing the player's unused inbox.
+  Omitted/null `target` broadcasts within 20 m. An invalid or out-of-range
+  explicit target is an error and never falls back to broadcast.
 - `offer_item {"item_id": "<item id>", "target": "<char id>"}` — offer a held
   item; it stays in the giver's `holds` until accepted. Omitted/null `target`
   = broadcast (anyone within 4 m may accept, first wins); a bad target
   id is an error, NOT a fallback to broadcast. Re-offering replaces the
-  pending offer (a jilted target gets a "withdrew" event).
+  pending offer (a nearby jilted target gets a structured `retract_offer`
+  event and, when LLM-controlled, a "withdrew" inbox entry).
 - `accept_offered_item {"item_id": "<item id>"}` — take an item offered to
   you (or broadcast) by someone still within 4 m; moves it giver → you
   and clears the offer.

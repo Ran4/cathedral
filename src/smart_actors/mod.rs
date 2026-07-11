@@ -63,6 +63,9 @@ pub struct SmartActorsPlugin {
 pub struct SmartActorRuntime {
     pub connected: bool,
     pub ready: bool,
+    /// True while the semantic mirror is waiting for an authoritative
+    /// replacement snapshot. No player command may cross this barrier.
+    pub resyncing: bool,
     pub stt_available: bool,
     pub tts_available: bool,
     pub fake_backend: bool,
@@ -74,6 +77,7 @@ impl SmartActorRuntime {
         Self {
             connected: false,
             ready: false,
+            resyncing: false,
             stt_available: false,
             tts_available: false,
             fake_backend,
@@ -82,7 +86,7 @@ impl SmartActorRuntime {
     }
 
     pub fn interactions_enabled(&self) -> bool {
-        self.connected && self.ready
+        self.connected && self.ready && !self.resyncing
     }
 }
 
@@ -128,6 +132,7 @@ impl Plugin for SmartActorsPlugin {
             .insert_resource(worker)
             .insert_resource(mirror)
             .insert_resource(SmartActorRuntime::starting(self.config.fake_backend))
+            .init_resource::<HandshakeRecovery>()
             .init_resource::<ActorFocus>()
             .init_resource::<interaction::InteractionState>()
             .init_resource::<interaction::PlayerSpatialState>()
@@ -222,12 +227,17 @@ pub struct InjectPlayerTranscript {
     pub target_id: Option<model::ActorId>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CapabilitiesWire {
     llm: bool,
     stt: bool,
     tts: bool,
+}
+
+#[derive(Resource, Default)]
+struct HandshakeRecovery {
+    capabilities: Option<CapabilitiesWire>,
 }
 
 #[derive(Deserialize)]
@@ -295,6 +305,7 @@ fn drain_bridge_messages(
     microphone: Option<Res<microphone::MicrophoneService>>,
     mut mirror: ResMut<model::WorldMirror>,
     mut runtime: ResMut<SmartActorRuntime>,
+    mut handshake_recovery: ResMut<HandshakeRecovery>,
     mut hud: ResMut<hud::SmartActorHudState>,
     mut interaction: ResMut<interaction::InteractionState>,
     mut microphone_input: ResMut<interaction::MicrophoneInputState>,
@@ -311,6 +322,9 @@ fn drain_bridge_messages(
         match event {
             bridge::BridgeEvent::ProcessStarted => {
                 runtime.connected = true;
+                runtime.ready = false;
+                runtime.resyncing = false;
+                handshake_recovery.capabilities = None;
                 hud.connection = hud::ConnectionUiState::Starting;
                 hud.connection_detail = "Python started; handshaking…".into();
                 let Ok(player) = players.single() else {
@@ -343,6 +357,7 @@ fn drain_bridge_messages(
                 match mirror.observe_event(handle.session_id(), envelope.event_seq) {
                     Ok(()) => {}
                     Err(error @ model::MirrorError::EventSequenceGap { .. }) => {
+                        runtime.resyncing = true;
                         request_resync(&handle, &mirror);
                         hud.toast(error.to_string());
                         if !is_snapshot {
@@ -363,6 +378,7 @@ fn drain_bridge_messages(
                     &handle,
                     &mut mirror,
                     &mut runtime,
+                    &mut handshake_recovery,
                     &mut hud,
                     &mut interaction,
                     &mut speech_messages,
@@ -395,8 +411,10 @@ fn drain_bridge_messages(
             bridge::BridgeEvent::Disconnected(message) => {
                 runtime.connected = false;
                 runtime.ready = false;
+                runtime.resyncing = false;
                 runtime.stt_available = false;
                 runtime.tts_available = false;
+                handshake_recovery.capabilities = None;
                 interaction.clear_pending();
                 microphone_input.clear_on_disconnect();
                 hud.clear_transients_on_disconnect(truncate_owned(message, 300));
@@ -416,6 +434,7 @@ fn process_server_message(
     handle: &bridge::BridgeHandle,
     mirror: &mut model::WorldMirror,
     runtime: &mut SmartActorRuntime,
+    handshake_recovery: &mut HandshakeRecovery,
     hud: &mut hud::SmartActorHudState,
     interaction: &mut interaction::InteractionState,
     speech_messages: &mut MessageWriter<speech::PresentSpeech>,
@@ -423,45 +442,57 @@ fn process_server_message(
     let message_type = envelope.message_type;
     let payload = envelope.payload;
     match message_type.as_str() {
-        "ready" => match serde_json::from_value::<ReadyWire>(payload) {
-            Ok(ready) => {
-                if accept_snapshot(handle, mirror, runtime, hud, ready.snapshot) {
-                    runtime.ready = true;
-                    runtime.connected = true;
-                    runtime.stt_available = ready.capabilities.stt;
-                    runtime.tts_available = ready.capabilities.tts;
-                    hud.connection = hud::ConnectionUiState::Online;
-                    if ready.capabilities.stt {
-                        // Preserve an explicit pre-handshake MIC OFF choice;
-                        // otherwise the worker's Available event reveals it.
-                        hud.microphone_unavailable = false;
-                    } else {
-                        hud.microphone_available = false;
-                        hud.microphone_unavailable = true;
+        "ready" => {
+            // Keep independently valid capabilities even if the bundled
+            // snapshot is malformed. The requested replacement snapshot does
+            // not repeat them, so this is what lets the initial handshake
+            // recover instead of remaining permanently offline.
+            let recoverable_capabilities = recoverable_ready_capabilities(&payload);
+            match serde_json::from_value::<ReadyWire>(payload) {
+                Ok(ready) => {
+                    handshake_recovery.capabilities = Some(ready.capabilities);
+                    if accept_snapshot(handle, mirror, runtime, hud, ready.snapshot) {
+                        apply_ready_capabilities(runtime, hud, ready.capabilities);
+                        handshake_recovery.capabilities = None;
                     }
-                    hud.listening = false;
-                    hud.connection_detail = connection_detail_for_capabilities(
-                        ready.capabilities.llm,
-                        ready.capabilities.stt,
-                        ready.capabilities.tts,
-                    );
+                }
+                Err(error) => {
+                    if let Some(capabilities) = recoverable_capabilities {
+                        handshake_recovery.capabilities = Some(capabilities);
+                    }
+                    malformed_payload(handle, mirror, runtime, hud, "ready", error);
                 }
             }
-            Err(error) => malformed_payload(handle, mirror, hud, "ready", error),
-        },
+        }
         "world_snapshot" => match serde_json::from_value::<model::WorldSnapshot>(payload) {
             Ok(snapshot) => {
                 let completes_resync = mirror.needs_resync();
-                if accept_snapshot(handle, mirror, runtime, hud, snapshot) && completes_resync {
-                    // The authoritative snapshot supersedes every uncertain
-                    // in-flight projection. A command result may have been the
-                    // event lost at the sequence gap, so never leave controls
-                    // permanently locked waiting for it.
-                    interaction.clear_pending();
-                    hud.toast("Actor world resynchronized");
+                if accept_snapshot(handle, mirror, runtime, hud, snapshot) {
+                    let handshake_failed = if completes_resync && !runtime.ready {
+                        if let Some(capabilities) = handshake_recovery.capabilities {
+                            apply_ready_capabilities(runtime, hud, capabilities);
+                            false
+                        } else {
+                            mark_handshake_unrecoverable(runtime, hud);
+                            true
+                        }
+                    } else {
+                        false
+                    };
+                    if completes_resync {
+                        handshake_recovery.capabilities = None;
+                        // The authoritative snapshot supersedes every
+                        // uncertain in-flight projection. A command result may
+                        // have been the event lost at the sequence gap, so
+                        // never leave controls locked waiting for it.
+                        interaction.clear_pending();
+                        if !handshake_failed {
+                            hud.toast("Actor world resynchronized");
+                        }
+                    }
                 }
             }
-            Err(error) => malformed_payload(handle, mirror, hud, "world_snapshot", error),
+            Err(error) => malformed_payload(handle, mirror, runtime, hud, "world_snapshot", error),
         },
         "speech" => match serde_json::from_value::<SpeechWire>(payload) {
             Ok(speech) if valid_speech(&speech, mirror) => {
@@ -547,6 +578,13 @@ fn process_server_message(
     }
 }
 
+fn recoverable_ready_capabilities(payload: &serde_json::Value) -> Option<CapabilitiesWire> {
+    payload
+        .get("capabilities")
+        .cloned()
+        .and_then(|value| serde_json::from_value(value).ok())
+}
+
 fn connection_detail_for_capabilities(llm: bool, stt: bool, tts: bool) -> String {
     let mut unavailable = Vec::new();
     if !llm {
@@ -565,6 +603,46 @@ fn connection_detail_for_capabilities(llm: bool, stt: bool, tts: bool) -> String
     }
 }
 
+fn apply_ready_capabilities(
+    runtime: &mut SmartActorRuntime,
+    hud: &mut hud::SmartActorHudState,
+    capabilities: CapabilitiesWire,
+) {
+    runtime.ready = true;
+    runtime.connected = true;
+    runtime.resyncing = false;
+    runtime.stt_available = capabilities.stt;
+    runtime.tts_available = capabilities.tts;
+    hud.connection = hud::ConnectionUiState::Online;
+    if capabilities.stt {
+        // Preserve an explicit pre-handshake MIC OFF choice; otherwise the
+        // worker's Available event reveals the default-on state.
+        hud.microphone_unavailable = false;
+    } else {
+        hud.microphone_available = false;
+        hud.microphone_unavailable = true;
+    }
+    hud.listening = false;
+    hud.connection_detail =
+        connection_detail_for_capabilities(capabilities.llm, capabilities.stt, capabilities.tts);
+}
+
+fn mark_handshake_unrecoverable(
+    runtime: &mut SmartActorRuntime,
+    hud: &mut hud::SmartActorHudState,
+) {
+    runtime.ready = false;
+    runtime.stt_available = false;
+    runtime.tts_available = false;
+    hud.connection = hud::ConnectionUiState::Offline;
+    hud.connection_detail =
+        "Actor handshake failed: ready capabilities were missing or invalid".into();
+    hud.microphone_available = false;
+    hud.microphone_unavailable = true;
+    hud.listening = false;
+    hud.toast("Actor handshake could not recover");
+}
+
 fn accept_snapshot(
     handle: &bridge::BridgeHandle,
     mirror: &mut model::WorldMirror,
@@ -575,11 +653,13 @@ fn accept_snapshot(
     match mirror.replace_snapshot(handle.session_id(), snapshot) {
         Ok(revision) => {
             runtime.mirror_revision = Some(revision);
+            runtime.resyncing = false;
             true
         }
         Err(model::MirrorError::StaleRevision { .. }) => false,
         Err(error) => {
             if error.requires_resync() {
+                runtime.resyncing = true;
                 request_resync(handle, mirror);
             }
             hud.toast(error.to_string());
@@ -591,11 +671,13 @@ fn accept_snapshot(
 fn malformed_payload(
     handle: &bridge::BridgeHandle,
     mirror: &mut model::WorldMirror,
+    runtime: &mut SmartActorRuntime,
     hud: &mut hud::SmartActorHudState,
     message_type: &str,
     error: serde_json::Error,
 ) {
     mirror.mark_resync_needed();
+    runtime.resyncing = true;
     request_resync(handle, mirror);
     hud.toast(format!("Malformed {message_type}: {error}"));
 }
@@ -708,11 +790,6 @@ fn describe_world_event(event: &WorldEventWire, mirror: &model::WorldMirror) -> 
         .as_ref()
         .and_then(|item_id| mirror.item(item_id))
         .map(|item| item.name.as_str())?;
-    let target = event
-        .target_id
-        .as_ref()
-        .and_then(|target_id| mirror.actor(target_id))
-        .map(|target| target.name_for_player.as_str());
     let offer_verb = if player_acted { "offer" } else { "offers" };
     match event.kind.as_str() {
         "offer_item" if event.target_id.as_ref() == Some(player_id) => {
@@ -721,10 +798,10 @@ fn describe_world_event(event: &WorldEventWire, mirror: &model::WorldMirror) -> 
         "offer_item" if event.target_id.is_none() => {
             Some(format!("{actor} {offer_verb} the {item} openly"))
         }
-        "offer_item" => Some(format!(
-            "{actor} {offer_verb} the {item} to {}",
-            target.unwrap_or("someone")
-        )),
+        // A targeted offer between other actors is not feedback for the
+        // player. In particular, do not let it overwrite the preceding
+        // retract event when an offer is redirected away from the player.
+        "offer_item" => None,
         "accept_offered_item" => Some(if player_acted {
             format!("You accept the {item}")
         } else {
@@ -771,6 +848,7 @@ fn truncate_owned(mut value: String, maximum_chars: usize) -> String {
 fn forward_player_intents(
     handle: Res<bridge::BridgeHandle>,
     microphone: Option<Res<microphone::MicrophoneService>>,
+    runtime: Res<SmartActorRuntime>,
     mut intents: MessageReader<interaction::PlayerIntent>,
     mut interaction: ResMut<interaction::InteractionState>,
     mut spatial: ResMut<interaction::PlayerSpatialState>,
@@ -783,6 +861,20 @@ fn forward_player_intents(
             interaction::PlayerIntent::Recording { wav_basename, .. } => Some(wav_basename.clone()),
             _ => None,
         };
+        if !runtime.interactions_enabled() {
+            if is_spatial {
+                spatial.retry_latest_position();
+            }
+            if let Some(request_id) = request_id {
+                interaction.resolve_command(&request_id, false, None);
+            }
+            if let (Some(wav_basename), Some(microphone)) = (failed_recording, &microphone)
+                && let Err(error) = microphone.discard_recording(wav_basename)
+            {
+                hud.toast(error);
+            }
+            continue;
+        }
         let delivery = intent_to_command(intent).and_then(|command| handle.try_send(command));
         if let Err(error) = delivery {
             if is_spatial {
@@ -791,9 +883,10 @@ fn forward_player_intents(
             if let Some(request_id) = request_id {
                 interaction.resolve_command(&request_id, false, None);
             }
-            if let (Some(wav_basename), Some(microphone)) = (failed_recording, &microphone) {
-                let _ =
-                    microphone.try_send(microphone::MicrophoneCommand::Discard { wav_basename });
+            if let (Some(wav_basename), Some(microphone)) = (failed_recording, &microphone)
+                && let Err(cleanup_error) = microphone.discard_recording(wav_basename)
+            {
+                hud.toast(cleanup_error);
             }
             if !error.contains("spatial update coalesced") {
                 hud.toast(error);
@@ -953,6 +1046,143 @@ mod tests {
             "Connected; unavailable: microphone transcription, NPC voice audio"
         );
         assert!(connection_detail_for_capabilities(false, true, true).contains("NPC cognition"));
+    }
+
+    #[test]
+    fn resync_is_a_hard_interaction_barrier() {
+        let mut runtime = SmartActorRuntime::starting(true);
+        runtime.connected = true;
+        runtime.ready = true;
+        assert!(runtime.interactions_enabled());
+
+        runtime.resyncing = true;
+        assert!(!runtime.interactions_enabled());
+
+        runtime.resyncing = false;
+        assert!(runtime.interactions_enabled());
+    }
+
+    #[test]
+    fn capabilities_survive_a_malformed_initial_ready_snapshot() {
+        let payload = serde_json::json!({
+            "capabilities": {"llm": true, "stt": true, "tts": false},
+            "snapshot": {"world_revision": "not-a-number"}
+        });
+        assert!(serde_json::from_value::<ReadyWire>(payload.clone()).is_err());
+
+        let capabilities = recoverable_ready_capabilities(&payload)
+            .expect("independently valid capabilities should be recoverable");
+        let mut runtime = SmartActorRuntime::starting(false);
+        runtime.connected = true;
+        runtime.resyncing = true;
+        let mut recovery = HandshakeRecovery {
+            capabilities: Some(capabilities),
+        };
+        let mut hud = hud::SmartActorHudState::default();
+
+        // This is the state transition used after the replacement snapshot is
+        // accepted; the sidecar does not repeat capabilities in that message.
+        apply_ready_capabilities(&mut runtime, &mut hud, capabilities);
+        recovery.capabilities = None;
+
+        assert!(runtime.ready);
+        assert!(runtime.stt_available);
+        assert!(!runtime.tts_available);
+        assert!(!runtime.resyncing);
+        assert!(recovery.capabilities.is_none());
+        assert_eq!(hud.connection, hud::ConnectionUiState::Online);
+    }
+
+    #[test]
+    fn replacement_snapshot_without_valid_ready_capabilities_fails_visibly() {
+        let mut runtime = SmartActorRuntime::starting(false);
+        runtime.connected = true;
+        runtime.resyncing = false;
+        let mut hud = hud::SmartActorHudState::default();
+
+        mark_handshake_unrecoverable(&mut runtime, &mut hud);
+
+        assert!(runtime.connected);
+        assert!(!runtime.ready);
+        assert_eq!(hud.connection, hud::ConnectionUiState::Offline);
+        assert!(hud.connection_detail.contains("capabilities"));
+        assert!(hud.microphone_unavailable);
+    }
+
+    #[test]
+    fn redirected_offer_keeps_player_withdrawal_feedback_visible() {
+        let player = model::ActorId("player".into());
+        let giver = model::ActorId("giver".into());
+        let other = model::ActorId("other".into());
+        let coin = model::ItemId("coin".into());
+        let mut mirror = model::WorldMirror::default();
+        mirror.begin_session("test-session").unwrap();
+        mirror
+            .replace_snapshot(
+                "test-session",
+                model::WorldSnapshot {
+                    world_revision: 1,
+                    player_id: player.clone(),
+                    actors: vec![
+                        model::ActorSnapshot {
+                            id: player.clone(),
+                            name_for_player: "You".into(),
+                            control: model::ActorControl::Player,
+                            position_m: model::Position::new(0.0, 0.0, 0.0).unwrap(),
+                            appearance_key: "player".into(),
+                            holds: vec![],
+                        },
+                        model::ActorSnapshot {
+                            id: giver.clone(),
+                            name_for_player: "Ilse".into(),
+                            control: model::ActorControl::Llm,
+                            position_m: model::Position::new(1.0, 0.0, 0.0).unwrap(),
+                            appearance_key: "ilse".into(),
+                            holds: vec![coin.clone()],
+                        },
+                        model::ActorSnapshot {
+                            id: other.clone(),
+                            name_for_player: "Frans".into(),
+                            control: model::ActorControl::Llm,
+                            position_m: model::Position::new(2.0, 0.0, 0.0).unwrap(),
+                            appearance_key: "frans".into(),
+                            holds: vec![],
+                        },
+                    ],
+                    items: vec![model::ItemSnapshot {
+                        id: coin.clone(),
+                        name: "copper coin".into(),
+                        visual_key: "coin".into(),
+                    }],
+                    offers: vec![],
+                },
+            )
+            .unwrap();
+
+        let retract = WorldEventWire {
+            event_id: "withdrawal".into(),
+            kind: "retract_offer".into(),
+            actor_id: giver.clone(),
+            target_id: Some(player.clone()),
+            item_id: Some(coin.clone()),
+            recipient_ids: vec![player.clone()],
+        };
+        assert_eq!(
+            describe_world_event(&retract, &mirror).as_deref(),
+            Some("Ilse withdraws the copper coin offer")
+        );
+
+        let redirected = WorldEventWire {
+            event_id: "replacement".into(),
+            kind: "offer_item".into(),
+            actor_id: giver,
+            target_id: Some(other.clone()),
+            item_id: Some(coin),
+            // Python broadcasts observational world events to nearby actors,
+            // including the player, even when the offer targets someone else.
+            recipient_ids: vec![player, other],
+        };
+        assert_eq!(describe_world_event(&redirected, &mirror), None);
     }
 
     #[test]

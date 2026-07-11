@@ -56,6 +56,9 @@ pub struct SmartActorHudState {
     pub subtitle: String,
     pub microphone_available: bool,
     pub microphone_unavailable: bool,
+    /// Persistent user preference controlled by V, distinct from temporary
+    /// worker pauses during protocol resynchronization.
+    pub microphone_enabled: bool,
     pub listening: bool,
     transient: Option<TimedMessage>,
 }
@@ -71,6 +74,7 @@ impl Default for SmartActorHudState {
             subtitle: String::new(),
             microphone_available: false,
             microphone_unavailable: false,
+            microphone_enabled: true,
             listening: false,
             transient: None,
         }
@@ -332,6 +336,7 @@ pub fn update_smart_actor_hud(
     let listening_text = microphone_label(
         state.microphone_available,
         state.microphone_unavailable,
+        state.microphone_enabled,
         state.listening,
     );
     let toast_text = state
@@ -385,12 +390,18 @@ pub fn update_smart_actor_hud(
     }
 }
 
-fn microphone_label(available: bool, unavailable: bool, enabled: bool) -> &'static str {
-    match (available, unavailable, enabled) {
-        (_, true, _) => "MIC UNAVAILABLE",
-        (true, false, true) => "●  MIC ON — OPEN SPEECH    [V] OFF",
-        (true, false, false) => "MIC OFF    [V] ON",
-        (false, false, _) => "",
+fn microphone_label(
+    available: bool,
+    unavailable: bool,
+    preference_enabled: bool,
+    listening: bool,
+) -> &'static str {
+    match (available, unavailable, preference_enabled, listening) {
+        (_, true, _, _) => "MIC UNAVAILABLE",
+        (true, false, true, true) => "●  MIC ON — OPEN SPEECH    [V] OFF",
+        (true, false, true, false) => "MIC PAUSED — SYNCING    [V] OFF",
+        (true, false, false, _) => "MIC OFF    [V] ON",
+        (false, false, _, _) => "",
     }
 }
 
@@ -464,11 +475,21 @@ mod tests {
     #[test]
     fn microphone_status_stays_visible_when_the_user_toggles_it_off() {
         assert_eq!(
-            microphone_label(true, false, true),
+            microphone_label(true, false, true, true),
             "●  MIC ON — OPEN SPEECH    [V] OFF"
         );
-        assert_eq!(microphone_label(true, false, false), "MIC OFF    [V] ON");
-        assert_eq!(microphone_label(false, true, false), "MIC UNAVAILABLE");
-        assert_eq!(microphone_label(false, false, true), "");
+        assert_eq!(
+            microphone_label(true, false, true, false),
+            "MIC PAUSED — SYNCING    [V] OFF"
+        );
+        assert_eq!(
+            microphone_label(true, false, false, false),
+            "MIC OFF    [V] ON"
+        );
+        assert_eq!(
+            microphone_label(false, true, false, false),
+            "MIC UNAVAILABLE"
+        );
+        assert_eq!(microphone_label(false, false, true, false), "");
     }
 }

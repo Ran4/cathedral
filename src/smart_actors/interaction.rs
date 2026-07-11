@@ -568,6 +568,7 @@ pub fn update_microphone_toggle(
             "Microphone off"
         });
     }
+    hud.microphone_enabled = state.enabled;
 
     let should_enable = state.enabled && runtime.interactions_enabled() && runtime.stt_available;
     let Some(microphone) = microphone else {
@@ -661,11 +662,24 @@ pub fn poll_microphone(
                     continue;
                 }
                 if !context_matches {
-                    let _ = microphone.try_send(MicrophoneCommand::Discard { wav_basename });
+                    if let Err(error) = microphone.discard_recording(wav_basename) {
+                        hud.toast(error);
+                    }
+                    continue;
+                }
+                if !runtime.interactions_enabled() {
+                    // A resync is a hard command barrier. This utterance was
+                    // captured against an uncertain projection, so it cannot
+                    // be queued behind the snapshot request and replayed.
+                    if let Err(error) = microphone.discard_recording(wav_basename) {
+                        hud.toast(error);
+                    }
                     continue;
                 }
                 let Ok(player) = players.single() else {
-                    let _ = microphone.try_send(MicrophoneCommand::Discard { wav_basename });
+                    if let Err(error) = microphone.discard_recording(wav_basename) {
+                        hud.toast(error);
+                    }
                     continue;
                 };
                 let position = player.translation();
@@ -1005,6 +1019,7 @@ mod tests {
         let runtime = SmartActorRuntime {
             connected: false,
             ready: false,
+            resyncing: false,
             stt_available: false,
             tts_available: false,
             fake_backend: false,
@@ -1022,6 +1037,7 @@ mod tests {
         let hud = app.world().resource::<SmartActorHudState>();
         assert!(hud.microphone_available);
         assert!(!hud.microphone_unavailable);
+        assert!(!hud.microphone_enabled);
         assert!(!hud.listening);
     }
 
@@ -1032,6 +1048,7 @@ mod tests {
         let runtime = SmartActorRuntime {
             connected: true,
             ready: true,
+            resyncing: false,
             stt_available: true,
             tts_available: false,
             fake_backend: true,
@@ -1053,6 +1070,11 @@ mod tests {
         assert!(matches!(commands.try_recv(), Ok(MicrophoneCommand::Enable)));
         assert!(app.world().resource::<MicrophoneInputState>().is_enabled());
         assert!(app.world().resource::<SmartActorHudState>().listening);
+        assert!(
+            app.world()
+                .resource::<SmartActorHudState>()
+                .microphone_enabled
+        );
 
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
@@ -1064,6 +1086,11 @@ mod tests {
         ));
         assert!(!app.world().resource::<MicrophoneInputState>().enabled);
         assert!(!app.world().resource::<SmartActorHudState>().listening);
+        assert!(
+            !app.world()
+                .resource::<SmartActorHudState>()
+                .microphone_enabled
+        );
 
         {
             let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
@@ -1072,6 +1099,33 @@ mod tests {
             keyboard.clear();
             keyboard.press(KeyCode::KeyV);
         }
+        app.update();
+        assert!(matches!(commands.try_recv(), Ok(MicrophoneCommand::Enable)));
+        assert!(app.world().resource::<MicrophoneInputState>().enabled);
+        assert!(app.world().resource::<SmartActorHudState>().listening);
+
+        {
+            let mut keyboard = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+            keyboard.clear();
+            keyboard.release(KeyCode::KeyV);
+            keyboard.clear();
+        }
+        app.world_mut()
+            .resource_mut::<SmartActorRuntime>()
+            .resyncing = true;
+        app.update();
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(MicrophoneCommand::Disable)
+        ));
+        assert!(app.world().resource::<MicrophoneInputState>().enabled);
+        let hud = app.world().resource::<SmartActorHudState>();
+        assert!(hud.microphone_enabled);
+        assert!(!hud.listening);
+
+        app.world_mut()
+            .resource_mut::<SmartActorRuntime>()
+            .resyncing = false;
         app.update();
         assert!(matches!(commands.try_recv(), Ok(MicrophoneCommand::Enable)));
         assert!(app.world().resource::<MicrophoneInputState>().enabled);
@@ -1181,6 +1235,7 @@ mod tests {
             .insert_resource(SmartActorRuntime {
                 connected: true,
                 ready: true,
+                resyncing: false,
                 stt_available: false,
                 tts_available: false,
                 fake_backend: true,

@@ -163,6 +163,23 @@ class SpeechTests(unittest.TestCase):
         apply_action(world, speaker, "say", {"text": "hello"})
         self.assertEqual(speaker.inbox, [])
 
+    def test_player_receives_structured_speech_without_private_inbox_growth(
+        self,
+    ) -> None:
+        world = World()
+        speaker = character("speaker", "Speaker", 0)
+        player = character("player", "Player", 1, control="player")
+        world.add(speaker)
+        world.add(player)
+
+        for index in range(3):
+            apply_action(world, speaker, "say", {"text": f"hello {index}"})
+
+        events = world.drain_events()
+        self.assertEqual(player.inbox, [])
+        self.assertEqual(len(events), 3)
+        self.assertTrue(all(event.recipient_ids == (player.id,) for event in events))
+
 
 class OfferTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -261,6 +278,7 @@ class OfferTests(unittest.TestCase):
 
     def test_reoffer_replaces_and_notifies_displaced_near_target(self) -> None:
         self.offer()
+        self.world.drain_events()
         self.receiver.inbox.clear()
         apply_action(
             self.world,
@@ -270,6 +288,31 @@ class OfferTests(unittest.TestCase):
         )
         self.assertIn("withdrew", self.receiver.inbox[0])
         self.assertEqual(self.world.offers[self.apple.id].target_id, self.other.id)
+        events = self.world.drain_events()
+        self.assertEqual(
+            [event.kind for event in events], ["retract_offer", "offer_item"]
+        )
+        self.assertEqual(events[0].target_id, self.receiver.id)
+        self.assertEqual(events[0].recipient_ids, (self.receiver.id,))
+
+    def test_reoffer_gives_displaced_player_structured_feedback_only(self) -> None:
+        self.receiver.control = "player"
+        self.offer()
+        self.world.drain_events()
+
+        apply_action(
+            self.world,
+            self.giver,
+            "offer_item",
+            {"item_id": "apple", "target": "other"},
+        )
+
+        self.assertEqual(self.receiver.inbox, [])
+        events = self.world.drain_events()
+        self.assertEqual(events[0].kind, "retract_offer")
+        self.assertEqual(events[0].recipient_ids, (self.receiver.id,))
+        self.assertEqual(events[1].kind, "offer_item")
+        self.assertIn(self.receiver.id, events[1].recipient_ids)
 
     def test_eating_retracts_and_removes_singular_item(self) -> None:
         self.offer()

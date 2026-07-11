@@ -76,10 +76,12 @@ pub struct MicrophoneService {
     shutdown: Sender<()>,
     stopped: Receiver<()>,
     worker: Option<JoinHandle<()>>,
+    cleanup_dir: Option<PathBuf>,
 }
 
 impl MicrophoneService {
     pub fn spawn(runtime_dir: PathBuf) -> Self {
+        let cleanup_dir = runtime_dir.clone();
         let (commands_tx, commands_rx) = bounded(8);
         let (events_tx, events_rx) = bounded(16);
         let (shutdown_tx, shutdown_rx) = bounded(1);
@@ -106,6 +108,7 @@ impl MicrophoneService {
             shutdown: shutdown_tx,
             stopped: stopped_rx,
             worker,
+            cleanup_dir: Some(cleanup_dir),
         }
     }
 
@@ -122,6 +125,7 @@ impl MicrophoneService {
             shutdown: bounded(1).0,
             stopped: bounded(1).1,
             worker: None,
+            cleanup_dir: None,
         }
     }
 
@@ -136,6 +140,7 @@ impl MicrophoneService {
                 shutdown: bounded(1).0,
                 stopped: bounded(1).1,
                 worker: None,
+                cleanup_dir: None,
             },
             received_commands,
         )
@@ -148,6 +153,24 @@ impl MicrophoneService {
                 TrySendError::Full(_) => "microphone command queue is busy".into(),
                 TrySendError::Disconnected(_) => "microphone worker is unavailable".into(),
             })
+    }
+
+    /// Relinquish a completed recording. If the bounded worker queue cannot
+    /// accept the cleanup command, remove the confined file directly so a
+    /// resync or bridge failure cannot accumulate orphaned utterances.
+    pub fn discard_recording(&self, wav_basename: String) -> Result<(), String> {
+        let delivery_error = match self.try_send(MicrophoneCommand::Discard {
+            wav_basename: wav_basename.clone(),
+        }) {
+            Ok(()) => return Ok(()),
+            Err(error) => error,
+        };
+        let Some(runtime_dir) = self.cleanup_dir.as_deref() else {
+            return Err(delivery_error);
+        };
+        remove_recording_checked(runtime_dir, &wav_basename).map_err(|cleanup_error| {
+            format!("{delivery_error}; fallback cleanup failed: {cleanup_error}")
+        })
     }
 
     pub fn poll(&self) -> MicrophonePoll {
@@ -560,8 +583,16 @@ fn fail_recording(
 }
 
 fn remove_recording(runtime_dir: &Path, wav_basename: &str) {
-    if let Some(path) = safe_audio_path(runtime_dir, wav_basename) {
-        let _ = std::fs::remove_file(path);
+    let _ = remove_recording_checked(runtime_dir, wav_basename);
+}
+
+fn remove_recording_checked(runtime_dir: &Path, wav_basename: &str) -> Result<(), String> {
+    let path = safe_audio_path(runtime_dir, wav_basename)
+        .ok_or_else(|| "recording filename is invalid".to_string())?;
+    match std::fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("could not remove recording: {error}")),
     }
 }
 
@@ -760,7 +791,7 @@ fn safe_audio_path(runtime_dir: &Path, basename: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Instant;
+    use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
     #[test]
     fn audio_paths_are_confined_to_the_session_directory() {
@@ -787,6 +818,43 @@ mod tests {
     }
 
     #[test]
+    fn discard_falls_back_to_confined_file_cleanup_when_command_queue_is_full() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let runtime_dir = std::env::temp_dir().join(format!(
+            "cathedralbevy-microphone-cleanup-{}-{nonce}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&runtime_dir).unwrap();
+        let wav_basename = "orphan.wav";
+        let wav_path = runtime_dir.join(wav_basename);
+        std::fs::write(&wav_path, b"RIFF-test").unwrap();
+
+        let (commands, _received_commands) = bounded(1);
+        commands.try_send(MicrophoneCommand::Enable).unwrap();
+        let (_events_tx, events) = bounded(1);
+        let (shutdown, _shutdown_rx) = bounded(1);
+        let (_stopped_tx, stopped) = bounded(1);
+        let service = MicrophoneService {
+            commands,
+            events,
+            shutdown,
+            stopped,
+            worker: None,
+            cleanup_dir: Some(runtime_dir.clone()),
+        };
+
+        service
+            .discard_recording(wav_basename.into())
+            .expect("direct cleanup should recover from a full command queue");
+        assert!(!wav_path.exists());
+        drop(service);
+        std::fs::remove_dir(runtime_dir).unwrap();
+    }
+
+    #[test]
     fn service_drop_is_bounded_when_a_driver_worker_does_not_stop() {
         let (commands, _received_commands) = bounded(1);
         let (_events_tx, events) = bounded(1);
@@ -802,6 +870,7 @@ mod tests {
             shutdown,
             stopped,
             worker: Some(worker),
+            cleanup_dir: None,
         };
 
         let started = Instant::now();
