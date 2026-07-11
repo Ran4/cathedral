@@ -1,4 +1,4 @@
-//! Smart-actor status, inventory, subtitle, and offer-card HUD.
+//! Smart-actor status, inventory, and offer-card HUD.
 
 use std::time::Duration;
 
@@ -61,6 +61,7 @@ pub struct SmartActorHudState {
     /// worker pauses during protocol resynchronization.
     pub microphone_enabled: bool,
     pub listening: bool,
+    pub transcription_backend: String,
     transient: Option<TimedMessage>,
     player_transcript: Option<TimedMessage>,
 }
@@ -78,6 +79,7 @@ impl Default for SmartActorHudState {
             microphone_unavailable: false,
             microphone_enabled: true,
             listening: false,
+            transcription_backend: "CLOUD".into(),
             transient: None,
             player_transcript: None,
         }
@@ -155,8 +157,6 @@ pub(super) struct InventoryText;
 pub(super) struct OfferCardText;
 #[derive(Component)]
 pub(super) struct FocusHintText;
-#[derive(Component)]
-pub(super) struct SubtitleText;
 #[derive(Component)]
 pub(super) struct PlayerTranscriptLayer;
 #[derive(Component)]
@@ -264,14 +264,6 @@ pub fn spawn_smart_actor_hud(mut commands: Commands) {
         14.0,
         MUTED,
     );
-    spawn_centered_text(
-        &mut commands,
-        "Smart actor subtitle",
-        SubtitleText,
-        82.0,
-        20.0,
-        TEXT,
-    );
     spawn_player_transcript(&mut commands);
     spawn_centered_text(
         &mut commands,
@@ -312,7 +304,7 @@ fn spawn_player_transcript(commands: &mut Commands) {
                 PlayerTranscriptText,
                 Text::new(""),
                 TextFont {
-                    font_size: FontSize::Px(11.0),
+                    font_size: FontSize::Px(14.0),
                     ..default()
                 },
                 TextColor(TEXT),
@@ -339,7 +331,7 @@ fn spawn_centered_text<M: Component>(
     color: Color,
 ) {
     // Keep the centering layer transparent and let its child size to the text.
-    // This gives subtitles and focus hints a compact backing instead of a wide
+    // This gives centered status text a compact backing instead of a wide
     // screen-spanning strip, while retaining the existing 60% wrap boundary.
     commands
         .spawn((
@@ -393,7 +385,6 @@ pub fn update_smart_actor_hud(
             Option<&InventoryText>,
             Option<&OfferCardText>,
             Option<&FocusHintText>,
-            Option<&SubtitleText>,
             Option<&PlayerTranscriptText>,
             Option<&ListeningText>,
             Option<&ToastText>,
@@ -404,7 +395,6 @@ pub fn update_smart_actor_hud(
             With<InventoryText>,
             With<OfferCardText>,
             With<FocusHintText>,
-            With<SubtitleText>,
             With<PlayerTranscriptText>,
             With<ListeningText>,
             With<ToastText>,
@@ -429,6 +419,7 @@ pub fn update_smart_actor_hud(
         state.microphone_unavailable,
         state.microphone_enabled,
         state.listening,
+        &state.transcription_backend,
     );
     let toast_text = state
         .transient
@@ -448,7 +439,6 @@ pub fn update_smart_actor_hud(
         inventory,
         offer,
         hint,
-        subtitle,
         player_transcript,
         listening,
         toast,
@@ -467,8 +457,6 @@ pub fn update_smart_actor_hud(
             set_optional_text(&state.offer_card, &mut text, node.as_deref_mut());
         } else if hint.is_some() {
             set_optional_text(&state.focus_hint, &mut text, node.as_deref_mut());
-        } else if subtitle.is_some() {
-            set_optional_text(&state.subtitle, &mut text, node.as_deref_mut());
         } else if player_transcript.is_some() {
             set_optional_text(player_transcript_text, &mut text, node.as_deref_mut());
         } else if listening.is_some() {
@@ -481,7 +469,7 @@ pub fn update_smart_actor_hud(
                     MUTED
                 };
             }
-            set_optional_text(listening_text, &mut text, node.as_deref_mut());
+            set_optional_text(&listening_text, &mut text, node.as_deref_mut());
         } else if toast.is_some() {
             set_optional_text(toast_text, &mut text, node.as_deref_mut());
         }
@@ -493,13 +481,19 @@ fn microphone_label(
     unavailable: bool,
     preference_enabled: bool,
     listening: bool,
-) -> &'static str {
-    match (available, unavailable, preference_enabled, listening) {
+    transcription_backend: &str,
+) -> String {
+    let microphone = match (available, unavailable, preference_enabled, listening) {
         (_, true, _, _) => "MIC UNAVAILABLE",
         (true, false, true, true) => "●  MIC ON — OPEN SPEECH    [V] OFF",
         (true, false, true, false) => "MIC PAUSED — SYNCING    [V] OFF",
         (true, false, false, _) => "MIC OFF    [V] ON",
         (false, false, _, _) => "",
+    };
+    if microphone.is_empty() {
+        String::new()
+    } else {
+        format!("{microphone}\nSTT {transcription_backend}    [Z] SWITCH")
     }
 }
 
@@ -537,15 +531,6 @@ mod tests {
         assert_eq!(focus_node.display, Display::None);
         assert_eq!(focus_node.max_width, percent(100));
 
-        let mut subtitle_query = app
-            .world_mut()
-            .query_filtered::<&BackgroundColor, With<SubtitleText>>();
-        let subtitle_background = subtitle_query
-            .iter(app.world())
-            .next()
-            .expect("subtitle exists");
-        assert_eq!(subtitle_background.0, CENTERED_TEXT_BACKDROP);
-
         let mut caption_query = app
             .world_mut()
             .query_filtered::<(&TextFont, &BackgroundColor, &Node), With<PlayerTranscriptText>>();
@@ -553,7 +538,7 @@ mod tests {
             .iter(app.world())
             .next()
             .expect("player transcript exists");
-        assert_eq!(caption_font.font_size, FontSize::Px(11.0));
+        assert_eq!(caption_font.font_size, FontSize::Px(14.0));
         assert_eq!(caption_background.0, CENTERED_TEXT_BACKDROP);
         assert_eq!(caption_node.display, Display::None);
 
@@ -623,21 +608,21 @@ mod tests {
     #[test]
     fn microphone_status_stays_visible_when_the_user_toggles_it_off() {
         assert_eq!(
-            microphone_label(true, false, true, true),
-            "●  MIC ON — OPEN SPEECH    [V] OFF"
+            microphone_label(true, false, true, true, "CLOUD"),
+            "●  MIC ON — OPEN SPEECH    [V] OFF\nSTT CLOUD    [Z] SWITCH"
         );
         assert_eq!(
-            microphone_label(true, false, true, false),
-            "MIC PAUSED — SYNCING    [V] OFF"
+            microphone_label(true, false, true, false, "CANARY-QWEN FP16"),
+            "MIC PAUSED — SYNCING    [V] OFF\nSTT CANARY-QWEN FP16    [Z] SWITCH"
         );
         assert_eq!(
-            microphone_label(true, false, false, false),
-            "MIC OFF    [V] ON"
+            microphone_label(true, false, false, false, "CLOUD"),
+            "MIC OFF    [V] ON\nSTT CLOUD    [Z] SWITCH"
         );
         assert_eq!(
-            microphone_label(false, true, false, false),
-            "MIC UNAVAILABLE"
+            microphone_label(false, true, false, false, "CLOUD"),
+            "MIC UNAVAILABLE\nSTT CLOUD    [Z] SWITCH"
         );
-        assert_eq!(microphone_label(false, false, true, false), "");
+        assert_eq!(microphone_label(false, false, true, false, "CLOUD"), "");
     }
 }

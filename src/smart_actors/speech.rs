@@ -92,6 +92,8 @@ pub struct SpeechPresentationState {
     subtitles: VecDeque<SubtitleLine>,
     audio_order: VecDeque<AudioExpectation>,
     ready_audio: HashMap<String, ReadyClip>,
+    /// One auto-layout root per NPC; its children retain accepted event order.
+    bubble_stacks: HashMap<ActorId, Entity>,
     active_voice: Option<ActiveVoice>,
     microphone_suspended_for_voice: bool,
     microphone_suspend_ack: Option<Receiver<()>>,
@@ -104,6 +106,7 @@ impl SpeechPresentationState {
         self.subtitles.clear();
         self.audio_order.clear();
         self.ready_audio.clear();
+        self.bubble_stacks.clear();
         self.active_voice = None;
         self.microphone_suspended_for_voice = false;
         self.microphone_suspend_ack = None;
@@ -119,10 +122,14 @@ impl SpeechPresentationState {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
+pub(super) struct SpeechBubbleStack {
+    world_position: Vec3,
+}
+
+#[derive(Component, Debug)]
 pub(super) struct SpeechBubble {
     expires_at: f64,
-    world_position: Vec3,
 }
 
 #[derive(Component)]
@@ -164,6 +171,8 @@ pub fn receive_speech_events(
 
         spawn_speech_bubble(
             &mut commands,
+            &mut state.bubble_stacks,
+            &message.speaker_id,
             message.speaker_position,
             text,
             now + f64::from(duration),
@@ -178,13 +187,46 @@ pub fn receive_speech_events(
     }
 }
 
-fn spawn_speech_bubble(commands: &mut Commands, speaker: Vec3, text: &str, expires_at: f64) {
-    commands.spawn((
+fn spawn_speech_bubble(
+    commands: &mut Commands,
+    bubble_stacks: &mut HashMap<ActorId, Entity>,
+    speaker_id: &ActorId,
+    speaker: Vec3,
+    text: &str,
+    expires_at: f64,
+) {
+    let world_position = speaker + Vec3::Y * 1.75;
+    // `Commands::spawn` reserves the entity immediately, so even several
+    // messages read in this frame can attach to the same speaker stack.
+    let stack_entity = if let Some(entity) = bubble_stacks.get(speaker_id).copied() {
+        commands
+            .entity(entity)
+            .insert(SpeechBubbleStack { world_position });
+        entity
+    } else {
+        let entity = commands
+            .spawn((
+                Name::new(format!("NPC speech stack: {}", speaker_id.0)),
+                SpeechBubbleStack { world_position },
+                Node {
+                    position_type: PositionType::Absolute,
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    row_gap: px(6),
+                    ..default()
+                },
+                UiTransform::from_xy(percent(-50), percent(-100)),
+                ZIndex(9),
+                Visibility::Hidden,
+            ))
+            .id();
+        bubble_stacks.insert(speaker_id.clone(), entity);
+        entity
+    };
+
+    commands.entity(stack_entity).with_child((
         Name::new("NPC speech bubble"),
-        SpeechBubble {
-            expires_at,
-            world_position: speaker + Vec3::Y * 2.75,
-        },
+        SpeechBubble { expires_at },
         Text::new(wrap_dialogue(text, 42)),
         TextFont {
             font_size: FontSize::Px(24.0),
@@ -194,16 +236,12 @@ fn spawn_speech_bubble(commands: &mut Commands, speaker: Vec3, text: &str, expir
         TextShadow::default(),
         TextLayout::justify(Justify::Center),
         Node {
-            position_type: PositionType::Absolute,
             max_width: px(420),
             padding: UiRect::axes(px(10), px(6)),
             border_radius: BorderRadius::all(px(6)),
             ..default()
         },
-        UiTransform::from_xy(percent(-50), percent(-100)),
         BackgroundColor(DIALOGUE_BACKDROP),
-        ZIndex(9),
-        Visibility::Hidden,
     ));
 }
 
@@ -211,21 +249,24 @@ pub fn update_speech_bubbles(
     mut commands: Commands,
     time: Res<Time>,
     cameras: Query<(&Camera, &GlobalTransform), With<crate::controller::PlayerCamera>>,
-    mut bubbles: Query<(Entity, &SpeechBubble, &mut Node, &mut Visibility)>,
+    bubbles: Query<(Entity, &SpeechBubble)>,
+    mut stacks: Query<(&SpeechBubbleStack, &mut Node, &mut Visibility)>,
 ) {
     let now = time.elapsed_secs_f64();
-    let camera = cameras.single().ok();
-    for (entity, bubble, mut node, mut visibility) in &mut bubbles {
+    for (entity, bubble) in &bubbles {
         if now >= bubble.expires_at {
             commands.entity(entity).despawn();
-            continue;
         }
+    }
+
+    let camera = cameras.single().ok();
+    for (stack, mut node, mut visibility) in &mut stacks {
         let Some((camera, camera_transform)) = camera else {
             *visibility = Visibility::Hidden;
             continue;
         };
         let Ok(viewport_position) =
-            camera.world_to_viewport(camera_transform, bubble.world_position)
+            camera.world_to_viewport(camera_transform, stack.world_position)
         else {
             *visibility = Visibility::Hidden;
             continue;
@@ -550,7 +591,10 @@ pub fn clear_speech_presentation(
     mut messages: MessageReader<ClearSpeechPresentation>,
     mut state: ResMut<SpeechPresentationState>,
     mut hud: ResMut<SmartActorHudState>,
-    transient_entities: Query<Entity, Or<(With<SpeechBubble>, With<NpcVoice>)>>,
+    transient_entities: Query<
+        Entity,
+        Or<(With<SpeechBubbleStack>, With<SpeechBubble>, With<NpcVoice>)>,
+    >,
     microphone: Option<Res<MicrophoneService>>,
 ) {
     if messages.read().next().is_none() {
@@ -606,29 +650,197 @@ fn wrap_dialogue(text: &str, width: usize) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use bevy::time::{TimeUpdateStrategy, Virtual};
+
     use super::*;
+
+    fn speech_test_app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<SpeechPresentationState>()
+            .init_resource::<SmartActorHudState>()
+            .add_message::<PresentSpeech>()
+            .add_systems(Update, receive_speech_events);
+        app
+    }
+
+    fn npc_speech(event_seq: u64, speaker_id: &str, text: impl Into<String>) -> PresentSpeech {
+        PresentSpeech {
+            event_seq,
+            event_id: format!("speech-{event_seq}"),
+            speaker_id: ActorId(speaker_id.into()),
+            speaker_label: speaker_id.into(),
+            text: text.into(),
+            speaker_position: Vec3::new(event_seq as f32, 0.0, 0.0),
+            recipient_count: 1,
+            expect_audio: false,
+        }
+    }
+
+    fn bubble_count(app: &mut App) -> usize {
+        let world = app.world_mut();
+        let mut bubbles = world.query_filtered::<Entity, With<SpeechBubble>>();
+        bubbles.iter(world).count()
+    }
 
     #[test]
     fn projected_dialogue_uses_a_padded_neutral_text_backdrop() {
-        fn spawn_test_bubble(mut commands: Commands) {
-            spawn_speech_bubble(&mut commands, Vec3::ZERO, "Readable dialogue", 10.0);
+        fn spawn_test_bubble(mut commands: Commands, mut state: ResMut<SpeechPresentationState>) {
+            spawn_speech_bubble(
+                &mut commands,
+                &mut state.bubble_stacks,
+                &ActorId("speaker".into()),
+                Vec3::ZERO,
+                "Readable dialogue",
+                10.0,
+            );
         }
 
         let mut app = App::new();
-        app.add_systems(Startup, spawn_test_bubble);
+        app.init_resource::<SpeechPresentationState>()
+            .add_systems(Startup, spawn_test_bubble);
         app.update();
 
-        let mut query = app.world_mut().query_filtered::<
-            (&BackgroundColor, &TextShadow, &Node, &UiTransform),
-            With<SpeechBubble>,
-        >();
-        let (background, _shadow, node, transform) = query
-            .iter(app.world())
-            .next()
-            .expect("speech bubble exists");
-        assert_eq!(background.0, DIALOGUE_BACKDROP);
-        assert_eq!(node.max_width, px(420));
-        assert_eq!(transform.translation.x, percent(-50));
+        let stack_entity = {
+            let mut query = app.world_mut().query_filtered::<
+                (&BackgroundColor, &TextShadow, &Node, &ChildOf),
+                With<SpeechBubble>,
+            >();
+            let (background, _shadow, node, parent) = query
+                .iter(app.world())
+                .next()
+                .expect("speech bubble exists");
+            assert_eq!(background.0, DIALOGUE_BACKDROP);
+            assert_eq!(node.position_type, PositionType::Relative);
+            assert_eq!(node.max_width, px(420));
+            parent.parent()
+        };
+        let stack_node = app
+            .world()
+            .get::<Node>(stack_entity)
+            .expect("speech stack is a UI node");
+        let stack_transform = app
+            .world()
+            .get::<UiTransform>(stack_entity)
+            .expect("speech stack is projected from its lower centre");
+        assert_eq!(stack_node.position_type, PositionType::Absolute);
+        assert_eq!(stack_node.flex_direction, FlexDirection::Column);
+        assert_eq!(stack_node.align_items, AlignItems::Center);
+        assert_eq!(stack_node.row_gap, px(6));
+        assert_eq!(stack_transform.translation.x, percent(-50));
+        assert_eq!(stack_transform.translation.y, percent(-100));
+    }
+
+    #[test]
+    fn same_speaker_same_frame_uses_one_ordered_non_overlapping_stack() {
+        let mut app = speech_test_app();
+        app.world_mut()
+            .write_message(npc_speech(1, "sven", "first line"));
+        app.world_mut()
+            .write_message(npc_speech(2, "sven", "second line"));
+
+        app.update();
+
+        let stack_entity = {
+            let state = app.world().resource::<SpeechPresentationState>();
+            assert_eq!(state.bubble_stacks.len(), 1);
+            state.bubble_stacks[&ActorId("sven".into())]
+        };
+        let stack_node = app.world().get::<Node>(stack_entity).unwrap();
+        assert_eq!(stack_node.flex_direction, FlexDirection::Column);
+        assert_eq!(stack_node.row_gap, px(6));
+
+        let children = app.world().get::<Children>(stack_entity).unwrap();
+        let ordered_text: Vec<_> = children
+            .iter()
+            .map(|child| {
+                assert_eq!(
+                    app.world().get::<Node>(child).unwrap().position_type,
+                    PositionType::Relative
+                );
+                app.world().get::<Text>(child).unwrap().0.as_str()
+            })
+            .collect();
+        assert_eq!(ordered_text, ["first line", "second line"]);
+    }
+
+    #[test]
+    fn distinct_speakers_use_distinct_stacks() {
+        let mut app = speech_test_app();
+        app.world_mut()
+            .write_message(npc_speech(1, "sven", "from Sven"));
+        app.world_mut()
+            .write_message(npc_speech(2, "conny", "from Conny"));
+
+        app.update();
+
+        let (sven_stack, conny_stack) = {
+            let state = app.world().resource::<SpeechPresentationState>();
+            assert_eq!(state.bubble_stacks.len(), 2);
+            (
+                state.bubble_stacks[&ActorId("sven".into())],
+                state.bubble_stacks[&ActorId("conny".into())],
+            )
+        };
+        assert_ne!(sven_stack, conny_stack);
+        assert_eq!(app.world().get::<Children>(sven_stack).unwrap().len(), 1);
+        assert_eq!(app.world().get::<Children>(conny_stack).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn stacked_bubbles_keep_individual_expiry_times() {
+        let mut app = speech_test_app();
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
+            .add_systems(Update, update_speech_bubbles.after(receive_speech_events));
+        app.world_mut()
+            .resource_mut::<Time<Virtual>>()
+            .set_max_delta(Duration::from_secs(10));
+        app.world_mut()
+            .write_message(npc_speech(1, "sven", "short"));
+        app.world_mut()
+            .write_message(npc_speech(2, "sven", "x".repeat(120)));
+
+        app.update();
+        assert_eq!(bubble_count(&mut app), 2);
+
+        *app.world_mut().resource_mut::<TimeUpdateStrategy>() =
+            TimeUpdateStrategy::ManualDuration(Duration::from_secs(4));
+        app.update();
+        assert_eq!(bubble_count(&mut app), 1);
+
+        *app.world_mut().resource_mut::<TimeUpdateStrategy>() =
+            TimeUpdateStrategy::ManualDuration(Duration::from_secs(6));
+        app.update();
+        assert_eq!(bubble_count(&mut app), 0);
+    }
+
+    #[test]
+    fn clearing_speech_removes_stacks_children_and_tracking() {
+        let mut app = speech_test_app();
+        app.add_message::<ClearSpeechPresentation>().add_systems(
+            Update,
+            clear_speech_presentation.after(receive_speech_events),
+        );
+        app.world_mut()
+            .write_message(npc_speech(1, "sven", "temporary"));
+        app.update();
+        assert_eq!(bubble_count(&mut app), 1);
+
+        app.world_mut().write_message(ClearSpeechPresentation);
+        app.update();
+
+        assert_eq!(bubble_count(&mut app), 0);
+        let world = app.world_mut();
+        let mut stacks = world.query_filtered::<Entity, With<SpeechBubbleStack>>();
+        assert_eq!(stacks.iter(world).count(), 0);
+        assert!(
+            world
+                .resource::<SpeechPresentationState>()
+                .bubble_stacks
+                .is_empty()
+        );
     }
 
     #[test]
@@ -715,12 +927,7 @@ mod tests {
 
     #[test]
     fn player_speech_uses_the_tiny_caption_instead_of_npc_subtitle_queue() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<SpeechPresentationState>()
-            .init_resource::<SmartActorHudState>()
-            .add_message::<PresentSpeech>()
-            .add_systems(Update, receive_speech_events);
+        let mut app = speech_test_app();
         app.world_mut().write_message(PresentSpeech {
             event_seq: 1,
             event_id: "speech-1".into(),

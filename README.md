@@ -51,6 +51,10 @@ persistent process, protocol, world rules, HUD, and interaction paths.
 - `V` — toggle the microphone on/off (on by default); speech is heard openly
   by every actor within 20 m. Recognized speech appears in tiny text near the
   bottom with a nearby-recipient count
+- `Z` — toggle player transcription between the configured cloud model and
+  local `nvidia/canary-qwen-2.5b` in FP16. The first local utterance installs
+  the isolated NeMo environment and downloads about 5 GB of model weights;
+  later utterances reuse the GPU-resident model
 - Mouse wheel / `1`–`9` — select an inventory item
 - Right click — offer the selected item to the focused actor
 - `Y` / `N` — accept or decline the active incoming offer

@@ -9,9 +9,11 @@ Characters take turns in a round-robin tick loop. Each turn:
 1. `prompt.render_prompt` renders the character's full sheet (backstory,
    location, visible people, held items, memories, goal) plus a
    `since_your_last_turn` field drained from the character's **inbox**.
-2. The prompt is sent to Kimi (`llm_client.complete`) — one stateless call, no chat
-   history. `stored_memories` and `current_goal` are the only persistence,
-   so the prompt tells the model to use `remember`/`forget` deliberately.
+2. The prompt is sent to the configured LLM (`llm_client.complete`) — one
+   stateless call, no provider-side chat history. Each character gets a bounded
+   `recent_conversation` containing received speech and its own lines;
+   `stored_memories` and `current_goal` remain the only durable persistence, so
+   the prompt tells the model to use `remember`/`forget` deliberately.
 3. The reply is parsed as `VERB {json}` lines (`prompt.parse_reply`) and each
    action is applied to the world (`sim.apply_action`).
 
@@ -59,6 +61,8 @@ Parsing uses `JSONDecoder.raw_decode`, so `#` inside quoted strings is safe.
   (the target, if any, is notified).
 - `eat {"item_id": "<item id>"}` — consume a held item: it is removed from the
   world (any pending offer of it is implicitly retracted, with notification).
+- `wait {}` — deliberately take no world action when speaking would only repeat
+  the recent conversation. Scheduler waits are not appended to the transcript.
 - General concept: omit and null is the same thing, {"foo": null, ...} <=> {...}
 - `item_id` takes ids only — a name like `"fish"` is an error, no fallback.
 
@@ -142,3 +146,5 @@ uv run --offline --no-project python -m unittest discover -s tests -v
   record outcomes the turn they happen, forget superseded memories, and
   clear/replace achieved goals (`set_goal {"goal": null}` clears). This works
   in test runs but nothing in the sim guarantees it.
+- Recent conversation is a bounded short-term aid, not durable memory. Older
+  lines fall out and important facts still need an explicit `remember` action.

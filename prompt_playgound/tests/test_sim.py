@@ -9,6 +9,7 @@ from sim import (
     HEARING_RADIUS_M,
     ITEM_INTERACTION_RADIUS_M,
     PLAYER_SPEECH_MAX_CHARS,
+    RECENT_CONVERSATION_MAX_ENTRIES,
     ActionError,
     Character,
     CharIdStr,
@@ -123,6 +124,36 @@ class SpeechTests(unittest.TestCase):
         self.assertEqual(event.text, "hello")
         self.assertEqual(event.recipient_ids, (bystander.id, target.id))
 
+    def test_recent_conversation_keeps_received_and_own_speech(self) -> None:
+        world, speaker, target, bystander, _ = speech_world()
+        speaker.knows.add(target.id)
+
+        apply_action(world, speaker, "say", {"target": target.id, "text": "hello"})
+
+        self.assertEqual(
+            speaker.recent_conversation,
+            ['You said to Target: "hello"'],
+        )
+        self.assertEqual(
+            target.recent_conversation,
+            ['A stranger (id speaker) said to you: "hello"'],
+        )
+        self.assertIn("said to a stranger", bystander.recent_conversation[-1])
+
+    def test_recent_conversation_is_bounded(self) -> None:
+        world, speaker, target, *_ = speech_world()
+        for index in range(RECENT_CONVERSATION_MAX_ENTRIES + 3):
+            apply_action(world, speaker, "say", {"text": f"line {index}"})
+
+        self.assertEqual(
+            len(target.recent_conversation), RECENT_CONVERSATION_MAX_ENTRIES
+        )
+        self.assertNotIn("line 0", target.recent_conversation[0])
+        self.assertIn(
+            f"line {RECENT_CONVERSATION_MAX_ENTRIES + 2}",
+            target.recent_conversation[-1],
+        )
+
     def test_broadcast_and_exact_boundary(self) -> None:
         world, speaker, target, bystander, distant = speech_world()
         distant.position_m = Vec3(20, 0, 0)
@@ -162,6 +193,17 @@ class SpeechTests(unittest.TestCase):
         world, speaker, *_ = speech_world()
         apply_action(world, speaker, "say", {"text": "hello"})
         self.assertEqual(speaker.inbox, [])
+        self.assertEqual(speaker.recent_conversation, ['You said aloud: "hello"'])
+
+    def test_wait_is_a_valid_no_op(self) -> None:
+        world, speaker, *_ = speech_world()
+        revision = world.world_revision
+
+        self.assertEqual(apply_action(world, speaker, "wait", {}), "Speaker waits")
+        self.assertEqual(world.world_revision, revision)
+        self.assertEqual(world.drain_events(), [])
+        with self.assertRaises(ActionError):
+            apply_action(world, speaker, "wait", {"unexpected": True})
 
     def test_player_receives_structured_speech_without_private_inbox_growth(
         self,

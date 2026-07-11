@@ -43,6 +43,21 @@ pub struct BridgeLaunchConfig {
     pub fake_backend: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TranscriptionBackend {
+    Cloud,
+    Local,
+}
+
+impl TranscriptionBackend {
+    pub fn wire_name(self) -> &'static str {
+        match self {
+            Self::Cloud => "cloud",
+            Self::Local => "local",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum BridgeCommand {
     Hello {
@@ -56,6 +71,7 @@ pub enum BridgeCommand {
     PlayerRecording {
         request_id: String,
         wav_basename: String,
+        stt_backend: TranscriptionBackend,
         position_m: Position,
         spatial_seq: u64,
     },
@@ -127,6 +143,7 @@ impl BridgeCommand {
             Self::PlayerRecording {
                 request_id,
                 wav_basename,
+                stt_backend,
                 position_m,
                 spatial_seq,
             } => (
@@ -134,6 +151,7 @@ impl BridgeCommand {
                 json!({
                     "request_id": request_id,
                     "wav_basename": wav_basename,
+                    "stt_backend": stt_backend.wire_name(),
                     // Microphone speech is always open. Retain the explicit
                     // null in protocol v1 so older peers fail closed if they
                     // still expect the settled field.
@@ -427,6 +445,7 @@ fn run_bridge_worker(
     }
 
     let mut process = Command::new(&config.uv_binary);
+    process.env("SMART_ACTORS_UV_BINARY", &config.uv_binary);
     process.arg("run");
     if config.fake_backend {
         // Fake mode has no SDK imports or provider calls. Avoid resolving the
@@ -1049,6 +1068,7 @@ mod tests {
         let command = BridgeCommand::PlayerRecording {
             request_id: "request-1".into(),
             wav_basename: "recording-1.wav".into(),
+            stt_backend: TranscriptionBackend::Local,
             position_m: position(),
             spatial_seq: 9,
         };
@@ -1059,6 +1079,7 @@ mod tests {
         let value: Value = serde_json::from_str(line.trim()).unwrap();
         assert_eq!(value["type"], "player_recording");
         assert!(value["payload"]["target_id"].is_null());
+        assert_eq!(value["payload"]["stt_backend"], "local");
     }
 
     #[test]

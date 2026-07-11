@@ -921,11 +921,13 @@ fn intent_to_command(intent: &interaction::PlayerIntent) -> Result<bridge::Bridg
         interaction::PlayerIntent::Recording {
             request_id,
             wav_basename,
+            stt_backend,
             spatial_seq,
             position: value,
         } => bridge::BridgeCommand::PlayerRecording {
             request_id: request_id.clone(),
             wav_basename: wav_basename.clone(),
+            stt_backend: *stt_backend,
             position_m: position(*value)?,
             spatial_seq: *spatial_seq,
         },

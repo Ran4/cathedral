@@ -224,8 +224,11 @@ class NpcScheduler:
                             file=sys.stderr,
                         )
                         continue
-                    self.world.transcript.append(line)
-                    if self._verbose:
+                    # Waiting is a real, validated model choice but not a world
+                    # event and should not make the transcript grow forever.
+                    if verb != "wait":
+                        self.world.transcript.append(line)
+                    if self._verbose and verb != "wait":
                         print(f"[smart actors] {line}", file=sys.stderr)
                 statuses.append(SchedulerStatus("llm", "idle", actor.id))
             self._in_flight_events = []

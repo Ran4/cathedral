@@ -14,6 +14,7 @@ from typing import Any, Literal, Mapping, NewType, Sequence
 HEARING_RADIUS_M = 20.0
 ITEM_INTERACTION_RADIUS_M = 4.0
 PLAYER_SPEECH_MAX_CHARS = 500
+RECENT_CONVERSATION_MAX_ENTRIES = 16
 
 # Entity ids as they key world dictionaries and appear in JSON arguments.
 ItemIdStr = NewType("ItemIdStr", str)
@@ -95,6 +96,7 @@ class Character:
     goal: str = "None"
     memories: list[str] = field(default_factory=list)
     inbox: list[str] = field(default_factory=list)
+    recent_conversation: list[str] = field(default_factory=list)
     knows: set[CharIdStr] = field(default_factory=set)
 
     def __post_init__(self) -> None:
@@ -457,6 +459,22 @@ def _notify(recipient: Character, text: str) -> None:
         recipient.inbox.append(text)
 
 
+def _remember_conversation(actor: Character, text: str) -> None:
+    """Retain bounded, model-visible dialogue, including the actor's own lines."""
+    if actor.control != "llm":
+        return
+    actor.recent_conversation.append(text)
+    overflow = len(actor.recent_conversation) - RECENT_CONVERSATION_MAX_ENTRIES
+    if overflow > 0:
+        del actor.recent_conversation[:overflow]
+
+
+def _notify_speech(recipient: Character, text: str) -> None:
+    """Deliver new speech and also retain it as short-term conversation context."""
+    _notify(recipient, text)
+    _remember_conversation(recipient, text)
+
+
 def apply_action(world: World, actor: Character, verb: str, args: object) -> str:
     """Validate and apply one action, returning its terminal transcript line.
 
@@ -468,6 +486,10 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
         raise ActionError("acting character is not part of this world", "unknown_actor")
     if not isinstance(verb, str):
         raise ActionError("action verb must be a string", "invalid_action")
+
+    if verb == "wait":
+        _args(args, required=set())
+        return f"{actor.name} waits"
 
     if verb == "say":
         parsed = _args(args, required={"text"}, optional={"target"})
@@ -491,14 +513,18 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
                 )
 
         if target is not None:
+            _remember_conversation(
+                actor,
+                f'You said to {identify(actor, target)}: "{text}"',
+            )
             for recipient in nearby:
                 if recipient.id == target.id:
-                    _notify(
+                    _notify_speech(
                         recipient,
                         f'{_cap(identify(recipient, actor))} said to you: "{text}"',
                     )
                 else:
-                    _notify(
+                    _notify_speech(
                         recipient,
                         f"{_cap(identify(recipient, actor))} said to "
                         f'{identify(recipient, target)}: "{text}"',
@@ -506,8 +532,12 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
             target_id = target.id
             line = f'{actor.name} -> {target.name}: "{text}"'
         else:
+            _remember_conversation(actor, f'You said aloud: "{text}"')
             for recipient in nearby:
-                _notify(recipient, f'{_cap(identify(recipient, actor))} said: "{text}"')
+                _notify_speech(
+                    recipient,
+                    f'{_cap(identify(recipient, actor))} said: "{text}"',
+                )
             target_id = None
             line = f'{actor.name} (aloud): "{text}"'
 

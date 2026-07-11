@@ -35,9 +35,11 @@ class FakeSpeech:
         self.transcript = transcript
         self.stt_error = stt_error
         self.tts_error = tts_error
+        self.transcribed: list[Path] = []
         self.synthesized: list[tuple[str, str]] = []
 
     def transcribe(self, wav_path: Path) -> str:
+        self.transcribed.append(wav_path)
         if self.stt_error is not None:
             raise self.stt_error
         return self.transcript
@@ -139,6 +141,18 @@ class HandshakeAndStateTests(ServerTestCase):
         self.assertEqual(snapshot["player_id"], "player")
         self.assertEqual(len(snapshot["actors"]), 4)
         self.assertNotIn("back_story", str(snapshot))
+
+    def test_local_transcription_makes_stt_available_without_cloud_credentials(
+        self,
+    ) -> None:
+        server = self.make_server(
+            speech_backend=NoSpeech(),
+            local_stt_backend=FakeSpeech(),
+        )
+        self.handshake(server)
+
+        capabilities = self.messages("ready")[0]["payload"]["capabilities"]
+        self.assertEqual(capabilities, {"llm": False, "stt": True, "tts": False})
 
     def test_session_mismatch_is_rejected_without_mutation(self) -> None:
         server = self.make_server()
@@ -354,14 +368,68 @@ class CommandTests(ServerTestCase):
 
 
 class SpeechWorkerTests(ServerTestCase):
-    def recording_payload(self, request_id: str, basename: str) -> dict:
+    def recording_payload(
+        self, request_id: str, basename: str, *, stt_backend: str = "cloud"
+    ) -> dict:
         return {
             "request_id": request_id,
             "wav_basename": basename,
             "target_id": None,
             "position_m": {"x": 0, "y": 0.91, "z": 111},
             "spatial_seq": 1,
+            "stt_backend": stt_backend,
         }
+
+    def test_recording_routes_to_selected_local_backend(self) -> None:
+        cloud = FakeSpeech(transcript="from cloud")
+        local = FakeSpeech(transcript="from Canary")
+        server = self.make_server(
+            speech_backend=cloud,
+            local_stt_backend=local,
+        )
+        self.handshake(server)
+        wav = Path(self.temp.name) / "local-recording.wav"
+        wav.write_bytes(b"RIFF")
+
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                self.recording_payload(
+                    "local-recording", wav.name, stt_backend="local"
+                ),
+                message_id="local-recording-message",
+            )
+        )
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+
+        self.assertEqual(
+            self.messages("transcription_result")[-1]["payload"]["text"],
+            "from Canary",
+        )
+        self.assertEqual(len(local.transcribed), 1)
+        self.assertEqual(cloud.transcribed, [])
+
+    def test_invalid_transcription_backend_is_rejected_and_cleans_audio(self) -> None:
+        server = self.make_server(speech_backend=FakeSpeech())
+        self.handshake(server)
+        wav = Path(self.temp.name) / "invalid-backend.wav"
+        wav.write_bytes(b"RIFF")
+
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                self.recording_payload(
+                    "invalid-backend", wav.name, stt_backend="elsewhere"
+                ),
+                message_id="invalid-backend-message",
+            )
+        )
+
+        self.assertFalse(wav.exists())
+        self.assertEqual(
+            self.messages("command_result")[-1]["payload"]["error_code"],
+            "invalid_stt_backend",
+        )
 
     def test_fake_stt_success_applies_player_speech_and_deletes_recording(self) -> None:
         backend = FakeSpeech(transcript="  What's your name?  ")

@@ -88,6 +88,7 @@ occlusion in the hearing rule.
 | Input | Action |
 | --- | --- |
 | `V` | Toggle microphone listening on/off. It is on by default. |
+| `Z` | Toggle transcription between the cloud model and local Canary-Qwen FP16. |
 | Mouse wheel / `1`-`9` | Select a held item in the inventory quickbar. |
 | Right click | Offer the selected item to the actor under the crosshair, if within 4 m. |
 | `Y` | Accept the active incoming offer. |
@@ -95,9 +96,9 @@ occlusion in the hearing rule.
 | `R` | Retract the player's pending offer of the selected item. |
 
 World/item actions require the game to own the cursor and the relevant HUD
-control not to be waiting for a Python result. `V` remains a direct persistent
-microphone toggle whenever the app receives keyboard input. Existing movement
-bindings keep their current meaning.
+control not to be waiting for a Python result. `V` and `Z` remain direct
+persistent microphone/model toggles whenever the app receives keyboard input.
+Existing movement bindings keep their current meaning.
 
 ## Authority boundary
 
@@ -148,6 +149,7 @@ class Character:
     goal: str = "None"
     memories: list[str] = field(default_factory=list)
     inbox: list[str] = field(default_factory=list)
+    recent_conversation: list[str] = field(default_factory=list)
     knows: set[CharIdStr] = field(default_factory=set)
 ```
 
@@ -280,7 +282,10 @@ Rules:
    The event contains the exact recipient IDs; Rust uses that list rather than
    recomputing who heard the historical utterance.
 
-The speaker does not receive their own utterance in their inbox.
+The speaker does not receive their own utterance in their inbox. Every LLM NPC
+does retain a bounded recent-conversation view, however: received speech and
+the NPC's own lines are kept there so the next stateless prompt can preserve
+local conversational continuity. Durable facts still require `remember`.
 
 ### Prompt changes
 
@@ -352,6 +357,9 @@ is in flight:
    types must be handled too; arbitrary LLM output must never terminate the
    service.
 
+The prompt also offers `wait {}` as a validated no-op. NPCs should use it when
+there is nothing useful and new to say; waits do not grow the transcript.
+
 After the current in-flight call, a valid player utterance addressed to an NPC
 prioritizes that NPC for the next turn. Then normal round-robin order resumes.
 This keeps spoken interactions responsive without allowing one actor to starve
@@ -416,7 +424,7 @@ neither side derives behavior from their format or an item's display name.
 | --- | --- | --- |
 | `hello` | supported version, player ID, current player position, spatial sequence | Begin handshake. |
 | `spatial_update` | spatial sequence and changed `{actor_id, position_m}` records | Update Python's position mirror. In v1 only the moving player changes after initialization. |
-| `player_recording` | request ID, WAV basename, null target, current position, spatial sequence | Ask Python to transcribe and apply one open player utterance. |
+| `player_recording` | request ID, WAV basename, STT backend (`cloud`/`local`), null target, current position, spatial sequence | Ask Python to transcribe and apply one open player utterance. |
 | `player_offer` | request ID, target actor ID, item ID, current position, spatial sequence | Invoke `offer_item` for the player. |
 | `player_accept` | request ID, item ID, current position, spatial sequence | Invoke `accept_offered_item` for the player. |
 | `player_decline` | request ID, item ID, current position, spatial sequence | Invoke `decline_offer` for the player. |
@@ -633,7 +641,10 @@ render thread. Absence, permission denial, disconnection, or an unsupported
 format changes the HUD to a text-only actor experience and does not stop the
 game.
 
-Listening is enabled by default and `V` toggles it. The audio callback only
+Listening is enabled by default and `V` toggles it. `Z` toggles completed-file
+transcription between the configured cloud model (the default) and local
+Canary-Qwen-2.5B FP16; the HUD always names the selected backend. The audio
+callback only
 converts/copies samples into a bounded channel; it performs no disk, network,
 JSON, or Bevy work. A worker uses local voice activity detection with bounded
 pre-roll and trailing-silence windows, writes each detected utterance as a valid
@@ -666,19 +677,27 @@ def transcribe(wav_path: Path) -> str: ...
 def synthesize(text: str, voice_key: str, output_wav: Path) -> None: ...
 ```
 
-The initial adapter uses the existing Python OpenAI SDK, separately from the
+The cloud adapter uses the existing Python OpenAI SDK, separately from the
 configured Moonshot/OpenAI text LLM. Use the Audio Transcriptions endpoint for
 the completed utterance WAV and the Speech endpoint with WAV output for NPC
-text. Default to a low-latency transcription model and `tts-1`, but make both
-model IDs environment settings so replacing a model never changes the game
+text. Default to the higher-accuracy transcription model and `tts-1`, but make
+both model IDs environment settings so replacing a model never changes the game
 protocol. The current endpoint contracts accept WAV transcription input and
 WAV speech output; see the official [OpenAI Audio API reference](https://platform.openai.com/docs/api-reference/audio).
+
+The local adapter lazily starts a separate `uv` PEP-723 worker for
+`nvidia/canary-qwen-2.5b`, loads the model onto CUDA in FP16, and keeps that
+process and model resident for later utterances. Keeping NeMo isolated means
+cloud-only startup does not resolve the GPU dependency tree. The first local
+utterance may download roughly 5 GB of weights and therefore reports a loading
+state instead of blocking Bevy.
 
 Configuration belongs in `prompt_playgound/.example.env`:
 
 ```text
 OPENAI_API_KEY=
-STT_MODEL=gpt-4o-mini-transcribe
+STT_MODEL=gpt-4o-transcribe
+LOCAL_STT_MODEL=nvidia/canary-qwen-2.5b
 TTS_MODEL=tts-1
 TTS_VOICE_SVEN=
 TTS_VOICE_CONNY=
@@ -888,6 +907,8 @@ The feature is complete only when all of the following are true:
 - With a microphone, voice input is on by default and `V` toggles it. Every
   accepted transcript becomes an open player `say` action heard by all actors
   within 20 m, independent of gaze, and never invokes an LLM for the player.
+- `Z` switches subsequent utterances between cloud transcription and the local
+  English-only Canary-Qwen-2.5B FP16 backend without restarting the game.
 - Asking Ilse her name and then asking her to offer her coin can produce a
   normal LLM response and offer without bespoke phrase matching.
 - Every pending NPC offer has a faithful item prop above the giver. Several

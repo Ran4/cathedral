@@ -14,9 +14,13 @@ FOOTER = """\
 Take one or more actions.
 Make SURE that what you're doing matches what you see, who you are, what you can think about/understand etc.
 
-IMPORTANT: You have no memory besides stored_memories and current_goal. After this
-turn you will only know what they contain, plus whatever you hear next. Use
-remember for anything future-you should know — above all OUTCOMES: the moment a
+IMPORTANT: recent_conversation is your short-term recollection of the latest
+dialogue, including your own words. Read it before speaking: do not repeat a
+question, answer, greeting, offer, or topic that is already there unless someone
+has just given you a reason to revisit it. It is bounded and older lines will
+disappear. Your only durable memory is stored_memories and current_goal. Use
+remember for anything future-you should know after the recent conversation fades
+— above all OUTCOMES: the moment a
 trade, payment or agreement completes, record it in that same turn (e.g.
 remember {"memory": "I bought the fish from Sven for one copper"}), or
 future-you will not know it happened and will try to do it again. Record
@@ -71,7 +75,11 @@ set_goal {"goal": "Eat fish"}
 set_goal {"goal": null}                              # Clear your goal (achieved or given up)
 remember {"memory": "I like ships"}
 forget {"memory": "I like ships"}
+wait {}                                                 # Stay quiet when there is nothing useful and new to do
 ```
+
+Do not manufacture conversation merely because it is your turn. If nobody has
+said anything new and you would otherwise repeat yourself, use `wait {}` alone.
 
 Output like this, and only like this (skip the backticks, and everything after # is a comment):
 
@@ -171,6 +179,7 @@ def render_prompt(
             "people": people,
         },
         "since_your_last_turn": events or ["nothing"],
+        "recent_conversation": actor.recent_conversation or ["nothing yet"],
         "stored_memories": actor.memories,
         "the_only_languages_you_know": "English",
         "current_goal": actor.goal,

@@ -47,7 +47,13 @@ from sim import (
     apply_action,
     identify,
 )
-from speech_client import OpenAISpeechBackend, SpeechBackend
+from speech_client import (
+    CanaryQwenSpeechBackend,
+    OpenAISpeechBackend,
+    SpeechBackend,
+    SpeechUnavailable,
+    TranscriptionBackend,
+)
 
 MAX_REQUEST_HISTORY = 1_024
 INPUT_QUEUE_CAPACITY = 256
@@ -188,6 +194,7 @@ class _TranscriptionTask:
     request_id: str
     wav_path: Path
     position_m: Vec3
+    backend: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -257,6 +264,7 @@ class SmartActorServer:
         llm_complete: Callable[[str], str] | None = None,
         llm_available: bool | None = None,
         speech_backend: SpeechBackend | None = None,
+        local_stt_backend: TranscriptionBackend | None = None,
         output: Callable[[str], None] | None = None,
         fake_mode: bool = False,
         turn_delay_seconds: float | None = None,
@@ -280,9 +288,20 @@ class SmartActorServer:
                 completion_was_injected or fake_mode or llm_client.is_available()
             )
         self.llm_available = bool(llm_available)
+        speech_backend_was_injected = speech_backend is not None
         self.speech_backend = speech_backend or (
             FakeSpeechBackend() if fake_mode else OpenAISpeechBackend()
         )
+        if local_stt_backend is not None:
+            self.local_stt_backend = local_stt_backend
+        elif fake_mode:
+            self.local_stt_backend = self.speech_backend
+        elif speech_backend_was_injected:
+            # Tests and embedders that inject a complete speech service retain
+            # their declared capabilities unless they also inject local STT.
+            self.local_stt_backend = None
+        else:
+            self.local_stt_backend = CanaryQwenSpeechBackend()
         delay = (
             turn_delay_seconds
             if turn_delay_seconds is not None
@@ -323,6 +342,13 @@ class SmartActorServer:
     def close(self) -> None:
         self.running = False
         self.scheduler.close()
+        if (
+            self.local_stt_backend is not None
+            and self.local_stt_backend is not self.speech_backend
+        ):
+            close_local = getattr(self.local_stt_backend, "close", None)
+            if callable(close_local):
+                close_local()
         self._stt_worker.close()
         self._tts_worker.close()
         pending_audio = set(self._pending_recording_paths.values())
@@ -505,7 +531,13 @@ class SmartActorServer:
             {
                 "capabilities": {
                     "llm": self.llm_available,
-                    "stt": bool(self.speech_backend.stt_available),
+                    "stt": bool(
+                        self.speech_backend.stt_available
+                        or (
+                            self.local_stt_backend is not None
+                            and self.local_stt_backend.stt_available
+                        )
+                    ),
                     "tts": bool(self.speech_backend.tts_available),
                 },
                 "snapshot": self.world.public_snapshot(self.player_id),
@@ -706,6 +738,7 @@ class SmartActorServer:
                 "position_m",
                 "spatial_seq",
             },
+            optional={"stt_backend"},
         )
         rid = self._begin_request(payload)
         if rid is None:
@@ -727,13 +760,21 @@ class SmartActorServer:
                     "player microphone speech must have a null target_id",
                     "invalid_target",
                 )
-            if not self.speech_backend.stt_available:
+            backend = payload.get("stt_backend", "cloud")
+            if backend not in {"cloud", "local"}:
                 raise ProtocolError(
-                    "speech transcription is unavailable", "stt_unavailable"
+                    "stt_backend must be cloud or local", "invalid_stt_backend"
+                )
+            selected_backend = (
+                self.speech_backend if backend == "cloud" else self.local_stt_backend
+            )
+            if selected_backend is None or not selected_backend.stt_available:
+                raise ProtocolError(
+                    f"{backend} speech transcription is unavailable", "stt_unavailable"
                 )
             self._apply_player_position(payload)
             utterance_position = self.world.characters[self.player_id].position_m
-            task = _TranscriptionTask(rid, wav_path, utterance_position)
+            task = _TranscriptionTask(rid, wav_path, utterance_position, backend)
             if not self._stt_worker.submit(task):
                 raise ProtocolError("transcription queue is full", "overloaded")
             self._pending_recording_paths[rid] = wav_path
@@ -759,10 +800,24 @@ class SmartActorServer:
                 _safe_message(error, "transcription request was rejected"),
             )
             return
-        self._send_status("stt", "transcribing")
+        if task.backend == "local":
+            self._send_status(
+                "stt",
+                "loading",
+                message="Loading local Canary-Qwen FP16; first use may download about 5 GB",
+            )
+        else:
+            self._send_status("stt", "transcribing")
 
     def _transcribe_task(self, task: _TranscriptionTask) -> str:
-        return self.speech_backend.transcribe(task.wav_path)
+        backend = (
+            self.speech_backend
+            if task.backend == "cloud"
+            else self.local_stt_backend
+        )
+        if backend is None:
+            raise SpeechUnavailable(f"{task.backend} transcription is unavailable")
+        return backend.transcribe(task.wav_path)
 
     def _poll_transcriptions(self) -> None:
         for result in self._stt_worker.drain():
@@ -780,20 +835,25 @@ class SmartActorServer:
                     f"[smart actors] transcription failed: {type(result.error).__name__}",
                     file=sys.stderr,
                 )
+                error_message = (
+                    str(result.error)[:300]
+                    if isinstance(result.error, SpeechUnavailable)
+                    else "transcription failed"
+                )
                 self._send(
                     "transcription_result",
                     {
                         "request_id": task.request_id,
                         "text": None,
-                        "error": "transcription failed",
+                        "error": error_message,
                     },
                 )
-                self._send_status("stt", "degraded", message="transcription failed")
+                self._send_status("stt", "degraded", message=error_message)
                 self._finish_request(
                     task.request_id,
                     False,
                     "transcription_failed",
-                    "transcription failed",
+                    error_message,
                 )
                 continue
             text = result.value

@@ -87,9 +87,14 @@ class PromptTests(unittest.TestCase):
 
     def test_render_and_drain_moves_old_events_to_prompt(self) -> None:
         self.sven.inbox[:] = ["first", "second"]
+        self.sven.recent_conversation[:] = ['You said aloud: "earlier"']
         rendered = sheet(render_prompt_and_drain(self.world, self.sven))
         self.assertEqual(rendered["since_your_last_turn"], ["first", "second"])
+        self.assertEqual(
+            rendered["recent_conversation"], ['You said aloud: "earlier"']
+        )
         self.assertEqual(self.sven.inbox, [])
+        self.assertEqual(self.sven.recent_conversation, ['You said aloud: "earlier"'])
 
     def test_failed_prompt_render_restores_drained_events(self) -> None:
         self.sven.inbox[:] = ["must survive"]
@@ -114,6 +119,19 @@ class PromptTests(unittest.TestCase):
 
 
 class SchedulerTests(unittest.TestCase):
+    def test_wait_does_not_grow_transcript(self) -> None:
+        world = build_world()
+
+        scheduler = NpcScheduler(
+            world, lambda prompt: "wait {}", minimum_delay_seconds=100
+        )
+        self.addCleanup(scheduler.close)
+        scheduler.start()
+        scheduler.poll()
+        wait_until(lambda: scheduler.in_flight_actor_id is None, scheduler.poll)
+
+        self.assertEqual(world.transcript, [])
+
     def test_event_arriving_during_completion_remains_for_next_turn(self) -> None:
         world = build_world()
         player = world.characters[CharIdStr("player")]

@@ -12,6 +12,7 @@ use crate::controller::PlayerController;
 
 use super::{
     ActorFocus, ITEM_INTERACTION_RADIUS_M, POSITION_UPDATE_HZ, SmartActorRuntime,
+    bridge::TranscriptionBackend,
     hud::SmartActorHudState,
     microphone::{MicrophoneCommand, MicrophoneEvent, MicrophonePoll, MicrophoneService},
     model::{ActorId, ItemId, WorldMirror},
@@ -27,6 +28,7 @@ pub enum PlayerIntent {
     Recording {
         request_id: String,
         wav_basename: String,
+        stt_backend: TranscriptionBackend,
         spatial_seq: u64,
         position: Vec3,
     },
@@ -225,6 +227,7 @@ impl PlayerSpatialState {
 #[derive(Debug, Clone)]
 struct RecordingContext {
     wav_basename: String,
+    stt_backend: TranscriptionBackend,
 }
 
 /// Persistent, voice-activated microphone state.
@@ -235,6 +238,7 @@ struct RecordingContext {
 #[derive(Resource, Debug)]
 pub struct MicrophoneInputState {
     pub enabled: bool,
+    pub stt_backend: TranscriptionBackend,
     worker_enabled: bool,
     recording: Option<RecordingContext>,
 }
@@ -243,6 +247,7 @@ impl Default for MicrophoneInputState {
     fn default() -> Self {
         Self {
             enabled: true,
+            stt_backend: TranscriptionBackend::Cloud,
             worker_enabled: false,
             recording: None,
         }
@@ -551,6 +556,21 @@ pub fn update_microphone_toggle(
     mut state: ResMut<MicrophoneInputState>,
     mut hud: ResMut<SmartActorHudState>,
 ) {
+    if keyboard.just_pressed(KeyCode::KeyZ) {
+        state.stt_backend = match state.stt_backend {
+            TranscriptionBackend::Cloud => TranscriptionBackend::Local,
+            TranscriptionBackend::Local => TranscriptionBackend::Cloud,
+        };
+        hud.toast(match state.stt_backend {
+            TranscriptionBackend::Cloud => "Transcription: cloud model",
+            TranscriptionBackend::Local => "Transcription: local Canary-Qwen FP16",
+        });
+    }
+    hud.transcription_backend = match state.stt_backend {
+        TranscriptionBackend::Cloud => "CLOUD".into(),
+        TranscriptionBackend::Local => "CANARY-QWEN FP16".into(),
+    };
+
     if keyboard.just_pressed(KeyCode::KeyV) {
         state.enabled = !state.enabled;
         if state.enabled {
@@ -643,7 +663,10 @@ pub fn poll_microphone(
                 hud.listening = false;
             }
             MicrophoneEvent::RecordingStarted { wav_basename } => {
-                microphone_input.recording = Some(RecordingContext { wav_basename });
+                microphone_input.recording = Some(RecordingContext {
+                    wav_basename,
+                    stt_backend: microphone_input.stt_backend,
+                });
                 stop_speech.write(StopNpcSpeech);
             }
             MicrophoneEvent::RecordingFinished {
@@ -655,6 +678,11 @@ pub fn poll_microphone(
                     .recording
                     .as_ref()
                     .is_some_and(|context| context.wav_basename == wav_basename);
+                let stt_backend = microphone_input
+                    .recording
+                    .as_ref()
+                    .filter(|context| context.wav_basename == wav_basename)
+                    .map_or(microphone_input.stt_backend, |context| context.stt_backend);
                 if context_matches {
                     microphone_input.recording = None;
                 }
@@ -693,6 +721,7 @@ pub fn poll_microphone(
                 intents.write(PlayerIntent::Recording {
                     request_id,
                     wav_basename,
+                    stt_backend,
                     spatial_seq,
                     position,
                 });
@@ -1010,6 +1039,35 @@ mod tests {
         let state = MicrophoneInputState::default();
         assert!(state.enabled);
         assert!(!state.is_enabled());
+        assert_eq!(state.stt_backend, TranscriptionBackend::Cloud);
+    }
+
+    #[test]
+    fn z_toggles_between_cloud_and_local_transcription() {
+        let mut keyboard = ButtonInput::<KeyCode>::default();
+        keyboard.press(KeyCode::KeyZ);
+        let runtime = SmartActorRuntime {
+            connected: false,
+            ready: false,
+            resyncing: false,
+            stt_available: false,
+            tts_available: false,
+            fake_backend: false,
+            mirror_revision: None,
+        };
+        let mut app = App::new();
+        app.insert_resource(keyboard)
+            .insert_resource(runtime)
+            .insert_resource(MicrophoneInputState::default())
+            .insert_resource(SmartActorHudState::default())
+            .add_systems(Update, update_microphone_toggle);
+
+        app.update();
+
+        let state = app.world().resource::<MicrophoneInputState>();
+        assert_eq!(state.stt_backend, TranscriptionBackend::Local);
+        let hud = app.world().resource::<SmartActorHudState>();
+        assert_eq!(hud.transcription_backend, "CANARY-QWEN FP16");
     }
 
     #[test]

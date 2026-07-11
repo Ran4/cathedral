@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import io
+import json
 import os
 import tempfile
 import unittest
@@ -9,7 +11,11 @@ from unittest.mock import patch
 
 from support import MODULE_DIR  # noqa: F401
 
-from speech_client import OpenAISpeechBackend, SpeechUnavailable
+from speech_client import (
+    CanaryQwenSpeechBackend,
+    OpenAISpeechBackend,
+    SpeechUnavailable,
+)
 
 
 class FakeStreamingResponse:
@@ -56,6 +62,38 @@ class FakeClient:
         return FakeStreamingResponse(self.speech_calls, kwargs, error=self.error)
 
 
+class FakeCanaryWorker:
+    def __init__(self) -> None:
+        self.stdin = io.StringIO()
+        self.stdout = io.StringIO(
+            '\n'.join(
+                [
+                    json.dumps({"type": "ready"}),
+                    json.dumps(
+                        {"type": "result", "request_id": 1, "text": "first local"}
+                    ),
+                    json.dumps(
+                        {"type": "result", "request_id": 2, "text": "second local"}
+                    ),
+                    "",
+                ]
+            )
+        )
+        self.terminated = False
+
+    def poll(self):
+        return 0 if self.terminated else None
+
+    def terminate(self) -> None:
+        self.terminated = True
+
+    def wait(self, timeout=None) -> int:
+        return 0
+
+    def kill(self) -> None:
+        self.terminated = True
+
+
 class SpeechAdapterTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -70,6 +108,31 @@ class SpeechAdapterTests(unittest.TestCase):
         self.assertEqual(backend.transcribe(self.wav), "understood")
         self.assertEqual(client.transcription_calls[0]["model"], "test-transcribe")
         self.assertTrue(client.transcription_calls[0]["file"].closed)
+
+    def test_transcription_defaults_to_high_accuracy_model(self) -> None:
+        client = FakeClient(transcript="understood")
+        with patch.dict(os.environ, {"STT_MODEL": ""}, clear=False):
+            backend = OpenAISpeechBackend(client=client)
+        self.assertEqual(backend.transcribe(self.wav), "understood")
+        self.assertEqual(client.transcription_calls[0]["model"], "gpt-4o-transcribe")
+
+    def test_canary_worker_is_lazy_and_reused_between_transcriptions(self) -> None:
+        worker = FakeCanaryWorker()
+        worker_script = Path(self.temp.name) / "canary.py"
+        worker_script.touch()
+        with patch("speech_client.subprocess.Popen", return_value=worker) as popen:
+            backend = CanaryQwenSpeechBackend(
+                worker_script=worker_script,
+                uv_binary="test-uv",
+            )
+            self.assertEqual(backend.transcribe(self.wav), "first local")
+            self.assertEqual(backend.transcribe(self.wav), "second local")
+            backend.close()
+
+        popen.assert_called_once()
+        requests = [json.loads(line) for line in worker.stdin.getvalue().splitlines()]
+        self.assertEqual([request["request_id"] for request in requests], [1, 2])
+        self.assertTrue(worker.terminated)
 
     def test_synthesis_requests_wav_and_distinct_default_voice(self) -> None:
         client = FakeClient()
