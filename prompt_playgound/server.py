@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["openai", "python-dotenv"]
+# dependencies = ["openai", "python-dotenv", "websocket-client"]
 # ///
 """Persistent JSON-lines smart-actor sidecar for the Bevy game."""
 
@@ -38,6 +38,7 @@ from protocol import (
 )
 from scheduler import NpcScheduler
 from sim import (
+    HEARING_RADIUS_M,
     PLAYER_SPEECH_MAX_CHARS,
     ActionError,
     CharIdStr,
@@ -53,6 +54,9 @@ from speech_client import (
     OpenAITranscriptionBackend,
     OpenAITtsBackend,
     PocketTtsBackend,
+    RealtimeFailure,
+    RealtimeTranscript,
+    RealtimeTranscriptionSession,
     SpeechBackend,
     SpeechUnavailable,
     TranscriptionBackend,
@@ -62,6 +66,11 @@ from speech_client import (
 MAX_REQUEST_HISTORY = 1_024
 INPUT_QUEUE_CAPACITY = 256
 SPEECH_QUEUE_CAPACITY = 32
+MAX_UTTERANCE_TIMINGS = 64
+MAX_ACTIVE_STREAMS = 8
+STT_STREAM_MAX_CHUNKS = 256
+STT_STREAM_MAX_CHUNK_B64 = 32_000
+STT_STREAM_HELD_TRANSCRIPT_S = 5.0
 
 
 def _enabled(value: str | None) -> bool:
@@ -125,6 +134,47 @@ def _safe_basename(value: object, *, suffix: str = ".wav") -> str:
     if not name.lower().endswith(suffix):
         raise ProtocolError(f"audio basename must end in {suffix}", "invalid_path")
     return name
+
+
+def _elapsed_ms(start: float, end: float) -> int:
+    return max(0, round((end - start) * 1000))
+
+
+def _wav_duration_seconds(path: Path) -> float | None:
+    """Duration of a RIFF WAV by header math alone.
+
+    Player recordings are 32-bit float (format tag 3), which Python's
+    ``wave`` module rejects, so the fmt/data chunks are walked by hand.
+    """
+    try:
+        with path.open("rb") as stream:
+            header = stream.read(12)
+            if len(header) < 12 or header[:4] != b"RIFF" or header[8:12] != b"WAVE":
+                return None
+            byte_rate = 0
+            while True:
+                chunk_header = stream.read(8)
+                if len(chunk_header) < 8:
+                    return None
+                chunk_id, chunk_size = struct.unpack("<4sI", chunk_header)
+                padded = chunk_size + (chunk_size & 1)
+                if chunk_id == b"fmt " and chunk_size >= 16:
+                    fmt = stream.read(padded)
+                    if len(fmt) < 16:
+                        return None
+                    _, _, sample_rate, rate, block_align, _ = struct.unpack(
+                        "<HHIIHH", fmt[:16]
+                    )
+                    # block_align is bytes per frame across all channels.
+                    byte_rate = rate or sample_rate * block_align
+                elif chunk_id == b"data":
+                    if byte_rate <= 0:
+                        return None
+                    return chunk_size / byte_rate
+                else:
+                    stream.seek(padded, 1)
+    except (OSError, struct.error):
+        return None
 
 
 T = TypeVar("T")
@@ -219,6 +269,49 @@ class _TtsStreamChunk:
     pcm_s16le_base64: str
 
 
+@dataclass(slots=True)
+class _UtteranceTiming:
+    """Latency probes for one player utterance, endpoint to applied say."""
+
+    basename: str
+    path: str
+    endpoint_at: float
+    audio_seconds: float | None = None
+    commit_at: float | None = None
+    completed_at: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _ParkedRecording:
+    """A player_recording waiting briefly for its streamed transcript."""
+
+    task: _TranscriptionTask
+    stream: _StreamState
+    deadline: float
+
+
+@dataclass(slots=True)
+class _StreamState:
+    """One streamed player utterance, keyed by its recording basename.
+
+    The stream is presentation-free plumbing: every failure quietly resolves
+    through the batch WAV fallback at ``player_recording`` time, so degrade
+    paths mark state (once) instead of raising protocol errors per chunk.
+    """
+
+    basename: str
+    started_at: float
+    state: str = "streaming"  # streaming | committed | completed | degraded
+    next_seq: int = 0
+    decoded_bytes: int = 0
+    end_at: float | None = None
+    commit_at: float | None = None
+    completed_at: float | None = None
+    transcript: str | None = None
+    degrade_reason: str | None = None
+    status_sent: bool = False
+
+
 class FakeSpeechBackend:
     """Deterministic offline speech backend enabled only by ``--fake``."""
 
@@ -300,6 +393,7 @@ class SmartActorServer:
         fake_mode: bool = False,
         turn_delay_seconds: float | None = None,
         clock: Callable[[], float] = time.monotonic,
+        realtime_session: RealtimeTranscriptionSession | None = None,
     ) -> None:
         runtime_dir = Path(runtime_dir)
         runtime_dir.mkdir(parents=True, exist_ok=True)
@@ -395,6 +489,24 @@ class SmartActorServer:
         self._generated_audio: dict[tuple[str, str], Path] = {}
         self._tts_stream_chunks: queue.Queue[_TtsStreamChunk] = queue.Queue(maxsize=64)
         self._tts_warm_errors: queue.SimpleQueue[Exception] = queue.SimpleQueue()
+        self._utterance_timings: OrderedDict[str, _UtteranceTiming] = OrderedDict()
+        self._streams: OrderedDict[str, _StreamState] = OrderedDict()
+        self._parked: OrderedDict[str, _ParkedRecording] = OrderedDict()
+        try:
+            grace_ms = float(
+                os.environ.get("STT_STREAM_COMPLETION_GRACE_MS", "").strip() or 2_000.0
+            )
+        except ValueError:
+            grace_ms = 2_000.0
+        self._stream_grace_seconds = max(0.2, grace_ms / 1_000.0)
+        if realtime_session is not None:
+            self._realtime: RealtimeTranscriptionSession | None = realtime_session
+        elif fake_mode or speech_backend_was_injected:
+            # Fake mode and injected test backends must never open sockets.
+            self._realtime = None
+        else:
+            candidate = RealtimeTranscriptionSession(clock=clock)
+            self._realtime = candidate if candidate.available else None
         self._stt_worker = _DaemonWorker(
             "smart-actor-stt", self._transcribe_task, capacity=4
         )
@@ -433,6 +545,10 @@ class SmartActorServer:
                 close_tts()
         self._stt_worker.close()
         self._tts_worker.close()
+        if self._realtime is not None:
+            self._realtime.close()
+        self._streams.clear()
+        self._parked.clear()
         pending_audio = set(self._pending_recording_paths.values())
         pending_audio.update(self._pending_tts_paths)
         for path in pending_audio:
@@ -537,6 +653,7 @@ class SmartActorServer:
         self._poll_local_stt_status()
         self._poll_local_tts_status()
         self._poll_tts_warm_errors()
+        self._poll_streaming()
         self._poll_transcriptions()
         self._poll_tts_stream_chunks()
         self._poll_tts()
@@ -554,6 +671,14 @@ class SmartActorServer:
             self._handle_spatial_update(payload)
         elif message_type == "player_recording":
             self._handle_player_recording(payload)
+        elif message_type == "player_audio_begin":
+            self._handle_player_audio_begin(payload)
+        elif message_type == "player_audio_chunk":
+            self._handle_player_audio_chunk(payload)
+        elif message_type == "player_audio_end":
+            self._handle_player_audio_end(payload)
+        elif message_type == "player_audio_abort":
+            self._handle_player_audio_abort(payload)
         elif message_type == "debug_player_say":
             self._handle_debug_player_say(payload)
         elif message_type == "player_offer":
@@ -872,6 +997,232 @@ class SmartActorServer:
         reserved.update(self._generated_audio.values())
         return reserved
 
+    def _degrade_stream(self, stream: _StreamState, reason: str) -> None:
+        if stream.state == "completed":
+            # The utterance already resolved; late noise cannot un-complete it.
+            return
+        stream.state = "degraded"
+        if stream.degrade_reason is None:
+            stream.degrade_reason = reason
+        if stream.status_sent:
+            return
+        stream.status_sent = True
+        # Waiting for a session (or its reconnect backoff) is expected and the
+        # session reports its own transitions; only genuine stream damage
+        # warrants a per-utterance status.
+        if reason not in {"no_session", "session_unavailable"}:
+            self._send_status(
+                "stt",
+                "degraded",
+                message=f"streamed audio fell back to batch ({reason})",
+                backend="cloud",
+            )
+
+    def _handle_player_audio_begin(self, payload: Mapping[str, object]) -> None:
+        _exact_payload(payload, required={"wav_basename", "sample_rate", "format"})
+        basename = _safe_basename(payload["wav_basename"])
+        if self._streams.pop(basename, None) is not None and self._realtime is not None:
+            self._realtime.clear(basename)
+        while len(self._streams) >= MAX_ACTIVE_STREAMS:
+            evicted, _ = self._streams.popitem(last=False)
+            if self._realtime is not None:
+                self._realtime.clear(evicted)
+        stream = _StreamState(basename=basename, started_at=self._clock())
+        self._streams[basename] = stream
+        sample_rate = payload["sample_rate"]
+        if (
+            isinstance(sample_rate, bool)
+            or sample_rate != 24_000
+            or payload["format"] != "pcm_s16le"
+        ):
+            self._degrade_stream(stream, "bad_format")
+            return
+        if self.fake_mode:
+            return
+        if self._realtime is None:
+            # No realtime session is configured; the utterance quietly
+            # resolves through the batch fallback at player_recording time.
+            self._degrade_stream(stream, "no_session")
+            return
+        if not self._realtime.begin(basename):
+            self._degrade_stream(stream, "session_unavailable")
+
+    def _handle_player_audio_chunk(self, payload: Mapping[str, object]) -> None:
+        _exact_payload(payload, required={"wav_basename", "seq", "pcm_s16le_base64"})
+        basename = _safe_basename(payload["wav_basename"])
+        stream = self._streams.get(basename)
+        if stream is None or stream.state == "degraded":
+            # Rust cannot know a stream degraded; trailing chunks are expected.
+            return
+        if stream.state != "streaming":
+            self._degrade_stream(stream, "chunk_after_end")
+            return
+        seq = payload["seq"]
+        if isinstance(seq, bool) or not isinstance(seq, int) or seq != stream.next_seq:
+            self._degrade_stream(stream, "seq_gap")
+            return
+        if stream.next_seq >= STT_STREAM_MAX_CHUNKS:
+            self._degrade_stream(stream, "too_many_chunks")
+            return
+        encoded = payload["pcm_s16le_base64"]
+        if (
+            not isinstance(encoded, str)
+            or not encoded
+            or len(encoded) > STT_STREAM_MAX_CHUNK_B64
+        ):
+            self._degrade_stream(stream, "oversized_chunk")
+            return
+        try:
+            decoded = base64.b64decode(encoded, validate=True)
+        except ValueError:
+            self._degrade_stream(stream, "bad_base64")
+            return
+        if not decoded or len(decoded) % 2:
+            self._degrade_stream(stream, "bad_base64")
+            return
+        stream.next_seq += 1
+        stream.decoded_bytes += len(decoded)
+        if not self.fake_mode and self._realtime is not None:
+            if not self._realtime.append(basename, encoded):
+                self._degrade_stream(stream, "backpressure")
+                self._realtime.clear(basename)
+
+    def _handle_player_audio_end(self, payload: Mapping[str, object]) -> None:
+        _exact_payload(payload, required={"wav_basename", "chunk_count", "silent"})
+        basename = _safe_basename(payload["wav_basename"])
+        stream = self._streams.get(basename)
+        if stream is None:
+            return
+        silent = payload["silent"]
+        if not isinstance(silent, bool):
+            self._degrade_stream(stream, "bad_end")
+            return
+        if silent:
+            # The worker discards sub-minimum utterances locally; nothing may
+            # ever be committed or said for them.
+            del self._streams[basename]
+            if not self.fake_mode and self._realtime is not None:
+                self._realtime.clear(basename)
+            return
+        if stream.state == "degraded":
+            return
+        if stream.state != "streaming":
+            self._degrade_stream(stream, "bad_end")
+            return
+        chunk_count = payload["chunk_count"]
+        if (
+            isinstance(chunk_count, bool)
+            or chunk_count != stream.next_seq
+            or stream.next_seq == 0
+        ):
+            self._degrade_stream(stream, "count_mismatch")
+            return
+        stream.end_at = self._clock()
+        if self.fake_mode:
+            stream.commit_at = stream.end_at
+            try:
+                stream.transcript = self.speech_backend.transcribe(
+                    self.runtime_dir / basename
+                )
+            except Exception:
+                self._degrade_stream(stream, "fake_transcription_failed")
+                return
+            stream.state = "completed"
+            stream.completed_at = self._clock()
+            return
+        if self._realtime is None:
+            self._degrade_stream(stream, "no_session")
+            return
+        if self._realtime.commit(basename):
+            stream.state = "committed"
+            stream.commit_at = stream.end_at
+        else:
+            self._degrade_stream(stream, "session_unavailable")
+
+    def _handle_player_audio_abort(self, payload: Mapping[str, object]) -> None:
+        _exact_payload(payload, required={"wav_basename"})
+        basename = _safe_basename(payload["wav_basename"])
+        # A parked recording is deliberately untouched: it belongs to an
+        # in-flight player_recording whose grace timer owns its resolution.
+        if self._streams.pop(basename, None) is not None and self._realtime is not None:
+            self._realtime.clear(basename)
+
+    def _poll_streaming(self) -> None:
+        now = self._clock()
+        session = self._realtime
+        if session is not None:
+            for state, message in session.drain_status():
+                self._send_status("stt", state, message=message, backend="cloud")
+            for result in session.poll(now):
+                self._apply_realtime_result(result)
+        overdue = [
+            basename
+            for basename, parked in self._parked.items()
+            if now >= parked.deadline
+        ]
+        for basename in overdue:
+            parked = self._parked.pop(basename)
+            if session is not None:
+                session.clear(basename)
+            self._submit_parked_batch(parked, "grace")
+        expired = [
+            basename
+            for basename, stream in self._streams.items()
+            if stream.state == "completed"
+            and stream.completed_at is not None
+            and now - stream.completed_at > STT_STREAM_HELD_TRANSCRIPT_S
+        ]
+        for basename in expired:
+            # The owning player_recording never arrived (Bevy died or a lost
+            # abort); a held transcript must never turn into a late say.
+            del self._streams[basename]
+
+    def _apply_realtime_result(
+        self, result: RealtimeTranscript | RealtimeFailure
+    ) -> None:
+        if isinstance(result, RealtimeTranscript):
+            parked = self._parked.pop(result.key, None)
+            if parked is not None:
+                timing = self._utterance_timings.get(result.key)
+                if timing is not None:
+                    timing.completed_at = self._clock()
+                self._handle_transcription_outcome(parked.task, result.text, None)
+                return
+            stream = self._streams.get(result.key)
+            if stream is not None and stream.state == "committed":
+                stream.state = "completed"
+                stream.transcript = result.text
+                stream.completed_at = self._clock()
+            # An unknown key is a late completion after fallback: discarded.
+            return
+        if result.key is None:
+            # Session-wide failure: every live streamed utterance falls back.
+            for basename in list(self._parked):
+                self._submit_parked_batch(self._parked.pop(basename), result.reason)
+            for stream in self._streams.values():
+                if stream.state in {"streaming", "committed"}:
+                    self._degrade_stream(stream, result.reason)
+            return
+        parked = self._parked.pop(result.key, None)
+        if parked is not None:
+            self._submit_parked_batch(parked, result.reason)
+            return
+        stream = self._streams.get(result.key)
+        if stream is not None:
+            self._degrade_stream(stream, result.reason)
+
+    def _submit_parked_batch(self, parked: _ParkedRecording, reason: str) -> None:
+        task = parked.task
+        timing = self._utterance_timings.get(task.wav_path.name)
+        if timing is not None:
+            timing.path = f"batch(fallback:{reason})"
+        if not self._stt_worker.submit(task):
+            self._handle_transcription_outcome(
+                task,
+                None,
+                SpeechUnavailable("transcription queue is full"),
+            )
+
     def _handle_player_recording(self, payload: Mapping[str, object]) -> None:
         _exact_payload(
             payload,
@@ -919,9 +1270,61 @@ class SmartActorServer:
             self._apply_player_position(payload)
             utterance_position = self.world.characters[self.player_id].position_m
             task = _TranscriptionTask(rid, wav_path, utterance_position, backend)
+            stream = self._streams.pop(basename, None)
+            if stream is not None and backend != "cloud":
+                # The player switched to local transcription mid-utterance;
+                # the streamed copy is irrelevant.
+                if self._realtime is not None:
+                    self._realtime.clear(basename)
+                stream = None
+            if stream is not None and stream.state == "completed":
+                self._pending_recording_paths[rid] = wav_path
+                self._begin_utterance_timing(
+                    basename,
+                    path="stream",
+                    audio_seconds=stream.decoded_bytes / 2 / 24_000,
+                    endpoint_at=stream.end_at,
+                )
+                timing = self._utterance_timings.get(basename)
+                if timing is not None:
+                    timing.commit_at = stream.commit_at
+                    timing.completed_at = stream.completed_at
+                self._handle_transcription_outcome(task, stream.transcript, None)
+                return
+            if stream is not None and stream.state == "committed":
+                # The provider already holds all the audio; wait briefly for
+                # its transcript instead of paying for a batch upload.
+                self._parked[basename] = _ParkedRecording(
+                    task=task,
+                    stream=stream,
+                    deadline=self._clock() + self._stream_grace_seconds,
+                )
+                self._pending_recording_paths[rid] = wav_path
+                self._begin_utterance_timing(
+                    basename,
+                    path="stream",
+                    audio_seconds=stream.decoded_bytes / 2 / 24_000,
+                    endpoint_at=stream.end_at,
+                )
+                timing = self._utterance_timings.get(basename)
+                if timing is not None:
+                    timing.commit_at = stream.commit_at
+                self._send_status("stt", "transcribing", backend="cloud")
+                return
+            path = "batch"
+            endpoint_at = None
+            if stream is not None:
+                path = f"batch(fallback:{stream.degrade_reason or 'incomplete_stream'})"
+                endpoint_at = stream.end_at
             if not self._stt_worker.submit(task):
                 raise ProtocolError("transcription queue is full", "overloaded")
             self._pending_recording_paths[rid] = wav_path
+            self._begin_utterance_timing(
+                basename,
+                path=path,
+                audio_seconds=_wav_duration_seconds(wav_path),
+                endpoint_at=endpoint_at,
+            )
         except Exception as error:
             if owns_wav and wav_path is not None:
                 try:
@@ -984,145 +1387,228 @@ class SmartActorServer:
 
     def _poll_transcriptions(self) -> None:
         for result in self._stt_worker.drain():
-            task = result.task
-            self._pending_recording_paths.pop(task.request_id, None)
-            try:
-                task.wav_path.unlink(missing_ok=True)
-            except OSError as error:
-                print(
-                    f"[smart actors] could not remove recording: {error}",
-                    file=sys.stderr,
-                )
-            if result.error is not None:
-                print(
-                    f"[smart actors] transcription failed: {type(result.error).__name__}",
-                    file=sys.stderr,
-                )
-                error_message = (
-                    str(result.error)[:300]
-                    if isinstance(result.error, SpeechUnavailable)
-                    else "transcription failed"
-                )
-                self._send(
-                    "transcription_result",
-                    {
-                        "request_id": task.request_id,
-                        "text": None,
-                        "error": error_message,
-                    },
-                )
-                self._send_status(
-                    "stt", "degraded", message=error_message, backend=task.backend
-                )
-                self._finish_request(
-                    task.request_id,
-                    False,
-                    "transcription_failed",
-                    error_message,
-                )
-                continue
-            text = result.value
-            if not isinstance(text, str):
-                text = ""
-            text = text.strip()
-            if not text:
-                self._send(
-                    "transcription_result",
-                    {
-                        "request_id": task.request_id,
-                        "text": None,
-                        "error": "no speech detected",
-                    },
-                )
-                self._send_status(
-                    "stt",
-                    "idle",
-                    message="no speech detected",
-                    backend=task.backend,
-                )
-                self._finish_request(
-                    task.request_id, False, "empty_transcription", "no speech detected"
-                )
-                continue
-            if len(text) > PLAYER_SPEECH_MAX_CHARS:
-                self._send(
-                    "transcription_result",
-                    {
-                        "request_id": task.request_id,
-                        "text": None,
-                        "error": "transcription exceeds the 500 character limit",
-                    },
-                )
-                self._send_status("stt", "idle", backend=task.backend)
-                self._finish_request(
-                    task.request_id,
-                    False,
-                    "text_too_long",
-                    "transcription exceeds the 500 character limit",
-                )
-                continue
-            try:
-                text.encode("utf-8")
-                has_control = any(
-                    (ord(character) < 0x20 and character not in "\n\t")
-                    or 0x7F <= ord(character) <= 0x9F
-                    for character in text
-                )
-            except UnicodeEncodeError:
-                has_control = True
-            if has_control:
-                self._send(
-                    "transcription_result",
-                    {
-                        "request_id": task.request_id,
-                        "text": None,
-                        "error": "transcription contains unsupported characters",
-                    },
-                )
-                self._send_status("stt", "idle", backend=task.backend)
-                self._finish_request(
-                    task.request_id,
-                    False,
-                    "invalid_transcription",
-                    "transcription contains unsupported characters",
-                )
-                continue
+            self._handle_transcription_outcome(result.task, result.value, result.error)
+
+    def _handle_transcription_outcome(
+        self,
+        task: _TranscriptionTask,
+        value: str | None,
+        error: Exception | None,
+    ) -> None:
+        """Resolve one utterance; every transcription path converges here."""
+        try:
+            self._resolve_transcription(task, value, error)
+        finally:
+            self._log_utterance_timing(task.wav_path.name)
+
+    def _resolve_transcription(
+        self,
+        task: _TranscriptionTask,
+        value: str | None,
+        error: Exception | None,
+    ) -> None:
+        self._pending_recording_paths.pop(task.request_id, None)
+        try:
+            task.wav_path.unlink(missing_ok=True)
+        except OSError as unlink_error:
+            print(
+                f"[smart actors] could not remove recording: {unlink_error}",
+                file=sys.stderr,
+            )
+        if error is not None:
+            print(
+                f"[smart actors] transcription failed: {type(error).__name__}",
+                file=sys.stderr,
+            )
+            error_message = (
+                str(error)[:300]
+                if isinstance(error, SpeechUnavailable)
+                else "transcription failed"
+            )
             self._send(
                 "transcription_result",
-                {"request_id": task.request_id, "text": text, "error": None},
+                {
+                    "request_id": task.request_id,
+                    "text": None,
+                    "error": error_message,
+                },
             )
+            self._send_status(
+                "stt", "degraded", message=error_message, backend=task.backend
+            )
+            self._finish_request(
+                task.request_id,
+                False,
+                "transcription_failed",
+                error_message,
+            )
+            return
+        text = value
+        if not isinstance(text, str):
+            text = ""
+        text = text.strip()
+        if not text:
+            self._send(
+                "transcription_result",
+                {
+                    "request_id": task.request_id,
+                    "text": None,
+                    "error": "no speech detected",
+                },
+            )
+            self._send_status(
+                "stt",
+                "idle",
+                message="no speech detected",
+                backend=task.backend,
+            )
+            self._finish_request(
+                task.request_id, False, "empty_transcription", "no speech detected"
+            )
+            return
+        if len(text) > PLAYER_SPEECH_MAX_CHARS:
+            self._send(
+                "transcription_result",
+                {
+                    "request_id": task.request_id,
+                    "text": None,
+                    "error": "transcription exceeds the 500 character limit",
+                },
+            )
+            self._send_status("stt", "idle", backend=task.backend)
+            self._finish_request(
+                task.request_id,
+                False,
+                "text_too_long",
+                "transcription exceeds the 500 character limit",
+            )
+            return
+        try:
+            text.encode("utf-8")
+            has_control = any(
+                (ord(character) < 0x20 and character not in "\n\t")
+                or 0x7F <= ord(character) <= 0x9F
+                for character in text
+            )
+        except UnicodeEncodeError:
+            has_control = True
+        if has_control:
+            self._send(
+                "transcription_result",
+                {
+                    "request_id": task.request_id,
+                    "text": None,
+                    "error": "transcription contains unsupported characters",
+                },
+            )
+            self._send_status("stt", "idle", backend=task.backend)
+            self._finish_request(
+                task.request_id,
+                False,
+                "invalid_transcription",
+                "transcription contains unsupported characters",
+            )
+            return
+        self._send(
+            "transcription_result",
+            {"request_id": task.request_id, "text": text, "error": None},
+        )
+        try:
+            player = self.world.characters[self.player_id]
+            current_position = player.position_m
+            player.position_m = task.position_m
             try:
-                player = self.world.characters[self.player_id]
-                current_position = player.position_m
-                player.position_m = task.position_m
-                try:
-                    line = apply_action(
-                        self.world,
-                        player,
-                        "say",
-                        {"text": text},
-                    )
-                finally:
-                    # STT can finish after newer spatial updates. Freeze this
-                    # utterance at its recorded action position without
-                    # rewinding the authoritative current player position.
-                    player.position_m = current_position
-                self.world.transcript.append(line)
-            except Exception as error:
-                self._flush_domain_events()
-                self._send_snapshot_if_changed()
-                self._send_status("stt", "idle", backend=task.backend)
-                self._finish_request(
-                    task.request_id,
-                    False,
-                    _error_code(error),
-                    _safe_message(error, "the transcription was rejected by the world"),
+                line = apply_action(
+                    self.world,
+                    player,
+                    "say",
+                    {"text": text},
                 )
-                continue
+            finally:
+                # STT can finish after newer spatial updates. Freeze this
+                # utterance at its recorded action position without
+                # rewinding the authoritative current player position.
+                player.position_m = current_position
+            self.world.transcript.append(line)
+        except Exception as action_error:
             self._flush_domain_events()
             self._send_snapshot_if_changed()
             self._send_status("stt", "idle", backend=task.backend)
-            self._finish_request(task.request_id, True, "ok", line)
+            self._finish_request(
+                task.request_id,
+                False,
+                _error_code(action_error),
+                _safe_message(
+                    action_error, "the transcription was rejected by the world"
+                ),
+            )
+            return
+        # Being heard should be followed by the earliest possible reaction:
+        # the nearest LLM listener takes the next turn without waiting out
+        # the round-robin or the inter-turn delay.
+        nearest = next(
+            (
+                character
+                for character in self.world.characters_within(
+                    task.position_m, HEARING_RADIUS_M, exclude=self.player_id
+                )
+                if character.control == "llm"
+            ),
+            None,
+        )
+        if nearest is not None:
+            self.scheduler.prioritize(nearest.id, immediate=True)
+        self._flush_domain_events()
+        self._send_snapshot_if_changed()
+        self._send_status("stt", "idle", backend=task.backend)
+        self._finish_request(task.request_id, True, "ok", line)
+
+    def _begin_utterance_timing(
+        self,
+        basename: str,
+        *,
+        path: str,
+        audio_seconds: float | None,
+        endpoint_at: float | None = None,
+    ) -> None:
+        self._utterance_timings[basename] = _UtteranceTiming(
+            basename=basename,
+            path=path,
+            endpoint_at=self._clock() if endpoint_at is None else endpoint_at,
+            audio_seconds=audio_seconds,
+        )
+        while len(self._utterance_timings) > MAX_UTTERANCE_TIMINGS:
+            self._utterance_timings.popitem(last=False)
+
+    def _log_utterance_timing(self, basename: str) -> None:
+        timing = self._utterance_timings.pop(basename, None)
+        if timing is None:
+            return
+        now = self._clock()
+        audio = (
+            f"{timing.audio_seconds:.2f}s"
+            if timing.audio_seconds is not None
+            else "?"
+        )
+        segments = [f"audio={audio}", f"path={timing.path}"]
+        if timing.commit_at is not None:
+            segments.append(
+                f"endpoint->commit={_elapsed_ms(timing.endpoint_at, timing.commit_at)}ms"
+            )
+            if timing.completed_at is not None:
+                segments.append(
+                    "commit->transcript="
+                    f"{_elapsed_ms(timing.commit_at, timing.completed_at)}ms"
+                )
+        if timing.completed_at is not None:
+            segments.append(
+                f"transcript->say={_elapsed_ms(timing.completed_at, now)}ms"
+            )
+        segments.append(f"endpoint->say={_elapsed_ms(timing.endpoint_at, now)}ms")
+        print(
+            f"[smart actors/stt] {basename}: {' '.join(segments)}",
+            file=sys.stderr,
+        )
 
     def _warm_local_tts(self) -> None:
         backend = self.local_tts_backend

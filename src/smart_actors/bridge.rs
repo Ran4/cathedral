@@ -26,6 +26,9 @@ use serde_json::{Value, json};
 use super::model::{ActorId, ItemId, Position};
 
 pub const PROTOCOL_VERSION: u32 = 1;
+/// Fixed provider format for streamed microphone audio; the capture worker
+/// resamples every device rate down to this before chunking.
+pub const STREAM_SAMPLE_RATE: u32 = 24_000;
 const COMMAND_QUEUE_CAPACITY: usize = 128;
 const EVENT_QUEUE_CAPACITY: usize = 256;
 const MAX_PROTOCOL_LINE_BYTES: usize = 1_000_000;
@@ -95,6 +98,24 @@ pub enum BridgeCommand {
         stt_backend: TranscriptionBackend,
         position_m: Position,
         spatial_seq: u64,
+    },
+    /// Start of a streamed copy of the utterance being recorded to
+    /// `wav_basename`; chunks follow while the player is still speaking.
+    PlayerAudioBegin {
+        wav_basename: String,
+    },
+    PlayerAudioChunk {
+        wav_basename: String,
+        seq: u32,
+        samples: Arc<[i16]>,
+    },
+    PlayerAudioEnd {
+        wav_basename: String,
+        chunk_count: u32,
+        silent: bool,
+    },
+    PlayerAudioAbort {
+        wav_basename: String,
     },
     DebugPlayerSay {
         request_id: String,
@@ -184,6 +205,44 @@ impl BridgeCommand {
                     "position_m": position_m,
                     "spatial_seq": spatial_seq,
                 }),
+            ),
+            Self::PlayerAudioBegin { wav_basename } => (
+                "player_audio_begin",
+                json!({
+                    "wav_basename": wav_basename,
+                    "sample_rate": STREAM_SAMPLE_RATE,
+                    "format": "pcm_s16le",
+                }),
+            ),
+            Self::PlayerAudioChunk {
+                wav_basename,
+                seq,
+                samples,
+            } => (
+                "player_audio_chunk",
+                json!({
+                    "wav_basename": wav_basename,
+                    "seq": seq,
+                    // Base64 work stays on the writer thread with the rest of
+                    // the wire encoding; producers only move sample buffers.
+                    "pcm_s16le_base64": encode_pcm_chunk(samples),
+                }),
+            ),
+            Self::PlayerAudioEnd {
+                wav_basename,
+                chunk_count,
+                silent,
+            } => (
+                "player_audio_end",
+                json!({
+                    "wav_basename": wav_basename,
+                    "chunk_count": chunk_count,
+                    "silent": silent,
+                }),
+            ),
+            Self::PlayerAudioAbort { wav_basename } => (
+                "player_audio_abort",
+                json!({"wav_basename": wav_basename}),
             ),
             Self::DebugPlayerSay {
                 request_id,
@@ -332,6 +391,13 @@ impl BridgeHandle {
 
     pub fn runtime_dir(&self) -> &Path {
         &self.runtime_dir
+    }
+
+    /// Clone of the bounded command sender for non-ECS producers. The
+    /// microphone worker streams utterance audio through the same queue so
+    /// its chunks and Bevy's later `player_recording` stay strictly ordered.
+    pub fn command_sender(&self) -> Sender<BridgeCommand> {
+        self.commands.clone()
     }
 
     /// Enqueue without ever waiting on the protocol worker.
@@ -938,6 +1004,14 @@ struct TtsChunkWire {
     pcm_s16le_base64: String,
 }
 
+fn encode_pcm_chunk(samples: &[i16]) -> String {
+    let mut bytes = Vec::with_capacity(samples.len() * 2);
+    for sample in samples {
+        bytes.extend_from_slice(&sample.to_le_bytes());
+    }
+    BASE64.encode(bytes)
+}
+
 fn decode_pcm_chunk(chunk: &TtsChunkWire) -> Result<Vec<i16>, String> {
     if chunk.channels != 1 || !(8_000..=48_000).contains(&chunk.sample_rate) {
         return Err("unsupported PCM format".into());
@@ -1210,6 +1284,88 @@ mod tests {
         assert_eq!(value["type"], "player_recording");
         assert!(value["payload"]["target_id"].is_null());
         assert_eq!(value["payload"]["stt_backend"], "local");
+    }
+
+    #[test]
+    fn player_audio_wire_shapes_are_strict_and_little_endian() {
+        let samples: Arc<[i16]> = vec![0x1234_i16, -1].into();
+        let (message_type, payload) = BridgeCommand::PlayerAudioChunk {
+            wav_basename: "player-recording-3.wav".into(),
+            seq: 7,
+            samples,
+        }
+        .wire_parts();
+        assert_eq!(message_type, "player_audio_chunk");
+        assert_eq!(payload["wav_basename"], "player-recording-3.wav");
+        assert_eq!(payload["seq"], 7);
+        assert_eq!(
+            payload["pcm_s16le_base64"],
+            Value::String(BASE64.encode([0x34_u8, 0x12, 0xFF, 0xFF]))
+        );
+
+        let mut bytes = Vec::new();
+        write_command(
+            &mut bytes,
+            "session",
+            3,
+            &BridgeCommand::PlayerAudioBegin {
+                wav_basename: "player-recording-3.wav".into(),
+            },
+        )
+        .unwrap();
+        let line = String::from_utf8(bytes).unwrap();
+        assert!(line.ends_with('\n'));
+        let value: Value = serde_json::from_str(line.trim()).unwrap();
+        assert_eq!(value["type"], "player_audio_begin");
+        assert_eq!(value["message_id"], "rust-3");
+        assert_eq!(value["payload"]["sample_rate"], 24_000);
+        assert_eq!(value["payload"]["format"], "pcm_s16le");
+
+        let (end_type, end_payload) = BridgeCommand::PlayerAudioEnd {
+            wav_basename: "player-recording-3.wav".into(),
+            chunk_count: 8,
+            silent: false,
+        }
+        .wire_parts();
+        assert_eq!(end_type, "player_audio_end");
+        assert_eq!(
+            end_payload,
+            serde_json::json!({
+                "wav_basename": "player-recording-3.wav",
+                "chunk_count": 8,
+                "silent": false,
+            })
+        );
+
+        let (abort_type, abort_payload) = BridgeCommand::PlayerAudioAbort {
+            wav_basename: "player-recording-3.wav".into(),
+        }
+        .wire_parts();
+        assert_eq!(abort_type, "player_audio_abort");
+        assert_eq!(
+            abort_payload,
+            serde_json::json!({"wav_basename": "player-recording-3.wav"})
+        );
+    }
+
+    #[test]
+    fn streaming_commands_are_never_coalesced_as_spatials() {
+        assert!(
+            !BridgeCommand::PlayerAudioChunk {
+                wav_basename: "player-recording-1.wav".into(),
+                seq: 0,
+                samples: vec![0_i16].into(),
+            }
+            .is_redundant_spatial()
+        );
+        assert!(
+            !BridgeCommand::PlayerAudioEnd {
+                wav_basename: "player-recording-1.wav".into(),
+                chunk_count: 1,
+                silent: false,
+            }
+            .is_redundant_spatial()
+        );
     }
 
     #[test]

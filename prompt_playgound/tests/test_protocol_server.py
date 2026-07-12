@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import base64
 import struct
@@ -13,8 +15,13 @@ from support import MODULE_DIR, decode_output, envelope, hello, wait_until  # no
 
 from main import build_world
 from protocol import ProtocolError, encode_message, parse_line, server_envelope
-from server import SmartActorServer
+from server import (
+    STT_STREAM_HELD_TRANSCRIPT_S,
+    SmartActorServer,
+    _wav_duration_seconds,
+)
 from sim import CharIdStr, Vec3, apply_action
+from speech_client import RealtimeFailure, RealtimeTranscript
 
 
 class NoSpeech:
@@ -93,6 +100,19 @@ class StreamingTts(FakeSpeech):
         on_chunk(0, 24_000, encoded)
         on_chunk(1, 24_000, encoded)
         return 2, 173
+
+
+def player_recording_payload(
+    request_id: str, basename: str, *, stt_backend: str = "cloud"
+) -> dict:
+    return {
+        "request_id": request_id,
+        "wav_basename": basename,
+        "target_id": None,
+        "position_m": {"x": 0, "y": 0.91, "z": 111},
+        "spatial_seq": 1,
+        "stt_backend": stt_backend,
+    }
 
 
 class ProtocolPrimitiveTests(unittest.TestCase):
@@ -1062,6 +1082,585 @@ class SpeechWorkerTests(ServerTestCase):
             self.messages("speech")[-1]["payload"]["event_id"],
         )
         self.assertIn("timed out", failure["reason"])
+
+
+class TimingInstrumentationTests(ServerTestCase):
+    def submit_recording(
+        self, server: SmartActorServer, request_id: str, basename: str
+    ) -> None:
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                player_recording_payload(request_id, basename),
+                message_id=f"{request_id}-message",
+            )
+        )
+
+    def timing_lines(self, stderr: io.StringIO) -> list[str]:
+        return [
+            line
+            for line in stderr.getvalue().splitlines()
+            if line.startswith("[smart actors/stt]")
+        ]
+
+    def test_batch_resolution_emits_one_timing_line(self) -> None:
+        server = self.make_server(speech_backend=FakeSpeech(transcript="Hello"))
+        self.handshake(server)
+        wav = Path(self.temp.name) / "timing-batch.wav"
+        wav.write_bytes(b"RIFF")
+        self.submit_recording(server, "timing-batch", wav.name)
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        lines = self.timing_lines(stderr)
+        self.assertEqual(len(lines), 1)
+        self.assertRegex(
+            lines[0],
+            r"^\[smart actors/stt\] timing-batch\.wav: "
+            r"audio=\? path=batch endpoint->say=\d+ms$",
+        )
+
+    def test_failed_transcription_also_emits_one_timing_line(self) -> None:
+        backend = FakeSpeech(stt_error=RuntimeError("provider offline"))
+        server = self.make_server(speech_backend=backend)
+        self.handshake(server)
+        wav = Path(self.temp.name) / "timing-failed.wav"
+        wav.write_bytes(b"RIFF")
+        self.submit_recording(server, "timing-failed", wav.name)
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertFalse(self.messages("command_result")[-1]["payload"]["success"])
+        lines = self.timing_lines(stderr)
+        self.assertEqual(len(lines), 1)
+        self.assertIn("path=batch", lines[0])
+
+    def test_wav_duration_reads_float32_riff_header(self) -> None:
+        sample_rate = 48_000
+        frames = sample_rate * 3 // 2
+        data = b"\x00\x00\x00\x00" * frames
+        fmt = struct.pack("<HHIIHH", 3, 1, sample_rate, sample_rate * 4, 4, 32)
+        chunks = (
+            b"fmt "
+            + struct.pack("<I", len(fmt))
+            + fmt
+            + b"fact"
+            + struct.pack("<I", 4)
+            + struct.pack("<I", frames)
+            + b"data"
+            + struct.pack("<I", len(data))
+            + data
+        )
+        wav = Path(self.temp.name) / "float32.wav"
+        wav.write_bytes(b"RIFF" + struct.pack("<I", 4 + len(chunks)) + b"WAVE" + chunks)
+        self.assertAlmostEqual(_wav_duration_seconds(wav), 1.5, places=3)
+
+    def test_wav_duration_is_none_for_unparseable_files(self) -> None:
+        garbage = Path(self.temp.name) / "garbage.wav"
+        garbage.write_bytes(b"RIFF")
+        self.assertIsNone(_wav_duration_seconds(garbage))
+        missing = Path(self.temp.name) / "missing.wav"
+        self.assertIsNone(_wav_duration_seconds(missing))
+
+
+class StreamMessageMixin:
+    def chunk_b64(self, samples: int = 480) -> str:
+        return base64.b64encode(b"\x00\x00" * samples).decode("ascii")
+
+    def send(
+        self, server: SmartActorServer, message_type: str, payload: dict, message_id: str
+    ) -> None:
+        server.handle_envelope(envelope(message_type, payload, message_id=message_id))
+
+    def begin(
+        self,
+        server: SmartActorServer,
+        basename: str,
+        *,
+        message_id: str,
+        sample_rate: int = 24_000,
+        fmt: str = "pcm_s16le",
+    ) -> None:
+        self.send(
+            server,
+            "player_audio_begin",
+            {"wav_basename": basename, "sample_rate": sample_rate, "format": fmt},
+            message_id,
+        )
+
+    def chunk(
+        self,
+        server: SmartActorServer,
+        basename: str,
+        seq: int,
+        *,
+        message_id: str,
+        encoded: str | None = None,
+    ) -> None:
+        self.send(
+            server,
+            "player_audio_chunk",
+            {
+                "wav_basename": basename,
+                "seq": seq,
+                "pcm_s16le_base64": encoded or self.chunk_b64(),
+            },
+            message_id,
+        )
+
+    def end(
+        self,
+        server: SmartActorServer,
+        basename: str,
+        chunk_count: int,
+        *,
+        message_id: str,
+        silent: bool = False,
+    ) -> None:
+        self.send(
+            server,
+            "player_audio_end",
+            {"wav_basename": basename, "chunk_count": chunk_count, "silent": silent},
+            message_id,
+        )
+
+    def degraded_statuses(self) -> list[dict]:
+        return [
+            message["payload"]
+            for message in self.messages("status")
+            if message["payload"]["subsystem"] == "stt"
+            and message["payload"]["state"] == "degraded"
+        ]
+
+
+class PlayerAudioStreamTests(StreamMessageMixin, ServerTestCase):
+    def stream_server(self, **kwargs) -> tuple[SmartActorServer, FakeSpeech]:
+        backend = kwargs.pop("speech_backend", FakeSpeech(transcript="Streamed words"))
+        server = self.make_server(fake_mode=True, speech_backend=backend, **kwargs)
+        self.handshake(server)
+        return server, backend
+
+    def test_streamed_utterance_resolves_through_result_pipeline(self) -> None:
+        server, backend = self.stream_server()
+        wav = Path(self.temp.name) / "player-recording-1.wav"
+        wav.write_bytes(b"RIFF")
+        self.begin(server, wav.name, message_id="s1-begin")
+        self.chunk(server, wav.name, 0, message_id="s1-c0")
+        self.chunk(server, wav.name, 1, message_id="s1-c1")
+        self.end(server, wav.name, 2, message_id="s1-end")
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            server.handle_envelope(
+                envelope(
+                    "player_recording",
+                    player_recording_payload("stream-1", wav.name),
+                    message_id="s1-recording",
+                )
+            )
+        self.assertFalse(wav.exists())
+        self.assertEqual(
+            self.messages("transcription_result")[-1]["payload"]["text"],
+            "Streamed words",
+        )
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(len(backend.transcribed), 1)
+        self.assertEqual(server._streams, {})
+        self.assertEqual(self.degraded_statuses(), [])
+        speech = self.messages("speech")[-1]["payload"]
+        self.assertIsNone(speech["target_id"])
+        timing = [
+            line
+            for line in stderr.getvalue().splitlines()
+            if line.startswith("[smart actors/stt]")
+        ]
+        self.assertEqual(len(timing), 1)
+        self.assertIn("path=stream", timing[0])
+        self.assertIn("commit->transcript=", timing[0])
+
+    def test_stream_messages_produce_no_command_result(self) -> None:
+        server, backend = self.stream_server()
+        self.begin(server, "player-recording-2.wav", message_id="s2-begin")
+        self.chunk(server, "player-recording-2.wav", 0, message_id="s2-c0")
+        self.end(server, "player-recording-2.wav", 1, message_id="s2-end")
+        server.poll()
+        self.assertEqual(self.messages("command_result"), [])
+        self.assertEqual(self.messages("transcription_result"), [])
+        self.assertEqual(self.messages("speech"), [])
+
+    def test_begin_with_bad_format_degrades_to_batch_once(self) -> None:
+        server, backend = self.stream_server()
+        wav = Path(self.temp.name) / "player-recording-3.wav"
+        wav.write_bytes(b"RIFF")
+        self.begin(server, wav.name, message_id="s3-begin", sample_rate=48_000)
+        self.chunk(server, wav.name, 0, message_id="s3-c0")
+        self.end(server, wav.name, 1, message_id="s3-end")
+        degraded = self.degraded_statuses()
+        self.assertEqual(len(degraded), 1)
+        self.assertIn("bad_format", degraded[0]["message"])
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                player_recording_payload("stream-3", wav.name),
+                message_id="s3-recording",
+            )
+        )
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(len(backend.transcribed), 1)
+        self.assertEqual(len(self.degraded_statuses()), 1)
+
+    def test_stream_violations_degrade_exactly_once_each(self) -> None:
+        server, _ = self.stream_server()
+        self.begin(server, "player-recording-4a.wav", message_id="s4a-begin")
+        self.chunk(server, "player-recording-4a.wav", 1, message_id="s4a-gap")
+        self.chunk(server, "player-recording-4a.wav", 2, message_id="s4a-more")
+        self.begin(server, "player-recording-4b.wav", message_id="s4b-begin")
+        self.chunk(
+            server,
+            "player-recording-4b.wav",
+            0,
+            message_id="s4b-big",
+            encoded="A" * 33_000,
+        )
+        self.begin(server, "player-recording-4c.wav", message_id="s4c-begin")
+        self.chunk(server, "player-recording-4c.wav", 0, message_id="s4c-c0")
+        self.end(server, "player-recording-4c.wav", 3, message_id="s4c-end")
+        messages = [status["message"] for status in self.degraded_statuses()]
+        self.assertEqual(len(messages), 3)
+        self.assertIn("seq_gap", messages[0])
+        self.assertIn("oversized_chunk", messages[1])
+        self.assertIn("count_mismatch", messages[2])
+
+    def test_chunk_after_completion_cannot_uncomplete_the_stream(self) -> None:
+        server, backend = self.stream_server()
+        wav = Path(self.temp.name) / "player-recording-4d.wav"
+        wav.write_bytes(b"RIFF")
+        self.begin(server, wav.name, message_id="s4d-begin")
+        self.chunk(server, wav.name, 0, message_id="s4d-c0")
+        self.end(server, wav.name, 1, message_id="s4d-end")
+        self.chunk(server, wav.name, 1, message_id="s4d-late")
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                player_recording_payload("stream-4d", wav.name),
+                message_id="s4d-recording",
+            )
+        )
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(len(backend.transcribed), 1)
+        self.assertEqual(self.degraded_statuses(), [])
+
+    def test_silent_end_clears_stream_without_say(self) -> None:
+        server, backend = self.stream_server()
+        self.begin(server, "player-recording-5.wav", message_id="s5-begin")
+        self.chunk(server, "player-recording-5.wav", 0, message_id="s5-c0")
+        self.end(server, "player-recording-5.wav", 1, message_id="s5-end", silent=True)
+        server.poll()
+        self.assertEqual(server._streams, {})
+        self.assertEqual(self.messages("transcription_result"), [])
+        self.assertEqual(self.messages("speech"), [])
+        self.assertEqual(backend.transcribed, [])
+        self.assertEqual(self.degraded_statuses(), [])
+
+    def test_abort_and_unknown_basenames_are_idempotent(self) -> None:
+        server, _ = self.stream_server()
+        self.send(
+            server,
+            "player_audio_abort",
+            {"wav_basename": "player-recording-9.wav"},
+            "s6-abort-unknown",
+        )
+        self.end(server, "player-recording-9.wav", 1, message_id="s6-end-unknown")
+        self.chunk(server, "player-recording-9.wav", 0, message_id="s6-chunk-unknown")
+        self.begin(server, "player-recording-6.wav", message_id="s6-begin")
+        self.send(
+            server,
+            "player_audio_abort",
+            {"wav_basename": "player-recording-6.wav"},
+            "s6-abort",
+        )
+        self.send(
+            server,
+            "player_audio_abort",
+            {"wav_basename": "player-recording-6.wav"},
+            "s6-abort-again",
+        )
+        self.assertEqual(server._streams, {})
+        self.assertEqual(self.degraded_statuses(), [])
+
+    def test_begin_replaces_a_live_stream(self) -> None:
+        server, backend = self.stream_server()
+        wav = Path(self.temp.name) / "player-recording-7.wav"
+        wav.write_bytes(b"RIFF")
+        self.begin(server, wav.name, message_id="s7-begin-1")
+        self.chunk(server, wav.name, 0, message_id="s7-c0")
+        self.begin(server, wav.name, message_id="s7-begin-2")
+        self.chunk(server, wav.name, 0, message_id="s7-c0-again")
+        self.end(server, wav.name, 1, message_id="s7-end")
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                player_recording_payload("stream-7", wav.name),
+                message_id="s7-recording",
+            )
+        )
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(len(backend.transcribed), 1)
+        self.assertEqual(self.degraded_statuses(), [])
+
+    def test_completed_transcript_is_dropped_after_hold_window(self) -> None:
+        self.now = 1_000.0
+        server, backend = self.stream_server(clock=lambda: self.now)
+        wav = Path(self.temp.name) / "player-recording-8.wav"
+        wav.write_bytes(b"RIFF")
+        self.begin(server, wav.name, message_id="s8-begin")
+        self.chunk(server, wav.name, 0, message_id="s8-c0")
+        self.end(server, wav.name, 1, message_id="s8-end")
+        self.assertEqual(len(server._streams), 1)
+        self.now += STT_STREAM_HELD_TRANSCRIPT_S + 0.1
+        server.poll()
+        self.assertEqual(server._streams, {})
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                player_recording_payload("stream-8", wav.name),
+                message_id="s8-recording",
+            )
+        )
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(len(backend.transcribed), 2)
+
+    def test_stream_messages_before_hello_are_dropped(self) -> None:
+        server = self.make_server(fake_mode=True, speech_backend=FakeSpeech())
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            self.begin(server, "player-recording-11.wav", message_id="s9-begin")
+        self.assertEqual(server._streams, {})
+        self.assertEqual(self.messages("status"), [])
+
+
+class FakeRealtimeSession:
+    """Injected session double; tests drive its poll()/drain_status() output."""
+
+    def __init__(self) -> None:
+        self.begun: list[str] = []
+        self.appended: list[str] = []
+        self.committed: list[str] = []
+        self.cleared: list[str] = []
+        self.results: list = []
+        self.statuses: list[tuple[str, str]] = []
+        self.begin_ok = True
+        self.append_ok = True
+        self.commit_ok = True
+        self.closed = False
+
+    def begin(self, key: str) -> bool:
+        self.begun.append(key)
+        return self.begin_ok
+
+    def append(self, key: str, pcm_s16le_base64: str) -> bool:
+        self.appended.append(key)
+        return self.append_ok
+
+    def commit(self, key: str) -> bool:
+        self.committed.append(key)
+        return self.commit_ok
+
+    def clear(self, key: str) -> None:
+        self.cleared.append(key)
+
+    def poll(self, now: float) -> list:
+        drained, self.results = self.results, []
+        return drained
+
+    def drain_status(self) -> list[tuple[str, str]]:
+        drained, self.statuses = self.statuses, []
+        return drained
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class StreamJoinTests(StreamMessageMixin, ServerTestCase):
+    def join_server(self, **kwargs):
+        self.now = 1_000.0
+        session = FakeRealtimeSession()
+        backend = kwargs.pop("speech_backend", FakeSpeech(transcript="From batch"))
+        server = self.make_server(
+            speech_backend=backend,
+            realtime_session=session,
+            clock=lambda: self.now,
+            **kwargs,
+        )
+        self.handshake(server)
+        return server, session, backend
+
+    def streamed_utterance(self, server, basename: str, *, prefix: str) -> None:
+        self.begin(server, basename, message_id=f"{prefix}-begin")
+        self.chunk(server, basename, 0, message_id=f"{prefix}-c0")
+        self.end(server, basename, 1, message_id=f"{prefix}-end")
+
+    def park_recording(self, server, request_id: str) -> Path:
+        wav = Path(self.temp.name) / f"{request_id}.wav"
+        wav.write_bytes(b"RIFF")
+        self.streamed_utterance(server, wav.name, prefix=request_id)
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                player_recording_payload(request_id, wav.name),
+                message_id=f"{request_id}-recording",
+            )
+        )
+        return wav
+
+    def test_committed_recording_parks_and_resolves_on_completion(self) -> None:
+        server, session, backend = self.join_server()
+        wav = self.park_recording(server, "join-1")
+        self.assertEqual(session.begun, [wav.name])
+        self.assertEqual(session.appended, [wav.name])
+        self.assertEqual(session.committed, [wav.name])
+        self.assertEqual(self.messages("transcription_result"), [])
+
+        session.results.append(RealtimeTranscript(wav.name, "From the stream"))
+        server.poll()
+        self.assertEqual(
+            self.messages("transcription_result")[-1]["payload"]["text"],
+            "From the stream",
+        )
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(backend.transcribed, [])
+        self.assertFalse(wav.exists())
+        self.assertEqual(server._parked, {})
+
+    def test_grace_expiry_batches_once_and_late_completion_is_discarded(self) -> None:
+        server, session, backend = self.join_server()
+        wav = self.park_recording(server, "join-2")
+
+        self.now += server._stream_grace_seconds + 0.1
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(
+            self.messages("transcription_result")[-1]["payload"]["text"],
+            "From batch",
+        )
+        self.assertEqual(len(backend.transcribed), 1)
+        self.assertIn(wav.name, session.cleared)
+
+        session.results.append(RealtimeTranscript(wav.name, "Too late"))
+        server.poll()
+        self.assertEqual(len(self.messages("transcription_result")), 1)
+        self.assertEqual(len(self.messages("speech")), 1)
+
+    def test_session_failure_batches_parked_requests_immediately(self) -> None:
+        server, session, backend = self.join_server()
+        wav = self.park_recording(server, "join-3")
+
+        session.statuses.append(("degraded", "socket lost"))
+        session.results.append(RealtimeFailure(wav.name, "socket"))
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(len(backend.transcribed), 1)
+        degraded = [
+            status for status in self.degraded_statuses() if "socket" in status["message"]
+        ]
+        self.assertEqual(len(degraded), 1)
+
+    def test_session_wide_failure_batches_every_parked_request(self) -> None:
+        server, session, backend = self.join_server()
+        self.park_recording(server, "join-4")
+
+        session.results.append(RealtimeFailure(None, "socket"))
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(len(backend.transcribed), 1)
+        self.assertEqual(server._parked, {})
+
+    def test_commit_failure_degrades_quietly_to_batch(self) -> None:
+        server, session, backend = self.join_server()
+        session.commit_ok = False
+        wav = Path(self.temp.name) / "join-5.wav"
+        wav.write_bytes(b"RIFF")
+        self.streamed_utterance(server, wav.name, prefix="join-5")
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                player_recording_payload("join-5", wav.name),
+                message_id="join-5-recording",
+            )
+        )
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(len(backend.transcribed), 1)
+        # Waiting for a session is expected; it never spams degraded statuses.
+        self.assertEqual(self.degraded_statuses(), [])
+
+    def test_local_backend_clears_the_session_and_never_streams(self) -> None:
+        local = FakeSpeech(transcript="From Canary")
+        server, session, backend = self.join_server(local_stt_backend=local)
+        wav = Path(self.temp.name) / "join-6.wav"
+        wav.write_bytes(b"RIFF")
+        self.streamed_utterance(server, wav.name, prefix="join-6")
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                player_recording_payload("join-6", wav.name, stt_backend="local"),
+                message_id="join-6-recording",
+            )
+        )
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertEqual(
+            self.messages("transcription_result")[-1]["payload"]["text"],
+            "From Canary",
+        )
+        self.assertIn(wav.name, session.cleared)
+        self.assertEqual(backend.transcribed, [])
+        self.assertEqual(len(local.transcribed), 1)
+
+    def test_shutdown_closes_session_and_unlinks_parked_wav(self) -> None:
+        server, session, backend = self.join_server()
+        wav = self.park_recording(server, "join-7")
+        server.close()
+        self.assertTrue(session.closed)
+        self.assertFalse(wav.exists())
+        self.assertEqual(server._parked, {})
+
+
+class TranscriptionPriorityTests(ServerTestCase):
+    def transcribe(self, server: SmartActorServer, request_id: str, payload: dict) -> None:
+        wav = Path(self.temp.name) / f"{request_id}.wav"
+        wav.write_bytes(b"RIFF")
+        payload = dict(payload, wav_basename=wav.name)
+        server.handle_envelope(
+            envelope("player_recording", payload, message_id=f"{request_id}-message")
+        )
+        wait_until(lambda: bool(self.messages("command_result")), server.poll)
+
+    def test_transcribed_say_prioritizes_the_nearest_llm_recipient(self) -> None:
+        server = self.make_server(speech_backend=FakeSpeech(transcript="Hello all"))
+        self.handshake(server)
+        self.transcribe(
+            server, "priority-1", player_recording_payload("priority-1", "x.wav")
+        )
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        expected = next(
+            character.id
+            for character in server.world.characters_within(
+                Vec3(0, 0.91, 111), 20.0, exclude=server.player_id
+            )
+            if character.control == "llm"
+        )
+        self.assertEqual(server.scheduler._priority_actor_id, expected)
+
+    def test_prioritization_is_a_noop_without_llm_hearers(self) -> None:
+        server = self.make_server(speech_backend=FakeSpeech(transcript="Anyone?"))
+        self.handshake(server)
+        payload = player_recording_payload("priority-2", "x.wav")
+        payload["position_m"] = {"x": 500, "y": 0.91, "z": 500}
+        payload["spatial_seq"] = 2
+        self.transcribe(server, "priority-2", payload)
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertIsNone(server.scheduler._priority_actor_id)
 
 
 if __name__ == "__main__":

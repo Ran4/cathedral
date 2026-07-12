@@ -12,7 +12,8 @@ use crate::controller::PlayerController;
 
 use super::{
     ActorFocus, ITEM_INTERACTION_RADIUS_M, POSITION_UPDATE_HZ, SmartActorRuntime,
-    bridge::TranscriptionBackend,
+    SmartActorsConfig,
+    bridge::{BridgeCommand, BridgeHandle, TranscriptionBackend},
     hud::SmartActorHudState,
     microphone::{MicrophoneCommand, MicrophoneEvent, MicrophonePoll, MicrophoneService},
     model::{ActorId, ItemId, WorldMirror},
@@ -241,6 +242,9 @@ pub struct MicrophoneInputState {
     pub stt_backend: TranscriptionBackend,
     worker_enabled: bool,
     recording: Option<RecordingContext>,
+    /// Last streaming gate acknowledged by the capture worker. `None` forces
+    /// a resend, covering worker (re)spawn after connect/disconnect.
+    streaming_sync: Option<bool>,
 }
 
 impl Default for MicrophoneInputState {
@@ -250,6 +254,7 @@ impl Default for MicrophoneInputState {
             stt_backend: TranscriptionBackend::Cloud,
             worker_enabled: false,
             recording: None,
+            streaming_sync: None,
         }
     }
 }
@@ -257,12 +262,26 @@ impl Default for MicrophoneInputState {
 impl MicrophoneInputState {
     pub fn clear_on_disconnect(&mut self) {
         self.recording = None;
+        self.streaming_sync = None;
     }
 
     #[cfg(test)]
     fn is_enabled(&self) -> bool {
         self.enabled && self.worker_enabled
     }
+}
+
+/// Cloud streaming starts only when every layer agrees: config.ron has not
+/// disabled it, the player has the cloud backend selected, and the sidecar
+/// reported cloud transcription available.
+pub(crate) fn effective_streaming(
+    config: &SmartActorsConfig,
+    state: &MicrophoneInputState,
+    runtime: &SmartActorRuntime,
+) -> bool {
+    config.stt_streaming
+        && state.stt_backend == TranscriptionBackend::Cloud
+        && runtime.stt_cloud_available
 }
 
 pub fn sync_player_position(
@@ -551,6 +570,7 @@ pub fn collect_item_interaction_input(
 #[allow(clippy::too_many_arguments)]
 pub fn update_microphone_toggle(
     keyboard: Res<ButtonInput<KeyCode>>,
+    config: Res<SmartActorsConfig>,
     runtime: Res<SmartActorRuntime>,
     microphone: Option<Res<MicrophoneService>>,
     mut state: ResMut<MicrophoneInputState>,
@@ -593,9 +613,24 @@ pub fn update_microphone_toggle(
     let should_enable = state.enabled && runtime.interactions_enabled() && runtime.stt_available;
     let Some(microphone) = microphone else {
         state.worker_enabled = false;
+        state.streaming_sync = None;
         hud.listening = false;
         return;
     };
+    // Sync the streaming gate ahead of Enable so a freshly armed worker
+    // already knows the mode before its first utterance can trigger.
+    let streaming = effective_streaming(&config, &state, &runtime);
+    if state.streaming_sync != Some(streaming) {
+        if state.streaming_sync.is_none() && !streaming {
+            // A fresh worker already starts with streaming off.
+            state.streaming_sync = Some(false);
+        } else if microphone
+            .try_send(MicrophoneCommand::SetStreaming { enabled: streaming })
+            .is_ok()
+        {
+            state.streaming_sync = Some(streaming);
+        }
+    }
     if should_enable != state.worker_enabled {
         let command = if should_enable {
             MicrophoneCommand::Enable
@@ -613,6 +648,7 @@ pub fn update_microphone_toggle(
 #[allow(clippy::too_many_arguments)]
 pub fn poll_microphone(
     microphone: Option<Res<MicrophoneService>>,
+    handle: Res<BridgeHandle>,
     runtime: Res<SmartActorRuntime>,
     players: Query<&GlobalTransform, With<PlayerController>>,
     mut spatial: ResMut<PlayerSpatialState>,
@@ -691,6 +727,11 @@ pub fn poll_microphone(
                     continue;
                 }
                 if !context_matches {
+                    // Discarded after finishing: also release any streamed
+                    // copy so the sidecar never holds an ownerless transcript.
+                    let _ = handle.try_send(BridgeCommand::PlayerAudioAbort {
+                        wav_basename: wav_basename.clone(),
+                    });
                     if let Err(error) = microphone.discard_recording(wav_basename) {
                         hud.toast(error);
                     }
@@ -700,12 +741,18 @@ pub fn poll_microphone(
                     // A resync is a hard command barrier. This utterance was
                     // captured against an uncertain projection, so it cannot
                     // be queued behind the snapshot request and replayed.
+                    let _ = handle.try_send(BridgeCommand::PlayerAudioAbort {
+                        wav_basename: wav_basename.clone(),
+                    });
                     if let Err(error) = microphone.discard_recording(wav_basename) {
                         hud.toast(error);
                     }
                     continue;
                 }
                 let Ok(player) = players.single() else {
+                    let _ = handle.try_send(BridgeCommand::PlayerAudioAbort {
+                        wav_basename: wav_basename.clone(),
+                    });
                     if let Err(error) = microphone.discard_recording(wav_basename) {
                         hud.toast(error);
                     }
@@ -934,6 +981,27 @@ mod tests {
         ActorControl, ActorSnapshot, ItemSnapshot, OfferSnapshot, Position, WorldSnapshot,
     };
 
+    #[test]
+    fn effective_streaming_requires_cloud_selected_available_and_configured() {
+        let mut config = SmartActorsConfig::default();
+        let mut state = MicrophoneInputState::default();
+        let mut runtime = SmartActorRuntime::starting(false);
+
+        runtime.stt_cloud_available = true;
+        assert!(effective_streaming(&config, &state, &runtime));
+
+        config.stt_streaming = false;
+        assert!(!effective_streaming(&config, &state, &runtime));
+        config.stt_streaming = true;
+
+        state.stt_backend = TranscriptionBackend::Local;
+        assert!(!effective_streaming(&config, &state, &runtime));
+        state.stt_backend = TranscriptionBackend::Cloud;
+
+        runtime.stt_cloud_available = false;
+        assert!(!effective_streaming(&config, &state, &runtime));
+    }
+
     fn offer_mirror(giver_x: f32) -> WorldMirror {
         let mut mirror = WorldMirror::default();
         mirror.begin_session("test").unwrap();
@@ -1073,6 +1141,7 @@ mod tests {
         };
         let mut app = App::new();
         app.insert_resource(keyboard)
+            .insert_resource(SmartActorsConfig::default())
             .insert_resource(runtime)
             .insert_resource(MicrophoneInputState::default())
             .insert_resource(SmartActorHudState::default())
@@ -1102,6 +1171,7 @@ mod tests {
         };
         let mut app = App::new();
         app.insert_resource(keyboard)
+            .insert_resource(SmartActorsConfig::default())
             .insert_resource(runtime)
             .insert_resource(MicrophoneInputState::default())
             .insert_resource(SmartActorHudState::default())
@@ -1136,6 +1206,7 @@ mod tests {
 
         let mut app = App::new();
         app.insert_resource(ButtonInput::<KeyCode>::default())
+            .insert_resource(SmartActorsConfig::default())
             .insert_resource(runtime)
             .insert_resource(microphone)
             .insert_resource(state)

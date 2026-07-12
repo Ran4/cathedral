@@ -252,6 +252,59 @@ class SchedulerTests(unittest.TestCase):
         wait_until(lambda: len(calls) >= 3, scheduler.poll)
         self.assertEqual(calls[:3], ["Sven", "Ilse", "Conny"])
 
+    def test_prioritize_immediate_pulls_the_next_turn_forward(self) -> None:
+        world = build_world()
+        calls: list[str] = []
+        now = [1_000.0]
+
+        def complete(prompt: str) -> str:
+            calls.append(sheet(prompt)["name"])
+            return 'set_goal {"goal": null}'
+
+        scheduler = NpcScheduler(
+            world, complete, minimum_delay_seconds=100, clock=lambda: now[0]
+        )
+        self.addCleanup(scheduler.close)
+        scheduler.start()
+        scheduler.poll()
+        wait_until(lambda: scheduler.in_flight_actor_id is None, scheduler.poll)
+        self.assertEqual(calls, ["Sven"])
+        # The frozen clock sits inside the 100 s inter-turn delay.
+        scheduler.poll()
+        scheduler.poll()
+        self.assertEqual(calls, ["Sven"])
+
+        self.assertTrue(scheduler.prioritize("k0fb1", immediate=True))
+        wait_until(lambda: len(calls) == 2, scheduler.poll)
+        self.assertEqual(calls[1], "Ilse")
+
+    def test_prioritize_without_immediate_keeps_the_turn_delay(self) -> None:
+        world = build_world()
+        calls: list[str] = []
+        now = [1_000.0]
+
+        def complete(prompt: str) -> str:
+            calls.append(sheet(prompt)["name"])
+            return 'set_goal {"goal": null}'
+
+        scheduler = NpcScheduler(
+            world, complete, minimum_delay_seconds=100, clock=lambda: now[0]
+        )
+        self.addCleanup(scheduler.close)
+        scheduler.start()
+        scheduler.poll()
+        wait_until(lambda: scheduler.in_flight_actor_id is None, scheduler.poll)
+        self.assertEqual(calls, ["Sven"])
+
+        self.assertTrue(scheduler.prioritize("k0fb1"))
+        for _ in range(5):
+            scheduler.poll()
+        self.assertEqual(calls, ["Sven"])
+
+        now[0] += 200.0
+        wait_until(lambda: len(calls) == 2, scheduler.poll)
+        self.assertEqual(calls[1], "Ilse")
+
     def test_malformed_actions_become_system_events_without_crash(self) -> None:
         world = build_world()
 

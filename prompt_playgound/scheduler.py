@@ -143,12 +143,16 @@ class NpcScheduler:
         self._running = False
         self._worker.close()
 
-    def prioritize(self, actor_id: CharIdStr | str) -> bool:
+    def prioritize(self, actor_id: CharIdStr | str, *, immediate: bool = False) -> bool:
         actor_id = CharIdStr(str(actor_id))
         actor = self.world.characters.get(actor_id)
         if actor is None or actor.control != "llm":
             return False
         self._priority_actor_id = actor_id
+        if immediate:
+            # Skip the remaining inter-turn delay so the prioritized actor can
+            # react as soon as the current turn (if any) has finished.
+            self._next_turn_at = min(self._next_turn_at, self._clock())
         return True
 
     def poll(self, now: float | None = None) -> list[SchedulerStatus]:

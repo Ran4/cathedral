@@ -118,6 +118,8 @@ mod tests {
                 height: 720,
                 smart_actors: (
                     pause_microphone_during_npc_voice: false,
+                    stt_streaming: false,
+                    stt_trailing_silence_ms: 700,
                 ),
             )"#,
         )
@@ -128,6 +130,12 @@ mod tests {
         assert_eq!(config.height, 720);
         assert_eq!(config.title, AppConfig::default().title);
         assert!(!config.smart_actors.pause_microphone_during_npc_voice);
+        assert!(!config.smart_actors.stt_streaming);
+        assert_eq!(config.smart_actors.stt_trailing_silence_ms, 700);
+
+        let defaults = AppConfig::default().smart_actors;
+        assert!(defaults.stt_streaming);
+        assert_eq!(defaults.stt_trailing_silence_ms, 500);
     }
 
     #[test]

@@ -14,6 +14,11 @@
         tts_backend: "local",
         // false enables full-duplex capture: NPC audio never pauses the microphone,
         // and microphone activity never interrupts NPC playback.
-        pause_microphone_during_npc_voice: false,
+        pause_microphone_during_npc_voice: true,
+        // Stream cloud transcription while you are still speaking; batch
+        // transcription of the finished recording remains the fallback.
+        stt_streaming: true,
+        // Silence that ends an utterance, in milliseconds (clamped 300..=1500).
+        stt_trailing_silence_ms: 500,
     ),
 )

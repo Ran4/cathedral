@@ -35,6 +35,11 @@ pub struct SmartActorsConfig {
     pub server_script: String,
     pub tts_backend: String,
     pub pause_microphone_during_npc_voice: bool,
+    /// Stream cloud transcription audio while the player is still speaking.
+    pub stt_streaming: bool,
+    /// Silence that ends an utterance. Clamped to a window where speech still
+    /// ends promptly but deliberate mid-sentence pauses rarely split it.
+    pub stt_trailing_silence_ms: u32,
 }
 
 impl Default for SmartActorsConfig {
@@ -46,6 +51,8 @@ impl Default for SmartActorsConfig {
             server_script: "prompt_playgound/server.py".into(),
             tts_backend: "local".into(),
             pause_microphone_during_npc_voice: true,
+            stt_streaming: true,
+            stt_trailing_silence_ms: 500,
         }
     }
 }
@@ -72,6 +79,8 @@ pub struct SmartActorRuntime {
     /// replacement snapshot. No player command may cross this barrier.
     pub resyncing: bool,
     pub stt_available: bool,
+    pub stt_cloud_available: bool,
+    pub stt_local_available: bool,
     pub tts_available: bool,
     pub tts_cloud_available: bool,
     pub tts_local_available: bool,
@@ -89,6 +98,8 @@ impl SmartActorRuntime {
             ready: false,
             resyncing: false,
             stt_available: false,
+            stt_cloud_available: false,
+            stt_local_available: false,
             tts_available: false,
             tts_cloud_available: false,
             tts_local_available: false,
@@ -365,6 +376,7 @@ struct BridgePresentationWriters<'w> {
 #[allow(clippy::too_many_arguments)]
 fn drain_bridge_messages(
     mut commands: Commands,
+    config: Res<SmartActorsConfig>,
     inbox: Res<bridge::BridgeInbox>,
     handle: Res<bridge::BridgeHandle>,
     players: Query<&GlobalTransform, With<crate::controller::PlayerController>>,
@@ -454,6 +466,10 @@ fn drain_bridge_messages(
                 if runtime.ready && runtime.stt_available && !microphone_present {
                     commands.insert_resource(microphone::MicrophoneService::spawn(
                         handle.runtime_dir().to_path_buf(),
+                        handle.command_sender(),
+                        microphone::clamped_trailing_silence(
+                            config.stt_trailing_silence_ms,
+                        ),
                     ));
                     microphone_present = true;
                 }
@@ -494,6 +510,8 @@ fn drain_bridge_messages(
                 runtime.ready = false;
                 runtime.resyncing = false;
                 runtime.stt_available = false;
+                runtime.stt_cloud_available = false;
+                runtime.stt_local_available = false;
                 runtime.tts_available = false;
                 runtime.tts_cloud_available = false;
                 runtime.tts_local_available = false;
@@ -798,6 +816,8 @@ fn apply_ready_capabilities(
     runtime.connected = true;
     runtime.resyncing = false;
     runtime.stt_available = capabilities.stt;
+    runtime.stt_cloud_available = capabilities.stt_cloud;
+    runtime.stt_local_available = capabilities.stt_local;
     runtime.tts_available = capabilities.tts;
     runtime.tts_cloud_available = capabilities.tts_cloud;
     runtime.tts_local_available = capabilities.tts_local;
@@ -825,6 +845,8 @@ fn mark_handshake_unrecoverable(
 ) {
     runtime.ready = false;
     runtime.stt_available = false;
+    runtime.stt_cloud_available = false;
+    runtime.stt_local_available = false;
     runtime.tts_available = false;
     runtime.tts_cloud_available = false;
     runtime.tts_local_available = false;
@@ -1127,10 +1149,14 @@ fn forward_player_intents(
             if let Some(request_id) = request_id {
                 interaction.resolve_command(&request_id, false, None);
             }
-            if let (Some(wav_basename), Some(microphone)) = (failed_recording, &microphone)
-                && let Err(error) = microphone.discard_recording(wav_basename)
-            {
-                hud.toast(error);
+            if let (Some(wav_basename), Some(microphone)) = (failed_recording, &microphone) {
+                // Best-effort: release any streamed copy the sidecar holds.
+                let _ = handle.try_send(bridge::BridgeCommand::PlayerAudioAbort {
+                    wav_basename: wav_basename.clone(),
+                });
+                if let Err(error) = microphone.discard_recording(wav_basename) {
+                    hud.toast(error);
+                }
             }
             continue;
         }
@@ -1142,10 +1168,13 @@ fn forward_player_intents(
             if let Some(request_id) = request_id {
                 interaction.resolve_command(&request_id, false, None);
             }
-            if let (Some(wav_basename), Some(microphone)) = (failed_recording, &microphone)
-                && let Err(cleanup_error) = microphone.discard_recording(wav_basename)
-            {
-                hud.toast(cleanup_error);
+            if let (Some(wav_basename), Some(microphone)) = (failed_recording, &microphone) {
+                let _ = handle.try_send(bridge::BridgeCommand::PlayerAudioAbort {
+                    wav_basename: wav_basename.clone(),
+                });
+                if let Err(cleanup_error) = microphone.discard_recording(wav_basename) {
+                    hud.toast(cleanup_error);
+                }
             }
             if !error.contains("spatial update coalesced") {
                 hud.toast(error);
@@ -1307,6 +1336,32 @@ mod tests {
             "Connected; unavailable: microphone transcription, NPC voice audio"
         );
         assert!(connection_detail_for_capabilities(false, true, true).contains("NPC cognition"));
+    }
+
+    #[test]
+    fn ready_capabilities_split_stt_availability_for_the_streaming_gate() {
+        let mut runtime = SmartActorRuntime::starting(false);
+        let mut hud = hud::SmartActorHudState::default();
+        apply_ready_capabilities(
+            &mut runtime,
+            &mut hud,
+            CapabilitiesWire {
+                llm: true,
+                stt: true,
+                stt_cloud: true,
+                stt_local: false,
+                tts: false,
+                tts_cloud: false,
+                tts_local: false,
+                tts_selected: bridge::TtsBackend::Off,
+            },
+        );
+        assert!(runtime.stt_cloud_available);
+        assert!(!runtime.stt_local_available);
+
+        mark_handshake_unrecoverable(&mut runtime, &mut hud);
+        assert!(!runtime.stt_cloud_available);
+        assert!(!runtime.stt_local_available);
     }
 
     #[test]
@@ -1534,6 +1589,7 @@ mod tests {
                 .to_string(),
             tts_backend: "local".into(),
             pause_microphone_during_npc_voice: true,
+            ..SmartActorsConfig::default()
         }));
 
         let deadline = std::time::Instant::now() + Duration::from_secs(8);
