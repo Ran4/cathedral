@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="An interactive lore and game-design atlas for The Second Sun in The Cathedral-City of Impossible Light.">
+  <title>The Second Sun — An Atlas of Divided Light</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #e8e1d2;
+      --muted: #aaa49d;
+      --dim: #77736f;
+      --night: #090a10;
+      --panel: #11131d;
+      --panel-2: #171925;
+      --line: rgba(224, 215, 198, .16);
+      --gold: #d9ad61;
+      --gold-pale: #f0d79d;
+      --violet: #a99bff;
+      --bruise: #6c61b6;
+      --blue: #789bd4;
+      --rose: #bc6f7c;
+      --green: #759b86;
+      --mx: 50%;
+      --my: 40%;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at var(--mx) var(--my), rgba(74, 65, 124, .12), transparent 34rem),
+        linear-gradient(180deg, #0a0b11 0%, #090a0f 70%, #0d0c10 100%);
+      font-family: Georgia, 'Times New Roman', serif;
+      line-height: 1.58;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .22;
+      background-image:
+        linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.013) 1px, transparent 1px);
+      background-size: 7px 7px;
+      mix-blend-mode: screen;
+      z-index: 20;
+    }
+
+    a { color: inherit; }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    :focus-visible { outline: 2px solid var(--gold-pale); outline-offset: 4px; }
+
+    .skip-link {
+      position: fixed;
+      top: .75rem;
+      left: .75rem;
+      z-index: 100;
+      padding: .55rem .8rem;
+      background: var(--gold-pale);
+      color: var(--night);
+      transform: translateY(-180%);
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      min-height: 3.25rem;
+      padding: .55rem clamp(1rem, 4vw, 4rem);
+      border-bottom: 1px solid var(--line);
+      background: rgba(9, 10, 16, .84);
+      backdrop-filter: blur(14px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      text-decoration: none;
+      font-size: .8rem;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      width: 1.55rem;
+      aspect-ratio: 1;
+      border: 1px solid var(--gold);
+      border-radius: 50%;
+      box-shadow: -.32rem .18rem 0 -.2rem var(--violet);
+    }
+    .topbar nav { display: flex; gap: clamp(.65rem, 2vw, 1.5rem); }
+    .topbar nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font: 600 .69rem/1.2 system-ui, sans-serif;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .topbar nav a:hover, .topbar nav a.active { color: var(--gold-pale); }
+
+    main { display: block; }
+    section { scroll-margin-top: 4rem; }
+    .shell { width: min(1160px, calc(100% - 2rem)); margin-inline: auto; }
+
+    .hero {
+      position: relative;
+      min-height: min(780px, calc(100svh - 3.25rem));
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-bottom: 1px solid var(--line);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 42%;
+      background:
+        linear-gradient(168deg, transparent 48%, rgba(217,173,97,.08) 49%, transparent 51%),
+        linear-gradient(192deg, transparent 47%, rgba(169,155,255,.09) 48%, transparent 50%);
+      clip-path: polygon(0 18%, 100% 0, 100% 100%, 0 100%);
+      pointer-events: none;
+    }
+    .rose-stage {
+      position: absolute;
+      width: min(64vw, 660px);
+      aspect-ratio: 1;
+      left: 50%;
+      top: 42%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      opacity: .58;
+      filter: drop-shadow(0 0 42px rgba(151, 136, 229, .16));
+    }
+    .rose-stage::before,
+    .rose-stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: clamp(8px, 1.2vw, 15px) solid #181a24;
+      border-radius: 50%;
+      background:
+        repeating-conic-gradient(from 3deg,
+          rgba(102, 130, 180, .72) 0 7deg,
+          #1a1b25 7.5deg 9deg,
+          rgba(138, 72, 84, .72) 9.5deg 16deg,
+          #1a1b25 16.5deg 18deg),
+        radial-gradient(circle, transparent 0 14%, #1a1b25 14.3% 16%, transparent 16.4% 34%, #1a1b25 34.4% 36.5%, transparent 37% 62%, #1a1b25 62.5% 65%, transparent 65.5%);
+      box-shadow:
+        inset 0 0 0 2px rgba(217,173,97,.18),
+        inset 0 0 80px rgba(10,10,15,.7),
+        0 0 0 1px rgba(217,173,97,.2);
+    }
+    .rose-stage::after {
+      inset: 10%;
+      border-width: 3px;
+      opacity: .7;
+      transform: rotate(7.5deg);
+      background: repeating-conic-gradient(transparent 0 14deg, #151721 14.5deg 16deg);
+    }
+    .sun {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .sun.first {
+      width: clamp(74px, 10vw, 124px);
+      aspect-ratio: 1;
+      left: calc(50% + min(18vw, 185px));
+      top: 31%;
+      background: #f4d69b;
+      box-shadow: 0 0 24px #dbb268, 0 0 90px rgba(225,174,83,.45);
+    }
+    .sun.second {
+      width: clamp(62px, 8vw, 102px);
+      aspect-ratio: 1;
+      left: calc(50% + min(7vw, 72px));
+      top: 42%;
+      background: radial-gradient(circle at 44% 40%, #eeeaff, #afa1ed 58%, #7369ab 100%);
+      box-shadow: 0 0 24px #b5a9f6, 0 0 110px rgba(146,129,232,.52);
+      animation: breathe 7s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      50% { box-shadow: 0 0 33px #c3b9ff, 0 0 145px rgba(146,129,232,.6); transform: scale(1.025); }
+    }
+    .hero-copy {
+      position: relative;
+      z-index: 2;
+      width: min(850px, calc(100% - 2rem));
+      padding-top: clamp(15rem, 40vh, 22rem);
+      text-align: center;
+      text-shadow: 0 2px 16px #090a10, 0 2px 35px #090a10;
+    }
+    .eyebrow {
+      margin: 0 0 .7rem;
+      color: var(--gold-pale);
+      font: 650 .72rem/1.4 system-ui, sans-serif;
+      letter-spacing: .24em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(3.2rem, 10vw, 8.2rem);
+      font-weight: 400;
+      line-height: .85;
+      letter-spacing: -.055em;
+    }
+    .hero-lede {
+      max-width: 690px;
+      margin: 1.5rem auto 0;
+      color: #d3cec6;
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+    }
+    .hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .8rem; margin-top: 1.7rem; }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: .45rem;
+      min-height: 2.8rem;
+      padding: .65rem 1rem;
+      border: 1px solid rgba(217,173,97,.38);
+      background: rgba(17,19,29,.78);
+      color: var(--gold-pale);
+      text-decoration: none;
+      font: 650 .72rem/1.2 system-ui, sans-serif;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform .18s, border-color .18s, background .18s;
+    }
+    .button:hover { transform: translateY(-2px); border-color: var(--gold); background: #1c1a20; }
+    .button.primary { color: #151311; background: var(--gold-pale); }
+
+    .section { padding: clamp(4rem, 9vw, 8rem) 0; border-bottom: 1px solid var(--line); }
+    .section-head { display: grid; grid-template-columns: minmax(0, .7fr) minmax(260px, 1.3fr); gap: 2rem; align-items: end; margin-bottom: 2.5rem; }
+    .section-number { color: var(--dim); font: .7rem system-ui, sans-serif; letter-spacing: .2em; }
+    h2 { margin: .35rem 0 0; font-size: clamp(2rem, 5vw, 4.4rem); font-weight: 400; line-height: 1; letter-spacing: -.035em; }
+    .section-intro { margin: 0; color: var(--muted); font-size: 1.08rem; max-width: 660px; }
+    h3 { margin: 0; font-size: 1.35rem; font-weight: 400; }
+
+    .canon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+    .canon-card { background: var(--panel); padding: clamp(1.2rem, 3vw, 2rem); min-height: 250px; }
+    .canon-glyph { font-size: 2rem; margin-bottom: 1.3rem; }
+    .canon-card p { color: var(--muted); }
+    .canon-card ul { padding-left: 1rem; color: #c7c1b8; }
+    .canon-card.stone .canon-glyph { color: #c6bba7; }
+    .canon-card.glass .canon-glyph { color: var(--blue); }
+    .canon-card.flame .canon-glyph { color: var(--rose); }
+
+    .observatory {
+      display: grid;
+      grid-template-columns: .88fr 1.12fr;
+      min-height: 520px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .controls { padding: clamp(1.4rem, 3vw, 2.4rem); border-right: 1px solid var(--line); }
+    .control { margin: 1.5rem 0; }
+    .control label { display: flex; justify-content: space-between; gap: 1rem; color: var(--gold-pale); font: .72rem system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+    input[type="range"] { width: 100%; margin-top: .75rem; accent-color: var(--violet); }
+    .view-toggle { display: grid; grid-template-columns: repeat(2, 1fr); gap: .55rem; margin-top: .75rem; }
+    .view-toggle button { padding: .6rem; border: 1px solid var(--line); background: #0c0e16; cursor: pointer; }
+    .view-toggle button.active { border-color: var(--violet); color: #e4dfff; background: rgba(108,97,182,.22); }
+    .omen {
+      position: relative;
+      display: grid;
+      align-content: end;
+      padding: clamp(1.5rem, 5vw, 3.5rem);
+      overflow: hidden;
+      background: radial-gradient(circle at 65% 35%, rgba(169,155,255,.18), transparent 42%), #0b0c13;
+    }
+    .omen::before {
+      content: "";
+      position: absolute;
+      width: 180px;
+      aspect-ratio: 1;
+      top: 17%;
+      left: 58%;
+      border-radius: 50%;
+      background: rgba(185,175,244,var(--omen-alpha, .75));
+      box-shadow: 0 0 35px rgba(169,155,255,.6), 0 0 120px rgba(108,97,182,.3);
+      transform: translateX(-50%) scale(var(--omen-scale, .72));
+      transition: opacity .4s, transform .4s, background .4s;
+      opacity: var(--omen-visible, .8);
+    }
+    .omen::after {
+      content: "";
+      position: absolute;
+      left: 6%; right: 6%; top: 58%; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(169,155,255,.6), transparent);
+      transform: rotate(var(--ray-angle, -11deg));
+      box-shadow: 0 0 18px rgba(169,155,255,.5);
+    }
+    .omen-output { position: relative; z-index: 2; max-width: 560px; }
+    .omen-label { color: var(--violet); font: .7rem system-ui, sans-serif; letter-spacing: .17em; text-transform: uppercase; }
+    .omen-output h3 { font-size: clamp(1.55rem, 3vw, 2.4rem); margin-top: .5rem; }
+    .omen-output p { color: #c0bac5; }
+    .evidence-tags { display: flex; gap: .45rem; flex-wrap: wrap; }
+    .tag { padding: .25rem .48rem; border: 1px solid var(--line); color: var(--muted); font: .64rem system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+
+    .faction-stage { display: grid; grid-template-columns: minmax(340px, 1.12fr) minmax(300px, .88fr); border: 1px solid var(--line); min-height: 570px; }
+    .constellation { position: relative; min-height: 570px; background: radial-gradient(circle, rgba(107,96,176,.12), transparent 54%), #0b0c13; overflow: hidden; }
+    .constellation::before {
+      content: "";
+      position: absolute;
+      inset: 12%;
+      border: 1px solid rgba(169,155,255,.15);
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 7rem rgba(169,155,255,.015), inset 0 0 0 7.05rem rgba(169,155,255,.1);
+    }
+    .faction-node {
+      position: absolute;
+      left: var(--x); top: var(--y);
+      transform: translate(-50%, -50%);
+      width: clamp(72px, 11vw, 112px);
+      aspect-ratio: 1;
+      padding: .4rem;
+      border: 1px solid rgba(217,173,97,.25);
+      border-radius: 50%;
+      background: rgba(17,19,29,.92);
+      color: var(--muted);
+      font: 600 clamp(.56rem, 1vw, .68rem)/1.25 system-ui, sans-serif;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: .2s;
+    }
+    .faction-node:hover, .faction-node.active { color: var(--gold-pale); border-color: var(--gold); box-shadow: 0 0 28px rgba(217,173,97,.15); transform: translate(-50%, -50%) scale(1.05); }
+    .faction-panel { padding: clamp(1.5rem, 4vw, 3rem); background: var(--panel); display: flex; flex-direction: column; justify-content: center; }
+    .faction-panel .motto { color: var(--gold-pale); font-size: 1.2rem; font-style: italic; }
+    .faction-panel dl { display: grid; grid-template-columns: 5.5rem 1fr; gap: .75rem 1rem; margin: 1.6rem 0; }
+    .faction-panel dt { color: var(--dim); font: .65rem system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+    .faction-panel dd { margin: 0; color: #c5bfc1; }
+
+    .rumour-machine { display: grid; grid-template-columns: .72fr 1.28fr; border: 1px solid var(--line); }
+    .rumour-control { padding: clamp(1.5rem, 4vw, 3rem); background: var(--panel); }
+    .rumour-control p { color: var(--muted); }
+    .rumour-path { display: grid; gap: 1px; background: var(--line); }
+    .rumour-hop { padding: 1.3rem 1.5rem; background: #0d0f17; transition: background .3s; }
+    .rumour-hop.revealed { background: #171722; }
+    .hop-source { color: var(--violet); font: .65rem system-ui, sans-serif; letter-spacing: .13em; text-transform: uppercase; }
+    .rumour-hop blockquote { margin: .4rem 0 0; font-size: 1.06rem; }
+
+    .filter-row { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.5rem; }
+    .filter-row input { flex: 1; min-width: 0; padding: .8rem 1rem; color: var(--ink); background: var(--panel); border: 1px solid var(--line); }
+    .result-count { color: var(--dim); font: .7rem system-ui, sans-serif; white-space: nowrap; }
+    .people-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .person-card { position: relative; padding: 1.4rem; min-height: 270px; border: 1px solid var(--line); background: var(--panel); overflow: hidden; }
+    .person-card::after { content: attr(data-index); position: absolute; right: .8rem; bottom: -.7rem; color: rgba(255,255,255,.025); font-size: 6rem; line-height: 1; }
+    .person-card[hidden] { display: none; }
+    .role { margin: .3rem 0 1rem; color: var(--gold); font: .65rem system-ui, sans-serif; letter-spacing: .11em; text-transform: uppercase; }
+    .person-card p { color: var(--muted); font-size: .94rem; }
+    .secret { color: #c4bbdb !important; border-left: 2px solid var(--bruise); padding-left: .8rem; }
+
+    .library-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .8rem; }
+    .file-card { display: grid; grid-template-columns: 2.6rem 1fr auto; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--line); background: var(--panel); text-decoration: none; transition: .18s; }
+    .file-card:hover { border-color: rgba(217,173,97,.55); transform: translateY(-2px); background: var(--panel-2); }
+    .file-no { color: var(--dim); font: .65rem system-ui, sans-serif; }
+    .file-card h3 { font-size: 1rem; }
+    .file-card p { margin: .22rem 0 0; color: var(--muted); font-size: .82rem; }
+    .file-arrow { color: var(--gold); font-size: 1.2rem; }
+
+    .closing { text-align: center; padding: clamp(5rem, 12vw, 10rem) 1rem; }
+    .closing blockquote { max-width: 760px; margin: 0 auto; font-size: clamp(1.7rem, 4vw, 3.2rem); line-height: 1.24; }
+    .closing cite { display: block; margin-top: 1.5rem; color: var(--muted); font-style: normal; }
+    footer { padding: 1.5rem; text-align: center; color: var(--dim); font: .7rem system-ui, sans-serif; letter-spacing: .08em; }
+
+    .noscript { padding: .75rem 1rem; text-align: center; color: #171217; background: var(--gold-pale); }
+
+    @media (max-width: 850px) {
+      .topbar nav a:not(:last-child) { display: none; }
+      .section-head, .observatory, .faction-stage, .rumour-machine { grid-template-columns: 1fr; }
+      .controls { border-right: 0; border-bottom: 1px solid var(--line); }
+      .canon-grid, .people-grid { grid-template-columns: 1fr; }
+      .constellation { min-height: 500px; }
+      .library-grid { grid-template-columns: 1fr; }
+      .section-intro { max-width: none; }
+    }
+    @media (max-width: 520px) {
+      .rose-stage { width: 110vw; }
+      .sun.first { left: 67%; }
+      .sun.second { left: 54%; }
+      .view-toggle { grid-template-columns: 1fr; }
+      .faction-node { width: 78px; font-size: .52rem; }
+      .file-card { grid-template-columns: 2rem 1fr auto; }
+      .constellation { margin-inline: -1rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to the atlas</a>
+  <header class="topbar">
+    <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span> Divided Light</a>
+    <nav aria-label="Atlas sections">
+      <a href="#canon">Canon</a>
+      <a href="#observe">Observe</a>
+      <a href="#factions">Factions</a>
+      <a href="#people">People</a>
+      <a href="#library">Files</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="rose-stage" aria-hidden="true"></div>
+      <div class="sun first" aria-hidden="true"></div>
+      <div class="sun second" aria-hidden="true"></div>
+      <div class="hero-copy">
+        <p class="eyebrow">The Cathedral-City of Impossible Light</p>
+        <h1 id="hero-title">The Second Sun</h1>
+        <p class="hero-lede">Visible only through the great western rose. Absent from the open sky. Warm enough to cast a second shadow—and old enough that an entire city has learned not to agree about it.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#observe">Enter the phenomenon</a>
+          <a class="button" href="README.html">Open collection guide ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="canon">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="section-number">I / THE CANON CONTRACT</span><h2>What can be known?</h2></div>
+          <p class="section-intro">The world stays coherent by distinguishing physical facts from durable interpretations and living rumours. Certainty is local. Ultimate cause remains contested.</p>
+        </div>
+        <div class="canon-grid">
+          <article class="canon-card stone">
+            <div class="canon-glyph" aria-hidden="true">◆</div>
+            <h3>Stone</h3>
+            <p>Stable observable fact. The city may deny it; the world does not casually contradict it.</p>
+            <ul><li>The disc requires original rose glass.</li><li>Its light has measurable consequence.</li><li>Long exposure can produce counter-memory.</li></ul>
+          </article>
+          <article class="canon-card glass">
+            <div class="canon-glyph" aria-hidden="true">◈</div>
+            <h3>Glass</h3>
+            <p>A strong interpretation, supported by evidence, always capable of fracture.</p>
+            <ul><li>Reserved creation.</li><li>A world walled from its second sky.</li><li>An optical instrument or buried civic memory.</li></ul>
+          </article>
+          <article class="canon-card flame">
+            <div class="canon-glyph" aria-hidden="true">✦</div>
+            <h3>Flame</h3>
+            <p>Rumour, doctrine, private grief, useful lie, and story under social pressure.</p>
+            <ul><li>Another cathedral looks back.</li><li>The canal sees what heaven hides.</li><li>At conjunction, every oath becomes true.</li></ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="observe">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="section-number">II / OBSERVATION CHAMBER</span><h2>Change the conditions.</h2></div>
+          <p class="section-intro">Architecture is the instrument. Move between threshold and open air, alter the crowd, and look through a different material. The physical event remains precise while its meaning escapes capture.</p>
+        </div>
+        <div class="observatory">
+          <div class="controls">
+            <h3>Canon Orra's controls</h3>
+            <div class="control">
+              <label for="attention">Witness attention <output id="attention-value">solitary</output></label>
+              <input id="attention" type="range" min="0" max="3" value="0" step="1">
+            </div>
+            <div class="control">
+              <label for="hour">Hour <output id="hour-value">late afternoon</output></label>
+              <input id="hour" type="range" min="0" max="3" value="2" step="1">
+            </div>
+            <div class="control">
+              <label>Boundary</label>
+              <div class="view-toggle" id="boundary-buttons">
+                <button type="button" data-view="nave" class="active">Nave</button>
+                <button type="button" data-view="gallery">West gallery</button>
+                <button type="button" data-view="passage">Covered passage</button>
+                <button type="button" data-view="canal">Canal reflection</button>
+              </div>
+            </div>
+            <p style="color:var(--dim);font-size:.85rem">A speculative lore instrument, not a promise of game behavior.</p>
+          </div>
+          <div class="omen" id="omen" aria-live="polite">
+            <div class="omen-output">
+              <span class="omen-label" id="omen-label">Doublefall · strong</span>
+              <h3 id="omen-title">Two shadows leave one pair of boots.</h3>
+              <p id="omen-text">The violet-white disc hangs low in the rose. Dust turns in still air. Your ordinary shadow falls east; the lesser one points north and moves a breath late.</p>
+              <div class="evidence-tags" id="omen-tags"><span class="tag">disc</span><span class="tag">dry warmth</span><span class="tag">paired shadow</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="factions">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="section-number">III / THE CITY ARGUES</span><h2>Every answer has a constituency.</h2></div>
+          <p class="section-intro">Choose a circle. Each interpretation protects something real, fears something plausible, and asks the witness to accept a cost.</p>
+        </div>
+        <div class="faction-stage">
+          <div class="constellation" id="constellation" aria-label="Interactive faction map"></div>
+          <article class="faction-panel" aria-live="polite">
+            <span class="eyebrow" id="faction-type">Cathedral institution</span>
+            <h3 id="faction-name" style="font-size:2.2rem">Office of Lucent Custody</h3>
+            <p class="motto" id="faction-motto">“Tell me what the light did. Save what it wanted for later.”</p>
+            <dl><dt>Protects</dt><dd id="faction-protects">The rose, witnesses, civic order, and a chain of evidence.</dd><dt>Fears</dt><dd id="faction-fears">That its sealed archives prove every policy has failed.</dd><dt>Asks</dt><dd id="faction-asks">Precision, confiscation, quiet access, and names.</dd></dl>
+            <a class="button" href="03_FAITHS_AND_FACTIONS.html">Read the full faction map ↗</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="rumours">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="section-number">IV / RUMOUR DRIFT</span><h2>A fact walks across town.</h2></div>
+          <p class="section-intro">The physical detail survives. The emotional reason survives. Everything else learns the vocabulary of its next teller.</p>
+        </div>
+        <div class="rumour-machine">
+          <div class="rumour-control">
+            <h3>The absent bakery</h3>
+            <p>Advance the account through four social hops. Reset to see how quickly evidence becomes commodity and cure.</p>
+            <button type="button" class="button primary" id="rumour-next">Pass it on</button>
+            <button type="button" class="button" id="rumour-reset">Reset</button>
+          </div>
+          <div class="rumour-path" id="rumour-path">
+            <div class="rumour-hop revealed"><span class="hop-source">Witness · direct</span><blockquote>“A pale bar crossed the old bakery foundation after vespers.”</blockquote></div>
+            <div class="rumour-hop"><span class="hop-source">Flour porter · relational</span><blockquote>“The wrong light found Avel's absent bakery.”</blockquote></div>
+            <div class="rumour-hop"><span class="hop-source">Merchant · useful</span><blockquote>“The flour woman opened a shop in the other city.”</blockquote></div>
+            <div class="rumour-hop"><span class="hop-source">Pilgrim · flame</span><blockquote>“Buy bread from the dead under violet sun; it cures regret.”</blockquote></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="people">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="section-number">V / THE PEOPLE IN THE LIGHT</span><h2>No one is only a belief.</h2></div>
+          <p class="section-intro">Search by name, role, or allegiance. Every character has an ordinary livelihood, a cross-faction debt, a dangerous uncertainty, and something more urgent than explaining the setting.</p>
+        </div>
+        <div class="filter-row"><label for="people-filter" class="eyebrow" style="margin:0">Find</label><input id="people-filter" type="search" placeholder="Try glazier, canal, Custody, counter-memory…"><span class="result-count" id="result-count">9 shown</span></div>
+        <div class="people-grid" id="people-grid">
+          <article class="person-card" data-index="01" data-search="sabine vale lucent warden custody archive"><h3>Sabine Vale</h3><div class="role">Lucent Warden · Custody</div><p>Turns sensation into careful questions, then divides dangerous answers across seven files.</p><p class="secret"><strong>Private fracture:</strong> She fears every institution competing to possess the light—including her own.</p></article>
+          <article class="person-card" data-index="02" data-search="tomas rusk master glazier saint lume guild glass"><h3>Tomas Rusk</h3><div class="role">Master glazier · Saint Lume</div><p>Believes a window lives through repairs and that a perfect repair is a lie.</p><p class="secret"><strong>Private fracture:</strong> His illicit replacement transmits more wrong light than the original he broke.</p></article>
+          <article class="person-card" data-index="03" data-search="mara lath rusk plasterer unwalled day passage"><h3>Mara of the Lath</h3><div class="role">Plasterer · Route-keeper</div><p>Knows every wall was somebody's paid decision and every opening needs a resident's consent.</p><p class="secret"><strong>Private fracture:</strong> Her newest aperture is a chain of hospitality, not a place.</p></article>
+          <article class="person-card" data-index="04" data-search="avel noll flour porter absent bakery counter-memory keepers"><h3>Avel Noll</h3><div class="role">Flour porter · Absent resident</div><p>Remembers a bakery that was no paradise: the rye rent was high and its roof leaked.</p><p class="secret"><strong>Private fracture:</strong> She remembers evidence of a murder behind a present family's cellar wall.</p></article>
+          <article class="person-card" data-index="05" data-search="nera quill boatwoman canal reflection token"><h3>Nera Quill</h3><div class="role">Canal polewoman · Route ally</div><p>Measures distance in pole strokes and never says “sun” beneath an arch.</p><p class="secret"><strong>Private fracture:</strong> She returned a dry, future-dated viewing token to the black water.</p></article>
+          <article class="person-card" data-index="06" data-search="edrin pell physician counter-memory care"><h3>Edrin Pell</h3><div class="role">Physician · Witness advocate</div><p>Does not need to settle metaphysics before treating unusual memory humanely.</p><p class="secret"><strong>Private fracture:</strong> Edrin remembers patients who were never born in this city.</p></article>
+          <article class="person-card" data-index="07" data-search="iven roofless open sky radical roofer"><h3>Iven Roofless</h3><div class="role">Roofer · Open Sky radical</div><p>Calls roofs buried skies and secrecy obedience delayed; plans to remove the rose's lead.</p><p class="secret"><strong>Private fracture:</strong> He has never seen the Second Sun at all.</p></article>
+          <article class="person-card" data-index="08" data-search="hessa dault concord one shadow refuge soap"><h3>Hessa Dault</h3><div class="role">Soap boiler · One Shadow</div><p>Names the victims whenever scholars turn harm into an interesting theory.</p><p class="secret"><strong>Private fracture:</strong> She sees the pale disc whenever her eyes are closed.</p></article>
+          <article class="person-card" data-index="09" data-search="pip ash child guide passages echo"><h3>Pip Ash</h3><div class="role">Child guide · Passage runner</div><p>Sells chalk maps that are almost correct and hears absent alleys in one extra footstep.</p><p class="secret"><strong>Private fracture:</strong> Three separate Custody files think Pip is three different children.</p></article>
+        </div>
+        <p style="margin-top:1.5rem"><a class="button" href="05_CHARACTER_SEEDS.html">Meet all fifteen characters ↗</a></p>
+      </div>
+    </section>
+
+    <section class="section" id="library">
+      <div class="shell">
+        <div class="section-head">
+          <div><span class="section-number">VI / SOURCE LIBRARY</span><h2>Open the working files.</h2></div>
+          <p class="section-intro">Every lore and design document is available here as a standalone, styled HTML page. These cards link directly to the converted collection; the editable Markdown remains available in the parent directory.</p>
+        </div>
+        <div class="library-grid">
+          <a class="file-card" href="README.html"><span class="file-no">00</span><div><h3>Collection guide</h3><p>Reading paths, canon levels, and ownership boundary.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="01_CANON_AND_MYSTERIES.html"><span class="file-no">01</span><div><h3>Canon and mysteries</h3><p>Stone facts, glass theories, flame claims, protected questions.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="02_HISTORY_AND_CHRONOLOGY.html"><span class="file-no">02</span><div><h3>History and chronology</h3><p>Four centuries from First Glass to the approaching conjunction.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="03_FAITHS_AND_FACTIONS.html"><span class="file-no">03</span><div><h3>Faiths and factions</h3><p>Nine constituencies, internal schisms, legitimate fears.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="04_CITIZEN_KNOWLEDGE_AND_NPC_BIBLE.html"><span class="file-no">04</span><div><h3>Citizen and NPC bible</h3><p>Prompt-ready knowledge slices and anti-omniscience rules.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="05_CHARACTER_SEEDS.html"><span class="file-no">05</span><div><h3>Character seeds</h3><p>Fifteen intertwined people with wants, secrets, and gates.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="06_SITES_PHENOMENA_AND_RELICS.html"><span class="file-no">06</span><div><h3>Sites and phenomena</h3><p>Architectural anchors, manifestation taxonomy, contested objects.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="07_RUMOURS_AND_ORAL_CULTURE.html"><span class="file-no">07</span><div><h3>Rumours and oral culture</h3><p>Truth-tagged gossip, proverbs, prayers, games, and passphrases.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="08_DIEGETIC_DOCUMENTS.html"><span class="file-no">08</span><div><h3>Diegetic documents</h3><p>Twenty notices, letters, records, songs, ledgers, and marginalia.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="09_GAME_DESIGN_SPEC.html"><span class="file-no">09</span><div><h3>Game design spec</h3><p>Player fantasy, verbs, witness loop, consequences, accessibility.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="10_QUEST_AND_ENCOUNTER_ANTHOLOGY.html"><span class="file-no">10</span><div><h3>Quest anthology</h3><p>Fifteen authored arcs and repeatable systemic situations.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="11_LEXICON_AND_STYLE_GUIDE.html"><span class="file-no">11</span><div><h3>Lexicon and style</h3><p>Terminology, naming, voice textures, micro-prompts, guardrails.</p></div><span class="file-arrow">↗</span></a>
+          <a class="file-card" href="12_PROMPT_READY_CONTEXT_PACKS.html"><span class="file-no">12</span><div><h3>Prompt-ready context packs</h3><p>Composable district, occupation, faction, evidence, and scene blocks.</p></div><span class="file-arrow">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="closing">
+      <blockquote>“The first sun makes the world visible. The second makes visibility suspect.”</blockquote>
+      <cite>— scratched beneath the west-gallery parapet</cite>
+    </section>
+  </main>
+
+  <footer>THE SECOND SUN · LORE/CODEX/HTML · <a href="../README.md">MARKDOWN SOURCES</a> · A DESIGN ATLAS, NOT AN IMPLEMENTATION</footer>
+  <noscript><div class="noscript">The source library works without JavaScript. Interactive observation, faction, rumour, and search controls require it.</div></noscript>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      window.addEventListener('pointermove', (event) => {
+        root.style.setProperty('--mx', `${event.clientX}px`);
+        root.style.setProperty('--my', `${event.clientY}px`);
+      }, { passive: true });
+
+      const attentionNames = ['solitary', 'two witnesses', 'small gathering', 'announced crowd'];
+      const hourNames = ['midnight', 'morning', 'late afternoon', 'vespers'];
+      const attention = document.querySelector('#attention');
+      const hour = document.querySelector('#hour');
+      const boundaryButtons = [...document.querySelectorAll('[data-view]')];
+      let boundary = 'nave';
+
+      const observations = {
+        nave: {
+          title: 'Two shadows leave one pair of boots.',
+          text: 'The violet-white disc hangs low in the rose. Dust turns in still air. Your ordinary shadow falls east; the lesser one points north and moves a breath late.',
+          tags: ['disc', 'dry warmth', 'paired shadow'], angle: '-11deg'
+        },
+        gallery: {
+          title: 'The source disappears at the nearest point.',
+          text: 'No second disc is visible. Beyond the glass lies a pale foreign sky, while the nave below remains filled with light that now has no apparent origin.',
+          tags: ['counter-sky', 'no disc', 'source refusal'], angle: '8deg'
+        },
+        passage: {
+          title: 'Evening lodges where no west remains.',
+          text: 'A narrow bar crosses the ceiling of a passage enclosed on every side. It follows the line of a demolished wall and illuminates objects, but not faces.',
+          tags: ['remote fall', 'absent wall', 'threshold'], angle: '2deg'
+        },
+        canal: {
+          title: 'The hidden day appears beneath the current.',
+          text: 'A pale disc rests in black water under Saint Orra’s Bridge. Look up and it is gone. The stone arch feels warm one handspan above the waterline.',
+          tags: ['reflection', 'black-water oculus', 'below'], angle: '17deg'
+        }
+      };
+
+      function updateObservation() {
+        const a = Number(attention.value);
+        const h = Number(hour.value);
+        const base = observations[boundary];
+        document.querySelector('#attention-value').textContent = attentionNames[a];
+        document.querySelector('#hour-value').textContent = hourNames[h];
+        document.querySelector('#omen-title').textContent = base.title;
+        const crowdNote = a === 3 ? ' The announced crowd sees less; instruments still register a faint second angle.' : a === 0 ? ' With no audience to satisfy, its edge sharpens.' : '';
+        const timeNote = h === 2 || h === 3 ? '' : h === 0 ? ' At this hour the effect feels like an intrusion into sleep.' : ' Morning makes the anomaly weak but unusually cool.';
+        document.querySelector('#omen-text').textContent = base.text + crowdNote + timeNote;
+        const strength = Math.max(0.14, (h >= 2 ? .9 : .48) - a * .16);
+        const omen = document.querySelector('#omen');
+        omen.style.setProperty('--omen-visible', boundary === 'gallery' ? '.08' : String(strength));
+        omen.style.setProperty('--omen-scale', String(.55 + strength * .35));
+        omen.style.setProperty('--ray-angle', base.angle);
+        document.querySelector('#omen-label').textContent = `${base.tags[0]} · ${strength > .68 ? 'strong' : strength > .4 ? 'uncertain' : 'trace'}`;
+        document.querySelector('#omen-tags').innerHTML = base.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+      }
+      attention.addEventListener('input', updateObservation);
+      hour.addEventListener('input', updateObservation);
+      boundaryButtons.forEach(button => button.addEventListener('click', () => {
+        boundary = button.dataset.view;
+        boundaryButtons.forEach(item => item.classList.toggle('active', item === button));
+        updateObservation();
+      }));
+
+      const factionData = [
+        { name:'Lucent Custody', short:'Custody', type:'Cathedral institution', x:'50%', y:'50%', motto:'“Tell me what the light did. Save what it wanted for later.”', protects:'The rose, witnesses, civic order, and a chain of evidence.', fears:'That its sealed archives prove every policy has failed.', asks:'Precision, confiscation, quiet access, and names.' },
+        { name:'Cathedral Chapter', short:'Chapter', type:'Divided religious authority', x:'50%', y:'17%', motto:'“A thing need not occupy the sky to illuminate the world.”', protects:'Worship, doctrine, charity, pilgrimage, and a governable cathedral.', fears:'That no language can keep the phenomenon inside one faith.', asks:'Reverence, careful terms, public calm, and selective witness.' },
+        { name:'Guild of Saint Lume', short:'Glaziers', type:'Craft institution', x:'82%', y:'29%', motto:'“A window must admit its wound.”', protects:'The living window, craft lineage, repair knowledge, and dangerous materials.', fears:'That present craft cannot reproduce what the rose requires.', asks:'Material proof, patience, scaffold access, and honest imperfection.' },
+        { name:'Unwalled Day', short:'Unwallers', type:'Heretical route network', x:'83%', y:'69%', motto:'“Let no wall call itself the sky.”', protects:'Openings, witnesses, erased names, and freedom from monopoly.', fears:'That secrecy has become its own beloved wall.', asks:'Whispers, route knowledge, consent, and reciprocal risk.' },
+        { name:'Open Sky', short:'Open Sky', type:'Radical unwallers', x:'51%', y:'84%', motto:'“Remove the line that says colours must not meet.”', protects:'Radical access, exposed prisons, and a world without owned sky.', fears:'That moderation will map the cage forever and never open it.', asks:'Lead, roof access, public action, and irreversible courage.' },
+        { name:'One Shadow', short:'One Shadow', type:'Refusal movement', x:'18%', y:'69%', motto:'“You may refuse to be evidence.”', protects:'Ordinary life, consent, refuge, and people injured by spectacle.', fears:'That attention feeds the light and makes every person public.', asks:'Closure, silence, blacked glass, and remembrance of victims.' },
+        { name:'Keepers of Absent Streets', short:'Keepers', type:'Mutual aid and archive', x:'17%', y:'29%', motto:'“We record neither life to cancel the other.”', protects:'Counter-rememberers, absent lives, double courtesy, and old names.', fears:'That one city will overwrite the rights of the other.', asks:'Listening, mapping, domestic detail, and restraint around property.' }
+      ];
+      const constellation = document.querySelector('#constellation');
+      function selectFaction(item, button) {
+        document.querySelectorAll('.faction-node').forEach(node => node.classList.toggle('active', node === button));
+        document.querySelector('#faction-type').textContent = item.type;
+        document.querySelector('#faction-name').textContent = item.name;
+        document.querySelector('#faction-motto').textContent = item.motto;
+        document.querySelector('#faction-protects').textContent = item.protects;
+        document.querySelector('#faction-fears').textContent = item.fears;
+        document.querySelector('#faction-asks').textContent = item.asks;
+      }
+      factionData.forEach((item, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `faction-node${index === 0 ? ' active' : ''}`;
+        button.style.setProperty('--x', item.x);
+        button.style.setProperty('--y', item.y);
+        button.textContent = item.short;
+        button.setAttribute('aria-label', `Show ${item.name}`);
+        button.addEventListener('click', () => selectFaction(item, button));
+        constellation.append(button);
+      });
+
+      const hops = [...document.querySelectorAll('.rumour-hop')];
+      let shownHop = 0;
+      document.querySelector('#rumour-next').addEventListener('click', () => {
+        shownHop = Math.min(hops.length - 1, shownHop + 1);
+        hops[shownHop].classList.add('revealed');
+        hops[shownHop].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      });
+      document.querySelector('#rumour-reset').addEventListener('click', () => {
+        shownHop = 0;
+        hops.forEach((hop, index) => hop.classList.toggle('revealed', index === 0));
+      });
+
+      const filter = document.querySelector('#people-filter');
+      const cards = [...document.querySelectorAll('.person-card')];
+      const count = document.querySelector('#result-count');
+      filter.addEventListener('input', () => {
+        const query = filter.value.trim().toLocaleLowerCase();
+        let shown = 0;
+        cards.forEach(card => {
+          const match = !query || card.textContent.toLocaleLowerCase().includes(query) || card.dataset.search.includes(query);
+          card.hidden = !match;
+          if (match) shown += 1;
+        });
+        count.textContent = `${shown} shown`;
+      });
+
+      const navLinks = [...document.querySelectorAll('.topbar nav a')];
+      const observed = navLinks.map(link => document.querySelector(link.hash)).filter(Boolean);
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) navLinks.forEach(link => link.classList.toggle('active', link.hash === `#${entry.target.id}`));
+        });
+      }, { rootMargin: '-25% 0px -65% 0px' });
+      observed.forEach(section => observer.observe(section));
+      updateObservation();
+    })();
+  </script>
+</body>
+</html>

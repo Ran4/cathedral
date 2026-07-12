@@ -5,6 +5,16 @@ Ideas for *The Cathedral-City of Impossible Light* — brainstormed across eight
 narrative, experimental) and curated down to the strongest 50. Suggestions only;
 nothing here is implemented.
 
+The list leans hard on what makes this game unique — the open microphone, the LLM actors, and the "impossible light" premise — rather than open-world boilerplate. A taste of the top
+  entries:
+
+- The Second Sun — a wrong-colored second sun visible only through the rose window, with a heretic faction that has noticed.
+- The Heresy of Flight — NPCs witness you using flight and their LLMs decide whether it was a miracle or demonry, feeding the gossip network.
+- Breath-Bent Candleflame — your real microphone input physically disturbs candle flames; shouting snuffs votives.
+- The City Names You — actors collectively coin and spread an emergent epithet for you instead of a reputation bar.
+- The Anchoress in the Wall — a voice-only NPC bricked into the cathedral who trades lore for spoken descriptions of the city, with the LLM judging your honesty.
+- The Campanile Simulation — physically modeled bells across the city as clock, map, and navigation system.
+
 ## 1. The Second Sun
 *Atmosphere & Light*
 

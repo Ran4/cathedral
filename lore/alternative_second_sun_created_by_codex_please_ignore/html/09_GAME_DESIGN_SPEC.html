@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Game design: seeing the unsayable</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+  <link rel="stylesheet" href="lore.css" />
+</head>
+<body>
+<nav class="document-nav" aria-label="Lore collection navigation">
+  <a href="index.html"><span class="sun-mark" aria-hidden="true"></span>Second Sun atlas</a>
+  <span class="nav-links">
+    <a href="README.html">HTML guide</a>
+    <a href="../README.md">Markdown sources</a>
+  </span>
+</nav>
+<header id="title-block-header">
+<h1 class="title">Game design: seeing the unsayable</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#design-promise">Design promise</a></li>
+<li><a href="#player-fantasy">Player fantasy</a></li>
+<li><a href="#experience-pillars">Experience pillars</a>
+<ul>
+<li><a href="#1-beauty-before-explanation">1. Beauty before explanation</a></li>
+<li><a href="#2-architecture-is-the-investigative-instrument">2. Architecture is the investigative instrument</a></li>
+<li><a href="#3-speech-is-action">3. Speech is action</a></li>
+<li><a href="#4-every-answer-has-a-constituency">4. Every answer has a constituency</a></li>
+<li><a href="#5-mystery-without-arbitrariness">5. Mystery without arbitrariness</a></li>
+<li><a href="#6-consequence-through-retelling">6. Consequence through retelling</a></li>
+</ul></li>
+<li><a href="#core-verbs">Core verbs</a>
+<ul>
+<li><a href="#look">Look</a></li>
+<li><a href="#move">Move</a></li>
+<li><a href="#listen">Listen</a></li>
+<li><a href="#speak">Speak</a></li>
+<li><a href="#record">Record</a></li>
+<li><a href="#carry">Carry</a></li>
+<li><a href="#alter">Alter</a></li>
+<li><a href="#wait">Wait</a></li>
+</ul></li>
+<li><a href="#the-witness-loop">The witness loop</a>
+<ul>
+<li><a href="#phase-1-manifestation">Phase 1: manifestation</a></li>
+<li><a href="#phase-2-situated-observation">Phase 2: situated observation</a></li>
+<li><a href="#phase-3-custody-choice">Phase 3: custody choice</a></li>
+<li><a href="#phase-4-circulation">Phase 4: circulation</a></li>
+<li><a href="#phase-5-return">Phase 5: return</a></li>
+</ul></li>
+<li><a href="#observation-design">Observation design</a>
+<ul>
+<li><a href="#the-condition-matrix">The condition matrix</a></li>
+<li><a href="#evidence-quality">Evidence quality</a></li>
+<li><a href="#fair-ambiguity">Fair ambiguity</a></li>
+</ul></li>
+<li><a href="#voice-and-smart-actor-design">Voice and smart-actor design</a>
+<ul>
+<li><a href="#whisper-as-social-and-spatial-key">Whisper as social and spatial key</a></li>
+<li><a href="#testimony-as-structured-free-speech">Testimony as structured free speech</a></li>
+<li><a href="#public-and-private-vocabulary">Public and private vocabulary</a></li>
+<li><a href="#silence-and-refusal">Silence and refusal</a></li>
+<li><a href="#rumour-drift-with-anchors">Rumour drift with anchors</a></li>
+</ul></li>
+<li><a href="#social-consequence-model">Social consequence model</a></li>
+<li><a href="#long-form-arc-the-approaching-conjunction">Long-form arc: the approaching conjunction</a>
+<ul>
+<li><a href="#act-i--the-extra-shadow">Act I — The extra shadow</a></li>
+<li><a href="#act-ii--the-city-behind-its-explanations">Act II — The city behind its explanations</a></li>
+<li><a href="#act-iii--the-disputed-preparations">Act III — The disputed preparations</a></li>
+<li><a href="#act-iv--two-days-at-once">Act IV — Two days at once</a></li>
+<li><a href="#act-v--the-morning-that-remains">Act V — The morning that remains</a></li>
+</ul></li>
+<li><a href="#conjunction-outcome-families">Conjunction outcome families</a>
+<ul>
+<li><a href="#custodied-wonder">Custodied wonder</a></li>
+<li><a href="#unwalled-commons">Unwalled commons</a></li>
+<li><a href="#one-shadow-peace">One-shadow peace</a></li>
+<li><a href="#reframed-instrument">Reframed instrument</a></li>
+<li><a href="#spectacle-city">Spectacle city</a></li>
+<li><a href="#the-unfinished-cadence">The unfinished cadence</a></li>
+</ul></li>
+<li><a href="#failure-philosophy">Failure philosophy</a></li>
+<li><a href="#integrating-flight">Integrating flight</a></li>
+<li><a href="#integrating-screenshots-as-camera-obscura-plates">Integrating screenshots as camera-obscura plates</a></li>
+<li><a href="#sound-design-intent">Sound design intent</a></li>
+<li><a href="#visual-design-intent">Visual design intent</a></li>
+<li><a href="#accessibility">Accessibility</a></li>
+<li><a href="#content-pacing">Content pacing</a></li>
+<li><a href="#prototype-ladder-design-only">Prototype ladder (design only)</a>
+<ul>
+<li><a href="#stage-1-the-iconic-room">Stage 1: the iconic room</a></li>
+<li><a href="#stage-2-one-evidence-loop">Stage 2: one evidence loop</a></li>
+<li><a href="#stage-3-one-passage-cell">Stage 3: one passage cell</a></li>
+<li><a href="#stage-4-citywide-rumour">Stage 4: citywide rumour</a></li>
+<li><a href="#stage-5-conjunction-slice">Stage 5: conjunction slice</a></li>
+</ul></li>
+<li><a href="#evaluation-questions">Evaluation questions</a></li>
+<li><a href="#what-not-to-build">What not to build</a></li>
+</ul>
+</nav>
+<section id="design-promise" class="level2">
+<h2>Design promise</h2>
+<p>The Second Sun makes a rendering contradiction into a social world. The player does not merely discover that a wrong-coloured sun exists. They learn where it can be seen, whom it is safe to tell, how evidence changes when circulated, and what kind of city grows around an undeniable phenomenon no institution can explain without harming someone.</p>
+<p>The feature is fun when a spectacular sight leads directly to curiosity, navigation, conversation, performance, and consequence:</p>
+<blockquote>
+<p><strong>See something impossible → test it in architecture → decide whom to involve → watch the account mutate socially → revisit a changed place or relationship.</strong></p>
+</blockquote>
+<p>It should not collapse into “collect ten lore notes” or a faction dialogue tree.</p>
+</section>
+<section id="player-fantasy" class="level2">
+<h2>Player fantasy</h2>
+<p>The player becomes an <strong>unlicensed witness</strong>: unusually mobile, socially unattached, able to cross class and district boundaries, and not yet committed to the city's inherited vocabulary. Their advantage is not a chosen-one ability. It is freedom to compare perspectives that institutions keep separate.</p>
+<p>Over time the player may be treated as:</p>
+<ul>
+<li>a naive pilgrim;</li>
+<li>a useful courier of observations;</li>
+<li>a safe listener or dangerous gossip;</li>
+<li>a surveyor of wrong light;</li>
+<li>a route-keeper, Custody auxiliary, professional skeptic, spectacle broker, or unwelcome independent;</li>
+<li>a person whose own shadow and memories have become public evidence.</li>
+</ul>
+<p>The city should coin an epithet from conduct—“Two-Step,” “Window-Eater,” “the Quiet Witness,” “Lead-Bringer,” “One-Hand-Here”—rather than show a Second Sun reputation meter.</p>
+</section>
+<section id="experience-pillars" class="level2">
+<h2>Experience pillars</h2>
+<section id="1-beauty-before-explanation" class="level3">
+<h3>1. Beauty before explanation</h3>
+<p>The first encounter should be visually legible without prior text: two suns through one rose, contradictory rays, doubled shadows. Let the player inhabit the image before anyone explains it.</p>
+</section>
+<section id="2-architecture-is-the-investigative-instrument" class="level3">
+<h3>2. Architecture is the investigative instrument</h3>
+<p>The player changes position, angle, enclosure, elevation, glass colour, water reflection, time, and route. The city itself replaces a scanning gadget.</p>
+</section>
+<section id="3-speech-is-action" class="level3">
+<h3>3. Speech is action</h3>
+<p>What the player says, how loudly, where, and before whom changes the social state of evidence. Whispered passphrases, spoken testimony, public accusations, careful omission, and reading documents aloud are verbs with consequences.</p>
+</section>
+<section id="4-every-answer-has-a-constituency" class="level3">
+<h3>4. Every answer has a constituency</h3>
+<p>Interpretations are tied to jobs, griefs, money, power, and care practices. Giving evidence to a faction advances people, not an abstract ideology.</p>
+</section>
+<section id="5-mystery-without-arbitrariness" class="level3">
+<h3>5. Mystery without arbitrariness</h3>
+<p>Ultimate cause remains open, but local questions have reliable answers. The player can determine which pane transmits light, who stole lead, which report was forged, where a beam will land, or who leaked a passphrase. Ambiguous cosmology must not excuse incoherent detective design.</p>
+</section>
+<section id="6-consequence-through-retelling" class="level3">
+<h3>6. Consequence through retelling</h3>
+<p>The player experiences impact by overhearing changed stories, seeing new notices, finding a route sealed or crowded, and being addressed differently—not by a modal “faction reputation +10.”</p>
+</section>
+</section>
+<section id="core-verbs" class="level2">
+<h2>Core verbs</h2>
+<section id="look" class="level3">
+<h3>Look</h3>
+<p>Stand in a precise place; align the rose with architecture; compare direct and reflected views; observe a person's two shadows without violating them; notice colours, dust, warmth, and sound.</p>
+<p>The design should reward patient looking but never require medically unsafe staring or exact colour discrimination.</p>
+</section>
+<section id="move" class="level3">
+<h3>Move</h3>
+<p>Follow beams through dogleg streets, climb to boundary spaces, pass under bridges, walk counter-memory routes, re-create an absent structure through viewpoints. Flight can expose otherwise impossible sightlines but carries social consequences if witnessed and risks bypassing the relational knowledge needed to interpret a site.</p>
+</section>
+<section id="listen" class="level3">
+<h3>Listen</h3>
+<p>Hear how a rumour differs by district, compare a bell note with the rose's lead geometry, follow an extra footstep echo, notice when an actor changes from public to private vocabulary.</p>
+</section>
+<section id="speak" class="level3">
+<h3>Speak</h3>
+<p>Ask open questions, report precisely, lie, protect a source, whisper a rotating passphrase, read a document aloud, give public testimony, shout a warning, or refuse to answer.</p>
+</section>
+<section id="record" class="level3">
+<h3>Record</h3>
+<p>Make a charcoal shadow trace, mark a map, preserve afterlight on woad, collect a testimony with consent, or create a screenshot/plate as a survey artifact. A record includes provenance; detached “evidence points” are less valuable.</p>
+</section>
+<section id="carry" class="level3">
+<h3>Carry</h3>
+<p>Transport documents, lens frames, lead curls, woad cloth, spoken messages, and secrets between people. The object or account can be inspected, altered, stolen, sold, or deliberately withheld.</p>
+</section>
+<section id="alter" class="level3">
+<h3>Alter</h3>
+<p>Open or close shutters, move a mirror, clean or preserve plaster, scratch a repair flaw, relight a kiln, expose a sealed site, remove a roof tile, or return lead. Alteration should be consequential and rarely framed as morally neutral.</p>
+</section>
+<section id="wait" class="level3">
+<h3>Wait</h3>
+<p>Attend a particular bell, allow a silence, revisit a site after weather or public reaction changes, or choose ordinary duty over chasing an appearance. Waiting is meaningful when the world continues around it.</p>
+</section>
+</section>
+<section id="the-witness-loop" class="level2">
+<h2>The witness loop</h2>
+<section id="phase-1-manifestation" class="level3">
+<h3>Phase 1: manifestation</h3>
+<p>A visual, acoustic, or mnemonic anomaly occurs. It can be scheduled within a window but should retain some unplanned appearances tied to routine workers and low-spectacle moments.</p>
+</section>
+<section id="phase-2-situated-observation" class="level3">
+<h3>Phase 2: situated observation</h3>
+<p>The player can change one or two conditions: viewpoint, pane colour, obstruction, reflection, company, voice, instrument. The observation produces a small local question with testable options.</p>
+<p>Example: Does the remote fall stop at the present wall, pass through it, or stop at the line of a demolished wall?</p>
+</section>
+<section id="phase-3-custody-choice" class="level3">
+<h3>Phase 3: custody choice</h3>
+<p>Evidence is fragile or socially owned. The player decides whether to bring in a glazier, Custodian, Keeper, witness's family, merchant, or nobody. The choice determines method, access, risk, and interpretation.</p>
+</section>
+<section id="phase-4-circulation" class="level3">
+<h3>Phase 4: circulation</h3>
+<p>The account enters conversations. Each retelling preserves source and emotional core while potentially mutating detail. Publicity may draw crowds, seal a site, raise prices, validate a victim, expose a cell, or create a fraudulent market.</p>
+</section>
+<section id="phase-5-return" class="level3">
+<h3>Phase 5: return</h3>
+<p>The player revisits the physical site or affected person. The world reflects circulation: chalk marks, guards, offerings, vandalism, absence, changed dialogue, or a new use. The return closes the small question while opening a larger one.</p>
+</section>
+</section>
+<section id="observation-design" class="level2">
+<h2>Observation design</h2>
+<section id="the-condition-matrix" class="level3">
+<h3>The condition matrix</h3>
+<p>Each manifestation can be authored from a compact set of conditions:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Dimension</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Viewpoint</td>
+<td>nave, aisle, gallery, reflection, roof alignment</td>
+</tr>
+<tr class="even">
+<td>Boundary</td>
+<td>indoors, outdoors, threshold, shared wall, bridge arch</td>
+</tr>
+<tr class="odd">
+<td>Material</td>
+<td>original glass, repair glass, woad, gold, water, lime</td>
+</tr>
+<tr class="even">
+<td>Time</td>
+<td>ordinary hour, bell interval, feast, weather, crowd state</td>
+</tr>
+<tr class="odd">
+<td>Social</td>
+<td>alone, with believer, with skeptic, being watched, speaking</td>
+</tr>
+<tr class="even">
+<td>History</td>
+<td>current wall, erased street, plague ward, old foundation</td>
+</tr>
+</tbody>
+</table>
+<p>A strong puzzle asks the player to vary only a few dimensions and lets the result remain readable in-world.</p>
+</section>
+<section id="evidence-quality" class="level3">
+<h3>Evidence quality</h3>
+<p>Evidence is not a universal score. Actors judge it differently:</p>
+<ul>
+<li>Custody values chain of handling, independent accounts, and controlled wording.</li>
+<li>Glaziers value panel provenance, material response, and craft repeatability.</li>
+<li>Keepers value mundane counter-memory detail and overlap without prior contact.</li>
+<li>Fellowship route-keepers value embodied knowledge of a changing location.</li>
+<li>College members value measurements and published failure.</li>
+<li>Ordinary kin value whether the investigation helps or harms the witness.</li>
+</ul>
+<p>One artifact can therefore open one door and close another.</p>
+</section>
+<section id="fair-ambiguity" class="level3">
+<h3>Fair ambiguity</h3>
+<p>For any major ambiguous clue:</p>
+<ol>
+<li>establish the physical observation clearly;</li>
+<li>provide at least two interpretations with named advocates;</li>
+<li>show what each interpretation predicts next;</li>
+<li>allow a local prediction to succeed or fail;</li>
+<li>preserve an alternative explanation at the ultimate level.</li>
+</ol>
+<p>The player should say “I know what happened; I don't know what it ultimately means,” not “the game makes up whatever it wants.”</p>
+</section>
+</section>
+<section id="voice-and-smart-actor-design" class="level2">
+<h2>Voice and smart-actor design</h2>
+<section id="whisper-as-social-and-spatial-key" class="level3">
+<h3>Whisper as social and spatial key</h3>
+<p>Fellowship meetings require an actual whisper because acoustic behavior is part of secrecy. Volume alone is insufficient: a current route response and observed proof are also needed. A shouted correct phrase compromises the route instead of unlocking it.</p>
+</section>
+<section id="testimony-as-structured-free-speech" class="level3">
+<h3>Testimony as structured free speech</h3>
+<p>After a manifestation, a Lector or scholar asks concrete questions:</p>
+<ul>
+<li>Where did you stand?</li>
+<li>Which surface brightened first?</li>
+<li>Did your second shadow move with you?</li>
+<li>Who else was present?</li>
+<li>What did you infer, distinct from what you saw?</li>
+</ul>
+<p>The player answers naturally. The actor should summarize back, allowing correction. The stored memory separates perception and interpretation. This makes careful speech mechanically useful without demanding magic exact phrasing.</p>
+</section>
+<section id="public-and-private-vocabulary" class="level3">
+<h3>Public and private vocabulary</h3>
+<p>Actors track audience. A glazier who says “the Occluded” in a private loft may say “western appearance” when a guard enters. The player learns affiliations by code-switching. Repeating private wording publicly can betray trust even without naming a source.</p>
+</section>
+<section id="silence-and-refusal" class="level3">
+<h3>Silence and refusal</h3>
+<p>“I won't tell you” is a supported action. The social system can remember refused testimony, protected names, or an actor's request for silence. Some relationships deepen when the player does not exhaust every dialogue possibility.</p>
+</section>
+<section id="rumour-drift-with-anchors" class="level3">
+<h3>Rumour drift with anchors</h3>
+<p>Free retelling should keep structured anchors: event identity, original source, place, confidence, and harm risk. The language can mutate, but game-critical facts remain recoverable through triangulation. NPCs may explicitly say whom they heard it from, allowing the player to trace drift.</p>
+</section>
+</section>
+<section id="social-consequence-model" class="level2">
+<h2>Social consequence model</h2>
+<p>Track concrete remembered deeds and a few latent dimensions per community:</p>
+<ul>
+<li><strong>discretion:</strong> protects sources and boundaries;</li>
+<li><strong>precision:</strong> distinguishes observation from conclusion;</li>
+<li><strong>care:</strong> treats witnesses as people;</li>
+<li><strong>access politics:</strong> broadens or restricts who may see;</li>
+<li><strong>spectacle:</strong> amplifies events publicly;</li>
+<li><strong>intervention:</strong> alters sites and artifacts.</li>
+</ul>
+<p>These dimensions do not need UI. They inform dialogue, requests, access, and the epithet the city develops. A player can be precise but cruel, caring but inaccurate, discreet but complicit. Avoid a single moral axis.</p>
+</section>
+<section id="long-form-arc-the-approaching-conjunction" class="level2">
+<h2>Long-form arc: the approaching conjunction</h2>
+<p>The conjunction provides urgency without supplying the cosmological answer.</p>
+<section id="act-i--the-extra-shadow" class="level3">
+<h3>Act I — The extra shadow</h3>
+<p>The player encounters the full visual premise and resolves local incidents: counterfeit lens, unexpected remote fall, witness in distress. They learn that talking changes access.</p>
+</section>
+<section id="act-ii--the-city-behind-its-explanations" class="level3">
+<h3>Act II — The city behind its explanations</h3>
+<p>Faction invitations overlap. The player walks an Unwaller chapter, enters the measuring room, helps at the kiln, maps an absent street, or protects the refuge. Evidence suggests the appearance is intensifying. Lead theft begins.</p>
+</section>
+<section id="act-iii--the-disputed-preparations" class="level3">
+<h3>Act III — The disputed preparations</h3>
+<p>Three conjunction calculations align. The chapter plans controlled worship, merchants a festival, Custody a closure, Fellowship a public witnessing, Open Sky an Unleading, Concord a bricking-up, College an experiment. Each preparation has reasonable small tasks whose combined consequences become visible.</p>
+</section>
+<section id="act-iv--two-days-at-once" class="level3">
+<h3>Act IV — Two days at once</h3>
+<p>The conjunction is not one fixed cutscene. Its social and spatial form reflects the city's preparation:</p>
+<ul>
+<li>Are crowds in the forecourt, dispersed across openings, or locked out?</li>
+<li>Is the rose structurally whole, reframed, missing lead, or veiled?</li>
+<li>Do bells complete Belis's cadence?</li>
+<li>Are counter-rememberers present by choice or confined “for safety”?</li>
+<li>Which documents have been made public?</li>
+<li>What name does the city call the player?</li>
+</ul>
+<p>The sky remains ambiguous. The civic outcome is not.</p>
+</section>
+<section id="act-v--the-morning-that-remains" class="level3">
+<h3>Act V — The morning that remains</h3>
+<p>The feature's emotional payoff is the next ordinary morning. Shops open or do not. Someone is missing, returned, vindicated, scapegoated, freed, imprisoned, or simply exhausted. The cathedral light may have changed subtly. People argue about what happened. The player sees what their way of handling truth built.</p>
+</section>
+</section>
+<section id="conjunction-outcome-families" class="level2">
+<h2>Conjunction outcome families</h2>
+<p>These are systemic configurations, not good/bad endings.</p>
+<section id="custodied-wonder" class="level3">
+<h3>Custodied wonder</h3>
+<p>The rose survives, panic is low, evidence is centralized, and access narrows. Witnesses receive orderly care but dissident routes close. The player gains archives and loses street trust.</p>
+</section>
+<section id="unwalled-commons" class="level3">
+<h3>Unwalled commons</h3>
+<p>Many boundary sites are open and public testimony flourishes. The Office loses monopoly; fraud, crowd danger, and coercive visibility grow. The Fellowship must learn governance it previously criticized.</p>
+</section>
+<section id="one-shadow-peace" class="level3">
+<h3>One-shadow peace</h3>
+<p>The city collectively turns away or covers the rose. Everyday life stabilizes; some affected people feel profound relief. Inquiry and pilgrimage collapse, and wrong light begins appearing in less controllable domestic places.</p>
+</section>
+<section id="reframed-instrument" class="level3">
+<h3>Reframed instrument</h3>
+<p>The guild alters part of the rose. New phenomena reveal patterns but erase old ones. Craft becomes recognized as active authorship rather than passive custody, splitting the guild and chapter.</p>
+</section>
+<section id="spectacle-city" class="level3">
+<h3>Spectacle city</h3>
+<p>The festival succeeds economically and evidence spreads widely, mixed with fraud. The phenomenon becomes impossible to suppress and difficult to discuss sincerely. The player may be celebrated while private witnesses withdraw.</p>
+</section>
+<section id="the-unfinished-cadence" class="level3">
+<h3>The unfinished cadence</h3>
+<p>No faction controls the event because the player preserves incompatible needs and leaves a key action incomplete. The conjunction passes quietly or diffusely. This is not the “neutral best” outcome: unresolved dangers and relationships remain, but no single theory colonizes the future.</p>
+</section>
+</section>
+<section id="failure-philosophy" class="level2">
+<h2>Failure philosophy</h2>
+<p>Avoid hard quest failure where possible. Convert mistakes into changed situations.</p>
+<ul>
+<li>Shouting a passphrase compromises a route; the cell moves and distrust grows.</li>
+<li>Losing a document means another faction finds or sells it.</li>
+<li>Missing an appearance preserves relationships or duties elsewhere.</li>
+<li>Publishing bad evidence creates a rumour the player can trace and correct, but never perfectly erase.</li>
+<li>Breaking glass does not reload the mystery; it changes transmitted phenomena and creates responsibility.</li>
+<li>A witness refusing the player is a valid relationship state, not incomplete content.</li>
+</ul>
+<p>Irreversible choices need clear material warning: a craftsperson says what cannot be restored, a resident states whose consent is missing, an object visibly bears history.</p>
+</section>
+<section id="integrating-flight" class="level2">
+<h2>Integrating flight</h2>
+<p>Flight creates a productive theological and social collision.</p>
+<ul>
+<li>It offers exceptional alignments: absent bridge composition, exterior view of remote falls, rose inspection without official scaffold.</li>
+<li>Witnesses interpret it through their beliefs, feeding the Heresy of Flight and contaminating Second Sun testimony.</li>
+<li>Using flight during a secret route may invalidate embodied proof: the point was learning doors and social permission, not reaching coordinates.</li>
+<li>A flying player can discover evidence earlier but may be treated as part of the phenomenon, reducing credibility with skeptics and increasing dangerous attention from apocalyptic groups.</li>
+</ul>
+<p>Do not universally punish flight. Make it a method whose social meaning travels.</p>
+</section>
+<section id="integrating-screenshots-as-camera-obscura-plates" class="level2">
+<h2>Integrating screenshots as camera-obscura plates</h2>
+<p>The screenshot system naturally supports survey play if framed diegetically:</p>
+<ul>
+<li>a captured image can carry position, facing, time, and visible manifestation;</li>
+<li>actors judge composition differently from evidentiary value;</li>
+<li>the Second Sun might appear in the image when not seen, or fail to appear when witnessed, creating a specific contradiction rather than random unreliability;</li>
+<li>side-by-side images from absent-route viewpoints can compose a larger symbol;</li>
+<li>public display of a plate spreads a rumour more quickly than private testimony.</li>
+</ul>
+<p>Preserve actual player images as personal history. Do not overwrite them with canonical art.</p>
+</section>
+<section id="sound-design-intent" class="level2">
+<h2>Sound design intent</h2>
+<p>The Second Sun has no grand constant theme. Use a restrained acoustic grammar:</p>
+<ul>
+<li>a near-unison or minor-second beating tied to wrong light intensity;</li>
+<li>lead and glass resonance at specific viewpoints;</li>
+<li>room tone subtly arriving from the wrong direction;</li>
+<li>duplicate bell returns without duplicate strikes;</li>
+<li>breath and whispers unusually intimate under remote falls;</li>
+<li>silence at conjunction as absence of expected reverberation, not muted master audio.</li>
+</ul>
+<p>Players should sometimes locate a manifestation by hearing architecture disagree before seeing it.</p>
+</section>
+<section id="visual-design-intent" class="level2">
+<h2>Visual design intent</h2>
+<ul>
+<li>Colour: pale violet-white with a bruised edge, explicitly difficult to name.</li>
+<li>The ordinary sun remains warmer and more physically complete.</li>
+<li>Godrays should contradict direction but still respect local occlusion enough to be read as light.</li>
+<li>Double shadows differ subtly in softness and response latency.</li>
+<li>Wrong light reveals texture rather than covering the world in a colour grade.</li>
+<li>Rare escalation removes shadows or shows counter-sky; constant excess makes the impossible ordinary too quickly.</li>
+</ul>
+</section>
+<section id="accessibility" class="level2">
+<h2>Accessibility</h2>
+<p>The mystery must not depend on colour vision, hearing, microphone use, or precise timing alone.</p>
+<ul>
+<li>Pair hue with shadow direction, warmth, dust motion, vibration, and actor reactions.</li>
+<li>Provide subtitles/descriptive text for wrong-direction sound and bell intervals.</li>
+<li>Passphrases may be spoken, selected, typed, or signed through an equivalent interaction; secrecy intent matters more than vocal ability.</li>
+<li>Do not require sustained bright-light exposure or rapid flicker.</li>
+<li>Allow generous observation windows or repeatable low-stakes manifestations for core information.</li>
+<li>Give nonvisual routes: echo count, bell direction, warmed surfaces, guided testimony.</li>
+<li>Let actors accommodate a player who communicates without speech in-world, preserving social depth rather than treating it as failure.</li>
+</ul>
+</section>
+<section id="content-pacing" class="level2">
+<h2>Content pacing</h2>
+<p>Use a ratio near:</p>
+<ul>
+<li>60% ordinary life touched subtly by the phenomenon;</li>
+<li>25% social conflict and interpretation;</li>
+<li>10% investigative anomaly;</li>
+<li>5% full impossible spectacle.</li>
+</ul>
+<p>The exact numbers are illustrative. The point is contrast. A loaf tasting bitter, a sweeper losing half a day to testimony, or a child selling a fake map keeps the Second Sun present without constantly firing godrays.</p>
+</section>
+<section id="prototype-ladder-design-only" class="level2">
+<h2>Prototype ladder (design only)</h2>
+<p>This collection does not change the game. If implementation is considered later, the feature can be validated in increasing scope.</p>
+<section id="stage-1-the-iconic-room" class="level3">
+<h3>Stage 1: the iconic room</h3>
+<p>One rose-only second disc, contradictory ray, doubled player/NPC shadows, three vantage reactions, and a short conversation with public/private vocabulary. Question: does the image create immediate curiosity?</p>
+</section>
+<section id="stage-2-one-evidence-loop" class="level3">
+<h3>Stage 2: one evidence loop</h3>
+<p>Add a remote fall, woad trace, two actors who value evidence differently, and a return-state change. Question: does circulation feel like play rather than lore delivery?</p>
+</section>
+<section id="stage-3-one-passage-cell" class="level3">
+<h3>Stage 3: one passage cell</h3>
+<p>Add route-based whisper access, compromise behavior, and a meeting with internal disagreement. Question: can natural voice and architecture jointly gate trust?</p>
+</section>
+<section id="stage-4-citywide-rumour" class="level3">
+<h3>Stage 4: citywide rumour</h3>
+<p>Propagate one witnessed event through structured mutation and let the player triangulate it. Question: is drift legible and emotionally believable?</p>
+</section>
+<section id="stage-5-conjunction-slice" class="level3">
+<h3>Stage 5: conjunction slice</h3>
+<p>Combine three preparations and show a changed next morning. Question: do choices express values through concrete city state?</p>
+</section>
+</section>
+<section id="evaluation-questions" class="level2">
+<h2>Evaluation questions</h2>
+<p>Playtests should ask:</p>
+<ul>
+<li>Did players notice the second source before being told?</li>
+<li>Could they describe what was physically stable and what remained uncertain?</li>
+<li>Did they care who received evidence, or only seek the nominal quest owner?</li>
+<li>Could they identify an NPC's position from vocabulary and behavior?</li>
+<li>Did withholding speech ever feel active and respected?</li>
+<li>Did a rumour return in a recognizable but surprising form?</li>
+<li>Did architecture—not UI—guide at least one successful inquiry?</li>
+<li>Did the next-morning consequence feel connected to player conduct?</li>
+<li>Did any faction seem secretly designated as correct?</li>
+<li>Was the phenomenon still beautiful after prolonged play?</li>
+</ul>
+</section>
+<section id="what-not-to-build" class="level2">
+<h2>What not to build</h2>
+<ul>
+<li>A morality meter labelled Church versus Heretics.</li>
+<li>A single conspiracy in which one bishop knows the complete scientific answer.</li>
+<li>Random hallucinations that invalidate careful investigation.</li>
+<li>Passphrases as static keyword checks detached from place and trust.</li>
+<li>Exposition NPCs who recite the entire canon.</li>
+<li>Endless collectible shards whose only purpose is completion percentage.</li>
+<li>A “true ending” that explains the sun and makes other interpretations foolish.</li>
+<li>Constant purple post-processing.</li>
+<li>Punishment for players who use accessibility alternatives to voice or colour.</li>
+<li>Apocalyptic stakes so total that bread, rent, family, craft, and ordinary harm stop mattering.</li>
+</ul>
+<p>The Second Sun should deepen the city, not replace it.</p>
+</section>
+</body>
+</html>

@@ -1,0 +1,217 @@
+:root {
+  color-scheme: dark;
+  --ink: #e7e0d1;
+  --muted: #aaa49d;
+  --night: #090a10;
+  --panel: #11131d;
+  --panel-2: #171925;
+  --line: rgba(224, 215, 198, .17);
+  --gold: #d9ad61;
+  --gold-pale: #f0d79d;
+  --violet: #aaa0ef;
+  --blue: #82a2d6;
+  --rose: #ca7e8b;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 78% 4%, rgba(108, 97, 182, .16), transparent 30rem),
+    linear-gradient(180deg, #0b0c13, var(--night));
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 18px;
+  line-height: 1.68;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .17;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.012) 1px, transparent 1px);
+  background-size: 7px 7px;
+}
+
+a { color: var(--gold-pale); text-decoration-color: rgba(217, 173, 97, .45); text-underline-offset: .16em; }
+a:hover { color: #fff1ca; text-decoration-color: currentColor; }
+:focus-visible { outline: 2px solid var(--gold-pale); outline-offset: 3px; }
+
+.document-nav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.25rem;
+  padding: .55rem max(1rem, calc((100vw - 980px) / 2));
+  border-bottom: 1px solid var(--line);
+  background: rgba(9, 10, 16, .88);
+  backdrop-filter: blur(14px);
+  font: 650 .72rem/1.2 system-ui, sans-serif;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+.document-nav a { color: var(--muted); text-decoration: none; }
+.document-nav a:hover { color: var(--gold-pale); }
+.document-nav .sun-mark {
+  display: inline-block;
+  width: 1.15rem;
+  aspect-ratio: 1;
+  margin-right: .55rem;
+  vertical-align: -.2rem;
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  box-shadow: -.25rem .12rem 0 -.15rem var(--violet);
+}
+.document-nav .nav-links { display: flex; gap: 1.2rem; }
+
+body > header,
+body > main,
+body > #TOC,
+body > p,
+body > section,
+body > h1,
+body > h2,
+body > h3,
+body > h4,
+body > blockquote,
+body > table,
+body > ul,
+body > ol,
+body > pre,
+body > dl,
+body > hr {
+  width: min(920px, calc(100% - 2rem));
+  margin-left: auto;
+  margin-right: auto;
+}
+
+body > header { padding-top: clamp(3rem, 8vw, 6rem); }
+body > header .title,
+body > h1:first-of-type {
+  margin-top: clamp(3rem, 8vw, 6rem);
+  margin-bottom: 1.2rem;
+  font-size: clamp(2.6rem, 7vw, 5.4rem);
+  font-weight: 400;
+  line-height: .98;
+  letter-spacing: -.04em;
+}
+body > header .title { margin-top: 0; }
+body > header .author,
+body > header .date { color: var(--muted); }
+
+#TOC {
+  margin-top: 2rem;
+  margin-bottom: 4rem;
+  padding: 1.4rem 1.6rem;
+  border: 1px solid var(--line);
+  background: rgba(17, 19, 29, .82);
+}
+#TOC::before {
+  content: "Contents";
+  display: block;
+  margin-bottom: .8rem;
+  color: var(--gold);
+  font: 650 .68rem/1.2 system-ui, sans-serif;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+#TOC ul { margin: .3rem 0; padding-left: 1.2rem; }
+#TOC a { color: #ccc5b9; text-decoration: none; }
+#TOC a:hover { color: var(--gold-pale); }
+
+main { padding-bottom: 7rem; }
+main > h1:first-child { display: none; }
+h1, h2, h3, h4 { scroll-margin-top: 4.5rem; }
+h2 {
+  margin-top: 4.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: 1.13;
+  letter-spacing: -.025em;
+}
+h3 { margin-top: 2.8rem; color: var(--gold-pale); font-size: 1.45rem; font-weight: 400; }
+h4 { margin-top: 2rem; color: #d6cbb8; font-size: 1.05rem; }
+
+p, li, dd { max-width: 76ch; }
+strong { color: #f0e7d8; }
+em { color: #d7cedd; }
+hr { margin-top: 3rem; margin-bottom: 3rem; border: 0; border-top: 1px solid var(--line); }
+
+blockquote {
+  margin-top: 1.8rem;
+  margin-bottom: 1.8rem;
+  padding: .3rem 0 .3rem 1.25rem;
+  border-left: 3px solid var(--violet);
+  color: #c9c2cd;
+  font-size: 1.05em;
+}
+blockquote p { margin: .6rem 0; }
+
+table { display: block; overflow-x: auto; border-collapse: collapse; margin-top: 1.5rem; margin-bottom: 2rem; font-size: .92rem; }
+th, td { padding: .72rem .8rem; border: 1px solid var(--line); vertical-align: top; }
+th { color: var(--gold-pale); background: var(--panel-2); text-align: left; }
+td { background: rgba(17, 19, 29, .68); }
+
+code {
+  padding: .1em .32em;
+  border: 1px solid rgba(170, 160, 239, .2);
+  background: rgba(170, 160, 239, .08);
+  color: #d9d1ff;
+  font: .86em/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+pre {
+  overflow-x: auto;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+  padding: 1.2rem;
+  border: 1px solid var(--line);
+  background: #0c0e15;
+}
+pre code { padding: 0; border: 0; background: none; }
+
+li::marker { color: var(--gold); }
+dt { margin-top: 1rem; color: var(--gold-pale); }
+dd { margin-left: 1.5rem; color: var(--muted); }
+
+body::after {
+  content: "THE SECOND SUN · DIVIDED LIGHT ARCHIVE";
+  display: block;
+  padding: 1.5rem;
+  border-top: 1px solid var(--line);
+  color: #77736f;
+  text-align: center;
+  font: .65rem/1.2 system-ui, sans-serif;
+  letter-spacing: .13em;
+}
+
+@media (max-width: 650px) {
+  body { font-size: 16px; }
+  .document-nav { align-items: flex-start; }
+  .document-nav .nav-links { flex-direction: column; gap: .35rem; text-align: right; }
+  #TOC { padding: 1rem; }
+}
+
+@media print {
+  :root { color-scheme: light; }
+  body { color: #161616; background: white; font-size: 11pt; }
+  body::before, body::after, .document-nav { display: none; }
+  a { color: inherit; }
+  #TOC, th, td, pre { background: transparent; }
+  h2 { break-after: avoid; }
+  blockquote, table, pre { break-inside: avoid; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
