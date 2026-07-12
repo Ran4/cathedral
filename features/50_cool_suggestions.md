@@ -15,6 +15,73 @@ The list leans hard on what makes this game unique — the open microphone, the 
 - The Anchoress in the Wall — a voice-only NPC bricked into the cathedral who trades lore for spoken descriptions of the city, with the LLM judging your honesty.
 - The Campanile Simulation — physically modeled bells across the city as clock, map, and navigation system.
 
+# Tierlist (by me)
+
+## S
+
+- **1. The Second Sun** — *Atmosphere & Light*
+- **3. Rumor Drift** — *Smart Actors & Social Simulation*
+
+## A
+
+- **10. The Campanile Simulation** — *Sound & Acoustics*
+- **40. Postcard Seeds** — *Procedural Generation*
+- **35. Every Door Opens** — *Procedural Generation*
+- **16. Trial by Earshot** — *Narrative & Quests*
+- **21. The Lamplighter of the Five Squares** — *Atmosphere & Light*
+- **30. The Errand of Words** — *Smart Actors & Social Simulation*
+- **24. Cry Your Wares** — *Gameplay & Systems*
+- **46. The City Keeps Real Time** — *Experimental & Wild*
+
+## B
+
+- **4. Breath-Bent Candleflame** — *Atmosphere & Light*
+- **31. Steam, Seal, and Lie** — *Narrative & Quests*
+- **5. The Light That Falls Wrong** — *Narrative & Quests*
+- **11. The Anchoress in the Wall** — *Narrative & Quests*
+- **22. Sworn by the Bell** — *Gameplay & Systems*
+- **12. Whispered or Shouted** — *Smart Actors & Social Simulation*
+- **49. Ask the Master** — *Gameplay & Systems*
+- **13. The Confessional** — *Smart Actors & Social Simulation*
+- **15. The Vespers Sermon** — *Smart Actors & Social Simulation*
+- **34. The Quarter's Temperament** — *Procedural Generation*
+- **33. The Unfinished Spire** — *Procedural Generation*
+- **17. Palimpsest City** — *Procedural Generation*
+- **23. The Tilewalkers' Guild** — *Gameplay & Systems*
+- **25. Voces Sacrae: Voice-Spoken Words of Power** — *Sound & Acoustics*
+- **26. The Choir That Learns Your Words** — *Sound & Acoustics*
+- **27. Organum: The Playable Great Organ** — *Sound & Acoustics*
+- **39. The Gargoyle Way** — *Exploration & Secrets*
+- **47. Procession of the Broken Bell** — *Narrative & Quests*
+- **36. Storm of White Glass** — *Atmosphere & Light*
+- **45. Plague Ledger** — *Experimental & Wild*
+- **42. The Long Memory of Bells** — *Experimental & Wild*
+- **50. The Blind Pilgrim** — *Experimental & Wild*
+
+## NoWay (don't implement these - they're dumb or too complicated/not worth it)
+
+- **2. The Heresy of Flight** — *Smart Actors & Social Simulation*
+- **38. The Illuminator's Commissions** — *Exploration & Secrets*
+- **19. The Chapel of Saint Anselm's Paradox** — *Procedural Generation*
+- **18. Marks of the Nameless Mason** — *Narrative & Quests*
+- **6. The Rose Meridian** — *Atmosphere & Light*
+- **7. Windows That Remember** — *Procedural Generation*
+- **8. The City Names You** — *Smart Actors & Social Simulation*
+- **9. Whispering Galleries, For Real** — *Sound & Acoustics*
+- **41. Pilgrims of the Same Stone** — *Experimental & Wild*
+- **14. Cathedral Convolution: Audio Raytracing Through Stone** — *Sound & Acoustics*
+- **37. Fog Sea over the Rooftops** — *Atmosphere & Light*
+- **48. The Finger of Saint Alduin** — *Narrative & Quests*
+- **43. Scaffolding Time** — *Experimental & Wild*
+- **32. A Gift Remembered** — *Smart Actors & Social Simulation*
+- **20. The Ossuary Below** — *Procedural Generation*
+- **28. Vespers in Eight Bells** — *Gameplay & Systems*
+- **29. Poleman of the Canal** — *Gameplay & Systems*
+- **44. Frescoes of What Was Said** — *Experimental & Wild*
+
+
+# The actual suggestions
+
 ## 1. The Second Sun
 *Atmosphere & Light*
 

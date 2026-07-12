@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Second Sun — a lore &amp; design corpus</title>
+<style>
+:root{
+  --bg:#0a0806;
+  --bg-panel:#100d09;
+  --bg-raise:#161209;
+  --ink:#e6dcc6;
+  --ink-soft:#bcae92;
+  --ink-dim:#8a7c63;
+  --ink-faint:#5f5544;
+  --rule:#2a2318;
+  --rule-soft:#1d1810;
+  --gold:#a98a4e;
+  --accent:#b8e6d2;          /* the wrong green-white — second sun only */
+  --accent-dim:#7fae9c;
+  --accent-glow:rgba(184,230,210,.10);
+  --serif:Georgia,"Iowan Old Style","Palatino Linotype",Palatino,Charter,"Times New Roman",serif;
+  --sidebar:21rem;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--serif);
+  font-size:17px;
+  line-height:1.72;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule)}
+a:hover{color:#fff8e8;border-bottom-color:var(--gold)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:2px}
+mark{background:rgba(169,138,78,.30);color:#fff5df;border-radius:2px;padding:0 .1em}
+button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer;text-align:left}
+
+/* ---------- shell ---------- */
+.shell{display:flex;min-height:100vh}
+.sidebar{
+  width:var(--sidebar);flex:0 0 var(--sidebar);
+  background:var(--bg-panel);
+  border-right:1px solid var(--rule);
+  height:100vh;position:sticky;top:0;overflow-y:auto;
+  padding:1.6rem 0 3rem;
+}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* ---------- sidebar ---------- */
+.brand{padding:0 1.5rem 1.2rem;border-bottom:1px solid var(--rule-soft);margin-bottom:1.1rem}
+.brand button{display:block;width:100%}
+.brand-title{font-size:1.32rem;letter-spacing:.055em;color:var(--ink);margin:0;font-weight:400}
+.brand-title .sun{color:var(--accent)}
+.brand-sub{font-size:.72rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin-top:.45rem;line-height:1.6}
+
+.search-wrap{padding:0 1.5rem 1.1rem}
+.search{
+  width:100%;background:var(--bg);border:1px solid var(--rule);
+  color:var(--ink);font-family:var(--serif);font-size:.92rem;
+  padding:.5rem .7rem;border-radius:2px;
+}
+.search::placeholder{color:var(--ink-faint);font-style:italic}
+.search:focus{border-color:var(--gold);outline:none}
+.search-meta{font-size:.72rem;color:var(--ink-faint);letter-spacing:.06em;padding:.45rem .1rem 0;min-height:1rem}
+
+.group{margin-bottom:1.5rem}
+.group-h{
+  font-size:.68rem;letter-spacing:.19em;text-transform:uppercase;
+  color:var(--ink-faint);padding:0 1.5rem;margin:0 0 .55rem;font-weight:400;
+}
+.group-h::after{content:"";display:block;height:1px;background:var(--rule-soft);margin-top:.45rem}
+.entry{display:flex;align-items:baseline;gap:.3rem;padding:0 1.5rem 0 1.5rem}
+.entry-main{
+  flex:1;min-width:0;display:block;padding:.3rem 0;
+  border-left:2px solid transparent;margin-left:-.65rem;padding-left:.65rem;
+  color:var(--ink-soft);font-size:.93rem;line-height:1.4;
+}
+.entry-main:hover{color:#fff8e8}
+.entry-main.active{color:var(--accent);border-left-color:var(--accent-dim)}
+.entry-words{display:block;font-size:.68rem;color:var(--ink-faint);letter-spacing:.07em;margin-top:.08rem}
+.entry-raw{
+  color:var(--ink-faint);font-size:.8rem;border:none;padding:.3rem .2rem;
+  flex:0 0 auto;text-decoration:none;
+}
+.entry-raw:hover{color:var(--gold);border:none}
+
+/* ---------- results ---------- */
+.results{padding:0 1.5rem;margin:-.5rem 0 1.5rem}
+.result{display:block;width:100%;padding:.6rem 0;border-bottom:1px solid var(--rule-soft)}
+.result:hover .result-t{color:#fff8e8}
+.result-t{font-size:.86rem;color:var(--ink-soft);letter-spacing:.02em}
+.result-s{font-size:.78rem;color:var(--ink-dim);line-height:1.55;margin-top:.2rem;font-style:italic}
+
+/* ---------- reading pane ---------- */
+.pane{flex:1;padding:3.2rem 3rem 6rem;max-width:calc(46rem + 6rem);width:100%}
+.doc{max-width:46rem}
+.doc-head{margin-bottom:2.2rem;padding-bottom:1.1rem;border-bottom:1px solid var(--rule)}
+.doc-path{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.doc-path a{color:var(--ink-faint);border:none}
+.doc-path a:hover{color:var(--gold)}
+.doc-meta{font-size:.75rem;color:var(--ink-faint);letter-spacing:.08em;margin-top:.35rem}
+
+.doc h1{font-size:1.95rem;font-weight:400;line-height:1.3;letter-spacing:.01em;margin:0 0 1.4rem}
+.doc h2{font-size:1.3rem;font-weight:400;letter-spacing:.03em;color:var(--ink);margin:2.6rem 0 .9rem;padding-bottom:.35rem;border-bottom:1px solid var(--rule-soft)}
+.doc h3{font-size:1.06rem;font-weight:400;font-style:italic;color:var(--ink-soft);margin:2rem 0 .7rem}
+.doc h4{font-size:.78rem;font-weight:400;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim);margin:1.7rem 0 .6rem}
+.doc p{margin:0 0 1.15rem}
+.doc strong{color:#fbf3e0;font-weight:700}
+.doc em{color:var(--ink-soft)}
+.doc hr{border:none;height:1px;background:var(--rule);margin:2.6rem 0}
+.doc ul,.doc ol{margin:0 0 1.15rem;padding-left:1.5rem}
+.doc li{margin-bottom:.42rem}
+.doc li>ul,.doc li>ol{margin:.42rem 0 0}
+.doc blockquote{
+  margin:0 0 1.3rem;padding:.15rem 0 .15rem 1.3rem;
+  border-left:2px solid var(--rule);color:var(--ink-soft);font-style:italic;
+}
+.doc blockquote p:last-child{margin-bottom:0}
+.doc h1+blockquote{
+  border-left:2px solid var(--gold);background:rgba(169,138,78,.05);
+  padding:.9rem 1.2rem;font-size:.9rem;font-style:normal;color:var(--ink-dim);
+  line-height:1.65;border-radius:0 2px 2px 0;
+}
+.doc code{
+  font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  font-size:.85em;background:var(--bg-raise);color:var(--ink-soft);
+  padding:.1em .35em;border-radius:2px;border:1px solid var(--rule-soft);
+}
+.doc pre{
+  background:var(--bg-panel);border:1px solid var(--rule);border-left:2px solid var(--rule);
+  padding:1rem 1.15rem;overflow-x:auto;border-radius:2px;margin:0 0 1.3rem;
+}
+.doc pre code{background:none;border:none;padding:0;font-size:.82rem;line-height:1.6;color:var(--ink-soft)}
+.table-scroll{overflow-x:auto;margin:0 0 1.5rem;border:1px solid var(--rule);border-radius:2px}
+.doc table{border-collapse:collapse;width:100%;font-size:.88rem}
+.doc th{
+  text-align:left;font-weight:400;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-faint);padding:.7rem .85rem;background:var(--bg-panel);
+  border-bottom:1px solid var(--rule);white-space:nowrap;
+}
+.doc td{padding:.62rem .85rem;border-bottom:1px solid var(--rule-soft);vertical-align:top;color:var(--ink-soft);line-height:1.55}
+.doc tr:last-child td{border-bottom:none}
+.doc tbody tr:hover td{background:rgba(169,138,78,.04)}
+.doc td strong{color:#fbf3e0}
+.doc a.xref{color:var(--ink);border-bottom:1px dotted var(--gold)}
+.doc a.xref:hover{color:var(--accent)}
+
+/* ---------- landing ---------- */
+.landing{max-width:60rem}
+.hero{display:flex;gap:3rem;align-items:center;padding-bottom:2.6rem;border-bottom:1px solid var(--rule);margin-bottom:2.8rem}
+.hero-text{flex:1;min-width:0}
+.hero h1{
+  font-size:2.9rem;font-weight:400;line-height:1.1;margin:0 0 .8rem;letter-spacing:.01em;
+}
+.hero h1 .sun{color:var(--accent);text-shadow:0 0 26px var(--accent-glow)}
+.hero-sub{font-size:.95rem;color:var(--ink-dim);font-style:italic;margin:0 0 1.6rem;line-height:1.6}
+.hero-quote{
+  border-left:2px solid var(--accent-dim);padding:.2rem 0 .2rem 1.2rem;
+  color:var(--ink-soft);font-style:italic;font-size:1rem;line-height:1.7;margin:0;
+}
+.hero-quote cite{display:block;font-style:normal;font-size:.72rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin-top:.7rem}
+.rose-wrap{flex:0 0 auto;text-align:center}
+.rose-cap{font-size:.68rem;color:var(--ink-faint);letter-spacing:.07em;line-height:1.6;margin-top:.7rem;max-width:19rem}
+
+/* stats */
+.stats{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--rule);border-radius:2px;margin-bottom:3.4rem;background:var(--bg-panel)}
+.stat{flex:1 1 0;min-width:8rem;padding:1.05rem 1.2rem;border-right:1px solid var(--rule-soft)}
+.stat:last-child{border-right:none}
+.stat-n{font-size:1.5rem;color:var(--ink);line-height:1.2}
+.stat-n.t{color:var(--ink)}
+.stat-n.f{color:var(--gold)}
+.stat-n.a{color:var(--accent)}
+.stat-l{font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-faint);margin-top:.25rem;line-height:1.5}
+
+section.block{margin-bottom:3.8rem}
+.block-h{font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);font-weight:400;margin:0 0 .5rem}
+.block-d{font-size:.88rem;color:var(--ink-faint);font-style:italic;margin:0 0 1.5rem;max-width:42rem;line-height:1.65}
+
+/* phenomenon cards */
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(15.5rem,1fr));gap:1px;background:var(--rule-soft);border:1px solid var(--rule)}
+.rule{background:var(--bg-panel);padding:1.15rem 1.25rem}
+.rule-n{font-size:.66rem;letter-spacing:.16em;color:var(--accent-dim);margin-bottom:.35rem}
+.rule-t{font-size:.98rem;color:var(--ink);margin-bottom:.3rem;line-height:1.4}
+.rule-b{font-size:.84rem;color:var(--ink-dim);line-height:1.62;margin:0}
+
+/* four answers */
+.answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:1.5rem}
+.answer{border-top:1px solid var(--rule);padding-top:1rem}
+.answer-t{font-size:1.02rem;color:var(--ink);margin:0 0 .1rem}
+.answer-w{font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.7rem}
+.answer-b{font-size:.87rem;color:var(--ink-dim);line-height:1.68;margin:0 0 .9rem}
+.answer-q{font-size:.87rem;color:var(--ink-soft);font-style:italic;line-height:1.6;margin:0;padding-left:.9rem;border-left:1px solid var(--rule)}
+
+/* timeline */
+.tl{position:relative;padding-left:1.6rem;max-width:44rem}
+.tl::before{content:"";position:absolute;left:.32rem;top:.6rem;bottom:.6rem;width:1px;background:var(--rule)}
+.tl-e{position:relative;margin-bottom:.15rem}
+.tl-b{display:block;width:100%;padding:.5rem 0}
+.tl-b::before{
+  content:"";position:absolute;left:-1.6rem;top:1.02rem;width:7px;height:7px;
+  border-radius:50%;background:var(--bg);border:1px solid var(--ink-faint);
+  transform:translateX(.0rem);
+}
+.tl-e.live .tl-b::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 9px var(--accent-glow)}
+.tl-y{font-size:.76rem;letter-spacing:.1em;color:var(--ink-faint);display:inline-block;min-width:6.2rem}
+.tl-e.live .tl-y{color:var(--accent-dim)}
+.tl-h{color:var(--ink-soft);font-size:.95rem}
+.tl-b:hover .tl-h{color:#fff8e8}
+.tl-b[aria-expanded="true"] .tl-h{color:var(--ink)}
+.tl-d{
+  display:none;font-size:.86rem;color:var(--ink-dim);line-height:1.7;
+  padding:.15rem 0 .85rem 6.2rem;max-width:40rem;
+}
+.tl-e.open .tl-d{display:block}
+.tl-legend{font-size:.7rem;color:var(--ink-faint);letter-spacing:.08em;margin-top:1.2rem;padding-left:1.6rem}
+.tl-legend .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:.4rem;vertical-align:middle}
+
+/* people */
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:1px;background:var(--rule-soft);border:1px solid var(--rule)}
+/* flex-column, not block: a <button> otherwise centres its content vertically
+   inside the stretched grid cell, and the cards read as staggered */
+.person{
+  background:var(--bg-panel);width:100%;padding:1.05rem 1.15rem;transition:background .18s;
+  display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;
+}
+.person:hover{background:var(--bg-raise)}
+.person-n{font-size:.98rem;color:var(--ink);line-height:1.35}
+.person-r{font-size:.68rem;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-faint);margin:.28rem 0 .5rem}
+.person-s{font-size:.84rem;color:var(--ink-dim);line-height:1.6;margin:0;font-style:italic}
+.person-secret{display:none;margin-top:.85rem;padding-top:.7rem;border-top:1px solid var(--rule)}
+.person.open .person-secret{display:block}
+.secret-l{font-size:.63rem;letter-spacing:.19em;text-transform:uppercase;color:var(--accent-dim);margin-bottom:.3rem}
+.secret-b{font-size:.84rem;color:var(--ink-soft);line-height:1.62;margin:0}
+.person-hint{font-size:.63rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin-top:.7rem}
+.person.open .person-hint{display:none}
+
+/* rose svg */
+.rose{display:block}
+.rose .lead{stroke:#0a0806;stroke-width:1.15;vector-effect:non-scaling-stroke}
+.rose .stone{fill:none;stroke:#3a3123;stroke-width:2}
+.rose .pane:hover{filter:brightness(1.55)}
+.rose .anom{filter:url(#glow)}
+@keyframes breathe{0%,100%{opacity:.72}50%{opacity:1}}
+.rose .disc{animation:breathe 7.5s ease-in-out infinite;transform-origin:center}
+@media (prefers-reduced-motion:reduce){.rose .disc{animation:none}}
+
+/* footer */
+.foot{
+  border-top:1px solid var(--rule);padding:1.8rem 3rem 3rem;margin-top:auto;
+  font-size:.76rem;color:var(--ink-faint);line-height:1.8;letter-spacing:.03em;
+}
+.foot a{color:var(--ink-dim);border-bottom:1px solid var(--rule-soft)}
+.foot a:hover{color:var(--gold)}
+.foot .law{color:var(--ink-dim)}
+
+/* noscript */
+.ns{padding:2rem 3rem;max-width:52rem}
+.ns h2{font-weight:400;font-size:1rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim)}
+.ns ul{list-style:none;padding:0}
+.ns li{padding:.25rem 0;border-bottom:1px solid var(--rule-soft)}
+
+@media (max-width:900px){
+  .shell{flex-direction:column}
+  .sidebar{width:100%;flex:none;height:auto;position:static;border-right:none;border-bottom:1px solid var(--rule)}
+  .pane{padding:2rem 1.4rem 4rem}
+  .foot{padding:1.5rem 1.4rem 2.5rem}
+  .hero{flex-direction:column-reverse;gap:2rem;align-items:flex-start}
+  .hero h1{font-size:2.2rem}
+  .tl-d{padding-left:0}
+  .tl-y{display:block;min-width:0;margin-bottom:.1rem}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <nav class="sidebar" aria-label="Corpus contents">
+    <div class="brand">
+      <button id="home-btn" aria-label="Back to overview">
+        <p class="brand-title">The Second <span class="sun">Sun</span></p>
+        <p class="brand-sub">Lore &amp; design corpus<br>The Cathedral-City of Impossible Light</p>
+      </button>
+    </div>
+
+    <div class="search-wrap">
+      <label class="visually-hidden" for="q" style="position:absolute;left:-9999px">Search the corpus</label>
+      <input class="search" id="q" type="search" placeholder="Search 27 documents…" autocomplete="off" spellcheck="false">
+      <div class="search-meta" id="qmeta"></div>
+    </div>
+
+    <div id="results" class="results" hidden></div>
+    <div id="toc"></div>
+  </nav>
+
+  <div class="main">
+    <main class="pane" id="pane" tabindex="-1"></main>
+    <footer class="foot">
+      <div>Generated 2026-07-12 · written by Claude (multi-agent) · <span class="law">canon: <a href="00_canon.md">00_canon.md</a> is law</span></div>
+      <div>Feature source: <a href="../../features/50_cool_suggestions.md">50_cool_suggestions.md</a> — “The Second Sun” is entry #1.</div>
+    </footer>
+  </div>
+</div>
+
+<noscript>
+  <div class="ns">
+    <h2>The Second Sun — 27 documents</h2>
+    <p>This showcase renders its documents with JavaScript. Here are direct links to every source file.</p>
+    <!--__NOSCRIPT_LINKS__-->
+  </div>
+</noscript>
+
+<script>
+const DOCS = /*__DOCS_JSON__*/;
+const STATS = /*__STATS_JSON__*/;
+
+/* ==========================================================================
+   markdown renderer (hand-written; headings, emphasis, quotes, tables,
+   lists, hr, code, links, and in-corpus cross-references)
+   ========================================================================== */
+const XREF = /*__XREF_JSON__*/;
+const XREF_RE = new RegExp(
+  '(' + Object.keys(XREF).sort((a,b)=>b.length-a.length)
+        .map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|') + ')','g');
+
+function esc(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function inline(raw){
+  let s = esc(raw);
+  const code = [];
+  s = s.replace(/`([^`]+)`/g, (m,c)=>{ code.push(c); return '\u0001'+(code.length-1)+'\u0001'; });
+  s = s.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m,t,h)=>'<a href="'+h+'">'+t+'</a>');
+  s = s.replace(XREF_RE, (m)=>{
+    const t = XREF[m];
+    if (t.ext) return '<a class="xref" href="'+t.ext+'">'+m+'</a>';
+    return '<a class="xref" href="'+t.key+'" data-doc="'+t.key+'">'+m+'</a>';
+  });
+  s = s.replace(/\u0001(\d+)\u0001/g, (m,i)=>'<code>'+code[+i]+'</code>');
+  return s;
+}
+
+function isTableSep(l){ return /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(l) && l.includes('-'); }
+function cells(l){
+  let t = l.trim();
+  if (t.startsWith('|')) t = t.slice(1);
+  if (t.endsWith('|')) t = t.slice(0,-1);
+  return t.split('|').map(c=>c.trim());
+}
+const listMatch = l => l.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+
+function renderBlocks(lines){
+  const out = [];
+  let i = 0;
+  while (i < lines.length){
+    const line = lines[i];
+
+    if (!line.trim()){ i++; continue; }
+
+    /* fenced code */
+    if (/^\s*```/.test(line)){
+      const buf = []; i++;
+      while (i < lines.length && !/^\s*```/.test(lines[i])){ buf.push(lines[i]); i++; }
+      i++;
+      out.push('<pre><code>'+esc(buf.join('\n'))+'</code></pre>');
+      continue;
+    }
+
+    /* heading */
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h){
+      const n = h[1].length;
+      out.push('<h'+n+'>'+inline(h[2].replace(/\s*#+\s*$/,''))+'</h'+n+'>');
+      i++; continue;
+    }
+
+    /* hr */
+    if (/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(line)){ out.push('<hr>'); i++; continue; }
+
+    /* table */
+    if (line.trim().startsWith('|') && i+1 < lines.length && isTableSep(lines[i+1])){
+      const head = cells(line); i += 2;
+      const body = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')){ body.push(cells(lines[i])); i++; }
+      let t = '<div class="table-scroll"><table><thead><tr>';
+      head.forEach(c=>{ t += '<th>'+inline(c)+'</th>'; });
+      t += '</tr></thead><tbody>';
+      body.forEach(r=>{
+        t += '<tr>';
+        for (let c = 0; c < head.length; c++) t += '<td>'+inline(r[c] || '')+'</td>';
+        t += '</tr>';
+      });
+      out.push(t + '</tbody></table></div>');
+      continue;
+    }
+
+    /* blockquote */
+    if (/^\s*>/.test(line)){
+      const buf = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])){
+        buf.push(lines[i].replace(/^\s*>\s?/,''));
+        i++;
+      }
+      out.push('<blockquote>'+renderBlocks(buf)+'</blockquote>');
+      continue;
+    }
+
+    /* list (nested, stack-based) */
+    if (listMatch(line)){
+      const stack = [];   // {indent, tag}
+      let html = '';
+      while (i < lines.length){
+        const m = listMatch(lines[i]);
+        if (!m){
+          /* lazy continuation of the current item */
+          if (lines[i].trim() && stack.length && !/^\s*(#{1,6}\s|>|\||```)/.test(lines[i])){
+            html += ' ' + inline(lines[i].trim());
+            i++; continue;
+          }
+          break;
+        }
+        const indent = m[1].replace(/\t/g,'  ').length;
+        const ordered = /\d/.test(m[2][0]);
+        const tag = ordered ? 'ol' : 'ul';
+        if (!stack.length){
+          stack.push({indent, tag}); html += '<'+tag+'>';
+        } else if (indent > stack[stack.length-1].indent + 1){
+          html += '<'+tag+'>'; stack.push({indent, tag});
+        } else {
+          while (stack.length > 1 && indent < stack[stack.length-1].indent - 1){
+            html += '</li></'+stack.pop().tag+'>';
+          }
+          html += '</li>';
+        }
+        html += '<li>' + inline(m[3]);
+        i++;
+      }
+      while (stack.length) html += '</li></'+stack.pop().tag+'>';
+      out.push(html.replace(/<(ul|ol)><\/li>/g,'<$1>'));
+      continue;
+    }
+
+    /* paragraph */
+    const p = [];
+    while (i < lines.length && lines[i].trim()
+           && !/^\s*(#{1,6}\s|>|```)/.test(lines[i])
+           && !listMatch(lines[i])
+           && !(lines[i].trim().startsWith('|') && i+1 < lines.length && isTableSep(lines[i+1]))
+           && !/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(lines[i])){
+      p.push(lines[i].trim()); i++;
+    }
+    if (p.length) out.push('<p>'+inline(p.join(' '))+'</p>');
+    else i++;
+  }
+  return out.join('\n');
+}
+const md = text => renderBlocks(text.replace(/\r\n/g,'\n').split('\n'));
+
+/* ==========================================================================
+   sidebar
+   ========================================================================== */
+const GROUPS = [
+  {name:'Canon',               test:k => k === '00_canon.md'},
+  {name:'The World',           test:k => /^\d\d_/.test(k) && k !== '00_canon.md'},
+  {name:'Documents (diegetic)',test:k => k.startsWith('documents/')},
+  {name:'Design Specs',        test:k => k.startsWith('design/')},
+];
+const KEYS = Object.keys(DOCS);
+const fmt = n => n.toLocaleString('en-US');
+
+function buildToc(){
+  const toc = document.getElementById('toc');
+  GROUPS.forEach(g => {
+    const keys = KEYS.filter(g.test);
+    if (!keys.length) return;
+    const sec = document.createElement('div');
+    sec.className = 'group';
+    const h = document.createElement('h2');
+    h.className = 'group-h';
+    h.textContent = g.name;
+    sec.appendChild(h);
+    keys.forEach(k => {
+      const d = DOCS[k];
+      const row = document.createElement('div');
+      row.className = 'entry';
+
+      const b = document.createElement('button');
+      b.className = 'entry-main';
+      b.dataset.doc = k;
+      b.innerHTML = '<span>'+esc(d.title)+'</span><span class="entry-words">'+fmt(d.words)+' words</span>';
+      b.addEventListener('click', () => open(k));
+
+      const a = document.createElement('a');
+      a.className = 'entry-raw';
+      a.href = k;
+      a.title = 'Open the raw file: ' + k;
+      a.setAttribute('aria-label','Open raw markdown: ' + d.title);
+      a.textContent = '↗';
+
+      row.appendChild(b); row.appendChild(a);
+      sec.appendChild(row);
+    });
+    toc.appendChild(sec);
+  });
+}
+
+/* ==========================================================================
+   reading pane
+   ========================================================================== */
+const pane = document.getElementById('pane');
+
+function open(key, push){
+  const d = DOCS[key];
+  if (!d) return;
+  document.querySelectorAll('.entry-main').forEach(e =>
+    e.classList.toggle('active', e.dataset.doc === key));
+  pane.innerHTML =
+    '<article class="doc">'
+    + '<div class="doc-head">'
+    +   '<div class="doc-path"><a href="'+key+'">'+esc(key)+' ↗</a></div>'
+    +   '<div class="doc-meta">'+fmt(d.words)+' words</div>'
+    + '</div>'
+    + md(d.text)
+    + '</article>';
+  pane.scrollIntoView({block:'start'});
+  window.scrollTo(0,0);
+  pane.focus({preventScroll:true});
+  if (push !== false) history.replaceState(null,'','#'+encodeURIComponent(key));
+  document.title = d.title + ' — The Second Sun';
+}
+
+/* in-page cross-reference links */
+pane.addEventListener('click', e => {
+  const a = e.target.closest('a[data-doc]');
+  if (!a) return;
+  e.preventDefault();
+  open(a.dataset.doc);
+});
+
+/* ==========================================================================
+   search
+   ========================================================================== */
+const q = document.getElementById('q');
+const resBox = document.getElementById('results');
+const qmeta = document.getElementById('qmeta');
+
+function search(term){
+  const t = term.trim();
+  if (t.length < 2){
+    resBox.hidden = true; resBox.innerHTML = '';
+    document.getElementById('toc').hidden = false;
+    qmeta.textContent = '';
+    return;
+  }
+  const needle = t.toLowerCase();
+  const hits = [];
+  KEYS.forEach(k => {
+    const text = DOCS[k].text, low = text.toLowerCase();
+    let idx = low.indexOf(needle), n = 0;
+    while (idx !== -1){
+      n++;
+      if (n <= 3){
+        const s = Math.max(0, idx - 55), e = Math.min(text.length, idx + needle.length + 75);
+        hits.push({
+          key: k,
+          snip: (s > 0 ? '…' : '')
+              + esc(text.slice(s, idx)) + '<mark>' + esc(text.slice(idx, idx+needle.length)) + '</mark>'
+              + esc(text.slice(idx+needle.length, e))
+              + (e < text.length ? '…' : '')
+        });
+      }
+      idx = low.indexOf(needle, idx + needle.length);
+    }
+  });
+  document.getElementById('toc').hidden = true;
+  resBox.hidden = false;
+  qmeta.textContent = hits.length
+    ? hits.length + ' passage' + (hits.length === 1 ? '' : 's')
+    : 'nothing in the archive';
+  resBox.innerHTML = hits.slice(0, 60).map(h =>
+      '<button class="result" data-doc="'+h.key+'">'
+    + '<div class="result-t">'+esc(DOCS[h.key].title)+'</div>'
+    + '<div class="result-s">'+h.snip.replace(/\n+/g,' ')+'</div>'
+    + '</button>').join('');
+}
+q.addEventListener('input', () => search(q.value));
+resBox.addEventListener('click', e => {
+  const b = e.target.closest('[data-doc]');
+  if (b) open(b.dataset.doc);
+});
+
+/* ==========================================================================
+   the rose window — geometry from 09_rose_window_iconography.md
+   O (the eye) · Ring I: 8 petals · Ring II: 16 histories
+   Ring III: 32 small lights · Ring IV: 8 buds = sixty-five lights
+   Numbering begins at the crown (XII) and runs sunwise.
+   ========================================================================== */
+const G = {
+  ruby:'#7c1f22', gold:'#a5772a', white:'#cdc4ae', blue:'#1e3f6b', deepblue:'#16305a',
+  greenblue:'#1d5a56', green:'#245a42', silver:'#8d99a0', ochre:'#8a6524', iron:'#3c3f45',
+  violet:'#4a2a58', amber:'#9a6a22', bronze:'#7d5a24', brown:'#5c3f24', black:'#241f1c',
+  red:'#8d2822', parch:'#a08a5c', grey:'#4e4a44', greygreen:'#4a5c50', wgreen:'#7fa896',
+  ACCENT:'#b8e6d2'
+};
+const PETALS = [ /* Ring I */
+  ['Saint Ambrelle the Glass-Carrier', G.ruby],
+  ['Saint Vhairé of the Ford', G.deepblue],
+  ['Saint Coswald the Wall-Wright', G.ochre],
+  ['Saint Perrin Halfbell', G.bronze],
+  ['Saint Belwyn the Unlit', G.violet],
+  ['Saint Maren of the Reeds', G.greenblue],
+  ['Saint Gaudry the Ledgerer', G.red],
+  ['Saint Ilvane the Twice-Shadowed — the Fault', G.ACCENT],
+];
+const HISTORIES = [ /* Ring II */
+  ['The First Stone, F.1', G.blue],['The Ferry at the Flood', G.silver],
+  ['The Quire Unroofed', G.gold],['Coswald in the Breach', G.iron],
+  ['The Lodge at Work', G.ochre],['The Casting', G.amber],
+  ['The Burning of Cinder Row, F.171', G.red],['Cinder Row Rebuilt', G.amber],
+  ['The Setting of the Rose — the Tear', G.white],['The Light Kept Faith, F.362', G.iron],
+  ['Maren Upstream', G.greenblue],['Gaudry and the Ledgers', G.red],
+  ['The Oath by Light', G.gold],['The Luminary in Ostrelle', G.violet],
+  ['The Five Squares', G.brown],['Ambrelle’s Walk', G.ruby],
+];
+const SMALL = [ /* Ring III: the Months, the Trades, the Waters */
+  ['Ploughing',G.brown],['Sowing',G.greygreen],['Pruning',G.grey],['Shearing',G.white],
+  ['Haymaking',G.gold],['Reaping',G.gold],['Threshing',G.ochre],['Brewing',G.amber],
+  ['Slaughter-month',G.red],['Salting',G.silver],['Wood-hauling',G.brown],['Candle-dipping',G.gold],
+  ['The mason',G.ochre],['The smith',G.red],['The bellfounder',G.bronze],['The chandler',G.gold],
+  ['The glazier — the Sworn Pane',G.white],['The fuller',G.silver],['The draper',G.blue],['The salter',G.white],
+  ['The baker',G.amber],['The scrivener',G.parch],['The fisher',G.green],['The boatman',G.greenblue],
+  ['The Ford',G.silver],['The eel-weirs',G.green],['Maren’s wharf',G.blue],['The Tally Bridge',G.grey],
+  ['The Cut',G.deepblue],['The sluice',G.wgreen],['The Frost of F.187',G.white],['The high water',G.silver],
+];
+const BUDS = ['the glaziers','the boat-families','the masons','the bellfounders',
+              'the chandlers','the fishers','the scriveners','a lamp before a shut cell door'];
+
+const rad = d => (d - 90) * Math.PI / 180;   /* 0° = the crown (XII), sunwise */
+const px = (r,d) => [r*Math.cos(rad(d)), r*Math.sin(rad(d))];
+
+function sector(r0, r1, a0, a1){
+  const [x0,y0] = px(r1,a0), [x1,y1] = px(r1,a1), [x2,y2] = px(r0,a1), [x3,y3] = px(r0,a0);
+  const big = (a1 - a0) > 180 ? 1 : 0;
+  return `M${x0.toFixed(2)},${y0.toFixed(2)} A${r1},${r1} 0 ${big} 1 ${x1.toFixed(2)},${y1.toFixed(2)}`
+       + ` L${x2.toFixed(2)},${y2.toFixed(2)} A${r0},${r0} 0 ${big} 0 ${x3.toFixed(2)},${y3.toFixed(2)} Z`;
+}
+function petalPath(a, r0, r1){
+  const w = 19;                                   /* half-angle at the waist */
+  const [tx,ty] = px(r1, a);
+  const [ax,ay] = px(r0, a - w), [bx,by] = px(r0, a + w);
+  const [cx1,cy1] = px(r1*0.92, a - w*0.72), [cx2,cy2] = px(r1*0.92, a + w*0.72);
+  return `M${ax.toFixed(2)},${ay.toFixed(2)} Q${cx1.toFixed(2)},${cy1.toFixed(2)} ${tx.toFixed(2)},${ty.toFixed(2)}`
+       + ` Q${cx2.toFixed(2)},${cy2.toFixed(2)} ${bx.toFixed(2)},${by.toFixed(2)}`
+       + ` A${r0},${r0} 0 0 0 ${ax.toFixed(2)},${ay.toFixed(2)} Z`;
+}
+const SVGNS = 'http://www.w3.org/2000/svg';
+function el(name, attrs, title){
+  const n = document.createElementNS(SVGNS, name);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (title){
+    const t = document.createElementNS(SVGNS,'title');
+    t.textContent = title;
+    n.appendChild(t);
+  }
+  return n;
+}
+
+function buildRose(size){
+  const svg = el('svg', {
+    viewBox:'-250 -250 500 500', width:size, height:size, class:'rose',
+    role:'img', 'aria-label':'The Great Rose of the Lanthorn — sixty-five lights'
+  });
+
+  svg.innerHTML =
+    '<defs>'
+  + '<radialGradient id="eyeg"><stop offset="0%" stop-color="#fff6dd"/><stop offset="55%" stop-color="#e2c887"/>'
+  + '<stop offset="100%" stop-color="#9c7a33"/></radialGradient>'
+  + '<radialGradient id="discg"><stop offset="0%" stop-color="#eafff5" stop-opacity="1"/>'
+  + '<stop offset="42%" stop-color="#b8e6d2" stop-opacity=".95"/>'
+  + '<stop offset="100%" stop-color="#b8e6d2" stop-opacity="0"/></radialGradient>'
+  + '<filter id="glow" x="-60%" y="-60%" width="220%" height="220%">'
+  + '<feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>'
+  + '</filter>'
+  + '<path id="creedpath" d="M0,-40 A40,40 0 1,1 -0.1,-40" fill="none"/>'
+  + '</defs>';
+
+  const g = el('g', {});
+
+  /* outer stone rim */
+  g.appendChild(el('circle', {cx:0, cy:0, r:243, class:'stone'}));
+  g.appendChild(el('circle', {cx:0, cy:0, r:228, class:'stone', 'stroke-width':'6', stroke:'#2e2719'}));
+
+  /* Ring III — the two-and-thirty small lights */
+  for (let n = 1; n <= 32; n++){
+    const a = (n - 1) * 11.25;
+    const [name, col] = SMALL[n-1];
+    const sworn = (n === 17);
+    g.appendChild(el('path', {
+      d: sector(160, 196, a - 4.9, a + 4.9), fill: col, class:'pane lead',
+      stroke: sworn ? '#5d5238' : '#0a0806', 'stroke-width': sworn ? 2.6 : 1.15,
+      opacity:.9
+    }, 'III-' + n + ' · ' + name));
+  }
+
+  /* Ring II — the sixteen histories */
+  for (let n = 1; n <= 16; n++){
+    const a = (n - 1) * 22.5;
+    const [name, col] = HISTORIES[n-1];
+    g.appendChild(el('path', {
+      d: sector(104, 150, a - 10.2, a + 10.2), fill: col, class:'pane lead', opacity:.92
+    }, 'II-' + n + ' · ' + name));
+  }
+  /* the Tear: one fleck of green-white glass at the eye of the little painted rose, II-9 */
+  {
+    const [tx,ty] = px(127, 180);
+    g.appendChild(el('circle', {cx:tx.toFixed(2), cy:ty.toFixed(2), r:4.2, fill:G.ACCENT,
+      class:'pane anom', opacity:.95}, 'II-9 · the Tear — one fleck of green-white glass, found nowhere else in the window'));
+  }
+
+  /* Ring I — the eight petals */
+  for (let n = 1; n <= 8; n++){
+    const a = (n - 1) * 45;
+    const [name, col] = PETALS[n-1];
+    const fault = (n === 8);
+    g.appendChild(el('path', {
+      d: petalPath(a, 52, 99), fill: col, class: 'pane lead' + (fault ? ' anom' : ''),
+      opacity: fault ? .82 : .95
+    }, 'I-' + n + ' · ' + name));
+  }
+
+  /* Ring IV — the eight buds (trefoils in the rim stonework) */
+  for (let n = 1; n <= 8; n++){
+    const a = (n - 1) * 45;
+    const [cx,cy] = px(212, a);
+    const bud = el('g', {}, 'IV-' + n + ' · ' + BUDS[n-1]);
+    [[0,-7],[-6.2,3.6],[6.2,3.6]].forEach(([dx,dy]) => {
+      bud.appendChild(el('circle', {
+        cx:(cx+dx).toFixed(2), cy:(cy+dy).toFixed(2), r:6.2,
+        fill:'#1a1610', stroke:'#4a4129', 'stroke-width':1.4
+      }));
+    });
+    g.appendChild(bud);
+  }
+
+  /* O — the eye: the Sole Light, a white heart rayed in gold, ringed with the creed,
+     lettered black on white — LVX VNA ET INDIVISA */
+  const eye = el('g', {},
+    'O · the eye — the Sole Light, ringed with the creed: LVX VNA ET INDIVISA. '
+  + 'One lead-strip crosses the final A, so the word undivided is divided. Unmended.');
+  eye.appendChild(el('circle', {cx:0, cy:0, r:47, fill:'#0f0c08', stroke:'#4a4129', 'stroke-width':1.4}));
+  eye.appendChild(el('circle', {cx:0, cy:0, r:41.5, fill:'none', stroke:'#c3b697', 'stroke-width':11}));
+  eye.appendChild(el('circle', {cx:0, cy:0, r:36, fill:'#0f0c08'}));
+  for (let i = 0; i < 16; i++){
+    const a = i * 22.5;
+    const [x1,y1] = px(12, a), [x2,y2] = px(33, a);
+    eye.appendChild(el('line', {
+      x1:x1.toFixed(2), y1:y1.toFixed(2), x2:x2.toFixed(2), y2:y2.toFixed(2),
+      stroke:'#c9a24a', 'stroke-width':1.5, opacity:.68
+    }));
+  }
+  eye.appendChild(el('circle', {cx:0, cy:0, r:12, fill:'url(#eyeg)'}));
+  g.appendChild(eye);
+
+  const creed = el('text', {
+    fill:'#17130d', 'font-size':'7.4', 'letter-spacing':'1.9',
+    'font-family':'Georgia, serif', 'aria-hidden':'true'
+  });
+  const tp = document.createElementNS(SVGNS,'textPath');
+  tp.setAttribute('href','#creedpath');
+  tp.setAttribute('startOffset','25%');
+  tp.setAttribute('text-anchor','middle');
+  tp.textContent = 'LVX VNA ET INDIVISA';
+  creed.appendChild(tp);
+  g.appendChild(creed);
+
+  /* "the lead must go somewhere" — the strip that crosses the final A of INDIVISA */
+  {
+    const [lx1,ly1] = px(35.6, 331), [lx2,ly2] = px(47.4, 331);
+    g.appendChild(el('line', {
+      x1:lx1.toFixed(2), y1:ly1.toFixed(2), x2:lx2.toFixed(2), y2:ly2.toFixed(2),
+      stroke:'#0a0806', 'stroke-width':1.9, opacity:.95
+    }));
+  }
+
+  /* the Emblem — more mornings than not it stands within Belwyn's petal, I-5, at the root,
+     so the blind saint has it at his back (09_rose_window_iconography.md, VIII) */
+  const [dx,dy] = px(78, 180);
+  const disc = el('g', {class:'disc'}, 'The Emblem — the dawn-showing, standing low and very great in Belwyn’s petal (I-5)');
+  disc.appendChild(el('circle', {cx:dx.toFixed(2), cy:dy.toFixed(2), r:26, fill:'url(#discg)', opacity:.5}));
+  disc.appendChild(el('circle', {cx:dx.toFixed(2), cy:dy.toFixed(2), r:10, fill:'#dff6ec'}));
+  disc.appendChild(el('circle', {cx:dx.toFixed(2), cy:dy.toFixed(2), r:10, fill:'none',
+                                 stroke:'#b8e6d2', 'stroke-width':1, opacity:.8}));
+  g.appendChild(disc);
+
+  svg.appendChild(g);
+  return svg;
+}
+
+/* ==========================================================================
+   the landing view
+   ========================================================================== */
+const PHENOMENON = [
+  ['Where it shows','A second sun is visible only where sky is seen through the glass of the Great Rose, from inside the Lanthorn. Through the other windows: nothing. From outside: nothing.'],
+  ['It is the Rose, not the pane','A pane taken from the rose and held to open sky shows nothing. Replica glass shows nothing anywhere. But new plain glass leaded into the rose shows it perfectly. It needs glass, and it needs <em>that window</em>.'],
+  ['The wrong colour','A cold green-white — the colour of dawn seen through river ice. It does not take the colour of the pane it shines through. Every light in the world obeys the glass but this one.'],
+  ['You may look at it','The true sun punishes the eye; this one permits it. The permission is what unsettles people most.'],
+  ['Two shadows','Persons and pillars cast a warm true shadow and a faint, cold, differently-aimed <em>grave-shadow</em>. Where the beams cross they overlap without mixing. Wax does not soften in its light.'],
+  ['Step outside','One sun, one shadow, always. Nothing of it survives in a mirror carried out the door. A flying observer over the rooftops finds one sun and nothing else, forever.'],
+  ['No parallax','It stands in the same pane for every eye in the building at once, as if it were <em>in</em> the glass — yet its rays sweep the floor with the hour. This is the measurement that broke the scholars.'],
+  ['The countergait','It moves against the true sun: low and huge in the rose at dawn, climbing while the sun descends. Once each day they pass — <em>the Kiss</em> — and lay an X of light down the nave.'],
+  ['The Concurrence','On one fixed day a year the Passing falls dead centre in the eye and every doubled shadow in the nave fuses into one. Under cloud there is nothing to fuse with, and the feast simply fails.'],
+  ['Nothing else doubles','It burns through overcast; lightning whitens every pane except the one it stands in. One moon, single stars, single flames. Only the sun, and only through the rose.'],
+];
+
+const ANSWERS = [
+  {t:'The Church', w:'the Candor', b:'There are not two suns. There is one Light and, by grace, one <em>Emblem</em> of it — a granted image, “a painting of the Light upon the eye of the Church.” Calling it a sun is a citable offence under the Edict of F.244. The doctrine is elegant precisely because it explains nothing and forbids the question. Privately, the Church is not hiding a truth it knows; it is holding a fact it cannot metabolize.',
+   q:'“Una lux, gemina species” — one light, twofold appearance.<br>“To see is no sin; to affirm is.”'},
+  {t:'The Heretics', w:'the Unwalled', b:'The green sun is real, and the elder of the two: it once stood in the open sky above everyone’s grandmothers. Four centuries of building were not worship but masonry against heaven — the Lanthorn is a wall raised to shut it out, and the Great Rose is the wall’s one flaw. They are right that the Church is lying about something. They are wrong about everything else, on purpose, and half know it.',
+   q:'“Lucem non murabis” — you shall not wall the light.'},
+  {t:'The Scholars', w:'Doctor Aubin Ferrant', b:'The doubled-ray theory: glass fluxed with the ash of the F.171 fire splits the sun’s image, as a stick bends in water. His own replica panes show nothing; his own last measurement proved the no-parallax, which no bent ray can do. The theory is dead, and Ferrant, to his credit, keeps the corpse on his desk and keeps measuring.',
+   q:'“It moves against the sun; it stands in one pane for every eye; I have no theory.”'},
+  {t:'The Street', w:'folk belief', b:'It is the Green Sun, and it shines for the dead: speak your dead’s name in its beam and they hear you. A grave-shadow on a bride is ill luck. Mothers hold newborns in the doubled light so the child has a spare shadow to spend. Children play <em>twinning</em>, contorting until their two shadows touch hands. The vergers tolerate it all; pilgrims pay.',
+   q:'“One sun for the living, one sun for the flown…<br>count both your shadows wherever you go.”'},
+];
+
+const TIMELINE = [
+  ['F.1','The First Stone', 'Laid at the old ford-market, on Saint Vhairé’s ground. Years count from this stone: the Fabric era.', 0],
+  ['F.171','The Cinder Row fire', 'The glaziers’ street burns and is rebuilt. Its ash enters glass, legend, and — three centuries later — Ferrant’s dead theory.', 0],
+  ['F.198–203','The making of the Great Rose', 'Master Idonea Sparr of Cinder Row leads the work. The day the last panel is set she looks back through her finished window from the crossing and weeps, saying she had made two of something there was one of. She never fires glass again.', 0],
+  ['F.204','The Sparr deposition', 'The Chapter takes her deposition and seals it — the oldest paper in the Grey Press. The cover-up is older than the first public sighting.', 0],
+  ['F.211','The anchorhold occupied', 'Idonea Sparr dies. The anchorhold at the Ilvane Chapel is first occupied; the line has not broken since.', 0],
+  ['F.219','“The sky doubled behind the rose”', 'First open record: a novice’s margin note. Ruled a fault of the eye. What passed in the sixteen silent years since F.204 is unrecorded — deliberately, and forever.', 0],
+  ['F.244','The Edict of the Undivided Light', 'The Chapter first monetizes the pilgrim surge — badges, viewing hours — then criminalizes the vocabulary. To call it a sun becomes an offence.', 0],
+  ['F.288','The Glaziers’ Trial', 'The masons accuse the glaziers of sorcerous glass. Before the court a rose pane is replaced with plain new glass — and the Emblem persists in the new pane. Verdict: <em>no art of man</em>. Never published. Three journeymen had already been broken at the Question.', 0],
+  ['F.289','The Custody of the Eye', 'Founded to hold one sealed verdict and prevent the next trial. It has been preventing, and accumulating, ever since. The Praelucent’s Attestation is instituted the same year.', 0],
+  ['F.290','The Ilvane Chapel shut', 'Mortared closed by the Custody — officially structurally unsound. The squint of the anchorhold stays open, because canon law will not let them wall up a living woman.', 0],
+  ['F.301','Colm Attergate', 'A mason’s labourer preaches in the Bellstand that the towers are coffin lids and the Church is walling a sun out of the sky, course by course. Banished; drowns at the Serle sluice trying to return by water. The heresy dates itself from him.', 0],
+  ['F.362','The Great Rains', 'Three weeks of overcast; the only sunlight in the city stands in the nave. Publicly the Church’s finest hour. Privately its ugliest: forty arrests for saying which sun fed the city.', 0],
+  ['F.398','The Fabric declared complete', 'After three hundred and ninety-eight years. The north tower crown stands scaffolded to this day.', 0],
+  ['F.419–421','The Re-leading', 'Two years of scaffold over the rose “for repair” — in truth the Custody’s largest experiment. A third of the panes swapped, one whole light removed and re-set, everything documented. The Emblem never flinched.', 1],
+  ['F.428','The Whisper Arrests', 'On an informant’s tip the Custody seizes five in Gaunt Passage. Two recant on the Gradine; a fuller dies in custody “of the damp.” The informant was never named. Every current cell member remembers, and suspects everyone.', 1],
+  ['F.431','The Almanac Shame', 'The heretics’ computed Concurrence date beats the official almanac by a day; the wrong bells ring at the wrong noon. Corrected without acknowledgment — by Rasp himself, using the heretics’ own figures.', 1],
+  ['F.433','The Ledger Theft', 'A Custody scribe dies (or flees; the record is neat and unsigned) and a satchel of archive copies goes into the city. A “Sparr page” is now the costliest contraband in Ombreval.', 1],
+  ['F.436','The Shut Door', 'At last year’s Concurrence the Chapter, fearing crowds, bars the nave doors at the moment of the Passing. A crush on the Gradine; a child’s arm broken; tavern fury still hot.', 1],
+  ['F.437','<em>the present year</em>', 'This year’s Concurrence approaches. The doors question must be answered again — and everyone watches the sky, for a clouded Concurrence answers nothing.', 1],
+];
+
+const PEOPLE = [
+  ['Praelucent Havise Dorn','Head of the Church in Ombreval','Serene, exhausted, precise; pure doctrine in public.','As a young canon she attended a heretic reading — doubt, not duty — and her name may be in the stolen F.433 pages.'],
+  ['Provost-Custodian Segwin Rasp','Master of the Custody of the Eye','Enforce the Emblem; learn the truth quietly. Despises cruelty as sloppy method.','He wrote the anonymous almanac correction of F.431 using the heretics’ own figures.'],
+  ['Warden Hamel Stott','Master of the masons’ lodge','“It is in the glass; glass is a lie you can see through.”','The lodge’s founding charter pledges the masons to “close the light above.” He has read the clause a hundred times and sleeps badly.'],
+  ['Mistress Jonet Sparr','Master glazier of Cinder Row','“Our glass shows true; take it up with the sky.”','She holds one page in Idonea’s hand — a recipe margin reading “cool the green under the open sky.” Meaningless, or everything. Shown to no one.'],
+  ['Osanne Vell','Chandler of the Wickmarket — the Tracer','Motherly, iron-cored; leads the Unwalled though her failing eyes can no longer make out the Emblem.','The F.428 informant was her: one anonymous tip, to remove a hothead before he got them all killed. The fuller’s death is hers to carry, and her leadership is penance.'],
+  ['Grigor Ashe','Salt-merchant — the Wicket at the grate','Jumpy, mercenary, quarter-believer.','He keeps a private list of every face marked at the grate. Insurance, he calls it. Merchandise, it may become.'],
+  ['Doctor Aubin Ferrant','Physician-astronomer off the Tallage','Courteous, obsessed, honest to a fault; his theory is dead by his own measurements and he keeps measuring.','His instruments are funded by the Custody. He suspects, and does not ask.'],
+  ['Lise Copp','Pawnbroker at the Tally Bridge','Unreadable, scrupulously “neutral”: fences archive pages to the heretics, launders informant money for the Custody.','She cannot read. She prices pages by seal, by hand, and by the fear in the seller’s eyes — and has sold three of her nephew’s forgeries as genuine.'],
+  ['Corin Copp','Journeyman scrivener; forger','Charming, hollow, gifted. Makes “old” pages for both markets.','His masterpiece — <em>Colm’s Last Letter</em>, the cell’s most revered relic — he seeded with phrases from a real page handed him by a man he now believes was a Custody clerk.'],
+  ['Verger Dunstan Pike','Keeper of the nave keys','Pious, venal in small change; sells odd-hour nave access.','He stood the F.421 scaffold, watched the pane-swaps, signed the silence-oath. A living eyewitness that new glass shows the Emblem.'],
+  ['Crier Jos Brant','Town crier of the Bellstand','Booming, warm, a cheerful folk believer: “the Green Sun hears the dead, neighbours.”','A paid Custody moth, reporting crowd-talk weekly — who does not know his tip caused the Whisper Arrests, or that anyone died of it.'],
+  ['Betriss Marle','Publicly recanted heretic — the Namekeeper','Meek in company, granite alone; in the nave daily, ostentatiously devout.','The recantation was planned with the cell to shield the Tracer. She is still sworn, and charts the Emblem daily in embroidery.'],
+  ['Ede of the Needle','Orphan, message-runner','Feral, watchful, unbought; arm healed crooked from the Shut Door crush. Keeper of every skipping rhyme.','From her hiding place in the Needle she has overheard the current counter-sign. She has told no one, and does not know what it is worth.'],
+  ['Dame Aldith','Anchoress of the mortared Ilvane Chapel','Ancient, amused; trades verses for honest news. “I face a wall, child. Both suns can manage without me.”','Each anchoress since F.211 has taught the next a recitation, never written, said to be Idonea Sparr’s last words. Missing page or long game of whispers — not even Aldith knows. She has recited it to no one. Yet.'],
+];
+
+function landing(){
+  document.querySelectorAll('.entry-main').forEach(e => e.classList.remove('active'));
+  document.title = 'The Second Sun — a lore & design corpus';
+  history.replaceState(null,'',location.pathname + location.search);
+
+  const rules = PHENOMENON.map((r,i) =>
+      '<div class="rule"><div class="rule-n">'+ (i+1) +'</div>'
+    + '<div class="rule-t">'+r[0]+'</div><p class="rule-b">'+r[1]+'</p></div>').join('');
+
+  const answers = ANSWERS.map(a =>
+      '<div class="answer"><h3 class="answer-t">'+a.t+'</h3><div class="answer-w">'+a.w+'</div>'
+    + '<p class="answer-b">'+a.b+'</p><p class="answer-q">'+a.q+'</p></div>').join('');
+
+  const tl = TIMELINE.map((e,i) =>
+      '<div class="tl-e'+(e[3] ? ' live' : '')+'" data-tl="'+i+'">'
+    + '<button class="tl-b" aria-expanded="false">'
+    + '<span class="tl-y">'+e[0]+'</span><span class="tl-h">'+e[1]+'</span></button>'
+    + '<div class="tl-d">'+e[2]+'</div></div>').join('');
+
+  const people = PEOPLE.map((p,i) =>
+      '<button class="person" data-p="'+i+'" aria-expanded="false">'
+    + '<div class="person-n">'+p[0]+'</div><div class="person-r">'+p[1]+'</div>'
+    + '<p class="person-s">'+p[2]+'</p>'
+    + '<div class="person-secret"><div class="secret-l">Their secret</div><p class="secret-b">'+p[3]+'</p></div>'
+    + '<div class="person-hint">Their secret →</div></button>').join('');
+
+  pane.innerHTML =
+    '<div class="landing">'
+  + '<div class="hero">'
+  +   '<div class="hero-text">'
+  +     '<h1>The Second <span class="sun">Sun</span></h1>'
+  +     '<p class="hero-sub">A lore &amp; design corpus for <em>The Cathedral-City of Impossible Light</em>.<br>'
+  +     STATS.docs + ' documents · ' + fmt(STATS.words) + ' words · the free city of Ombreval, in the year F.437.</p>'
+  +     '<blockquote class="hero-quote">“It moves against the sun; it stands in one pane for every eye; I have no theory. '
+  +     'An impossible light, and the city at peace with it.”'
+  +     '<cite>Doctor Aubin Ferrant, in the margin of his notebook</cite></blockquote>'
+  +   '</div>'
+  +   '<div class="rose-wrap" id="rose-wrap">'
+  +     '<p class="rose-cap">The Great Rose of the Lanthorn — the eye, eight petals, sixteen histories, '
+  +     'two-and-thirty small lights, eight buds: sixty-five lights in all. The Emblem stands at the root, '
+  +     'in Belwyn’s petal. Hover any light to name it.</p>'
+  +   '</div>'
+  + '</div>'
+
+  + '<div class="stats">'
+  +   '<div class="stat"><div class="stat-n">'+STATS.docs+'</div><div class="stat-l">Documents</div></div>'
+  +   '<div class="stat"><div class="stat-n">'+fmt(STATS.words)+'</div><div class="stat-l">Words</div></div>'
+  +   '<div class="stat"><div class="stat-n t">'+STATS.ledger.T+'</div><div class="stat-l">True</div></div>'
+  +   '<div class="stat"><div class="stat-n f">'+STATS.ledger.F+'</div><div class="stat-l">False, but believed</div></div>'
+  +   '<div class="stat"><div class="stat-n a">'+STATS.ledger.A+'</div><div class="stat-l">Ambiguous by design</div></div>'
+  + '</div>'
+
+  + '<section class="block"><h2 class="block-h">The Phenomenon</h2>'
+  + '<p class="block-d">Every rule below is a visual fact the render layer enforces. Two hundred years of records '
+  + 'describe them identically — that consistency is the horror. The dread is that it does nothing, except be seen.</p>'
+  + '<div class="rules">'+rules+'</div></section>'
+
+  + '<section class="block"><h2 class="block-h">Four Answers</h2>'
+  + '<p class="block-d">Four positions on one impossible thing. None of them is right; the game never says which is '
+  + 'least wrong. Add evidence for any theory only if it also fits a rival.</p>'
+  + '<div class="answers">'+answers+'</div></section>'
+
+  + '<section class="block"><h2 class="block-h">The Fabric Era</h2>'
+  + '<p class="block-d">Years count from the cathedral’s first stone. The present year is F.437. Select any year to open it.</p>'
+  + '<div class="tl">'+tl+'</div>'
+  + '<div class="tl-legend"><span class="dot"></span>Living memory — NPCs in the city remember these themselves.</div>'
+  + '</section>'
+
+  + '<section class="block"><h2 class="block-h">The People</h2>'
+  + '<p class="block-d">Fourteen seed bios. Every one of them is keeping something; select a card to read it.</p>'
+  + '<div class="people">'+people+'</div></section>'
+  + '</div>';
+
+  document.getElementById('rose-wrap').prepend(buildRose(340));
+
+  pane.querySelectorAll('.tl-b').forEach(b => b.addEventListener('click', () => {
+    const e = b.parentElement;
+    const open = e.classList.toggle('open');
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }));
+  pane.querySelectorAll('.person').forEach(b => b.addEventListener('click', () => {
+    const open = b.classList.toggle('open');
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }));
+  window.scrollTo(0,0);
+}
+
+/* ==========================================================================
+   boot
+   ========================================================================== */
+buildToc();
+document.getElementById('home-btn').addEventListener('click', landing);
+const hash = decodeURIComponent(location.hash.slice(1));
+if (hash && DOCS[hash]) open(hash, false); else landing();
+</script>
+</body>
+</html>
