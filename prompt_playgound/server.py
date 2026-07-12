@@ -71,10 +71,10 @@ MAX_ACTIVE_STREAMS = 8
 STT_STREAM_MAX_CHUNKS = 256
 STT_STREAM_MAX_CHUNK_B64 = 32_000
 STT_STREAM_HELD_TRANSCRIPT_S = 5.0
-FLOOR_POST_UTTERANCE_BEAT_SECONDS = 0.5
+FLOOR_POST_UTTERANCE_BEAT_SECONDS = 0.4
 FLOOR_AUDIO_FAILSAFE_MAX_SECONDS = 45.0
 MAX_FLOOR_AWAITING = 32
-FLOOR_PLAYER_CHUNK_HOLD_SECONDS = 2.0
+FLOOR_PLAYER_CHUNK_HOLD_SECONDS = 1.7
 FLOOR_PLAYER_ENDPOINT_HOLD_SECONDS = 3.0
 FLOOR_PLAYER_TRANSCRIBING_HOLD_SECONDS = 8.0
 
@@ -1061,9 +1061,7 @@ class SmartActorServer:
         The explicit releases (silent end, abort, resolved transcription) set
         ``_player_hold_until`` to 0.0 directly; they never call this.
         """
-        self._player_hold_until = max(
-            self._player_hold_until, self._clock() + seconds
-        )
+        self._player_hold_until = max(self._player_hold_until, self._clock() + seconds)
 
     def _handle_player_audio_begin(self, payload: Mapping[str, object]) -> None:
         _exact_payload(payload, required={"wav_basename", "sample_rate", "format"})
@@ -1659,9 +1657,7 @@ class SmartActorServer:
             return
         now = self._clock()
         audio = (
-            f"{timing.audio_seconds:.2f}s"
-            if timing.audio_seconds is not None
-            else "?"
+            f"{timing.audio_seconds:.2f}s" if timing.audio_seconds is not None else "?"
         )
         segments = [f"audio={audio}", f"path={timing.path}"]
         if timing.commit_at is not None:
@@ -1784,7 +1780,8 @@ class SmartActorServer:
                     or not all(isinstance(value, int) for value in completion)
                 ):
                     self._send_tts_failed(
-                        task.event_id, "local streaming synthesis returned no completion"
+                        task.event_id,
+                        "local streaming synthesis returned no completion",
                     )
                     continue
                 chunk_count, first_chunk_ms = completion
