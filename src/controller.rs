@@ -3,6 +3,18 @@
 //! The cathedral only needs coarse, static collision.  Treating those colliders
 //! as boxes keeps the controller deterministic and makes the movement code easy
 //! to test without starting Bevy's renderer.
+//!
+//! AGENT: please keep this keyboard map up to date whenever you change anything:
+//!    ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
+//!    │   │   │   │   │   │   │   │   │   │   │ 0 │   ` = screenshot, 1-9 = inventory
+//!    └─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┘
+//!      │ Q │   │ E │   │ T │   │ U │ I │ O │ P │     W=fwd  R=retract  Y=accept
+//!      └─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┘
+//!        │   │   │   │   │ G │ H │ J │ K │ L │       A/S/D=move  F=fly
+//!        └─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴───┴───┘
+//!          │   │   │ C │   │ B │   │ M │             Z=STT  X=TTS  V=mic  N=decline
+//!          └───┴───┴───┴───┴───┴───┴───┘
+
 
 use std::f32::consts::{FRAC_PI_2, PI};
 
