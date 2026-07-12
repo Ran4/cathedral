@@ -1,6 +1,7 @@
 mod city;
 mod config;
 mod controller;
+mod drive;
 mod fonts;
 mod materials;
 mod scene;
@@ -23,7 +24,19 @@ fn main() {
     let config = load_config();
     let smart_actors = config.smart_actors.clone();
     let persisted = PersistedConfig(config.clone());
-    App::new()
+    let drive = drive::DrivePlugin::from_env();
+    // Drive scripts always run windowed and small: fast, WM-friendly, and
+    // independent of whatever config.ron says.
+    let (resolution, mode) = if drive.is_some() {
+        (WindowResolution::new(1280, 720), WindowMode::Windowed)
+    } else {
+        (
+            WindowResolution::new(config.width, config.height),
+            window_mode(config.fullscreen),
+        )
+    };
+    let mut app = App::new();
+    app
         // The procedural atmosphere normally fills the background. This warm,
         // hazy blue is also a useful fallback on GPUs without atmosphere
         // compute-shader support.
@@ -31,9 +44,9 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: config.title,
-                resolution: WindowResolution::new(config.width, config.height),
+                resolution,
                 resizable: config.resizable,
-                mode: window_mode(config.fullscreen),
+                mode,
                 ..default()
             }),
             primary_cursor_options: Some(CursorOptions {
@@ -52,8 +65,11 @@ fn main() {
             HudPlugin,
             CathedralScreenshotPlugin,
         ))
-        .add_plugins(SmartActorsPlugin::new(smart_actors))
-        .run();
+        .add_plugins(SmartActorsPlugin::new(smart_actors));
+    if let Some(drive) = drive {
+        app.add_plugins(drive);
+    }
+    app.run();
 }
 
 fn window_mode(fullscreen: bool) -> WindowMode {
