@@ -711,10 +711,12 @@ class CanaryQwenSpeechBackend:
         self.python_version = (
             python_version or os.environ.get("LOCAL_STT_PYTHON", "").strip() or "3.12"
         )
+        # The default CUDA index lives in the worker script's metadata, pinned
+        # to torch alone (explicit index) so an index outage cannot break
+        # resolution of unrelated packages. A non-empty override replaces that
+        # named index on the uv command line.
         self.torch_index = (
-            torch_index
-            or os.environ.get("LOCAL_STT_TORCH_INDEX", "").strip()
-            or "https://download.pytorch.org/whl/cu124"
+            torch_index or os.environ.get("LOCAL_STT_TORCH_INDEX", "").strip()
         )
         self.model = (
             model
@@ -792,22 +794,20 @@ class CanaryQwenSpeechBackend:
             return process
         if not self.stt_available:
             raise SpeechUnavailable("local Canary-Qwen worker script is unavailable")
+        command = [
+            self.uv_binary,
+            "run",
+            "--python",
+            self.python_version,
+            "--resolution",
+            "highest",
+        ]
+        if self.torch_index:
+            command += ["--index", f"pytorch={self.torch_index}"]
+        command += ["--script", str(self.worker_script)]
         try:
             process = subprocess.Popen(
-                [
-                    self.uv_binary,
-                    "run",
-                    "--python",
-                    self.python_version,
-                    "--resolution",
-                    "highest",
-                    "--index",
-                    self.torch_index,
-                    "--index-strategy",
-                    "unsafe-best-match",
-                    "--script",
-                    str(self.worker_script),
-                ],
+                command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

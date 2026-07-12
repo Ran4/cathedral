@@ -139,17 +139,20 @@ class SpeechAdapterTests(unittest.TestCase):
         worker_script = Path(self.temp.name) / "canary.py"
         worker_script.touch()
         with patch("speech_client.subprocess.Popen", return_value=worker) as popen:
-            backend = CanaryQwenSpeechBackend(
-                worker_script=worker_script,
-                uv_binary="test-uv",
-            )
+            with patch.dict(
+                os.environ, {"LOCAL_STT_TORCH_INDEX": ""}, clear=False
+            ):
+                backend = CanaryQwenSpeechBackend(
+                    worker_script=worker_script,
+                    uv_binary="test-uv",
+                )
             self.assertEqual(backend.transcribe(self.wav), "first local")
             self.assertEqual(backend.transcribe(self.wav), "second local")
             backend.close()
 
         popen.assert_called_once()
         self.assertEqual(
-            popen.call_args.args[0][:11],
+            popen.call_args.args[0][:7],
             [
                 "test-uv",
                 "run",
@@ -157,16 +160,34 @@ class SpeechAdapterTests(unittest.TestCase):
                 "3.12",
                 "--resolution",
                 "highest",
-                "--index",
-                "https://download.pytorch.org/whl/cu124",
-                "--index-strategy",
-                "unsafe-best-match",
                 "--script",
             ],
         )
         requests = [json.loads(line) for line in worker.stdin.getvalue().splitlines()]
         self.assertEqual([request["request_id"] for request in requests], [1, 2])
         self.assertTrue(worker.terminated)
+
+    def test_canary_torch_index_override_replaces_named_metadata_index(self) -> None:
+        worker = FakeCanaryWorker()
+        worker_script = Path(self.temp.name) / "canary.py"
+        worker_script.touch()
+        with patch("speech_client.subprocess.Popen", return_value=worker) as popen:
+            backend = CanaryQwenSpeechBackend(
+                worker_script=worker_script,
+                uv_binary="test-uv",
+                torch_index="https://download.pytorch.org/whl/cpu",
+            )
+            self.assertEqual(backend.transcribe(self.wav), "first local")
+            backend.close()
+
+        self.assertEqual(
+            popen.call_args.args[0][6:9],
+            [
+                "--index",
+                "pytorch=https://download.pytorch.org/whl/cpu",
+                "--script",
+            ],
+        )
 
     def test_kokoro_worker_is_lazy_reused_and_resolves_provider_voices(self) -> None:
         worker = FakeCanaryWorker()

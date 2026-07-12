@@ -8,6 +8,14 @@
 #   "numpy==1.26.4",
 #   "torch==2.6.0",
 # ]
+#
+# [[tool.uv.index]]
+# name = "pytorch"
+# url = "https://download.pytorch.org/whl/cu124"
+# explicit = true
+#
+# [tool.uv.sources]
+# torch = { index = "pytorch" }
 # ///
 """Private persistent FP16 Canary-Qwen transcription worker.
 
