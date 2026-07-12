@@ -260,6 +260,13 @@ impl Default for MicrophoneInputState {
 }
 
 impl MicrophoneInputState {
+    pub fn with_backend(stt_backend: TranscriptionBackend) -> Self {
+        Self {
+            stt_backend,
+            ..Self::default()
+        }
+    }
+
     pub fn clear_on_disconnect(&mut self) {
         self.recording = None;
         self.streaming_sync = None;

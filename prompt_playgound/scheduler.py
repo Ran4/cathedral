@@ -94,6 +94,10 @@ class NpcScheduler:
     ``poll`` must be called by the protocol/state thread. Only the provider call
     runs on the daemon worker; replies are parsed and actions are revalidated on
     the next ``poll`` against the latest world.
+
+    ``floor_busy`` gates application, not submission: while it reports True a
+    finished result is held unapplied (and no new turn starts), so the next
+    speaker keeps thinking while the previous utterance is still presented.
     """
 
     def __init__(
@@ -105,6 +109,7 @@ class NpcScheduler:
         maximum_backoff_seconds: float = 60.0,
         clock: Callable[[], float] = time.monotonic,
         verbose: bool = False,
+        floor_busy: Callable[[], bool] | None = None,
     ) -> None:
         if minimum_delay_seconds < 0:
             raise ValueError("minimum_delay_seconds cannot be negative")
@@ -115,6 +120,7 @@ class NpcScheduler:
         )
         self._clock = clock
         self._verbose = verbose
+        self._floor_busy = floor_busy
         self._worker = _CompletionWorker(complete)
         self._order = [
             actor.id for actor in world.characters.values() if actor.control == "llm"
@@ -123,6 +129,7 @@ class NpcScheduler:
         self._priority_actor_id: CharIdStr | None = None
         self._in_flight_actor_id: CharIdStr | None = None
         self._in_flight_events: list[str] = []
+        self._held_result: _CompletionResult | None = None
         self._next_turn_at = self._clock()
         self._provider_failures = 0
         self._running = False
@@ -159,7 +166,23 @@ class NpcScheduler:
         now = self._clock() if now is None else now
         statuses: list[SchedulerStatus] = []
 
-        result = self._worker.poll() if self._in_flight_actor_id is not None else None
+        result: _CompletionResult | None = None
+        if self._in_flight_actor_id is not None:
+            result = self._held_result
+            self._held_result = None
+            if result is None:
+                result = self._worker.poll()
+            if (
+                result is not None
+                and self._floor_busy is not None
+                and self._floor_busy()
+            ):
+                # The previous utterance is still being presented. Keep the
+                # finished turn unapplied — in-flight stays set so no new turn
+                # can start — and retry on a later poll, where the normal path
+                # below revalidates the actions against the then-latest world.
+                self._held_result = result
+                result = None
         if result is not None:
             # Discard a result whose actor disappeared or which somehow does not
             # correspond to the sole in-flight request.
@@ -228,6 +251,17 @@ class NpcScheduler:
                             file=sys.stderr,
                         )
                         continue
+                    # Conversation turn-taking: a successfully addressed say
+                    # hands the next selection slot to the addressee, so 2-way
+                    # exchanges don't braid through the global round-robin.
+                    # Deliberately not immediate — the inter-turn delay and
+                    # floor gating still govern when, only selection changes.
+                    # prioritize() itself rejects non-LLM targets (the player),
+                    # so this is best-effort; last targeted say in a reply wins.
+                    if verb == "say":
+                        target = action_args.get("target")
+                        if isinstance(target, str):
+                            self.prioritize(CharIdStr(target))
                     # Waiting is a real, validated model choice but not a world
                     # event and should not make the transcript grow forever.
                     if verb != "wait":

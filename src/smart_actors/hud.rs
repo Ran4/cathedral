@@ -8,20 +8,20 @@ use crate::fonts::CathedralFonts;
 
 use super::bridge;
 
-const PANEL: Color = Color::srgba(0.025, 0.03, 0.045, 0.88);
+pub(super) const PANEL: Color = Color::srgba(0.025, 0.03, 0.045, 0.88);
 const CENTERED_TEXT_BACKDROP: Color = Color::srgba(0.10, 0.105, 0.11, 0.80);
-const TEXT: Color = Color::srgb(0.96, 0.94, 0.86);
-const MUTED: Color = Color::srgb(0.70, 0.72, 0.74);
-const ONLINE: Color = Color::srgb(0.58, 0.88, 0.62);
-const DEGRADED: Color = Color::srgb(0.97, 0.74, 0.31);
-const OFFLINE: Color = Color::srgb(0.96, 0.40, 0.36);
-const LOADER_TRACK: Color = Color::srgba(0.24, 0.25, 0.27, 0.92);
+pub(super) const TEXT: Color = Color::srgb(0.96, 0.94, 0.86);
+pub(super) const MUTED: Color = Color::srgb(0.70, 0.72, 0.74);
+pub(super) const ONLINE: Color = Color::srgb(0.58, 0.88, 0.62);
+pub(super) const DEGRADED: Color = Color::srgb(0.97, 0.74, 0.31);
+pub(super) const OFFLINE: Color = Color::srgb(0.96, 0.40, 0.36);
+pub(super) const LOADER_TRACK: Color = Color::srgba(0.24, 0.25, 0.27, 0.92);
 const PLAYER_TRANSCRIPT_LIFETIME: Duration = Duration::from_secs(8);
 const VOICE_PANEL_FONT_SIZE: f32 = 15.6;
 const VOICE_PANEL_CONTROLS_FONT_SIZE: f32 = 11.7;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum VoiceModelUiState {
+pub(super) enum VoiceModelUiState {
     Checking,
     NotLoaded,
     Loading,
@@ -32,7 +32,7 @@ enum VoiceModelUiState {
 }
 
 impl VoiceModelUiState {
-    fn label(self) -> &'static str {
+    pub(super) fn label(self) -> &'static str {
         match self {
             Self::Checking => "CHECKING",
             Self::NotLoaded => "STANDBY",
@@ -44,7 +44,7 @@ impl VoiceModelUiState {
         }
     }
 
-    fn color(self) -> Color {
+    pub(super) fn color(self) -> Color {
         match self {
             Self::Ready => ONLINE,
             Self::Checking | Self::NotLoaded | Self::Loading | Self::Transcribing => DEGRADED,
@@ -287,6 +287,18 @@ impl SmartActorHudState {
         } else {
             &self.cloud_voice
         }
+    }
+
+    /// Per-backend transcription readiness for the settings menu.
+    pub(super) fn transcription_status(
+        &self,
+        backend: bridge::TranscriptionBackend,
+    ) -> (VoiceModelUiState, &str) {
+        let voice = match backend {
+            bridge::TranscriptionBackend::Cloud => &self.cloud_voice,
+            bridge::TranscriptionBackend::Local => &self.local_voice,
+        };
+        (voice.state, voice.detail.as_str())
     }
 }
 

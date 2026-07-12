@@ -15,3 +15,6 @@ screenshots/
 
 # This is local
 cathedral_meta.json
+
+# Local settings; committed defaults live in default_config.ron
+/config.ron

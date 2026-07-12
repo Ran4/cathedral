@@ -18,7 +18,7 @@ use crossbeam_channel::{Receiver, TryRecvError, bounded};
 use crate::{controller::PlayerController, fonts::CathedralFonts, smart_actors::HEARING_RADIUS_M};
 
 use super::{
-    SmartActorsConfig,
+    SmartActorsConfig, bridge,
     hud::SmartActorHudState,
     microphone::{MicrophoneCommand, MicrophoneService},
     model::ActorId,
@@ -471,6 +471,7 @@ pub fn receive_tts_failures(
     mut messages: MessageReader<TtsClipFailed>,
     mut state: ResMut<SpeechPresentationState>,
     mut hud: ResMut<SmartActorHudState>,
+    handle: Option<Res<bridge::BridgeHandle>>,
 ) {
     for message in messages.read() {
         let before = state.audio_order.len();
@@ -482,6 +483,7 @@ pub fn receive_tts_failures(
             stream.source.finish();
         }
         if state.audio_order.len() != before {
+            notify_speech_presented(handle.as_deref(), &message.event_id);
             voice_toast(
                 Some(&mut hud),
                 format!(
@@ -497,6 +499,7 @@ pub fn receive_tts_pcm_chunks(
     mut messages: MessageReader<TtsPcmChunkReady>,
     mut state: ResMut<SpeechPresentationState>,
     mut hud: ResMut<SmartActorHudState>,
+    handle: Option<Res<bridge::BridgeHandle>>,
 ) {
     for message in messages.read() {
         let stream_is_live = state.pcm_streams.contains_key(&message.event_id);
@@ -532,9 +535,13 @@ pub fn receive_tts_pcm_chunks(
             if let Some(stream) = state.pcm_streams.remove(&message.event_id) {
                 stream.source.finish();
             }
+            let before = state.audio_order.len();
             state
                 .audio_order
                 .retain(|expected| expected.event_id != message.event_id);
+            if state.audio_order.len() != before {
+                notify_speech_presented(handle.as_deref(), &message.event_id);
+            }
             voice_toast(
                 Some(&mut hud),
                 "NPC PCM stream was out of order; text remains available",
@@ -547,6 +554,7 @@ pub fn receive_tts_stream_ends(
     mut messages: MessageReader<TtsStreamFinished>,
     mut state: ResMut<SpeechPresentationState>,
     mut hud: ResMut<SmartActorHudState>,
+    handle: Option<Res<bridge::BridgeHandle>>,
 ) {
     for message in messages.read() {
         let Some(received_chunks) = state
@@ -560,9 +568,13 @@ pub fn receive_tts_stream_ends(
             if let Some(stream) = state.pcm_streams.remove(&message.event_id) {
                 stream.source.finish();
             }
+            let before = state.audio_order.len();
             state
                 .audio_order
                 .retain(|expected| expected.event_id != message.event_id);
+            if state.audio_order.len() != before {
+                notify_speech_presented(handle.as_deref(), &message.event_id);
+            }
             voice_toast(
                 Some(&mut hud),
                 "NPC PCM stream ended incorrectly; text remains available",
@@ -596,6 +608,7 @@ pub fn start_ready_audio(
     microphone: Option<Res<MicrophoneService>>,
     config: Res<SmartActorsConfig>,
     mut hud: Option<ResMut<SmartActorHudState>>,
+    handle: Option<Res<bridge::BridgeHandle>>,
 ) {
     let now = time.elapsed_secs_f64();
     if !config.pause_microphone_during_npc_voice {
@@ -630,6 +643,7 @@ pub fn start_ready_audio(
         let event_id = active.event_id.clone();
         state.active_voice = None;
         state.pcm_streams.remove(&event_id);
+        notify_speech_presented(handle.as_deref(), &event_id);
         if let Some(line) = state
             .subtitles
             .iter_mut()
@@ -662,6 +676,7 @@ pub fn start_ready_audio(
             if let Some(stream) = state.pcm_streams.remove(&stale.event_id) {
                 stream.source.finish();
             }
+            notify_speech_presented(handle.as_deref(), &stale.event_id);
             continue;
         }
 
@@ -676,6 +691,7 @@ pub fn start_ready_audio(
             if timed_out {
                 state.audio_order.pop_front();
                 state.pcm_streams.remove(&event_id);
+                notify_speech_presented(handle.as_deref(), &event_id);
                 continue;
             }
             let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
@@ -693,6 +709,7 @@ pub fn start_ready_audio(
                 stream.source.finish();
             }
             state.audio_order.pop_front();
+            notify_speech_presented(handle.as_deref(), &event_id);
             let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
             return;
         };
@@ -715,6 +732,7 @@ pub fn start_ready_audio(
                     stream.source.finish();
                 }
                 state.audio_order.pop_front();
+                notify_speech_presented(handle.as_deref(), &event_id);
                 abandon_microphone_suspension(&mut state, microphone.as_deref());
                 voice_toast(
                     hud.as_deref_mut(),
@@ -742,6 +760,7 @@ pub fn start_ready_audio(
         } else {
             let Some(streaming_sources) = streaming_sources.as_deref_mut() else {
                 state.pcm_streams.remove(&event_id);
+                notify_speech_presented(handle.as_deref(), &event_id);
                 abandon_microphone_suspension(&mut state, microphone.as_deref());
                 voice_toast(
                     hud.as_deref_mut(),
@@ -930,6 +949,7 @@ pub fn stop_npc_speech_for_capture(
     sinks: Query<&SpatialAudioSink, With<NpcVoice>>,
     microphone: Option<Res<MicrophoneService>>,
     config: Res<SmartActorsConfig>,
+    handle: Option<Res<bridge::BridgeHandle>>,
 ) {
     if messages.read().next().is_none() {
         return;
@@ -942,6 +962,7 @@ pub fn stop_npc_speech_for_capture(
             sink.stop();
         }
         commands.entity(active.entity).try_despawn();
+        notify_speech_presented(handle.as_deref(), &active.event_id);
         if let Some(line) = state
             .subtitles
             .iter_mut()
@@ -950,7 +971,10 @@ pub fn stop_npc_speech_for_capture(
             line.audio_playing = false;
         }
     }
-    state.audio_order.clear();
+    // Cut-off and never-started lines are equally terminal for the floor.
+    for expected in state.audio_order.drain(..) {
+        notify_speech_presented(handle.as_deref(), &expected.event_id);
+    }
     state.ready_audio.clear();
     let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
 }
@@ -976,6 +1000,19 @@ pub fn clear_speech_presentation(
     let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
     state.clear();
     hud.subtitle.clear();
+}
+
+/// Best-effort notice to Python that this event's audio presentation reached a
+/// terminal state (played, skipped, dropped, failed, or cut off), freeing the
+/// conversation floor. Errors are ignored: a lost message only delays the next
+/// NPC line until the server-side failsafe deadline expires.
+fn notify_speech_presented(handle: Option<&bridge::BridgeHandle>, event_id: &str) {
+    let Some(handle) = handle else {
+        return;
+    };
+    let _ = handle.try_send(bridge::BridgeCommand::SpeechPresented {
+        speech_event_id: event_id.to_owned(),
+    });
 }
 
 fn speech_text_seconds(text: &str) -> f32 {

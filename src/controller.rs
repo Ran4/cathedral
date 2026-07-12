@@ -17,6 +17,7 @@ use bevy::{
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 
+use crate::smart_actors::ConfigMenuState;
 use crate::smart_actors::model::ActorId;
 
 const FIXED_HZ: f64 = 120.0;
@@ -252,6 +253,7 @@ fn initially_capture_cursor(mut cursor: Single<&mut CursorOptions, With<PrimaryW
 fn collect_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
+    menu: Res<ConfigMenuState>,
     mut input: ResMut<ControllerInput>,
     mut controller: Single<&mut PlayerController>,
     mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
@@ -264,10 +266,9 @@ fn collect_input(
         controller.jump_buffer_remaining = 0.0;
     }
 
-    if keyboard.just_pressed(KeyCode::Escape) {
-        cursor.visible = true;
-        cursor.grab_mode = CursorGrabMode::None;
-    } else if mouse_buttons.just_pressed(MouseButton::Left) {
+    // Escape belongs to the settings menu, which releases and recaptures the
+    // cursor as it opens and closes. Clicking only recaptures outside it.
+    if !menu.open && mouse_buttons.just_pressed(MouseButton::Left) {
         cursor.visible = false;
         cursor.grab_mode = CursorGrabMode::Locked;
     }

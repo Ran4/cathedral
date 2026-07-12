@@ -71,6 +71,12 @@ MAX_ACTIVE_STREAMS = 8
 STT_STREAM_MAX_CHUNKS = 256
 STT_STREAM_MAX_CHUNK_B64 = 32_000
 STT_STREAM_HELD_TRANSCRIPT_S = 5.0
+FLOOR_POST_UTTERANCE_BEAT_SECONDS = 0.5
+FLOOR_AUDIO_FAILSAFE_MAX_SECONDS = 45.0
+MAX_FLOOR_AWAITING = 32
+FLOOR_PLAYER_CHUNK_HOLD_SECONDS = 2.0
+FLOOR_PLAYER_ENDPOINT_HOLD_SECONDS = 3.0
+FLOOR_PLAYER_TRANSCRIBING_HOLD_SECONDS = 8.0
 
 
 def _enabled(value: str | None) -> bool:
@@ -138,6 +144,20 @@ def _safe_basename(value: object, *, suffix: str = ".wav") -> str:
 
 def _elapsed_ms(start: float, end: float) -> int:
     return max(0, round((end - start) * 1000))
+
+
+def _floor_audio_failsafe_seconds(text: str) -> float:
+    """Ceiling on synthesis latency plus playback for one voiced utterance.
+
+    Deliberately looser than the reading estimate: it only bounds how long a
+    lost ``speech_presented`` acknowledgement can stall the conversation floor.
+    """
+    return min(8.0 + len(text) / 10.0, FLOOR_AUDIO_FAILSAFE_MAX_SECONDS)
+
+
+def _speech_reading_seconds(text: str) -> float:
+    """Mirror of Bevy's ``speech_text_seconds`` subtitle formula (speech.rs)."""
+    return min(max(2.0 + len(text) / 15.0, 3.0), 10.0)
 
 
 def _wav_duration_seconds(path: Path) -> float | None:
@@ -467,14 +487,26 @@ class SmartActorServer:
             if turn_delay_seconds is not None
             else float(os.environ.get("NPC_TURN_DELAY_SECONDS", "1.0"))
         )
+        self._clock = clock
+        # Conversation floor: NPC speech holds it until Bevy reports the
+        # utterance presented (or an estimate elapses); the scheduler defers
+        # applying finished turns while it is held (see _floor_busy).
+        self._floor_awaiting: dict[str, float] = {}
+        self._floor_until = 0.0
+        # Player politeness hold: a rolling deadline bumped while microphone
+        # chunks stream in and while an utterance's transcription is in
+        # flight. Inherently failsafe — a dead client or hung STT worker
+        # simply stops bumping it and it expires on its own, so player state
+        # can never freeze NPC turns forever.
+        self._player_hold_until = 0.0
         self.scheduler = NpcScheduler(
             self.world,
             llm_complete,
             minimum_delay_seconds=delay,
             clock=clock,
             verbose=_enabled(os.environ.get("SMART_ACTORS_VERBOSE")),
+            floor_busy=self._floor_busy,
         )
-        self._clock = clock
         self._output = output or self._write_stdout
         self.session_id: str | None = None
         self.event_seq = 0
@@ -549,6 +581,9 @@ class SmartActorServer:
             self._realtime.close()
         self._streams.clear()
         self._parked.clear()
+        self._floor_awaiting.clear()
+        self._floor_until = 0.0
+        self._player_hold_until = 0.0
         pending_audio = set(self._pending_recording_paths.values())
         pending_audio.update(self._pending_tts_paths)
         for path in pending_audio:
@@ -699,6 +734,8 @@ class SmartActorServer:
             )
         elif message_type == "audio_consumed":
             self._handle_audio_consumed(payload)
+        elif message_type == "speech_presented":
+            self._handle_speech_presented(payload)
         elif message_type == "set_tts_backend":
             self._handle_set_tts_backend(payload)
         elif message_type == "resync_request":
@@ -1018,6 +1055,16 @@ class SmartActorServer:
                 backend="cloud",
             )
 
+    def _bump_player_hold(self, seconds: float) -> None:
+        """Extend the rolling player-speech hold; a bump never shortens it.
+
+        The explicit releases (silent end, abort, resolved transcription) set
+        ``_player_hold_until`` to 0.0 directly; they never call this.
+        """
+        self._player_hold_until = max(
+            self._player_hold_until, self._clock() + seconds
+        )
+
     def _handle_player_audio_begin(self, payload: Mapping[str, object]) -> None:
         _exact_payload(payload, required={"wav_basename", "sample_rate", "format"})
         basename = _safe_basename(payload["wav_basename"])
@@ -1029,6 +1076,8 @@ class SmartActorServer:
                 self._realtime.clear(evicted)
         stream = _StreamState(basename=basename, started_at=self._clock())
         self._streams[basename] = stream
+        # The player has started speaking; hold NPC turns while chunks flow.
+        self._bump_player_hold(FLOOR_PLAYER_CHUNK_HOLD_SECONDS)
         sample_rate = payload["sample_rate"]
         if (
             isinstance(sample_rate, bool)
@@ -1051,7 +1100,14 @@ class SmartActorServer:
         _exact_payload(payload, required={"wav_basename", "seq", "pcm_s16le_base64"})
         basename = _safe_basename(payload["wav_basename"])
         stream = self._streams.get(basename)
-        if stream is None or stream.state == "degraded":
+        if stream is None:
+            # Trailing chunks after an abort or silent end must never
+            # resurrect a released player hold.
+            return
+        # Even chunks bound for a degraded stream mean the player is audibly
+        # mid-utterance (the recording still lands via the batch fallback).
+        self._bump_player_hold(FLOOR_PLAYER_CHUNK_HOLD_SECONDS)
+        if stream.state == "degraded":
             # Rust cannot know a stream degraded; trailing chunks are expected.
             return
         if stream.state != "streaming":
@@ -1100,10 +1156,14 @@ class SmartActorServer:
         if silent:
             # The worker discards sub-minimum utterances locally; nothing may
             # ever be committed or said for them.
+            self._player_hold_until = 0.0
             del self._streams[basename]
             if not self.fake_mode and self._realtime is not None:
                 self._realtime.clear(basename)
             return
+        # Endpoint reached: the transcript and the resulting say normally
+        # land within this window (player_recording extends it further).
+        self._bump_player_hold(FLOOR_PLAYER_ENDPOINT_HOLD_SECONDS)
         if stream.state == "degraded":
             return
         if stream.state != "streaming":
@@ -1144,8 +1204,11 @@ class SmartActorServer:
         basename = _safe_basename(payload["wav_basename"])
         # A parked recording is deliberately untouched: it belongs to an
         # in-flight player_recording whose grace timer owns its resolution.
-        if self._streams.pop(basename, None) is not None and self._realtime is not None:
-            self._realtime.clear(basename)
+        if self._streams.pop(basename, None) is not None:
+            # The utterance was discarded; nothing will ever be said for it.
+            self._player_hold_until = 0.0
+            if self._realtime is not None:
+                self._realtime.clear(basename)
 
     def _poll_streaming(self) -> None:
         now = self._clock()
@@ -1300,6 +1363,9 @@ class SmartActorServer:
                     deadline=self._clock() + self._stream_grace_seconds,
                 )
                 self._pending_recording_paths[rid] = wav_path
+                # The transcript is in flight (and may still fall back to a
+                # batch round-trip); keep NPC turns held meanwhile.
+                self._bump_player_hold(FLOOR_PLAYER_TRANSCRIBING_HOLD_SECONDS)
                 self._begin_utterance_timing(
                     basename,
                     path="stream",
@@ -1319,6 +1385,9 @@ class SmartActorServer:
             if not self._stt_worker.submit(task):
                 raise ProtocolError("transcription queue is full", "overloaded")
             self._pending_recording_paths[rid] = wav_path
+            # Batch STT round-trips can take several seconds; keep NPC turns
+            # held until the transcription resolves (or this expires).
+            self._bump_player_hold(FLOOR_PLAYER_TRANSCRIBING_HOLD_SECONDS)
             self._begin_utterance_timing(
                 basename,
                 path=path,
@@ -1407,6 +1476,10 @@ class SmartActorServer:
         value: str | None,
         error: Exception | None,
     ) -> None:
+        # Whatever the outcome, the player's utterance is no longer pending:
+        # on success the applied say plus the NPC floor govern pacing from
+        # here; on failure nothing will be said, so NPC turns may resume.
+        self._player_hold_until = 0.0
         self._pending_recording_paths.pop(task.request_id, None)
         try:
             task.wav_path.unlink(missing_ok=True)
@@ -1771,7 +1844,12 @@ class SmartActorServer:
             )
             self._send_status("tts", "idle", backend=task.backend_name)
 
-    def _queue_tts(self, event: DomainEvent) -> None:
+    def _queue_tts(self, event: DomainEvent) -> bool:
+        """Submit synthesis for a heard NPC line.
+
+        Returns True only when a task was actually handed to the TTS worker,
+        so callers can tell an awaited audio presentation from a text-only one.
+        """
         speaker = self.world.characters.get(event.actor_id)
         if (
             speaker is None
@@ -1780,10 +1858,10 @@ class SmartActorServer:
             or event.text is None
             or self.player_id not in event.recipient_ids
         ):
-            return
+            return False
         selected = self.tts_backend
         if selected == "off":
-            return
+            return False
         backend = self._tts_backend_for(selected)
         if backend is None or not backend.tts_available:
             error_message = f"{selected} NPC voice backend is unavailable"
@@ -1794,14 +1872,14 @@ class SmartActorServer:
                 backend=selected,
             )
             self._send_tts_failed(event.event_id, error_message)
-            return
+            return False
         basename = f"{event.event_id}.wav"
         wav_path = self.runtime_dir / basename
         if wav_path in self._reserved_audio_paths():
             error_message = "speech output path is already in use"
             self._send_status("tts", "degraded", message=error_message)
             self._send_tts_failed(event.event_id, error_message)
-            return
+            return False
         task = _TtsTask(
             event.event_id,
             event.text,
@@ -1814,15 +1892,84 @@ class SmartActorServer:
             error_message = "speech queue is full"
             self._send_status("tts", "degraded", message=error_message)
             self._send_tts_failed(event.event_id, error_message)
-            return
+            return False
         self._pending_tts_paths.add(wav_path)
         self._send_status("tts", "synthesizing", actor_id=speaker.id, backend=selected)
+        return True
 
     def _send_tts_failed(self, event_id: str, reason: str) -> None:
+        # This synthesis will never be presented as audio; Bevy keeps the text
+        # visible for its own reading time, so only the awaited floor entry
+        # (if this event ever acquired one) is released here.
+        self._release_floor(event_id)
         self._send(
             "tts_failed",
             {"speech_event_id": event_id, "reason": reason[:160]},
         )
+
+    def _floor_busy(self) -> bool:
+        """True while a previous utterance is still being presented.
+
+        Speech with queued TTS is awaited per event id until Bevy reports
+        ``speech_presented`` (or its failsafe deadline passes); every other
+        hold — text-only reading estimates and the post-utterance beat —
+        extends ``_floor_until``. The player holds the floor too, through the
+        rolling ``_player_hold_until`` deadline bumped while microphone
+        chunks stream in and while a transcription is in flight.
+        """
+        now = self._clock()
+        expired = [
+            event_id
+            for event_id, deadline in self._floor_awaiting.items()
+            if deadline <= now
+        ]
+        for event_id in expired:
+            # Failsafe: a lost speech_presented must never stall NPC turns.
+            # An overdue presentation gets no post-utterance beat either.
+            del self._floor_awaiting[event_id]
+        return (
+            bool(self._floor_awaiting)
+            or now < self._floor_until
+            or now < self._player_hold_until
+        )
+
+    def _acquire_floor(self, event: DomainEvent, tts_queued: bool) -> None:
+        """Hold the next NPC turn application until this line was presented."""
+        now = self._clock()
+        text = event.text or ""
+        if tts_queued:
+            while len(self._floor_awaiting) >= MAX_FLOOR_AWAITING:
+                # Insertion order matches deadline order, so this only trims
+                # an already pathological backlog of unpresented lines.
+                del self._floor_awaiting[next(iter(self._floor_awaiting))]
+            self._floor_awaiting[event.event_id] = now + _floor_audio_failsafe_seconds(
+                text
+            )
+        else:
+            # No audio will ever be presented (player out of earshot, voices
+            # off, or synthesis rejected). Pace the conversation at the same
+            # reading speed Bevy uses for the on-screen text.
+            self._floor_until = max(
+                self._floor_until, now + _speech_reading_seconds(text)
+            )
+
+    def _release_floor(self, event_id: str) -> None:
+        """Release one awaited utterance; late or unknown ids are no-ops."""
+        if self._floor_awaiting.pop(event_id, None) is None:
+            return
+        if not self._floor_awaiting:
+            # A short beat between utterances so consecutive voices breathe.
+            self._floor_until = max(
+                self._floor_until,
+                self._clock() + FLOOR_POST_UTTERANCE_BEAT_SECONDS,
+            )
+
+    def _handle_speech_presented(self, payload: Mapping[str, object]) -> None:
+        _exact_payload(payload, required={"speech_event_id"})
+        event_id = validated_id(payload["speech_event_id"], "speech_event_id")
+        # Fire-and-forget like spatial_update: no command_result, and ids whose
+        # failsafe already expired (or duplicates) are legitimately unknown.
+        self._release_floor(event_id)
 
     def _handle_audio_consumed(self, payload: Mapping[str, object]) -> None:
         _exact_payload(payload, required={"speech_event_id", "wav_basename"})
@@ -1881,7 +2028,9 @@ class SmartActorServer:
                         "speaker_name_for_player": label,
                     },
                 )
-                self._queue_tts(event)
+                queued = self._queue_tts(event)
+                if speaker.control != "player":
+                    self._acquire_floor(event, queued)
             else:
                 self._send(
                     "world_event",

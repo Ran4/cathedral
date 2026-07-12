@@ -16,6 +16,10 @@ from support import MODULE_DIR, decode_output, envelope, hello, wait_until  # no
 from main import build_world
 from protocol import ProtocolError, encode_message, parse_line, server_envelope
 from server import (
+    FLOOR_PLAYER_CHUNK_HOLD_SECONDS,
+    FLOOR_PLAYER_ENDPOINT_HOLD_SECONDS,
+    FLOOR_PLAYER_TRANSCRIBING_HOLD_SECONDS,
+    FLOOR_POST_UTTERANCE_BEAT_SECONDS,
     STT_STREAM_HELD_TRANSCRIPT_S,
     SmartActorServer,
     _wav_duration_seconds,
@@ -1624,6 +1628,224 @@ class StreamJoinTests(StreamMessageMixin, ServerTestCase):
         self.assertTrue(session.closed)
         self.assertFalse(wav.exists())
         self.assertEqual(server._parked, {})
+
+
+class ConversationFloorTests(ServerTestCase):
+    """NPC speech holds the floor until its presentation is over."""
+
+    def floor_server(self, **kwargs) -> SmartActorServer:
+        self.now = 1_000.0
+        server = self.make_server(clock=lambda: self.now, **kwargs)
+        self.handshake(server)
+        return server
+
+    def say_as_ilse(self, server: SmartActorServer, text: str) -> str:
+        ilse = server.world.characters[CharIdStr("k0fb1")]
+        apply_action(server.world, ilse, "say", {"target": "player", "text": text})
+        server.poll()
+        return self.messages("speech")[-1]["payload"]["event_id"]
+
+    def test_queued_tts_holds_the_floor_until_speech_presented(self) -> None:
+        server = self.floor_server(speech_backend=FakeSpeech())
+        event_id = self.say_as_ilse(server, "Hold the floor")
+        self.assertIn(event_id, server._floor_awaiting)
+        self.assertTrue(server._floor_busy())
+
+        server.handle_envelope(
+            envelope(
+                "speech_presented",
+                {"speech_event_id": event_id},
+                message_id="presented-1",
+            )
+        )
+        self.assertEqual(server._floor_awaiting, {})
+        # The post-utterance beat still separates consecutive voices.
+        self.assertTrue(server._floor_busy())
+        self.now += FLOOR_POST_UTTERANCE_BEAT_SECONDS + 0.01
+        self.assertFalse(server._floor_busy())
+        # Fire-and-forget: no command_result, and late duplicates are ignored.
+        self.assertEqual(self.messages("command_result"), [])
+        server.handle_envelope(
+            envelope(
+                "speech_presented",
+                {"speech_event_id": event_id},
+                message_id="presented-1-again",
+            )
+        )
+        self.assertFalse(server._floor_busy())
+
+    def test_failsafe_deadline_frees_a_lost_presentation(self) -> None:
+        server = self.floor_server(speech_backend=FakeSpeech())
+        text = "x" * 20
+        event_id = self.say_as_ilse(server, text)
+        self.assertIn(event_id, server._floor_awaiting)
+
+        failsafe_seconds = 8.0 + len(text) / 10.0
+        self.now += failsafe_seconds - 0.01
+        self.assertTrue(server._floor_busy())
+        self.now += 0.02
+        # Expiry releases without the post-utterance beat: the line is stale.
+        self.assertFalse(server._floor_busy())
+        self.assertEqual(server._floor_awaiting, {})
+
+    def test_text_only_speech_holds_for_the_reading_estimate(self) -> None:
+        server = self.floor_server()
+        self.assertEqual(server.tts_backend, "off")
+        text = "x" * 30  # Bevy's reading estimate: 2 + 30/15 = 4 seconds.
+        self.say_as_ilse(server, text)
+        self.assertEqual(server._floor_awaiting, {})
+        self.assertTrue(server._floor_busy())
+
+        self.now += 3.99
+        self.assertTrue(server._floor_busy())
+        self.now += 0.02
+        self.assertFalse(server._floor_busy())
+
+    def test_tts_failure_releases_the_awaited_floor_with_the_beat(self) -> None:
+        server = self.floor_server(
+            speech_backend=FakeSpeech(tts_error=TimeoutError("slow"))
+        )
+        event_id = self.say_as_ilse(server, "Never synthesized")
+        self.assertIn(event_id, server._floor_awaiting)
+
+        wait_until(lambda: bool(self.messages("tts_failed")), server.poll)
+        self.assertEqual(server._floor_awaiting, {})
+        self.assertTrue(server._floor_busy())
+        self.now += FLOOR_POST_UTTERANCE_BEAT_SECONDS + 0.01
+        self.assertFalse(server._floor_busy())
+
+    def test_player_speech_never_holds_the_floor(self) -> None:
+        server = self.floor_server(speech_backend=FakeSpeech())
+        player = server.world.characters[server.player_id]
+        apply_action(server.world, player, "say", {"text": "No floor for me"})
+        server.poll()
+
+        self.assertTrue(self.messages("speech"))
+        self.assertEqual(server._floor_awaiting, {})
+        self.assertFalse(server._floor_busy())
+
+
+class PlayerFloorHoldTests(StreamMessageMixin, ServerTestCase):
+    """The player holds the conversation floor while mid-utterance."""
+
+    def hold_server(self, **kwargs) -> SmartActorServer:
+        self.now = 1_000.0
+        server = self.make_server(
+            fake_mode=True,
+            speech_backend=kwargs.pop(
+                "speech_backend", FakeSpeech(transcript="Pardon me")
+            ),
+            clock=lambda: self.now,
+            **kwargs,
+        )
+        self.handshake(server)
+        return server
+
+    def test_streamed_audio_holds_the_floor_and_expires_on_its_own(self) -> None:
+        server = self.hold_server()
+        self.assertFalse(server._floor_busy())
+        self.begin(server, "player-recording-h1.wav", message_id="h1-begin")
+        self.assertTrue(server._floor_busy())
+        # Each chunk re-bumps the rolling deadline while the player speaks.
+        self.now += FLOOR_PLAYER_CHUNK_HOLD_SECONDS - 0.01
+        self.chunk(server, "player-recording-h1.wav", 0, message_id="h1-c0")
+        self.now += FLOOR_PLAYER_CHUNK_HOLD_SECONDS - 0.01
+        self.assertTrue(server._floor_busy())
+        # A dead client just stops bumping; the hold expires with no clear.
+        self.now += 0.02
+        self.assertFalse(server._floor_busy())
+
+    def test_silent_end_releases_the_hold_immediately(self) -> None:
+        server = self.hold_server()
+        self.begin(server, "player-recording-h2.wav", message_id="h2-begin")
+        self.chunk(server, "player-recording-h2.wav", 0, message_id="h2-c0")
+        self.assertTrue(server._floor_busy())
+        self.end(server, "player-recording-h2.wav", 1, message_id="h2-end", silent=True)
+        self.assertFalse(server._floor_busy())
+        self.assertEqual(server._player_hold_until, 0.0)
+
+    def test_abort_releases_the_hold_immediately(self) -> None:
+        server = self.hold_server()
+        self.begin(server, "player-recording-h3.wav", message_id="h3-begin")
+        self.chunk(server, "player-recording-h3.wav", 0, message_id="h3-c0")
+        self.assertTrue(server._floor_busy())
+        self.send(
+            server,
+            "player_audio_abort",
+            {"wav_basename": "player-recording-h3.wav"},
+            "h3-abort",
+        )
+        self.assertFalse(server._floor_busy())
+        # Trailing chunks after the abort must not resurrect the hold.
+        self.chunk(server, "player-recording-h3.wav", 1, message_id="h3-late")
+        self.assertFalse(server._floor_busy())
+
+    def test_completed_transcription_clears_the_hold(self) -> None:
+        server = self.hold_server()
+        wav = Path(self.temp.name) / "player-recording-h4.wav"
+        wav.write_bytes(b"RIFF")
+        self.begin(server, wav.name, message_id="h4-begin")
+        self.chunk(server, wav.name, 0, message_id="h4-c0")
+        self.end(server, wav.name, 1, message_id="h4-end")
+        # Endpoint reached: held while the say is still on its way.
+        self.assertEqual(
+            server._player_hold_until,
+            self.now + FLOOR_PLAYER_ENDPOINT_HOLD_SECONDS,
+        )
+        self.assertTrue(server._floor_busy())
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            server.handle_envelope(
+                envelope(
+                    "player_recording",
+                    player_recording_payload("hold-4", wav.name),
+                    message_id="h4-recording",
+                )
+            )
+        self.assertTrue(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(server._player_hold_until, 0.0)
+        # Player speech never acquires the NPC floor either.
+        self.assertFalse(server._floor_busy())
+
+    def test_batch_transcription_failure_clears_the_hold(self) -> None:
+        server = self.hold_server(
+            speech_backend=FakeSpeech(stt_error=RuntimeError("provider offline"))
+        )
+        wav = Path(self.temp.name) / "player-recording-h5.wav"
+        wav.write_bytes(b"RIFF")
+        server.handle_envelope(
+            envelope(
+                "player_recording",
+                player_recording_payload("hold-5", wav.name),
+                message_id="h5-recording",
+            )
+        )
+        # A batch round-trip can take seconds; the hold covers it.
+        self.assertEqual(
+            server._player_hold_until,
+            self.now + FLOOR_PLAYER_TRANSCRIBING_HOLD_SECONDS,
+        )
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            wait_until(lambda: bool(self.messages("command_result")), server.poll)
+        self.assertFalse(self.messages("command_result")[-1]["payload"]["success"])
+        self.assertEqual(server._player_hold_until, 0.0)
+        self.assertFalse(server._floor_busy())
+
+    def test_npc_reply_finished_during_player_speech_waits_for_the_hold(self) -> None:
+        server = self.hold_server(llm_available=True, turn_delay_seconds=0.0)
+        self.begin(server, "player-recording-h6.wav", message_id="h6-begin")
+        self.chunk(server, "player-recording-h6.wav", 0, message_id="h6-c0")
+        self.assertTrue(server._floor_busy())
+        transcript_before = len(server.world.transcript)
+        # The NPC turn starts and finishes while the player is mid-utterance;
+        # the scheduler holds the finished result instead of applying it.
+        wait_until(lambda: server.scheduler._held_result is not None, server.poll)
+        self.assertEqual(len(server.world.transcript), transcript_before)
+        # Once the player hold expires, the next poll applies the turn.
+        self.now += FLOOR_PLAYER_CHUNK_HOLD_SECONDS + 0.01
+        server.poll()
+        self.assertEqual(len(server.world.transcript), transcript_before + 1)
 
 
 class TranscriptionPriorityTests(ServerTestCase):

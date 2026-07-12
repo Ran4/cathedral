@@ -1,3 +1,5 @@
+// Committed defaults. The game reads the git-ignored `config.ron` first and
+// falls back to this file; in-game settings changes rewrite `config.ron`.
 // Window settings. Set `fullscreen` to false to use a resizable window.
 (
     title: "The Cathedral of Impossible Light",
@@ -12,6 +14,9 @@
         server_script: "prompt_playgound/server.py",
         // NPC voice audio: "local" (streaming Pocket TTS), "cloud" (OpenAI), or "off".
         tts_backend: "local",
+        // Player transcription: "cloud" (OpenAI gpt-4o-transcribe) or "local"
+        // (Canary-Qwen FP16).
+        stt_backend: "cloud",
         // false enables full-duplex capture: NPC audio never pauses the microphone,
         // and microphone activity never interrupts NPC playback.
         pause_microphone_during_npc_voice: true,

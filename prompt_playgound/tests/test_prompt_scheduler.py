@@ -305,6 +305,57 @@ class SchedulerTests(unittest.TestCase):
         wait_until(lambda: len(calls) == 2, scheduler.poll)
         self.assertEqual(calls[1], "Ilse")
 
+    def test_targeted_say_hands_the_next_turn_to_the_addressee(self) -> None:
+        world = build_world()
+        calls: list[str] = []
+
+        def complete(prompt: str) -> str:
+            calls.append(sheet(prompt)["name"])
+            if len(calls) == 1:
+                return 'say {"target": "k0fb1", "text": "Ilse, a word?"}'
+            return 'set_goal {"goal": null}'
+
+        scheduler = NpcScheduler(world, complete, minimum_delay_seconds=0)
+        self.addCleanup(scheduler.close)
+        scheduler.start()
+        wait_until(lambda: len(calls) >= 3, scheduler.poll)
+        # Round-robin alone would have given Conny the second turn.
+        self.assertEqual(calls[:3], ["Sven", "Ilse", "Conny"])
+
+    def test_broadcast_say_leaves_round_robin_order_unchanged(self) -> None:
+        world = build_world()
+        calls: list[str] = []
+
+        def complete(prompt: str) -> str:
+            calls.append(sheet(prompt)["name"])
+            if len(calls) == 1:
+                return 'say {"text": "gather round, everyone"}'
+            return 'set_goal {"goal": null}'
+
+        scheduler = NpcScheduler(world, complete, minimum_delay_seconds=0)
+        self.addCleanup(scheduler.close)
+        scheduler.start()
+        wait_until(lambda: len(calls) >= 3, scheduler.poll)
+        self.assertEqual(calls[:3], ["Sven", "Conny", "Ilse"])
+
+    def test_say_to_the_player_leaves_round_robin_order_unchanged(self) -> None:
+        world = build_world()
+        calls: list[str] = []
+
+        def complete(prompt: str) -> str:
+            calls.append(sheet(prompt)["name"])
+            if len(calls) == 1:
+                return 'say {"target": "player", "text": "hello traveller"}'
+            return 'set_goal {"goal": null}'
+
+        scheduler = NpcScheduler(world, complete, minimum_delay_seconds=0)
+        self.addCleanup(scheduler.close)
+        scheduler.start()
+        wait_until(lambda: len(calls) >= 3, scheduler.poll)
+        # The say must actually have applied, or this test proves nothing.
+        self.assertTrue(any("hello traveller" in line for line in world.transcript))
+        self.assertEqual(calls[:3], ["Sven", "Conny", "Ilse"])
+
     def test_malformed_actions_become_system_events_without_crash(self) -> None:
         world = build_world()
 
@@ -326,6 +377,44 @@ class SchedulerTests(unittest.TestCase):
         sven = world.characters[CharIdStr("sv3n1")]
         self.assertGreaterEqual(len(sven.inbox), 4)
         self.assertTrue(all(event.startswith("system:") for event in sven.inbox))
+
+    def test_busy_floor_holds_a_completed_result_without_new_submissions(
+        self,
+    ) -> None:
+        world = build_world()
+        calls: list[str] = []
+        floor_busy = [True]
+
+        def complete(prompt: str) -> str:
+            calls.append(sheet(prompt)["name"])
+            return 'say {"text": "held until the floor frees"}'
+
+        scheduler = NpcScheduler(
+            world,
+            complete,
+            minimum_delay_seconds=0,
+            floor_busy=lambda: floor_busy[0],
+        )
+        self.addCleanup(scheduler.close)
+        scheduler.start()
+        scheduler.poll()
+        wait_until(lambda: scheduler._held_result is not None, scheduler.poll)
+
+        # Held: nothing was applied, the turn stays in flight, and even with a
+        # zero inter-turn delay no new turn may start behind the held one.
+        for _ in range(5):
+            scheduler.poll()
+        self.assertEqual(calls, ["Sven"])
+        self.assertEqual(world.transcript, [])
+        self.assertEqual(scheduler.in_flight_actor_id, CharIdStr("sv3n1"))
+
+        floor_busy[0] = False
+        scheduler.poll()
+        self.assertIsNone(scheduler._held_result)
+        self.assertEqual(len(world.transcript), 1)
+        self.assertIn("held until the floor frees", world.transcript[0])
+        wait_until(lambda: len(calls) >= 2, scheduler.poll)
+        self.assertEqual(calls[1], "Conny")
 
     def test_provider_failure_uses_backoff_and_preserves_service(self) -> None:
         world = build_world()

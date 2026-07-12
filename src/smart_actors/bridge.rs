@@ -151,6 +151,12 @@ pub enum BridgeCommand {
         speech_event_id: String,
         wav_basename: String,
     },
+    /// Fire-and-forget notice that a speech event's audio presentation reached
+    /// a terminal state (played, skipped, dropped, failed, or cut off). Python
+    /// frees the conversation floor on it; its failsafe covers a lost send.
+    SpeechPresented {
+        speech_event_id: String,
+    },
     SetTtsBackend {
         request_id: String,
         backend: TtsBackend,
@@ -320,6 +326,10 @@ impl BridgeCommand {
                     "speech_event_id": speech_event_id,
                     "wav_basename": wav_basename,
                 }),
+            ),
+            Self::SpeechPresented { speech_event_id } => (
+                "speech_presented",
+                json!({"speech_event_id": speech_event_id}),
             ),
             Self::SetTtsBackend {
                 request_id,
@@ -1409,6 +1419,16 @@ mod tests {
     }
 
     #[test]
+    fn speech_presented_command_has_the_strict_wire_shape() {
+        let (message_type, payload) = BridgeCommand::SpeechPresented {
+            speech_event_id: "speech-7".into(),
+        }
+        .wire_parts();
+        assert_eq!(message_type, "speech_presented");
+        assert_eq!(payload, serde_json::json!({"speech_event_id": "speech-7"}));
+    }
+
+    #[test]
     fn tts_selection_command_has_the_strict_wire_shape() {
         let (message_type, payload) = BridgeCommand::SetTtsBackend {
             request_id: "tts-mode-1".into(),
@@ -1618,6 +1638,18 @@ mod tests {
             if let Some(BridgeEvent::Message(envelope)) = inbox.try_recv() {
                 if envelope.message_type == "speech" && envelope.payload["speaker_id"] == "k0fb1" {
                     reply_seen = true;
+                    // Act as the presentation layer: retire the utterance so
+                    // the conversation floor frees for Ilse's next turn well
+                    // inside this test's deadlines.
+                    let event_id = envelope.payload["event_id"]
+                        .as_str()
+                        .expect("speech events carry an event_id")
+                        .to_owned();
+                    handle
+                        .try_send(BridgeCommand::SpeechPresented {
+                            speech_event_id: event_id,
+                        })
+                        .unwrap();
                 }
                 if envelope.message_type == "command_result"
                     && envelope.payload["request_id"] == "ask-name"

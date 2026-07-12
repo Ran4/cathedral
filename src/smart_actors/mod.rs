@@ -4,6 +4,7 @@ pub mod actors;
 pub mod bridge;
 pub mod model;
 
+mod config_menu;
 mod hud;
 mod interaction;
 mod microphone;
@@ -14,9 +15,10 @@ use bevy::audio::AddAudioSource;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::transform::TransformSystems;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+pub use config_menu::ConfigMenuState;
 pub use targeting::ActorFocus;
 
 pub const HEARING_RADIUS_M: f32 = 20.0;
@@ -26,7 +28,7 @@ pub const PLAYER_SPEECH_MAX_CHARS: usize = 500;
 pub const POSITION_UPDATE_HZ: f32 = 10.0;
 
 /// Non-secret client-side sidecar settings loaded from `config.ron`.
-#[derive(Resource, Debug, Clone, Deserialize)]
+#[derive(Resource, Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SmartActorsConfig {
     pub enabled: bool,
@@ -34,6 +36,9 @@ pub struct SmartActorsConfig {
     pub uv_binary: String,
     pub server_script: String,
     pub tts_backend: String,
+    /// Player transcription at startup: "cloud" (OpenAI) or "local"
+    /// (Canary-Qwen FP16).
+    pub stt_backend: String,
     pub pause_microphone_during_npc_voice: bool,
     /// Stream cloud transcription audio while the player is still speaking.
     pub stt_streaming: bool,
@@ -50,9 +55,20 @@ impl Default for SmartActorsConfig {
             uv_binary: "uv".into(),
             server_script: "prompt_playgound/server.py".into(),
             tts_backend: "local".into(),
+            stt_backend: "cloud".into(),
             pause_microphone_during_npc_voice: true,
             stt_streaming: true,
             stt_trailing_silence_ms: 500,
+        }
+    }
+}
+
+impl SmartActorsConfig {
+    fn initial_stt_backend(&self) -> bridge::TranscriptionBackend {
+        if self.stt_backend.eq_ignore_ascii_case("local") {
+            bridge::TranscriptionBackend::Local
+        } else {
+            bridge::TranscriptionBackend::Cloud
         }
     }
 }
@@ -86,6 +102,9 @@ pub struct SmartActorRuntime {
     pub tts_local_available: bool,
     pub tts_selected: bridge::TtsBackend,
     tts_selection_pending: Option<(String, bridge::TtsBackend)>,
+    /// A user-requested backend change was confirmed and awaits persistence
+    /// to `config.ron`.
+    tts_selection_dirty: bool,
     next_tts_request: u64,
     pub fake_backend: bool,
     pub mirror_revision: Option<u64>,
@@ -105,6 +124,7 @@ impl SmartActorRuntime {
             tts_local_available: false,
             tts_selected: bridge::TtsBackend::Off,
             tts_selection_pending: None,
+            tts_selection_dirty: false,
             next_tts_request: 0,
             fake_backend,
             mirror_revision: None,
@@ -134,6 +154,21 @@ impl Plugin for SmartActorsPlugin {
         }
         app.init_resource::<hud::SmartActorHudState>()
             .add_systems(Startup, hud::spawn_smart_actor_hud);
+
+        // The Esc settings menu exists even when smart actors are disabled;
+        // its rows then report the disabled state instead of toggling.
+        app.init_resource::<config_menu::ConfigMenuState>()
+            .add_systems(Startup, config_menu::spawn_config_menu)
+            .add_systems(
+                Update,
+                (
+                    config_menu::toggle_config_menu,
+                    config_menu::handle_config_menu_buttons,
+                    config_menu::persist_backend_selections,
+                    config_menu::update_config_menu,
+                )
+                    .chain(),
+            );
 
         if !self.config.enabled {
             let mut hud = hud::SmartActorHudState::default();
@@ -172,7 +207,9 @@ impl Plugin for SmartActorsPlugin {
             .init_resource::<ActorFocus>()
             .init_resource::<interaction::InteractionState>()
             .init_resource::<interaction::PlayerSpatialState>()
-            .init_resource::<interaction::MicrophoneInputState>()
+            .insert_resource(interaction::MicrophoneInputState::with_backend(
+                self.config.initial_stt_backend(),
+            ))
             .init_resource::<speech::SpeechPresentationState>()
             .add_message::<interaction::PlayerIntent>()
             .add_message::<InjectPlayerTranscript>()
@@ -681,6 +718,7 @@ fn process_server_message(
                             .expect("pending selection was checked");
                         if result.success {
                             runtime.tts_selected = requested;
+                            runtime.tts_selection_dirty = true;
                             hud.set_npc_voice_backend(requested);
                             hud.toast(format!(
                                 "NPC voices: {}",
@@ -937,6 +975,18 @@ fn update_tts_backend_toggle(
     if !keyboard.just_pressed(KeyCode::KeyX) {
         return;
     }
+    let backend = next_tts_backend(&runtime);
+    request_tts_backend(&mut runtime, &handle, &mut hud, backend);
+}
+
+/// Validated NPC-voice switch shared by the X key and the settings menu. The
+/// selection only commits (and persists) once the sidecar confirms it.
+fn request_tts_backend(
+    runtime: &mut SmartActorRuntime,
+    handle: &bridge::BridgeHandle,
+    hud: &mut hud::SmartActorHudState,
+    backend: bridge::TtsBackend,
+) {
     if !runtime.interactions_enabled() {
         hud.toast("NPC voice selection is unavailable while actors are offline");
         return;
@@ -945,7 +995,21 @@ fn update_tts_backend_toggle(
         hud.toast("NPC voice selection is still changing");
         return;
     }
-    let backend = next_tts_backend(&runtime);
+    let available = match backend {
+        bridge::TtsBackend::Cloud => runtime.tts_cloud_available,
+        bridge::TtsBackend::Local => runtime.tts_local_available,
+        bridge::TtsBackend::Off => true,
+    };
+    if !available {
+        hud.toast(format!(
+            "{} NPC voices are not available",
+            backend.wire_name().to_uppercase()
+        ));
+        return;
+    }
+    if runtime.tts_selected == backend {
+        return;
+    }
     runtime.next_tts_request = runtime.next_tts_request.wrapping_add(1).max(1);
     let request_id = format!("tts-mode-{}", runtime.next_tts_request);
     match handle.try_send(bridge::BridgeCommand::SetTtsBackend {

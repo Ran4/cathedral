@@ -78,9 +78,13 @@ class FakeEndToEndTests(unittest.TestCase):
                     message_id="ask-coin-msg",
                 )
             )
+            # Ilse's spoken answer holds the conversation floor for its
+            # reading estimate (~4.2 s here, TTS is off), so her offering turn
+            # legitimately applies only after that pacing window.
             wait_until(
                 lambda: CharIdStr("c0prs") in server.world.offers,
                 server.poll,
+                timeout=8.0,
             )
             offer = server.world.offers[CharIdStr("c0prs")]
             self.assertEqual(offer.giver_id, CharIdStr("k0fb1"))
