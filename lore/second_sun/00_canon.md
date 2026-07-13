@@ -18,7 +18,7 @@ This bible is the source of truth for roughly twenty sibling documents — depos
 
 ## 1. Names
 
-**The city: OMBREVAL** — a free fortified city of roughly 1.2 × 1.0 km on the canalized river **Serle**. Chroniclers relish the irony that a city named for shadow became famous for light. Years count from the **Fabric era** (F.1 = the cathedral's first stone); the present year is **F.437**.
+**The city: OMBREVAL** — a free fortified city of roughly 1.2 × 1.0 km beside the river **Serle**, which runs beyond the south wall. Chroniclers relish the irony that a city named for shadow became famous for light. Years count from the **Fabric era** (F.1 = the cathedral's first stone); the present year is **F.437**.
 
 **The cathedral:** formally the **Great Church of Saint Ambrelle**; everyone calls it **the Lanthorn**. Its west front carries the **Great Rose**, whose central round light is **the eye**; its ceremonial forecourt is **the Gradine**, named for its shallow processional steps.
 
@@ -44,17 +44,17 @@ This bible is the source of truth for roughly twenty sibling documents — depos
 
 1. **The Wickmarket** (west) — chandlers, wax, tallow; Osanne Vell's stall.
 2. **Coswald's Yard** (north) — stone, timber, the masons' lodge.
-3. **The Tallage** (on the canal) — customs square for Serle tolls; pawnshops; the Tally Bridge.
-4. **Maren's Green** (downstream) — fish market, boatmen, eel smoke.
+3. **The Tallage** (on the dry Cut) — customs square for Serle tolls; pawnshops; the Tally Bridge.
+4. **Maren's Green** (south-east) — fish market, boat-families, eel smoke.
 5. **The Bellstand** (east) — proclamation square under the old watch-bell tower; edicts cried and posted here.
 
 (The Gradine is ceremonial ground, counted apart from the five.)
 
-**The canal:** the **Serle**; its straightened city stretch is **the Cut**. Waters keep their pre-Fabric names; nobody renames water.
+**The river and Cut:** the **Serle** runs outside the south wall. Its former straightened city stretch is **the Cut**, closed and filled in F.363–369 and now a trade street. Waters keep their pre-Fabric names; nobody renames water, and dry places often keep the names water left them.
 
 **Secondary churches:**
 
-- **Saint Maren of the Reeds** — boatmen's and paupers' church on the Cut; its crypt floods at high water; on the lintel of its **charnel door** the sexton chalks each buried soul's name, leaving it until the next burial.
+- **Saint Maren of the Reeds** — boatmen's and paupers' church on the old Cut; on the lintel of its churchyard **charnel door** the sexton chalks each buried soul's name, leaving it until the next burial.
 - **The Ilvane Chapel** — deconsecrated in F.290, its doors mortared shut by the Custody: officially "structurally unsound," actually shut because the Twice-Shadowed drew the wrong kind of pilgrim. One thing could not be mortared: the **anchorhold** in its north wall, occupied without a break since F.211 — canon law forbids walling up a living anchoress, so the Custody bricked the chapel around her and left the squint on the lane. The present anchoress is Dame Aldith (§7).
 
 **Streets and passages that matter:**
@@ -63,7 +63,7 @@ This bible is the source of truth for roughly twenty sibling documents — depos
 - **The Draper's Reach** — covered gallery of the cloth halls; secondary meeting site (roof space).
 - **Cinder Row** — the glaziers' street, rebuilt after the fire of F.171; workshops of the Sparr line.
 - **The Needle** — the narrowest pinch in the city, shoulder-wide; proverbial ("past the Needle" = beyond saving); where the cell chalks its signs.
-- **The Tally Bridge** — canal bridge at the Tallage; Lise Copp's pawnshop faces it.
+- **The Tally Bridge** — two-arched stone overhead bridge across the dry Cut at the Tallage; Lise Copp's pawnshop faces it.
 
 **Naming conventions (for minting new names):**
 
@@ -82,7 +82,7 @@ Every rule below is a visual fact the render layer enforces; witnesses may descr
 2. **It is the Rose, not the pane.** A pane taken from the rose and held to open sky shows nothing; replica glass shows nothing anywhere; but **new plain glass leaded into the rose shows it perfectly**. It needs glass, and it needs *that window*. (Proven, suppressed, load-bearing: it acquitted the glaziers in F.288, refutes the heretics' fondest doctrine, and almost no one living knows it.)
 3. **The wrong color.** A cold **green-white — the color of dawn seen through river ice**. Wrong three ways. First, what witnesses always name: it does not take the color of the pane it shines through — through a red pane the clouds redden and the disc stays green-white; every light in the world obeys the glass but this one. Second, its color belongs to no hour of any honest sky. Third, **you can look straight at it without pain** — the true sun punishes the eye; this one permits it, and the permission unsettles people most.
 4. **Its light indoors.** It casts its own beams into the nave at angles that contradict the true sun's, in that same unglazed green-white. Persons and pillars cast **two shadows**: one warm and true, one faint, cold, differently aimed — the **grave-shadow**. Where its beam crosses a true sunbeam, the two pools overlap **without mixing**, each shadow keeping its edge and color inside the other's light. Its beams carry no warmth: wax does not soften in them.
-5. **Step outside** and it is gone — one sun, one shadow, always. Nothing of it reflects on the Cut or survives in a mirror carried out the door. A flying observer over the rooftops finds one sun and nothing else, forever.
+5. **Step outside** and it is gone — one sun, one shadow, always. Nothing of it reflects in the Serle beyond the walls, in a rain-barrel, or in a mirror carried out the door. A flying observer over the rooftops finds one sun and nothing else, forever.
 6. **No parallax.** The true sun shifts from pane to pane as a walker crosses the nave. The second sun does not: at any instant it stands **in the same pane for every eye in the building**, as if it were *in* the glass — yet its rays sweep the floor with the hour. This is the measurement that broke the scholars.
 7. **Motion.** It moves **against** the true sun — the **countergait**. At clear dawn, while the true sun rises at the city's back, the disc stands low and huge in the western rose: the daily **dawn-showing**, the most crowded viewing. Through the day it climbs the lights against the sun's course. In late afternoon, when the true sun comes round into the west, the two share the window — the **strong hour** — and once each day they pass: **the Passing** (folk: **the Kiss**), crossed rays laying an X of light down the nave. The crossing point walks through the year. It keeps the sun's hours exactly: appearing with dawn, fading with the last light, never seen at night.
 8. **The Concurrence.** On one fixed day a year (§8), the Passing falls dead center in the eye as seen from the crossing floor, and for a handful of minutes the two lights superpose: every doubled shadow in the nave **fuses into one**. It needs the true sun: under a **clouded Concurrence** the pale disc burns alone through the overcast, there is nothing for its shadow to fuse *with*, and the feast simply fails — the city takes it hard.
@@ -150,8 +150,9 @@ Developer flight changes nothing: outside there is nothing to find; inside, it i
 - **F.288 — THE GLAZIERS' TRIAL.** The masons' lodge, aggrieved by the glaziers' pilgrim income and the cathedral's dedication to Saint Ambrelle, formally accuses the glaziers' guild of *sorcerous glass*. Before the Praelucent's court a rose pane is replaced with plain new glass: **the Emblem persists in the new pane.** Verdict: *no art of man* — never published. Three journeymen had already been broken at the Question; the guild pays a "peace fine" for a disproven crime; the record is sealed. The glaziers never forgive the masons; the masons never forgive the verdict they were never shown.
 - **F.289** — The **Custody of the Eye** founded to hold the sealed record and prevent the next trial. It has been preventing, and accumulating, ever since. The **Praelucent's Attestation** (§6) is instituted the same year.
 - **F.290** — The Ilvane Chapel shut; the anchorhold's squint stays open, because it must.
-- **F.301 — ORIGIN OF "WALLED OUT OF THE SKY."** During the raising of the west towers, a mason's laborer named **Colm Attergate** preaches in the Bellstand that the towers are coffin lids and the Church is "walling a sun out of the sky, course by course." Banished; drowns at the Serle sluice trying to return by water. Folk make him a martyr; the heresy dates itself from him; the phrase is his. (The Alder boat-family keeps the true drowning place a trade secret from pilgrims.)
+- **F.301 — ORIGIN OF "WALLED OUT OF THE SKY."** During the raising of the west towers, a mason's laborer named **Colm Attergate** preaches in the Bellstand that the towers are coffin lids and the Church is "walling a sun out of the sky, course by course." Banished; drowns at the Serle sluice trying to return by water, while the Cut still ran. Folk make him a martyr; the heresy dates itself from him; the phrase is his. (The Alder boat-family keeps the true arch of the now-dry Old Sluice a trade secret from pilgrims.)
 - **F.362** — **The Great Rains**: three weeks of overcast; the only sunlight in the city stands in the nave. Publicly the Church's finest hour ("the Light kept faith"); privately its ugliest: forty arrests for saying the green sun fed the city when the true one failed.
+- **F.363–369** — The Great Rains' damage settles the old argument over the Cut. The city closes and fills it and turns navigation into the Serle's present bed outside the south wall. The old bridge, yard, and sluice names survive on dry ground.
 - **F.398** — The Fabric declared complete after 398 years; the north tower crown stands scaffolded to this day.
 
 **Living memory (NPCs remember these):**
@@ -179,7 +180,7 @@ Developer flight changes nothing: outside there is nothing to find; inside, it i
 
 All of it is short, phonetically plain, kind to speech-to-text; a leaked name alone opens nothing, and a leaked counter-sign without the fresh name opens nothing either.
 
-**Signals.** A small **glazier's diamond chalked at the midpoint of the Needle**: high, meeting at Gaunt Passage; low, the Draper's Reach; doorside, Saint Maren's crypt at low water; **struck through — a "cracked pane"** — pass and counter-sign burned, scatter, the next pair travels lead to lead.
+**Signals.** A small **glazier's diamond chalked at the midpoint of the Needle**: high, meeting at Gaunt Passage; low, the Draper's Reach; doorside, Saint Maren's crypt after a burial; **struck through — a "cracked pane"** — pass and counter-sign burned, scatter, the next pair travels lead to lead.
 
 **A wrong whisper.** No knives, ever. The grate stays silent a breath too long; then Grigor Ashe answers, perfectly mundane: *"We're closed, friend — the salt's weighed at Lowmarket."* The meeting drains out the far end and becomes people sheltering from weather. But the Wicket has marked your face. A second wrong whisper gets you *fed*: a false name, a false time, an empty cellar — and, the darker rumor says, an unsigned note reaches the Custody. The Unwalled do not kill; they inform on their enemies to their enemies, which in Ombreval is worse.
 
@@ -265,7 +266,7 @@ Role — temperament — stance — one secret. Later documents expand, never co
 13. **Moth** — a paid Custody informant. **Dry money** — laundered informant pay. **Badge-money** — revenue from licensed pilgrim badges.
 14. **The Unwalled / Colmites / the Greensick** — the heresy's own, official, and street names. **Neighbor** — what members call one another.
 15. **Light** — a heretic cell of three. **Lead** — a member's sole contact. **The Tracer** — the hidden head. **The Wicket** — the doorkeeper. **The Namekeeper** — keeper of the bede-roll.
-16. **The charnel door** — Saint Maren's riverside door; its chalked lintel carries the newest buried name — the living pass.
+16. **The charnel door** — Saint Maren's churchyard door; its chalked lintel carries the newest buried name — the living pass.
 17. **The name-knell** — Maren Smallvoice's burial toll, one stroke per year of the life.
 18. **The counter-sign** — the quarterly second pass: saint's possessive plus terse image ("Belwyn's, unlit"). **Cracked pane** — the struck-through chalk diamond: pass and sign burned, scatter.
 19. **Sky-drawing / the Green Almanac** — the cell's spoken observation rite, and the cloth chart it fills.
@@ -301,7 +302,7 @@ Canonical statements for the rumor system and NPC prompt injection. **T** = TRUE
 | 17 | It has been seen at night, in the wrong place, during lightning. | A | No two witnesses agree; never confirm. |
 | 18 | Idonea Sparr wept at her finished rose, said she had made two of something there was one of, and never fired glass again. | T | Chronicle of F.203. |
 | 19 | The last page of the Sparr deposition exists and names what she saw. | A | Missing from the Grey Press itself; forever. |
-| 20 | Colm Attergate coined "walled out of the sky" and drowned at the Serle sluice. | T | Bellstand record, F.301. |
+| 20 | Colm Attergate coined "walled out of the sky" and drowned at the Serle sluice while the Cut still ran. | T | Bellstand record, F.301. |
 | 21 | *Colm's Last Letter*, the cell's relic, is genuine. | F | Corin Copp forged it — seeded from a real page whose nature is A. |
 | 22 | The heretics' Concurrence arithmetic beat the official almanac in F.431. | T | The Almanac Shame; Rasp corrected it anonymously. |
 | 23 | The Custody's secret sky-charts match the heretics' Green Almanac. | T | Rasp has seen the match; no one else living has. |

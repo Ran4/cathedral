@@ -30,7 +30,7 @@ Ranges are 3D radii, no occlusion, matching the hearing model (design/02 §1); t
 | Great toll | **Great Ambrelle, called Gravemouth** | Bellday's great mass; the great dead | Calendar; death of rank | citywide | "Gravemouth tolling, slow, unnumbered" |
 | The Ruin | the ring, backward, greatest first | Fire or flood. Drop everything | Calamity event (dev-triggered only, §7) | citywide | "the ring rung backward — the Ruin" (at onset) |
 | Alarm | **Coswald Ironthroat** | A local fire or breach; help to one quarter | Calamity event, local | citywide | "Ironthroat ringing fast from the Lanthorn" (at onset) |
-| Fog and flood | **Vhairé Farcall** | Fog on the Cut; the Serle rising | Weather state | 600 m along the water | "Farcall in the fog" / "Farcall — the river is rising" |
+| Fog and flood | **Vhairé Farcall** | A report from the off-map Serle wharves: river fog or rising water | Weather state | citywide, strongest in the south wards | "Farcall for the outer wharves" / "Farcall — the river beyond the wall is rising" |
 | The court | **Gaudry Truetongue** | The Praelucent's court; Gradine recantations | Court event | 400 m | "Truetongue: the court is sitting" |
 | The name-knell | **Maren Smallvoice** (Saint Maren's) | A funeral; one slow stroke per year of the life | Burial transaction (design/04 §3) | 300 m | "the name-knell from Saint Maren's: N strokes" (at completion) |
 | Curfew | **The Scold** (Bellstand) | The Snuffing curfew, in law | Sim clock, after the seventh office | 500 m | "the Scold ringing curfew" |
@@ -57,7 +57,7 @@ Ranges are 3D radii, no occlusion, matching the hearing model (design/02 §1); t
 
 **The Scold.** Its curfew ring is the *legal* Snuffing, following Evenblow's seventh office — the office is prayer, the Scold is law, and the minutes between them are the city's dusk grace **[spec decision]**. Its summons pattern precedes every crying and Gradine proclamation.
 
-**Farcall.** Long intervals through fog so boats find the Tallage; a faster pattern when the Serle rises. A hook for free: high water floods Saint Maren's crypt (§1), the cell's doorside meeting site — Farcall's flood pattern *is* the audible "crypt meetings off" signal to anyone who knows the diamond code, with no extra machinery.
+**Farcall.** Long intervals report fog at the off-map Serle wharves; a faster pattern reports rising water beyond the south wall. Boat crews use it outside the playable city, while citizens hear only a material warning about delayed freight and prices. It never changes Saint Maren's crypt or any in-city geometry, and its playback must not imply an accessible canal.
 
 ## 4. The human layer
 

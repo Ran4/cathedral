@@ -90,16 +90,16 @@ repairs.
 
 ### The Church of Saint Maren of the Reeds
 
-**Saint Maren of the Reeds** stands at the water's edge by Maren's Green. It was
-consecrated in F.97 for boatmen and the poor. Its crypt lies low and floods at
-high water.
+**Saint Maren of the Reeds** stands on the old Cut by Maren's Green. It was
+consecrated in F.97 for boatmen and the poor, when the channel still ran. The
+crypt lies low, but has stood dry since the Serle was diverted beyond the walls.
 
-Its riverside **charnel door** has a lintel on which the sexton chalks the given
+Its churchyard **charnel door** has a lintel on which the sexton chalks the given
 name of each newly buried soul, leaving it until the next burial. This custom
 began after a flood disordered the dead in F.323. The passing-bell **Maren
 Smallvoice** rings the **name-knell**, one slow stroke for every year of the
-dead person's life. The church is a parish, burial place, riverside refuge,
-boatmen's landmark, and institution of poor relief—not merely a satellite of
+dead person's life. The church is a parish, burial place, boat-families'
+landmark, and institution of poor relief—not merely a satellite of
 the cathedral plot.
 
 ### The Ilvane Chapel and anchorhold

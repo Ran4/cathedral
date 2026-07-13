@@ -38,7 +38,7 @@ TRUE · origin: the Long Book · carriers: old men, ringers, storm-watchers · d
 Drift: "the disc drank the lightning" → "storms come to Ombreval because of it."
 
 **R-008** — "There's boatmen swear that in a night storm they've seen it standing in the open sky, in the wrong place, for the length of a flash."
-AMBIGUOUS-BY-DESIGN · origin: boat-folk of the Cut; no two accounts agree · carriers: boatmen, drinkers · danger: an open-sky claim contradicts doctrine wholesale; the Unwalled listen hungrily.
+AMBIGUOUS-BY-DESIGN · origin: boat-folk working the Serle beyond the south wall; no two accounts agree · carriers: boatmen, drinkers · danger: an open-sky claim contradicts doctrine wholesale; the Unwalled listen hungrily.
 Drift: "it stood over where the martyr drowned" → "it comes out at night to look for Colm."
 
 **R-009** — "When a pane's out, the hole shows plain sky. It doesn't come through the gap. Every man who's seen that goes quiet after."
@@ -123,7 +123,7 @@ Drift: "it's the crier himself" (true, and laughed off) → "it's whoever asks w
 
 **R-026** — "Cross the Greensick and they'll cut your throat in a covered passage. They've done it before."
 FALSE-BUT-BELIEVED · origin: Renna Tapster, warning young fools sincerely · carriers: taverners, mothers, watchmen · danger: none to the speaker; it is the cell's best armor, and false.
-Drift: "they weight the bodies into the Cut" → "they drowned Colm themselves, to make a martyr."
+Drift: "they cart the bodies through the river gate" → "they drowned Colm themselves, to make a martyr."
 
 **R-027** — "Whisper wrong at their door twice and it's worse than knives. A note goes to the grey coats with your name on it. Unsigned."
 AMBIGUOUS-BY-DESIGN (the cell neither confirms nor forbids) · origin: unknown; possibly the cell, as deterrent · carriers: the fearful and the knowing · danger: knowing this much about their doors is itself a question — who told you?
@@ -137,8 +137,8 @@ Drift: "the old folk remember it" (none ever did) → "the Church stole the warm
 FALSE-BUT-BELIEVED · origin: Unwalled doctrine, generations old · carriers: neighbors, romantics, one glazier's apprentice · danger: heresy dressed as shop-lore; customers ask glaziers to "wake" old panes.
 Drift: "a bottle from Colm's day shows a green spark at dawn" → "the Sparrs fire memory into glass to this day" (see R-035).
 
-**R-030** — "Colm Attergate drowned at the Serle sluice, coming home by night against his banishment. The water knows the spot, and the Alders know the water."
-TRUE · origin: the Long Book and boat-folk memory; an Alder hooked him out · carriers: boatmen, pilgrims shown a spot close enough for a penny, the cell like scripture · danger: reverence dressed in awe is citable Attergate talk.
+**R-030** — "Colm Attergate drowned at the Serle sluice, coming home by night against his banishment, when the Cut still ran. The dry gate keeps the place, and the Alders know the arch."
+TRUE · origin: the Long Book and boat-folk memory; an Alder hooked him out · carriers: boatmen, pilgrims shown an arch close enough for a penny, the cell like scripture · danger: reverence dressed in awe is citable Attergate talk.
 Drift: "he preached from the water as he went down" → "he never drowned — he walled himself into the tower he built."
 
 **R-031** — "The Greensick keep his last letter, in his own hand, wet from the night he drowned."
@@ -231,8 +231,8 @@ Drift: "the page is behind the anchoress's wall" → "there are twelve last page
 
 ## Sampling Notes for the Sidecar
 
-**Per district.** Weight by where the NPC stands or trades. *Lanthorn and Gradine:* I, II, VI heavy; R-016/R-017 from any cleric; never IV from clergy except R-026 as warning. *Wickmarket:* I and VI, plus R-004. *Coswald's Yard:* V heavy — R-035 and R-037 are identity; II at brawl pitch near Coswaldstide. *Cinder Row:* R-002/R-036/R-037 with pride, R-029/R-038 with fury. *Tallage and Tally Bridge:* III heavy — R-024, R-048 — plus VII; Lise Copp repeats nothing. *Maren's Green and the Cut:* R-008, R-022, R-030, R-040, R-042, boat-folk versions throughout. *Bellstand and the Bell and Ladle:* everything, one hop noisier — the tavern is the pool's mixing vessel; Renna carries R-010, R-026, R-046; Brant carries R-005 and R-040, and unknowingly reports what he hears.
+**Per district.** Weight by where the NPC stands or trades. *Lanthorn and Gradine:* I, II, VI heavy; R-016/R-017 from any cleric; never IV from clergy except R-026 as warning. *Wickmarket:* I and VI, plus R-004. *Coswald's Yard:* V heavy — R-035 and R-037 are identity; II at brawl pitch near Coswaldstide. *Cinder Row:* R-002/R-036/R-037 with pride, R-029/R-038 with fury. *Tallage and Tally Bridge:* III heavy — R-024, R-048 — plus VII; Lise Copp repeats nothing. *Maren's Green and the dry Cut:* R-008, R-022, R-030, R-040, R-042, boat-folk versions throughout. *Bellstand and the Bell and Ladle:* everything, one hop noisier — the tavern is the pool's mixing vessel; Renna carries R-010, R-026, R-046; Brant carries R-005 and R-040, and unknowingly reports what he hears.
 
 **Per stance.** *Clergy:* only R-016/R-017 plus II as worry, and R-026 as a warning; correct forbidden vocabulary in others. *Grey clerks:* repeat nothing, recognize everything; a citizen voicing R-015, R-019, R-021, R-023, or R-028 within twenty meters is remembered and reported. *Sworn Unwalled:* hold R-028 through R-032 as faith, deny them to strangers; go quiet or hostile at R-015, R-023, R-027, or name-guessing on R-032. *Masons:* R-035 sincere; *glaziers:* R-036/R-037 sincere; each calls the other's rumor slander. *Folk believers:* VI entire, plus R-001 through R-005 with wonder. *Children:* R-003, R-030, R-041, R-045, and the Colm rhyme; children speak freely — nobody cites a child, and everyone forgets they are inside the twenty meters.
 
-**Mechanics.** (1) Truth values bind the simulation, not the speaker: every carrier speaks sincerely, including FALSE-BUT-BELIEVED. (2) Never resolve AMBIGUOUS-BY-DESIGN entries — no NPC, however senior, may confirm or deny R-008, R-010, R-016, R-027, R-039, R-040 through R-043, or R-048. R-011 is OPEN, not ambiguous: no NPC may confirm or deny it before the Chapter's decision event fires; once it fires, the doors question resolves like any other fact. (3) Pick the drift hop by social distance from the origin: the origin's district speaks the root; adjacent districts hop one; the far bank hops two. (4) R-019 and R-021 are LOCKED: never sample by default; only a designer trigger (Pike drunk and pressed, a stolen Attestation leaf in play) may voice them. (5) Danger runs through the live microphone: anything the player repeats within twenty meters of the wrong hearer takes the consequence in that entry's danger field, and moths pass along what they hear whether they understand it or not.
+**Mechanics.** (1) Truth values bind the simulation, not the speaker: every carrier speaks sincerely, including FALSE-BUT-BELIEVED. (2) Never resolve AMBIGUOUS-BY-DESIGN entries — no NPC, however senior, may confirm or deny R-008, R-010, R-016, R-027, R-039, R-040 through R-043, or R-048. R-011 is OPEN, not ambiguous: no NPC may confirm or deny it before the Chapter's decision event fires; once it fires, the doors question resolves like any other fact. (3) Pick the drift hop by social distance from the origin: the origin's district speaks the root; adjacent districts hop one; two or more districts away hops two. (4) R-019 and R-021 are LOCKED: never sample by default; only a designer trigger (Pike drunk and pressed, a stolen Attestation leaf in play) may voice them. (5) Danger runs through the live microphone: anything the player repeats within twenty meters of the wrong hearer takes the consequence in that entry's danger field, and moths pass along what they hear whether they understand it or not.

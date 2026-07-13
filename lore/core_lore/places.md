@@ -12,8 +12,8 @@ always counted separately from them.
 |---|---|---|
 | **The Wickmarket** | West; chandlers' market | Wax, tallow, wicks, honey, hot fat, candle stalls, and the lamplighters' trade. |
 | **Coswald's Yard** | North | Stone, timber, lime, scaffolding, and the masons' lodge. Guild pride and old grievances are aired loudly here. |
-| **The Tallage** | On the Cut | Customs square: toll-house, weigh-beams, chained standards, pawnshops, and the Tally Bridge. It is a place of clerks, freight, valuation, and careful faces. |
-| **Maren's Green** | Downstream, south-east | Fish market, eel smoke, boatmen, the Alder moorings, and the church of Saint Maren at the water's edge. |
+| **The Tallage** | On the dry Cut | Customs square: toll-house, weigh-beams, chained standards, pawnshops, and the Tally Bridge. Serle freight comes here by cart and porter from the wharves outside the south wall. It is a place of clerks, freight, valuation, and careful faces. |
+| **Maren's Green** | South-east | Fish market, eel smoke, boat-families, the Alder Moorings yard, and the church of Saint Maren. |
 | **The Bellstand** | East, behind the Lanthorn's east end | Proclamation square beneath the old watch-bell tower. Edicts are cried and posted here; crowds are summoned by the Scold. |
 
 ### The Gradine
@@ -33,13 +33,16 @@ These names are already attached to places and should be reused consistently.
 - **The Lanthorn**: the common name of the Great Church of Saint Ambrelle.
 - **The Great Rose**: the monumental rose window in the Lanthorn's west front.
 - **The eye**: the Rose's central round light.
-- **The Cut**: the straightened city reach of the Serle.
-- **The Tally Bridge**: a stone bridge of two arches at the Tallage, with the
-  toll-chain below it.
-- **The Eel Bridge**: a low timber footbridge at Maren's Green. Pedestrians must
-  wait when a laden barge passes beneath.
-- **The sluice**: where the Cut leaves beneath the east water-wall.
-- **The Alder moorings**: the boat-family's moorings at Maren's Green.
+- **The Cut**: the filled former city reach of the Serle, now an unusually
+  straight trade street and district.
+- **The Tally Bridge**: a stone overhead bridge of two arches across the Cut at
+  the Tallage, joining the toll-house to its bonded warehouse.
+- **The Eel Bridge**: a low timber gallery bridge above the fish-market lane at
+  Maren's Green. Laden carts make pedestrians wait at its narrow stair.
+- **The Old Sluice**: the dry stone gatehouse at the east end of the former Cut,
+  where Colm drowned while the channel still ran.
+- **The Alder Moorings**: the boat-family's warehouse court at Maren's Green;
+  the river left, but the yard kept its name.
 
 ### Streets, passages, courts, and halls
 
@@ -72,4 +75,5 @@ kind is preserved:
 - **Maren's Slip** — a saint-name attached to a walkway
 - **Crookneck Lane** and **Eelback Alley** — names from street shape.
 - **Malt Passage** — a passage beneath a malt-house at Coswald's Yard.
-- **The Chain Bridge** — a working bridge name associated with a harbour chain.
+- **The Chain Bridge** — a working bridge name inherited from the former harbour
+  chain-house.

@@ -86,7 +86,7 @@ Under the Edict you will not say that the cold shadow and the Emblem are one mat
 
 ## VI. Ring III - the two-and-thirty small lights
 
-Three arcs: the Months (III-1 to III-12), the Trades (III-13 to III-24), the Waters (III-25 to III-32). Quarry-work, white and yellow-stain, coloured as noted.
+Three arcs: the Months (III-1 to III-12), the Trades (III-13 to III-24), the Waters (III-25 to III-32). Quarry-work, white and yellow-stain, coloured as noted. The Waters were made while the Cut still carried the Serle; their wharf, bridge, channel, sluice, and high water are now historical images of dry city places.
 
 | Light | Shows | Colour | Careful eye |
 |---|---|---|---|

@@ -173,7 +173,7 @@ Curses, mild to mortal: **"May the Orphan ring you in."** **"May your shadow go 
 > *sing low by the sluice, boys, and pole for the sun —*
 > *the water knows one, boys, the water knows one.*
 
-*Every verse is chronicle-true: Saint Maren upstream; the ox of F.229; the sturgeon of F.271, whose roe the boatmen kept and lie about in the song itself; the Cut's one reflected sun; and Colm at the sluice, unnamed, because the boatmen own that death. Legally the song is unimpeachable, and everyone in the room knows exactly what it means.*
+*Every verse is chronicle-true and older than the closing of the Cut: Saint Maren upstream; the ox of F.229; the sturgeon of F.271, whose roe the boatmen kept and lie about in the song itself; the working Cut's one reflected sun; and Colm at the sluice, unnamed, because the boatmen own that death. The river now runs beyond the south wall and the song has refused every correction. Legally it is unimpeachable, and everyone in the room knows exactly what it means.*
 
 ## The ghost in Gaunt Passage
 

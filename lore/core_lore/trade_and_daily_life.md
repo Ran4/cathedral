@@ -10,8 +10,10 @@ networks are:
 
 - wool from Brede and the Combs; fulling, tenting, measuring, and cloth trade in
   Ombreval;
-- salt from Salorge, brought upriver and stored near the Tallage;
-- fish, eels, barges, ferries, and river labour at Maren's Green;
+- salt from Salorge, brought upriver to the wharves beyond the south wall and
+  stored near the Tallage;
+- fish and eels carried in from those wharves, with boat-families, freight
+  brokers, and river labourers based at Maren's Green;
 - stone, lime, timber, scaffolding, and generations of unfinished Fabric work
   around Coswald's Yard;
 - glassmaking and leading on Cinder Row;
@@ -24,11 +26,12 @@ Trade bodies matter. The **masons' lodge** at Coswald's Yard and the
 control apprenticeship, customs, tools, reputation, feast observance, burial,
 and collective memory without becoming a modern union or corporation.
 
-The river makes the city prosperous and vulnerable. Flooding reaches streets
-and crypts; frost stops boats; a downstream chain can threaten the salt supply.
+The river makes the city prosperous and vulnerable. Flooding closes the outer
+wharves and river road; frost stops boats; a downstream chain can threaten the
+salt supply.
 A realistic plot should remember storage, spoilage, transport time, labour,
-season, price, and who owns access to a quay, bridge, oven, warehouse, or
-standard weight.
+season, price, and who owns access to an outer quay, gate, bridge, oven,
+warehouse, or standard weight.
 
 ### Money
 
@@ -47,7 +50,7 @@ buyer, but new lore should not treat a lantern as tavern change.
 ### Measures
 
 - Cloth is measured by the **ell of Ombreval**.
-- Canal cargo is measured by the **Serle tun**.
+- River cargo is measured by the **Serle tun**.
 - Salt is measured by the **salt-weigh**.
 - Measures are proved against the **Tallage stone** and sealed brass **Gaudry
   weights**, kept chained in the customs square.

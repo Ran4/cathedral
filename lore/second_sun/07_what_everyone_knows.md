@@ -5,7 +5,7 @@
 
 ## The city
 
-Ombreval is a free fortified city on the river Serle; its straightened stretch is the Cut. Years count from the cathedral's first stone; it is F.437. The great church of Saint Ambrelle everyone calls the Lanthorn; its stepped forecourt is the Gradine. Five squares: the Wickmarket (wax and chandlers), Coswald's Yard (stone; the masons' lodge — do not praise glaziers there), the Tallage (canal tolls; pawnshops by the Tally Bridge), Maren's Green (fish and eel smoke; Saint Maren's church, whose crypt floods), and the Bellstand (edicts cried under the old watch-bell). Cinder Row is the glaziers' street. The Needle is a lane one shoulder wide; "past the Needle" means beyond saving. The Ilvane Chapel is mortared shut — "unsound," they say — but the anchoress Dame Aldith lives in its north wall and trades verses for honest news through her squint.
+Ombreval is a free fortified city beside the river Serle, which runs beyond the south wall. Its former straightened city channel, the Cut, has been a dry trade street since the works of F.363–369. Years count from the cathedral's first stone; it is F.437. The great church of Saint Ambrelle everyone calls the Lanthorn; its stepped forecourt is the Gradine. Five squares: the Wickmarket (wax and chandlers), Coswald's Yard (stone; the masons' lodge — do not praise glaziers there), the Tallage (Serle tolls; pawnshops by the dry Tally Bridge), Maren's Green (fish and eel smoke; Saint Maren's church), and the Bellstand (edicts cried under the old watch-bell). Cinder Row is the glaziers' street. The Needle is a lane one shoulder wide; "past the Needle" means beyond saving. The Ilvane Chapel is mortared shut — "unsound," they say — but the anchoress Dame Aldith lives in its north wall and trades verses for honest news through her squint.
 
 ## Bells and hours
 
@@ -34,7 +34,7 @@ Greatest is the Concurrence — the Feast of the Sole Light, the fortieth day af
 - It walks against the true sun — the countergait: huge in the west at dawn (the dawn-showing), sharing the window late in the day (the strong hour), crossing once daily — the Passing, or the Kiss.
 - In the Great Rains it burned three weeks through the wrack, the only sunlight in Ombreval.
 - A few — the Spared — see only one sun there. Pitied, envied, doubted.
-- Old stories: Idonea Sparr, who made the rose, wept at its finishing — she had made two of something there was one of; Colm Attergate preached the Church was walling a sun out of the sky, and drowned banished at the sluice; and the skipping rhyme, *one sun for the living, one sun for the flown*, that no grown soul can gloss.
+- Old stories: Idonea Sparr, who made the rose, wept at its finishing — she had made two of something there was one of; Colm Attergate preached the Church was walling a sun out of the sky, and drowned banished at the sluice while the Cut still ran; and the skipping rhyme, *one sun for the living, one sun for the flown*, that no grown soul can gloss.
 - Pilgrims buy lead badges of the Emblem, which it is forbidden to describe; the city finds this funny, and profitable.
 - There are heretics — the street says the Greensick — who hold the disc a true sun the Lanthorn was built to wall out. Nine years back the Custody took five in a cellar raid; two recanted, and a fuller died in keeping, of the damp. The street says the Greensick kill those who cross them; the street says a great deal.
 

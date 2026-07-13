@@ -14,8 +14,8 @@ The ritual and civic year, from spring:
 
 - **Colm's Night** — unofficial, early spring; green-dipped candles are burned
   at home for the drowned labourer Colm Attergate.
-- **Vhairestide** — spring; first quarter-feast, blessing of the first boats,
-  and turn of the year.
+- **Vhairestide** — spring; first quarter-feast, blessing of the first boats at
+  the wharves beyond the south wall, and turn of the year.
 - **Perrinstide** — late spring; bells washed and greased, with alms for the
   deaf.
 - **Feast of Saint Ambrelle / Ambrellestide** — early summer; second quarter-
@@ -80,6 +80,9 @@ remain in `second_sun/04_chronicle_of_the_city.md`.
   Orphan.
 - **F.362** — The Great Rains bring three weeks of overcast and flooding. Wet
   Alms begins in their aftermath.
+- **F.363–369** — The ruined Cut is closed and filled; the Serle is turned into
+  its present navigable bed outside the south wall. The bridges, Moorings, and
+  Old Sluice keep their names in dry ground.
 - **F.371** — Encroaching rebuilt houses narrow a weavers' lane into the Needle.
 - **F.390–398** — The north tower crown is scaffolded; the Fabric is declared
   complete, but the scaffold and “little that remained” stay.
@@ -90,6 +93,6 @@ remain in `second_sun/04_chronicle_of_the_city.md`.
 - **F.436** — During the Concurrence the Chapter bars the Lanthorn doors; a
   crowd crush on the Gradine causes injuries. The event is called the Shut
   Door.
-- **F.437** — Present year. The rye stands well, the Serle remains in its bed,
-  ravens nest in the north-tower scaffold, and the city waits to see what the
-  next Concurrence brings.
+- **F.437** — Present year. The rye stands well, the Serle remains in its bed
+  beyond the south wall, ravens nest in the north-tower scaffold, and the city
+  waits to see what the next Concurrence brings.

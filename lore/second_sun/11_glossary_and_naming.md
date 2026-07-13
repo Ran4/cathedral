@@ -19,7 +19,7 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 
 **The Candor** — the street's name for the Church of the Sole Light; nearly affection.
 
-**The charnel door** — Saint Maren's riverside door; the sexton chalks each buried soul's given name on its lintel until the next burial.
+**The charnel door** — Saint Maren's churchyard door; the sexton chalks each buried soul's given name on its lintel until the next burial.
 
 **Cinder Row** — the glaziers' street, burnt F.171 and rebuilt; workshops of the Sparr line.
 
@@ -33,7 +33,7 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 
 **The Custody of the Eye** — grey office founded F.289, its emblem a closed eye, its patron Saint Belwyn. Its public teaching is the **Custody Doctrine**: *to see is no sin; to affirm is.*
 
-**The Cut** — the straightened city stretch of the river **Serle**, whose name is older than the Fabric. Nobody renames water.
+**The Cut** — the filled former city stretch of the river **Serle**, now an unusually straight trade street and district. The river was diverted beyond the south wall in F.363–369; dry places kept the working names water left them.
 
 **The dawn-showing** — the disc low and huge in the western rose at clear sunrise; the day's most crowded viewing.
 
@@ -79,7 +79,7 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 
 **Maren Smallvoice** — Saint Maren's passing-bell; it rings the **name-knell**, one slow stroke per year of the life. Free to paupers whose burials are paid.
 
-**Measures** — cloth by the **ell of Ombreval**; canal cargo by the **Serle tun**; salt by the **salt-weigh**; all proved against the **Tallage stone**, chained in the customs square, and the sealed brass **Gaudry weights**. The chandlers' pound runs heavy by charter, "for the wick's sake."
+**Measures** — cloth by the **ell of Ombreval**; river cargo by the **Serle tun**; salt by the **salt-weigh**; all proved against the **Tallage stone**, chained in the customs square, and the sealed brass **Gaudry weights**. The chandlers' pound runs heavy by charter, "for the wick's sake."
 
 **Moth †** — a paid Custody informant, paid in **dry money** laundered through the pawnshop at the Tally Bridge. Some moths do not know they are moths.
 
@@ -99,7 +99,7 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 
 **The Question** — judicial torture: in the archive, with three deaths against it; not used in living memory.
 
-**The ring** — the Lanthorn's bells: **Great Ambrelle, called Gravemouth**, the bourdon (*SOLI LUCI CANO*, "I sing to the sole light"); **Coswald Ironthroat**, the alarm; **Vhairé Farcall**, fog and flood (*SICCA TRANSIVI*); **Perrin Evenblow**, the hours; **Gaudry Truetongue**, the court (*PONDUS IUSTUM*), cast last, F.365, youngest of the ring; and the Orphan. Full ring at the Concurrence and the quarter-feasts.
+**The ring** — the Lanthorn's bells: **Great Ambrelle, called Gravemouth**, the bourdon (*SOLI LUCI CANO*, "I sing to the sole light"); **Coswald Ironthroat**, the alarm; **Vhairé Farcall**, fog and flood at the outer Serle wharves (*SICCA TRANSIVI*); **Perrin Evenblow**, the hours; **Gaudry Truetongue**, the court (*PONDUS IUSTUM*), cast last, F.365, youngest of the ring; and the Orphan. Full ring at the Concurrence and the quarter-feasts.
 
 **The Ruin** — the ring rung backward, greatest bell first: fire or flood. Drop everything.
 
@@ -113,9 +113,9 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 
 **A Sparr page** — any alleged leaf of the sealed deposition of F.204; the costliest contraband in Ombreval.
 
-**The squares** — the five: the **Wickmarket** (west; wax and tallow), **Coswald's Yard** (north; stone and timber), the **Tallage** (canal customs), **Maren's Green** (downstream; fish and eel smoke), the **Bellstand** (east; proclamations). The Gradine is counted apart.
+**The squares** — the five: the **Wickmarket** (west; wax and tallow), **Coswald's Yard** (north; stone and timber), the **Tallage** (Serle customs on the dry Cut), **Maren's Green** (south-east; fish and eel smoke), the **Bellstand** (east; proclamations). The Gradine is counted apart.
 
-**The Tallage** — the customs square on the canal: Serle tolls, the chained weights, pawnshops facing the **Tally Bridge**.
+**The Tallage** — the customs square on the dry Cut: Serle tolls, the chained weights, bonded warehouses, and pawnshops facing the **Tally Bridge**. Freight comes by cart and porter from the outer wharves.
 
 **The Tracer †** — the hidden head of the Unwalled, as the tracery holds all lights; unknown even to most of the sworn.
 
@@ -144,7 +144,7 @@ Given names — men: Aubin, Colm, Corin, Dunstan, Grigor, Hamel, Jos, Noll, Segw
 3. *Ede of the Needle* — street.
 4. *Renn of the Bellstand* — square.
 5. *Clemence of Ostrelle* — origin; origin bynames invite questions.
-6. *Tobin Upstream* — origin; boat-born beyond the sluice.
+6. *Tobin Upstream* — origin; boat-born beyond the south wall.
 7. *Cobb Threefinger* — feature.
 8. *Sef the Long* — feature.
 9. *Averil Wetalms* — event; born at the feast.
@@ -154,7 +154,7 @@ Given names — men: Aubin, Colm, Corin, Dunstan, Grigor, Hamel, Jos, Noll, Segw
 
 ### Streets, passages, bridges
 
-Streets are named for trades, damage, saints, or shape — never for living people — and renaming follows only calamity (Cinder Row was the Glassmakers' Row until F.171). Passages take the name of what they pass beneath. Bridges take working names — their toll, their cargo, or their keeping — never saints' names: a bridge belongs half to the water, and nobody renames water.
+Streets are named for trades, damage, saints, or shape — never for living people — and renaming follows only calamity (Cinder Row was the Glassmakers' Row until F.171). Passages take the name of what they pass beneath. Bridges take working names — their toll, cargo, or keeping — never saints' names. The Tally, Eel, and Chain bridges kept river-working names after the Cut went dry: Ombreval is as reluctant to rename a bridge as water.
 
 1. *Tenterhook Lane* — trade; the fullers' frames.
 2. *Cinder Row* — damage.
@@ -166,9 +166,9 @@ Streets are named for trades, damage, saints, or shape — never for living peop
 8. *Gaunt Passage* — beneath the Gaunt salt-cellars.
 9. *Malt Passage* — beneath the malt-house at Coswald's Yard.
 10. *Bellfoot Passage* — beneath the watch-bell tower.
-11. *The Tally Bridge* — toll.
-12. *The Eel Bridge* — cargo, at Maren's Green.
-13. *The Chain Bridge* — keeping; the harbour chain at the Cut's mouth.
+11. *The Tally Bridge* — toll; stone arches carrying an upper passage across the dry Cut.
+12. *The Eel Bridge* — cargo; a timber gallery over the fish-market lane at Maren's Green.
+13. *The Chain Bridge* — keeping; inherited from the former harbour chain-house.
 
 ### Bells
 
@@ -198,7 +198,7 @@ Years count in the Fabric era; dates are located by feast, chronicle-style: "the
 The year, from spring:
 
 - **Colm's Night** (early spring; unofficial) — a green-dipped candle burnt at home for Colm Attergate; the Unwalled's private first quarter.
-- **Vhairestide** (spring; first quarter-feast) — first boats blessed at the old ford; the year-number turns.
+- **Vhairestide** (spring; first quarter-feast) — first boats blessed at the wharves beyond the south wall; the year-number turns.
 - **Perrinstide** (late spring) — the ringers' feast; the bells washed and greased; alms to the deaf.
 - **Feast of Saint Ambrelle** (early summer; second quarter-feast) — glass carried in procession from Cinder Row to the Gradine.
 - **Marenstide** (late summer) — eel fair at Maren's Green; the drowned remembered.

@@ -8,8 +8,8 @@
 
 The core setting is a **medieval city-state in a realistic-ish world**. Its
 centre is **Ombreval**, a free fortified city whose survival depends on walls,
-river traffic, stored grain, skilled trades, tolls, markets, and the labour of
-ordinary people. Weather delays journeys. Floods move graves. Fire remakes
+river traffic landed beyond them, stored grain, skilled trades, tolls, markets,
+and the labour of ordinary people. Weather delays journeys. Floods move graves. Fire remakes
 streets. Disease, hunger, bad harvests, debt, guild rivalry, and distance are
 material facts rather than scenery.
 
@@ -37,18 +37,26 @@ Praelucent a temporal monarch.
 
 ## Ombreval at a glance
 
-**Ombreval** is a free, walled city-state built on the canalized river
-**Serle**. It measures roughly 1.2 kilometres west to east and 1.0 kilometre
-north to south, also described locally as twelve hundred by a thousand paces.
+**Ombreval** is a free, walled city-state beside the river **Serle**, which now
+runs west to east beyond its south wall. It measures roughly 1.2 kilometres
+west to east and 1.0 kilometre north to south, also described locally as twelve
+hundred by a thousand paces.
 Its name has long invited jokes about a city named for shadow becoming famous
 for light.
 
 The city's oldest named civic ground is an old ford-market. The **Lanthorn**
 stands a little west of its centre, with its quire to the east and its
-monumental west front facing the **Gradine**. The Serle enters beneath the
-western water-wall, crosses the southern third of the city in a straightened
-channel called **the Cut**, and leaves through the sluice under the eastern
-wall.
+monumental west front facing the **Gradine**. From F.83 until the Great Rains,
+the Serle crossed the southern third of the city in a straightened channel
+called **the Cut**. In F.363–369 the damaged channel was closed and the river
+was diverted into its present bed outside the south wall. The filled Cut is now
+an unusually straight trade street; its Tally and Eel bridges, the Alder
+Moorings, and the Old Sluice keep working river names in dry places.
+
+River cargo is unloaded at wharves beyond the south wall and brought through
+the river gate by cart and porter. The Tallage still weighs Serle freight, and
+Maren's Green remains the boat-families' market and parish, but no open river or
+canal lies inside the present walls.
 
 Ombreval is dense and irregular. Streets narrow and widen between independently
 set facades, dogleg through blocks, pass under houses, and open unexpectedly
@@ -98,7 +106,7 @@ The following subjects are deliberately available for development:
 
 - the secular charter, councils, courts, watch, taxation, and balance between
   civic and ecclesiastical authority;
-- unnamed gates, towers, wards, quays, residential courts, alleys, bridges,
+- unnamed gates, towers, wards, residential courts, alleys, overhead bridges,
   wells, granaries, bathhouses, hospitals, schools, taverns, and workshops;
 - parish churches beyond Saint Maren's, provided their sites and congregations
   do not overwrite the three established sacred places;
@@ -106,12 +114,13 @@ The following subjects are deliberately available for development:
 - nearby farms, mills, villages, common lands, and the food supply that a dense
   walled city requires;
 - family histories, neighborhood feuds, crime, romance, seasonal labour,
-  medicine, entertainment, cooking, childhood, migration, and river life;
+  medicine, entertainment, cooking, childhood, migration, and river life
+  based at the wharves beyond the walls;
 - regions beyond Brede, Harne, Salorge, the Combs, and Ostrelle, with travel
   times and information limits respected.
 
 Good additions connect to material life. A new feast should close shops or
-change food prices. A new bridge needs keepers, repair, and a reason for its
+change food prices. A new street bridge needs keepers, repair, and a reason for its
 name. A guild needs inputs, customers, rivals, and waste. A district needs
 water, work, noise, and a route to market. A church needs a congregation and a
 means of support. This is how new lore remains medieval, local, and coherent

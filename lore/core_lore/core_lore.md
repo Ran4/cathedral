@@ -5,7 +5,7 @@
 
 ## Core premise
 
-The setting is a **medieval city-state in a realistic-ish world**. Its centre is **Ombreval**, a free fortified city whose life depends on river traffic, markets, stored food, walls, skilled labour, guilds, and carried news.
+The setting is a **medieval city-state in a realistic-ish world**. Its centre is **Ombreval**, a free fortified city whose life depends on Serle traffic landed outside its walls, markets, stored food, walls, skilled labour, guilds, and carried news.
 
 The default inhabitants are human and the default causes are natural, social, or political. Weather, fire, flood, disease, hunger, distance, debt, and physical work matter. Do not assume routine magic, magical species, modern institutions, or reliably effective miracles.
 
@@ -18,8 +18,9 @@ The default present year is **F.437**, the 437th year since the first stone of t
 ## The city and river
 
 - **Ombreval** is a free walled city-state, roughly 1.2 km west to east and 1.0 km north to south.
-- **The Serle** flows west to east through the city. Its straightened urban reach is **the Cut**. Nobody renames water.
-- The Serle enters under the west water-wall and leaves through the east sluice.
+- **The Serle** flows west to east outside the south wall. Nobody renames water.
+- From F.83 until the Great Rains, its straightened urban reach was **the Cut**. The river was diverted beyond the walls in F.363–369; the filled Cut survives as an unusually straight trade street and district.
+- River cargo lands at wharves beyond the south wall and comes through the river gate by cart and porter. The **Old Sluice** at the Cut's east end is a dry historic landmark.
 - **The Lanthorn** stands a little west of the city's centre, with its quire east and its Great Rose facing west over the Gradine.
 - Streets pinch, widen, and dogleg between mismatched facades. Jettied storeys, covered passages, courts, and bridges between lofts make the city dense and irregular.
 - The city is walkable and crowded, but has no fixed population number.
@@ -28,8 +29,8 @@ The default present year is **F.437**, the 437th year since the first stone of t
 
 1. **The Wickmarket** — western chandlers' square: wax, tallow, wicks, lamps, and honey.
 2. **Coswald's Yard** — northern builders' square: stone, timber, lime, scaffolding, and the masons' lodge.
-3. **The Tallage** — customs square on the Cut: tolls, weights, pawnshops, and the Tally Bridge.
-4. **Maren's Green** — downstream fish and boatmen's square: eel smoke, moorings, and Saint Maren's church.
+3. **The Tallage** — customs square on the dry Cut: tolls, weights, pawnshops, and the Tally Bridge.
+4. **Maren's Green** — south-eastern fish and boatmen's square: eel smoke, the Alder family's Moorings yard, and Saint Maren's church.
 5. **The Bellstand** — eastern proclamation square beneath the secular watch-bell tower.
 
 **The Gradine** is the Lanthorn's stepped ceremonial forecourt and is always counted apart from the five squares.
@@ -43,8 +44,8 @@ The default present year is **F.437**, the 437th year since the first stone of t
 - **Bellfoot Passage** — beneath the Bellstand watch-tower stair.
 - **Tanners' Slip** — behind Maren's Green.
 - **Skinners' Court** — north of the Gradine.
-- **The Tally Bridge** — two-arched stone bridge at the Tallage.
-- **The Eel Bridge** — low timber footbridge at Maren's Green.
+- **The Tally Bridge** — two-arched stone overhead bridge across the Cut at the Tallage.
+- **The Eel Bridge** — low timber gallery bridge above the fish-market lane at Maren's Green.
 - **The Hungry Ox** — boatmen's tavern by Maren's Green.
 
 ## Beyond the walls (won't be part of the actual game! but is part of the lore)
@@ -67,14 +68,14 @@ The default present year is **F.437**, the 437th year since the first stone of t
 The three established sacred sites inside Ombreval are:
 
 1. **The Great Church of Saint Ambrelle**, universally called **the Lanthorn** — cathedral, civic clock, major employer, pilgrimage church, archive, and perpetual building project.
-2. **The Church of Saint Maren of the Reeds** — boatmen's and paupers' church on the Cut; its low crypt floods, and its charnel-door lintel bears the newest buried name in chalk.
+2. **The Church of Saint Maren of the Reeds** — boatmen's and paupers' church on the old Cut; its charnel-door lintel bears the newest buried name in chalk.
 3. **The Ilvane Chapel** — deconsecrated and mortared shut; its occupied anchorhold still opens to the lane through a squint.
 
 Other parishes exist but are not yet named in core canon.
 
 ## Trade, money, and time
 
-Wool comes downriver from Brede, salt comes upriver from Salorge, and Ombreval exports finished cloth. Fish, eels, glass, stone, timber, lime, wax, tallow, freight, copying, tolls, food, and lodging sustain ordinary city life.
+Wool comes downriver from Brede, salt comes upriver from Salorge, and Ombreval exports finished cloth. The cargo is landed outside the walls and carried into the city. Fish, eels, glass, stone, timber, lime, wax, tallow, freight, copying, tolls, food, and lodging sustain ordinary city life.
 
 The coins are the copper **spark** or penny, the silver **bell** worth twelve sparks, and the gold **lantern** worth sixty bells. A lantern is mostly money of account, not tavern change.
 

@@ -118,7 +118,7 @@ Two principles govern everything:
 
 **L7.2 Looking in from outside.** From the Gradine through open west doors, the nave floor shows true sunlight only: the grave-light renders only for a camera inside the interior volume. Two people straddling the sill disagree about what the floor shows; that is the phenomenon's nature, not a bug **[spec decision, supported by canon §2.5 and the Shut Door crowds wanting in]**.
 
-**L7.3 Flight outside.** A flying player over the rooftops finds one sun and nothing else, forever (canon §2.5, §3f). Looking back at the rose from the air: ordinary glass, no green glow on the west front, nothing on the Cut. There is nothing to find outside, at any altitude, and the implementation must make that boring rather than glitchy.
+**L7.3 Flight outside.** A flying player over the rooftops finds one sun and nothing else, forever (canon §2.5, §3f). Looking back at the rose from the air: ordinary glass, no green glow on the west front, no anomalous light anywhere on the dry Cut. There is nothing to find outside, at any altitude, and the implementation must make that boring rather than glitchy.
 
 **L7.4 Flight inside and degenerate cases.** Flying within the nave, the rules hold unchanged (the triforium criteria already assume elevated eyes). For a camera straddling glass, clipping the window plane, or hovering in a doorway: apply the interior gate with a hysteresis band of about half a metre, and inside the band **fail dark** — never a frame of the disc rendered to an exterior eye. An inside player who briefly sees one sun has met a defect the fiction can absorb; an outside player who sees two has broken the bible.
 

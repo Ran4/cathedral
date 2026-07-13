@@ -190,7 +190,7 @@ If you miss the meeting, your lead brings it to you. Nothing is chalked, nothing
 - **Hodge**, that slept under the Tally Bridge.
 - **Annet**, that sold cress by the Gradine steps.
 - **Nan**, that swept for the sexton and got a whole name from him at the last.
-- **Tacey**, that no one knew, found at the sluice.
+- **Tacey**, that no one knew, found in the Old Sluice gatehouse.
 
 ### Spent Signs
 
@@ -217,7 +217,7 @@ The living sign I do not set down. Kill me first.
 
 *A diamond high: go under the salt.*
 *A diamond low: go over the cloth.*
-*A diamond doorside: down where the water lets you.*
+*A diamond doorside: down when the last knell lets you.*
 *Struck through — a cracked pane: you never knew us.*
 
 ---

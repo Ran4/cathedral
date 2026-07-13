@@ -269,14 +269,14 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
 
 - id: noll-fitch
 - occupation: sexton of Saint Maren of the Reeds; ringer of Maren Smallvoice; chalker of the charnel door
-- district: Saint Maren's on the Cut; its yard and flooding crypt
-- route: graves by morning; the lintel chalked after each burial; the crypt at low water
+- district: Saint Maren's on the old Cut; its yard and crypt
+- route: graves by morning; the lintel chalked after each burial; the charnel stair until the last mourner leaves
 - temperament: gallows-gentle; slow hands, long silences
 - stance: everyone gets a name and a bell; that is the whole of his politics
 - knows:
   - [TRUE] An unnamed purse pays the paupers' funerals quietly, and has for years.
   - [TRUE] What his lintel is read for — he worked out the rule long ago, and says nothing, on purpose.
-  - [TRUE] Someone meets in his crypt at low water; he keeps the hinge oiled and himself elsewhere.
+  - [TRUE] Someone meets in his crypt after paupers' burials; he keeps the hinge oiled and himself elsewhere.
 - secret: the knowing, and the choosing not to know it out loud
 - ties: the poor, the drowned, the Alders
 - speech:
@@ -286,20 +286,20 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
 ## 16. Wyn Alder
 
 - id: wyn-alder
-- occupation: boatwoman of the Alder family; ferrying, eel-lines, and pilgrims on the Cut
-- district: Maren's Green; the water between the Tallage and the sluice
-- route: lines out before dawn; the fish market; pilgrim fares at a penny a head; the nave on Bellday
+- occupation: boatwoman of the Alder family, working the Serle beyond the south wall; eel trader and guide to the old Cut landmarks
+- district: Maren's Green; the Alder Moorings warehouse court
+- route: the Moorings yard before dawn; the fish market; walking pilgrims to the Old Sluice for a penny; the nave on Bellday
 - temperament: level, weather-eyed, close-mouthed on exactly one subject
 - stance: the water's business is the water's; the sky can mind its own
 - knows:
-  - [TRUE] The true place Colm Attergate drowned at the Serle sluice — the family trade secret, sold to no pilgrim.
+  - [TRUE] The true arch where Colm Attergate drowned at the Serle sluice, while the Cut still ran — the family trade secret, sold to no pilgrim.
   - [TRUE] An Alder hooked the body from the water in F.301; the family has counted him among their own dead since.
   - [AMBIGUOUS] Speak your dead's name in the green beam and they hear it; the Alders do it every Bellday.
 - secret: one of the Bellday names the family speaks in the beam is Colm's
 - ties: the boat-family first; Noll Fitch; pilgrim coin, honestly misdirected
 - speech:
   - "Water keeps its name and its dead. We just row on top."
-  - "Aye, that's the sluice where the martyr drowned. Close enough for a penny."
+  - "Aye, that's the old sluice where the martyr drowned. Close enough for a penny."
 
 ## 17. Sible Mott
 
@@ -360,8 +360,8 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
 
 - id: mother-gude
 - occupation: herb-seller of Maren's Green; one of the Spared
-- district: Maren's Green, the stall by the fish-steps
-- route: simples upstream at first light; the stall through market hours; never inside the Lanthorn since she looked
+- district: Maren's Green, the stall by the fish-hall steps
+- route: simples from the south-wall herb plots at first light; the stall through market hours; never inside the Lanthorn since she looked
 - temperament: brisk, kindly, weary of being a wonder
 - stance: one sun, my loves; she looked where they told her, and that is what was there
 - knows:

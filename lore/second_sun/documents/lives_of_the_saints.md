@@ -9,7 +9,7 @@
 
 ## Saint Vhairé of the Ford
 
-*Read at Vhairestide, when the year turns and the first boats are blessed at the old ford.*
+*Read at Vhairestide, when the year turns; the life is read at the old ford-stone before the first boats are blessed at the wharves beyond the south wall.*
 
 Before the first stone there was a ford, and at the ford a ferrywoman, and at her prow a lamp. Vhairé kept the crossing when the Serle was kind and when it was not.
 
@@ -111,7 +111,7 @@ He is patron of clerks and of honest weights. His petal in the Great Rose is the
 
 **Of Saint Perrin**, the tuning bone: his jawbone, in a bronze case in the ringing chamber of the Lanthorn tower. The ringers lay a thumb to the case before a full ring. It leaves the tower only at Perrinstide, as far as the door and no farther.
 
-**Of Saint Maren**, the reed-crown: at her church upon the Cut, in a dry shrine above the water-line of the crypt. The crypt floods, as all know; the crown has never taken water, which is the relic's own quiet argument.
+**Of Saint Maren**, the reed-crown: at her church upon the old Cut, in a dry shrine above the mark left by the last great flood. The crypt has stood dry since the river was turned beyond the walls; the crown has never taken water, which the parish still calls the relic's own quiet argument.
 
 **Of Saint Ilvane** the book keeps the elder entry struck. What was hers was within her chapel when the chapel was shut, and was not brought out. The chapel keeps it. There is the anchorhold, and the squint, and alms, and that is what there is.
 
