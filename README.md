@@ -25,15 +25,17 @@ The first build is large because Bevy and its renderer compile from source.
 ## Configuration
 
 The app starts in borderless fullscreen by default. Edit [config.ron](config.ron)
-to change the window or smart-actor sidecar settings. Smart actors start through
-`uv` and degrade to an offline HUD state if Python, a provider key, a microphone,
-or a speech service is unavailable; the cathedral remains playable. Set
-`smart_actors.enabled` to `false` to disable the sidecar entirely. If the file
-cannot be read or parsed, the app safely uses the same defaults.
+to change the window or smart-actor settings. The actor engine runs in-process;
+each of its three capabilities — NPC cognition, microphone transcription, NPC
+voices — degrades to an offline HUD state on its own when a provider key, a
+microphone or a local speech worker is unavailable, and the cathedral remains
+playable. Set `smart_actors.enabled` to `false` to disable smart actors
+entirely. If the file cannot be read or parsed, the app safely uses the same
+defaults.
 
 Set `smart_actors.fake_backend` to `true` for the deterministic offline cast:
 it uses no provider credentials or network calls while exercising the same
-persistent process, protocol, world rules, HUD, and interaction paths.
+engine, world rules, HUD, and interaction paths.
 
 ## Controls
 
@@ -68,9 +70,9 @@ persistent process, protocol, world rules, HUD, and interaction paths.
 Each game start increments `session` in `cathedral_meta.json` once, creates
 `logs/session_<n>_<start time>/`, and repoints the `logs/latest_session`
 symlink at it. The session directory collects that run's `screenshots/`, a
-structured `logs.jsonl` (game, Python sidecar, and drive-script lines as JSON
-lines), and `prompts/` — every LLM prompt/answer exchange as a readable `.md`
-plus a machine-readable `.json`.
+structured `logs.jsonl` (game, actor engine, speech workers, and drive-script
+lines as JSON lines), and `prompts/` — every LLM prompt/answer exchange as a
+readable `.md` plus a machine-readable `.json`.
 
 Walking uses acceleration, friction, air control, gravity, collision, coyote
 time, and buffered jumping. Flying disables gravity but deliberately keeps
@@ -78,12 +80,10 @@ collision enabled so the architecture still has physical presence.
 
 ## Tests
 
-All smart-actor tests are offline; the fake sidecar never contacts a provider:
+All smart-actor tests are offline; the fake backends never contact a provider:
 
 ```sh
 cargo fmt --check
-cargo clippy --all-targets --offline -- -D warnings
-cargo test --offline
-uv run --with openai --with python-dotenv \
-  python -m unittest discover -s prompt_playgound/tests -v
+cargo clippy --workspace --all-targets --offline -- -D warnings
+cargo test --workspace --offline
 ```

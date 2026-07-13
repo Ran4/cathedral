@@ -1,3 +1,21 @@
+[workspace]
+members = [".", "crates/cathedral-sim", "crates/cathedral-backends"]
+
+# Shared across the game crate and the ported engine crates. Keep the version
+# requirements identical to what the bevy tree already resolves to (Cargo.lock)
+# so the workspace conversion changes no resolved version.
+[workspace.dependencies]
+base64 = "0.22.1"
+cathedral-backends = { path = "crates/cathedral-backends" }
+cathedral-sim = { path = "crates/cathedral-sim" }
+crossbeam-channel = "0.5.15"
+glam = "0.32"
+hound = "3.5.1"
+minijinja = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.9"
+
 [package]
 name = "cathedralbevy"
 version = "0.1.0"
@@ -6,15 +24,17 @@ description = "A walkable, procedural cathedral-city built with Bevy"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-base64 = "0.22.1"
 bevy = { version = "0.19", default-features = false, features = ["3d", "ui", "bevy_audio", "png", "wav", "mp3"] }
+# The actor authority: the pure sim, plus the IO backends that feed it.
+cathedral-backends = { workspace = true }
+cathedral-sim = { workspace = true }
 cpal = "0.17.3"
-crossbeam-channel = "0.5.15"
-hound = "3.5.1"
+crossbeam-channel = { workspace = true }
+hound = { workspace = true }
 libc = "0.2.186"
 ron = "0.12"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [profile.dev]
 opt-level = 1

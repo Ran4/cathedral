@@ -1,0 +1,38 @@
+[package]
+name = "cathedral-backends"
+version = "0.1.0"
+edition = "2024"
+description = "IO backends (LLM, speech, prompt log) for the cathedral smart-actor engine"
+license = "MIT OR Apache-2.0"
+
+# The IO half of the port (D23): one owned tokio runtime, reqwest against the
+# OpenAI-compatible providers, crossbeam channels back to the host. The pure
+# domain lives in cathedral-sim and must never gain any of these.
+[dependencies]
+cathedral-sim = { workspace = true }
+base64 = { workspace = true }
+crossbeam-channel = { workspace = true }
+hound = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { version = "1", features = ["rt-multi-thread", "time", "sync", "macros", "io-util", "net", "process"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "rustls-tls", "charset", "http2"] }
+dotenvy = "0.15"
+# Local wall-clock time for the prompt archive's filenames, exactly the way the
+# game crate does it (src/session_log.rs); std has no local-time conversion.
+libc = "0.2"
+clap = { version = "4", features = ["derive"] }
+# Realtime STT over the OpenAI websocket API (P6). Shares reqwest's rustls, so
+# it adds no second TLS stack.
+tokio-tungstenite = { version = "0.30.0", default-features = false, features = ["connect", "rustls-tls-webpki-roots", "handshake"] }
+# The Sink/Stream extension traits tokio-tungstenite's WebSocketStream is used
+# through (`send`/`next`). Already in the tree as its own dependency; naming it
+# here is what makes it callable.
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+
+# The terminal tick loop (`main.py`) and the one-shot prompt CLI (`kimi.py`).
+# It needs backends + sim and nothing else, so it lives here rather than in a
+# crate of its own (D4).
+[[bin]]
+name = "cathedral-headless"
+path = "src/bin/cathedral_headless.rs"

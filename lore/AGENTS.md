@@ -2,13 +2,15 @@
 
 ```
 lore
+├── core_lore
+│   │── core_lore.md
+│   │── naming_language.md
+│   │── ...
+│   └── *.md
 ├── second_sun
 │   │── ...
 │   └── *.md
-├── alternative_second_sun_created_by_codex_please_ignore/
-│   └── second_sun
-│       │── ...
-│       └── *..md
+├── wip_lore_please_ignore_this_is_NOT_canon/ <- IGNORE THIS FOLDER!
 ├── AGENTS.md
 └── CLAUDE.md
 ```
@@ -19,7 +21,9 @@ This folder includes lore for the game's world.
 
 It could be markdown, html, wav files...
 
-Lore files aren't just flavor, they're potential prompt fodder for the sidecar. A "what everyone in the city knows" doc, district reputations, or a rumor list can be injected straight into NPC context so actors gossip
+Lore files aren't just flavor, they're potential prompt fodder for the game.
+A "what everyone in the city knows" doc, district reputations,
+or a rumor list can be injected straight into NPC context so actors gossip
 consistently about the same events. That makes some lore types more valuable than others.
 
 These are just some suggestions (be creative!):

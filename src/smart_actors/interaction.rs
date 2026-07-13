@@ -224,7 +224,7 @@ impl PlayerSpatialState {
     }
 
     /// Sequence for a background `spatial_update`, which carries facing too.
-    /// Turning in place must take a fresh sequence: the sidecar treats an
+    /// Turning in place must take a fresh sequence: the engine treats an
     /// equal sequence as an idempotent repeat and would drop the new yaw.
     pub fn spatial_update_needed(&self, position: Vec3, facing_yaw: f32) -> bool {
         self.last_position != Some(position) || self.last_yaw != Some(facing_yaw)
@@ -304,7 +304,7 @@ impl MicrophoneInputState {
 }
 
 /// Cloud streaming starts only when every layer agrees: config.ron has not
-/// disabled it, the player has the cloud backend selected, and the sidecar
+/// disabled it, the player has the cloud backend selected, and the engine
 /// reported cloud transcription available.
 pub(crate) fn effective_streaming(
     config: &SmartActorsConfig,
@@ -403,7 +403,7 @@ pub fn reconcile_interaction_state(
                 "[Y] Accept    [N] Decline"
             };
             let waiting = if state.item_is_pending(&card.item_id) {
-                "\nWaiting for Python…"
+                "\nWaiting for the actor engine…"
             } else {
                 ""
             };
@@ -659,7 +659,7 @@ pub fn update_microphone_toggle(
             }
         } else if !hud.microphone_unavailable {
             // Keep an explicit MIC OFF visible even if V was pressed before
-            // capability probing or the Python handshake completed.
+            // capability probing or the engine handshake completed.
             hud.microphone_available = true;
         }
         hud.toast(if state.enabled {
@@ -788,7 +788,7 @@ pub fn poll_microphone(
                 }
                 if !context_matches {
                     // Discarded after finishing: also release any streamed
-                    // copy so the sidecar never holds an ownerless transcript.
+                    // copy so the engine never holds an ownerless transcript.
                     let _ = handle.try_send(BridgeCommand::PlayerAudioAbort {
                         wav_basename: wav_basename.clone(),
                     });
@@ -798,9 +798,8 @@ pub fn poll_microphone(
                     continue;
                 }
                 if !runtime.interactions_enabled() {
-                    // A resync is a hard command barrier. This utterance was
-                    // captured against an uncertain projection, so it cannot
-                    // be queued behind the snapshot request and replayed.
+                    // An offline engine is a hard command barrier: there is
+                    // nobody to hear this utterance and nowhere to queue it.
                     let _ = handle.try_send(BridgeCommand::PlayerAudioAbort {
                         wav_basename: wav_basename.clone(),
                     });
@@ -1064,61 +1063,57 @@ mod tests {
 
     fn offer_mirror(giver_x: f32) -> WorldMirror {
         let mut mirror = WorldMirror::default();
-        mirror.begin_session("test").unwrap();
         mirror
-            .replace_snapshot(
-                "test",
-                WorldSnapshot {
-                    world_revision: 1,
-                    player_id: ActorId("player".into()),
-                    actors: vec![
-                        ActorSnapshot {
-                            id: ActorId("player".into()),
-                            name_for_player: "You".into(),
-                            control: ActorControl::Player,
-                            position_m: Position::new(0.0, 0.0, 0.0).unwrap(),
-                            facing_yaw: 0.0,
-                            appearance_key: "player".into(),
-                            holds: vec![],
-                        },
-                        ActorSnapshot {
-                            id: ActorId("ilse".into()),
-                            name_for_player: "Ilse".into(),
-                            control: ActorControl::Llm,
-                            position_m: Position::new(giver_x, 0.0, 0.0).unwrap(),
-                            facing_yaw: 0.0,
-                            appearance_key: "ilse".into(),
-                            holds: vec![ItemId("coin".into()), ItemId("fish".into())],
-                        },
-                    ],
-                    items: vec![
-                        ItemSnapshot {
-                            id: ItemId("coin".into()),
-                            name: "copper coin".into(),
-                            visual_key: "copper_coin".into(),
-                        },
-                        ItemSnapshot {
-                            id: ItemId("fish".into()),
-                            name: "fish".into(),
-                            visual_key: "fish".into(),
-                        },
-                    ],
-                    offers: vec![
-                        OfferSnapshot {
-                            item_id: ItemId("fish".into()),
-                            giver_id: ActorId("ilse".into()),
-                            target_id: None,
-                            created_seq: 1,
-                        },
-                        OfferSnapshot {
-                            item_id: ItemId("coin".into()),
-                            giver_id: ActorId("ilse".into()),
-                            target_id: Some(ActorId("player".into())),
-                            created_seq: 5,
-                        },
-                    ],
-                },
-            )
+            .replace_snapshot(WorldSnapshot {
+                world_revision: 1,
+                player_id: ActorId("player".into()),
+                actors: vec![
+                    ActorSnapshot {
+                        id: ActorId("player".into()),
+                        name_for_player: "You".into(),
+                        control: ActorControl::Player,
+                        position_m: Position::new(0.0, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "player".into(),
+                        holds: vec![],
+                    },
+                    ActorSnapshot {
+                        id: ActorId("ilse".into()),
+                        name_for_player: "Ilse".into(),
+                        control: ActorControl::Llm,
+                        position_m: Position::new(giver_x, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "ilse".into(),
+                        holds: vec![ItemId("coin".into()), ItemId("fish".into())],
+                    },
+                ],
+                items: vec![
+                    ItemSnapshot {
+                        id: ItemId("coin".into()),
+                        name: "copper coin".into(),
+                        visual_key: "copper_coin".into(),
+                    },
+                    ItemSnapshot {
+                        id: ItemId("fish".into()),
+                        name: "fish".into(),
+                        visual_key: "fish".into(),
+                    },
+                ],
+                offers: vec![
+                    OfferSnapshot {
+                        item_id: ItemId("fish".into()),
+                        giver_id: ActorId("ilse".into()),
+                        target_id: None,
+                        created_seq: 1,
+                    },
+                    OfferSnapshot {
+                        item_id: ItemId("coin".into()),
+                        giver_id: ActorId("ilse".into()),
+                        target_id: Some(ActorId("player".into())),
+                        created_seq: 5,
+                    },
+                ],
+            })
             .unwrap();
         mirror
     }
@@ -1160,8 +1155,10 @@ mod tests {
         assert!(state.pending.is_empty());
     }
 
+    /// A command whose result never arrives (the engine died mid-flight) must
+    /// not lock its controls forever: the disconnect clears the pending slot.
     #[test]
-    fn authoritative_resync_can_unlock_a_command_whose_result_was_lost() {
+    fn clearing_pending_unlocks_a_command_whose_result_was_lost() {
         let mut state = InteractionState::default();
         let item_id = ItemId("coin".into());
         let target_id = ActorId("ilse".into());
@@ -1194,7 +1191,6 @@ mod tests {
         let runtime = SmartActorRuntime {
             connected: false,
             ready: false,
-            resyncing: false,
             stt_available: false,
             tts_available: false,
             fake_backend: false,
@@ -1224,7 +1220,6 @@ mod tests {
         let runtime = SmartActorRuntime {
             connected: false,
             ready: false,
-            resyncing: false,
             stt_available: false,
             tts_available: false,
             fake_backend: false,
@@ -1255,7 +1250,6 @@ mod tests {
         let runtime = SmartActorRuntime {
             connected: true,
             ready: true,
-            resyncing: false,
             stt_available: true,
             tts_available: false,
             fake_backend: true,
@@ -1319,9 +1313,9 @@ mod tests {
             keyboard.release(KeyCode::KeyV);
             keyboard.clear();
         }
-        app.world_mut()
-            .resource_mut::<SmartActorRuntime>()
-            .resyncing = true;
+        // The engine going away disarms the capture without forgetting that the
+        // player wants his microphone on.
+        app.world_mut().resource_mut::<SmartActorRuntime>().ready = false;
         app.update();
         assert!(matches!(
             commands.try_recv(),
@@ -1332,15 +1326,13 @@ mod tests {
         assert!(hud.microphone_enabled);
         assert!(!hud.listening);
 
-        app.world_mut()
-            .resource_mut::<SmartActorRuntime>()
-            .resyncing = false;
+        app.world_mut().resource_mut::<SmartActorRuntime>().ready = true;
         app.update();
         assert!(matches!(commands.try_recv(), Ok(MicrophoneCommand::Enable)));
         assert!(app.world().resource::<MicrophoneInputState>().enabled);
         assert!(app.world().resource::<SmartActorHudState>().listening);
 
-        // Keep the receiving end alive while the resource sends Shutdown.
+        // Keep the receiving end alive while the resource shuts the worker down.
         drop(app);
     }
 
@@ -1451,7 +1443,6 @@ mod tests {
             .insert_resource(SmartActorRuntime {
                 connected: true,
                 ready: true,
-                resyncing: false,
                 stt_available: false,
                 tts_available: false,
                 fake_backend: true,

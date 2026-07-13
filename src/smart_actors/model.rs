@@ -1,27 +1,37 @@
-//! Typed protocol data and the validated, read-only semantic world mirror.
+//! The read-only semantic world mirror the ECS queries, and its types.
 //!
-//! Python owns the world.  This module deliberately contains no mutation
-//! helpers for inventory or offers: a complete, validated snapshot is the only
+//! `cathedral_sim` owns the world. This module deliberately contains no
+//! mutation helpers for inventory or offers: a complete snapshot is the only
 //! way semantic state enters the Bevy application.
+//!
+//! The reconciliation machinery is gone with the sidecar. Session ids, event
+//! sequence gaps, stale revisions and resynchronization existed because a
+//! snapshot could be lost, reordered or truncated in a pipe. The engine now
+//! hands its snapshots over a typed in-process channel, so the mirror is a
+//! projection and nothing more.
+//!
+//! What survives is [`ValidatedSnapshot`]: the actors' names, appearances and
+//! item labels are written by an LLM, and this is where that text is bounded
+//! and shape-checked before it reaches the ECS or a UI node.
 
 use std::{collections::HashMap, error::Error, fmt};
 
 use bevy::prelude::{Component, Resource, Vec3};
 use serde::{Deserialize, Deserializer, Serialize, de};
 
-/// Maximum ID length accepted by the version-one protocol.
+/// Maximum id length the projection accepts.
 pub const MAX_ID_CHARS: usize = 128;
 const MAX_ACTORS: usize = 1_024;
 const MAX_ITEMS: usize = 4_096;
 const MAX_OFFERS: usize = 4_096;
 const MAX_LABEL_CHARS: usize = 256;
 
-/// Stable, opaque identity of an actor in the Python world.
+/// Stable, opaque identity of an actor in the engine's world.
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct ActorId(pub String);
 
-/// Stable, opaque identity of an item in the Python world.
+/// Stable, opaque identity of an item in the engine's world.
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct ItemId(pub String);
@@ -153,7 +163,7 @@ pub struct OfferSnapshot {
     pub created_seq: u64,
 }
 
-/// Complete public semantic state sent by Python.
+/// Complete public semantic state, as the engine last published it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct WorldSnapshot {
@@ -162,6 +172,88 @@ pub struct WorldSnapshot {
     pub actors: Vec<ActorSnapshot>,
     pub items: Vec<ItemSnapshot>,
     pub offers: Vec<OfferSnapshot>,
+}
+
+// ------------------------------------------------- the sim → renderer boundary
+//
+// The sim is f64 and its ids and sequences are its own types (D1). This is the
+// one place those become the f32, Bevy-shaped values the ECS and the UI read.
+// The conversion is lossy by design and deliberately *not* validating: what it
+// produces is fed straight into [`WorldMirror::replace_snapshot`], which is the
+// gate.
+
+/// Metres, f64 → f32.
+pub fn position_from_sim(position: cathedral_sim::Vec3) -> Position {
+    Position {
+        x: position.x as f32,
+        y: position.y as f32,
+        z: position.z as f32,
+    }
+}
+
+/// Metres, f64 → the renderer's own vector.
+pub fn vec3_from_sim(position: cathedral_sim::Vec3) -> Vec3 {
+    Vec3::new(position.x as f32, position.y as f32, position.z as f32)
+}
+
+pub fn actor_id_from_sim(id: &cathedral_sim::ActorId) -> ActorId {
+    ActorId(id.as_str().to_owned())
+}
+
+pub fn item_id_from_sim(id: &cathedral_sim::ItemId) -> ItemId {
+    ItemId(id.as_str().to_owned())
+}
+
+impl From<cathedral_sim::Control> for ActorControl {
+    fn from(value: cathedral_sim::Control) -> Self {
+        match value {
+            cathedral_sim::Control::Llm => Self::Llm,
+            cathedral_sim::Control::Player => Self::Player,
+        }
+    }
+}
+
+impl From<&cathedral_sim::PublicSnapshot> for WorldSnapshot {
+    fn from(snapshot: &cathedral_sim::PublicSnapshot) -> Self {
+        Self {
+            // The sim's revisions and sequences count up from zero and never
+            // go back; the saturating cast is a formality.
+            world_revision: snapshot.world_revision.max(0) as u64,
+            player_id: actor_id_from_sim(&snapshot.player_id),
+            actors: snapshot
+                .actors
+                .iter()
+                .map(|actor| ActorSnapshot {
+                    id: actor_id_from_sim(&actor.id),
+                    name_for_player: actor.name_for_player.clone(),
+                    control: actor.control.into(),
+                    position_m: position_from_sim(actor.position_m),
+                    facing_yaw: actor.facing_yaw as f32,
+                    appearance_key: actor.appearance_key.clone(),
+                    holds: actor.holds.iter().map(item_id_from_sim).collect(),
+                })
+                .collect(),
+            items: snapshot
+                .items
+                .iter()
+                .map(|item| ItemSnapshot {
+                    id: item_id_from_sim(&item.id),
+                    name: item.name.clone(),
+                    visual_key: item.visual_key.clone(),
+                })
+                .collect(),
+            offers: snapshot
+                .offers
+                .iter()
+                .map(|offer| OfferSnapshot {
+                    item_id: item_id_from_sim(&offer.item_id),
+                    giver_id: actor_id_from_sim(&offer.giver_id),
+                    target_id: offer.target_id.as_ref().map(actor_id_from_sim),
+                    created_seq: offer.created_seq.max(0) as u64,
+                })
+                .collect(),
+        }
+    }
 }
 
 /// A detailed invariant failure inside an otherwise decoded snapshot.
@@ -295,73 +387,15 @@ impl fmt::Display for SnapshotError {
 
 impl Error for SnapshotError {}
 
-/// Failure to apply or order data for the semantic mirror.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MirrorError {
-    InvalidSessionId,
-    NoActiveSession,
-    SessionMismatch { expected: String, received: String },
-    StaleRevision { current: u64, received: u64 },
-    MalformedSnapshot(SnapshotError),
-    StaleEventSequence { current: u64, received: u64 },
-    EventSequenceGap { expected: u64, received: u64 },
-}
-
-impl MirrorError {
-    /// Whether the bridge should request a complete authoritative snapshot.
-    pub fn requires_resync(&self) -> bool {
-        matches!(
-            self,
-            Self::MalformedSnapshot(_) | Self::EventSequenceGap { .. }
-        )
-    }
-}
-
-impl fmt::Display for MirrorError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidSessionId => formatter.write_str("invalid session id"),
-            Self::NoActiveSession => formatter.write_str("no smart-actor session is active"),
-            Self::SessionMismatch { expected, received } => write!(
-                formatter,
-                "message belongs to session {received:?}, expected {expected:?}"
-            ),
-            Self::StaleRevision { current, received } => write!(
-                formatter,
-                "snapshot revision {received} is not newer than revision {current}"
-            ),
-            Self::MalformedSnapshot(error) => write!(formatter, "malformed snapshot: {error}"),
-            Self::StaleEventSequence { current, received } => write!(
-                formatter,
-                "event sequence {received} is not newer than {current}"
-            ),
-            Self::EventSequenceGap { expected, received } => write!(
-                formatter,
-                "event sequence gap: expected {expected}, received {received}"
-            ),
-        }
-    }
-}
-
-impl Error for MirrorError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::MalformedSnapshot(error) => Some(error),
-            _ => None,
-        }
-    }
-}
-
-impl From<SnapshotError> for MirrorError {
-    fn from(value: SnapshotError) -> Self {
-        Self::MalformedSnapshot(value)
-    }
-}
-
-/// Validated projection of the current Python world.
+/// Validated projection of the engine's current world.
+///
+/// A projection, not a reconciler: the engine publishes a complete snapshot on
+/// every revision increase and the channel delivers each one exactly once, in
+/// order. The only thing that can still go wrong is the *content* — actor
+/// labels and item names are LLM-authored — so the replacement is atomic and
+/// validated, and a snapshot that fails leaves the previous one standing.
 #[derive(Resource, Debug, Default)]
 pub struct WorldMirror {
-    session_id: Option<String>,
     revision: Option<u64>,
     player_id: Option<ActorId>,
     actors: Vec<ActorSnapshot>,
@@ -369,61 +403,26 @@ pub struct WorldMirror {
     items: Vec<ItemSnapshot>,
     item_indices: HashMap<ItemId, usize>,
     offers: Vec<OfferSnapshot>,
-    last_event_seq: Option<u64>,
-    resync_needed: bool,
 }
 
-#[allow(dead_code)]
 impl WorldMirror {
-    /// Starts a fresh sidecar session and drops all state from the old one.
-    pub fn begin_session(&mut self, session_id: impl Into<String>) -> Result<(), MirrorError> {
-        let session_id = session_id.into();
-        if !valid_id(&session_id) {
-            return Err(MirrorError::InvalidSessionId);
-        }
-
-        *self = Self {
-            session_id: Some(session_id),
-            ..Self::default()
-        };
-        Ok(())
-    }
-
-    pub fn session(&self) -> Option<&str> {
-        self.session_id.as_deref()
-    }
-
+    /// The revision the ECS is currently projecting. `interaction.rs` carries it
+    /// on every command so a result that lands after the world moved on can be
+    /// recognized as stale.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "queried by tests and future consumers")
+    )]
     pub fn revision(&self) -> Option<u64> {
         self.revision
-    }
-
-    /// Alias matching the name used on the wire.
-    pub fn world_revision(&self) -> Option<u64> {
-        self.revision()
     }
 
     pub fn player_id(&self) -> Option<&ActorId> {
         self.player_id.as_ref()
     }
 
-    pub fn last_event_seq(&self) -> Option<u64> {
-        self.last_event_seq
-    }
-
-    pub fn needs_resync(&self) -> bool {
-        self.resync_needed
-    }
-
-    pub fn mark_resync_needed(&mut self) {
-        self.resync_needed = true;
-    }
-
     pub fn actors(&self) -> impl ExactSizeIterator<Item = &ActorSnapshot> {
         self.actors.iter()
-    }
-
-    pub fn items(&self) -> impl ExactSizeIterator<Item = &ItemSnapshot> {
-        self.items.iter()
     }
 
     pub fn offers(&self) -> impl ExactSizeIterator<Item = &OfferSnapshot> {
@@ -442,75 +441,18 @@ impl WorldMirror {
             .and_then(|index| self.items.get(*index))
     }
 
+    /// Offers are few; a linear scan beats a second index.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "queried by tests and future consumers")
+    )]
     pub fn offer(&self, id: &ItemId) -> Option<&OfferSnapshot> {
         self.offers.iter().find(|offer| &offer.item_id == id)
     }
 
-    /// Records one server event and detects loss or reordering.
-    ///
-    /// A gap advances the observed watermark before returning the error.  This
-    /// lets the bridge request one resync and continue consuming the ordered
-    /// stream while it waits for that snapshot, rather than reporting the same
-    /// missing sequence for every subsequent event.
-    pub fn observe_event(&mut self, session_id: &str, event_seq: u64) -> Result<(), MirrorError> {
-        self.ensure_session(session_id)?;
-
-        let expected = self.last_event_seq.map_or(1, |last| last.saturating_add(1));
-        if self
-            .last_event_seq
-            .is_some_and(|current| event_seq <= current)
-        {
-            return Err(MirrorError::StaleEventSequence {
-                current: self.last_event_seq.expect("checked above"),
-                received: event_seq,
-            });
-        }
-
-        self.last_event_seq = Some(event_seq);
-        if event_seq != expected {
-            self.resync_needed = true;
-            return Err(MirrorError::EventSequenceGap {
-                expected,
-                received: event_seq,
-            });
-        }
-        Ok(())
-    }
-
-    /// More explicit alias useful at protocol call sites.
-    pub fn observe_event_sequence(
-        &mut self,
-        session_id: &str,
-        event_seq: u64,
-    ) -> Result<(), MirrorError> {
-        self.observe_event(session_id, event_seq)
-    }
-
     /// Atomically validates and replaces the entire semantic projection.
-    pub fn replace_snapshot(
-        &mut self,
-        session_id: &str,
-        snapshot: WorldSnapshot,
-    ) -> Result<u64, MirrorError> {
-        self.ensure_session(session_id)?;
-        if let Some(current) = self.revision {
-            let stale = snapshot.world_revision < current
-                || (snapshot.world_revision == current && !self.resync_needed);
-            if stale {
-                return Err(MirrorError::StaleRevision {
-                    current,
-                    received: snapshot.world_revision,
-                });
-            }
-        }
-
-        let validated = match ValidatedSnapshot::new(snapshot) {
-            Ok(validated) => validated,
-            Err(error) => {
-                self.resync_needed = true;
-                return Err(MirrorError::MalformedSnapshot(error));
-            }
-        };
+    pub fn replace_snapshot(&mut self, snapshot: WorldSnapshot) -> Result<u64, SnapshotError> {
+        let validated = ValidatedSnapshot::new(snapshot)?;
 
         let revision = validated.snapshot.world_revision;
         self.revision = Some(revision);
@@ -520,21 +462,7 @@ impl WorldMirror {
         self.items = validated.snapshot.items;
         self.item_indices = validated.item_indices;
         self.offers = validated.snapshot.offers;
-        self.resync_needed = false;
         Ok(revision)
-    }
-
-    fn ensure_session(&self, received: &str) -> Result<(), MirrorError> {
-        let Some(expected) = self.session_id.as_deref() else {
-            return Err(MirrorError::NoActiveSession);
-        };
-        if received != expected {
-            return Err(MirrorError::SessionMismatch {
-                expected: expected.to_owned(),
-                received: received.to_owned(),
-            });
-        }
-        Ok(())
     }
 }
 
@@ -779,7 +707,7 @@ mod tests {
     }
 
     #[test]
-    fn typed_ids_are_transparent_on_the_wire() {
+    fn typed_ids_serialize_as_bare_strings() {
         assert_eq!(
             serde_json::to_string(&ActorId("npc".into())).unwrap(),
             r#""npc""#
@@ -799,106 +727,36 @@ mod tests {
         assert_eq!(bevy, Vec3::new(1.0, 2.0, 3.0));
     }
 
+    /// The projection is replaced whole or not at all. There is no resync any
+    /// more — a rejected snapshot simply does not land, and the next one (the
+    /// engine publishes one per revision) supersedes it.
     #[test]
-    fn replacement_is_atomic_and_rejects_stale_revisions() {
+    fn a_rejected_snapshot_leaves_the_previous_projection_standing() {
         let mut mirror = WorldMirror::default();
-        mirror.begin_session("one").unwrap();
-        assert_eq!(mirror.replace_snapshot("one", snapshot(7)).unwrap(), 7);
+        assert_eq!(mirror.replace_snapshot(snapshot(7)).unwrap(), 7);
 
         let mut broken = snapshot(8);
         broken.actors[1].holds.push(ItemId("fish".into()));
-        let error = mirror.replace_snapshot("one", broken).unwrap_err();
         assert!(matches!(
-            error,
-            MirrorError::MalformedSnapshot(SnapshotError::MultipleOwners { .. })
+            mirror.replace_snapshot(broken).unwrap_err(),
+            SnapshotError::MultipleOwners { .. }
         ));
         assert_eq!(mirror.revision(), Some(7));
         assert_eq!(mirror.actor(&ActorId("npc".into())).unwrap().holds.len(), 1);
-        assert!(mirror.needs_resync());
 
-        // A malformed snapshot requested a resync, so an equal-revision full
-        // snapshot is the one intentional exception to normal stale rejection.
-        assert_eq!(mirror.replace_snapshot("one", snapshot(7)).unwrap(), 7);
-        assert!(!mirror.needs_resync());
-        assert!(matches!(
-            mirror.replace_snapshot("one", snapshot(7)),
-            Err(MirrorError::StaleRevision { .. })
-        ));
-    }
-
-    #[test]
-    fn replacement_rejects_wrong_session_without_changing_state() {
-        let mut mirror = WorldMirror::default();
-        mirror.begin_session("one").unwrap();
-        mirror.replace_snapshot("one", snapshot(2)).unwrap();
-        assert!(matches!(
-            mirror.replace_snapshot("two", snapshot(3)),
-            Err(MirrorError::SessionMismatch { .. })
-        ));
-        assert_eq!(mirror.revision(), Some(2));
-    }
-
-    #[test]
-    fn begin_session_clears_old_projection_and_sequence() {
-        let mut mirror = WorldMirror::default();
-        mirror.begin_session("one").unwrap();
-        mirror.observe_event("one", 1).unwrap();
-        mirror.replace_snapshot("one", snapshot(2)).unwrap();
-        mirror.begin_session("two").unwrap();
-        assert_eq!(mirror.session(), Some("two"));
-        assert_eq!(mirror.revision(), None);
-        assert_eq!(mirror.last_event_seq(), None);
-        assert_eq!(mirror.actors().len(), 0);
-    }
-
-    #[test]
-    fn event_sequence_gap_is_observed_and_requests_resync() {
-        let mut mirror = WorldMirror::default();
-        mirror.begin_session("one").unwrap();
-        mirror.observe_event("one", 1).unwrap();
-        let error = mirror.observe_event("one", 3).unwrap_err();
-        assert_eq!(
-            error,
-            MirrorError::EventSequenceGap {
-                expected: 2,
-                received: 3,
-            }
-        );
-        assert!(error.requires_resync());
-        assert!(mirror.needs_resync());
-        assert_eq!(mirror.last_event_seq(), Some(3));
-        mirror.observe_event("one", 4).unwrap();
-    }
-
-    #[test]
-    fn equal_revision_full_snapshot_completes_requested_resync() {
-        let mut mirror = WorldMirror::default();
-        mirror.begin_session("one").unwrap();
-        mirror.replace_snapshot("one", snapshot(7)).unwrap();
-        mirror.observe_event("one", 1).unwrap();
-        assert!(matches!(
-            mirror.observe_event("one", 3),
-            Err(MirrorError::EventSequenceGap { .. })
-        ));
-        assert!(mirror.needs_resync());
-
-        assert_eq!(mirror.replace_snapshot("one", snapshot(7)).unwrap(), 7);
-        assert!(!mirror.needs_resync());
+        assert_eq!(mirror.replace_snapshot(snapshot(8)).unwrap(), 8);
     }
 
     #[test]
     fn malformed_offer_does_not_replace_the_good_projection() {
         let mut mirror = WorldMirror::default();
-        mirror.begin_session("one").unwrap();
-        mirror.replace_snapshot("one", snapshot(1)).unwrap();
+        mirror.replace_snapshot(snapshot(1)).unwrap();
         let mut invalid = snapshot(2);
         invalid.offers[0].giver_id = ActorId("player".into());
         invalid.offers[0].target_id = Some(ActorId("npc".into()));
         assert!(matches!(
-            mirror.replace_snapshot("one", invalid),
-            Err(MirrorError::MalformedSnapshot(
-                SnapshotError::OfferGiverDoesNotOwnItem { .. }
-            ))
+            mirror.replace_snapshot(invalid),
+            Err(SnapshotError::OfferGiverDoesNotOwnItem { .. })
         ));
         assert_eq!(
             mirror.offers().next().unwrap().giver_id,
@@ -909,14 +767,11 @@ mod tests {
     #[test]
     fn projection_text_is_bounded_before_reaching_ecs_or_ui() {
         let mut mirror = WorldMirror::default();
-        mirror.begin_session("one").unwrap();
         let mut invalid = snapshot(1);
         invalid.actors[0].name_for_player = "x".repeat(MAX_LABEL_CHARS + 1);
         assert!(matches!(
-            mirror.replace_snapshot("one", invalid),
-            Err(MirrorError::MalformedSnapshot(
-                SnapshotError::InvalidText { .. }
-            ))
+            mirror.replace_snapshot(invalid),
+            Err(SnapshotError::InvalidText { .. })
         ));
         assert_eq!(mirror.revision(), None);
     }

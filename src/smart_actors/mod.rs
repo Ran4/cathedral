@@ -1,7 +1,14 @@
-//! Python-authoritative smart actors and their non-blocking Bevy projection.
+//! Engine-authoritative smart actors and their non-blocking Bevy projection.
+//!
+//! The authority is [`local_engine`], an in-process `cathedral_sim::Engine`.
+//! The game writes [`bridge::BridgeCommand`]s into its queue and reads typed
+//! `cathedral_sim::EngineMessage`s back out of its inbox; [`model::WorldMirror`]
+//! projects the snapshots, and everything else here turns the engine's messages
+//! into HUD toasts, speech bubbles and sound effects.
 
 pub mod actors;
 pub mod bridge;
+pub mod local_engine;
 pub mod model;
 
 mod config_menu;
@@ -16,11 +23,14 @@ use bevy::audio::AddAudioSource;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::transform::TransformSystems;
+use cathedral_sim::{Capabilities, EngineMessage, StatusEvent, TtsBackendKind};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 
 pub use config_menu::ConfigMenuState;
 pub use targeting::ActorFocus;
+
+/// The one actor the game itself controls.
+const PLAYER_ID: &str = "player";
 
 pub const HEARING_RADIUS_M: f32 = 20.0;
 pub const ITEM_INTERACTION_RADIUS_M: f32 = 4.0;
@@ -28,14 +38,15 @@ pub const PLAYER_SPEECH_MAX_SECONDS: u32 = 15;
 pub const PLAYER_SPEECH_MAX_CHARS: usize = 500;
 pub const POSITION_UPDATE_HZ: f32 = 10.0;
 
-/// Non-secret client-side sidecar settings loaded from `config.ron`.
+/// Non-secret client-side actor settings loaded from `config.ron`.
 #[derive(Resource, Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SmartActorsConfig {
     pub enabled: bool,
     pub fake_backend: bool,
+    /// Still needed: the local speech models (Canary-Qwen, Pocket TTS) run as
+    /// `uv` worker subprocesses. Nothing else is spawned any more.
     pub uv_binary: String,
-    pub server_script: String,
     pub tts_backend: String,
     /// Player transcription at startup: "cloud" (OpenAI) or "local"
     /// (Canary-Qwen FP16).
@@ -50,8 +61,8 @@ pub struct SmartActorsConfig {
     pub sounds: SoundsConfig,
 }
 
-/// Settings for non-speech sound percepts. Perception runs in the sidecar;
-/// these values are forwarded through its environment at launch.
+/// Settings for non-speech sound percepts. Perception runs in the engine;
+/// these values configure it at construction.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SoundsConfig {
@@ -59,7 +70,7 @@ pub struct SoundsConfig {
     /// Total horizontal FOV for the "saw who did it" test. 135° is a guess —
     /// the one number in this feature only play-testing can settle.
     pub view_cone_degrees: f32,
-    /// Sidecar-side rate limit: sounds inside the cooldown are dropped
+    /// Engine-side rate limit: sounds inside the cooldown are dropped
     /// silently, so holding F cannot flood NPC inboxes (and the LLM bill).
     pub min_seconds_between_player_sounds: f32,
 }
@@ -80,7 +91,6 @@ impl Default for SmartActorsConfig {
             enabled: true,
             fake_backend: false,
             uv_binary: "uv".into(),
-            server_script: "prompt_playgound/server.py".into(),
             tts_backend: "local".into(),
             stt_backend: "cloud".into(),
             pause_microphone_during_npc_voice: true,
@@ -119,9 +129,6 @@ pub struct SmartActorsPlugin {
 pub struct SmartActorRuntime {
     pub connected: bool,
     pub ready: bool,
-    /// True while the semantic mirror is waiting for an authoritative
-    /// replacement snapshot. No player command may cross this barrier.
-    pub resyncing: bool,
     pub stt_available: bool,
     pub stt_cloud_available: bool,
     pub stt_local_available: bool,
@@ -143,7 +150,6 @@ impl SmartActorRuntime {
         Self {
             connected: false,
             ready: false,
-            resyncing: false,
             stt_available: false,
             stt_cloud_available: false,
             stt_local_available: false,
@@ -160,7 +166,7 @@ impl SmartActorRuntime {
     }
 
     pub fn interactions_enabled(&self) -> bool {
-        self.connected && self.ready && !self.resyncing
+        self.connected && self.ready
     }
 }
 
@@ -209,35 +215,14 @@ impl Plugin for SmartActorsPlugin {
             return;
         }
 
-        let script = PathBuf::from(&self.config.server_script);
-        let script = if script.is_absolute() {
-            script
-        } else {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(script)
-        };
-        let (handle, inbox, worker) = bridge::spawn_sidecar(bridge::BridgeLaunchConfig {
-            uv_binary: self.config.uv_binary.clone(),
-            server_script: script,
-            fake_backend: self.config.fake_backend,
-            tts_backend: self.config.tts_backend.clone(),
-            sounds_enabled: self.config.sounds.enabled,
-            view_cone_degrees: self.config.sounds.view_cone_degrees,
-            min_seconds_between_player_sounds: self
-                .config
-                .sounds
-                .min_seconds_between_player_sounds,
-        });
-        let mut mirror = model::WorldMirror::default();
-        mirror
-            .begin_session(handle.session_id().to_owned())
-            .expect("generated session IDs are valid");
+        let (handle, inbox, worker, engine) = local_engine::spawn(&self.config);
+        app.insert_non_send(engine);
 
         app.insert_resource(handle)
             .insert_resource(inbox)
             .insert_resource(worker)
-            .insert_resource(mirror)
+            .init_resource::<model::WorldMirror>()
             .insert_resource(SmartActorRuntime::starting(self.config.fake_backend))
-            .init_resource::<HandshakeRecovery>()
             .init_resource::<ActorFocus>()
             .init_resource::<interaction::InteractionState>()
             .init_resource::<interaction::PlayerSpatialState>()
@@ -273,7 +258,10 @@ impl Plugin for SmartActorsPlugin {
             )
             .add_systems(
                 PostUpdate,
-                (drain_bridge_messages, retry_pending_resync)
+                // The engine polls first: a command written in this frame's
+                // CollectInput is answered no later than the next frame's drain,
+                // the same latency the sidecar had.
+                (local_engine::pump_local_engine, drain_bridge_messages)
                     .chain()
                     .in_set(SmartActorSet::DrainBridge),
             )
@@ -339,121 +327,13 @@ impl Plugin for SmartActorsPlugin {
     }
 }
 
-/// Developer/test-only transcript injection. The Python service accepts it
-/// exclusively in deterministic fake mode and still applies the normal `say`
-/// validator; production has no typed-chat path.
+/// Developer/test-only transcript injection. The engine accepts it exclusively
+/// in deterministic fake mode and still applies the normal `say` validator;
+/// production has no typed-chat path.
 #[derive(Message, Debug, Clone)]
 pub struct InjectPlayerTranscript {
     pub text: String,
     pub target_id: Option<model::ActorId>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct CapabilitiesWire {
-    llm: bool,
-    stt: bool,
-    stt_cloud: bool,
-    stt_local: bool,
-    tts: bool,
-    tts_cloud: bool,
-    tts_local: bool,
-    tts_selected: bridge::TtsBackend,
-}
-
-#[derive(Resource, Default)]
-struct HandshakeRecovery {
-    capabilities: Option<CapabilitiesWire>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct ReadyWire {
-    capabilities: CapabilitiesWire,
-    snapshot: model::WorldSnapshot,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct SpeechWire {
-    event_id: String,
-    speaker_id: model::ActorId,
-    target_id: Option<model::ActorId>,
-    text: String,
-    speaker_position_m: model::Position,
-    recipient_ids: Vec<model::ActorId>,
-    speaker_name_for_player: String,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct WorldEventWire {
-    event_id: String,
-    kind: String,
-    actor_id: model::ActorId,
-    target_id: Option<model::ActorId>,
-    item_id: Option<model::ItemId>,
-    recipient_ids: Vec<model::ActorId>,
-}
-
-/// The design/06 `sound` event: a positioned, radius-bound percept. Bevy only
-/// plays it and toasts the sidecar-rendered player percept; it changes no
-/// state. `actor_id` arrives null unless the player witnessed the sound.
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct SoundWire {
-    event_id: String,
-    sound_id: String,
-    #[serde(rename = "class")]
-    sound_class: String,
-    actor_id: Option<model::ActorId>,
-    position_m: model::Position,
-    audible_distance: f32,
-    recipient_ids: Vec<model::ActorId>,
-    witness_ids: Vec<model::ActorId>,
-    text_for_player: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct TranscriptionWire {
-    request_id: String,
-    text: Option<String>,
-    error: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct CommandResultWire {
-    request_id: String,
-    success: bool,
-    error_code: Option<String>,
-    message: String,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct StatusWire {
-    subsystem: String,
-    state: String,
-    actor_id: Option<model::ActorId>,
-    message: Option<String>,
-    backend: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct TtsFailedWire {
-    speech_event_id: String,
-    reason: String,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct TtsStreamEndWire {
-    speech_event_id: String,
-    chunk_count: u32,
-    first_chunk_ms: u32,
 }
 
 #[derive(SystemParam)]
@@ -477,15 +357,18 @@ fn drain_bridge_messages(
     microphone: Option<Res<microphone::MicrophoneService>>,
     mut mirror: ResMut<model::WorldMirror>,
     mut runtime: ResMut<SmartActorRuntime>,
-    mut handshake_recovery: ResMut<HandshakeRecovery>,
     mut hud: ResMut<hud::SmartActorHudState>,
     mut interaction: ResMut<interaction::InteractionState>,
     mut microphone_input: ResMut<interaction::MicrophoneInputState>,
     mut spatial: ResMut<interaction::PlayerSpatialState>,
     mut presentation: BridgePresentationWriters,
+    // Speech presentation dedupes and orders by this (speech.rs), and the
+    // engine's messages no longer carry a sequence of their own. Counting them
+    // here gives the same monotonic, gap-free stream the envelope did.
+    mut message_seq: Local<u64>,
 ) {
     // Resource insertions/removals are deferred. Track what this drain pass
-    // has queued so several buffered server messages cannot spawn several
+    // has queued so several buffered engine messages cannot spawn several
     // microphone workers before commands are applied.
     let mut microphone_present = microphone.is_some();
     while let Some(event) = inbox.try_recv() {
@@ -493,10 +376,8 @@ fn drain_bridge_messages(
             bridge::BridgeEvent::ProcessStarted => {
                 runtime.connected = true;
                 runtime.ready = false;
-                runtime.resyncing = false;
-                handshake_recovery.capabilities = None;
                 hud.connection = hud::ConnectionUiState::Starting;
-                hud.connection_detail = "Python started; handshaking…".into();
+                hud.connection_detail = "Actor engine starting; handshaking…".into();
                 let Ok(player) = players.single() else {
                     hud.clear_transients_on_disconnect("Player transform is unavailable");
                     continue;
@@ -514,93 +395,37 @@ fn drain_bridge_messages(
                     hud.clear_transients_on_disconnect(error);
                 }
             }
-            bridge::BridgeEvent::Message(envelope) => {
-                // Lifecycle and protocol events come from separate worker
-                // threads. Once the sole child is known dead, never let a
-                // buffered late message revive interactions against stale
-                // state; this slice has no in-place restart.
+            bridge::BridgeEvent::Message(message) => {
+                // Once the engine is known dead, never let a buffered late
+                // message revive interactions against stale state; this slice
+                // has no in-place restart.
                 if !runtime.connected {
                     continue;
                 }
-                let is_snapshot =
-                    matches!(envelope.message_type.as_str(), "ready" | "world_snapshot");
-                match mirror.observe_event(handle.session_id(), envelope.event_seq) {
-                    Ok(()) => {}
-                    Err(error @ model::MirrorError::EventSequenceGap { .. }) => {
-                        runtime.resyncing = true;
-                        request_resync(&handle, &mirror);
-                        hud.toast(error.to_string());
-                        if !is_snapshot {
-                            continue;
-                        }
-                    }
-                    Err(model::MirrorError::StaleEventSequence { .. }) => continue,
-                    Err(error) => {
-                        hud.toast(error.to_string());
-                        continue;
-                    }
-                }
-                if mirror.needs_resync() && !is_snapshot {
-                    continue;
-                }
-                process_server_message(
-                    envelope,
-                    &handle,
+                *message_seq += 1;
+                process_engine_message(
+                    *message,
+                    *message_seq,
                     &mut mirror,
                     &mut runtime,
-                    &mut handshake_recovery,
                     &mut hud,
                     &mut interaction,
                     &mut presentation,
                 );
-                // Do not open the default input device before the Python
+                // Do not open the default input device before the engine
                 // handshake confirms that transcription is configured.
                 if runtime.ready && runtime.stt_available && !microphone_present {
                     commands.insert_resource(microphone::MicrophoneService::spawn(
                         handle.runtime_dir().to_path_buf(),
                         handle.command_sender(),
-                        microphone::clamped_trailing_silence(
-                            config.stt_trailing_silence_ms,
-                        ),
+                        microphone::clamped_trailing_silence(config.stt_trailing_silence_ms),
                     ));
                     microphone_present = true;
-                }
-            }
-            bridge::BridgeEvent::TtsAudio {
-                speech_event_id,
-                wav_bytes,
-            } => {
-                if runtime.connected {
-                    presentation.wav.write(speech::TtsClipReady {
-                        event_id: speech_event_id,
-                        wav_bytes,
-                    });
-                }
-            }
-            bridge::BridgeEvent::TtsPcmChunk {
-                speech_event_id,
-                chunk_seq,
-                sample_rate,
-                samples,
-            } => {
-                if runtime.connected {
-                    presentation.pcm.write(speech::TtsPcmChunkReady {
-                        event_id: speech_event_id,
-                        chunk_seq,
-                        sample_rate,
-                        samples,
-                    });
-                }
-            }
-            bridge::BridgeEvent::Degraded(message) => {
-                if runtime.connected {
-                    hud.connection_detail = truncate_owned(message, 300);
                 }
             }
             bridge::BridgeEvent::Disconnected(message) => {
                 runtime.connected = false;
                 runtime.ready = false;
-                runtime.resyncing = false;
                 runtime.stt_available = false;
                 runtime.stt_cloud_available = false;
                 runtime.stt_local_available = false;
@@ -609,7 +434,6 @@ fn drain_bridge_messages(
                 runtime.tts_local_available = false;
                 runtime.tts_selected = bridge::TtsBackend::Off;
                 runtime.tts_selection_pending = None;
-                handshake_recovery.capabilities = None;
                 interaction.clear_pending();
                 microphone_input.clear_on_disconnect();
                 hud.clear_transients_on_disconnect(truncate_owned(message, 300));
@@ -623,279 +447,243 @@ fn drain_bridge_messages(
     }
 }
 
+/// One authoritative message, typed.
+///
+/// Every arm used to begin by deserializing a `serde_json::Value` and toasting
+/// on failure. The message is now the engine's own value, so what remains is
+/// the *sanitation* the projection still owes the UI: an NPC's line and a
+/// backend's error string are the two texts nobody in this process wrote.
 #[allow(clippy::too_many_arguments)]
-fn process_server_message(
-    envelope: bridge::ServerEnvelope,
-    handle: &bridge::BridgeHandle,
+fn process_engine_message(
+    message: EngineMessage,
+    message_seq: u64,
     mirror: &mut model::WorldMirror,
     runtime: &mut SmartActorRuntime,
-    handshake_recovery: &mut HandshakeRecovery,
     hud: &mut hud::SmartActorHudState,
     interaction: &mut interaction::InteractionState,
     presentation: &mut BridgePresentationWriters,
 ) {
-    let message_type = envelope.message_type;
-    let payload = envelope.payload;
-    match message_type.as_str() {
-        "ready" => {
-            // Keep independently valid capabilities even if the bundled
-            // snapshot is malformed. The requested replacement snapshot does
-            // not repeat them, so this is what lets the initial handshake
-            // recover instead of remaining permanently offline.
-            let recoverable_capabilities = recoverable_ready_capabilities(&payload);
-            match serde_json::from_value::<ReadyWire>(payload) {
-                Ok(ready) => {
-                    if !valid_capabilities(&ready.capabilities) {
-                        let _ = accept_snapshot(handle, mirror, runtime, hud, ready.snapshot);
-                        handshake_recovery.capabilities = None;
-                        mark_handshake_unrecoverable(runtime, hud);
-                        hud.toast("Invalid NPC voice capabilities from Python");
-                        return;
-                    }
-                    handshake_recovery.capabilities = Some(ready.capabilities);
-                    if accept_snapshot(handle, mirror, runtime, hud, ready.snapshot) {
-                        apply_ready_capabilities(runtime, hud, ready.capabilities);
-                        handshake_recovery.capabilities = None;
-                    }
-                }
-                Err(error) => {
-                    if let Some(capabilities) = recoverable_capabilities {
-                        handshake_recovery.capabilities = Some(capabilities);
-                    }
-                    malformed_payload(handle, mirror, runtime, hud, "ready", error);
-                }
+    match message {
+        EngineMessage::Ready {
+            capabilities,
+            snapshot,
+        } => {
+            // A rejected first snapshot means the seeded world itself is
+            // unrenderable — a sim bug, not a lost message, and there is no
+            // resync left to ask for. The handshake simply never completes and
+            // the HUD keeps saying so.
+            if accept_snapshot(mirror, runtime, hud, &snapshot) {
+                apply_ready_capabilities(runtime, hud, capabilities);
             }
         }
-        "world_snapshot" => match serde_json::from_value::<model::WorldSnapshot>(payload) {
-            Ok(snapshot) => {
-                let completes_resync = mirror.needs_resync();
-                if accept_snapshot(handle, mirror, runtime, hud, snapshot) {
-                    let handshake_failed = if completes_resync && !runtime.ready {
-                        if let Some(capabilities) = handshake_recovery.capabilities {
-                            apply_ready_capabilities(runtime, hud, capabilities);
-                            false
-                        } else {
-                            mark_handshake_unrecoverable(runtime, hud);
-                            true
-                        }
-                    } else {
-                        false
-                    };
-                    if completes_resync {
-                        handshake_recovery.capabilities = None;
-                        // The authoritative snapshot supersedes every
-                        // uncertain in-flight projection. A command result may
-                        // have been the event lost at the sequence gap, so
-                        // never leave controls locked waiting for it.
-                        interaction.clear_pending();
-                        if !handshake_failed {
-                            hud.toast("Actor world resynchronized");
-                        }
-                    }
-                }
-            }
-            Err(error) => malformed_payload(handle, mirror, runtime, hud, "world_snapshot", error),
-        },
-        "speech" => match serde_json::from_value::<SpeechWire>(payload) {
-            Ok(speech) if valid_speech(&speech, mirror) => {
-                let player_heard = speech.speaker_id.0 == "player"
-                    || speech
-                        .recipient_ids
-                        .iter()
-                        .any(|actor_id| actor_id.0 == "player");
-                if player_heard {
-                    let recipient_count = speech
-                        .recipient_ids
-                        .iter()
-                        .filter(|recipient| {
-                            *recipient != &speech.speaker_id && mirror.actor(recipient).is_some()
-                        })
-                        .count();
-                    presentation.speech.write(speech::PresentSpeech {
-                        event_seq: envelope.event_seq,
-                        event_id: speech.event_id,
-                        speaker_id: speech.speaker_id.clone(),
-                        speaker_label: speech.speaker_name_for_player,
-                        text: speech.text,
-                        speaker_position: speech.speaker_position_m.into(),
-                        recipient_count,
-                        expect_audio: tts_selection_is_usable(runtime)
-                            && speech.speaker_id.0 != "player",
-                    });
-                }
-            }
-            Ok(_) => hud.toast("Discarded invalid speech data from Python"),
-            Err(error) => hud.toast(format!("Malformed speech event: {error}")),
-        },
-        "sound" => match serde_json::from_value::<SoundWire>(payload) {
-            Ok(event) if valid_sound(&event) => {
-                // The sidecar rendered the player's percept (or None when the
-                // player is out of range); Bevy never decides what is known.
-                if let Some(text) = event.text_for_player.clone() {
-                    hud.toast(text);
-                }
-                let player_heard = event
-                    .actor_id
-                    .as_ref()
-                    .is_some_and(|actor_id| actor_id.0 == "player")
-                    || event
-                        .recipient_ids
-                        .iter()
-                        .any(|recipient| recipient.0 == "player");
-                if player_heard {
-                    presentation.sound_effects.write(sound::PlaySoundEffect {
-                        sound_id: event.sound_id,
-                        position: event.position_m.into(),
-                        audible_distance: event.audible_distance,
-                    });
-                }
-            }
-            Ok(_) => hud.toast("Discarded invalid sound data from Python"),
-            Err(error) => hud.toast(format!("Malformed sound event: {error}")),
-        },
-        "world_event" => {
-            match serde_json::from_value::<WorldEventWire>(payload) {
-                Ok(event) => {
-                    // This is presentation feedback only. Offers and ownership
-                    // still reconcile exclusively from authoritative snapshots.
-                    if let Some(text) = describe_world_event(&event, mirror) {
-                        hud.toast(text);
-                    }
-                }
-                Err(error) => hud.toast(format!("Malformed world event: {error}")),
-            }
+        EngineMessage::Snapshot(snapshot) => {
+            accept_snapshot(mirror, runtime, hud, &snapshot);
         }
-        "transcription_result" => match serde_json::from_value::<TranscriptionWire>(payload) {
-            Ok(result) => {
-                if let Some(text) = result.text.filter(|text| valid_ui_text(text, 500)) {
-                    // This is the earliest exact confirmation of what STT
-                    // understood. It has a dedicated bottom caption so later
-                    // status/world-event toasts cannot overwrite it.
-                    hud.show_player_transcript(&text);
-                } else if let Some(error) = result.error {
-                    hud.toast(truncate_owned(error, 300));
-                }
-                let _ = result.request_id;
-            }
-            Err(error) => hud.toast(format!("Malformed transcription result: {error}")),
-        },
-        "command_result" => {
-            let request_id_hint = payload
-                .get("request_id")
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned);
-            match serde_json::from_value::<CommandResultWire>(payload) {
-                Ok(result) => {
-                    if runtime
-                        .tts_selection_pending
-                        .as_ref()
-                        .is_some_and(|(request_id, _)| request_id == &result.request_id)
-                    {
-                        let (_, requested) = runtime
-                            .tts_selection_pending
-                            .take()
-                            .expect("pending selection was checked");
-                        if result.success {
-                            runtime.tts_selected = requested;
-                            runtime.tts_selection_dirty = true;
-                            hud.set_npc_voice_backend(requested);
-                            hud.toast(format!(
-                                "NPC voices: {}",
-                                requested.wire_name().to_uppercase()
-                            ));
-                        } else {
-                            let code = truncate_owned(
-                                result.error_code.unwrap_or_else(|| "error".into()),
-                                64,
-                            );
-                            hud.toast(format!("{code}: {}", truncate_owned(result.message, 260)));
-                        }
-                        return;
-                    }
-                    let known = interaction.resolve_command(
-                        &result.request_id,
-                        result.success,
-                        runtime.mirror_revision,
-                    );
-                    if known && !result.success {
-                        let code =
-                            truncate_owned(result.error_code.unwrap_or_else(|| "error".into()), 64);
-                        hud.toast(format!("{}: {}", code, truncate_owned(result.message, 260)));
-                    }
-                }
-                Err(error) => {
-                    if let Some(request_id) = request_id_hint {
-                        if runtime
-                            .tts_selection_pending
-                            .as_ref()
-                            .is_some_and(|(pending, _)| pending == &request_id)
-                        {
-                            runtime.tts_selection_pending = None;
-                        }
-                        interaction.resolve_command(&request_id, false, None);
-                    } else {
-                        interaction.clear_pending();
-                    }
-                    hud.toast(format!("Malformed command result: {error}"));
-                }
-            }
-        }
-        "status" => match serde_json::from_value::<StatusWire>(payload) {
-            Ok(status) => apply_status(status, mirror, hud),
-            Err(error) => hud.toast(format!("Malformed actor status: {error}")),
-        },
-        "tts_failed" => match serde_json::from_value::<TtsFailedWire>(payload) {
-            Ok(failure)
-                if valid_wire_id(&failure.speech_event_id)
-                    && valid_ui_text(&failure.reason, 160) =>
+        EngineMessage::Speech {
+            event_id,
+            speaker_id,
+            target_id: _,
+            text,
+            speaker_position_m,
+            recipient_ids,
+            speaker_name_for_player,
+        } => {
+            let speaker_id = model::actor_id_from_sim(&speaker_id);
+            let recipients: Vec<model::ActorId> =
+                recipient_ids.iter().map(model::actor_id_from_sim).collect();
+            if !valid_ui_text(&speaker_name_for_player, 256)
+                || !valid_ui_text(&text, PLAYER_SPEECH_MAX_CHARS)
+                || mirror.actor(&speaker_id).is_none()
             {
-                presentation.failure.write(speech::TtsClipFailed {
-                    event_id: failure.speech_event_id,
-                    reason: failure.reason,
+                hud.toast("Discarded invalid speech data from the actor engine");
+                return;
+            }
+            let player_heard =
+                speaker_id.0 == PLAYER_ID || recipients.iter().any(|id| id.0 == PLAYER_ID);
+            if !player_heard {
+                return;
+            }
+            let recipient_count = recipients
+                .iter()
+                .filter(|recipient| **recipient != speaker_id && mirror.actor(recipient).is_some())
+                .count();
+            presentation.speech.write(speech::PresentSpeech {
+                event_seq: message_seq,
+                event_id: event_id.0,
+                speaker_id: speaker_id.clone(),
+                speaker_label: speaker_name_for_player,
+                text,
+                speaker_position: model::vec3_from_sim(speaker_position_m),
+                recipient_count,
+                expect_audio: tts_selection_is_usable(runtime) && speaker_id.0 != PLAYER_ID,
+            });
+        }
+        EngineMessage::Sound {
+            event_id: _,
+            sound_id,
+            sound_class: _,
+            actor_id,
+            position_m,
+            audible_distance,
+            recipient_ids,
+            witness_ids: _,
+            text_for_player,
+        } => {
+            let audible_distance = audible_distance as f32;
+            if !sound::valid_sound_id(&sound_id)
+                || !audible_distance.is_finite()
+                || audible_distance <= 0.0
+                || audible_distance > 10_000.0
+                || text_for_player
+                    .as_deref()
+                    .is_some_and(|text| !valid_ui_text(text, 300))
+            {
+                hud.toast("Discarded invalid sound data from the actor engine");
+                return;
+            }
+            // The engine rendered the player's percept (or None when the player
+            // is out of range); Bevy never decides what is known.
+            if let Some(text) = text_for_player {
+                hud.toast(text);
+            }
+            let player_made_it = actor_id
+                .as_ref()
+                .is_some_and(|actor_id| actor_id.as_str() == PLAYER_ID);
+            let player_heard = player_made_it
+                || recipient_ids
+                    .iter()
+                    .any(|recipient| recipient.as_str() == PLAYER_ID);
+            if player_heard {
+                presentation.sound_effects.write(sound::PlaySoundEffect {
+                    sound_id,
+                    position: model::vec3_from_sim(position_m),
+                    audible_distance,
                 });
             }
-            Ok(_) => hud.toast("Discarded invalid NPC voice failure data"),
-            Err(error) => hud.toast(format!("Malformed NPC voice failure: {error}")),
-        },
-        "tts_stream_end" => match serde_json::from_value::<TtsStreamEndWire>(payload) {
-            Ok(end)
-                if valid_wire_id(&end.speech_event_id)
-                    && end.chunk_count > 0
-                    && end.first_chunk_ms <= 600_000 =>
+        }
+        EngineMessage::WorldEvent {
+            event_id: _,
+            kind,
+            actor_id,
+            target_id,
+            item_id,
+            recipient_ids,
+        } => {
+            // Presentation feedback only. Offers and ownership still reconcile
+            // exclusively from authoritative snapshots.
+            let text = describe_world_event(
+                &kind,
+                &model::actor_id_from_sim(&actor_id),
+                target_id.as_ref().map(model::actor_id_from_sim).as_ref(),
+                item_id.as_ref().map(model::item_id_from_sim).as_ref(),
+                &recipient_ids
+                    .iter()
+                    .map(model::actor_id_from_sim)
+                    .collect::<Vec<_>>(),
+                mirror,
+            );
+            if let Some(text) = text {
+                hud.toast(text);
+            }
+        }
+        EngineMessage::TranscriptionResult {
+            request_id: _,
+            text,
+            error,
+        } => {
+            if let Some(text) = text.filter(|text| valid_ui_text(text, 500)) {
+                // This is the earliest exact confirmation of what STT
+                // understood. It has a dedicated bottom caption so later
+                // status/world-event toasts cannot overwrite it.
+                hud.show_player_transcript(&text);
+            } else if let Some(error) = error {
+                hud.toast(truncate_owned(error, 300));
+            }
+        }
+        EngineMessage::CommandResult {
+            request_id,
+            success,
+            error_code,
+            message,
+        } => {
+            if runtime
+                .tts_selection_pending
+                .as_ref()
+                .is_some_and(|(pending, _)| pending == &request_id)
             {
+                let (_, requested) = runtime
+                    .tts_selection_pending
+                    .take()
+                    .expect("pending selection was checked");
+                if success {
+                    runtime.tts_selected = requested;
+                    runtime.tts_selection_dirty = true;
+                    hud.set_npc_voice_backend(requested);
+                    hud.toast(format!("NPC voices: {}", requested.name().to_uppercase()));
+                } else {
+                    let code = truncate_owned(error_code.unwrap_or_else(|| "error".into()), 64);
+                    hud.toast(format!("{code}: {}", truncate_owned(message, 260)));
+                }
+                return;
+            }
+            let known = interaction.resolve_command(&request_id, success, runtime.mirror_revision);
+            if known && !success {
+                let code = truncate_owned(error_code.unwrap_or_else(|| "error".into()), 64);
+                hud.toast(format!("{code}: {}", truncate_owned(message, 260)));
+            }
+        }
+        EngineMessage::Status(status) => apply_status(status, mirror, hud),
+        EngineMessage::TtsReady {
+            event_id,
+            wav_bytes,
+        } => {
+            presentation.wav.write(speech::TtsClipReady {
+                event_id: event_id.0,
+                wav_bytes,
+            });
+        }
+        EngineMessage::TtsChunk {
+            event_id,
+            chunk_seq,
+            sample_rate,
+            samples,
+        } => {
+            presentation.pcm.write(speech::TtsPcmChunkReady {
+                event_id: event_id.0,
+                chunk_seq,
+                sample_rate,
+                samples,
+            });
+        }
+        EngineMessage::TtsStreamEnd {
+            event_id,
+            chunk_count,
+            first_chunk_ms,
+        } => {
+            if chunk_count > 0 && first_chunk_ms <= 600_000 {
                 presentation.stream_end.write(speech::TtsStreamFinished {
-                    event_id: end.speech_event_id,
-                    chunk_count: end.chunk_count,
-                    first_chunk_ms: end.first_chunk_ms,
+                    event_id: event_id.0,
+                    chunk_count,
+                    first_chunk_ms,
                 });
+            } else {
+                hud.toast("Discarded invalid NPC stream completion data");
             }
-            Ok(_) => hud.toast("Discarded invalid NPC stream completion data"),
-            Err(error) => hud.toast(format!("Malformed NPC stream completion: {error}")),
-        },
-        "tts_chunk" => {}
-        "tts_ready" => {}
-        _ => {
-            hud.connection_detail = format!("Ignored unknown actor message: {message_type}");
         }
+        EngineMessage::TtsFailed { event_id, reason } => {
+            if valid_ui_text(&reason, 160) {
+                presentation.failure.write(speech::TtsClipFailed {
+                    event_id: event_id.0,
+                    reason,
+                });
+            } else {
+                hud.toast("Discarded invalid NPC voice failure data");
+            }
+        }
+        // Both are the host's business and never reach the ECS: `local_engine`
+        // writes the prompt archive and the session log itself.
+        EngineMessage::PromptExchange { .. } | EngineMessage::Diagnostic(_) => {}
     }
-}
-
-fn recoverable_ready_capabilities(payload: &serde_json::Value) -> Option<CapabilitiesWire> {
-    payload
-        .get("capabilities")
-        .cloned()
-        .and_then(|value| serde_json::from_value(value).ok())
-        .filter(valid_capabilities)
-}
-
-fn valid_capabilities(capabilities: &CapabilitiesWire) -> bool {
-    capabilities.stt == (capabilities.stt_cloud || capabilities.stt_local)
-        && capabilities.tts == (capabilities.tts_cloud || capabilities.tts_local)
-        && match capabilities.tts_selected {
-            bridge::TtsBackend::Cloud => capabilities.tts_cloud,
-            bridge::TtsBackend::Local => capabilities.tts_local,
-            bridge::TtsBackend::Off => true,
-        }
 }
 
 fn tts_selection_is_usable(runtime: &SmartActorRuntime) -> bool {
@@ -918,27 +706,29 @@ fn connection_detail_for_capabilities(llm: bool, stt: bool, tts: bool) -> String
         unavailable.push("NPC voice audio");
     }
     if unavailable.is_empty() {
-        "Local Python authority connected".into()
+        "Local actor engine connected".into()
     } else {
         format!("Connected; unavailable: {}", unavailable.join(", "))
     }
 }
 
+/// The engine's capability set is consistent by construction
+/// (`Capabilities::new` derives the `stt`/`tts` ORs from the four probes), so
+/// there is nothing left to validate here — only to apply.
 fn apply_ready_capabilities(
     runtime: &mut SmartActorRuntime,
     hud: &mut hud::SmartActorHudState,
-    capabilities: CapabilitiesWire,
+    capabilities: Capabilities,
 ) {
     runtime.ready = true;
     runtime.connected = true;
-    runtime.resyncing = false;
     runtime.stt_available = capabilities.stt;
     runtime.stt_cloud_available = capabilities.stt_cloud;
     runtime.stt_local_available = capabilities.stt_local;
     runtime.tts_available = capabilities.tts;
     runtime.tts_cloud_available = capabilities.tts_cloud;
     runtime.tts_local_available = capabilities.tts_local;
-    runtime.tts_selected = capabilities.tts_selected;
+    runtime.tts_selected = tts_backend_of(capabilities.tts_selected);
     runtime.tts_selection_pending = None;
     hud.connection = hud::ConnectionUiState::Online;
     if capabilities.stt {
@@ -951,77 +741,38 @@ fn apply_ready_capabilities(
     }
     hud.listening = false;
     hud.set_transcription_capabilities(capabilities.stt_cloud, capabilities.stt_local);
-    hud.set_npc_voice_backend(capabilities.tts_selected);
+    hud.set_npc_voice_backend(runtime.tts_selected);
     hud.connection_detail =
         connection_detail_for_capabilities(capabilities.llm, capabilities.stt, capabilities.tts);
 }
 
-fn mark_handshake_unrecoverable(
-    runtime: &mut SmartActorRuntime,
-    hud: &mut hud::SmartActorHudState,
-) {
-    runtime.ready = false;
-    runtime.stt_available = false;
-    runtime.stt_cloud_available = false;
-    runtime.stt_local_available = false;
-    runtime.tts_available = false;
-    runtime.tts_cloud_available = false;
-    runtime.tts_local_available = false;
-    runtime.tts_selected = bridge::TtsBackend::Off;
-    runtime.tts_selection_pending = None;
-    hud.connection = hud::ConnectionUiState::Offline;
-    hud.connection_detail =
-        "Actor handshake failed: ready capabilities were missing or invalid".into();
-    hud.microphone_available = false;
-    hud.microphone_unavailable = true;
-    hud.listening = false;
-    hud.set_transcription_capabilities(false, false);
-    hud.toast("Actor handshake could not recover");
-}
-
-fn accept_snapshot(
-    handle: &bridge::BridgeHandle,
-    mirror: &mut model::WorldMirror,
-    runtime: &mut SmartActorRuntime,
-    hud: &mut hud::SmartActorHudState,
-    snapshot: model::WorldSnapshot,
-) -> bool {
-    match mirror.replace_snapshot(handle.session_id(), snapshot) {
-        Ok(revision) => {
-            runtime.mirror_revision = Some(revision);
-            runtime.resyncing = false;
-            true
-        }
-        Err(model::MirrorError::StaleRevision { .. }) => false,
-        Err(error) => {
-            if error.requires_resync() {
-                runtime.resyncing = true;
-                request_resync(handle, mirror);
-            }
-            hud.toast(error.to_string());
-            false
-        }
+fn tts_backend_of(kind: TtsBackendKind) -> bridge::TtsBackend {
+    match kind {
+        TtsBackendKind::Cloud => bridge::TtsBackend::Cloud,
+        TtsBackendKind::Local => bridge::TtsBackend::Local,
+        TtsBackendKind::Off => bridge::TtsBackend::Off,
     }
 }
 
-fn malformed_payload(
-    handle: &bridge::BridgeHandle,
+/// Project one authoritative snapshot. It is replaced whole or not at all; a
+/// snapshot the projection rejects is a sim bug, and the next revision — the
+/// engine publishes one per change — is the only recovery there is.
+fn accept_snapshot(
     mirror: &mut model::WorldMirror,
     runtime: &mut SmartActorRuntime,
     hud: &mut hud::SmartActorHudState,
-    message_type: &str,
-    error: serde_json::Error,
-) {
-    mirror.mark_resync_needed();
-    runtime.resyncing = true;
-    request_resync(handle, mirror);
-    hud.toast(format!("Malformed {message_type}: {error}"));
-}
-
-fn request_resync(handle: &bridge::BridgeHandle, mirror: &model::WorldMirror) {
-    let _ = handle.try_send(bridge::BridgeCommand::ResyncRequest {
-        last_world_revision: mirror.revision().unwrap_or(0),
-    });
+    snapshot: &cathedral_sim::PublicSnapshot,
+) -> bool {
+    match mirror.replace_snapshot(snapshot.into()) {
+        Ok(revision) => {
+            runtime.mirror_revision = Some(revision);
+            true
+        }
+        Err(error) => {
+            hud.toast(format!("malformed snapshot: {error}"));
+            false
+        }
+    }
 }
 
 fn next_tts_backend(runtime: &SmartActorRuntime) -> bridge::TtsBackend {
@@ -1059,7 +810,7 @@ fn update_tts_backend_toggle(
 }
 
 /// Validated NPC-voice switch shared by the X key and the settings menu. The
-/// selection only commits (and persists) once the sidecar confirms it.
+/// selection only commits (and persists) once the engine confirms it.
 fn request_tts_backend(
     runtime: &mut SmartActorRuntime,
     handle: &bridge::BridgeHandle,
@@ -1082,7 +833,7 @@ fn request_tts_backend(
     if !available {
         hud.toast(format!(
             "{} NPC voices are not available",
-            backend.wire_name().to_uppercase()
+            backend.name().to_uppercase()
         ));
         return;
     }
@@ -1099,150 +850,82 @@ fn request_tts_backend(
             runtime.tts_selection_pending = Some((request_id, backend));
             hud.toast(format!(
                 "Switching NPC voices to {}…",
-                backend.wire_name().to_uppercase()
+                backend.name().to_uppercase()
             ));
         }
         Err(error) => hud.toast(error),
     }
 }
 
-/// A full command queue must not strand the mirror in resync mode forever.
-/// Retry at a modest cadence until an authoritative snapshot clears the flag.
-fn retry_pending_resync(
-    time: Res<Time>,
-    handle: Res<bridge::BridgeHandle>,
-    mirror: Res<model::WorldMirror>,
-    runtime: Res<SmartActorRuntime>,
-    mut next_attempt_at: Local<f64>,
-) {
-    if !mirror.needs_resync() || !runtime.connected {
-        *next_attempt_at = 0.0;
-        return;
-    }
-    let now = time.elapsed_secs_f64();
-    if now < *next_attempt_at {
-        return;
-    }
-    let retry_delay = if handle
-        .try_send(bridge::BridgeCommand::ResyncRequest {
-            last_world_revision: mirror.revision().unwrap_or(0),
-        })
-        .is_ok()
-    {
-        0.5
-    } else {
-        0.1
-    };
-    *next_attempt_at = now + retry_delay;
-}
-
+/// The engine's status rows drive the connection line and the STT pills.
+///
+/// `state` stays a free-form string: the speech backends add rows of their own
+/// (`synthesizing`, `loading`, `selected`, …) and the HUD matches on them.
 fn apply_status(
-    mut status: StatusWire,
+    status: StatusEvent,
     mirror: &model::WorldMirror,
     hud: &mut hud::SmartActorHudState,
 ) {
-    status.subsystem = truncate_owned(status.subsystem, 64);
-    status.state = truncate_owned(status.state, 64);
-    status.message = status.message.map(|message| truncate_owned(message, 300));
-    status.backend = status.backend.map(|backend| truncate_owned(backend, 16));
+    let subsystem = status.subsystem.as_str();
+    let state = truncate_owned(status.state, 64);
+    let message = status.message.map(|message| truncate_owned(message, 300));
+    let backend = status.backend.map(|backend| truncate_owned(backend, 16));
     let actor = status
         .actor_id
         .as_ref()
-        .and_then(|id| mirror.actor(id))
-        .map(|actor| actor.name_for_player.as_str());
-    hud.connection_detail = match (status.subsystem.as_str(), status.state.as_str(), actor) {
+        .map(model::actor_id_from_sim)
+        .and_then(|id| mirror.actor(&id))
+        .map(|actor| actor.name_for_player.clone());
+    hud.connection_detail = match (subsystem, state.as_str(), actor) {
         ("llm", "thinking", Some(actor)) => format!("{actor} is thinking…"),
         ("stt", "transcribing", _) => "Transcribing your speech…".into(),
         ("tts", "synthesizing", Some(actor)) => format!("Preparing {actor}'s voice…"),
-        (_, state, _) => status
-            .message
+        (_, state, _) => message
             .clone()
-            .unwrap_or_else(|| format!("{}: {state}", status.subsystem)),
+            .unwrap_or_else(|| format!("{subsystem}: {state}")),
     };
     hud.connection_detail = truncate_owned(std::mem::take(&mut hud.connection_detail), 300);
-    if status.subsystem == "stt"
-        && let Some(backend) = status.backend.as_deref()
+    if subsystem == "stt"
+        && let Some(backend) = backend.as_deref()
     {
-        hud.apply_transcription_status(backend, &status.state, status.message.as_deref());
+        hud.apply_transcription_status(backend, &state, message.as_deref());
     }
-    if matches!(status.state.as_str(), "degraded" | "unavailable")
-        && let Some(message) = status.message
+    if matches!(state.as_str(), "degraded" | "unavailable")
+        && let Some(message) = message
     {
         hud.toast(truncate_owned(message, 300));
     }
 }
 
-fn valid_sound(event: &SoundWire) -> bool {
-    valid_wire_id(&event.event_id)
-        && sound::valid_sound_id(&event.sound_id)
-        && !event.sound_class.is_empty()
-        && event.sound_class.len() <= 64
-        && event
-            .actor_id
-            .as_ref()
-            .is_none_or(|actor_id| valid_wire_id(&actor_id.0))
-        && event
-            .recipient_ids
-            .iter()
-            .chain(event.witness_ids.iter())
-            .all(|actor_id| valid_wire_id(&actor_id.0))
-        && event.audible_distance.is_finite()
-        && event.audible_distance > 0.0
-        && event.audible_distance <= 10_000.0
-        && event
-            .text_for_player
-            .as_deref()
-            .is_none_or(|text| valid_ui_text(text, 300))
-}
-
-fn valid_speech(speech: &SpeechWire, mirror: &model::WorldMirror) -> bool {
-    valid_wire_id(&speech.event_id)
-        && valid_wire_id(&speech.speaker_id.0)
-        && speech
-            .target_id
-            .as_ref()
-            .is_none_or(|target| valid_wire_id(&target.0))
-        && speech
-            .recipient_ids
-            .iter()
-            .all(|recipient| valid_wire_id(&recipient.0))
-        && mirror.actor(&speech.speaker_id).is_some()
-        && valid_ui_text(&speech.speaker_name_for_player, 256)
-        && valid_ui_text(&speech.text, PLAYER_SPEECH_MAX_CHARS)
-}
-
-fn describe_world_event(event: &WorldEventWire, mirror: &model::WorldMirror) -> Option<String> {
-    if !valid_wire_id(&event.event_id)
-        || !valid_wire_id(&event.actor_id.0)
-        || event.kind.len() > 64
-        || event
-            .recipient_ids
-            .iter()
-            .any(|recipient| !valid_wire_id(&recipient.0))
-    {
-        return None;
-    }
+/// The player-facing sentence one world event deserves, or `None` when it is
+/// none of his business.
+fn describe_world_event(
+    kind: &str,
+    actor_id: &model::ActorId,
+    target_id: Option<&model::ActorId>,
+    item_id: Option<&model::ItemId>,
+    recipient_ids: &[model::ActorId],
+    mirror: &model::WorldMirror,
+) -> Option<String> {
     let player_id = mirror.player_id()?;
-    if &event.actor_id != player_id && !event.recipient_ids.contains(player_id) {
+    if actor_id != player_id && !recipient_ids.contains(player_id) {
         return None;
     }
-    let player_acted = &event.actor_id == player_id;
+    let player_acted = actor_id == player_id;
     let actor = if player_acted {
         "You"
     } else {
-        mirror.actor(&event.actor_id)?.name_for_player.as_str()
+        mirror.actor(actor_id)?.name_for_player.as_str()
     };
-    let item = event
-        .item_id
-        .as_ref()
+    let item = item_id
         .and_then(|item_id| mirror.item(item_id))
         .map(|item| item.name.as_str())?;
     let offer_verb = if player_acted { "offer" } else { "offers" };
-    match event.kind.as_str() {
-        "offer_item" if event.target_id.as_ref() == Some(player_id) => {
+    match kind {
+        "offer_item" if target_id == Some(player_id) => {
             Some(format!("{actor} {offer_verb} you the {item}"))
         }
-        "offer_item" if event.target_id.is_none() => {
+        "offer_item" if target_id.is_none() => {
             Some(format!("{actor} {offer_verb} the {item} openly"))
         }
         // A targeted offer between other actors is not feedback for the
@@ -1273,10 +956,8 @@ fn describe_world_event(event: &WorldEventWire, mirror: &model::WorldMirror) -> 
     }
 }
 
-fn valid_wire_id(value: &str) -> bool {
-    !value.is_empty() && value.len() <= 128 && !value.chars().any(char::is_control)
-}
-
+/// LLM-authored text is the only untrusted input left. Bound it before it
+/// reaches a UI node.
 fn valid_ui_text(value: &str, max_chars: usize) -> bool {
     !value.is_empty()
         && value.chars().count() <= max_chars
@@ -1316,7 +997,7 @@ fn forward_player_intents(
                 interaction.resolve_command(&request_id, false, None);
             }
             if let (Some(wav_basename), Some(microphone)) = (failed_recording, &microphone) {
-                // Best-effort: release any streamed copy the sidecar holds.
+                // Best-effort: release any streamed copy the engine holds.
                 let _ = handle.try_send(bridge::BridgeCommand::PlayerAudioAbort {
                     wav_basename: wav_basename.clone(),
                 });
@@ -1479,7 +1160,7 @@ fn collect_injected_transcripts(
 
 #[cfg(test)]
 mod tests {
-    use std::{process::Stdio, thread, time::Duration};
+    use std::{thread, time::Duration};
 
     use bevy::{
         asset::{AssetApp, AssetPlugin},
@@ -1505,7 +1186,7 @@ mod tests {
     fn ready_hud_names_each_independently_missing_capability() {
         assert_eq!(
             connection_detail_for_capabilities(true, true, true),
-            "Local Python authority connected"
+            "Local actor engine connected"
         );
         assert_eq!(
             connection_detail_for_capabilities(true, false, false),
@@ -1514,6 +1195,8 @@ mod tests {
         assert!(connection_detail_for_capabilities(false, true, true).contains("NPC cognition"));
     }
 
+    /// The cloud and local ears are independent: the streaming gate keys off
+    /// the cloud flag alone, and the pill row off both.
     #[test]
     fn ready_capabilities_split_stt_availability_for_the_streaming_gate() {
         let mut runtime = SmartActorRuntime::starting(false);
@@ -1521,36 +1204,15 @@ mod tests {
         apply_ready_capabilities(
             &mut runtime,
             &mut hud,
-            CapabilitiesWire {
-                llm: true,
-                stt: true,
-                stt_cloud: true,
-                stt_local: false,
-                tts: false,
-                tts_cloud: false,
-                tts_local: false,
-                tts_selected: bridge::TtsBackend::Off,
-            },
+            Capabilities::new(true, true, false, false, false, TtsBackendKind::Off),
         );
-        assert!(runtime.stt_cloud_available);
+
+        assert!(runtime.ready && runtime.connected);
+        assert!(runtime.stt_available && runtime.stt_cloud_available);
         assert!(!runtime.stt_local_available);
-
-        mark_handshake_unrecoverable(&mut runtime, &mut hud);
-        assert!(!runtime.stt_cloud_available);
-        assert!(!runtime.stt_local_available);
-    }
-
-    #[test]
-    fn resync_is_a_hard_interaction_barrier() {
-        let mut runtime = SmartActorRuntime::starting(true);
-        runtime.connected = true;
-        runtime.ready = true;
-        assert!(runtime.interactions_enabled());
-
-        runtime.resyncing = true;
-        assert!(!runtime.interactions_enabled());
-
-        runtime.resyncing = false;
+        assert!(!runtime.tts_available);
+        assert_eq!(runtime.tts_selected, bridge::TtsBackend::Off);
+        assert_eq!(hud.connection, hud::ConnectionUiState::Online);
         assert!(runtime.interactions_enabled());
     }
 
@@ -1584,152 +1246,87 @@ mod tests {
     }
 
     #[test]
-    fn capabilities_survive_a_malformed_initial_ready_snapshot() {
-        let payload = serde_json::json!({
-            "capabilities": {
-                "llm": true,
-                "stt": true,
-                "stt_cloud": true,
-                "stt_local": true,
-                "tts": false,
-                "tts_cloud": false,
-                "tts_local": false,
-                "tts_selected": "off"
-            },
-            "snapshot": {"world_revision": "not-a-number"}
-        });
-        assert!(serde_json::from_value::<ReadyWire>(payload.clone()).is_err());
-
-        let capabilities = recoverable_ready_capabilities(&payload)
-            .expect("independently valid capabilities should be recoverable");
-        let mut runtime = SmartActorRuntime::starting(false);
-        runtime.connected = true;
-        runtime.resyncing = true;
-        let mut recovery = HandshakeRecovery {
-            capabilities: Some(capabilities),
-        };
-        let mut hud = hud::SmartActorHudState::default();
-
-        // This is the state transition used after the replacement snapshot is
-        // accepted; the sidecar does not repeat capabilities in that message.
-        apply_ready_capabilities(&mut runtime, &mut hud, capabilities);
-        recovery.capabilities = None;
-
-        assert!(runtime.ready);
-        assert!(runtime.stt_available);
-        assert!(!runtime.tts_available);
-        assert!(!runtime.resyncing);
-        assert!(recovery.capabilities.is_none());
-        assert_eq!(hud.connection, hud::ConnectionUiState::Online);
-    }
-
-    #[test]
-    fn replacement_snapshot_without_valid_ready_capabilities_fails_visibly() {
-        let mut runtime = SmartActorRuntime::starting(false);
-        runtime.connected = true;
-        runtime.resyncing = false;
-        let mut hud = hud::SmartActorHudState::default();
-
-        mark_handshake_unrecoverable(&mut runtime, &mut hud);
-
-        assert!(runtime.connected);
-        assert!(!runtime.ready);
-        assert_eq!(hud.connection, hud::ConnectionUiState::Offline);
-        assert!(hud.connection_detail.contains("capabilities"));
-        assert!(hud.microphone_unavailable);
-    }
-
-    #[test]
     fn redirected_offer_keeps_player_withdrawal_feedback_visible() {
         let player = model::ActorId("player".into());
         let giver = model::ActorId("giver".into());
         let other = model::ActorId("other".into());
         let coin = model::ItemId("coin".into());
         let mut mirror = model::WorldMirror::default();
-        mirror.begin_session("test-session").unwrap();
         mirror
-            .replace_snapshot(
-                "test-session",
-                model::WorldSnapshot {
-                    world_revision: 1,
-                    player_id: player.clone(),
-                    actors: vec![
-                        model::ActorSnapshot {
-                            id: player.clone(),
-                            name_for_player: "You".into(),
-                            control: model::ActorControl::Player,
-                            position_m: model::Position::new(0.0, 0.0, 0.0).unwrap(),
-                            facing_yaw: 0.0,
-                            appearance_key: "player".into(),
-                            holds: vec![],
-                        },
-                        model::ActorSnapshot {
-                            id: giver.clone(),
-                            name_for_player: "Ilse".into(),
-                            control: model::ActorControl::Llm,
-                            position_m: model::Position::new(1.0, 0.0, 0.0).unwrap(),
-                            facing_yaw: 0.0,
-                            appearance_key: "ilse".into(),
-                            holds: vec![coin.clone()],
-                        },
-                        model::ActorSnapshot {
-                            id: other.clone(),
-                            name_for_player: "Frans".into(),
-                            control: model::ActorControl::Llm,
-                            position_m: model::Position::new(2.0, 0.0, 0.0).unwrap(),
-                            facing_yaw: 0.0,
-                            appearance_key: "frans".into(),
-                            holds: vec![],
-                        },
-                    ],
-                    items: vec![model::ItemSnapshot {
-                        id: coin.clone(),
-                        name: "copper coin".into(),
-                        visual_key: "coin".into(),
-                    }],
-                    offers: vec![],
-                },
-            )
+            .replace_snapshot(model::WorldSnapshot {
+                world_revision: 1,
+                player_id: player.clone(),
+                actors: vec![
+                    model::ActorSnapshot {
+                        id: player.clone(),
+                        name_for_player: "You".into(),
+                        control: model::ActorControl::Player,
+                        position_m: model::Position::new(0.0, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "player".into(),
+                        holds: vec![],
+                    },
+                    model::ActorSnapshot {
+                        id: giver.clone(),
+                        name_for_player: "Ilse".into(),
+                        control: model::ActorControl::Llm,
+                        position_m: model::Position::new(1.0, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "ilse".into(),
+                        holds: vec![coin.clone()],
+                    },
+                    model::ActorSnapshot {
+                        id: other.clone(),
+                        name_for_player: "Frans".into(),
+                        control: model::ActorControl::Llm,
+                        position_m: model::Position::new(2.0, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "frans".into(),
+                        holds: vec![],
+                    },
+                ],
+                items: vec![model::ItemSnapshot {
+                    id: coin.clone(),
+                    name: "copper coin".into(),
+                    visual_key: "coin".into(),
+                }],
+                offers: vec![],
+            })
             .unwrap();
 
-        let retract = WorldEventWire {
-            event_id: "withdrawal".into(),
-            kind: "retract_offer".into(),
-            actor_id: giver.clone(),
-            target_id: Some(player.clone()),
-            item_id: Some(coin.clone()),
-            recipient_ids: vec![player.clone()],
-        };
         assert_eq!(
-            describe_world_event(&retract, &mirror).as_deref(),
+            describe_world_event(
+                "retract_offer",
+                &giver,
+                Some(&player),
+                Some(&coin),
+                std::slice::from_ref(&player),
+                &mirror,
+            )
+            .as_deref(),
             Some("Ilse withdraws the copper coin offer")
         );
 
-        let redirected = WorldEventWire {
-            event_id: "replacement".into(),
-            kind: "offer_item".into(),
-            actor_id: giver,
-            target_id: Some(other.clone()),
-            item_id: Some(coin),
-            // Python broadcasts observational world events to nearby actors,
-            // including the player, even when the offer targets someone else.
-            recipient_ids: vec![player, other],
-        };
-        assert_eq!(describe_world_event(&redirected, &mirror), None);
+        // The engine broadcasts observational world events to nearby actors,
+        // including the player, even when the offer targets someone else — and
+        // that must not overwrite the withdrawal toast above.
+        assert_eq!(
+            describe_world_event(
+                "offer_item",
+                &giver,
+                Some(&other),
+                Some(&coin),
+                &[player, other.clone()],
+                &mirror,
+            ),
+            None
+        );
     }
 
+    /// The seam's acceptance test: the whole plugin, the in-process engine, and
+    /// the fake backends — no subprocess, no network, no `uv`.
     #[test]
     fn complete_plugin_reaches_ready_and_spawns_the_cast_headlessly() {
-        if std::process::Command::new("uv")
-            .arg("--version")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .is_err()
-        {
-            return;
-        }
-
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default(), TransformPlugin))
             .init_asset::<Mesh>()
@@ -1762,14 +1359,18 @@ mod tests {
             enabled: true,
             fake_backend: true,
             uv_binary: "uv".into(),
-            server_script: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("prompt_playgound/server.py")
-                .display()
-                .to_string(),
             tts_backend: "local".into(),
             pause_microphone_during_npc_voice: true,
             ..SmartActorsConfig::default()
         }));
+        // Fake mode reports transcription available, so the plugin spawns the
+        // capture worker — but a test may not open the developer's microphone
+        // and put the room's noise into the scripted conversation. The worker
+        // probes no device until it is enabled, so an explicit OFF (the V state)
+        // keeps it inert while everything downstream of it stays wired.
+        app.world_mut()
+            .resource_mut::<interaction::MicrophoneInputState>()
+            .enabled = false;
 
         let deadline = std::time::Instant::now() + Duration::from_secs(8);
         while std::time::Instant::now() < deadline

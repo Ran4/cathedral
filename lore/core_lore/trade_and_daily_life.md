@@ -3,6 +3,8 @@
 > Shared reference for work, river commerce, guilds, money, measures, markets,
 > and the rhythm of an ordinary Ombreval day.
 
+Note: see `occupations.json` and `occupation_descriptions.md` for explicit jobs in the game.
+
 ## Work, trade, and ordinary life
 
 Ombreval's economy is not sustained by pilgrimage alone. Its main visible

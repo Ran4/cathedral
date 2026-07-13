@@ -1002,7 +1002,7 @@ pub fn clear_speech_presentation(
     hud.subtitle.clear();
 }
 
-/// Best-effort notice to Python that this event's audio presentation reached a
+/// Best-effort notice to the engine that this event's audio presentation reached a
 /// terminal state (played, skipped, dropped, failed, or cut off), freeing the
 /// conversation floor. Errors are ignored: a lost message only delays the next
 /// NPC line until the server-side failsafe deadline expires.

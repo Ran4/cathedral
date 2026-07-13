@@ -2,7 +2,7 @@
 //!
 //! Each settings row shows the setting name, a cloud/local pill toggle, and
 //! the live status of the selected backend. Choices persist to `config.ron`;
-//! NPC voices only persist once the Python sidecar confirms the switch.
+//! NPC voices only persist once the engine confirms the switch.
 
 use bevy::ecs::hierarchy::ChildSpawnerCommands;
 use bevy::prelude::*;
@@ -340,14 +340,14 @@ pub(super) fn persist_backend_selections(
         && runtime.tts_selection_dirty
     {
         runtime.tts_selection_dirty = false;
-        let backend = runtime.tts_selected.wire_name();
+        let backend = runtime.tts_selected.name();
         if persisted.0.smart_actors.tts_backend != backend {
             persisted.0.smart_actors.tts_backend = backend.into();
             changed = true;
         }
     }
     if let Some(microphone) = microphone.as_deref() {
-        let backend = microphone.stt_backend.wire_name();
+        let backend = microphone.stt_backend.name();
         if persisted.0.smart_actors.stt_backend != backend {
             persisted.0.smart_actors.stt_backend = backend.into();
             changed = true;
@@ -397,7 +397,9 @@ pub(super) fn update_config_menu(
             .as_ref()
             .map_or(runtime.tts_selected, |(_, backend)| *backend)
     });
-    let stt_selected = microphone.as_deref().map(|microphone| microphone.stt_backend);
+    let stt_selected = microphone
+        .as_deref()
+        .map(|microphone| microphone.stt_backend);
 
     for (interaction, mut background) in &mut continue_button {
         background.0 = if *interaction == Interaction::None {

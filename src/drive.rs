@@ -104,14 +104,12 @@ impl Plugin for DrivePlugin {
             // `ButtonInput` clear, and after UiSystems::Focus so an injected
             // `Interaction::Pressed` is not overwritten until the focus
             // system naturally resets it (to None) on the next frame.
-            run_drive_script
-                .after(InputSystems)
-                .after(UiSystems::Focus),
+            run_drive_script.after(InputSystems).after(UiSystems::Focus),
         );
     }
 }
 
-/// A hung run (GPU stall, sidecar deadlock, window that never opens) must not
+/// A hung run (GPU stall, engine deadlock, window that never opens) must not
 /// strand a background process; systems may not be ticking at all, so the
 /// watchdog lives on a plain OS thread and hard-aborts.
 fn spawn_watchdog(timeout: Duration) {
@@ -437,9 +435,7 @@ fn run_drive_script(
                 commands
                     .spawn(Screenshot::primary_window())
                     .observe(save_to_disk(path))
-                    .observe(move |_: On<ScreenshotCaptured>| {
-                        saved.store(true, Ordering::Release)
-                    });
+                    .observe(move |_: On<ScreenshotCaptured>| saved.store(true, Ordering::Release));
             }
         },
         Some(Directive::Sound(sound_id)) => {
@@ -455,7 +451,9 @@ fn run_drive_script(
                         sound_id,
                         position_m,
                     }) {
-                        drive_log(&format!("[drive] {now:.1}s warning: sound not sent: {error}"));
+                        drive_log(&format!(
+                            "[drive] {now:.1}s warning: sound not sent: {error}"
+                        ));
                     }
                 }
                 _ => drive_log(&format!(
@@ -590,7 +588,10 @@ mod tests {
         assert_eq!(scheduler.tick(6.0, Some(true), true), None);
         assert_eq!(scheduler.tick(6.5, Some(true), true), Some(Directive::Quit));
         let log = scheduler.drain_log();
-        assert!(log.iter().any(|line| line == "[drive] 6.0s online"), "was: {log:?}");
+        assert!(
+            log.iter().any(|line| line == "[drive] 6.0s online"),
+            "was: {log:?}"
+        );
     }
 
     #[test]
@@ -607,7 +608,8 @@ mod tests {
         );
         let log = scheduler.drain_log();
         assert!(
-            log.iter().any(|line| line.contains("error: wait-online timed out")),
+            log.iter()
+                .any(|line| line.contains("error: wait-online timed out")),
             "was: {log:?}"
         );
     }

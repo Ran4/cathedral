@@ -1,0 +1,719 @@
+//! The global NPC turn stream (`scheduler.py`): one request in flight, ever.
+//!
+//! Round-robin over the LLM cast, with a single priority slot for
+//! turn-taking (an addressed `say` hands the next turn to whoever was
+//! addressed), provider backoff, and floor gating.
+//!
+//! Python ran the provider call on a daemon thread and everything else on the
+//! poll thread. Here the split is a trait boundary instead: [`Cognition::request`]
+//! is a non-blocking submit, the completion comes back as a plain
+//! [`Completion`] value in the next [`NpcScheduler::poll`]. Rendering, parsing,
+//! action application and world mutation all still happen inside `poll` — which
+//! is the point: a reply is revalidated against the *then-current* world, not
+//! the one it was prompted from.
+//!
+//! The scheduler is clock-free. Every `time.monotonic()` in Python is a `now`
+//! parameter here.
+
+use serde_json::{Map, Value};
+
+use crate::{
+    MAX_LLM_REPLY_CHARS,
+    actions::apply_action,
+    character::Control,
+    ids::{ActorId, RequestId},
+    prompt::{PromptEnv, parse_reply, render_prompt_and_drain},
+    pyfmt::py_repr_map,
+    status::{STATE_DEGRADED, STATE_IDLE, STATE_THINKING, StatusEvent},
+    traits::{Cognition, CognitionError, Completion},
+    world::World,
+};
+
+/// An oversized reply is a provider failure, not a turn (D17). Python raised
+/// this inside the worker thread (`scheduler.py:86-87`); we enforce it on
+/// receipt so every backend — fakes included — is covered.
+///
+/// The *value* is the exception kind, because that is all Python's log ever
+/// showed: `raise ValueError(…)` inside the worker surfaced as
+/// `type(error).__name__` in `[smart actors] LLM request for … failed: …`
+/// (`scheduler.py:242-246`). [`CognitionError`] carries a short kind name by
+/// contract — real backends report `TimeoutError` and friends — so the one error
+/// the sim raises itself has to speak the same language.
+pub const REPLY_TOO_LARGE: &str = "ValueError";
+
+/// The `system:` lines the scheduler fabricates into an actor's inbox.
+///
+/// They are model-visible English, but they are *world facts about this turn*
+/// rather than prompt prose, so they stay `format!` calls in Rust (D3). They are
+/// appended to `inbox` only, never to `pending_history`: shown once as
+/// `since_your_last_turn`, then gone — they never graduate into
+/// `recent_history` (scheduler.md §2).
+const SYSTEM_PROVIDER_FAILED: &str =
+    "system: the cognition provider failed; your turn will be retried later";
+const SYSTEM_PROMPT_FAILED: &str = "system: your prompt could not be prepared";
+const SYSTEM_WORKER_BUSY: &str = "system: the cognition worker is busy";
+
+/// Everything the scheduler tells the outside world (scheduler.md §7.5).
+///
+/// One `Vec` replaces Python's returned statuses, its `[smart actors] …` stderr
+/// prints, and its `PromptLog.record` callback — so the sim stays IO-free and
+/// the tests stay assertable.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SchedulerEvent {
+    /// Forwarded to the HUD as today's `status` message.
+    Status(StatusEvent),
+    /// A former stderr line; the host logs it via `tracing`.
+    Diagnostic(String),
+    /// One archived LLM exchange, successes and failures alike (D24: the file
+    /// writing lives in cathedral-backends).
+    PromptExchange {
+        actor_id: ActorId,
+        actor_name: String,
+        prompt: String,
+        answer: Option<String>,
+        duration_seconds: f64,
+        error: Option<String>,
+    },
+}
+
+/// The one outstanding request.
+#[derive(Debug, Clone, PartialEq)]
+struct InFlight {
+    actor_id: ActorId,
+    request_id: RequestId,
+    /// The inbox as it was *before* the prompt drained it — restored on failure.
+    drained_events: Vec<String>,
+    /// The percepts the prompt showed as `since_your_last_turn`: they graduate
+    /// into `recent_history` on success and go back to pending on failure.
+    presented: Vec<String>,
+    /// Kept sim-side so a *failed* exchange can still be archived.
+    prompt: String,
+}
+
+pub struct NpcScheduler {
+    /// The LLM cast in world-insertion order, frozen at construction
+    /// (`scheduler.py:137-139`). An NPC added to the world later is never
+    /// scheduled; one whose control changes is skipped at selection time but
+    /// keeps its slot (scheduler.md risk 7).
+    order: Vec<ActorId>,
+    minimum_delay_seconds: f64,
+    maximum_backoff_seconds: f64,
+    round_robin_index: usize,
+    /// Single slot, last write wins, consumed once.
+    priority_actor_id: Option<ActorId>,
+    in_flight: Option<InFlight>,
+    /// A finished turn the floor would not let us apply yet.
+    held_result: Option<Completion>,
+    next_turn_at: f64,
+    /// Consecutive provider failures; only a successful turn resets it.
+    provider_failures: u32,
+    running: bool,
+}
+
+impl NpcScheduler {
+    /// `order` is the LLM cast in turn order — [`llm_turn_order`] builds it from
+    /// a world's roster.
+    ///
+    /// `maximum_backoff_seconds` is normalized to `max(1, cap, delay)` here
+    /// (`scheduler.py:128-130`), so the effective cap is never below one second
+    /// and never below the inter-turn delay. A negative `minimum_delay_seconds`
+    /// (Python raised `ValueError`) is clamped to zero — the caller reads it
+    /// from config, and a bad number must not take the cast offline.
+    pub fn new(
+        order: Vec<ActorId>,
+        minimum_delay_seconds: f64,
+        maximum_backoff_seconds: f64,
+        now: f64,
+    ) -> Self {
+        // `f64::max` returns the other operand for NaN, so this sanitizes too.
+        let minimum_delay_seconds = minimum_delay_seconds.max(0.0);
+        let maximum_backoff_seconds = maximum_backoff_seconds.max(1.0).max(minimum_delay_seconds);
+        Self {
+            order,
+            minimum_delay_seconds,
+            maximum_backoff_seconds,
+            round_robin_index: 0,
+            priority_actor_id: None,
+            in_flight: None,
+            held_result: None,
+            // The first turn is eligible immediately.
+            next_turn_at: now,
+            provider_failures: 0,
+            running: false,
+        }
+    }
+
+    /// Idempotent: also clears any residual delay so the first turn can start on
+    /// the next poll.
+    pub fn start(&mut self, now: f64) {
+        self.running = true;
+        self.next_turn_at = self.next_turn_at.min(now);
+    }
+
+    /// Stop submitting new turns.
+    ///
+    /// A `poll` after `close` still APPLIES an in-flight result — `running`
+    /// gates only submission (`scheduler.py:162-164`, scheduler.md risk 4).
+    /// Ported deliberately: applying a turn that already cost a provider call is
+    /// harmless and loses nothing.
+    pub fn close(&mut self) {
+        self.running = false;
+    }
+
+    pub fn running(&self) -> bool {
+        self.running
+    }
+
+    pub fn in_flight_actor_id(&self) -> Option<&ActorId> {
+        self.in_flight.as_ref().map(|flight| &flight.actor_id)
+    }
+
+    /// Who has been handed the next selection slot, if anyone. Consumed on the
+    /// next submission — the engine's sound nudge and the post-`say` handoff both
+    /// write it, and the tests read it.
+    pub fn priority_actor_id(&self) -> Option<&ActorId> {
+        self.priority_actor_id.as_ref()
+    }
+
+    /// Whether a finished turn is parked waiting for the floor.
+    pub fn has_held_result(&self) -> bool {
+        self.held_result.is_some()
+    }
+
+    pub fn turn_order(&self) -> &[ActorId] {
+        &self.order
+    }
+
+    /// Give `actor` the next turn. Returns whether the slot was taken.
+    ///
+    /// A non-LLM or unknown target is rejected — which is exactly what makes an
+    /// NPC's `say` to the *player* a silent no-op instead of a broken handoff.
+    /// The check is against the world, not against `order`: Python looked
+    /// `world.characters` up (`scheduler.py:166-176`) and so do we.
+    ///
+    /// `immediate` collapses the remaining inter-turn/backoff delay. It never
+    /// preempts the in-flight request and never bypasses floor gating; without
+    /// it, only the *selection order* changes and the timing stands.
+    pub fn prioritize(
+        &mut self,
+        world: &World,
+        actor_id: &ActorId,
+        immediate: bool,
+        now: f64,
+    ) -> bool {
+        let Some(actor) = world.characters.get(actor_id) else {
+            return false;
+        };
+        if actor.control() != Control::Llm {
+            return false;
+        }
+        self.priority_actor_id = Some(actor_id.clone());
+        if immediate {
+            self.next_turn_at = self.next_turn_at.min(now);
+        }
+        true
+    }
+
+    /// One tick of the turn stream: harvest, apply, submit.
+    ///
+    /// A single call can both apply a finished turn and submit the next one —
+    /// with `minimum_delay_seconds == 0` a fresh turn is in flight after every
+    /// poll.
+    ///
+    /// `floor_busy` is computed by the caller once per frame (D20): passing a
+    /// bool instead of Python's callback keeps the floor's expiry side effects
+    /// out of the scheduler's call count.
+    // The parameter list is pinned by ARCHITECTURE §2.5 (and §6, which adds
+    // `transcript` and `env` to scheduler.md's signature). Bundling the borrows
+    // into a context struct would only move the arguments, and it would move
+    // them away from the shape the spec names.
+    #[allow(clippy::too_many_arguments)]
+    pub fn poll(
+        &mut self,
+        now: f64,
+        world: &mut World,
+        transcript: &mut Vec<String>,
+        completions: &mut Vec<Completion>,
+        floor_busy: bool,
+        cognition: &mut dyn Cognition,
+        env: &PromptEnv,
+    ) -> Vec<SchedulerEvent> {
+        let mut events: Vec<SchedulerEvent> = Vec::new();
+
+        // 1. Harvest. A held result outranks the queue — and, given the single
+        //    in-flight invariant, excludes it.
+        let mut result: Option<Completion> = if self.in_flight.is_some() {
+            self.held_result.take()
+        } else {
+            None
+        };
+        for completion in completions.drain(..) {
+            let matches = self
+                .in_flight
+                .as_ref()
+                .is_some_and(|flight| flight.request_id == completion.request_id);
+            if matches && result.is_none() {
+                result = Some(completion);
+                continue;
+            }
+            // A completion for a request we are not waiting on. Python left it
+            // in the worker queue, where it would poison the *next* turn's
+            // result slot; with RequestId matching (D10) we can identify it here
+            // and drop it on the spot. Only reachable if a backend answers twice
+            // or answers after a close (scheduler.md risk 10).
+            events.push(SchedulerEvent::Status(StatusEvent::llm(
+                STATE_DEGRADED,
+                None,
+                Some("discarded a stale LLM result".to_string()),
+            )));
+        }
+
+        // 2. Gate. The floor defers APPLICATION, never submission: while it is
+        //    busy the finished turn is parked and in-flight stays set, so no new
+        //    turn can start behind it — but a poll with nothing in flight still
+        //    submits normally, and the next speaker keeps thinking while the
+        //    previous line is presented.
+        if let Some(completion) = result {
+            if floor_busy {
+                self.held_result = Some(completion);
+            } else {
+                self.apply_result(now, world, transcript, completion, &mut events);
+            }
+        }
+
+        // 3. Submit. The in-flight check sees the value *after* step 2 cleared
+        //    it, which is how one poll can apply and submit.
+        if self.running
+            && self.in_flight.is_none()
+            && !self.order.is_empty()
+            && now >= self.next_turn_at
+        {
+            self.submit_next_turn(now, world, cognition, env, &mut events);
+        }
+
+        events
+    }
+
+    fn apply_result(
+        &mut self,
+        now: f64,
+        world: &mut World,
+        transcript: &mut Vec<String>,
+        completion: Completion,
+        events: &mut Vec<SchedulerEvent>,
+    ) {
+        // In-flight is cleared before any validation, exactly as in Python: even
+        // a discarded result ends the turn.
+        let mut flight = self
+            .in_flight
+            .take()
+            .expect("a result is only harvested while a request is in flight");
+        // The prompt's only remaining job is the archive below.
+        let prompt = std::mem::take(&mut flight.prompt);
+
+        // The size limit is a provider failure, not a turn (D17). Enforced
+        // before the archive so an oversized reply is logged as the error it is.
+        let result = match completion.result {
+            Ok(reply) if reply.chars().count() > MAX_LLM_REPLY_CHARS => {
+                Err(CognitionError::new(REPLY_TOO_LARGE))
+            }
+            other => other,
+        };
+
+        let known_actor = world.characters.get(&flight.actor_id);
+        let actor_name = known_actor
+            .map(|actor| actor.name().to_string())
+            .unwrap_or_else(|| flight.actor_id.to_string());
+        let is_llm = known_actor.is_some_and(|actor| actor.control() == Control::Llm);
+
+        // The archive is unconditional and first — a stale result is an exchange
+        // that happened, and a failed one is exactly what you want in the log
+        // (`scheduler.py:205-213`). A *held* result is not archived: it has not
+        // been harvested yet.
+        events.push(SchedulerEvent::PromptExchange {
+            actor_id: flight.actor_id.clone(),
+            actor_name: actor_name.clone(),
+            prompt,
+            answer: result.as_ref().ok().cloned(),
+            duration_seconds: completion.duration_seconds,
+            // The archive gets the *detail* (`repr(error)`), not the kind: a
+            // bare "LlmHttpError" cannot tell a bad key from a rate limit
+            // (`scheduler.py:205-213`, prompt.md §5.2). The diagnostic below
+            // keeps printing the kind, exactly as Python did.
+            error: result
+                .as_ref()
+                .err()
+                .map(|error| error.detail().to_string()),
+        });
+
+        // The request id already matched, so Python's actor-echo check is
+        // subsumed — but the world can still have changed under the request, so
+        // the actor-exists / still-LLM revalidation stays (scheduler.md §4.2.d).
+        if !is_llm {
+            // The drained percepts die with the result. Defensible: the actor is
+            // gone (or is no longer an LLM), so there is nobody left to re-read
+            // them (scheduler.md risk 3).
+            events.push(SchedulerEvent::Status(StatusEvent::llm(
+                STATE_DEGRADED,
+                None,
+                Some("discarded a stale LLM result".to_string()),
+            )));
+            return;
+        }
+
+        match result {
+            Err(error) => self.apply_failure(now, world, &flight, &actor_name, &error, events),
+            Ok(reply) => self.apply_reply(now, world, transcript, &flight, &reply, events),
+        }
+    }
+
+    /// The provider never produced a turn.
+    fn apply_failure(
+        &mut self,
+        now: f64,
+        world: &mut World,
+        flight: &InFlight,
+        actor_name: &str,
+        error: &CognitionError,
+        events: &mut Vec<SchedulerEvent>,
+    ) {
+        let backoff = self.backoff_after_failure();
+        self.next_turn_at = now + backoff;
+
+        let actor = world
+            .characters
+            .get_mut(&flight.actor_id)
+            .expect("the actor exists");
+        // Let the actor perceive the events the failed prompt took away, as
+        // *new* ones: prepend, so anything that arrived mid-request stays behind
+        // them in chronological order. Presented percepts go back to pending the
+        // same way, so the retry shows them in `since_your_last_turn` instead of
+        // duplicating them into `recent_history`.
+        prepend(&mut actor.state.inbox, flight.drained_events.clone());
+        prepend(&mut actor.state.pending_history, flight.presented.clone());
+        // Appended last, so it lands after the mid-flight arrivals too.
+        actor.state.inbox.push(SYSTEM_PROVIDER_FAILED.to_string());
+
+        events.push(SchedulerEvent::Diagnostic(format!(
+            "[smart actors] LLM request for {actor_name} failed: {error}"
+        )));
+        events.push(SchedulerEvent::Status(StatusEvent::llm(
+            STATE_DEGRADED,
+            Some(flight.actor_id.clone()),
+            Some(format!(
+                "provider request failed; retrying in {} seconds",
+                format_g(backoff)
+            )),
+        )));
+    }
+
+    /// `delay, 2·delay, 4·delay, …` capped — with a floor that keeps a zero
+    /// development delay from spinning (`scheduler.py:231-237`).
+    fn backoff_after_failure(&mut self) -> f64 {
+        self.provider_failures += 1;
+        // `powi` saturates to +inf long before it overflows, and `min` then
+        // takes the cap: a very long outage cannot wrap around to a short retry.
+        let exponential = self.minimum_delay_seconds * 2f64.powi(self.provider_failures as i32 - 1);
+        let backoff = self.maximum_backoff_seconds.min(exponential);
+        backoff.max(self.maximum_backoff_seconds.min(1.0))
+    }
+
+    /// The provider produced a turn: graduate its percepts, then apply it.
+    fn apply_reply(
+        &mut self,
+        now: f64,
+        world: &mut World,
+        transcript: &mut Vec<String>,
+        flight: &InFlight,
+        reply: &str,
+        events: &mut Vec<SchedulerEvent>,
+    ) {
+        self.provider_failures = 0;
+        self.next_turn_at = now + self.minimum_delay_seconds;
+
+        let actor = world
+            .characters
+            .get_mut(&flight.actor_id)
+            .expect("the actor exists");
+        // Identical to the name the caller resolved: this path is only reached
+        // once the actor has been revalidated as a live LLM character.
+        let actor_name = actor.name().to_string();
+        // The turn happened, so the percepts it presented become recollection —
+        // before the reply's own lines are remembered after them.
+        actor.absorb_presented_history(&flight.presented);
+
+        let (actions, errors) = parse_reply(reply);
+        for error in &errors {
+            let actor = world
+                .characters
+                .get_mut(&flight.actor_id)
+                .expect("the actor exists");
+            actor
+                .state
+                .inbox
+                .push(format!("system: your last output was invalid: {error}"));
+            events.push(SchedulerEvent::Diagnostic(format!(
+                "[smart actors] {actor_name}: {error}"
+            )));
+        }
+
+        for (verb, args) in actions {
+            let value = Value::Object(args.clone());
+            let line = match apply_action(world, &flight.actor_id, &verb, &value) {
+                Ok(line) => line,
+                Err(error) => {
+                    // The final boundary: arbitrary model output never takes the
+                    // process down, and the actor gets told so it can correct
+                    // itself next turn. Later actions in the same reply still run.
+                    let actor = world
+                        .characters
+                        .get_mut(&flight.actor_id)
+                        .expect("the actor exists");
+                    actor.state.inbox.push(format!(
+                        "system: your action \"{verb} {}\" failed: {error}",
+                        render_args(&args)
+                    ));
+                    events.push(SchedulerEvent::Diagnostic(format!(
+                        "[smart actors] {actor_name}: {verb} failed: {error}"
+                    )));
+                    continue;
+                }
+            };
+
+            // Turn-taking: an addressed `say` hands the next selection slot to
+            // the addressee, so a two-way exchange does not braid through the
+            // global round robin. Deliberately not immediate — the inter-turn
+            // delay and the floor still govern *when*, only selection changes.
+            // `prioritize` rejects the player itself, so this is best-effort;
+            // with several targeted says in one reply, the last one wins.
+            if verb == "say"
+                && let Some(Value::String(target)) = args.get("target")
+                && let Ok(target_id) = ActorId::new(target.clone())
+            {
+                self.prioritize(world, &target_id, false, now);
+            }
+
+            // Waiting is a real, validated choice — but it is not a world event
+            // and must not make the transcript grow forever.
+            if verb != "wait" {
+                transcript.push(line);
+            }
+        }
+
+        events.push(SchedulerEvent::Status(StatusEvent::llm(
+            STATE_IDLE,
+            Some(flight.actor_id.clone()),
+            None,
+        )));
+    }
+
+    fn submit_next_turn(
+        &mut self,
+        now: f64,
+        world: &mut World,
+        cognition: &mut dyn Cognition,
+        env: &PromptEnv,
+        events: &mut Vec<SchedulerEvent>,
+    ) {
+        // Selection happens — and the rotation advances / the priority slot is
+        // consumed — BEFORE the validity check: a skipped actor still burns its
+        // turn, and so do a failed render and a refused submit. Intentional
+        // (scheduler.md risk 8).
+        let actor_id = self.select_next_actor();
+        let Some(actor) = world.characters.get(&actor_id) else {
+            // Silently skipped, with no delay change, so the very next poll
+            // selects the following actor. Only reachable if the world mutated
+            // after construction — `order` is frozen.
+            return;
+        };
+        if actor.control() != Control::Llm {
+            return;
+        }
+        let actor_name = actor.name().to_string();
+        // Taken before the render, because the render is what empties the inbox.
+        let drained_events = actor.inbox().to_vec();
+
+        let (prompt, presented) = match render_prompt_and_drain(world, &actor_id, env) {
+            Ok(rendered) => rendered,
+            Err(error) => {
+                // The renderer already restored the inbox and pending history
+                // itself (`prompt.py:257-260`), so we must NOT restore again.
+                let actor = world
+                    .characters
+                    .get_mut(&actor_id)
+                    .expect("the actor exists");
+                actor.state.inbox.push(SYSTEM_PROMPT_FAILED.to_string());
+                self.next_turn_at = now + self.minimum_delay_seconds.max(1.0);
+                events.push(SchedulerEvent::Diagnostic(format!(
+                    "[smart actors] prompt for {actor_name} failed: {error}"
+                )));
+                events.push(SchedulerEvent::Status(StatusEvent::llm(
+                    STATE_DEGRADED,
+                    Some(actor_id.clone()),
+                    Some("prompt rendering failed".to_string()),
+                )));
+                return;
+            }
+        };
+
+        match cognition.request(prompt.clone()) {
+            Ok(request_id) => {
+                self.in_flight = Some(InFlight {
+                    actor_id: actor_id.clone(),
+                    request_id,
+                    drained_events,
+                    presented,
+                    prompt,
+                });
+                events.push(SchedulerEvent::Status(StatusEvent::llm(
+                    STATE_THINKING,
+                    Some(actor_id),
+                    None,
+                )));
+            }
+            Err(busy) => {
+                let actor = world
+                    .characters
+                    .get_mut(&actor_id)
+                    .expect("the actor exists");
+                prepend(&mut actor.state.inbox, drained_events);
+                prepend(&mut actor.state.pending_history, presented);
+                actor.state.inbox.push(SYSTEM_WORKER_BUSY.to_string());
+                self.next_turn_at = now + self.minimum_delay_seconds.max(1.0);
+                events.push(SchedulerEvent::Diagnostic(format!(
+                    "[smart actors] could not queue {actor_name}'s turn: {busy}"
+                )));
+                events.push(SchedulerEvent::Status(StatusEvent::llm(
+                    STATE_DEGRADED,
+                    Some(actor_id),
+                    Some("cognition worker is busy".to_string()),
+                )));
+            }
+        }
+    }
+
+    /// The priority slot wins once and does NOT advance the round robin, so the
+    /// rotation resumes exactly where it left off (`scheduler.py:360-367`).
+    fn select_next_actor(&mut self) -> ActorId {
+        if let Some(actor_id) = self.priority_actor_id.take() {
+            return actor_id;
+        }
+        debug_assert!(
+            !self.order.is_empty(),
+            "callers guarantee a non-empty order"
+        );
+        let actor_id = self.order[self.round_robin_index % self.order.len()].clone();
+        self.round_robin_index = (self.round_robin_index + 1) % self.order.len();
+        actor_id
+    }
+}
+
+/// The LLM cast in turn order: the world's insertion order (D12), which is what
+/// makes the rotation Sven → Conny → Ilse rather than the map's sorted ids.
+pub fn llm_turn_order(world: &World) -> Vec<ActorId> {
+    world
+        .roster
+        .iter()
+        .filter(|actor_id| world.characters[*actor_id].control() == Control::Llm)
+        .cloned()
+        .collect()
+}
+
+fn prepend(target: &mut Vec<String>, mut front: Vec<String>) {
+    front.append(target);
+    *target = front;
+}
+
+/// The failed action's args, as the actor gets to see them.
+///
+/// Python interpolated the `dict` itself (`scheduler.py:277-279`), so the line
+/// carries Python literal syntax — `{'item_id': ['bad'], 'target': None}` — not
+/// JSON. It lands in the actor's inbox and is re-rendered verbatim as
+/// `since_your_last_turn` on the next turn, so it is prompt bytes: it has to be
+/// `str(dict)`.
+///
+/// One residual divergence, which the syntax fix cannot reach: `serde_json::Map`
+/// is a `BTreeMap` (the type is pinned by ARCHITECTURE §2.4, and serde_json's
+/// `preserve_order` feature would unify across the whole workspace), so the keys
+/// come out **sorted** where Python's dict kept the model's document order —
+/// `{'extra': 1, 'text': 'hi'}` for a reply that wrote `text` first. Same
+/// characters, different order; only a multi-key *failed* action shows it.
+fn render_args(args: &Map<String, Value>) -> String {
+    py_repr_map(args)
+}
+
+/// Python's `f"{value:g}"` (D30): 6 significant digits, trailing zeros trimmed.
+///
+/// The degraded status text is wire format, so a one-second backoff has to read
+/// "retrying in 1 seconds" — not "retrying in 1.0 seconds", and not the full
+/// float noise Rust's default `{}` would print for, say, 0.1 + 0.2.
+fn format_g(value: f64) -> String {
+    const PRECISION: i32 = 6;
+    if !value.is_finite() {
+        return format!("{value}");
+    }
+    // `{:.5e}` is 6 significant digits, and the exponent it reports is the
+    // post-rounding one — exactly what CPython's `%g` branches on.
+    let scientific = format!("{:.*e}", (PRECISION - 1) as usize, value);
+    let (mantissa, exponent) = scientific
+        .split_once('e')
+        .expect("`{:e}` always emits an exponent");
+    let exponent: i32 = exponent.parse().expect("the exponent is an integer");
+    if !(-4..PRECISION).contains(&exponent) {
+        let sign = if exponent < 0 { '-' } else { '+' };
+        return format!("{}e{sign}{:02}", trim_zeros(mantissa), exponent.abs());
+    }
+    let decimals = (PRECISION - 1 - exponent).max(0) as usize;
+    trim_zeros(&format!("{value:.decimals$}")).to_string()
+}
+
+fn trim_zeros(text: &str) -> &str {
+    if !text.contains('.') {
+        return text;
+    }
+    text.trim_end_matches('0').trim_end_matches('.')
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backoff_doubles_from_the_delay_and_stops_at_the_cap() {
+        // delay 1, cap 8 → 1, 2, 4, 8, 8, …
+        let mut scheduler = NpcScheduler::new(Vec::new(), 1.0, 8.0, 0.0);
+        let seen: Vec<f64> = (0..5).map(|_| scheduler.backoff_after_failure()).collect();
+        assert_eq!(seen, [1.0, 2.0, 4.0, 8.0, 8.0]);
+    }
+
+    #[test]
+    fn a_zero_delay_still_backs_off_a_whole_second() {
+        // The anti-spin floor: min(1.0, cap) — otherwise delay 0 retries forever.
+        let mut scheduler = NpcScheduler::new(Vec::new(), 0.0, 60.0, 0.0);
+        assert_eq!(scheduler.backoff_after_failure(), 1.0);
+        assert_eq!(scheduler.backoff_after_failure(), 1.0);
+    }
+
+    #[test]
+    fn the_cap_is_normalized_to_at_least_one_second_and_the_delay() {
+        // cap 0 → 1; cap below the delay → the delay.
+        let scheduler = NpcScheduler::new(Vec::new(), 0.0, 0.0, 0.0);
+        assert_eq!(scheduler.maximum_backoff_seconds, 1.0);
+        let scheduler = NpcScheduler::new(Vec::new(), 30.0, 5.0, 0.0);
+        assert_eq!(scheduler.maximum_backoff_seconds, 30.0);
+        // A negative delay is clamped rather than fatal.
+        let scheduler = NpcScheduler::new(Vec::new(), -5.0, 60.0, 0.0);
+        assert_eq!(scheduler.minimum_delay_seconds, 0.0);
+    }
+
+    #[test]
+    fn g_formatting_matches_python() {
+        assert_eq!(format_g(1.0), "1");
+        assert_eq!(format_g(2.0), "2");
+        assert_eq!(format_g(60.0), "60");
+        assert_eq!(format_g(2.5), "2.5");
+        assert_eq!(format_g(0.5), "0.5");
+        assert_eq!(format_g(1.0 / 3.0), "0.333333");
+        assert_eq!(format_g(1_234_567.0), "1.23457e+06");
+    }
+}

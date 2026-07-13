@@ -20,7 +20,10 @@ One JSON object per line, chronological. Fields:
 - `source` — who produced the record:
   - `"session"` — the single session-start marker
   - `"rust"` — the game's log stream (same events as the console output)
-  - `"python"` — the smart-actor sidecar's stderr, one record per line
+  - `"engine"` — the in-process actor engine's diagnostics (the `[smart actors]
+    …` lines) and its failures
+  - `"stt"` / `"tts"` — a local speech worker's stderr (Canary-Qwen, Pocket
+    TTS), one record per line; only present when a local backend is in use
   - `"drive"` — `CATHEDRAL_DRIVE` script evidence lines, e.g. `[drive] 1.0s key F5`
 - `level` — `INFO` / `WARN` / `ERROR` (non-rust sources are `INFO` unless failing)
 - `message` — the log text

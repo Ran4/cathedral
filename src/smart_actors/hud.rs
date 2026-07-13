@@ -116,8 +116,8 @@ pub struct SmartActorHudState {
     pub subtitle: String,
     pub microphone_available: bool,
     pub microphone_unavailable: bool,
-    /// Persistent user preference controlled by V, distinct from temporary
-    /// worker pauses during protocol resynchronization.
+    /// Persistent user preference controlled by V, distinct from the temporary
+    /// worker pauses an offline engine causes.
     pub microphone_enabled: bool,
     pub listening: bool,
     pub transcription_backend: String,
@@ -833,7 +833,7 @@ mod tests {
         };
         state.show_player_transcript("Can anyone hear me?");
         state.toast("pending");
-        state.clear_transients_on_disconnect("Python exited");
+        state.clear_transients_on_disconnect("The actor engine exited");
 
         assert_eq!(state.inventory, "[1] copper coin");
         assert!(state.offer_card.is_empty());

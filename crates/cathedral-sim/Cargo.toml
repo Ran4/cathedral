@@ -1,0 +1,18 @@
+[package]
+name = "cathedral-sim"
+version = "0.1.0"
+edition = "2024"
+description = "Pure-domain smart-actor simulation: world, actions, perception, prompts"
+license = "MIT OR Apache-2.0"
+
+# Deliberately frozen dependency set: no bevy, no tokio, no network, no clock
+# reads, no file reads. Loaders take `&str`; the host owns IO.
+[dependencies]
+glam = { workspace = true }
+minijinja = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# The two data-file formats the loaders parse from `&str`: `assets/world/seed.json`
+# (serde_json) and `assets/sounds/catalog.toml` + `assets/prompts/strings.toml`
+# (toml). Pure parsers, no IO of their own.
+toml = { workspace = true }

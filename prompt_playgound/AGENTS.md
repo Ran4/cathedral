@@ -1,167 +1,34 @@
-Python authority for cathedralbevy's LLM-driven character simulation. The
-terminal prototype and persistent Bevy sidecar share this domain model, prompt
-format, action parser, and orchestration code.
+# prompt_playgound — the two local speech workers, and the secrets
 
-## How it works
+Everything else that was here is gone. The LLM-driven character simulation used
+to be a Python sidecar in this directory (`server.py`, `sim.py`, `prompt.py`,
+`scheduler.py`, `protocol.py`, `llm_client.py`, `speech_client.py`, the terminal
+prototype and their tests); it is now Rust, in `crates/cathedral-sim` (the pure
+simulation) and `crates/cathedral-backends` (the provider client, the speech
+backends, the prompt archive). Read `crates/cathedral-sim/AGENTS.md` for the
+domain model, the action verbs and the prompt loop.
 
-Characters take turns in a round-robin tick loop. Each turn:
+What survives here is what genuinely has to be Python, because the models are:
 
-1. `prompt.render_prompt` renders the character's full sheet (backstory,
-   location, visible people, held items, memories, goal) plus a
-   `since_your_last_turn` field drained from the character's **inbox**.
-2. The prompt is sent to the configured LLM (`llm_client.complete`) — one
-   stateless call, no provider-side chat history. Each character gets a bounded
-   `recent_history` containing received speech, heard sound percepts, and its
-   own lines. The two fields never overlap: a received percept is pending
-   (`Character.pending_history`) while it is unread, appears once as
-   `since_your_last_turn`, and graduates into `recent_history` when that turn
-   completes (a failed turn re-queues it as new);
-   `stored_memories` and `current_goal` remain the only durable persistence, so
-   the prompt tells the model to use `remember`/`forget` deliberately.
-3. The reply is parsed as `VERB {json}` lines (`prompt.parse_reply`) and each
-   action is applied to the world (`sim.apply_action`).
+| File | What it is |
+|---|---|
+| `canary_qwen_worker.py` | local speech-to-text (NVIDIA Canary-Qwen 2.5B, FP16, CUDA, English-only). The Z key / the Esc menu selects it. |
+| `pocket_tts_worker.py` | local NPC voices (Pocket TTS, CPU, streams PCM as it synthesizes). The X key / the Esc menu selects it. |
+| `.env` | provider keys and speech settings (gitignored); `.example.env` is the template. |
 
-When the game launches the sidecar it passes `CATHEDRAL_SESSION_DIR` (the
-per-run `logs/session_...` directory); every LLM exchange — including failed
-ones — is then archived by `prompt_log.PromptLog` under its `prompts/` as a
-`<stamp>__<nn>__<actor id>__<actor name>_prompt.md` (Prompt/Answer/Meta
-sections) plus a `.json` with the same `{prompt, answer, meta}`. Standalone
-runs (terminal prototype, tests) have no session directory and archive
-nothing.
+Both workers are `uv` inline scripts, spawned as subprocesses by
+`crates/cathedral-backends/src/worker.rs` and driven over a strict JSON-lines
+protocol on stdin/stdout. They are the only subprocesses the game starts. Their
+stderr is forwarded into the session log (`logs.jsonl`, sources `"stt"` and
+`"tts"`).
 
-"Hearing" has one authoritative recipient calculation within 20 metres
-(including nearby bystanders). Every recipient ID is retained in the structured
-event consumed by Bevy; LLM-controlled recipients additionally receive a prose
-inbox entry for their next turn. The player is never scheduled, so player prose
-is not accumulated in an unread inbox. Metric queries use full 3D distance,
-inclusive boundaries, and stable distance/ID ordering.
+`config.ron`'s `smart_actors.uv_binary` picks the `uv` that runs them; this
+directory is `cathedral_backends::config::DEFAULT_WORKERS_DIR`, and `.env` here
+is `DEFAULT_DOTENV_PATH` (real environment variables win over it). The directory
+kept its name — typo and all — because that `.env` path and the "put it in
+`prompt_playgound/.env`" error message are a user-facing contract a rename would
+break for no gain.
 
-Invalid reply lines and failed actions become `system:` events in the actor's
-own inbox so the model can self-correct next turn (also echoed to stderr).
-
-**Unknown people:** each character has a `knows` set of character ids. People
-outside it are rendered as `(unknown - you don't know the name of this
-person)` in `you_see` and as `a stranger (id <id>)` in heard events —
-`sim.identify(observer, subject)` is the single place this perspective
-rendering happens. There is no introduction verb: characters introduce
-themselves in speech, and listeners keep names as memories (the prompt tells
-them to, e.g. `remember {"memory": "The pilgrim with id k0fb1 is called
-Ilse"}`). `knows` is only seeded at world creation.
-
-## Actions
-
-Format: one action per line, `VERB {json args}`, optional `# comment` after.
-Parsing uses `JSONDecoder.raw_decode`, so `#` inside quoted strings is safe.
-
-- `say {"target": "<id>", "text": "..."}` — an LLM target's inbox gets
-  "said to you", and LLM bystanders get "said to X". Structured recipients
-  include the human player without growing the player's unused inbox.
-  Omitted/null `target` broadcasts within 20 m. An invalid or out-of-range
-  explicit target is an error and never falls back to broadcast.
-- `offer_item {"item_id": "<item id>", "target": "<char id>"}` — offer a held
-  item; it stays in the giver's `holds` until accepted. Omitted/null `target`
-  = broadcast (anyone within 4 m may accept, first wins); a bad target
-  id is an error, NOT a fallback to broadcast. Re-offering replaces the
-  pending offer (a nearby jilted target gets a structured `retract_offer`
-  event and, when LLM-controlled, a "withdrew" inbox entry).
-- `accept_offered_item {"item_id": "<item id>"}` — take an item offered to
-  you (or broadcast) by someone still within 4 m; moves it giver → you
-  and clears the offer.
-- `decline_offer {"item_id": "<item id>"}` — turn down an offer targeted at
-  you; the giver keeps the item. Broadcast offers can only be ignored.
-- `retract_offer {"item_id": "<item id>"}` — withdraw your own pending offer
-  (the target, if any, is notified).
-- `eat {"item_id": "<item id>"}` — consume a held item: it is removed from the
-  world (any pending offer of it is implicitly retracted, with notification).
-- `wait {}` — deliberately take no world action when speaking would only repeat
-  the recent history. Scheduler waits are not appended to the transcript.
-- General concept: omit and null is the same thing, {"foo": null, ...} <=> {...}
-- `item_id` takes ids only — a name like `"fish"` is an error, no fallback.
-
-Pending offers live in `world.offers` (item id → `(giver, target | None)`)
-and are rendered on the character sheet every turn as `you_offer` /
-`offered_to_you`, since inbox events alone would be forgotten. Offer inbox
-events are past-tense history with no accept hint — they can be stale by the
-time they're read (someone earlier in the round may have taken a broadcast
-offer); the accept syntax appears only in `offered_to_you`, which is always
-current. Full design: `../features/giving_things.md`.
-
-## Files
-
-- `main.py` — entry point; tick loop and the seeded demo world (Sven, who
-  holds a fish and owes Conny two coppers; Conny the fishmonger; and Ilse, a
-  hungry pilgrim stranger holding a copper coin — seeded so a purchase can
-  emerge). uv inline script; `sim`/`prompt`/`llm` are plain modules it
-  imports.
-- `sim.py` — `Character`, `Item`, `World`, `apply_action`. Items are world
-  entities with ids; `world.add(entity)` takes either a `Character` or an
-  `Item`, and `Character.holds` is a list of item ids that the prompt
-  resolves to `{"id", "name"}` objects. Id strings are typed as `ItemIdStr` /
-  `CharIdStr` (`typing.NewType`) so the type checker keeps them apart.
-- `prompt.py` — prompt rendering + reply parsing (the LLM text format lives
-  here and nowhere else).
-- `server.py` — uv inline-script JSON-lines sidecar and protocol state thread.
-- `protocol.py` — strict version-1 envelope parsing and compact encoding.
-- `scheduler.py` — one non-blocking global NPC turn stream with priority and
-  provider backoff.
-- `prompt_log.py` — the per-session `.md`/`.json` archive of every LLM
-  exchange (see above); disabled without `CATHEDRAL_SESSION_DIR`.
-- `speech_client.py` — independent completed-utterance OpenAI STT/TTS adapters
-  plus persistent local Canary-Qwen STT and streaming Pocket TTS workers; unavailable
-  credentials degrade independently from text cognition and local speech.
-- `llm_client.py` — `complete(prompt) -> str` against the configured provider (see
-  Configuration below).
-- `kimi.py` — standalone one-shot CLI: send a file to the configured LLM,
-  print the reply (`./kimi.py [file]`, default `think.md`).
-- `think.md` — the original hand-written prompt sketch that `prompt.py` is
-  derived from; used with `./kimi.py` for one-off prompt experiments.
-
-## Configuration
-
-`llm_client.py` loads `.env` from this directory (gitignored; real environment
-variables take precedence over it):
-
-- `LLM_PROVIDER` — `moonshot` or `openai` (default `moonshot`)
-- `LLM_MODEL` — optional model override; unset/empty means the provider
-  default: `kimi-k2.5` for moonshot, `gpt-5.6-luna` for openai
-- `MOONSHOT_API_KEY` / `OPENAI_API_KEY` — key for the chosen provider
-  (moonshot also falls back to `~/.config/moonshot/key`)
-
-Moonshot calls run with temperature 0.6 and thinking disabled (instant
-mode, for speed); openai calls use API defaults. Override per run like
-`LLM_PROVIDER=moonshot ./main.py`.
-
-## Running
-
-```
-./main.py            # 6 ticks (make sim)
-./main.py -t 10      # more ticks
-./main.py -v         # dump full prompts and raw replies to stderr
-./kimi.py think.md   # one-off prompt test (make think)
-```
-
-Every run makes live API calls (a few seconds per tick). stdout is the
-transcript + final state + total run cost in USD (priced from the per-model
-table in `llm_client.PRICING`; cache discounts not modeled); diagnostics go
-to stderr.
-
-The sidecar has a deterministic fake mode for offline integration tests. Run
-the complete Python suite without a project environment or network access:
-
-```
-uv run --offline --no-project python -m unittest discover -s tests -v
-```
-
-## Known gaps (intentional, for now)
-
-- `move_to` and other verbs from `think.md` are not implemented (`eat` is) —
-  characters may narrate world changes the sim doesn't model (e.g. claiming a
-  fish is sold before it is).
-- Memory/goal hygiene is prompt-enforced only: the prompt tells characters to
-  record outcomes the turn they happen, forget superseded memories, and
-  clear/replace achieved goals (`set_goal {"goal": null}` clears). This works
-  in test runs but nothing in the sim guarantees it.
-- Recent history is a bounded short-term aid, not durable memory. Older lines
-  fall out and important facts still need an explicit `remember` action.
-  Repeated identical percepts are not yet coalesced
-  (`../features/small_thing_deduplicate_repeat_recent_history.md`).
+A missing worker script, a missing `uv`, or a worker that dies takes down *only*
+its own capability: cognition, transcription and voices degrade independently,
+and the cathedral stays playable.

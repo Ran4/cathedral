@@ -1,6 +1,6 @@
 //! Snapshot-driven smart-actor and offered-item presentation.
 //!
-//! The Python world owns identities, inventory, and offers.  Entities in this
+//! The engine owns identities, inventory, and offers.  Entities in this
 //! module are a disposable visual projection: actor roots and offered-item props
 //! are created, updated, or removed only to match the current `WorldMirror`.
 
@@ -356,7 +356,7 @@ fn visual_disposition(
 /// Reconciles one visual copy for every offer in the latest snapshot.
 ///
 /// No command intent calls this system directly, so accepting, declining, or
-/// retracting an offer cannot make a prop disappear before Python confirms it.
+/// retracting an offer cannot make a prop disappear before the engine confirms it.
 pub(crate) fn reconcile_offered_item_views(
     mut commands: Commands,
     mirror: Res<WorldMirror>,
@@ -660,61 +660,57 @@ mod tests {
     #[test]
     fn every_offer_from_one_giver_gets_a_fanned_visual() {
         let mut mirror = WorldMirror::default();
-        mirror.begin_session("test").unwrap();
         mirror
-            .replace_snapshot(
-                "test",
-                WorldSnapshot {
-                    world_revision: 1,
-                    player_id: ActorId("player".into()),
-                    actors: vec![
-                        ActorSnapshot {
-                            id: ActorId("player".into()),
-                            name_for_player: "You".into(),
-                            control: ActorControl::Player,
-                            position_m: Position::new(0.0, 0.0, 0.0).unwrap(),
-                            facing_yaw: 0.0,
-                            appearance_key: "player".into(),
-                            holds: vec![],
-                        },
-                        ActorSnapshot {
-                            id: ActorId("ilse".into()),
-                            name_for_player: "Ilse".into(),
-                            control: ActorControl::Llm,
-                            position_m: Position::new(1.0, 0.0, 0.0).unwrap(),
-                            facing_yaw: 0.0,
-                            appearance_key: "ilse".into(),
-                            holds: vec![ItemId("coin".into()), ItemId("fish".into())],
-                        },
-                    ],
-                    items: vec![
-                        ItemSnapshot {
-                            id: ItemId("coin".into()),
-                            name: "coin".into(),
-                            visual_key: "copper_coin".into(),
-                        },
-                        ItemSnapshot {
-                            id: ItemId("fish".into()),
-                            name: "fish".into(),
-                            visual_key: "fish".into(),
-                        },
-                    ],
-                    offers: vec![
-                        OfferSnapshot {
-                            item_id: ItemId("coin".into()),
-                            giver_id: ActorId("ilse".into()),
-                            target_id: Some(ActorId("player".into())),
-                            created_seq: 2,
-                        },
-                        OfferSnapshot {
-                            item_id: ItemId("fish".into()),
-                            giver_id: ActorId("ilse".into()),
-                            target_id: None,
-                            created_seq: 3,
-                        },
-                    ],
-                },
-            )
+            .replace_snapshot(WorldSnapshot {
+                world_revision: 1,
+                player_id: ActorId("player".into()),
+                actors: vec![
+                    ActorSnapshot {
+                        id: ActorId("player".into()),
+                        name_for_player: "You".into(),
+                        control: ActorControl::Player,
+                        position_m: Position::new(0.0, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "player".into(),
+                        holds: vec![],
+                    },
+                    ActorSnapshot {
+                        id: ActorId("ilse".into()),
+                        name_for_player: "Ilse".into(),
+                        control: ActorControl::Llm,
+                        position_m: Position::new(1.0, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "ilse".into(),
+                        holds: vec![ItemId("coin".into()), ItemId("fish".into())],
+                    },
+                ],
+                items: vec![
+                    ItemSnapshot {
+                        id: ItemId("coin".into()),
+                        name: "coin".into(),
+                        visual_key: "copper_coin".into(),
+                    },
+                    ItemSnapshot {
+                        id: ItemId("fish".into()),
+                        name: "fish".into(),
+                        visual_key: "fish".into(),
+                    },
+                ],
+                offers: vec![
+                    OfferSnapshot {
+                        item_id: ItemId("coin".into()),
+                        giver_id: ActorId("ilse".into()),
+                        target_id: Some(ActorId("player".into())),
+                        created_seq: 2,
+                    },
+                    OfferSnapshot {
+                        item_id: ItemId("fish".into()),
+                        giver_id: ActorId("ilse".into()),
+                        target_id: None,
+                        created_seq: 3,
+                    },
+                ],
+            })
             .unwrap();
 
         let visuals = desired_offer_visuals(&mirror);
@@ -729,7 +725,6 @@ mod tests {
     #[test]
     fn stationary_actor_projection_reasserts_authoritative_spawn_positions() {
         let mut mirror = WorldMirror::default();
-        mirror.begin_session("stationary-test").unwrap();
         let actor = |id: &str, name: &str, position_m: Position| ActorSnapshot {
             id: ActorId(id.into()),
             name_for_player: name.into(),
@@ -740,29 +735,26 @@ mod tests {
             holds: vec![],
         };
         mirror
-            .replace_snapshot(
-                "stationary-test",
-                WorldSnapshot {
-                    world_revision: 1,
-                    player_id: ActorId("player".into()),
-                    actors: vec![
-                        actor("cb947", "Conny", Position::new(0.0, 0.91, 112.0).unwrap()),
-                        actor("sv3n1", "Sven", Position::new(-1.8, 0.91, 114.0).unwrap()),
-                        actor("k0fb1", "Ilse", Position::new(1.8, 0.91, 114.0).unwrap()),
-                        ActorSnapshot {
-                            id: ActorId("player".into()),
-                            name_for_player: "You".into(),
-                            control: ActorControl::Player,
-                            position_m: Position::new(0.0, 0.91, 95.0).unwrap(),
-                            facing_yaw: 0.0,
-                            appearance_key: "player".into(),
-                            holds: vec![],
-                        },
-                    ],
-                    items: vec![],
-                    offers: vec![],
-                },
-            )
+            .replace_snapshot(WorldSnapshot {
+                world_revision: 1,
+                player_id: ActorId("player".into()),
+                actors: vec![
+                    actor("cb947", "Conny", Position::new(0.0, 0.91, 112.0).unwrap()),
+                    actor("sv3n1", "Sven", Position::new(-1.8, 0.91, 114.0).unwrap()),
+                    actor("k0fb1", "Ilse", Position::new(1.8, 0.91, 114.0).unwrap()),
+                    ActorSnapshot {
+                        id: ActorId("player".into()),
+                        name_for_player: "You".into(),
+                        control: ActorControl::Player,
+                        position_m: Position::new(0.0, 0.91, 95.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "player".into(),
+                        holds: vec![],
+                    },
+                ],
+                items: vec![],
+                offers: vec![],
+            })
             .unwrap();
 
         let mut app = App::new();

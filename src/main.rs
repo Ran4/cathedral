@@ -24,8 +24,15 @@ use ui::HudPlugin;
 
 fn main() {
     // The session directory must exist before anything logs, screenshots, or
-    // spawns the Python sidecar; all three consume this process-wide state.
+    // starts the actor engine; all three consume this process-wide state.
     session_log::init();
+    // The speech workers are subprocesses and write to their own stderr. Route
+    // it into `logs.jsonl` under the worker's own source name (`stt` / `tts`),
+    // so a session log still accounts for every line the run produced.
+    cathedral_backends::set_log_sink(std::sync::Arc::new(|source: &str, line: &str| {
+        eprintln!("[smart actors/{source}] {line}");
+        session_log::log_line(source, "INFO", line);
+    }));
     let config = load_config();
     let smart_actors = config.smart_actors.clone();
     let persisted = PersistedConfig(config.clone());

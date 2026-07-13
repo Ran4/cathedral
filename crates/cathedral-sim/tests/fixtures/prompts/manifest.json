@@ -1,0 +1,2794 @@
+{
+  "scenarios": [
+    {
+      "name": "sven_baseline",
+      "file": "sven_baseline.txt",
+      "actor_id": "sv3n1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": []
+      },
+      "presented": null
+    },
+    {
+      "name": "conny_baseline",
+      "file": "conny_baseline.txt",
+      "actor_id": "cb947",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": []
+      },
+      "presented": null
+    },
+    {
+      "name": "ilse_all_strangers",
+      "file": "ilse_all_strangers.txt",
+      "actor_id": "k0fb1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": []
+      },
+      "presented": null
+    },
+    {
+      "name": "sven_sounds_off",
+      "file": "sven_sounds_off.txt",
+      "actor_id": "sv3n1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": false,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": []
+      },
+      "presented": null
+    },
+    {
+      "name": "sven_alone_empty_people",
+      "file": "sven_alone_empty_people.txt",
+      "actor_id": "sv3n1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 300.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": []
+      },
+      "presented": null
+    },
+    {
+      "name": "targeted_offer_giver",
+      "file": "targeted_offer_giver.txt",
+      "actor_id": "k0fb1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) held out a copper coin (id c0prs) to you"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) offered a copper coin to Sven"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "c0prs",
+            "giver_id": "k0fb1",
+            "target_id": "sv3n1",
+            "created_seq": 1
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "targeted_offer_target",
+      "file": "targeted_offer_target.txt",
+      "actor_id": "sv3n1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) held out a copper coin (id c0prs) to you"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) offered a copper coin to Sven"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "c0prs",
+            "giver_id": "k0fb1",
+            "target_id": "sv3n1",
+            "created_seq": 1
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "targeted_offer_out_of_range_target",
+      "file": "targeted_offer_out_of_range_target.txt",
+      "actor_id": "sv3n1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -20.0,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) held out a copper coin (id c0prs) to you"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) offered a copper coin to Sven"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "c0prs",
+            "giver_id": "k0fb1",
+            "target_id": "sv3n1",
+            "created_seq": 1
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "targeted_offer_out_of_range_giver",
+      "file": "targeted_offer_out_of_range_giver.txt",
+      "actor_id": "k0fb1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -20.0,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) held out a copper coin (id c0prs) to you"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) offered a copper coin to Sven"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "c0prs",
+            "giver_id": "k0fb1",
+            "target_id": "sv3n1",
+            "created_seq": 1
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "broadcast_offer_giver",
+      "file": "broadcast_offer_giver.txt",
+      "actor_id": "sv3n1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [
+              "Sven held out a fish (id fzbn9) to anyone who wanted it"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [
+              "A stranger (id sv3n1) held out a fish (id fzbn9) to anyone who wanted it"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "fzbn9",
+            "giver_id": "sv3n1",
+            "target_id": null,
+            "created_seq": 1
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "broadcast_offer_bystander",
+      "file": "broadcast_offer_bystander.txt",
+      "actor_id": "cb947",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [
+              "Sven held out a fish (id fzbn9) to anyone who wanted it"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [
+              "A stranger (id sv3n1) held out a fish (id fzbn9) to anyone who wanted it"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "fzbn9",
+            "giver_id": "sv3n1",
+            "target_id": null,
+            "created_seq": 1
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "dangling_target_offer",
+      "file": "dangling_target_offer.txt",
+      "actor_id": "k0fb1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) offered a copper coin to Sven"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "c0prs",
+            "giver_id": "k0fb1",
+            "target_id": "sv3n1",
+            "created_seq": 1
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "dangling_item_ids_giver",
+      "file": "dangling_item_ids_giver.txt",
+      "actor_id": "k0fb1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) held out a copper coin (id c0prs) to you"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) offered a copper coin to Sven",
+              "Sven held out a fish (id fzbn9) to you"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [
+              "A stranger (id sv3n1) offered a fish to a stranger (id cb947)"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "c0prs",
+            "giver_id": "k0fb1",
+            "target_id": "sv3n1",
+            "created_seq": 1
+          },
+          {
+            "item_id": "fzbn9",
+            "giver_id": "sv3n1",
+            "target_id": "cb947",
+            "created_seq": 2
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "dangling_item_ids_target",
+      "file": "dangling_item_ids_target.txt",
+      "actor_id": "sv3n1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) held out a copper coin (id c0prs) to you"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [
+              "A stranger (id k0fb1) offered a copper coin to Sven",
+              "Sven held out a fish (id fzbn9) to you"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [
+              "A stranger (id sv3n1) offered a fish to a stranger (id cb947)"
+            ],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "c0prs",
+            "giver_id": "k0fb1",
+            "target_id": "sv3n1",
+            "created_seq": 1
+          },
+          {
+            "item_id": "fzbn9",
+            "giver_id": "sv3n1",
+            "target_id": "cb947",
+            "created_seq": 2
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "offer_ordering_giver",
+      "file": "offer_ordering_giver.txt",
+      "actor_id": "cb947",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          },
+          {
+            "id": "zz001",
+            "name": "anvil",
+            "visual_key": "generic"
+          },
+          {
+            "id": "aa002",
+            "name": "loaf",
+            "visual_key": "generic"
+          },
+          {
+            "id": "mm003",
+            "name": "rope",
+            "visual_key": "generic"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [
+              "zz001",
+              "aa002",
+              "mm003"
+            ],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "zz001",
+            "giver_id": "cb947",
+            "target_id": "sv3n1",
+            "created_seq": 30
+          },
+          {
+            "item_id": "aa002",
+            "giver_id": "cb947",
+            "target_id": "sv3n1",
+            "created_seq": 10
+          },
+          {
+            "item_id": "mm003",
+            "giver_id": "cb947",
+            "target_id": "sv3n1",
+            "created_seq": 10
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "offer_ordering_target",
+      "file": "offer_ordering_target.txt",
+      "actor_id": "sv3n1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          },
+          {
+            "id": "zz001",
+            "name": "anvil",
+            "visual_key": "generic"
+          },
+          {
+            "id": "aa002",
+            "name": "loaf",
+            "visual_key": "generic"
+          },
+          {
+            "id": "mm003",
+            "name": "rope",
+            "visual_key": "generic"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [
+              "zz001",
+              "aa002",
+              "mm003"
+            ],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": [
+          {
+            "item_id": "zz001",
+            "giver_id": "cb947",
+            "target_id": "sv3n1",
+            "created_seq": 30
+          },
+          {
+            "item_id": "aa002",
+            "giver_id": "cb947",
+            "target_id": "sv3n1",
+            "created_seq": 10
+          },
+          {
+            "item_id": "mm003",
+            "giver_id": "cb947",
+            "target_id": "sv3n1",
+            "created_seq": 10
+          }
+        ]
+      },
+      "presented": null
+    },
+    {
+      "name": "non_ascii_and_quotes",
+      "file": "non_ascii_and_quotes.txt",
+      "actor_id": "sv3n1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "Buy a fish \u2014 pay Conny back \ud83d\udc1f",
+            "memories": [
+              "I owe Conny two coppers \u2014 he calls it \"the fish debt\"",
+              "Sm\u00f6rg\u00e5sbord, \u0161\u010de, \u0442\u0435\u0441\u0442"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [
+              "system: your action \"say {}\" failed: text must be a string"
+            ],
+            "recent_history": [
+              "Conny said to you: \"I\u2019ll not sell you a fish, Sven \u2014 not today.\"",
+              "A stranger (id k0fb1) said aloud: \u00abbonjour\u00bb, \u4f60\u597d, \ud83d\ude00",
+              "[You heard a big fart!]\u007f\u0001"
+            ],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": []
+      },
+      "presented": null
+    },
+    {
+      "name": "full_inbox_drain",
+      "file": "full_inbox_drain.txt",
+      "actor_id": "sv3n1",
+      "mode": "drain",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [
+              "Conny said to you: \"Fresh fish!\"",
+              "[You heard glass shatter nearby.]",
+              "system: your action \"eat {}\" failed: item_id must be an item id"
+            ],
+            "recent_history": [
+              "You said aloud: \"earlier\""
+            ],
+            "pending_history": [
+              "Conny said to you: \"Fresh fish!\"",
+              "[You heard glass shatter nearby.]"
+            ]
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": []
+      },
+      "presented": [
+        "Conny said to you: \"Fresh fish!\"",
+        "[You heard glass shatter nearby.]"
+      ]
+    },
+    {
+      "name": "empty_inbox_drain",
+      "file": "empty_inbox_drain.txt",
+      "actor_id": "k0fb1",
+      "mode": "drain",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [
+              "Sven still owes me two coppers for that fish"
+            ],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": []
+      },
+      "presented": []
+    },
+    {
+      "name": "cleared_goal_and_no_memories",
+      "file": "cleared_goal_and_no_memories.txt",
+      "actor_id": "cb947",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          {
+            "id": "fzbn9",
+            "name": "fish",
+            "visual_key": "fish"
+          },
+          {
+            "id": "c0prs",
+            "name": "copper coin",
+            "visual_key": "copper_coin"
+          }
+        ],
+        "characters": [
+          {
+            "id": "sv3n1",
+            "name": "Sven",
+            "control": "llm",
+            "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "sven",
+            "voice_key": "sven",
+            "position_m": {
+              "x": -1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": -0.7328151017865066,
+            "holds": [
+              "fzbn9"
+            ],
+            "goal": "None",
+            "memories": [
+              "I'm going to get some fish"
+            ],
+            "knows": [
+              "cb947"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "cb947",
+            "name": "Conny",
+            "control": "llm",
+            "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "conny",
+            "voice_key": "conny",
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 112.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": 1.8,
+              "y": 0.91,
+              "z": 114.0
+            },
+            "facing_yaw": 3.141592653589793,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "None",
+            "memories": [
+              "I am very hungry after the long road here"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          },
+          {
+            "id": "player",
+            "name": "Player",
+            "control": "player",
+            "back_story": "A human visitor exploring the cathedral city.",
+            "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+            "appearance_key": "player",
+            "voice_key": null,
+            "position_m": {
+              "x": 0.0,
+              "y": 0.91,
+              "z": 95.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [],
+            "goal": "None",
+            "memories": [],
+            "knows": [
+              "cb947",
+              "k0fb1",
+              "sv3n1"
+            ],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": []
+          }
+        ],
+        "offers": []
+      },
+      "presented": null
+    }
+  ]
+}

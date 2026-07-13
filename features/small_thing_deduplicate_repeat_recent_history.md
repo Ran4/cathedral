@@ -1,6 +1,6 @@
 # Coalesce repeated entries in recent_history
 
-`Character.recent_history` (prompt_playgound/sim.py) now holds sound percepts
+`CharacterState.recent_history` (crates/cathedral-sim/src/character.rs) now holds sound percepts
 as well as speech, and the window is only `RECENT_HISTORY_MAX_ENTRIES` = 16
 entries. Consecutive identical percepts can therefore evict real dialogue: a
 player fart barrage at the 2 s rate limit flushes the whole window in ~30 s,

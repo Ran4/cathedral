@@ -198,8 +198,8 @@ impl MicrophoneService {
     }
 
     /// Relinquish a completed recording. If the bounded worker queue cannot
-    /// accept the cleanup command, remove the confined file directly so a
-    /// resync or bridge failure cannot accumulate orphaned utterances.
+    /// accept the cleanup command, remove the confined file directly so an
+    /// engine or bridge failure cannot accumulate orphaned utterances.
     pub fn discard_recording(&self, wav_basename: String) -> Result<(), String> {
         let delivery_error = match self.try_send(MicrophoneCommand::Discard {
             wav_basename: wav_basename.clone(),
@@ -646,7 +646,7 @@ impl UtteranceStream {
     }
 
     /// Flush the partial tail and mark the utterance finished. Must be called
-    /// before `RecordingFinished` is emitted so the sidecar always observes
+    /// before `RecordingFinished` is emitted so the engine always observes
     /// the stream end ahead of the recording's `player_recording` request.
     fn finish(mut self, silent: bool) {
         if self.dead {
@@ -694,7 +694,7 @@ impl UtteranceStream {
     }
 
     fn die(&mut self) {
-        // One best-effort abort. If even that cannot be queued, the sidecar
+        // One best-effort abort. If even that cannot be queued, the engine
         // reclaims the partial stream at player_recording time or when the
         // held-transcript window expires.
         self.dead = true;
@@ -770,7 +770,7 @@ fn finish_recording(
         )));
         return false;
     }
-    // The stream end is enqueued before RecordingFinished so the sidecar
+    // The stream end is enqueued before RecordingFinished so the engine
     // always observes it ahead of Bevy's player_recording request.
     if let Some(stream) = stream {
         stream.finish(silent);
@@ -1263,7 +1263,10 @@ mod tests {
     fn trailing_silence_is_clamped_to_the_supported_window() {
         assert_eq!(clamped_trailing_silence(0), Duration::from_millis(300));
         assert_eq!(clamped_trailing_silence(500), Duration::from_millis(500));
-        assert_eq!(clamped_trailing_silence(5_000), Duration::from_millis(1_500));
+        assert_eq!(
+            clamped_trailing_silence(5_000),
+            Duration::from_millis(1_500)
+        );
     }
 
     #[test]
@@ -1369,7 +1372,10 @@ mod tests {
 
         let commands = drain_bridge(&bridge_rx);
         assert_eq!(commands.len(), 2, "{commands:?}");
-        assert!(matches!(&commands[0], BridgeCommand::PlayerAudioBegin { .. }));
+        assert!(matches!(
+            &commands[0],
+            BridgeCommand::PlayerAudioBegin { .. }
+        ));
         assert!(matches!(
             &commands[1],
             BridgeCommand::PlayerAudioChunk { seq: 0, .. }
@@ -1488,10 +1494,11 @@ mod tests {
             .filter(|command| matches!(command, BridgeCommand::PlayerAudioAbort { .. }))
             .count();
         assert_eq!(aborts, 1, "{commands:?}");
-        assert!(!commands.iter().any(|command| matches!(
-            command,
-            BridgeCommand::PlayerAudioEnd { .. }
-        )));
+        assert!(
+            !commands
+                .iter()
+                .any(|command| matches!(command, BridgeCommand::PlayerAudioEnd { .. }))
+        );
         assert!(!path.exists());
         assert!(matches!(
             events_rx.try_recv(),

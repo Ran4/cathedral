@@ -1,14 +1,14 @@
 //! Per-run session logging: every game start creates
 //! `logs/session_<n>_<start time>/` (symlinked as `logs/latest_session`)
-//! holding that run's `screenshots/`, the LLM `prompts/` archive written by
-//! the Python sidecar, and a structured `logs.jsonl` that merges Bevy log
-//! events, sidecar stderr, and drive-script evidence lines so an agent can
-//! parse a whole session later.
+//! holding that run's `screenshots/`, the LLM `prompts/` archive, and a
+//! structured `logs.jsonl` that merges Bevy log events, the actor engine's
+//! diagnostics, the speech workers' stderr, and drive-script evidence lines so
+//! an agent can parse a whole session later.
 //!
 //! The session counter lives in `cathedral_meta.json` at the repository root
 //! and increments once per game start. `init()` runs before the Bevy app is
-//! built — the tracing layer, the screenshot systems, and the sidecar spawn
-//! all read the resulting process-wide state instead of threading it through
+//! built — the tracing layer, the screenshot systems, and the actor engine all
+//! read the resulting process-wide state instead of threading it through
 //! plugins that are constructed in different orders.
 
 use std::{
@@ -34,8 +34,8 @@ static WRITER: OnceLock<Mutex<BufWriter<File>>> = OnceLock::new();
 #[derive(Debug)]
 pub struct SessionPaths {
     pub number: u64,
-    /// Absolute, so the Python sidecar can resolve it from its environment.
-    /// The sidecar derives `<root>/prompts` itself from `CATHEDRAL_SESSION_DIR`.
+    /// Absolute: the prompt archive under `<root>/prompts` is written from
+    /// several places and none of them can rely on the working directory.
     pub root: PathBuf,
     pub screenshots: PathBuf,
 }
@@ -102,8 +102,9 @@ pub fn custom_layer(_app: &mut App) -> Option<BoxedLayer> {
     WRITER.get().map(|_| Box::new(JsonlLayer) as BoxedLayer)
 }
 
-/// Appends one record for a non-tracing line (drive evidence, sidecar
-/// stderr). A no-op before `init()` or when the session could not be created.
+/// Appends one record for a non-tracing line (drive evidence, the actor
+/// engine, a speech worker's stderr). A no-op before `init()` or when the
+/// session could not be created.
 pub fn log_line(source: &str, level: &str, message: &str) {
     write_record(source, level, None, message, Map::new());
 }
@@ -135,7 +136,9 @@ fn write_record(
         record.insert("fields".into(), Value::Object(extra));
     }
 
-    let Ok(mut writer) = writer.lock() else { return };
+    let Ok(mut writer) = writer.lock() else {
+        return;
+    };
     // One flushed line per record, so an abort or crash loses nothing.
     if serde_json::to_writer(&mut *writer, &Value::Object(record)).is_ok() {
         let _ = writer.write_all(b"\n");

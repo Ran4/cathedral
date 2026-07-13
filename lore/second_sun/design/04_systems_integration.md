@@ -154,7 +154,7 @@ Each knob gates exactly one mechanism named above. Where a knob restates a desig
 - **C13 — the two-eyes test.** Ferrant validates called panes against the deterministic ephemeris; the margin line as fixed reward.
 - **C14 — the doors.** Dorn's Concurrence ruling as a fixed weighing over counted memory categories, defaulting open.
 
-Plus the fake capability layer itself: fake STT (input arrives only via the drive `say` action), fake TTS (silent, text only), and scripted events — funeral, quarter-feast, weather, Concurrence day — fired on drive triggers (§8). Every C-series exchange gets one offline integration test in the existing Python suite (`uv run --offline --no-project python -m unittest discover -s tests`).
+Plus the fake capability layer itself: fake STT (input arrives only via the drive `say` action), fake TTS (silent, text only), and scripted events — funeral, quarter-feast, weather, Concurrence day — fired on drive triggers (§8). Every C-series exchange gets one offline integration test in the engine suite (`cargo test -p cathedral-sim`; the Python sidecar this originally named was ported into `crates/cathedral-sim`).
 
 ## 8. Drive-mode smoke scripts
 

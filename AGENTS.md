@@ -16,27 +16,50 @@ forecourt. For developer playtesting, "flying" support makes the full skyline ex
 
 ## Smart actors
 
-NPCs are LLM-driven "smart actors". The authoritative simulation is a Python
-sidecar (`prompt_playgound/server.py`) that the game launches itself via `uv`
-and that owns world state, prompts, and action parsing; the Bevy side
-(`src/smart_actors/`) is only a non-blocking projection. Rust and Python speak
-a version-1 JSON-lines protocol over the child's stdin/stdout
-(`src/smart_actors/bridge.rs`); Bevy reconciles a `WorldMirror` from
-authoritative snapshots and events, requests a resync on any sequence gap, and
-blocks player commands until the replacement snapshot lands.
+NPCs are LLM-driven "smart actors". The authoritative simulation is
+**`crates/cathedral-sim`**: a pure, IO-free Rust crate that owns world state,
+the prompt format, the action parser and the NPC turn scheduler. It runs
+**in-process**, pumped once per frame by `src/smart_actors/local_engine.rs`;
+the rest of `src/smart_actors/` is a non-blocking projection of it (there is
+no sidecar and no wire — the engine hands the game typed
+`cathedral_sim::EngineMessage`s, and `model::WorldMirror` projects the
+snapshots the ECS reads).
 
-The sidecar reports three independent capabilities at handshake: LLM cognition,
-player speech-to-text (cloud OpenAI gpt-4o-transcribe or local Canary-Qwen),
-and NPC voices (local streaming Pocket TTS, cloud OpenAI, or off). Each
-degrades independently — a missing API key never takes the others down. The
-Esc settings menu switches STT/TTS backends at runtime and persists the choice
-to `config.ron`; the X key cycles the NPC voice backend.
+Everything impure — the provider HTTP client, the speech workers, the prompt
+archive, the private audio directory — lives in **`crates/cathedral-backends`**.
+The sim calls it through the `Cognition` / `Transcription` / `Tts` traits and
+gets results back as plain values, so the sim itself has no clock, no threads
+and no filesystem. Domain details (the world model, the action verbs, the turn
+loop, the "unknown people" rule) are in `crates/cathedral-sim/AGENTS.md`.
 
-Everything is configured in `config.ron` under `smart_actors: (...)`. For runs
-without network or API keys, set `fake_backend: true` — a deterministic
-offline mode also used by the integration tests. Python-side details (domain
-model, actions, prompt format, the terminal prototype) live in
-`prompt_playgound/AGENTS.md`.
+Three capabilities are probed at startup and reported independently: LLM
+cognition, player speech-to-text (cloud OpenAI gpt-4o-transcribe or local
+Canary-Qwen), and NPC voices (local streaming Pocket TTS, cloud OpenAI, or
+off). Each degrades on its own — a missing API key never takes the others down.
+The Esc settings menu switches STT/TTS backends at runtime and persists the
+choice to `config.ron`; the X key cycles the NPC voice backend.
+
+Everything is configured in `config.ron` under `smart_actors: (...)`; secrets
+stay in `prompt_playgound/.env` (real environment variables win over it). For
+runs without network or API keys, set `fake_backend: true` — a deterministic
+offline mode also used by the integration tests.
+
+The two local speech models still run as `uv` subprocesses; `prompt_playgound/`
+is now nothing but those two workers and their `.env`.
+
+### Running the sim without Bevy
+
+The whole cast plays out headlessly, which is the fastest way to change the
+prompt, the scheduler or an action verb and see what it does:
+
+```sh
+cargo run -p cathedral-backends --bin cathedral-headless -- --fake -t 6    # offline, instant
+cargo run -p cathedral-backends --bin cathedral-headless -- -t 10 -v       # live provider, full prompts
+cargo run -p cathedral-backends --bin cathedral-headless -- --one-shot FILE  # send one file, print the reply
+```
+
+stdout is the transcript, the final world state and the run cost in USD;
+diagnostics (and, with `-v`, the prompts and raw replies) go to stderr.
 
 ----------
 
@@ -51,12 +74,13 @@ logs/
     latest_session -> session_35_2026-07-13_10_12_02
     session_35_2026-07-13_10_12_02/        # session 35, started 2026-07-13 10:12:02
         logs.jsonl                         # structured logs, one JSON object per line:
-                                           #   game (source "rust"), Python sidecar stderr
-                                           #   ("python"), drive evidence lines ("drive")
+                                           #   game (source "rust"), actor-engine diagnostics
+                                           #   ("engine"), speech-worker stderr ("stt"/"tts"),
+                                           #   drive evidence lines ("drive")
         screenshots/
             cathedral_screenshot_2026-07-13_10_14_31__00.png   # __nn counts up within a second
             <name>.png                     # named drive-mode `shot` captures
-        prompts/                           # every LLM exchange, written by the sidecar
+        prompts/                           # every LLM exchange, written by the engine's host
             2026-07-13_10_12_45__00__k0fb1__Ilse_prompt.md     # Prompt / Answer / Meta sections
             2026-07-13_10_12_45__00__k0fb1__Ilse_prompt.json   # same data: {prompt, answer, meta}
 ```

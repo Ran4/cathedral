@@ -3,7 +3,13 @@
 # requires-python = ">=3.11"
 # dependencies = ["requests", "python-dotenv"]
 # ///
-"""Generate the sound assets the catalog (prompt_playgound/sounds.py) defines.
+"""Generate the sound assets the catalog (assets/sounds/catalog.toml) defines.
+
+The catalog is the single source of truth: the sim emits sound events and
+renders their percepts from it, Bevy resolves playback by convention from the
+id alone, and this script synthesizes each row's asset from its `sfx_prompt`.
+It used to import `prompt_playgound/sounds.py`; that module went with the rest
+of the Python sidecar, and the TOML it became says exactly the same thing.
 
 Idempotent by design: reads the catalog, diffs against assets/sounds/, and
 generates only what is missing via ElevenLabs sound generation. Don't like a
@@ -24,6 +30,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
 
 import requests
@@ -31,10 +38,8 @@ from dotenv import load_dotenv
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ASSET_DIR = REPO_ROOT / "assets" / "sounds"
+CATALOG_PATH = ASSET_DIR / "catalog.toml"
 API_URL = "https://api.elevenlabs.io/v1/sound-generation"
-
-sys.path.insert(0, str(REPO_ROOT / "prompt_playgound"))
-from sounds import AMBIENT, SOUNDS  # noqa: E402
 
 
 def generate(api_key: str, prompt: str, duration_seconds: float) -> bytes:
@@ -73,27 +78,29 @@ def main() -> int:
     if not api_key:
         print("ELEVENLABS_API_KEY is not set (repo-root .env)", file=sys.stderr)
         return 2
+
+    catalog = tomllib.loads(CATALOG_PATH.read_text(encoding="utf-8"))
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
 
     generated = 0
-    for sound in SOUNDS.values():
-        target = ASSET_DIR / f"{sound.sound_id}.mp3"
+    for sound in catalog.get("sounds", []):
+        target = ASSET_DIR / f"{sound['sound_id']}.mp3"
         if target.exists():
             print(f"  keep     {target.relative_to(REPO_ROOT)}")
             continue
-        print(f"  generate {target.relative_to(REPO_ROOT)} ({sound.duration_seconds}s)")
-        target.write_bytes(generate(api_key, sound.sfx_prompt, sound.duration_seconds))
+        duration = sound["duration_seconds"]
+        print(f"  generate {target.relative_to(REPO_ROOT)} ({duration}s)")
+        target.write_bytes(generate(api_key, sound["sfx_prompt"], duration))
         generated += 1
 
-    for ambient in AMBIENT.values():
-        target = ASSET_DIR / f"{ambient.sound_id}.wav"
+    for ambient in catalog.get("ambients", []):
+        target = ASSET_DIR / f"{ambient['sound_id']}.wav"
         if target.exists():
             print(f"  keep     {target.relative_to(REPO_ROOT)}")
             continue
-        print(
-            f"  generate {target.relative_to(REPO_ROOT)} ({ambient.duration_seconds}s)"
-        )
-        mp3_bytes = generate(api_key, ambient.sfx_prompt, ambient.duration_seconds)
+        duration = ambient["duration_seconds"]
+        print(f"  generate {target.relative_to(REPO_ROOT)} ({duration}s)")
+        mp3_bytes = generate(api_key, ambient["sfx_prompt"], duration)
         if not convert_to_wav(mp3_bytes, target):
             fallback = target.with_suffix(".mp3")
             fallback.write_bytes(mp3_bytes)

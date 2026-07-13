@@ -1,0 +1,284 @@
+[
+  {
+    "occupation": "Candor cleric",
+    "lore_locations": ["The Lanthorn", "Chapter house", "Parish churches", "Saint Maren's", "Ostrelle"],
+    "lore_example": "The Candor's hierarchy runs from the Luminary and Praelucent through the Chapter and Canons of the Rose to parish wick-priests and junior Tapers.",
+    "alternative_titles": ["Luminary", "Praelucent", "Provost of the Fabric", "Provost of the Rite", "Provost-Custodian", "Canon of the Rose", "Wick-priest", "Confessor", "Deacon", "Taper", "Novice"]
+  },
+  {
+    "occupation": "Church attendant",
+    "lore_locations": ["The Lanthorn", "The Gradine", "Saint Maren's"],
+    "lore_example": "The Lanthorn is a major employer whose ordinary work includes keys, cleaning, pilgrim fees, crowd control and practical assistance; Verger Dunstan Pike keeps the nave keys.",
+    "alternative_titles": ["Verger", "Key-keeper", "Pilgrim attendant", "Badge attendant", "Church cleaner", "Sweeper", "Choir attendant"]
+  },
+  {
+    "occupation": "Funerary worker",
+    "lore_locations": ["Saint Maren's churchyard", "Saint Maren's crypt", "Charnel door", "Other parish churchyards"],
+    "lore_example": "Sexton Noll Fitch digs and tends graves, rings the name-knell and chalks each newly buried name on Saint Maren's charnel-door lintel.",
+    "alternative_titles": ["Sexton", "Gravedigger", "Funeral arranger", "Charnel-door keeper", "Burial worker"]
+  },
+  {
+    "occupation": "Bell-ringer",
+    "lore_locations": ["Lanthorn towers", "Saint Maren's", "Bellstand", "Church bell towers"],
+    "lore_example": "Ringers sound offices, feasts, alarms and funerals; Perrinstide is their feast, when the bells are washed and greased.",
+    "alternative_titles": ["Ringer", "Bell-ringer", "Bellman", "Passing-bell ringer", "Name-knell ringer"]
+  },
+  {
+    "occupation": "Custody clerk",
+    "lore_locations": ["Chapter house", "Grey Press", "The Lanthorn", "The Tallage", "Saint Maren's funerals"],
+    "lore_example": "Grey-coated clerks copy and file records, issue licences and badges, carry packets, observe crowds and investigate claims concerning the Emblem.",
+    "alternative_titles": ["Grey clerk", "Archive clerk", "Presskeeper", "Archivist", "Custody investigator", "Badge clerk"]
+  },
+  {
+    "occupation": "Anchoress",
+    "lore_locations": ["Ilvane Chapel anchorhold", "Religious cells and hermitages"],
+    "lore_example": "Dame Aldith lives enclosed in the Ilvane anchorhold, receives alms and trades verses for honest news through the squint.",
+    "alternative_titles": ["Anchoress", "Recluse", "Hermit"]
+  },
+  {
+    "occupation": "Mason",
+    "lore_locations": ["Coswald's Yard", "Masons' lodge", "The Lanthorn", "City walls", "North-tower scaffold"],
+    "lore_example": "The masons' lodge is one of Ombreval's strongest trade powers and carries its grievance against the glaziers from the sealed trial of F.288.",
+    "alternative_titles": ["Master mason", "Journeyman mason", "Stone mason", "Stonecutter", "Wall-wright", "Quarry worker", "Lime worker", "Plasterer"]
+  },
+  {
+    "occupation": "Glazier",
+    "lore_locations": ["Cinder Row", "Great Rose", "The Lanthorn", "Tracing-house", "Glass furnaces"],
+    "lore_example": "Cinder Row's glaziers make, paint, lead and repair cathedral glass; the Sparr line remains tied to the Great Rose and to the guild's feud with the masons.",
+    "alternative_titles": ["Master glazier", "Journeyman glazier", "Glazier's apprentice", "Glassmaker", "Glass-wright", "Glass-painter", "Lead worker", "Re-leader"]
+  },
+  {
+    "occupation": "Carpenter and builder",
+    "lore_locations": ["Coswald's Yard", "The Lanthorn", "Fabric works", "Bridges", "Cloth halls", "Residential quarters"],
+    "lore_example": "Timber, scaffolding, roofs, jetties and overhead bridges are constant parts of Ombreval's building life, although no separate carpenters' guild is established.",
+    "alternative_titles": ["Carpenter", "Builder", "Fabric workman", "Scaffold worker", "Roofer", "Tiler", "Bridge repairer"]
+  },
+  {
+    "occupation": "Smith",
+    "lore_locations": ["Smithy not yet fixed", "Coswald's Yard markets"],
+    "lore_example": "The smith is one of the twelve trades depicted in the Great Rose, shown at a black-red fire with yellow sparks.",
+    "alternative_titles": ["Smith", "Blacksmith"]
+  },
+  {
+    "occupation": "Bellfounder",
+    "lore_locations": ["Casting pits at Coswald's Yard", "Lanthorn towers", "Bell foundry not otherwise fixed"],
+    "lore_example": "Great Ambrelle and the lesser bells were cast at Coswald's Yard; Saint Perrin began as a founder's boy and learned to tune bronze by palm and jawbone.",
+    "alternative_titles": ["Bellfounder", "Founder", "Master founder", "Founder's apprentice", "Founder's boy"]
+  },
+  {
+    "occupation": "Chandler",
+    "lore_locations": ["The Wickmarket", "Lanthorn candle stores", "Market stalls"],
+    "lore_example": "The Wickmarket trades in wax, tallow, wicks and lamps; Osanne Vell supplies the Lanthorn's candles.",
+    "alternative_titles": ["Chandler", "Candle-maker", "Candle-dipper", "Tallow worker", "Wax worker", "Wick maker"]
+  },
+  {
+    "occupation": "Lamplighter",
+    "lore_locations": ["The five squares", "The Wickmarket", "City streets"],
+    "lore_example": "Lamplighters serve under the Wickmarket chandlers, whistle the three-note wick-call and leave one public lantern dark each night as Belwyn's lamp.",
+    "alternative_titles": ["Lamplighter", "Public lamp-lighter"]
+  },
+  {
+    "occupation": "Roper",
+    "lore_locations": ["Ropewalk on the Cut", "Outer wharves", "Freight streets"],
+    "lore_example": "The Unwalled include a rope-walker, and Petronel Roper is supplied as an approved trade byname.",
+    "alternative_titles": ["Roper", "Rope-maker", "Rope-walker"]
+  },
+  {
+    "occupation": "Painter",
+    "lore_locations": ["Cinder Row workshops", "The Lanthorn", "Private workshops", "Ostrelle commissions"],
+    "lore_example": "The painter of the Rose panel showing the Luminary had never visited Ostrelle and imagined its cathedral as a smaller Lanthorn.",
+    "alternative_titles": ["Painter", "Panel painter", "Religious painter"]
+  },
+  {
+    "occupation": "Instrument maker",
+    "lore_locations": ["Ostrelle", "Learned workshops", "Ferrant's suppliers"],
+    "lore_example": "Ferrant owns unusually fine lenses and measuring instruments; Emeric Sault pointedly asks who grinds those lenses and pays for them.",
+    "alternative_titles": ["Instrument maker", "Lens grinder", "Optical craftsman"]
+  },
+  {
+    "occupation": "Cloth worker",
+    "lore_locations": ["The Cut", "Draper's Reach", "Tenter-yards", "The Needle", "Cloth halls"],
+    "lore_example": "Ombreval turns Brede wool into finished cloth through weaving, fulling, tenting and dyeing; Tam Rud is a journeyman fuller on the Cut.",
+    "alternative_titles": ["Weaver", "Fuller", "Tenter worker", "Dyer", "Seamstress", "Journeyman fuller"]
+  },
+  {
+    "occupation": "Draper",
+    "lore_locations": ["Draper's Reach", "Cloth halls", "The Tallage", "Wool road"],
+    "lore_example": "The drapers paid to roof the Draper's Reach, where cloth is measured against the standard ell of Ombreval.",
+    "alternative_titles": ["Draper", "Cloth merchant", "Cloth measurer", "Wool merchant"]
+  },
+  {
+    "occupation": "Leather worker",
+    "lore_locations": ["Tanners' Slip", "Skinners' Court", "The Tallage", "Shambles"],
+    "lore_example": "The old tanneries burned in F.157, while Tanners' Slip and Skinners' Court preserve the city's leather trades in their names.",
+    "alternative_titles": ["Tanner", "Skinner", "Hide worker", "Hide carrier"]
+  },
+  {
+    "occupation": "Laundress",
+    "lore_locations": ["The Cut", "Households", "Cloth-working quarters"],
+    "lore_example": "Mabbe, remembered among the Unwalled's old pass-names, was a washerwoman of the Cut.",
+    "alternative_titles": ["Laundress", "Washerwoman", "Clothes washer"]
+  },
+  {
+    "occupation": "Scavenger",
+    "lore_locations": ["City streets", "Outer wharves", "Ropewalk", "Poor parish around Saint Maren's"],
+    "lore_example": "Dob was a rag-picker and Pin a rope-picker; both survive in the Unwalled's recent funeral and pass-name history.",
+    "alternative_titles": ["Rag-picker", "Rope-picker", "Salvage picker"]
+  },
+  {
+    "occupation": "Boatworker",
+    "lore_locations": ["The Serle", "Outer wharves", "Maren's Green", "Alder Moorings", "Hungry Ox"],
+    "lore_example": "Boat-families pole freight between Brede, Ombreval, Harne and Salorge; Wyn Alder is a working boatwoman beyond the south wall.",
+    "alternative_titles": ["Boatman", "Boatwoman", "Waterman", "Bargeman", "Ferryman", "Ferrywoman", "Boat crew"]
+  },
+  {
+    "occupation": "Fish trader",
+    "lore_locations": ["Maren's Green", "Fish hall", "Outer Serle", "Alder Moorings", "Eel fair"],
+    "lore_example": "Maren's Green is the fish and eel market under eel smoke; Wyn Alder combines boat work with eel trading.",
+    "alternative_titles": ["Fisher", "Fishwife", "Fish seller", "Eel trader", "Eel-girl", "Fish smoker"]
+  },
+  {
+    "occupation": "Cargo worker",
+    "lore_locations": ["Outer wharves", "River gate", "The Tallage", "The Cut", "Draper's Reach", "Gaunt Passage", "Alder Moorings"],
+    "lore_example": "Serle cargo is unloaded beyond the south wall and moved through the river gate by cart and porter to warehouses, markets and cloth halls.",
+    "alternative_titles": ["Porter", "Freight porter", "Salt-porter", "Wharf hand", "Warehouse hand", "Carrier", "Carter", "River labourer", "Wood-hauler", "Wool carrier"]
+  },
+  {
+    "occupation": "Freight broker",
+    "lore_locations": ["Outer wharves", "Maren's Green", "The Tallage", "Bonded warehouses"],
+    "lore_example": "Freight brokers are part of the river economy based at Maren's Green, matching cargo with boats, carriers and storage.",
+    "alternative_titles": ["Freight broker", "Cargo broker", "Wharf broker", "Shipping broker"]
+  },
+  {
+    "occupation": "Salt trader",
+    "lore_locations": ["The Tallage", "Gaunt Passage", "Salt-cellars", "Salorge route", "Lowmarket"],
+    "lore_example": "Grigor Ashe's lawful living is the salt road: Salorge salt is brought upriver, weighed at Lowmarket and stored near the Tallage.",
+    "alternative_titles": ["Salt merchant", "Salter", "Salt-factor", "Salt wholesaler"]
+  },
+  {
+    "occupation": "Salt worker",
+    "lore_locations": ["Salorge salt-pans", "Salt barges", "Outer wharves", "Gaunt Passage salt-cellars"],
+    "lore_example": "Pan-workers and salt-rakers work at Salorge, while salt-hands accompany or unload the upriver trade.",
+    "alternative_titles": ["Salt-hand", "Salt-raker", "Salt-pan worker", "Salt carrier"]
+  },
+  {
+    "occupation": "Guide",
+    "lore_locations": ["Maren's Green", "Old Sluice", "The Gradine", "The Lanthorn", "Pilgrim routes"],
+    "lore_example": "Wyn Alder walks pilgrims to old Cut landmarks for a penny, while vergers guide paying visitors inside the Lanthorn.",
+    "alternative_titles": ["Pilgrim guide", "River guide", "Street guide", "Landmark guide"]
+  },
+  {
+    "occupation": "Merchant",
+    "lore_locations": ["The five squares", "The Tallage", "Outer wharves", "River roads", "Lantern Road"],
+    "lore_example": "Merchants know Ombreval as a toll town with honest weights, fair tolls and crowds that turn the window into custom.",
+    "alternative_titles": ["Merchant", "Trader", "Wholesale merchant", "Foreign merchant", "Road trader"]
+  },
+  {
+    "occupation": "Market seller",
+    "lore_locations": ["Gradine steps", "Street markets", "The Wickmarket", "Maren's Green", "The Tallage"],
+    "lore_example": "Annet, an old pass-name, sold cress by the Gradine; the squares also support honey, food, fish and licensed pilgrim-badge sellers.",
+    "alternative_titles": ["Stallholder", "Street seller", "Cress seller", "Honey seller", "Badge seller", "Food seller"]
+  },
+  {
+    "occupation": "Money dealer",
+    "lore_locations": ["The Tallage", "Tally Bridge", "Pawnshops", "Merchant counters"],
+    "lore_example": "Lise Copp keeps a pawnshop facing the Tally Bridge, valuing pledges while money and illicit pages move across the same counter.",
+    "alternative_titles": ["Pawnbroker", "Money broker", "Moneylender", "Pawnshop keeper"]
+  },
+  {
+    "occupation": "Scribe and clerk",
+    "lore_locations": ["The Tallage", "Chapter house", "Grey Press", "Tally Bridge", "Warehouses", "Merchants' counters"],
+    "lore_example": "Corin Copp writes bills of lading by day; Fabric, Church, court and merchant records create extensive copying, accounting and book work.",
+    "alternative_titles": ["Scrivener", "Copyist", "Scribe", "Ledger clerk", "Accountant", "Fabric clerk", "Church copyist", "Chronicler", "Hired writer", "Bookbinder"]
+  },
+  {
+    "occupation": "Revenue worker",
+    "lore_locations": ["The Tallage", "Toll-house", "River gate", "Road toll-gates", "Bonded warehouses"],
+    "lore_example": "Tallage officials weigh grain, cloth, salt and river cargo against chained standards and record the tolls under formal oath.",
+    "alternative_titles": ["Tollman", "Customs clerk", "Toll clerk", "Tax clerk", "Corn-measurer", "Official weigher", "Tax-farmer", "Customs farmer"]
+  },
+  {
+    "occupation": "Baker",
+    "lore_locations": ["Bakery site not fixed", "City markets", "Lanthorn alms distribution"],
+    "lore_example": "The baker is depicted among the Great Rose's trades, while bread prices, famine and Wet Alms make bread a public concern.",
+    "alternative_titles": ["Baker", "Bread baker", "Oven keeper"]
+  },
+  {
+    "occupation": "Butcher",
+    "lore_locations": ["The shambles", "City markets", "The Tallage"],
+    "lore_example": "Butchers feasted on the ox roasted on the frozen Cut in F.229, and slaughter-month is depicted in the Great Rose.",
+    "alternative_titles": ["Butcher", "Slaughterer", "Meat seller"]
+  },
+  {
+    "occupation": "Brewer",
+    "lore_locations": ["Brewhouse not fixed", "Taverns", "Alehouses", "Possible malt-house at Coswald's Yard"],
+    "lore_example": "Brewing is one of the Great Rose's month-labours; Malt Passage is an approved name for a passage beneath a malt-house.",
+    "alternative_titles": ["Brewer", "Ale brewer", "Maltster", "Brewhouse worker"]
+  },
+  {
+    "occupation": "Cook",
+    "lore_locations": ["The Hungry Ox", "The Bell and Ladle", "Lanthorn kitchens", "Households", "Market food stalls"],
+    "lore_example": "The core explicitly names cooks as citizens with lives beyond the cathedral plot, and the Lanthorn and taverns maintain kitchens.",
+    "alternative_titles": ["Cook", "Kitchen worker", "Tavern cook", "Household cook"]
+  },
+  {
+    "occupation": "Tavern worker",
+    "lore_locations": ["The Hungry Ox", "The Bell and Ladle", "Other unnamed taverns and alehouses"],
+    "lore_example": "Renna Tapster keeps the Bell and Ladle from the crier's first call until the last argument goes home.",
+    "alternative_titles": ["Tapster", "Alehouse keeper", "Tavern keeper", "Innkeeper", "Server", "Pot-boy", "Scullion"]
+  },
+  {
+    "occupation": "Miller",
+    "lore_locations": ["Mills beyond the walls", "Nearby villages", "Grain routes"],
+    "lore_example": "The core reserves nearby farms and mills as necessary parts of Ombreval's food supply, though no individual mill is fixed yet.",
+    "alternative_titles": ["Miller", "Mill worker", "Grain miller"]
+  },
+  {
+    "occupation": "Healer",
+    "lore_locations": ["Households across the city", "Ferrant's house off the Tallage", "Maren's Green", "South-wall herb plots"],
+    "lore_example": "Doctor Aubin Ferrant makes sick-calls, Mother Gude gathers and sells simples, and midwives carry parish-specific knowledge around birth and the Passing.",
+    "alternative_titles": ["Physician", "Doctor", "Midwife", "Barber", "Herb-seller", "Herb-wife", "Herbal healer"]
+  },
+  {
+    "occupation": "Scholar",
+    "lore_locations": ["Great school in Ostrelle", "Ferrant's house", "The Lanthorn", "Libraries and studies"],
+    "lore_example": "Magister Emeric Sault reads the mathematical arts at Ostrelle, while Aubin Ferrant measures the light and corresponds with distant scholars.",
+    "alternative_titles": ["Scholar", "Astronomer", "Magister", "Reader", "Teacher", "Tutor", "Computist", "Antiquary", "Philosopher", "Dean"]
+  },
+  {
+    "occupation": "Messenger",
+    "lore_locations": ["The Bellstand", "The five squares", "The Needle", "City streets", "Lantern Road"],
+    "lore_example": "Ede runs messages for a bell-coin, while Crier Jos Brant carries official words around the five squares and posts them at the Bellstand.",
+    "alternative_titles": ["Message-runner", "Messenger", "Courier", "Town crier", "Proclamation crier"]
+  },
+  {
+    "occupation": "Watchman and keeper",
+    "lore_locations": ["Bellstand watch-tower", "City gates", "Old Sluice", "Bridges", "Squares and streets"],
+    "lore_example": "Watchmen appear in city rumor and the Old Sluice has a keeper; the exact secular watch hierarchy remains open canon.",
+    "alternative_titles": ["Watchman", "City watchman", "Gatekeeper", "Gate guard", "Bridge keeper", "Sluice keeper"]
+  },
+  {
+    "occupation": "Court officer",
+    "lore_locations": ["Praelucent's court", "Chapter house", "The Gradine", "Civic courts not yet fixed"],
+    "lore_example": "The Glaziers' Trial is recorded by a Chapter notary and argued by a lodge proctor before the Praelucent and provosts.",
+    "alternative_titles": ["Magistrate", "Notary", "Proctor", "Court clerk", "Legal advocate"]
+  },
+  {
+    "occupation": "Executioner",
+    "lore_locations": ["Gallows or execution site not yet fixed", "Civic and Church courts"],
+    "lore_example": "Saint Gaudry asked the hangman whether the knot was well tied before he was executed for burning the false customs ledger.",
+    "alternative_titles": ["Executioner", "Hangman"]
+  },
+  {
+    "occupation": "Farmer",
+    "lore_locations": ["The Combs", "Nearby farms", "Villages beyond the walls", "Fields supplying Ombreval"],
+    "lore_example": "The Great Rose depicts ploughing, sowing, pruning, shearing, haymaking, reaping and threshing, while wool comes from the sheep-hills of the Combs.",
+    "alternative_titles": ["Farmer", "Agricultural labourer", "Ploughman", "Sower", "Pruner", "Haymaker", "Reaper", "Thresher", "Shearer", "Shepherd", "Sheep farmer", "Reed-gatherer", "Gleaner", "Beekeeper"]
+  },
+  {
+    "occupation": "General labourer",
+    "lore_locations": ["Coswald's Yard", "Fabric works", "Markets", "Warehouses", "The Cut", "Outer wharves", "City streets"],
+    "lore_example": "Ombreval depends on physical and seasonal labour, from Colm Attergate's work on the west towers to hired hands moving materials, cleaning yards and filling gaps between specialised trades.",
+    "alternative_titles": ["Labourer", "Day labourer", "Hired hand", "Fabric labourer", "Seasonal worker", "Yard hand", "Furnace hand"]
+  }
+]

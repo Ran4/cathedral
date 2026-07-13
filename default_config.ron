@@ -11,7 +11,6 @@
         enabled: true,
         fake_backend: false,
         uv_binary: "uv",
-        server_script: "prompt_playgound/server.py",
         // NPC voice audio: "local" (streaming Pocket TTS), "cloud" (OpenAI), or "off".
         tts_backend: "local",
         // Player transcription: "cloud" (OpenAI gpt-4o-transcribe) or "local"
@@ -30,7 +29,7 @@
             enabled: true,
             // Total FOV for the "saw who did it" test; 135 is a playtest guess.
             view_cone_degrees: 135.0,
-            // Sidecar rate limit; sounds inside the cooldown drop silently.
+            // Engine-side rate limit; sounds inside the cooldown drop silently.
             min_seconds_between_player_sounds: 2.0,
         ),
     ),

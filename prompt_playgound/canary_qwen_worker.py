@@ -19,7 +19,8 @@
 # ///
 """Private persistent FP16 Canary-Qwen transcription worker.
 
-stdout is a machine-readable JSON-lines channel owned by speech_client.py.
+stdout is a machine-readable JSON-lines channel owned by the Rust worker
+driver (crates/cathedral-backends/src/worker.rs).
 NeMo diagnostics are redirected to stderr so they cannot corrupt it.
 """
 

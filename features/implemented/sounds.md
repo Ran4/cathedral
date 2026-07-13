@@ -1,7 +1,9 @@
 # Sounds (non-speech percepts)
 
-Status: **implemented** (2026-07-13). The catalog lives in `prompt_playgound/sounds.py`,
-assets in `assets/sounds/`, generation via `scripts/generate_sounds.py`.
+Status: **implemented** (2026-07-13). The catalog lives in
+`assets/sounds/catalog.toml` (it was `prompt_playgound/sounds.py` until the
+sidecar was ported into `crates/cathedral-sim`), assets in `assets/sounds/`,
+generation via `scripts/generate_sounds.py`.
 
 Generalises the one perception rule the sim has today — *"everyone within 20 m
 hears you"* — into a catalog of non-speech sounds with per-sound radii, and adds
@@ -49,42 +51,32 @@ you call a sound you don't want. The bell is not noise.
 
 ## The catalog
 
-One table, `prompt_playgound/sounds.py`, and it is the **single source of truth
-for three consumers**: the sim (which emits and renders percepts), the generator
-script (which makes the wav/mp3), and Bevy (which resolves the asset by
-convention from the id alone).
+One table, `assets/sounds/catalog.toml`, and it is the **single source of truth
+for three consumers**: the sim (`cathedral_sim::SoundCatalog`, which emits and
+renders percepts), the generator script (which makes the wav/mp3), and Bevy
+(which resolves the asset by convention from the id alone).
 
-```python
-@dataclass(frozen=True, slots=True)
-class Sound:
-    sound_id: str            # [a-z_]+ — also the asset basename
-    sound_class: str         # body | impact | bell   (design/06's `class`)
-    audible_distance: float
-    heard: str               # unattributed percept — everyone in radius
-    seen: str | None         # attributed percept; None => not attributable
-    sfx_prompt: str          # ElevenLabs generation prompt
-    duration_seconds: float
-    actor_emittable: bool    # may an LLM choose this via make_sound?
+```toml
+[[sounds]]
+sound_id = "fart"            # [a-z_]+ — also the asset basename
+sound_class = "body"         # body | impact | bell   (design/06's `class`)
+audible_distance = 20.0
+heard = "[You heard a big fart!]"   # unattributed percept — everyone in radius
+seen = "{actor} farted."            # attributed percept; omitted => not attributable
+sfx_prompt = "..."                  # ElevenLabs generation prompt
+duration_seconds = 2.0
+actor_emittable = true              # may an LLM choose this via make_sound?
 
-SOUNDS = {
-  "fart":        Sound(sound_class="body",   audible_distance=20,  actor_emittable=True,
-                       seen="{actor} farted.",
-                       heard="[You heard a big fart!]", ...),
-  "glass_break": Sound(sound_class="impact", audible_distance=25,  actor_emittable=True,
-                       seen="{actor} broke a beer glass.",
-                       heard="[You heard glass shatter nearby.]", ...),
-  "town_bell":   Sound(sound_class="bell",   audible_distance=600, actor_emittable=False,
-                       seen=None,
-                       heard="[The town bell is ringing.]", ...),
-}
+# ... glass_break (impact, 25 m, emittable, seen = "{actor} broke a beer glass.")
+# ... town_bell   (bell, 600 m, not emittable, no `seen`)
 ```
 
-`seen=None` means **not attributable**: there is no witness split and everyone in
-range gets `heard`. Nobody wonders *who* rang the town bell, which is also what
-makes a 600 m radius sensible.
+A missing `seen` means **not attributable**: there is no witness split and
+everyone in range gets `heard`. Nobody wonders *who* rang the town bell, which is
+also what makes a 600 m radius sensible.
 
-`{actor}` is rendered per-recipient through `sim.identify()`, so strangers stay
-strangers — see Events.
+`{actor}` is rendered per-recipient through `perception::identify`, so strangers
+stay strangers — see Events.
 
 ## Perception
 
@@ -182,7 +174,7 @@ actor). Bevy uses `position_m` + `sound_id` for positional playback and
 
 ## Events
 
-All percepts render per-recipient through `sim.identify()`, so the existing
+All percepts render per-recipient through `perception::identify`, so the existing
 `knows` machinery does the attribution work for free. Sven farts, in range of
 three people:
 
@@ -248,13 +240,13 @@ and NPC awareness of the fire is already covered by `location_description`, whic
 ships today.
 
 Ambient assets still need generating, so they live in a second table in
-`sounds.py` (`AMBIENT`) which the generator reads and the sim never does.
+`catalog.toml` (`[[ambients]]`) which the generator reads and the sim never does.
 
 ### Generation
 
 `scripts/generate_sounds.py` — a uv inline script, **idempotent by design**:
 
-1. read the catalog (`SOUNDS` + `AMBIENT`),
+1. read the catalog (`[[sounds]]` + `[[ambients]]` from `catalog.toml`),
 2. diff against `assets/sounds/`,
 3. generate **only what is missing**, via ElevenLabs sound-generation using each
    row's `sfx_prompt` and `duration_seconds`.
