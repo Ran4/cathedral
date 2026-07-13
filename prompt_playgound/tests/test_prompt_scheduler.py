@@ -9,7 +9,7 @@ from support import MODULE_DIR, wait_until  # noqa: F401
 from main import build_world
 from prompt import parse_reply, render_prompt, render_prompt_and_drain
 from scheduler import NpcScheduler
-from sim import CharIdStr, Vec3, apply_action
+from sim import CharIdStr, Vec3, absorb_presented_history, apply_action
 
 
 def sheet(prompt: str) -> dict:
@@ -87,19 +87,34 @@ class PromptTests(unittest.TestCase):
 
     def test_render_and_drain_moves_old_events_to_prompt(self) -> None:
         self.sven.inbox[:] = ["first", "second"]
+        self.sven.pending_history[:] = ["first", "second"]
         self.sven.recent_history[:] = ['You said aloud: "earlier"']
-        rendered = sheet(render_prompt_and_drain(self.world, self.sven))
+        prompt, presented = render_prompt_and_drain(self.world, self.sven)
+        rendered = sheet(prompt)
         self.assertEqual(rendered["since_your_last_turn"], ["first", "second"])
         self.assertEqual(rendered["recent_history"], ['You said aloud: "earlier"'])
         self.assertEqual(self.sven.inbox, [])
+        self.assertEqual(self.sven.pending_history, [])
+        self.assertEqual(presented, ["first", "second"])
+        # Graduation waits for the turn to complete, so a failed turn can
+        # re-present the same lines as new instead of leaving them duplicated
+        # into recent_history.
         self.assertEqual(self.sven.recent_history, ['You said aloud: "earlier"'])
+        absorb_presented_history(self.sven, presented)
+        self.assertEqual(
+            self.sven.recent_history,
+            ['You said aloud: "earlier"', "first", "second"],
+        )
 
     def test_failed_prompt_render_restores_drained_events(self) -> None:
         self.sven.inbox[:] = ["must survive"]
+        self.sven.pending_history[:] = ["must survive"]
         self.sven.control = "player"
         with self.assertRaises(ValueError):
             render_prompt_and_drain(self.world, self.sven)
         self.assertEqual(self.sven.inbox, ["must survive"])
+        self.assertEqual(self.sven.pending_history, ["must survive"])
+        self.assertEqual(self.sven.recent_history, [])
 
     def test_prompt_distinguishes_hearing_from_a_conversational_turn(self) -> None:
         rendered = render_prompt(self.world, self.sven)
@@ -219,6 +234,55 @@ class SchedulerTests(unittest.TestCase):
         wait_until(lambda: scheduler.in_flight_actor_id is None, scheduler.poll)
         self.assertEqual(len(sven.inbox), 1)
         self.assertIn("new event", sven.inbox[0])
+
+    def test_provider_failure_requeues_percepts_without_duplication(self) -> None:
+        """A failed turn puts its percepts back as unread-and-pending, so the
+        retried prompt presents them as new — never in both fields at once —
+        and they graduate into recent_history exactly once."""
+        world = build_world()
+        player = world.characters[CharIdStr("player")]
+        sven = world.characters[CharIdStr("sv3n1")]
+        player.position_m = Vec3(-1.8, 0.91, 113)
+        apply_action(world, player, "say", {"target": "sv3n1", "text": "psst"})
+        heard = 'A stranger (id player) said to you: "psst"'
+        self.assertEqual(sven.inbox, [heard])
+        self.assertEqual(sven.pending_history, [heard])
+
+        calls: list[str] = []
+        now = [1_000.0]
+
+        def complete(prompt: str) -> str:
+            calls.append(prompt)
+            if len(calls) == 1:
+                raise RuntimeError("provider down")
+            return 'set_goal {"goal": null}'
+
+        scheduler = NpcScheduler(
+            world, complete, minimum_delay_seconds=0, clock=lambda: now[0]
+        )
+        self.addCleanup(scheduler.close)
+        scheduler.start()
+        scheduler.poll()
+        wait_until(lambda: scheduler.in_flight_actor_id is None, scheduler.poll)
+
+        self.assertEqual(sven.inbox[0], heard)
+        self.assertEqual(sven.pending_history, [heard])
+        self.assertEqual(sven.recent_history, [])
+
+        def sven_prompts() -> list[str]:
+            return [prompt for prompt in calls if sheet(prompt)["name"] == "Sven"]
+
+        now[0] += 200.0  # past the failure backoff; the round robin resumes
+        wait_until(lambda: len(sven_prompts()) >= 2, scheduler.poll)
+        # With a zero delay a fresh turn is in flight on every poll, so wait
+        # on the graduation itself rather than on an idle scheduler.
+        wait_until(lambda: sven.recent_history == [heard], scheduler.poll)
+
+        retry = sheet(sven_prompts()[1])
+        self.assertEqual(retry["since_your_last_turn"][0], heard)
+        self.assertNotIn(heard, retry["recent_history"])
+        self.assertEqual(sven.recent_history, [heard])
+        self.assertEqual(sven.pending_history, [])
 
     def test_player_is_skipped_and_round_robin_is_global(self) -> None:
         world = build_world()

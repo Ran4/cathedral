@@ -106,6 +106,10 @@ class Character:
     memories: list[str] = field(default_factory=list)
     inbox: list[str] = field(default_factory=list)
     recent_history: list[str] = field(default_factory=list)
+    # Percepts that are still unread in the inbox; they graduate into
+    # recent_history only once presented as since_your_last_turn, so one line
+    # never appears in both prompt fields at the same time.
+    pending_history: list[str] = field(default_factory=list)
     knows: set[CharIdStr] = field(default_factory=set)
 
     def __post_init__(self) -> None:
@@ -424,8 +428,9 @@ def emit_sound(
 
     ``actor`` is None for world sounds (the town bell), which are never
     attributable regardless of the catalog row. Percepts land in recipients'
-    inboxes and, like speech, persist in their bounded ``recent_history``
-    (the emitter's own act included). Returns the transcript line.
+    inboxes and, like speech, later graduate into their bounded
+    ``recent_history``; the emitter remembers their own act immediately.
+    Returns the transcript line.
     """
     if position_m is None:
         if actor is None:
@@ -595,9 +600,28 @@ def _remember_percept(actor: Character, text: str) -> None:
 
 
 def _notify_percept(recipient: Character, text: str) -> None:
-    """Deliver a new percept and also retain it as short-term history."""
+    """Deliver a new percept; it becomes short-term history once presented."""
     _notify(recipient, text)
-    _remember_percept(recipient, text)
+    if recipient.control == "llm":
+        recipient.pending_history.append(text)
+
+
+def take_pending_history(actor: Character) -> list[str]:
+    """Detach the percepts a prompt is about to present as
+    since_your_last_turn. Once the turn completes the caller graduates them
+    with absorb_presented_history; a turn that never happens pushes them back
+    onto the front of pending_history so a retried prompt presents them as
+    new again."""
+    presented = actor.pending_history
+    actor.pending_history = []
+    return presented
+
+
+def absorb_presented_history(actor: Character, presented: list[str]) -> None:
+    """Graduate percepts a completed turn presented as since_your_last_turn
+    into the bounded recent_history window."""
+    for text in presented:
+        _remember_percept(actor, text)
 
 
 def apply_action(world: World, actor: Character, verb: str, args: object) -> str:

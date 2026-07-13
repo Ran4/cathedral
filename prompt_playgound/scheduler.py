@@ -10,7 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from prompt import parse_reply, render_prompt_and_drain
-from sim import CharIdStr, World, apply_action
+from sim import CharIdStr, World, absorb_presented_history, apply_action
 
 MAX_LLM_REPLY_CHARS = 100_000
 
@@ -141,6 +141,7 @@ class NpcScheduler:
         self._priority_actor_id: CharIdStr | None = None
         self._in_flight_actor_id: CharIdStr | None = None
         self._in_flight_events: list[str] = []
+        self._in_flight_presented: list[str] = []
         self._held_result: _CompletionResult | None = None
         self._next_turn_at = self._clock()
         self._provider_failures = 0
@@ -219,8 +220,14 @@ class NpcScheduler:
             elif result.error is not None:
                 # The provider never produced a turn, so let the actor perceive
                 # the events that were moved into that failed prompt again. New
-                # events collected during the request remain after them.
+                # events collected during the request remain after them. The
+                # presented percepts go back to pending the same way, so the
+                # retried prompt shows them as new rather than duplicated into
+                # recent_history.
                 actor.inbox = self._in_flight_events + actor.inbox
+                actor.pending_history = (
+                    self._in_flight_presented + actor.pending_history
+                )
                 self._provider_failures += 1
                 backoff = min(
                     self.maximum_backoff_seconds,
@@ -248,6 +255,9 @@ class NpcScheduler:
             else:
                 self._provider_failures = 0
                 self._next_turn_at = now + self.minimum_delay_seconds
+                # The turn happened: its presented percepts become recollection
+                # before the reply's own lines are appended after them.
+                absorb_presented_history(actor, self._in_flight_presented)
                 if self._verbose:
                     print(
                         f"--- reply from {actor.name} ---\n{result.reply}",
@@ -291,6 +301,7 @@ class NpcScheduler:
                         print(f"[smart actors] {line}", file=sys.stderr)
                 statuses.append(SchedulerStatus("llm", "idle", actor.id))
             self._in_flight_events = []
+            self._in_flight_presented = []
 
         if (
             self._running
@@ -303,7 +314,7 @@ class NpcScheduler:
             if actor is not None and actor.control == "llm":
                 drained_events = list(actor.inbox)
                 try:
-                    prompt = render_prompt_and_drain(self.world, actor)
+                    prompt, presented = render_prompt_and_drain(self.world, actor)
                     if self._verbose:
                         print(
                             f"--- prompt for {actor.name} ---\n{prompt}",
@@ -326,6 +337,7 @@ class NpcScheduler:
                         self._worker.submit(actor.id, prompt)
                     except Exception as error:
                         actor.inbox = drained_events + actor.inbox
+                        actor.pending_history = presented + actor.pending_history
                         actor.inbox.append("system: the cognition worker is busy")
                         self._next_turn_at = now + max(self.minimum_delay_seconds, 1.0)
                         print(
@@ -340,6 +352,7 @@ class NpcScheduler:
                     else:
                         self._in_flight_actor_id = actor.id
                         self._in_flight_events = drained_events
+                        self._in_flight_presented = presented
                         statuses.append(SchedulerStatus("llm", "thinking", actor.id))
 
         return statuses

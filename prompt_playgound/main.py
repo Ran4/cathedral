@@ -11,16 +11,26 @@ import sys
 
 import llm_client
 from prompt import parse_reply, render_prompt_and_drain
-from sim import Character, CharIdStr, Item, ItemIdStr, Vec3, World, apply_action
+from sim import (
+    Character,
+    CharIdStr,
+    Item,
+    ItemIdStr,
+    Vec3,
+    World,
+    absorb_presented_history,
+    apply_action,
+)
 
 
 def take_turn(world: World, actor: Character, verbose: bool = False) -> None:
     if actor.control != "llm":
         raise ValueError("the player is human-controlled and cannot take an LLM turn")
-    prompt = render_prompt_and_drain(world, actor)
+    prompt, presented = render_prompt_and_drain(world, actor)
     if verbose:
         print(f"--- prompt for {actor.name} ---\n{prompt}", file=sys.stderr)
     reply = llm_client.complete(prompt)
+    absorb_presented_history(actor, presented)
     if verbose:
         print(f"--- reply from {actor.name} ---\n{reply}", file=sys.stderr)
 

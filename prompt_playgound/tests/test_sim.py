@@ -17,7 +17,9 @@ from sim import (
     ItemIdStr,
     Vec3,
     World,
+    absorb_presented_history,
     apply_action,
+    take_pending_history,
 )
 
 
@@ -134,16 +136,27 @@ class SpeechTests(unittest.TestCase):
             speaker.recent_history,
             ['You said to Target: "hello"'],
         )
+        # Received speech stays pending (it is still unread in the inbox) and
+        # only graduates into recent_history once presented in a prompt.
+        self.assertEqual(
+            target.pending_history,
+            ['A stranger (id speaker) said to you: "hello"'],
+        )
+        self.assertEqual(target.recent_history, [])
+        self.assertIn("said to a stranger", bystander.pending_history[-1])
+
+        absorb_presented_history(target, take_pending_history(target))
         self.assertEqual(
             target.recent_history,
             ['A stranger (id speaker) said to you: "hello"'],
         )
-        self.assertIn("said to a stranger", bystander.recent_history[-1])
+        self.assertEqual(target.pending_history, [])
 
     def test_recent_history_is_bounded(self) -> None:
         world, speaker, target, *_ = speech_world()
         for index in range(RECENT_HISTORY_MAX_ENTRIES + 3):
             apply_action(world, speaker, "say", {"text": f"line {index}"})
+        absorb_presented_history(target, take_pending_history(target))
 
         self.assertEqual(len(target.recent_history), RECENT_HISTORY_MAX_ENTRIES)
         self.assertNotIn("line 0", target.recent_history[0])

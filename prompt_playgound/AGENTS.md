@@ -12,7 +12,10 @@ Characters take turns in a round-robin tick loop. Each turn:
 2. The prompt is sent to the configured LLM (`llm_client.complete`) — one
    stateless call, no provider-side chat history. Each character gets a bounded
    `recent_history` containing received speech, heard sound percepts, and its
-   own lines;
+   own lines. The two fields never overlap: a received percept is pending
+   (`Character.pending_history`) while it is unread, appears once as
+   `since_your_last_turn`, and graduates into `recent_history` when that turn
+   completes (a failed turn re-queues it as new);
    `stored_memories` and `current_goal` remain the only durable persistence, so
    the prompt tells the model to use `remember`/`forget` deliberately.
 3. The reply is parsed as `VERB {json}` lines (`prompt.parse_reply`) and each

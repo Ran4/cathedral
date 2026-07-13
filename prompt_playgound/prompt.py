@@ -3,7 +3,13 @@
 import json
 import re
 
-from sim import ITEM_INTERACTION_RADIUS_M, Character, Offer, World
+from sim import (
+    ITEM_INTERACTION_RADIUS_M,
+    Character,
+    Offer,
+    World,
+    take_pending_history,
+)
 from sounds import emittable_sound_ids
 
 HEADER = (
@@ -15,12 +21,14 @@ FOOTER = """\
 Take one or more actions.
 Make SURE that what you're doing matches what you see, who you are, what you can think about/understand etc.
 
-IMPORTANT: recent_history is your short-term recollection of the latest things
-you perceived — dialogue (including your own words) and other percepts such as
-noises. Read it before speaking: do not repeat a
+IMPORTANT: since_your_last_turn holds only what is new right now;
+recent_history is your short-term recollection of everything you perceived
+before that — dialogue (including your own words) and other percepts such as
+noises. They do not overlap: new lines join recent_history once you have seen
+them. Read both before speaking: do not repeat a
 question, answer, greeting, offer, or topic that is already there unless someone
-has just given you a reason to revisit it. It is bounded and older lines will
-disappear. Your only durable memory is stored_memories and current_goal. Use
+has just given you a reason to revisit it. recent_history is bounded and older
+lines will disappear. Your only durable memory is stored_memories and current_goal. Use
 remember for anything future-you should know after recent_history fades
 — above all OUTCOMES: the moment a
 trade, payment or agreement completes, record it in that same turn (e.g.
@@ -232,15 +240,25 @@ def render_prompt(
     return f"{HEADER}\n\n```json\n{json.dumps(sheet, indent=4)}\n```\n\n{footer}\n"
 
 
-def render_prompt_and_drain(world: World, actor: Character) -> str:
-    """Move the current inbox into a prompt, leaving a fresh inbox behind."""
+def render_prompt_and_drain(world: World, actor: Character) -> tuple[str, list[str]]:
+    """Move the current inbox into a prompt, leaving a fresh inbox behind.
+
+    Returns the prompt together with the detached percepts it presented as
+    since_your_last_turn. Once the turn completes, the caller graduates them
+    into recent_history with absorb_presented_history; if the turn never
+    happens it pushes them back onto the front of pending_history, so a
+    retried prompt presents them as new again instead of showing the same
+    line in both fields at once."""
     drained = actor.inbox
     actor.inbox = []
+    presented = take_pending_history(actor)
     try:
-        return render_prompt(world, actor, since_your_last_turn=drained)
+        rendered = render_prompt(world, actor, since_your_last_turn=drained)
     except Exception:
         actor.inbox = drained + actor.inbox
+        actor.pending_history = presented + actor.pending_history
         raise
+    return rendered, presented
 
 
 _ACTION_RE = re.compile(r"^([a-z_]\w*)\s*(\{.*)$", re.IGNORECASE)
