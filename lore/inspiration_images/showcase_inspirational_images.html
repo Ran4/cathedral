@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Ombreval · Inspiration Images</title>
+  <style>
+    :root {
+      --ink: #e9e2d2;
+      --muted: #a9a18f;
+      --paper: #151512;
+      --panel: #1e1d19;
+      --line: #444036;
+      --gold: #d3a54b;
+      --green: #a9c7b7;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--paper); color: var(--ink); }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(circle at 82% -10%, #34443d 0, transparent 34rem),
+        linear-gradient(180deg, #191914, var(--paper) 42rem);
+      min-height: 100vh;
+    }
+    header {
+      max-width: 92rem;
+      margin: 0 auto;
+      padding: clamp(3rem, 8vw, 8rem) clamp(1.1rem, 4vw, 4rem) 2.5rem;
+    }
+    .kicker, .eyebrow {
+      color: var(--gold);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .72rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 12ch;
+      margin: .4rem 0 1rem;
+      font-size: clamp(3rem, 9vw, 7.6rem);
+      font-weight: 400;
+      letter-spacing: -.055em;
+      line-height: .88;
+    }
+    .intro {
+      max-width: 47rem;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.25rem);
+      line-height: 1.55;
+    }
+    .toolbar {
+      position: sticky;
+      z-index: 5;
+      top: 0;
+      border-block: 1px solid var(--line);
+      background: color-mix(in srgb, var(--paper) 90%, transparent);
+      backdrop-filter: blur(14px);
+    }
+    .toolbar-inner {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      max-width: 92rem;
+      margin: auto;
+      padding: .8rem clamp(1.1rem, 4vw, 4rem);
+    }
+    label { color: var(--muted); white-space: nowrap; }
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: .75rem 1rem;
+      background: #0f0f0d;
+      color: var(--ink);
+      font: inherit;
+    }
+    input:focus { outline: 2px solid var(--gold); outline-offset: 2px; }
+    #count {
+      min-width: 7rem;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .75rem;
+      text-align: right;
+    }
+    main {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
+      gap: 1px;
+      max-width: 92rem;
+      margin: 3rem auto 7rem;
+      padding: 1px;
+      background: var(--line);
+      border: 1px solid var(--line);
+    }
+    .card { min-width: 0; background: var(--panel); }
+    .card[hidden] { display: none; }
+    .image-button {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      aspect-ratio: 3 / 2;
+      overflow: hidden;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      padding: 0;
+      background: #10100e;
+      color: var(--muted);
+      cursor: zoom-in;
+    }
+    .image-button img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 600ms cubic-bezier(.2,.7,.2,1), filter 300ms;
+    }
+    .image-button:hover img { transform: scale(1.025); filter: brightness(1.06); }
+    .image-button.missing { cursor: default; }
+    .image-button.missing img { display: none; }
+    .missing-copy {
+      display: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .75rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .image-button.missing .missing-copy { display: block; }
+    .card-copy { padding: 1.35rem 1.45rem 1.65rem; }
+    h2 { margin: .35rem 0 .6rem; font-size: 1.75rem; font-weight: 400; }
+    .card p {
+      display: -webkit-box;
+      overflow: hidden;
+      margin: 0 0 1rem;
+      color: var(--muted);
+      line-height: 1.48;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 4;
+    }
+    a { color: var(--green); text-underline-offset: .2em; }
+    dialog {
+      width: min(96vw, 110rem);
+      max-width: none;
+      border: 1px solid #5d584d;
+      padding: 0;
+      background: #090908;
+      color: var(--ink);
+      box-shadow: 0 2rem 8rem #000;
+    }
+    dialog::backdrop { background: rgb(0 0 0 / 88%); backdrop-filter: blur(5px); }
+    dialog img { display: block; width: 100%; max-height: 88vh; object-fit: contain; }
+    .dialog-bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+      padding: .7rem 1rem;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .78rem;
+    }
+    .dialog-bar button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: .45rem .8rem;
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+    }
+    @media (max-width: 38rem) {
+      .toolbar-inner { align-items: stretch; flex-wrap: wrap; }
+      label { width: 100%; }
+      #count { min-width: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="kicker">The Cathedral-City of Impossible Light · F.437</div>
+    <h1>Places of Ombreval</h1>
+    <p class="intro">Lore-grounded visual studies of the fortified river city:
+      its markets, passages, bridges, working courts, churches, and impossible
+      cathedral. Select an image to inspect the full composition.</p>
+  </header>
+  <div class="toolbar">
+    <div class="toolbar-inner">
+      <label for="filter">Find a place</label>
+      <input id="filter" type="search" placeholder="Try market, river, passage…"
+             autocomplete="off">
+      <span id="count" aria-live="polite">24 images</span>
+    </div>
+  </div>
+  <main id="gallery">
+        <article class="card" data-search="the lanthorn the_lanthorn the great church of saint ambrelle, ombreval&#x27;s immense cathedral: a nine-bay aisled nave, crossing, transepts, quire, triforium, clerestory walks, chapels, towers, chapter house, and generations of visible building work. its west front holds the great rose; the unfinished crown of the north tower still carries scaffolding. exterior from the stepped gradine toward the monumental west front. show the great rose as dark glass and tracery from outside, working scaffolds on the north-tower crown, masons, pilgrims, vergers, carts, and routine maintenance.">
+          <button class="image-button" type="button"
+                  data-image="places/the_lanthorn/the_lanthorn_001.png"
+                  data-caption="The Lanthorn — 001"
+                  aria-label="View The Lanthorn image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_lanthorn/the_lanthorn_001.png"
+                 alt="Inspiration art for The Lanthorn, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 01 · View 001</div>
+            <h2>The Lanthorn</h2>
+            <p>Exterior from the stepped Gradine toward the monumental west front. Show the Great Rose as dark glass and tracery from outside, working scaffolds on the north-tower crown, masons, pilgrims, vergers, carts, and routine maintenance.</p>
+            <a href="places/the_lanthorn/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the lanthorn the_lanthorn the great church of saint ambrelle, ombreval&#x27;s immense cathedral: a nine-bay aisled nave, crossing, transepts, quire, triforium, clerestory walks, chapels, towers, chapter house, and generations of visible building work. its west front holds the great rose; the unfinished crown of the north tower still carries scaffolding. interior view from the crossing looking west through the nave toward the great rose. through the rose alone, the sky contains a cold green-white second sunlike disc; its beams cast faint second grave-shadows at an impossible angle beside ordinary sun-shadows. show ordinary cathedral work continuing below.">
+          <button class="image-button" type="button"
+                  data-image="places/the_lanthorn/the_lanthorn_002.png"
+                  data-caption="The Lanthorn — 002"
+                  aria-label="View The Lanthorn image 002">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_lanthorn/the_lanthorn_002.png"
+                 alt="Inspiration art for The Lanthorn, view 002"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 02 · View 002</div>
+            <h2>The Lanthorn</h2>
+            <p>Interior view from the crossing looking west through the nave toward the Great Rose. Through the Rose alone, the sky contains a cold green-white second sunlike disc; its beams cast faint second grave-shadows at an impossible angle beside ordinary sun-shadows. Show ordinary cathedral work continuing below.</p>
+            <a href="places/the_lanthorn/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the wickmarket the_wickmarket ombreval&#x27;s western chandlers&#x27; square: wax, tallow, wicks, honey, hot fat, candle stalls, public lamps, and the lamplighters&#x27; trade, enclosed by irregular jettied houses and narrow back lanes. highmarket at full business: chandlers dipping candles, blocks of wax and tallow, coiled wick, honey pots, smoking cauldrons, buyers, apprentices, handcarts, and a lawful lamplighter&#x27;s ladder.">
+          <button class="image-button" type="button"
+                  data-image="places/the_wickmarket/the_wickmarket_001.png"
+                  data-caption="The Wickmarket — 001"
+                  aria-label="View The Wickmarket image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_wickmarket/the_wickmarket_001.png"
+                 alt="Inspiration art for The Wickmarket, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 03 · View 001</div>
+            <h2>The Wickmarket</h2>
+            <p>Highmarket at full business: chandlers dipping candles, blocks of wax and tallow, coiled wick, honey pots, smoking cauldrons, buyers, apprentices, handcarts, and a lawful lamplighter&#x27;s ladder.</p>
+            <a href="places/the_wickmarket/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the wickmarket the_wickmarket ombreval&#x27;s western chandlers&#x27; square: wax, tallow, wicks, honey, hot fat, candle stalls, public lamps, and the lamplighters&#x27; trade, enclosed by irregular jettied houses and narrow back lanes. the market closing at lamplight after a brief rain: shutters, wax-streaked boards, workers lifting awnings, lamps being lit, puddles and cart ruts, with one public lamp deliberately left dark.">
+          <button class="image-button" type="button"
+                  data-image="places/the_wickmarket/the_wickmarket_002.png"
+                  data-caption="The Wickmarket — 002"
+                  aria-label="View The Wickmarket image 002">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_wickmarket/the_wickmarket_002.png"
+                 alt="Inspiration art for The Wickmarket, view 002"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 04 · View 002</div>
+            <h2>The Wickmarket</h2>
+            <p>The market closing at Lamplight after a brief rain: shutters, wax-streaked boards, workers lifting awnings, lamps being lit, puddles and cart ruts, with one public lamp deliberately left dark.</p>
+            <a href="places/the_wickmarket/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="coswald&#x27;s yard coswalds_yard the northern builders&#x27; square: dressed and rough stone, timber, lime, scaffolding, hoists, tracing floors, the masons&#x27; lodge, skilled hand labour, guild pride, and old grievances connected to the lanthorn&#x27;s fabric. a working builders&#x27; yard crowded with stone blocks, timber racks, lime mixing, wooden cranes, templates, chisels, lodge benches, apprentices, and masons debating beside an unfinished carving.">
+          <button class="image-button" type="button"
+                  data-image="places/coswalds_yard/coswalds_yard_001.png"
+                  data-caption="Coswald&#x27;s Yard — 001"
+                  aria-label="View Coswald&#x27;s Yard image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/coswalds_yard/coswalds_yard_001.png"
+                 alt="Inspiration art for Coswald&#x27;s Yard, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 05 · View 001</div>
+            <h2>Coswald&#x27;s Yard</h2>
+            <p>A working builders&#x27; yard crowded with stone blocks, timber racks, lime mixing, wooden cranes, templates, chisels, lodge benches, apprentices, and masons debating beside an unfinished carving.</p>
+            <a href="places/coswalds_yard/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the tallage the_tallage the customs square on the dry cut: toll-house, weigh-beams, chained standards, the tallage stone, sealed gaudry weights, pawnshops, clerks, freight brought by cart and porter from wharves outside the south wall, careful valuation, and the two-arched overhead tally bridge. serle freight arriving by ox cart and porter along the dry cut: clerks at boards, porters at the weigh-beam, chained brass weights and stone standards, merchants waiting beside packed bales and salt casks, pawnshop fronts, and the overhead tally bridge joining the toll-house to its bonded warehouse.">
+          <button class="image-button" type="button"
+                  data-image="places/the_tallage/the_tallage_001.png"
+                  data-caption="The Tallage — 001"
+                  aria-label="View The Tallage image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_tallage/the_tallage_001.png"
+                 alt="Inspiration art for The Tallage, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 06 · View 001</div>
+            <h2>The Tallage</h2>
+            <p>Serle freight arriving by ox cart and porter along the dry Cut: clerks at boards, porters at the weigh-beam, chained brass weights and stone standards, merchants waiting beside packed bales and salt casks, pawnshop fronts, and the overhead Tally Bridge joining the toll-house to its bonded warehouse.</p>
+            <a href="places/the_tallage/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="maren&#x27;s green marens_green the south-eastern fish and boat-families&#x27; square on the dry former cut: eel smoke, fish carried in from the outer wharves, the alder moorings warehouse yard, the eel gallery bridge, and the church of saint maren. lowmarket on the dry former cut: fish slabs, eel-smoking racks, baskets and crates brought in by handcart from wharves beyond the south wall, boat-families trading and sorting freight, the open gate of the alder moorings warehouse yard, a laden cart squeezing past the eel gallery bridge&#x27;s narrow stair, and saint maren&#x27;s church beyond.">
+          <button class="image-button" type="button"
+                  data-image="places/marens_green/marens_green_001.png"
+                  data-caption="Maren&#x27;s Green — 001"
+                  aria-label="View Maren&#x27;s Green image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/marens_green/marens_green_001.png"
+                 alt="Inspiration art for Maren&#x27;s Green, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 07 · View 001</div>
+            <h2>Maren&#x27;s Green</h2>
+            <p>Lowmarket on the dry former Cut: fish slabs, eel-smoking racks, baskets and crates brought in by handcart from wharves beyond the south wall, boat-families trading and sorting freight, the open gate of the Alder Moorings warehouse yard, a laden cart squeezing past the Eel gallery bridge&#x27;s narrow stair, and Saint Maren&#x27;s church beyond.</p>
+            <a href="places/marens_green/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the bellstand the_bellstand the eastern proclamation square behind the lanthorn&#x27;s east end, beneath an old secular watch-bell tower. the unhallowed scold rings curfew and summons crowds while edicts are cried and posted. a proclamation drawing a mixed city crowd beneath the tall, severe watch-bell tower: crier on a worn platform, watch officers, posted sheets, people listening from windows and passage mouths, and the large secular bell visible overhead.">
+          <button class="image-button" type="button"
+                  data-image="places/the_bellstand/the_bellstand_001.png"
+                  data-caption="The Bellstand — 001"
+                  aria-label="View The Bellstand image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_bellstand/the_bellstand_001.png"
+                 alt="Inspiration art for The Bellstand, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 08 · View 001</div>
+            <h2>The Bellstand</h2>
+            <p>A proclamation drawing a mixed city crowd beneath the tall, severe watch-bell tower: crier on a worn platform, watch officers, posted sheets, people listening from windows and passage mouths, and the large secular bell visible overhead.</p>
+            <a href="places/the_bellstand/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the gradine the_gradine the lanthorn&#x27;s shallow stepped ceremonial forecourt, counted apart from the five squares: processions, petitions, public recantations, licensed pilgrim sellers, feast crowds, and civic spectacle beneath the west front. the steps prepared for an ambrellestide procession: glassworkers carrying wrapped panes from cinder row, vergers managing the route, licensed sellers, petitioners, guild banners without legible words, and townspeople packed into a forecourt too small for the whole city.">
+          <button class="image-button" type="button"
+                  data-image="places/the_gradine/the_gradine_001.png"
+                  data-caption="The Gradine — 001"
+                  aria-label="View The Gradine image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_gradine/the_gradine_001.png"
+                 alt="Inspiration art for The Gradine, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 09 · View 001</div>
+            <h2>The Gradine</h2>
+            <p>The steps prepared for an Ambrellestide procession: glassworkers carrying wrapped panes from Cinder Row, vergers managing the route, licensed sellers, petitioners, guild banners without legible words, and townspeople packed into a forecourt too small for the whole city.</p>
+            <a href="places/the_gradine/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the cut the_cut the filled former urban reach of the serle, now an unusually straight trade street and district across ombreval&#x27;s southern third. the river was diverted outside the south wall in f.363–369, while its bridges and working river names survived in dry ground. a broad, unusually straight trade street cutting through otherwise crooked dense quarters: freight carts and porters, warehouse doors, hoists, awnings, handbarrows, reused old masonry, and overhead bridges compressed into the distance. the former channel is completely filled and its dry paving is worn by generations of cart traffic.">
+          <button class="image-button" type="button"
+                  data-image="places/the_cut/the_cut_001.png"
+                  data-caption="The Cut — 001"
+                  aria-label="View The Cut image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_cut/the_cut_001.png"
+                 alt="Inspiration art for The Cut, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 10 · View 001</div>
+            <h2>The Cut</h2>
+            <p>A broad, unusually straight trade street cutting through otherwise crooked dense quarters: freight carts and porters, warehouse doors, hoists, awnings, handbarrows, reused old masonry, and overhead bridges compressed into the distance. The former channel is completely filled and its dry paving is worn by generations of cart traffic.</p>
+            <a href="places/the_cut/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the tally bridge the_tally_bridge a two-arched stone overhead bridge across the dry cut at the tallage, first built for the former channel and rebuilt in stone in f.247. it now joins the toll-house to its bonded warehouse above the trade street. the twin stone arches spanning the busy dry cut between the toll-house and bonded warehouse: laden salt carts and porters pass through below, clerks cross within the overhead bridge, and tallage customs buildings crowd both sides of the street.">
+          <button class="image-button" type="button"
+                  data-image="places/the_tally_bridge/the_tally_bridge_001.png"
+                  data-caption="The Tally Bridge — 001"
+                  aria-label="View The Tally Bridge image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_tally_bridge/the_tally_bridge_001.png"
+                 alt="Inspiration art for The Tally Bridge, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 11 · View 001</div>
+            <h2>The Tally Bridge</h2>
+            <p>The twin stone arches spanning the busy dry Cut between the toll-house and bonded warehouse: laden salt carts and porters pass through below, clerks cross within the overhead bridge, and Tallage customs buildings crowd both sides of the street.</p>
+            <a href="places/the_tally_bridge/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the eel bridge the_eel_bridge a low timber gallery bridge above the dry fish-market lane at maren&#x27;s green. its narrow stair constricts the lane, so laden carts make pedestrians wait. a low enclosed timber gallery joining upper storeys above the crowded fish-market lane. a cart piled with eel baskets squeezes past the gallery&#x27;s narrow stair while pedestrians wait on its small landing; vendors, boat-family porters, and dry market goods fill maren&#x27;s green.">
+          <button class="image-button" type="button"
+                  data-image="places/the_eel_bridge/the_eel_bridge_001.png"
+                  data-caption="The Eel Bridge — 001"
+                  aria-label="View The Eel Bridge image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_eel_bridge/the_eel_bridge_001.png"
+                 alt="Inspiration art for The Eel Bridge, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 12 · View 001</div>
+            <h2>The Eel Bridge</h2>
+            <p>A low enclosed timber gallery joining upper storeys above the crowded fish-market lane. A cart piled with eel baskets squeezes past the gallery&#x27;s narrow stair while pedestrians wait on its small landing; vendors, boat-family porters, and dry market goods fill Maren&#x27;s Green.</p>
+            <a href="places/the_eel_bridge/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the old sluice the_sluice the dry stone gatehouse at the east end of the former cut, where colm attergate drowned while the channel still ran. the river was diverted outside the south wall in f.363–369, but this historic landmark kept its name. the dry old gatehouse closing the eastern end of the filled cut: heavy weathered masonry, blocked former gate apertures, grooves from removed mechanisms, remnants of iron lifting gear, pedestrians and a handcart using the adjoining dry street, and dense buildings abutting the structure.">
+          <button class="image-button" type="button"
+                  data-image="places/the_sluice/the_sluice_001.png"
+                  data-caption="The Old Sluice — 001"
+                  aria-label="View The Old Sluice image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_sluice/the_sluice_001.png"
+                 alt="Inspiration art for The Old Sluice, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 13 · View 001</div>
+            <h2>The Old Sluice</h2>
+            <p>The dry old gatehouse closing the eastern end of the filled Cut: heavy weathered masonry, blocked former gate apertures, grooves from removed mechanisms, remnants of iron lifting gear, pedestrians and a handcart using the adjoining dry street, and dense buildings abutting the structure.</p>
+            <a href="places/the_sluice/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the alder moorings the_alder_moorings the alder boat-family&#x27;s warehouse court at maren&#x27;s green. the river left the city when the cut was filled, but the dry storage and transfer yard kept the inherited name moorings. an enclosed working warehouse court entered through a broad arched gate: alder family members sort fish baskets and freight bales, repair ropes, poles and patched canvas from their outer-wharf work, load handcarts, keep ledgers at a rough table, and store gear beneath timber galleries.">
+          <button class="image-button" type="button"
+                  data-image="places/the_alder_moorings/the_alder_moorings_001.png"
+                  data-caption="The Alder Moorings — 001"
+                  aria-label="View The Alder Moorings image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_alder_moorings/the_alder_moorings_001.png"
+                 alt="Inspiration art for The Alder Moorings, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 14 · View 001</div>
+            <h2>The Alder Moorings</h2>
+            <p>An enclosed working warehouse court entered through a broad arched gate: Alder family members sort fish baskets and freight bales, repair ropes, poles and patched canvas from their outer-wharf work, load handcarts, keep ledgers at a rough table, and store gear beneath timber galleries.</p>
+            <a href="places/the_alder_moorings/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="cinder row cinder_row the glaziers&#x27; street, rebuilt after the fire of f.171 with stone lower storeys and timber above: furnaces, glassmaking, leading, guild workshops, old burn memory, and the annual ambrellestide glass procession. a narrow active workshop street with furnace glow behind open shutters, glaziers carrying colored panes, apprentices working lead cames, crates of sand and fuel, stone shopfronts under rebuilt timber upper floors, and practical fire precautions.">
+          <button class="image-button" type="button"
+                  data-image="places/cinder_row/cinder_row_001.png"
+                  data-caption="Cinder Row — 001"
+                  aria-label="View Cinder Row image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/cinder_row/cinder_row_001.png"
+                 alt="Inspiration art for Cinder Row, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 15 · View 001</div>
+            <h2>Cinder Row</h2>
+            <p>A narrow active workshop street with furnace glow behind open shutters, glaziers carrying colored panes, apprentices working lead cames, crates of sand and fuel, stone shopfronts under rebuilt timber upper floors, and practical fire precautions.</p>
+            <a href="places/cinder_row/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the needle the_needle ombreval&#x27;s narrowest pinch, made shoulder-wide by encroaching rebuilt houses, running from the wickmarket back lanes toward the tallage. the saying &#x27;past the needle&#x27; means beyond saving. a single porter turning sideways to squeeze through the shoulder-wide lane between bowed plaster-and-timber walls, with scraped corners, dripping eaves, tiny doors, worn paving, and a brighter market glimpse at the far end.">
+          <button class="image-button" type="button"
+                  data-image="places/the_needle/the_needle_001.png"
+                  data-caption="The Needle — 001"
+                  aria-label="View The Needle image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_needle/the_needle_001.png"
+                 alt="Inspiration art for The Needle, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 16 · View 001</div>
+            <h2>The Needle</h2>
+            <p>A single porter turning sideways to squeeze through the shoulder-wide lane between bowed plaster-and-timber walls, with scraped corners, dripping eaves, tiny doors, worn paving, and a brighter market glimpse at the far end.</p>
+            <a href="places/the_needle/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the draper&#x27;s reach the_drapers_reach the roofed gallery of cloth halls between coswald&#x27;s yard and the wickmarket, sheltering wool and finished cloth. ombreval&#x27;s standard iron ell is fixed there for public measurement. a long covered cloth gallery during business: bolts of wool cloth, merchants measuring against the fixed iron ell, porters, tally boards, timber roof trusses, shutters, and rain kept just beyond the arcade.">
+          <button class="image-button" type="button"
+                  data-image="places/the_drapers_reach/the_drapers_reach_001.png"
+                  data-caption="The Draper&#x27;s Reach — 001"
+                  aria-label="View The Draper&#x27;s Reach image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_drapers_reach/the_drapers_reach_001.png"
+                 alt="Inspiration art for The Draper&#x27;s Reach, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 17 · View 001</div>
+            <h2>The Draper&#x27;s Reach</h2>
+            <p>A long covered cloth gallery during business: bolts of wool cloth, merchants measuring against the fixed iron ell, porters, tally boards, timber roof trusses, shutters, and rain kept just beyond the arcade.</p>
+            <a href="places/the_drapers_reach/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="gaunt passage gaunt_passage a blind covered passage beneath the old gaunt house&#x27;s salt-cellars near the tallage. the salt-factor family is extinct, but its name persists in this dim, practical dead end. a dim vaulted passage ending blindly below bulging salt-cellar walls, with salt bloom on masonry, leaking sacks overhead, a handcart that must be backed out, old doorways, and a narrow slice of tallage daylight.">
+          <button class="image-button" type="button"
+                  data-image="places/gaunt_passage/gaunt_passage_001.png"
+                  data-caption="Gaunt Passage — 001"
+                  aria-label="View Gaunt Passage image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/gaunt_passage/gaunt_passage_001.png"
+                 alt="Inspiration art for Gaunt Passage, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 18 · View 001</div>
+            <h2>Gaunt Passage</h2>
+            <p>A dim vaulted passage ending blindly below bulging salt-cellar walls, with salt bloom on masonry, leaking sacks overhead, a handcart that must be backed out, old doorways, and a narrow slice of Tallage daylight.</p>
+            <a href="places/gaunt_passage/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="bellfoot passage bellfoot_passage the covered way directly beneath the old bellstand watch-tower stair, shaped by heavy civic masonry, foot traffic, the tower&#x27;s secular bell, and the proclamation square immediately beyond. people passing under a steep external tower stair and thick timber bracing, with worn civic stonework, a watchman descending, posted but unreadable notices, and the brighter bellstand square at the exit.">
+          <button class="image-button" type="button"
+                  data-image="places/bellfoot_passage/bellfoot_passage_001.png"
+                  data-caption="Bellfoot Passage — 001"
+                  aria-label="View Bellfoot Passage image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/bellfoot_passage/bellfoot_passage_001.png"
+                 alt="Inspiration art for Bellfoot Passage, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 19 · View 001</div>
+            <h2>Bellfoot Passage</h2>
+            <p>People passing under a steep external tower stair and thick timber bracing, with worn civic stonework, a watchman descending, posted but unreadable notices, and the brighter Bellstand square at the exit.</p>
+            <a href="places/bellfoot_passage/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="tanners&#x27; slip tanners_slip a working lane behind maren&#x27;s green, associated with tannery workshops, hides, bark tannin, closed barrels, hard labour, sharp smells, patched firebreak masonry, and the remembered tannery fire of f.157. a cramped, completely dry service lane where workers in stained aprons scrape, trim, stretch, and cure hides at rough benches and timber frames. show bark chips, sacks of ground tannin, folded hides, closed barrels, empty covered vats, patched firebreak masonry, and projecting upper floors. the lane ends in an enclosed dogleg between workshops.">
+          <button class="image-button" type="button"
+                  data-image="places/tanners_slip/tanners_slip_001.png"
+                  data-caption="Tanners&#x27; Slip — 001"
+                  aria-label="View Tanners&#x27; Slip image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/tanners_slip/tanners_slip_001.png"
+                 alt="Inspiration art for Tanners&#x27; Slip, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 20 · View 001</div>
+            <h2>Tanners&#x27; Slip</h2>
+            <p>A cramped, completely dry service lane where workers in stained aprons scrape, trim, stretch, and cure hides at rough benches and timber frames. Show bark chips, sacks of ground tannin, folded hides, closed barrels, empty covered vats, patched firebreak masonry, and projecting upper floors. The lane ends in an enclosed dogleg between workshops.</p>
+            <a href="places/tanners_slip/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="skinners&#x27; court skinners_court a small enclosed working court north of the gradine, occupied by ordinary dense-city trade and domestic life, and associated with a persistent but unproven local tale about light from the great rose. an irregular court reached through a covered entry: scraping benches, bundled pelts, washing lines, children and workers sharing limited space, jettied rooms, patched plaster, drains, and only an indirect glimpse toward the lanthorn over rooftops.">
+          <button class="image-button" type="button"
+                  data-image="places/skinners_court/skinners_court_001.png"
+                  data-caption="Skinners&#x27; Court — 001"
+                  aria-label="View Skinners&#x27; Court image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/skinners_court/skinners_court_001.png"
+                 alt="Inspiration art for Skinners&#x27; Court, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 21 · View 001</div>
+            <h2>Skinners&#x27; Court</h2>
+            <p>An irregular court reached through a covered entry: scraping benches, bundled pelts, washing lines, children and workers sharing limited space, jettied rooms, patched plaster, drains, and only an indirect glimpse toward the Lanthorn over rooftops.</p>
+            <a href="places/skinners_court/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the hungry ox the_hungry_ox a boatmen&#x27;s tavern by maren&#x27;s green, used by working river people and known for the song &#x27;the water knows one&#x27;: smoky, crowded, practical, affordable, and tied to the rhythms of barges, fish, freight, and weather. a low-ceilinged tavern interior after lamplight: boatmen and porters sharing stew and ale, wet cloaks steaming, a singer leading a table song, river gear by the door, scarred tables, rushes, hearth smoke, and no romanticized noble clientele.">
+          <button class="image-button" type="button"
+                  data-image="places/the_hungry_ox/the_hungry_ox_001.png"
+                  data-caption="The Hungry Ox — 001"
+                  aria-label="View The Hungry Ox image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_hungry_ox/the_hungry_ox_001.png"
+                 alt="Inspiration art for The Hungry Ox, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 22 · View 001</div>
+            <h2>The Hungry Ox</h2>
+            <p>A low-ceilinged tavern interior after Lamplight: boatmen and porters sharing stew and ale, wet cloaks steaming, a singer leading a table song, river gear by the door, scarred tables, rushes, hearth smoke, and no romanticized noble clientele.</p>
+            <a href="places/the_hungry_ox/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the church of saint maren of the reeds saint_marens_church a low parish church on the old dry cut by maren&#x27;s green, consecrated for boatmen and the poor when the channel still ran. its low crypt has stood dry since the serle was diverted; its churchyard charnel-door lintel carries one newly buried given name in chalk, and maren smallvoice rings the name-knell. the humble church and its dry churchyard beside the filled former cut: a sexton chalking one short indistinct given name on the charnel-door lintel, poor-relief bread being carried inside, boat-family parishioners arriving from maren&#x27;s green, and the small passing-bell visible in the modest tower.">
+          <button class="image-button" type="button"
+                  data-image="places/saint_marens_church/saint_marens_church_001.png"
+                  data-caption="The Church of Saint Maren of the Reeds — 001"
+                  aria-label="View The Church of Saint Maren of the Reeds image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/saint_marens_church/saint_marens_church_001.png"
+                 alt="Inspiration art for The Church of Saint Maren of the Reeds, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 23 · View 001</div>
+            <h2>The Church of Saint Maren of the Reeds</h2>
+            <p>The humble church and its dry churchyard beside the filled former Cut: a sexton chalking one short indistinct given name on the charnel-door lintel, poor-relief bread being carried inside, boat-family parishioners arriving from Maren&#x27;s Green, and the small passing-bell visible in the modest tower.</p>
+            <a href="places/saint_marens_church/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+        <article class="card" data-search="the ilvane chapel and anchorhold the_ilvane_chapel a deconsecrated chapel mortared shut since f.290. its north-wall anchorhold remains occupied, and a small squint still opens to the lane so dame aldith can speak, receive alms, and trade verses for honest news. a narrow lane beside the sealed chapel: visibly mortared doors and windows, weathered sacred stonework, structural cracks and buttressing, the tiny open squint of the inhabited anchorhold, a basket of alms, and two ordinary neighbors speaking quietly with the unseen anchoress inside.">
+          <button class="image-button" type="button"
+                  data-image="places/the_ilvane_chapel/the_ilvane_chapel_001.png"
+                  data-caption="The Ilvane Chapel and Anchorhold — 001"
+                  aria-label="View The Ilvane Chapel and Anchorhold image 001">
+            <span class="missing-copy">Image not generated yet</span>
+            <img src="places/the_ilvane_chapel/the_ilvane_chapel_001.png"
+                 alt="Inspiration art for The Ilvane Chapel and Anchorhold, view 001"
+                 loading="lazy">
+          </button>
+          <div class="card-copy">
+            <div class="eyebrow">Place 24 · View 001</div>
+            <h2>The Ilvane Chapel and Anchorhold</h2>
+            <p>A narrow lane beside the sealed chapel: visibly mortared doors and windows, weathered sacred stonework, structural cracks and buttressing, the tiny open squint of the inhabited anchorhold, a basket of alms, and two ordinary neighbors speaking quietly with the unseen anchoress inside.</p>
+            <a href="places/the_ilvane_chapel/image_generation_prompt.md">Read generation prompt</a>
+          </div>
+        </article>
+  </main>
+  <dialog id="lightbox">
+    <img id="lightbox-image" alt="">
+    <div class="dialog-bar">
+      <span id="lightbox-caption"></span>
+      <button id="close" type="button">Close</button>
+    </div>
+  </dialog>
+  <script>
+    const cards = [...document.querySelectorAll('.card')];
+    const filter = document.querySelector('#filter');
+    const count = document.querySelector('#count');
+    const dialog = document.querySelector('#lightbox');
+    const dialogImage = document.querySelector('#lightbox-image');
+    const caption = document.querySelector('#lightbox-caption');
+
+    document.querySelectorAll('.image-button img').forEach((image) => {
+      image.addEventListener('error', () => {
+        image.parentElement.classList.add('missing');
+        image.parentElement.disabled = true;
+      });
+    });
+
+    filter.addEventListener('input', () => {
+      const query = filter.value.trim().toLowerCase();
+      let visible = 0;
+      cards.forEach((card) => {
+        const matches = !query || card.dataset.search.includes(query);
+        card.hidden = !matches;
+        if (matches) visible += 1;
+      });
+      count.textContent = `${visible} image${visible === 1 ? '' : 's'}`;
+    });
+
+    document.querySelectorAll('.image-button').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.classList.contains('missing')) return;
+        dialogImage.src = button.dataset.image;
+        dialogImage.alt = button.dataset.caption;
+        caption.textContent = button.dataset.caption;
+        dialog.showModal();
+      });
+    });
+    document.querySelector('#close').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  </script>
+</body>
+</html>
