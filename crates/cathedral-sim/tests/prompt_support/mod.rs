@@ -9,7 +9,7 @@
 use std::{fs, path::PathBuf};
 
 use cathedral_sim::{
-    ActorId, PromptEnv, SoundCatalog, World, WorldConfig, WorldSeed, build_world,
+    ActorId, AreaMap, PromptEnv, SoundCatalog, World, WorldConfig, WorldSeed, build_world,
     prompt::render_prompt,
 };
 use serde_json::Value;
@@ -41,6 +41,10 @@ pub fn catalog() -> SoundCatalog {
     SoundCatalog::from_toml_str(&asset("sounds/catalog.toml")).expect("the shipped catalog loads")
 }
 
+pub fn areas() -> AreaMap {
+    AreaMap::from_json_str(&asset("world/areas.json")).expect("the shipped area map loads")
+}
+
 /// The seeded world (`assets/world/seed.json`), with the real sound catalog so
 /// the footer lists the emittable ids.
 pub fn seed_world() -> World {
@@ -48,6 +52,7 @@ pub fn seed_world() -> World {
     build_world(
         &seed,
         WorldConfig {
+            area_map: areas(),
             sounds_enabled: true,
             sound_catalog: catalog(),
             ..WorldConfig::default()

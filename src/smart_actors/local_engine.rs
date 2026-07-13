@@ -41,7 +41,7 @@ use cathedral_backends::{
     PromptExchange, PromptLog, SessionDir,
 };
 use cathedral_sim::{
-    ActorId as SimActorId, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand,
+    ActorId as SimActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand,
     EngineConfig, EngineMessage, FakeCognition, ItemId as SimItemId, NullSight, PromptEnv,
     RequestId, SoundCatalog, SpatialActorUpdate, SpeechEventId, SttBackendKind, Transcription, Tts,
     TtsBackendKind, Vec3 as SimVec3, WorldSeed,
@@ -57,7 +57,7 @@ use super::{
     model::Position,
 };
 
-/// The four data files the sim is seeded from (ARCHITECTURE §1.4). They ship
+/// The five data files the sim is seeded from (ARCHITECTURE §1.4). They ship
 /// with the repository, not with the player's save, so they are resolved against
 /// the crate root rather than the working directory.
 fn assets_dir() -> PathBuf {
@@ -93,6 +93,7 @@ impl Cognition for SharedCognition {
 /// where the player is standing.
 struct EngineSeed {
     seed: WorldSeed,
+    areas: AreaMap,
     catalog: SoundCatalog,
     prompts: PromptEnv,
     config: EngineConfig,
@@ -201,6 +202,8 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
     };
     let seed = WorldSeed::from_json_str(&read("world/seed.json")?)
         .map_err(|error| format!("invalid world seed: {error}"))?;
+    let areas = AreaMap::from_json_str(&read("world/areas.json")?)
+        .map_err(|error| format!("invalid world areas: {error}"))?;
     let catalog = SoundCatalog::from_toml_str(&read("sounds/catalog.toml")?)
         .map_err(|error| format!("invalid sound catalog: {error}"))?;
     let prompts = PromptEnv::new(&read("prompts/turn.j2")?, &read("prompts/strings.toml")?)
@@ -255,6 +258,7 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
     Ok((
         EngineSeed {
             seed,
+            areas,
             catalog,
             prompts,
             config: engine_config,
@@ -396,6 +400,7 @@ impl LocalEngine {
         };
         let EngineSeed {
             seed: world,
+            areas,
             catalog,
             prompts,
             config,
@@ -412,6 +417,7 @@ impl LocalEngine {
         match Engine::new(
             config,
             &world,
+            areas,
             catalog,
             prompts,
             cognition,

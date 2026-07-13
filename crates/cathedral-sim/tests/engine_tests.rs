@@ -22,7 +22,7 @@ use cathedral_sim::{
     SttBackendKind, Subsystem, Tts, TtsBackendKind, TtsOutcome, TtsRequest, TtsSubmitError, Vec3,
     WorldSeed, apply_action, ids::RequestId, speech_reading_seconds,
 };
-use prompt_support::{asset, catalog, prompt_env};
+use prompt_support::{areas, asset, catalog, prompt_env};
 use serde_json::json;
 
 // ---------------------------------------------------------------- test doubles
@@ -176,6 +176,7 @@ impl Builder {
                 ..EngineConfig::default()
             },
             &seed(),
+            areas(),
             catalog(),
             prompt_env(),
             Box::new(cognition.clone()),
@@ -409,6 +410,7 @@ fn a_world_without_a_player_is_not_a_world_the_engine_will_run() {
     let outcome = Engine::new(
         EngineConfig::default(),
         &seed,
+        areas(),
         catalog(),
         prompt_env(),
         Box::new(SharedCognition::default()),
@@ -1039,6 +1041,7 @@ fn a_silenced_voice_explains_itself_once_after_ready() {
                 ..EngineConfig::default()
             },
             &seed(),
+            areas(),
             catalog(),
             prompt_env(),
             Box::new(SharedCognition::default()),

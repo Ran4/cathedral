@@ -39,9 +39,10 @@ use cathedral_backends::{
     config::{DEFAULT_DOTENV_PATH, DEFAULT_WORKERS_DIR},
 };
 use cathedral_sim::{
-    ActorId, Capabilities, Cognition, CognitionBusy, Completion, DEFAULT_VIEW_CONE_DEGREES, Engine,
-    EngineCommand, EngineConfig, EngineMessage, FakeCognition, NullSight, NullTranscription,
-    NullTts, PromptEnv, RequestId, SoundCatalog, TtsBackendKind, Vec3, World, WorldSeed,
+    ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion,
+    DEFAULT_VIEW_CONE_DEGREES, Engine, EngineCommand, EngineConfig, EngineMessage, FakeCognition,
+    NullSight, NullTranscription, NullTts, PromptEnv, RequestId, SoundCatalog, TtsBackendKind,
+    Vec3, World, WorldSeed,
     engine::{
         DEFAULT_MAXIMUM_BACKOFF_SECONDS, DEFAULT_SOUND_COOLDOWN_SECONDS,
         DEFAULT_STT_STREAM_GRACE_SECONDS,
@@ -220,6 +221,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             runtime_dir: PathBuf::new(),
         },
         &assets.seed,
+        assets.areas,
         assets.catalog,
         assets.prompts,
         cognition,
@@ -491,10 +493,11 @@ fn cost_line(cost: Option<f64>) -> String {
 
 // ------------------------------------------------------------------ the assets
 
-/// Everything the engine is seeded from — the four data files of ARCHITECTURE
+/// Everything the engine is seeded from — the data files of ARCHITECTURE
 /// §1.4. The sim reads no files itself (D22), so the host reads them for it.
 struct Assets {
     seed: WorldSeed,
+    areas: AreaMap,
     catalog: SoundCatalog,
     prompts: PromptEnv,
 }
@@ -508,12 +511,15 @@ impl Assets {
         };
         let seed = WorldSeed::from_json_str(&read("world/seed.json")?)
             .map_err(|error| format!("invalid world seed: {error}"))?;
+        let areas = AreaMap::from_json_str(&read("world/areas.json")?)
+            .map_err(|error| format!("invalid world areas: {error}"))?;
         let catalog = SoundCatalog::from_toml_str(&read("sounds/catalog.toml")?)
             .map_err(|error| format!("invalid sound catalog: {error}"))?;
         let prompts = PromptEnv::new(&read("prompts/turn.j2")?, &read("prompts/strings.toml")?)
             .map_err(|error| format!("invalid prompt assets: {error}"))?;
         Ok(Self {
             seed,
+            areas,
             catalog,
             prompts,
         })
@@ -702,6 +708,7 @@ mod tests {
                 ..EngineConfig::default()
             },
             &assets.seed,
+            assets.areas,
             assets.catalog,
             assets.prompts,
             Box::new(http.clone()),

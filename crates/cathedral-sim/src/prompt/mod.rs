@@ -125,7 +125,7 @@ impl PromptEnv {
 struct Sheet<'a> {
     name: &'a str,
     back_story: &'a str,
-    you_are: YouAre<'a>,
+    you_are: YouAre,
     you_hold: Vec<ItemRef<'a>>,
     /// Omitted entirely when empty — not rendered as `[]` (`prompt.py:227`).
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -142,8 +142,8 @@ struct Sheet<'a> {
 }
 
 #[derive(Serialize)]
-struct YouAre<'a> {
-    location_description: &'a str,
+struct YouAre {
+    location_description: String,
     position_m: Position,
 }
 
@@ -307,11 +307,15 @@ pub fn render_prompt(
     let recent_history = fallback(actor.recent_history(), &strings.nothing_yet);
 
     let position = actor.position_m();
+    let location_description = world
+        .area_map
+        .location_description(position)
+        .unwrap_or_else(|| actor.location_description().to_string());
     let sheet = Sheet {
         name: actor.name(),
         back_story: actor.back_story(),
         you_are: YouAre {
-            location_description: actor.location_description(),
+            location_description,
             position_m: Position {
                 x: position.x,
                 y: position.y,

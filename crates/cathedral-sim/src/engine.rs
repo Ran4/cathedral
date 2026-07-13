@@ -22,6 +22,7 @@ use serde_json::{Value, json};
 
 use crate::{
     actions::apply_action,
+    areas::AreaMap,
     character::Control,
     error::{CommandError, CommandErrorCode, EngineInitError},
     event::{DomainEvent, EventType},
@@ -405,6 +406,7 @@ impl Engine {
     pub fn new(
         config: EngineConfig,
         seed: &WorldSeed,
+        area_map: AreaMap,
         catalog: SoundCatalog,
         env: PromptEnv,
         cognition: Box<dyn Cognition>,
@@ -419,6 +421,7 @@ impl Engine {
         let mut world = build_world(
             seed,
             WorldConfig {
+                area_map,
                 sounds_enabled: config.sounds_enabled,
                 view_cone_degrees: config.view_cone_degrees,
                 sound_catalog: catalog,

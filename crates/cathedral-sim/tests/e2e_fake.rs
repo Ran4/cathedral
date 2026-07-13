@@ -20,7 +20,7 @@ use cathedral_sim::{
     EngineMessage, FakeCognition, ItemId, NullSight, NullTranscription, NullTts, PublicSnapshot,
     RequestId, TtsBackendKind, Vec3, WorldSeed,
 };
-use prompt_support::{asset, catalog, prompt_env};
+use prompt_support::{areas, asset, catalog, prompt_env};
 
 /// `hello()`'s spawn in the Python tests: on the forecourt, within 20 m of the
 /// whole cast and within 4 m of Ilse, so a broadcast say reaches everyone and
@@ -71,6 +71,7 @@ impl Harness {
                 ..EngineConfig::default()
             },
             &seed,
+            areas(),
             catalog(),
             prompt_env(),
             Box::new(cognition.clone()),

@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     DEFAULT_VIEW_CONE_DEGREES, MAX_VIEW_CONE_DEGREES, MIN_VIEW_CONE_DEGREES,
+    areas::AreaMap,
     character::{Character, CharacterSheet},
     ids::{ActorId, ItemId},
     item::Item,
@@ -167,6 +168,7 @@ impl WorldSeed {
 /// the environment, so the host supplies them).
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorldConfig {
+    pub area_map: AreaMap,
     pub sounds_enabled: bool,
     /// Total horizontal FOV of the witness test; clamped to
     /// `[MIN_VIEW_CONE_DEGREES, MAX_VIEW_CONE_DEGREES]` by [`build_world`], which
@@ -178,6 +180,7 @@ pub struct WorldConfig {
 impl Default for WorldConfig {
     fn default() -> Self {
         Self {
+            area_map: AreaMap::default(),
             sounds_enabled: true,
             view_cone_degrees: DEFAULT_VIEW_CONE_DEGREES,
             sound_catalog: SoundCatalog::empty(),
@@ -194,6 +197,7 @@ impl Default for WorldConfig {
 /// express.
 pub fn build_world(seed: &WorldSeed, config: WorldConfig) -> World {
     let mut world = World::new();
+    world.area_map = config.area_map;
     world.sounds_enabled = config.sounds_enabled;
     world.view_cone_degrees = view_cone_degrees(config.view_cone_degrees);
     world.sound_catalog = config.sound_catalog;
@@ -272,6 +276,7 @@ mod tests {
         let world = build_world(
             &seed(),
             WorldConfig {
+                area_map: AreaMap::default(),
                 sounds_enabled: false,
                 view_cone_degrees: 0.0,
                 sound_catalog: catalog,

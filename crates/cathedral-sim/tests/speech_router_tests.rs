@@ -22,7 +22,7 @@ use cathedral_sim::{
     TtsBackendKind, TtsOutcome, TtsRequest, TtsSubmitError, Vec3, WorldSeed, apply_action,
     speech_reading_seconds,
 };
-use prompt_support::{asset, catalog, prompt_env};
+use prompt_support::{areas, asset, catalog, prompt_env};
 use serde_json::json;
 
 // ---------------------------------------------------------------- test doubles
@@ -280,6 +280,7 @@ impl Builder {
                 ..EngineConfig::default()
             },
             &seed(),
+            areas(),
             catalog(),
             prompt_env(),
             Box::new(FakeCognition::default()),

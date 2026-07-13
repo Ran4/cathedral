@@ -1,4 +1,4 @@
-CURRENT STATUS: no steps have started.
+CURRENT STATUS: Step 1 is implemented; awaiting user review before Step 2.
 
 # Make the lore's places real
 
@@ -164,6 +164,8 @@ rendering must not affect simulation results.
 Stop for user review after Steps 1 and 2 work before modifying the game world.
 
 ## Step 3: build Coswald's Yard
+
+From now on: do read lore/second_sun
 
 Find the established descriptions of Coswald's Yard in the core lore and modify
 the 3D game world so that an actual place matches them. Then add the area's

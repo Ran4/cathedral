@@ -90,7 +90,7 @@ round may have taken a broadcast offer); the accept syntax appears only in
 
 ## Data, not code
 
-Four files under `assets/` are the single source of truth for what would
+Five files under `assets/` are the single source of truth for what would
 otherwise be strings baked into Rust:
 
 | File | Owns |
@@ -99,6 +99,7 @@ otherwise be strings baked into Rust:
 | `assets/prompts/strings.toml` | the sheet's micro-strings |
 | `assets/sounds/catalog.toml` | the sound catalog: percepts, radii, and the `sfx_prompt` `scripts/generate_sounds.py` synthesizes each asset from |
 | `assets/world/seed.json` | the seeded cast — Sven (a fish, and two coppers owed to Conny), Conny the fishmonger, Ilse a hungry pilgrim stranger holding a copper coin, and the player. Insertion order is load-bearing: it is the round-robin order. |
+| `assets/world/areas.json` | named world geography: coordinate axes, stable IDs, prompt labels, and non-overlapping box unions used for containment and nearest-area descriptions |
 
 The loaders take `&str`, never a path: the host reads the file.
 

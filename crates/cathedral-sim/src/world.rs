@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 
 use crate::{
     DEFAULT_VIEW_CONE_DEGREES,
+    areas::AreaMap,
     character::Character,
     error::{SpatialUpdateError, SpatialUpdateErrorCode},
     event::DomainEvent,
@@ -40,6 +41,8 @@ impl SpatialActorUpdate {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct World {
+    /// Authoritative named geography used whenever a prompt is rendered.
+    pub area_map: AreaMap,
     pub characters: BTreeMap<ActorId, Character>,
     /// Character insertion order — the round-robin turn order (D12).
     pub roster: Vec<ActorId>,
@@ -62,6 +65,7 @@ pub struct World {
 impl Default for World {
     fn default() -> Self {
         Self {
+            area_map: AreaMap::default(),
             characters: BTreeMap::new(),
             roster: Vec::new(),
             items: BTreeMap::new(),
