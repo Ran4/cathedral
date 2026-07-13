@@ -1,9 +1,12 @@
 //! Conversation floor arbitration (`server.py:2021-2083`).
 //!
-//! One utterance at a time gets the room. A voiced NPC line is *awaited* by
-//! event id until the game reports it was presented; an unvoiced one just holds
-//! the floor for as long as it takes to read. The player holds it too, through a
-//! rolling deadline bumped while the microphone streams.
+//! Ordinary NPC turns share one room. A voiced NPC line is *awaited* by event id
+//! until the game reports it was presented; an unvoiced one just holds the
+//! floor for as long as it takes to read. Player-audible and background holds
+//! are tracked separately so a protected response to fresh player speech can
+//! ignore an inaudible exchange elsewhere in the city. The player holds the
+//! foreground too, through a rolling deadline bumped while the microphone
+//! streams.
 //!
 //! Every hold is self-expiring. A lost `speech_presented`, a crashed client, a
 //! dropped transcription — none of them may stall NPC turns forever, so
@@ -44,11 +47,22 @@ pub fn speech_reading_seconds(text: &str) -> f64 {
 pub struct ConversationFloor {
     /// Voiced utterances awaiting their `speech_presented`, insertion-ordered
     /// with their failsafe deadlines (`OrderedDict` in Python).
-    awaiting: Vec<(SpeechEventId, f64)>,
-    /// Reading estimates and the post-utterance beat.
-    floor_until: f64,
+    awaiting: Vec<AwaitedSpeech>,
+    /// Reading estimates and the post-utterance beat for speech the player can
+    /// hear. These still pace an urgent response to the player's own words.
+    foreground_floor_until: f64,
+    /// Equivalent pacing for conversations outside the player's earshot.
+    /// Ordinary city turns honor it; a protected player reaction does not.
+    background_floor_until: f64,
     /// The player's rolling microphone/transcription hold.
     player_hold_until: f64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct AwaitedSpeech {
+    event_id: SpeechEventId,
+    deadline: f64,
+    blocks_player_reaction: bool,
 }
 
 impl ConversationFloor {
@@ -62,10 +76,25 @@ impl ConversationFloor {
     /// dropped here and *not* granted a post-utterance beat — the line is stale,
     /// nobody is listening to it any more.
     pub fn busy(&mut self, now: f64) -> bool {
-        // Python: `deadline <= now` expires, so a deadline exactly at `now` is
-        // already gone.
-        self.awaiting.retain(|(_, deadline)| *deadline > now);
-        !self.awaiting.is_empty() || now < self.floor_until || now < self.player_hold_until
+        self.purge_expired(now);
+        !self.awaiting.is_empty()
+            || now < self.foreground_floor_until
+            || now < self.background_floor_until
+            || now < self.player_hold_until
+    }
+
+    /// Whether the floor should hold a response to fresh player speech.
+    ///
+    /// Inaudible conversations elsewhere in the city retain their own pacing,
+    /// but they no longer serialize the nearby exchange the player initiated.
+    /// Speech within the player's earshot and the microphone hold still block.
+    pub fn busy_for_player_reaction(&mut self, now: f64) -> bool {
+        self.purge_expired(now);
+        self.awaiting
+            .iter()
+            .any(|speech| speech.blocks_player_reaction)
+            || now < self.foreground_floor_until
+            || now < self.player_hold_until
     }
 
     /// Hold the floor for one non-player utterance.
@@ -77,8 +106,30 @@ impl ConversationFloor {
     /// reading estimate instead (D26: the floor never waits for an event that
     /// cannot be acknowledged).
     pub fn acquire(&mut self, now: f64, event_id: &SpeechEventId, text: &str, tts_queued: bool) {
+        self.acquire_scoped(now, event_id, text, tts_queued, true);
+    }
+
+    /// Hold either the player-audible or background conversation floor.
+    ///
+    /// `blocks_player_reaction` is true exactly when the player was among the
+    /// speech event's recipients. This preserves normal global pacing while
+    /// allowing a nearby answer to overlap an inaudible distant exchange.
+    pub fn acquire_scoped(
+        &mut self,
+        now: f64,
+        event_id: &SpeechEventId,
+        text: &str,
+        tts_queued: bool,
+        blocks_player_reaction: bool,
+    ) {
         if !tts_queued {
-            self.floor_until = self.floor_until.max(now + speech_reading_seconds(text));
+            let deadline = now + speech_reading_seconds(text);
+            let floor_until = if blocks_player_reaction {
+                &mut self.foreground_floor_until
+            } else {
+                &mut self.background_floor_until
+            };
+            *floor_until = floor_until.max(deadline);
             return;
         }
         // Insertion order is deadline order closely enough: this only ever
@@ -88,11 +139,22 @@ impl ConversationFloor {
             self.awaiting.remove(0);
         }
         let deadline = now + floor_audio_failsafe_seconds(text);
-        match self.awaiting.iter_mut().find(|(id, _)| id == event_id) {
+        match self
+            .awaiting
+            .iter_mut()
+            .find(|speech| speech.event_id == *event_id)
+        {
             // Re-acquiring an id refreshes its deadline in place, like assigning
             // to an existing dict key.
-            Some(entry) => entry.1 = deadline,
-            None => self.awaiting.push((event_id.clone(), deadline)),
+            Some(entry) => {
+                entry.deadline = deadline;
+                entry.blocks_player_reaction = blocks_player_reaction;
+            }
+            None => self.awaiting.push(AwaitedSpeech {
+                event_id: event_id.clone(),
+                deadline,
+                blocks_player_reaction,
+            }),
         }
     }
 
@@ -100,15 +162,26 @@ impl ConversationFloor {
     /// whose failsafe already expired are legitimately unknown, and must not
     /// re-arm the beat.
     pub fn release(&mut self, now: f64, event_id: &SpeechEventId) {
-        let Some(index) = self.awaiting.iter().position(|(id, _)| id == event_id) else {
+        let Some(index) = self
+            .awaiting
+            .iter()
+            .position(|speech| speech.event_id == *event_id)
+        else {
             return;
         };
-        self.awaiting.remove(index);
-        if self.awaiting.is_empty() {
+        let released = self.awaiting.remove(index);
+        if !self
+            .awaiting
+            .iter()
+            .any(|speech| speech.blocks_player_reaction == released.blocks_player_reaction)
+        {
             // A short beat so consecutive voices breathe.
-            self.floor_until = self
-                .floor_until
-                .max(now + FLOOR_POST_UTTERANCE_BEAT_SECONDS);
+            let floor_until = if released.blocks_player_reaction {
+                &mut self.foreground_floor_until
+            } else {
+                &mut self.background_floor_until
+            };
+            *floor_until = floor_until.max(now + FLOOR_POST_UTTERANCE_BEAT_SECONDS);
         }
     }
 
@@ -129,15 +202,23 @@ impl ConversationFloor {
     }
 
     pub fn floor_until(&self) -> f64 {
-        self.floor_until
+        self.foreground_floor_until.max(self.background_floor_until)
     }
 
     pub fn is_awaiting(&self, event_id: &SpeechEventId) -> bool {
-        self.awaiting.iter().any(|(id, _)| id == event_id)
+        self.awaiting
+            .iter()
+            .any(|speech| speech.event_id == *event_id)
     }
 
     pub fn awaiting_len(&self) -> usize {
         self.awaiting.len()
+    }
+
+    fn purge_expired(&mut self, now: f64) {
+        // Python: `deadline <= now` expires, so a deadline exactly at `now` is
+        // already gone. Expiry deliberately grants no post-utterance beat.
+        self.awaiting.retain(|speech| speech.deadline > now);
     }
 }
 

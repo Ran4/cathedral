@@ -1019,7 +1019,8 @@ impl SpeechRouter {
                     .is_some_and(|character| character.control() == Control::Llm)
             });
         if let Some(nearest) = nearest {
-            ctx.scheduler.prioritize(ctx.world, &nearest, true, now);
+            ctx.scheduler
+                .prioritize_player_reaction(ctx.world, &nearest, now);
         }
 
         out.push(EngineMessage::Status(stt_status(

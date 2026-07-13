@@ -89,6 +89,25 @@ fn text_only_speech_holds_for_the_reading_estimate() {
     assert!(!floor.busy(now));
 }
 
+#[test]
+fn background_speech_does_not_hold_a_player_reaction() {
+    let mut floor = ConversationFloor::new();
+    let now = 1_000.0;
+
+    floor.acquire_scoped(now, &event(1), "A distant exchange", false, false);
+    assert!(floor.busy(now), "ordinary city turns remain paced");
+    assert!(
+        !floor.busy_for_player_reaction(now),
+        "inaudible speech must not delay the nearby listener"
+    );
+
+    floor.acquire_scoped(now, &event(2), "A nearby exchange", false, true);
+    assert!(
+        floor.busy_for_player_reaction(now),
+        "speech the player can hear still owns the conversational floor"
+    );
+}
+
 /// 61. `test_tts_failure_releases_the_awaited_floor_with_the_beat`
 #[test]
 fn tts_failure_releases_the_awaited_floor_with_the_beat() {

@@ -544,7 +544,11 @@ impl Engine {
 
         // Computed once per poll (D20): the floor's expiry purge is a side
         // effect, and the scheduler must not be able to change how often it runs.
-        let floor_busy = self.floor.busy(now);
+        let floor_busy = if self.scheduler.in_flight_is_player_reaction() {
+            self.floor.busy_for_player_reaction(now)
+        } else {
+            self.floor.busy(now)
+        };
         let events = self.scheduler.poll(
             now,
             &mut self.world,
@@ -1057,6 +1061,7 @@ impl Engine {
             return;
         };
         let speaker_is_player = speaker.control() == Control::Player;
+        let player_can_hear = event.recipient_ids.contains(&self.config.player_id);
         let speaker_name_for_player = if actor_id == self.config.player_id {
             "You".to_string()
         } else {
@@ -1084,7 +1089,8 @@ impl Engine {
         if !speaker_is_player {
             // The player's own line is not something the NPCs must wait through;
             // his microphone hold is an entirely different mechanism.
-            self.floor.acquire(now, &event_id, &text, queued);
+            self.floor
+                .acquire_scoped(now, &event_id, &text, queued, player_can_hear);
         }
     }
 

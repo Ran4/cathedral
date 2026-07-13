@@ -11,9 +11,9 @@ use bevy::prelude::*;
 
 use crate::{controller::PlayerCamera, fonts::CathedralFonts};
 
-use super::SmartActorRuntime;
 use super::model::{ActorControl, ActorId, ItemId, WorldMirror};
 use super::targeting::ActorTarget;
+use super::{HEARING_RADIUS_M, SmartActorRuntime};
 
 const NAME_ANCHOR_Y: f32 = 0.9;
 const MAX_NAME_LABEL_DISTANCE_M: f32 = 80.0;
@@ -391,7 +391,6 @@ pub(crate) fn update_thinking_indicators(
         .map(|(anchor, transform)| (anchor.0.clone(), transform.translation()))
         .collect();
     let active_actor = runtime.thinking_actor();
-    let maximum_distance_squared = MAX_NAME_LABEL_DISTANCE_M * MAX_NAME_LABEL_DISTANCE_M;
     let dots = thinking_dots(time.elapsed_secs());
 
     for (indicator, mut text, mut node, mut visibility) in &mut indicators {
@@ -403,11 +402,7 @@ pub(crate) fn update_thinking_indicators(
             *visibility = Visibility::Hidden;
             continue;
         };
-        if camera_transform
-            .translation()
-            .distance_squared(*world_position)
-            > maximum_distance_squared
-        {
+        if !thinking_indicator_in_range(camera_transform.translation(), *world_position) {
             *visibility = Visibility::Hidden;
             continue;
         }
@@ -424,6 +419,10 @@ pub(crate) fn update_thinking_indicators(
         node.top = Val::Px(viewport_position.y - THINKING_INDICATOR_HEAD_OFFSET_PX);
         *visibility = Visibility::Inherited;
     }
+}
+
+fn thinking_indicator_in_range(camera_position: Vec3, actor_position: Vec3) -> bool {
+    camera_position.distance_squared(actor_position) <= HEARING_RADIUS_M * HEARING_RADIUS_M
 }
 
 fn thinking_dots(elapsed_seconds: f32) -> &'static str {
@@ -835,6 +834,18 @@ mod tests {
         assert_eq!(thinking_dots(THINKING_DOT_STEP_SECONDS), "..");
         assert_eq!(thinking_dots(THINKING_DOT_STEP_SECONDS * 2.0), "...");
         assert_eq!(thinking_dots(THINKING_DOT_STEP_SECONDS * 3.0), ".");
+    }
+
+    #[test]
+    fn thinking_indicator_uses_the_conversation_radius() {
+        assert!(thinking_indicator_in_range(
+            Vec3::ZERO,
+            Vec3::new(0.0, 0.0, HEARING_RADIUS_M)
+        ));
+        assert!(!thinking_indicator_in_range(
+            Vec3::ZERO,
+            Vec3::new(0.0, 0.0, HEARING_RADIUS_M + 0.01)
+        ));
     }
 
     #[test]

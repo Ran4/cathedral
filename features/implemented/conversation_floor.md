@@ -153,8 +153,9 @@ whoever round-robin lands on. Deliberately **not** `immediate=True`: only the
   prompt's existing wait-discipline (see `speech_turn_taking.md`) is what
   breaks a two-NPC ping-pong from starving the third.
 
-Player-directed speech already had this behavior
-(`_resolve_transcription` -> `prioritize(nearest, immediate=True)`).
+Player-directed speech uses a stronger form of this behavior: the nearest
+listener enters a protected FIFO reaction lane. Ordinary NPC handoffs cannot
+overwrite it if a background reply and STT completion land in the same poll.
 
 ### 3. Full-duplex politeness: hold the floor while the player speaks
 
@@ -180,9 +181,9 @@ client simply stops bumping it and it expires on its own.
 - Cleared to 0.0 on: silent end, abort of a live stream, and every path
   through `_resolve_transcription` (success, failure, empty, invalid — all
   transcription outcomes funnel through it via
-  `_handle_transcription_outcome`). On success the applied `say` +
-  `prioritize(nearest, immediate=True)` take over and the NPC floor governs
-  from there.
+  `_handle_transcription_outcome`). On success the applied `say` queues the
+  nearest listener as a protected player reaction; only player-audible floor
+  holds govern its completed reply from there.
 - Bumps are always `max(current, new)` so an out-of-order older bump cannot
   resurrect an explicit clear.
 
@@ -252,6 +253,7 @@ the floor adds ~2 s per line there and stays inside the existing deadlines.
   the voice's first PCM chunk (synthesis latency). Much less jarring now that
   events themselves are paced; delaying bubble spawn until audio actually
   starts is optional polish.
-- The floor is global. If NPC groups ever spread beyond hearing range of each
-  other, it could become per conversation group (connected components of the
-  20 m hearing graph) so distant conversations don't wait on each other.
+- Ordinary NPC pacing is still global. Player-audible and background holds are
+  distinguished, however: a protected response to fresh player speech ignores
+  an inaudible background hold. Fully independent NPC conversation groups
+  (connected components of the 20 m hearing graph) remain a possible follow-up.

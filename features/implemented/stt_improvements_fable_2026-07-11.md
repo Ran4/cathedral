@@ -305,10 +305,11 @@ result) and WAV deletion stay exactly where they are: both paths converge in
 ### Reaction priority
 
 After a transcribed say is applied, call
-`self.scheduler.prioritize(<nearest LLM-controlled recipient>)`, choosing by
-the sim's stable distance-then-id ordering among the say's recipients; no-op
-when there are none. This mirrors what targeted `debug_player_say` already
-does and removes the round-robin wait between "heard" and "reacting".
+`self.scheduler.prioritize_player_reaction(<nearest LLM-controlled recipient>)`,
+choosing by the sim's stable distance-then-id ordering among the say's
+recipients; no-op when there are none. The protected lane cannot be overwritten
+by an NPC handoff that completes in the same poll and removes the round-robin
+wait between "heard" and "reacting".
 
 ### Statuses
 

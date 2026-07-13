@@ -427,6 +427,62 @@ fn targeted_say_hands_the_next_turn_to_the_addressee() {
     assert_eq!(harness.prompted_names()[..3], ["Sven", "Ilse", "Conny"]);
 }
 
+/// A transcription and an already-running background turn can complete in the
+/// same engine poll. The background reply's targeted `say` must not overwrite
+/// the listener the player just woke, and its ordinary delay must not postpone
+/// that listener either (session 76's Gile/Dunstan/Mote starvation).
+#[test]
+fn player_reaction_survives_a_same_poll_background_handoff() {
+    let mut harness = Harness::new(
+        Box::new(|_, call| {
+            if call == 0 {
+                Ok(r#"say {"target": "k0fb1", "text": "Ilse, a word?"}"#.to_string())
+            } else {
+                noop("", call)
+            }
+        }),
+        100.0,
+    );
+    player_beside_sven(&mut harness.world);
+    harness.start();
+    harness.poll_pending(); // Sven is already thinking.
+
+    player_says(&mut harness.world, "cb947", "Where is the rail?");
+    assert!(harness.scheduler.prioritize_player_reaction(
+        &harness.world,
+        &actor("cb947"),
+        harness.now
+    ));
+
+    // Sven completes and hands the ordinary slot to Ilse. Conny's protected
+    // player reaction still submits in this same poll, despite the 100 s delay.
+    harness.poll();
+    assert_eq!(harness.prompted_names(), ["Sven", "Conny"]);
+    assert_eq!(
+        harness.scheduler.in_flight_actor_id(),
+        Some(&actor("cb947"))
+    );
+    assert!(harness.scheduler.in_flight_is_player_reaction());
+    assert_eq!(
+        harness.scheduler.priority_actor_id(),
+        Some(&actor("k0fb1")),
+        "the background handoff remains queued behind the player reaction"
+    );
+    assert_eq!(
+        sheet_of(&harness.cognition.prompts[1])["since_your_last_turn"],
+        json!([
+            "A stranger (id player) said to you: \"Where is the rail?\"",
+            "Sven said to a stranger (id k0fb1): \"Ilse, a word?\""
+        ])
+    );
+
+    // Once Conny succeeds, the ordinary delay and handoff resume unchanged.
+    harness.poll();
+    harness.now += 100.0;
+    harness.poll();
+    assert_eq!(harness.prompted_names(), ["Sven", "Conny", "Ilse"]);
+}
+
 /// 19. `test_broadcast_say_leaves_round_robin_order_unchanged`
 #[test]
 fn broadcast_say_leaves_round_robin_order_unchanged() {

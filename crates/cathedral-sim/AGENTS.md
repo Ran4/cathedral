@@ -43,7 +43,9 @@ inbox, so the model can self-correct next turn (and are echoed as
 distance, inclusive boundary, stable `(distance, id)` ordering). Every recipient
 id is retained in the structured event the game consumes; LLM-controlled
 recipients additionally get a prose inbox line. The player is never scheduled, so
-his inbox never accumulates.
+his inbox never accumulates. Fresh player speech queues the nearest LLM listener
+in a protected FIFO reaction lane: NPC-to-NPC handoffs cannot overwrite it, and
+background speech outside the player's earshot cannot hold its completed reply.
 
 **Unknown people.** Each character has a `knows` set of character ids. People
 outside it render as `(unknown - you don't know the name of this person)` in

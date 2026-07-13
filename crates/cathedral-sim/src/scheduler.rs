@@ -1,8 +1,8 @@
 //! The global NPC turn stream (`scheduler.py`): one request in flight, ever.
 //!
-//! Round-robin over the LLM cast, with a single priority slot for
-//! turn-taking (an addressed `say` hands the next turn to whoever was
-//! addressed), provider backoff, and floor gating.
+//! Round-robin over the LLM cast, with an ordinary priority slot for NPC
+//! turn-taking, a protected FIFO lane for reactions to player speech, provider
+//! backoff, and floor gating.
 //!
 //! Python ran the provider call on a daemon thread and everything else on the
 //! poll thread. Here the split is a trait boundary instead: [`Cognition::request`]
@@ -14,6 +14,8 @@
 //!
 //! The scheduler is clock-free. Every `time.monotonic()` in Python is a `now`
 //! parameter here.
+
+use std::collections::VecDeque;
 
 use serde_json::{Map, Value};
 
@@ -81,6 +83,10 @@ pub enum SchedulerEvent {
 struct InFlight {
     actor_id: ActorId,
     request_id: RequestId,
+    /// Player speech selected this turn. Its completed reply may ignore a
+    /// background-only conversation-floor hold, but never speech the player can
+    /// hear or the player's own microphone hold.
+    player_reaction: bool,
     /// The inbox as it was *before* the prompt drained it — restored on failure.
     drained_events: Vec<String>,
     /// The percepts the prompt showed as `since_your_last_turn`: they graduate
@@ -99,8 +105,15 @@ pub struct NpcScheduler {
     minimum_delay_seconds: f64,
     maximum_backoff_seconds: f64,
     round_robin_index: usize,
-    /// Single slot, last write wins, consumed once.
+    /// Ordinary turn-taking handoff. NPC speech and sound nudges still use the
+    /// legacy last-write-wins slot.
     priority_actor_id: Option<ActorId>,
+    /// Protected reactions to player speech, oldest first and de-duplicated.
+    ///
+    /// This is deliberately separate from `priority_actor_id`: a background
+    /// NPC reply can finish in the same poll as STT and hand its addressee the
+    /// ordinary slot. That must not erase the listener the player just woke.
+    player_reactions: VecDeque<ActorId>,
     in_flight: Option<InFlight>,
     /// A finished turn the floor would not let us apply yet.
     held_result: Option<Completion>,
@@ -134,6 +147,7 @@ impl NpcScheduler {
             maximum_backoff_seconds,
             round_robin_index: 0,
             priority_actor_id: None,
+            player_reactions: VecDeque::new(),
             in_flight: None,
             held_result: None,
             // The first turn is eligible immediately.
@@ -168,11 +182,22 @@ impl NpcScheduler {
         self.in_flight.as_ref().map(|flight| &flight.actor_id)
     }
 
-    /// Who has been handed the next selection slot, if anyone. Consumed on the
-    /// next submission — the engine's sound nudge and the post-`say` handoff both
-    /// write it, and the tests read it.
+    /// Whether the outstanding prompt was protected player-speech work.
+    ///
+    /// The engine uses this to ignore only conversation-floor holds belonging
+    /// to speech the player cannot hear. Ordinary turns remain globally paced.
+    pub fn in_flight_is_player_reaction(&self) -> bool {
+        self.in_flight
+            .as_ref()
+            .is_some_and(|flight| flight.player_reaction)
+    }
+
+    /// Who has been handed the next selection slot, if anyone. Protected player
+    /// reactions are reported before the ordinary sound/post-`say` slot.
     pub fn priority_actor_id(&self) -> Option<&ActorId> {
-        self.priority_actor_id.as_ref()
+        self.player_reactions
+            .front()
+            .or(self.priority_actor_id.as_ref())
     }
 
     /// Whether a finished turn is parked waiting for the floor.
@@ -211,6 +236,32 @@ impl NpcScheduler {
         if immediate {
             self.next_turn_at = self.next_turn_at.min(now);
         }
+        true
+    }
+
+    /// Queue the nearest listener to fresh player speech as protected work.
+    ///
+    /// Unlike ordinary NPC handoffs, player reactions are FIFO, de-duplicated,
+    /// immediate, and cannot be overwritten before submission. If the same
+    /// actor is already thinking, one queued follow-up remains necessary: that
+    /// in-flight prompt cannot contain the words that arrived after it was
+    /// rendered.
+    pub fn prioritize_player_reaction(
+        &mut self,
+        world: &World,
+        actor_id: &ActorId,
+        now: f64,
+    ) -> bool {
+        let Some(actor) = world.characters.get(actor_id) else {
+            return false;
+        };
+        if actor.control() != Control::Llm {
+            return false;
+        }
+        if !self.player_reactions.contains(actor_id) {
+            self.player_reactions.push_back(actor_id.clone());
+        }
+        self.next_turn_at = self.next_turn_at.min(now);
         true
     }
 
@@ -379,6 +430,9 @@ impl NpcScheduler {
     ) {
         let backoff = self.backoff_after_failure();
         self.next_turn_at = now + backoff;
+        if flight.player_reaction {
+            self.requeue_player_reaction_front(&flight.actor_id);
+        }
 
         let actor = world
             .characters
@@ -429,7 +483,14 @@ impl NpcScheduler {
         events: &mut Vec<SchedulerEvent>,
     ) {
         self.provider_failures = 0;
-        self.next_turn_at = now + self.minimum_delay_seconds;
+        // A player reaction may have arrived while this request was in flight.
+        // Preserve its immediate wake-up instead of replacing it with the
+        // ordinary inter-turn delay as the completed background turn applies.
+        self.next_turn_at = if self.player_reactions.is_empty() {
+            now + self.minimum_delay_seconds
+        } else {
+            now
+        };
 
         let actor = world
             .characters
@@ -519,7 +580,7 @@ impl NpcScheduler {
         // consumed — BEFORE the validity check: a skipped actor still burns its
         // turn, and so do a failed render and a refused submit. Intentional
         // (scheduler.md risk 8).
-        let actor_id = self.select_next_actor();
+        let (actor_id, player_reaction) = self.select_next_actor();
         let Some(actor) = world.characters.get(&actor_id) else {
             // Silently skipped, with no delay change, so the very next poll
             // selects the following actor. Only reachable if the world mutated
@@ -543,6 +604,9 @@ impl NpcScheduler {
                     .get_mut(&actor_id)
                     .expect("the actor exists");
                 actor.state.inbox.push(SYSTEM_PROMPT_FAILED.to_string());
+                if player_reaction {
+                    self.requeue_player_reaction_front(&actor_id);
+                }
                 self.next_turn_at = now + self.minimum_delay_seconds.max(1.0);
                 events.push(SchedulerEvent::Diagnostic(format!(
                     "[smart actors] prompt for {actor_name} failed: {error}"
@@ -561,6 +625,7 @@ impl NpcScheduler {
                 self.in_flight = Some(InFlight {
                     actor_id: actor_id.clone(),
                     request_id,
+                    player_reaction,
                     drained_events,
                     presented,
                     prompt,
@@ -579,6 +644,9 @@ impl NpcScheduler {
                 prepend(&mut actor.state.inbox, drained_events);
                 prepend(&mut actor.state.pending_history, presented);
                 actor.state.inbox.push(SYSTEM_WORKER_BUSY.to_string());
+                if player_reaction {
+                    self.requeue_player_reaction_front(&actor_id);
+                }
                 self.next_turn_at = now + self.minimum_delay_seconds.max(1.0);
                 events.push(SchedulerEvent::Diagnostic(format!(
                     "[smart actors] could not queue {actor_name}'s turn: {busy}"
@@ -592,11 +660,15 @@ impl NpcScheduler {
         }
     }
 
-    /// The priority slot wins once and does NOT advance the round robin, so the
-    /// rotation resumes exactly where it left off (`scheduler.py:360-367`).
-    fn select_next_actor(&mut self) -> ActorId {
+    /// Protected player reactions win first, then the ordinary priority slot.
+    /// Neither advances the round robin, so the rotation resumes exactly where
+    /// it left off (`scheduler.py:360-367`).
+    fn select_next_actor(&mut self) -> (ActorId, bool) {
+        if let Some(actor_id) = self.player_reactions.pop_front() {
+            return (actor_id, true);
+        }
         if let Some(actor_id) = self.priority_actor_id.take() {
-            return actor_id;
+            return (actor_id, false);
         }
         debug_assert!(
             !self.order.is_empty(),
@@ -604,7 +676,18 @@ impl NpcScheduler {
         );
         let actor_id = self.order[self.round_robin_index % self.order.len()].clone();
         self.round_robin_index = (self.round_robin_index + 1) % self.order.len();
-        actor_id
+        (actor_id, false)
+    }
+
+    fn requeue_player_reaction_front(&mut self, actor_id: &ActorId) {
+        if let Some(index) = self
+            .player_reactions
+            .iter()
+            .position(|queued| queued == actor_id)
+        {
+            self.player_reactions.remove(index);
+        }
+        self.player_reactions.push_front(actor_id.clone());
     }
 }
 

@@ -912,12 +912,15 @@ fn apply_status(
     if subsystem == "llm" {
         runtime.observe_llm_status(&state, actor_id.as_ref());
     }
-    let actor = actor_id
-        .as_ref()
-        .and_then(|id| mirror.actor(id))
+    let actor = actor_id.as_ref().and_then(|id| mirror.actor(id));
+    let actor_name = actor.map(|actor| actor.name_for_player.clone());
+    let nearby_thinking_actor = actor
+        .filter(|actor| actor_is_near_player(actor, mirror))
         .map(|actor| actor.name_for_player.clone());
-    hud.connection_detail = match (subsystem, state.as_str(), actor) {
-        ("llm", "thinking", Some(actor)) => format!("{actor} is thinking…"),
+    hud.connection_detail = match (subsystem, state.as_str(), actor_name.as_deref()) {
+        ("llm", "thinking", _) => nearby_thinking_actor
+            .map(|actor| format!("{actor} is thinking…"))
+            .unwrap_or_else(|| "Background actors are thinking…".into()),
         ("stt", "transcribing", _) => "Transcribing your speech…".into(),
         ("tts", "synthesizing", Some(actor)) => format!("Preparing {actor}'s voice…"),
         (_, state, _) => message
@@ -935,6 +938,18 @@ fn apply_status(
     {
         hud.toast(truncate_owned(message, 300));
     }
+}
+
+fn actor_is_near_player(actor: &model::ActorSnapshot, mirror: &model::WorldMirror) -> bool {
+    let Some(player) = mirror
+        .player_id()
+        .and_then(|player_id| mirror.actor(player_id))
+    else {
+        return false;
+    };
+    let actor_position: Vec3 = actor.position_m.into();
+    let player_position: Vec3 = player.position_m.into();
+    actor_position.distance_squared(player_position) <= HEARING_RADIUS_M * HEARING_RADIUS_M
 }
 
 /// The player-facing sentence one world event deserves, or `None` when it is
@@ -1287,6 +1302,75 @@ mod tests {
             &mut hud,
         );
         assert!(runtime.thinking_actor().is_none());
+    }
+
+    #[test]
+    fn thinking_hud_names_only_actors_within_conversation_range() {
+        let mut mirror = model::WorldMirror::default();
+        mirror
+            .replace_snapshot(model::WorldSnapshot {
+                world_revision: 1,
+                player_id: model::ActorId("player".into()),
+                actors: vec![
+                    model::ActorSnapshot {
+                        id: model::ActorId("player".into()),
+                        name_for_player: "You".into(),
+                        control: model::ActorControl::Player,
+                        position_m: model::Position::new(0.0, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "player".into(),
+                        holds: vec![],
+                    },
+                    model::ActorSnapshot {
+                        id: model::ActorId("near".into()),
+                        name_for_player: "Near".into(),
+                        control: model::ActorControl::Llm,
+                        position_m: model::Position::new(HEARING_RADIUS_M, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "near".into(),
+                        holds: vec![],
+                    },
+                    model::ActorSnapshot {
+                        id: model::ActorId("far".into()),
+                        name_for_player: "Far".into(),
+                        control: model::ActorControl::Llm,
+                        position_m: model::Position::new(HEARING_RADIUS_M + 0.01, 0.0, 0.0)
+                            .unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "far".into(),
+                        holds: vec![],
+                    },
+                ],
+                items: vec![],
+                offers: vec![],
+            })
+            .unwrap();
+        let mut runtime = SmartActorRuntime::starting(false);
+        let mut hud = hud::SmartActorHudState::default();
+
+        apply_status(
+            StatusEvent::llm(
+                "thinking",
+                Some(cathedral_sim::ActorId::from_raw("far")),
+                None,
+            ),
+            &mirror,
+            &mut runtime,
+            &mut hud,
+        );
+        assert_eq!(hud.connection_detail, "Background actors are thinking…");
+
+        apply_status(
+            StatusEvent::llm(
+                "thinking",
+                Some(cathedral_sim::ActorId::from_raw("near")),
+                None,
+            ),
+            &mirror,
+            &mut runtime,
+            &mut hud,
+        );
+        assert_eq!(hud.connection_detail, "Near is thinking…");
     }
 
     /// The cloud and local ears are independent: the streaming gate keys off
