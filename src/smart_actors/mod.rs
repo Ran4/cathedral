@@ -1409,6 +1409,13 @@ mod tests {
                 .resource::<area_debug::AreaDebugState>()
                 .is_enabled()
         );
+        assert_eq!(
+            app.world()
+                .resource::<area_debug::AreaDebugState>()
+                .visible_area_ids()
+                .len(),
+            4
+        );
         let world = app.world_mut();
         assert_eq!(
             world

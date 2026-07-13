@@ -146,6 +146,13 @@ pub struct Area {
     pub boxes: Vec<AreaBox>,
 }
 
+/// One logical area ranked by horizontal distance from a query position.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NearestArea<'a> {
+    pub area: &'a Area,
+    pub horizontal_distance_m: f64,
+}
+
 /// The validated, authoritative place map.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -286,6 +293,39 @@ impl AreaMap {
             .find(|area| area.boxes.iter().any(|bounds| bounds.contains(position)))
     }
 
+    /// Logical areas nearest to `position`, ordered by distance and then stable
+    /// ID. Distance is measured horizontally to the nearest point on any box
+    /// in the area's union. The maximum distance is inclusive.
+    pub fn nearest_areas(
+        &self,
+        position: Vec3,
+        maximum_distance_m: f64,
+        limit: usize,
+    ) -> Vec<NearestArea<'_>> {
+        if !maximum_distance_m.is_finite() || maximum_distance_m < 0.0 || limit == 0 {
+            return Vec::new();
+        }
+        let maximum_squared = maximum_distance_m * maximum_distance_m;
+        let mut nearest: Vec<NearestArea<'_>> = self
+            .areas
+            .iter()
+            .filter_map(|area| {
+                let distance_squared = nearest_horizontal_point(area, position)?.0;
+                (distance_squared <= maximum_squared).then_some(NearestArea {
+                    area,
+                    horizontal_distance_m: distance_squared.sqrt(),
+                })
+            })
+            .collect();
+        nearest.sort_by(|left, right| {
+            left.horizontal_distance_m
+                .total_cmp(&right.horizontal_distance_m)
+                .then_with(|| left.area.id.cmp(&right.area.id))
+        });
+        nearest.truncate(limit);
+        nearest
+    }
+
     /// Resolve the exact prompt description for a world position.
     pub fn location_description(&self, position: Vec3) -> Option<String> {
         if let Some(area) = self.containing_area(position) {
@@ -294,19 +334,7 @@ impl AreaMap {
 
         let mut nearest: Option<(&Area, f64, Vec3)> = None;
         for area in &self.areas {
-            let mut area_nearest: Option<(f64, Vec3)> = None;
-            for bounds in &area.boxes {
-                let point = bounds.nearest_horizontal_point(position);
-                let distance_squared =
-                    (position.x - point.x).powi(2) + (position.z - point.z).powi(2);
-                if area_nearest
-                    .as_ref()
-                    .is_none_or(|(best, _)| distance_squared < *best)
-                {
-                    area_nearest = Some((distance_squared, point));
-                }
-            }
-            let Some((distance_squared, point)) = area_nearest else {
+            let Some((distance_squared, point)) = nearest_horizontal_point(area, position) else {
                 continue;
             };
             let replace = match nearest {
@@ -339,6 +367,21 @@ impl AreaMap {
         let index = ((clockwise / sector_width + 0.5).floor() as usize) % COMPASS_SECTORS.len();
         COMPASS_SECTORS[index]
     }
+}
+
+fn nearest_horizontal_point(area: &Area, position: Vec3) -> Option<(f64, Vec3)> {
+    let mut nearest: Option<(f64, Vec3)> = None;
+    for bounds in &area.boxes {
+        let point = bounds.nearest_horizontal_point(position);
+        let distance_squared = (position.x - point.x).powi(2) + (position.z - point.z).powi(2);
+        if nearest
+            .as_ref()
+            .is_none_or(|(best, _)| distance_squared < *best)
+        {
+            nearest = Some((distance_squared, point));
+        }
+    }
+    nearest
 }
 
 fn valid_area_id(id: &str) -> bool {
@@ -404,8 +447,11 @@ mod tests {
                 Vec3::new(0.0, 0.91, 60.0),
                 "Inside the Lanthorn (Great Church of Saint Ambrelle)",
             ),
-            (Vec3::new(-72.0, 0.91, 190.0), "Near the Dawn Bearer"),
-            (Vec3::new(72.0, 0.91, 190.0), "Near the Seraph"),
+            (
+                Vec3::new(-72.0, 0.91, 190.0),
+                "Next to the Dawn Bearer statue",
+            ),
+            (Vec3::new(72.0, 0.91, 190.0), "Next to the Seraph statue"),
         ] {
             assert_eq!(map.location_description(position).unwrap(), label);
         }
@@ -589,5 +635,42 @@ mod tests {
             map.location_description(Vec3::new(5.0, 20.0, 5.0)).unwrap(),
             "0 meters from The Square"
         );
+    }
+
+    #[test]
+    fn nearest_area_lists_limit_range_and_tie_break_by_stable_id() {
+        let areas = (0..12)
+            .rev()
+            .map(|index| {
+                let id = format!("area_{index:02}");
+                let (min_x, max_x) = match index {
+                    0 => (10.0, 11.0),
+                    1 => (-11.0, -10.0),
+                    3 => (350.0, 351.0),
+                    _ => (index as f64 * 100.0, index as f64 * 100.0 + 1.0),
+                };
+                area(
+                    &id,
+                    &format!("Area {index}"),
+                    &bounds((min_x, 0.0, 0.0), (max_x, 1.0, 1.0)),
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        let map = map(&areas);
+        let nearest = map.nearest_areas(Vec3::ZERO, 350.0, 8);
+        let ids: Vec<&str> = nearest
+            .iter()
+            .map(|match_| match_.area.id.as_str())
+            .collect();
+        assert_eq!(ids, ["area_00", "area_01", "area_02", "area_03"]);
+        assert_eq!(nearest[0].horizontal_distance_m, 10.0);
+        assert_eq!(nearest[1].horizontal_distance_m, 10.0);
+        assert_eq!(nearest[3].horizontal_distance_m, 350.0);
+
+        let limited = map.nearest_areas(Vec3::ZERO, 2_000.0, 8);
+        assert_eq!(limited.len(), 8);
+        assert_eq!(limited.last().unwrap().area.id, "area_07");
+        assert!(map.nearest_areas(Vec3::ZERO, 350.0, 0).is_empty());
     }
 }

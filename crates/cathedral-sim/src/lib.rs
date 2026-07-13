@@ -37,7 +37,9 @@ pub mod traits;
 pub mod world;
 
 pub use actions::{apply_action, apply_action_at};
-pub use areas::{Area, AreaBox, AreaMap, AreaMapError, AxisDirection, CoordinateSystem};
+pub use areas::{
+    Area, AreaBox, AreaMap, AreaMapError, AxisDirection, CoordinateSystem, NearestArea,
+};
 pub use character::{Character, CharacterSheet, CharacterState, Control};
 pub use engine::{Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage};
 pub use error::{

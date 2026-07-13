@@ -135,10 +135,10 @@ Implement the complete spatial system above, but initially add only:
   large box which contains the building.
 * **Inside the Lanthorn** — the accessible cathedral interior, labelled
   `Inside the Lanthorn (Great Church of Saint Ambrelle)`.
-* **Near the Dawn Bearer** — the vicinity of the existing Dawn Bearer approach
-  monument, labelled `Near the Dawn Bearer`.
-* **Near the Seraph** — the vicinity of the existing Seraph approach monument,
-  labelled `Near the Seraph`.
+* **Next to the Dawn Bearer statue** — the vicinity of the existing Dawn Bearer
+  approach monument, labelled `Next to the Dawn Bearer statue`.
+* **Next to the Seraph statue** — the vicinity of the existing Seraph approach
+  monument, labelled `Next to the Seraph statue`.
 
 Use clear final display labels for the two monument areas rather than `"..."`.
 Their boxes must also remain disjoint from the Lanthorn grounds and each other.
@@ -152,7 +152,9 @@ Implement an area debug mode toggled by `B`.
 
 When enabled:
 
-* draw every area box as a skeleton/wireframe box,
+* select at most the eight closest logical areas whose nearest horizontal point
+  is no more than 350 meters from the player,
+* draw every box belonging to those selected areas as a skeleton/wireframe box,
 * show its area label and stable ID in the game world,
 * distinguish multiple boxes belonging to the same logical area by index, and
 * show the player's currently resolved location description so containment and

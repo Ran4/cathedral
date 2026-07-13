@@ -5,6 +5,8 @@
 //! labels are therefore a view of authoritative simulation data rather than a
 //! second set of coordinates.
 
+use std::collections::BTreeSet;
+
 use bevy::prelude::*;
 use cathedral_sim::{Area, AreaBox, AreaMap, Vec3 as SimVec3};
 
@@ -14,10 +16,13 @@ use super::local_engine::LocalEngine;
 
 const BOX_LABEL_WIDTH_PX: f32 = 280.0;
 const BOX_LABEL_Y_OFFSET_PX: f32 = 25.0;
+const MAX_VISIBLE_AREAS: usize = 8;
+const MAX_VISIBLE_DISTANCE_M: f64 = 350.0;
 
 #[derive(Resource, Debug, Default)]
 pub(super) struct AreaDebugState {
     enabled: bool,
+    visible_area_ids: BTreeSet<String>,
 }
 
 impl AreaDebugState {
@@ -25,10 +30,16 @@ impl AreaDebugState {
     pub(super) fn is_enabled(&self) -> bool {
         self.enabled
     }
+
+    #[cfg(test)]
+    pub(super) fn visible_area_ids(&self) -> &BTreeSet<String> {
+        &self.visible_area_ids
+    }
 }
 
 #[derive(Component, Debug)]
 pub(super) struct AreaBoxLabel {
+    area_id: String,
     anchor_m: Vec3,
 }
 
@@ -102,6 +113,7 @@ pub(super) fn spawn_area_debug_ui(
             commands.spawn((
                 Name::new(format!("Area debug: {} box {box_index}", area.id)),
                 AreaBoxLabel {
+                    area_id: area.id.clone(),
                     anchor_m: box_label_anchor(bounds),
                 },
                 Text::new(box_label_text(area, box_index)),
@@ -147,6 +159,7 @@ pub(super) fn update_area_debug_ui(
         return;
     };
     if !state.enabled {
+        state.visible_area_ids.clear();
         *player_visibility = Visibility::Hidden;
         hide_box_labels(&mut box_labels);
         return;
@@ -154,24 +167,28 @@ pub(super) fn update_area_debug_ui(
     *player_visibility = Visibility::Inherited;
 
     let Some(map) = engine.area_map() else {
+        state.visible_area_ids.clear();
         player_text.0 = "AREA DEBUG  ·  area map unavailable".to_string();
         hide_box_labels(&mut box_labels);
         return;
     };
-    player_text.0 = match players.single() {
-        Ok(player) => {
-            let position = player.translation();
-            let description = map
-                .location_description(SimVec3::new(
-                    f64::from(position.x),
-                    f64::from(position.y),
-                    f64::from(position.z),
-                ))
-                .unwrap_or_else(|| "No areas are defined".to_string());
-            format!("AREA DEBUG  ·  Player: {description}")
-        }
-        Err(_) => "AREA DEBUG  ·  player transform unavailable".to_string(),
+    let Ok(player) = players.single() else {
+        state.visible_area_ids.clear();
+        player_text.0 = "AREA DEBUG  ·  player transform unavailable".to_string();
+        hide_box_labels(&mut box_labels);
+        return;
     };
+    let position = player.translation();
+    let sim_position = SimVec3::new(
+        f64::from(position.x),
+        f64::from(position.y),
+        f64::from(position.z),
+    );
+    state.visible_area_ids = visible_area_ids(map, sim_position);
+    let description = map
+        .location_description(sim_position)
+        .unwrap_or_else(|| "No areas are defined".to_string());
+    player_text.0 = format!("AREA DEBUG  ·  Player: {description}");
 
     let Ok((camera, camera_transform)) = cameras.single() else {
         hide_box_labels(&mut box_labels);
@@ -182,6 +199,10 @@ pub(super) fn update_area_debug_ui(
         return;
     };
     for (label, mut node, mut visibility) in &mut box_labels {
+        if !state.visible_area_ids.contains(&label.area_id) {
+            *visibility = Visibility::Hidden;
+            continue;
+        }
         let Ok(viewport) = camera.world_to_viewport(camera_transform, label.anchor_m) else {
             *visibility = Visibility::Hidden;
             continue;
@@ -200,8 +221,9 @@ pub(super) fn update_area_debug_ui(
     }
 }
 
-/// Draw all twelve edges of every area box. Multiple boxes in one logical area
-/// share a color; their projected labels carry the distinguishing box index.
+/// Draw all twelve edges of each selected area box. Multiple boxes in one
+/// logical area share a color; their projected labels carry the distinguishing
+/// box index.
 pub(super) fn draw_area_boxes(
     state: Res<AreaDebugState>,
     engine: NonSend<LocalEngine>,
@@ -213,16 +235,26 @@ pub(super) fn draw_area_boxes(
     let Some(map) = engine.area_map() else {
         return;
     };
-    draw_map_boxes(map, &mut gizmos);
+    draw_map_boxes(map, &state.visible_area_ids, &mut gizmos);
 }
 
-fn draw_map_boxes(map: &AreaMap, gizmos: &mut Gizmos) {
+fn draw_map_boxes(map: &AreaMap, visible_area_ids: &BTreeSet<String>, gizmos: &mut Gizmos) {
     for (area_index, area) in map.areas.iter().enumerate() {
+        if !visible_area_ids.contains(&area.id) {
+            continue;
+        }
         let color = area_color(area_index);
         for bounds in &area.boxes {
             gizmos.cube(box_transform(bounds), color);
         }
     }
+}
+
+fn visible_area_ids(map: &AreaMap, position: SimVec3) -> BTreeSet<String> {
+    map.nearest_areas(position, MAX_VISIBLE_DISTANCE_M, MAX_VISIBLE_AREAS)
+        .into_iter()
+        .map(|nearest| nearest.area.id.clone())
+        .collect()
 }
 
 fn hide_box_labels(labels: &mut BoxLabelQuery) {
