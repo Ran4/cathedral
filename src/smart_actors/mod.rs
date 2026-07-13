@@ -144,6 +144,7 @@ pub struct SmartActorRuntime {
     next_tts_request: u64,
     pub fake_backend: bool,
     pub mirror_revision: Option<u64>,
+    thinking_actor_id: Option<model::ActorId>,
 }
 
 impl SmartActorRuntime {
@@ -163,11 +164,28 @@ impl SmartActorRuntime {
             next_tts_request: 0,
             fake_backend,
             mirror_revision: None,
+            thinking_actor_id: None,
         }
     }
 
     pub fn interactions_enabled(&self) -> bool {
         self.connected && self.ready
+    }
+
+    fn thinking_actor(&self) -> Option<&model::ActorId> {
+        self.thinking_actor_id.as_ref()
+    }
+
+    /// The scheduler has one global request slot. Actor-specific terminal rows
+    /// only clear the actor they name, so a stale row cannot hide a newer turn.
+    fn observe_llm_status(&mut self, state: &str, actor_id: Option<&model::ActorId>) {
+        if state == "thinking" {
+            self.thinking_actor_id = actor_id.cloned();
+        } else if actor_id.is_some_and(|actor_id| self.thinking_actor() == Some(actor_id))
+            || (actor_id.is_none() && state == "unavailable")
+        {
+            self.thinking_actor_id = None;
+        }
     }
 }
 
@@ -305,6 +323,7 @@ impl Plugin for SmartActorsPlugin {
                 PostUpdate,
                 (
                     actors::position_actor_name_labels,
+                    actors::update_thinking_indicators,
                     actors::animate_offered_items,
                     speech::receive_speech_events,
                     speech::receive_tts_clips,
@@ -391,6 +410,7 @@ fn drain_bridge_messages(
             bridge::BridgeEvent::ProcessStarted => {
                 runtime.connected = true;
                 runtime.ready = false;
+                runtime.thinking_actor_id = None;
                 hud.connection = hud::ConnectionUiState::Starting;
                 hud.connection_detail = "Actor engine starting; handshaking…".into();
                 let Ok(player) = players.single() else {
@@ -449,6 +469,7 @@ fn drain_bridge_messages(
                 runtime.tts_local_available = false;
                 runtime.tts_selected = bridge::TtsBackend::Off;
                 runtime.tts_selection_pending = None;
+                runtime.thinking_actor_id = None;
                 interaction.clear_pending();
                 microphone_input.clear_on_disconnect();
                 hud.clear_transients_on_disconnect(truncate_owned(message, 300));
@@ -483,6 +504,7 @@ fn process_engine_message(
             capabilities,
             snapshot,
         } => {
+            runtime.thinking_actor_id = None;
             // A rejected first snapshot means the seeded world itself is
             // unrenderable — a sim bug, not a lost message, and there is no
             // resync left to ask for. The handshake simply never completes and
@@ -647,7 +669,7 @@ fn process_engine_message(
                 hud.toast(format!("{code}: {}", truncate_owned(message, 260)));
             }
         }
-        EngineMessage::Status(status) => apply_status(status, mirror, hud),
+        EngineMessage::Status(status) => apply_status(status, mirror, runtime, hud),
         EngineMessage::TtsReady {
             event_id,
             wav_bytes,
@@ -879,17 +901,20 @@ fn request_tts_backend(
 fn apply_status(
     status: StatusEvent,
     mirror: &model::WorldMirror,
+    runtime: &mut SmartActorRuntime,
     hud: &mut hud::SmartActorHudState,
 ) {
     let subsystem = status.subsystem.as_str();
     let state = truncate_owned(status.state, 64);
     let message = status.message.map(|message| truncate_owned(message, 300));
     let backend = status.backend.map(|backend| truncate_owned(backend, 16));
-    let actor = status
-        .actor_id
+    let actor_id = status.actor_id.as_ref().map(model::actor_id_from_sim);
+    if subsystem == "llm" {
+        runtime.observe_llm_status(&state, actor_id.as_ref());
+    }
+    let actor = actor_id
         .as_ref()
-        .map(model::actor_id_from_sim)
-        .and_then(|id| mirror.actor(&id))
+        .and_then(|id| mirror.actor(id))
         .map(|actor| actor.name_for_player.clone());
     hud.connection_detail = match (subsystem, state.as_str(), actor) {
         ("llm", "thinking", Some(actor)) => format!("{actor} is thinking…"),
@@ -1208,6 +1233,60 @@ mod tests {
             "Connected; unavailable: microphone transcription, NPC voice audio"
         );
         assert!(connection_detail_for_capabilities(false, true, true).contains("NPC cognition"));
+    }
+
+    #[test]
+    fn llm_status_tracks_the_actor_for_the_overhead_thinking_indicator() {
+        let mirror = model::WorldMirror::default();
+        let mut runtime = SmartActorRuntime::starting(false);
+        let mut hud = hud::SmartActorHudState::default();
+        let ilse = cathedral_sim::ActorId::from_raw("ilse");
+        let sven = cathedral_sim::ActorId::from_raw("sven");
+
+        apply_status(
+            StatusEvent::llm("thinking", Some(ilse.clone()), None),
+            &mirror,
+            &mut runtime,
+            &mut hud,
+        );
+        assert_eq!(
+            runtime.thinking_actor().map(|id| id.0.as_str()),
+            Some("ilse")
+        );
+
+        // A late terminal row for a different actor cannot hide Ilse's newer
+        // turn, but Ilse's own terminal row does.
+        apply_status(
+            StatusEvent::llm("idle", Some(sven), None),
+            &mirror,
+            &mut runtime,
+            &mut hud,
+        );
+        assert_eq!(
+            runtime.thinking_actor().map(|id| id.0.as_str()),
+            Some("ilse")
+        );
+        apply_status(
+            StatusEvent::llm("idle", Some(ilse.clone()), None),
+            &mirror,
+            &mut runtime,
+            &mut hud,
+        );
+        assert!(runtime.thinking_actor().is_none());
+
+        apply_status(
+            StatusEvent::llm("thinking", Some(ilse), None),
+            &mirror,
+            &mut runtime,
+            &mut hud,
+        );
+        apply_status(
+            StatusEvent::llm("unavailable", None, Some("offline".into())),
+            &mirror,
+            &mut runtime,
+            &mut hud,
+        );
+        assert!(runtime.thinking_actor().is_none());
     }
 
     /// The cloud and local ears are independent: the streaming gate keys off

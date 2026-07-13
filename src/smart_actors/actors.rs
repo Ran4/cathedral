@@ -11,12 +11,16 @@ use bevy::prelude::*;
 
 use crate::{controller::PlayerCamera, fonts::CathedralFonts};
 
+use super::SmartActorRuntime;
 use super::model::{ActorControl, ActorId, ItemId, WorldMirror};
 use super::targeting::ActorTarget;
 
 const NAME_ANCHOR_Y: f32 = 0.9;
 const MAX_NAME_LABEL_DISTANCE_M: f32 = 80.0;
 const MAX_VISIBLE_NAME_LABELS: usize = 20;
+const THINKING_INDICATOR_WIDTH_PX: f32 = 38.0;
+const THINKING_INDICATOR_HEAD_OFFSET_PX: f32 = 68.0;
+const THINKING_DOT_STEP_SECONDS: f32 = 0.32;
 const SPEECH_ANCHOR_Y: f32 = 1.05;
 const OFFER_ANCHOR_Y: f32 = 2.02;
 const OFFER_FAN_SPACING_M: f32 = 0.48;
@@ -43,6 +47,10 @@ pub(crate) struct NameAnchor(ActorId);
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ActorNameLabel(ActorId);
+
+/// Small animated thought bubble projected above one actor's head.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ThinkingIndicator(ActorId);
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ActorOutfit(ActorId);
@@ -133,6 +141,7 @@ pub(crate) fn setup_actor_visual_assets(
 ///
 /// Player-controlled records are represented by the controller's existing root
 /// and therefore never get a duplicate primitive body here.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn reconcile_actor_views(
     mut commands: Commands,
     mirror: Res<WorldMirror>,
@@ -140,6 +149,7 @@ pub(crate) fn reconcile_actor_views(
     fonts: Option<Res<CathedralFonts>>,
     mut roots: Query<(Entity, &ActorId, &mut Transform), With<ActorView>>,
     mut labels: Query<(Entity, &ActorNameLabel, &mut Text)>,
+    indicators: Query<(Entity, &ThinkingIndicator)>,
     mut outfits: Query<(&ActorOutfit, &mut MeshMaterial3d<StandardMaterial>)>,
 ) {
     let actor_snapshots: Vec<_> = mirror
@@ -188,6 +198,12 @@ pub(crate) fn reconcile_actor_views(
                 text.0.clone_from(&actor.name_for_player);
             }
         } else if !desired_ids.contains(&label.0) {
+            commands.entity(entity).despawn();
+        }
+    }
+
+    for (entity, indicator) in &indicators {
+        if !desired_ids.contains(&indicator.0) {
             commands.entity(entity).despawn();
         }
     }
@@ -266,10 +282,10 @@ fn spawn_actor(
     // is rendered by the existing 3D + UI feature set and always faces the eye.
     commands.spawn((
         Name::new(format!("Actor name: {}", actor.name_for_player)),
-        ActorNameLabel(actor_id),
+        ActorNameLabel(actor_id.clone()),
         Text::new(actor.name_for_player.clone()),
         TextFont {
-            font: name_font,
+            font: name_font.clone(),
             font_size: FontSize::Px(18.0),
             ..default()
         },
@@ -285,6 +301,34 @@ fn spawn_actor(
         },
         BackgroundColor(Color::srgba(0.025, 0.030, 0.040, 0.78)),
         ZIndex(4),
+        Visibility::Hidden,
+    ));
+
+    commands.spawn((
+        Name::new(format!(
+            "Actor thinking indicator: {}",
+            actor.name_for_player
+        )),
+        ThinkingIndicator(actor_id),
+        Text::new("..."),
+        TextFont {
+            font: name_font,
+            font_size: FontSize::Px(20.0),
+            ..default()
+        },
+        TextColor(Color::srgb(0.10, 0.08, 0.045)),
+        TextShadow::default(),
+        TextLayout::justify(Justify::Center),
+        Node {
+            position_type: PositionType::Absolute,
+            width: Val::Px(THINKING_INDICATOR_WIDTH_PX),
+            min_height: Val::Px(26.0),
+            padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
+            border_radius: BorderRadius::all(Val::Px(13.0)),
+            ..default()
+        },
+        BackgroundColor(Color::srgba(0.96, 0.90, 0.72, 0.94)),
+        ZIndex(5),
         Visibility::Hidden,
     ));
 }
@@ -325,6 +369,68 @@ pub(crate) fn position_actor_name_labels(
         node.left = Val::Px(viewport_position.x - 54.0);
         node.top = Val::Px(viewport_position.y - 34.0);
         *visibility = Visibility::Inherited;
+    }
+}
+
+/// Shows an animated ellipsis above the actor whose LLM request is in flight.
+pub(crate) fn update_thinking_indicators(
+    time: Res<Time>,
+    runtime: Res<SmartActorRuntime>,
+    cameras: Query<(&Camera, &GlobalTransform), With<PlayerCamera>>,
+    anchors: Query<(&NameAnchor, &GlobalTransform)>,
+    mut indicators: Query<(&ThinkingIndicator, &mut Text, &mut Node, &mut Visibility)>,
+) {
+    let Ok((camera, camera_transform)) = cameras.single() else {
+        for (_, _, _, mut visibility) in &mut indicators {
+            *visibility = Visibility::Hidden;
+        }
+        return;
+    };
+    let anchor_positions: HashMap<_, _> = anchors
+        .iter()
+        .map(|(anchor, transform)| (anchor.0.clone(), transform.translation()))
+        .collect();
+    let active_actor = runtime.thinking_actor();
+    let maximum_distance_squared = MAX_NAME_LABEL_DISTANCE_M * MAX_NAME_LABEL_DISTANCE_M;
+    let dots = thinking_dots(time.elapsed_secs());
+
+    for (indicator, mut text, mut node, mut visibility) in &mut indicators {
+        if active_actor != Some(&indicator.0) {
+            *visibility = Visibility::Hidden;
+            continue;
+        }
+        let Some(world_position) = anchor_positions.get(&indicator.0) else {
+            *visibility = Visibility::Hidden;
+            continue;
+        };
+        if camera_transform
+            .translation()
+            .distance_squared(*world_position)
+            > maximum_distance_squared
+        {
+            *visibility = Visibility::Hidden;
+            continue;
+        }
+        let Ok(viewport_position) = camera.world_to_viewport(camera_transform, *world_position)
+        else {
+            *visibility = Visibility::Hidden;
+            continue;
+        };
+
+        if text.0 != dots {
+            text.0 = dots.into();
+        }
+        node.left = Val::Px(viewport_position.x - THINKING_INDICATOR_WIDTH_PX * 0.5);
+        node.top = Val::Px(viewport_position.y - THINKING_INDICATOR_HEAD_OFFSET_PX);
+        *visibility = Visibility::Inherited;
+    }
+}
+
+fn thinking_dots(elapsed_seconds: f32) -> &'static str {
+    match ((elapsed_seconds / THINKING_DOT_STEP_SECONDS) as u32) % 3 {
+        0 => ".",
+        1 => "..",
+        _ => "...",
     }
 }
 
@@ -724,6 +830,14 @@ mod tests {
     }
 
     #[test]
+    fn thinking_ellipsis_animates_through_three_steps() {
+        assert_eq!(thinking_dots(0.0), ".");
+        assert_eq!(thinking_dots(THINKING_DOT_STEP_SECONDS), "..");
+        assert_eq!(thinking_dots(THINKING_DOT_STEP_SECONDS * 2.0), "...");
+        assert_eq!(thinking_dots(THINKING_DOT_STEP_SECONDS * 3.0), ".");
+    }
+
+    #[test]
     fn every_offer_from_one_giver_gets_a_fanned_visual() {
         let mut mirror = WorldMirror::default();
         mirror
@@ -831,6 +945,21 @@ mod tests {
             .add_systems(Startup, setup_actor_visual_assets)
             .add_systems(Update, reconcile_actor_views);
         app.update();
+
+        {
+            let world = app.world_mut();
+            let indicators: Vec<_> = world
+                .query::<(&ThinkingIndicator, &Visibility)>()
+                .iter(world)
+                .map(|(indicator, visibility)| (indicator.0.clone(), *visibility))
+                .collect();
+            assert_eq!(indicators.len(), 3);
+            assert!(
+                indicators
+                    .iter()
+                    .all(|(_, visibility)| *visibility == Visibility::Hidden)
+            );
+        }
 
         {
             let world = app.world_mut();
