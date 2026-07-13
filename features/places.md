@@ -1,74 +1,200 @@
-CURRENT STATUS: no steps has started.
+CURRENT STATUS: no steps have started.
 
-So, as per the lore (see lore/core_lore and especially,
-lore/core_lore/places.md), there's various places - squares, streets, passages, courts...
+# Make the lore's places real
 
-Right now, they're mostly imagined - they don't map to the actual game world.
-The in-game characters's positions don't map to the names given in the core lore.
+The core lore describes squares, streets, passages, courts, churches, and
+landmarks, but most of those names do not currently map to the actual game
+world. Character positions therefore do not tell the smart actors where they
+are in the shared geography of Ombreval.
 
-Note: second_sun lore is extensive; skip it, ONLY consider core_lore for now!
+During step 1 and 2, only use `lore/core_lore/`, especially `lore/core_lore/places.md`, for this
+Do not use `lore/second_sun/`  but do use it for step 3 onwards.
+But NEVER use `lore/wip_lore_please_ignore_this_is_NOT_canon/` at any point ever!
 
-so, what we want to do is:
+## Spatial model and ownership
 
-## Step 1: establish area bounding boxes
+The area map is authoritative simulation data, not prompt-only text and not a
+Bevy-only debug overlay. `cathedral-sim` owns the area types, validation,
+containment lookup, nearest-area lookup, compass directions, and the location
+description injected into actor prompts. It must remain pure and IO-free: the
+host reads the JSON as a string and passes it into the sim, as it does for other
+world data.
 
-In the game, establish bounding boxes for areas - area boxes.
+Store the source of truth at `assets/world/areas.json`. The Bevy debug layer in
+Step 2 must visualize this same parsed area map; it must not maintain a second
+copy of the coordinates.
 
-Each area is an invisible 3d box with a label.
+An **area** is a logical named place with:
 
-So, for example,
-* the grounds outside of the cathedral is the "The cathedral grounds",
-* inside of the cathedral it's "Inside of the cathedral",
-* a specific church is "inside of the church of X" and their courtyards are "The courtyard of church of X"
-* near each of the two huge statues is "Near statue of X" or "Near statue of Y"
-* Coswald's Yard -> "Coswald's Yard"
+* a stable machine-readable ID,
+* the exact display label used in prompts, and
+* one or more axis-aligned 3D bounding boxes.
 
-When we inject position data into the characters,
-we take the character's XYZ coordinates and finds the corresponding area box, and inject it as e.g.
-in the cathedral - something like "[position: Inside of the Lanthorn (Great Church of Saint Ambrelle.)]"
-or "The Draper's Reach"
+One area may need several boxes so irregular places such as the cruciform
+Lanthorn, a dogleg street, or the ground surrounding a building can be
+represented without one overly broad box. The boxes belonging to one area form
+one logical union for containment and nearest-distance calculations.
 
-If we're not inside of an area, find the closest area and show it like
+The JSON should be straightforward to inspect and modify programmatically. Use
+a schema along these lines (with real coordinates in the actual file):
 
-"30 meters north-northwest of The Draper's Reach" (distance (integer meters) + 16 directions (North, North-northeast, Northeast, East-northeast, East, East-southeast, Southeast, South-southeast, South, South-southwest, Southwest, West-southwest, West, West-northwest, Northwest, North-northwest))
+```json
+{
+  "schema_version": 1,
+  "coordinate_system": {
+    "units": "meters",
+    "north": "+x",
+    "east": "-z",
+    "up": "+y"
+  },
+  "areas": [
+    {
+      "id": "lanthorn_interior",
+      "label": "Inside the Lanthorn (Great Church of Saint Ambrelle)",
+      "boxes": [
+        {
+          "min_m": { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "max_m": { "x": 1.0, "y": 1.0, "z": 1.0 }
+        }
+      ]
+    }
+  ]
+}
+```
 
-At first, only create the system and add these boxes:
-* The cathedral - "The Lanthorn (Great Church of Saint Ambrelle)"
-* Inside of the cathedral - "Inside of The Lanthorn (Great Church of Saint Ambrelle)"
-* Near the two status - "..."
+The coordinate-system metadata is authoritative. It follows the existing
+world: the Lanthorn's west entrance is at positive Z and its east end is at
+negative Z; north is positive X.
 
-IMPLEMENT THIS FIRST, stop for user input before going for step 2.
+### Boxes must not overlap
 
-Note: the coordinates should be stored in a json file somewhere, so it's easy to programmatically/agentically
-extract things.
+Overlapping area boxes are not supported. Any overlap is a data bug which must
+be fixed in `areas.json`, not resolved through priority rules.
 
+This applies both to boxes belonging to different areas and to boxes belonging
+to the same logical area. Boxes may share faces or edges, but their interiors
+must not intersect. Containment uses an inclusive minimum and exclusive maximum
+on every axis (`min <= coordinate < max`), so adjacent boxes have deterministic
+ownership at a shared boundary.
 
-## Step 2: add a debug layer that lets us test this
+Reject invalid area data during loading with a useful error identifying both
+boxes. Also reject duplicate area IDs, empty labels or box lists, non-finite
+coordinates, and any box where `min >= max` on an axis. Do not silently choose
+one of two overlapping boxes.
 
-Implement a debug mode. Pressing B toggles debug mode.
+## Location descriptions
 
-If debug mode is on, areas should be shown as skeleton bounding boxes, and the area name should be shown in
-a label in the game world.
+Compute a character's location from their current XYZ position whenever their
+prompt is rendered. This replaces the character seed's static
+`location_description` as the prompt's authoritative location description. Keep
+the raw XYZ `position_m` in the prompt as well.
 
-## Step 3: modify game world
+If the position is inside an area box, use that area's exact label, for example:
 
-Note: implement step 1 and 2 first!
+```text
+Inside the Lanthorn (Great Church of Saint Ambrelle)
+```
 
-Find out places that are mentioned in the core lore,
-and actually modify the 3d gameworld so it matches the description of the places.
+If the position is outside every box, find the closest logical area and render:
 
-Then add the areas boxes.
+```text
+30 meters north-northwest of The Draper's Reach
+```
 
-This is going to be incredibly time-consuming, so start off with just doing one place: start with
-the Coswald's Yard.
+Use these exact rules:
 
-Important: see lore/inspiration_images/places/ for inspiration!
-Note: this has both images (that you need to look at) as well as the llm prompt that generated the images.
+* Measure horizontal Euclidean distance in the XZ plane from the character to
+  the nearest point on a box, not to the box's centre. An area's distance is the
+  minimum distance across all its boxes.
+* Round the distance to the nearest integer meter, with an exact half meter
+  rounding upward. Use `meter` only for exactly 1 and `meters` otherwise.
+* Calculate the bearing from the nearest point on the chosen box towards the
+  character, using the coordinate system declared in the JSON.
+* Quantize to the closest of 16 equal compass sectors: north,
+  north-northeast, northeast, east-northeast, east, east-southeast, southeast,
+  south-southeast, south, south-southwest, southwest, west-southwest, west,
+  west-northwest, northwest, and north-northwest.
+* If two logical areas are exactly equally near, choose the lexicographically
+  smaller stable area ID so results remain deterministic.
+* A position can be outside a 3D box while still lying directly above or below
+  its XZ footprint. In that case the horizontal distance and direction vector
+  are both zero; render `0 meters from <label>` without a compass direction.
 
-If you're uncertain about a feature, note that the written lore beats the image (feel free to look it up
-in the lore/ folder - but do ignore the lore/wip_lore_please_ignore_this_is_NOT_canon/ folder!).
+Add deterministic tests for JSON validation, shared box boundaries, rejection
+of overlaps, multi-box logical areas, containment, nearest-point distance,
+rounded integer distances, all 16 compass sectors, equal-distance tie-breaking,
+and a moved character receiving a newly computed prompt location.
 
+## Step 1: establish the first areas
 
-## Step 3: The rest of the owl
+Implement the complete spatial system above, but initially add only:
 
-Complete the rest of the places...
+* **The Lanthorn grounds** — the exterior grounds around the building, labelled
+  `The grounds of the Lanthorn (Great Church of Saint Ambrelle)`. Represent the
+  ground around the interior with several non-overlapping boxes rather than one
+  large box which contains the building.
+* **Inside the Lanthorn** — the accessible cathedral interior, labelled
+  `Inside the Lanthorn (Great Church of Saint Ambrelle)`.
+* **Near the Dawn Bearer** — the vicinity of the existing Dawn Bearer approach
+  monument, labelled `Near the Dawn Bearer`.
+* **Near the Seraph** — the vicinity of the existing Seraph approach monument,
+  labelled `Near the Seraph`.
+
+Use clear final display labels for the two monument areas rather than `"..."`.
+Their boxes must also remain disjoint from the Lanthorn grounds and each other.
+
+**IMPLEMENT ONLY STEP 1 FIRST. Stop for user review and input before starting
+Step 2.**
+
+## Step 2: add an area debug layer
+
+Implement an area debug mode toggled by `B`.
+
+When enabled:
+
+* draw every area box as a skeleton/wireframe box,
+* show its area label and stable ID in the game world,
+* distinguish multiple boxes belonging to the same logical area by index, and
+* show the player's currently resolved location description so containment and
+  nearest-area behavior can be checked while moving.
+
+Use the same parsed `assets/world/areas.json` data that the sim uses. Debug
+rendering must not affect simulation results.
+
+Stop for user review after Steps 1 and 2 work before modifying the game world.
+
+## Step 3: build Coswald's Yard
+
+Find the established descriptions of Coswald's Yard in the core lore and modify
+the 3D game world so that an actual place matches them. Then add the area's
+non-overlapping boxes to `areas.json`.
+
+This is intentionally limited to one place because authored world changes will
+be time-consuming. Inspect both the image and its generation prompt under
+`lore/inspiration_images/places/` for visual inspiration.
+
+If an inspiration image conflicts with written core lore, the written lore
+wins.
+
+Stop for user review after Coswald's Yard.
+
+## Step 4: Figure out positions for the rest of the places
+
+So, right now the game world is generic (other than the church + coswald's yard that we just implemented).
+
+But now we want to add the rest of the established places.
+
+But first, we need to figure out where these are positioned, so it all makes sense.
+
+So, act like a "(fictional) medieval city planner" and plan the rough positions of all the named places.
+Also feel free to add more places.
+
+The result should be an authoritative guide. Later on, we'll fill it in with more lore.
+
+## Step 5: the rest of the owl
+
+Implement the remaining established places one at a time, treating each place
+as its own reviewable feature: modify the world, add and validate its area
+boxes, test it in debug mode, and then continue to the next place.
+
+Follow the guide created in step 4.
