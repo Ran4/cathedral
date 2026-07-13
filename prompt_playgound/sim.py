@@ -16,7 +16,7 @@ from sounds import SOUNDS, Sound
 HEARING_RADIUS_M = 20.0
 ITEM_INTERACTION_RADIUS_M = 4.0
 PLAYER_SPEECH_MAX_CHARS = 500
-RECENT_CONVERSATION_MAX_ENTRIES = 16
+RECENT_HISTORY_MAX_ENTRIES = 16
 # Total horizontal FOV for the sound witness test. 135° is a playtesting guess;
 # config.ron `smart_actors.sounds.view_cone_degrees` overrides it per run.
 DEFAULT_VIEW_CONE_DEGREES = 135.0
@@ -105,7 +105,7 @@ class Character:
     goal: str = "None"
     memories: list[str] = field(default_factory=list)
     inbox: list[str] = field(default_factory=list)
-    recent_conversation: list[str] = field(default_factory=list)
+    recent_history: list[str] = field(default_factory=list)
     knows: set[CharIdStr] = field(default_factory=set)
 
     def __post_init__(self) -> None:
@@ -423,7 +423,9 @@ def emit_sound(
     """Emit one sound: everyone in radius hears it, witnesses see who did it.
 
     ``actor`` is None for world sounds (the town bell), which are never
-    attributable regardless of the catalog row. Returns the transcript line.
+    attributable regardless of the catalog row. Percepts land in recipients'
+    inboxes and, like speech, persist in their bounded ``recent_history``
+    (the emitter's own act included). Returns the transcript line.
     """
     if position_m is None:
         if actor is None:
@@ -442,13 +444,20 @@ def emit_sound(
             if sees(recipient, actor, world.view_cone_degrees)
         ]
     witness_ids = {witness.id for witness in witnesses}
+    if actor is not None:
+        # Symmetric with speech: the emitter is excluded from recipients but
+        # still remembers their own act.
+        _remember_percept(
+            actor,
+            sound.seen.format(actor="You") if sound.seen is not None else sound.heard,
+        )
     for recipient in recipients:
         if recipient.id in witness_ids and actor is not None and sound.seen is not None:
             percept = _cap(sound.seen.format(actor=identify(recipient, actor)))
         else:
             # A percept you didn't see must not leak who it was — no id.
             percept = sound.heard
-        _notify(recipient, percept)
+        _notify_percept(recipient, percept)
     world.emit(
         "sound",
         sound.sound_class,
@@ -574,20 +583,21 @@ def _notify(recipient: Character, text: str) -> None:
         recipient.inbox.append(text)
 
 
-def _remember_conversation(actor: Character, text: str) -> None:
-    """Retain bounded, model-visible dialogue, including the actor's own lines."""
+def _remember_percept(actor: Character, text: str) -> None:
+    """Retain one bounded, model-visible history line — speech and other
+    percepts share the same window, including the actor's own lines."""
     if actor.control != "llm":
         return
-    actor.recent_conversation.append(text)
-    overflow = len(actor.recent_conversation) - RECENT_CONVERSATION_MAX_ENTRIES
+    actor.recent_history.append(text)
+    overflow = len(actor.recent_history) - RECENT_HISTORY_MAX_ENTRIES
     if overflow > 0:
-        del actor.recent_conversation[:overflow]
+        del actor.recent_history[:overflow]
 
 
-def _notify_speech(recipient: Character, text: str) -> None:
-    """Deliver new speech and also retain it as short-term conversation context."""
+def _notify_percept(recipient: Character, text: str) -> None:
+    """Deliver a new percept and also retain it as short-term history."""
     _notify(recipient, text)
-    _remember_conversation(recipient, text)
+    _remember_percept(recipient, text)
 
 
 def apply_action(world: World, actor: Character, verb: str, args: object) -> str:
@@ -628,18 +638,18 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
                 )
 
         if target is not None:
-            _remember_conversation(
+            _remember_percept(
                 actor,
                 f'You said to {identify(actor, target)}: "{text}"',
             )
             for recipient in nearby:
                 if recipient.id == target.id:
-                    _notify_speech(
+                    _notify_percept(
                         recipient,
                         f'{_cap(identify(recipient, actor))} said to you: "{text}"',
                     )
                 else:
-                    _notify_speech(
+                    _notify_percept(
                         recipient,
                         f"{_cap(identify(recipient, actor))} said to "
                         f'{identify(recipient, target)}: "{text}"',
@@ -647,9 +657,9 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
             target_id = target.id
             line = f'{actor.name} -> {target.name}: "{text}"'
         else:
-            _remember_conversation(actor, f'You said aloud: "{text}"')
+            _remember_percept(actor, f'You said aloud: "{text}"')
             for recipient in nearby:
-                _notify_speech(
+                _notify_percept(
                     recipient,
                     f'{_cap(identify(recipient, actor))} said: "{text}"',
                 )

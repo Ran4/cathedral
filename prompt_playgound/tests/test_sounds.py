@@ -201,6 +201,66 @@ class SoundEventTests(unittest.TestCase):
         self.assertEqual(balcony.inbox, ["Sven farted."])
         self.assertEqual(overhead.inbox, ["[You heard a big fart!]"])
 
+    def test_sound_percepts_enter_recent_history_for_all_parties(self) -> None:
+        """Sounds persist in the same rolling window as speech — the witness's
+        attributed line, the non-witness's unattributed one, the emitter's own
+        act — while the emitter's inbox stays empty (like own speech)."""
+        world = World()
+        actor = character("sv1", "Sven", (0, 0, 0))
+        facing = character("facing", "Conny", (0, 0, 5), knows={"sv1"})
+        facing.facing_yaw = yaw_towards(facing, actor)
+        away = character("away", "Mott", (0, 0, -5), knows={"sv1"})
+        away.facing_yaw = yaw_towards(away, actor) + math.pi
+        for each in (actor, facing, away):
+            world.add(each)
+
+        apply_action(world, actor, "make_sound", {"sound": "fart"})
+
+        self.assertEqual(facing.recent_history, ["Sven farted."])
+        self.assertEqual(away.recent_history, ["[You heard a big fart!]"])
+        self.assertEqual(actor.recent_history, ["You farted."])
+        self.assertEqual(actor.inbox, [])
+
+    def test_world_sound_enters_recent_history_unattributed(self) -> None:
+        world = World()
+        listener = character("listener", "Conny", (0, 0, 10))
+        world.add(listener)
+
+        emit_sound(world, None, SOUNDS["town_bell"], position_m=Vec3(0, 0, 0))
+
+        self.assertEqual(listener.recent_history, ["[The town bell is ringing.]"])
+
+    def test_speech_and_sounds_share_one_history_window(self) -> None:
+        world = World()
+        actor = character("actor", "Sven", (0, 0, 0))
+        listener = character("listener", "Conny", (0, 0, 5))
+        listener.facing_yaw = yaw_towards(listener, actor)
+        world.add(actor)
+        world.add(listener)
+
+        apply_action(world, actor, "say", {"text": "hello"})
+        apply_action(world, actor, "make_sound", {"sound": "fart"})
+
+        self.assertEqual(
+            listener.recent_history,
+            [
+                'A stranger (id actor) said: "hello"',
+                "A stranger (id actor) farted.",
+            ],
+        )
+
+    def test_player_never_accumulates_recent_history(self) -> None:
+        world = World()
+        actor = character("actor", "Sven", (0, 0, 0))
+        player = character("player", "Player", (0, 0, 5), control="player")
+        world.add(actor)
+        world.add(player)
+
+        apply_action(world, actor, "make_sound", {"sound": "fart"})
+
+        self.assertEqual(player.recent_history, [])
+        self.assertEqual(player.inbox, [])
+
     def test_unknown_or_non_emittable_sound_is_rejected_without_event(self) -> None:
         """S8: bad ids error back to the actor and emit nothing."""
         world = World()

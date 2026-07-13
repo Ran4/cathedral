@@ -15,12 +15,13 @@ FOOTER = """\
 Take one or more actions.
 Make SURE that what you're doing matches what you see, who you are, what you can think about/understand etc.
 
-IMPORTANT: recent_conversation is your short-term recollection of the latest
-dialogue, including your own words. Read it before speaking: do not repeat a
+IMPORTANT: recent_history is your short-term recollection of the latest things
+you perceived — dialogue (including your own words) and other percepts such as
+noises. Read it before speaking: do not repeat a
 question, answer, greeting, offer, or topic that is already there unless someone
 has just given you a reason to revisit it. It is bounded and older lines will
 disappear. Your only durable memory is stored_memories and current_goal. Use
-remember for anything future-you should know after the recent conversation fades
+remember for anything future-you should know after recent_history fades
 — above all OUTCOMES: the moment a
 trade, payment or agreement completes, record it in that same turn (e.g.
 remember {"memory": "I bought the fish from Sven for one copper"}), or
@@ -60,7 +61,7 @@ contains only offers you can act on at this moment.
 Speech in your history is what you could hear, not necessarily speech addressed
 to you. Before speaking in response, decide from the wording (including names
 and phrases such as "anyone"), your own identity, the nearby people, and the
-recent conversation whether the speaker is talking to you, to the group, or to
+recent history whether the speaker is talking to you, to the group, or to
 somebody else. If a line is clearly for somebody else, normally use `wait {}`
 alone. Do not answer merely to announce that you are not the named person.
 Interject only when your character has a concrete reason to do so. If you are
@@ -101,7 +102,7 @@ wait {}                                              # Stay quiet when there is 
 
 Do not manufacture conversation merely because it is your turn. Use `wait {}`
 alone whenever there is nothing useful and socially appropriate for you to do,
-even if you just overheard something new.
+even if you just overheard something new.__SOUND_WAIT_EXEMPTION__
 
 Output like this, and only like this (skip the backticks, and everything after # is a comment):
 
@@ -117,8 +118,19 @@ _MAKE_SOUND_EXAMPLE = (
     f"# Deliberately make a noise everyone within earshot perceives; "
     f"sounds: {', '.join(emittable_sound_ids())}\n"
 )
-_FOOTER_WITH_SOUNDS = FOOTER.replace("__MAKE_SOUND_EXAMPLE__", _MAKE_SOUND_EXAMPLE)
-_FOOTER_WITHOUT_SOUNDS = FOOTER.replace("__MAKE_SOUND_EXAMPLE__", "")
+# Exempts deliberate noises from the wait bias — only in worlds where such
+# percepts can occur at all.
+_SOUND_WAIT_EXEMPTION = (
+    " A deliberate noise someone just made in your presence (a fart, breaking"
+    " glass) is a social act, not background — reacting to it in character is"
+    " a valid reason to speak."
+)
+_FOOTER_WITH_SOUNDS = FOOTER.replace(
+    "__MAKE_SOUND_EXAMPLE__", _MAKE_SOUND_EXAMPLE
+).replace("__SOUND_WAIT_EXEMPTION__", _SOUND_WAIT_EXEMPTION)
+_FOOTER_WITHOUT_SOUNDS = FOOTER.replace("__MAKE_SOUND_EXAMPLE__", "").replace(
+    "__SOUND_WAIT_EXEMPTION__", ""
+)
 
 
 def _person(actor: Character, c: Character, *, distance_m: float | None = None) -> dict:
@@ -211,7 +223,7 @@ def render_prompt(
             "people": people,
         },
         "since_your_last_turn": events or ["nothing"],
-        "recent_conversation": actor.recent_conversation or ["nothing yet"],
+        "recent_history": actor.recent_history or ["nothing yet"],
         "stored_memories": actor.memories,
         "the_only_languages_you_know": "English",
         "current_goal": actor.goal,

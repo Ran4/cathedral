@@ -11,7 +11,8 @@ Characters take turns in a round-robin tick loop. Each turn:
    `since_your_last_turn` field drained from the character's **inbox**.
 2. The prompt is sent to the configured LLM (`llm_client.complete`) — one
    stateless call, no provider-side chat history. Each character gets a bounded
-   `recent_conversation` containing received speech and its own lines;
+   `recent_history` containing received speech, heard sound percepts, and its
+   own lines;
    `stored_memories` and `current_goal` remain the only durable persistence, so
    the prompt tells the model to use `remember`/`forget` deliberately.
 3. The reply is parsed as `VERB {json}` lines (`prompt.parse_reply`) and each
@@ -62,7 +63,7 @@ Parsing uses `JSONDecoder.raw_decode`, so `#` inside quoted strings is safe.
 - `eat {"item_id": "<item id>"}` — consume a held item: it is removed from the
   world (any pending offer of it is implicitly retracted, with notification).
 - `wait {}` — deliberately take no world action when speaking would only repeat
-  the recent conversation. Scheduler waits are not appended to the transcript.
+  the recent history. Scheduler waits are not appended to the transcript.
 - General concept: omit and null is the same thing, {"foo": null, ...} <=> {...}
 - `item_id` takes ids only — a name like `"fish"` is an error, no fallback.
 
@@ -147,5 +148,7 @@ uv run --offline --no-project python -m unittest discover -s tests -v
   record outcomes the turn they happen, forget superseded memories, and
   clear/replace achieved goals (`set_goal {"goal": null}` clears). This works
   in test runs but nothing in the sim guarantees it.
-- Recent conversation is a bounded short-term aid, not durable memory. Older
-  lines fall out and important facts still need an explicit `remember` action.
+- Recent history is a bounded short-term aid, not durable memory. Older lines
+  fall out and important facts still need an explicit `remember` action.
+  Repeated identical percepts are not yet coalesced
+  (`../features/small_thing_deduplicate_repeat_recent_history.md`).

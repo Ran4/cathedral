@@ -9,7 +9,7 @@ from sim import (
     HEARING_RADIUS_M,
     ITEM_INTERACTION_RADIUS_M,
     PLAYER_SPEECH_MAX_CHARS,
-    RECENT_CONVERSATION_MAX_ENTRIES,
+    RECENT_HISTORY_MAX_ENTRIES,
     ActionError,
     Character,
     CharIdStr,
@@ -124,34 +124,32 @@ class SpeechTests(unittest.TestCase):
         self.assertEqual(event.text, "hello")
         self.assertEqual(event.recipient_ids, (bystander.id, target.id))
 
-    def test_recent_conversation_keeps_received_and_own_speech(self) -> None:
+    def test_recent_history_keeps_received_and_own_speech(self) -> None:
         world, speaker, target, bystander, _ = speech_world()
         speaker.knows.add(target.id)
 
         apply_action(world, speaker, "say", {"target": target.id, "text": "hello"})
 
         self.assertEqual(
-            speaker.recent_conversation,
+            speaker.recent_history,
             ['You said to Target: "hello"'],
         )
         self.assertEqual(
-            target.recent_conversation,
+            target.recent_history,
             ['A stranger (id speaker) said to you: "hello"'],
         )
-        self.assertIn("said to a stranger", bystander.recent_conversation[-1])
+        self.assertIn("said to a stranger", bystander.recent_history[-1])
 
-    def test_recent_conversation_is_bounded(self) -> None:
+    def test_recent_history_is_bounded(self) -> None:
         world, speaker, target, *_ = speech_world()
-        for index in range(RECENT_CONVERSATION_MAX_ENTRIES + 3):
+        for index in range(RECENT_HISTORY_MAX_ENTRIES + 3):
             apply_action(world, speaker, "say", {"text": f"line {index}"})
 
-        self.assertEqual(
-            len(target.recent_conversation), RECENT_CONVERSATION_MAX_ENTRIES
-        )
-        self.assertNotIn("line 0", target.recent_conversation[0])
+        self.assertEqual(len(target.recent_history), RECENT_HISTORY_MAX_ENTRIES)
+        self.assertNotIn("line 0", target.recent_history[0])
         self.assertIn(
-            f"line {RECENT_CONVERSATION_MAX_ENTRIES + 2}",
-            target.recent_conversation[-1],
+            f"line {RECENT_HISTORY_MAX_ENTRIES + 2}",
+            target.recent_history[-1],
         )
 
     def test_broadcast_and_exact_boundary(self) -> None:
@@ -193,7 +191,7 @@ class SpeechTests(unittest.TestCase):
         world, speaker, *_ = speech_world()
         apply_action(world, speaker, "say", {"text": "hello"})
         self.assertEqual(speaker.inbox, [])
-        self.assertEqual(speaker.recent_conversation, ['You said aloud: "hello"'])
+        self.assertEqual(speaker.recent_history, ['You said aloud: "hello"'])
 
     def test_wait_is_a_valid_no_op(self) -> None:
         world, speaker, *_ = speech_world()

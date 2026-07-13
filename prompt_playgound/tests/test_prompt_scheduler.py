@@ -87,14 +87,12 @@ class PromptTests(unittest.TestCase):
 
     def test_render_and_drain_moves_old_events_to_prompt(self) -> None:
         self.sven.inbox[:] = ["first", "second"]
-        self.sven.recent_conversation[:] = ['You said aloud: "earlier"']
+        self.sven.recent_history[:] = ['You said aloud: "earlier"']
         rendered = sheet(render_prompt_and_drain(self.world, self.sven))
         self.assertEqual(rendered["since_your_last_turn"], ["first", "second"])
-        self.assertEqual(
-            rendered["recent_conversation"], ['You said aloud: "earlier"']
-        )
+        self.assertEqual(rendered["recent_history"], ['You said aloud: "earlier"'])
         self.assertEqual(self.sven.inbox, [])
-        self.assertEqual(self.sven.recent_conversation, ['You said aloud: "earlier"'])
+        self.assertEqual(self.sven.recent_history, ['You said aloud: "earlier"'])
 
     def test_failed_prompt_render_restores_drained_events(self) -> None:
         self.sven.inbox[:] = ["must survive"]
@@ -156,6 +154,16 @@ class PromptTests(unittest.TestCase):
             "even if you just overheard something new.",
             compact,
         )
+
+    def test_wait_rule_sound_exemption_tracks_sounds_enabled(self) -> None:
+        compact = " ".join(render_prompt(self.world, self.sven).split())
+        self.assertIn("is a social act, not background", compact)
+        self.assertNotIn("__SOUND_WAIT_EXEMPTION__", compact)
+
+        self.world.sounds_enabled = False
+        compact = " ".join(render_prompt(self.world, self.sven).split())
+        self.assertNotIn("is a social act", compact)
+        self.assertNotIn("__SOUND_WAIT_EXEMPTION__", compact)
 
     def test_parser_rejects_non_object_and_trailing_garbage(self) -> None:
         actions, errors = parse_reply(
