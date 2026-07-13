@@ -1,51 +1,43 @@
 # The Cathedral-City of Impossible Light
 
-A first-person, procedural cathedral-city inspired by the monumental engraving
-in `docs/reference_image.png`. The scene is assembled entirely in Rust with
-Bevy 0.19 and uses original generated material artwork for cathedral limestone,
-weathered city plaster, half-timber infill, dark fieldstone, terracotta and
-slate roofs, and the rose window.
+A first-person, procedural cathedral-city inspired by the monumental engraving in `docs/reference_image.png`.
+The scene is assembled entirely in Rust with Bevy 0.19 and uses original generated material artwork for
+cathedral limestone, weathered city plaster, half-timber infill, dark fieldstone, terracotta and slate roofs,
+and the rose window.
 
-The cathedral opens into a roughly 1.2 × 1.0 km fortified medieval city. Most
-streets pinch and change width between independently offset façades; each block
-contains a 4.6 m route that doglegs twice, lateral alleys, projecting upper
-floors, covered passages, small courts, and frequent overhead bridges.
-Those dense quarters open selectively into five town squares, markets, a canal
-and bridges, secondary churches and towers, and the cathedral's ceremonial
-forecourt. For developer playtesting, "flying" support makes the full skyline explorable.
+The cathedral opens into a roughly 1.2 × 1.0 km fortified medieval city. Most streets pinch and change width
+between independently offset façades; each block contains a 4.6 m route that doglegs twice, lateral alleys,
+projecting upper floors, covered passages, small courts, and frequent overhead bridges. Those dense quarters
+open selectively into five town squares, markets, a canal and bridges, secondary churches and towers, and the
+cathedral's ceremonial forecourt. For developer playtesting, "flying" support makes the full skyline
+explorable.
 
 ## Smart actors
 
-NPCs are LLM-driven "smart actors". The authoritative simulation is
-**`crates/cathedral-sim`**: a pure, IO-free Rust crate that owns world state,
-the prompt format, the action parser and the NPC turn scheduler. It runs
-**in-process**, pumped once per frame by `src/smart_actors/local_engine.rs`;
-the rest of `src/smart_actors/` is a non-blocking projection of it (there is
-no sidecar and no wire — the engine hands the game typed
-`cathedral_sim::EngineMessage`s, and `model::WorldMirror` projects the
-snapshots the ECS reads).
+NPCs are LLM-driven "smart actors". The authoritative simulation is **`crates/cathedral-sim`**: a pure,
+IO-free Rust crate that owns world state, the prompt format, the action parser and the NPC turn scheduler. It
+runs **in-process**, pumped once per frame by `src/smart_actors/local_engine.rs`; the rest of
+`src/smart_actors/` is a non-blocking projection of it (there is no sidecar and no wire — the engine hands the
+game typed `cathedral_sim::EngineMessage`s, and `model::WorldMirror` projects the snapshots the ECS reads).
 
-Everything impure — the provider HTTP client, the speech workers, the prompt
-archive, the private audio directory — lives in **`crates/cathedral-backends`**.
-The sim calls it through the `Cognition` / `Transcription` / `Tts` traits and
-gets results back as plain values, so the sim itself has no clock, no threads
-and no filesystem. Domain details (the world model, the action verbs, the turn
-loop, the "unknown people" rule) are in `crates/cathedral-sim/AGENTS.md`.
+Everything impure — the provider HTTP client, the speech workers, the prompt archive, the private audio
+directory — lives in **`crates/cathedral-backends`**. The sim calls it through the `Cognition` /
+`Transcription` / `Tts` traits and gets results back as plain values, so the sim itself has no clock, no
+threads and no filesystem. Domain details (the world model, the action verbs, the turn loop, the "unknown
+people" rule) are in `crates/cathedral-sim/AGENTS.md`.
 
-Three capabilities are probed at startup and reported independently: LLM
-cognition, player speech-to-text (cloud OpenAI gpt-4o-transcribe or local
-Canary-Qwen), and NPC voices (local streaming Pocket TTS, cloud OpenAI, or
-off). Each degrades on its own — a missing API key never takes the others down.
-The Esc settings menu switches STT/TTS backends at runtime and persists the
-choice to `config.ron`; the X key cycles the NPC voice backend.
+Three capabilities are probed at startup and reported independently: LLM cognition, player speech-to-text
+(cloud OpenAI gpt-4o-transcribe or local Canary-Qwen), and NPC voices (local streaming Pocket TTS, cloud
+OpenAI, or off). Each degrades on its own — a missing API key never takes the others down. The Esc settings
+menu switches STT/TTS backends at runtime and persists the choice to `config.ron`; the X key cycles the NPC
+voice backend.
 
-Everything is configured in `config.ron` under `smart_actors: (...)`; secrets
-stay in `prompt_playgound/.env` (real environment variables win over it). For
-runs without network or API keys, set `fake_backend: true` — a deterministic
-offline mode also used by the integration tests.
+Everything is configured in `config.ron` under `smart_actors: (...)`; secrets stay in `prompt_playgound/.env`
+(real environment variables win over it). For runs without network or API keys, set `fake_backend: true` — a
+deterministic offline mode also used by the integration tests.
 
-The two local speech models still run as `uv` subprocesses; `prompt_playgound/`
-is now nothing but those two workers and their `.env`.
+The two local speech models still run as `uv` subprocesses; `prompt_playgound/` is now nothing but those two
+workers and their `.env`.
 
 ### Running the sim without Bevy
 
@@ -61,13 +53,28 @@ cargo run -p cathedral-backends --bin cathedral-headless -- --one-shot FILE  # s
 stdout is the transcript, the final world state and the run cost in USD;
 diagnostics (and, with `-v`, the prompts and raw replies) go to stderr.
 
+## Agent drive mode
+
+To verify a change in a running game, see .claude/rules/CATHEDRAL_DRIVE.md (do NOT use xdotool/XTEST (winit
+never sees synthetic core events).
+
+## Lore
+
+Extensive lore, in markdown format (as well as inspiration images generated by
+scripts/generate_lore_inspiration_images.py) is found at `lore/`.
+
+Note: most of the things that is part of the lore isn't part of the game in any way!
+
+## Backlog
+
+Found in `features/`, see features/AGENTS.md
+
 ----------
 
 ## Session logs
 
-Every game start creates a session directory (the counter lives in
-`cathedral_meta.json`) and repoints the `logs/latest_session` symlink at it —
-that's usually what I'll talk about:
+Every game start creates a session directory (the counter lives in `cathedral_meta.json`) and repoints the
+`logs/latest_session` symlink at it — that's usually what I'll talk about:
 
 ```
 logs/
@@ -87,8 +94,3 @@ logs/
 
 If I refer to screenshots, F5 captures are the timestamped files in
 `logs/latest_session/screenshots/`.
-
-## Agent drive mode
-
-To verify a change in a running game, see .claude/rules/CATHEDRAL_DRIVE.md
-(do NOT use xdotool/XTEST (winit never sees synthetic core events).
