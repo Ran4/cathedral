@@ -124,6 +124,18 @@ pub struct LocalEngine {
     dead: bool,
 }
 
+impl LocalEngine {
+    /// The single parsed map moves from the pending seed into the live sim at
+    /// handshake time. Debug rendering borrows it here instead of loading or
+    /// maintaining another coordinate source.
+    pub(super) fn area_map(&self) -> Option<&AreaMap> {
+        self.engine
+            .as_ref()
+            .map(|engine| &engine.world().area_map)
+            .or_else(|| self.seed.as_ref().map(|seed| &seed.areas))
+    }
+}
+
 /// Start the engine and hand the ECS its resources.
 ///
 /// Nothing here can fail loudly: a missing asset, an unusable temp directory or

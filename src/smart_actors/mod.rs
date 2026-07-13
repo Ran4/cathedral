@@ -11,6 +11,7 @@ pub mod bridge;
 pub mod local_engine;
 pub mod model;
 
+mod area_debug;
 mod config_menu;
 mod hud;
 mod interaction;
@@ -223,6 +224,7 @@ impl Plugin for SmartActorsPlugin {
             .insert_resource(worker)
             .init_resource::<model::WorldMirror>()
             .insert_resource(SmartActorRuntime::starting(self.config.fake_backend))
+            .init_resource::<area_debug::AreaDebugState>()
             .init_resource::<ActorFocus>()
             .init_resource::<interaction::InteractionState>()
             .init_resource::<interaction::PlayerSpatialState>()
@@ -254,7 +256,11 @@ impl Plugin for SmartActorsPlugin {
             )
             .add_systems(
                 Startup,
-                actors::setup_actor_visual_assets.after(hud::spawn_smart_actor_hud),
+                (
+                    actors::setup_actor_visual_assets,
+                    area_debug::spawn_area_debug_ui,
+                )
+                    .after(hud::spawn_smart_actor_hud),
             )
             .add_systems(
                 PostUpdate,
@@ -311,6 +317,7 @@ impl Plugin for SmartActorsPlugin {
                     speech::update_subtitle_hud,
                     sound::play_sound_effects,
                     sound::expire_stalled_sound_effects,
+                    area_debug::update_area_debug_ui,
                     hud::update_smart_actor_hud,
                 )
                     .chain()
@@ -324,6 +331,14 @@ impl Plugin for SmartActorsPlugin {
                 // could occasionally miss sink attachment.
                 speech::start_ready_audio,
             );
+        if app.is_plugin_added::<bevy::gizmos::GizmoPlugin>() {
+            app.add_systems(
+                PostUpdate,
+                area_debug::draw_area_boxes
+                    .in_set(SmartActorSet::Present)
+                    .after(area_debug::update_area_debug_ui),
+            );
+        }
     }
 }
 
@@ -1381,6 +1396,51 @@ mod tests {
         }
         assert!(app.world().resource::<SmartActorRuntime>().ready);
         app.update();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyB);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+        assert!(
+            app.world()
+                .resource::<area_debug::AreaDebugState>()
+                .is_enabled()
+        );
+        let world = app.world_mut();
+        assert_eq!(
+            world
+                .query::<&area_debug::AreaBoxLabel>()
+                .iter(world)
+                .count(),
+            13
+        );
+        let (location_text, visibility) = world
+            .query_filtered::<(&Text, &Visibility), With<area_debug::PlayerAreaDescription>>()
+            .single(world)
+            .expect("the area debug player label exists");
+        assert!(location_text.0.contains("The grounds of the Lanthorn"));
+        assert_eq!(*visibility, Visibility::Inherited);
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::KeyB);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
+        assert!(
+            !app.world()
+                .resource::<area_debug::AreaDebugState>()
+                .is_enabled()
+        );
+        let world = app.world_mut();
+        let (_, visibility) = world
+            .query_filtered::<(&Text, &Visibility), With<area_debug::PlayerAreaDescription>>()
+            .single(world)
+            .expect("the area debug player label remains available");
+        assert_eq!(*visibility, Visibility::Hidden);
 
         let world = app.world_mut();
         let actor_count = world

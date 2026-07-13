@@ -1,4 +1,4 @@
-CURRENT STATUS: Step 1 is implemented; awaiting user review before Step 2.
+CURRENT STATUS: Steps 1 and 2 are implemented; awaiting user review before Step 3.
 
 # Make the lore's places real
 
