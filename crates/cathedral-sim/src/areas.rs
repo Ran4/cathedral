@@ -425,28 +425,25 @@ mod tests {
     }
 
     #[test]
-    fn shipped_json_loads_and_has_the_initial_four_areas() {
+    fn shipped_json_loads_and_preserves_precinct_boundaries() {
         let map = AreaMap::from_json_str(include_str!("../../../assets/world/areas.json"))
             .expect("the shipped map loads");
-        let ids: Vec<&str> = map.areas.iter().map(|area| area.id.as_str()).collect();
+        assert_eq!(map.areas.len(), 60);
         assert_eq!(
-            ids,
-            [
-                "lanthorn_grounds",
-                "lanthorn_interior",
-                "dawn_bearer_vicinity",
-                "seraph_vicinity"
-            ]
+            map.areas.iter().map(|area| area.boxes.len()).sum::<usize>(),
+            76
         );
         for (position, label) in [
             (
-                Vec3::new(0.0, 0.91, 114.0),
+                Vec3::new(0.0, 0.91, 90.0),
                 "The grounds of the Lanthorn (Great Church of Saint Ambrelle)",
             ),
+            (Vec3::new(0.0, 0.91, 114.0), "The Gradine"),
             (
                 Vec3::new(0.0, 0.91, 60.0),
                 "Inside the Lanthorn (Great Church of Saint Ambrelle)",
             ),
+            (Vec3::new(0.0, 84.0, 81.0), "At the Great Rose and eye"),
             (
                 Vec3::new(-72.0, 0.91, 190.0),
                 "Next to the Dawn Bearer statue",

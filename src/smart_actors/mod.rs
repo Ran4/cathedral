@@ -1414,21 +1414,30 @@ mod tests {
                 .resource::<area_debug::AreaDebugState>()
                 .visible_area_ids()
                 .len(),
-            4
+            8
         );
+        let expected_box_labels = app
+            .world()
+            .non_send::<local_engine::LocalEngine>()
+            .area_map()
+            .expect("the area map is loaded")
+            .areas
+            .iter()
+            .map(|area| area.boxes.len())
+            .sum::<usize>();
         let world = app.world_mut();
         assert_eq!(
             world
                 .query::<&area_debug::AreaBoxLabel>()
                 .iter(world)
                 .count(),
-            13
+            expected_box_labels
         );
         let (location_text, visibility) = world
             .query_filtered::<(&Text, &Visibility), With<area_debug::PlayerAreaDescription>>()
             .single(world)
             .expect("the area debug player label exists");
-        assert!(location_text.0.contains("The grounds of the Lanthorn"));
+        assert!(location_text.0.contains("The Gradine"));
         assert_eq!(*visibility, Visibility::Inherited);
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()

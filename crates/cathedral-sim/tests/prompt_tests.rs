@@ -34,10 +34,7 @@ fn metric_people_have_distance_and_perspective_name() {
         rendered["you_are"]["position_m"],
         json!({"x": -1.8, "y": 0.91, "z": 114.0})
     );
-    assert_eq!(
-        rendered["you_are"]["location_description"],
-        "The grounds of the Lanthorn (Great Church of Saint Ambrelle)"
-    );
+    assert_eq!(rendered["you_are"]["location_description"], "The Gradine");
 }
 
 #[test]
@@ -57,7 +54,7 @@ fn a_moved_character_gets_a_freshly_resolved_prompt_location() {
 
     assert_eq!(
         sheet(&world, "sv3n1", &env)["you_are"]["location_description"],
-        "The grounds of the Lanthorn (Great Church of Saint Ambrelle)"
+        "The Gradine"
     );
     world.characters.get_mut(&sven).unwrap().state.position_m = Vec3::new(0.0, 0.91, 60.0);
     assert_eq!(
