@@ -15,6 +15,8 @@ use super::model::{ActorControl, ActorId, ItemId, WorldMirror};
 use super::targeting::ActorTarget;
 
 const NAME_ANCHOR_Y: f32 = 0.9;
+const MAX_NAME_LABEL_DISTANCE_M: f32 = 80.0;
+const MAX_VISIBLE_NAME_LABELS: usize = 20;
 const SPEECH_ANCHOR_Y: f32 = 1.05;
 const OFFER_ANCHOR_Y: f32 = 2.02;
 const OFFER_FAN_SPACING_M: f32 = 0.48;
@@ -303,8 +305,13 @@ pub(crate) fn position_actor_name_labels(
         .iter()
         .map(|(anchor, transform)| (anchor.0.clone(), transform.translation()))
         .collect();
+    let visible_ids = nearest_name_anchor_ids(camera_transform.translation(), &anchor_positions);
 
     for (label, mut node, mut visibility) in &mut labels {
+        if !visible_ids.contains(&label.0) {
+            *visibility = Visibility::Hidden;
+            continue;
+        }
         let Some(world_position) = anchor_positions.get(&label.0) else {
             *visibility = Visibility::Hidden;
             continue;
@@ -319,6 +326,28 @@ pub(crate) fn position_actor_name_labels(
         node.top = Val::Px(viewport_position.y - 34.0);
         *visibility = Visibility::Inherited;
     }
+}
+
+fn nearest_name_anchor_ids(
+    camera_position: Vec3,
+    anchor_positions: &HashMap<ActorId, Vec3>,
+) -> HashSet<ActorId> {
+    let maximum_distance_squared = MAX_NAME_LABEL_DISTANCE_M * MAX_NAME_LABEL_DISTANCE_M;
+    let mut nearest: Vec<_> = anchor_positions
+        .iter()
+        .filter_map(|(actor_id, position)| {
+            let distance_squared = camera_position.distance_squared(*position);
+            (distance_squared <= maximum_distance_squared).then_some((actor_id, distance_squared))
+        })
+        .collect();
+    nearest.sort_unstable_by(|left, right| {
+        left.1.total_cmp(&right.1).then_with(|| left.0.cmp(right.0))
+    });
+    nearest.truncate(MAX_VISIBLE_NAME_LABELS);
+    nearest
+        .into_iter()
+        .map(|(actor_id, _)| actor_id.clone())
+        .collect()
 }
 
 #[derive(Debug, Clone)]
@@ -655,6 +684,43 @@ mod tests {
             .collect();
 
         assert_eq!(removed, vec![ItemId("fish".into())]);
+    }
+
+    #[test]
+    fn name_labels_stop_at_eighty_metres() {
+        let anchors = HashMap::from([
+            (ActorId("near".into()), Vec3::new(0.0, 0.0, 79.0)),
+            (ActorId("boundary".into()), Vec3::new(0.0, 0.0, 80.0)),
+            (ActorId("far".into()), Vec3::new(0.0, 0.0, 80.01)),
+        ]);
+
+        let visible = nearest_name_anchor_ids(Vec3::ZERO, &anchors);
+
+        assert!(visible.contains(&ActorId("near".into())));
+        assert!(visible.contains(&ActorId("boundary".into())));
+        assert!(!visible.contains(&ActorId("far".into())));
+    }
+
+    #[test]
+    fn name_labels_are_limited_to_the_nearest_twenty_people() {
+        let anchors: HashMap<_, _> = (1..=25)
+            .map(|distance| {
+                (
+                    ActorId(format!("actor-{distance:02}")),
+                    Vec3::new(distance as f32, 0.0, 0.0),
+                )
+            })
+            .collect();
+
+        let visible = nearest_name_anchor_ids(Vec3::ZERO, &anchors);
+
+        assert_eq!(visible.len(), 20);
+        for distance in 1..=20 {
+            assert!(visible.contains(&ActorId(format!("actor-{distance:02}"))));
+        }
+        for distance in 21..=25 {
+            assert!(!visible.contains(&ActorId(format!("actor-{distance:02}"))));
+        }
     }
 
     #[test]
