@@ -28,7 +28,7 @@ the impossible light has never been visible from the steps.
 
 These names are already attached to places and should be reused consistently.
 
-### Cathedral and river landmarks
+### Cathedral and city landmarks
 
 - **The Lanthorn**: the common name of the Great Church of Saint Ambrelle.
 - **The Great Rose**: the monumental rose window in the Lanthorn's west front.
@@ -69,8 +69,7 @@ kind is preserved:
 
 - **Tenterhook Lane** — a trade street by fullers' frames.
 - **Burnt Court** — a place renamed after fire.
-- **Maren's Slip** — a saint-name attached to a way down to water.
+- **Maren's Slip** — a saint-name attached to a walkway
 - **Crookneck Lane** and **Eelback Alley** — names from street shape.
 - **Malt Passage** — a passage beneath a malt-house at Coswald's Yard.
 - **The Chain Bridge** — a working bridge name associated with a harbour chain.
-- **The Dry Arch** — an old crossing over a ditch that no longer carries water.

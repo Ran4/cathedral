@@ -159,7 +159,7 @@ Streets are named for trades, damage, saints, or shape — never for living peop
 1. *Tenterhook Lane* — trade; the fullers' frames.
 2. *Cinder Row* — damage.
 3. *Burnt Court* — damage.
-4. *Maren's Slip* — saint; the way down to the water.
+4. *Maren's Slip* — saint
 5. *The Needle* — shape.
 6. *Crookneck Lane* — shape.
 7. *Eelback Alley* — shape; humped, cobbles like a spine.
@@ -169,7 +169,6 @@ Streets are named for trades, damage, saints, or shape — never for living peop
 11. *The Tally Bridge* — toll.
 12. *The Eel Bridge* — cargo, at Maren's Green.
 13. *The Chain Bridge* — keeping; the harbour chain at the Cut's mouth.
-14. *The Dry Arch* — its ditch drained a century past; the name stayed.
 
 ### Bells
 

@@ -55,7 +55,7 @@ set facades, dogleg through blocks, pass under houses, and open unexpectedly
 into courts and five major squares. Upper storeys are jettied over the street;
 eaves nearly meet; covered passages take the names of the buildings above them;
 timber bridges join lofts across lanes. Stone, plaster, timber, lead, tile,
-smoke, river damp, animal traffic, bells, and hand labour should remain visible
+smoke, animal traffic, bells, and hand labour should remain visible
 in everyday descriptions.
 
 The city has no established population figure. Do not invent one merely to
