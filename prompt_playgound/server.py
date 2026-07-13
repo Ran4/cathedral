@@ -37,6 +37,7 @@ from protocol import (
     server_envelope,
     validated_id,
 )
+from prompt_log import PromptLog
 from scheduler import NpcScheduler
 from sim import (
     HEARING_RADIUS_M,
@@ -527,6 +528,19 @@ class SmartActorServer:
         # simply stops bumping it and it expires on its own, so player state
         # can never freeze NPC turns forever.
         self._player_hold_until = 0.0
+        # The game passes its per-run session directory; every LLM exchange is
+        # archived under its prompts/. Launched standalone, nothing is written.
+        session_dir = os.environ.get("CATHEDRAL_SESSION_DIR", "").strip()
+        if fake_mode:
+            prompt_model = "fake"
+        elif completion_was_injected:
+            prompt_model = "injected"
+        else:
+            prompt_model = llm_client.model_name()
+        self.prompt_log = PromptLog(
+            Path(session_dir) / "prompts" if session_dir else None,
+            model=prompt_model,
+        )
         self.scheduler = NpcScheduler(
             self.world,
             llm_complete,
@@ -534,6 +548,7 @@ class SmartActorServer:
             clock=clock,
             verbose=_enabled(os.environ.get("SMART_ACTORS_VERBOSE")),
             floor_busy=self._floor_busy,
+            prompt_log=self.prompt_log.record,
         )
         self._output = output or self._write_stdout
         self.session_id: str | None = None

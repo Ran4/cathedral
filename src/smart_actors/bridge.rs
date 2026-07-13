@@ -597,6 +597,11 @@ fn run_bridge_worker(
     }
 
     let mut process = Command::new(&config.uv_binary);
+    // The sidecar archives every LLM prompt/answer under the session's
+    // `prompts/` directory; absent (init failed) it simply does not archive.
+    if let Some(session) = crate::session_log::paths() {
+        process.env("CATHEDRAL_SESSION_DIR", &session.root);
+    }
     process.env("SMART_ACTORS_UV_BINARY", &config.uv_binary);
     process.env("SMART_ACTORS_TTS_BACKEND", &config.tts_backend);
     process.env(
@@ -1189,9 +1194,15 @@ impl WorkerEventSink {
 fn forward_stderr(stderr: impl std::io::Read) {
     for line in BufReader::new(stderr).lines() {
         match line {
-            Ok(line) => eprintln!("[smart actors/python] {}", truncate(&line, 2_000)),
+            Ok(line) => {
+                let line = truncate(&line, 2_000);
+                eprintln!("[smart actors/python] {line}");
+                crate::session_log::log_line("python", "INFO", line);
+            }
             Err(error) => {
-                eprintln!("[smart actors/python] stderr read failed: {error}");
+                let message = format!("stderr read failed: {error}");
+                eprintln!("[smart actors/python] {message}");
+                crate::session_log::log_line("python", "ERROR", &message);
                 return;
             }
         }

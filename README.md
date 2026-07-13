@@ -48,8 +48,8 @@ persistent process, protocol, world rules, HUD, and interaction paths.
 - `Esc` — release the mouse
 - Left click — recapture the mouse
 - `F5` / `´` — save a PNG to
-  `screenshots/session_<session>/cathedral_screenshot_<timestamp>.png` and
-  overwrite `screenshots/cathedral_screenshot_latest.png`
+  `logs/latest_session/screenshots/cathedral_screenshot_<timestamp>__<nn>.png`
+  (`nn` counts up when several captures land in the same second)
 - `V` — toggle the microphone on/off (on by default); speech is heard openly
   by every actor within 20 m. Recognized speech appears in tiny text near the
   bottom with a nearby-recipient count
@@ -65,8 +65,12 @@ persistent process, protocol, world rules, HUD, and interaction paths.
 - `Y` / `N` — accept or decline the active incoming offer
 - `R` — retract the selected item's pending offer
 
-Each game start increments `session` in `cathedral_meta.json` once. Every
-screenshot taken during that run uses the resulting session directory.
+Each game start increments `session` in `cathedral_meta.json` once, creates
+`logs/session_<n>_<start time>/`, and repoints the `logs/latest_session`
+symlink at it. The session directory collects that run's `screenshots/`, a
+structured `logs.jsonl` (game, Python sidecar, and drive-script lines as JSON
+lines), and `prompts/` — every LLM prompt/answer exchange as a readable `.md`
+plus a machine-readable `.json`.
 
 Walking uses acceleration, friction, air control, gravity, collision, coyote
 time, and buffered jumping. Flying disables gravity but deliberately keeps

@@ -39,6 +39,8 @@ class _CompletionResult:
     actor_id: CharIdStr
     reply: str | None
     error: Exception | None
+    prompt: str
+    duration_seconds: float
 
 
 class _CompletionWorker:
@@ -76,6 +78,7 @@ class _CompletionWorker:
             if task is None:
                 return
             actor_id, prompt = task
+            started = time.monotonic()
             try:
                 reply = self._complete(prompt)
                 if not isinstance(reply, str):
@@ -83,9 +86,15 @@ class _CompletionWorker:
                 if len(reply) > MAX_LLM_REPLY_CHARS:
                     raise ValueError("LLM reply exceeded the service size limit")
             except Exception as error:
-                self._results.put(_CompletionResult(actor_id, None, error))
+                duration = time.monotonic() - started
+                self._results.put(
+                    _CompletionResult(actor_id, None, error, prompt, duration)
+                )
             else:
-                self._results.put(_CompletionResult(actor_id, reply, None))
+                duration = time.monotonic() - started
+                self._results.put(
+                    _CompletionResult(actor_id, reply, None, prompt, duration)
+                )
 
 
 class NpcScheduler:
@@ -110,6 +119,7 @@ class NpcScheduler:
         clock: Callable[[], float] = time.monotonic,
         verbose: bool = False,
         floor_busy: Callable[[], bool] | None = None,
+        prompt_log: Callable[..., None] | None = None,
     ) -> None:
         if minimum_delay_seconds < 0:
             raise ValueError("minimum_delay_seconds cannot be negative")
@@ -121,6 +131,8 @@ class NpcScheduler:
         self._clock = clock
         self._verbose = verbose
         self._floor_busy = floor_busy
+        # PromptLog.record-compatible keyword callable (see prompt_log.py).
+        self._prompt_log = prompt_log
         self._worker = _CompletionWorker(complete)
         self._order = [
             actor.id for actor in world.characters.values() if actor.control == "llm"
@@ -189,6 +201,15 @@ class NpcScheduler:
             expected = self._in_flight_actor_id
             self._in_flight_actor_id = None
             actor = self.world.characters.get(result.actor_id)
+            if self._prompt_log is not None:
+                self._prompt_log(
+                    actor_id=str(result.actor_id),
+                    actor_name=actor.name if actor is not None else str(result.actor_id),
+                    prompt=result.prompt,
+                    answer=result.reply,
+                    duration_seconds=result.duration_seconds,
+                    error=repr(result.error) if result.error is not None else None,
+                )
             if result.actor_id != expected or actor is None or actor.control != "llm":
                 statuses.append(
                     SchedulerStatus(

@@ -7,11 +7,11 @@
 //! Actions inject real `ButtonInput<KeyCode>` presses and `Interaction`
 //! transitions, so every existing keybinding and button handler works
 //! unchanged. Each fired action prints a `[drive] 3.2s key Escape` line to
-//! stdout as the evidence trail. Without the env var the plugin is never
-//! added and there is zero behavior change.
+//! stdout as the evidence trail (mirrored into the session's `logs.jsonl`);
+//! `shot` PNGs land in the session's `screenshots/` directory. Without the
+//! env var the plugin is never added and there is zero behavior change.
 
 use std::fs;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -24,6 +24,7 @@ use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_dis
 use bevy::ui::UiSystems;
 
 use crate::controller::PlayerController;
+use crate::session_log;
 use crate::smart_actors::SmartActorRuntime;
 use crate::smart_actors::bridge::{BridgeCommand, BridgeHandle};
 use crate::smart_actors::model::Position;
@@ -32,7 +33,6 @@ pub const DRIVE_ENV: &str = "CATHEDRAL_DRIVE";
 pub const SHOT_ENV: &str = "CATHEDRAL_SHOT";
 pub const TIMEOUT_ENV: &str = "CATHEDRAL_DRIVE_TIMEOUT";
 
-const DRIVE_DIRECTORY: &str = "screenshots/drive";
 /// Default spacing between actions; every action is additionally at least one
 /// frame apart because the scheduler fires at most one directive per tick.
 const ACTION_SPACING: f64 = 0.5;
@@ -78,13 +78,20 @@ impl DrivePlugin {
     }
 }
 
+/// Stdout is the documented evidence trail; the session `logs.jsonl` gets the
+/// same line so a parsed session is complete on its own.
+fn drive_log(line: &str) {
+    println!("{line}");
+    session_log::log_line("drive", "INFO", line);
+}
+
 impl Plugin for DrivePlugin {
     fn build(&self, app: &mut App) {
-        println!(
+        drive_log(&format!(
             "[drive] script has {} action(s); watchdog aborts after {}s",
             self.actions.len(),
             self.timeout.as_secs_f64()
-        );
+        ));
         spawn_watchdog(self.timeout);
         app.insert_resource(DriveState {
             scheduler: Scheduler::new(self.actions.clone()),
@@ -110,10 +117,12 @@ impl Plugin for DrivePlugin {
 fn spawn_watchdog(timeout: Duration) {
     std::thread::spawn(move || {
         std::thread::sleep(timeout);
-        eprintln!(
+        let message = format!(
             "[drive] watchdog: run exceeded {}s; aborting",
             timeout.as_secs_f64()
         );
+        eprintln!("{message}");
+        session_log::log_line("drive", "ERROR", &message);
         std::process::exit(124);
     });
 }
@@ -388,7 +397,7 @@ fn run_drive_script(
         state.shot_saved = None;
     }
     for line in state.scheduler.drain_log() {
-        println!("{line}");
+        drive_log(&line);
     }
 
     match directive {
@@ -406,21 +415,33 @@ fn run_drive_script(
                 // The UI focus system resets this to `None` next frame, which
                 // produces the `Changed<Interaction>` press the handlers expect.
                 Some((_, interaction)) => **interaction = Interaction::Pressed,
-                None => println!("[drive] {now:.1}s warning: no UI entity named like `{name}`"),
+                None => drive_log(&format!(
+                    "[drive] {now:.1}s warning: no UI entity named like `{name}`"
+                )),
             }
         }
-        Some(Directive::Shot(name)) => {
-            if let Err(error) = fs::create_dir_all(DRIVE_DIRECTORY) {
-                println!("[drive] {now:.1}s warning: could not create {DRIVE_DIRECTORY}: {error}");
+        Some(Directive::Shot(name)) => match session_log::paths() {
+            None => drive_log(&format!(
+                "[drive] {now:.1}s warning: no session directory; screenshot `{name}` skipped"
+            )),
+            Some(session) => {
+                if let Err(error) = fs::create_dir_all(&session.screenshots) {
+                    drive_log(&format!(
+                        "[drive] {now:.1}s warning: could not create {}: {error}",
+                        session.screenshots.display()
+                    ));
+                }
+                let path = session.screenshots.join(format!("{name}.png"));
+                let saved = Arc::new(AtomicBool::new(false));
+                state.shot_saved = Some(saved.clone());
+                commands
+                    .spawn(Screenshot::primary_window())
+                    .observe(save_to_disk(path))
+                    .observe(move |_: On<ScreenshotCaptured>| {
+                        saved.store(true, Ordering::Release)
+                    });
             }
-            let path = PathBuf::from(DRIVE_DIRECTORY).join(format!("{name}.png"));
-            let saved = Arc::new(AtomicBool::new(false));
-            state.shot_saved = Some(saved.clone());
-            commands
-                .spawn(Screenshot::primary_window())
-                .observe(save_to_disk(path))
-                .observe(move |_: On<ScreenshotCaptured>| saved.store(true, Ordering::Release));
-        }
+        },
         Some(Directive::Sound(sound_id)) => {
             // Emitted at the player's position: the drive trigger stands in
             // for world causes the sim lacks, not for a modeled bell tower.
@@ -434,12 +455,12 @@ fn run_drive_script(
                         sound_id,
                         position_m,
                     }) {
-                        println!("[drive] {now:.1}s warning: sound not sent: {error}");
+                        drive_log(&format!("[drive] {now:.1}s warning: sound not sent: {error}"));
                     }
                 }
-                _ => println!(
+                _ => drive_log(&format!(
                     "[drive] {now:.1}s warning: `sound` needs smart actors and a player"
-                ),
+                )),
             }
         }
         Some(Directive::Quit) => {
@@ -497,7 +518,7 @@ mod tests {
     }
 
     #[test]
-    fn screenshot_names_must_stay_inside_the_drive_directory() {
+    fn screenshot_names_must_stay_inside_the_session_directory() {
         assert!(parse_script("shot ../escape").is_err());
         assert!(parse_script("shot sub/dir").is_err());
         assert!(parse_script("shot back\\slash").is_err());

@@ -18,6 +18,14 @@ Characters take turns in a round-robin tick loop. Each turn:
 3. The reply is parsed as `VERB {json}` lines (`prompt.parse_reply`) and each
    action is applied to the world (`sim.apply_action`).
 
+When the game launches the sidecar it passes `CATHEDRAL_SESSION_DIR` (the
+per-run `logs/session_...` directory); every LLM exchange — including failed
+ones — is then archived by `prompt_log.PromptLog` under its `prompts/` as a
+`<stamp>__<nn>__<actor id>__<actor name>_prompt.md` (Prompt/Answer/Meta
+sections) plus a `.json` with the same `{prompt, answer, meta}`. Standalone
+runs (terminal prototype, tests) have no session directory and archive
+nothing.
+
 "Hearing" has one authoritative recipient calculation within 20 metres
 (including nearby bystanders). Every recipient ID is retained in the structured
 event consumed by Bevy; LLM-controlled recipients additionally receive a prose
@@ -93,6 +101,8 @@ current. Full design: `../features/giving_things.md`.
 - `protocol.py` — strict version-1 envelope parsing and compact encoding.
 - `scheduler.py` — one non-blocking global NPC turn stream with priority and
   provider backoff.
+- `prompt_log.py` — the per-session `.md`/`.json` archive of every LLM
+  exchange (see above); disabled without `CATHEDRAL_SESSION_DIR`.
 - `speech_client.py` — independent completed-utterance OpenAI STT/TTS adapters
   plus persistent local Canary-Qwen STT and streaming Pocket TTS workers; unavailable
   credentials degrade independently from text cognition and local speech.

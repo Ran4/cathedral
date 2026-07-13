@@ -100,6 +100,15 @@ def complete(prompt: str) -> str:
     return content
 
 
+def model_name() -> str | None:
+    """The model complete() would use, or None when misconfigured."""
+    try:
+        _, _, model = _config()
+    except LLMConfigurationError:
+        return None
+    return model
+
+
 def is_available() -> bool:
     """Whether cognition appears configured, without making a provider call."""
     try:

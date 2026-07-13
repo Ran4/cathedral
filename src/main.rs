@@ -6,9 +6,11 @@ mod fonts;
 mod materials;
 mod scene;
 mod screenshot;
+mod session_log;
 mod smart_actors;
 mod ui;
 
+use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, MonitorSelection, WindowMode, WindowResolution};
 use city::CityPlugin;
@@ -21,6 +23,9 @@ use smart_actors::SmartActorsPlugin;
 use ui::HudPlugin;
 
 fn main() {
+    // The session directory must exist before anything logs, screenshots, or
+    // spawns the Python sidecar; all three consume this process-wide state.
+    session_log::init();
     let config = load_config();
     let smart_actors = config.smart_actors.clone();
     let persisted = PersistedConfig(config.clone());
@@ -41,21 +46,30 @@ fn main() {
         // hazy blue is also a useful fallback on GPUs without atmosphere
         // compute-shader support.
         .insert_resource(ClearColor(Color::srgb(0.52, 0.67, 0.76)))
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: config.title,
-                resolution,
-                resizable: config.resizable,
-                mode,
-                ..default()
-            }),
-            primary_cursor_options: Some(CursorOptions {
-                visible: false,
-                grab_mode: CursorGrabMode::Locked,
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(LogPlugin {
+                    // Mirror the console log stream into the session's
+                    // `logs.jsonl` (see `session_log`).
+                    custom_layer: session_log::custom_layer,
+                    ..default()
+                })
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: config.title,
+                        resolution,
+                        resizable: config.resizable,
+                        mode,
+                        ..default()
+                    }),
+                    primary_cursor_options: Some(CursorOptions {
+                        visible: false,
+                        grab_mode: CursorGrabMode::Locked,
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .insert_resource(persisted)
         .add_plugins((
             CathedralFontsPlugin,

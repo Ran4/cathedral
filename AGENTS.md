@@ -40,11 +40,29 @@ model, actions, prompt format, the terminal prototype) live in
 
 ----------
 
-If i refer to screenshots,
-they're written to:
+## Session logs
 
-screenshots/session_X/cathedral_screenshot_YYYY-MM-DD_HH_MM_SS.png
-screenshots/cathedral_screenshot_latest.png <- this is usually what I'll talk about
+Every game start creates a session directory (the counter lives in
+`cathedral_meta.json`) and repoints the `logs/latest_session` symlink at it —
+that's usually what I'll talk about:
+
+```
+logs/
+    latest_session -> session_35_2026-07-13_10_12_02
+    session_35_2026-07-13_10_12_02/        # session 35, started 2026-07-13 10:12:02
+        logs.jsonl                         # structured logs, one JSON object per line:
+                                           #   game (source "rust"), Python sidecar stderr
+                                           #   ("python"), drive evidence lines ("drive")
+        screenshots/
+            cathedral_screenshot_2026-07-13_10_14_31__00.png   # __nn counts up within a second
+            <name>.png                     # named drive-mode `shot` captures
+        prompts/                           # every LLM exchange, written by the sidecar
+            2026-07-13_10_12_45__00__k0fb1__Ilse_prompt.md     # Prompt / Answer / Meta sections
+            2026-07-13_10_12_45__00__k0fb1__Ilse_prompt.json   # same data: {prompt, answer, meta}
+```
+
+If I refer to screenshots, F5 captures are the timestamped files in
+`logs/latest_session/screenshots/`.
 
 ## Agent drive mode
 

@@ -10,8 +10,11 @@
 .DS_Store
 *.swp
 
-# Runtime captures
-screenshots/
+# Per-run session logs, screenshots, and prompt archives — but keep the
+# format description tracked
+logs/*
+!logs/AGENTS.md
+!logs/CLAUDE.md
 
 # This is local
 cathedral_meta.json
