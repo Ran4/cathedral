@@ -4,7 +4,8 @@ We have consolidated occupations mentioned or
 strongly implied by `lore/core_lore/` and `lore/second_sun/` into a smaller
 set of occupation families for later population generation, see occupations.json
 
-Each `occupation` is a merged job family. `alternative_titles` preserves the
+Each entry is a merged job family, keyed by `occupation_id` (the stable slug a character sheet points at)
+and named by `occupation_display`. `alternative_titles` preserves the
 more specific lore terms, ranks, and specialisms that can be used when writing
 about an individual person. Related locations are supported by the lore but are
 not exclusive workplaces.
