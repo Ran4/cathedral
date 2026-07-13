@@ -1,8 +1,9 @@
 //! A small, dependency-free first-person character controller.
 //!
-//! The cathedral only needs coarse, static collision.  Treating those colliders
-//! as boxes keeps the controller deterministic and makes the movement code easy
-//! to test without starting Bevy's renderer.
+//! The cathedral only needs simple, static collision. Axis-aligned boxes cover
+//! floors and authored scene pieces; convex vertical prisms follow the city's
+//! rotated cadastral footprints. Both keep the controller deterministic and
+//! easy to test without starting Bevy's renderer.
 //!
 //! AGENT: please keep this keyboard map up to date whenever you change anything:
 //!    ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
@@ -63,6 +64,7 @@ const PITCH_LIMIT: f32 = FRAC_PI_2 - 0.01;
 // repeatedly pushing the player in and out of a surface.
 const COLLISION_SKIN: f32 = 0.002;
 const SWEEP_EPSILON: f32 = 1.0e-6;
+const PRISM_GEOMETRY_EPSILON: f32 = 1.0e-3;
 const MAX_SLIDE_PLANES: usize = 5;
 const MAX_DEPENETRATION_STEPS: usize = 8;
 
@@ -123,14 +125,14 @@ impl PlayerController {
     }
 }
 
-/// Static collision boxes used by the character controller.
+/// Static collision geometry used by the character controller.
 ///
-/// Boxes are world-space and axis-aligned.  Scene geometry may be as detailed
-/// as desired; register simple boxes for floors, walls, stairs, and other solid
-/// navigation surfaces.
+/// Scene geometry may be as detailed as desired; register simple boxes for
+/// floors, walls, and stairs, or convex vertical prisms for rotated footprints.
 #[derive(Resource, Debug, Default)]
 pub struct CollisionWorld {
     boxes: Vec<SolidBox>,
+    convex_prisms: Vec<SolidConvexPrism>,
 }
 
 impl CollisionWorld {
@@ -153,7 +155,85 @@ impl CollisionWorld {
         });
     }
 
-    /// Returns the distance to the first static collision box hit by a ray.
+    /// Registers a solid vertical prism with a convex footprint in the XZ plane.
+    ///
+    /// Vertices may use either winding order. Invalid, degenerate, or concave
+    /// footprints are ignored, just like invalid boxes; callers can decompose a
+    /// concave footprint into convex pieces before registering it.
+    pub fn add_convex_prism(&mut self, footprint_xz: &[[f32; 2]], min_y: f32, max_y: f32) {
+        let lower_y = min_y.min(max_y);
+        let upper_y = min_y.max(max_y);
+        if footprint_xz.len() < 3
+            || !lower_y.is_finite()
+            || !upper_y.is_finite()
+            || upper_y <= lower_y
+            || footprint_xz
+                .iter()
+                .flatten()
+                .any(|coordinate| !coordinate.is_finite())
+        {
+            return;
+        }
+
+        let signed_area = footprint_xz
+            .iter()
+            .zip(footprint_xz.iter().cycle().skip(1))
+            .map(|(a, b)| a[0] * b[1] - b[0] * a[1])
+            .sum::<f32>()
+            * 0.5;
+        if signed_area.abs() <= PRISM_GEOMETRY_EPSILON {
+            return;
+        }
+
+        let winding = signed_area.signum();
+        let vertices = footprint_xz
+            .iter()
+            .copied()
+            .map(Vec2::from_array)
+            .collect::<Vec<_>>();
+        let mut planes = Vec::with_capacity(vertices.len() + 4);
+
+        // An AABB swept against a convex polygon uses the separating axes of
+        // both shapes. Put the AABB's four axes first so they also serve as a
+        // cheap broad-phase rejection before testing the footprint edges.
+        for normal in [Vec2::X, Vec2::NEG_X, Vec2::Y, Vec2::NEG_Y] {
+            let offset = vertices
+                .iter()
+                .map(|vertex| normal.dot(*vertex))
+                .max_by(f32::total_cmp)
+                .expect("a validated prism has vertices");
+            planes.push(PrismPlane { normal, offset });
+        }
+
+        for (a, b) in vertices.iter().zip(vertices.iter().cycle().skip(1)) {
+            let edge = *b - *a;
+            if edge.length_squared() <= PRISM_GEOMETRY_EPSILON * PRISM_GEOMETRY_EPSILON {
+                return;
+            }
+            let outward = (Vec2::new(edge.y, -edge.x) * winding).normalize();
+            let edge_offset = outward.dot(*a);
+            let offset = vertices
+                .iter()
+                .map(|vertex| outward.dot(*vertex))
+                .max_by(f32::total_cmp)
+                .expect("a validated prism has vertices");
+            if offset > edge_offset + PRISM_GEOMETRY_EPSILON {
+                return;
+            }
+            planes.push(PrismPlane {
+                normal: outward,
+                offset,
+            });
+        }
+
+        self.convex_prisms.push(SolidConvexPrism {
+            min_y: lower_y,
+            max_y: upper_y,
+            planes: planes.into_boxed_slice(),
+        });
+    }
+
+    /// Returns the distance to the first static collider hit by a ray.
     ///
     /// Smart-actor gaze targeting uses the same deliberately coarse geometry
     /// as player movement. This keeps walls authoritative for interaction
@@ -179,19 +259,23 @@ impl CollisionWorld {
                 sweep_point_box(origin, displacement, solid.min, solid.max)
                     .map(|hit| hit.time * max_distance)
             })
+            .chain(self.convex_prisms.iter().filter_map(|solid| {
+                sweep_point_prism(origin, displacement, Vec3::ZERO, solid)
+                    .map(|hit| hit.time * max_distance)
+            }))
             .min_by(f32::total_cmp)
     }
 
-    /// Number of coarse static colliders registered by the scene.
+    /// Number of static colliders registered by the scene.
     #[cfg(test)]
     pub fn len(&self) -> usize {
-        self.boxes.len()
+        self.boxes.len() + self.convex_prisms.len()
     }
 
     /// Whether the scene has registered any collision geometry yet.
     #[cfg(test)]
     pub fn is_empty(&self) -> bool {
-        self.boxes.is_empty()
+        self.boxes.is_empty() && self.convex_prisms.is_empty()
     }
 }
 
@@ -199,6 +283,19 @@ impl CollisionWorld {
 struct SolidBox {
     min: Vec3,
     max: Vec3,
+}
+
+#[derive(Debug)]
+struct SolidConvexPrism {
+    min_y: f32,
+    max_y: f32,
+    planes: Box<[PrismPlane]>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PrismPlane {
+    normal: Vec2,
+    offset: f32,
 }
 
 #[derive(Component, Debug)]
@@ -376,18 +473,11 @@ fn fixed_player_movement(
         PLAYER_HALF_SIZE,
         controller.velocity * dt,
         &collision_world.boxes,
+        &collision_world.convex_prisms,
     );
     physical_position.current = movement.position;
 
-    if movement.contacts.blocked_x {
-        controller.velocity.x = 0.0;
-    }
-    if movement.contacts.blocked_z {
-        controller.velocity.z = 0.0;
-    }
-    if movement.contacts.blocked_y {
-        controller.velocity.y = 0.0;
-    }
+    movement.contacts.clip_velocity(&mut controller.velocity);
 
     if !controller.flying {
         controller.grounded = movement.contacts.ground;
@@ -503,13 +593,31 @@ fn apply_friction(velocity: &mut Vec3, friction: f32, dt: f32) {
     *velocity *= new_speed / speed;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+const MAX_CONTACT_NORMALS: usize = MAX_SLIDE_PLANES + MAX_DEPENETRATION_STEPS;
+
+#[derive(Debug, Clone, Copy)]
 struct CollisionContacts {
     blocked_x: bool,
     blocked_y: bool,
     blocked_z: bool,
     ground: bool,
     ceiling: bool,
+    normals: [Vec3; MAX_CONTACT_NORMALS],
+    normal_count: usize,
+}
+
+impl Default for CollisionContacts {
+    fn default() -> Self {
+        Self {
+            blocked_x: false,
+            blocked_y: false,
+            blocked_z: false,
+            ground: false,
+            ceiling: false,
+            normals: [Vec3::ZERO; MAX_CONTACT_NORMALS],
+            normal_count: 0,
+        }
+    }
 }
 
 impl CollisionContacts {
@@ -524,6 +632,28 @@ impl CollisionContacts {
         }
         if normal.z.abs() > 0.5 {
             self.blocked_z = true;
+        }
+
+        if self.normal_count < self.normals.len()
+            && !self.normals[..self.normal_count]
+                .iter()
+                .any(|registered| registered.dot(normal) > 1.0 - SWEEP_EPSILON)
+        {
+            self.normals[self.normal_count] = normal;
+            self.normal_count += 1;
+        }
+    }
+
+    fn clip_velocity(&self, velocity: &mut Vec3) {
+        // A later plane can push a velocity slightly back into an earlier one
+        // at a convex corner, so make a second inexpensive pass.
+        for _ in 0..2 {
+            for normal in &self.normals[..self.normal_count] {
+                let into_surface = velocity.dot(*normal);
+                if into_surface < 0.0 {
+                    *velocity -= *normal * into_surface;
+                }
+            }
         }
     }
 }
@@ -547,10 +677,11 @@ fn move_aabb(
     half_size: Vec3,
     displacement: Vec3,
     boxes: &[SolidBox],
+    prisms: &[SolidConvexPrism],
 ) -> MovementResult {
     let mut position = start;
     let mut contacts = CollisionContacts::default();
-    depenetrate(&mut position, half_size, boxes, &mut contacts);
+    depenetrate(&mut position, half_size, boxes, prisms, &mut contacts);
 
     let mut remaining = displacement;
     for _ in 0..MAX_SLIDE_PLANES {
@@ -558,9 +689,18 @@ fn move_aabb(
             break;
         }
 
-        let Some(hit) = nearest_hit(position, half_size, remaining, boxes) else {
-            position += remaining;
-            break;
+        let box_hit = nearest_hit(position, half_size, remaining, boxes);
+        let prism_hit = nearest_prism_hit(position, half_size, remaining, prisms);
+        let hit = match (box_hit, prism_hit) {
+            (Some(box_hit), Some(prism_hit)) if prism_hit.time < box_hit.time - SWEEP_EPSILON => {
+                prism_hit
+            }
+            (Some(box_hit), _) => box_hit,
+            (None, Some(prism_hit)) => prism_hit,
+            (None, None) => {
+                position += remaining;
+                break;
+            }
         };
 
         let time = hit.time.clamp(0.0, 1.0);
@@ -592,6 +732,28 @@ fn nearest_hit(
         let expanded_min = solid.min - expansion;
         let expanded_max = solid.max + expansion;
         let Some(hit) = sweep_point_box(origin, displacement, expanded_min, expanded_max) else {
+            continue;
+        };
+
+        if nearest.is_none_or(|current| hit.time < current.time - SWEEP_EPSILON) {
+            nearest = Some(hit);
+        }
+    }
+
+    nearest
+}
+
+fn nearest_prism_hit(
+    origin: Vec3,
+    half_size: Vec3,
+    displacement: Vec3,
+    prisms: &[SolidConvexPrism],
+) -> Option<SweepHit> {
+    let expansion = half_size + Vec3::splat(COLLISION_SKIN);
+    let mut nearest: Option<SweepHit> = None;
+
+    for solid in prisms {
+        let Some(hit) = sweep_point_prism(origin, displacement, expansion, solid) else {
             continue;
         };
 
@@ -662,12 +824,100 @@ fn sweep_point_box(origin: Vec3, displacement: Vec3, min: Vec3, max: Vec3) -> Op
     })
 }
 
+/// Ray-versus-expanded-convex-prism clipping over `[0, 1]`.
+fn sweep_point_prism(
+    origin: Vec3,
+    displacement: Vec3,
+    expansion: Vec3,
+    solid: &SolidConvexPrism,
+) -> Option<SweepHit> {
+    let mut enter_time = f32::NEG_INFINITY;
+    let mut exit_time = f32::INFINITY;
+    let mut enter_normal = Vec3::ZERO;
+
+    for plane in &solid.planes {
+        let normal = Vec3::new(plane.normal.x, 0.0, plane.normal.y);
+        let offset =
+            plane.offset + plane.normal.x.abs() * expansion.x + plane.normal.y.abs() * expansion.z;
+        if !clip_sweep_half_space(
+            origin,
+            displacement,
+            normal,
+            offset,
+            &mut enter_time,
+            &mut exit_time,
+            &mut enter_normal,
+        ) {
+            return None;
+        }
+    }
+
+    for (normal, offset) in [
+        (Vec3::Y, solid.max_y + expansion.y),
+        (Vec3::NEG_Y, -solid.min_y + expansion.y),
+    ] {
+        if !clip_sweep_half_space(
+            origin,
+            displacement,
+            normal,
+            offset,
+            &mut enter_time,
+            &mut exit_time,
+            &mut enter_normal,
+        ) {
+            return None;
+        }
+    }
+
+    if !(-SWEEP_EPSILON..=1.0 + SWEEP_EPSILON).contains(&enter_time)
+        || exit_time < -SWEEP_EPSILON
+        || enter_normal == Vec3::ZERO
+        || displacement.dot(enter_normal) >= 0.0
+    {
+        return None;
+    }
+
+    Some(SweepHit {
+        time: enter_time.max(0.0),
+        normal: enter_normal,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn clip_sweep_half_space(
+    origin: Vec3,
+    displacement: Vec3,
+    outward_normal: Vec3,
+    offset: f32,
+    enter_time: &mut f32,
+    exit_time: &mut f32,
+    enter_normal: &mut Vec3,
+) -> bool {
+    let distance_inside = offset - outward_normal.dot(origin);
+    let speed_outward = outward_normal.dot(displacement);
+    if speed_outward.abs() <= SWEEP_EPSILON {
+        return distance_inside >= -SWEEP_EPSILON;
+    }
+
+    let plane_time = distance_inside / speed_outward;
+    if speed_outward < 0.0 {
+        if plane_time > *enter_time {
+            *enter_time = plane_time;
+            *enter_normal = outward_normal;
+        }
+    } else {
+        *exit_time = exit_time.min(plane_time);
+    }
+    *enter_time <= *exit_time + SWEEP_EPSILON
+}
+
 /// Recovers from invalid spawn points or numerical penetration by repeatedly
 /// taking the shortest route out of an expanded solid.
 fn depenetrate(
     position: &mut Vec3,
     half_size: Vec3,
     boxes: &[SolidBox],
+    prisms: &[SolidConvexPrism],
     contacts: &mut CollisionContacts,
 ) {
     let expansion = half_size + Vec3::splat(COLLISION_SKIN);
@@ -707,6 +957,16 @@ fn depenetrate(
             }
         }
 
+        for solid in prisms {
+            let Some(push) = prism_penetration_push(*position, expansion, solid) else {
+                continue;
+            };
+            if shortest_push.is_none_or(|current| push.length_squared() < current.length_squared())
+            {
+                shortest_push = Some(push);
+            }
+        }
+
         let Some(mut push) = shortest_push else {
             break;
         };
@@ -715,6 +975,38 @@ fn depenetrate(
         *position += push;
         contacts.add(normal);
     }
+}
+
+fn prism_penetration_push(
+    position: Vec3,
+    expansion: Vec3,
+    solid: &SolidConvexPrism,
+) -> Option<Vec3> {
+    let min_y = solid.min_y - expansion.y;
+    let max_y = solid.max_y + expansion.y;
+    if position.y <= min_y || position.y >= max_y {
+        return None;
+    }
+
+    let mut shortest_push = if position.y - min_y < max_y - position.y {
+        Vec3::NEG_Y * (position.y - min_y)
+    } else {
+        Vec3::Y * (max_y - position.y)
+    };
+    let position_xz = Vec2::new(position.x, position.z);
+    for plane in &solid.planes {
+        let offset =
+            plane.offset + plane.normal.x.abs() * expansion.x + plane.normal.y.abs() * expansion.z;
+        let distance_inside = offset - plane.normal.dot(position_xz);
+        if distance_inside <= 0.0 {
+            return None;
+        }
+        let push = Vec3::new(plane.normal.x, 0.0, plane.normal.y) * distance_inside;
+        if push.length_squared() < shortest_push.length_squared() {
+            shortest_push = push;
+        }
+    }
+    Some(shortest_push)
 }
 
 fn axis_vector(axis_index: usize, value: f32) -> Vec3 {
@@ -734,6 +1026,15 @@ mod tests {
 
     fn solid(min: Vec3, max: Vec3) -> SolidBox {
         SolidBox { min, max }
+    }
+
+    fn move_boxes(
+        start: Vec3,
+        half_size: Vec3,
+        displacement: Vec3,
+        boxes: &[SolidBox],
+    ) -> MovementResult {
+        move_aabb(start, half_size, displacement, boxes, &[])
     }
 
     fn close(actual: f32, expected: f32) {
@@ -796,7 +1097,7 @@ mod tests {
     #[test]
     fn high_speed_sweep_cannot_tunnel_through_a_thin_wall() {
         let wall = solid(Vec3::new(0.0, -2.0, -2.0), Vec3::new(0.05, 2.0, 2.0));
-        let result = move_aabb(
+        let result = move_boxes(
             Vec3::new(-5.0, 0.0, 0.0),
             TEST_HALF_SIZE,
             Vec3::new(20.0, 0.0, 0.0),
@@ -810,7 +1111,7 @@ mod tests {
     #[test]
     fn diagonal_sweep_hits_a_box_instead_of_skipping_its_corner() {
         let obstacle = solid(Vec3::splat(-0.25), Vec3::splat(0.25));
-        let result = move_aabb(
+        let result = move_boxes(
             Vec3::new(-3.0, 0.0, -3.0),
             TEST_HALF_SIZE,
             Vec3::new(6.0, 0.0, 6.0),
@@ -824,7 +1125,7 @@ mod tests {
     #[test]
     fn wall_collision_preserves_tangential_slide() {
         let wall = solid(Vec3::new(0.0, -3.0, -10.0), Vec3::new(0.2, 3.0, 10.0));
-        let result = move_aabb(
+        let result = move_boxes(
             Vec3::new(-2.0, 0.0, -2.0),
             TEST_HALF_SIZE,
             Vec3::new(4.0, 0.0, 3.0),
@@ -840,7 +1141,7 @@ mod tests {
     #[test]
     fn falling_lands_on_floor_and_reports_ground() {
         let floor = solid(Vec3::new(-10.0, -1.0, -10.0), Vec3::new(10.0, 0.0, 10.0));
-        let result = move_aabb(
+        let result = move_boxes(
             Vec3::new(0.0, 5.0, 0.0),
             TEST_HALF_SIZE,
             Vec3::new(0.0, -10.0, 0.0),
@@ -855,7 +1156,7 @@ mod tests {
     #[test]
     fn upward_sweep_stops_at_ceiling() {
         let ceiling = solid(Vec3::new(-10.0, 3.0, -10.0), Vec3::new(10.0, 4.0, 10.0));
-        let result = move_aabb(
+        let result = move_boxes(
             Vec3::new(0.0, 1.0, 0.0),
             TEST_HALF_SIZE,
             Vec3::new(0.0, 10.0, 0.0),
@@ -869,7 +1170,7 @@ mod tests {
     #[test]
     fn resting_on_floor_does_not_block_horizontal_motion() {
         let floor = solid(Vec3::new(-20.0, -1.0, -20.0), Vec3::new(20.0, 0.0, 20.0));
-        let result = move_aabb(
+        let result = move_boxes(
             Vec3::new(0.0, 0.5 + COLLISION_SKIN, 0.0),
             TEST_HALF_SIZE,
             Vec3::new(5.0, 0.0, 0.0),
@@ -891,6 +1192,59 @@ mod tests {
             .expect("the ray should hit the near wall");
         close(distance, 3.0);
         assert!(world.nearest_ray_hit(Vec3::ZERO, Vec3::X, 20.0).is_none());
+    }
+
+    #[test]
+    fn rotated_prism_ray_hits_its_actual_facade() {
+        let footprint = [[0.0, -2.0], [2.0, 0.0], [0.0, 2.0], [-2.0, 0.0]];
+        let outward = Vec3::new(1.0, 0.0, -1.0).normalize();
+        let facade_midpoint = Vec3::new(1.0, 1.0, -1.0);
+        let mut world = CollisionWorld::default();
+        world.add_convex_prism(&footprint, 0.0, 3.0);
+
+        let distance = world
+            .nearest_ray_hit(facade_midpoint + outward * 3.0, -outward, 6.0)
+            .expect("the ray should hit the rotated facade");
+        close(distance, 3.0);
+    }
+
+    #[test]
+    fn swept_aabb_cannot_enter_a_rotated_prism() {
+        let footprint = [[0.0, -2.0], [2.0, 0.0], [0.0, 2.0], [-2.0, 0.0]];
+        let outward = Vec3::new(1.0, 0.0, -1.0).normalize();
+        let facade_midpoint = Vec3::new(1.0, 1.0, -1.0);
+        let mut world = CollisionWorld::default();
+        world.add_convex_prism(&footprint, 0.0, 3.0);
+
+        let start = facade_midpoint + outward * 3.0;
+        let result = move_aabb(
+            start,
+            TEST_HALF_SIZE,
+            -outward * 6.0,
+            &world.boxes,
+            &world.convex_prisms,
+        );
+        let expected_clearance = TEST_HALF_SIZE.x * outward.x.abs()
+            + TEST_HALF_SIZE.z * outward.z.abs()
+            + COLLISION_SKIN * (outward.x.abs() + outward.z.abs());
+        close(
+            (result.position - facade_midpoint).dot(outward),
+            expected_clearance,
+        );
+    }
+
+    #[test]
+    fn diagonal_contact_keeps_tangential_velocity() {
+        let normal = Vec3::new(1.0, 0.0, -1.0).normalize();
+        let tangent = Vec3::new(1.0, 0.0, 1.0).normalize();
+        let mut contacts = CollisionContacts::default();
+        contacts.add(normal);
+        let mut velocity = tangent * 4.0 - normal * 2.0;
+
+        contacts.clip_velocity(&mut velocity);
+
+        close(velocity.dot(normal), 0.0);
+        close(velocity.dot(tangent), 4.0);
     }
 
     #[test]

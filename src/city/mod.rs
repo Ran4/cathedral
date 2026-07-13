@@ -30,7 +30,6 @@ const GROUND_MIN_Z: f32 = -745.0;
 const GROUND_MAX_Z: f32 = 650.0;
 const WALL_HEIGHT: f32 = 14.0;
 const WALL_THICKNESS: f32 = 3.2;
-const COLLIDER_SLICE_M: f32 = 4.0;
 const BUILDING_FLOOR_HEIGHT: f32 = 3.15;
 
 pub struct CityPlugin;
@@ -922,72 +921,25 @@ fn add_facade_panel(
     );
 }
 
-/// Fill a rotated or irregular footprint with narrow, axis-aligned boxes.
-/// The boxes are inscribed in the polygon instead of using its oversized AABB;
-/// this preserves the narrow lanes that run past angled parcels while keeping
-/// the deliberately small controller collision model fast and deterministic.
+/// Register the visible footprint itself as collision geometry.
+///
+/// Almost every cadastral building is a convex quadrilateral. The two concave
+/// non-cathedral footprints are decomposed into triangles so their passages
+/// remain open instead of being filled by an oversized convex hull.
 fn add_footprint_colliders(
     collision_world: &mut CollisionWorld,
     polygon: &[[f32; 2]],
     min_y: f32,
     max_y: f32,
 ) {
-    let min_x = polygon
-        .iter()
-        .map(|point| point[0])
-        .fold(f32::INFINITY, f32::min);
-    let max_x = polygon
-        .iter()
-        .map(|point| point[0])
-        .fold(f32::NEG_INFINITY, f32::max);
-    let slices = ((max_x - min_x) / COLLIDER_SLICE_M).ceil().max(1.0) as usize;
-
-    for slice in 0..slices {
-        let x0 = min_x + (max_x - min_x) * slice as f32 / slices as f32;
-        let x1 = min_x + (max_x - min_x) * (slice + 1) as f32 / slices as f32;
-        let samples = [x0.lerp(x1, 0.08), x0.lerp(x1, 0.5), x0.lerp(x1, 0.92)];
-        let sample_spans = samples.map(|x| vertical_polygon_spans(polygon, x));
-
-        for middle in &sample_spans[1] {
-            let mut low = middle.0;
-            let mut high = middle.1;
-            let mut valid = true;
-            for spans in [&sample_spans[0], &sample_spans[2]] {
-                let Some(overlap) = spans.iter().max_by(|a, b| {
-                    interval_overlap(**a, *middle).total_cmp(&interval_overlap(**b, *middle))
-                }) else {
-                    valid = false;
-                    break;
-                };
-                low = low.max(overlap.0);
-                high = high.min(overlap.1);
-            }
-            if valid && high - low > 0.18 {
-                collision_world.add_box(Vec3::new(x0, min_y, low), Vec3::new(x1, max_y, high));
-            }
-        }
+    if polygon_is_convex(polygon) {
+        collision_world.add_convex_prism(polygon, min_y, max_y);
+        return;
     }
-}
 
-fn vertical_polygon_spans(polygon: &[[f32; 2]], x: f32) -> Vec<(f32, f32)> {
-    let mut crossings = Vec::new();
-    for (a, b) in polygon.iter().zip(polygon.iter().cycle().skip(1)) {
-        let (x0, z0) = (a[0], a[1]);
-        let (x1, z1) = (b[0], b[1]);
-        if (x0 <= x && x < x1) || (x1 <= x && x < x0) {
-            let t = (x - x0) / (x1 - x0);
-            crossings.push(z0.lerp(z1, t));
-        }
+    for triangle in triangulate_polygon(polygon) {
+        collision_world.add_convex_prism(&triangle.map(|vertex| polygon[vertex]), min_y, max_y);
     }
-    crossings.sort_by(f32::total_cmp);
-    crossings
-        .chunks_exact(2)
-        .map(|pair| (pair[0], pair[1]))
-        .collect()
-}
-
-fn interval_overlap(a: (f32, f32), b: (f32, f32)) -> f32 {
-    (a.1.min(b.1) - a.0.max(b.0)).max(0.0)
 }
 
 fn build_fixtures(
@@ -1922,6 +1874,20 @@ fn add_disc_surface(mesh: &mut MeshData, center: Vec2, radius: f32, y: f32, segm
     }
 }
 
+fn polygon_is_convex(polygon: &[[f32; 2]]) -> bool {
+    let winding = plan::signed_area(polygon).signum();
+    polygon
+        .iter()
+        .zip(polygon.iter().cycle().skip(1))
+        .zip(polygon.iter().cycle().skip(2))
+        .all(|((a, b), c)| {
+            let a = Vec2::from_array(*a);
+            let b = Vec2::from_array(*b);
+            let c = Vec2::from_array(*c);
+            cross_2d(b - a, c - b) * winding >= -0.001
+        })
+}
+
 fn triangulate_polygon(polygon: &[[f32; 2]]) -> Vec<[usize; 3]> {
     if polygon.len() < 3 {
         return Vec::new();
@@ -2242,6 +2208,60 @@ mod tests {
 
         let passage = Vec2::new(-235.0, 20.0);
         assert!(!point_in_polygon_for_test(passage, &gaunt.polygon));
+
+        let mut collision_world = CollisionWorld::default();
+        add_footprint_colliders(&mut collision_world, &gaunt.polygon, 0.0, 8.0);
+        assert!(
+            collision_world
+                .nearest_ray_hit(Vec3::new(-239.0, 1.0, 20.0), Vec3::X, 7.0)
+                .is_none(),
+            "the triangulated collider must not seal Gaunt House's passage"
+        );
+    }
+
+    #[test]
+    fn every_building_collider_starts_at_its_visible_facades() {
+        let plan = plan::load();
+        for building in &plan.buildings {
+            if building.id == "named_lanthorn" {
+                continue;
+            }
+
+            let (base_y, eave_y) = building_verticals(building);
+            let mut collision_world = CollisionWorld::default();
+            add_footprint_colliders(&mut collision_world, &building.polygon, base_y, eave_y);
+            assert!(
+                !collision_world.is_empty(),
+                "{} has no collider",
+                building.id
+            );
+
+            let winding = plan::signed_area(&building.polygon).signum();
+            for (a, b) in building
+                .polygon
+                .iter()
+                .zip(building.polygon.iter().cycle().skip(1))
+            {
+                let a = Vec2::from_array(*a);
+                let b = Vec2::from_array(*b);
+                let midpoint = (a + b) * 0.5;
+                let edge = b - a;
+                let outward = Vec2::new(edge.y, -edge.x).normalize() * winding;
+                let ray_start = midpoint + outward * 0.75;
+                let distance = collision_world
+                    .nearest_ray_hit(
+                        Vec3::new(ray_start.x, base_y + 0.5, ray_start.y),
+                        Vec3::new(-outward.x, 0.0, -outward.y),
+                        1.5,
+                    )
+                    .unwrap_or_else(|| panic!("{} has an unprotected facade", building.id));
+                assert!(
+                    (distance - 0.75).abs() < 0.002,
+                    "{} collider is {distance:.3} m from its facade",
+                    building.id
+                );
+            }
+        }
     }
 
     fn point_in_polygon_for_test(point: Vec2, polygon: &[[f32; 2]]) -> bool {
