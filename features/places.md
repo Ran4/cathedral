@@ -1,6 +1,9 @@
-So, as per the lore (see lore/core_lore), there's various places.
+CURRENT STATUS: no steps has started.
 
-Right now, they're imagined - they don't map to the actual game world.
+So, as per the lore (see lore/core_lore and especially,
+lore/core_lore/places.md), there's various places - squares, streets, passages, courts...
+
+Right now, they're mostly imagined - they don't map to the actual game world.
 The in-game characters's positions don't map to the names given in the core lore.
 
 Note: second_sun lore is extensive; skip it, ONLY consider core_lore for now!
@@ -55,3 +58,17 @@ Find out places that are mentioned in the core lore,
 and actually modify the 3d gameworld so it matches the description of the places.
 
 Then add the areas boxes.
+
+This is going to be incredibly time-consuming, so start off with just doing one place: start with
+the Coswald's Yard.
+
+Important: see lore/inspiration_images/places/ for inspiration!
+Note: this has both images (that you need to look at) as well as the llm prompt that generated the images.
+
+If you're uncertain about a feature, note that the written lore beats the image (feel free to look it up
+in the lore/ folder - but do ignore the lore/wip_lore_please_ignore_this_is_NOT_canon/ folder!).
+
+
+## Step 3: The rest of the owl
+
+Complete the rest of the places...
