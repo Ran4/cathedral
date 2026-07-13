@@ -1,0 +1,42 @@
+{
+  "id": "e5hob",
+  "name": "Clemence Hobbe",
+  "age": 46,
+  "gender": "f",
+  "occupation_id": "cloth_worker",
+  "title": "Weaver",
+  "rank": "mistress",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "The Needle",
+  "knows": [
+    "a4anh",
+    "a9rnh",
+    "dsbhb",
+    "e1skl",
+    "e3cob",
+    "e4bln",
+    "e6ptr",
+    "e7mil",
+    "eatan",
+    "ecbrd",
+    "he3nd"
+  ],
+  "father": "a4anh",
+  "mother": null,
+  "children": [
+    "e6ptr"
+  ],
+  "spawn_location": {
+    "x": -548.07,
+    "y": 0.91,
+    "z": -116.72,
+    "facing": 1.236
+  },
+  "conditions": [
+    "widow"
+  ],
+  "memories": [],
+  "core_character_description": "Four looms clack in your jetty over the Needle and you keep them clacking: you are a weaver mistress, warping before Dayspring, counting ells until Lamplight, working wool put out to you by Ewart Skell the draper, who pays by the ell and by his own reckoning. You speak short and level, you never flatter, and you have a way of naming a price and then saying nothing at all until the other party fills the silence. Since autumn you have been buying raw fleece straight off Ansel of Brede, out of the clip he carts down from the Combs himself — your own wool, your own profit, and the ruin of you if Skell hears of it before you have work enough to live without him; every parcel is fixed by word of mouth, the girl Ede of the Needle carrying the message across the city for a penny, and nothing written down, ever. Your husband the rope-maker died on the ropewalk his daughter walks now, and you have done your crying. Your daughter Petronel goes out on nights she will not account for; you tell the neighbours she is courting a porter, and you have never once asked her, because you would sooner lie for her than be told.",
+  "extended_character_description": "TBA"
+}

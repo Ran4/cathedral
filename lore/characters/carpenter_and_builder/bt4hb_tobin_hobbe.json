@@ -1,0 +1,32 @@
+{
+  "id": "bt4hb",
+  "name": "Tobin Hobbe",
+  "age": 16,
+  "gender": "m",
+  "occupation_id": "carpenter_and_builder",
+  "title": "Scaffold worker",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "The Lanthorn",
+  "knows": [
+    "b5ewk",
+    "bd7hb",
+    "bm3ot",
+    "br2sk",
+    "brn5o"
+  ],
+  "father": "bd7hb",
+  "mother": "br2sk",
+  "children": [],
+  "spawn_location": {
+    "x": -179.66,
+    "y": 0.91,
+    "z": 203.72,
+    "facing": 4.621
+  },
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "At the Kindling bell you climb the north-tower scaffold, and every foot of it frightens you: the sway when the wind comes up off the Gradine, the way a pole talks under your boot, the long grey drop past the lodge roofs. You are sixteen, a builder's apprentice because your father is Dunstan Hobbe and nobody thought to ask you, so you agree with everyone, laugh when the men laugh, answer well enough to any question, and keep your hands up your sleeves where the shake does not show. What you want is a cart, a horse, and level ground under both. What you will never do is say so to your father; you would sooner fall, and some mornings you half mean that. Mote, who keeps Halfbell's furnace, has guessed -- she watched you go white on the ladder and said nothing -- and you have twice pressed half a loaf on her for a silence she was never going to break; your mother Rohese asks how the scaffold goes and you look at your boots until she stops.",
+  "extended_character_description": "TBA"
+}

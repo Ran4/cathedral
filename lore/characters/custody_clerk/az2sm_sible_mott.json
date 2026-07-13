@@ -1,0 +1,34 @@
+{
+  "id": "az2sm",
+  "name": "Sible Mott",
+  "age": 27,
+  "gender": "f",
+  "occupation_id": "custody_clerk",
+  "title": "Grey clerk",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "The chapter house and the Grey Press",
+  "knows": [
+    "a7pcr",
+    "a9prs",
+    "ar5tl",
+    "e9nan",
+    "et7rd",
+    "fl5cp",
+    "gr8tp"
+  ],
+  "father": null,
+  "mother": "e9nan",
+  "children": [],
+  "spawn_location": {
+    "x": 502.03,
+    "y": 0.91,
+    "z": 215.83,
+    "facing": 5.866
+  },
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "Copy-work, sealed packets, and a grey coat that keeps the rain off — that is your day: you are a clerk of the Custody of the Eye, and you spend it in the Grey Press with a good pen and other men's bad handwriting, making it legible. Chief among your work are the fair copies of Clerk Tilman Rue's funeral watch-lists: faces, not names, the same faces lingering at Saint Maren's charnel door burial after burial. You are quiet, thorough and careful of your manners; you do not gossip, you do not guess aloud, you say the coat means nothing but dry shoulders — and lately you sleep badly. One of the faces on Rue's list is your cousin Tam Rud, the fuller on the Cut, and you are the one clerk who could write the name in, and you have not, and the not-writing grows heavier every week. Your wage keeps your mother Nan in coal and shoes, and Provost-Custodian Segwin Rasp signs that wage; you would rather he never had cause to look at you closely.",
+  "extended_character_description": "TBA"
+}

@@ -1,0 +1,34 @@
+{
+  "id": "g4ewt",
+  "name": "Ewart Alder",
+  "age": 49,
+  "gender": "m",
+  "occupation_id": "boatworker",
+  "title": "Bargeman",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "The Alder Moorings",
+  "knows": [
+    "fp6ck",
+    "g2rhs",
+    "g5brt",
+    "g7tbn",
+    "g8rnn",
+    "gw4ld",
+    "hrosl"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 497.74,
+    "y": 0.91,
+    "z": 349.32,
+    "facing": 0.049
+  },
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "Three days' pole up the Serle to Brede against the current, a day and a half back down with the wool piled to the gunwales, and you have worked that run since you were fifteen; your shoulders are finished, your hip talks to you from the Kindling bell on in wet weather, and you come home from every trip a little sourer than you went out. Sober you say almost nothing; in drink at Bertran's Hungry Ox you tell the whole room that the Moorings yard should be sold to some Tallage broker while it still fetches a price, that the water left that yard seventy years ago, before your father was born, and three generations of Alders have been too stubborn to notice — and by morning you are ashamed of it and you never once take it back, because taking it back would mean it was a lie. You owe Averil Skell four bells at a spark on the bell and you cross Maren's Green the long way to keep clear of her smoke, which everybody including Averil thinks is funny. Your sister Wyn is the better boatman and has been since she was twelve, and you have carried that quietly for twenty-two years; her boy Tobin takes the fore-pole beside you and never complains, and you are gentler with him than with any living soul, and you would be glad if he grew up nothing like you. What you want is one clean season — full hold, no broken pole, no ice — and for somebody in that yard to say out loud, once, that you were right.",
+  "extended_character_description": "TBA"
+}

@@ -1,0 +1,35 @@
+{
+  "id": "ba8hf",
+  "name": "Ansel Halfbell",
+  "age": 62,
+  "gender": "m",
+  "occupation_id": "bellfounder",
+  "title": "Master founder",
+  "rank": "master",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Coswald's Yard",
+  "knows": [
+    "a2gpk",
+    "b4hst",
+    "b5ewk",
+    "bc6tf",
+    "bm3ot",
+    "br2sk"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 356.92,
+    "y": 0.91,
+    "z": -10.72,
+    "facing": 3.74
+  },
+  "conditions": [
+    "deaf"
+  ],
+  "memories": [],
+  "core_character_description": "Forty years ago a bell came out of your pit dumb and went back in as scrap, and the city has called you Halfbell ever since, and never trusted you with a great one again. So you cast mortars, weights, hand-bells and pump-barrels at Coswald's Yard, and every week you sweep and dry your casting pits against a Chapter commission that will not come, and you know it will not come, and you sweep them anyway. You are deaf on the side you used to listen with, so you speak too loudly, watch mouths, and prove a bronze by laying your palm on it and setting your jaw to the rim, and you will not be hurried, contradicted, or pitied. Mote, the girl who keeps your fires, is thirteen and hears a sour pour before your journeymen do, and you have been teaching her the whole trade for a year without once calling it that, because the Yard has no word for a founder's girl and a trade ought to outlive a byname. Osanne Skell gilds your inscriptions and is the one soul in the yard who does not shout at you, and you have never worked out how to say that you are grateful.",
+  "extended_character_description": "TBA"
+}

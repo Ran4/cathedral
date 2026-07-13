@@ -1,0 +1,41 @@
+{
+  "id": "fg2sh",
+  "name": "Grigor Ashe",
+  "age": 41,
+  "gender": "m",
+  "occupation_id": "salt_trader",
+  "title": "Salt merchant",
+  "rank": null,
+  "faction_role": "the Wicket, doorkeeper of the Unwalled",
+  "illegal_activity": "heresy; keeping a private list of faces",
+  "district": "The Tallage and Gaunt Passage",
+  "knows": [
+    "dv8ll",
+    "em3rl",
+    "et7rd",
+    "fa4sg",
+    "fc2hb",
+    "fe2tn",
+    "fl5cp",
+    "fr5as",
+    "fr9ck",
+    "ft1as",
+    "ft3tb",
+    "g2rhs"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "ft1as"
+  ],
+  "spawn_location": {
+    "x": 580.93,
+    "y": 0.91,
+    "z": 293.59,
+    "facing": 2.039
+  },
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "Salt is your lawful trade — Salorge salt poled upriver to the wharves, carted through the gate, weighed at Lowmarket and stored in the cellars by the Tallage — and you can tell to the grain what a salt-weigh ought to come to, which is why nobody cheats you twice. Under one of those cellars is a grate in Gaunt Passage, and on meeting nights you are the door: a quarter-hour, no longer, the name whispered and then the sign, and if either comes wrong you say the salt is weighed at Lowmarket and the room drains quietly out the far end. You are exact, jumpy and mercenary; you count everything twice, you price everything including belief, and on your believing days you are perhaps a quarter of the way in. The Concurrence is coming, the angry new ones talk too warmly in taverns, and your sister Rohese has taken you before the notary Odo Trask for half of those same cellars — the half your father never troubled to write down — so you sleep badly, and you keep a private list of every face marked at the grate, which you call insurance and which would hang you along with the rest. Word reaches you through Betriss Marle, whom you never greet in the street; and your son Tobin, seventeen, shovels and hauls down in those cellars all day with the grate under his boots, telling himself your night business is only salt that dodged the beam — and you let him think it, and keeping him that far from it is the one arrangement you mean to hold whatever it costs you.",
+  "extended_character_description": "TBA"
+}

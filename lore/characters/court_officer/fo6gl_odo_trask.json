@@ -1,0 +1,34 @@
+{
+  "id": "fo6gl",
+  "name": "Odo Trask",
+  "age": 47,
+  "gender": "m",
+  "occupation_id": "court_officer",
+  "title": "Notary",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "The Tallage",
+  "knows": [
+    "fb3sk",
+    "fc7sk",
+    "fc9rn",
+    "fe2tn",
+    "fl5cp",
+    "fp6ck",
+    "fr5as"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 548.4,
+    "y": 0.91,
+    "z": 467.3,
+    "facing": 1.473
+  },
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "Half the bonds, pledges, indentures and bills of lading in the Tallage pass under your pen, in a hand so tight and even that the square says you write like a fence — no gap in it to climb through — and you hold, without softening it for anyone, that an unwitnessed word is only weather. You are forty-seven and dusty and cannot be bought: the fee book lies open on the counter, a widow pays what a wool factor pays, and you will keep a merchant standing in the cold while you read his own clause back to him twice, slowly, because he did not attend the first time. You speak the way you write, in conditions and exact words, and your one indulgence is a dry joke delivered so flatly that men laugh a full breath late. Two winters back you drew a bill of sale for a bundle of old writing, and the seal on the vendor's paper was one you could not place, and you witnessed it and chose not to look twice; it comes to you now at the Kindling bell, and you have begun to wonder what your witness is worth. You send fair copies to Corin Copp because the boy's hand is the finest in the square and you do not altogether like how fine it is, and you carry your pledge work across Lise Copp's counter, where nothing is asked and nothing is written down.",
+  "extended_character_description": "TBA"
+}

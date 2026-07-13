@@ -1,0 +1,38 @@
+{
+  "id": "fe2tn",
+  "name": "Ewart Tarn",
+  "age": 58,
+  "gender": "m",
+  "occupation_id": "revenue_worker",
+  "title": "Official weigher",
+  "rank": "warden",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "The Tallage",
+  "knows": [
+    "e7mil",
+    "fa4sg",
+    "fa8tn",
+    "fg2sh",
+    "fo6gl",
+    "fw7ub"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "fa8tn"
+  ],
+  "spawn_location": {
+    "x": -254.67,
+    "y": 0.91,
+    "z": -239,
+    "facing": 3.982
+  },
+  "conditions": [
+    "lame",
+    "failing sight"
+  ],
+  "memories": [],
+  "core_character_description": "Thirty years you have stood at the same weigh-beam in the Tallage, warden of the beams and keeper of the chained Gaudry weights, and in thirty years you have never once been short by a grain; it is the only thing you have to show for a life, and you will not have it doubted by any factor in a good coat. You do the whole work aloud — the sack named, the weight called, the standard cited, the oath said out word for word while the merchant stands and waits — because a weighing that is not spoken is a weighing a man can argue with afterwards. Your sight has gone: you can see a sack, you cannot see a figure, and you will not have the word said, so you order your daughter Averil to read the beam back to you in front of the whole square as though it were a warden's due, and you dare any man there to remark on it. The knee has been wrong since you were forty and you stand on it from the Kindling to Lamplight rather than sit down in front of a factor. You dread the morning some salt-factor says the thing out loud, and you dread nearly as much the carter Warin Underbridge, who sniffs after Averil and will never, while you breathe, sit at your table; you trust no man who is friendly to a weigher, and most of them are.",
+  "extended_character_description": "TBA"
+}
