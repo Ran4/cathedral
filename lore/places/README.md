@@ -86,6 +86,44 @@ crowd.
   market, feast, pilgrimage, and covert routes, plus the visual reveals that
   make the plan legible in first person.
 
+## Cadastral map and building inventory
+
+The prose plan now has a complete top-down footprint plan rather than only the
+schematic in the spatial index:
+
+- [`ombreval_top_down_map.html`](ombreval_top_down_map.html) is the preferred
+  viewer. It supports wheel and button zoom, drag panning, double-click zoom,
+  keyboard `+`/`-`, and `0` to return to the full plan.
+- [`ombreval_top_down_map.svg`](ombreval_top_down_map.svg) is the full-resolution
+  vector map. It includes the wall circuit, towers, gates, 49 planned routes,
+  working grounds and courts, the Serle and outer wharves, every building
+  footprint, direct labels for principal sites, and a numbered index of all 59
+  named places. Every building polygon has an inspectable stable ID and
+  metadata for use, material, district, and storey count.
+- [`ombreval_top_down_map_preview.png`](ombreval_top_down_map_preview.png) is a
+  3600 × 2880 quick-look render. Use the HTML or SVG when individual roofs or
+  index text need to be read.
+- [`ombreval_buildings.json`](ombreval_buildings.json) is the machine-readable
+  inventory behind the drawing. The current revision contains 2,566 individual
+  building footprints: 2,501 ordinary urban-fabric buildings and 65 named,
+  reserved, gate, bridge, church, civic, or complex-building footprints.
+- [`generate_top_down_map.py`](generate_top_down_map.py) contains the
+  deterministic geometry and layout rules. It validates IDs, numbered places,
+  the wall containment of ordinary buildings, and accidental footprint
+  overlaps before writing the SVG, HTML, and JSON.
+
+Regenerate the authoritative outputs from the repository root with:
+
+```sh
+uv run lore/places/generate_top_down_map.py
+```
+
+The building inventory and SVG are two serializations of the same generated
+plan; neither should be hand-edited. Change the generator and regenerate them
+together. Exact building footprints and IDs come from the JSON/generator,
+while the guide files remain authoritative for meaning, movement, sensory
+character, and the binding relationships listed below.
+
 ## Source ledger
 
 The principal written sources behind the plan are:

@@ -5,6 +5,12 @@
 This diagram shows relationships, not exact footprints. North is up. West is
 left, although west is positive `z` in game coordinates.
 
+For the exact wall, road, site, fixture, and individual-building plan, use the
+zoomable [`ombreval_top_down_map.html`](ombreval_top_down_map.html). Its
+numbered markers correspond to the complete named-place index printed on the
+right side of the map; [`ombreval_buildings.json`](ombreval_buildings.json)
+contains the same footprint plan as inspectable data.
+
 ```text
                                       NORTH  +X
                                           ^
