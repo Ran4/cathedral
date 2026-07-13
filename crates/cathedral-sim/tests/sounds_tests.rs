@@ -61,6 +61,7 @@ fn character(
         goal: "None".into(),
         memories: Vec::new(),
         knows: knows.iter().map(|id| actor(id)).collect::<BTreeSet<_>>(),
+        lore: None,
     })
 }
 

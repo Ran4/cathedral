@@ -32,10 +32,10 @@
     "g5brt"
   ],
   "spawn_location": {
-    "x": -369.96,
+    "x": -308.0,
     "y": 0.91,
-    "z": -226.47,
-    "facing": 3.567
+    "z": -100.0,
+    "facing": 0.0
   },
   "conditions": [
     "widow",

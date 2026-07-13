@@ -31,10 +31,10 @@
     "b1sbb"
   ],
   "spawn_location": {
-    "x": 417.33,
+    "x": 292.375,
     "y": 0.91,
-    "z": 546.72,
-    "facing": 6.121
+    "z": 140.0,
+    "facing": 2.824537
   },
   "conditions": [
     "failing sight"

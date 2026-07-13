@@ -873,5 +873,19 @@
       "Yard hand",
       "Furnace hand"
     ]
+  },
+  {
+    "occupation_id": "pilgrim",
+    "occupation_display": "Pilgrim",
+    "lore_locations": [
+      "The Gradine",
+      "The Lanthorn",
+      "Pilgrim lodgings",
+      "Roads and city gates"
+    ],
+    "lore_example": "Pilgrims arrive in Ombreval to stand beneath the Great Rose, speak the names of their dead, seek cures, fulfil vows or simply witness the impossible light.",
+    "alternative_titles": [
+      "Pilgrim"
+    ]
   }
 ]

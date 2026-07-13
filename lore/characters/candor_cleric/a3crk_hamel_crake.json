@@ -23,10 +23,10 @@
   "mother": null,
   "children": [],
   "spawn_location": {
-    "x": 221.91,
+    "x": 71.42,
     "y": 0.91,
-    "z": -372.76,
-    "facing": 5.566
+    "z": -78.333,
+    "facing": -2.922319
   },
   "conditions": [
     "gout"

@@ -29,10 +29,10 @@
     "dewvl"
   ],
   "spawn_location": {
-    "x": -229.25,
+    "x": -37.75,
     "y": 0.91,
-    "z": -380.79,
-    "facing": 0.91
+    "z": 379.333,
+    "facing": -0.395805
   },
   "conditions": [
     "failing eyesight"

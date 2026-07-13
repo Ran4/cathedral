@@ -27,10 +27,10 @@
     "dgskl"
   ],
   "spawn_location": {
-    "x": 341.72,
+    "x": -417.5,
     "y": 0.91,
-    "z": 140.04,
-    "facing": 3.151
+    "z": 315.0,
+    "facing": -1.570796
   },
   "conditions": [],
   "memories": [],

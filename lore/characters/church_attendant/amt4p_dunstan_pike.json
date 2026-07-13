@@ -29,10 +29,10 @@
     "a5sbp"
   ],
   "spawn_location": {
-    "x": 463.87,
+    "x": 0.0,
     "y": 0.91,
-    "z": 430.12,
-    "facing": 3.48
+    "z": 45.0,
+    "facing": 3.141593
   },
   "conditions": [],
   "memories": [],

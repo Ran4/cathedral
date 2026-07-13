@@ -29,10 +29,10 @@
     "ft1as"
   ],
   "spawn_location": {
-    "x": 580.93,
+    "x": -228.0,
     "y": 0.91,
-    "z": 293.59,
-    "facing": 2.039
+    "z": 25.38,
+    "facing": -3.141593
   },
   "conditions": [],
   "memories": [],

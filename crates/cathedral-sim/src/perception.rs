@@ -168,6 +168,7 @@ mod tests {
             goal: "None".into(),
             memories: Vec::new(),
             knows: BTreeSet::new(),
+            lore: None,
         })
     }
 

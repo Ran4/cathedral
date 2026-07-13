@@ -22,10 +22,10 @@
   "mother": "dpcrk",
   "children": [],
   "spawn_location": {
-    "x": -319.39,
+    "x": -18.25,
     "y": 0.91,
-    "z": 173.63,
-    "facing": 4.181
+    "z": 356.0,
+    "facing": 1.570796
   },
   "conditions": [],
   "memories": [],

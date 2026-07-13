@@ -27,10 +27,10 @@
     "g7tbn"
   ],
   "spawn_location": {
-    "x": 322.98,
+    "x": -388.75,
     "y": 0.91,
-    "z": 224.99,
-    "facing": 5.362
+    "z": -392.0,
+    "facing": -0.684821
   },
   "conditions": [],
   "memories": [],

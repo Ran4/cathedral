@@ -26,10 +26,10 @@
     "a8ewf"
   ],
   "spawn_location": {
-    "x": -590.12,
+    "x": -229.0,
     "y": 0.91,
-    "z": 534.08,
-    "facing": 3.969
+    "z": -392.0,
+    "facing": 1.570796
   },
   "conditions": [],
   "memories": [],

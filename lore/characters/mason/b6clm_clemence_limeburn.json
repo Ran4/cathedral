@@ -24,10 +24,10 @@
     "b0nll"
   ],
   "spawn_location": {
-    "x": -318.59,
+    "x": 260.875,
     "y": 0.91,
-    "z": -167.96,
-    "facing": 1.46
+    "z": 164.0,
+    "facing": -1.570796
   },
   "conditions": [
     "widow"

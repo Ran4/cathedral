@@ -20,10 +20,10 @@
   "mother": null,
   "children": [],
   "spawn_location": {
-    "x": -341.83,
+    "x": -127.44,
     "y": 0.91,
-    "z": -59.98,
-    "facing": 2.713
+    "z": 201.587,
+    "facing": 2.498092
   },
   "conditions": [],
   "memories": [],

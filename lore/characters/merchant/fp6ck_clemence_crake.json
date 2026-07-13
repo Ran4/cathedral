@@ -25,10 +25,10 @@
     "fr9ck"
   ],
   "spawn_location": {
-    "x": 290.32,
+    "x": -294.6,
     "y": 0.91,
-    "z": 133.15,
-    "facing": 3.523
+    "z": 86.5,
+    "facing": 1.570796
   },
   "conditions": [
     "widow"

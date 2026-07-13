@@ -37,6 +37,7 @@ use cathedral_backends::{
     BackendEvent, BackendRuntime, BackendsConfig, BackendsHandle, BackendsOptions, Environment,
     HttpCognition, LlmClient, LlmError,
     config::{DEFAULT_DOTENV_PATH, DEFAULT_WORKERS_DIR},
+    world_data::load_world_seed,
 };
 use cathedral_sim::{
     ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion,
@@ -102,6 +103,10 @@ struct Args {
     /// directory holding prompts/, sounds/ and world/
     #[arg(long, default_value = "assets", value_name = "DIR")]
     assets: PathBuf,
+
+    /// directory holding characters/ and core_lore/; defaults beside assets/
+    #[arg(long, value_name = "DIR")]
+    lore: Option<PathBuf>,
 }
 
 fn main() -> ExitCode {
@@ -176,7 +181,13 @@ fn one_shot(path: &Path, config: &BackendsConfig) -> ExitCode {
 // ------------------------------------------------------------------- tick loop
 
 fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
-    let assets = Assets::load(&args.assets)?;
+    let lore = args.lore.clone().unwrap_or_else(|| {
+        args.assets
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join("lore")
+    });
+    let assets = Assets::load(&args.assets, &lore)?;
 
     // Fake cognition needs no provider and no key; a real run needs both, and a
     // scheduler with nothing to call would simply never take a turn.
@@ -503,14 +514,13 @@ struct Assets {
 }
 
 impl Assets {
-    fn load(directory: &Path) -> Result<Self, String> {
+    fn load(directory: &Path, lore_directory: &Path) -> Result<Self, String> {
         let read = |relative: &str| -> Result<String, String> {
             let path = directory.join(relative);
             fs::read_to_string(&path)
                 .map_err(|error| format!("cannot read {}: {error}", path.display()))
         };
-        let seed = WorldSeed::from_json_str(&read("world/seed.json")?)
-            .map_err(|error| format!("invalid world seed: {error}"))?;
+        let seed = load_world_seed(directory, lore_directory)?;
         let areas = AreaMap::from_json_str(&read("world/areas.json")?)
             .map_err(|error| format!("invalid world areas: {error}"))?;
         let catalog = SoundCatalog::from_toml_str(&read("sounds/catalog.toml")?)
@@ -638,9 +648,10 @@ mod tests {
 
     #[test]
     fn the_shipped_assets_load() {
-        let assets = Assets::load(Path::new("../../assets")).expect("the shipped assets load");
+        let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"))
+            .expect("the shipped assets load");
         assert_eq!(assets.player_spawn().0, Vec3::new(0.0, 0.91, 95.0));
-        assert_eq!(assets.seed.characters.len(), 4);
+        assert_eq!(assets.seed.characters.len(), 104);
     }
 
     /// A canned chat-completions endpoint: enough HTTP to answer reqwest, and
@@ -694,7 +705,8 @@ mod tests {
             content_parts: true,
         });
 
-        let assets = Assets::load(Path::new("../../assets")).expect("the shipped assets");
+        let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"))
+            .expect("the shipped assets");
         let (player_spawn, player_yaw) = assets.player_spawn();
         let handle = BackendsHandle::start(config, None).expect("the backends start");
         let http = Shared::new(handle.cognition());

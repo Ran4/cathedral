@@ -20,10 +20,10 @@
   "mother": "fr5as",
   "children": [],
   "spawn_location": {
-    "x": -469.91,
+    "x": -230.133,
     "y": 0.91,
-    "z": -350.88,
-    "facing": 3.954
+    "z": 25.38,
+    "facing": -2.054243
   },
   "conditions": [],
   "memories": [],

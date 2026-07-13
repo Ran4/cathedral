@@ -29,10 +29,10 @@
   "mother": "e9nan",
   "children": [],
   "spawn_location": {
-    "x": -96.11,
+    "x": 13.0,
     "y": 0.91,
-    "z": 554.98,
-    "facing": 3.21
+    "z": -281.667,
+    "facing": -2.722115
   },
   "conditions": [],
   "memories": [],

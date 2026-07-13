@@ -3,9 +3,8 @@
 //!
 //! The data is `assets/world/seed.json` (D19) — the host reads the file and
 //! hands the text to [`WorldSeed::from_json_str`]; the crate never touches the
-//! filesystem. Character order in the file is the world's `roster` order, which
-//! is the round-robin turn order (Sven → Conny → Ilse), so it is load-bearing:
-//! do not sort it.
+//! filesystem. Production composes its player/items seed with the lore cast;
+//! compact compatibility tests retain a dedicated four-character fixture.
 
 use std::fmt;
 
@@ -17,6 +16,7 @@ use crate::{
     character::{Character, CharacterSheet},
     ids::{ActorId, ItemId},
     item::Item,
+    lore::LoreCast,
     sounds::SoundCatalog,
     world::World,
 };
@@ -162,6 +162,32 @@ impl WorldSeed {
             .iter()
             .find(|character| character.id == *actor_id)
     }
+
+    /// Compose the production world: all lore NPCs in deterministic lore-path
+    /// order, followed by the player records from the compact base seed.
+    pub fn with_lore_cast(mut self, cast: LoreCast) -> Result<Self, SeedError> {
+        if let Some(character) = self
+            .characters
+            .iter()
+            .find(|character| character.control != crate::character::Control::Player)
+        {
+            return Err(SeedError::new(format!(
+                "base world seed may only contain player characters; found '{}'",
+                character.id
+            )));
+        }
+
+        let lore_ids: Vec<ActorId> = cast.ids().cloned().collect();
+        for player in &mut self.characters {
+            player.knows.extend(lore_ids.iter().cloned());
+        }
+
+        let mut characters = cast.into_character_sheets();
+        characters.append(&mut self.characters);
+        self.characters = characters;
+        self.validate()?;
+        Ok(self)
+    }
 }
 
 /// The world-level knobs a seed does not carry (they come from `config.ron` /
@@ -231,9 +257,8 @@ mod tests {
     use super::*;
     use crate::character::Control;
 
-    /// The shipped seed, compiled in so the loader is tested against the real
-    /// cast. (Only the tests do this — the crate itself reads no files.)
-    const SEED_JSON: &str = include_str!("../../../assets/world/seed.json");
+    /// The compact demo cast is retained as a focused domain fixture.
+    const SEED_JSON: &str = include_str!("../tests/fixtures/demo_seed.json");
 
     fn seed() -> WorldSeed {
         WorldSeed::from_json_str(SEED_JSON).expect("the shipped seed must load")

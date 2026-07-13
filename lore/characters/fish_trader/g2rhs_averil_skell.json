@@ -26,10 +26,10 @@
     "g9sib"
   ],
   "spawn_location": {
-    "x": 30.24,
+    "x": -305.0,
     "y": 0.91,
-    "z": -332.42,
-    "facing": 5.397
+    "z": -369.0,
+    "facing": -3.141593
   },
   "conditions": [
     "widow"

@@ -23,10 +23,10 @@
     "ebhid"
   ],
   "spawn_location": {
-    "x": -330.06,
+    "x": -393.24,
     "y": 0.91,
-    "z": 259.72,
-    "facing": 0.592
+    "z": -347.24,
+    "facing": -2.356194
   },
   "conditions": [
     "lame"

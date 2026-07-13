@@ -12,7 +12,7 @@ use cathedral_sim::{
 use serde_json::json;
 
 /// The host reads these files; the tests compile them in.
-const SEED_JSON: &str = include_str!("../../../assets/world/seed.json");
+const SEED_JSON: &str = include_str!("fixtures/demo_seed.json");
 const CATALOG_TOML: &str = include_str!("../../../assets/sounds/catalog.toml");
 
 fn seeded_world() -> World {

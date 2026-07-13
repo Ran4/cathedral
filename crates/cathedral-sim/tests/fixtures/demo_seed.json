@@ -1,0 +1,64 @@
+{
+  "items": [
+    { "id": "fzbn9", "name": "fish", "visual_key": "fish" },
+    { "id": "c0prs", "name": "copper coin", "visual_key": "copper_coin" }
+  ],
+  "characters": [
+    {
+      "id": "sv3n1",
+      "name": "Sven",
+      "control": "llm",
+      "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
+      "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+      "appearance_key": "sven",
+      "voice_key": "sven",
+      "position_m": { "x": -1.8, "y": 0.91, "z": 114.0 },
+      "facing_yaw": -0.7328151017865066,
+      "holds": ["fzbn9"],
+      "memories": ["I'm going to get some fish"],
+      "knows": ["cb947"]
+    },
+    {
+      "id": "cb947",
+      "name": "Conny",
+      "control": "llm",
+      "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
+      "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+      "appearance_key": "conny",
+      "voice_key": "conny",
+      "position_m": { "x": 0.0, "y": 0.91, "z": 112.0 },
+      "facing_yaw": 0.0,
+      "holds": [],
+      "memories": ["Sven still owes me two coppers for that fish"],
+      "knows": ["sv3n1"]
+    },
+    {
+      "id": "k0fb1",
+      "name": "Ilse",
+      "control": "llm",
+      "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
+      "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+      "appearance_key": "ilse",
+      "voice_key": "ilse",
+      "position_m": { "x": 1.8, "y": 0.91, "z": 114.0 },
+      "facing_yaw": 3.141592653589793,
+      "holds": ["c0prs"],
+      "memories": ["I am very hungry after the long road here"],
+      "knows": []
+    },
+    {
+      "id": "player",
+      "name": "Player",
+      "control": "player",
+      "back_story": "A human visitor exploring the cathedral city.",
+      "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+      "appearance_key": "player",
+      "voice_key": null,
+      "position_m": { "x": 0.0, "y": 0.91, "z": 95.0 },
+      "facing_yaw": 0.0,
+      "holds": [],
+      "memories": [],
+      "knows": ["sv3n1", "cb947", "k0fb1"]
+    }
+  ]
+}

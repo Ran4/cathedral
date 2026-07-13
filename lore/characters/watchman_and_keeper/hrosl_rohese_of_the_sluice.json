@@ -26,10 +26,10 @@
     "hansl"
   ],
   "spawn_location": {
-    "x": -135.26,
+    "x": -316.0,
     "y": 0.91,
-    "z": -390.45,
-    "facing": 1.168
+    "z": -610.0,
+    "facing": -1.570796
   },
   "conditions": [
     "widow",

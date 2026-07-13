@@ -23,10 +23,10 @@
   "mother": "dsbhb",
   "children": [],
   "spawn_location": {
-    "x": 256.53,
+    "x": -57.25,
     "y": 0.91,
-    "z": -273.4,
-    "facing": 5.123
+    "z": 356.0,
+    "facing": -1.570796
   },
   "conditions": [],
   "memories": [],

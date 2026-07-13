@@ -23,10 +23,10 @@
   "mother": "hrosl",
   "children": [],
   "spawn_location": {
-    "x": -215.67,
+    "x": 35.0,
     "y": 0.91,
-    "z": 173.26,
-    "facing": 5.561
+    "z": -281.667,
+    "facing": 2.722115
   },
   "conditions": [],
   "memories": [],

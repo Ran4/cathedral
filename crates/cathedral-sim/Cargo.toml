@@ -12,7 +12,6 @@ glam = { workspace = true }
 minijinja = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-# The two data-file formats the loaders parse from `&str`: `assets/world/seed.json`
-# (serde_json) and `assets/sounds/catalog.toml` + `assets/prompts/strings.toml`
-# (toml). Pure parsers, no IO of their own.
+# The two data-file formats the loaders parse from `&str`: world, area, lore,
+# and occupation JSON plus sound/prompt TOML. Pure parsers, no IO of their own.
 toml = { workspace = true }

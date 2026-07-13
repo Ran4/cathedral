@@ -4,7 +4,7 @@
 mod prompt_support;
 
 use cathedral_sim::{
-    ActorId, Control, ItemId, Vec3, apply_action,
+    ActorId, Control, ItemId, LoreProfile, Vec3, apply_action,
     prompt::{render_prompt, render_prompt_and_drain},
 };
 use prompt_support::{actor, compact, prompt_env, seed_world, sheet, sheet_of};
@@ -383,4 +383,47 @@ fn you_hold_is_always_present_and_skips_dangling_ids() {
         .state
         .holds = vec![ItemId::from_raw("ghost")];
     assert_eq!(sheet(&world, "cb947", &env)["you_hold"], json!([]));
+}
+
+#[test]
+fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
+    let env = prompt_env();
+    let mut world = seed_world();
+    world
+        .characters
+        .get_mut(&actor("sv3n1"))
+        .unwrap()
+        .sheet
+        .lore = Some(LoreProfile {
+        age: 19,
+        gender: "m".into(),
+        occupation_id: "smith".into(),
+        occupation_display: "Smith".into(),
+        title: "Blacksmith".into(),
+        rank: Some("apprentice".into()),
+        faction_role: None,
+        illegal_activity: None,
+        district: "Cinder Row".into(),
+        father: None,
+        mother: None,
+        children: vec![actor("k0fb1")],
+        conditions: vec!["singed eyebrows".into()],
+        core_character_description: "The prompt uses back_story for this.".into(),
+        extended_character_description: "SECRET EXTENDED DETAIL".into(),
+    });
+
+    let rendered = render_prompt(&world, &actor("sv3n1"), None, &env).unwrap();
+    let sheet = sheet_of(&rendered);
+    assert_eq!(sheet["lore_profile"]["age"], 19);
+    assert_eq!(sheet["lore_profile"]["occupation"], "Smith");
+    assert_eq!(sheet["lore_profile"]["rank"], "apprentice");
+    assert_eq!(
+        sheet["lore_profile"]["children"][0],
+        json!({"id": "k0fb1", "name": "Ilse"})
+    );
+    assert_eq!(
+        sheet["lore_profile"]["conditions"],
+        json!(["singed eyebrows"])
+    );
+    assert!(!rendered.contains("SECRET EXTENDED DETAIL"));
 }

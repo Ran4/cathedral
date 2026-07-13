@@ -31,6 +31,13 @@ pub fn fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/prompts")
 }
 
+pub fn demo_seed() -> String {
+    fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/demo_seed.json"),
+    )
+    .expect("the preserved demo seed loads")
+}
+
 /// The shipped prompt environment: `turn.j2` + `strings.toml`.
 pub fn prompt_env() -> PromptEnv {
     PromptEnv::new(&asset("prompts/turn.j2"), &asset("prompts/strings.toml"))
@@ -45,10 +52,10 @@ pub fn areas() -> AreaMap {
     AreaMap::from_json_str(&asset("world/areas.json")).expect("the shipped area map loads")
 }
 
-/// The seeded world (`assets/world/seed.json`), with the real sound catalog so
+/// The preserved compact demo world, with the real sound catalog so
 /// the footer lists the emittable ids.
 pub fn seed_world() -> World {
-    let seed = WorldSeed::from_json_str(&asset("world/seed.json")).expect("the shipped seed loads");
+    let seed = WorldSeed::from_json_str(&demo_seed()).expect("the demo seed loads");
     build_world(
         &seed,
         WorldConfig {

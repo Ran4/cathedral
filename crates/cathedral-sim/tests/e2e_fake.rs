@@ -20,7 +20,7 @@ use cathedral_sim::{
     EngineMessage, FakeCognition, ItemId, NullSight, NullTranscription, NullTts, PublicSnapshot,
     RequestId, TtsBackendKind, Vec3, WorldSeed,
 };
-use prompt_support::{areas, asset, catalog, prompt_env};
+use prompt_support::{areas, catalog, demo_seed, prompt_env};
 
 /// `hello()`'s spawn in the Python tests: on the forecourt, within 20 m of the
 /// whole cast and within 4 m of Ilse, so a broadcast say reaches everyone and
@@ -62,7 +62,7 @@ impl Harness {
     /// =True, speech_backend=TextOnlySpeech(), turn_delay_seconds=0)`.
     fn new() -> Self {
         let cognition = SharedCognition::default();
-        let seed = WorldSeed::from_json_str(&asset("world/seed.json")).expect("the shipped seed");
+        let seed = WorldSeed::from_json_str(&demo_seed()).expect("the demo seed");
         let engine = Engine::new(
             EngineConfig {
                 fake_mode: true,

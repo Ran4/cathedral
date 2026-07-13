@@ -23,10 +23,10 @@
     "fc2hb"
   ],
   "spawn_location": {
-    "x": 207.84,
+    "x": -315.4,
     "y": 0.91,
-    "z": 504.69,
-    "facing": 4.335
+    "z": 92.167,
+    "facing": -1.071899
   },
   "conditions": [
     "widow"

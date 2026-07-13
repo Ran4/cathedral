@@ -52,7 +52,11 @@ lore/
     "conditions": ["crippled"],
     "memories": [],
     "core_character_description": "...",
-    "extended_character_description": "..."
+    "extended_character_description": "...",
+    "appearance_key": "generic",
+    "voice_key": "ilse",
+    "holds": ["optional_item_id"],
+    "goal": "optional initial goal"
 }
 ```
 
@@ -76,7 +80,10 @@ Most don't really have any conditions.
   it. `rank` is a guild rank (master / mistress / journeyman / apprentice / novice / warden / contractor).
   All four are null/empty for most people.
 * `spawn_location` is Bevy's Y-up world space, in metres: `x`/`z` are the ground plane and `y` is the height,
-  as in `position_m` in `assets/world/seed.json`. **The current values are placeholders** — the canonical
-  in-game positions of the squares, streets and workshops have not been fixed yet, so the existing cast is
-  scattered at random over the city footprint at a standing height of `y: 0.91`. `district` records where a
-  person actually belongs, and is what a future pass should use to place them for real.
+  as in `position_m` in `assets/world/seed.json`. These are canonical in-game transforms, curated against
+  `assets/world/areas.json` and the Ombreval city plan. Most street-level characters stand at `y: 0.91`;
+  tower workers may use an authored elevated floor. `district` records where a person belongs, which may
+  differ from a deliberately authored current location (notably the original Gradine trio).
+* `appearance_key`, `voice_key`, `holds`, and `goal` are optional runtime overrides. Most characters omit
+  them and receive the generic body plus a deterministic voice from the existing three-voice pool. Held
+  item ids must exist in `assets/world/seed.json`.

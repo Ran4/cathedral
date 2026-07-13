@@ -124,6 +124,8 @@ impl PromptEnv {
 #[derive(Serialize)]
 struct Sheet<'a> {
     name: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    lore_profile: Option<PromptLoreProfile<'a>>,
     back_story: &'a str,
     you_are: YouAre,
     you_hold: Vec<ItemRef<'a>>,
@@ -139,6 +141,32 @@ struct Sheet<'a> {
     the_only_languages_you_know: &'a str,
     /// Always a string: a cleared goal is the literal `"None"` (D15).
     current_goal: &'a str,
+}
+
+/// The compact, always-relevant portion of a lore record. The potentially
+/// long extended description stays authoritative in the sim but is reserved
+/// for a future introspection mechanism rather than paid for on every turn.
+#[derive(Serialize)]
+struct PromptLoreProfile<'a> {
+    age: u16,
+    gender: &'a str,
+    occupation_id: &'a str,
+    occupation: &'a str,
+    title: &'a str,
+    rank: Option<&'a str>,
+    faction_role: Option<&'a str>,
+    illegal_activity: Option<&'a str>,
+    district: &'a str,
+    father: Option<LoreRelation<'a>>,
+    mother: Option<LoreRelation<'a>>,
+    children: Vec<LoreRelation<'a>>,
+    conditions: &'a [String],
+}
+
+#[derive(Serialize)]
+struct LoreRelation<'a> {
+    id: &'a ActorId,
+    name: String,
 }
 
 #[derive(Serialize)]
@@ -311,8 +339,31 @@ pub fn render_prompt(
         .area_map
         .location_description(position)
         .unwrap_or_else(|| actor.location_description().to_string());
+    let relation = |id| LoreRelation {
+        id,
+        name: world
+            .characters
+            .get(id)
+            .map_or_else(|| id.to_string(), |character| character.name().to_string()),
+    };
+    let lore_profile = actor.lore().map(|profile| PromptLoreProfile {
+        age: profile.age,
+        gender: &profile.gender,
+        occupation_id: &profile.occupation_id,
+        occupation: &profile.occupation_display,
+        title: &profile.title,
+        rank: profile.rank.as_deref(),
+        faction_role: profile.faction_role.as_deref(),
+        illegal_activity: profile.illegal_activity.as_deref(),
+        district: &profile.district,
+        father: profile.father.as_ref().map(&relation),
+        mother: profile.mother.as_ref().map(&relation),
+        children: profile.children.iter().map(relation).collect(),
+        conditions: &profile.conditions,
+    });
     let sheet = Sheet {
         name: actor.name(),
+        lore_profile,
         back_story: actor.back_story(),
         you_are: YouAre {
             location_description,

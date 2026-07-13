@@ -990,6 +990,7 @@ mod tests {
             goal: GOAL_NONE.into(),
             memories: Vec::new(),
             knows: BTreeSet::new(),
+            lore: None,
         })
     }
 

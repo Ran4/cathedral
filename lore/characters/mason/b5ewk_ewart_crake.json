@@ -24,10 +24,10 @@
     "b3glc"
   ],
   "spawn_location": {
-    "x": -395.3,
+    "x": 308.125,
     "y": 0.91,
-    "z": -389.23,
-    "facing": 0.037
+    "z": 140.0,
+    "facing": 2.364068
   },
   "conditions": [
     "lame"

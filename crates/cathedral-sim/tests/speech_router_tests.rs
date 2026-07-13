@@ -22,7 +22,7 @@ use cathedral_sim::{
     TtsBackendKind, TtsOutcome, TtsRequest, TtsSubmitError, Vec3, WorldSeed, apply_action,
     speech_reading_seconds,
 };
-use prompt_support::{areas, asset, catalog, prompt_env};
+use prompt_support::{areas, catalog, prompt_env};
 use serde_json::json;
 
 // ---------------------------------------------------------------- test doubles
@@ -402,7 +402,7 @@ impl Harness {
 }
 
 fn seed() -> WorldSeed {
-    WorldSeed::from_json_str(&asset("world/seed.json")).expect("the shipped seed loads")
+    WorldSeed::from_json_str(&prompt_support::demo_seed()).expect("the demo seed loads")
 }
 
 fn player() -> ActorId {

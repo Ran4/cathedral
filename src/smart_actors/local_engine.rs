@@ -38,7 +38,7 @@ use std::{
 use bevy::prelude::*;
 use cathedral_backends::{
     BackendCapabilities, BackendEvent, BackendsConfig, BackendsHandle, BackendsOptions,
-    PromptExchange, PromptLog, SessionDir,
+    PromptExchange, PromptLog, SessionDir, world_data::load_world_seed,
 };
 use cathedral_sim::{
     ActorId as SimActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand,
@@ -57,9 +57,9 @@ use super::{
     model::Position,
 };
 
-/// The five data files the sim is seeded from (ARCHITECTURE §1.4). They ship
-/// with the repository, not with the player's save, so they are resolved against
-/// the crate root rather than the working directory.
+/// The asset half of the sim's authored data. Assets and lore ship with the
+/// repository, not the player's save, so both resolve against the crate root
+/// rather than the working directory.
 fn assets_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets")
 }
@@ -207,13 +207,13 @@ type Built = (
 /// provider with an offline stand-in and therefore reports everything available.
 fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Built, String> {
     let assets = assets_dir();
+    let lore = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("lore");
     let read = |relative: &str| -> Result<String, String> {
         let path = assets.join(relative);
         std::fs::read_to_string(&path)
             .map_err(|error| format!("could not read {}: {error}", path.display()))
     };
-    let seed = WorldSeed::from_json_str(&read("world/seed.json")?)
-        .map_err(|error| format!("invalid world seed: {error}"))?;
+    let seed = load_world_seed(&assets, &lore)?;
     let areas = AreaMap::from_json_str(&read("world/areas.json")?)
         .map_err(|error| format!("invalid world areas: {error}"))?;
     let catalog = SoundCatalog::from_toml_str(&read("sounds/catalog.toml")?)
@@ -707,8 +707,8 @@ mod tests {
         model::{ActorId, ItemId, WorldSnapshot},
     };
 
-    /// The player's spawn in the Python end-to-end test: within 20 m of the
-    /// whole cast and within 4 m of Ilse.
+    /// The player's spawn in the preserved demo exchange: within 20 m of the
+    /// original trio and within 4 m of Ilse.
     fn player_position() -> Position {
         Position::new(0.0, 0.91, 111.0).unwrap()
     }

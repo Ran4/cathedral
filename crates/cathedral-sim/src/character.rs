@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     GOAL_NONE, RECENT_HISTORY_MAX_ENTRIES,
     ids::{ActorId, ItemId},
+    lore::LoreProfile,
     math::Vec3,
 };
 
@@ -62,6 +63,10 @@ pub struct CharacterSheet {
     /// Seeded only at world creation; the sim never mutates it.
     #[serde(default)]
     pub knows: BTreeSet<ActorId>,
+    /// Complete authored metadata for lore-backed NPCs. The player and compact
+    /// test fixtures intentionally have no lore profile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lore: Option<LoreProfile>,
 }
 
 /// Everything an action may change.
@@ -166,6 +171,10 @@ impl Character {
         &self.state.knows
     }
 
+    pub fn lore(&self) -> Option<&LoreProfile> {
+        self.sheet.lore.as_ref()
+    }
+
     pub fn inbox(&self) -> &[String] {
         &self.state.inbox
     }
@@ -247,6 +256,7 @@ mod tests {
             goal: goal_none(),
             memories: Vec::new(),
             knows: BTreeSet::new(),
+            lore: None,
         }
     }
 

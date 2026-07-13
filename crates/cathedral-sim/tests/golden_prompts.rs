@@ -101,6 +101,7 @@ impl WorldDump {
                 goal: dump.goal,
                 memories: dump.memories,
                 knows: dump.knows,
+                lore: None,
             });
             character.state.inbox = dump.inbox;
             character.state.recent_history = dump.recent_history;

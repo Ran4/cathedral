@@ -20,10 +20,10 @@
   "mother": "dclsk",
   "children": [],
   "spawn_location": {
-    "x": 513.35,
+    "x": -57.25,
     "y": 0.91,
-    "z": 63.69,
-    "facing": 5.165
+    "z": 379.333,
+    "facing": -0.897447
   },
   "conditions": [],
   "memories": [],

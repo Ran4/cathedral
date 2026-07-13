@@ -37,6 +37,7 @@ pub mod tts_cloud;
 pub mod tts_local;
 pub mod wav;
 pub mod worker;
+pub mod world_data;
 
 #[cfg(test)]
 mod testing;

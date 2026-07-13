@@ -28,10 +28,10 @@
     "hj6br"
   ],
   "spawn_location": {
-    "x": 546.76,
+    "x": -163.28,
     "y": 0.91,
-    "z": 593.44,
-    "facing": 1.768
+    "z": 227.76,
+    "facing": -2.622447
   },
   "conditions": [
     "pauper"

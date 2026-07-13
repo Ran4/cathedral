@@ -25,10 +25,10 @@
     "dclsk"
   ],
   "spawn_location": {
-    "x": 19.78,
+    "x": -312.333,
     "y": 0.91,
-    "z": 339.63,
-    "facing": 2.477
+    "z": -369.0,
+    "facing": -2.070143
   },
   "conditions": [
     "one of the Spared"

@@ -1,0 +1,445 @@
+//! Pure parsing and validation for the authored cast in `lore/characters`.
+//!
+//! This module deliberately accepts source strings and relative names rather
+//! than paths. Hosts own filesystem discovery; the simulation owns what the
+//! character data means.
+
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+};
+
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    GOAL_NONE,
+    character::{CharacterSheet, Control},
+    ids::{ActorId, ItemId},
+    math::Vec3,
+};
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoreError {
+    pub message: String,
+}
+
+impl LoreError {
+    fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
+}
+
+impl fmt::Display for LoreError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for LoreError {}
+
+/// Authored metadata retained alongside the mutable simulation state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LoreProfile {
+    pub age: u16,
+    pub gender: String,
+    pub occupation_id: String,
+    pub occupation_display: String,
+    pub title: String,
+    pub rank: Option<String>,
+    pub faction_role: Option<String>,
+    pub illegal_activity: Option<String>,
+    pub district: String,
+    pub father: Option<ActorId>,
+    pub mother: Option<ActorId>,
+    pub children: Vec<ActorId>,
+    pub conditions: Vec<String>,
+    pub core_character_description: String,
+    pub extended_character_description: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LoreSpawnLocation {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub facing: f64,
+}
+
+/// One JSON document under `lore/characters/{occupation}/`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LoreCharacterSheet {
+    pub id: ActorId,
+    pub name: String,
+    pub age: u16,
+    pub gender: String,
+    pub occupation_id: String,
+    pub title: String,
+    pub rank: Option<String>,
+    pub faction_role: Option<String>,
+    pub illegal_activity: Option<String>,
+    pub district: String,
+    #[serde(default)]
+    pub knows: Vec<ActorId>,
+    pub father: Option<ActorId>,
+    pub mother: Option<ActorId>,
+    #[serde(default)]
+    pub children: Vec<ActorId>,
+    pub spawn_location: LoreSpawnLocation,
+    #[serde(default)]
+    pub conditions: Vec<String>,
+    #[serde(default)]
+    pub memories: Vec<String>,
+    pub core_character_description: String,
+    pub extended_character_description: String,
+    /// Optional game-facing overrides. Most authored people use shared visual
+    /// and voice defaults; the original demo trio retains its established cast.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub appearance_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub holds: Vec<ItemId>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub goal: Option<String>,
+}
+
+impl LoreCharacterSheet {
+    pub fn from_json_str(source: &str) -> Result<Self, LoreError> {
+        let sheet: Self = serde_json::from_str(source)
+            .map_err(|error| LoreError::new(format!("invalid lore character: {error}")))?;
+        sheet.validate()?;
+        Ok(sheet)
+    }
+
+    fn validate(&self) -> Result<(), LoreError> {
+        if !self.id.is_valid() {
+            return Err(LoreError::new(format!(
+                "invalid character id '{}'",
+                self.id
+            )));
+        }
+        if self.name.trim().is_empty() {
+            return Err(LoreError::new(format!(
+                "character '{}' has no name",
+                self.id
+            )));
+        }
+        if self.occupation_id.trim().is_empty() || self.title.trim().is_empty() {
+            return Err(LoreError::new(format!(
+                "character '{}' needs an occupation and title",
+                self.id
+            )));
+        }
+        if self.district.trim().is_empty() || self.core_character_description.trim().is_empty() {
+            return Err(LoreError::new(format!(
+                "character '{}' needs a district and core description",
+                self.id
+            )));
+        }
+        let spawn = self.spawn_location;
+        if !spawn.x.is_finite()
+            || !spawn.y.is_finite()
+            || !spawn.z.is_finite()
+            || !spawn.facing.is_finite()
+        {
+            return Err(LoreError::new(format!(
+                "character '{}' needs a finite spawn transform",
+                self.id
+            )));
+        }
+        for related in self
+            .knows
+            .iter()
+            .chain(self.father.iter())
+            .chain(self.mother.iter())
+            .chain(self.children.iter())
+        {
+            if !related.is_valid() {
+                return Err(LoreError::new(format!(
+                    "character '{}' references invalid id '{related}'",
+                    self.id
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    fn into_character_sheet(self, occupation_display: String) -> CharacterSheet {
+        let voice_key = self
+            .voice_key
+            .clone()
+            .unwrap_or_else(|| default_voice_key(&self.gender, &self.id));
+        CharacterSheet {
+            id: self.id,
+            name: self.name,
+            control: Control::Llm,
+            back_story: self.core_character_description.clone(),
+            location_description: self.district.clone(),
+            appearance_key: self.appearance_key.unwrap_or_else(|| "generic".to_string()),
+            voice_key: Some(voice_key),
+            position_m: Vec3::new(
+                self.spawn_location.x,
+                self.spawn_location.y,
+                self.spawn_location.z,
+            ),
+            facing_yaw: self.spawn_location.facing,
+            holds: self.holds,
+            goal: self.goal.unwrap_or_else(|| GOAL_NONE.to_string()),
+            memories: self.memories,
+            knows: self.knows.into_iter().collect(),
+            lore: Some(LoreProfile {
+                age: self.age,
+                gender: self.gender,
+                occupation_id: self.occupation_id,
+                occupation_display,
+                title: self.title,
+                rank: self.rank,
+                faction_role: self.faction_role,
+                illegal_activity: self.illegal_activity,
+                district: self.district,
+                father: self.father,
+                mother: self.mother,
+                children: self.children,
+                conditions: self.conditions,
+                core_character_description: self.core_character_description,
+                extended_character_description: self.extended_character_description,
+            }),
+        }
+    }
+}
+
+fn default_voice_key(gender: &str, id: &ActorId) -> String {
+    if gender.eq_ignore_ascii_case("f") {
+        return "ilse".to_string();
+    }
+    let checksum = id
+        .as_str()
+        .bytes()
+        .fold(0u32, |sum, byte| sum.wrapping_add(u32::from(byte)));
+    if checksum % 2 == 0 { "sven" } else { "conny" }.to_string()
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Occupation {
+    occupation_id: String,
+    occupation_display: String,
+    lore_locations: Vec<String>,
+    lore_example: String,
+    alternative_titles: Vec<String>,
+}
+
+/// A fully validated cast in deterministic relative-path order.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoreCast {
+    characters: Vec<(LoreCharacterSheet, String)>,
+}
+
+impl LoreCast {
+    /// Parse occupation data and `(relative_path, json)` sources. Relative paths
+    /// are rooted at `lore/characters` and therefore have the form
+    /// `{occupation}/{id}_{slug}.json`.
+    pub fn from_json_sources(
+        occupations_source: &str,
+        sources: impl IntoIterator<Item = (String, String)>,
+    ) -> Result<Self, LoreError> {
+        let occupations: Vec<Occupation> = serde_json::from_str(occupations_source)
+            .map_err(|error| LoreError::new(format!("invalid occupation catalog: {error}")))?;
+        let mut occupation_map = BTreeMap::new();
+        for occupation in occupations {
+            let id = occupation.occupation_id.clone();
+            if id.trim().is_empty() || occupation.occupation_display.trim().is_empty() {
+                return Err(LoreError::new(
+                    "occupation ids and displays may not be empty",
+                ));
+            }
+            if occupation.lore_locations.is_empty() || occupation.lore_example.trim().is_empty() {
+                return Err(LoreError::new(format!(
+                    "occupation '{id}' needs locations and a lore example"
+                )));
+            }
+            if occupation_map.insert(id.clone(), occupation).is_some() {
+                return Err(LoreError::new(format!("duplicate occupation id '{id}'")));
+            }
+        }
+
+        let mut sources: Vec<_> = sources.into_iter().collect();
+        sources.sort_by(|left, right| left.0.cmp(&right.0));
+        let mut parsed = Vec::with_capacity(sources.len());
+        let mut ids = BTreeSet::new();
+        for (relative_path, source) in sources {
+            let normalized = relative_path.replace('\\', "/");
+            let mut components = normalized.split('/');
+            let folder = components.next().unwrap_or_default();
+            let file_name = components.next().unwrap_or_default();
+            if folder.is_empty() || file_name.is_empty() || components.next().is_some() {
+                return Err(LoreError::new(format!(
+                    "character source '{relative_path}' must be occupation/file.json"
+                )));
+            }
+            let sheet = LoreCharacterSheet::from_json_str(&source)
+                .map_err(|error| LoreError::new(format!("{relative_path}: {error}")))?;
+            if folder != sheet.occupation_id {
+                return Err(LoreError::new(format!(
+                    "{relative_path}: folder '{folder}' does not match occupation '{}'",
+                    sheet.occupation_id
+                )));
+            }
+            if !file_name.ends_with(".json") || !file_name.starts_with(&format!("{}_", sheet.id)) {
+                return Err(LoreError::new(format!(
+                    "{relative_path}: filename must start with '{}_' and end in .json",
+                    sheet.id
+                )));
+            }
+            let Some(occupation) = occupation_map.get(&sheet.occupation_id) else {
+                return Err(LoreError::new(format!(
+                    "{relative_path}: unknown occupation '{}'",
+                    sheet.occupation_id
+                )));
+            };
+            if !occupation.alternative_titles.contains(&sheet.title) {
+                return Err(LoreError::new(format!(
+                    "{relative_path}: title '{}' is not valid for occupation '{}'",
+                    sheet.title, sheet.occupation_id
+                )));
+            }
+            if !ids.insert(sheet.id.clone()) {
+                return Err(LoreError::new(format!(
+                    "{relative_path}: duplicate character id '{}'",
+                    sheet.id
+                )));
+            }
+            parsed.push((sheet, occupation.occupation_display.clone()));
+        }
+
+        for (sheet, _) in &parsed {
+            for related in sheet
+                .knows
+                .iter()
+                .chain(sheet.father.iter())
+                .chain(sheet.mother.iter())
+                .chain(sheet.children.iter())
+            {
+                if !ids.contains(related) {
+                    return Err(LoreError::new(format!(
+                        "character '{}' references missing character '{related}'",
+                        sheet.id
+                    )));
+                }
+            }
+        }
+        for (sheet, _) in &parsed {
+            for parent in sheet.father.iter().chain(sheet.mother.iter()) {
+                let parent_sheet = parsed
+                    .iter()
+                    .find(|(candidate, _)| candidate.id == *parent)
+                    .map(|(candidate, _)| candidate)
+                    .expect("references were checked above");
+                if !parent_sheet.children.contains(&sheet.id) {
+                    return Err(LoreError::new(format!(
+                        "character '{}' names '{parent}' as a parent, but the parent does not name the child",
+                        sheet.id
+                    )));
+                }
+            }
+            for child in &sheet.children {
+                let child_sheet = parsed
+                    .iter()
+                    .find(|(candidate, _)| candidate.id == *child)
+                    .map(|(candidate, _)| candidate)
+                    .expect("references were checked above");
+                if child_sheet.father.as_ref() != Some(&sheet.id)
+                    && child_sheet.mother.as_ref() != Some(&sheet.id)
+                {
+                    return Err(LoreError::new(format!(
+                        "character '{}' names '{child}' as a child, but the child does not name the parent",
+                        sheet.id
+                    )));
+                }
+            }
+        }
+
+        Ok(Self { characters: parsed })
+    }
+
+    pub fn len(&self) -> usize {
+        self.characters.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.characters.is_empty()
+    }
+
+    pub fn ids(&self) -> impl ExactSizeIterator<Item = &ActorId> {
+        self.characters.iter().map(|(sheet, _)| &sheet.id)
+    }
+
+    pub(crate) fn into_character_sheets(self) -> Vec<CharacterSheet> {
+        self.characters
+            .into_iter()
+            .map(|(sheet, display)| sheet.into_character_sheet(display))
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const OCCUPATIONS: &str = r#"[{"occupation_id":"smith","occupation_display":"Smith","lore_locations":["forge"],"lore_example":"A smith works.","alternative_titles":["Blacksmith"]}]"#;
+
+    fn character(id: &str, knows: &str) -> String {
+        format!(
+            r#"{{"id":"{id}","name":"N","age":20,"gender":"m","occupation_id":"smith","title":"Blacksmith","rank":null,"faction_role":null,"illegal_activity":null,"district":"Cinder Row","knows":{knows},"father":null,"mother":null,"children":[],"spawn_location":{{"x":1.0,"y":0.91,"z":2.0,"facing":0.0}},"conditions":[],"memories":[],"core_character_description":"You smith.","extended_character_description":"More."}}"#
+        )
+    }
+
+    #[test]
+    fn cast_order_is_relative_path_order_and_defaults_are_stable() {
+        let cast = LoreCast::from_json_sources(
+            OCCUPATIONS,
+            [
+                ("smith/bbbbb_b.json".into(), character("bbbbb", "[]")),
+                ("smith/aaaaa_a.json".into(), character("aaaaa", "[]")),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            cast.ids().map(ActorId::as_str).collect::<Vec<_>>(),
+            ["aaaaa", "bbbbb"]
+        );
+        let sheets = cast.into_character_sheets();
+        assert_eq!(sheets[0].appearance_key, "generic");
+        assert!(matches!(
+            sheets[0].voice_key.as_deref(),
+            Some("sven" | "conny")
+        ));
+        assert_eq!(sheets[0].back_story, "You smith.");
+        assert_eq!(sheets[0].lore.as_ref().unwrap().occupation_display, "Smith");
+    }
+
+    #[test]
+    fn source_path_occupation_title_and_relationships_are_validated() {
+        let bad_folder = LoreCast::from_json_sources(
+            OCCUPATIONS,
+            [("baker/aaaaa_a.json".into(), character("aaaaa", "[]"))],
+        )
+        .unwrap_err();
+        assert!(bad_folder.message.contains("does not match occupation"));
+
+        let dangling = LoreCast::from_json_sources(
+            OCCUPATIONS,
+            [(
+                "smith/aaaaa_a.json".into(),
+                character("aaaaa", r#"["ghost"]"#),
+            )],
+        )
+        .unwrap_err();
+        assert!(dangling.message.contains("missing character 'ghost'"));
+    }
+}

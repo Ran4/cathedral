@@ -22,10 +22,10 @@
   "mother": null,
   "children": [],
   "spawn_location": {
-    "x": -420.16,
+    "x": -8.0,
     "y": 0.91,
-    "z": -186.57,
-    "facing": 0.794
+    "z": 25.0,
+    "facing": 3.141593
   },
   "conditions": [
     "recanted heretic"

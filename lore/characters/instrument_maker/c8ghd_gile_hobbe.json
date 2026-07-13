@@ -21,10 +21,10 @@
   "mother": "c6pkl",
   "children": [],
   "spawn_location": {
-    "x": -501.6,
+    "x": -127.44,
     "y": 0.91,
-    "z": -62.9,
-    "facing": 2.533
+    "z": 205.0,
+    "facing": 1.570796
   },
   "conditions": [],
   "memories": [],

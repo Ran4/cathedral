@@ -47,6 +47,7 @@ fn controlled_character(actor_id: &str, name: &str, x: f64, control: Control) ->
         goal: "None".into(),
         memories: Vec::new(),
         knows: BTreeSet::new(),
+        lore: None,
     })
 }
 

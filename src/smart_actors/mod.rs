@@ -1463,7 +1463,7 @@ mod tests {
             .query_filtered::<Entity, With<actors::ActorView>>()
             .iter(world)
             .count();
-        assert_eq!(actor_count, 3);
+        assert_eq!(actor_count, 103);
         let runtime_dir = world
             .resource::<bridge::BridgeHandle>()
             .runtime_dir()
@@ -1471,7 +1471,7 @@ mod tests {
 
         app.world_mut().write_message(InjectPlayerTranscript {
             text: "What's your name?".into(),
-            target_id: None,
+            target_id: Some(model::ActorId("k0fb1".into())),
         });
         let reply_deadline = std::time::Instant::now() + Duration::from_secs(8);
         let mut reply_bubble_seen = false;
@@ -1501,7 +1501,7 @@ mod tests {
 
         app.world_mut().write_message(InjectPlayerTranscript {
             text: "Please offer me your coin".into(),
-            target_id: None,
+            target_id: Some(model::ActorId("k0fb1".into())),
         });
         let offer_deadline = std::time::Instant::now() + Duration::from_secs(8);
         while std::time::Instant::now() < offer_deadline

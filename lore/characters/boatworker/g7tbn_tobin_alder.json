@@ -20,10 +20,10 @@
   "mother": "gw4ld",
   "children": [],
   "spawn_location": {
-    "x": 273.54,
+    "x": -364.25,
     "y": 0.91,
-    "z": 310.47,
-    "facing": 2.843
+    "z": -422.0,
+    "facing": 2.456771
   },
   "conditions": [],
   "memories": [],

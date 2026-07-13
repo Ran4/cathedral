@@ -22,10 +22,10 @@
   "mother": "e2rhs",
   "children": [],
   "spawn_location": {
-    "x": -518.86,
+    "x": 30.0,
     "y": 0.91,
-    "z": 315.75,
-    "facing": 4.759
+    "z": 195.0,
+    "facing": 0.0
   },
   "conditions": [],
   "memories": [],

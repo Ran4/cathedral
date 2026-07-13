@@ -29,10 +29,10 @@
   "mother": null,
   "children": [],
   "spawn_location": {
-    "x": 235.3,
+    "x": -163.28,
     "y": 0.91,
-    "z": 508.23,
-    "facing": 4.106
+    "z": 232.24,
+    "facing": -0.519146
   },
   "conditions": [
     "orphan",

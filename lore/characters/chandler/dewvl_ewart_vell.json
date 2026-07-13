@@ -23,10 +23,10 @@
     "dtbvl"
   ],
   "spawn_location": {
-    "x": -101.9,
+    "x": 1.25,
     "y": 0.91,
-    "z": 343.96,
-    "facing": 5.033
+    "z": 332.667,
+    "facing": 2.244146
   },
   "conditions": [],
   "memories": [],

@@ -28,10 +28,10 @@
     "dbskl"
   ],
   "spawn_location": {
-    "x": -167.22,
+    "x": -132.56,
     "y": 0.91,
-    "z": 531.18,
-    "facing": 4.885
+    "z": 205.0,
+    "facing": -1.570796
   },
   "conditions": [
     "widow",

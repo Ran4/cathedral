@@ -20,10 +20,10 @@
   "mother": "br2sk",
   "children": [],
   "spawn_location": {
-    "x": -179.66,
+    "x": 20.0,
     "y": 0.91,
-    "z": 203.72,
-    "facing": 4.621
+    "z": 68.0,
+    "facing": 1.570796
   },
   "conditions": [],
   "memories": [],

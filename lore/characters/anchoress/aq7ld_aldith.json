@@ -23,10 +23,10 @@
     "b6clm"
   ],
   "spawn_location": {
-    "x": -568.86,
+    "x": 194.5,
     "y": 0.91,
-    "z": -83.46,
-    "facing": 1.689
+    "z": -92.0,
+    "facing": 0.0
   },
   "conditions": [
     "enclosed",

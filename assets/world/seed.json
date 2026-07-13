@@ -1,3 +1,22 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:d6ae3ce5ab9e9913b71efa0ebc1911ca8151ea66a59763852920fbbd55693699
-size 2425
+{
+  "items": [
+    { "id": "fzbn9", "name": "fish", "visual_key": "fish" },
+    { "id": "c0prs", "name": "copper coin", "visual_key": "copper_coin" }
+  ],
+  "characters": [
+    {
+      "id": "player",
+      "name": "Player",
+      "control": "player",
+      "back_story": "A human visitor exploring the cathedral city.",
+      "location_description": "On the grand forecourt just outside the cathedral's west entrance",
+      "appearance_key": "player",
+      "voice_key": null,
+      "position_m": { "x": 0.0, "y": 0.91, "z": 95.0 },
+      "facing_yaw": 0.0,
+      "holds": [],
+      "memories": [],
+      "knows": []
+    }
+  ]
+}

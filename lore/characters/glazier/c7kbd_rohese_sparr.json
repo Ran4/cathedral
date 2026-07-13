@@ -21,10 +21,10 @@
   "mother": "cj9sp",
   "children": [],
   "spawn_location": {
-    "x": 168.94,
+    "x": -130.0,
     "y": 0.91,
-    "z": -292.53,
-    "facing": 4.412
+    "z": 205.0,
+    "facing": 0.0
   },
   "conditions": [],
   "memories": [],

@@ -25,10 +25,10 @@
   "mother": "dtib0",
   "children": [],
   "spawn_location": {
-    "x": 266.59,
+    "x": 35.0,
     "y": 0.91,
-    "z": 95.91,
-    "facing": 4.947
+    "z": -257.0,
+    "facing": 1.570796
   },
   "conditions": [],
   "memories": [],

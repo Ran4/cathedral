@@ -19,10 +19,10 @@
   "mother": "g2rhs",
   "children": [],
   "spawn_location": {
-    "x": -167.64,
+    "x": -312.333,
     "y": 0.91,
-    "z": 97.33,
-    "facing": 2.71
+    "z": -361.0,
+    "facing": -1.07145
   },
   "conditions": [],
   "memories": [],

@@ -28,10 +28,10 @@
     "e6ptr"
   ],
   "spawn_location": {
-    "x": -548.07,
+    "x": -160.72,
     "y": 0.91,
-    "z": -116.72,
-    "facing": 1.236
+    "z": 227.76,
+    "facing": 2.622447
   },
   "conditions": [
     "widow"
