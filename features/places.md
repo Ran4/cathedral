@@ -165,9 +165,27 @@ rendering must not affect simulation results.
 
 Stop for user review after Steps 1 and 2 work before modifying the game world.
 
-## Step 3: build Coswald's Yard
+## Step 3: Figure out positions for the rest of the places
 
 From now on: do read lore/second_sun
+
+So, right now the game world is generic (other than the cathedral essentially).
+
+But now we want to add the rest of the established places.
+
+But first, we need to figure out where these are positioned, so it all makes sense.
+
+So, act like a "(fictional) medieval city planner" and plan the rough positions of all the named places.
+Also feel free to add more places.
+
+The result should be an authoritative guide. Later on, we'll fill it in with more lore.
+
+Note: this is a HARD job. Spend like one full hour on it, at least.
+
+What you generate should be written to lore/places - which should include both toplevel stuff as well as
+detailed descriptions of each place.
+
+## Step 4: build Coswald's Yard
 
 Find the established descriptions of Coswald's Yard in the core lore and modify
 the 3D game world so that an actual place matches them. Then add the area's
@@ -181,19 +199,6 @@ If an inspiration image conflicts with written core lore, the written lore
 wins.
 
 Stop for user review after Coswald's Yard.
-
-## Step 4: Figure out positions for the rest of the places
-
-So, right now the game world is generic (other than the church + coswald's yard that we just implemented).
-
-But now we want to add the rest of the established places.
-
-But first, we need to figure out where these are positioned, so it all makes sense.
-
-So, act like a "(fictional) medieval city planner" and plan the rough positions of all the named places.
-Also feel free to add more places.
-
-The result should be an authoritative guide. Later on, we'll fill it in with more lore.
 
 ## Step 5: the rest of the owl
 
