@@ -1,14 +1,4 @@
-# Rust
-/target
-**/*.rs.bk
-*.pdb
-
-# Secrets
-.env
-
-# Editor/OS
-.DS_Store
-*.swp
+.claude/settings.local.json
 
 # Per-run session logs, screenshots, and prompt archives — but keep the
 # format description tracked
@@ -21,3 +11,16 @@ cathedral_meta.json
 
 # Local settings; committed defaults live in default_config.ron
 /config.ron
+
+# Editor/OS
+.DS_Store
+*.swp
+
+# Secrets
+.env
+
+
+# Rust
+/target
+**/*.rs.bk
+*.pdb
