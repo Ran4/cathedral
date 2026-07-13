@@ -25,6 +25,12 @@ pub enum PlayerIntent {
     SpatialUpdate {
         spatial_seq: u64,
         position: Vec3,
+        facing_yaw: f32,
+    },
+    /// Fire-and-forget deliberate noise (the F key); no request_id because
+    /// there is no failure the player can act on.
+    Sound {
+        sound_id: String,
     },
     Recording {
         request_id: String,
@@ -193,6 +199,7 @@ impl InteractionState {
 pub struct PlayerSpatialState {
     pub sequence: u64,
     last_position: Option<Vec3>,
+    last_yaw: Option<f32>,
     last_background_send: f64,
 }
 
@@ -201,6 +208,7 @@ impl Default for PlayerSpatialState {
         Self {
             sequence: 0,
             last_position: None,
+            last_yaw: None,
             last_background_send: f64::NEG_INFINITY,
         }
     }
@@ -215,6 +223,22 @@ impl PlayerSpatialState {
         self.sequence
     }
 
+    /// Sequence for a background `spatial_update`, which carries facing too.
+    /// Turning in place must take a fresh sequence: the sidecar treats an
+    /// equal sequence as an idempotent repeat and would drop the new yaw.
+    pub fn spatial_update_needed(&self, position: Vec3, facing_yaw: f32) -> bool {
+        self.last_position != Some(position) || self.last_yaw != Some(facing_yaw)
+    }
+
+    pub fn mark_spatial_update(&mut self, position: Vec3, facing_yaw: f32) -> u64 {
+        if self.spatial_update_needed(position, facing_yaw) {
+            self.sequence = self.sequence.saturating_add(1);
+            self.last_position = Some(position);
+            self.last_yaw = Some(facing_yaw);
+        }
+        self.sequence
+    }
+
     pub fn mark_hello_position(&mut self, position: Vec3) -> u64 {
         self.last_position = Some(position);
         self.sequence
@@ -222,6 +246,7 @@ impl PlayerSpatialState {
 
     pub fn retry_latest_position(&mut self) {
         self.last_position = None;
+        self.last_yaw = None;
     }
 }
 
@@ -294,26 +319,30 @@ pub(crate) fn effective_streaming(
 pub fn sync_player_position(
     time: Res<Time>,
     runtime: Res<SmartActorRuntime>,
-    players: Query<&GlobalTransform, With<PlayerController>>,
+    players: Query<(&GlobalTransform, &PlayerController)>,
     mut spatial: ResMut<PlayerSpatialState>,
     mut intents: MessageWriter<PlayerIntent>,
 ) {
     if !runtime.interactions_enabled() {
         return;
     }
-    let Ok(player) = players.single() else { return };
+    let Ok((player, controller)) = players.single() else {
+        return;
+    };
     let position = player.translation();
+    let facing_yaw = controller.yaw();
     let now = time.elapsed_secs_f64();
-    if spatial.last_position == Some(position)
+    if !spatial.spatial_update_needed(position, facing_yaw)
         || now - spatial.last_background_send < f64::from(POSITION_UPDATE_HZ.recip())
     {
         return;
     }
-    let spatial_seq = spatial.position_for_action(position);
+    let spatial_seq = spatial.mark_spatial_update(position, facing_yaw);
     spatial.last_background_send = now;
     intents.write(PlayerIntent::SpatialUpdate {
         spatial_seq,
         position,
+        facing_yaw,
     });
 }
 
@@ -572,6 +601,30 @@ pub fn collect_item_interaction_input(
             });
         }
     }
+}
+
+/// F emits the catalog fart at the player's position. Deliberately the whole
+/// non-speech sound loop in one key: perception, attribution, playback, and
+/// the rate limit are all exercised by mashing it (features/sounds.md).
+pub fn collect_sound_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    cursor: Query<&CursorOptions, With<PrimaryWindow>>,
+    config: Res<SmartActorsConfig>,
+    runtime: Res<SmartActorRuntime>,
+    mut intents: MessageWriter<PlayerIntent>,
+) {
+    if !config.sounds.enabled
+        || !keyboard.just_pressed(KeyCode::KeyF)
+        || !runtime.interactions_enabled()
+        || cursor
+            .single()
+            .map_or(true, |cursor| cursor.grab_mode == CursorGrabMode::None)
+    {
+        return;
+    }
+    intents.write(PlayerIntent::Sound {
+        sound_id: "fart".into(),
+    });
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1024,6 +1077,7 @@ mod tests {
                             name_for_player: "You".into(),
                             control: ActorControl::Player,
                             position_m: Position::new(0.0, 0.0, 0.0).unwrap(),
+                            facing_yaw: 0.0,
                             appearance_key: "player".into(),
                             holds: vec![],
                         },
@@ -1032,6 +1086,7 @@ mod tests {
                             name_for_player: "Ilse".into(),
                             control: ActorControl::Llm,
                             position_m: Position::new(giver_x, 0.0, 0.0).unwrap(),
+                            facing_yaw: 0.0,
                             appearance_key: "ilse".into(),
                             holds: vec![ItemId("coin".into()), ItemId("fish".into())],
                         },

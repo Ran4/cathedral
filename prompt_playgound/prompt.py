@@ -4,6 +4,7 @@ import json
 import re
 
 from sim import ITEM_INTERACTION_RADIUS_M, Character, Offer, World
+from sounds import emittable_sound_ids
 
 HEADER = (
     "You are a character in a medieval 3d world, that can interact with "
@@ -91,7 +92,7 @@ accept_offered_item {"item_id": "fzbn9"}             # Take an item currently of
 decline_offer {"item_id": "fzbn9"}                   # Turn down an item offered to you (the offerer keeps it)
 retract_offer {"item_id": "fzbn9"}                   # Withdraw an offer you made
 eat {"item_id": "fzbn9"}                             # Eat something you hold; it is gone for good
-set_goal {"goal": "Eat fish"}
+__MAKE_SOUND_EXAMPLE__set_goal {"goal": "Eat fish"}
 set_goal {"goal": null}                              # Clear your goal (achieved or given up)
 remember {"memory": "I like ships"}
 forget {"memory": "I like ships"}
@@ -108,6 +109,16 @@ Output like this, and only like this (skip the backticks, and everything after #
 set_goal {"goal": "Eat fish"}  # We're hungry
 say {"target": "4bfk4", "text": "Conny, do you like fish?"}
 ```"""
+
+# The catalog decides what a character may deliberately sound like; rendering
+# the ids inline is what lets the model see its options.
+_MAKE_SOUND_EXAMPLE = (
+    'make_sound {"sound": "fart"}                         '
+    f"# Deliberately make a noise everyone within earshot perceives; "
+    f"sounds: {', '.join(emittable_sound_ids())}\n"
+)
+_FOOTER_WITH_SOUNDS = FOOTER.replace("__MAKE_SOUND_EXAMPLE__", _MAKE_SOUND_EXAMPLE)
+_FOOTER_WITHOUT_SOUNDS = FOOTER.replace("__MAKE_SOUND_EXAMPLE__", "")
 
 
 def _person(actor: Character, c: Character, *, distance_m: float | None = None) -> dict:
@@ -205,7 +216,8 @@ def render_prompt(
         "the_only_languages_you_know": "English",
         "current_goal": actor.goal,
     }
-    return f"{HEADER}\n\n```json\n{json.dumps(sheet, indent=4)}\n```\n\n{FOOTER}\n"
+    footer = _FOOTER_WITH_SOUNDS if world.sounds_enabled else _FOOTER_WITHOUT_SOUNDS
+    return f"{HEADER}\n\n```json\n{json.dumps(sheet, indent=4)}\n```\n\n{footer}\n"
 
 
 def render_prompt_and_drain(world: World, actor: Character) -> str:

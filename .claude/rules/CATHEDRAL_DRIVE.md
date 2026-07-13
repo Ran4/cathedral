@@ -9,7 +9,9 @@ and exits on its own — no `pkill` needed.
 Actions: `key <KeyCode>` (e.g. `Escape`, `KeyZ`, `F5`), `click <Name
 substring>` (case-insensitive match on UI `Name`), `shot <name>` (PNG to
 `screenshots/drive/<name>.png`), `sleep <seconds>`, `wait-online` (until the
-actor sidecar is ready; 30 s timeout), `quit`. Without `quit` the game exits
+actor sidecar is ready; 30 s timeout), `sound <sound_id>` (emit a catalog
+world sound, e.g. `sound town_bell` — the stand-in trigger for world causes
+the sim lacks), `quit`. Without `quit` the game exits
 ~2 s after the last action; a watchdog aborts after `CATHEDRAL_DRIVE_TIMEOUT`
 seconds (default 60).
 

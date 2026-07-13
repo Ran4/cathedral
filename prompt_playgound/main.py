@@ -6,6 +6,7 @@
 """Tick-loop demo: characters take turns acting on a town square."""
 
 import argparse
+import math
 import sys
 
 import llm_client
@@ -41,6 +42,12 @@ def take_turn(world: World, actor: Character, verbose: bool = False) -> None:
 def build_world() -> World:
     forecourt = "On the grand forecourt just outside the cathedral's west entrance"
     world = World()
+    # Static seeded facings (yaw radians; yaw 0 faces -Z, matching Bevy).
+    # NPCs never move or turn, so where they look at world creation is where
+    # they look forever — you walk around *them* (features/sounds.md).
+    sven_facing = math.atan2(-1.8, 2.0)  # toward Conny at his south-east
+    conny_facing = 0.0  # down the west approach, toward arriving visitors
+    ilse_facing = math.pi  # gazing up at the cathedral she came to see
     world.add(Item(id=ItemIdStr("fzbn9"), name="fish", visual_key="fish"))
     world.add(Item(id=ItemIdStr("c0prs"), name="copper coin", visual_key="copper_coin"))
     world.add(
@@ -57,6 +64,7 @@ def build_world() -> World:
             position_m=Vec3(-1.8, 0.91, 114.0),
             appearance_key="sven",
             voice_key="sven",
+            facing_yaw=sven_facing,
             holds=[ItemIdStr("fzbn9")],
             memories=["I'm going to get some fish"],
             knows={CharIdStr("cb947")},
@@ -76,6 +84,7 @@ def build_world() -> World:
             position_m=Vec3(0.0, 0.91, 112.0),
             appearance_key="conny",
             voice_key="conny",
+            facing_yaw=conny_facing,
             memories=["Sven still owes me two coppers for that fish"],
             knows={CharIdStr("sv3n1")},
         )
@@ -93,6 +102,7 @@ def build_world() -> World:
             position_m=Vec3(1.8, 0.91, 114.0),
             appearance_key="ilse",
             voice_key="ilse",
+            facing_yaw=ilse_facing,
             holds=[ItemIdStr("c0prs")],
             memories=["I am very hungry after the long road here"],
         )

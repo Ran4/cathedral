@@ -162,7 +162,10 @@ pub(crate) fn reconcile_actor_views(
         if let Some(actor) = desired_by_id.get(actor_id) {
             existing_ids.insert(actor_id.clone());
             transform.translation = actor.position_m.into();
-            transform.rotation = Quat::IDENTITY;
+            // The render is the only place the player can read the sound
+            // witness rule from: if the sim thinks an NPC faces away and the
+            // body faces the player, the rule is unlearnable.
+            transform.rotation = Quat::from_rotation_y(actor.facing_yaw);
             transform.scale = Vec3::ONE;
         } else {
             // This path is reached only because the authoritative projection no
@@ -210,7 +213,8 @@ fn spawn_actor(
             actor_id.clone(),
             ActorView,
             ActorTarget::default(),
-            Transform::from_translation(actor.position_m.into()),
+            Transform::from_translation(actor.position_m.into())
+                .with_rotation(Quat::from_rotation_y(actor.facing_yaw)),
             Visibility::default(),
         ))
         .with_children(|root| {
@@ -226,6 +230,17 @@ fn spawn_actor(
                 Mesh3d(assets.head_mesh.clone()),
                 MeshMaterial3d(assets.skin.clone()),
                 Transform::from_xyz(0.0, 0.65, 0.0),
+            ));
+            // The capsule body is rotationally symmetric, so without a face
+            // the seeded facing_yaw would be invisible — and the render is
+            // how the player learns the sound witness cone.
+            root.spawn((
+                Name::new("Actor nose"),
+                Mesh3d(assets.fish_tail_mesh.clone()),
+                MeshMaterial3d(assets.skin.clone()),
+                Transform::from_xyz(0.0, 0.65, -0.29)
+                    .with_rotation(Quat::from_rotation_x(-FRAC_PI_2))
+                    .with_scale(Vec3::new(0.07, 0.12, 0.07)),
             ));
             root.spawn((
                 Name::new("Actor name anchor"),
@@ -658,6 +673,7 @@ mod tests {
                             name_for_player: "You".into(),
                             control: ActorControl::Player,
                             position_m: Position::new(0.0, 0.0, 0.0).unwrap(),
+                            facing_yaw: 0.0,
                             appearance_key: "player".into(),
                             holds: vec![],
                         },
@@ -666,6 +682,7 @@ mod tests {
                             name_for_player: "Ilse".into(),
                             control: ActorControl::Llm,
                             position_m: Position::new(1.0, 0.0, 0.0).unwrap(),
+                            facing_yaw: 0.0,
                             appearance_key: "ilse".into(),
                             holds: vec![ItemId("coin".into()), ItemId("fish".into())],
                         },
@@ -718,6 +735,7 @@ mod tests {
             name_for_player: name.into(),
             control: ActorControl::Llm,
             position_m,
+            facing_yaw: 0.0,
             appearance_key: name.to_ascii_lowercase(),
             holds: vec![],
         };
@@ -736,6 +754,7 @@ mod tests {
                             name_for_player: "You".into(),
                             control: ActorControl::Player,
                             position_m: Position::new(0.0, 0.91, 95.0).unwrap(),
+                            facing_yaw: 0.0,
                             appearance_key: "player".into(),
                             holds: vec![],
                         },

@@ -47,6 +47,11 @@ pub struct BridgeLaunchConfig {
     pub server_script: PathBuf,
     pub fake_backend: bool,
     pub tts_backend: String,
+    /// Sound-percept settings forwarded to the sidecar's environment; the
+    /// witness cone and rate limit are enforced Python-side.
+    pub sounds_enabled: bool,
+    pub view_cone_degrees: f32,
+    pub min_seconds_between_player_sounds: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,6 +96,9 @@ pub enum BridgeCommand {
     SpatialUpdate {
         position_m: Position,
         spatial_seq: u64,
+        /// Player compass bearing in radians (yaw 0 faces -Z). The sidecar
+        /// runs the identical witness cone test against the player.
+        facing_yaw: f32,
     },
     PlayerRecording {
         request_id: String,
@@ -147,6 +155,18 @@ pub enum BridgeCommand {
         request_id: String,
         item_id: ItemId,
     },
+    /// Fire-and-forget deliberate player noise (the F key). No request_id and
+    /// no command_result: there is no failure the player can act on, and
+    /// rate-limited sounds are dropped silently at the sidecar.
+    PlayerSound {
+        sound_id: String,
+    },
+    /// CATHEDRAL_DRIVE stand-in for world sounds the sim cannot cause yet
+    /// (nothing rings the town bell: no clock, no calendar).
+    DebugSound {
+        sound_id: String,
+        position_m: Position,
+    },
     AudioConsumed {
         speech_event_id: String,
         wav_basename: String,
@@ -185,11 +205,16 @@ impl BridgeCommand {
             Self::SpatialUpdate {
                 position_m,
                 spatial_seq,
+                facing_yaw,
             } => (
                 "spatial_update",
                 json!({
                     "spatial_seq": spatial_seq,
-                    "updates": [{"actor_id": "player", "position_m": position_m}],
+                    "updates": [{
+                        "actor_id": "player",
+                        "position_m": position_m,
+                        "facing_yaw": facing_yaw,
+                    }],
                 }),
             ),
             Self::PlayerRecording {
@@ -316,6 +341,16 @@ impl BridgeCommand {
             } => (
                 "player_retract",
                 json!({"request_id": request_id, "item_id": item_id}),
+            ),
+            Self::PlayerSound { sound_id } => {
+                ("player_sound", json!({"sound_id": sound_id}))
+            }
+            Self::DebugSound {
+                sound_id,
+                position_m,
+            } => (
+                "debug_sound",
+                json!({"sound_id": sound_id, "position_m": position_m}),
             ),
             Self::AudioConsumed {
                 speech_event_id,
@@ -564,6 +599,18 @@ fn run_bridge_worker(
     let mut process = Command::new(&config.uv_binary);
     process.env("SMART_ACTORS_UV_BINARY", &config.uv_binary);
     process.env("SMART_ACTORS_TTS_BACKEND", &config.tts_backend);
+    process.env(
+        "SMART_ACTORS_SOUNDS_ENABLED",
+        if config.sounds_enabled { "1" } else { "0" },
+    );
+    process.env(
+        "SMART_ACTORS_VIEW_CONE_DEGREES",
+        config.view_cone_degrees.to_string(),
+    );
+    process.env(
+        "SMART_ACTORS_SOUND_COOLDOWN_SECONDS",
+        config.min_seconds_between_player_sounds.to_string(),
+    );
     process.arg("run");
     if config.fake_backend {
         // Fake mode has no SDK imports or provider calls. Avoid resolving the
@@ -1399,11 +1446,44 @@ mod tests {
     }
 
     #[test]
+    fn spatial_update_carries_the_player_facing() {
+        let (message_type, payload) = BridgeCommand::SpatialUpdate {
+            position_m: position(),
+            spatial_seq: 4,
+            facing_yaw: 1.25,
+        }
+        .wire_parts();
+        assert_eq!(message_type, "spatial_update");
+        assert_eq!(payload["updates"][0]["facing_yaw"], 1.25);
+        assert_eq!(payload["updates"][0]["actor_id"], "player");
+    }
+
+    #[test]
+    fn player_sound_command_has_the_strict_wire_shape() {
+        let (message_type, payload) = BridgeCommand::PlayerSound {
+            sound_id: "fart".into(),
+        }
+        .wire_parts();
+        assert_eq!(message_type, "player_sound");
+        assert_eq!(payload, serde_json::json!({"sound_id": "fart"}));
+
+        let (message_type, payload) = BridgeCommand::DebugSound {
+            sound_id: "town_bell".into(),
+            position_m: position(),
+        }
+        .wire_parts();
+        assert_eq!(message_type, "debug_sound");
+        assert_eq!(payload["sound_id"], "town_bell");
+        assert_eq!(payload["position_m"]["y"], 2.0);
+    }
+
+    #[test]
     fn spatial_updates_are_explicitly_safe_to_coalesce() {
         assert!(
             BridgeCommand::SpatialUpdate {
                 position_m: position(),
                 spatial_seq: 2,
+                facing_yaw: 0.0,
             }
             .is_redundant_spatial()
         );
@@ -1555,6 +1635,9 @@ mod tests {
             server_script: PathBuf::from("server.py"),
             fake_backend: false,
             tts_backend: "off".into(),
+            sounds_enabled: true,
+            view_cone_degrees: 135.0,
+            min_seconds_between_player_sounds: 2.0,
         });
         let runtime_dir = handle.runtime_dir().to_path_buf();
         let deadline = Instant::now() + Duration::from_secs(2);
@@ -1591,6 +1674,9 @@ mod tests {
                 .join("prompt_playgound/server.py"),
             fake_backend: true,
             tts_backend: "local".into(),
+            sounds_enabled: true,
+            view_cone_degrees: 135.0,
+            min_seconds_between_player_sounds: 2.0,
         });
         let runtime_dir = handle.runtime_dir().to_path_buf();
         let deadline = std::time::Instant::now() + Duration::from_secs(8);

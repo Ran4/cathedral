@@ -10,7 +10,7 @@
 //!    └─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┘
 //!      │ Q │   │ E │   │ T │   │ U │ I │ O │ P │     W=fwd  R=retract  Y=accept
 //!      └─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┘
-//!        │   │   │   │   │ G │ H │ J │ K │ L │       A/S/D=move  F=fly
+//!        │   │   │   │   │ G │ H │ J │ K │ L │       A/S/D=move  F=fart  '=fly (ä on sv-SE)
 //!        └─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴───┴───┘
 //!          │   │   │ C │   │ B │   │ M │             Z=STT  X=TTS  V=mic  N=decline
 //!          └───┴───┴───┴───┴───┴───┴───┘
@@ -113,6 +113,14 @@ impl Default for PlayerController {
             coyote_remaining: 0.0,
             jump_buffer_remaining: 0.0,
         }
+    }
+}
+
+impl PlayerController {
+    /// Current compass yaw in radians (yaw 0 faces -Z). The smart-actor
+    /// bridge reports it with spatial updates for the sound witness test.
+    pub fn yaw(&self) -> f32 {
+        self.yaw
     }
 }
 
@@ -260,8 +268,12 @@ fn initially_capture_cursor(mut cursor: Single<&mut CursorOptions, With<PrimaryW
 }
 
 /// Samples edge-triggered input once per rendered frame, before fixed physics
-/// may run zero or several times. In particular, F must not be sampled from
-/// `FixedUpdate`, where one key press could otherwise toggle flight repeatedly.
+/// may run zero or several times. In particular, the fly toggle must not be
+/// sampled from `FixedUpdate`, where one key press could toggle repeatedly.
+///
+/// `KeyCode::Quote` is a *physical* key position (Bevy/winit use US-layout
+/// positions); on the sv-SE layout that same physical key is `ä`. Chosen
+/// deliberately when F became the fart key — do not "fix" it to a logical key.
 fn collect_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
@@ -270,7 +282,7 @@ fn collect_input(
     mut controller: Single<&mut PlayerController>,
     mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
 ) {
-    if keyboard.just_pressed(KeyCode::KeyF) {
+    if keyboard.just_pressed(KeyCode::Quote) {
         controller.flying = !controller.flying;
         controller.velocity.y = 0.0;
         controller.grounded = false;

@@ -127,6 +127,11 @@ pub struct ActorSnapshot {
     pub name_for_player: String,
     pub control: ActorControl,
     pub position_m: Position,
+    /// Static seeded NPC orientation, radians (yaw 0 faces -Z). The render is
+    /// the only place the player can read the sound witness rule from, so the
+    /// actor view must rotate to exactly this.
+    #[serde(default)]
+    pub facing_yaw: f32,
     pub appearance_key: String,
     pub holds: Vec<ItemId>,
 }
@@ -562,6 +567,11 @@ impl ValidatedSnapshot {
             if !actor.position_m.is_finite() {
                 return Err(SnapshotError::NonFinitePosition(actor.id.clone()));
             }
+            // JSON has no NaN literal, but serde_json parses overflowing
+            // numbers to infinity; a non-finite yaw must not reach a Quat.
+            if !actor.facing_yaw.is_finite() {
+                return Err(SnapshotError::NonFinitePosition(actor.id.clone()));
+            }
             if !valid_projection_text(&actor.name_for_player, MAX_LABEL_CHARS) {
                 return Err(SnapshotError::InvalidText {
                     field: "actor label",
@@ -736,6 +746,7 @@ mod tests {
             name_for_player: id.into(),
             control,
             position_m: Position::new(1.0, 2.0, 3.0).unwrap(),
+            facing_yaw: 0.0,
             appearance_key: id.into(),
             holds: holds.iter().map(|id| ItemId((*id).into())).collect(),
         }

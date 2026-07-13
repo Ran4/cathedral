@@ -2,7 +2,8 @@
 //! Claude and CI can verify changes without synthetic X11 input.
 //!
 //! The env var holds a `;`-separated list of actions (`key Escape`,
-//! `click Continue`, `shot menu_open`, `sleep 2`, `wait-online`, `quit`).
+//! `click Continue`, `shot menu_open`, `sleep 2`, `wait-online`, `sound
+//! town_bell`, `quit`).
 //! Actions inject real `ButtonInput<KeyCode>` presses and `Interaction`
 //! transitions, so every existing keybinding and button handler works
 //! unchanged. Each fired action prints a `[drive] 3.2s key Escape` line to
@@ -22,7 +23,10 @@ use bevy::reflect::{TypeInfo, Typed};
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk};
 use bevy::ui::UiSystems;
 
+use crate::controller::PlayerController;
 use crate::smart_actors::SmartActorRuntime;
+use crate::smart_actors::bridge::{BridgeCommand, BridgeHandle};
+use crate::smart_actors::model::Position;
 
 pub const DRIVE_ENV: &str = "CATHEDRAL_DRIVE";
 pub const SHOT_ENV: &str = "CATHEDRAL_SHOT";
@@ -121,6 +125,10 @@ enum Action {
     Shot(String),
     Sleep(f64),
     WaitOnline,
+    /// Emit a catalog world sound at the player's position. The honest
+    /// stand-in for world causes the sim does not model yet — nothing rings
+    /// the town bell (no clock, no calendar), so drive scripts do.
+    Sound(String),
     Quit,
 }
 
@@ -132,6 +140,7 @@ impl Action {
             Self::Shot(name) => format!("shot {name}"),
             Self::Sleep(seconds) => format!("sleep {seconds}"),
             Self::WaitOnline => "wait-online".into(),
+            Self::Sound(sound_id) => format!("sound {sound_id}"),
             Self::Quit => "quit".into(),
         }
     }
@@ -178,6 +187,19 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
             Ok(seconds) if seconds.is_finite() && seconds >= 0.0 => Ok(Action::Sleep(seconds)),
             _ => Err(format!("bad sleep duration `{argument}` in `{statement}`")),
         },
+        "sound" => {
+            if !argument.is_empty()
+                && argument
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte == b'_')
+            {
+                Ok(Action::Sound(argument.into()))
+            } else {
+                Err(format!(
+                    "`sound` needs a catalog sound id like `town_bell`, got `{statement}`"
+                ))
+            }
+        }
         "wait-online" if argument.is_empty() => Ok(Action::WaitOnline),
         "quit" if argument.is_empty() => Ok(Action::Quit),
         "wait-online" | "quit" => Err(format!("`{verb}` takes no argument, got `{statement}`")),
@@ -205,6 +227,7 @@ enum Directive {
     PressKey(KeyCode),
     Click(String),
     Shot(String),
+    Sound(String),
     Quit,
 }
 
@@ -301,6 +324,7 @@ impl Scheduler {
                 self.online_deadline = Some(now + WAIT_ONLINE_TIMEOUT);
                 None
             }
+            Action::Sound(sound_id) => Some(Directive::Sound(sound_id)),
             Action::Quit => {
                 self.finished = true;
                 Some(Directive::Quit)
@@ -336,12 +360,15 @@ struct DriveState {
     pressed_key: Option<KeyCode>,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_drive_script(
     mut commands: Commands,
     time: Res<Time<Real>>,
     mut state: ResMut<DriveState>,
     mut keys: ResMut<ButtonInput<KeyCode>>,
     runtime: Option<Res<SmartActorRuntime>>,
+    bridge: Option<Res<BridgeHandle>>,
+    players: Query<&GlobalTransform, With<PlayerController>>,
     mut interactions: Query<(&Name, &mut Interaction)>,
     mut exit: MessageWriter<AppExit>,
 ) {
@@ -393,6 +420,27 @@ fn run_drive_script(
                 .spawn(Screenshot::primary_window())
                 .observe(save_to_disk(path))
                 .observe(move |_: On<ScreenshotCaptured>| saved.store(true, Ordering::Release));
+        }
+        Some(Directive::Sound(sound_id)) => {
+            // Emitted at the player's position: the drive trigger stands in
+            // for world causes the sim lacks, not for a modeled bell tower.
+            let position = players
+                .single()
+                .ok()
+                .and_then(|player| Position::try_from(player.translation()).ok());
+            match (bridge.as_deref(), position) {
+                (Some(bridge), Some(position_m)) => {
+                    if let Err(error) = bridge.try_send(BridgeCommand::DebugSound {
+                        sound_id,
+                        position_m,
+                    }) {
+                        println!("[drive] {now:.1}s warning: sound not sent: {error}");
+                    }
+                }
+                _ => println!(
+                    "[drive] {now:.1}s warning: `sound` needs smart actors and a player"
+                ),
+            }
         }
         Some(Directive::Quit) => {
             exit.write(AppExit::Success);

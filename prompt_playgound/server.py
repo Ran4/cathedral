@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import math
 import os
 import queue
 import struct
@@ -46,9 +47,12 @@ from sim import (
     SpatialUpdateError,
     Vec3,
     World,
+    _cap,
     apply_action,
+    emit_sound,
     identify,
 )
+from sounds import SOUNDS
 from speech_client import (
     CanaryQwenSpeechBackend,
     OpenAITranscriptionBackend,
@@ -81,6 +85,19 @@ FLOOR_PLAYER_TRANSCRIBING_HOLD_SECONDS = 8.0
 
 def _enabled(value: str | None) -> bool:
     return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_float(name: str, default: float, minimum: float, maximum: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = float(raw.strip())
+    except ValueError:
+        return default
+    if not math.isfinite(value):
+        return default
+    return min(max(value, minimum), maximum)
 
 
 def _safe_message(error: BaseException, fallback: str) -> str:
@@ -424,6 +441,17 @@ class SmartActorServer:
         self.player_id = CharIdStr("player")
         if self.world.characters.get(self.player_id) is None:
             raise ValueError("world has no stable player character")
+        # Sound settings arrive from config.ron via the launcher's environment.
+        sounds_enabled = os.environ.get("SMART_ACTORS_SOUNDS_ENABLED")
+        if sounds_enabled is not None:
+            self.world.sounds_enabled = _enabled(sounds_enabled)
+        self.world.view_cone_degrees = _env_float(
+            "SMART_ACTORS_VIEW_CONE_DEGREES", self.world.view_cone_degrees, 1.0, 360.0
+        )
+        self.sound_cooldown_seconds = _env_float(
+            "SMART_ACTORS_SOUND_COOLDOWN_SECONDS", 2.0, 0.0, 3_600.0
+        )
+        self._last_player_sound_at = float("-inf")
         self.fake_mode = fake_mode
         completion_was_injected = llm_complete is not None
         if llm_complete is None:
@@ -732,6 +760,10 @@ class SmartActorServer:
             self._handle_player_action(
                 payload, "retract_offer", has_target=False, has_position=False
             )
+        elif message_type == "player_sound":
+            self._handle_player_sound(payload)
+        elif message_type == "debug_sound":
+            self._handle_debug_sound(payload)
         elif message_type == "audio_consumed":
             self._handle_audio_consumed(payload)
         elif message_type == "speech_presented":
@@ -863,20 +895,39 @@ class SmartActorServer:
         raw_updates = payload["updates"]
         if not isinstance(raw_updates, list) or not raw_updates:
             raise ProtocolError("updates must be a non-empty array", "invalid_position")
-        updates: list[tuple[CharIdStr, Vec3]] = []
+        updates: list[tuple[CharIdStr, Vec3, float | None]] = []
         for raw_update in raw_updates:
             if not isinstance(raw_update, Mapping):
                 raise ProtocolError(
                     "each spatial update must be an object", "invalid_position"
                 )
-            _exact_payload(raw_update, required={"actor_id", "position_m"})
+            _exact_payload(
+                raw_update,
+                required={"actor_id", "position_m"},
+                optional={"facing_yaw"},
+            )
             actor_id = CharIdStr(validated_id(raw_update["actor_id"], "actor_id"))
             if actor_id != self.player_id:
                 raise ProtocolError(
                     "protocol v1 spatial updates may only move the player",
                     "forbidden_actor",
                 )
-            updates.append((actor_id, Vec3.from_json(raw_update["position_m"])))
+            facing_yaw = raw_update.get("facing_yaw")
+            if facing_yaw is not None and (
+                isinstance(facing_yaw, bool)
+                or not isinstance(facing_yaw, (int, float))
+                or not math.isfinite(float(facing_yaw))
+            ):
+                raise ProtocolError(
+                    "facing_yaw must be a finite number", "invalid_position"
+                )
+            updates.append(
+                (
+                    actor_id,
+                    Vec3.from_json(raw_update["position_m"]),
+                    None if facing_yaw is None else float(facing_yaw),
+                )
+            )
         self.world.update_positions(sequence, updates)
 
     def _apply_player_position(self, payload: Mapping[str, object]) -> None:
@@ -996,6 +1047,54 @@ class SmartActorServer:
         self._flush_domain_events()
         self._send_snapshot_if_changed()
         self._finish_request(rid, True, "ok", line)
+
+    def _handle_player_sound(self, payload: Mapping[str, object]) -> None:
+        """Fire-and-forget deliberate player noise (the F key).
+
+        No ``command_result``: there is no failure the player can act on. The
+        confirmation the player does get is the sound event itself, whose
+        ``text_for_player`` names the player as the actor.
+        """
+        _exact_payload(payload, required={"sound_id"})
+        sound_id = validated_id(payload["sound_id"], "sound_id")
+        sound = SOUNDS.get(sound_id)
+        if sound is None or not sound.actor_emittable:
+            raise ProtocolError(
+                f"there is no player-emittable sound {sound_id!r}", "unknown_sound"
+            )
+        if not self.world.sounds_enabled:
+            return
+        now = self._clock()
+        if now - self._last_player_sound_at < self.sound_cooldown_seconds:
+            # Dropped silently, not queued: percepts are prompt tokens, and
+            # holding F must not become a denial-of-service on the LLM bill.
+            return
+        self._last_player_sound_at = now
+        player = self.world.characters[self.player_id]
+        line = emit_sound(self.world, player, sound)
+        self.world.transcript.append(line)
+        self._flush_domain_events()
+        self._send_snapshot_if_changed()
+
+    def _handle_debug_sound(self, payload: Mapping[str, object]) -> None:
+        """CATHEDRAL_DRIVE stand-in for world causes the sim does not model.
+
+        Nothing in the sim rings the town bell (no clock, no calendar, no
+        weather), so drive scripts trigger world sounds directly. World sounds
+        have no actor and are never attributed.
+        """
+        _exact_payload(payload, required={"sound_id", "position_m"})
+        sound_id = validated_id(payload["sound_id"], "sound_id")
+        sound = SOUNDS.get(sound_id)
+        if sound is None:
+            raise ProtocolError(f"there is no sound {sound_id!r}", "unknown_sound")
+        if not self.world.sounds_enabled:
+            return
+        position = Vec3.from_json(payload["position_m"])
+        line = emit_sound(self.world, None, sound, position_m=position)
+        self.world.transcript.append(line)
+        self._flush_domain_events()
+        self._send_snapshot_if_changed()
 
     def _runtime_input_path(self, basename: str) -> Path:
         candidate = self.runtime_dir / basename
@@ -2028,6 +2127,8 @@ class SmartActorServer:
                 queued = self._queue_tts(event)
                 if speaker.control != "player":
                     self._acquire_floor(event, queued)
+            elif event.event_type == "sound":
+                self._send_sound_event(event, player)
             else:
                 self._send(
                     "world_event",
@@ -2046,6 +2147,63 @@ class SmartActorServer:
                         ],
                     },
                 )
+
+    def _send_sound_event(self, event: DomainEvent, player) -> None:
+        """Project one sound event for Bevy and nudge the nearest reactor.
+
+        ``text_for_player`` is the player's percept, rendered here so Bevy
+        never decides what the player knows. Fail dark: unless the player
+        witnessed the sound (or made it), ``actor_id`` is withheld — an
+        unattributed sound must not leak its actor through the wire.
+        """
+        sound = SOUNDS.get(event.sound_id or "")
+        if sound is None or event.position_m is None:
+            return
+        actor = (
+            self.world.characters.get(event.actor_id)
+            if event.actor_id is not None
+            else None
+        )
+        player_is_actor = actor is not None and actor.id == player.id
+        player_is_witness = player.id in event.witness_ids
+        player_is_recipient = player.id in event.recipient_ids
+        text_for_player = None
+        if player_is_actor:
+            # HUD confirmation even with nobody in range, or F feels broken.
+            text_for_player = (
+                sound.seen.format(actor="You")
+                if sound.seen is not None
+                else sound.heard
+            )
+        elif player_is_witness and actor is not None and sound.seen is not None:
+            text_for_player = _cap(sound.seen.format(actor=identify(player, actor)))
+        elif player_is_recipient:
+            text_for_player = sound.heard
+        reveal_actor = actor is not None and (player_is_actor or player_is_witness)
+        self._send(
+            "sound",
+            {
+                "event_id": event.event_id,
+                "sound_id": sound.sound_id,
+                "class": sound.sound_class,
+                "actor_id": str(actor.id) if reveal_actor and actor else None,
+                "position_m": event.position_m.to_json(),
+                "audible_distance": sound.audible_distance,
+                "recipient_ids": [str(actor_id) for actor_id in event.recipient_ids],
+                "witness_ids": [str(actor_id) for actor_id in event.witness_ids],
+                "text_for_player": text_for_player,
+            },
+        )
+        # A percept sitting in an inbox does nothing until that actor's next
+        # turn; hand the next slot to the nearest witness (falling back to the
+        # nearest mere hearer) so the reaction lands promptly. One nudge per
+        # sound: the turn stream is global and single.
+        for id_group in (event.witness_ids, event.recipient_ids):
+            for actor_id in id_group:
+                candidate = self.world.characters.get(actor_id)
+                if candidate is not None and candidate.control == "llm":
+                    self.scheduler.prioritize(candidate.id, immediate=True)
+                    return
 
     def _send_snapshot_if_changed(self) -> None:
         if (

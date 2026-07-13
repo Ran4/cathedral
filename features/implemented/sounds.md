@@ -1,6 +1,7 @@
 # Sounds (non-speech percepts)
 
-Status: **specified, not implemented.** Everything below is a proposal.
+Status: **implemented** (2026-07-13). The catalog lives in `prompt_playgound/sounds.py`,
+assets in `assets/sounds/`, generation via `scripts/generate_sounds.py`.
 
 Generalises the one perception rule the sim has today — *"everyone within 20 m
 hears you"* — into a catalog of non-speech sounds with per-sound radii, and adds

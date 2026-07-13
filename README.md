@@ -41,7 +41,9 @@ persistent process, protocol, world rules, HUD, and interaction paths.
 - Hold `Shift` — run (12 m/s)
 - Mouse — look
 - `Space` — jump
-- `F` — toggle gravity-free flight
+- `F` — fart (a real sound percept: everyone within 20 m hears it, and anyone
+  whose view cone contains you knows it was you — see `features/sounds.md`)
+- `'` — toggle gravity-free flight (physical key position; `ä` on sv-SE)
 - `Space` / `Ctrl` — rise / descend while flying
 - `Esc` — release the mouse
 - Left click — recapture the mouse

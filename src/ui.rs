@@ -114,7 +114,7 @@ fn spawn_controls(commands: &mut Commands, fonts: &CathedralFonts) {
             ));
 
             panel.spawn((
-                Text::new("F  toggle flight   ·   ESC  release cursor"),
+                Text::new("F  fart   ·   '  toggle flight   ·   ESC  release cursor"),
                 TextFont {
                     font: fonts.body(),
                     font_size: FontSize::Px(12.5),

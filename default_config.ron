@@ -25,5 +25,13 @@
         stt_streaming: true,
         // Silence that ends an utterance, in milliseconds (clamped 300..=1500).
         stt_trailing_silence_ms: 500,
+        // Non-speech sound percepts (F = fart; see features/sounds.md).
+        sounds: (
+            enabled: true,
+            // Total FOV for the "saw who did it" test; 135 is a playtest guess.
+            view_cone_degrees: 135.0,
+            // Sidecar rate limit; sounds inside the cooldown drop silently.
+            min_seconds_between_player_sounds: 2.0,
+        ),
     ),
 )

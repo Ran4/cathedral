@@ -11,10 +11,15 @@ import math
 from dataclasses import dataclass, field
 from typing import Any, Literal, Mapping, NewType, Sequence
 
+from sounds import SOUNDS, Sound
+
 HEARING_RADIUS_M = 20.0
 ITEM_INTERACTION_RADIUS_M = 4.0
 PLAYER_SPEECH_MAX_CHARS = 500
 RECENT_CONVERSATION_MAX_ENTRIES = 16
+# Total horizontal FOV for the sound witness test. 135° is a playtesting guess;
+# config.ron `smart_actors.sounds.view_cone_degrees` overrides it per run.
+DEFAULT_VIEW_CONE_DEGREES = 135.0
 
 # Entity ids as they key world dictionaries and appear in JSON arguments.
 ItemIdStr = NewType("ItemIdStr", str)
@@ -92,6 +97,10 @@ class Character:
     position_m: Vec3
     appearance_key: str
     voice_key: str | None
+    # Compass bearing in radians, matching Bevy's yaw: the character faces
+    # (-sin(yaw), -cos(yaw)) in the XZ plane. NPCs get a static seeded value;
+    # the player's is updated live from `spatial_update`.
+    facing_yaw: float = 0.0
     holds: list[ItemIdStr] = field(default_factory=list)
     goal: str = "None"
     memories: list[str] = field(default_factory=list)
@@ -122,18 +131,24 @@ class DomainEvent:
     """A structured historical event emitted by an authoritative action."""
 
     sequence: int
-    event_type: Literal["speech", "world_event"]
+    event_type: Literal["speech", "world_event", "sound"]
     kind: str
-    actor_id: CharIdStr
+    # Nullable only for sounds: a world sound (the town bell) has no actor.
+    actor_id: CharIdStr | None
     target_id: CharIdStr | None = None
     item_id: ItemIdStr | None = None
     text: str | None = None
     position_m: Vec3 | None = None
     recipient_ids: tuple[CharIdStr, ...] = ()
+    # Sound-only fields. ``witness_ids`` ⊆ ``recipient_ids``: the recipients
+    # whose view cone contained the actor, in the same distance order.
+    sound_id: str | None = None
+    audible_distance: float | None = None
+    witness_ids: tuple[CharIdStr, ...] = ()
 
     @property
     def event_id(self) -> str:
-        prefix = "speech" if self.event_type == "speech" else "world"
+        prefix = {"speech": "speech", "sound": "sound"}.get(self.event_type, "world")
         return f"{prefix}-{self.sequence}"
 
 
@@ -146,6 +161,8 @@ class World:
     world_revision: int = 0
     event_sequence: int = 0
     spatial_sequence: int = -1
+    sounds_enabled: bool = True
+    view_cone_degrees: float = DEFAULT_VIEW_CONE_DEGREES
     _events: list[DomainEvent] = field(default_factory=list, repr=False)
 
     def add(self, entity: Character | Item) -> None:
@@ -194,15 +211,18 @@ class World:
 
     def emit(
         self,
-        event_type: Literal["speech", "world_event"],
+        event_type: Literal["speech", "world_event", "sound"],
         kind: str,
-        actor_id: CharIdStr,
+        actor_id: CharIdStr | None,
         *,
         target_id: CharIdStr | None = None,
         item_id: ItemIdStr | None = None,
         text: str | None = None,
         position_m: Vec3 | None = None,
         recipient_ids: Sequence[CharIdStr] = (),
+        sound_id: str | None = None,
+        audible_distance: float | None = None,
+        witness_ids: Sequence[CharIdStr] = (),
     ) -> DomainEvent:
         self.event_sequence += 1
         event = DomainEvent(
@@ -215,6 +235,9 @@ class World:
             text=text,
             position_m=position_m,
             recipient_ids=tuple(recipient_ids),
+            sound_id=sound_id,
+            audible_distance=audible_distance,
+            witness_ids=tuple(witness_ids),
         )
         self._events.append(event)
         return event
@@ -224,12 +247,19 @@ class World:
         return events
 
     def update_positions(
-        self, spatial_sequence: int, updates: Sequence[tuple[CharIdStr, Vec3]]
+        self,
+        spatial_sequence: int,
+        updates: Sequence[
+            tuple[CharIdStr, Vec3] | tuple[CharIdStr, Vec3, float | None]
+        ],
     ) -> bool:
         """Validate and atomically apply a spatial update.
 
         Equal sequences are accepted only as an idempotent repeat.  An equal
         sequence with different coordinates is rejected just like an older one.
+        An update may carry an optional third ``facing_yaw`` element; facing
+        changes are applied silently and never bump the public revision (the
+        next snapshot, whatever triggers it, always reads current facing).
         """
         if isinstance(spatial_sequence, bool) or not isinstance(spatial_sequence, int):
             raise SpatialUpdateError("spatial_seq must be a non-negative integer")
@@ -240,9 +270,11 @@ class World:
                 "spatial update is older than current state", "stale_spatial_seq"
             )
 
-        checked: list[tuple[Character, Vec3]] = []
+        checked: list[tuple[Character, Vec3, float | None]] = []
         seen: set[CharIdStr] = set()
-        for actor_id, position in updates:
+        for update in updates:
+            actor_id, position = update[0], update[1]
+            facing_yaw = update[2] if len(update) > 2 else None
             actor_id = _character_id(actor_id, "actor_id")
             if actor_id in seen:
                 raise SpatialUpdateError(
@@ -256,19 +288,29 @@ class World:
                 )
             if not isinstance(position, Vec3):
                 raise SpatialUpdateError("position_m must be a valid finite Vec3")
-            checked.append((actor, position))
+            if facing_yaw is not None:
+                if (
+                    isinstance(facing_yaw, bool)
+                    or not isinstance(facing_yaw, (int, float))
+                    or not math.isfinite(float(facing_yaw))
+                ):
+                    raise SpatialUpdateError("facing_yaw must be a finite number")
+                facing_yaw = float(facing_yaw)
+            checked.append((actor, position, facing_yaw))
 
         if spatial_sequence == self.spatial_sequence:
-            if any(actor.position_m != position for actor, position in checked):
+            if any(actor.position_m != position for actor, position, _ in checked):
                 raise SpatialUpdateError(
                     "spatial sequence was reused with different coordinates",
                     "stale_spatial_seq",
                 )
             return False
 
-        changed = any(actor.position_m != position for actor, position in checked)
-        for actor, position in checked:
+        changed = any(actor.position_m != position for actor, position, _ in checked)
+        for actor, position, facing_yaw in checked:
             actor.position_m = position
+            if facing_yaw is not None:
+                actor.facing_yaw = facing_yaw
         self.spatial_sequence = spatial_sequence
         if changed:
             self.touch_public_state()
@@ -290,6 +332,7 @@ class World:
                     "name_for_player": label,
                     "control": actor.control,
                     "position_m": actor.position_m.to_json(),
+                    "facing_yaw": actor.facing_yaw,
                     "appearance_key": actor.appearance_key,
                     "holds": [str(item_id) for item_id in actor.holds],
                 }
@@ -347,6 +390,78 @@ def identify(observer: Character, subject: Character) -> str:
     if observer.id == subject.id or subject.id in observer.knows:
         return subject.name
     return f"a stranger (id {subject.id})"
+
+
+def sees(observer: Character, subject: Character, view_cone_degrees: float) -> bool:
+    """Whether ``subject`` is inside ``observer``'s horizontal view cone.
+
+    The cone is a compass bearing only: facing is a single yaw, so there is
+    nothing honest to test vertically. A subject directly above or below the
+    observer has no horizontal bearing at all and fails dark (not seen), which
+    keeps an undefined angle from ever attributing a sound.
+    """
+    dx = subject.position_m.x - observer.position_m.x
+    dz = subject.position_m.z - observer.position_m.z
+    horizontal = math.hypot(dx, dz)
+    if horizontal < 1e-9:
+        return False
+    # Matches Bevy: yaw 0 faces -Z, and Quat::from_rotation_y(yaw) turns it.
+    facing_x = -math.sin(observer.facing_yaw)
+    facing_z = -math.cos(observer.facing_yaw)
+    cosine = (facing_x * dx + facing_z * dz) / horizontal
+    half_angle = math.radians(view_cone_degrees) / 2.0
+    return cosine >= math.cos(half_angle) - 1e-9
+
+
+def emit_sound(
+    world: World,
+    actor: Character | None,
+    sound: Sound,
+    *,
+    position_m: Vec3 | None = None,
+) -> str:
+    """Emit one sound: everyone in radius hears it, witnesses see who did it.
+
+    ``actor`` is None for world sounds (the town bell), which are never
+    attributable regardless of the catalog row. Returns the transcript line.
+    """
+    if position_m is None:
+        if actor is None:
+            raise ValueError("a world sound needs an explicit position")
+        position_m = actor.position_m
+    recipients = world.characters_within(
+        position_m,
+        sound.audible_distance,
+        exclude=None if actor is None else actor.id,
+    )
+    witnesses: list[Character] = []
+    if actor is not None and sound.seen is not None:
+        witnesses = [
+            recipient
+            for recipient in recipients
+            if sees(recipient, actor, world.view_cone_degrees)
+        ]
+    witness_ids = {witness.id for witness in witnesses}
+    for recipient in recipients:
+        if recipient.id in witness_ids and actor is not None and sound.seen is not None:
+            percept = _cap(sound.seen.format(actor=identify(recipient, actor)))
+        else:
+            # A percept you didn't see must not leak who it was — no id.
+            percept = sound.heard
+        _notify(recipient, percept)
+    world.emit(
+        "sound",
+        sound.sound_class,
+        actor.id if actor is not None else None,
+        position_m=position_m,
+        recipient_ids=[recipient.id for recipient in recipients],
+        sound_id=sound.sound_id,
+        audible_distance=sound.audible_distance,
+        witness_ids=[witness.id for witness in witnesses],
+    )
+    if actor is not None and sound.seen is not None:
+        return _cap(sound.seen.format(actor=actor.name))
+    return sound.heard
 
 
 def _cap(value: str) -> str:
@@ -834,6 +949,19 @@ def apply_action(world: World, actor: Character, verb: str, args: object) -> str
         if actor.goal == "None":
             return f"{actor.name} drops their goal"
         return f"{actor.name} now wants: {actor.goal}"
+
+    if verb == "make_sound":
+        parsed = _args(args, required={"sound"})
+        sound_value = parsed["sound"]
+        # Ids only; no name-fallback, per the house rule.
+        sound = SOUNDS.get(sound_value) if isinstance(sound_value, str) else None
+        if sound is None or not sound.actor_emittable:
+            raise ActionError(
+                f"there is no sound {sound_value!r}", "unknown_sound"
+            )
+        if not world.sounds_enabled:
+            raise ActionError("sounds are disabled in this world", "sounds_disabled")
+        return emit_sound(world, actor, sound)
 
     if verb == "remember":
         parsed = _args(args, required={"memory"})

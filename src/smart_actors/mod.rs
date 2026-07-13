@@ -8,6 +8,7 @@ mod config_menu;
 mod hud;
 mod interaction;
 mod microphone;
+mod sound;
 mod speech;
 mod targeting;
 
@@ -45,6 +46,32 @@ pub struct SmartActorsConfig {
     /// Silence that ends an utterance. Clamped to a window where speech still
     /// ends promptly but deliberate mid-sentence pauses rarely split it.
     pub stt_trailing_silence_ms: u32,
+    /// Non-speech sound percepts (features/sounds.md).
+    pub sounds: SoundsConfig,
+}
+
+/// Settings for non-speech sound percepts. Perception runs in the sidecar;
+/// these values are forwarded through its environment at launch.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct SoundsConfig {
+    pub enabled: bool,
+    /// Total horizontal FOV for the "saw who did it" test. 135° is a guess —
+    /// the one number in this feature only play-testing can settle.
+    pub view_cone_degrees: f32,
+    /// Sidecar-side rate limit: sounds inside the cooldown are dropped
+    /// silently, so holding F cannot flood NPC inboxes (and the LLM bill).
+    pub min_seconds_between_player_sounds: f32,
+}
+
+impl Default for SoundsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            view_cone_degrees: 135.0,
+            min_seconds_between_player_sounds: 2.0,
+        }
+    }
 }
 
 impl Default for SmartActorsConfig {
@@ -59,6 +86,7 @@ impl Default for SmartActorsConfig {
             pause_microphone_during_npc_voice: true,
             stt_streaming: true,
             stt_trailing_silence_ms: 500,
+            sounds: SoundsConfig::default(),
         }
     }
 }
@@ -192,6 +220,12 @@ impl Plugin for SmartActorsPlugin {
             server_script: script,
             fake_backend: self.config.fake_backend,
             tts_backend: self.config.tts_backend.clone(),
+            sounds_enabled: self.config.sounds.enabled,
+            view_cone_degrees: self.config.sounds.view_cone_degrees,
+            min_seconds_between_player_sounds: self
+                .config
+                .sounds
+                .min_seconds_between_player_sounds,
         });
         let mut mirror = model::WorldMirror::default();
         mirror
@@ -220,6 +254,7 @@ impl Plugin for SmartActorsPlugin {
             .add_message::<speech::TtsStreamFinished>()
             .add_message::<speech::StopNpcSpeech>()
             .add_message::<speech::ClearSpeechPresentation>()
+            .add_message::<sound::PlaySoundEffect>()
             .configure_sets(
                 PostUpdate,
                 (
@@ -263,6 +298,7 @@ impl Plugin for SmartActorsPlugin {
                     interaction::sync_player_position,
                     interaction::poll_microphone,
                     interaction::collect_item_interaction_input,
+                    interaction::collect_sound_input,
                     interaction::update_microphone_toggle,
                     update_tts_backend_toggle,
                     collect_injected_transcripts,
@@ -285,6 +321,8 @@ impl Plugin for SmartActorsPlugin {
                     speech::stop_npc_speech_for_capture,
                     speech::update_speech_bubbles,
                     speech::update_subtitle_hud,
+                    sound::play_sound_effects,
+                    sound::expire_stalled_sound_effects,
                     hud::update_smart_actor_hud,
                 )
                     .chain()
@@ -358,6 +396,24 @@ struct WorldEventWire {
     recipient_ids: Vec<model::ActorId>,
 }
 
+/// The design/06 `sound` event: a positioned, radius-bound percept. Bevy only
+/// plays it and toasts the sidecar-rendered player percept; it changes no
+/// state. `actor_id` arrives null unless the player witnessed the sound.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SoundWire {
+    event_id: String,
+    sound_id: String,
+    #[serde(rename = "class")]
+    sound_class: String,
+    actor_id: Option<model::ActorId>,
+    position_m: model::Position,
+    audible_distance: f32,
+    recipient_ids: Vec<model::ActorId>,
+    witness_ids: Vec<model::ActorId>,
+    text_for_player: Option<String>,
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct TranscriptionWire {
@@ -408,6 +464,7 @@ struct BridgePresentationWriters<'w> {
     failure: MessageWriter<'w, speech::TtsClipFailed>,
     stream_end: MessageWriter<'w, speech::TtsStreamFinished>,
     clear: MessageWriter<'w, speech::ClearSpeechPresentation>,
+    sound_effects: MessageWriter<'w, sound::PlaySoundEffect>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -494,9 +551,7 @@ fn drain_bridge_messages(
                     &mut handshake_recovery,
                     &mut hud,
                     &mut interaction,
-                    &mut presentation.speech,
-                    &mut presentation.failure,
-                    &mut presentation.stream_end,
+                    &mut presentation,
                 );
                 // Do not open the default input device before the Python
                 // handshake confirms that transcription is configured.
@@ -577,9 +632,7 @@ fn process_server_message(
     handshake_recovery: &mut HandshakeRecovery,
     hud: &mut hud::SmartActorHudState,
     interaction: &mut interaction::InteractionState,
-    speech_messages: &mut MessageWriter<speech::PresentSpeech>,
-    audio_failures: &mut MessageWriter<speech::TtsClipFailed>,
-    stream_ends: &mut MessageWriter<speech::TtsStreamFinished>,
+    presentation: &mut BridgePresentationWriters,
 ) {
     let message_type = envelope.message_type;
     let payload = envelope.payload;
@@ -658,7 +711,7 @@ fn process_server_message(
                             *recipient != &speech.speaker_id && mirror.actor(recipient).is_some()
                         })
                         .count();
-                    speech_messages.write(speech::PresentSpeech {
+                    presentation.speech.write(speech::PresentSpeech {
                         event_seq: envelope.event_seq,
                         event_id: speech.event_id,
                         speaker_id: speech.speaker_id.clone(),
@@ -673,6 +726,32 @@ fn process_server_message(
             }
             Ok(_) => hud.toast("Discarded invalid speech data from Python"),
             Err(error) => hud.toast(format!("Malformed speech event: {error}")),
+        },
+        "sound" => match serde_json::from_value::<SoundWire>(payload) {
+            Ok(event) if valid_sound(&event) => {
+                // The sidecar rendered the player's percept (or None when the
+                // player is out of range); Bevy never decides what is known.
+                if let Some(text) = event.text_for_player.clone() {
+                    hud.toast(text);
+                }
+                let player_heard = event
+                    .actor_id
+                    .as_ref()
+                    .is_some_and(|actor_id| actor_id.0 == "player")
+                    || event
+                        .recipient_ids
+                        .iter()
+                        .any(|recipient| recipient.0 == "player");
+                if player_heard {
+                    presentation.sound_effects.write(sound::PlaySoundEffect {
+                        sound_id: event.sound_id,
+                        position: event.position_m.into(),
+                        audible_distance: event.audible_distance,
+                    });
+                }
+            }
+            Ok(_) => hud.toast("Discarded invalid sound data from Python"),
+            Err(error) => hud.toast(format!("Malformed sound event: {error}")),
         },
         "world_event" => {
             match serde_json::from_value::<WorldEventWire>(payload) {
@@ -770,7 +849,7 @@ fn process_server_message(
                 if valid_wire_id(&failure.speech_event_id)
                     && valid_ui_text(&failure.reason, 160) =>
             {
-                audio_failures.write(speech::TtsClipFailed {
+                presentation.failure.write(speech::TtsClipFailed {
                     event_id: failure.speech_event_id,
                     reason: failure.reason,
                 });
@@ -784,7 +863,7 @@ fn process_server_message(
                     && end.chunk_count > 0
                     && end.first_chunk_ms <= 600_000 =>
             {
-                stream_ends.write(speech::TtsStreamFinished {
+                presentation.stream_end.write(speech::TtsStreamFinished {
                     event_id: end.speech_event_id,
                     chunk_count: end.chunk_count,
                     first_chunk_ms: end.first_chunk_ms,
@@ -1093,6 +1172,29 @@ fn apply_status(
     }
 }
 
+fn valid_sound(event: &SoundWire) -> bool {
+    valid_wire_id(&event.event_id)
+        && sound::valid_sound_id(&event.sound_id)
+        && !event.sound_class.is_empty()
+        && event.sound_class.len() <= 64
+        && event
+            .actor_id
+            .as_ref()
+            .is_none_or(|actor_id| valid_wire_id(&actor_id.0))
+        && event
+            .recipient_ids
+            .iter()
+            .chain(event.witness_ids.iter())
+            .all(|actor_id| valid_wire_id(&actor_id.0))
+        && event.audible_distance.is_finite()
+        && event.audible_distance > 0.0
+        && event.audible_distance <= 10_000.0
+        && event
+            .text_for_player
+            .as_deref()
+            .is_none_or(|text| valid_ui_text(text, 300))
+}
+
 fn valid_speech(speech: &SpeechWire, mirror: &model::WorldMirror) -> bool {
     valid_wire_id(&speech.event_id)
         && valid_wire_id(&speech.speaker_id.0)
@@ -1255,9 +1357,15 @@ fn intent_to_command(intent: &interaction::PlayerIntent) -> Result<bridge::Bridg
         interaction::PlayerIntent::SpatialUpdate {
             spatial_seq,
             position: value,
+            facing_yaw,
         } => bridge::BridgeCommand::SpatialUpdate {
             spatial_seq: *spatial_seq,
             position_m: position(*value)?,
+            facing_yaw: if facing_yaw.is_finite() {
+                *facing_yaw
+            } else {
+                return Err("player facing is invalid".into());
+            },
         },
         interaction::PlayerIntent::Recording {
             request_id,
@@ -1314,6 +1422,9 @@ fn intent_to_command(intent: &interaction::PlayerIntent) -> Result<bridge::Bridg
             request_id: request_id.clone(),
             item_id: item_id.clone(),
         },
+        interaction::PlayerIntent::Sound { sound_id } => bridge::BridgeCommand::PlayerSound {
+            sound_id: sound_id.clone(),
+        },
         interaction::PlayerIntent::DebugSay {
             request_id,
             text,
@@ -1332,7 +1443,8 @@ fn intent_to_command(intent: &interaction::PlayerIntent) -> Result<bridge::Bridg
 
 fn intent_request_id(intent: &interaction::PlayerIntent) -> Option<&str> {
     match intent {
-        interaction::PlayerIntent::SpatialUpdate { .. } => None,
+        interaction::PlayerIntent::SpatialUpdate { .. }
+        | interaction::PlayerIntent::Sound { .. } => None,
         interaction::PlayerIntent::Recording { request_id, .. }
         | interaction::PlayerIntent::Offer { request_id, .. }
         | interaction::PlayerIntent::Accept { request_id, .. }
@@ -1547,6 +1659,7 @@ mod tests {
                             name_for_player: "You".into(),
                             control: model::ActorControl::Player,
                             position_m: model::Position::new(0.0, 0.0, 0.0).unwrap(),
+                            facing_yaw: 0.0,
                             appearance_key: "player".into(),
                             holds: vec![],
                         },
@@ -1555,6 +1668,7 @@ mod tests {
                             name_for_player: "Ilse".into(),
                             control: model::ActorControl::Llm,
                             position_m: model::Position::new(1.0, 0.0, 0.0).unwrap(),
+                            facing_yaw: 0.0,
                             appearance_key: "ilse".into(),
                             holds: vec![coin.clone()],
                         },
@@ -1563,6 +1677,7 @@ mod tests {
                             name_for_player: "Frans".into(),
                             control: model::ActorControl::Llm,
                             position_m: model::Position::new(2.0, 0.0, 0.0).unwrap(),
+                            facing_yaw: 0.0,
                             appearance_key: "frans".into(),
                             holds: vec![],
                         },
