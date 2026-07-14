@@ -23,6 +23,7 @@ use serde_json::{Value, json};
 use crate::{
     actions::apply_action,
     areas::AreaMap,
+    attention::{IdleCognitionMode, IdleGate, STAGE_PARTNER_MEMORY_SECONDS, StageConfig, on_stage},
     character::Control,
     error::{CommandError, CommandErrorCode, EngineInitError},
     event::{DomainEvent, EventType},
@@ -31,7 +32,7 @@ use crate::{
     math::Vec3,
     perception::{cap_first, emit_sound, identify},
     prompt::PromptEnv,
-    scheduler::{NpcScheduler, SchedulerEvent, background_turn_order},
+    scheduler::{NpcScheduler, SchedulerEvent, background_turn_order, stage_turn_order},
     seed::{WorldConfig, WorldSeed, build_world},
     snapshot::PublicSnapshot,
     sounds::SoundCatalog,
@@ -175,6 +176,20 @@ pub struct EngineConfig {
     /// file (D22); an empty path simply yields the bare basename, which is what
     /// the text-only tests and the headless runner want.
     pub runtime_dir: PathBuf,
+    /// Whether the round-robin lane is gated on the player's neighborhood
+    /// (`features/gate_idle_cognition_on_proximity.md`).
+    ///
+    /// Defaults to [`IdleCognitionMode::All`] — the pre-gate behavior — so the
+    /// tests and the headless runner keep exercising the whole cast without
+    /// having to fake proximity. `config.ron` puts the *game* on `Stage`, and
+    /// setting it back to `"all"` there is a rebuild-free A/B.
+    ///
+    /// It also decides the rotation's weights at construction: `All` keeps
+    /// `background_turn_order`'s Major ×4 / Ambient ×0, `Stage` takes
+    /// `stage_turn_order`'s flattened ones.
+    pub idle_mode: IdleCognitionMode,
+    /// The neighborhood itself, when `idle_mode` is [`IdleCognitionMode::Stage`].
+    pub stage: StageConfig,
 }
 
 impl Default for EngineConfig {
@@ -191,6 +206,8 @@ impl Default for EngineConfig {
             tts_startup_message: None,
             stt_stream_grace_seconds: DEFAULT_STT_STREAM_GRACE_SECONDS,
             runtime_dir: PathBuf::new(),
+            idle_mode: IdleCognitionMode::All,
+            stage: StageConfig::default(),
         }
     }
 }
@@ -395,6 +412,18 @@ pub struct Engine {
     /// −∞ so the very first `player_sound` is never inside the cooldown
     /// (`server.py:455`).
     last_player_sound_at: f64,
+    /// The NPC the player last exchanged a *targeted* line with, and when.
+    ///
+    /// The stage's second member: it keeps a conversation partner eligible for
+    /// an idle turn after the player has backed out of `stage.radius_m`
+    /// mid-exchange. Speech is the whole signal — the player addressed them, or
+    /// they addressed the player — and it lapses after
+    /// [`STAGE_PARTNER_MEMORY_SECONDS`], because a partner who never expired
+    /// would keep one NPC thinking in an empty field for the rest of the run.
+    ///
+    /// Broadcast lines need no entry here: to reach the player at all they came
+    /// from inside the 20 m hearing radius, which the stage radius contains.
+    last_player_exchange: Option<(ActorId, f64)>,
     ready_emitted: bool,
 }
 
@@ -454,8 +483,18 @@ impl Engine {
         // has already run through the availability fallback.
         capabilities.tts_selected = config.tts_selected;
 
+        // The rotation is frozen at construction, so the weights are chosen here
+        // — and the gate changes which weights are *right*. Ungated, the
+        // rotation rations scarce global compute across 500 people and ambient
+        // NPCs get none of it. Gated, it hands out turns among the six people in
+        // front of the player, where the ambient market crowd is most of the
+        // scene (attention.rs, `stage_turn_order`).
+        let order = match config.idle_mode {
+            IdleCognitionMode::All => background_turn_order(&world),
+            IdleCognitionMode::Stage => stage_turn_order(&world),
+        };
         let mut scheduler = NpcScheduler::new(
-            background_turn_order(&world),
+            order,
             config.turn_delay_seconds,
             config.maximum_backoff_seconds,
             now,
@@ -502,6 +541,7 @@ impl Engine {
             tts_selected,
             last_snapshot_revision: 0,
             last_player_sound_at: f64::NEG_INFINITY,
+            last_player_exchange: None,
             ready_emitted: false,
         })
     }
@@ -552,12 +592,33 @@ impl Engine {
         } else {
             self.floor.busy(now)
         };
+        // The stage is computed here for the same reason, and it is the answer
+        // to one question: who is close enough to be worth a thought? Nobody in
+        // the empty field behind you is.
+        let stage = match self.config.idle_mode {
+            IdleCognitionMode::All => None,
+            IdleCognitionMode::Stage => Some(on_stage(
+                &self.world,
+                &self.config.player_id,
+                self.conversation_partner(now),
+                &self.config.stage,
+            )),
+        };
+        let idle = if self.speech_router.player_composing() {
+            IdleGate::Suppressed
+        } else {
+            match &stage {
+                None => IdleGate::All,
+                Some(stage) => IdleGate::Stage(stage),
+            }
+        };
         let events = self.scheduler.poll(
             now,
             &mut self.world,
             &mut self.transcript,
             &mut completions,
             floor_busy,
+            idle,
             self.cognition.as_mut(),
             &self.env,
         );
@@ -611,6 +672,15 @@ impl Engine {
     /// The microphone/voice state machines, for tests and diagnostics.
     pub fn speech_router(&self) -> &SpeechRouter {
         &self.speech_router
+    }
+
+    /// The NPC the player is currently in an exchange with, while it is still
+    /// warm — the stage's reserved seat (see [`Engine::last_player_exchange`]).
+    pub fn conversation_partner(&self, now: f64) -> Option<&ActorId> {
+        self.last_player_exchange
+            .as_ref()
+            .filter(|(_, spoke_at)| now - spoke_at < STAGE_PARTNER_MEMORY_SECONDS)
+            .map(|(actor_id, _)| actor_id)
     }
 
     /// Purges overdue awaited utterances, then answers.
@@ -1070,6 +1140,17 @@ impl Engine {
         } else {
             identify(&self.world.characters[&self.config.player_id], speaker)
         };
+
+        // Who the player is talking with, from the only signal that means it: a
+        // line one of them addressed to the other. It survives him walking out
+        // of the stage radius, and it lapses on its own.
+        if speaker_is_player {
+            if let Some(target_id) = &event.target_id {
+                self.last_player_exchange = Some((target_id.clone(), now));
+            }
+        } else if event.target_id.as_ref() == Some(&self.config.player_id) {
+            self.last_player_exchange = Some((actor_id.clone(), now));
+        }
 
         let event_id = event.speech_event_id();
         out.push(EngineMessage::Speech {

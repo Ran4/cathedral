@@ -42,8 +42,8 @@ use cathedral_backends::{
 use cathedral_sim::{
     ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion,
     DEFAULT_VIEW_CONE_DEGREES, Engine, EngineCommand, EngineConfig, EngineMessage, FakeCognition,
-    NullSight, NullTranscription, NullTts, PlayerKnowledge, PromptEnv, RequestId, SoundCatalog,
-    TtsBackendKind, Vec3, World, WorldSeed,
+    IdleCognitionMode, NullSight, NullTranscription, NullTts, PlayerKnowledge, PromptEnv,
+    RequestId, SoundCatalog, StageConfig, TtsBackendKind, Vec3, World, WorldSeed,
     engine::{
         DEFAULT_MAXIMUM_BACKOFF_SECONDS, DEFAULT_SOUND_COOLDOWN_SECONDS,
         DEFAULT_STT_STREAM_GRACE_SECONDS,
@@ -91,6 +91,14 @@ struct Args {
     /// developer mode: seed the player with all ambient names too
     #[arg(long)]
     know_everybody: bool,
+
+    /// gate idle turns on the player's neighborhood, as the game does
+    ///
+    /// Off by default: the terminal's player never moves, so an ungated
+    /// rotation is what makes a six-tick run visit six different people. Turn it
+    /// on when the gate itself is what you are testing.
+    #[arg(long)]
+    stage: bool,
 
     /// LLM provider override (moonshot | openai); beats LLM_PROVIDER
     #[arg(long)]
@@ -234,6 +242,11 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             // The terminal has no microphone either: no recording will ever be
             // named, so there is no directory to name it in.
             runtime_dir: PathBuf::new(),
+            idle_mode: match args.stage {
+                true => IdleCognitionMode::Stage,
+                false => IdleCognitionMode::All,
+            },
+            stage: StageConfig::default(),
         },
         &assets.seed,
         assets.areas,

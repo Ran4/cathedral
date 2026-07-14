@@ -32,6 +32,11 @@ cloud OpenAI, or off). Each degrades on its own — a missing API key never take
 menu switches STT/TTS backends at runtime and persists the choice to `config.ron`; the X key cycles the NPC
 voice backend.
 
+LLM turns are spent only on NPCs the player can see, hear or talk to: the idle rotation is gated on the
+player's neighborhood (`crates/cathedral-sim/src/attention.rs`), while speech and sounds still reach anyone,
+anywhere. `config.ron: smart_actors.idle_cognition.mode` switches between `"stage"` and the old city-wide
+clock (`"all"`) without a rebuild.
+
 Everything is configured in `config.ron` under `smart_actors: (...)`; secrets stay in `prompt_playgound/.env`
 (real environment variables win over it). For runs without network or API keys, set `fake_backend: true` — a
 deterministic offline mode also used by the integration tests.
@@ -47,6 +52,7 @@ prompt, the scheduler or an action verb and see what it does:
 ```sh
 cargo run -p cathedral-backends --bin cathedral-headless -- --fake -t 6    # offline, instant
 cargo run -p cathedral-backends --bin cathedral-headless -- -t 10 -v       # live provider, full prompts
+cargo run -p cathedral-backends --bin cathedral-headless -- --fake -t 6 --stage  # gate idle turns on proximity
 cargo run -p cathedral-backends --bin cathedral-headless -- --one-shot FILE  # send one file, print the reply
 ```
 

@@ -274,6 +274,11 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
             .runtime_dir()
             .map(Path::to_path_buf)
             .unwrap_or_default(),
+        // Unlike the tests and the headless runner, the game has a player who is
+        // actually standing somewhere — so it is the one caller that gates idle
+        // turns on where that is.
+        idle_mode: config.idle_cognition.mode(),
+        stage: config.idle_cognition.stage(),
         ..EngineConfig::default()
     };
 
@@ -712,8 +717,10 @@ fn panic_reason(payload: &(dyn std::any::Any + Send)) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cathedral_sim::{DEFAULT_STAGE_MAX_ACTORS, DEFAULT_STAGE_RADIUS_M, IdleCognitionMode};
+
     use crate::smart_actors::{
-        SmartActorsConfig,
+        IdleCognitionSettings, SmartActorsConfig,
         model::{ActorId, ItemId, WorldSnapshot},
     };
 
@@ -1138,6 +1145,33 @@ mod tests {
             seed.config.stt_stream_grace_seconds, 2.0,
             "the grace window the router parks a committed recording for"
         );
+    }
+
+    /// The game is the one caller whose player is actually standing somewhere,
+    /// so it is the one caller that gates idle turns
+    /// (features/gate_idle_cognition_on_proximity.md). The sim defaults to
+    /// ungated for the tests and the headless runner, so a broken mapping here
+    /// would silently restore the ~1,100 calls/hour this feature removes —
+    /// nothing else would fail.
+    #[test]
+    fn the_game_gates_idle_cognition_on_the_players_neighborhood() {
+        let (seed, _backends, _fake, _log) =
+            build(&fake_config(), None).expect("the shipped assets");
+        assert_eq!(seed.config.idle_mode, IdleCognitionMode::Stage);
+        assert_eq!(seed.config.stage.radius_m, DEFAULT_STAGE_RADIUS_M);
+        assert_eq!(seed.config.stage.max_actors, DEFAULT_STAGE_MAX_ACTORS);
+
+        // `mode: "all"` is the documented rebuild-free way back to the old
+        // city-wide clock, so it has to actually reach the engine.
+        let ungated = SmartActorsConfig {
+            idle_cognition: IdleCognitionSettings {
+                mode: "all".into(),
+                ..IdleCognitionSettings::default()
+            },
+            ..fake_config()
+        };
+        let (seed, _backends, _fake, _log) = build(&ungated, None).expect("the shipped assets");
+        assert_eq!(seed.config.idle_mode, IdleCognitionMode::All);
     }
 
     /// The transcription backend is handed a path, and the microphone worker

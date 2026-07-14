@@ -16,8 +16,9 @@ which line it came from.
 
 ## How a turn works
 
-Major and minor NPCs take autonomous turns in a significance-weighted stream;
-ambient NPCs enter it only when speech or a nearby event wakes them. Each turn:
+NPCs near the player take autonomous turns in a significance-weighted stream;
+anyone the player cannot see, hear or talk to enters it only when speech or a
+nearby event wakes them (see *Who gets an idle turn* below). Each turn:
 
 1. `prompt::render_prompt_and_drain` renders the character's full sheet
    (backstory, location, visible people, held items, memories, goal) plus a
@@ -58,11 +59,55 @@ keep introduced names as memories (the prompt tells them to).
 
 For the shipped cast, the player begins knowing all major/minor figures by
 reputation and no ambient names. `PlayerKnowledge::Everyone` is retained for
-headless/developer use (`cathedral-headless --know-everybody`). Major lore NPCs
-receive four autonomous-order slots for each minor slot; ambient NPCs receive
-none, but player speech and event priority can schedule them even when the idle
-order is empty. Provider requests cap output at 1,200 / 700 / 350 tokens for
-major / minor / ambient turns. Significance itself never enters the prompt.
+headless/developer use (`cathedral-headless --know-everybody`). Provider requests
+cap output at 1,200 / 700 / 350 tokens for major / minor / ambient turns.
+Significance itself never enters the prompt.
+
+## Who gets an idle turn (`attention.rs`)
+
+Three lanes select the next actor, and only one of them is a clock:
+
+| Lane | Fires because | Gated? |
+|---|---|---|
+| player reaction | the player spoke | never |
+| priority slot | an addressed `say` or an audible sound reached them | never |
+| round robin | time passed | **yes** |
+
+The round robin is restricted to the **stage**: the LLM actors within
+`radius_m` (32 m, wider than the 20 m hearing radius on purpose) of the player,
+nearest first, capped at `max_actors` (6), plus whoever the player is currently
+in an exchange with — a partner keeps a reserved seat for 30 s after the last
+targeted line either of them addressed to the other, so backing out of the radius
+mid-sentence does not cut them off. The engine recomputes it once per poll, next
+to `floor_busy` and for the same reason (D20).
+
+Alone in a field this costs **nothing**; before the gate the rotation spent ~1,100
+provider calls an hour regardless of where the player stood. Ambient NPCs remain
+reachable by speech and by sound anywhere in the city — those lanes are ungated,
+and they are the only way an ambient NPC ever thought in the first place.
+
+The weights change meaning with the gate, so there are two orders.
+`background_turn_order` (Major ×4 / Minor ×1 / **Ambient ×0**) answers "who, out
+of 500 people, deserves scarce global compute?". `stage_turn_order` (Major 3 /
+Minor 2 / **Ambient 1**) answers "who, out of the six people in front of the
+player, thinks next?" — where the ambient market crowd *is* the scene, and the
+completion caps above keep their turns cheap instead. `EngineConfig::idle_mode`
+picks one at construction and defaults to `All`, so the tests and the headless
+runner keep exercising the full cast without faking proximity;
+`config.ron: idle_cognition.mode` puts the game on `"stage"`, and
+`cathedral-headless --stage` opts in when the gate itself is under test.
+
+No idle turn starts while the player is composing an utterance — microphone hot,
+STT in flight, or inside the router's grace window (`SpeechRouter::player_composing`).
+The scheduler cannot preempt a provider call once it is out, so the only way to
+keep the player's words from queueing behind two seconds of some irrelevant NPC's
+thinking is to not start that turn. The protected reaction lane is the one
+exception and still fires immediately.
+
+**Known consequence.** With the gate in and nothing behind it, the city outside
+the stage stops moving: no errands, no autonomous movement, no gossip. That is
+the accepted trade, and it promotes the non-LLM behavior layer from a
+nice-to-have to a dependency.
 
 ## Actions
 

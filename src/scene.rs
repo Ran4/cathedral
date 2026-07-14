@@ -1196,12 +1196,17 @@ fn add_fog_to_new_cameras(
 ) {
     for entity in &cameras {
         commands.entity(entity).insert(DistanceFog {
-            color: Color::srgba(0.58, 0.68, 0.73, 0.22),
+            // The alpha is a ceiling on the blend, not a tint: the shader
+            // computes `mix(scene, fog, falloff * color.a)`, so an alpha of 0.22
+            // pinned every surface past ~150 m at 22% fog whether it stood 200 m
+            // or 1200 m away — a flat film over the city rather than depth. At
+            // 1.0 the falloff alone decides, and distance reads again.
+            color: Color::srgba(0.58, 0.68, 0.73, 1.0),
             directional_light_color: Color::srgba(1.0, 0.78, 0.52, 0.32),
             directional_light_exponent: 24.0,
-            // The old density made most of this 1.2 km city converge on
-            // near-black. This leaves only a restrained coastal haze.
-            falloff: FogFalloff::from_visibility_squared(1_800.0),
+            // Squared falloff keeps the near lane crisp and then closes in hard.
+            // Lower the visibility for thicker weather, raise it for a clear day.
+            falloff: FogFalloff::from_visibility_squared(300.0),
         });
     }
 }

@@ -12,8 +12,9 @@
 mod prompt_support;
 
 use cathedral_sim::{
-    Cognition, CognitionBusy, CognitionError, Completion, Control, NpcScheduler, PromptEnv,
-    RequestId, SchedulerEvent, StatusEvent, Subsystem, Vec3, World, apply_action, llm_turn_order,
+    Cognition, CognitionBusy, CognitionError, Completion, Control, IdleGate, NpcScheduler,
+    PromptEnv, RequestId, SchedulerEvent, StatusEvent, Subsystem, Vec3, World, apply_action,
+    llm_turn_order,
 };
 use prompt_support::{actor, prompt_env, seed_world, sheet_of};
 use serde_json::json;
@@ -137,6 +138,10 @@ impl Harness {
             &mut self.transcript,
             completions,
             self.floor_busy,
+            // Ungated: these tests are about the turn stream itself, not about
+            // who is standing near the player. The gate's own behavior is
+            // covered in `attention.rs` and in the scheduler's unit tests.
+            IdleGate::All,
             &mut self.cognition,
             &self.env,
         );
@@ -786,6 +791,7 @@ fn the_system_inbox_lines_keep_their_wording() {
         &mut Vec::new(),
         &mut Vec::new(),
         false,
+        IdleGate::All,
         &mut BusyCognition,
         &prompt_env(),
     );

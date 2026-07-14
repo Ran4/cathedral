@@ -32,5 +32,21 @@
             // Engine-side rate limit; sounds inside the cooldown drop silently.
             min_seconds_between_player_sounds: 2.0,
         ),
+        // No LLM turn is spent on an actor you cannot see, hear or talk to
+        // (features/implemented/gate_idle_cognition_on_proximity.md).
+        idle_cognition: (
+            // "stage" gives idle turns only to the people near you. "all"
+            // restores the old city-wide rotation: ~1,100 provider calls an
+            // hour, sustained, whether or not anybody is there to notice.
+            mode: "stage",
+            // Deliberately wider than the 20 m hearing radius, so an NPC has
+            // been thinking for a while by the time you can hear them instead
+            // of visibly booting when you walk up.
+            radius_m: 32.0,
+            // How many neighbours share the rotation. Still only one provider
+            // request in flight at a time — this caps how thinly the turns are
+            // spread, not how many run at once.
+            max_actors: 6,
+        ),
     ),
 )

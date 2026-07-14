@@ -12,6 +12,7 @@
 
 pub mod actions;
 pub mod areas;
+pub mod attention;
 pub mod character;
 pub mod engine;
 pub mod error;
@@ -41,6 +42,10 @@ pub use actions::{apply_action, apply_action_at};
 pub use areas::{
     Area, AreaBox, AreaMap, AreaMapError, AxisDirection, CoordinateSystem, NearestArea,
 };
+pub use attention::{
+    DEFAULT_STAGE_MAX_ACTORS, DEFAULT_STAGE_RADIUS_M, IdleCognitionMode, IdleGate,
+    STAGE_PARTNER_MEMORY_SECONDS, StageConfig, on_stage,
+};
 pub use character::{Character, CharacterSheet, CharacterState, Control};
 pub use engine::{Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage};
 pub use error::{
@@ -63,7 +68,9 @@ pub use prompt::{
     ParsedAction, PromptEnv, PromptStrings, parse_reply, parse_reply_value, py_round,
     render_prompt, render_prompt_and_drain, to_py_json,
 };
-pub use scheduler::{NpcScheduler, SchedulerEvent, background_turn_order, llm_turn_order};
+pub use scheduler::{
+    NpcScheduler, SchedulerEvent, background_turn_order, llm_turn_order, stage_turn_order,
+};
 pub use seed::{ItemSeed, PlayerKnowledge, SeedError, WorldConfig, WorldSeed, build_world};
 pub use snapshot::{ActorSnapshot, ItemSnapshot, OfferSnapshot, PublicSnapshot};
 pub use sounds::{AmbientSound, Sound, SoundCatalog, SoundCatalogError};

@@ -12,7 +12,7 @@ mod prompt_support;
 use cathedral_sim::{
     Cognition, ConversationFloor, FLOOR_PLAYER_CHUNK_HOLD_SECONDS,
     FLOOR_PLAYER_ENDPOINT_HOLD_SECONDS, FLOOR_PLAYER_TRANSCRIBING_HOLD_SECONDS,
-    FLOOR_POST_UTTERANCE_BEAT_SECONDS, FakeCognition, MAX_FLOOR_AWAITING, NpcScheduler,
+    FLOOR_POST_UTTERANCE_BEAT_SECONDS, FakeCognition, IdleGate, MAX_FLOOR_AWAITING, NpcScheduler,
     SpeechEventId, floor_audio_failsafe_seconds, llm_turn_order, speech_reading_seconds,
 };
 use prompt_support::{prompt_env, seed_world};
@@ -297,6 +297,9 @@ fn an_npc_reply_finished_during_player_speech_waits_for_the_hold() {
             transcript,
             &mut completions,
             busy,
+            // Ungated: this test is about the floor, and it wants the cast to
+            // keep thinking so there is something for the floor to hold back.
+            IdleGate::All,
             cognition as &mut dyn Cognition,
             &env,
         );

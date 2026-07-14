@@ -4,6 +4,15 @@
 //! turn-taking, a protected FIFO lane for reactions to player speech, provider
 //! backoff, and floor gating.
 //!
+//! Three lanes select the next actor, and only one of them is a clock. The
+//! player-reaction lane fires because the player spoke; the priority slot fires
+//! because an addressed `say` or an audible sound reached someone. The round
+//! robin fired because time passed — so it, alone, is gated on an [`IdleGate`]
+//! the engine computes from the player's neighborhood
+//! (`features/gate_idle_cognition_on_proximity.md`). An ambient NPC across the
+//! city remains reachable by speech and by sound exactly as before; what stops
+//! is thinking at nobody.
+//!
 //! Python ran the provider call on a daemon thread and everything else on the
 //! poll thread. Here the split is a trait boundary instead: [`Cognition::request`]
 //! is a non-blocking submit, the completion comes back as a plain
@@ -22,8 +31,10 @@ use serde_json::{Map, Value};
 use crate::{
     MAX_LLM_REPLY_CHARS,
     actions::apply_action,
+    attention::IdleGate,
     character::Control,
     ids::{ActorId, RequestId},
+    lore::Significance,
     prompt::{PromptEnv, parse_reply, render_prompt_and_drain},
     pyfmt::py_repr_map,
     status::{STATE_DEGRADED, STATE_IDLE, STATE_THINKING, StatusEvent},
@@ -271,9 +282,11 @@ impl NpcScheduler {
     /// with `minimum_delay_seconds == 0` a fresh turn is in flight after every
     /// poll.
     ///
-    /// `floor_busy` is computed by the caller once per frame (D20): passing a
-    /// bool instead of Python's callback keeps the floor's expiry side effects
-    /// out of the scheduler's call count.
+    /// `floor_busy` and `idle` are both computed by the caller once per frame
+    /// (D20): passing values instead of Python's callback keeps the floor's
+    /// expiry side effects — and now the stage query — out of the scheduler's
+    /// call count. The scheduler must not be able to change how often either
+    /// runs.
     // The parameter list is pinned by ARCHITECTURE §2.5 (and §6, which adds
     // `transcript` and `env` to scheduler.md's signature). Bundling the borrows
     // into a context struct would only move the arguments, and it would move
@@ -286,6 +299,7 @@ impl NpcScheduler {
         transcript: &mut Vec<String>,
         completions: &mut Vec<Completion>,
         floor_busy: bool,
+        idle: IdleGate<'_>,
         cognition: &mut dyn Cognition,
         env: &PromptEnv,
     ) -> Vec<SchedulerEvent> {
@@ -333,15 +347,11 @@ impl NpcScheduler {
         }
 
         // 3. Submit. The in-flight check sees the value *after* step 2 cleared
-        //    it, which is how one poll can apply and submit.
-        if self.running
-            && self.in_flight.is_none()
-            && (!self.order.is_empty()
-                || !self.player_reactions.is_empty()
-                || self.priority_actor_id.is_some())
-            && now >= self.next_turn_at
-        {
-            self.submit_next_turn(now, world, cognition, env, &mut events);
+        //    it, which is how one poll can apply and submit. Whether there is
+        //    anyone to submit *for* is now `select_next_actor`'s answer alone —
+        //    a non-empty `order` no longer means a turn is owed.
+        if self.running && self.in_flight.is_none() && now >= self.next_turn_at {
+            self.submit_next_turn(now, world, idle, cognition, env, &mut events);
         }
 
         events
@@ -574,6 +584,7 @@ impl NpcScheduler {
         &mut self,
         now: f64,
         world: &mut World,
+        idle: IdleGate<'_>,
         cognition: &mut dyn Cognition,
         env: &PromptEnv,
         events: &mut Vec<SchedulerEvent>,
@@ -582,7 +593,14 @@ impl NpcScheduler {
         // consumed — BEFORE the validity check: a skipped actor still burns its
         // turn, and so do a failed render and a refused submit. Intentional
         // (scheduler.md risk 8).
-        let (actor_id, player_reaction) = self.select_next_actor();
+        let Some((actor_id, player_reaction)) = self.select_next_actor(idle) else {
+            // Nobody may think right now: the stage is empty, or the player is
+            // mid-utterance. `next_turn_at` is deliberately left where it is —
+            // in the past — so the first poll after someone walks into the
+            // stage submits at once. An NPC should already be mid-thought when
+            // you arrive, not boot when you look at them.
+            return;
+        };
         let Some(actor) = world.characters.get(&actor_id) else {
             // Silently skipped, with no delay change, so the very next poll
             // selects the following actor. Only reachable if the world mutated
@@ -665,23 +683,52 @@ impl NpcScheduler {
         }
     }
 
-    /// Protected player reactions win first, then the ordinary priority slot.
-    /// Neither advances the round robin, so the rotation resumes exactly where
-    /// it left off (`scheduler.py:360-367`).
-    fn select_next_actor(&mut self) -> (ActorId, bool) {
+    /// Protected player reactions win first, then the ordinary priority slot,
+    /// then the gated round robin. Neither of the first two advances the round
+    /// robin, so the rotation resumes exactly where it left off
+    /// (`scheduler.py:360-367`).
+    ///
+    /// `None` means no turn is owed at all — the lane that would have supplied
+    /// one is empty or closed. It is the poll that buys nothing, and not
+    /// spending it is the whole feature.
+    fn select_next_actor(&mut self, idle: IdleGate<'_>) -> Option<(ActorId, bool)> {
+        // Ungated, always: the player spoke, so someone answers.
         if let Some(actor_id) = self.player_reactions.pop_front() {
-            return (actor_id, true);
+            return Some((actor_id, true));
         }
+        // The player is still composing. The lane he needs is the one above,
+        // and the ordinary slot's occupant — an NPC handoff, a sound nudge — is
+        // exactly the two seconds of irrelevant thinking his words would
+        // otherwise queue behind. It is a sticky slot; it keeps until he stops.
+        if idle.is_suppressed() {
+            return None;
+        }
+        // Ungated by proximity: an addressed `say` or an audible sound reached
+        // them. This is also the only way an ambient NPC ever thinks, and it
+        // must stay that way.
         if let Some(actor_id) = self.priority_actor_id.take() {
-            return (actor_id, false);
+            return Some((actor_id, false));
         }
-        debug_assert!(
-            !self.order.is_empty(),
-            "callers guarantee a non-empty order"
-        );
-        let actor_id = self.order[self.round_robin_index % self.order.len()].clone();
-        self.round_robin_index = (self.round_robin_index + 1) % self.order.len();
-        (actor_id, false)
+        self.next_idle_actor(idle).map(|actor_id| (actor_id, false))
+    }
+
+    /// Scan the rotation forward for the first actor the gate admits, bounded by
+    /// one lap.
+    ///
+    /// Scanning rather than rebuilding `order` is what preserves both the
+    /// rotation's fairness and its significance weighting, and it is what keeps
+    /// `order` frozen at construction (the invariant the struct's comment pins).
+    fn next_idle_actor(&mut self, idle: IdleGate<'_>) -> Option<ActorId> {
+        // No modulo on an empty rotation: the loop simply never runs.
+        for offset in 0..self.order.len() {
+            let index = (self.round_robin_index + offset) % self.order.len();
+            if !idle.allows(&self.order[index]) {
+                continue;
+            }
+            self.round_robin_index = (index + 1) % self.order.len();
+            return Some(self.order[index].clone());
+        }
+        None
     }
 
     fn requeue_player_reaction_front(&mut self, actor_id: &ActorId) {
@@ -707,13 +754,53 @@ pub fn llm_turn_order(world: &World) -> Vec<ActorId> {
         .collect()
 }
 
-/// Significance-aware autonomous turn stream.
+/// Significance-aware autonomous turn stream, for an **ungated** rotation.
 ///
 /// Major lore actors receive four slots for each minor slot. Ambient actors
 /// receive no idle slot at all, but `prioritize` and the protected player
 /// reaction lane can still schedule them immediately. Non-lore fixtures retain
 /// one slot so compact tests and custom seeds keep their historic behavior.
+///
+/// These weights answer *"who, out of 500 people, deserves scarce global
+/// compute?"*, and Ambient ×0 is the right answer to that question: the ambient
+/// cast is the people you will never meet. See [`stage_turn_order`] for the
+/// question a gated rotation asks instead.
 pub fn background_turn_order(world: &World) -> Vec<ActorId> {
+    weighted_turn_order(world, |significance| match significance {
+        None => 1,
+        Some(Significance::Major) => 4,
+        Some(Significance::Minor) => 1,
+        Some(Significance::Ambient) => 0,
+    })
+}
+
+/// The same stream, weighted for a rotation the stage has already filtered.
+///
+/// With the gate in, the rotation answers a different question — *"who, out of
+/// the six people standing in front of the player, thinks next?"* — and there
+/// Ambient ×0 is backwards. The market crowd around you **is** ambient; under
+/// the ungated weights they would be exactly the statues the gate is supposed to
+/// prevent.
+///
+/// So the weights flatten to Major 3 / Minor 2 / Ambient 1, and the
+/// per-significance completion caps ([`Significance::output_token_budget`]) keep
+/// the difference in the bill instead: an ambient fishmonger beside you should
+/// live, just in fewer tokens.
+pub fn stage_turn_order(world: &World) -> Vec<ActorId> {
+    weighted_turn_order(world, |significance| match significance {
+        None => 1,
+        Some(Significance::Major) => 3,
+        Some(Significance::Minor) => 2,
+        Some(Significance::Ambient) => 1,
+    })
+}
+
+/// Interleave the cast by weight: one pass per layer, so a ×4 actor is spread
+/// across the rotation rather than stacked at their roster position.
+fn weighted_turn_order(
+    world: &World,
+    copies: impl Fn(Option<Significance>) -> usize,
+) -> Vec<ActorId> {
     let weighted: Vec<_> = world
         .roster
         .iter()
@@ -722,19 +809,17 @@ pub fn background_turn_order(world: &World) -> Vec<ActorId> {
             if actor.control() != Control::Llm {
                 return None;
             }
-            let copies = match actor.lore() {
-                None => 1,
-                Some(profile) => match profile.significance {
-                    crate::lore::Significance::Major => 4,
-                    crate::lore::Significance::Minor => 1,
-                    crate::lore::Significance::Ambient => 0,
-                },
-            };
-            Some((actor_id, copies))
+            let copies = copies(actor.lore().map(|profile| profile.significance));
+            (copies > 0).then_some((actor_id, copies))
         })
         .collect();
+    let layers = weighted
+        .iter()
+        .map(|(_, copies)| *copies)
+        .max()
+        .unwrap_or(0);
     let mut order = Vec::new();
-    for layer in 0..4 {
+    for layer in 0..layers {
         order.extend(
             weighted
                 .iter()
@@ -935,6 +1020,83 @@ mod tests {
     }
 
     #[test]
+    fn the_stage_order_flattens_the_weights_and_lets_ambient_in() {
+        let mut world = World::new();
+        world.add_character(lore_character("major", Significance::Major));
+        world.add_character(lore_character("minor", Significance::Minor));
+        world.add_character(lore_character("ambnt", Significance::Ambient));
+
+        // Major 3 / Minor 2 / Ambient 1: the crowd in front of you all lives,
+        // and the interleave still favours the people worth talking to.
+        assert_eq!(
+            stage_turn_order(&world)
+                .iter()
+                .map(ActorId::as_str)
+                .collect::<Vec<_>>(),
+            ["major", "minor", "ambnt", "major", "minor", "major"]
+        );
+    }
+
+    #[test]
+    fn the_idle_lane_skips_actors_off_stage_and_keeps_the_rotation_fair() {
+        let mut world = World::new();
+        for id in ["one", "two", "tre"] {
+            world.add_character(lore_character(id, Significance::Minor));
+        }
+        let order = stage_turn_order(&world);
+        // Minor ×2, so each actor appears twice: the scan must not mistake the
+        // second copy for a fresh actor.
+        assert_eq!(order.len(), 6);
+        let mut scheduler = NpcScheduler::new(order, 0.0, 60.0, 0.0);
+
+        let stage: BTreeSet<ActorId> = [ActorId::from_raw("tre")].into_iter().collect();
+        let gate = IdleGate::Stage(&stage);
+        // Only "tre" is near the player, so the rotation lands on "tre" every
+        // time — skipping past "one" and "two" rather than stalling on them.
+        for _ in 0..3 {
+            assert_eq!(
+                scheduler.select_next_actor(gate),
+                Some((ActorId::from_raw("tre"), false))
+            );
+        }
+        // An empty stage buys nothing, so it costs nothing.
+        let empty = BTreeSet::new();
+        assert_eq!(scheduler.select_next_actor(IdleGate::Stage(&empty)), None);
+        // Ungated, the rotation resumes where the gated scan left it.
+        assert_eq!(
+            scheduler.select_next_actor(IdleGate::All),
+            Some((ActorId::from_raw("one"), false))
+        );
+    }
+
+    #[test]
+    fn a_composing_player_suppresses_every_lane_but_his_own() {
+        let mut world = World::new();
+        world.add_character(lore_character("major", Significance::Major));
+        world.add_character(lore_character("ambnt", Significance::Ambient));
+        let mut scheduler = NpcScheduler::new(stage_turn_order(&world), 0.0, 60.0, 0.0);
+
+        // A sound nudge has handed the ordinary slot to the ambient NPC…
+        assert!(scheduler.prioritize(&world, &ActorId::from_raw("ambnt"), true, 0.0));
+        // …but the player is mid-utterance, so nothing starts: neither that
+        // handoff nor the round robin may spend the slot his words are about to
+        // need.
+        assert_eq!(scheduler.select_next_actor(IdleGate::Suppressed), None);
+
+        // The protected lane is the exception, and it still outranks everything.
+        assert!(scheduler.prioritize_player_reaction(&world, &ActorId::from_raw("major"), 0.0));
+        assert_eq!(
+            scheduler.select_next_actor(IdleGate::Suppressed),
+            Some((ActorId::from_raw("major"), true))
+        );
+        // The nudge was only deferred, never dropped.
+        assert_eq!(
+            scheduler.select_next_actor(IdleGate::All),
+            Some((ActorId::from_raw("ambnt"), false))
+        );
+    }
+
+    #[test]
     fn an_ambient_actor_can_react_without_an_idle_order_and_gets_the_small_budget() {
         let mut world = World::new();
         let ambient = ActorId::from_raw("ambnt");
@@ -949,12 +1111,16 @@ mod tests {
         )
         .unwrap();
         let mut cognition = BudgetCognition::default();
+        // The gate is the tightest one there is — an empty stage — and the
+        // reaction lane sails straight through it.
+        let empty = BTreeSet::new();
         let events = scheduler.poll(
             0.0,
             &mut world,
             &mut Vec::new(),
             &mut Vec::new(),
             false,
+            IdleGate::Stage(&empty),
             &mut cognition,
             &env,
         );

@@ -24,7 +24,10 @@ use bevy::audio::AddAudioSource;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::transform::TransformSystems;
-use cathedral_sim::{Capabilities, EngineMessage, StatusEvent, TtsBackendKind};
+use cathedral_sim::{
+    Capabilities, DEFAULT_STAGE_MAX_ACTORS, DEFAULT_STAGE_RADIUS_M, EngineMessage,
+    IdleCognitionMode, StageConfig, StatusEvent, TtsBackendKind,
+};
 use serde::{Deserialize, Serialize};
 
 pub use config_menu::ConfigMenuState;
@@ -60,6 +63,56 @@ pub struct SmartActorsConfig {
     pub stt_trailing_silence_ms: u32,
     /// Non-speech sound percepts (features/sounds.md).
     pub sounds: SoundsConfig,
+    /// Who gets to think when nothing has happened
+    /// (features/gate_idle_cognition_on_proximity.md).
+    pub idle_cognition: IdleCognitionSettings,
+}
+
+/// The proximity gate on *idle* NPC turns.
+///
+/// The three lanes that schedule an NPC turn are not equal: two of them fire
+/// because of a real event (you spoke; a sound reached them), and the third
+/// fired because time passed. Only the third is gated here, and only when
+/// `mode` is `"stage"`.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct IdleCognitionSettings {
+    /// `"stage"` gates idle turns on the player's neighborhood; `"all"` restores
+    /// the unconditional city-wide rotation. A rebuild-free A/B.
+    pub mode: String,
+    /// Deliberately wider than the 20 m hearing radius: an NPC should already
+    /// have been thinking by the time you can hear them, rather than animating
+    /// the instant you arrive.
+    pub radius_m: f64,
+    /// How many neighbours share the rotation. The scheduler still allows only
+    /// one request in flight, so this caps how *thinly* the turns are spread,
+    /// not how many run at once.
+    pub max_actors: usize,
+}
+
+impl Default for IdleCognitionSettings {
+    fn default() -> Self {
+        Self {
+            mode: IdleCognitionMode::Stage.as_str().into(),
+            radius_m: DEFAULT_STAGE_RADIUS_M,
+            max_actors: DEFAULT_STAGE_MAX_ACTORS,
+        }
+    }
+}
+
+impl IdleCognitionSettings {
+    pub fn mode(&self) -> IdleCognitionMode {
+        IdleCognitionMode::from_config(&self.mode)
+    }
+
+    pub fn stage(&self) -> StageConfig {
+        StageConfig {
+            radius_m: self.radius_m,
+            // A rotation nobody is in would never idle at all; `mode: "all"` is
+            // the way to say that on purpose.
+            max_actors: self.max_actors.max(1),
+        }
+    }
 }
 
 /// Settings for non-speech sound percepts. Perception runs in the engine;
@@ -98,6 +151,7 @@ impl Default for SmartActorsConfig {
             stt_streaming: true,
             stt_trailing_silence_ms: 400,
             sounds: SoundsConfig::default(),
+            idle_cognition: IdleCognitionSettings::default(),
         }
     }
 }

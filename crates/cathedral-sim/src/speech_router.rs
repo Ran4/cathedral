@@ -312,6 +312,24 @@ impl SpeechRouter {
         self.recording_jobs.len()
     }
 
+    /// The player is mid-utterance: the microphone is streaming, a recording is
+    /// waiting out the grace window, or a transcription is in flight.
+    ///
+    /// The three states the scheduler cares about, as one bool. It suppresses
+    /// idle submission while this holds
+    /// (`features/gate_idle_cognition_on_proximity.md` §4): the protected
+    /// reaction lane is immediate at *selection*, but it cannot preempt a call
+    /// that is already out, so without this every player utterance can wait out
+    /// ~2 s of some irrelevant NPC's thinking. Not starting that turn is what
+    /// makes "nothing was in flight when your words landed" the common case.
+    ///
+    /// Every contributing state is self-expiring — the grace deadline, the
+    /// held-transcript timeout, an abort — so a dropped client cannot wedge the
+    /// cast into silence.
+    pub fn player_composing(&self) -> bool {
+        !self.streams.is_empty() || !self.parked.is_empty() || !self.recording_jobs.is_empty()
+    }
+
     // ------------------------------------------------------------------ poll
 
     /// `_poll_streaming` (`server.py:1325-1353`): the two deadlines nobody else
