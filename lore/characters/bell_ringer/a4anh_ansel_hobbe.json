@@ -1,6 +1,8 @@
 {
   "id": "a4anh",
   "name": "Ansel Hobbe",
+  "significance": "minor",
+  "planning_ward": "fabric",
   "age": 64,
   "gender": "m",
   "occupation_id": "bell_ringer",
@@ -34,6 +36,7 @@
     "z": -23.0,
     "facing": -1.570796
   },
+  "statuses": [],
   "conditions": [
     "deaf"
   ],

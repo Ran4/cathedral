@@ -18,6 +18,71 @@ use crate::{
     math::Vec3,
 };
 
+pub const NO_FIXED_TRADE_FOLDER: &str = "no_fixed_trade";
+
+/// Canonical importance and the corresponding default compute class.
+///
+/// This is host metadata. It is deliberately not rendered into an NPC's
+/// prompt as a statement about the person's worth or self-knowledge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Significance {
+    Major,
+    Minor,
+    Ambient,
+}
+
+impl Significance {
+    /// Completion budget used by provider-backed cognition. The prompt format
+    /// keeps actions compact, so these caps leave ample room for several
+    /// actions while making reactive ambient turns materially cheaper.
+    pub const fn output_token_budget(self) -> u32 {
+        match self {
+            Self::Major => 1_200,
+            Self::Minor => 700,
+            Self::Ambient => 350,
+        }
+    }
+}
+
+/// Broad authoring geography from `lore/places/00_city_plan.md`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PlanningWard {
+    Fabric,
+    Wick,
+    Cloth,
+    Wallwright,
+    Cinder,
+    Weigh,
+    Reed,
+    BellAndSluice,
+}
+
+/// Status spellings shared by authoring and loader validation. Health and
+/// bodily conditions do not belong here; they remain in `conditions`.
+pub const CONTROLLED_STATUSES: &[&str] = &[
+    "alms_dependent",
+    "begs_regularly",
+    "dependent",
+    "enclosed_religious",
+    "illiterate",
+    "insecure_lodging",
+    "intermittently_employed",
+    "noncitizen",
+    "orphan",
+    "pauper",
+    "prisoner",
+    "recent_migrant",
+    "recanted_heretic",
+    "retired",
+    "spared",
+    "unemployed",
+    "unhoused",
+    "widow",
+    "widower",
+];
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoreError {
     pub message: String,
@@ -43,11 +108,13 @@ impl std::error::Error for LoreError {}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LoreProfile {
+    pub significance: Significance,
+    pub planning_ward: PlanningWard,
     pub age: u16,
     pub gender: String,
-    pub occupation_id: String,
-    pub occupation_display: String,
-    pub title: String,
+    pub occupation_id: Option<String>,
+    pub occupation_display: Option<String>,
+    pub title: Option<String>,
     pub rank: Option<String>,
     pub faction_role: Option<String>,
     pub illegal_activity: Option<String>,
@@ -55,6 +122,7 @@ pub struct LoreProfile {
     pub father: Option<ActorId>,
     pub mother: Option<ActorId>,
     pub children: Vec<ActorId>,
+    pub statuses: Vec<String>,
     pub conditions: Vec<String>,
     pub core_character_description: String,
     pub extended_character_description: String,
@@ -75,10 +143,12 @@ pub struct LoreSpawnLocation {
 pub struct LoreCharacterSheet {
     pub id: ActorId,
     pub name: String,
+    pub significance: Significance,
+    pub planning_ward: PlanningWard,
     pub age: u16,
     pub gender: String,
-    pub occupation_id: String,
-    pub title: String,
+    pub occupation_id: Option<String>,
+    pub title: Option<String>,
     pub rank: Option<String>,
     pub faction_role: Option<String>,
     pub illegal_activity: Option<String>,
@@ -90,6 +160,8 @@ pub struct LoreCharacterSheet {
     #[serde(default)]
     pub children: Vec<ActorId>,
     pub spawn_location: LoreSpawnLocation,
+    #[serde(default)]
+    pub statuses: Vec<String>,
     #[serde(default)]
     pub conditions: Vec<String>,
     #[serde(default)]
@@ -117,9 +189,9 @@ impl LoreCharacterSheet {
     }
 
     fn validate(&self) -> Result<(), LoreError> {
-        if !self.id.is_valid() {
+        if !self.id.is_valid() || self.id.as_str().chars().count() != 5 {
             return Err(LoreError::new(format!(
-                "invalid character id '{}'",
+                "invalid character id '{}': lore character ids must be exactly five characters",
                 self.id
             )));
         }
@@ -129,11 +201,28 @@ impl LoreCharacterSheet {
                 self.id
             )));
         }
-        if self.occupation_id.trim().is_empty() || self.title.trim().is_empty() {
-            return Err(LoreError::new(format!(
-                "character '{}' needs an occupation and title",
-                self.id
-            )));
+        match (&self.occupation_id, &self.title) {
+            (Some(occupation), Some(title))
+                if !occupation.trim().is_empty() && !title.trim().is_empty() => {}
+            (None, None) if self.rank.is_none() => {
+                if !self.statuses.iter().any(|status| {
+                    matches!(
+                        status.as_str(),
+                        "alms_dependent" | "dependent" | "pauper" | "prisoner"
+                    )
+                }) {
+                    return Err(LoreError::new(format!(
+                        "character '{}' has no fixed trade and needs a support status",
+                        self.id
+                    )));
+                }
+            }
+            _ => {
+                return Err(LoreError::new(format!(
+                    "character '{}' must have both occupation/title, or null occupation/title/rank",
+                    self.id
+                )));
+            }
         }
         if self.district.trim().is_empty() || self.core_character_description.trim().is_empty() {
             return Err(LoreError::new(format!(
@@ -152,6 +241,21 @@ impl LoreCharacterSheet {
                 self.id
             )));
         }
+        let mut seen_statuses = BTreeSet::new();
+        for status in &self.statuses {
+            if !CONTROLLED_STATUSES.contains(&status.as_str()) {
+                return Err(LoreError::new(format!(
+                    "character '{}' has unknown status '{status}'",
+                    self.id
+                )));
+            }
+            if !seen_statuses.insert(status) {
+                return Err(LoreError::new(format!(
+                    "character '{}' repeats status '{status}'",
+                    self.id
+                )));
+            }
+        }
         for related in self
             .knows
             .iter()
@@ -169,7 +273,7 @@ impl LoreCharacterSheet {
         Ok(())
     }
 
-    fn into_character_sheet(self, occupation_display: String) -> CharacterSheet {
+    fn into_character_sheet(self, occupation_display: Option<String>) -> CharacterSheet {
         let voice_key = self
             .voice_key
             .clone()
@@ -193,6 +297,8 @@ impl LoreCharacterSheet {
             memories: self.memories,
             knows: self.knows.into_iter().collect(),
             lore: Some(LoreProfile {
+                significance: self.significance,
+                planning_ward: self.planning_ward,
                 age: self.age,
                 gender: self.gender,
                 occupation_id: self.occupation_id,
@@ -205,6 +311,7 @@ impl LoreCharacterSheet {
                 father: self.father,
                 mother: self.mother,
                 children: self.children,
+                statuses: self.statuses,
                 conditions: self.conditions,
                 core_character_description: self.core_character_description,
                 extended_character_description: self.extended_character_description,
@@ -237,7 +344,7 @@ struct Occupation {
 /// A fully validated cast in deterministic relative-path order.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoreCast {
-    characters: Vec<(LoreCharacterSheet, String)>,
+    characters: Vec<(LoreCharacterSheet, Option<String>)>,
 }
 
 impl LoreCast {
@@ -284,37 +391,48 @@ impl LoreCast {
             }
             let sheet = LoreCharacterSheet::from_json_str(&source)
                 .map_err(|error| LoreError::new(format!("{relative_path}: {error}")))?;
-            if folder != sheet.occupation_id {
-                return Err(LoreError::new(format!(
-                    "{relative_path}: folder '{folder}' does not match occupation '{}'",
-                    sheet.occupation_id
-                )));
-            }
             if !file_name.ends_with(".json") || !file_name.starts_with(&format!("{}_", sheet.id)) {
                 return Err(LoreError::new(format!(
                     "{relative_path}: filename must start with '{}_' and end in .json",
                     sheet.id
                 )));
             }
-            let Some(occupation) = occupation_map.get(&sheet.occupation_id) else {
-                return Err(LoreError::new(format!(
-                    "{relative_path}: unknown occupation '{}'",
-                    sheet.occupation_id
-                )));
+            let occupation_display = match (&sheet.occupation_id, &sheet.title) {
+                (Some(occupation_id), Some(title)) => {
+                    if folder != occupation_id {
+                        return Err(LoreError::new(format!(
+                            "{relative_path}: folder '{folder}' does not match occupation '{occupation_id}'"
+                        )));
+                    }
+                    let Some(occupation) = occupation_map.get(occupation_id) else {
+                        return Err(LoreError::new(format!(
+                            "{relative_path}: unknown occupation '{occupation_id}'"
+                        )));
+                    };
+                    if !occupation.alternative_titles.contains(title) {
+                        return Err(LoreError::new(format!(
+                            "{relative_path}: title '{title}' is not valid for occupation '{occupation_id}'"
+                        )));
+                    }
+                    Some(occupation.occupation_display.clone())
+                }
+                (None, None) => {
+                    if folder != NO_FIXED_TRADE_FOLDER {
+                        return Err(LoreError::new(format!(
+                            "{relative_path}: a null occupation must be stored under '{NO_FIXED_TRADE_FOLDER}'"
+                        )));
+                    }
+                    None
+                }
+                _ => unreachable!("sheet-level validation checked occupation/title pairing"),
             };
-            if !occupation.alternative_titles.contains(&sheet.title) {
-                return Err(LoreError::new(format!(
-                    "{relative_path}: title '{}' is not valid for occupation '{}'",
-                    sheet.title, sheet.occupation_id
-                )));
-            }
             if !ids.insert(sheet.id.clone()) {
                 return Err(LoreError::new(format!(
                     "{relative_path}: duplicate character id '{}'",
                     sheet.id
                 )));
             }
-            parsed.push((sheet, occupation.occupation_display.clone()));
+            parsed.push((sheet, occupation_display));
         }
 
         for (sheet, _) in &parsed {
@@ -328,6 +446,16 @@ impl LoreCast {
                 if !ids.contains(related) {
                     return Err(LoreError::new(format!(
                         "character '{}' references missing character '{related}'",
+                        sheet.id
+                    )));
+                }
+                if sheet.significance != Significance::Ambient
+                    && parsed.iter().any(|(candidate, _)| {
+                        candidate.id == *related && candidate.significance == Significance::Ambient
+                    })
+                {
+                    return Err(LoreError::new(format!(
+                        "stable character '{}' may not depend on ambient character '{related}'",
                         sheet.id
                     )));
                 }
@@ -379,6 +507,13 @@ impl LoreCast {
         self.characters.iter().map(|(sheet, _)| &sheet.id)
     }
 
+    pub fn public_ids(&self) -> impl Iterator<Item = &ActorId> {
+        self.characters
+            .iter()
+            .filter(|(sheet, _)| sheet.significance != Significance::Ambient)
+            .map(|(sheet, _)| &sheet.id)
+    }
+
     pub(crate) fn into_character_sheets(self) -> Vec<CharacterSheet> {
         self.characters
             .into_iter()
@@ -395,7 +530,7 @@ mod tests {
 
     fn character(id: &str, knows: &str) -> String {
         format!(
-            r#"{{"id":"{id}","name":"N","age":20,"gender":"m","occupation_id":"smith","title":"Blacksmith","rank":null,"faction_role":null,"illegal_activity":null,"district":"Cinder Row","knows":{knows},"father":null,"mother":null,"children":[],"spawn_location":{{"x":1.0,"y":0.91,"z":2.0,"facing":0.0}},"conditions":[],"memories":[],"core_character_description":"You smith.","extended_character_description":"More."}}"#
+            r#"{{"id":"{id}","name":"N","significance":"minor","planning_ward":"cinder","age":20,"gender":"m","occupation_id":"smith","title":"Blacksmith","rank":null,"faction_role":null,"illegal_activity":null,"district":"Cinder Row","knows":{knows},"father":null,"mother":null,"children":[],"spawn_location":{{"x":1.0,"y":0.91,"z":2.0,"facing":0.0}},"statuses":[],"conditions":[],"memories":[],"core_character_description":"You smith.","extended_character_description":"More."}}"#
         )
     }
 
@@ -420,7 +555,15 @@ mod tests {
             Some("sven" | "conny")
         ));
         assert_eq!(sheets[0].back_story, "You smith.");
-        assert_eq!(sheets[0].lore.as_ref().unwrap().occupation_display, "Smith");
+        assert_eq!(
+            sheets[0]
+                .lore
+                .as_ref()
+                .unwrap()
+                .occupation_display
+                .as_deref(),
+            Some("Smith")
+        );
     }
 
     #[test]
@@ -441,5 +584,48 @@ mod tests {
         )
         .unwrap_err();
         assert!(dangling.message.contains("missing character 'ghost'"));
+    }
+
+    #[test]
+    fn no_fixed_trade_requires_the_structural_folder_null_fields_and_support() {
+        let source = character("aaaaa", "[]")
+            .replace(r#""occupation_id":"smith""#, r#""occupation_id":null"#)
+            .replace(r#""title":"Blacksmith""#, r#""title":null"#)
+            .replace(r#""statuses":[]"#, r#""statuses":["dependent"]"#);
+        let cast = LoreCast::from_json_sources(
+            OCCUPATIONS,
+            [("no_fixed_trade/aaaaa_n.json".into(), source)],
+        )
+        .unwrap();
+        let sheets = cast.into_character_sheets();
+        let profile = sheets[0].lore.as_ref().unwrap();
+        assert_eq!(profile.occupation_id, None);
+        assert_eq!(profile.occupation_display, None);
+        assert_eq!(profile.title, None);
+    }
+
+    #[test]
+    fn statuses_are_controlled_and_stable_characters_cannot_name_ambient_people() {
+        let unknown_status =
+            character("aaaaa", "[]").replace(r#""statuses":[]"#, r#""statuses":["very_poor"]"#);
+        let error = LoreCast::from_json_sources(
+            OCCUPATIONS,
+            [("smith/aaaaa_n.json".into(), unknown_status)],
+        )
+        .unwrap_err();
+        assert!(error.message.contains("unknown status 'very_poor'"));
+
+        let ambient = character("bbbbb", "[]")
+            .replace(r#""significance":"minor""#, r#""significance":"ambient""#);
+        let stable = character("aaaaa", r#"["bbbbb"]"#);
+        let error = LoreCast::from_json_sources(
+            OCCUPATIONS,
+            [
+                ("smith/aaaaa_n.json".into(), stable),
+                ("smith/bbbbb_n.json".into(), ambient),
+            ],
+        )
+        .unwrap_err();
+        assert!(error.message.contains("may not depend on ambient"));
     }
 }

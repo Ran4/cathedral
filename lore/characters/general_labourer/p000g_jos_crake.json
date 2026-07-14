@@ -1,0 +1,36 @@
+{
+  "id": "p000g",
+  "name": "Jos Crake",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 70,
+  "gender": "m",
+  "occupation_id": "general_labourer",
+  "title": "Furnace hand",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward household streets",
+  "knows": [
+    "p002j",
+    "p003p"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 102.5,
+    "y": 0.91,
+    "z": -152.5,
+    "facing": 2.2712
+  },
+  "statuses": [
+    "noncitizen",
+    "recent_migrant"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a furnace hand in Fabric Ward household streets, working beside the Crake household. Your wages, barter and place in the shared household pot keep you fed. You are courteous, direct and hard to hurry. Today you need to find the owner of a missing hen. A burn mark crosses the back of your right hand. You arrived recently and still measure local speech before trusting it.",
+  "extended_character_description": "",
+  "goal": "Find the owner of a missing hen"
+}

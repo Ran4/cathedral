@@ -230,6 +230,21 @@ fn format_g(value: f64) -> String {
     }
 }
 
+/// A self-introduction is ordinary speech, not a special verb. Match the
+/// speaker's full name case-insensitively at word boundaries so "Nan" does not
+/// match "nanny".
+fn text_mentions_name(text: &str, name: &str) -> bool {
+    let text = text.to_lowercase();
+    let name = name.to_lowercase();
+    text.match_indices(&name).any(|(start, matched)| {
+        let end = start + matched.len();
+        let before = text[..start].chars().next_back();
+        let after = text[end..].chars().next();
+        before.is_none_or(|character| !character.is_alphanumeric())
+            && after.is_none_or(|character| !character.is_alphanumeric())
+    })
+}
+
 // ------------------------------------------------------------------- helpers
 
 fn nearby(world: &World, actor_id: &ActorId, radius: f64) -> Vec<ActorId> {
@@ -399,6 +414,23 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
         deliver(world, percepts, true);
         format!("{} (aloud): \"{text}\"", world.characters[actor_id].name())
     };
+
+    let speaker_name = world.characters[actor_id].name().to_string();
+    if text_mentions_name(&text, &speaker_name) {
+        let mut learned = false;
+        for hearer in &hearers {
+            let observer = world
+                .characters
+                .get_mut(hearer)
+                .expect("hearers come from the world");
+            if !observer.control().is_llm() {
+                learned |= observer.state.knows.insert(actor_id.clone());
+            }
+        }
+        if learned {
+            world.touch_public_state();
+        }
+    }
 
     world.emit(DomainEvent::speech(
         actor_id.clone(),
@@ -1039,6 +1071,54 @@ mod tests {
             event.recipient_ids,
             vec![ActorId::from_raw("bystander"), ActorId::from_raw("target")]
         );
+    }
+
+    #[test]
+    fn a_heard_self_introduction_teaches_the_human_observer_the_speakers_name() {
+        let mut world = World::new();
+        let speaker = ActorId::from_raw("nan01");
+        let player = ActorId::from_raw("player");
+        world.add_character(character("nan01", "Nan", 0.0));
+        let mut player_character = character("player", "Player", 2.0);
+        player_character.sheet.control = Control::Player;
+        world.add_character(player_character);
+
+        assert_eq!(
+            identify_ids(&world, &player, &speaker),
+            "a stranger (id nan01)"
+        );
+        let revision = world.world_revision;
+        apply_action(
+            &mut world,
+            &speaker,
+            "say",
+            &json!({"target": "player", "text": "The nanny calls me nothing. I am Nan."}),
+        )
+        .unwrap();
+
+        assert!(world.characters[&player].knows().contains(&speaker));
+        assert_eq!(identify_ids(&world, &player, &speaker), "Nan");
+        assert!(world.world_revision > revision);
+    }
+
+    #[test]
+    fn a_name_substring_is_not_mistaken_for_an_introduction() {
+        let mut world = World::new();
+        let speaker = ActorId::from_raw("nan01");
+        let player = ActorId::from_raw("player");
+        world.add_character(character("nan01", "Nan", 0.0));
+        let mut player_character = character("player", "Player", 2.0);
+        player_character.sheet.control = Control::Player;
+        world.add_character(player_character);
+
+        apply_action(
+            &mut world,
+            &speaker,
+            "say",
+            &json!({"target": "player", "text": "The nanny brought bananas."}),
+        )
+        .unwrap();
+        assert!(!world.characters[&player].knows().contains(&speaker));
     }
 
     #[test]

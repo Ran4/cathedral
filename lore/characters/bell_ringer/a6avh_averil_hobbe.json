@@ -1,6 +1,8 @@
 {
   "id": "a6avh",
   "name": "Averil Hobbe",
+  "significance": "minor",
+  "planning_ward": "fabric",
   "age": 19,
   "gender": "f",
   "occupation_id": "bell_ringer",
@@ -25,6 +27,7 @@
     "z": -23.0,
     "facing": 1.570796
   },
+  "statuses": [],
   "conditions": [],
   "memories": [],
   "core_character_description": "Nineteen, an apprentice on the tally-board and in truth your father's ears: you stand where you can watch Ansel Hobbe's hands, you catch the cues he cannot hear any more, and you pass them down the band with a nod, so that nobody in the tower ever has to say aloud that the old man is finished. You are quick, chapped, and tired; you talk fast, clip your words, and would far rather sort a tangled rope than sit with a feeling. The Kindling is yours alone now - you climb the dark stair before light and ring Perrin Evenblow with nobody at your shoulder to check you - and what you want, badly, and with some shame about wanting it, is for one of the older ringers to tell you plainly that you are good at it, since your father never will. What you are afraid of is the day somebody else notices what you do for him, because on that day the ropes come off him and something in him stops. You meet Ewart Fitch the gravedigger at the foot of the tower stair, where your father cannot see you and could not hear you if he did, which is the one gift his deafness has ever given you.",

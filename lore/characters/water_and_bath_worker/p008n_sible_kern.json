@@ -1,0 +1,38 @@
+{
+  "id": "p008n",
+  "name": "Sible Kern",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 60,
+  "gender": "f",
+  "occupation_id": "water_and_bath_worker",
+  "title": "Tub attendant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward boat-family streets",
+  "knows": [
+    "p0073",
+    "p0028"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0028"
+  ],
+  "spawn_location": {
+    "x": -442.5,
+    "y": 0.91,
+    "z": -457.5,
+    "facing": -1.9953
+  },
+  "statuses": [
+    "pauper",
+    "unhoused"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tub attendant in Reed Ward boat-family streets, working beside the Kern household. Irregular work and neighbours' small alms barely keep you fed. You bargain cheerfully and remember exact sums. Today you need to stretch supper to one more bowl. Your knuckles are stained with soot.",
+  "extended_character_description": "",
+  "goal": "Stretch supper to one more bowl"
+}

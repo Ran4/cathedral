@@ -16,7 +16,8 @@ which line it came from.
 
 ## How a turn works
 
-NPCs take turns in a global round-robin. Each turn:
+Major and minor NPCs take autonomous turns in a significance-weighted stream;
+ambient NPCs enter it only when speech or a nearby event wakes them. Each turn:
 
 1. `prompt::render_prompt_and_drain` renders the character's full sheet
    (backstory, location, visible people, held items, memories, goal) plus a
@@ -51,8 +52,17 @@ background speech outside the player's earshot cannot hold its completed reply.
 outside it render as `(unknown - you don't know the name of this person)` in
 `you_see` and as `a stranger (id <id>)` in heard events. `perception::identify`
 is the single place this perspective rendering happens. There is no introduction
-verb: characters introduce themselves in speech and listeners keep names as
-memories (the prompt tells them to). `knows` is only seeded at world creation.
+verb: characters introduce themselves in speech. A human observer who hears a
+speaker say their own full name learns that identity in `knows`; NPC listeners
+keep introduced names as memories (the prompt tells them to).
+
+For the shipped cast, the player begins knowing all major/minor figures by
+reputation and no ambient names. `PlayerKnowledge::Everyone` is retained for
+headless/developer use (`cathedral-headless --know-everybody`). Major lore NPCs
+receive four autonomous-order slots for each minor slot; ambient NPCs receive
+none, but player speech and event priority can schedule them even when the idle
+order is empty. Provider requests cap output at 1,200 / 700 / 350 tokens for
+major / minor / ambient turns. Significance itself never enters the prompt.
 
 ## Actions
 
@@ -102,7 +112,7 @@ strings baked into Rust. The host reads them and passes strings to this crate:
 | `assets/sounds/catalog.toml` | the sound catalog: percepts, radii, and the `sfx_prompt` `scripts/generate_sounds.py` synthesizes each asset from |
 | `assets/world/seed.json` | Shared items and the player record. |
 | `assets/world/areas.json` | named world geography: coordinate axes, stable IDs, prompt labels, and non-overlapping box unions used for containment and nearest-area descriptions |
-| `lore/characters/**/*.json` | The 103-NPC cast, full authored profiles, relationships, memories, items and canonical spawn transforms. Sorted relative paths are the round-robin order. |
+| `lore/characters/**/*.json` | The 500-NPC authored cast, significance/status metadata, relationships, memories, items and canonical spawn transforms. Sorted relative paths seed the significance-aware turn order. |
 | `lore/core_lore/occupations.json` | Occupation display names, locations and valid character titles. |
 
 The loaders take `&str`, never a path: the host reads the file.

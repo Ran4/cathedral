@@ -1,6 +1,8 @@
 {
   "id": "b4hst",
   "name": "Hamel Stott",
+  "significance": "major",
+  "planning_ward": "wallwright",
   "age": 47,
   "gender": "m",
   "occupation_id": "mason",
@@ -36,6 +38,7 @@
     "z": 140.0,
     "facing": 2.824537
   },
+  "statuses": [],
   "conditions": [
     "failing sight"
   ],

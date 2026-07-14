@@ -123,6 +123,19 @@ pub trait Cognition {
     /// into [`NpcScheduler::poll`](crate::scheduler::NpcScheduler::poll).
     /// `Err(CognitionBusy)` takes the "cognition worker is busy" branch.
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy>;
+
+    /// Submit with a host-side completion cap. Test fakes and legacy backends
+    /// may ignore it; provider-backed cognition overrides this method. Keeping
+    /// the budget outside the prompt prevents characters from learning their
+    /// authoring significance.
+    fn request_with_budget(
+        &mut self,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        let _ = max_output_tokens;
+        self.request(prompt)
+    }
 }
 
 // ----------------------------------------------------------------- speech I/O

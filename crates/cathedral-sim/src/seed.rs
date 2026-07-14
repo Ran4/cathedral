@@ -78,6 +78,16 @@ pub struct WorldSeed {
     pub characters: Vec<CharacterSheet>,
 }
 
+/// Which authored names a newly created player knows before any conversation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlayerKnowledge {
+    /// Major and minor public figures are known by reputation; ambient people
+    /// begin as strangers.
+    PublicFigures,
+    /// Developer/headless convenience mode.
+    Everyone,
+}
+
 impl WorldSeed {
     /// Parse and validate `assets/world/seed.json`.
     ///
@@ -165,7 +175,15 @@ impl WorldSeed {
 
     /// Compose the production world: all lore NPCs in deterministic lore-path
     /// order, followed by the player records from the compact base seed.
-    pub fn with_lore_cast(mut self, cast: LoreCast) -> Result<Self, SeedError> {
+    pub fn with_lore_cast(self, cast: LoreCast) -> Result<Self, SeedError> {
+        self.with_lore_cast_knowledge(cast, PlayerKnowledge::PublicFigures)
+    }
+
+    pub fn with_lore_cast_knowledge(
+        mut self,
+        cast: LoreCast,
+        knowledge: PlayerKnowledge,
+    ) -> Result<Self, SeedError> {
         if let Some(character) = self
             .characters
             .iter()
@@ -177,7 +195,10 @@ impl WorldSeed {
             )));
         }
 
-        let lore_ids: Vec<ActorId> = cast.ids().cloned().collect();
+        let lore_ids: Vec<ActorId> = match knowledge {
+            PlayerKnowledge::PublicFigures => cast.public_ids().cloned().collect(),
+            PlayerKnowledge::Everyone => cast.ids().cloned().collect(),
+        };
         for player in &mut self.characters {
             player.knows.extend(lore_ids.iter().cloned());
         }

@@ -1,0 +1,33 @@
+{
+  "id": "p0098",
+  "name": "Colm Dunn",
+  "significance": "ambient",
+  "planning_ward": "wallwright",
+  "age": 13,
+  "gender": "m",
+  "occupation_id": "food_provisioner",
+  "title": "Fruit seller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wallwright Ward yards",
+  "knows": [
+    "p007s",
+    "p003y"
+  ],
+  "father": "p007s",
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 422.5,
+    "y": 0.91,
+    "z": 47.5,
+    "facing": 0.7894
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a fruit seller in Wallwright Ward yards, working beside the Dunn household. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to have a sore heel looked at. A reed whistle sticks from your sleeve.",
+  "extended_character_description": "",
+  "goal": "Have a sore heel looked at"
+}

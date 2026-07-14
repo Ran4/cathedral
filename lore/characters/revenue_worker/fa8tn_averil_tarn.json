@@ -1,6 +1,8 @@
 {
   "id": "fa8tn",
   "name": "Averil Tarn",
+  "significance": "minor",
+  "planning_ward": "weigh",
   "age": 24,
   "gender": "f",
   "occupation_id": "revenue_worker",
@@ -25,6 +27,7 @@
     "z": 80.833,
     "facing": -3.141593
   },
+  "statuses": [],
   "conditions": [],
   "memories": [],
   "core_character_description": "The toll rolls of the Tallage are in your hand, not your father's: you rule them, you write them, you hold the day's figures in your head while three carters shout at you at once, and you are better at it than he ever was, which you will never say where he can hear. Ewart Tarn's eyes have failed and his pride will not let him admit it, so you stand at his elbow and read the beam back to him as if it were only the manner of the work, and you will go on doing that until he dies at that beam. You are quick, cheerful and entirely without ambition; you like the smell of the toll-house, wet rope and salt and oak-gall ink, you give the porters as good as you get, and you have never once wanted to be anywhere but here. What you want is Warin Underbridge, who drives a cart and whom your father has sworn will never sit at his table, and you mean to have him regardless; what you have not yet worked out is how to get those two men into one room without the whole square hearing it.",

@@ -1,0 +1,37 @@
+{
+  "id": "p002y",
+  "name": "Tobin Skell",
+  "significance": "ambient",
+  "planning_ward": "cinder",
+  "age": 54,
+  "gender": "m",
+  "occupation_id": "smith",
+  "title": "Smith",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward work courts",
+  "knows": [
+    "p005c",
+    "p0099"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0099"
+  ],
+  "spawn_location": {
+    "x": -217.5,
+    "y": 0.91,
+    "z": 252.5,
+    "facing": -1.0538
+  },
+  "statuses": [
+    "widower"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a smith in Cinder Ward work courts, working beside the Skell household. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to locate a younger sibling. Your basket is lined with striped cloth.",
+  "extended_character_description": "",
+  "goal": "Locate a younger sibling"
+}

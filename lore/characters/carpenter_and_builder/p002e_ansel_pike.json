@@ -1,0 +1,35 @@
+{
+  "id": "p002e",
+  "name": "Ansel Pike",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 47,
+  "gender": "m",
+  "occupation_id": "carpenter_and_builder",
+  "title": "Bridge repairer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward workshop lofts",
+  "knows": [
+    "p006e",
+    "p0094"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 187.5,
+    "y": 0.91,
+    "z": 282.5,
+    "facing": -3.1074
+  },
+  "statuses": [
+    "widower"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a bridge repairer in Cloth Ward workshop lofts, working beside the Pike household. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to avoid losing a rented stool. You have ink on one thumb.",
+  "extended_character_description": "",
+  "goal": "Avoid losing a rented stool"
+}

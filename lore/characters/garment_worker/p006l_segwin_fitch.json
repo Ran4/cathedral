@@ -1,0 +1,33 @@
+{
+  "id": "p006l",
+  "name": "Segwin Fitch",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 12,
+  "gender": "m",
+  "occupation_id": "garment_worker",
+  "title": "Tailor's apprentice",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward workshop lofts",
+  "knows": [
+    "p0030",
+    "p0089"
+  ],
+  "father": "p0030",
+  "mother": "p0089",
+  "children": [],
+  "spawn_location": {
+    "x": 187.5,
+    "y": 0.91,
+    "z": 287.5,
+    "facing": 0.4594
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tailor's apprentice in Cloth Ward workshop lofts, working beside the Fitch household. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to find a quiet corner to sleep. White lime dust sits in the seams of your coat.",
+  "extended_character_description": "",
+  "goal": "Find a quiet corner to sleep"
+}

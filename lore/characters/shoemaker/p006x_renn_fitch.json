@@ -1,0 +1,33 @@
+{
+  "id": "p006x",
+  "name": "Renn Fitch",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 13,
+  "gender": "m",
+  "occupation_id": "shoemaker",
+  "title": "Shoemaker's apprentice",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward workshop lofts",
+  "knows": [
+    "p0030",
+    "p0089"
+  ],
+  "father": "p0030",
+  "mother": "p0089",
+  "children": [],
+  "spawn_location": {
+    "x": 192.5,
+    "y": 0.91,
+    "z": 287.5,
+    "facing": 2.9482
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a shoemaker's apprentice in Cloth Ward workshop lofts, working beside the Fitch household. Your wages, barter and place in the shared household pot keep you fed. You meet strangers with guarded good manners. Today you need to locate a younger sibling. Your nose has been broken and set slightly sideways.",
+  "extended_character_description": "",
+  "goal": "Locate a younger sibling"
+}

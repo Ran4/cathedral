@@ -1,0 +1,33 @@
+{
+  "id": "p0070",
+  "name": "Bertran Thorn",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 21,
+  "gender": "m",
+  "occupation_id": "cooper",
+  "title": "Tub-maker",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward lodging streets",
+  "knows": [
+    "p0071",
+    "p0074"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -417.5,
+    "y": 0.91,
+    "z": -17.5,
+    "facing": -1.142
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tub-maker in Weigh Ward lodging streets, working beside a shared weigh work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to keep rain off a bundle of kindling. You carry a basket with one broken handle.",
+  "extended_character_description": "",
+  "goal": "Keep rain off a bundle of kindling"
+}

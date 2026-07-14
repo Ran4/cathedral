@@ -1,0 +1,33 @@
+{
+  "id": "p00ap",
+  "name": "Corin Crake",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 27,
+  "gender": "m",
+  "occupation_id": "sex_worker",
+  "title": "Independent companion",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "keeping an unregistered brothel",
+  "district": "Wick Ward lodging streets",
+  "knows": [
+    "p00ag",
+    "p00al"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 97.5,
+    "y": 0.91,
+    "z": 407.5,
+    "facing": 1.8333
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an independent companion in Wick Ward lodging streets, working beside a shared wick work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to collect kindling without a fine. You wear mismatched woollen gloves. You quietly supplement that living through keeping an unregistered brothel.",
+  "extended_character_description": "",
+  "goal": "Collect kindling without a fine"
+}

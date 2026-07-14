@@ -1,6 +1,8 @@
 {
   "id": "fe2tn",
   "name": "Ewart Tarn",
+  "significance": "minor",
+  "planning_ward": "weigh",
   "age": 58,
   "gender": "m",
   "occupation_id": "revenue_worker",
@@ -28,6 +30,7 @@
     "z": 86.5,
     "facing": -1.570796
   },
+  "statuses": [],
   "conditions": [
     "lame",
     "failing sight"

@@ -1,0 +1,38 @@
+{
+  "id": "p0030",
+  "name": "Gile Fitch",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 56,
+  "gender": "m",
+  "occupation_id": "leather_worker",
+  "title": "Hide carrier",
+  "rank": "warden",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward workshop lofts",
+  "knows": [
+    "p0089",
+    "p006l"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p006l",
+    "p006x"
+  ],
+  "spawn_location": {
+    "x": 202.5,
+    "y": 0.91,
+    "z": 282.5,
+    "facing": 0.4082
+  },
+  "statuses": [
+    "widower"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a hide carrier in Cloth Ward workshop lofts, working beside the Fitch household. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to find the owner of a missing hen. A tiny clay bird rides in your pocket.",
+  "extended_character_description": "",
+  "goal": "Find the owner of a missing hen"
+}

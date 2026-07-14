@@ -1,0 +1,38 @@
+{
+  "id": "p0024",
+  "name": "Osanne Varn",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 35,
+  "gender": "f",
+  "occupation_id": "farmer",
+  "title": "Sheep farmer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward boat-family streets",
+  "knows": [
+    "p000u",
+    "p001z"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -437.5,
+    "y": 0.91,
+    "z": -502.5,
+    "facing": 2.1489
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a sheep farmer in Reed Ward boat-family streets, working beside a shared reed work-and-lodging group. Irregular work, doorstep alms and a regular begging pitch keep you fed. You bargain cheerfully and remember exact sums. Today you need to have a sore heel looked at. A string of nutshells circles one wrist.",
+  "extended_character_description": "",
+  "goal": "Have a sore heel looked at"
+}

@@ -1,0 +1,35 @@
+{
+  "id": "p0073",
+  "name": "Colm Kern",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 72,
+  "gender": "m",
+  "occupation_id": "cooper",
+  "title": "Tub-maker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward boat-family streets",
+  "knows": [
+    "p008n",
+    "p0028"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0028"
+  ],
+  "spawn_location": {
+    "x": -437.5,
+    "y": 0.91,
+    "z": -467.5,
+    "facing": 1.051
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tub-maker in Reed Ward boat-family streets, working beside the Kern household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to have a sore heel looked at. Your nose has been broken and set slightly sideways.",
+  "extended_character_description": "",
+  "goal": "Have a sore heel looked at"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "p0063",
+  "name": "Ansel Lark",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 12,
+  "gender": "m",
+  "occupation_id": "domestic_servant",
+  "title": "Chamber servant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward boat-family streets",
+  "knows": [
+    "p007y",
+    "p0036"
+  ],
+  "father": null,
+  "mother": "p007y",
+  "children": [],
+  "spawn_location": {
+    "x": -442.5,
+    "y": 0.91,
+    "z": -467.5,
+    "facing": -0.1322
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a chamber servant in Reed Ward boat-family streets, working beside the Lark household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to keep rain off a bundle of kindling. A tiny clay bird rides in your pocket.",
+  "extended_character_description": "",
+  "goal": "Keep rain off a bundle of kindling"
+}

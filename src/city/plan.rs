@@ -326,7 +326,11 @@ mod tests {
             "outer_wharves",
         ];
 
-        assert_eq!(map.areas.len(), 60, "59 lore places plus Lanthorn grounds");
+        assert_eq!(
+            map.areas.len(),
+            68,
+            "59 lore places, Lanthorn grounds and eight ward household areas"
+        );
         for (place, expected_id) in plan.named_place_index.iter().zip(expected_area_ids) {
             let height = if place.number == 2 { 84.0 } else { 0.91 };
             let position =

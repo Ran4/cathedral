@@ -1,6 +1,8 @@
 {
   "id": "a9rnh",
   "name": "Renn Hobbe",
+  "significance": "minor",
+  "planning_ward": "reed",
   "age": 34,
   "gender": "m",
   "occupation_id": "candor_cleric",
@@ -32,6 +34,7 @@
     "z": -392.0,
     "facing": -1.570796
   },
+  "statuses": [],
   "conditions": [],
   "memories": [],
   "core_character_description": "Wick-priest of Saint Maren of the Reeds, a ringer's son with a ringer's hands and no gift at all for the finer parts of the office: you bury boatmen and paupers, you marry them, you hand out bread at Wet Alms, you sing badly and you sing anyway, on the grounds that the Light has heard worse. Your sermons are short and your language is the language of the parish - reed-damp, eel-smoke, fever, rent, and the rent that was spent on a burial instead. Nobody dies unnamed in your ground: some quiet purse has paid the paupers' eight bells for years and has never once asked you for anything, and you long ago stopped pretending to yourself that you do not wonder whose it is. Ask you about the rose and you say honestly that you hold no opinion about it and never have, which in this city is a rarer answer than it ought to be; you have a dead man to get into the ground before the light goes. The one thing that reliably angers you is a grey coat standing at your charnel door counting the faces of mourners: Tilman Rue has been asked to move along more than once and does not, and you are working out how far you dare push him. You lean on Noll Fitch, who digs and chalks and says nothing, and you love your deaf father Ansel up in the Lanthorn tower without being able to talk to him for longer than a minute at a time.",

@@ -887,5 +887,323 @@
     "alternative_titles": [
       "Pilgrim"
     ]
+  },
+  {
+    "occupation_id": "domestic_servant",
+    "occupation_display": "Domestic servant",
+    "lore_locations": [
+      "Households throughout Ombreval",
+      "Markets and wells",
+      "Merchant and clerical houses"
+    ],
+    "lore_example": "Household servants cook, clean, carry messages, mind children and maintain the private work on which public trades depend.",
+    "alternative_titles": [
+      "Household servant",
+      "Housemaid",
+      "Chamber servant",
+      "Housekeeper",
+      "Manservant",
+      "Kitchen maid",
+      "Nursemaid",
+      "Wet nurse",
+      "Errand child",
+      "Stable servant"
+    ]
+  },
+  {
+    "occupation_id": "garment_worker",
+    "occupation_display": "Garment worker",
+    "lore_locations": [
+      "Cloth Ward",
+      "The Draper's Reach",
+      "Household workshops"
+    ],
+    "lore_example": "Garment workers cut, fit, mend and decorate finished clothing after cloth leaves the loom and fulling stocks.",
+    "alternative_titles": [
+      "Tailor",
+      "Cutter",
+      "Embroiderer",
+      "Mender",
+      "Hosier",
+      "Capper",
+      "Hatter",
+      "Tailor's apprentice"
+    ]
+  },
+  {
+    "occupation_id": "shoemaker",
+    "occupation_display": "Shoemaker",
+    "lore_locations": [
+      "Cloth Ward",
+      "Skinners' Court",
+      "Market lanes"
+    ],
+    "lore_example": "Cordwainers make new shoes while cobblers and shoe menders keep worn footwear usable for people who cannot replace it.",
+    "alternative_titles": [
+      "Cordwainer",
+      "Cobbler",
+      "Shoe mender",
+      "Pattener",
+      "Shoemaker's apprentice"
+    ]
+  },
+  {
+    "occupation_id": "cooper",
+    "occupation_display": "Cooper",
+    "lore_locations": [
+      "Warehouses",
+      "Breweries",
+      "The Cut",
+      "Market yards"
+    ],
+    "lore_example": "Coopers make and repair the casks, tubs and hoops used by brewers, fish traders, salt houses and freight carriers.",
+    "alternative_titles": [
+      "Cooper",
+      "Barrel-maker",
+      "Cask-maker",
+      "Tub-maker",
+      "Hoop-setter",
+      "Cooper's apprentice"
+    ]
+  },
+  {
+    "occupation_id": "potter",
+    "occupation_display": "Potter",
+    "lore_locations": [
+      "Fire-conscious edge yards",
+      "Cinder Ward",
+      "Market stalls"
+    ],
+    "lore_example": "Potters fire household vessels, storage jars and tiles in yards where smoke and kiln heat can be managed.",
+    "alternative_titles": [
+      "Potter",
+      "Kiln worker",
+      "Vessel maker",
+      "Tile maker",
+      "Potter's apprentice"
+    ]
+  },
+  {
+    "occupation_id": "cartwright_and_wheelwright",
+    "occupation_display": "Cartwright and wheelwright",
+    "lore_locations": [
+      "Gate roads",
+      "Freight yards",
+      "Coswald's Yard"
+    ],
+    "lore_example": "Cartwrights and wheelwrights keep freight carts, wagons and handcarts moving over Ombreval's steep and narrow routes.",
+    "alternative_titles": [
+      "Cartwright",
+      "Wheelwright",
+      "Wagon repairer",
+      "Handcart maker",
+      "Wheelwright's apprentice"
+    ]
+  },
+  {
+    "occupation_id": "fine_metalworker",
+    "occupation_display": "Fine metalworker",
+    "lore_locations": [
+      "Skilled workshops",
+      "Cloth and Fabric Wards",
+      "Market lanes"
+    ],
+    "lore_example": "Fine metalworkers make locks, knives, vessels, ornaments and armour distinct from the ordinary iron work of a smithy.",
+    "alternative_titles": [
+      "Cutler",
+      "Locksmith",
+      "Brazier",
+      "Pewterer",
+      "Goldsmith",
+      "Silversmith",
+      "Armourer",
+      "Metalworker's apprentice"
+    ]
+  },
+  {
+    "occupation_id": "animal_worker",
+    "occupation_display": "Animal worker",
+    "lore_locations": [
+      "City gates",
+      "Stable yards",
+      "Freight routes",
+      "Food-storage margins"
+    ],
+    "lore_example": "Animal workers stable, drive, feed and clean up after the horses, swine, poultry and droving stock that enter the city.",
+    "alternative_titles": [
+      "Ostler",
+      "Stable hand",
+      "Drover",
+      "Horse keeper",
+      "Swineherd",
+      "Poultry keeper",
+      "Stable child"
+    ]
+  },
+  {
+    "occupation_id": "sanitation_worker",
+    "occupation_display": "Sanitation worker",
+    "lore_locations": [
+      "Streets throughout Ombreval",
+      "Gutters and privies",
+      "Routes toward the gates"
+    ],
+    "lore_example": "Sanitation crews clear dung, privies, gutters and refuse, carrying waste outward rather than leaving it in market streets.",
+    "alternative_titles": [
+      "Dung carter",
+      "Privy cleaner",
+      "Gutter raker",
+      "Refuse collector",
+      "Street sweeper",
+      "Cesspit digger"
+    ]
+  },
+  {
+    "occupation_id": "water_and_bath_worker",
+    "occupation_display": "Water and bathing worker",
+    "lore_locations": [
+      "Ward wells",
+      "Private households",
+      "Market lanes"
+    ],
+    "lore_example": "Water carriers and well keepers supply households; a few attendants heat tubs privately, but Ombreval has no established public bathhouse.",
+    "alternative_titles": [
+      "Water carrier",
+      "Well keeper",
+      "Private bath attendant",
+      "Boiler tender",
+      "Tub attendant"
+    ]
+  },
+  {
+    "occupation_id": "food_provisioner",
+    "occupation_display": "Food provisioner",
+    "lore_locations": [
+      "Markets",
+      "Gate roads",
+      "Food-storage streets"
+    ],
+    "lore_example": "Food provisioners bring poultry, cheese, milk, eggs, grain, fruit and vegetables into daily retail beyond the specialised fish and salt trades.",
+    "alternative_titles": [
+      "Poulterer",
+      "Cheesemonger",
+      "Milk seller",
+      "Egg seller",
+      "Grain dealer",
+      "Fruit seller",
+      "Vegetable seller",
+      "Food-stall helper"
+    ]
+  },
+  {
+    "occupation_id": "grocer_and_spicer",
+    "occupation_display": "Grocer and spicer",
+    "lore_locations": [
+      "The Tallage",
+      "The Wickmarket",
+      "Merchant streets"
+    ],
+    "lore_example": "Grocers and spicers sell oils, dried goods, imported seasonings and other provisions measured in small valuable quantities.",
+    "alternative_titles": [
+      "Grocer",
+      "Spicer",
+      "Oil seller",
+      "Dried-goods seller",
+      "Grocer's apprentice"
+    ]
+  },
+  {
+    "occupation_id": "entertainer",
+    "occupation_display": "Entertainer",
+    "lore_locations": [
+      "Taverns",
+      "Markets and squares",
+      "Pilgrim routes"
+    ],
+    "lore_example": "Musicians, singers, storytellers, dancers and show people work for coins in taverns, markets, lodging houses and licensed gaming rooms.",
+    "alternative_titles": [
+      "Musician",
+      "Singer",
+      "Storyteller",
+      "Juggler",
+      "Dancer",
+      "Puppeteer",
+      "Gaming-room keeper",
+      "Tumbler"
+    ]
+  },
+  {
+    "occupation_id": "civic_officer",
+    "occupation_display": "Civic officer",
+    "lore_locations": [
+      "Bench House",
+      "Ward reckonings",
+      "The Tallage",
+      "City streets"
+    ],
+    "lore_example": "The Common Bench makes secular rules while its paid officers keep the Common Chest, records, surveys and ward business.",
+    "alternative_titles": [
+      "First Seat",
+      "Bencher",
+      "Common Clerk",
+      "Chest-keeper",
+      "Line-keeper",
+      "Ward hand",
+      "Measure clerk"
+    ]
+  },
+  {
+    "occupation_id": "bailiff_and_gaoler",
+    "occupation_display": "Court sergeant and gaoler",
+    "lore_locations": [
+      "Civic Measure Court",
+      "The Stone House",
+      "Bench House"
+    ],
+    "lore_example": "Bench sergeants serve civic warrants and the Stone keeper's staff guard prisoners committed by the Civic Measure Court.",
+    "alternative_titles": [
+      "Bench sergeant",
+      "Stone keeper",
+      "Gaoler",
+      "Prison guard",
+      "Debt officer",
+      "Court usher"
+    ]
+  },
+  {
+    "occupation_id": "militia_and_soldier",
+    "occupation_display": "Militia and soldier",
+    "lore_locations": [
+      "City walls and gates",
+      "Armoury",
+      "Ward musters"
+    ],
+    "lore_example": "A small paid watch supports the ward-based Wall Muster, led in alarm by a term-appointed Wall captain and temporary file leaders.",
+    "alternative_titles": [
+      "Militiaman",
+      "Militia captain",
+      "Wall guard",
+      "Armoury keeper",
+      "Hired soldier",
+      "Wall captain",
+      "File leader"
+    ]
+  },
+  {
+    "occupation_id": "sex_worker",
+    "occupation_display": "Sex worker",
+    "lore_locations": [
+      "Registered houses",
+      "Tavern and lodging streets",
+      "Market quarters"
+    ],
+    "lore_example": "Adult sex work is a licensed livelihood; coercion, confinement, child exploitation and unregistered houses are civic offences.",
+    "alternative_titles": [
+      "Sex worker",
+      "Independent companion",
+      "Registered-house worker",
+      "Brothel keeper",
+      "House keeper"
+    ]
   }
 ]

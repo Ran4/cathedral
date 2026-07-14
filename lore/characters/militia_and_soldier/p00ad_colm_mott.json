@@ -1,0 +1,33 @@
+{
+  "id": "p00ad",
+  "name": "Colm Mott",
+  "significance": "ambient",
+  "planning_ward": "wallwright",
+  "age": 62,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "Wall guard",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wallwright Ward yards",
+  "knows": [
+    "p007f",
+    "p004n"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 452.5,
+    "y": 0.91,
+    "z": 47.5,
+    "facing": -0.6556
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a wall guard in Wallwright Ward yards, working beside the Mott household. Your wages, barter and place in the shared household pot keep you fed. You bargain cheerfully and remember exact sums. Today you need to secure tomorrow's place in the hiring line. You carry a horn spoon tucked through your belt.",
+  "extended_character_description": "",
+  "goal": "Secure tomorrow's place in the hiring line"
+}

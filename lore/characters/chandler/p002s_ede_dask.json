@@ -1,0 +1,36 @@
+{
+  "id": "p002s",
+  "name": "Ede Dask",
+  "significance": "minor",
+  "planning_ward": "fabric",
+  "age": 38,
+  "gender": "f",
+  "occupation_id": "chandler",
+  "title": "Candle-dipper",
+  "rank": "mistress",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward household streets",
+  "knows": [
+    "p0000",
+    "p002g",
+    "p003o"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 142.5,
+    "y": 0.91,
+    "z": 42.5,
+    "facing": 0.8434
+  },
+  "statuses": [
+    "widow"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a candle-dipper in Fabric Ward household streets, working beside the established fabric ward circle. Your wages, barter and place in the shared household pot keep you fed. You meet strangers with guarded good manners. Today you need to have a bent buckle straightened. Your nose has been broken and set slightly sideways. People in this ward return to you because you remember agreements and faces. You mean to keep your place without pretending that every local quarrel concerns the Great Rose.",
+  "extended_character_description": "",
+  "goal": "Have a bent buckle straightened"
+}

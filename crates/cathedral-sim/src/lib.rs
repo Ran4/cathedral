@@ -52,7 +52,10 @@ pub use fake::{FakeCognition, fake_reply};
 pub use floor::{ConversationFloor, floor_audio_failsafe_seconds, speech_reading_seconds};
 pub use ids::{ActorId, InvalidId, ItemId, RequestId, SpeechEventId};
 pub use item::Item;
-pub use lore::{LoreCast, LoreCharacterSheet, LoreError, LoreProfile, LoreSpawnLocation};
+pub use lore::{
+    CONTROLLED_STATUSES, LoreCast, LoreCharacterSheet, LoreError, LoreProfile, LoreSpawnLocation,
+    NO_FIXED_TRADE_FOLDER, PlanningWard, Significance,
+};
 pub use math::{Vec3, vec3, vec3_from_json, vec3_to_json};
 pub use offer::Offer;
 pub use perception::{cap_first, emit_sound, identify, sees};
@@ -60,8 +63,8 @@ pub use prompt::{
     ParsedAction, PromptEnv, PromptStrings, parse_reply, parse_reply_value, py_round,
     render_prompt, render_prompt_and_drain, to_py_json,
 };
-pub use scheduler::{NpcScheduler, SchedulerEvent, llm_turn_order};
-pub use seed::{ItemSeed, SeedError, WorldConfig, WorldSeed, build_world};
+pub use scheduler::{NpcScheduler, SchedulerEvent, background_turn_order, llm_turn_order};
+pub use seed::{ItemSeed, PlayerKnowledge, SeedError, WorldConfig, WorldSeed, build_world};
 pub use snapshot::{ActorSnapshot, ItemSnapshot, OfferSnapshot, PublicSnapshot};
 pub use sounds::{AmbientSound, Sound, SoundCatalog, SoundCatalogError};
 pub use speech_router::{DegradeReason, SpeechContext, SpeechRouter, has_unsupported_characters};

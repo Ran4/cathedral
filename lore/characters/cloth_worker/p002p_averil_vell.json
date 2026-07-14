@@ -1,0 +1,35 @@
+{
+  "id": "p002p",
+  "name": "Averil Vell",
+  "significance": "ambient",
+  "planning_ward": "cinder",
+  "age": 16,
+  "gender": "f",
+  "occupation_id": "cloth_worker",
+  "title": "Seamstress",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward work courts",
+  "knows": [
+    "p002o",
+    "p002q"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -247.5,
+    "y": 0.91,
+    "z": 132.5,
+    "facing": -1.3496
+  },
+  "statuses": [],
+  "conditions": [
+    "tooth pain"
+  ],
+  "memories": [],
+  "core_character_description": "You are a seamstress in Cinder Ward work courts, working beside a shared cinder work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to collect a late wage. You have ink on one thumb. The visible bodily condition you live with is tooth pain.",
+  "extended_character_description": "",
+  "goal": "Collect a late wage"
+}

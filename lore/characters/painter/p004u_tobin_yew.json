@@ -1,0 +1,35 @@
+{
+  "id": "p004u",
+  "name": "Tobin Yew",
+  "significance": "ambient",
+  "planning_ward": "cinder",
+  "age": 76,
+  "gender": "m",
+  "occupation_id": "painter",
+  "title": "Panel painter",
+  "rank": "master",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward work courts",
+  "knows": [
+    "p006u",
+    "p001a"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -227.5,
+    "y": 0.91,
+    "z": 132.5,
+    "facing": -1.6113
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired panel painter in Cinder Ward work courts, still part of the Yew household. Your wages, barter and place in the shared household pot keep you fed. You meet strangers with guarded good manners. Today you need to replace a cracked cup. A pale scar notches your lower lip.",
+  "extended_character_description": "",
+  "goal": "Replace a cracked cup"
+}

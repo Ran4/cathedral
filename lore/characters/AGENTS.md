@@ -37,6 +37,7 @@ lore/
     "id": "kcdg5",
     "name": "Havise Wetalms",
     "significance": "major",
+    "planning_ward": "cinder",
     "age": 43,
     "gender": "f",
     "occupation_id": "glazier",
@@ -50,6 +51,7 @@ lore/
     "mother": null,
     "children": [],
     "spawn_location": {"x": 43.19, "y": 0.91, "z": 0.5, "facing": 0.3},
+    "statuses": [],
     "conditions": ["crippled"],
     "memories": [],
     "core_character_description": "...",
@@ -85,6 +87,9 @@ Most don't really have any conditions.
   `assets/world/areas.json` and the Ombreval city plan. Most street-level characters stand at `y: 0.91`;
   tower workers may use an authored elevated floor. `district` records where a person belongs, which may
   differ from a deliberately authored current location (notably the original Gradine trio).
+* `planning_ward` is one of `fabric`, `wick`, `cloth`, `wallwright`, `cinder`,
+  `weigh`, `reed`, or `bell_and_sluice`. It is authoring/spatial metadata and is
+  not injected into the NPC prompt.
 * `appearance_key`, `voice_key`, `holds`, and `goal` are optional runtime overrides. Most characters omit
   them and receive the generic body plus a deterministic voice from the existing three-voice pool. Held
   item ids must exist in `assets/world/seed.json`.
@@ -106,6 +111,12 @@ intermittent occupation. Examples include an injured porter, an unemployed
 labourer, a widowed laundress, a retired watchman or an out-of-work servant.
 Begging is then represented by statuses such as `pauper`, `alms_dependent`,
 `unhoused` and `begs_regularly`, plus the description and goal.
+
+`occupation_id`, `title`, and `rank` may all be null only for genuine
+dependants or people with no present or former trade. Those sheets live in
+`no_fixed_trade/` and must explain their material support. Every other sheet
+must live under its exact `occupation_id` and use a title registered in
+`lore/core_lore/occupations.json`.
 
 
 # Significance value of characters

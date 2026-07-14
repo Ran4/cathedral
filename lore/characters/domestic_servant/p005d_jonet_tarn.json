@@ -1,0 +1,35 @@
+{
+  "id": "p005d",
+  "name": "Jonet Tarn",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 62,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Manservant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward household streets",
+  "knows": [
+    "p009q",
+    "p005s"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 122.5,
+    "y": 0.91,
+    "z": -147.5,
+    "facing": -0.2887
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired manservant in Fabric Ward household streets, still part of the Tarn household. Your wages, barter and place in the shared household pot keep you fed. You bargain cheerfully and remember exact sums. Today you need to secure tomorrow's place in the hiring line. Your apron bears three square repairs.",
+  "extended_character_description": "",
+  "goal": "Secure tomorrow's place in the hiring line"
+}

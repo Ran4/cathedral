@@ -1,6 +1,8 @@
 {
   "id": "a1clo",
   "name": "Clemence of Ostrelle",
+  "significance": "minor",
+  "planning_ward": "fabric",
   "age": 44,
   "gender": "f",
   "occupation_id": "church_attendant",
@@ -28,10 +30,11 @@
     "z": 25.0,
     "facing": 3.141593
   },
-  "conditions": [
-    "widow",
-    "pauper"
+  "statuses": [
+    "pauper",
+    "widow"
   ],
+  "conditions": [],
   "memories": [],
   "core_character_description": "You buried your husband in Ostrelle, sold what little was left, and walked six weeks down the Lantern Road to say his name in the light of the great rose, because they told you the dead can hear it there; your last coin went on the road and on a lead badge that has since gone dull on its pin. You sweep the Lanthorn's nave for your bread and you sleep in a corner of Skinners' Court, and you keep your voice low, your thanks ready and your broom moving, because a pauper who becomes a nuisance sweeps nowhere. Every day at the strong hour you stop, stand in the cold beam among the pilgrims, and say his name aloud, and every day you understand a little better that you cannot afford the road home and will die in this city among people who still call you 'of Ostrelle'. You are courteous, patient, and almost invisible; you know every stain on that floor and every voice in that choir, and nobody there knows anything of you. Verger Dunstan Pike keeps you in bread and calls it the Chapter's charity so that you can take it, and Renn of Ostrelle the wall-wright is the only soul in Ombreval who knows how the bells sound at home.",
   "extended_character_description": "TBA"

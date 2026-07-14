@@ -1,0 +1,33 @@
+{
+  "id": "p00af",
+  "name": "Warin Wren",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 46,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "File leader",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice eastern housing",
+  "knows": [
+    "p009u",
+    "p009v"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 282.5,
+    "y": 0.91,
+    "z": -427.5,
+    "facing": 0.8064
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a file leader in Bell-and-Sluice eastern housing, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak slowly and test every claim. Today you need to dry a blanket before curfew. You carry a smooth tally stick.",
+  "extended_character_description": "",
+  "goal": "Dry a blanket before curfew"
+}

@@ -29,8 +29,9 @@ character fields:
 - `rank`: master, mistress, journeyman, apprentice, novice, warden, contractor;
 - `faction_role`: moth, Wicket, Namekeeper, Tracer, Lead, recorder, page-weigher;
 - `illegal_activity`: thief, fence, forger, informer, smuggler;
-- `condition_or_status`: pauper, widow, orphan, pilgrim, heretic, prisoner,
-  recanted heretic, one of the Spared.
+- `statuses`: pauper, widow, orphan, prisoner, recanted heretic, one of the
+  Spared, housing and residency states;
+- `conditions`: health and bodily conditions only.
 
 Thus Corin Copp is a **scribe and clerk** by occupation, a **journeyman** by
 rank, and a **forger** by illegal activity. Grigor Ashe is a **salt trader** by

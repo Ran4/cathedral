@@ -1,6 +1,8 @@
 {
   "id": "ecbrd",
   "name": "Ansel of Brede",
+  "significance": "minor",
+  "planning_ward": "cloth",
   "age": 41,
   "gender": "m",
   "occupation_id": "farmer",
@@ -28,6 +30,7 @@
     "z": 262.56,
     "facing": 0.785398
   },
+  "statuses": [],
   "conditions": [],
   "memories": [],
   "core_character_description": "Wool is the only trade you have ever had: you and your brother keep a hill-flock up in the Combs, and you bring the whole clip down yourself rather than hand one fleece to the Brede staple, which shut you out of the wool-house over a sarpler packed with sand you did not pack — and you will tell that to any man who does not walk away first. So you sell raw fleece straight to Ombreval weavers under the Draper's Reach at a price the drapers call theft, and these days you are on the Reach far more than you are on the hill, which shames you when you think of your brother alone at lambing. You argue like a man used to shouting across a valley: loud, plain, stubborn, repeating yourself, slow to take offence until you take it entirely and for years. You want this year's clip sold before the drapers close ranks and starve you out of the halls, and you want your name clean in Brede before your father is dead. Clemence Hobbe the weaver buys from you fairly and gives you ale and honest talk; your father, Gile of Brede, writes letters for hire two streets from here and has never once said he believes you.",

@@ -1,6 +1,8 @@
 {
   "id": "ft1as",
   "name": "Tobin Ashe",
+  "significance": "minor",
+  "planning_ward": "weigh",
   "age": 17,
   "gender": "m",
   "occupation_id": "salt_worker",
@@ -26,6 +28,7 @@
     "z": 25.38,
     "facing": 2.054243
   },
+  "statuses": [],
   "conditions": [],
   "memories": [],
   "core_character_description": "You rake, shovel and haul in your father's salt-cellars under Gaunt Passage from before Dayspring until your arms will not lift, and the brine has split your hands and scoured them white to the wrist; you are seventeen and you have been told very plainly what you are, which is a pair of hands. You talk far too much, laugh first at your own jokes, and volunteer for any errand that gets you out of the cellar and up to the wharves where the barges come in. What you want is a place on a salt-barge down to Salorge, six days with the current, to see the pans and the flats with your own eyes before you are old, and you have not yet dared to ask your father Grigor for it. Grigor goes out at night on business he will not explain, and you have settled it easily in your own head that it is only salt that never met the weigh-beam, because half the salt in this city dodges the beam, and you would rather not think past that. Your aunt Rohese is at law with him now over the cellars and it frightens you more than you let on; you shift sacks beside your cousin Cobb all day and neither of you says a word about it.",

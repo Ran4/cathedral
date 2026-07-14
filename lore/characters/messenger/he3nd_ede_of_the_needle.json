@@ -1,6 +1,8 @@
 {
   "id": "he3nd",
   "name": "Ede of the Needle",
+  "significance": "major",
+  "planning_ward": "cinder",
   "age": 11,
   "gender": "f",
   "occupation_id": "messenger",
@@ -34,8 +36,10 @@
     "z": 232.24,
     "facing": -0.519146
   },
+  "statuses": [
+    "orphan"
+  ],
   "conditions": [
-    "orphan",
     "crooked arm from the Shut Door crush"
   ],
   "memories": [],

@@ -1,0 +1,36 @@
+{
+  "id": "p004w",
+  "name": "Ewart Rill",
+  "significance": "ambient",
+  "planning_ward": "wallwright",
+  "age": 59,
+  "gender": "m",
+  "occupation_id": "bellfounder",
+  "title": "Master founder",
+  "rank": "master",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wallwright Ward yards",
+  "knows": [
+    "p007d",
+    "p005p"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p005p",
+    "p005x"
+  ],
+  "spawn_location": {
+    "x": 442.5,
+    "y": 0.91,
+    "z": 42.5,
+    "facing": -0.1493
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a master founder in Wallwright Ward yards, working beside the Rill household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to dry a blanket before curfew. A brass button replaces the clasp at your neck.",
+  "extended_character_description": "",
+  "goal": "Dry a blanket before curfew"
+}

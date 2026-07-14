@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     GOAL_NONE, RECENT_HISTORY_MAX_ENTRIES,
     ids::{ActorId, ItemId},
-    lore::LoreProfile,
+    lore::{LoreProfile, Significance},
     math::Vec3,
 };
 
@@ -60,7 +60,8 @@ pub struct CharacterSheet {
     pub goal: String,
     #[serde(default)]
     pub memories: Vec<String>,
-    /// Seeded only at world creation; the sim never mutates it.
+    /// Seeded at world creation. Human observers add a speaker when they hear
+    /// that speaker say their own full name.
     #[serde(default)]
     pub knows: BTreeSet<ActorId>,
     /// Complete authored metadata for lore-backed NPCs. The player and compact
@@ -79,7 +80,8 @@ pub struct CharacterState {
     pub goal: String,
     /// Insertion-ordered, deduped by exact string on `remember`.
     pub memories: Vec<String>,
-    /// The sim never mutates this; it lives here for future features.
+    /// Live perspective knowledge; normally static for NPCs, expanded for a
+    /// human observer by a heard self-introduction.
     pub knows: BTreeSet<ActorId>,
     /// Unread prose percepts; only ever appended for `control == llm`.
     pub inbox: Vec<String>,
@@ -173,6 +175,13 @@ impl Character {
 
     pub fn lore(&self) -> Option<&LoreProfile> {
         self.sheet.lore.as_ref()
+    }
+
+    /// Non-lore fixtures keep the legacy full-cadence behavior. Production
+    /// NPCs always carry an explicit significance in their lore profile.
+    pub fn significance(&self) -> Significance {
+        self.lore()
+            .map_or(Significance::Major, |profile| profile.significance)
     }
 
     pub fn inbox(&self) -> &[String] {

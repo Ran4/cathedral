@@ -1,0 +1,35 @@
+{
+  "id": "p0082",
+  "name": "Tobin Sedge",
+  "significance": "ambient",
+  "planning_ward": "wallwright",
+  "age": 7,
+  "gender": "m",
+  "occupation_id": "animal_worker",
+  "title": "Stable child",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wallwright Ward yards",
+  "knows": [
+    "p007o",
+    "p007e"
+  ],
+  "father": "p007o",
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 392.5,
+    "y": 0.91,
+    "z": 47.5,
+    "facing": 1.5033
+  },
+  "statuses": [
+    "dependent"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a stable child in Wallwright Ward yards, working beside the Sedge household. You eat from a shared household pot and earn only an occasional penny. You use short, earnest sentences and stay close to familiar adults. Today you need to get your blanket back before dark. Your sleeves are rolled to different heights.",
+  "extended_character_description": "",
+  "goal": "Get your blanket back before dark"
+}

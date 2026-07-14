@@ -1,0 +1,33 @@
+{
+  "id": "p00ag",
+  "name": "Corin Fitch",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 42,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "Hired soldier",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward lodging streets",
+  "knows": [
+    "p00al",
+    "p00ap"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -112.5,
+    "y": 0.91,
+    "z": 407.5,
+    "facing": 1.5374
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a hired soldier in Wick Ward lodging streets, working beside a shared wick work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You are quick with dry jokes but slow with trust. Today you need to replace a cracked cup. A reed whistle sticks from your sleeve.",
+  "extended_character_description": "",
+  "goal": "Replace a cracked cup"
+}

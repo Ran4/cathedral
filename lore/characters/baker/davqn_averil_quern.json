@@ -1,6 +1,8 @@
 {
   "id": "davqn",
   "name": "Averil Quern",
+  "significance": "minor",
+  "planning_ward": "wick",
   "age": 27,
   "gender": "f",
   "occupation_id": "baker",
@@ -26,6 +28,7 @@
     "z": 332.667,
     "facing": -2.745788
   },
+  "statuses": [],
   "conditions": [],
   "memories": [],
   "core_character_description": "You do the night bake your father Ansel Quern can no longer stand for: in at the Watch, dough set by the Kindling, the first loaves out at two sparks apiece by Dayspring, and you are better at it than he ever was, though neither of you has said so. You are twenty-seven, a journeyman in the Wickmarket, and you work slow, speak slower, and answer a raised voice with silence; flour in your lashes, wrists burnt to the elbow, and nothing in a day rattles you but a cold oven. You buy your barm from Sibbe Hobbe, whom your father swore never to trade with again after the flue and his knee, and you go on buying it, because bread must rise whatever men have sworn. You want the oven in your own name before Ansel's stubbornness burns the trade down, and you would rather he did not learn where the barm comes from until then.",

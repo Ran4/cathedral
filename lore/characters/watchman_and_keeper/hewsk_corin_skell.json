@@ -1,6 +1,8 @@
 {
   "id": "hewsk",
   "name": "Corin Skell",
+  "significance": "minor",
+  "planning_ward": "bell_and_sluice",
   "age": 57,
   "gender": "m",
   "occupation_id": "watchman_and_keeper",
@@ -29,6 +31,7 @@
     "z": -257.0,
     "facing": -1.570796
   },
+  "statuses": [],
   "conditions": [
     "lame"
   ],

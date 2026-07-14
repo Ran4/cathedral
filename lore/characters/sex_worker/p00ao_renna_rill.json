@@ -1,0 +1,39 @@
+{
+  "id": "p00ao",
+  "name": "Renna Rill",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 78,
+  "gender": "f",
+  "occupation_id": "sex_worker",
+  "title": "Independent companion",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward lodging streets",
+  "knows": [
+    "p005b",
+    "p003q"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p003q",
+    "p005q"
+  ],
+  "spawn_location": {
+    "x": -102.5,
+    "y": 0.91,
+    "z": 407.5,
+    "facing": 1.1023
+  },
+  "statuses": [
+    "pauper",
+    "unhoused"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an independent companion in Wick Ward lodging streets, working beside the Rill household. Irregular work and neighbours' small alms barely keep you fed. You are courteous, direct and hard to hurry. Today you need to mend a leaking shoe. Your boots are polished only across the toes.",
+  "extended_character_description": "",
+  "goal": "Mend a leaking shoe"
+}

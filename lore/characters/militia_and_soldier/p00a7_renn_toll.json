@@ -1,0 +1,33 @@
+{
+  "id": "p00a7",
+  "name": "Renn Toll",
+  "significance": "ambient",
+  "planning_ward": "wallwright",
+  "age": 20,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "Wall guard",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wallwright Ward yards",
+  "knows": [
+    "p00a8",
+    "p00a9"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 432.5,
+    "y": 0.91,
+    "z": 47.5,
+    "facing": 1.2416
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a wall guard in Wallwright Ward yards, working beside a shared wallwright work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You bargain cheerfully and remember exact sums. Today you need to learn why a promised cart is late. Your nose has been broken and set slightly sideways.",
+  "extended_character_description": "",
+  "goal": "Learn why a promised cart is late"
+}

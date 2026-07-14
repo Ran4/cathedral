@@ -1,6 +1,8 @@
 {
   "id": "ft3tb",
   "name": "Sef",
+  "significance": "major",
+  "planning_ward": "weigh",
   "age": 14,
   "gender": "f",
   "occupation_id": "cargo_worker",
@@ -27,10 +29,11 @@
     "z": 27.62,
     "facing": -1.087349
   },
-  "conditions": [
+  "statuses": [
     "orphan",
     "pauper"
   ],
+  "conditions": [],
   "memories": [],
   "core_character_description": "Bread and a corner of straw at the mouth of Gaunt Passage is your whole wage, and for it you sweep, stack, shift and carry in the bonded warehouse from the Kindling until they put the lamp out. You can hold a tally of four hundred sacks in your head faster than the clerks can rule the line for it, and you have learned never to say the number first, because a girl cleverer than a clerk is a girl out on the street by Lamplight. You speak little, fast, and mostly to the ground; you are wary of hands, you eat whatever is set down and half of what is not, and you have no idea whose child you were. Men come down past the cellars at odd hours on some nights, and you lie still in your straw with your eyes open and count their feet, and in the morning you have seen nothing — seeing nothing is the rent on your corner, and you pay it exactly. Cobb Hobbe hauls salt through your warehouse and never asks you a single question, which is the kindest thing anybody does for you; Ede of the Needle brings you news you cannot use and takes crusts you cannot spare, and is the nearest thing you have to a friend.",
   "extended_character_description": "TBA"

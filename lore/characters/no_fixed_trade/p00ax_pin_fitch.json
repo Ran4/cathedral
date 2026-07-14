@@ -1,0 +1,37 @@
+{
+  "id": "p00ax",
+  "name": "Pin Fitch",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 9,
+  "gender": "m",
+  "occupation_id": null,
+  "title": null,
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward household streets",
+  "knows": [
+    "p001m",
+    "p00a0"
+  ],
+  "father": "p00a0",
+  "mother": "p001m",
+  "children": [],
+  "spawn_location": {
+    "x": 132.5,
+    "y": 0.91,
+    "z": -142.5,
+    "facing": 1.3981
+  },
+  "statuses": [
+    "dependent",
+    "pauper",
+    "unhoused"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You have no fixed trade and pass your days in Fabric Ward household streets with the Fitch household. You eat from a shared household pot and earn only an occasional penny. You answer in quick, literal phrases and grow wary when adults crowd you. Today you need to recover a disputed penny. Your broad hat has lost half its brim.",
+  "extended_character_description": "",
+  "goal": "Recover a disputed penny"
+}

@@ -1,0 +1,35 @@
+{
+  "id": "p0028",
+  "name": "Renn Kern",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 13,
+  "gender": "m",
+  "occupation_id": "farmer",
+  "title": "Farmer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward boat-family streets",
+  "knows": [
+    "p0073",
+    "p008n"
+  ],
+  "father": "p0073",
+  "mother": "p008n",
+  "children": [],
+  "spawn_location": {
+    "x": -447.5,
+    "y": 0.91,
+    "z": -492.5,
+    "facing": -1.2103
+  },
+  "statuses": [
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a farmer in Reed Ward boat-family streets, working beside the Kern household. Irregular work and neighbours' small alms barely keep you fed. You chatter when nervous and laugh at yourself. Today you need to secure tomorrow's place in the hiring line. Your hair is cropped close on one side.",
+  "extended_character_description": "",
+  "goal": "Secure tomorrow's place in the hiring line"
+}

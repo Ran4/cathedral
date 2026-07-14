@@ -1,0 +1,33 @@
+{
+  "id": "p007j",
+  "name": "Grigor Sark",
+  "significance": "ambient",
+  "planning_ward": "wallwright",
+  "age": 27,
+  "gender": "m",
+  "occupation_id": "cartwright_and_wheelwright",
+  "title": "Wheelwright",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wallwright Ward yards",
+  "knows": [
+    "p007c",
+    "p007i"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 377.5,
+    "y": 0.91,
+    "z": 47.5,
+    "facing": 0.1807
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a wheelwright in Wallwright Ward yards, working beside a shared wallwright work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You are quick with dry jokes but slow with trust. Today you need to replace a cracked cup. You carry a basket with one broken handle.",
+  "extended_character_description": "",
+  "goal": "Replace a cracked cup"
+}

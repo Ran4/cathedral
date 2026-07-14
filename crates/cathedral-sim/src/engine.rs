@@ -31,7 +31,7 @@ use crate::{
     math::Vec3,
     perception::{cap_first, emit_sound, identify},
     prompt::PromptEnv,
-    scheduler::{NpcScheduler, SchedulerEvent, llm_turn_order},
+    scheduler::{NpcScheduler, SchedulerEvent, background_turn_order},
     seed::{WorldConfig, WorldSeed, build_world},
     snapshot::PublicSnapshot,
     sounds::SoundCatalog,
@@ -455,7 +455,7 @@ impl Engine {
         capabilities.tts_selected = config.tts_selected;
 
         let mut scheduler = NpcScheduler::new(
-            llm_turn_order(&world),
+            background_turn_order(&world),
             config.turn_delay_seconds,
             config.maximum_backoff_seconds,
             now,

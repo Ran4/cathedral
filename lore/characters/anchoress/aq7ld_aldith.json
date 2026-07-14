@@ -1,6 +1,8 @@
 {
   "id": "aq7ld",
   "name": "Aldith",
+  "significance": "major",
+  "planning_ward": "bell_and_sluice",
   "age": 79,
   "gender": "f",
   "occupation_id": "anchoress",
@@ -28,8 +30,10 @@
     "z": -92.0,
     "facing": 0.0
   },
+  "statuses": [
+    "enclosed_religious"
+  ],
   "conditions": [
-    "enclosed",
     "failing sight",
     "cold hip"
   ],

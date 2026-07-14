@@ -1,0 +1,35 @@
+{
+  "id": "p005f",
+  "name": "Sible Varn",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 23,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Housemaid",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward lodging streets",
+  "knows": [
+    "p004x",
+    "p005k"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -382.5,
+    "y": 0.91,
+    "z": -22.5,
+    "facing": 1.1733
+  },
+  "statuses": [
+    "prisoner"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You worked as a housemaid and are now held from Weigh Ward lodging streets, still tied to a shared weigh work-and-lodging group. Stone House rations and food carried in by kin are your present support. You are quick with dry jokes but slow with trust. Today you need to buy lamp oil before dusk. A loop of blue cord holds your hair back.",
+  "extended_character_description": "",
+  "goal": "Buy lamp oil before dusk"
+}

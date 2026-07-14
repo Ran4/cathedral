@@ -1,0 +1,33 @@
+{
+  "id": "p009x",
+  "name": "Havise Rook",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 32,
+  "gender": "f",
+  "occupation_id": "bailiff_and_gaoler",
+  "title": "Bench sergeant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "taking bribes during inspection",
+  "district": "Fabric Ward household streets",
+  "knows": [
+    "p00a1",
+    "p00b0"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 112.5,
+    "y": 0.91,
+    "z": 52.5,
+    "facing": 0.2148
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a bench sergeant in Fabric Ward household streets, working beside a shared fabric work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to find two clean bandages. Your basket is lined with striped cloth. You quietly supplement that living through taking bribes during inspection.",
+  "extended_character_description": "",
+  "goal": "Find two clean bandages"
+}

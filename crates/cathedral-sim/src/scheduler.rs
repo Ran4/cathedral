@@ -336,7 +336,9 @@ impl NpcScheduler {
         //    it, which is how one poll can apply and submit.
         if self.running
             && self.in_flight.is_none()
-            && !self.order.is_empty()
+            && (!self.order.is_empty()
+                || !self.player_reactions.is_empty()
+                || self.priority_actor_id.is_some())
             && now >= self.next_turn_at
         {
             self.submit_next_turn(now, world, cognition, env, &mut events);
@@ -591,6 +593,9 @@ impl NpcScheduler {
             return;
         }
         let actor_name = actor.name().to_string();
+        let output_token_budget = actor
+            .lore()
+            .map(|_| actor.significance().output_token_budget());
         // Taken before the render, because the render is what empties the inbox.
         let drained_events = actor.inbox().to_vec();
 
@@ -620,7 +625,7 @@ impl NpcScheduler {
             }
         };
 
-        match cognition.request(prompt.clone()) {
+        match cognition.request_with_budget(prompt.clone(), output_token_budget) {
             Ok(request_id) => {
                 self.in_flight = Some(InFlight {
                     actor_id: actor_id.clone(),
@@ -702,6 +707,44 @@ pub fn llm_turn_order(world: &World) -> Vec<ActorId> {
         .collect()
 }
 
+/// Significance-aware autonomous turn stream.
+///
+/// Major lore actors receive four slots for each minor slot. Ambient actors
+/// receive no idle slot at all, but `prioritize` and the protected player
+/// reaction lane can still schedule them immediately. Non-lore fixtures retain
+/// one slot so compact tests and custom seeds keep their historic behavior.
+pub fn background_turn_order(world: &World) -> Vec<ActorId> {
+    let weighted: Vec<_> = world
+        .roster
+        .iter()
+        .filter_map(|actor_id| {
+            let actor = &world.characters[actor_id];
+            if actor.control() != Control::Llm {
+                return None;
+            }
+            let copies = match actor.lore() {
+                None => 1,
+                Some(profile) => match profile.significance {
+                    crate::lore::Significance::Major => 4,
+                    crate::lore::Significance::Minor => 1,
+                    crate::lore::Significance::Ambient => 0,
+                },
+            };
+            Some((actor_id, copies))
+        })
+        .collect();
+    let mut order = Vec::new();
+    for layer in 0..4 {
+        order.extend(
+            weighted
+                .iter()
+                .filter(|(_, copies)| *copies > layer)
+                .map(|(actor_id, _)| (*actor_id).clone()),
+        );
+    }
+    order
+}
+
 fn prepend(target: &mut Vec<String>, mut front: Vec<String>) {
     front.append(target);
     *target = front;
@@ -760,6 +803,74 @@ fn trim_zeros(text: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeSet;
+
+    use crate::{
+        Character, CharacterSheet, LoreProfile, PlanningWard, Significance, Vec3,
+        traits::CognitionBusy,
+    };
+
+    fn lore(significance: Significance) -> LoreProfile {
+        LoreProfile {
+            significance,
+            planning_ward: PlanningWard::Fabric,
+            age: 30,
+            gender: "f".into(),
+            occupation_id: Some("smith".into()),
+            occupation_display: Some("Smith".into()),
+            title: Some("Smith".into()),
+            rank: None,
+            faction_role: None,
+            illegal_activity: None,
+            district: "The Gradine".into(),
+            father: None,
+            mother: None,
+            children: Vec::new(),
+            statuses: Vec::new(),
+            conditions: Vec::new(),
+            core_character_description: "You work carefully.".into(),
+            extended_character_description: String::new(),
+        }
+    }
+
+    fn lore_character(id: &str, significance: Significance) -> Character {
+        Character::from_sheet(CharacterSheet {
+            id: ActorId::from_raw(id),
+            name: id.into(),
+            control: Control::Llm,
+            back_story: "You work carefully.".into(),
+            location_description: "The Gradine".into(),
+            appearance_key: "generic".into(),
+            voice_key: Some("ilse".into()),
+            position_m: Vec3::ZERO,
+            facing_yaw: 0.0,
+            holds: Vec::new(),
+            goal: crate::GOAL_NONE.into(),
+            memories: Vec::new(),
+            knows: BTreeSet::new(),
+            lore: Some(lore(significance)),
+        })
+    }
+
+    #[derive(Default)]
+    struct BudgetCognition {
+        requests: Vec<(String, Option<u32>)>,
+    }
+
+    impl Cognition for BudgetCognition {
+        fn request(&mut self, _prompt: String) -> Result<RequestId, CognitionBusy> {
+            panic!("the scheduler should use the budget-aware boundary")
+        }
+
+        fn request_with_budget(
+            &mut self,
+            prompt: String,
+            max_output_tokens: Option<u32>,
+        ) -> Result<RequestId, CognitionBusy> {
+            self.requests.push((prompt, max_output_tokens));
+            Ok(RequestId(0))
+        }
+    }
 
     #[test]
     fn backoff_doubles_from_the_delay_and_stops_at_the_cap() {
@@ -798,5 +909,63 @@ mod tests {
         assert_eq!(format_g(0.5), "0.5");
         assert_eq!(format_g(1.0 / 3.0), "0.333333");
         assert_eq!(format_g(1_234_567.0), "1.23457e+06");
+    }
+
+    #[test]
+    fn autonomous_order_weights_major_minor_and_omits_ambient() {
+        let mut world = World::new();
+        world.add_character(lore_character("major", Significance::Major));
+        world.add_character(lore_character("minor", Significance::Minor));
+        world.add_character(lore_character("ambnt", Significance::Ambient));
+
+        assert_eq!(
+            background_turn_order(&world)
+                .iter()
+                .map(ActorId::as_str)
+                .collect::<Vec<_>>(),
+            ["major", "minor", "major", "major", "major"]
+        );
+        assert_eq!(
+            llm_turn_order(&world)
+                .iter()
+                .map(ActorId::as_str)
+                .collect::<Vec<_>>(),
+            ["major", "minor", "ambnt"]
+        );
+    }
+
+    #[test]
+    fn an_ambient_actor_can_react_without_an_idle_order_and_gets_the_small_budget() {
+        let mut world = World::new();
+        let ambient = ActorId::from_raw("ambnt");
+        world.add_character(lore_character("ambnt", Significance::Ambient));
+        let mut scheduler = NpcScheduler::new(Vec::new(), 0.0, 60.0, 0.0);
+        scheduler.start(0.0);
+        assert!(scheduler.prioritize_player_reaction(&world, &ambient, 0.0));
+
+        let env = PromptEnv::new(
+            include_str!("../../../assets/prompts/turn.j2"),
+            include_str!("../../../assets/prompts/strings.toml"),
+        )
+        .unwrap();
+        let mut cognition = BudgetCognition::default();
+        let events = scheduler.poll(
+            0.0,
+            &mut world,
+            &mut Vec::new(),
+            &mut Vec::new(),
+            false,
+            &mut cognition,
+            &env,
+        );
+        assert!(events.iter().any(|event| matches!(
+            event,
+            SchedulerEvent::Status(status) if status.state == STATE_THINKING
+        )));
+        assert_eq!(cognition.requests.len(), 1);
+        assert_eq!(
+            cognition.requests[0].1,
+            Some(Significance::Ambient.output_token_budget())
+        );
     }
 }

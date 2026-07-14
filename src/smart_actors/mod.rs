@@ -1651,7 +1651,7 @@ mod tests {
             .query_filtered::<Entity, With<actors::ActorView>>()
             .iter(world)
             .count();
-        assert_eq!(actor_count, 103);
+        assert_eq!(actor_count, 500);
         let runtime_dir = world
             .resource::<bridge::BridgeHandle>()
             .runtime_dir()

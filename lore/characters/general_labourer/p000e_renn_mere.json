@@ -1,0 +1,36 @@
+{
+  "id": "p000e",
+  "name": "Renn Mere",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 27,
+  "gender": "m",
+  "occupation_id": "general_labourer",
+  "title": "Furnace hand",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward lodging streets",
+  "knows": [
+    "p000a",
+    "p000l"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -427.5,
+    "y": 0.91,
+    "z": -27.5,
+    "facing": 0.8092
+  },
+  "statuses": [
+    "noncitizen",
+    "recent_migrant"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a furnace hand in Weigh Ward lodging streets, working beside a shared weigh work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak slowly and test every claim. Today you need to collect a late wage. Your sleeves are rolled to different heights. You arrived recently and still measure local speech before trusting it.",
+  "extended_character_description": "",
+  "goal": "Collect a late wage"
+}

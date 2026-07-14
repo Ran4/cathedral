@@ -1,0 +1,39 @@
+{
+  "id": "p0017",
+  "name": "Betriss Rasp",
+  "significance": "minor",
+  "planning_ward": "cinder",
+  "age": 68,
+  "gender": "f",
+  "occupation_id": "scavenger",
+  "title": "Salvage picker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward work courts",
+  "knows": [
+    "p002w",
+    "p004z",
+    "p006m"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -267.5,
+    "y": 0.91,
+    "z": 132.5,
+    "facing": -3.1245
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a salvage picker in Cinder Ward work courts, working beside the established cinder ward circle. Irregular work, doorstep alms and a regular begging pitch keep you fed. You bargain cheerfully and remember exact sums. Today you need to learn why a promised cart is late. Your cap is pinned with a goose feather. People in this ward return to you because you remember agreements and faces. You mean to keep your place without pretending that every local quarrel concerns the Great Rose.",
+  "extended_character_description": "",
+  "goal": "Learn why a promised cart is late"
+}

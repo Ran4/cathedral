@@ -1,6 +1,8 @@
 {
   "id": "ar5tl",
   "name": "Tilman Rue",
+  "significance": "major",
+  "planning_ward": "reed",
   "age": 45,
   "gender": "m",
   "occupation_id": "custody_clerk",
@@ -30,6 +32,7 @@
     "z": -365.0,
     "facing": 0.0
   },
+  "statuses": [],
   "conditions": [],
   "memories": [],
   "core_character_description": "At paupers' burials you stand at the back in your grey coat with your hands folded, and you watch the mourners instead of the grave: who lingers at Saint Maren's charnel door, who counts the strokes of the name-knell, who reads the chalked name on the lintel — and who already knew it. You keep lists of faces and not of names, because that is the order you were given and you obey orders exactly; Sible Mott makes the fair copies, in a better hand than yours. The other half of the work is small coin: you count a few bells into the palm of a badge-seller on the Gradine steps, a lens-grinder, a crier who never thinks to ask whose clerk you are, and you take away nothing but market-talk — who lingers, who grumbles, who buys — and you take great care that none of them ever hears the word informer, because a frightened man brings you rubbish and a comfortable one brings you the truth. You are mild, slow-spoken and entirely without malice: you thank the gravedigger, you nod to Sexton Noll Fitch, you ask after a widow's chest cold and mean it, you let Wick-priest Renn Hobbe order you away from his charnel door and you stay exactly where you are — and people take a long while to work out why they cannot sleep after meeting you. Cruelty gets a man the answer he wants, not the true one; patience gets the true one, and you have a great deal of patience, no wife, and nobody expecting you home. What you are after is the pattern, one face recurring where it has no business recurring, and you would sooner take a year to be certain than a week to be wrong; Provost-Custodian Segwin Rasp is the only man whose approval you want, and he gives it in the form of more work.",

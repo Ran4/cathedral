@@ -1,0 +1,35 @@
+{
+  "id": "p009m",
+  "name": "Tib Marle",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 9,
+  "gender": "m",
+  "occupation_id": "entertainer",
+  "title": "Storyteller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward household streets",
+  "knows": [
+    "p004v",
+    "p009s"
+  ],
+  "father": "p009s",
+  "mother": "p004v",
+  "children": [],
+  "spawn_location": {
+    "x": 117.5,
+    "y": 0.91,
+    "z": -142.5,
+    "facing": -1.543
+  },
+  "statuses": [
+    "dependent"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a storyteller in Fabric Ward household streets, working beside the Marle household. You eat from a shared household pot and earn only an occasional penny. You answer in quick, literal phrases and grow wary when adults crowd you. Today you need to dry a blanket before curfew. One shoe has a new wooden sole.",
+  "extended_character_description": "",
+  "goal": "Dry a blanket before curfew"
+}

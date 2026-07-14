@@ -412,11 +412,13 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
         .unwrap()
         .sheet
         .lore = Some(LoreProfile {
+        significance: cathedral_sim::Significance::Major,
+        planning_ward: cathedral_sim::PlanningWard::Cinder,
         age: 19,
         gender: "m".into(),
-        occupation_id: "smith".into(),
-        occupation_display: "Smith".into(),
-        title: "Blacksmith".into(),
+        occupation_id: Some("smith".into()),
+        occupation_display: Some("Smith".into()),
+        title: Some("Blacksmith".into()),
         rank: Some("apprentice".into()),
         faction_role: None,
         illegal_activity: None,
@@ -424,6 +426,7 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
         father: None,
         mother: None,
         children: vec![actor("k0fb1")],
+        statuses: vec!["recent_migrant".into()],
         conditions: vec!["singed eyebrows".into()],
         core_character_description: "The prompt uses back_story for this.".into(),
         extended_character_description: "SECRET EXTENDED DETAIL".into(),
@@ -434,6 +437,9 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
     assert_eq!(sheet["lore_profile"]["age"], 19);
     assert_eq!(sheet["lore_profile"]["occupation"], "Smith");
     assert_eq!(sheet["lore_profile"]["rank"], "apprentice");
+    assert!(sheet["lore_profile"].get("significance").is_none());
+    assert!(sheet["lore_profile"].get("planning_ward").is_none());
+    assert_eq!(sheet["lore_profile"]["statuses"], json!(["recent_migrant"]));
     assert_eq!(
         sheet["lore_profile"]["children"][0],
         json!({"id": "k0fb1", "name": "Ilse"})

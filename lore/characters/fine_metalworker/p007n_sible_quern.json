@@ -1,0 +1,33 @@
+{
+  "id": "p007n",
+  "name": "Sible Quern",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 40,
+  "gender": "f",
+  "occupation_id": "fine_metalworker",
+  "title": "Pewterer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward household streets",
+  "knows": [
+    "p006v",
+    "p007q"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 137.5,
+    "y": 0.91,
+    "z": 47.5,
+    "facing": 3.1047
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a pewterer in Fabric Ward household streets, working beside a shared fabric work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You tell small stories instead of giving straight answers. Today you need to keep rain off a bundle of kindling. You carry a smooth tally stick.",
+  "extended_character_description": "",
+  "goal": "Keep rain off a bundle of kindling"
+}

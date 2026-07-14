@@ -1,0 +1,33 @@
+{
+  "id": "p008i",
+  "name": "Bertran Sedge",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 28,
+  "gender": "m",
+  "occupation_id": "sanitation_worker",
+  "title": "Street sweeper",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward workshop lofts",
+  "knows": [
+    "p006c",
+    "p006d"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 212.5,
+    "y": 0.91,
+    "z": 287.5,
+    "facing": 0.6329
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a street sweeper in Cloth Ward workshop lofts, working beside a shared cloth work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You meet strangers with guarded good manners. Today you need to get a splinter from your palm. A brass button replaces the clasp at your neck.",
+  "extended_character_description": "",
+  "goal": "Get a splinter from your palm"
+}

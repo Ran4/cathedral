@@ -1,0 +1,33 @@
+{
+  "id": "p00aa",
+  "name": "Grigor Nett",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 54,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "Militiaman",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward boat-family streets",
+  "knows": [
+    "p000m",
+    "p00at"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -447.5,
+    "y": 0.91,
+    "z": -447.5,
+    "facing": -2.8486
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a militiaman in Reed Ward boat-family streets, working beside the Nett household. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to replace a cracked cup. You carry a smooth tally stick.",
+  "extended_character_description": "",
+  "goal": "Replace a cracked cup"
+}

@@ -1,6 +1,8 @@
 {
   "id": "eatan",
   "name": "Gile Tarn",
+  "significance": "minor",
+  "planning_ward": "reed",
   "age": 63,
   "gender": "m",
   "occupation_id": "leather_worker",
@@ -28,6 +30,7 @@
     "z": -347.24,
     "facing": -2.356194
   },
+  "statuses": [],
   "conditions": [
     "lame"
   ],

@@ -1,0 +1,39 @@
+{
+  "id": "p007v",
+  "name": "Idonea Pell",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 39,
+  "gender": "f",
+  "occupation_id": "animal_worker",
+  "title": "Ostler",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward lodging streets",
+  "knows": [
+    "p0072",
+    "p007k"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -137.5,
+    "y": 0.91,
+    "z": 407.5,
+    "facing": 2.6695
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "insecure_lodging",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an ostler in Wick Ward lodging streets, working beside a shared wick work-and-lodging group. Irregular work, doorstep alms and a regular begging pitch keep you fed. You are quick with dry jokes but slow with trust. Today you need to get a splinter from your palm. A pale scar notches your lower lip.",
+  "extended_character_description": "",
+  "goal": "Get a splinter from your palm"
+}

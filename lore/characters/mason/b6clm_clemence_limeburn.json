@@ -1,6 +1,8 @@
 {
   "id": "b6clm",
   "name": "Clemence Limeburn",
+  "significance": "minor",
+  "planning_ward": "wallwright",
   "age": 53,
   "gender": "f",
   "occupation_id": "mason",
@@ -29,9 +31,10 @@
     "z": 164.0,
     "facing": -1.570796
   },
-  "conditions": [
+  "statuses": [
     "widow"
   ],
+  "conditions": [],
   "memories": [],
   "core_character_description": "You burn and slake the Fabric's lime yourself, and have done since your husband came off Dunstan Hobbe's scaffold in F.421 and you learned what a widow is worth in Coswald's Yard, which is nothing at all unless she owns the kiln. You price to the spark, you give credit to nobody, and nobody includes your son Noll, who comes round the kiln with his hands out and his breath sour before High Wick. You are short, exact and afraid of no man in the square; they call you mistress because the mortar makes them, and you enjoy watching Warden Hamel Stott touch his cap to you, because nobody else's lime sets in a wet winter and every man in the Yard knows it. What you do not say aloud is that Noll drinks his three bells before the Snuffing and is four behind with Cobb Threefinger, and that you have eight bells counted out and set aside, which is the price of a knell and a chalked name at Saint Maren's. On Bellday you carry the honest news of the week to your mother Aldith at the squint of the Ilvane Chapel, and she pays you in old verse, and neither of you says one soft word to the other.",
   "extended_character_description": "TBA"

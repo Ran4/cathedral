@@ -1,0 +1,35 @@
+{
+  "id": "p005a",
+  "name": "Havise Rasp",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 17,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Household servant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward boat-family streets",
+  "knows": [
+    "p004g",
+    "p004y"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -442.5,
+    "y": 0.91,
+    "z": -472.5,
+    "facing": -2.4817
+  },
+  "statuses": [
+    "prisoner"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You worked as a household servant and are now held from Reed Ward boat-family streets, still tied to a shared reed work-and-lodging group. Stone House rations and food carried in by kin are your present support. You bargain cheerfully and remember exact sums. Today you need to have a sore heel looked at. A loop of blue cord holds your hair back.",
+  "extended_character_description": "",
+  "goal": "Have a sore heel looked at"
+}

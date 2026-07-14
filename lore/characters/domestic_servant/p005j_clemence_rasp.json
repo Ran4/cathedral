@@ -1,0 +1,33 @@
+{
+  "id": "p005j",
+  "name": "Clemence Rasp",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 40,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Household servant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward lodging streets",
+  "knows": [
+    "p0044",
+    "p0049"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -97.5,
+    "y": 0.91,
+    "z": 402.5,
+    "facing": -2.1859
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a household servant in Wick Ward lodging streets, working beside a shared wick work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to trade for a sound length of cord. A tiny clay bird rides in your pocket.",
+  "extended_character_description": "",
+  "goal": "Trade for a sound length of cord"
+}

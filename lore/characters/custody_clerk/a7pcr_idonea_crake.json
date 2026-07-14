@@ -1,6 +1,8 @@
 {
   "id": "a7pcr",
   "name": "Idonea Crake",
+  "significance": "minor",
+  "planning_ward": "fabric",
   "age": 22,
   "gender": "f",
   "occupation_id": "custody_clerk",
@@ -28,6 +30,7 @@
     "z": -78.333,
     "facing": 2.922319
   },
+  "statuses": [],
   "conditions": [],
   "memories": [],
   "core_character_description": "You sort, mend and rebind in the Grey Press, the Custody's archive, where the air is dust and cold size and nobody speaks above a murmur, and the post is yours only because your uncle the Provost of the Rite spoke for you when your father died and left his debt to you and your mother. You are quiet, quick, obliging, you make yourself small and useful, and you have a clerk's memory for who stood where and when. Twice a month you carry out under your coat what nobody has ever counted, blank end-leaves, worm-eaten vellum, the spoiled sheets of dead ledgers, and you sell them across Lise Copp's counter at the Tally Bridge, telling yourself that paper is not a page, that this is not stealing, that the debt will be cleared by spring. Provost-Custodian Rasp notices everything and you are careful never to be interesting to him; Sible Mott, the grey clerk two benches down, has begun to be friendly, and you cannot decide whether that is friendship or a net. You do not ask why old paper fetches silver at that counter, and you have decided, deliberately, not to want to know.",

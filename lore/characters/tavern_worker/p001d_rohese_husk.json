@@ -1,0 +1,39 @@
+{
+  "id": "p001d",
+  "name": "Rohese Husk",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 52,
+  "gender": "f",
+  "occupation_id": "tavern_worker",
+  "title": "Scullion",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward lodging streets",
+  "knows": [
+    "p000z",
+    "p0011"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -147.5,
+    "y": 0.91,
+    "z": 402.5,
+    "facing": 1.2615
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "insecure_lodging",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a scullion in Wick Ward lodging streets, working beside a shared wick work-and-lodging group. Irregular work, doorstep alms and a regular begging pitch keep you fed. You ask one blunt question before offering help. Today you need to collect a late wage. Your left cuff is carefully patched in red.",
+  "extended_character_description": "",
+  "goal": "Collect a late wage"
+}

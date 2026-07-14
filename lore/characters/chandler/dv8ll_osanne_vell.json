@@ -1,6 +1,8 @@
 {
   "id": "dv8ll",
   "name": "Osanne Vell",
+  "significance": "major",
+  "planning_ward": "wick",
   "age": 63,
   "gender": "f",
   "occupation_id": "chandler",
@@ -34,6 +36,7 @@
     "z": 379.333,
     "facing": -0.395805
   },
+  "statuses": [],
   "conditions": [
     "failing eyesight"
   ],

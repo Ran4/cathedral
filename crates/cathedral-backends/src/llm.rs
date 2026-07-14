@@ -183,6 +183,8 @@ struct ChatRequest<'a> {
     /// Top level, not nested: this is what turns moonshot's reasoning pass off.
     #[serde(skip_serializing_if = "Option::is_none")]
     thinking: Option<Thinking>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_completion_tokens: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -307,10 +309,18 @@ impl LlmClient {
 
     /// One completion, with the single SDK-equivalent retry.
     pub async fn complete(&self, prompt: String) -> Result<String, LlmError> {
+        self.complete_with_budget(prompt, None).await
+    }
+
+    pub async fn complete_with_budget(
+        &self,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<String, LlmError> {
         let mut attempt = 0;
         loop {
             attempt += 1;
-            match self.attempt(&prompt).await {
+            match self.attempt(&prompt, max_output_tokens).await {
                 Ok(text) => return Ok(text),
                 Err(failure) => {
                     if attempt >= MAX_ATTEMPTS || !failure.retryable {
@@ -322,7 +332,11 @@ impl LlmClient {
         }
     }
 
-    async fn attempt(&self, prompt: &str) -> Result<String, Attempt> {
+    async fn attempt(
+        &self,
+        prompt: &str,
+        max_output_tokens: Option<u32>,
+    ) -> Result<String, Attempt> {
         let spec = self.settings.provider.spec();
         let body = ChatRequest {
             model: &self.settings.model,
@@ -340,6 +354,7 @@ impl LlmClient {
             thinking: spec
                 .thinking_disabled
                 .then_some(Thinking { mode: "disabled" }),
+            max_completion_tokens: max_output_tokens,
         };
 
         let response = self
@@ -507,10 +522,12 @@ impl HttpCognition {
         self.next_request_id += 1;
         request_id
     }
-}
 
-impl Cognition for HttpCognition {
-    fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
+    fn submit(
+        &mut self,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
         if self.busy.swap(true, Ordering::SeqCst) {
             return Err(CognitionBusy);
         }
@@ -519,8 +536,6 @@ impl Cognition for HttpCognition {
         let client = match &self.client {
             Ok(client) => Arc::clone(client),
             Err(error) => {
-                // Misconfiguration is reported through the same channel, one
-                // poll later, so the scheduler backs off instead of spinning.
                 self.busy.store(false, Ordering::SeqCst);
                 self.events.send(Completion {
                     request_id,
@@ -535,10 +550,8 @@ impl Cognition for HttpCognition {
         let busy = Arc::clone(&self.busy);
         self.runtime.spawn(async move {
             let started = Instant::now();
-            let result = client.complete(prompt).await;
+            let result = client.complete_with_budget(prompt, max_output_tokens).await;
             let duration_seconds = started.elapsed().as_secs_f64();
-            // Free the slot before publishing: the host may poll the channel on
-            // another thread the instant the completion lands.
             busy.store(false, Ordering::SeqCst);
             events.send(Completion {
                 request_id,
@@ -547,6 +560,20 @@ impl Cognition for HttpCognition {
             });
         });
         Ok(request_id)
+    }
+}
+
+impl Cognition for HttpCognition {
+    fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
+        self.submit(prompt, None)
+    }
+
+    fn request_with_budget(
+        &mut self,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        self.submit(prompt, max_output_tokens)
     }
 }
 
@@ -650,6 +677,31 @@ mod tests {
             2,
             "only model and messages: {body}"
         );
+    }
+
+    #[test]
+    fn a_significance_budget_is_sent_as_max_completion_tokens() {
+        let server = MockServer::start(vec![MockServer::ok(
+            r#"{"choices": [{"message": {"content": "wait {}"}}]}"#,
+        )]);
+        let events = backend_channel();
+        let runtime = BackendRuntime::new().expect("runtime");
+        let mut cognition = HttpCognition::new(
+            Arc::clone(&runtime),
+            Ok(settings(Provider::Openai, &server.base_url())),
+            events.0,
+        );
+        cognition
+            .request_with_budget("the prompt".to_string(), Some(350))
+            .expect("accepted");
+        let event = events
+            .1
+            .recv_timeout(Duration::from_secs(10))
+            .expect("a completion arrives");
+        assert!(matches!(event, BackendEvent::LlmCompletion(_)));
+
+        let body: Value = server.request(0).json();
+        assert_eq!(body["max_completion_tokens"], 350);
     }
 
     #[test]

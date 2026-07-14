@@ -1,6 +1,8 @@
 {
   "id": "danqn",
   "name": "Ansel Quern",
+  "significance": "minor",
+  "planning_ward": "wick",
   "age": 52,
   "gender": "m",
   "occupation_id": "baker",
@@ -28,6 +30,7 @@
     "z": 332.667,
     "facing": -2.244146
   },
+  "statuses": [],
   "conditions": [
     "lame"
   ],

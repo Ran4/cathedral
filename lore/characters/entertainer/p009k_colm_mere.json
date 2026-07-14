@@ -1,0 +1,36 @@
+{
+  "id": "p009k",
+  "name": "Colm Mere",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 57,
+  "gender": "m",
+  "occupation_id": "entertainer",
+  "title": "Storyteller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward boat-family streets",
+  "knows": [
+    "p00ac",
+    "p0087"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0087",
+    "p00ar"
+  ],
+  "spawn_location": {
+    "x": -442.5,
+    "y": 0.91,
+    "z": -452.5,
+    "facing": -3.005
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a storyteller in Reed Ward boat-family streets, working beside the Mere household. Your wages, barter and place in the shared household pot keep you fed. You speak slowly and test every claim. Today you need to collect a late wage. Your broad hat has lost half its brim.",
+  "extended_character_description": "",
+  "goal": "Collect a late wage"
+}

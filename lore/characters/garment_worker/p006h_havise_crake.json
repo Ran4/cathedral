@@ -1,0 +1,33 @@
+{
+  "id": "p006h",
+  "name": "Havise Crake",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 52,
+  "gender": "f",
+  "occupation_id": "garment_worker",
+  "title": "Tailor's apprentice",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward lodging streets",
+  "knows": [
+    "p006f",
+    "p006i"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -157.5,
+    "y": 0.91,
+    "z": 407.5,
+    "facing": -2.4646
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tailor's apprentice in Wick Ward lodging streets, working beside a shared wick work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to secure tomorrow's place in the hiring line. Three keys knock together at your belt.",
+  "extended_character_description": "",
+  "goal": "Secure tomorrow's place in the hiring line"
+}

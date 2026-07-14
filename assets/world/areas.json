@@ -1,3 +1,506 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:15c296d24123eb4f0ab2700fc888573c3a7470bac2bce3fc81de10d48796bf91
-size 14647
+{
+  "schema_version": 1,
+  "coordinate_system": {
+    "units": "meters",
+    "north": "+x",
+    "east": "-z",
+    "up": "+y"
+  },
+  "areas": [
+    {
+      "id": "lanthorn_grounds",
+      "label": "The grounds of the Lanthorn (Great Church of Saint Ambrelle)",
+      "boxes": [
+        { "min_m": { "x": -38.5, "y": -1.0, "z": 81.0 }, "max_m": { "x": 38.5, "y": 10.0, "z": 105.0 } },
+        { "min_m": { "x": -44.0, "y": -1.0, "z": -116.0 }, "max_m": { "x": 44.0, "y": 10.0, "z": -104.0 } },
+        { "min_m": { "x": -52.0, "y": -1.0, "z": -104.0 }, "max_m": { "x": -44.0, "y": 10.0, "z": -39.0 } },
+        { "min_m": { "x": -75.0, "y": -1.0, "z": -39.0 }, "max_m": { "x": -67.0, "y": 10.0, "z": -7.0 } },
+        { "min_m": { "x": -52.0, "y": -1.0, "z": -7.0 }, "max_m": { "x": -44.0, "y": 10.0, "z": 81.0 } },
+        { "min_m": { "x": 44.0, "y": -1.0, "z": -104.0 }, "max_m": { "x": 52.0, "y": 10.0, "z": -39.0 } },
+        { "min_m": { "x": 67.0, "y": -1.0, "z": -39.0 }, "max_m": { "x": 75.0, "y": 10.0, "z": -7.0 } },
+        { "min_m": { "x": 44.0, "y": -1.0, "z": -7.0 }, "max_m": { "x": 52.0, "y": 10.0, "z": 81.0 } }
+      ]
+    },
+    {
+      "id": "lanthorn_interior",
+      "label": "Inside the Lanthorn (Great Church of Saint Ambrelle)",
+      "boxes": [
+        { "min_m": { "x": -44.0, "y": 0.0, "z": -104.0 }, "max_m": { "x": 44.0, "y": 83.0, "z": 81.0 } },
+        { "min_m": { "x": -67.0, "y": 0.0, "z": -39.0 }, "max_m": { "x": -44.0, "y": 83.0, "z": -7.0 } },
+        { "min_m": { "x": 44.0, "y": 0.0, "z": -39.0 }, "max_m": { "x": 67.0, "y": 83.0, "z": -7.0 } }
+      ]
+    },
+    {
+      "id": "great_rose",
+      "label": "At the Great Rose and eye",
+      "boxes": [
+        { "min_m": { "x": -8.0, "y": 83.0, "z": 80.5 }, "max_m": { "x": 8.0, "y": 90.0, "z": 81.5 } }
+      ]
+    },
+    {
+      "id": "gradine",
+      "label": "The Gradine",
+      "boxes": [
+        { "min_m": { "x": -39.0, "y": -1.0, "z": 105.0 }, "max_m": { "x": 39.0, "y": 18.0, "z": 157.0 } }
+      ]
+    },
+    {
+      "id": "dawn_bearer_vicinity",
+      "label": "Next to the Dawn Bearer statue",
+      "boxes": [
+        { "min_m": { "x": -84.0, "y": -1.0, "z": 178.0 }, "max_m": { "x": -60.0, "y": 40.0, "z": 202.0 } }
+      ]
+    },
+    {
+      "id": "seraph_vicinity",
+      "label": "Next to the Seraph statue",
+      "boxes": [
+        { "min_m": { "x": 60.0, "y": -1.0, "z": 178.0 }, "max_m": { "x": 84.0, "y": 40.0, "z": 202.0 } }
+      ]
+    },
+    {
+      "id": "skinners_court",
+      "label": "Skinners' Court",
+      "boxes": [
+        { "min_m": { "x": 87.0, "y": -1.0, "z": 103.0 }, "max_m": { "x": 129.0, "y": 18.0, "z": 142.0 } }
+      ]
+    },
+    {
+      "id": "ford_well",
+      "label": "At Ford Well",
+      "boxes": [
+        { "min_m": { "x": 82.0, "y": -1.0, "z": 30.0 }, "max_m": { "x": 94.0, "y": 18.0, "z": 40.0 } }
+      ]
+    },
+    {
+      "id": "chapter_house",
+      "label": "The Lanthorn chapter house and Grey Press",
+      "boxes": [
+        { "min_m": { "x": 67.0, "y": -1.0, "z": -86.0 }, "max_m": { "x": 80.0, "y": 18.0, "z": -52.0 } }
+      ]
+    },
+    {
+      "id": "wickmarket",
+      "label": "The Wickmarket",
+      "boxes": [
+        { "min_m": { "x": -70.0, "y": -1.0, "z": 318.0 }, "max_m": { "x": 14.0, "y": 18.0, "z": 394.0 } },
+        { "min_m": { "x": 14.0, "y": -1.0, "z": 318.0 }, "max_m": { "x": 22.0, "y": 18.0, "z": 346.0 } },
+        { "min_m": { "x": 14.0, "y": -1.0, "z": 354.0 }, "max_m": { "x": 22.0, "y": 18.0, "z": 394.0 } },
+        { "min_m": { "x": 22.0, "y": -1.0, "z": 318.0 }, "max_m": { "x": 30.0, "y": 18.0, "z": 394.0 } }
+      ]
+    },
+    {
+      "id": "coswalds_yard",
+      "label": "Coswald's Yard",
+      "boxes": [
+        { "min_m": { "x": 250.0, "y": -1.0, "z": 125.0 }, "max_m": { "x": 319.0, "y": 18.0, "z": 203.0 } }
+      ]
+    },
+    {
+      "id": "tallage",
+      "label": "The Tallage",
+      "boxes": [
+        { "min_m": { "x": -321.0, "y": -1.0, "z": 75.0 }, "max_m": { "x": -289.0, "y": 18.0, "z": 98.0 } }
+      ]
+    },
+    {
+      "id": "marens_green",
+      "label": "Maren's Green",
+      "boxes": [
+        { "min_m": { "x": -319.0, "y": -1.0, "z": -376.0 }, "max_m": { "x": -291.0, "y": 18.0, "z": -354.0 } }
+      ]
+    },
+    {
+      "id": "bellstand",
+      "label": "The Bellstand",
+      "boxes": [
+        { "min_m": { "x": -1.0, "y": -1.0, "z": -297.0 }, "max_m": { "x": 49.0, "y": 18.0, "z": -217.0 } }
+      ]
+    },
+    {
+      "id": "the_cut",
+      "label": "The Cut",
+      "boxes": [
+        { "min_m": { "x": -313.0, "y": -1.0, "z": 431.0 }, "max_m": { "x": -297.0, "y": 18.0, "z": 465.0 } },
+        { "min_m": { "x": -313.0, "y": -1.0, "z": 112.0 }, "max_m": { "x": -297.0, "y": 18.0, "z": 419.0 } },
+        { "min_m": { "x": -313.0, "y": -1.0, "z": 34.0 }, "max_m": { "x": -297.0, "y": 18.0, "z": 75.0 } },
+        { "min_m": { "x": -313.0, "y": -1.0, "z": -354.0 }, "max_m": { "x": -297.0, "y": 18.0, "z": 34.0 } },
+        { "min_m": { "x": -313.0, "y": -1.0, "z": -589.0 }, "max_m": { "x": -297.0, "y": 18.0, "z": -376.0 } }
+      ]
+    },
+    {
+      "id": "chain_bridge",
+      "label": "The Chain Bridge",
+      "boxes": [
+        { "min_m": { "x": -327.0, "y": -1.0, "z": 419.0 }, "max_m": { "x": -283.0, "y": 18.0, "z": 431.0 } }
+      ]
+    },
+    {
+      "id": "tally_bridge",
+      "label": "The Tally Bridge",
+      "boxes": [
+        { "min_m": { "x": -335.5, "y": -1.0, "z": 98.0 }, "max_m": { "x": -274.5, "y": 18.0, "z": 112.0 } }
+      ]
+    },
+    {
+      "id": "old_sluice",
+      "label": "The Old Sluice",
+      "boxes": [
+        { "min_m": { "x": -330.0, "y": -1.0, "z": -631.0 }, "max_m": { "x": -280.0, "y": 18.0, "z": -589.0 } }
+      ]
+    },
+    {
+      "id": "ropewalk_cut",
+      "label": "The Cut ropewalk",
+      "boxes": [
+        { "min_m": { "x": -269.0, "y": -1.0, "z": 185.0 }, "max_m": { "x": -251.0, "y": 18.0, "z": 335.0 } }
+      ]
+    },
+    {
+      "id": "shambles",
+      "label": "The Shambles",
+      "boxes": [
+        { "min_m": { "x": -443.0, "y": -1.0, "z": 275.0 }, "max_m": { "x": -347.0, "y": 18.0, "z": 355.0 } }
+      ]
+    },
+    {
+      "id": "toll_house",
+      "label": "The Tallage toll-house",
+      "boxes": [
+        { "min_m": { "x": -274.5, "y": -1.0, "z": 84.0 }, "max_m": { "x": -251.0, "y": 18.0, "z": 126.0 } }
+      ]
+    },
+    {
+      "id": "bonded_warehouse",
+      "label": "The Tallage bonded warehouse",
+      "boxes": [
+        { "min_m": { "x": -366.0, "y": -1.0, "z": 79.0 }, "max_m": { "x": -335.5, "y": 18.0, "z": 131.0 } }
+      ]
+    },
+    {
+      "id": "lise_copps_pawnshop",
+      "label": "Lise Copp's pawnshop",
+      "boxes": [
+        { "min_m": { "x": -271.0, "y": -1.0, "z": 29.0 }, "max_m": { "x": -253.0, "y": 18.0, "z": 57.0 } }
+      ]
+    },
+    {
+      "id": "ferrants_house",
+      "label": "Doctor Ferrant's house and study",
+      "boxes": [
+        { "min_m": { "x": -251.0, "y": -1.0, "z": 7.0 }, "max_m": { "x": -234.0, "y": 18.0, "z": 34.0 } }
+      ]
+    },
+    {
+      "id": "gaunt_house",
+      "label": "The old Gaunt house",
+      "boxes": [
+        { "min_m": { "x": -225.0, "y": -1.0, "z": 7.0 }, "max_m": { "x": -211.0, "y": 18.0, "z": 23.0 } }
+      ]
+    },
+    {
+      "id": "gaunt_passage",
+      "label": "Gaunt Passage",
+      "boxes": [
+        { "min_m": { "x": -233.0, "y": -1.0, "z": 23.0 }, "max_m": { "x": -223.0, "y": 18.0, "z": 30.0 } }
+      ]
+    },
+    {
+      "id": "gaunt_weighing_yard",
+      "label": "The bonded weighing yard",
+      "boxes": [
+        { "min_m": { "x": -210.0, "y": -1.0, "z": -20.0 }, "max_m": { "x": -180.0, "y": 18.0, "z": 10.0 } }
+      ]
+    },
+    {
+      "id": "saint_marens_church",
+      "label": "The Church of Saint Maren of the Reeds",
+      "boxes": [
+        { "min_m": { "x": -250.0, "y": -1.0, "z": -410.0 }, "max_m": { "x": -220.0, "y": 18.0, "z": -374.0 } }
+      ]
+    },
+    {
+      "id": "saint_marens_churchyard",
+      "label": "Saint Maren's churchyard",
+      "boxes": [
+        { "min_m": { "x": -273.0, "y": -1.0, "z": -373.0 }, "max_m": { "x": -253.0, "y": 18.0, "z": -347.0 } }
+      ]
+    },
+    {
+      "id": "charnel_door",
+      "label": "The charnel door and crypt of Saint Maren",
+      "boxes": [
+        { "min_m": { "x": -284.0, "y": -1.0, "z": -371.0 }, "max_m": { "x": -273.0, "y": 18.0, "z": -359.0 } }
+      ]
+    },
+    {
+      "id": "alder_moorings",
+      "label": "The Alder Moorings",
+      "boxes": [
+        { "min_m": { "x": -404.0, "y": -1.0, "z": -440.0 }, "max_m": { "x": -349.0, "y": 18.0, "z": -374.0 } }
+      ]
+    },
+    {
+      "id": "eel_bridge",
+      "label": "The Eel Bridge",
+      "boxes": [
+        { "min_m": { "x": -349.0, "y": -1.0, "z": -390.0 }, "max_m": { "x": -337.0, "y": 18.0, "z": -358.0 } }
+      ]
+    },
+    {
+      "id": "hungry_ox",
+      "label": "The Hungry Ox",
+      "boxes": [
+        { "min_m": { "x": -342.0, "y": -1.0, "z": -470.0 }, "max_m": { "x": -318.0, "y": 18.0, "z": -440.0 } }
+      ]
+    },
+    {
+      "id": "tanners_slip",
+      "label": "Tanners' Slip",
+      "boxes": [
+        { "min_m": { "x": -398.0, "y": -1.0, "z": -352.0 }, "max_m": { "x": -384.0, "y": 18.0, "z": -338.0 } }
+      ]
+    },
+    {
+      "id": "eelback_alley",
+      "label": "Eelback Alley",
+      "boxes": [
+        { "min_m": { "x": -378.0, "y": -1.0, "z": -453.0 }, "max_m": { "x": -362.0, "y": 18.0, "z": -440.0 } }
+      ]
+    },
+    {
+      "id": "marens_slip",
+      "label": "Maren's Slip",
+      "boxes": [
+        { "min_m": { "x": -418.0, "y": -1.0, "z": -493.0 }, "max_m": { "x": -402.0, "y": 18.0, "z": -477.0 } }
+      ]
+    },
+    {
+      "id": "brine_cellar",
+      "label": "The empty brine-rotted cellar",
+      "boxes": [
+        { "min_m": { "x": -425.0, "y": -1.0, "z": -417.0 }, "max_m": { "x": -405.0, "y": 18.0, "z": -393.0 } }
+      ]
+    },
+    {
+      "id": "drapers_reach",
+      "label": "The Draper's Reach",
+      "boxes": [
+        { "min_m": { "x": 112.0, "y": -1.0, "z": 252.0 }, "max_m": { "x": 128.0, "y": 18.0, "z": 268.0 } }
+      ]
+    },
+    {
+      "id": "tenterhook_lane",
+      "label": "Tenterhook Lane",
+      "boxes": [
+        { "min_m": { "x": 24.0, "y": -1.0, "z": 189.0 }, "max_m": { "x": 36.0, "y": 18.0, "z": 201.0 } }
+      ]
+    },
+    {
+      "id": "the_needle",
+      "label": "The Needle",
+      "boxes": [
+        { "min_m": { "x": -166.0, "y": -1.0, "z": 223.0 }, "max_m": { "x": -158.0, "y": 18.0, "z": 237.0 } }
+      ]
+    },
+    {
+      "id": "cinder_row",
+      "label": "Cinder Row",
+      "boxes": [
+        { "min_m": { "x": -136.0, "y": -1.0, "z": 197.0 }, "max_m": { "x": -124.0, "y": 18.0, "z": 213.0 } }
+      ]
+    },
+    {
+      "id": "burnt_court",
+      "label": "Burnt Court",
+      "boxes": [
+        { "min_m": { "x": -185.0, "y": -1.0, "z": 218.0 }, "max_m": { "x": -168.0, "y": 18.0, "z": 248.0 } }
+      ]
+    },
+    {
+      "id": "glaziers_guildhall",
+      "label": "The glaziers' guildhall",
+      "boxes": [
+        { "min_m": { "x": -156.0, "y": -1.0, "z": 217.0 }, "max_m": { "x": -126.0, "y": 18.0, "z": 257.0 } }
+      ]
+    },
+    {
+      "id": "masons_lodge",
+      "label": "The masons' lodge",
+      "boxes": [
+        { "min_m": { "x": 185.0, "y": -1.0, "z": 135.0 }, "max_m": { "x": 230.0, "y": 18.0, "z": 168.0 } }
+      ]
+    },
+    {
+      "id": "malt_passage",
+      "label": "Malt Passage",
+      "boxes": [
+        { "min_m": { "x": 218.0, "y": -1.0, "z": 87.0 }, "max_m": { "x": 250.0, "y": 18.0, "z": 135.0 } }
+      ]
+    },
+    {
+      "id": "crookneck_lane",
+      "label": "Crookneck Lane",
+      "boxes": [
+        { "min_m": { "x": 158.0, "y": -1.0, "z": -23.0 }, "max_m": { "x": 172.0, "y": 18.0, "z": -7.0 } }
+      ]
+    },
+    {
+      "id": "osanne_vells_stall",
+      "label": "At Osanne Vell's stall",
+      "boxes": [
+        { "min_m": { "x": 14.0, "y": -1.0, "z": 346.0 }, "max_m": { "x": 22.0, "y": 18.0, "z": 354.0 } }
+      ]
+    },
+    {
+      "id": "ilvane_chapel",
+      "label": "The Ilvane Chapel",
+      "boxes": [
+        { "min_m": { "x": 157.0, "y": -1.0, "z": -119.0 }, "max_m": { "x": 190.0, "y": 18.0, "z": -65.0 } }
+      ]
+    },
+    {
+      "id": "ilvane_anchorhold",
+      "label": "The Ilvane anchorhold",
+      "boxes": [
+        { "min_m": { "x": 190.0, "y": -1.0, "z": -102.0 }, "max_m": { "x": 199.0, "y": 18.0, "z": -82.0 } }
+      ]
+    },
+    {
+      "id": "bellfoot_passage",
+      "label": "Bellfoot Passage",
+      "boxes": [
+        { "min_m": { "x": 49.0, "y": -1.0, "z": -254.0 }, "max_m": { "x": 61.0, "y": 18.0, "z": -242.0 } }
+      ]
+    },
+    {
+      "id": "bellstand_tower",
+      "label": "The Bellstand watch-bell tower",
+      "boxes": [
+        { "min_m": { "x": 53.0, "y": -1.0, "z": -283.0 }, "max_m": { "x": 75.0, "y": 30.0, "z": -257.0 } }
+      ]
+    },
+    {
+      "id": "colm_stone",
+      "label": "At Colm's stone",
+      "boxes": [
+        { "min_m": { "x": 49.0, "y": -1.0, "z": -262.0 }, "max_m": { "x": 53.0, "y": 18.0, "z": -254.0 } }
+      ]
+    },
+    {
+      "id": "bellfounders_yard",
+      "label": "Bellfounders' Yard",
+      "boxes": [
+        { "min_m": { "x": 111.0, "y": -1.0, "z": -522.0 }, "max_m": { "x": 199.0, "y": 18.0, "z": -448.0 } }
+      ]
+    },
+    {
+      "id": "wool_gate",
+      "label": "The Wool Gate",
+      "boxes": [
+        { "min_m": { "x": -42.0, "y": -1.0, "z": 500.0 }, "max_m": { "x": -28.0, "y": 24.0, "z": 520.0 } }
+      ]
+    },
+    {
+      "id": "stone_gate",
+      "label": "The Stone Gate",
+      "boxes": [
+        { "min_m": { "x": 487.0, "y": -1.0, "z": 123.0 }, "max_m": { "x": 503.0, "y": 24.0, "z": 147.0 } }
+      ]
+    },
+    {
+      "id": "harne_gate",
+      "label": "The Harne Gate",
+      "boxes": [
+        { "min_m": { "x": 8.0, "y": -1.0, "z": -675.0 }, "max_m": { "x": 22.0, "y": 24.0, "z": -655.0 } }
+      ]
+    },
+    {
+      "id": "river_gate",
+      "label": "The River Gate",
+      "boxes": [
+        { "min_m": { "x": -513.0, "y": -1.0, "z": -151.5 }, "max_m": { "x": -497.0, "y": 24.0, "z": -118.5 } }
+      ]
+    },
+    {
+      "id": "reed_postern",
+      "label": "The Reed Postern",
+      "boxes": [
+        { "min_m": { "x": -459.0, "y": -1.0, "z": -539.0 }, "max_m": { "x": -451.0, "y": 24.0, "z": -531.0 } }
+      ]
+    },
+    {
+      "id": "seven_lofts",
+      "label": "Seven Lofts",
+      "boxes": [
+        { "min_m": { "x": 301.0, "y": -1.0, "z": 286.0 }, "max_m": { "x": 419.0, "y": 24.0, "z": 384.0 } }
+      ]
+    },
+    {
+      "id": "fabric_ward_households",
+      "label": "The household streets of Fabric Ward",
+      "boxes": [
+        { "min_m": { "x": 90.0, "y": -1.0, "z": -155.0 }, "max_m": { "x": 150.0, "y": 24.0, "z": -110.0 } },
+        { "min_m": { "x": 100.0, "y": -1.0, "z": 40.0 }, "max_m": { "x": 170.0, "y": 24.0, "z": 90.0 } }
+      ]
+    },
+    {
+      "id": "wick_ward_households",
+      "label": "The lodging and storage streets of Wick Ward",
+      "boxes": [
+        { "min_m": { "x": -160.0, "y": -1.0, "z": 400.0 }, "max_m": { "x": -80.0, "y": 24.0, "z": 480.0 } },
+        { "min_m": { "x": 40.0, "y": -1.0, "z": 400.0 }, "max_m": { "x": 120.0, "y": 24.0, "z": 480.0 } }
+      ]
+    },
+    {
+      "id": "cloth_ward_households",
+      "label": "The workshops and lofts of Cloth Ward",
+      "boxes": [
+        { "min_m": { "x": 140.0, "y": -1.0, "z": 280.0 }, "max_m": { "x": 270.0, "y": 24.0, "z": 400.0 } }
+      ]
+    },
+    {
+      "id": "wallwright_ward_households",
+      "label": "The yards and food stores of Wallwright Ward",
+      "boxes": [
+        { "min_m": { "x": 330.0, "y": -1.0, "z": 40.0 }, "max_m": { "x": 470.0, "y": 24.0, "z": 260.0 } }
+      ]
+    },
+    {
+      "id": "cinder_ward_households",
+      "label": "The courts and work lanes of Cinder Ward",
+      "boxes": [
+        { "min_m": { "x": -270.0, "y": -1.0, "z": 130.0 }, "max_m": { "x": -190.0, "y": 24.0, "z": 180.0 } },
+        { "min_m": { "x": -250.0, "y": -1.0, "z": 250.0 }, "max_m": { "x": -190.0, "y": 24.0, "z": 320.0 } }
+      ]
+    },
+    {
+      "id": "weigh_ward_households",
+      "label": "The warehouse and lodging streets of Weigh Ward",
+      "boxes": [
+        { "min_m": { "x": -435.0, "y": -1.0, "z": -30.0 }, "max_m": { "x": -370.0, "y": 24.0, "z": 260.0 } }
+      ]
+    },
+    {
+      "id": "reed_ward_households",
+      "label": "The boat-family streets of Reed Ward",
+      "boxes": [
+        { "min_m": { "x": -450.0, "y": -1.0, "z": -520.0 }, "max_m": { "x": -426.0, "y": 24.0, "z": -250.0 } }
+      ]
+    },
+    {
+      "id": "bell_and_sluice_households",
+      "label": "The eastern housing of Bell-and-Sluice Ward",
+      "boxes": [
+        { "min_m": { "x": 80.0, "y": -1.0, "z": -430.0 }, "max_m": { "x": 300.0, "y": 24.0, "z": -180.0 } }
+      ]
+    },
+    {
+      "id": "outer_wharves",
+      "label": "The outer Serle wharves",
+      "boxes": [
+        { "min_m": { "x": -580.0, "y": -1.0, "z": -450.0 }, "max_m": { "x": -560.0, "y": 24.0, "z": 120.0 } }
+      ]
+    }
+  ]
+}

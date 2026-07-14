@@ -1,0 +1,37 @@
+{
+  "id": "p0036",
+  "name": "Osanne Lark",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 57,
+  "gender": "f",
+  "occupation_id": "laundress",
+  "title": "Laundress",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward boat-family streets",
+  "knows": [
+    "p007y",
+    "p005v"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -437.5,
+    "y": 0.91,
+    "z": -492.5,
+    "facing": -1.489
+  },
+  "statuses": [
+    "intermittently_employed",
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work laundress in Reed Ward boat-family streets, relying on the Lark household while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You talk warmly until money is mentioned. Today you need to keep rain off a bundle of kindling. Your basket is lined with striped cloth.",
+  "extended_character_description": "",
+  "goal": "Keep rain off a bundle of kindling"
+}

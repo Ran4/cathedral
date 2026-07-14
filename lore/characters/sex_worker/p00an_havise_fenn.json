@@ -1,0 +1,33 @@
+{
+  "id": "p00an",
+  "name": "Havise Fenn",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 42,
+  "gender": "f",
+  "occupation_id": "sex_worker",
+  "title": "Registered-house worker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward workshop lofts",
+  "knows": [],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 262.5,
+    "y": 0.91,
+    "z": 287.5,
+    "facing": 0.3713
+  },
+  "statuses": [
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work registered-house worker in Cloth Ward workshop lofts, relying on a shared cloth work-and-lodging group while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You speak slowly and test every claim. Today you need to trade for a sound length of cord. You smell faintly of woodsmoke and mint.",
+  "extended_character_description": "",
+  "goal": "Trade for a sound length of cord"
+}

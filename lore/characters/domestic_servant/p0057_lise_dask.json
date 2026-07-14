@@ -1,0 +1,35 @@
+{
+  "id": "p0057",
+  "name": "Lise Dask",
+  "significance": "ambient",
+  "planning_ward": "cinder",
+  "age": 41,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Kitchen maid",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward work courts",
+  "knows": [
+    "p005l",
+    "p006o"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -207.5,
+    "y": 0.91,
+    "z": 132.5,
+    "facing": 1.6085
+  },
+  "statuses": [
+    "prisoner"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You worked as a kitchen maid and are now held from Cinder Ward work courts, still tied to a shared cinder work-and-lodging group. Stone House rations and food carried in by kin are your present support. You use few words and watch hands more than faces. Today you need to recover a disputed penny. Your coat is too large and belted twice.",
+  "extended_character_description": "",
+  "goal": "Recover a disputed penny"
+}

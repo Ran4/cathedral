@@ -1,6 +1,8 @@
 {
   "id": "e4bln",
   "name": "Warin Bluehand",
+  "significance": "minor",
+  "planning_ward": "weigh",
   "age": 37,
   "gender": "m",
   "occupation_id": "cloth_worker",
@@ -28,6 +30,7 @@
     "z": 448.0,
     "facing": 0.0
   },
+  "statuses": [],
   "conditions": [],
   "memories": [],
   "core_character_description": "Blue to the elbow and not sorry for it, you keep a small woad-and-madder dye-house on the Cut: thirty-seven, a master by your own clawing, journeyman to master out of pure spite after Ewart Skell had you put out of the cloth hall like a dog that fouled the floor. You are loud, quick, coarse and funny about your own life; you shout the length of a lane, you say the name Skell the way a man spits a pip, and you hold up your stained hands to strangers as if they were a guild seal. Every quarter you send money to your son Cobb on Tenterhook Lane and every quarter it comes back untouched, and you send it again, because to stop would be to agree with him. You want the Reach to weigh your blues honestly and call you master to your face; you are afraid of dying with a boy in this city who will not say your name over you. Your mother Nan still washes cloth on the Cut at sixty-six and tells you plainly that spite is a poor dye and never holds, and you love her, and you do not listen.",

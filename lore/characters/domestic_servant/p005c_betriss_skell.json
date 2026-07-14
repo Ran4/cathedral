@@ -1,0 +1,37 @@
+{
+  "id": "p005c",
+  "name": "Betriss Skell",
+  "significance": "ambient",
+  "planning_ward": "cinder",
+  "age": 49,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Errand child",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward work courts",
+  "knows": [
+    "p002y",
+    "p0099"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0099"
+  ],
+  "spawn_location": {
+    "x": -202.5,
+    "y": 0.91,
+    "z": 132.5,
+    "facing": -1.0197
+  },
+  "statuses": [
+    "prisoner"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You worked as an errand child and are now held from Cinder Ward work courts, still tied to the Skell household. Stone House rations and food carried in by kin are your present support. You speak slowly and test every claim. Today you need to return a borrowed knife. Your coat is too large and belted twice.",
+  "extended_character_description": "",
+  "goal": "Return a borrowed knife"
+}

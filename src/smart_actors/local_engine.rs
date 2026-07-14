@@ -87,6 +87,16 @@ impl Cognition for SharedCognition {
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
         self.0.borrow_mut().request(prompt)
     }
+
+    fn request_with_budget(
+        &mut self,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        self.0
+            .borrow_mut()
+            .request_with_budget(prompt, max_output_tokens)
+    }
 }
 
 /// Everything `Engine::new` needs, held until `Hello` brings the last piece:

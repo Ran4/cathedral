@@ -1,0 +1,33 @@
+{
+  "id": "p0031",
+  "name": "Gile Rud",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 17,
+  "gender": "m",
+  "occupation_id": "leather_worker",
+  "title": "Hide carrier",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward workshop lofts",
+  "knows": [
+    "p002d",
+    "p003n"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 207.5,
+    "y": 0.91,
+    "z": 282.5,
+    "facing": 1.1392
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a hide carrier in Cloth Ward workshop lofts, working beside a shared cloth work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You meet strangers with guarded good manners. Today you need to recover a disputed penny. A loop of blue cord holds your hair back.",
+  "extended_character_description": "",
+  "goal": "Recover a disputed penny"
+}

@@ -1,0 +1,36 @@
+{
+  "id": "p0054",
+  "name": "Averil Rud",
+  "significance": "ambient",
+  "planning_ward": "cinder",
+  "age": 48,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Housekeeper",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward work courts",
+  "knows": [
+    "p0053",
+    "p0055"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -197.5,
+    "y": 0.91,
+    "z": 252.5,
+    "facing": -0.5845
+  },
+  "statuses": [
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work housekeeper in Cinder Ward work courts, relying on a shared cinder work-and-lodging group while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You speak softly but refuse to be talked over. Today you need to locate a younger sibling. A tiny clay bird rides in your pocket.",
+  "extended_character_description": "",
+  "goal": "Locate a younger sibling"
+}

@@ -1,0 +1,37 @@
+{
+  "id": "p000o",
+  "name": "Rohese Rill",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 19,
+  "gender": "f",
+  "occupation_id": "cargo_worker",
+  "title": "Freight porter",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward lodging streets",
+  "knows": [
+    "p000p",
+    "p000t"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -412.5,
+    "y": 0.91,
+    "z": -27.5,
+    "facing": 1.836
+  },
+  "statuses": [
+    "intermittently_employed",
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work freight porter in Weigh Ward lodging streets, relying on a shared weigh work-and-lodging group while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You bargain cheerfully and remember exact sums. Today you need to keep a sleeping place for tonight. Your basket is lined with striped cloth.",
+  "extended_character_description": "",
+  "goal": "Keep a sleeping place for tonight"
+}

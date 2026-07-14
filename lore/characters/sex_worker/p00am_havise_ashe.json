@@ -1,0 +1,36 @@
+{
+  "id": "p00am",
+  "name": "Havise Ashe",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 65,
+  "gender": "f",
+  "occupation_id": "sex_worker",
+  "title": "Registered-house worker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward workshop lofts",
+  "knows": [
+    "p006g",
+    "p0016"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 257.5,
+    "y": 0.91,
+    "z": 287.5,
+    "facing": -0.3597
+  },
+  "statuses": [
+    "pauper",
+    "unhoused"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a registered-house worker in Cloth Ward workshop lofts, working beside the Ashe household. Irregular work and neighbours' small alms barely keep you fed. You bargain cheerfully and remember exact sums. Today you need to learn why a promised cart is late. A chipped green bead hangs at your throat.",
+  "extended_character_description": "",
+  "goal": "Learn why a promised cart is late"
+}

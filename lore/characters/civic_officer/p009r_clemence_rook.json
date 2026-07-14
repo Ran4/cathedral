@@ -1,0 +1,35 @@
+{
+  "id": "p009r",
+  "name": "Clemence Rook",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 78,
+  "gender": "f",
+  "occupation_id": "civic_officer",
+  "title": "Bencher",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "taking bribes during inspection",
+  "district": "Weigh Ward lodging streets",
+  "knows": [
+    "p003g",
+    "p00as"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p00aw"
+  ],
+  "spawn_location": {
+    "x": -432.5,
+    "y": 0.91,
+    "z": -12.5,
+    "facing": 2.112
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a bencher in Weigh Ward lodging streets, working beside the Rook household. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to keep rain off a bundle of kindling. Your cap is pinned with a goose feather. You quietly supplement that living through taking bribes during inspection.",
+  "extended_character_description": "",
+  "goal": "Keep rain off a bundle of kindling"
+}

@@ -150,9 +150,9 @@ struct Sheet<'a> {
 struct PromptLoreProfile<'a> {
     age: u16,
     gender: &'a str,
-    occupation_id: &'a str,
-    occupation: &'a str,
-    title: &'a str,
+    occupation_id: Option<&'a str>,
+    occupation: Option<&'a str>,
+    title: Option<&'a str>,
     rank: Option<&'a str>,
     faction_role: Option<&'a str>,
     illegal_activity: Option<&'a str>,
@@ -160,6 +160,7 @@ struct PromptLoreProfile<'a> {
     father: Option<LoreRelation<'a>>,
     mother: Option<LoreRelation<'a>>,
     children: Vec<LoreRelation<'a>>,
+    statuses: &'a [String],
     conditions: &'a [String],
 }
 
@@ -349,9 +350,9 @@ pub fn render_prompt(
     let lore_profile = actor.lore().map(|profile| PromptLoreProfile {
         age: profile.age,
         gender: &profile.gender,
-        occupation_id: &profile.occupation_id,
-        occupation: &profile.occupation_display,
-        title: &profile.title,
+        occupation_id: profile.occupation_id.as_deref(),
+        occupation: profile.occupation_display.as_deref(),
+        title: profile.title.as_deref(),
         rank: profile.rank.as_deref(),
         faction_role: profile.faction_role.as_deref(),
         illegal_activity: profile.illegal_activity.as_deref(),
@@ -359,6 +360,7 @@ pub fn render_prompt(
         father: profile.father.as_ref().map(&relation),
         mother: profile.mother.as_ref().map(&relation),
         children: profile.children.iter().map(relation).collect(),
+        statuses: &profile.statuses,
         conditions: &profile.conditions,
     });
     let sheet = Sheet {

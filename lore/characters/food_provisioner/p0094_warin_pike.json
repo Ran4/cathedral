@@ -1,0 +1,36 @@
+{
+  "id": "p0094",
+  "name": "Warin Pike",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 7,
+  "gender": "m",
+  "occupation_id": "food_provisioner",
+  "title": "Food-stall helper",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward workshop lofts",
+  "knows": [
+    "p006e",
+    "p002e"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 237.5,
+    "y": 0.91,
+    "z": 287.5,
+    "facing": -2.1346
+  },
+  "statuses": [
+    "dependent",
+    "orphan"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a food-stall helper in Cloth Ward workshop lofts, working beside the Pike household. You eat from a shared household pot and earn only an occasional penny. You use short, earnest sentences and stay close to familiar adults. Today you need to carry a small bundle without dropping it. Your nose has been broken and set slightly sideways.",
+  "extended_character_description": "",
+  "goal": "Carry a small bundle without dropping it"
+}

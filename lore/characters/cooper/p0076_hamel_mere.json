@@ -1,0 +1,33 @@
+{
+  "id": "p0076",
+  "name": "Hamel Mere",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 39,
+  "gender": "m",
+  "occupation_id": "cooper",
+  "title": "Tub-maker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward lodging streets",
+  "knows": [
+    "p009e",
+    "p009z"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -397.5,
+    "y": 0.91,
+    "z": -17.5,
+    "facing": -3.0392
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tub-maker in Weigh Ward lodging streets, working beside a shared weigh work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to keep rain off a bundle of kindling. You carry a smooth tally stick.",
+  "extended_character_description": "",
+  "goal": "Keep rain off a bundle of kindling"
+}

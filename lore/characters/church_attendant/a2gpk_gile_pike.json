@@ -1,6 +1,8 @@
 {
   "id": "a2gpk",
   "name": "Gile Pike",
+  "significance": "minor",
+  "planning_ward": "fabric",
   "age": 24,
   "gender": "m",
   "occupation_id": "church_attendant",
@@ -29,6 +31,7 @@
     "z": 131.0,
     "facing": -1.570796
   },
+  "statuses": [],
   "conditions": [
     "lame"
   ],

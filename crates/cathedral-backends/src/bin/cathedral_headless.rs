@@ -37,13 +37,13 @@ use cathedral_backends::{
     BackendEvent, BackendRuntime, BackendsConfig, BackendsHandle, BackendsOptions, Environment,
     HttpCognition, LlmClient, LlmError,
     config::{DEFAULT_DOTENV_PATH, DEFAULT_WORKERS_DIR},
-    world_data::load_world_seed,
+    world_data::load_world_seed_with_knowledge,
 };
 use cathedral_sim::{
     ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion,
     DEFAULT_VIEW_CONE_DEGREES, Engine, EngineCommand, EngineConfig, EngineMessage, FakeCognition,
-    NullSight, NullTranscription, NullTts, PromptEnv, RequestId, SoundCatalog, TtsBackendKind,
-    Vec3, World, WorldSeed,
+    NullSight, NullTranscription, NullTts, PlayerKnowledge, PromptEnv, RequestId, SoundCatalog,
+    TtsBackendKind, Vec3, World, WorldSeed,
     engine::{
         DEFAULT_MAXIMUM_BACKOFF_SECONDS, DEFAULT_SOUND_COOLDOWN_SECONDS,
         DEFAULT_STT_STREAM_GRACE_SECONDS,
@@ -87,6 +87,10 @@ struct Args {
     /// offline scripted cognition: no provider, no network, no API key
     #[arg(long)]
     fake: bool,
+
+    /// developer mode: seed the player with all ambient names too
+    #[arg(long)]
+    know_everybody: bool,
 
     /// LLM provider override (moonshot | openai); beats LLM_PROVIDER
     #[arg(long)]
@@ -187,7 +191,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             .unwrap_or_else(|| Path::new("."))
             .join("lore")
     });
-    let assets = Assets::load(&args.assets, &lore)?;
+    let assets = Assets::load(&args.assets, &lore, args.know_everybody)?;
 
     // Fake cognition needs no provider and no key; a real run needs both, and a
     // scheduler with nothing to call would simply never take a turn.
@@ -514,13 +518,18 @@ struct Assets {
 }
 
 impl Assets {
-    fn load(directory: &Path, lore_directory: &Path) -> Result<Self, String> {
+    fn load(directory: &Path, lore_directory: &Path, know_everybody: bool) -> Result<Self, String> {
         let read = |relative: &str| -> Result<String, String> {
             let path = directory.join(relative);
             fs::read_to_string(&path)
                 .map_err(|error| format!("cannot read {}: {error}", path.display()))
         };
-        let seed = load_world_seed(directory, lore_directory)?;
+        let knowledge = if know_everybody {
+            PlayerKnowledge::Everyone
+        } else {
+            PlayerKnowledge::PublicFigures
+        };
+        let seed = load_world_seed_with_knowledge(directory, lore_directory, knowledge)?;
         let areas = AreaMap::from_json_str(&read("world/areas.json")?)
             .map_err(|error| format!("invalid world areas: {error}"))?;
         let catalog = SoundCatalog::from_toml_str(&read("sounds/catalog.toml")?)
@@ -571,6 +580,16 @@ impl<T> Clone for Shared<T> {
 impl<T: Cognition> Cognition for Shared<T> {
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
         self.0.borrow_mut().request(prompt)
+    }
+
+    fn request_with_budget(
+        &mut self,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        self.0
+            .borrow_mut()
+            .request_with_budget(prompt, max_output_tokens)
     }
 }
 
@@ -648,7 +667,7 @@ mod tests {
 
     #[test]
     fn the_shipped_assets_load() {
-        let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"))
+        let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"), false)
             .expect("the shipped assets load");
         assert_eq!(assets.player_spawn().0, Vec3::new(0.0, 0.91, 95.0));
         assert_eq!(assets.seed.characters.len(), 104);
@@ -705,7 +724,7 @@ mod tests {
             content_parts: true,
         });
 
-        let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"))
+        let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"), false)
             .expect("the shipped assets");
         let (player_spawn, player_yaw) = assets.player_spawn();
         let handle = BackendsHandle::start(config, None).expect("the backends start");

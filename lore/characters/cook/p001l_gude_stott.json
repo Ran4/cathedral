@@ -1,0 +1,38 @@
+{
+  "id": "p001l",
+  "name": "Gude Stott",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 32,
+  "gender": "f",
+  "occupation_id": "cook",
+  "title": "Tavern cook",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward household streets",
+  "knows": [
+    "p0010",
+    "p001n"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 112.5,
+    "y": 0.91,
+    "z": -152.5,
+    "facing": 0.8263
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "insecure_lodging",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tavern cook in Fabric Ward household streets, working beside a shared fabric work-and-lodging group. Irregular work, doorstep alms and a regular begging pitch keep you fed. You chatter when nervous and laugh at yourself. Today you need to find two clean bandages. Your boots are polished only across the toes.",
+  "extended_character_description": "",
+  "goal": "Find two clean bandages"
+}

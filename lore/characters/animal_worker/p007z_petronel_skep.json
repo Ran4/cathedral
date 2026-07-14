@@ -1,0 +1,33 @@
+{
+  "id": "p007z",
+  "name": "Petronel Skep",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 80,
+  "gender": "f",
+  "occupation_id": "animal_worker",
+  "title": "Swineherd",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "poaching",
+  "district": "Weigh Ward lodging streets",
+  "knows": [
+    "p008l",
+    "p005t"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -392.5,
+    "y": 0.91,
+    "z": -17.5,
+    "facing": -0.6897
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a swineherd in Weigh Ward lodging streets, working beside the Skep household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to avoid losing a rented stool. A burn mark crosses the back of your right hand. You quietly supplement that living through poaching.",
+  "extended_character_description": "",
+  "goal": "Avoid losing a rented stool"
+}

@@ -1,0 +1,35 @@
+{
+  "id": "p005y",
+  "name": "Renn Sedge",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 10,
+  "gender": "m",
+  "occupation_id": "domestic_servant",
+  "title": "Errand child",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward lodging streets",
+  "knows": [
+    "p009d",
+    "p00a6"
+  ],
+  "father": "p009d",
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -92.5,
+    "y": 0.91,
+    "z": 402.5,
+    "facing": 2.496
+  },
+  "statuses": [
+    "dependent"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an errand child in Wick Ward lodging streets, working beside the Sedge household. You eat from a shared household pot and earn only an occasional penny. You answer in quick, literal phrases and grow wary when adults crowd you. Today you need to buy lamp oil before dusk. A tiny clay bird rides in your pocket.",
+  "extended_character_description": "",
+  "goal": "Buy lamp oil before dusk"
+}

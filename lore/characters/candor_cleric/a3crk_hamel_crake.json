@@ -1,6 +1,8 @@
 {
   "id": "a3crk",
   "name": "Hamel Crake",
+  "significance": "minor",
+  "planning_ward": "fabric",
   "age": 61,
   "gender": "m",
   "occupation_id": "candor_cleric",
@@ -28,6 +30,7 @@
     "z": -78.333,
     "facing": -2.922319
   },
+  "statuses": [],
   "conditions": [
     "gout"
   ],

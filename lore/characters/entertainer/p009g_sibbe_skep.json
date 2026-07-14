@@ -1,0 +1,33 @@
+{
+  "id": "p009g",
+  "name": "Sibbe Skep",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 41,
+  "gender": "f",
+  "occupation_id": "entertainer",
+  "title": "Storyteller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "rigging games",
+  "district": "Bell-and-Sluice eastern housing",
+  "knows": [
+    "p008o",
+    "p009i"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 232.5,
+    "y": 0.91,
+    "z": -427.5,
+    "facing": 0.3542
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a storyteller in Bell-and-Sluice eastern housing, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak slowly and test every claim. Today you need to find a quiet corner to sleep. You have ink on one thumb. You quietly supplement that living through rigging games.",
+  "extended_character_description": "",
+  "goal": "Find a quiet corner to sleep"
+}

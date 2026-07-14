@@ -1,0 +1,38 @@
+{
+  "id": "p000m",
+  "name": "Gude Nett",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 53,
+  "gender": "f",
+  "occupation_id": "cargo_worker",
+  "title": "Wool carrier",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward boat-family streets",
+  "knows": [
+    "p00aa",
+    "p00at"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -447.5,
+    "y": 0.91,
+    "z": -512.5,
+    "facing": 0.374
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a wool carrier in Reed Ward boat-family streets, working beside the Nett household. Irregular work, doorstep alms and a regular begging pitch keep you fed. You bargain cheerfully and remember exact sums. Today you need to have a sore heel looked at. Your knuckles are stained with soot.",
+  "extended_character_description": "",
+  "goal": "Have a sore heel looked at"
+}

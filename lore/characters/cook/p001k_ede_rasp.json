@@ -1,0 +1,37 @@
+{
+  "id": "p001k",
+  "name": "Ede Rasp",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 25,
+  "gender": "f",
+  "occupation_id": "cook",
+  "title": "Cook",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice eastern housing",
+  "knows": [
+    "p001e",
+    "p001f"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 102.5,
+    "y": 0.91,
+    "z": -427.5,
+    "facing": 0.0953
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a cook in Bell-and-Sluice eastern housing, working beside a shared bell-and-sluice work-and-lodging group. Irregular work, doorstep alms and a regular begging pitch keep you fed. You chatter when nervous and laugh at yourself. Today you need to have a sore heel looked at. You smell faintly of woodsmoke and mint.",
+  "extended_character_description": "",
+  "goal": "Have a sore heel looked at"
+}

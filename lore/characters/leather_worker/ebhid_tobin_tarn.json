@@ -1,6 +1,8 @@
 {
   "id": "ebhid",
   "name": "Tobin Tarn",
+  "significance": "minor",
+  "planning_ward": "fabric",
   "age": 34,
   "gender": "m",
   "occupation_id": "leather_worker",
@@ -27,6 +29,7 @@
     "z": 122.5,
     "facing": -1.570796
   },
+  "statuses": [],
   "conditions": [],
   "memories": [],
   "core_character_description": "Six days a week you haul wet hides from the shambles down to your father's pits on Tanners' Slip, journeyman-sworn and paid a carrier's wage, with your shoulders rubbed raw and a stink in your hands that no lye will lift. The beam that broke old Gile's hip was on your shoulder eight years ago, and neither of you has ever said so; carrying for him is how you say it. You are sixty bells down to Bertran Hobbe the miller for bread-corn through two bad winters — a lantern's worth, and you have never seen a lantern — so you bring the odd untolled bundle in through the river gate after dark and tell yourself that dodging a toll is not thieving, which works fine until you try to sleep. You are loud and easy company, quick with a joke and quicker to go flat and quiet when a stranger stands too close to your business. You want the miller's daughter Ede, who stands at the wash-tubs on the Cut waiting on a husband gone to Salorge two winters with no word sent, and who will not have the word widow said over her; so there is nothing you are allowed to ask her, and you have caught yourself hoping the news comes back bad, and you would sooner lose the hand than say that out loud.",
