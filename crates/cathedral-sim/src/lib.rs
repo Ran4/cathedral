@@ -89,7 +89,7 @@ pub const GOAL_MAX_CHARS: usize = 1_000;
 /// Maximum `remember` / `forget` text length.
 pub const MEMORY_MAX_CHARS: usize = 2_000;
 /// Rolling per-character percept window.
-pub const RECENT_HISTORY_MAX_ENTRIES: usize = 16;
+pub const RECENT_HISTORY_MAX_ENTRIES: usize = 32;
 /// Total horizontal FOV for the sound witness test; overridable per run.
 pub const DEFAULT_VIEW_CONE_DEGREES: f64 = 135.0;
 /// An override narrower than this sees nothing at all (`server.py:449-451`).
