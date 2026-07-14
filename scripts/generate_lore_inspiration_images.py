@@ -1153,8 +1153,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--concurrency",
         type=positive_int,
-        default=3,
-        help="maximum simultaneous API calls (default: 3)",
+        default=5,
+        help="maximum simultaneous API calls (default: 5)",
     )
     parser.add_argument(
         "--force",
