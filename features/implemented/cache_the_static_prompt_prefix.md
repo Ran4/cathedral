@@ -1,0 +1,100 @@
+# Cache the static prompt prefix
+
+Status: **implemented 2026-07-14** (`f498706` the reorder, `9faa2d8` the
+measurement). The reordering works and is in. Whether it *saves* anything
+depends entirely on the provider, and on the one currently configured it does
+not — see **Outcome**.
+
+## Goal
+
+Cut input-token cost by roughly 60–70% for a change with no effect on behavior.
+
+## The observation
+
+`assets/prompts/turn.j2` rendered in this order:
+
+1. one line of preamble;
+2. `{{ sheet_json }}` — the character's whole sheet, **different every turn and
+   different for every actor**;
+3. ~6k characters of instructions — **byte-identical for every actor and every
+   turn** (modulo `sounds_enabled` / `emittable_sounds`, constant for a run).
+
+Provider prompt caching keys on a **prefix** match. Because the variable part
+came first, every prompt had a unique prefix and the cache could never hit.
+
+## The fix
+
+Static instructions **first**, sheet **last**: `[preamble][instructions][sheet]
+[act]`. The instruction block (6,771 bytes, ~1,700 tokens) is now a prefix
+shared by the entire cast for the whole session, and the sheet sits next to
+"Take one or more actions" instead of six thousand characters from it.
+
+It is a pure permutation — no prose added, removed or edited.
+
+## Outcome: the provider decides, and ours is the wrong one
+
+The feature said to verify the provider actually caches before claiming the win.
+It does not. Measured against both configured providers with a 2k-token shared
+prefix and differing tails:
+
+| Provider | Shared prefix, different tails | Byte-identical prompt |
+|---|---|---|
+| **openai** `gpt-5.6-luna` (**configured**) | `cached_tokens: 0` — never hits | full hit |
+| **moonshot** `kimi-k2.5` | `cached_tokens: 1792` (~84%) | full hit |
+
+The openai endpoint does **whole-prompt** caching, not prefix caching. It
+reports `cache_write_tokens` on every single call and `cached_tokens: 0`
+forever. Neither plain-string content (instead of the parts array) nor openai's
+own `prompt_cache_key` routing hint changes it. Warming the prefix with repeat
+calls does not change it either — only an exact, byte-identical prompt hits,
+which never happens in the game because the sheet differs every turn.
+
+Live 8-turn headless runs, same workload, real prompts:
+
+```
+moonshot: Run cost: 0.01 USD
+          Input tokens: 17021 (10752 served from the provider's prompt cache, 63%)
+openai:   Run cost: 0.02 USD
+          Input tokens: 16971 (0 served from the provider's prompt cache, 0%)
+```
+
+**63% on moonshot — exactly the predicted 60–70% band. 0% on openai.**
+
+So the acceptance criterion ("if the usage numbers do not move, it did not
+work") is met on moonshot and fails on openai, for reasons outside this change.
+
+## What was actually shipped
+
+- `assets/prompts/turn.j2` reordered, and the 20 golden fixtures permuted by the
+  same transform rather than re-rendered from Rust — so the sheet bytes are
+  still the ones the Python HEAD produced, and `tests/golden_prompts.rs` stays
+  an independent witness rather than a tautology. It passes byte-for-byte.
+- `UsageLedger` now carries `ModelUsage { prompt_tokens, cached_prompt_tokens,
+  completion_tokens }` and reads the cache hit from
+  `prompt_tokens_details.cached_tokens` (openai + moonshot) or the top-level
+  `cached_tokens` (moonshot). The headless runner prints the hit rate under the
+  run cost. A 0% line is the standing alarm that the prefix is not being reused.
+- Behavior unchanged: `e2e_fake`, `parse_tests`, `scheduler_tests`,
+  `prompt_tests`, `prompt_quirks`, `golden_prompts` all pass; the fake cast
+  still parses and acts.
+
+`run_cost_usd` still bills every input token at full price, so it stays the
+upper bound it already documented itself to be. Modelling the cached-input
+discount would mean inventing a per-provider rate, and no such rate was
+confirmed, so none was invented.
+
+## The open decision (for the human)
+
+The reorder is free and correct either way, but the ~60% input saving only
+exists on moonshot. Realizing it means `LLM_PROVIDER=moonshot` in
+`prompt_playgound/.env` — a model swap (kimi-k2.5 vs gpt-5.6-luna), which is a
+character-quality call, not a cost call. Nothing was switched.
+
+If openai stays, this feature's win is zero and the cost work has to come from
+`features/gate_idle_cognition_on_novelty.md` (fewer calls) instead.
+
+## Related
+
+- `features/gate_idle_cognition_on_novelty.md` — reduces the *number* of calls.
+  This reduces the *cost of each*, on a provider that supports it. They multiply,
+  and neither depends on the other.
