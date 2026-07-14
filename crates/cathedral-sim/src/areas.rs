@@ -428,10 +428,10 @@ mod tests {
     fn shipped_json_loads_and_preserves_precinct_boundaries() {
         let map = AreaMap::from_json_str(include_str!("../../../assets/world/areas.json"))
             .expect("the shipped map loads");
-        assert_eq!(map.areas.len(), 60);
+        assert_eq!(map.areas.len(), 70);
         assert_eq!(
             map.areas.iter().map(|area| area.boxes.len()).sum::<usize>(),
-            76
+            86
         );
         for (position, label) in [
             (

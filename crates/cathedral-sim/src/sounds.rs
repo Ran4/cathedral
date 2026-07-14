@@ -387,7 +387,18 @@ mod tests {
             .iter()
             .map(|s| s.sound_id.as_str())
             .collect();
-        assert_eq!(ids, ["fart", "glass_break", "town_bell"]);
+        assert_eq!(
+            ids,
+            [
+                "fart",
+                "glass_break",
+                "town_bell",
+                "draw_water",
+                "chain_windlass",
+                "pour_trough",
+                "pail_clatter",
+            ]
+        );
         for sound in catalog.sounds() {
             assert!(is_valid_sound_id(&sound.sound_id));
             assert!(sound.audible_distance > 0.0);
@@ -419,12 +430,41 @@ mod tests {
         assert_eq!(bell.heard, "[The town bell is ringing.]");
         assert_eq!(bell.seen, None);
         assert!(!bell.actor_emittable);
-        assert_eq!(catalog.emittable_sound_ids(), ["fart", "glass_break"]);
 
-        // The sim never simulates ambients; the generator still needs the row.
-        assert_eq!(catalog.ambients().len(), 1);
+        // The water sounds are world sounds for the same reason the bell is: the
+        // sim has no water items, actions or source state to decide with, so no
+        // actor may claim to have drawn a bucket. They stay unattributed until it
+        // does. Adding one to the emittable list changes every prompt in the city.
+        for water in [
+            "draw_water",
+            "chain_windlass",
+            "pour_trough",
+            "pail_clatter",
+        ] {
+            let sound = catalog.get(water).unwrap();
+            assert_eq!(sound.seen, None, "{water} may not be attributed yet");
+            assert!(!sound.actor_emittable, "{water} may not be chosen yet");
+            assert!(sound.heard.starts_with("[You heard"));
+        }
+        assert_eq!(catalog.emittable_sound_ids(), ["fart", "glass_break"]);
+        assert_eq!(
+            catalog.get("chain_windlass").unwrap().audible_distance,
+            40.0,
+            "Chain Well is heard around the corner before the curb is visible"
+        );
+
+        // The sim never simulates ambients; the generator and Bevy still need the
+        // rows — `city::water` puts the three water loops on the plan's fixtures.
+        let ambients: Vec<&str> = catalog
+            .ambients()
+            .iter()
+            .map(|a| a.sound_id.as_str())
+            .collect();
+        assert_eq!(
+            ambients,
+            ["fireplace", "well_trough", "cistern_drip", "chain_draw"]
+        );
         let fireplace = &catalog.ambients()[0];
-        assert_eq!(fireplace.sound_id, "fireplace");
         assert_eq!(fireplace.duration_seconds, 12.0);
         assert!(
             fireplace

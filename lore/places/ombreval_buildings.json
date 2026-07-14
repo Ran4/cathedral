@@ -2161,6 +2161,146 @@
       "label": "Yard crane"
     },
     {
+      "id": "slate_cistern",
+      "kind": "cistern",
+      "position": [
+        51,
+        372
+      ],
+      "size": [
+        9,
+        7
+      ],
+      "angle_deg": 0.0,
+      "label": "Slate Cistern"
+    },
+    {
+      "id": "tenter_cistern",
+      "kind": "cistern",
+      "position": [
+        94,
+        223
+      ],
+      "size": [
+        10,
+        7
+      ],
+      "angle_deg": 0.0,
+      "label": "Tenter Cistern"
+    },
+    {
+      "id": "lodge_well",
+      "kind": "lodge_well",
+      "position": [
+        239,
+        143
+      ],
+      "size": [
+        10,
+        8
+      ],
+      "angle_deg": 0.0,
+      "label": "Lodge Well"
+    },
+    {
+      "id": "three_curb",
+      "kind": "three_curb_well",
+      "position": [
+        -131,
+        166
+      ],
+      "size": [
+        10,
+        10
+      ],
+      "angle_deg": 0.0,
+      "label": "Three-Curb"
+    },
+    {
+      "id": "chain_well",
+      "kind": "chain_well",
+      "position": [
+        -197,
+        73
+      ],
+      "size": [
+        8,
+        8
+      ],
+      "angle_deg": 0.0,
+      "label": "Chain Well"
+    },
+    {
+      "id": "reed_cistern",
+      "kind": "cistern",
+      "position": [
+        -291,
+        -345
+      ],
+      "size": [
+        10,
+        8
+      ],
+      "angle_deg": 0.0,
+      "label": "Reed Cistern"
+    },
+    {
+      "id": "step_cistern",
+      "kind": "step_cistern",
+      "position": [
+        55,
+        -300
+      ],
+      "size": [
+        8,
+        7
+      ],
+      "angle_deg": 0.0,
+      "label": "Step Cistern"
+    },
+    {
+      "id": "bitter_well",
+      "kind": "well",
+      "position": [
+        101,
+        -401
+      ],
+      "size": [
+        7,
+        6
+      ],
+      "angle_deg": 0.0,
+      "label": "Bitter Well"
+    },
+    {
+      "id": "shambles_well",
+      "kind": "well",
+      "position": [
+        -340,
+        315
+      ],
+      "size": [
+        9,
+        8
+      ],
+      "angle_deg": 0.0,
+      "label": "The Shambles well"
+    },
+    {
+      "id": "seven_lofts_tanks",
+      "kind": "fire_tanks",
+      "position": [
+        385,
+        388
+      ],
+      "size": [
+        10,
+        6
+      ],
+      "angle_deg": 0.0,
+      "label": "Seven Lofts fire tanks"
+    },
+    {
       "id": "wick_fixture_01",
       "kind": "stall",
       "position": [
@@ -3700,6 +3840,96 @@
         -165
       ],
       "kind": "outside"
+    },
+    {
+      "number": 60,
+      "name": "Slate Cistern",
+      "anchor": [
+        51,
+        372
+      ],
+      "kind": "landmark"
+    },
+    {
+      "number": 61,
+      "name": "Tenter Cistern",
+      "anchor": [
+        94,
+        223
+      ],
+      "kind": "landmark"
+    },
+    {
+      "number": 62,
+      "name": "Lodge Well",
+      "anchor": [
+        239,
+        143
+      ],
+      "kind": "landmark"
+    },
+    {
+      "number": 63,
+      "name": "Three-Curb",
+      "anchor": [
+        -131,
+        166
+      ],
+      "kind": "landmark"
+    },
+    {
+      "number": 64,
+      "name": "Chain Well",
+      "anchor": [
+        -197,
+        73
+      ],
+      "kind": "landmark"
+    },
+    {
+      "number": 65,
+      "name": "Reed Cistern",
+      "anchor": [
+        -291,
+        -345
+      ],
+      "kind": "landmark"
+    },
+    {
+      "number": 66,
+      "name": "Step Cistern",
+      "anchor": [
+        55,
+        -300
+      ],
+      "kind": "landmark"
+    },
+    {
+      "number": 67,
+      "name": "Bitter Well",
+      "anchor": [
+        101,
+        -401
+      ],
+      "kind": "landmark"
+    },
+    {
+      "number": 68,
+      "name": "The Shambles well",
+      "anchor": [
+        -340,
+        315
+      ],
+      "kind": "landmark"
+    },
+    {
+      "number": 69,
+      "name": "Seven Lofts fire tanks",
+      "anchor": [
+        385,
+        388
+      ],
+      "kind": "landmark"
     }
   ],
   "buildings": [
@@ -73071,7 +73301,7 @@
     "named_or_reserved_buildings": 65,
     "unnamed_urban_fabric_buildings": 2501,
     "roads": 49,
-    "named_places": 59,
-    "fixtures": 81
+    "named_places": 69,
+    "fixtures": 91
   }
 }

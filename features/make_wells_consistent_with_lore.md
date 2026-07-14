@@ -1,6 +1,4 @@
-Implement the wells and water described in lore/wells_and_water.md
-
-For now just implement these 5:
+These have been implemented:
 
 1. Add visible fixtures for Slate Cistern, Tenter Cistern, Lodge Well, Three-Curb, Chain Well, Reed Cistern, Step Cistern, and Bitter Well, plus the Shambles well and Seven Lofts fire tanks.
 2. Replace the single generic well renderer with distinct well/cistern variants, and improve Ford Well with a hollow opening, visible water, bucket mechanism, trough, drainage, and accurate collision.
@@ -11,7 +9,7 @@ For now just implement these 5:
 
 Note: the authoritative runtime city plan is lore/places/ombreval_buildings.json, despite living under lore/.
 
-These things can be added at a LATER point, when the developer explicitly tells you to:
+These things are yet to be added:
 
 6. Give keepers and water carriers explicit source assignments, source-specific knowledge, schedules, queues, and delivery routes.
 7. Add water items/actions and authoritative source state to cathedral-sim.

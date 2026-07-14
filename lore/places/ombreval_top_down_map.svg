@@ -45,7 +45,8 @@
     .fixture-stone_stack { fill: #a7a38f; }
     .fixture-smoke_rack { fill: #826b54; }
     .fixture-platform, .fixture-tracing { fill: #c0ab82; }
-    .fixture-well { fill: #7e9fa0; }
+    .fixture-well, .fixture-chain_well, .fixture-three_curb_well, .fixture-lodge_well { fill: #7e9fa0; }
+    .fixture-cistern, .fixture-step_cistern, .fixture-fire_tanks { fill: #94b0ac; }
     .fixture-statue { fill: #5c766f; }
     .fixture-crane, .fixture-weighbeam { fill: #76583f; }
     .fixture-stone { fill: #aaa48d; }
@@ -5422,6 +5423,16 @@
 <circle id="fixture-tallage_stone" class="fixture fixture-stone" style="stroke: #3d372e; stroke-width: 0.6; fill: #aaa48d;" cx="-74.00" cy="290.00" r="2.00"><title>Tallage stone</title></circle>
 <rect id="fixture-coswald_tracing" class="fixture fixture-tracing" style="stroke: #3d372e; stroke-width: 0.6; fill: #c0ab82;" x="-178.50" y="-274.00" width="21.00" height="32.00" transform="rotate(-0.00 -168.00 -258.00)"><title>Tracing floor</title></rect>
 <circle id="fixture-coswald_crane" class="fixture fixture-crane" style="stroke: #3d372e; stroke-width: 0.6; fill: #76583f;" cx="-142.00" cy="-285.00" r="4.00"><title>Yard crane</title></circle>
+<rect id="fixture-slate_cistern" class="fixture fixture-cistern" style="stroke: #3d372e; stroke-width: 0.6; fill: #94b0ac;" x="-375.50" y="-55.50" width="7.00" height="9.00" transform="rotate(-0.00 -372.00 -51.00)"><title>Slate Cistern</title></rect>
+<rect id="fixture-tenter_cistern" class="fixture fixture-cistern" style="stroke: #3d372e; stroke-width: 0.6; fill: #94b0ac;" x="-226.50" y="-99.00" width="7.00" height="10.00" transform="rotate(-0.00 -223.00 -94.00)"><title>Tenter Cistern</title></rect>
+<circle id="fixture-lodge_well" class="fixture fixture-lodge_well" style="stroke: #3d372e; stroke-width: 0.6; fill: #7e9fa0;" cx="-143.00" cy="-239.00" r="5.00"><title>Lodge Well</title></circle>
+<circle id="fixture-three_curb" class="fixture fixture-three_curb_well" style="stroke: #3d372e; stroke-width: 0.6; fill: #7e9fa0;" cx="-166.00" cy="131.00" r="5.00"><title>Three-Curb</title></circle>
+<circle id="fixture-chain_well" class="fixture fixture-chain_well" style="stroke: #3d372e; stroke-width: 0.6; fill: #7e9fa0;" cx="-73.00" cy="197.00" r="4.00"><title>Chain Well</title></circle>
+<rect id="fixture-reed_cistern" class="fixture fixture-cistern" style="stroke: #3d372e; stroke-width: 0.6; fill: #94b0ac;" x="341.00" y="286.00" width="8.00" height="10.00" transform="rotate(-0.00 345.00 291.00)"><title>Reed Cistern</title></rect>
+<rect id="fixture-step_cistern" class="fixture fixture-step_cistern" style="stroke: #3d372e; stroke-width: 0.6; fill: #94b0ac;" x="296.50" y="-59.00" width="7.00" height="8.00" transform="rotate(-0.00 300.00 -55.00)"><title>Step Cistern</title></rect>
+<circle id="fixture-bitter_well" class="fixture fixture-well" style="stroke: #3d372e; stroke-width: 0.6; fill: #7e9fa0;" cx="401.00" cy="-101.00" r="3.50"><title>Bitter Well</title></circle>
+<circle id="fixture-shambles_well" class="fixture fixture-well" style="stroke: #3d372e; stroke-width: 0.6; fill: #7e9fa0;" cx="-315.00" cy="340.00" r="4.50"><title>The Shambles well</title></circle>
+<rect id="fixture-seven_lofts_tanks" class="fixture fixture-fire_tanks" style="stroke: #3d372e; stroke-width: 0.6; fill: #94b0ac;" x="-391.00" y="-390.00" width="6.00" height="10.00" transform="rotate(-0.00 -388.00 -385.00)"><title>Seven Lofts fire tanks</title></rect>
 <rect id="fixture-wick_fixture_01" class="fixture fixture-stall" style="stroke: #3d372e; stroke-width: 0.6; fill: #c27855;" x="-371.92" y="15.97" width="2.80" height="5.00" transform="rotate(2.27 -370.52 18.47)"><title>stall</title></rect>
 <rect id="fixture-wick_fixture_02" class="fixture fixture-stall" style="stroke: #3d372e; stroke-width: 0.6; fill: #c27855;" x="-368.09" y="2.71" width="2.80" height="5.00" transform="rotate(18.07 -366.69 5.21)"><title>stall</title></rect>
 <rect id="fixture-wick_fixture_03" class="fixture fixture-stall" style="stroke: #3d372e; stroke-width: 0.6; fill: #c27855;" x="-335.76" y="58.54" width="2.80" height="5.00" transform="rotate(11.03 -334.36 61.04)"><title>stall</title></rect>
@@ -5644,6 +5655,26 @@
 <text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="-335.00" y="-360.00">58</text>
 <circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="165.00" cy="570.00" r="5.8"><title>59. Outer Serle wharves</title></circle>
 <text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="165.00" y="570.00">59</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="-372.00" cy="-51.00" r="5.8"><title>60. Slate Cistern</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="-372.00" y="-51.00">60</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="-223.00" cy="-94.00" r="5.8"><title>61. Tenter Cistern</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="-223.00" y="-94.00">61</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="-143.00" cy="-239.00" r="5.8"><title>62. Lodge Well</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="-143.00" y="-239.00">62</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="-166.00" cy="131.00" r="5.8"><title>63. Three-Curb</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="-166.00" y="131.00">63</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="-73.00" cy="197.00" r="5.8"><title>64. Chain Well</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="-73.00" y="197.00">64</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="345.00" cy="291.00" r="5.8"><title>65. Reed Cistern</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="345.00" y="291.00">65</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="300.00" cy="-55.00" r="5.8"><title>66. Step Cistern</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="300.00" y="-55.00">66</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="401.00" cy="-101.00" r="5.8"><title>67. Bitter Well</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="401.00" y="-101.00">67</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="-315.00" cy="340.00" r="5.8"><title>68. The Shambles well</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="-315.00" y="340.00">68</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="-388.00" cy="-385.00" r="5.8"><title>69. Seven Lofts fire tanks</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="-388.00" y="-385.00">69</text>
 </g>
 </g>
 <g id="map-information">
@@ -5783,6 +5814,26 @@
 <text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="401.5">(360, 335) · place</text>
 <text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="419.0"><tspan font-weight="bold">59</tspan>  Outer Serle wharves</text>
 <text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="428.0">(-570, -165) · outside</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="445.5"><tspan font-weight="bold">60</tspan>  Slate Cistern</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="454.5">(51, 372) · landmark</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="472.0"><tspan font-weight="bold">61</tspan>  Tenter Cistern</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="481.0">(94, 223) · landmark</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="498.5"><tspan font-weight="bold">62</tspan>  Lodge Well</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="507.5">(239, 143) · landmark</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="525.0"><tspan font-weight="bold">63</tspan>  Three-Curb</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="534.0">(-131, 166) · landmark</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="551.5"><tspan font-weight="bold">64</tspan>  Chain Well</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="560.5">(-197, 73) · landmark</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="578.0"><tspan font-weight="bold">65</tspan>  Reed Cistern</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="587.0">(-291, -345) · landmark</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="604.5"><tspan font-weight="bold">66</tspan>  Step Cistern</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="613.5">(55, -300) · landmark</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="631.0"><tspan font-weight="bold">67</tspan>  Bitter Well</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="640.0">(101, -401) · landmark</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="657.5"><tspan font-weight="bold">68</tspan>  The Shambles well</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="666.5">(-340, 315) · landmark</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="920" y="684.0"><tspan font-weight="bold">69</tspan>  Seven Lofts fire tanks</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="937" y="693.0">(385, 388) · landmark</text>
 <rect class="panel" style="fill: #f4ecd7; stroke: #574b39; stroke-width: 1.2;" x="735" y="610" width="350" height="105" rx="5"/>
 <text class="panel-title" style="font-family: Georgia, serif; font-size: 12px; font-weight: bold; fill: #30291f; letter-spacing: 1px;" x="750" y="636">PLAN INVENTORY</text>
 <text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="750" y="657">2,566 total building footprints</text>

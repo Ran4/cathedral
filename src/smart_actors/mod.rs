@@ -370,6 +370,9 @@ impl Plugin for SmartActorsPlugin {
                 )
                     .after(hud::spawn_smart_actor_hud),
             )
+            // The city marks its wells and cisterns during Startup; their loops
+            // start once, after every fixture exists.
+            .add_systems(PostStartup, sound::start_water_ambience)
             .add_systems(
                 PostUpdate,
                 // The engine polls first: a command written in this frame's

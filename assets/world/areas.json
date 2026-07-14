@@ -442,6 +442,76 @@
       "boxes": [
         { "min_m": { "x": -580.0, "y": -1.0, "z": -450.0 }, "max_m": { "x": -560.0, "y": 24.0, "z": 120.0 } }
       ]
+    },
+    {
+      "id": "slate_cistern",
+      "label": "At Slate Cistern, the Wick Ward rain cistern and fire reserve",
+      "boxes": [
+        { "min_m": { "x": 45.5, "y": -1.0, "z": 367.5 }, "max_m": { "x": 56.5, "y": 18.0, "z": 376.5 } }
+      ]
+    },
+    {
+      "id": "tenter_cistern",
+      "label": "At Tenter Cistern, the Cloth Ward work cistern on Tenterhook Lane",
+      "boxes": [
+        { "min_m": { "x": 88.0, "y": -1.0, "z": 218.5 }, "max_m": { "x": 100.0, "y": 18.0, "z": 227.5 } }
+      ]
+    },
+    {
+      "id": "lodge_well",
+      "label": "At Lodge Well, the masons' well in Coswald's Yard",
+      "boxes": [
+        { "min_m": { "x": 233.0, "y": -1.0, "z": 138.0 }, "max_m": { "x": 245.0, "y": 18.0, "z": 148.0 } }
+      ]
+    },
+    {
+      "id": "three_curb",
+      "label": "At Three-Curb, the one well with three drawing mouths off Cinder Row",
+      "boxes": [
+        { "min_m": { "x": -137.0, "y": -1.0, "z": 160.0 }, "max_m": { "x": -125.0, "y": 18.0, "z": 172.0 } }
+      ]
+    },
+    {
+      "id": "chain_well",
+      "label": "At Chain Well, the deep chain-windlass well in the Weigh Ward approaches",
+      "boxes": [
+        { "min_m": { "x": -202.0, "y": -1.0, "z": 68.0 }, "max_m": { "x": -192.0, "y": 18.0, "z": 78.0 } }
+      ]
+    },
+    {
+      "id": "reed_cistern",
+      "label": "At Reed Cistern, the raised sealed rain cistern off Maren's Green",
+      "boxes": [
+        { "min_m": { "x": -297.0, "y": -1.0, "z": -350.0 }, "max_m": { "x": -285.0, "y": 18.0, "z": -340.0 } }
+      ]
+    },
+    {
+      "id": "step_cistern",
+      "label": "At Step Cistern, the vaulted cistern in the side court behind the Bellstand",
+      "boxes": [
+        { "min_m": { "x": 50.0, "y": -1.0, "z": -304.5 }, "max_m": { "x": 60.0, "y": 18.0, "z": -295.5 } }
+      ]
+    },
+    {
+      "id": "bitter_well",
+      "label": "At Bitter Well, the deep mineral well among the eastern metal trades",
+      "boxes": [
+        { "min_m": { "x": 96.5, "y": -1.0, "z": -405.0 }, "max_m": { "x": 105.5, "y": 18.0, "z": -397.0 } }
+      ]
+    },
+    {
+      "id": "shambles_well",
+      "label": "At the Shambles well, uphill of the slaughter courts",
+      "boxes": [
+        { "min_m": { "x": -345.5, "y": -1.0, "z": 310.0 }, "max_m": { "x": -334.5, "y": 18.0, "z": 320.0 } }
+      ]
+    },
+    {
+      "id": "seven_lofts_tanks",
+      "label": "At the Seven Lofts fire tanks",
+      "boxes": [
+        { "min_m": { "x": 379.0, "y": -1.0, "z": 384.0 }, "max_m": { "x": 391.0, "y": 24.0, "z": 392.0 } }
+      ]
     }
   ]
 }

@@ -1,3 +1,106 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:6ba36e38246af3893972aa79d10817440ffe358b46e80d0c64fcfa37e3b40125
-size 2292
+# The sound catalog: the single source of truth for three consumers.
+#
+# The sim emits `sound` events and renders their percepts from these rows; the
+# generator (`scripts/generate_sounds.py`) synthesizes each row's asset from
+# `sfx_prompt`; Bevy resolves playback by convention from the id alone
+# (`assets/sounds/{sound_id}.mp3`), so no filename ever crosses the wire.
+#
+# Row order is load-bearing: `emittable_sound_ids()` keeps it, and the prompt
+# lists the emittable ids in that order.
+#
+# Full design: `docs/features/sounds.md` (and design/06 for the wider soundscape).
+
+[[sounds]]
+sound_id = "fart"           # [a-z_]+ — also the asset basename
+sound_class = "body"        # body | impact | bell   (design/06's `class`)
+audible_distance = 20.0
+actor_emittable = true      # may an LLM choose this via make_sound?
+seen = "{actor} farted."    # attributed percept; omit => not attributable
+heard = "[You heard a big fart!]"   # unattributed percept — everyone in radius
+sfx_prompt = "A single loud comedic wet fart, one short burst, close and dry, no music, no voices, no reverb"
+duration_seconds = 1.5
+
+[[sounds]]
+sound_id = "glass_break"
+sound_class = "impact"
+audible_distance = 25.0
+actor_emittable = true
+seen = "{actor} broke a beer glass."
+heard = "[You heard glass shatter nearby.]"
+sfx_prompt = "A single beer glass shattering on a stone floor, sharp impact and scattering shards, medieval tavern room tone, no voices"
+duration_seconds = 2.0
+
+# No `seen`: the bell has no visible author, so it is never attributable — and
+# it is not actor-emittable either (the world rings it).
+[[sounds]]
+sound_id = "town_bell"
+sound_class = "bell"
+audible_distance = 600.0
+actor_emittable = false
+heard = "[The town bell is ringing.]"
+sfx_prompt = "A massive bronze cathedral bell tolling three slow strokes, deep and resonant, carrying over a medieval city, long natural decay, no music"
+duration_seconds = 9.0
+
+# The water network (lore/wells_and_water.md). These are world sounds like the
+# bell, not actor choices: the sim has no water items, actions or source state
+# yet, so nothing in it can decide to draw a bucket. The percepts are written
+# for the day it can — flip `actor_emittable` and a keeper can work the curb.
+[[sounds]]
+sound_id = "draw_water"
+sound_class = "impact"
+audible_distance = 30.0
+actor_emittable = false
+heard = "[You heard a windlass turn, and a bucket break the water far below.]"
+sfx_prompt = "A wooden well windlass creaking as its rope unwinds, then a bucket splashing into deep water far below in a stone shaft, echoing, then the rope creaking under load, outdoors, no music, no voices"
+duration_seconds = 6.0
+
+[[sounds]]
+sound_id = "chain_windlass"
+sound_class = "impact"
+audible_distance = 40.0
+actor_emittable = false
+heard = "[You heard the slow clank of a chain windlass, and a bucket knocking the shaft.]"
+sfx_prompt = "A heavy iron chain winding slowly over a wooden windlass barrel, a ratchet pawl clicking, an iron-bound bucket knocking against a stone well shaft, medieval street, no music, no voices"
+duration_seconds = 7.0
+
+[[sounds]]
+sound_id = "pour_trough"
+sound_class = "impact"
+audible_distance = 22.0
+actor_emittable = false
+heard = "[You heard a pail emptied into a stone trough.]"
+sfx_prompt = "A wooden pail of water poured out into a shallow stone trough, a heavy splash settling into a ripple, the empty pail set down on wet stone, outdoors, no music, no voices"
+duration_seconds = 4.0
+
+[[sounds]]
+sound_id = "pail_clatter"
+sound_class = "impact"
+audible_distance = 26.0
+actor_emittable = false
+heard = "[You heard a pail go over on the stones, and the water run out.]"
+sfx_prompt = "A wooden pail dropped on stone paving, its iron hoop ringing as it rolls, water slopping out across the flags, close and dry, no music, no voices"
+duration_seconds = 4.0
+
+# Looping scene assets. Read only by the generator and Bevy; the sim never sees
+# these (an inbox line per fireplace crackle would be token suicide —
+# design/06 §5). The two water loops are placed on the plan's well and cistern
+# fixtures by `city::water`.
+[[ambients]]
+sound_id = "fireplace"
+sfx_prompt = "A steady crackling fireplace, gentle wood pops over a warm even room tone, constant level, seamless loop, no voices, no music"
+duration_seconds = 12.0
+
+[[ambients]]
+sound_id = "well_trough"
+sfx_prompt = "A quiet medieval well yard: water trickling steadily from a stone trough into a drain, an occasional drip echoing down a deep shaft, a rope creaking faintly on a windlass, constant level, seamless loop, no voices, no music"
+duration_seconds = 14.0
+
+[[ambients]]
+sound_id = "cistern_drip"
+sfx_prompt = "Rainwater running down a gutter into a stone settling box, slow drips echoing inside a vaulted underground cistern, a hollow watery room tone, constant level, seamless loop, no voices, no music"
+duration_seconds = 14.0
+
+[[ambients]]
+sound_id = "chain_draw"
+sfx_prompt = "The slow steady clank of an iron chain over a well windlass, a ratchet pawl ticking, a bucket knocking a stone shaft, water dripping back down, a busy freight street behind it, constant level, seamless loop, no voices, no music"
+duration_seconds = 14.0

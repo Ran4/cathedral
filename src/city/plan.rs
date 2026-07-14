@@ -224,8 +224,8 @@ mod tests {
         assert_eq!(plan.statistics.named_or_reserved_buildings, 65);
         assert_eq!(plan.statistics.unnamed_urban_fabric_buildings, 2_501);
         assert_eq!(plan.roads.len(), 49);
-        assert_eq!(plan.fixtures.len(), 81);
-        assert_eq!(plan.named_place_index.len(), 59);
+        assert_eq!(plan.fixtures.len(), 91);
+        assert_eq!(plan.named_place_index.len(), 69);
         assert_eq!(plan.sites.len(), 23);
     }
 
@@ -253,9 +253,9 @@ mod tests {
             .map(|place| place.number)
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(numbers.len(), 59);
+        assert_eq!(numbers.len(), 69);
         assert_eq!(numbers.first(), Some(&1));
-        assert_eq!(numbers.last(), Some(&59));
+        assert_eq!(numbers.last(), Some(&69));
     }
 
     #[test]
@@ -324,9 +324,19 @@ mod tests {
             "reed_postern",
             "seven_lofts",
             "outer_wharves",
+            "slate_cistern",
+            "tenter_cistern",
+            "lodge_well",
+            "three_curb",
+            "chain_well",
+            "reed_cistern",
+            "step_cistern",
+            "bitter_well",
+            "shambles_well",
+            "seven_lofts_tanks",
         ];
 
-        assert_eq!(map.areas.len(), 60, "59 lore places plus Lanthorn grounds");
+        assert_eq!(map.areas.len(), 70, "69 lore places plus Lanthorn grounds");
         for (place, expected_id) in plan.named_place_index.iter().zip(expected_area_ids) {
             let height = if place.number == 2 { 84.0 } else { 0.91 };
             let position =

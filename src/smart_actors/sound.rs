@@ -1,14 +1,23 @@
-//! Positional one-shot playback for authoritative `sound` events.
+//! Positional one-shot playback for authoritative `sound` events, and the
+//! looping scene ambiences that never enter the event stream at all.
 //!
 //! Assets resolve by convention from the sound id alone —
 //! `assets/sounds/{sound_id}.mp3` — so no filename ever crosses the wire. A
 //! missing or unplayable asset skips playback only; the percept toast (owned
 //! by the bridge drain) is never silenced by it.
+//!
+//! An ambient loop is *not* an event: the sim never hears a well trickle, and
+//! an inbox line per drip would be token suicide. The city marks each water
+//! fixture with a [`WaterAmbience`]; this layer is the only place that turns
+//! one into sound, which is what keeps the city's headless tests free of the
+//! audio plugins.
 
 use bevy::{
     audio::{AudioPlayer, AudioSource, PlaybackSettings, SpatialScale},
     prelude::*,
 };
+
+use crate::city::water::WaterAmbience;
 
 /// A validated sound event the player heard (or made). Presentation only.
 #[derive(Message, Debug, Clone)]
@@ -70,6 +79,34 @@ pub(super) fn play_sound_effects(
                     1.0 / (radius * UNATTENUATED_FRACTION_OF_RADIUS),
                 )),
             Transform::from_translation(effect.position),
+        ));
+    }
+}
+
+/// Give every marked water fixture its loop, once, after the city is built.
+/// Loops are wav (rodio does not honour LAME gapless tags, so a looped mp3
+/// clicks at the wrap point) and spatial, so a cistern is quiet from the next
+/// street and the Chain Well is audible around the corner — which is exactly
+/// how the Weigh Ward describes it.
+pub(super) fn start_water_ambience(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    sources: Query<(Entity, &WaterAmbience)>,
+) {
+    for (entity, ambience) in &sources {
+        if !valid_sound_id(ambience.sound_id) {
+            continue;
+        }
+        let radius = ambience.audible_distance.clamp(1.0, 10_000.0);
+        let source: Handle<AudioSource> =
+            asset_server.load(format!("sounds/{}.wav", ambience.sound_id));
+        commands.entity(entity).insert((
+            AudioPlayer::new(source),
+            PlaybackSettings::LOOP
+                .with_spatial(true)
+                .with_spatial_scale(SpatialScale::new(
+                    1.0 / (radius * UNATTENUATED_FRACTION_OF_RADIUS),
+                )),
         ));
     }
 }

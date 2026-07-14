@@ -332,6 +332,20 @@ FIXTURES: list[Fixture] = [
     Fixture("tallage_stone", "stone", (-290, 74), (4, 4), label="Tallage stone"),
     Fixture("coswald_tracing", "tracing", (258, 168), (32, 21), label="Tracing floor"),
     Fixture("coswald_crane", "crane", (285, 142), (8, 8), label="Yard crane"),
+    # The water network of `lore/wells_and_water.md`. Ford Well above is the
+    # ninth and best-known source; a well is a lined shaft into groundwater, a
+    # cistern is a roof-fed store, and the Shambles and Seven Lofts keep their
+    # own work and fire supplies.
+    Fixture("slate_cistern", "cistern", (51, 372), (9, 7), label="Slate Cistern"),
+    Fixture("tenter_cistern", "cistern", (94, 223), (10, 7), label="Tenter Cistern"),
+    Fixture("lodge_well", "lodge_well", (239, 143), (10, 8), label="Lodge Well"),
+    Fixture("three_curb", "three_curb_well", (-131, 166), (10, 10), label="Three-Curb"),
+    Fixture("chain_well", "chain_well", (-197, 73), (8, 8), label="Chain Well"),
+    Fixture("reed_cistern", "cistern", (-291, -345), (10, 8), label="Reed Cistern"),
+    Fixture("step_cistern", "step_cistern", (55, -300), (8, 7), label="Step Cistern"),
+    Fixture("bitter_well", "well", (101, -401), (7, 6), label="Bitter Well"),
+    Fixture("shambles_well", "well", (-340, 315), (9, 8), label="The Shambles well"),
+    Fixture("seven_lofts_tanks", "fire_tanks", (385, 388), (10, 6), label="Seven Lofts fire tanks"),
 ]
 
 
@@ -426,6 +440,17 @@ for _name, _anchor, _kind in [
     ("The Reed Postern", (-455, -535), "gate"),
     ("Seven Lofts", (360, 335), "place"),
     ("Outer Serle wharves", (-570, -165), "outside"),
+    # The named ward water sources. Ford Well (7) is already indexed above.
+    ("Slate Cistern", (51, 372), "landmark"),
+    ("Tenter Cistern", (94, 223), "landmark"),
+    ("Lodge Well", (239, 143), "landmark"),
+    ("Three-Curb", (-131, 166), "landmark"),
+    ("Chain Well", (-197, 73), "landmark"),
+    ("Reed Cistern", (-291, -345), "landmark"),
+    ("Step Cistern", (55, -300), "landmark"),
+    ("Bitter Well", (101, -401), "landmark"),
+    ("The Shambles well", (-340, 315), "landmark"),
+    ("Seven Lofts fire tanks", (385, 388), "landmark"),
 ]:
     mark(_name, _anchor, _kind)
 
@@ -956,7 +981,8 @@ def svg_header() -> str:
     .fixture-stone_stack { fill: #a7a38f; }
     .fixture-smoke_rack { fill: #826b54; }
     .fixture-platform, .fixture-tracing { fill: #c0ab82; }
-    .fixture-well { fill: #7e9fa0; }
+    .fixture-well, .fixture-chain_well, .fixture-three_curb_well, .fixture-lodge_well { fill: #7e9fa0; }
+    .fixture-cistern, .fixture-step_cistern, .fixture-fire_tanks { fill: #94b0ac; }
     .fixture-statue { fill: #5c766f; }
     .fixture-crane, .fixture-weighbeam { fill: #76583f; }
     .fixture-stone { fill: #aaa48d; }
@@ -1096,7 +1122,7 @@ def render_svg() -> None:
         sx, sy = screen(fixture.position)
         width, height = fixture.size[1], fixture.size[0]
         title = escape(fixture.label or fixture.kind)
-        if fixture.kind in {"well", "statue", "stone", "crane"}:
+        if fixture.kind in {"well", "chain_well", "three_curb_well", "lodge_well", "statue", "stone", "crane"}:
             radius = max(width, height) / 2
             parts.append(f'<circle id="fixture-{fixture.id}" class="fixture fixture-{fixture.kind}" cx="{sx:.2f}" cy="{sy:.2f}" r="{radius:.2f}"><title>{title}</title></circle>')
         else:

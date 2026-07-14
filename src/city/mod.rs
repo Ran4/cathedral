@@ -7,6 +7,7 @@
 
 mod monuments;
 mod plan;
+pub mod water;
 
 use std::{collections::BTreeMap, f32::consts::PI};
 
@@ -62,6 +63,8 @@ struct CityMeshes {
     cylinder: Handle<Mesh>,
     sphere: Handle<Mesh>,
     pyramid: Handle<Mesh>,
+    /// A cylinder with its middle taken out: the hollow mouth of a well.
+    curb_ring: Handle<Mesh>,
 }
 
 #[derive(Clone)]
@@ -86,6 +89,11 @@ struct CityMaterials {
     cloth_ochre: Handle<StandardMaterial>,
     cloth_russet: Handle<StandardMaterial>,
     water: Handle<StandardMaterial>,
+    /// The wet lining you see when you lean over a curb.
+    well_shaft: Handle<StandardMaterial>,
+    /// Water at the bottom of a shaft or behind a draw hatch: the same stuff as
+    /// `water`, read in the dark.
+    well_water: Handle<StandardMaterial>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -239,6 +247,7 @@ fn create_meshes(meshes: &mut Assets<Mesh>) -> CityMeshes {
         cylinder: meshes.add(Cylinder::new(1.0, 1.0).mesh().resolution(16).build()),
         sphere: meshes.add(Sphere::new(1.0).mesh().uv(16, 10)),
         pyramid: meshes.add(Cone::new(1.0, 1.0).mesh().resolution(4).build()),
+        curb_ring: meshes.add(water::curb_ring_mesh()),
     }
 }
 
@@ -364,6 +373,24 @@ fn create_materials(
             perceptual_roughness: 0.2,
             reflectance: 0.62,
             alpha_mode: AlphaMode::Blend,
+            ..default()
+        }),
+        well_shaft: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.11, 0.11, 0.10),
+            perceptual_roughness: 0.95,
+            double_sided: true,
+            cull_mode: None,
+            ..default()
+        }),
+        // A shaft is a hole with a roof over it, so nothing down there catches
+        // the sun. The faint emissive is what a real well surface gets for free
+        // and this one cannot: the sky, bounced back up at whoever leans in.
+        well_water: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.10, 0.19, 0.21),
+            emissive: LinearRgba::rgb(0.02, 0.05, 0.06),
+            metallic: 0.15,
+            perceptual_roughness: 0.08,
+            reflectance: 0.85,
             ..default()
         }),
     }
@@ -990,7 +1017,18 @@ fn build_fixtures(
                 );
             }
             "smoke_rack" => spawn_smoke_rack(commands, meshes, materials, position, angle, &name),
-            "well" => spawn_ford_well(commands, meshes, materials, collision_world, position),
+            "well" | "chain_well" | "three_curb_well" | "lodge_well" | "cistern"
+            | "step_cistern" | "fire_tanks" => water::spawn_water_fixture(
+                commands,
+                meshes,
+                materials,
+                collision_world,
+                &fixture.id,
+                &fixture.kind,
+                position,
+                Vec2::from_array(fixture.size),
+                angle,
+            ),
             "stone" => {
                 spawn_mesh_named(
                     commands,
@@ -1110,60 +1148,6 @@ fn spawn_smoke_rack(
         Vec3::new(4.4, 0.18, 0.18),
         angle,
         "Smoke rack beam",
-    );
-}
-
-fn spawn_ford_well(
-    commands: &mut Commands,
-    meshes: &CityMeshes,
-    materials: &CityMaterials,
-    collision_world: &mut CollisionWorld,
-    position: Vec3,
-) {
-    spawn_cylinder(
-        commands,
-        meshes,
-        &materials.limestone,
-        position + Vec3::Y * 0.7,
-        3.6,
-        1.4,
-    );
-    spawn_cylinder(
-        commands,
-        meshes,
-        &materials.iron,
-        position + Vec3::Y * 1.38,
-        2.7,
-        0.08,
-    );
-    for x in [-2.9, 2.9] {
-        spawn_box_named(
-            commands,
-            meshes,
-            &materials.timber,
-            position + Vec3::new(x, 2.8, 0.0),
-            Vec3::new(0.35, 4.2, 0.35),
-            "Ford Well roof post",
-        );
-    }
-    spawn_mesh_named(
-        commands,
-        &meshes.pyramid,
-        &materials.slate,
-        Transform::from_translation(position + Vec3::Y * 5.4).with_scale(Vec3::new(5.3, 1.8, 4.6)),
-        "Ford Well roof",
-    );
-    spawn_cylinder(
-        commands,
-        meshes,
-        &materials.dark_wood,
-        position + Vec3::Y * 2.6,
-        0.18,
-        6.0,
-    );
-    collision_world.add_box(
-        position + Vec3::new(-3.7, 0.0, -3.7),
-        position + Vec3::new(3.7, 5.8, 3.7),
     );
 }
 
@@ -2087,6 +2071,8 @@ fn add_rotated_box_collider_at(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeSet;
+
     use bevy::asset::{AssetApp, AssetPlugin};
 
     use super::*;
@@ -2109,10 +2095,10 @@ mod tests {
         // The Lanthorn is rendered by CathedralPlugin; every other footprint is
         // rendered by this plugin from the authoritative plan.
         assert_eq!(stats.rendered_plan_buildings, 2_565);
-        assert_eq!(stats.named_places, 59);
+        assert_eq!(stats.named_places, 69);
         assert_eq!(stats.roads, 49);
         assert_eq!(stats.sites, 23);
-        assert_eq!(stats.fixtures, 81);
+        assert_eq!(stats.fixtures, 91);
         assert_eq!(stats.wharf_sheds, 15);
 
         let place_markers = world
@@ -2120,10 +2106,73 @@ mod tests {
             .iter(world)
             .map(|number| number.0)
             .collect::<Vec<_>>();
-        assert_eq!(place_markers.len(), 59);
+        assert_eq!(place_markers.len(), 69);
         assert!(place_markers.contains(&1));
-        assert!(place_markers.contains(&59));
+        assert!(place_markers.contains(&69));
         assert!(world.resource::<CollisionWorld>().len() > 3_000);
+    }
+
+    /// Every water fixture in the plan is built, marked for its loop, and asks
+    /// for a loop the catalog can actually synthesize — a typo here would be a
+    /// silent well rather than a failed build.
+    #[test]
+    fn every_water_source_is_built_and_sounds_like_itself() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<Image>()
+            .init_asset::<StandardMaterial>()
+            .init_resource::<CollisionWorld>()
+            .add_systems(Startup, build_city);
+        app.update();
+
+        let catalog = cathedral_sim::SoundCatalog::from_toml_str(include_str!(
+            "../../assets/sounds/catalog.toml"
+        ))
+        .expect("the shipped catalog loads");
+        let ambient_ids = catalog
+            .ambients()
+            .iter()
+            .map(|ambient| ambient.sound_id.as_str())
+            .collect::<BTreeSet<_>>();
+
+        let world = app.world_mut();
+        let sources = world
+            .query::<(&water::WaterAmbience, &Transform)>()
+            .iter(world)
+            .map(|(ambience, transform)| {
+                assert!(
+                    ambient_ids.contains(ambience.sound_id),
+                    "'{}' is not an [[ambients]] row in the sound catalog",
+                    ambience.sound_id
+                );
+                assert!(ambience.audible_distance > 0.0);
+                [transform.translation.x, transform.translation.z]
+            })
+            .collect::<Vec<_>>();
+
+        // The nine named ward sources (Ford plus the eight of the ward network),
+        // the Shambles well, and the Seven Lofts fire tanks.
+        assert_eq!(sources.len(), 11);
+        let plan = plan::load();
+        for fixture in plan.fixtures.iter().filter(|fixture| {
+            matches!(
+                fixture.kind.as_str(),
+                "well"
+                    | "chain_well"
+                    | "three_curb_well"
+                    | "lodge_well"
+                    | "cistern"
+                    | "step_cistern"
+                    | "fire_tanks"
+            )
+        }) {
+            assert!(
+                sources.contains(&fixture.position),
+                "{} has no water ambience",
+                fixture.id
+            );
+        }
     }
 
     #[test]
