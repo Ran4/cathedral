@@ -142,6 +142,13 @@ split pauses between 400 and 500 ms that previously remained one utterance.
 
 ## Foreground cognition lane
 
+Partly addressed by `features/implemented/gate_idle_cognition_on_proximity.md`
+§4, which took the cheap first move: no background turn *starts* while the player
+is composing (microphone hot, STT in flight, or inside the router's grace
+window), so "nothing was in flight when your words landed" is now the common
+case. What follows remains the fallback for the turns that were already out —
+measure before building it.
+
 The protected reaction queue prevents player speech from being overwritten, but
 cognition still has one global in-flight request. A background actor that began
 thinking just before the transcript lands can add the remainder of its provider
