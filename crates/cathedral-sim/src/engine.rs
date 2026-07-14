@@ -24,7 +24,8 @@ use crate::{
     actions::apply_action,
     areas::AreaMap,
     attention::{
-        IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS, StageConfig, on_stage,
+        CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS,
+        StageConfig, on_stage,
     },
     character::Control,
     error::{CommandError, CommandErrorCode, EngineInitError},
@@ -209,6 +210,18 @@ pub struct EngineConfig {
     /// tests and the headless runner keep the old behavior unless they ask for
     /// this, and `config.ron` turns it on for the game as a rebuild-free A/B.
     pub idle_requires_news: bool,
+    /// Whether *unprompted* initiative is also a fact about the character
+    /// (`features/gate_idle_cognition_on_novelty.md` §2).
+    ///
+    /// News decided whether there is anything to think about; this decides who
+    /// bothers. Without it, all ~500 people you walk past think about you the
+    /// moment you enter their street — one turn each rather than a rotation,
+    /// which the novelty gate made affordable but no less silly.
+    ///
+    /// Rides on `idle_requires_news`, which is the only path that consults it,
+    /// and defaults to off for the same reason: nothing but `config.ron` changes
+    /// behavior that the shipped tests pin.
+    pub idle_curiosity: CuriosityConfig,
 }
 
 impl Default for EngineConfig {
@@ -228,6 +241,7 @@ impl Default for EngineConfig {
             idle_mode: IdleCognitionMode::All,
             stage: StageConfig::default(),
             idle_requires_news: false,
+            idle_curiosity: CuriosityConfig::default(),
         }
     }
 }
@@ -619,13 +633,17 @@ impl Engine {
         } else {
             self.floor.busy(now)
         };
-        // The stage is computed here for the same reason, and it answers two
+        // The stage is computed here for the same reason, and it answers three
         // questions in order. Who is close enough to be worth a thought? Nobody
-        // in the empty field behind you is. And then: has anything happened to
-        // them since they last thought? A man standing beside you with nothing
-        // to react to costs a full prompt to say `wait {}`, and saying it
-        // changes nothing — so the next poll would ask him again. Silence is the
-        // one thing that must be free.
+        // in the empty field behind you is. Then: has anything happened to them
+        // since they last thought? A man standing beside you with nothing to
+        // react to costs a full prompt to say `wait {}`, and saying it changes
+        // nothing — so the next poll would ask him again. Silence is the one
+        // thing that must be free. And last: is this a person who would say
+        // something about it unbidden? Most are not, and a street where they all
+        // are is not a street. The third question is never asked of somebody who
+        // was *spoken to* (`Novelty::admits_idle`) — an aloof NPC never opens,
+        // but always answers.
         let stage = match self.config.idle_mode {
             IdleCognitionMode::All => None,
             IdleCognitionMode::Stage => {
@@ -637,7 +655,10 @@ impl Engine {
                 );
                 if self.config.idle_requires_news {
                     self.novelty.observe(now, &stage);
-                    stage.retain(|actor_id| self.novelty.has_news(&self.world, actor_id));
+                    stage.retain(|actor_id| {
+                        self.novelty
+                            .admits_idle(&self.world, actor_id, &self.config.idle_curiosity)
+                    });
                 }
                 Some(stage)
             }

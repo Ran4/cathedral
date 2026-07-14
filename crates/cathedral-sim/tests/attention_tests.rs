@@ -15,10 +15,10 @@ mod prompt_support;
 use std::{cell::RefCell, rc::Rc};
 
 use cathedral_sim::{
-    ActorId, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand, EngineConfig,
-    EngineMessage, FakeCognition, IdleCognitionMode, NOVELTY_MEMORY_SECONDS, NullSight,
-    NullTranscription, NullTts, SpatialActorUpdate, StageConfig, TtsBackendKind, Vec3, WorldSeed,
-    ids::RequestId,
+    ActorId, Capabilities, Cognition, CognitionBusy, CuriosityConfig, Engine, EngineCommand,
+    EngineConfig, EngineMessage, FakeCognition, IdleCognitionMode, NOVELTY_MEMORY_SECONDS,
+    NullSight, NullTranscription, NullTts, SpatialActorUpdate, StageConfig, TtsBackendKind, Vec3,
+    WorldSeed, ids::RequestId,
 };
 use prompt_support::{areas, catalog, prompt_env};
 
@@ -49,18 +49,39 @@ struct Harness {
 impl Harness {
     /// A proximity-gated engine: on stage is enough to think, every rotation.
     fn staged(player_spawn: Vec3) -> Self {
-        Self::build(player_spawn, false)
+        Self::build(player_spawn, false, CuriosityConfig::default())
     }
 
     /// The game's own configuration: on stage **and** with something to react to
     /// (`features/gate_idle_cognition_on_novelty.md`).
     fn with_news(player_spawn: Vec3) -> Self {
-        Self::build(player_spawn, true)
+        Self::build(player_spawn, true, CuriosityConfig::default())
+    }
+
+    /// …and the third gate: whether the person is one who speaks *first*.
+    ///
+    /// The demo trio carries no lore sheet, so each is maximally curious by
+    /// definition (`CURIOSITY_WITHOUT_LORE`) and `scale` becomes the whole city's
+    /// chance outright — which is exactly the dial these tests want. `0.0` is a
+    /// street of magistrates; `1.0` is the world before this feature.
+    fn with_curiosity(player_spawn: Vec3, scale: f64) -> Self {
+        Self::build(
+            player_spawn,
+            true,
+            CuriosityConfig {
+                enabled: true,
+                scale,
+            },
+        )
     }
 
     /// A gated engine with a live (fake) provider, and the player standing where
     /// the caller says.
-    fn build(player_spawn: Vec3, idle_requires_news: bool) -> Self {
+    fn build(
+        player_spawn: Vec3,
+        idle_requires_news: bool,
+        idle_curiosity: CuriosityConfig,
+    ) -> Self {
         let cognition = SharedCognition::default();
         let engine = Engine::new(
             EngineConfig {
@@ -70,6 +91,7 @@ impl Harness {
                 idle_mode: IdleCognitionMode::Stage,
                 stage: StageConfig::default(),
                 idle_requires_news,
+                idle_curiosity,
                 ..EngineConfig::default()
             },
             &WorldSeed::from_json_str(&prompt_support::demo_seed()).expect("the demo seed loads"),
@@ -359,6 +381,93 @@ fn a_sound_still_reaches_an_npc_who_has_no_news_and_no_player() {
         prompts.len(),
         1,
         "the bell must reach exactly one witness, news gate or no news gate: {prompts:?}"
+    );
+}
+
+// ---------------------------------------------------------------- curiosity
+//
+// `features/gate_idle_cognition_on_novelty.md` §2. Novelty made silence free but
+// left every one of the ~500 people you walk past thinking about you the moment
+// you appeared — one turn each rather than a rotation, which is affordable and
+// still silly. These pin the third gate, and above all the two things it must
+// never touch: the latency of an answer, and the reach of a sound.
+
+/// The verdict is a fact about the news, not about the clock — and this is the
+/// engine-level form of the trap.
+///
+/// The player stands in a crowd for five minutes. Every one of those ~18,000
+/// polls, all three of them have news (they have never thought, and a stranger
+/// is standing in front of them) and every one of those polls asks the same
+/// question. A roll re-drawn per poll would pass within a frame or two and a
+/// street of magistrates would greet the player like touts. Not one of them says
+/// a word.
+#[test]
+fn an_aloof_crowd_never_speaks_first_however_long_you_stand_there() {
+    let mut harness = Harness::with_curiosity(IN_THE_CROWD, 0.0);
+    let prompts = harness.run(300.0);
+    assert_eq!(
+        prompts,
+        Vec::<ActorId>::new(),
+        "somebody's mind was changed for them by the passage of time: {prompts:?}"
+    );
+}
+
+/// *"An aloof NPC never opens, but always answers."*
+///
+/// The same three people who would not look up above answer the moment they are
+/// spoken to. Curiosity is on the changed-context branch of the novelty gate and
+/// on nothing else: a non-empty inbox is somebody else's initiative arriving, and
+/// the reaction and priority lanes never consulted the gate to begin with. This
+/// is the property that makes reticence safe to ship — the latency the player
+/// actually feels is unchanged, for everyone, at every station.
+#[test]
+fn an_aloof_crowd_answers_the_player_at_once() {
+    let mut harness = Harness::with_curiosity(IN_THE_CROWD, 0.0);
+    assert!(harness.run(30.0).is_empty(), "somebody greeted the player");
+
+    harness.player_say("hoy", "What's your name?", IN_THE_CROWD);
+    assert!(
+        !harness.run(20.0).is_empty(),
+        "nobody answered: curiosity leaked out of the idle lane and into the reaction lane"
+    );
+}
+
+/// …and the world still happens to them. A bell is a percept, not a
+/// conversational opening, and the nudge it buys is a priority turn — ungated by
+/// proximity, by news, and now by character too.
+#[test]
+fn a_sound_still_nudges_an_aloof_npc() {
+    let mut harness = Harness::with_curiosity(IN_A_FIELD, 0.0);
+    assert!(harness.run(10.0).is_empty());
+
+    harness.send_all(vec![EngineCommand::DebugSound {
+        sound_id: "town_bell".into(),
+        position_m: Vec3::new(0.0, 4.0, 113.0),
+    }]);
+
+    let prompts = harness.run(10.0);
+    assert_eq!(
+        prompts.len(),
+        1,
+        "the bell must reach exactly one witness, aloof or not: {prompts:?}"
+    );
+}
+
+/// A fully curious city is the city before this feature, to the prompt: the same
+/// arrival round, the same one turn each, and then the same silence. That is what
+/// makes `config.ron: curiosity: false` (and `curiosity_scale: 1.0`) an honest
+/// A/B rather than a different game.
+#[test]
+fn a_curious_city_is_the_city_before_curiosity() {
+    let mut harness = Harness::with_curiosity(IN_A_FIELD, 1.0);
+    assert!(harness.run(10.0).is_empty());
+
+    harness.move_player(IN_THE_CROWD);
+    let prompts = harness.run(120.0);
+    assert_eq!(
+        prompts.len(),
+        3,
+        "the arrival round changed shape: {prompts:?}"
     );
 }
 

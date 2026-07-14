@@ -105,7 +105,7 @@ impl fmt::Display for LoreError {
 impl std::error::Error for LoreError {}
 
 /// Authored metadata retained alongside the mutable simulation state.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LoreProfile {
     pub significance: Significance,
@@ -126,6 +126,15 @@ pub struct LoreProfile {
     pub conditions: Vec<String>,
     pub core_character_description: String,
     pub extended_character_description: String,
+    /// How readily this person speaks *first* — the authored override on the
+    /// curiosity gate (`attention::curiosity_of`). `None` means "derive it from
+    /// the metadata above", which is what all 500 shipped files do; a character
+    /// the derivation gets wrong says so here, and nobody else is touched.
+    ///
+    /// It is not [`Significance`], which sets the completion budget. An ambient
+    /// child may be cheap and forward, a major canon expensive and aloof.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub curiosity: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -178,6 +187,9 @@ pub struct LoreCharacterSheet {
     pub holds: Vec<ItemId>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub goal: Option<String>,
+    /// Overrides the derived willingness to speak first (see [`LoreProfile`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub curiosity: Option<f64>,
 }
 
 impl LoreCharacterSheet {
@@ -238,6 +250,17 @@ impl LoreCharacterSheet {
         {
             return Err(LoreError::new(format!(
                 "character '{}' needs a finite spawn transform",
+                self.id
+            )));
+        }
+        // Caught here rather than clamped at the gate: a `curiosity` of 20 is a
+        // typo, and silently reading it as 1.0 would hide the file that meant
+        // 0.2 and buried its author in prompts.
+        if let Some(curiosity) = self.curiosity
+            && !(0.0..=1.0).contains(&curiosity)
+        {
+            return Err(LoreError::new(format!(
+                "character '{}' has curiosity {curiosity}, which is not a probability in 0.0..=1.0",
                 self.id
             )));
         }
@@ -315,6 +338,7 @@ impl LoreCharacterSheet {
                 conditions: self.conditions,
                 core_character_description: self.core_character_description,
                 extended_character_description: self.extended_character_description,
+                curiosity: self.curiosity,
             }),
         }
     }

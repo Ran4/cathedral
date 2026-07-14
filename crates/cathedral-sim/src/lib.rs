@@ -43,9 +43,9 @@ pub use areas::{
     Area, AreaBox, AreaMap, AreaMapError, AxisDirection, CoordinateSystem, NearestArea,
 };
 pub use attention::{
-    DEFAULT_STAGE_MAX_ACTORS, DEFAULT_STAGE_RADIUS_M, IdleCognitionMode, IdleGate,
-    NOVELTY_MEMORY_SECONDS, Novelty, STAGE_PARTNER_MEMORY_SECONDS, StageConfig, context_hash,
-    on_stage,
+    CURIOSITY_BASE, CURIOSITY_WITHOUT_LORE, CuriosityConfig, DEFAULT_STAGE_MAX_ACTORS,
+    DEFAULT_STAGE_RADIUS_M, IdleCognitionMode, IdleGate, NOVELTY_MEMORY_SECONDS, Novelty,
+    STAGE_PARTNER_MEMORY_SECONDS, StageConfig, context_hash, curiosity_of, on_stage,
 };
 pub use character::{Character, CharacterSheet, CharacterState, Control};
 pub use engine::{Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage};

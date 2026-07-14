@@ -280,6 +280,7 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
         idle_mode: config.idle_cognition.mode(),
         stage: config.idle_cognition.stage(),
         idle_requires_news: config.idle_cognition.require_news,
+        idle_curiosity: config.idle_cognition.curiosity(),
         ..EngineConfig::default()
     };
 

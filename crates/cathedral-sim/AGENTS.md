@@ -86,6 +86,20 @@ provider calls an hour regardless of where the player stood. Ambient NPCs remain
 reachable by speech and by sound anywhere in the city — those lanes are ungated,
 and they are the only way an ambient NPC ever thought in the first place.
 
+Two further gates ride on the round robin, both in `attention.rs` and both
+`config.ron`-revertible under `idle_cognition`. **`Novelty`** (`require_news`)
+demands that something have *happened* to an on-stage actor since their last turn
+— a non-empty inbox, or a changed set of ids within their 20 m — because a turn
+that ends in `wait {}` changes nothing and would only buy another one.
+**`CuriosityConfig`** (`curiosity`, `curiosity_scale`) then asks whether they are
+someone who would *say* anything about it: derived from the lore sheet's age,
+trade and standing, overridable by an authored `curiosity` in the character's own
+JSON, and calibrated so ~20% of the people you walk past think about you at all.
+Curiosity applies **only** to the changed-context branch — a non-empty inbox is
+never rolled — so an aloof NPC never opens, but always answers. The roll is a pure
+hash of `(actor, context, meeting)` and never a fresh draw: the engine polls at
+60 Hz, and a re-drawn 20% is a certainty within a frame.
+
 The weights change meaning with the gate, so there are two orders.
 `background_turn_order` (Major ×4 / Minor ×1 / **Ambient ×0**) answers "who, out
 of 500 people, deserves scarce global compute?". `stage_turn_order` (Major 3 /

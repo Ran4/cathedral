@@ -1,8 +1,9 @@
 # Gate idle NPC cognition on novelty (and on character)
 
-Status: **§1 implemented** (2026-07-14) — the novelty gate, which is the whole
-cost win. §2 (curiosity) and the boredom timer are **not** written; see *What is
-left* below. Successor to `features/implemented/gate_idle_cognition_on_proximity.md`.
+Status: **§1 and §2 implemented** (2026-07-14) — the novelty gate, which is the
+whole cost win, and curiosity, which is the silliness half. The boredom timer is
+**not** written; see *What is left* below. Successor to
+`features/implemented/gate_idle_cognition_on_proximity.md`.
 
 `attention.rs::Novelty` is the gate; the engine composes it with the stage once
 per poll (D20) and stamps it from `NpcScheduler::take_submitted`;
@@ -53,17 +54,80 @@ with a live mic.
    prompt is in flight survives to be shown on the next turn, where hashing the
    inbox at completion would have swallowed it.
 
+## §2 — curiosity, measured
+
+`attention.rs::CuriosityConfig` is the gate; `config.ron:
+smart_actors.idle_cognition.curiosity` (and `curiosity_scale`) is the switch. It
+sits on the **changed-context** branch of `Novelty` and on nothing else, so an
+inbox — a word, a bell, a system line — stays ungated and *"an aloof NPC never
+opens, but always answers"* is true by construction rather than by care.
+
+Measured by walking a player at 1.4 m/s past the whole shipped cast, twice, at
+right angles — 545 encounters, nobody speaking, no bells
+(`crates/cathedral-backends/tests/curiosity_walk.rs`):
+
+| | of the people you walk past, how many think about you |
+| --- | --- |
+| `curiosity: false` (before) | **100%** — all 545 |
+| `curiosity: true` (after) | **19.3%** — 105 |
+
+Against a ~20% target. And who the fifth is, is a fact about them:
+
+| | rate |
+| --- | --- |
+| beggars, hawkers, entertainers, tavern folk, pilgrims (`no_fixed_trade`, `market_seller`, `food_provisioner`, `fish_trader`, `entertainer`, `tavern_worker`, `pilgrim`, `scavenger`) | **38%** |
+| the whole city | 19% |
+| the watch, the chapter and the ledger (`watchman_and_keeper`, `militia_and_soldier`, `bailiff_and_gaoler`, `civic_officer`, `candor_cleric`, `church_attendant`, `scribe_and_clerk`, `merchant`) | **3%** |
+
+Best of the trades with a real sample: entertainers 64%, food provisioners 45%,
+`no_fixed_trade` 42%, tavern workers 36%. Worst: the watch, the gaolers, the
+clerks and the militia at 0%. The 45 domestic servants — the biggest single
+trade, and deliberately given no bonus either way — land on 19%, i.e. exactly
+the city.
+
+### Three deviations in §2
+
+1. **`world_revision` is not in the roll, and could not be.** The work order
+   suggested `hash(actor_id, context_hash, world_revision)`. That is the bug the
+   whole design is trying to avoid: an actor's news *outlives the poll* (he keeps
+   on having noticed you until he takes a turn), and the world revision bumps
+   every time anyone anywhere acts — so the verdict would be re-drawn tens of
+   times per pending news and a 20% chance would become a certainty. The roll is
+   `hash(salt, actor_id, context_hash, visit)`, all four of which are constant for
+   as long as the news is. `the_same_news_never_changes_its_mind` polls it 600
+   times at 60 Hz and asserts it never flips.
+
+2. **`visit` is new state.** Without a per-meeting term the roll is a function of
+   who they are and what they are looking at — both permanent — so the man who did
+   not look up the first time you walked down his street would never look up, in
+   any hour of any run: 20% of the city would greet you always and 80% never. So
+   `Novelty::observe` now creates a memory for every on-stage actor, stamped with
+   `now.to_bits()` at first sight, and it lapses with the rest on absence. A
+   meeting is a chance; it is not a caste (`a_new_meeting_is_a_new_roll`).
+
+3. **The derived numbers were calibrated against the walk, not against the
+   arithmetic.** Two news events per person (you enter their street; you enter
+   their earshot) predicts `1 − (1 − p)²`, and it is wrong: the real cast is
+   clustered by trade, so `max_actors` (6) regularly hands the outer members of a
+   tavern their first turn only once the player is *already* in earshot, costing
+   them the first of their two rolls. The measured city behaves like ~1.6 rolls a
+   head, not 2. `CURIOSITY_BASE` is 0.09 and the mean derived curiosity is 0.123,
+   which the arithmetic says is 23% and the city says is 19.3%. Do not re-derive
+   this number; re-measure it.
+
+The derivation is a caricature and is meant to be — `lore/characters/**/*.json`
+takes an optional `curiosity` that beats it outright, and none of the 500 shipped
+files needed to be touched to get the table above.
+
 ## What is left
 
 - **The boredom timer** (work order §2). Not written. Nothing in the city
   initiates *ex nihilo* now: a fishmonger cannot decide to cry his wares into a
   quiet street, because nothing has changed for him. The known cost the design
-  names, unchanged and still unbought.
-- **Curiosity** (work order §3, "who speaks first is a fact about the
-  character"). Not written. All six neighbours still greet you on arrival — one
-  turn each now rather than a rotation, which makes it affordable but no less
-  silly. This is the remaining *silliness* half of the feature; the *cost* half
-  is done.
+  names, unchanged and still unbought. Curiosity sharpens the point rather than
+  blunting it: the four people in five who now say nothing say nothing *for good*
+  until you speak, and if the streets read as dead this and `curiosity_scale` are
+  the two dials.
 
 ## Goal
 

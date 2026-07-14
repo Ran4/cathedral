@@ -25,7 +25,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::transform::TransformSystems;
 use cathedral_sim::{
-    Capabilities, DEFAULT_STAGE_MAX_ACTORS, DEFAULT_STAGE_RADIUS_M, EngineMessage,
+    Capabilities, CuriosityConfig, DEFAULT_STAGE_MAX_ACTORS, DEFAULT_STAGE_RADIUS_M, EngineMessage,
     IdleCognitionMode, StageConfig, StatusEvent, TtsBackendKind,
 };
 use serde::{Deserialize, Serialize};
@@ -98,6 +98,22 @@ pub struct IdleCognitionSettings {
     /// nothing: they think when somebody speaks, when a sound reaches them, or
     /// when the crowd around them changes — and otherwise they are simply quiet.
     pub require_news: bool,
+    /// Whether *speaking first* is a fact about the character rather than about
+    /// the scheduler (features/gate_idle_cognition_on_novelty.md §2). Ignored
+    /// unless `require_news`.
+    ///
+    /// News alone still let every one of the ~500 people you walk past think
+    /// about you the moment you appeared. With this on, roughly a fifth of them
+    /// do — beggars, hawkers and children rather more, the magistrate and the
+    /// anchoress rather less. Nothing here touches how anyone *answers*: speak to
+    /// the haughtiest man in the city and he replies at the same latency he
+    /// always did.
+    pub curiosity: bool,
+    /// Multiplies every character's curiosity. `1.0` is the calibrated city (see
+    /// the feature doc's measured table); raise it if the streets feel dead,
+    /// drop it if they feel like a market of touts. `0.0` silences all unprompted
+    /// initiative without touching a single reply.
+    pub curiosity_scale: f64,
 }
 
 impl Default for IdleCognitionSettings {
@@ -107,6 +123,8 @@ impl Default for IdleCognitionSettings {
             radius_m: DEFAULT_STAGE_RADIUS_M,
             max_actors: DEFAULT_STAGE_MAX_ACTORS,
             require_news: true,
+            curiosity: true,
+            curiosity_scale: 1.0,
         }
     }
 }
@@ -122,6 +140,13 @@ impl IdleCognitionSettings {
             // A rotation nobody is in would never idle at all; `mode: "all"` is
             // the way to say that on purpose.
             max_actors: self.max_actors.max(1),
+        }
+    }
+
+    pub fn curiosity(&self) -> CuriosityConfig {
+        CuriosityConfig {
+            enabled: self.curiosity,
+            scale: self.curiosity_scale,
         }
     }
 }

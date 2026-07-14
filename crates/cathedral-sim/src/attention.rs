@@ -15,6 +15,13 @@
 //! changes nothing for anybody, which is exactly why it must not buy another
 //! turn: that is the loop that pays to be told nothing happened.
 //!
+//! News was two thirds of the rule. It bought silence for free, but it still let
+//! *everybody* remark on the stranger who walked into their street, which is
+//! neither what a city sounds like nor what it should cost. So the third gate is
+//! **character** — [`CuriosityConfig`]: who speaks first is a fact about the
+//! person, not about the scheduler. It applies to unprompted initiative and to
+//! nothing else. An aloof NPC never opens, but always answers.
+//!
 //! It is pure and cheap: [`on_stage`] is a distance query the engine recomputes
 //! once per poll, [`Novelty`] is a hash comparison beside it, and [`IdleGate`]
 //! is all the scheduler ever learns about either. Nothing here gates the lanes
@@ -29,7 +36,11 @@ use std::{
 };
 
 use crate::{
-    HEARING_RADIUS_M, ITEM_INTERACTION_RADIUS_M, character::Control, ids::ActorId, world::World,
+    HEARING_RADIUS_M, ITEM_INTERACTION_RADIUS_M,
+    character::{Character, Control},
+    ids::ActorId,
+    lore::LoreProfile,
+    world::World,
 };
 
 /// Deliberately larger than `HEARING_RADIUS_M` (20 m).
@@ -218,8 +229,21 @@ pub struct Novelty {
 #[derive(Debug, Clone, Copy)]
 struct Memory {
     /// [`context_hash`] as it stood the moment their prompt was submitted — the
-    /// world exactly as that prompt showed it to them.
-    context: u64,
+    /// world exactly as that prompt showed it to them. `None` while they have
+    /// been *watched* but never *told*: on stage, owed their first thought, and
+    /// in the map only so that [`Memory::visit`] has somewhere to live.
+    context: Option<u64>,
+    /// Which meeting this is: `now.to_bits()` from the poll we first noticed
+    /// them, held unchanged for as long as the memory lives.
+    ///
+    /// It exists for the curiosity roll, which is otherwise a function of who
+    /// they are and what they are looking at — both permanent. Without a per-
+    /// meeting term the verdict would be a permanent fact about the pair of you:
+    /// the man who did not look up the first time you walked down his street
+    /// would never look up, in any hour of any run, because the street he is
+    /// looking at hashes the same every time. With it, each meeting is its own
+    /// roll, and a meeting ends where the memory does — on absence.
+    visit: u64,
     /// When we last cared about this actor: the last poll they were on stage, or
     /// the last turn they took. Entries lapse [`NOVELTY_MEMORY_SECONDS`] after
     /// that, which is also what keeps the map bounded by the cast the player has
@@ -238,8 +262,16 @@ impl Novelty {
     /// Called once per poll, before [`Self::has_news`].
     pub fn observe(&mut self, now: f64, stage: &BTreeSet<ActorId>) {
         for actor_id in stage {
-            if let Some(memory) = self.last_told.get_mut(actor_id) {
-                memory.touched_at = now;
+            match self.last_told.get_mut(actor_id) {
+                Some(memory) => memory.touched_at = now,
+                // Somebody new in front of the player. They are owed their first
+                // thought either way (`context: None` reads as news below); the
+                // entry exists so the meeting itself gets an identity, which is
+                // what stops the curiosity roll from being the same coin flip
+                // forever.
+                None => {
+                    self.last_told.insert(actor_id.clone(), Memory::new(now));
+                }
             }
         }
         // A NaN `now` would make every comparison false and retain everything,
@@ -263,13 +295,47 @@ impl Novelty {
         // non-empty one is *by construction* something they have not yet been
         // shown — including anything that arrived while their own prompt was in
         // flight.
+        !actor.inbox().is_empty() || self.context_is_new(world, actor_id)
+    }
+
+    /// Whether `actor_id` may take an idle turn: they have news, and — if the
+    /// only news is that the world in front of them changed shape — they are the
+    /// sort of person who says something about it.
+    ///
+    /// The split is the whole of the curiosity design. An **inbox** is somebody
+    /// else's initiative arriving: a word, a bell, a system line. It is answered
+    /// by everyone, aloof or not, and it is what makes the reticence below safe
+    /// to ship. A **changed context** is nobody's initiative — the world merely
+    /// rearranged itself in front of them — and remarking on that unbidden is
+    /// exactly the thing that is a fact about the character.
+    ///
+    /// With curiosity disabled this is [`Self::has_news`] exactly, which is what
+    /// lets the engine call it unconditionally.
+    pub fn admits_idle(
+        &self,
+        world: &World,
+        actor_id: &ActorId,
+        curiosity: &CuriosityConfig,
+    ) -> bool {
+        let Some(actor) = world.characters.get(actor_id) else {
+            return false;
+        };
         if !actor.inbox().is_empty() {
             return true;
         }
-        match self.last_told.get(actor_id) {
-            None => true,
-            Some(memory) => memory.context != context_hash(world, actor_id),
+        let context = context_hash(world, actor_id);
+        let memory = self.last_told.get(actor_id);
+        if memory.is_some_and(|memory| memory.context == Some(context)) {
+            return false;
         }
+        // `visit` defaults to zero for an actor with no memory at all, which the
+        // engine cannot produce (`observe` runs first) but a direct caller can.
+        opens_first(
+            actor_id,
+            context,
+            memory.map_or(0, |memory| memory.visit),
+            curiosity.chance(world, actor_id),
+        )
     }
 
     /// Record that `actor_id`'s prompt has gone out, showing them the world as it
@@ -280,13 +346,42 @@ impl Novelty {
     /// call is in flight must survive to be shown on their *next* turn. Stamping
     /// on completion would swallow it.
     pub fn told(&mut self, now: f64, world: &World, actor_id: &ActorId) {
-        self.last_told.insert(
-            actor_id.clone(),
-            Memory {
-                context: context_hash(world, actor_id),
-                touched_at: now,
-            },
-        );
+        let context = Some(context_hash(world, actor_id));
+        match self.last_told.get_mut(actor_id) {
+            Some(memory) => {
+                memory.context = context;
+                memory.touched_at = now;
+            }
+            // A turn taken off stage: a sound nudge, or an answer called back
+            // across a square the player has already left. The meeting starts
+            // here, because as far as this actor is concerned it just did.
+            None => {
+                self.last_told.insert(
+                    actor_id.clone(),
+                    Memory {
+                        context,
+                        ..Memory::new(now)
+                    },
+                );
+            }
+        }
+    }
+
+    fn context_is_new(&self, world: &World, actor_id: &ActorId) -> bool {
+        match self.last_told.get(actor_id) {
+            None => true,
+            Some(memory) => memory.context != Some(context_hash(world, actor_id)),
+        }
+    }
+}
+
+impl Memory {
+    fn new(now: f64) -> Self {
+        Self {
+            context: None,
+            visit: now.to_bits(),
+            touched_at: now,
+        }
     }
 }
 
@@ -350,6 +445,259 @@ pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
     }
 
     hasher.finish()
+}
+
+// --------------------------------------------------------------- curiosity
+//
+// Who opens their mouth first (`features/gate_idle_cognition_on_novelty.md` §2).
+// The novelty gate made silence free; it did not stop every one of the ~500
+// people you walk past from thinking about you the moment you appear. That is
+// both the bill and the silliness: a city where the magistrate, the gaoler and
+// the anchoress each remark on a passing stranger is not a city.
+
+/// The chance a person with no lore sheet remarks on you unbidden: all of it.
+///
+/// The demo trio, the test worlds, the headless fixtures — nobody there has a
+/// character to be aloof *about*, and a world with no cast metadata must behave
+/// exactly as it did before this feature. Reticence is a property of an authored
+/// person, not a default.
+pub const CURIOSITY_WITHOUT_LORE: f64 = 1.0;
+
+/// Where a derived curiosity starts, before trade, age and standing move it.
+///
+/// It is a calibration constant and not a judgement — raise it and more of the
+/// city speaks first — and the thing it is calibrated *against* is not itself.
+/// Each person you walk past gets two pieces of news (you enter their street, and
+/// then you enter their earshot) and each is rolled separately, so what a player
+/// experiences is not the mean curiosity but roughly `1 − (1 − p)²` of it. This
+/// value puts the measured per-passer-by rate at **19.3%** against a ~20% target,
+/// walking the whole shipped cast (`cathedral-backends/tests/curiosity_walk.rs`).
+///
+/// Do not reason the number out from the mean. Measure it: the walk is the only
+/// place the `max_actors` cap, the turn rate and the real spatial clustering of
+/// the cast are all in the room at once, and between them they cost about half a
+/// roll per person that the arithmetic above does not know about.
+pub const CURIOSITY_BASE: f64 = 0.09;
+
+/// Nobody is *entirely* deaf to a stranger, and nobody accosts every single one.
+const CURIOSITY_FLOOR: f64 = 0.01;
+const CURIOSITY_CEILING: f64 = 0.60;
+
+/// So that the roll is not a re-reading of the context hash's own bits.
+const CURIOSITY_SALT: u64 = 0x_c0ff_ee15_600d_1dea;
+
+/// Trades whose whole day is spent hailing strangers in the street. The list is
+/// the vocabulary of `lore/characters/`'s own directories, bucketed by one
+/// question: does this person make a living by speaking to someone who did not
+/// speak first?
+const STREET_TRADES: &[&str] = &[
+    "boatworker",
+    "draper",
+    "entertainer",
+    "fish_trader",
+    "food_provisioner",
+    "grocer_and_spicer",
+    "guide",
+    "healer",
+    "lamplighter",
+    "market_seller",
+    "messenger",
+    "pilgrim",
+    "salt_trader",
+    "scavenger",
+    "sex_worker",
+    "tavern_worker",
+];
+
+/// Office, cloister and ledger: people for whom addressing a passer-by is at
+/// best not their business and at worst beneath them. A merchant is here rather
+/// than among the traders above because he sells to a factor, not to a street.
+const RESERVED_TRADES: &[&str] = &[
+    "anchoress",
+    "bailiff_and_gaoler",
+    "bell_ringer",
+    "candor_cleric",
+    "church_attendant",
+    "civic_officer",
+    "court_officer",
+    "custody_clerk",
+    "executioner",
+    "freight_broker",
+    "funerary_worker",
+    "merchant",
+    "militia_and_soldier",
+    "money_dealer",
+    "revenue_worker",
+    "scholar",
+    "scribe_and_clerk",
+    "watchman_and_keeper",
+];
+
+/// Whether unprompted initiative is a fact about the character at all, and how
+/// far the whole city leans.
+///
+/// Off reproduces the pre-curiosity behavior exactly — everyone with news speaks
+/// — which is what keeps the sim's own tests and the headless runner honest, and
+/// what makes this a rebuild-free A/B in `config.ron`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CuriosityConfig {
+    pub enabled: bool,
+    /// Multiplies every derived *and* authored curiosity before the roll. The
+    /// one knob for "the city is too chatty" / "the city is dead" — the
+    /// character-to-character texture is preserved, only the mean moves.
+    pub scale: f64,
+}
+
+impl Default for CuriosityConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            scale: 1.0,
+        }
+    }
+}
+
+impl CuriosityConfig {
+    /// How likely `actor_id` is to remark on something nobody said to them.
+    ///
+    /// A garbage `config.ron` scale must not make the city silent by accident or
+    /// panic the roll: `f64::max` returns the other operand for NaN, so nonsense
+    /// sanitizes to zero rather than propagating.
+    pub fn chance(&self, world: &World, actor_id: &ActorId) -> f64 {
+        if !self.enabled {
+            return 1.0;
+        }
+        (curiosity_of(world, actor_id) * self.scale.max(0.0)).clamp(0.0, 1.0)
+    }
+}
+
+/// The character's own willingness to speak first, before [`CuriosityConfig`]'s
+/// city-wide scale.
+pub fn curiosity_of(world: &World, actor_id: &ActorId) -> f64 {
+    world
+        .characters
+        .get(actor_id)
+        .and_then(Character::lore)
+        .map_or(CURIOSITY_WITHOUT_LORE, curiosity_from_lore)
+}
+
+fn curiosity_from_lore(profile: &LoreProfile) -> f64 {
+    // The authored number is the last word, and it is precisely what licenses the
+    // caricature below. A derivation from age and trade is a fine *default* and a
+    // terrible *verdict*: it will say that every guard is aloof and every child
+    // is a chatterbox, and for some guard and some child it will be wrong. That
+    // character gets a `curiosity` in their own JSON, and none of the other 499
+    // files are touched.
+    if let Some(curiosity) = profile.curiosity {
+        return curiosity.clamp(0.0, 1.0);
+    }
+    derived_curiosity(profile)
+}
+
+/// Curiosity from the metadata the cast already carries. Kept legible and modest
+/// on purpose — every term here is a stereotype, and the size of each is the
+/// size of the apology owed for it.
+///
+/// Deliberately *not* a function of [`Significance`](crate::Significance), which
+/// already sets the completion caps. The two are orthogonal and must stay so: an
+/// ambient child is cheap and highly curious, a major canon is expensive and
+/// aloof, and one field cannot mean both.
+fn derived_curiosity(profile: &LoreProfile) -> f64 {
+    let mut curiosity = CURIOSITY_BASE;
+
+    // No fixed trade at all — the paupers, the dependents, the people the
+    // validator makes carry a support status. The street is not where they work;
+    // it is where they live, and a stranger in it is the day's event.
+    curiosity += match profile.occupation_id.as_deref() {
+        None => 0.10,
+        Some(occupation) if STREET_TRADES.contains(&occupation) => 0.09,
+        Some(occupation) if RESERVED_TRADES.contains(&occupation) => -0.05,
+        Some(_) => 0.0,
+    };
+
+    // Children are curious; the very old have seen strangers before.
+    curiosity += match profile.age {
+        ..=14 => 0.09,
+        15..=24 => 0.02,
+        70.. => -0.02,
+        _ => 0.0,
+    };
+
+    // Standing, and the two ways the cast carries it. `title` is *not* one of
+    // them: the loader requires a title of everyone with a trade, so "Blacksmith"
+    // is a job and not a station, and reading it as rank would make the whole
+    // city haughty.
+    if matches!(
+        profile.rank.as_deref(),
+        Some("master" | "mistress" | "warden")
+    ) {
+        curiosity -= 0.03;
+    }
+    // A sworn conspirator keeps his head down: the last thing a paid moth of the
+    // Custody wants is to be the man who struck up a conversation.
+    if profile.faction_role.is_some() {
+        curiosity -= 0.04;
+    }
+
+    // Professionally curious in the most literal sense: a beggar has to speak
+    // first, because it is the entire job. Counted **once** — `begs_regularly`
+    // and `alms_dependent` are the same fact told twice, and most of the cast
+    // that carries one carries the other, so adding both would buy the same
+    // person the bonus twice over on nothing but bookkeeping.
+    if profile
+        .statuses
+        .iter()
+        .any(|status| matches!(status.as_str(), "begs_regularly" | "alms_dependent"))
+    {
+        curiosity += 0.10;
+    }
+    for status in &profile.statuses {
+        curiosity += match status.as_str() {
+            "unhoused" => 0.02,
+            "enclosed_religious" => -0.06,
+            "prisoner" => -0.04,
+            "retired" => -0.02,
+            _ => 0.0,
+        };
+    }
+
+    curiosity.clamp(CURIOSITY_FLOOR, CURIOSITY_CEILING)
+}
+
+/// The verdict on one piece of news — and the one thing about it that matters is
+/// that it is **stable**.
+///
+/// The engine polls at 60 Hz and the news outlives the poll: an actor who has
+/// noticed you keeps on having noticed you until they take a turn. A fresh draw
+/// each poll would therefore turn any chance at all into a certainty within a
+/// frame or two — a 20% NPC would open his mouth on his fifth poll, which is to
+/// say always, and the gate would be theatre. So there is no draw. The die *is*
+/// the news: who they are, what they are looking at, and which meeting this is.
+/// The same news yields the same verdict forever, and it changes only when the
+/// news does (`the_same_news_never_changes_its_mind`).
+fn opens_first(actor_id: &ActorId, context: u64, visit: u64, chance: f64) -> bool {
+    // NaN is spelled out rather than left to `<=`, which would answer `false` and
+    // let a garbage chance fall through to the roll. A chance nobody can read is
+    // silence, not a coin flip.
+    if chance.is_nan() || chance <= 0.0 {
+        return false;
+    }
+    if chance >= 1.0 {
+        return true;
+    }
+    let mut hasher = DefaultHasher::new();
+    CURIOSITY_SALT.hash(&mut hasher);
+    actor_id.as_str().hash(&mut hasher);
+    context.hash(&mut hasher);
+    visit.hash(&mut hasher);
+    uniform(hasher.finish()) < chance
+}
+
+/// A hash's top 53 bits as a uniform `[0, 1)` — the same construction a float RNG
+/// uses, and the reason `DefaultHasher`'s weaker low bits never reach the
+/// comparison.
+fn uniform(hash: u64) -> f64 {
+    (hash >> 11) as f64 / (1u64 << 53) as f64
 }
 
 #[cfg(test)]
@@ -694,6 +1042,288 @@ mod tests {
         assert_eq!(
             IdleCognitionMode::from_config("nonsense"),
             IdleCognitionMode::Stage
+        );
+    }
+
+    // ------------------------------------------------------------- curiosity
+
+    use crate::{PlanningWard, Significance, lore::LoreProfile};
+
+    /// The shape of a shipped lore sheet, with only the fields curiosity reads
+    /// left interesting.
+    fn profile() -> LoreProfile {
+        LoreProfile {
+            significance: Significance::Ambient,
+            planning_ward: PlanningWard::Fabric,
+            age: 40,
+            gender: "f".into(),
+            occupation_id: Some("mason".into()),
+            occupation_display: Some("Mason".into()),
+            title: Some("Mason".into()),
+            rank: None,
+            faction_role: None,
+            illegal_activity: None,
+            district: "The Gradine".into(),
+            father: None,
+            mother: None,
+            children: Vec::new(),
+            statuses: Vec::new(),
+            conditions: Vec::new(),
+            core_character_description: "You lay stone.".into(),
+            extended_character_description: String::new(),
+            curiosity: None,
+        }
+    }
+
+    /// A world in which `near` is somebody in particular.
+    fn world_with(profile: LoreProfile) -> World {
+        let mut world = world();
+        world
+            .characters
+            .get_mut(&ActorId::from_raw("near"))
+            .unwrap()
+            .sheet
+            .lore = Some(profile);
+        world
+    }
+
+    fn on(scale: f64) -> CuriosityConfig {
+        CuriosityConfig {
+            enabled: true,
+            scale,
+        }
+    }
+
+    /// **The correctness trap.** The engine polls at 60 Hz and the news outlives
+    /// the poll — an actor who has noticed you keeps on having noticed you until
+    /// he takes a turn. A fresh draw per poll would therefore make a 20% chance
+    /// a certainty inside of a frame or two: he would refuse four times and open
+    /// his mouth on the fifth, which is to say always, and the gate would buy
+    /// nothing at all.
+    ///
+    /// So the verdict is a function of the news, not of the clock. It never
+    /// flips while the news stands.
+    #[test]
+    fn the_same_news_never_changes_its_mind() {
+        let world = world_with(LoreProfile {
+            curiosity: Some(0.2),
+            ..profile()
+        });
+        let near = ActorId::from_raw("near");
+        let stage: BTreeSet<ActorId> = [near.clone()].into_iter().collect();
+
+        let mut novelty = Novelty::default();
+        novelty.observe(0.0, &stage);
+        // The whole point of the gate: this actor *has news* (he has never
+        // thought at all), and the only question left is whether he is the sort
+        // of person who says anything about it.
+        assert!(novelty.has_news(&world, &near));
+        let verdict = novelty.admits_idle(&world, &near, &on(1.0));
+
+        let mut now = 0.0;
+        for poll in 0..600 {
+            now += 1.0 / 60.0;
+            novelty.observe(now, &stage);
+            assert_eq!(
+                novelty.admits_idle(&world, &near, &on(1.0)),
+                verdict,
+                "the roll was re-drawn on poll {poll}: a chance became a certainty"
+            );
+        }
+    }
+
+    /// *"An aloof NPC never opens, but always answers."* The inbox is somebody
+    /// else's initiative arriving — a word, a bell, a system line — and curiosity
+    /// has no opinion about it. Only the changed-context branch is rolled.
+    ///
+    /// This is what makes the reticence safe to ship: speak to the haughtiest
+    /// magistrate in the city and he is idle-eligible on the very next poll.
+    #[test]
+    fn an_aloof_npc_never_opens_but_always_answers() {
+        let mut world = world_with(LoreProfile {
+            curiosity: Some(0.0),
+            ..profile()
+        });
+        let near = ActorId::from_raw("near");
+        let stage: BTreeSet<ActorId> = [near.clone()].into_iter().collect();
+        let mut novelty = Novelty::default();
+        novelty.observe(0.0, &stage);
+
+        // A stranger has walked into his street. He has news, and he does not
+        // care to remark on it — not now, not on any later poll.
+        assert!(novelty.has_news(&world, &near));
+        assert!(!novelty.admits_idle(&world, &near, &on(1.0)));
+
+        // The stranger speaks. He answers, exactly as he always did.
+        world
+            .characters
+            .get_mut(&near)
+            .unwrap()
+            .notify_percept("PLAYER said to you: \"Good evening.\"".to_string());
+        assert!(novelty.admits_idle(&world, &near, &on(1.0)));
+    }
+
+    /// Curiosity is a fact about the *character*, and the character is read off
+    /// the sheet the cast already carries. Legible, modest, and — where it is
+    /// wrong — overridable.
+    #[test]
+    fn curiosity_is_derived_from_the_person() {
+        let tradesman = derived_curiosity(&profile());
+
+        let beggar = derived_curiosity(&LoreProfile {
+            occupation_id: None,
+            occupation_display: None,
+            title: None,
+            statuses: vec!["pauper".into(), "begs_regularly".into()],
+            ..profile()
+        });
+        let hawker = derived_curiosity(&LoreProfile {
+            occupation_id: Some("market_seller".into()),
+            ..profile()
+        });
+        let child = derived_curiosity(&LoreProfile {
+            age: 9,
+            ..profile()
+        });
+        let watchman = derived_curiosity(&LoreProfile {
+            occupation_id: Some("watchman_and_keeper".into()),
+            ..profile()
+        });
+        let canon = derived_curiosity(&LoreProfile {
+            occupation_id: Some("candor_cleric".into()),
+            rank: Some("master".into()),
+            age: 71,
+            ..profile()
+        });
+
+        assert!(beggar > hawker, "{beggar} !> {hawker}");
+        assert!(hawker > tradesman, "{hawker} !> {tradesman}");
+        assert!(child > tradesman, "{child} !> {tradesman}");
+        assert!(tradesman > watchman, "{tradesman} !> {watchman}");
+        assert!(watchman > canon, "{watchman} !> {canon}");
+        // Nobody is *entirely* deaf to a stranger, and nobody accosts every one.
+        assert!(canon >= CURIOSITY_FLOOR && beggar <= CURIOSITY_CEILING);
+
+        // Significance is the completion budget and nothing else. An ambient
+        // child is cheap and forward; a major canon is expensive and aloof.
+        let major = derived_curiosity(&LoreProfile {
+            significance: Significance::Major,
+            ..profile()
+        });
+        assert_eq!(major, tradesman);
+    }
+
+    /// The escape hatch from the caricature above. The derivation will say that
+    /// every guard is aloof, and for some guard it will be wrong — so his own
+    /// file gets the last word, and the other 499 are not touched.
+    #[test]
+    fn an_authored_curiosity_beats_the_derivation() {
+        let chatty_watchman = LoreProfile {
+            occupation_id: Some("watchman_and_keeper".into()),
+            curiosity: Some(0.9),
+            ..profile()
+        };
+        assert_eq!(curiosity_from_lore(&chatty_watchman), 0.9);
+
+        let world = world_with(chatty_watchman);
+        assert_eq!(curiosity_of(&world, &ActorId::from_raw("near")), 0.9);
+    }
+
+    /// A world with no lore is the world before this feature: the demo trio, the
+    /// fixtures, the headless seed. Reticence is a property of an authored
+    /// person, and there is nobody here to be reticent.
+    #[test]
+    fn nobody_without_a_lore_sheet_is_aloof() {
+        let world = world();
+        let near = ActorId::from_raw("near");
+        assert_eq!(curiosity_of(&world, &near), CURIOSITY_WITHOUT_LORE);
+        assert!(on(1.0).chance(&world, &near) >= 1.0);
+
+        let mut novelty = Novelty::default();
+        novelty.observe(0.0, &[near.clone()].into_iter().collect());
+        assert!(novelty.admits_idle(&world, &near, &on(1.0)));
+        // …and disabled, everyone with news speaks, lore or no lore. That is what
+        // makes `config.ron: curiosity: false` an honest A/B.
+        assert!(novelty.admits_idle(&world, &near, &CuriosityConfig::default()));
+    }
+
+    /// The one tuning knob. It moves the city's mean without touching the
+    /// character-to-character texture — and a fat-fingered `config.ron` must
+    /// silence the streets or leave them be, never panic the roll.
+    #[test]
+    fn the_scale_moves_the_whole_city_and_survives_garbage() {
+        let world = world_with(LoreProfile {
+            curiosity: Some(0.2),
+            ..profile()
+        });
+        let near = ActorId::from_raw("near");
+
+        assert!((on(1.0).chance(&world, &near) - 0.2).abs() < 1e-9);
+        assert!((on(0.5).chance(&world, &near) - 0.1).abs() < 1e-9);
+        // Clamped, not wrapped: 10 × 0.2 is "always", not 2.0.
+        assert_eq!(on(10.0).chance(&world, &near), 1.0);
+
+        for scale in [0.0, -1.0, f64::NAN] {
+            assert_eq!(on(scale).chance(&world, &near), 0.0, "scale {scale}");
+        }
+        let mut novelty = Novelty::default();
+        novelty.observe(0.0, &[near.clone()].into_iter().collect());
+        assert!(!novelty.admits_idle(&world, &near, &on(f64::NAN)));
+    }
+
+    /// The roll has to actually be a *roll*: a chance of `p` has to admit about
+    /// `p` of the cast, or the calibration in the feature doc is a fiction.
+    #[test]
+    fn the_roll_is_uniform_across_the_cast() {
+        for chance in [0.05, 0.2, 0.5] {
+            let admitted = (0..2_000)
+                .filter(|index| {
+                    let actor_id = ActorId::from_raw(format!("a{index:04}"));
+                    opens_first(&actor_id, 0x_dead_beef, 0x_1234, chance)
+                })
+                .count();
+            let rate = admitted as f64 / 2_000.0;
+            assert!(
+                (rate - chance).abs() < 0.03,
+                "a {chance} chance admitted {rate} of the cast"
+            );
+        }
+    }
+
+    /// The same street, the same face, and yet he might look up this time.
+    ///
+    /// Without a per-meeting term the roll would be a function of who you are and
+    /// what you are looking at — both permanent — so the man who ignored you on
+    /// Tuesday would ignore you on every Tuesday there has ever been. The
+    /// meeting is what makes it a *chance* rather than a caste.
+    #[test]
+    fn a_new_meeting_is_a_new_roll() {
+        let world = world_with(LoreProfile {
+            curiosity: Some(0.3),
+            ..profile()
+        });
+        let near = ActorId::from_raw("near");
+        let stage: BTreeSet<ActorId> = [near.clone()].into_iter().collect();
+        let empty = BTreeSet::new();
+        let mut novelty = Novelty::default();
+
+        // One walk down the street per lap. The crowd, the faces and the context
+        // hash are identical every time — only the meeting is new, and only
+        // because the player was genuinely gone in between.
+        let mut now = 0.0;
+        let verdicts: Vec<bool> = (0..40)
+            .map(|_| {
+                now += NOVELTY_MEMORY_SECONDS * 2.0;
+                novelty.observe(now, &empty);
+                now += 1.0;
+                novelty.observe(now, &stage);
+                novelty.admits_idle(&world, &near, &on(1.0))
+            })
+            .collect();
+
+        assert!(
+            verdicts.contains(&true) && verdicts.contains(&false),
+            "every meeting drew the same verdict: the roll is a caste, not a chance"
         );
     }
 }

@@ -40,7 +40,7 @@ use cathedral_backends::{
     world_data::load_world_seed_with_knowledge,
 };
 use cathedral_sim::{
-    ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion,
+    ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion, CuriosityConfig,
     DEFAULT_VIEW_CONE_DEGREES, Engine, EngineCommand, EngineConfig, EngineMessage, FakeCognition,
     IdleCognitionMode, NullSight, NullTranscription, NullTts, PlayerKnowledge, PromptEnv,
     RequestId, SoundCatalog, StageConfig, TtsBackendKind, Vec3, World, WorldSeed,
@@ -107,6 +107,14 @@ struct Args {
     /// than you asked for is the feature working — nobody had anything to say.
     #[arg(long)]
     news: bool,
+
+    /// also let character decide who speaks first, as the game does (implies --news)
+    ///
+    /// Roughly four in five people you walk past keep their thoughts to
+    /// themselves; the beggars and the hawkers do not. It gates *initiative*
+    /// only — a `say` addressed to an aloof NPC is answered exactly as before.
+    #[arg(long)]
+    curiosity: bool,
 
     /// LLM provider override (moonshot | openai); beats LLM_PROVIDER
     #[arg(long)]
@@ -251,13 +259,18 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             // named, so there is no directory to name it in.
             runtime_dir: PathBuf::new(),
             // `--news` is meaningless ungated, so it implies `--stage` rather
-            // than silently doing nothing.
-            idle_mode: match args.stage || args.news {
+            // than silently doing nothing — and `--curiosity` is meaningless
+            // without news for the same reason, so it implies both.
+            idle_mode: match args.stage || args.news || args.curiosity {
                 true => IdleCognitionMode::Stage,
                 false => IdleCognitionMode::All,
             },
             stage: StageConfig::default(),
-            idle_requires_news: args.news,
+            idle_requires_news: args.news || args.curiosity,
+            idle_curiosity: CuriosityConfig {
+                enabled: args.curiosity,
+                ..CuriosityConfig::default()
+            },
         },
         &assets.seed,
         assets.areas,
@@ -281,7 +294,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         verbose: args.verbose,
         printed_lines: 0,
         provider_failed: false,
-        requires_news: args.news,
+        requires_news: args.news || args.curiosity,
     };
     runner.run_ticks(args.ticks)?;
     runner.print_final_state();

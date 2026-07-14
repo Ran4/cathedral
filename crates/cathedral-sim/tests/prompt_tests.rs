@@ -430,6 +430,7 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
         conditions: vec!["singed eyebrows".into()],
         core_character_description: "The prompt uses back_story for this.".into(),
         extended_character_description: "SECRET EXTENDED DETAIL".into(),
+        curiosity: None,
     });
 
     let rendered = render_prompt(&world, &actor("sv3n1"), None, &env).unwrap();
