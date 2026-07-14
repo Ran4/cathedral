@@ -44,10 +44,41 @@ prefix and differing tails:
 
 The openai endpoint does **whole-prompt** caching, not prefix caching. It
 reports `cache_write_tokens` on every single call and `cached_tokens: 0`
-forever. Neither plain-string content (instead of the parts array) nor openai's
-own `prompt_cache_key` routing hint changes it. Warming the prefix with repeat
-calls does not change it either — only an exact, byte-identical prompt hits,
-which never happens in the game because the sheet differs every turn.
+forever. Only an exact, byte-identical prompt hits — which never happens in the
+game, because the sheet differs every turn.
+
+This was not taken on one probe's word. Every client-side lever was tried
+against `{static}{sheet}`, and all nine read `cached_tokens: 0`:
+
+| Lever tried | Hit rate |
+|---|---|
+| Static prefix inline in one user message (what we ship) | 0% |
+| Static prefix as its own byte-identical `system` message | 0% |
+| Static prefix at ~8k tokens, inline *and* as a system message | 0% |
+| Plain-string content instead of the parts array | 0% |
+| `prompt_cache_key` (openai's routing hint) | 0% |
+| `prompt_cache_retention: "24h"` | 0% |
+| `/v1/responses` with `instructions` (the field built to be the cached prefix) | 0% |
+| `cache_control: {type: ephemeral}` breakpoint on the message | 0% |
+| `cache_control` breakpoint on the content part | 0% |
+| **byte-identical whole prompt** (the positive control) | **100%** |
+
+Two of those deserve their own note, because they are the ones that would
+otherwise leave the question open:
+
+- **The ~8k-token prefix** rules out an unmet minimum. The documented threshold
+  is 1,024 tokens; ours clears it four times over and still reads zero.
+- **The `cache_control` breakpoints** *appear* to be accepted (HTTP 200), which
+  looks like GPT-5.6's explicit-breakpoint feature working. It is not. The API
+  silently ignores unknown fields **inside** messages while strictly rejecting
+  unknown **top-level** ones (`Unknown parameter: 'prompt_cache'`). That
+  asymmetry is itself the proof: `prompt_cache_key` and `prompt_cache_retention`
+  are the *only* cache parameters this endpoint admits, so there is no explicit
+  breakpoint to set, and the one that "worked" was being dropped on the floor.
+
+The positive control is what makes this conclusive rather than a timing artifact:
+a byte-identical prompt hits within seconds. The cache is live and fast. It just
+has no prefix semantics.
 
 Live 8-turn headless runs, same workload, real prompts:
 
@@ -92,6 +123,14 @@ character-quality call, not a cost call. Nothing was switched.
 
 If openai stays, this feature's win is zero and the cost work has to come from
 `features/gate_idle_cognition_on_novelty.md` (fewer calls) instead.
+
+**Worth checking against the real bill:** the openai endpoint reports
+`cache_write_tokens` ≈ the whole prompt on *every* call. Cache writes are said
+to cost more than plain input on gpt-5.6 (~1.25×). If that holds here, the game
+is paying a write premium every turn and never once reading the write back,
+which would make the openai path *more* expensive than having no cache at all.
+`PRICING` bills one flat input rate and cannot see the difference, so only the
+provider's invoice can answer it.
 
 ## Related
 

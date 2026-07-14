@@ -26,17 +26,40 @@
 //! * **moonshot** (`kimi-k2.5`) does real prefix caching. A live 8-turn run
 //!   reports 63% of input tokens served from cache (`cached_tokens`, which it
 //!   sends both top-level and under `prompt_tokens_details`).
-//! * **openai** (`gpt-5.6-luna`) does **not**. It caches whole prompts: an
-//!   identical prompt hits, but a shared 2k-token prefix with a different tail
-//!   never does — it reports `cache_write_tokens` on every call and
-//!   `cached_tokens: 0` forever. Neither plain-string content nor openai's
-//!   `prompt_cache_key` routing hint changes this. The same 8-turn run reports
-//!   a 0% hit rate.
+//! * **openai** (`gpt-5.6-luna`) does **not**, whatever the docs say about
+//!   automatic prefix caching. It caches *whole prompts*: a byte-identical
+//!   prompt hits within seconds, but a shared prefix with a different tail never
+//!   does. It reports `cache_write_tokens` on every call and `cached_tokens: 0`
+//!   forever. The same 8-turn run reports a 0% hit rate.
+//!
+//! Every client-side lever was tried against `{static}{sheet}` before concluding
+//! that, and all nine read zero: the prefix inline or as its own `system`
+//! message; at ~2k and at ~8k tokens (so no minimum is unmet); with
+//! `prompt_cache_key`; with `prompt_cache_retention: "24h"`; through
+//! `/v1/responses` with `instructions`; and with an anthropic-style
+//! `cache_control` breakpoint on the message and on the content part — which the
+//! API *accepts* only because it silently ignores unknown fields **inside**
+//! messages, while strictly rejecting unknown top-level ones. That strictness is
+//! the proof there is no explicit-breakpoint parameter to reach for:
+//! `prompt_cache_key` and `prompt_cache_retention` are the only cache parameters
+//! the endpoint admits, and neither buys a prefix read.
+//!
+//! The positive control is what makes this conclusive rather than a timing
+//! artifact: a byte-identical prompt hits *immediately*, so the cache is live
+//! and fast — it simply has no prefix semantics. A game prompt is never
+//! byte-identical twice, because the sheet changes every turn.
 //!
 //! So the reordering is worth ~60% of the input bill on moonshot and nothing at
 //! all on openai. [`UsageLedger::prompt_totals`] is what settles the question
 //! for any future provider: if the hit rate is 0%, the prefix is not being
 //! reused, whatever the docs promise.
+//!
+//! One thing worth checking against the actual bill: this endpoint reports
+//! `cache_write_tokens` ≈ the whole prompt on *every* call. If cache writes
+//! carry a premium over plain input (they are said to on gpt-5.6), the game is
+//! paying it on every turn and never once recouping it — which would make the
+//! openai path *dearer* than having no cache at all. [`PRICING`] charges one
+//! flat input rate and cannot see the difference.
 
 use std::{
     collections::BTreeMap,
