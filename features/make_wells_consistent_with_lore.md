@@ -5,7 +5,8 @@ For now just implement these 5:
 1. Add visible fixtures for Slate Cistern, Tenter Cistern, Lodge Well, Three-Curb, Chain Well, Reed Cistern, Step Cistern, and Bitter Well, plus the Shambles well and Seven Lofts fire tanks.
 2. Replace the single generic well renderer with distinct well/cistern variants, and improve Ford Well with a hollow opening, visible water, bucket mechanism, trough, drainage, and accurate collision.
 3. Add named area records for every source so NPC prompts can identify their locations.
-4. Add appropriate water, bucket, chain, windlass, trough, gutter, and cistern audio.
+4. Add appropriate water, bucket, chain, windlass, trough, gutter, and cistern audio. Feel free to use the
+   ELEVENLABS_API_KEY
 5. Update the hardcoded fixture/place/area tests in src/city/plan.rs:220.
 
 Note: the authoritative runtime city plan is lore/places/ombreval_buildings.json, despite living under lore/.
