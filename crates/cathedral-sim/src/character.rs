@@ -269,20 +269,32 @@ mod tests {
         }
     }
 
+    /// Written against the bound itself, not a copy of its value: this test is
+    /// what says raising `RECENT_HISTORY_MAX_ENTRIES` keeps the *newest* lines,
+    /// and it stops saying that the moment it hardcodes the old number.
     #[test]
     fn recent_history_is_bounded_and_drops_the_oldest() {
+        const OVERFLOW: usize = 3;
+        let offered = RECENT_HISTORY_MAX_ENTRIES + OVERFLOW;
+
         let mut character = Character::from_sheet(sheet(Control::Llm));
-        for index in 0..19 {
+        for index in 0..offered {
             character.notify_percept(format!("line {index}"));
         }
+        // pending_history is unbounded — everything perceived is offered.
         let presented = character.take_pending_history();
-        assert_eq!(presented.len(), 19);
+        assert_eq!(presented.len(), offered);
         assert!(character.pending_history().is_empty());
 
         character.absorb_presented_history(&presented);
-        assert_eq!(character.recent_history().len(), RECENT_HISTORY_MAX_ENTRIES);
-        assert_eq!(character.recent_history()[0], "line 3");
-        assert_eq!(character.recent_history()[15], "line 18");
+        let history = character.recent_history();
+        assert_eq!(history.len(), RECENT_HISTORY_MAX_ENTRIES);
+        // The three oldest fell off the front; the newest line survived.
+        assert_eq!(history[0], format!("line {OVERFLOW}"));
+        assert_eq!(
+            history[RECENT_HISTORY_MAX_ENTRIES - 1],
+            format!("line {}", offered - 1)
+        );
     }
 
     #[test]

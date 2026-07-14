@@ -706,12 +706,50 @@ mod tests {
         assert_eq!(py_repr("a\nb\\c"), "'a\\nb\\\\c'");
     }
 
+    /// Recursively count the character files the loader would discover.
+    fn count_character_files(directory: &Path) -> usize {
+        std::fs::read_dir(directory)
+            .expect("the lore character directory is readable")
+            .map(|entry| entry.expect("a readable directory entry").path())
+            .map(|path| {
+                if path.is_dir() {
+                    count_character_files(&path)
+                } else {
+                    usize::from(
+                        path.extension()
+                            .is_some_and(|extension| extension == "json"),
+                    )
+                }
+            })
+            .sum()
+    }
+
     #[test]
     fn the_shipped_assets_load() {
         let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"), false)
             .expect("the shipped assets load");
         assert_eq!(assets.player_spawn().0, Vec3::new(0.0, 0.91, 95.0));
-        assert_eq!(assets.seed.characters.len(), 104);
+
+        // The cast is seed.json's own characters plus every file below
+        // lore/characters. Deriving that total rather than copying it keeps the
+        // test from going stale each time the city gains a citizen — and, unlike
+        // a hardcoded number, it fails when a character file silently does not
+        // compose into the seed, which is the thing actually worth catching.
+        let base: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string("../../assets/world/seed.json").expect("the seed is readable"),
+        )
+        .expect("the seed parses");
+        let in_seed = base["characters"]
+            .as_array()
+            .expect("the seed lists characters")
+            .len();
+        let in_lore = count_character_files(Path::new("../../lore/characters"));
+
+        assert!(
+            in_lore > 100,
+            "the lore cast lost its characters: {in_lore}"
+        );
+        assert_eq!(assets.seed.characters.len(), in_seed + in_lore);
     }
 
     /// A canned chat-completions endpoint: enough HTTP to answer reqwest, and
