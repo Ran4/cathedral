@@ -17,6 +17,8 @@ pub(super) const DEGRADED: Color = Color::srgb(0.97, 0.74, 0.31);
 pub(super) const OFFLINE: Color = Color::srgb(0.96, 0.40, 0.36);
 pub(super) const LOADER_TRACK: Color = Color::srgba(0.24, 0.25, 0.27, 0.92);
 const PLAYER_TRANSCRIPT_LIFETIME: Duration = Duration::from_secs(8);
+const CONNECTION_FONT_SIZE: f32 = 21.0;
+const CONNECTION_DETAIL_FONT_SIZE: f32 = 15.75;
 const VOICE_PANEL_FONT_SIZE: f32 = 15.6;
 const VOICE_PANEL_CONTROLS_FONT_SIZE: f32 = 11.7;
 
@@ -303,6 +305,8 @@ impl SmartActorHudState {
 }
 
 #[derive(Component)]
+pub(super) struct SmartActorStatusPanel;
+#[derive(Component)]
 pub(super) struct ConnectionText;
 #[derive(Component)]
 pub(super) struct ConnectionDetailText;
@@ -339,6 +343,7 @@ pub fn spawn_smart_actor_hud(mut commands: Commands, fonts: Option<Res<Cathedral
     commands
         .spawn((
             Name::new("Smart actor status"),
+            SmartActorStatusPanel,
             Node {
                 position_type: PositionType::Absolute,
                 top: px(18),
@@ -353,6 +358,7 @@ pub fn spawn_smart_actor_hud(mut commands: Commands, fonts: Option<Res<Cathedral
             },
             BackgroundColor(PANEL),
             ZIndex(12),
+            Visibility::Hidden,
         ))
         .with_children(|panel| {
             panel.spawn((
@@ -360,7 +366,7 @@ pub fn spawn_smart_actor_hud(mut commands: Commands, fonts: Option<Res<Cathedral
                 Text::new("ACTORS STARTING"),
                 TextFont {
                     font: display_font.clone(),
-                    font_size: FontSize::Px(14.0),
+                    font_size: FontSize::Px(CONNECTION_FONT_SIZE),
                     ..default()
                 },
                 TextColor(DEGRADED),
@@ -370,7 +376,7 @@ pub fn spawn_smart_actor_hud(mut commands: Commands, fonts: Option<Res<Cathedral
                 Text::new("Launching local service…"),
                 TextFont {
                     font: body_font.clone(),
-                    font_size: FontSize::Px(10.5),
+                    font_size: FontSize::Px(CONNECTION_DETAIL_FONT_SIZE),
                     ..default()
                 },
                 TextColor(MUTED),
@@ -781,6 +787,38 @@ fn set_optional_text(value: &str, text: &mut Text, node: Option<&mut Node>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn actor_status_is_hidden_by_default_and_uses_larger_text() {
+        let mut app = App::new();
+        app.add_systems(Startup, spawn_smart_actor_hud);
+        app.update();
+
+        let world = app.world_mut();
+        let visibility = world
+            .query_filtered::<&Visibility, With<SmartActorStatusPanel>>()
+            .single(world)
+            .expect("actor status panel exists");
+        assert_eq!(*visibility, Visibility::Hidden);
+
+        let connection_font = world
+            .query_filtered::<&TextFont, With<ConnectionText>>()
+            .single(world)
+            .expect("connection text exists");
+        assert_eq!(
+            connection_font.font_size,
+            FontSize::Px(CONNECTION_FONT_SIZE)
+        );
+
+        let detail_font = world
+            .query_filtered::<&TextFont, With<ConnectionDetailText>>()
+            .single(world)
+            .expect("connection detail text exists");
+        assert_eq!(
+            detail_font.font_size,
+            FontSize::Px(CONNECTION_DETAIL_FONT_SIZE)
+        );
+    }
 
     #[test]
     fn centered_readability_text_uses_compact_neutral_backdrops() {

@@ -12,7 +12,7 @@ use cathedral_sim::{Area, AreaBox, AreaMap, Vec3 as SimVec3};
 
 use crate::{controller::PlayerCamera, fonts::CathedralFonts};
 
-use super::local_engine::LocalEngine;
+use super::{hud::SmartActorStatusPanel, local_engine::LocalEngine};
 
 const BOX_LABEL_WIDTH_PX: f32 = 280.0;
 const BOX_LABEL_Y_OFFSET_PX: f32 = 25.0;
@@ -218,6 +218,20 @@ pub(super) fn update_area_debug_ui(
         node.left = px(viewport.x - BOX_LABEL_WIDTH_PX * 0.5);
         node.top = px(viewport.y - BOX_LABEL_Y_OFFSET_PX);
         *visibility = Visibility::Inherited;
+    }
+}
+
+/// Keep developer-only actor connection diagnostics with the area debug layer.
+pub(super) fn update_actor_status_visibility(
+    state: Res<AreaDebugState>,
+    mut status_panel: Query<&mut Visibility, With<SmartActorStatusPanel>>,
+) {
+    for mut visibility in &mut status_panel {
+        *visibility = if state.enabled {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
     }
 }
 

@@ -337,6 +337,7 @@ impl Plugin for SmartActorsPlugin {
                     sound::play_sound_effects,
                     sound::expire_stalled_sound_effects,
                     area_debug::update_area_debug_ui,
+                    area_debug::update_actor_status_visibility,
                     hud::update_smart_actor_hud,
                 )
                     .chain()
@@ -1562,6 +1563,15 @@ mod tests {
         assert!(app.world().resource::<SmartActorRuntime>().ready);
         app.update();
 
+        {
+            let world = app.world_mut();
+            let visibility = world
+                .query_filtered::<&Visibility, With<hud::SmartActorStatusPanel>>()
+                .single(world)
+                .expect("the actor status panel exists");
+            assert_eq!(*visibility, Visibility::Hidden);
+        }
+
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(KeyCode::KeyB);
@@ -1574,6 +1584,14 @@ mod tests {
                 .resource::<area_debug::AreaDebugState>()
                 .is_enabled()
         );
+        {
+            let world = app.world_mut();
+            let visibility = world
+                .query_filtered::<&Visibility, With<hud::SmartActorStatusPanel>>()
+                .single(world)
+                .expect("the actor status panel remains available");
+            assert_eq!(*visibility, Visibility::Inherited);
+        }
         assert_eq!(
             app.world()
                 .resource::<area_debug::AreaDebugState>()
@@ -1622,6 +1640,11 @@ mod tests {
             .single(world)
             .expect("the area debug player label remains available");
         assert_eq!(*visibility, Visibility::Hidden);
+        let status_visibility = world
+            .query_filtered::<&Visibility, With<hud::SmartActorStatusPanel>>()
+            .single(world)
+            .expect("the actor status panel remains available");
+        assert_eq!(*status_visibility, Visibility::Hidden);
 
         let world = app.world_mut();
         let actor_count = world

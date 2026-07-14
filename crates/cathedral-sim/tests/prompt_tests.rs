@@ -236,6 +236,23 @@ fn prompt_distinguishes_hearing_from_a_conversational_turn() {
     }
 }
 
+#[test]
+fn prompt_treats_player_speech_as_noisy_stt_without_correcting_the_player() {
+    let env = prompt_env();
+    let world = seed_world();
+    let compacted = compact(&render_prompt(&world, &actor("sv3n1"), None, &env).unwrap());
+
+    for sentence in [
+        "Speech from the player (id player) comes from imperfect automatic speech-to-text",
+        "silently infer the player's likely meaning",
+        r#"if the transcript says "pill rack" but the context clearly supports "peel rack""#,
+        "Do not correct or lecture the player about a likely transcription error",
+        "If two materially different meanings remain plausible, ask one short, natural clarification question.",
+    ] {
+        assert!(compacted.contains(sentence), "missing: {sentence}");
+    }
+}
+
 /// 7. `test_prompt_gives_contrastive_audience_examples_and_general_wait_rule`
 #[test]
 fn prompt_gives_contrastive_audience_examples_and_general_wait_rule() {
