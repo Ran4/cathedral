@@ -20,6 +20,11 @@ may report a miracle and a grandmother may swear to an omen, but belief is not
 the same thing as authorial confirmation. Extraordinary claims should usually
 remain testimony, doctrine, rumor, coincidence, fraud, or unresolved mystery.
 
+The Great Hail of F.415 is the setting's most extreme weather catastrophe. It
+was extraordinarily localized and violent, and nobody can prove why it
+happened. This uncertainty is not confirmation of a second magical system:
+the hail left ordinary physical damage and never repeated.
+
 The one fixed rupture in this ordinary world is the **impossible light in the
 Great Rose of the Lanthorn**. It is objective and repeatable, but narrowly
 bounded and unexplained. It does not turn the setting into a high-magic world.
@@ -66,10 +71,17 @@ timber bridges join lofts across lanes. Stone, plaster, timber, lead, tile,
 smoke, animal traffic, bells, and hand labour should remain visible
 in everyday descriptions.
 
-The city has no established population figure. Do not invent one merely to
-make the world sound complete. Its scale should feel walkable, crowded, and
-socially legible: a person can cross the walls in a day, while still spending a
-lifetime ignorant of another trade's back rooms.
+Ombreval held approximately 15,000 people before the Great Rains of F.362 and
+about 5,000 in F.437. The Great Rains, the Hammering of F.415, and the Long
+Departure explain the difference. Lively streets cluster around work,
+worship, water, and markets; elsewhere occupied ground floors sit beneath
+empty upper rooms. The city remains socially legible and fully functioning,
+not an abandoned ruin, but it occupies the shell of a larger city.
+
+The two disasters mark different heights of the built city. Flood history
+belongs mainly to old cellars, filled steps, salt bloom, and mismatched lower
+masonry. Hammering history belongs to patched rooflines, shortened jetties,
+braced walls, pitted stone, and upper windows with no household behind them.
 
 ## The Serle and the wider world
 

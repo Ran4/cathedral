@@ -9,6 +9,10 @@ The setting is a **medieval city-state in a realistic-ish world**. Its centre is
 
 The default inhabitants are human and the default causes are natural, social, or political. Weather, fire, flood, disease, hunger, distance, debt, and physical work matter. Do not assume routine magic, magical species, modern institutions, or reliably effective miracles.
 
+The Great Hail of F.415 was real weather of almost incredible violence. Its
+cause is unresolved, but nothing establishes it as magic. In ordinary speech
+the catastrophe is **the Hammering**.
+
 The one fixed anomaly is an impossible light visible through the Great Rose of the cathedral. It is objective but narrow, unexplained, and not evidence for a generally magical world. Most lives and most lore need not concern it.
 
 Religion is powerful but is not the whole setting. The Candor shapes oaths, burial, public language, education, and the calendar; trade, family, guilds, neighborhoods, crime, entertainment, and civic politics also have lives of their own.
@@ -23,9 +27,14 @@ The default present year is **F.437**, the 437th year since the first stone of t
 - River cargo lands at wharves beyond the south wall and comes through the river gate by cart and porter. The **Old Sluice** at the Cut's east end is a dry historic landmark.
 - **The Lanthorn** stands a little west of the city's centre, with its quire east and its Great Rose facing west over the Gradine.
 - Streets pinch, widen, and dogleg between mismatched facades. Jettied storeys, covered passages, courts, and bridges between lofts make the city dense and irregular.
-- Ombreval once held approximately **15,000 people**, but only about **5,000**
-  live there in F.437 after a still-undefined depopulating event. [The game
-  simulates only a few hundred of them; see `lore/core_lore/population.md`].
+- Ombreval held approximately **15,000 people** before the Great Rains of
+  F.362. Only about **5,000** live there in F.437 after the Rains broke the
+  Cut, the Hammering killed thousands in F.415, and the Long Departure carried
+  away many survivors. [The game simulates only a few hundred of them; see
+  `lore/core_lore/population.md`].
+- Flood damage survives chiefly in lower masonry and old cellars; Hammering
+  damage survives in patched roofs, braced walls, scarred stone, and empty
+  upper storeys.
 
 ## The five squares
 
@@ -105,6 +114,8 @@ People use given names with inherited or earned bynames from trade, place, origi
 - Candor hierarchy, churches, saints, and bells: `lore/core_lore/candor_and_churches.md`
 - Full observable rules and beliefs around the light: `lore/core_lore/impossible_light.md`
 - Feasts and shared historical chronology: `lore/core_lore/calendar_and_history.md`
+- The Great Rains, the Hammering, and the Long Departure:
+  `lore/the_great_rains_and_the_hammering.md`
 - Personal names, place-name rules, and language register: `lore/core_lore/naming_language.md`
 - Local sayings, gestures, blessings, and work customs: `lore/core_lore/sayings_and_customs.md`
 

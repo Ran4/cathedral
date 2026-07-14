@@ -53,7 +53,9 @@ These names are already attached to places and should be reused consistently.
   saving.
 - **The Draper's Reach**: the roofed gallery of the cloth halls between
   Coswald's Yard and the Wickmarket. The standard ell of Ombreval is an iron
-  rod fixed there.
+  rod fixed there. Its arcade sheltered people during the Hammering while
+  adjoining roofs, lofts, and upper walls failed; several repaired bays and
+  upper rooms never returned to their former use.
 - **Gaunt Passage**: a blind covered passage under the salt-cellars of the old
   Gaunt house near the Tallage. The Gaunt salt-factor line is extinct; the name
   survived the family.
@@ -63,6 +65,10 @@ These names are already attached to places and should be reused consistently.
   but unproven tale about light from the Rose.
 - **The Hungry Ox**: a boatmen's tavern by Maren's Green, home of the song “The
   Water Knows One.”
+
+Small courts in several wards may be called **widow courts** because most
+households there lost someone in the Hammering. This is a local description,
+not one fixed official place-name, and current residents need not be widows.
 
 ### Approved names not yet required to occupy a fixed site
 

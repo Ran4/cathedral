@@ -95,7 +95,7 @@
 
 **F.352.** A murrain of cattle out of the east. The Tallage stank of hides until the frosts.
 
-**F.362.** In this year fell the Great Rains, three weeks together and no sun over Ombreval, the Serle at the door-sills and the boats rowing in Maren's Green. In all the city the only sunlight stood in the nave, where the Emblem burned through the wrack as a pale coin, morning to evening, every day of the three weeks. The Praelucent preached that the Light kept faith with the city, and the city believed it, being wet. Bread was given at the nave door, and is given still upon that day, which is called Wet Alms. Certain persons who preached another sense of the matter were taken and corrected.
+**F.362.** In this year fell the Great Rains, three weeks together and no sun over Ombreval, the Serle at the door-sills and the boats rowing in Maren's Green. The Cut broke, stores and lower houses were drowned, and foundations took water that some hold yet. In all the city the only sunlight stood in the nave, where the Emblem burned through the wrack as a pale coin, morning to evening, every day of the three weeks. The Praelucent preached that the Light kept faith with the city, and the city believed it, being wet. Bread was given at the nave door, and is given still upon that day, which is called Wet Alms. Certain persons who preached another sense of the matter were taken and corrected.
 
 **F.369.** In the seven years after the Great Rains the broken Cut was stopped and filled, and the Serle was brought to the navigable bed it keeps beyond the south wall. The boat-families cursed the carts, the Tallage cursed the cost, and both prospered. The Tally Bridge, the Eel Bridge, the Alder Moorings, and the Old Sluice kept their names though water left them, because an Ombreval clerk will sooner move a river than alter four ledgers.
 
@@ -113,7 +113,9 @@
 
 **F.415.** Hail broke the tiles of the cloth halls; the Draper's Reach kept the wool dry, and the drapers boasted of it for a year, which was long.
 
-**F.419.** In this year the Great Rose was scaffolded and canvased for the re-leading of the panes, the Fabric's greatest care since the completion; and the work held two years. The dawn crowds were turned from the nave, and the badges sold poorly, and the pilgrims were bitter. The Custody's clerks kept tally of every pane, it is said, to the least piece of it. In F.421 the canvas came down at Saint Ambrelle's feast, and the rose was as it had been, in every particular, and the city let out its breath.
+*In the margin, a later hand:* The wool was dry. The people under the western loft were not.
+
+**F.419.** In this year the Great Rose was scaffolded and canvased for the re-leading of the panes, cracks and loosened lead having been left by the hail, the Fabric's greatest care since the completion; and the work held two years. The dawn crowds were turned from the nave, and the badges sold poorly, and the pilgrims were bitter. The Custody's clerks kept tally of every pane, it is said, to the least piece of it. In F.421 the canvas came down at Saint Ambrelle's feast, and the rose was as it had been, in every particular, and the city let out its breath.
 
 **F.428.** On a night after Lowmarket the Custody took five persons at the Gaunt Passage, behind the salt-cellars. Two abjured their error upon the Gradine and were received back. A fuller died in the Custody's keeping, of the damp, before he could be tried. Who gave the word was never said. The city has not done whispering about the whisperers, nor will soon.
 

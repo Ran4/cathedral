@@ -144,7 +144,7 @@ The repairs:
 - **F.244.** The seventh-bay rail; the Edict the same year.
 - **F.288.** The glazier's small-light, III-17, drawn out and returned. Amiel's book keeps the old entry whole: *pane drawn; pane returned; oath taken.* The lead about III-17 is double court-lead to this day; the vergers call it the Sworn Pane. The paint now in it is younger in manner than its neighbours by near a century, which you are not required to notice. Of the oath: above our office. Ask nothing.
 - **F.365.** II-10 glazed and set.
-- **F.419 to F.421, the Re-leading.** Two years of scaffold; a third of the panes through the lodge; the petal I-8 away two winters entire. The Fabric's published account is repair, and it is the account this book gives.
+- **F.419 to F.421, the Re-leading.** Two years of scaffold after the Hammering had cracked glass and loosened old lead without bringing down the tracery; a third of the panes through the lodge; the petal I-8 away two winters entire. The Fabric's published account is repair, and it is the account this book gives.
 - **The standing order, older than any name in this book:** a broken or fallen light is boarded before the next dawn - boarded, not glazed, and the Custody told. It is the only order with no reason written beside it. Through the hole, the sky is as any street shows it. Men who look long at the hole are the quieter afterward. Board it.
 
 ## VIII. The verger's day: a guide to the viewing

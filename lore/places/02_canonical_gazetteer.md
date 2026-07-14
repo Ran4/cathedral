@@ -180,6 +180,13 @@ counting rooms. At either end, the gallery opens clearly enough that a watcher
 can see activity in the Wickmarket or Coswald's Yard without seeing both in a
 single implausibly straight vista.
 
+The arcade saved many people in the first moments of the Hammering, while
+adjoining roofs, lofts, and upper walls failed over the crowd. A central bonded
+wool store stayed dry, the fact preserved in the Long Book's grotesquely small
+account of the disaster. Rebuilt bays use mismatched roof material and heavy
+braces. Several upper rooms remain closed or serve as stores, and the cloth
+trade in F.437 is real but smaller than the architecture around it.
+
 Above is the tenter loft, reached by stairs at both ends. Louvres overlook the
 gallery. An overhead bridge at the north end joins the neighbouring block, and
 jettied roofs offer a difficult secondary escape. Cloth work ends at dusk;
@@ -222,6 +229,11 @@ and a few durable paved runs beneath hoists. There is no decorative fountain
 in the centre. Water is kept in covered work troughs and a well near the lodge.
 Pale dust hangs in autumn light; hammer sound and shouted measures carry
 farther than conversation.
+
+Hammering repair remains one of the quarter's ordinary trades. Roof frames,
+wall braces, stripped jetties, disputed party walls, and the Bench's shoring
+marks give masons and builders work beyond the Lanthorn without making every
+conversation about the cathedral.
 
 The unfinished north tower is a permanent visual reproach. It should be
 possible to stand at the lodge porch and see scaffold against the sky, while a
@@ -492,9 +504,10 @@ movement for a moment. This is a designed piece of congestion, not a collision
 bug. People wait, trade remarks, read the chalk across the yard, or take a
 longer route.
 
-The Great Rains and the arrests that followed remain living memory here. The
-square's ordinary work must be strong enough that this history does not turn
-the place into a memorial set.
+The Great Rains and the arrests that followed remain inherited parish memory
+here; only Ombreval's oldest inhabitants retain childhood fragments of F.362.
+The Hammering remains living memory. The square's ordinary work must be strong
+enough that neither history turns the place into a memorial set.
 
 ### The Church of Saint Maren of the Reeds
 
@@ -509,6 +522,12 @@ and the surface dry. The charnel door around `(-276, -365)` faces the market;
 its lintel can be read obliquely from the Eel Bridge without a person lingering
 at the threshold. The single current given name is chalked plainly and changes
 with the next burial.
+
+The Hammering overwhelmed individual name-knells and left many dead with only
+the Chapter's common toll. Families still bring names omitted from the
+Hammering rolls and pay for belated knells; “one bell is not a name” is heard
+most often here. This practice uses the existing churchyard and bell rather
+than requiring a monumental disaster shrine.
 
 The crypt lies low beneath the eastern church and yard. Beaten earth and lime
 show footprints, so anyone concealing a gathering must rake them smooth. The

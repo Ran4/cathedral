@@ -16,6 +16,16 @@ same city:
   **“And one light over it.”** It is not said inside the Lanthorn.
 - **“Peace with the impossible, and dinner at noon.”** Stop arguing and get on
   with the day.
+- **“Before the Hammering.”** Built, begun, or remembered before F.415; often a
+  claim of soundness, age, or better times.
+- **“Under slate.”** Killed in the Hammering, whether the actual falling
+  material was slate, tile, timber, or masonry.
+- **“One bell is not a name.”** Traditional objection to the common mourning
+  toll substituted for individual name-knells after the Hammering.
+- **“Hammer-weather.”** A dark, abruptly cold summer sky. People begin drawing
+  toward arches and covered ways even when no hail follows.
+- **“Gone in the Long Departure.”** Left Ombreval after F.415, often leaving
+  property, debts, or unresolved kin behind.
 - **Belwyn's ward:** close one eye and lay two fingers on the lid. Clergy call it
   remembrance that darkness belongs to the Light; ordinary people use it
   against ill luck.

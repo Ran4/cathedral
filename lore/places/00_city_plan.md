@@ -122,6 +122,26 @@ names of water work still face the dry street. The centre of the former bed is
 now the easiest east–west cart road in Ombreval. New stalls and shallow shops
 have encroached on its margins, but its straightness remains unmistakable.
 
+The new cartage enriched some carriers, toll interests, and large boat houses,
+but it did not restore every Cut warehouse or river household. The dry city's
+odd mixture of valuable frontage, obsolete bank-side rooms, and cheap upper
+lodging begins with that uneven recovery.
+
+### The city after the Hammering
+
+The Great Hail of F.415 struck a city whose flood-weakened foundations carried
+generations of jetties, lofts, tile, and piecemeal repair. Present F.437
+geometry must therefore show survival and contraction together. Sound ground
+floors can remain in use beneath stripped, braced, storage-only, or empty upper
+storeys. A repaired roof may cover two formerly separate houses. A shortened
+jetty, rebuilt party wall, blocked stair, or roof material changing halfway
+across a frontage should have a parcel-level reason.
+
+Approximately 5,000 people occupy a city built for roughly 15,000. Major work
+routes and markets remain busy, but density is uneven: quiet courts and vacant
+upper windows can sit one turn from a crowded square without turning the city
+into a ruin.
+
 ## The eight planning wards
 
 Wards are broad authoring districts. They are not `areas.json` entries and may
@@ -291,6 +311,13 @@ ruin.
 Flood history belongs below waist height: mismatched lower masonry, blocked
 bank doors, old iron rings, salt bloom, filled steps, and cellars that remain
 unpopular. It must not imply that present streets are wet.
+
+Hammering history belongs above eye level: mismatched roof patches, shortened
+jetties, replaced braces, pitted soft stone, flattened metalwork, and upper
+openings closed with boards or reused shutters. Slate, tile, shingle, timber,
+and scavenged lead may meet on one repaired roof. This damage must not make
+every building derelict; ordinary maintenance has continued for twenty-two
+years.
 
 ## Squares as working spaces
 

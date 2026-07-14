@@ -52,6 +52,8 @@ This bible is the source of truth for roughly twenty sibling documents — depos
 
 **The river and Cut:** the **Serle** runs outside the south wall. Its former straightened city stretch is **the Cut**, closed and filled in F.363–369 and now a trade street. Waters keep their pre-Fabric names; nobody renames water, and dry places often keep the names water left them.
 
+**The disasters:** Ombreval held roughly 15,000 people before the **Great Rains** of F.362 broke the Cut and displaced its old waterside economy. On a late-summer Highmarket in F.415, the extraordinarily localized **Great Hail** struck for perhaps ten or fifteen minutes. Ordinary speech calls it **the Hammering**. It killed 2,000–3,000 people at once and perhaps another 1,000 afterward through injury, exposure, fire, failed stores, and later collapse. The **Long Departure** carried thousands of survivors away; roughly 5,000 people remain in F.437. Nothing establishes a supernatural cause, and the Emblem did not change or act.
+
 **Secondary churches:**
 
 - **Saint Maren of the Reeds** — boatmen's and paupers' church on the old Cut; on the lintel of its churchyard **charnel door** the sexton chalks each buried soul's name, leaving it until the next burial.
@@ -157,7 +159,8 @@ Developer flight changes nothing: outside there is nothing to find; inside, it i
 
 **Living memory (NPCs remember these):**
 
-- **F.419–421 — The Re-leading.** Two years of scaffold over the rose "for repair" — in truth the Custody's largest experiment: a third of the panes swapped, one whole light removed and re-set, everything documented. The Emblem never flinched. Several living NPCs worked that scaffold under silence-oath.
+- **F.415 — THE HAMMERING.** The Great Hail strikes a crowded late-summer Highmarket. Impact, falling roofs, fire, meltwater, failed foundations, and spoiled stores kill thousands. The Chapter's Long Book reduces it to broken cloth-hall tiles and dry wool. Ordinary rites are overwhelmed; many dead receive only common mourning tolls and are remembered as the Unknelled. The Great Rose's tracery holds, but glass cracks and leadwork loosens. The Emblem does not change.
+- **F.419–421 — The Re-leading.** Publicly, two years of scaffold over the rose to put right damage sustained in the Hammering. In truth, the Custody also makes the necessary repair its largest experiment: a third of the panes swapped, one whole light removed and re-set, everything documented. The Emblem never flinched. Several living NPCs worked that scaffold under silence-oath.
 - **F.428 — The Whisper Arrests.** On an informant's tip, the Custody seizes five in Gaunt Passage. Two recant on the Gradine; a fuller dies in custody "of the damp." The informant was never named. Every current cell member remembers, and suspects everyone.
 - **F.431 — The Almanac Shame.** The heretics' computed Concurrence date beats the official almanac by a day; the wrong bells ring at the wrong noon. Corrected without acknowledgment.
 - **F.433 — The Ledger Theft.** A Custody scribe dies (or flees; the record is neat and unsigned) and a satchel of archive copies goes into the city. The Custody has bought pages back through pawnshops ever since; a "Sparr page" is the costliest contraband in Ombreval.
@@ -245,6 +248,7 @@ Role — temperament — stance — one secret. Later documents expand, never co
 - **The Concurrence** (the fortieth day after Coswaldstide) — the alignment feast, officially the **Feast of the Sole Light**. The Passing centers in the eye; shadows fuse; the Unwalled sing the forbidden verse; the rite is hostage to weather, for a clouded Concurrence simply does not happen — and this year, after the Shut Door, the doors.
 - **Colm's Night** (unofficial, early spring) — the Unwalled each burn one green-dipped candle at home; a quarter-feast by their private count. Osanne Vell sells the candles and pads the Custody's tally of who buys them.
 - **Wet Alms** (anniversary of the Great Rains) — bread at the nave door; the fourth quarter-feast.
+- **The Hammering anniversary** (late summer; civic observance, not a feast) — a common mourning toll at the Waning. Traditional families answer that one bell is not a name and continue paying for belated name-knells for the Unknelled.
 - **Funerals as clockwork:** each pauper's burial paid by the cell resets the pass-name — the name-knell of Maren Smallvoice is, to nineteen people in Ombreval, the sound of a key turning.
 
 ---

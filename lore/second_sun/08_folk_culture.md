@@ -92,6 +92,29 @@ For choosing who is out.
 
 *The second keeps F.341: the Orphan's baptismal record burned, and the folk conviction that an unnamed bell cannot ring you anywhere good.*
 
+## The common toll and the Unknelled
+
+At the Waning on the Hammering's late-summer anniversary, the city gives one
+common mourning toll for those who could not receive individual rites during
+the mass burials of F.415. Many stand for it. Some traditional households turn away
+from the bell; others speak their dead's names after the last stroke, supplying
+in the mouth what the bronze did not count.
+
+Around Saint Maren's, the answer is taught in four short lines:
+
+> *One bell for the city,*
+> *one name for each dead;*
+> *ring what was owing*
+> *before we are dead.*
+
+The argument underneath is shorter: **one bell is not a name**. Families keep
+private copies of the incomplete Hammering rolls and save for belated
+name-knells when an omitted relative is proved or an old debt to the bell can
+finally be paid. The devout call those still without one **the Unknelled**.
+Some mean the word accusingly, some sorrowfully, and some only as a clerk's
+category. No authorial fact says the dead hear either the common toll or the
+belated bell.
+
 ## Superstitions and omens
 
 *All are sincerely held somewhere. Those marked (sooth) describe render-true facts from 00_canon.md §2; the rest the game never confirms nor mocks. The contradictions are intentional: quarters disagree and keep their own versions.*
@@ -135,6 +158,16 @@ The Custody can hardly object to a shut eye, its own emblem being one; the grey 
 - **"Sold at the Tallage"** — betrayed, at a fair price.
 - **"There's a moth in every tavern."** — mind your tongue. Most who say it could not tell you what a moth is, and are right anyway.
 - **"Peace with the impossible, and dinner at noon."** — no use puzzling; get on with the day. Also heard as "it's impossible light" (not worth arguing) and "the city's at peace with it" (drop the subject). *All three are drift from Doctor Ferrant's margin line (00_canon.md §3d); no speaker knows the phrase has an author.*
+- **"Before the Hammering."** — old, sound, or remembered as better than it
+  was. A roof, marriage, debt, and bad knee may all date this way.
+- **"Under slate."** — killed in the Hammering, regardless of what actually
+  fell.
+- **"Hammer-weather."** — a dark, abruptly cold summer sky; enough to send a
+  market crowd edging toward arches.
+- **"Gone in the Long Departure."** — left the city after F.415, usually with
+  some property, debt, or relative unresolved behind them.
+- **"One bell is not a name."** — the traditional objection to the common
+  Hammering toll.
 - The lawful oath is **"by the light that does not lie."** Four pots in at Maren's Green, a boatman will swear *"by the light that does not lie — and the other one, that does not answer,"* which costs a fine if a moth is thirsty.
 
 Curses, mild to mortal: **"May the Orphan ring you in."** **"May your shadow go home without you."** **"May you stand at the Kiss and cast nothing."** The last is not said to children. And there is **"fuller's luck"** — the worst luck, luck of the damp — used in low voices, and never within earshot of a grey coat.

@@ -1,7 +1,7 @@
 # The Second Sun
 
 A lore & design corpus for **The Cathedral-City of Impossible Light** — 27 documents,
-~83,000 words, set in the free fortified city of **Ombreval** in the year F.437.
+~85,000 words, set in the free fortified city of **Ombreval** in the year F.437.
 
 > *"It moves against the sun; it stands in one pane for every eye; I have no theory.
 > An impossible light, and the city at peace with it."*

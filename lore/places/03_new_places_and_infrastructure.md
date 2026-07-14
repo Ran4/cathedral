@@ -124,6 +124,11 @@ treadwheel or lever machines; most transfer is human, animal, ramp, rope, and
 handcart labour. Warehouses inside the wall remain useful because the bank is
 exposed to flood, theft, and closure.
 
+The Long Departure left fewer boat households to divide the work, not an empty
+river. Some wharf leases and inner warehouses have passed to larger families;
+others are held by absent heirs or used intermittently. The approaches should
+show active freight alongside more capacity than present trade requires.
+
 This is lore geography and a horizon/through-gate asset, not part of the
 current playable walled city. A future expansion may build it, but no present
 route should let the player accidentally wander from the Reed Postern into a
@@ -148,6 +153,11 @@ food.
 The F.183 memory that the Chapter opened its granary late can attach to rented
 or reserved bays without placing every grain store inside the cathedral. Seven
 Lofts gives scarcity and price stories a physical destination.
+
+Hammering repairs should be legible in roof trusses, replaced shutters, and
+one rebuilt bay. F.415 destroyed both city stores and the standing late-summer
+crop, making this compound a relief centre, a guarded asset, and a later source
+of argument over who received grain first.
 
 ## The Shambles
 

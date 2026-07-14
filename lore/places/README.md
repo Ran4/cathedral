@@ -22,10 +22,11 @@ The Gradine remains directly outside the west doors because that relationship
 is canon, but its paving and edges may be rebuilt. Everything else in this
 guide is the target arrangement for later authored world work.
 
-For facts of history, religion, named people, and the impossible light,
-`lore/core_lore/` and `lore/second_sun/00_canon.md` remain senior. This guide
-does not rewrite those facts. It makes their shared geography concrete. If an
-inspiration image disagrees with written lore, the writing wins.
+For facts of disaster history, religion, named people, and the impossible
+light, `lore/the_great_rains_and_the_hammering.md`, `lore/core_lore/`, and
+`lore/second_sun/00_canon.md` remain senior. This guide does not rewrite those
+facts. It makes their shared geography concrete. If an inspiration image
+disagrees with written lore, the writing wins.
 
 The directory `lore/wip_lore_please_ignore_this_is_NOT_canon/` was not used and
 must never be used to interpret this plan.
@@ -186,7 +187,11 @@ Later lore and construction should preserve all of these:
     extends it into the city.
 15. The walls and streets must show four centuries of adaptation: old ford
     lanes, the imposed Cut, post-diversion encroachment, fires, flood repairs,
-    guild wealth, and ordinary maintenance.
+    Hammering damage above the eye line, guild wealth, and ordinary
+    maintenance.
+16. F.437 is inhabited by roughly 5,000 people inside fabric built for about
+    15,000. Markets and work routes stay busy; vacant upper rooms and quiet
+    courts appear unevenly, without making Ombreval an abandoned ruin.
 
 ## What has become fixed here
 

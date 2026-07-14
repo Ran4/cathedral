@@ -35,6 +35,21 @@ A realistic plot should remember storage, spoilage, transport time, labour,
 season, price, and who owns access to an outer quay, gate, bridge, oven,
 warehouse, or standard weight.
 
+The river's diversion after the Great Rains redistributed rather than simply
+ended this prosperity. Large boat houses, carriers, and toll interests could
+profit from the extra transfer between outer wharf and inner market while old
+Cut warehouses, small river households, and trades tied to an inside landing
+declined. The Hammering later destroyed stores, workshops, tools, crops, and
+much of the cloth quarter's capital at once. The Draper's Reach still works in
+F.437, but at a smaller scale and with several bays and upper rooms never
+returned to trade.
+
+Empty property is not free property. Hammering deaths and the Long Departure
+left divided inheritances, absent owners, minor heirs, unpaid repair shares,
+and occupied ground floors beneath upper storeys claimed by someone elsewhere.
+Rent, salvage, shoring, roof work, copying old deeds, tracing kin, and disputing
+party walls are ordinary parts of the present economy.
+
 ### Money
 
 Ombreval's usual coinage is:

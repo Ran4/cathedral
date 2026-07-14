@@ -45,6 +45,25 @@ the **Common Chest**. Expenditure is read aloud at every quarter reckoning and
 proved against the Tallage weights at Gaudry's Audit. The Chest pays the watch,
 wall repairs, wells, drains, gaol, fire equipment and hired militia service.
 
+### Hammering law and damaged property
+
+The Hammering remains the Bench's largest inherited failure. Post-Rains
+surveys had identified unsafe foundations and shared walls, but enforcement
+was incomplete and repairs followed wealth. Present building rules therefore
+give the Line-keeper and ward hands authority to order shoring, strip an unsafe
+upper storey, limit a projecting jetty, or close a passage during roof work.
+These are medieval inspection powers exercised through notices, hearings,
+neighbour testimony, guild expertise, and physical marks on a door—not a
+modern uniform building code.
+
+The Civic Measure Court also hears **Hammering claims**: missing or competing
+heirs, common walls repaired by one household, occupied ground floors beneath
+vacant upper rooms, salvage taken during the emergency, and property whose
+owner left in the Long Departure. Possession since F.415 is evidence but does
+not automatically erase an older deed. These cases make notaries, witnesses,
+rent books, guild rolls, and the incomplete Hammering rolls unusually
+valuable.
+
 ## Courts and custody
 
 Three rotating benchers sit as the **Civic Measure Court** for debts, assault,

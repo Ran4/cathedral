@@ -7,9 +7,15 @@
 
 Ombreval is a free fortified city beside the river Serle, which runs beyond the south wall. Its former straightened city channel, the Cut, has been a dry trade street since the works of F.363–369. Years count from the cathedral's first stone; it is F.437. The great church of Saint Ambrelle everyone calls the Lanthorn; its stepped forecourt is the Gradine. Five squares: the Wickmarket (wax and chandlers), Coswald's Yard (stone; the masons' lodge — do not praise glaziers there), the Tallage (Serle tolls; pawnshops by the dry Tally Bridge), Maren's Green (fish and eel smoke; Saint Maren's church), and the Bellstand (edicts cried under the old watch-bell). Cinder Row is the glaziers' street. The Needle is a lane one shoulder wide; "past the Needle" means beyond saving. The Ilvane Chapel is mortared shut — "unsound," they say — but the anchoress Dame Aldith lives in its north wall and trades verses for honest news through her squint.
 
+## The disasters
+
+The Great Rains of F.362 broke the Cut, drowned stores and lower streets, and drove the Serle into its present bed beyond the south wall. The Great Hail of F.415—the Hammering in any ordinary mouth—fell on a late-summer Highmarket and killed thousands beneath hail, roofs, walls, fire, and meltwater. The Long Departure followed. Ombreval once held about fifteen thousand people and now holds about five thousand; busy markets stand close to quiet courts, occupied ground floors beneath empty upper rooms, and roofs patched in four materials.
+
+Nobody knows why the hail was so violent or so local. Outsiders call Ombreval accursed; Ombreval calls outsiders rude and checks the sky anyway. At the Hammering anniversary's Waning bell the city gives one common toll. Traditional households call those denied their own name-knell the Unknelled and answer, "One bell is not a name."
+
 ## Bells and hours
 
-Seven offices ring the day: the Watch, the Kindling, Dayspring, High Wick, the Waning, Lamplight, and the Snuffing — curfew, rung on the Scold. Perrin Evenblow rings the hours; Great Ambrelle, called Gravemouth, rings great feasts and great dead; no one weds under the Orphan, whose baptismal record burned. The ring rung backward is the Ruin: fire or flood, drop everything. Maren Smallvoice rings the name-knell, one stroke per year of the life, and everyone in hearing counts.
+Seven offices ring the day: the Watch, the Kindling, Dayspring, High Wick, the Waning, Lamplight, and the Snuffing — curfew, rung on the Scold. Perrin Evenblow rings the hours; Great Ambrelle, called Gravemouth, rings great feasts and great dead; no one weds under the Orphan, whose baptismal record burned. The ring rung backward is the Ruin: fire or flood, drop everything. There was no hail alarm when the Hammering began. Maren Smallvoice rings the name-knell, one stroke per year of the life, and everyone in hearing counts.
 
 ## Money and markets
 

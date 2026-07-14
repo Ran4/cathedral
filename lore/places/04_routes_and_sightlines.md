@@ -233,8 +233,10 @@ depth can achieve this without magic soundproofing.
 
 Both loft stairs must work. The north overhead bridge must lead somewhere a
 person can continue, not to a sealed decorative door. Roof escape is difficult
-and visible in daylight. At dusk, any loft light can be seen from Coswald's
-Yard, making the place unsuitable for large night meetings.
+and visible in daylight. The route crosses patched Hammering roofs, a shortened
+jetty, and one heavily braced bay; these repairs constrain movement but do not
+turn the route into an obstacle course. At dusk, any loft light can be seen
+from Coswald's Yard, making the place unsuitable for large night meetings.
 
 ### Saint Maren's burial cover
 

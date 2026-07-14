@@ -53,11 +53,17 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 
 **Grave-shadow** — the cold, faint, differently aimed second shadow cast indoors under the rose. On a bride: ill luck.
 
+**The Great Rains** — three weeks of overcast and flooding in F.362. They broke the Cut, drowned lower streets and stores, and began the decline of the old waterside city. In the nave, the Emblem was Ombreval's only visible sunlight; the Custody arrested forty people over what that meant.
+
 **The Green Almanac †** — the cell's cloth sky-map, charted from spoken observations at sky-drawing.
 
 **The Green Sun** — the forbidden street name. Saying it near the wrong ears costs money.
 
 **The Grey Press** — the Custody's archive, F.204 to yesterday. That it exists is known; what it holds is not.
+
+**The Hammering** — ordinary name for the **Great Hail** of F.415: an extraordinarily localized late-summer storm that killed thousands through hail, falling buildings, fire, meltwater, and the failure of old foundations. Formal records prefer *Great Hail*. No cause is established.
+
+**Hammering rolls** — incomplete lists of the F.415 dead assembled from household, rent, guild, parish, and survivor testimony. A name proved from them may still receive a belated knell.
 
 **The hours** — the Candor's seven offices: the **Watch** (deep night), the **Kindling** (before light), **Dayspring** (sunrise), **High Wick** (noon), the **Waning** (mid-afternoon), **Lamplight** (sunset), the **Snuffing** (curfew).
 
@@ -72,6 +78,8 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 **Light †** — a heretic cell of three, as the lights of a window; about nineteen sworn in all, who call one another **neighbor**.
 
 **The lodge** — the masons' lodge at Coswald's Yard; unforgiving of the glazier saint, and of a verdict of F.288 it was never shown.
+
+**The Long Departure** — the loss of households after the Great Rains and, especially, during the twenty-two years after the Hammering. It was migration from damage, weak trade, disputed property, cost, and ill reputation—not a magical compulsion.
 
 **The Luminary** — supreme head of the Candor, far off in primatial Ostrelle: invoked, feared, ignored.
 
@@ -120,6 +128,8 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 **The Tracer †** — the hidden head of the Unwalled, as the tracery holds all lights; unknown even to most of the sworn.
 
 **Twinning** — the children's game of contorting until one's two shadows touch hands.
+
+**The Unknelled** — those Hammering dead who received only common mourning tolls when individual name-knells became impossible. Traditional objection: **“one bell is not a name.”** The word names a cultural and religious grievance, not a confirmed supernatural condition.
 
 **The Unwalled** — the heresy's own name; the Custody's files say **the Attergate error** or **Colmites**; the street says **the Greensick**.
 
@@ -202,6 +212,7 @@ The year, from spring:
 - **Perrinstide** (late spring) — the ringers' feast; the bells washed and greased; alms to the deaf.
 - **Feast of Saint Ambrelle** (early summer; second quarter-feast) — glass carried in procession from Cinder Row to the Gradine.
 - **Marenstide** (late summer) — eel fair at Maren's Green; the drowned remembered.
+- **The Hammering anniversary** (late summer; civic observance, not a feast) — common mourning toll at the Waning; names of the Unknelled spoken or the toll refused in traditional households.
 - **The nameless day** (early autumn) — Ilvanestide until F.290; the almanac leaves it blank; the anchoress keeps it, alone, in the wall.
 - **Coswaldstide** (autumn; third quarter-feast) — scaffold-blessing; the annual brawl over F.288.
 - **The Concurrence** (fortieth day after Coswaldstide) — shadows fuse, weather permitting; this year, after the Shut Door, the doors question waits.

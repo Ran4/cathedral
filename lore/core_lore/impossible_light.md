@@ -39,6 +39,11 @@ something else. Its **observable rules** are fixed:
 10. It never appears in the Serle, rain barrels, or mirrors carried outdoors.
     No moon, star, flame, or other heavenly body doubles.
 
+The Hammering of F.415 cracked Rose glass and loosened leadwork without making
+the window fall or leaving a famous public breach. Emergency boarding preceded
+the F.419–421 Re-leading. The appearance did not react to the storm and did not
+change during or after the repair.
+
 The Candor calls it **the Emblem**, a granted image of the one Light:
 ***Una lux, gemina species***, “one light, twofold appearance.” The street calls
 it **the Green Sun** despite the Edict. Folk say the cold light belongs to the

@@ -18,6 +18,7 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
 - knows:
   - [TRUE] Her own Attestation: made to look at the crossing at installation, she signed; the thing is no fraud.
   - [TRUE] The Shut Door of F.436 was her Chapter's order; this year the doors question returns.
+  - [TRUE] As a young canon in the Hammering relief hall, she saw property and standing asked before injury; the order of the questions still governs her sense of institutional failure.
   - [AMBIGUOUS] Whether her name stands in the stolen F.433 pages; as a young canon she attended a heretic reading, out of doubt.
 - secret: that attendance, and the doubt that never entirely left
 - ties: the far Luminary in Ostrelle; relies on Rasp, dislikes relying; owes the city an answer on the doors
@@ -37,6 +38,7 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
   - [TRUE] The phenomenon is no fraud, no single pane, no new thing; the Grey Press proves only what it is not.
   - [TRUE] New plain glass leaded into the rose shows it perfectly — sealed in F.288, confirmed in the Re-leading.
   - [TRUE] The Custody's secret sky-charts match the heretics' Green Almanac, observation for observation.
+  - [TRUE] As a junior grey clerk he copied the first Hammering rolls and knows how many names disappeared between household, guild, parish, and witness accounts.
   - [AMBIGUOUS] Whether the Sparr deposition's last page was removed or never existed.
 - secret: he wrote the anonymous almanac correction of F.431 using the heretics' own figures
 - ties: serves Dorn; funds Ferrant's instruments without signature; refuses the Question
@@ -74,6 +76,7 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
 - knows:
   - [TRUE] Idonea wept at her finished rose, said she had made two of something there was one of, and never fired glass again.
   - [TRUE] Replica panes show nothing; rose panes carried elsewhere show nothing; it is not in the guild's recipes.
+  - [TRUE] At twenty-two she boarded cracked Lanthorn lights after the Hammering and saw the Rose's stone hold while old lead twisted; grey clerks counted the work.
   - [AMBIGUOUS] What Idonea's margin note means — cool the green under the open sky — meaningless, or everything.
 - secret: she holds that one page in Idonea's own hand, shown to no one
 - ties: the guild; the feud with Stott's lodge; profitable dependence on the Chapter's repairs
@@ -130,6 +133,7 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
   - [TRUE] The countergait, the Passing, the unmixed beams, the cold light — measured, repeatable.
   - [TRUE] The no-parallax: one pane for every eye; his own measurement killed his own theory.
   - [TRUE] His lenses arrive paid for by a patron in grey he has chosen never to ask about.
+  - [TRUE] At thirty he treated Hammering casualties in the Tallage through Lamplight and watched crushed and infected wounds enlarge the death toll for weeks.
   - [AMBIGUOUS] The night-storm sightings; no two testimonies agree.
 - secret: he suspects whose money the grey patron's is, and does not ask
 - ties: patients across four squares; Pike's palm; the Custody's unacknowledged purse
@@ -257,6 +261,7 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
 - stance: refuses every doctrine
 - knows:
   - [TRUE] The line is unbroken since F.211; the chapel was mortared around it — canon law forbids walling in the living.
+  - [TRUE] She retains a four-year-old's fragment of the Great Rains and heard the Hammering from inside the anchorhold, followed by names of the missing spoken through her squint.
   - [AMBIGUOUS] Whether the Glazier's Vespers she carries preserves Idonea Sparr's last words or an old woman's invention; not even she knows.
   - [TRUE] More honest news than any officer of the Candor, verse for verse through the squint.
 - secret: she has recited the Vespers to no one. Yet.
@@ -275,6 +280,7 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
 - stance: everyone gets a name and a bell; that is the whole of his politics
 - knows:
   - [TRUE] An unnamed purse pays the paupers' funerals quietly, and has for years.
+  - [TRUE] He helped bury the Hammering dead at thirty-five and has never accepted that the Chapter's common toll amounted to an individual name-knell.
   - [TRUE] What his lintel is read for — he worked out the rule long ago, and says nothing, on purpose.
   - [TRUE] Someone meets in his crypt after paupers' burials; he keeps the hinge oiled and himself elsewhere.
 - secret: the knowing, and the choosing not to know it out loud
@@ -294,6 +300,7 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
 - knows:
   - [TRUE] The true arch where Colm Attergate drowned at the Serle sluice, while the Cut still ran — the family trade secret, sold to no pilgrim.
   - [TRUE] An Alder hooked the body from the water in F.301; the family has counted him among their own dead since.
+  - [TRUE] Her father died when the Moorings roof failed in the Hammering; twelve-year-old Wyn took the fore-pole when her elder brother could not and never gave it back.
   - [AMBIGUOUS] Speak your dead's name in the green beam and they hear it; the Alders do it every Bellday.
 - secret: one of the Bellday names the family speaks in the beam is Colm's
 - ties: the boat-family first; Noll Fitch; pilgrim coin, honestly misdirected

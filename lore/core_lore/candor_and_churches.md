@@ -102,6 +102,12 @@ dead person's life. The church is a parish, burial place, boat-families'
 landmark, and institution of poor relief—not merely a satellite of
 the cathedral plot.
 
+The Hammering overwhelmed every churchyard and ordinary funeral schedule. The
+Chapter substituted common mourning tolls for the individual bells many dead
+never received. Traditional households, especially around Saint Maren's,
+still call them the Unknelled and answer that “one bell is not a name.” Belated
+name-knells remain a serious use of family, parish, and guild money.
+
 ### The Ilvane Chapel and anchorhold
 
 The **Ilvane Chapel**, dedicated to Saint Ilvane the Twice-Shadowed, was
@@ -173,6 +179,11 @@ Scold** is the unhallowed secular watch-bell at the Bellstand; it rings the
 Snuffing curfew and calls people to proclamations. **The Ruin** is not one bell
 but the alarm pattern of the ring sounded backward, greatest bell first, for
 fire or flood. Everyone who hears it is expected to drop ordinary work.
+
+There was no hail alarm in F.415. Ironthroat sounded for collapses and fire;
+the full Ruin followed only when the emergency had become fire, obstruction,
+and flooding that the established bell code could name. The anniversary's
+common mourning toll remains distinct from an individual name-knell.
 
 Approved bell-forming elements include *-mouth, -voice, -throat, -tongue,
 -call, -blow, -cry,* and *-tone*. **Ambrelle Clearcall** and **Belwyn Stillcry**

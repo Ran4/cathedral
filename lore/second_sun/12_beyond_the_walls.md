@@ -13,6 +13,22 @@ Below the city the Serle runs east through flat country, past Harne, and finds t
 
 Pilgrim traffic, surging since the F.240s, follows the trade: up with the salt, down with the wool, afoot along the towpaths in the dry months.
 
+## The Hammering on the roads
+
+The Great Hail of F.415 struck Ombreval and its nearest fields, not the whole
+Serle valley. Harne, Brede, and the boats between them had ordinary late-summer
+weather; travelers disagreed over how sharply the storm seemed to end, and no
+account fixes a supernatural boundary. Relief, opportunists, and returning kin
+came first. The Long Departure followed them outward: boat families and cloth
+workers toward Brede and Salorge, labourers to nearby farms and Harne, a few
+clerks and clergy onto the Lantern Road. By F.437 most river towns contain an
+Ombreval household or an empty chair kept for one.
+
+This is the source of the outsider's second version of Ombreval, beside the
+window: the unlucky city. Residents resent it because it is profitable gossip,
+because it discourages settlement and marriage, and because some of them
+believe it when summer cloud darkens.
+
 ## Harne
 
 Four leagues below the city stands Harne, a lord's town with a castle over the river and, in the old days, a chain across it. In F.54 the lord of Harne closed the river, took the salt-boats, and sold peace back to Ombreval for four hundred marks. "To buy peace of Harne" still means paying an extortionate price you cannot refuse, and the present lord — who takes a lawful toll and nothing more — inherits the curse with the castle.
