@@ -64,7 +64,7 @@ Automatically written:
 
 ```
 logs/
-    latest_session -> session_46_2026-07-13_10_28_52
+    latest_session  # symlinks on game start to e.g. session_46_2026-07-13_10_28_52
     session_<n>_<YYYY-MM-DD_HH_MM_SS>/   # run counter, local start time
         logs.jsonl
         screenshots/
