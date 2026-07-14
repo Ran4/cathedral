@@ -53,7 +53,7 @@ pub use config::{
 };
 pub use events::{BackendEvent, BackendSender, backend_channel};
 pub use fake::{DEFAULT_FAKE_TRANSCRIPT, FakeSpeech};
-pub use llm::{HttpCognition, LlmClient, LlmError, PRICING, UsageLedger, pricing_for};
+pub use llm::{HttpCognition, LlmClient, LlmError, ModelUsage, PRICING, UsageLedger, pricing_for};
 pub use prompt_log::{LocalTime, PromptExchange, PromptLog};
 pub use runtime::BackendRuntime;
 pub use session_dir::SessionDir;

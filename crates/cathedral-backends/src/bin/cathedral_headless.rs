@@ -35,7 +35,7 @@ use std::{
 
 use cathedral_backends::{
     BackendEvent, BackendRuntime, BackendsConfig, BackendsHandle, BackendsOptions, Environment,
-    HttpCognition, LlmClient, LlmError,
+    HttpCognition, LlmClient, LlmError, UsageLedger,
     config::{DEFAULT_DOTENV_PATH, DEFAULT_WORKERS_DIR},
     world_data::load_world_seed_with_knowledge,
 };
@@ -500,13 +500,19 @@ impl Runner {
     }
 
     fn print_cost(&self) {
-        let cost = match &self.brain {
+        let (cost, usage) = match &self.brain {
             // No provider, no bill — and Python's zero-call run printed exactly
             // this misleading line too (llm-headless.md risk 8).
-            Brain::Fake(_) => None,
-            Brain::Http { http, .. } => http.0.borrow().run_cost_usd(),
+            Brain::Fake(_) => (None, UsageLedger::new()),
+            Brain::Http { http, .. } => {
+                let http = http.0.borrow();
+                (http.run_cost_usd(), http.usage())
+            }
         };
         println!("\n{}", cost_line(cost));
+        if let Some(line) = cache_line(&usage) {
+            println!("{line}");
+        }
     }
 }
 
@@ -517,6 +523,28 @@ fn cost_line(cost: Option<f64>) -> String {
         Some(cost) if cost >= 0.005 => format!("Run cost: {cost:.2} USD"),
         Some(cost) => format!("Run cost: {cost:.4} USD"),
     }
+}
+
+/// What the provider's prompt cache actually did with `turn.j2`'s static prefix.
+///
+/// A run whose hit rate stays at 0% is the signal that the prefix is not being
+/// reused — either the template's static block moved back behind the sheet, or
+/// the provider does not do prefix caching at all (the openai endpoint does
+/// not; moonshot does). The run cost above bills every input token at full
+/// price, so a hit here means the true bill is lower than the line above says.
+fn cache_line(usage: &UsageLedger) -> Option<String> {
+    if usage.is_empty() {
+        return None;
+    }
+    let (prompt_tokens, cached) = usage.prompt_totals();
+    if prompt_tokens == 0 {
+        return None;
+    }
+    let percent = 100.0 * cached as f64 / prompt_tokens as f64;
+    Some(format!(
+        "Input tokens: {prompt_tokens} ({cached} served from the provider's \
+         prompt cache, {percent:.0}%)"
+    ))
 }
 
 // ------------------------------------------------------------------ the assets

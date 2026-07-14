@@ -16,6 +16,27 @@
 //! * `content` is a **parts array** (`[{"type":"text","text":…}]`) so an image
 //!   part can be added later without changing the wire type; a config flag falls
 //!   back to a plain string if a provider ever rejects it (risk 1).
+//!
+//! ## Prompt caching, as the two providers actually behave (measured 2026-07-14)
+//!
+//! `turn.j2` renders its ~1.7k-token instruction block *before* the character
+//! sheet so that the block is a prefix shared by every actor's every turn. What
+//! each provider then does with that prefix differs, and only one of them pays:
+//!
+//! * **moonshot** (`kimi-k2.5`) does real prefix caching. A live 8-turn run
+//!   reports 63% of input tokens served from cache (`cached_tokens`, which it
+//!   sends both top-level and under `prompt_tokens_details`).
+//! * **openai** (`gpt-5.6-luna`) does **not**. It caches whole prompts: an
+//!   identical prompt hits, but a shared 2k-token prefix with a different tail
+//!   never does — it reports `cache_write_tokens` on every call and
+//!   `cached_tokens: 0` forever. Neither plain-string content nor openai's
+//!   `prompt_cache_key` routing hint changes this. The same 8-turn run reports
+//!   a 0% hit rate.
+//!
+//! So the reordering is worth ~60% of the input bill on moonshot and nothing at
+//! all on openai. [`UsageLedger::prompt_totals`] is what settles the question
+//! for any future provider: if the hit rate is 0%, the prefix is not being
+//! reused, whatever the docs promise.
 
 use std::{
     collections::BTreeMap,
@@ -127,10 +148,34 @@ impl From<&LlmError> for CognitionError {
 
 // ----------------------------------------------------------------- usage/cost
 
-/// Per-model `[prompt_tokens, completion_tokens]` totals (`llm_client.py:41`).
+/// What one model's calls have cost so far, in tokens.
+///
+/// `cached_prompt_tokens` is the part of `prompt_tokens` the provider served
+/// from its prompt cache. It is the only direct evidence that the static prefix
+/// of `turn.j2` is being reused instead of re-billed, so it is counted even
+/// though [`UsageLedger::run_cost_usd`] does not yet discount it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ModelUsage {
+    pub prompt_tokens: u64,
+    pub cached_prompt_tokens: u64,
+    pub completion_tokens: u64,
+}
+
+impl ModelUsage {
+    /// The share of input tokens the provider did not re-read, 0.0 when it has
+    /// billed no input at all.
+    pub fn cache_hit_rate(&self) -> f64 {
+        if self.prompt_tokens == 0 {
+            return 0.0;
+        }
+        self.cached_prompt_tokens as f64 / self.prompt_tokens as f64
+    }
+}
+
+/// Per-model token totals (`llm_client.py:41`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct UsageLedger {
-    per_model: BTreeMap<String, (u64, u64)>,
+    per_model: BTreeMap<String, ModelUsage>,
 }
 
 impl UsageLedger {
@@ -139,18 +184,37 @@ impl UsageLedger {
     }
 
     /// A response without usage is silently not counted (`llm_client.py:93-96`).
-    pub fn record(&mut self, model: &str, prompt_tokens: u64, completion_tokens: u64) {
+    pub fn record(
+        &mut self,
+        model: &str,
+        prompt_tokens: u64,
+        cached_prompt_tokens: u64,
+        completion_tokens: u64,
+    ) {
         let entry = self.per_model.entry(model.to_string()).or_default();
-        entry.0 += prompt_tokens;
-        entry.1 += completion_tokens;
+        entry.prompt_tokens += prompt_tokens;
+        entry.cached_prompt_tokens += cached_prompt_tokens;
+        entry.completion_tokens += completion_tokens;
     }
 
     pub fn is_empty(&self) -> bool {
         self.per_model.is_empty()
     }
 
-    pub fn per_model(&self) -> &BTreeMap<String, (u64, u64)> {
+    pub fn per_model(&self) -> &BTreeMap<String, ModelUsage> {
         &self.per_model
+    }
+
+    /// Input tokens, cached input tokens: the totals across every model.
+    pub fn prompt_totals(&self) -> (u64, u64) {
+        self.per_model
+            .values()
+            .fold((0, 0), |(all, cached), usage| {
+                (
+                    all + usage.prompt_tokens,
+                    cached + usage.cached_prompt_tokens,
+                )
+            })
     }
 
     /// Total cost of every completion so far (`llm_client.py:126-132`).
@@ -164,9 +228,10 @@ impl UsageLedger {
             return None;
         }
         let mut total = 0.0;
-        for (model, (prompt_tokens, completion_tokens)) in &self.per_model {
+        for (model, usage) in &self.per_model {
             let (input, output) = pricing_for(model)?;
-            total += (*prompt_tokens as f64 * input + *completion_tokens as f64 * output) / 1e6;
+            total += (usage.prompt_tokens as f64 * input + usage.completion_tokens as f64 * output)
+                / 1e6;
         }
         Some(total)
     }
@@ -267,6 +332,33 @@ struct Usage {
     prompt_tokens: Option<u64>,
     #[serde(default)]
     completion_tokens: Option<u64>,
+    /// openai reports the cache hit here; moonshot reports it here *and*
+    /// top-level, and omits the whole object on a cold call.
+    #[serde(default)]
+    prompt_tokens_details: Option<PromptTokensDetails>,
+    /// moonshot's top-level spelling of the same number.
+    #[serde(default)]
+    cached_tokens: Option<u64>,
+}
+
+impl Usage {
+    /// How many input tokens the provider served from its prompt cache.
+    ///
+    /// Both spellings mean the same thing, so either one answers; a provider
+    /// that reports neither reads as an honest zero rather than as a hit.
+    fn cached_prompt_tokens(&self) -> u64 {
+        self.prompt_tokens_details
+            .as_ref()
+            .and_then(|details| details.cached_tokens)
+            .or(self.cached_tokens)
+            .unwrap_or(0)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct PromptTokensDetails {
+    #[serde(default)]
+    cached_tokens: Option<u64>,
 }
 
 // ------------------------------------------------------------------- the client
@@ -406,6 +498,7 @@ impl LlmClient {
                 .record(
                     &self.settings.model,
                     usage.prompt_tokens.unwrap_or(0),
+                    usage.cached_prompt_tokens(),
                     usage.completion_tokens.unwrap_or(0),
                 );
         }
@@ -900,10 +993,73 @@ mod tests {
         }
 
         let usage = cognition.usage();
-        assert_eq!(usage.per_model()["kimi-k2.5"], (2000, 200));
+        assert_eq!(
+            usage.per_model()["kimi-k2.5"],
+            ModelUsage {
+                prompt_tokens: 2000,
+                cached_prompt_tokens: 0,
+                completion_tokens: 200,
+            }
+        );
         // (2000 * 0.60 + 200 * 3.00) / 1e6
         let cost = cognition.run_cost_usd().expect("priced");
         assert!((cost - 0.0018).abs() < 1e-12, "{cost}");
+    }
+
+    /// The evidence that `turn.j2`'s static prefix is being reused. moonshot
+    /// spells it both ways and omits the details object entirely on a cold
+    /// call; openai spells it only the nested way. All three must read.
+    #[test]
+    fn cached_input_tokens_are_tallied_however_the_provider_spells_them() {
+        let server = MockServer::start(vec![
+            // Cold: no details object at all (moonshot's first call).
+            MockServer::ok(
+                r#"{"choices": [{"message": {"content": "a"}}],
+                    "usage": {"prompt_tokens": 2000, "completion_tokens": 10}}"#,
+            ),
+            // Warm, nested (openai, and moonshot's other spelling).
+            MockServer::ok(
+                r#"{"choices": [{"message": {"content": "b"}}],
+                    "usage": {"prompt_tokens": 2000, "completion_tokens": 10,
+                              "prompt_tokens_details": {"cached_tokens": 1792}}}"#,
+            ),
+            // Warm, top-level only (moonshot).
+            MockServer::ok(
+                r#"{"choices": [{"message": {"content": "c"}}],
+                    "usage": {"prompt_tokens": 2000, "completion_tokens": 10,
+                              "cached_tokens": 1792}}"#,
+            ),
+        ]);
+        let runtime = BackendRuntime::new().expect("runtime");
+        let (sender, receiver) = backend_channel();
+        let mut cognition = HttpCognition::new(
+            runtime,
+            Ok(settings(Provider::Moonshot, &server.base_url())),
+            sender,
+        );
+
+        for _ in 0..3 {
+            cognition.request("p".to_string()).expect("accepted");
+            receiver
+                .recv_timeout(Duration::from_secs(10))
+                .expect("completion");
+        }
+
+        let usage = cognition.usage();
+        let model = usage.per_model()["kimi-k2.5"];
+        assert_eq!(model.prompt_tokens, 6000);
+        assert_eq!(
+            model.cached_prompt_tokens, 3584,
+            "the cold call cached none"
+        );
+        assert_eq!(usage.prompt_totals(), (6000, 3584));
+        // Two of the three calls reused the prefix.
+        assert!((model.cache_hit_rate() - 3584.0 / 6000.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn a_model_that_has_billed_no_input_has_no_cache_hit_rate() {
+        assert_eq!(ModelUsage::default().cache_hit_rate(), 0.0);
     }
 
     #[test]
@@ -911,10 +1067,10 @@ mod tests {
         let mut ledger = UsageLedger::new();
         assert_eq!(ledger.run_cost_usd(), None, "no calls at all");
 
-        ledger.record("gpt-5.6-luna", 1_000_000, 0);
+        ledger.record("gpt-5.6-luna", 1_000_000, 0, 0);
         assert_eq!(ledger.run_cost_usd(), Some(1.0));
 
-        ledger.record("some-unpriced-model", 10, 10);
+        ledger.record("some-unpriced-model", 10, 0, 10);
         assert_eq!(ledger.run_cost_usd(), None, "one unknown model poisons it");
     }
 
