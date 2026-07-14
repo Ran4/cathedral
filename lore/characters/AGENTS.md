@@ -36,6 +36,7 @@ lore/
 {
     "id": "kcdg5",
     "name": "Havise Wetalms",
+    "significance": "major",
     "age": 43,
     "gender": "f",
     "occupation_id": "glazier",
@@ -87,3 +88,90 @@ Most don't really have any conditions.
 * `appearance_key`, `voice_key`, `holds`, and `goal` are optional runtime overrides. Most characters omit
   them and receive the generic body plus a deterministic voice from the existing three-voice pool. Held
   item ids must exist in `assets/world/seed.json`.
+
+# Occupation and status model
+
+`occupation_id` remains a trade or livelihood family. These belong in separate
+fields:
+
+- `rank`: guild or institutional rank;
+- `faction_role`: a special role in a faction;
+- `illegal_activity`: prohibited conduct;
+- `statuses`: poverty, housing, family, residency and legal statuses;
+- `conditions`: physical and health conditions;
+- `significance`: canonical and computational importance.
+
+A character who begs should usually retain a real former, occasional or
+intermittent occupation. Examples include an injured porter, an unemployed
+labourer, a widowed laundress, a retired watchman or an out-of-work servant.
+Begging is then represented by statuses such as `pauper`, `alms_dependent`,
+`unhoused` and `begs_regularly`, plus the description and goal.
+
+
+# Significance value of characters
+
+### Major
+
+- Individually required by canonical lore, a faction, an institution or a
+  planned quest.
+- May be referenced freely by other character sheets and lore documents.
+- Receives the largest reasoning budget and richest persistent memory.
+- Has a full authored description, consequential relationships and a clear
+  place in the city.
+- Removal requires a repository-wide lore and reference audit.
+
+### Minor
+
+- A stable named supporting character: a master tailor, ward officer, known
+  beggar, brothel keeper, militia captain, gang organiser or recurring servant.
+- May be mentioned in lore, but usually only locally or once or twice.
+- Receives normal interaction compute and persistent memory.
+- Has a compact but real backstory, several relationships and at least one
+  continuing concern.
+- Removal also requires a reference audit.
+
+### Ambient
+
+- Must not be individually named outside their own character sheet by core
+  lore, second-sun lore, features presented as canon, major/minor character
+  relationships, quests, canonical events or unique items.
+- May have relationships with other ambient characters. Those relations are
+  replaceable data, not canon.
+- May point outward to a major/minor employer or public figure from their own
+  sheet, but the stable character must not point back to the ambient character
+  by id or name.
+- Must have enough specificity to avoid becoming a generic crowd token:
+  locality, livelihood/status, speech manner, current activity and one
+  immediate material concern.
+- Should normally have no unique faction office, quest item or world-changing
+  secret.
+- Is replaceable between authored versions. Once encountered in a save, their
+  runtime identity and memories must remain stable for that save.
+- Dynamic player interest may temporarily increase compute and memory without
+  changing the character's canonical significance.
+
+Do not include the words `major`, `minor` or `ambient` in the NPC's own prompt
+as a statement about who they are. `significance` is host scheduling and
+authoring metadata, not self-knowledge.
+
+## Profile depth by significance
+
+These are authoring targets, not hard byte limits:
+
+| Significance | Core description | Extended description | Static relationships |
+|---|---|---|---:|
+| `major` | Roughly 150-300 words | As much as needed | Usually 5-15 meaningful links |
+| `minor` | Roughly 80-180 words | Optional, roughly 600-2000 words | Usually 2-6 links |
+| `ambient` | Roughly 40-90 words | Normally empty | Usually 0-2 links |
+
+An ambient description should normally answer five things in a few sentences:
+
+1. What are you doing here?
+2. How do you materially survive?
+3. How do you speak or react to strangers?
+4. What small thing do you need today?
+5. What immediately visible fact makes you distinct from the next person?
+
+The immediate concern can be a wet blanket, a disputed penny, an employer who
+is late, a missing chicken, sore feet, a place in the hiring line or fear of
+losing a sleeping place. It does not need to be a secret or quest.
