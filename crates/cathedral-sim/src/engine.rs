@@ -348,6 +348,9 @@ pub enum EngineMessage {
         chunk_seq: u32,
         sample_rate: u32,
         samples: Arc<[i16]>,
+        /// Captured when the utterance was queued; runtime selection may have
+        /// changed while synthesis was in flight.
+        backend: Option<TtsBackendKind>,
     },
     TtsStreamEnd {
         event_id: SpeechEventId,

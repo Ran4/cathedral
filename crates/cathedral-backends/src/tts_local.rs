@@ -1,10 +1,11 @@
 //! Local streaming synthesis — the Pocket TTS worker
 //! (`PocketTtsBackend`, `speech_client.py:238-468`).
 //!
-//! Pocket is the only backend that streams: the first PCM chunk arrives long
-//! before the sentence is finished, which is what makes a local voice feel
-//! immediate. The chunks are validated at this boundary and decoded here —
-//! base64 exists only on the worker's stdout, never in the game (D7/§7.1).
+//! Pocket produces PCM chunks directly: the first one arrives long before the
+//! sentence is finished, which is what makes a local voice feel immediate. The
+//! chunks are validated at this boundary and decoded here — base64 exists only
+//! on the worker's stdout, never in the game (D7/§7.1). Cloud TTS now shares the
+//! downstream PCM presentation path by incrementally decoding its WAV body.
 //!
 //! Two asymmetries with the cloud path, both deliberate:
 //!
@@ -23,7 +24,7 @@ use serde_json::{Map, Value};
 use crate::{
     config::SpeechSettings,
     events::BackendSender,
-    tts::{logical_voice, validate_tts_text},
+    tts::{PcmChunk, StreamCompletion, logical_voice, validate_tts_text},
     wav::MAX_PCM_CHUNK_BYTES,
     worker::{Worker, WorkerMessages, WorkerSpec, WorkerStep},
 };
@@ -49,23 +50,6 @@ const MIN_SAMPLE_RATE: u64 = 8_000;
 const MAX_SAMPLE_RATE: u64 = 48_000;
 /// The base64 field's own ceiling, before decoding (`speech_client.py:329`).
 const MAX_CHUNK_BASE64_CHARS: usize = 256_000;
-
-/// One decoded PCM chunk, ready for the game's audio sink.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PcmChunk {
-    pub seq: u32,
-    pub sample_rate: u32,
-    pub samples: Arc<[i16]>,
-}
-
-/// What a finished streaming synthesis produced.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StreamCompletion {
-    pub chunk_count: u32,
-    /// Time from request to first audible sample — the number the local voice
-    /// lives or dies by.
-    pub first_chunk_ms: u32,
-}
 
 /// The Pocket TTS driver.
 #[derive(Debug)]

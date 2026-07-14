@@ -28,7 +28,7 @@ use crate::{
     config::{DEFAULT_OPENAI_VOICES, LOGICAL_NPC_VOICES, SpeechSettings},
     events::{BackendEvent, BackendSender},
     runtime::BackendRuntime,
-    tts_cloud::CloudTts,
+    tts_cloud::{CloudSynthesis, CloudTts},
     tts_local::PocketTts,
 };
 
@@ -38,6 +38,22 @@ pub const TTS_QUEUE_CAPACITY: usize = 32;
 pub const MAX_SPEECH_TEXT_CHARS: usize = 500;
 /// A resolved provider voice may not be a path, a flag, or a novel.
 const MAX_VOICE_CHARS: usize = 64;
+
+/// One decoded mono PCM chunk, ready for the game's streaming audio sink.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PcmChunk {
+    pub seq: u32,
+    pub sample_rate: u32,
+    pub samples: Arc<[i16]>,
+}
+
+/// What a finished streaming synthesis produced.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StreamCompletion {
+    pub chunk_count: u32,
+    /// Time from request submission to the first decoded audio sample.
+    pub first_chunk_ms: u32,
+}
 
 // ------------------------------------------------------------- shared checks
 
@@ -242,8 +258,24 @@ fn synthesize(
             let Some(cloud) = cloud else {
                 return fail(events, &event_id, unavailable(kind), kind);
             };
-            match runtime.block_on(cloud.synthesize(&text, &voice_key)) {
-                Ok(wav) => events.send(BackendEvent::TtsDone {
+            let streamed_to = event_id.clone();
+            let outcome = runtime.block_on(cloud.synthesize_stream(&text, &voice_key, |chunk| {
+                events.send(BackendEvent::TtsChunk {
+                    event_id: streamed_to.clone(),
+                    seq: chunk.seq,
+                    sample_rate: chunk.sample_rate,
+                    samples: chunk.samples,
+                });
+            }));
+            match outcome {
+                Ok(CloudSynthesis::Streamed(completion)) => {
+                    events.send(BackendEvent::TtsStreamEnd {
+                        event_id,
+                        chunk_count: completion.chunk_count,
+                        first_chunk_ms: completion.first_chunk_ms,
+                    })
+                }
+                Ok(CloudSynthesis::Buffered(wav)) => events.send(BackendEvent::TtsDone {
                     event_id,
                     result: Ok(wav),
                 }),
@@ -290,7 +322,7 @@ fn unavailable(kind: TtsBackendKind) -> SpeechError {
 /// The **only** thing a finished synthesis publishes is its outcome.
 ///
 /// Not a status: the terminal `tts` rows (`idle`, `degraded`, and the
-/// "First local PCM in N ms" one) are the speech router's to emit, exactly as
+/// "First cloud/local PCM in N ms" one) are the speech router's to emit, exactly as
 /// they were `_poll_tts`'s in Python (`server.py:1854-1956`) and never the
 /// driver's. Emitting them here as well doubled every row in `logs.jsonl` and
 /// every HUD pill update. The driver still publishes its *own* lifecycle —
@@ -388,7 +420,7 @@ mod tests {
         worker::tests::StubWorker,
     };
     use crossbeam_channel::Receiver;
-    use std::{collections::BTreeMap, io::Cursor, path::PathBuf, time::Duration};
+    use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 
     fn settings(pairs: &[(&str, &str)], workers_dir: PathBuf, uv: &str) -> SpeechSettings {
         let vars: BTreeMap<String, String> = pairs
@@ -420,22 +452,24 @@ mod tests {
         }
     }
 
-    fn wav_body() -> Vec<u8> {
-        let specification = hound::WavSpec {
-            channels: 1,
-            sample_rate: 24_000,
-            bits_per_sample: 16,
-            sample_format: hound::SampleFormat::Int,
-        };
-        let mut buffer = Cursor::new(Vec::new());
-        {
-            let mut writer = hound::WavWriter::new(&mut buffer, specification).expect("header");
-            for _ in 0..240 {
-                writer.write_sample(0i16).expect("sample");
-            }
-            writer.finalize().expect("finalize");
-        }
-        buffer.into_inner()
+    fn streamed_wav_body() -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"RIFF");
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(b"WAVE");
+        bytes.extend_from_slice(b"fmt ");
+        bytes.extend_from_slice(&16u32.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&24_000u32.to_le_bytes());
+        bytes.extend_from_slice(&48_000u32.to_le_bytes());
+        bytes.extend_from_slice(&2u16.to_le_bytes());
+        bytes.extend_from_slice(&16u16.to_le_bytes());
+        bytes.extend_from_slice(b"data");
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(&100i16.to_le_bytes());
+        bytes.extend_from_slice(&(-200i16).to_le_bytes());
+        bytes
     }
 
     fn next(events: &Receiver<BackendEvent>) -> BackendEvent {
@@ -444,14 +478,14 @@ mod tests {
             .expect("a backend event")
     }
 
-    /// The whole cloud path: submit accepts synchronously and the WAV arrives on
-    /// the channel — and *nothing else does*. The terminal `tts` status belongs
-    /// to the speech router (`_poll_tts`, `server.py:1854-1956`); a driver that
-    /// also published one wrote every row twice.
+    /// The whole cloud path: submit accepts synchronously, PCM arrives first,
+    /// and the keyed stream end arrives last. The terminal `tts` status still
+    /// belongs to the speech router; a driver that also publishes one writes
+    /// every row twice.
     #[test]
-    fn a_cloud_utterance_completes_as_wav_bytes_on_the_channel() {
+    fn a_cloud_utterance_streams_pcm_chunks_on_the_channel() {
         let server = crate::testing::MockServer::start(vec![crate::testing::MockServer::ok_bytes(
-            &wav_body(),
+            &streamed_wav_body(),
         )]);
         let runtime = BackendRuntime::new().expect("runtime");
         let (sender, events) = backend_channel();
@@ -472,11 +506,27 @@ mod tests {
         tts.submit(request(1, TtsBackendKind::Cloud))
             .expect("accepted");
 
-        let BackendEvent::TtsDone { event_id, result } = next(&events) else {
-            panic!("expected a finished WAV");
+        let BackendEvent::TtsChunk {
+            event_id,
+            seq,
+            sample_rate,
+            samples,
+        } = next(&events)
+        else {
+            panic!("expected the first cloud PCM");
         };
         assert_eq!(event_id, event(1));
-        assert_eq!(&result.expect("synthesized")[..4], b"RIFF");
+        assert_eq!(seq, 0);
+        assert_eq!(sample_rate, 24_000);
+        assert_eq!(samples.as_ref(), &[100, -200]);
+        assert!(matches!(
+            next(&events),
+            BackendEvent::TtsStreamEnd {
+                event_id,
+                chunk_count: 1,
+                ..
+            } if event_id == event(1)
+        ));
         assert_eq!(
             events.recv_timeout(Duration::from_millis(200)),
             Err(crossbeam_channel::RecvTimeoutError::Timeout),

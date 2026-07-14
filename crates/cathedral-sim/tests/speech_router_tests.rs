@@ -1709,8 +1709,36 @@ fn the_voice_backend_is_captured_when_the_utterance_is_queued() {
 
     // …while the *next* line goes to the cloud.
     harness.npc("cb947", "say", json!({"text": "Spoken under cloud."}));
-    harness.poll();
+    let messages = harness.poll();
+    let second = speech_event_id(&messages);
     assert_eq!(tts.submitted()[1].kind, TtsBackendKind::Cloud);
+
+    let samples: Arc<[i16]> = Arc::from([1, 2]);
+    let messages = harness.send(EngineCommand::Tts(TtsOutcome::Chunk {
+        event_id: second.clone(),
+        seq: 0,
+        sample_rate: 24_000,
+        samples,
+    }));
+    assert!(messages.iter().any(|message| matches!(
+        message,
+        EngineMessage::TtsChunk {
+            backend: Some(TtsBackendKind::Cloud),
+            ..
+        }
+    )));
+
+    let messages = harness.send(EngineCommand::Tts(TtsOutcome::StreamEnd {
+        event_id: second,
+        chunk_count: 1,
+        first_chunk_ms: 241,
+    }));
+    let idle = statuses(&messages)
+        .into_iter()
+        .find(|status| status.subsystem == Subsystem::Tts && status.state == "idle")
+        .expect("the cloud first-PCM latency is reported");
+    assert_eq!(idle.message.as_deref(), Some("First cloud PCM in 241 ms"));
+    assert_eq!(idle.backend.as_deref(), Some("cloud"));
 }
 
 /// 18/36. The relay: chunks, stream end, whole-WAV success, and a failure that

@@ -1130,8 +1130,8 @@ impl SpeechRouter {
         }
     }
 
-    /// `_poll_tts` (`server.py:1854-1956`), minus the WAV validation that is now
-    /// a file fact and lives in cathedral-backends.
+    /// `_poll_tts` (`server.py:1854-1956`), minus audio validation/decoding,
+    /// which now lives at each backend boundary in cathedral-backends.
     pub fn on_tts(
         &mut self,
         now: f64,
@@ -1145,30 +1145,39 @@ impl SpeechRouter {
                 seq,
                 sample_rate,
                 samples,
-            } => out.push(EngineMessage::TtsChunk {
-                event_id,
-                chunk_seq: seq,
-                sample_rate,
-                samples,
-            }),
+            } => {
+                let backend = self.tts_backend(&event_id);
+                out.push(EngineMessage::TtsChunk {
+                    event_id,
+                    chunk_seq: seq,
+                    sample_rate,
+                    samples,
+                    backend,
+                });
+            }
             TtsOutcome::StreamEnd {
                 event_id,
                 chunk_count,
                 first_chunk_ms,
             } => {
-                self.forget_tts_backend(&event_id);
+                let backend = self.forget_tts_backend(&event_id);
                 out.push(EngineMessage::TtsStreamEnd {
                     event_id,
                     chunk_count,
                     first_chunk_ms,
                 });
-                // The whole point of the local streaming path is the first-PCM
-                // latency; show it.
+                let provider = match backend {
+                    Some(TtsBackendKind::Cloud) => "cloud",
+                    Some(TtsBackendKind::Local) => "local",
+                    Some(TtsBackendKind::Off) | None => "voice",
+                };
+                // First-PCM latency is the number every streaming voice lives
+                // or dies by, whichever provider produced it.
                 out.push(EngineMessage::Status(tts_status(
                     STATE_IDLE,
                     None,
-                    Some(format!("First local PCM in {first_chunk_ms} ms")),
-                    Some(TtsBackendKind::Local),
+                    Some(format!("First {provider} PCM in {first_chunk_ms} ms")),
+                    backend,
                 )));
             }
             TtsOutcome::Done {
@@ -1226,6 +1235,13 @@ impl SpeechRouter {
             self.tts_backends.remove(0);
         }
         self.tts_backends.push((event_id, kind));
+    }
+
+    fn tts_backend(&self, event_id: &SpeechEventId) -> Option<TtsBackendKind> {
+        self.tts_backends
+            .iter()
+            .find(|(tracked, _)| tracked == event_id)
+            .map(|(_, kind)| *kind)
     }
 
     fn forget_tts_backend(&mut self, event_id: &SpeechEventId) -> Option<TtsBackendKind> {

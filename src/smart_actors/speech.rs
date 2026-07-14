@@ -13,6 +13,7 @@ use bevy::{
     },
     prelude::*,
 };
+use cathedral_sim::TtsBackendKind;
 use crossbeam_channel::{Receiver, TryRecvError, bounded};
 
 use crate::{controller::PlayerController, fonts::CathedralFonts, smart_actors::HEARING_RADIUS_M};
@@ -42,6 +43,14 @@ const NPC_VOICE_SPATIAL_SCALE: f32 = 1.0 / HEARING_RADIUS_M;
 /// so dialogue feels attached to the world while staying legible against
 /// stone, sky, and the actors' light skin tones.
 const DIALOGUE_BACKDROP: Color = Color::srgba(0.10, 0.105, 0.11, 0.82);
+
+fn streaming_playback_speed(backend: Option<TtsBackendKind>) -> f32 {
+    if backend == Some(TtsBackendKind::Local) {
+        LOCAL_TTS_PLAYBACK_SPEED
+    } else {
+        1.0
+    }
+}
 
 /// A validated speech event that the bridge determined was heard by the player.
 #[derive(Message, Debug, Clone)]
@@ -75,6 +84,7 @@ pub struct TtsPcmChunkReady {
     pub chunk_seq: u32,
     pub sample_rate: u32,
     pub samples: Arc<[i16]>,
+    pub backend: Option<TtsBackendKind>,
 }
 
 #[derive(Message, Debug, Clone)]
@@ -163,9 +173,9 @@ impl Iterator for StreamingPcmDecoder {
         } else if buffer.finished {
             None
         } else {
-            // Never block the audio callback. Pocket TTS runs faster than
-            // real-time after its first chunk, so this is only an underrun
-            // guard and normally emits no audible gap.
+            // Never block the audio callback. Streaming TTS should run faster
+            // than real-time after its first chunk, so this is only an
+            // underrun guard and normally emits no audible gap.
             Some(0.0)
         }
     }
@@ -204,6 +214,7 @@ impl Decodable for StreamingPcmSource {
 struct PendingPcmStream {
     source: StreamingPcmSource,
     next_chunk_seq: u32,
+    backend: Option<TtsBackendKind>,
 }
 
 #[derive(Debug)]
@@ -520,9 +531,11 @@ pub fn receive_tts_pcm_chunks(
                 .or_insert_with(|| PendingPcmStream {
                     source: StreamingPcmSource::new(message.sample_rate),
                     next_chunk_seq: 0,
+                    backend: message.backend,
                 });
             if stream.next_chunk_seq != message.chunk_seq
                 || stream.source.sample_rate != message.sample_rate
+                || stream.backend != message.backend
             {
                 true
             } else {
@@ -584,7 +597,11 @@ pub fn receive_tts_stream_ends(
         if let Some(stream) = state.pcm_streams.get(&message.event_id) {
             stream.source.finish();
         }
-        if message.first_chunk_ms > 300 {
+        let backend = state
+            .pcm_streams
+            .get(&message.event_id)
+            .and_then(|stream| stream.backend);
+        if backend == Some(TtsBackendKind::Local) && message.first_chunk_ms > 300 {
             voice_toast(
                 Some(&mut hud),
                 format!(
@@ -768,19 +785,19 @@ pub fn start_ready_audio(
                 );
                 return;
             };
-            let source = state
+            let stream = state
                 .pcm_streams
                 .get(&event_id)
-                .expect("PCM readiness was checked")
-                .source
-                .clone();
+                .expect("PCM readiness was checked");
+            let playback_speed = streaming_playback_speed(stream.backend);
+            let source = stream.source.clone();
             let source = streaming_sources.add(source);
             commands
                 .spawn((
                     Name::new("NPC streaming spatial voice"),
                     NpcVoice,
                     AudioPlayer(source),
-                    settings.with_speed(LOCAL_TTS_PLAYBACK_SPEED),
+                    settings.with_speed(playback_speed),
                     Transform::from_translation(position),
                 ))
                 .id()
@@ -1360,6 +1377,13 @@ mod tests {
     }
 
     #[test]
+    fn only_local_streaming_voice_gets_the_pocket_speedup() {
+        assert_eq!(streaming_playback_speed(Some(TtsBackendKind::Local)), 1.05);
+        assert_eq!(streaming_playback_speed(Some(TtsBackendKind::Cloud)), 1.0);
+        assert_eq!(streaming_playback_speed(None), 1.0);
+    }
+
+    #[test]
     fn out_of_order_pcm_chunk_releases_the_waiting_subtitle() {
         let mut app = App::new();
         let mut state = SpeechPresentationState::default();
@@ -1377,6 +1401,7 @@ mod tests {
             chunk_seq: 0,
             sample_rate: 24_000,
             samples: Arc::from([1_i16, 2]),
+            backend: Some(TtsBackendKind::Local),
         });
         app.update();
         assert_eq!(
@@ -1392,6 +1417,7 @@ mod tests {
             chunk_seq: 2,
             sample_rate: 24_000,
             samples: Arc::from([3_i16, 4]),
+            backend: Some(TtsBackendKind::Local),
         });
         app.update();
         assert!(
@@ -1413,6 +1439,7 @@ mod tests {
             PendingPcmStream {
                 source,
                 next_chunk_seq: 1,
+                backend: Some(TtsBackendKind::Local),
             },
         );
         // start_ready_audio removes the event from audio_order as soon as
@@ -1427,6 +1454,7 @@ mod tests {
             chunk_seq: 1,
             sample_rate: 24_000,
             samples: Arc::from([2_i16, 3]),
+            backend: Some(TtsBackendKind::Local),
         });
 
         app.update();

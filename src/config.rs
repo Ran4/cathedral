@@ -97,7 +97,7 @@ mod tests {
 
         let defaults = AppConfig::default().smart_actors;
         assert!(defaults.stt_streaming);
-        assert_eq!(defaults.stt_trailing_silence_ms, 500);
+        assert_eq!(defaults.stt_trailing_silence_ms, 400);
         assert_eq!(defaults.stt_backend, "cloud");
     }
 

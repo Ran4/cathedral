@@ -96,7 +96,7 @@ impl Default for SmartActorsConfig {
             stt_backend: "cloud".into(),
             pause_microphone_during_npc_voice: true,
             stt_streaming: true,
-            stt_trailing_silence_ms: 500,
+            stt_trailing_silence_ms: 400,
             sounds: SoundsConfig::default(),
         }
     }
@@ -684,12 +684,14 @@ fn process_engine_message(
             chunk_seq,
             sample_rate,
             samples,
+            backend,
         } => {
             presentation.pcm.write(speech::TtsPcmChunkReady {
                 event_id: event_id.0,
                 chunk_seq,
                 sample_rate,
                 samples,
+                backend,
             });
         }
         EngineMessage::TtsStreamEnd {

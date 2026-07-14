@@ -61,9 +61,9 @@ pub use stt_cloud::CloudTranscriber;
 pub use stt_local::CanaryTranscriber;
 pub use stt_realtime::{RealtimeSttHandle, RealtimeTransport, TransportFactory};
 pub use transcription::{STT_QUEUE_CAPACITY, SttEngine};
-pub use tts::{TTS_QUEUE_CAPACITY, TtsEngine};
+pub use tts::{PcmChunk, StreamCompletion, TTS_QUEUE_CAPACITY, TtsEngine};
 pub use tts_cloud::CloudTts;
-pub use tts_local::{PcmChunk, PocketTts, StreamCompletion};
+pub use tts_local::PocketTts;
 pub use wav::{
     MAX_PCM_CHUNK_BYTES, MAX_WAV_BYTES, WavError, WavInfo, accept_wav_bytes, safe_session_path,
     validate_wav_bytes, wav_duration_seconds,
@@ -171,8 +171,8 @@ impl BackendsHandle {
         ))
     }
 
-    /// The cast's voice: cloud synthesis and the local streaming Pocket worker —
-    /// or silence-shaped fakes.
+    /// The cast's voice: streaming cloud WAVs and the local streaming Pocket
+    /// worker — or silence-shaped fakes.
     pub fn tts(&self) -> Box<dyn Tts + Send> {
         if self.config.fake_mode {
             return Box::new(self.fake_speech());

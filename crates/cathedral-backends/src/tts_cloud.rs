@@ -1,28 +1,36 @@
 //! Cloud synthesis — `POST /v1/audio/speech` (`OpenAISpeechBackend.synthesize`,
 //! `speech_client.py:180-205`).
 //!
-//! Python streamed the response into `<event>.wav.part` and renamed it over the
-//! target, because the game read the finished file off disk. In-process the WAV
-//! never needs to exist: the bytes go straight onto the backend channel as
-//! `TtsOutcome::Done`, which removes the temp file, the rename, the reservation
-//! and the `audio_consumed` handshake in one go. The sanity gate that guarded
-//! that file (`server.py:1927-1948`) stays — it now guards the bytes.
+//! OpenAI starts returning a WAV before it knows the final RIFF/data sizes. The
+//! previous in-process port collected that entire response, repaired its two
+//! placeholder sizes, and only then gave it to Bevy. [`CloudTts`] now consumes
+//! the HTTP body as it arrives and decodes the provider's PCM16 WAV into the
+//! same ordered mono chunks as local Pocket TTS. Honest non-streaming WAVs and
+//! unusual formats retain the complete-WAV compatibility path.
 
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use cathedral_sim::SpeechError;
+use futures_util::StreamExt;
 use serde::Serialize;
 
 use crate::{
     config::SpeechSettings,
     stt_cloud::{NO_KEY_MESSAGE, is_retryable, transport_error},
-    tts::{resolve_openai_voice, validate_tts_text},
-    wav::accept_wav_bytes,
+    tts::{PcmChunk, StreamCompletion, resolve_openai_voice, validate_tts_text},
+    wav::{MAX_PCM_CHUNK_BYTES, MAX_WAV_BYTES, accept_wav_bytes},
     worker::truncate,
 };
 
 const MAX_ATTEMPTS: u32 = 2;
 const RETRY_BACKOFF: Duration = Duration::from_millis(500);
+const MIN_STREAM_SAMPLE_RATE: u32 = 8_000;
+const MAX_STREAM_SAMPLE_RATE: u32 = 48_000;
+const PCM16_BYTES_PER_SAMPLE: usize = 2;
+const MAX_STREAM_CHUNK_SAMPLES: usize = MAX_PCM_CHUNK_BYTES / PCM16_BYTES_PER_SAMPLE;
 
 #[derive(Debug, Serialize)]
 struct SpeechRequest<'a> {
@@ -31,6 +39,251 @@ struct SpeechRequest<'a> {
     input: &'a str,
     /// WAV, not MP3: the game decodes it with `hound` and plays raw samples.
     response_format: &'static str,
+}
+
+/// A cloud provider normally takes the streaming branch. The buffered variant
+/// preserves compatibility with an honest-length WAV or a provider format the
+/// incremental PCM16 decoder deliberately does not guess at.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CloudSynthesis {
+    Streamed(StreamCompletion),
+    Buffered(Arc<[u8]>),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct StreamFormat {
+    data_offset: usize,
+    channels: u16,
+    sample_rate: u32,
+    block_align: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HeaderDecision {
+    NeedMore,
+    Stream(StreamFormat),
+    Buffer,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DecodeMode {
+    Inspecting,
+    Streaming {
+        format: StreamFormat,
+        emitted_raw_bytes: usize,
+    },
+    Buffered,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum DecodedCloudAudio {
+    Streamed { chunk_count: u32 },
+    Buffered(Arc<[u8]>),
+}
+
+/// Incremental decoder for the actual provider shape: PCM16 WAV with unknown
+/// RIFF/data lengths (`0xFFFFFFFF`). It keeps the bounded original bytes too so
+/// EOF still passes through the existing hound-based sanity gate.
+#[derive(Debug)]
+struct CloudWavDecoder {
+    bytes: Vec<u8>,
+    mode: DecodeMode,
+    next_seq: u32,
+}
+
+impl CloudWavDecoder {
+    fn new() -> Self {
+        Self {
+            bytes: Vec::new(),
+            mode: DecodeMode::Inspecting,
+            next_seq: 0,
+        }
+    }
+
+    fn push(&mut self, incoming: &[u8]) -> Result<Vec<PcmChunk>, SpeechError> {
+        let new_len = self
+            .bytes
+            .len()
+            .checked_add(incoming.len())
+            .filter(|length| *length <= MAX_WAV_BYTES)
+            .ok_or_else(|| SpeechError::new("generated WAV exceeds 16 MiB"))?;
+        self.bytes.reserve(new_len - self.bytes.len());
+        self.bytes.extend_from_slice(incoming);
+
+        if self.mode == DecodeMode::Inspecting {
+            self.mode = match inspect_streaming_header(&self.bytes) {
+                HeaderDecision::NeedMore => DecodeMode::Inspecting,
+                HeaderDecision::Stream(format) => DecodeMode::Streaming {
+                    format,
+                    emitted_raw_bytes: 0,
+                },
+                HeaderDecision::Buffer => DecodeMode::Buffered,
+            };
+        }
+
+        let DecodeMode::Streaming {
+            format,
+            emitted_raw_bytes,
+        } = self.mode
+        else {
+            return Ok(Vec::new());
+        };
+
+        let available = self.bytes.len().saturating_sub(format.data_offset);
+        let complete_raw_bytes = available - available % format.block_align;
+        if complete_raw_bytes <= emitted_raw_bytes {
+            return Ok(Vec::new());
+        }
+
+        let mut chunks = Vec::new();
+        let mut raw_offset = emitted_raw_bytes;
+        while raw_offset < complete_raw_bytes {
+            let available_frames = (complete_raw_bytes - raw_offset) / format.block_align;
+            let frames = available_frames.min(MAX_STREAM_CHUNK_SAMPLES);
+            let raw_len = frames * format.block_align;
+            let start = format.data_offset + raw_offset;
+            let end = start + raw_len;
+            let samples = decode_pcm16_mono(&self.bytes[start..end], format.channels);
+            chunks.push(PcmChunk {
+                seq: self.next_seq,
+                sample_rate: format.sample_rate,
+                samples: Arc::from(samples),
+            });
+            self.next_seq = self.next_seq.saturating_add(1);
+            raw_offset += raw_len;
+        }
+
+        self.mode = DecodeMode::Streaming {
+            format,
+            emitted_raw_bytes: complete_raw_bytes,
+        };
+        Ok(chunks)
+    }
+
+    fn finish(self) -> Result<DecodedCloudAudio, SpeechError> {
+        let (playable, info) = accept_wav_bytes(&self.bytes)?;
+        match self.mode {
+            DecodeMode::Streaming {
+                format,
+                emitted_raw_bytes,
+            } => {
+                let expected_raw_bytes = (info.frames as usize)
+                    .checked_mul(format.block_align)
+                    .ok_or_else(|| SpeechError::new("generated WAV is invalid"))?;
+                if self.next_seq == 0
+                    || info.channels != format.channels
+                    || info.sample_rate != format.sample_rate
+                    || info.bits_per_sample != 16
+                    || emitted_raw_bytes != expected_raw_bytes
+                {
+                    return Err(SpeechError::new("generated WAV is invalid"));
+                }
+                Ok(DecodedCloudAudio::Streamed {
+                    chunk_count: self.next_seq,
+                })
+            }
+            DecodeMode::Inspecting | DecodeMode::Buffered => {
+                Ok(DecodedCloudAudio::Buffered(Arc::from(playable.as_ref())))
+            }
+        }
+    }
+}
+
+fn inspect_streaming_header(bytes: &[u8]) -> HeaderDecision {
+    if bytes.len() < 12 {
+        return HeaderDecision::NeedMore;
+    }
+    if &bytes[..4] != b"RIFF" || &bytes[8..12] != b"WAVE" {
+        return HeaderDecision::Buffer;
+    }
+
+    let mut offset = 12usize;
+    let mut stream_format = None;
+    loop {
+        let Some(header_end) = offset.checked_add(8) else {
+            return HeaderDecision::Buffer;
+        };
+        let Some(header) = bytes.get(offset..header_end) else {
+            return HeaderDecision::NeedMore;
+        };
+        let chunk_id = &header[..4];
+        let declared = u32::from_le_bytes(header[4..8].try_into().expect("four bytes")) as usize;
+        let body = header_end;
+
+        if chunk_id == b"fmt " {
+            if declared < 16 {
+                return HeaderDecision::Buffer;
+            }
+            let Some(format) = bytes.get(body..body + 16) else {
+                return HeaderDecision::NeedMore;
+            };
+            let format_tag = u16::from_le_bytes(format[..2].try_into().expect("two bytes"));
+            let channels = u16::from_le_bytes(format[2..4].try_into().expect("two bytes"));
+            let sample_rate = u32::from_le_bytes(format[4..8].try_into().expect("four bytes"));
+            let block_align =
+                u16::from_le_bytes(format[12..14].try_into().expect("two bytes")) as usize;
+            let bits_per_sample = u16::from_le_bytes(format[14..16].try_into().expect("two bytes"));
+            let expected_align = usize::from(channels) * PCM16_BYTES_PER_SAMPLE;
+            if format_tag == 1
+                && (1..=2).contains(&channels)
+                && (MIN_STREAM_SAMPLE_RATE..=MAX_STREAM_SAMPLE_RATE).contains(&sample_rate)
+                && bits_per_sample == 16
+                && block_align == expected_align
+            {
+                stream_format = Some((channels, sample_rate, block_align));
+            } else {
+                return HeaderDecision::Buffer;
+            }
+        } else if chunk_id == b"data" {
+            let Some((channels, sample_rate, block_align)) = stream_format else {
+                return HeaderDecision::Buffer;
+            };
+            // This placeholder is the provider's promise that bytes following
+            // the header are an open-ended PCM stream. Honest finite WAVs use
+            // the complete-file compatibility path.
+            if declared != u32::MAX as usize {
+                return HeaderDecision::Buffer;
+            }
+            return HeaderDecision::Stream(StreamFormat {
+                data_offset: body,
+                channels,
+                sample_rate,
+                block_align,
+            });
+        }
+
+        let Some(padded) = declared.checked_add(declared & 1) else {
+            return HeaderDecision::Buffer;
+        };
+        let Some(next) = body.checked_add(padded) else {
+            return HeaderDecision::Buffer;
+        };
+        if next > MAX_WAV_BYTES {
+            return HeaderDecision::Buffer;
+        }
+        if bytes.len() < next {
+            return HeaderDecision::NeedMore;
+        }
+        offset = next;
+    }
+}
+
+fn decode_pcm16_mono(raw: &[u8], channels: u16) -> Vec<i16> {
+    match channels {
+        1 => raw
+            .chunks_exact(2)
+            .map(|sample| i16::from_le_bytes([sample[0], sample[1]]))
+            .collect(),
+        2 => raw
+            .chunks_exact(4)
+            .map(|frame| {
+                let left = i16::from_le_bytes([frame[0], frame[1]]);
+                let right = i16::from_le_bytes([frame[2], frame[3]]);
+                ((i32::from(left) + i32::from(right)) / 2) as i16
+            })
+            .collect(),
+        _ => unreachable!("the streaming header accepts mono or stereo only"),
+    }
 }
 
 /// The cloud TTS client.
@@ -66,12 +319,17 @@ impl CloudTts {
         &self.model
     }
 
-    /// One utterance, as WAV bytes.
+    /// One utterance, delivering PCM chunks as the provider's body arrives.
     ///
     /// Text and voice are validated **locally first** (`speech_client.py:180-183`):
     /// an empty line, a control character or a hostile voice override must never
     /// become a provider call.
-    pub async fn synthesize(&self, text: &str, voice_key: &str) -> Result<Arc<[u8]>, SpeechError> {
+    pub async fn synthesize_stream(
+        &self,
+        text: &str,
+        voice_key: &str,
+        mut on_chunk: impl FnMut(PcmChunk),
+    ) -> Result<CloudSynthesis, SpeechError> {
         validate_tts_text(text)?;
         let voice = resolve_openai_voice(&self.settings, voice_key)?;
         let Some(api_key) = self.api_key.clone() else {
@@ -86,8 +344,9 @@ impl CloudTts {
             response_format: "wav",
         };
 
+        let started = Instant::now();
         let mut attempt = 0;
-        let bytes = loop {
+        let response = loop {
             attempt += 1;
             let response = self
                 .http
@@ -121,19 +380,32 @@ impl CloudTts {
                 )));
             }
 
-            match response.bytes().await {
-                Ok(bytes) => break bytes,
-                Err(error) => return Err(transport_error("synthesis", &error)),
-            }
+            break response;
         };
 
-        // The same gate the file used to pass (`server.py:1927-1948`): the game's
-        // audio sink must never be handed something it cannot play. The provider
-        // streams its answer, so the WAV it sends declares 0xFFFFFFFF for its own
-        // length; what leaves here is the repaired copy, because rodio is as
-        // strict about that as the gate is.
-        let (playable, _) = accept_wav_bytes(&bytes)?;
-        Ok(Arc::from(playable.as_ref()))
+        let mut decoder = CloudWavDecoder::new();
+        let mut first_chunk_ms = None;
+        let mut body = response.bytes_stream();
+        while let Some(next) = body.next().await {
+            let bytes = next.map_err(|error| transport_error("synthesis", &error))?;
+            for chunk in decoder.push(&bytes)? {
+                first_chunk_ms.get_or_insert_with(|| {
+                    started.elapsed().as_millis().min(u128::from(u32::MAX)) as u32
+                });
+                on_chunk(chunk);
+            }
+        }
+
+        match decoder.finish()? {
+            DecodedCloudAudio::Streamed { chunk_count } => {
+                Ok(CloudSynthesis::Streamed(StreamCompletion {
+                    chunk_count,
+                    first_chunk_ms: first_chunk_ms
+                        .ok_or_else(|| SpeechError::new("generated WAV is invalid"))?,
+                }))
+            }
+            DecodedCloudAudio::Buffered(wav) => Ok(CloudSynthesis::Buffered(wav)),
+        }
     }
 }
 
@@ -185,6 +457,40 @@ mod tests {
         buffer.into_inner()
     }
 
+    fn synthesize(
+        runtime: &BackendRuntime,
+        client: &CloudTts,
+        text: &str,
+        voice: &str,
+    ) -> Result<CloudSynthesis, SpeechError> {
+        runtime.block_on(client.synthesize_stream(text, voice, |_| {}))
+    }
+
+    fn streamed_wav_with_channels(channels: u16, samples: &[i16]) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"RIFF");
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        bytes.extend_from_slice(b"WAVE");
+        bytes.extend_from_slice(b"fmt ");
+        bytes.extend_from_slice(&16u32.to_le_bytes());
+        bytes.extend_from_slice(&1u16.to_le_bytes()); // PCM
+        bytes.extend_from_slice(&channels.to_le_bytes());
+        bytes.extend_from_slice(&24_000u32.to_le_bytes());
+        bytes.extend_from_slice(&(24_000 * u32::from(channels) * 2).to_le_bytes());
+        bytes.extend_from_slice(&(channels * 2).to_le_bytes());
+        bytes.extend_from_slice(&16u16.to_le_bytes());
+        bytes.extend_from_slice(b"data");
+        bytes.extend_from_slice(&u32::MAX.to_le_bytes());
+        for sample in samples {
+            bytes.extend_from_slice(&sample.to_le_bytes());
+        }
+        bytes
+    }
+
+    fn streamed_wav(samples: &[i16]) -> Vec<u8> {
+        streamed_wav_with_channels(1, samples)
+    }
+
     /// speech-python.md test 10: model `tts-1`, Ilse's default voice `nova`,
     /// `response_format: "wav"`.
     #[test]
@@ -198,9 +504,11 @@ mod tests {
         assert!(client.available());
         assert_eq!(client.model(), "tts-1");
 
-        let wav = runtime
-            .block_on(client.synthesize("Greetings", "ilse"))
-            .expect("synthesized");
+        let CloudSynthesis::Buffered(wav) =
+            synthesize(&runtime, &client, "Greetings", "ilse").expect("synthesized")
+        else {
+            panic!("an honest finite WAV keeps the compatibility path");
+        };
         assert_eq!(&wav[..4], b"RIFF");
 
         let request = server.request(0);
@@ -223,9 +531,7 @@ mod tests {
             ("OPENAI_BASE_URL", &server.base_url()),
             ("TTS_VOICE_SVEN", "alloy"),
         ]));
-        runtime
-            .block_on(client.synthesize("Hello", "sven"))
-            .expect("synthesized");
+        synthesize(&runtime, &client, "Hello", "sven").expect("synthesized");
         assert_eq!(server.request(0).json()["voice"], "alloy");
 
         // The provider-qualified variable outranks the legacy one.
@@ -236,9 +542,7 @@ mod tests {
             ("TTS_VOICE_SVEN", "alloy"),
             ("TTS_OPENAI_VOICE_SVEN", "onyx"),
         ]));
-        runtime
-            .block_on(client.synthesize("Hello", "sven"))
-            .expect("synthesized");
+        synthesize(&runtime, &client, "Hello", "sven").expect("synthesized");
         assert_eq!(server.request(0).json()["voice"], "onyx");
     }
 
@@ -254,28 +558,16 @@ mod tests {
             ("OPENAI_API_KEY", "sk"),
             ("OPENAI_BASE_URL", &base),
         ]));
-        assert!(runtime.block_on(client.synthesize("", "ilse")).is_err());
-        assert!(runtime.block_on(client.synthesize("   ", "ilse")).is_err());
+        assert!(synthesize(&runtime, &client, "", "ilse").is_err());
+        assert!(synthesize(&runtime, &client, "   ", "ilse").is_err());
+        assert!(synthesize(&runtime, &client, "bad\0speech", "ilse").is_err());
+        assert!(synthesize(&runtime, &client, "bad\rspeech", "ilse").is_err());
         assert!(
-            runtime
-                .block_on(client.synthesize("bad\0speech", "ilse"))
-                .is_err()
-        );
-        assert!(
-            runtime
-                .block_on(client.synthesize("bad\rspeech", "ilse"))
-                .is_err()
-        );
-        assert!(
-            runtime
-                .block_on(client.synthesize(&"x".repeat(501), "ilse"))
-                .is_err(),
+            synthesize(&runtime, &client, &"x".repeat(501), "ilse").is_err(),
             "the 500-character limit"
         );
         assert!(
-            runtime
-                .block_on(client.synthesize("Hello", "gandalf"))
-                .is_err(),
+            synthesize(&runtime, &client, "Hello", "gandalf").is_err(),
             "only the three cast voices exist"
         );
 
@@ -284,11 +576,7 @@ mod tests {
             ("OPENAI_BASE_URL", &base),
             ("TTS_VOICE_ILSE", "../../bad"),
         ]));
-        assert!(
-            runtime
-                .block_on(hostile.synthesize("Hello", "ilse"))
-                .is_err()
-        );
+        assert!(synthesize(&runtime, &hostile, "Hello", "ilse").is_err());
 
         assert_eq!(server.request_count(), 0, "not one provider call");
     }
@@ -299,8 +587,7 @@ mod tests {
         let client = CloudTts::new(&settings(&[]));
         assert!(!client.available());
         assert_eq!(
-            runtime
-                .block_on(client.synthesize("Hello", "ilse"))
+            synthesize(&runtime, &client, "Hello", "ilse")
                 .expect_err("no key")
                 .presentable,
             NO_KEY_MESSAGE
@@ -315,8 +602,7 @@ mod tests {
             ("OPENAI_BASE_URL", &server.base_url()),
         ]));
         assert_eq!(
-            runtime
-                .block_on(client.synthesize("Hello", "ilse"))
+            synthesize(&runtime, &client, "Hello", "ilse")
                 .expect_err("the provider is down")
                 .presentable,
             "cloud speech provider failed (HTTP 503)"
@@ -324,27 +610,49 @@ mod tests {
         assert_eq!(server.request_count(), 2, "one retry");
     }
 
-    /// The real provider streams its answer and therefore cannot fill in the
-    /// lengths: RIFF and `data` both come back as 0xFFFFFFFF. Every cloud line
-    /// was silent until this was handled — and what the client returns has to be
-    /// playable by rodio, which is `hound`, which is what refused it.
+    /// The decoder emits the first samples before EOF/final validation. This is
+    /// the regression for the latency bug: buffering until `finish` would make
+    /// both `push` calls return no chunks.
     #[test]
-    fn the_streaming_wav_the_provider_actually_sends_is_playable_when_it_arrives() {
-        let mut streamed = Vec::new();
-        streamed.extend_from_slice(b"RIFF");
-        streamed.extend_from_slice(&u32::MAX.to_le_bytes());
-        streamed.extend_from_slice(b"WAVE");
-        streamed.extend_from_slice(b"fmt ");
-        streamed.extend_from_slice(&16u32.to_le_bytes());
-        streamed.extend_from_slice(&1u16.to_le_bytes());
-        streamed.extend_from_slice(&1u16.to_le_bytes());
-        streamed.extend_from_slice(&24_000u32.to_le_bytes());
-        streamed.extend_from_slice(&48_000u32.to_le_bytes());
-        streamed.extend_from_slice(&2u16.to_le_bytes());
-        streamed.extend_from_slice(&16u16.to_le_bytes());
-        streamed.extend_from_slice(b"data");
-        streamed.extend_from_slice(&u32::MAX.to_le_bytes());
-        streamed.extend(std::iter::repeat_n(0u8, 480));
+    fn provider_pcm_is_decoded_before_the_complete_wav_arrives() {
+        let wav = streamed_wav(&[100, -200, 300, -400]);
+        let split = wav.len() - 4;
+        let mut decoder = CloudWavDecoder::new();
+
+        let first = decoder.push(&wav[..split]).expect("first body fragment");
+        assert_eq!(first.len(), 1, "audio is available before response EOF");
+        assert_eq!(first[0].seq, 0);
+        assert_eq!(first[0].sample_rate, 24_000);
+        assert_eq!(first[0].samples.as_ref(), &[100, -200]);
+
+        let second = decoder.push(&wav[split..]).expect("last body fragment");
+        assert_eq!(second.len(), 1);
+        assert_eq!(second[0].seq, 1);
+        assert_eq!(second[0].samples.as_ref(), &[300, -400]);
+        assert_eq!(
+            decoder.finish().expect("valid at EOF"),
+            DecodedCloudAudio::Streamed { chunk_count: 2 }
+        );
+    }
+
+    #[test]
+    fn provider_stereo_is_downmixed_before_it_reaches_the_mono_game_source() {
+        let wav = streamed_wav_with_channels(2, &[100, 300, -300, 100]);
+        let mut decoder = CloudWavDecoder::new();
+        let chunks = decoder.push(&wav).expect("stereo body");
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].samples.as_ref(), &[200, -100]);
+        assert_eq!(
+            decoder.finish().expect("valid stereo at EOF"),
+            DecodedCloudAudio::Streamed { chunk_count: 1 }
+        );
+    }
+
+    /// The actual provider shape takes the streaming channel end to end, not
+    /// the complete-WAV compatibility branch.
+    #[test]
+    fn the_streaming_wav_the_provider_actually_sends_becomes_pcm_chunks() {
+        let streamed = streamed_wav(&[100, -200, 300, -400]);
 
         let server = MockServer::start(vec![MockServer::ok_bytes(&streamed)]);
         let runtime = BackendRuntime::new().expect("runtime");
@@ -353,11 +661,16 @@ mod tests {
             ("OPENAI_BASE_URL", &server.base_url()),
         ]));
 
-        let wav = runtime
-            .block_on(client.synthesize("Greetings", "ilse"))
+        let mut chunks = Vec::new();
+        let result = runtime
+            .block_on(client.synthesize_stream("Greetings", "ilse", |chunk| chunks.push(chunk)))
             .expect("the provider's own bytes are accepted");
-        let reader = hound::WavReader::new(Cursor::new(wav.as_ref())).expect("the game can play it");
-        assert_eq!(reader.duration(), 240);
+        let CloudSynthesis::Streamed(completion) = result else {
+            panic!("the provider placeholder sizes select streaming");
+        };
+        assert_eq!(completion.chunk_count, 1);
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].samples.as_ref(), &[100, -200, 300, -400]);
     }
 
     /// The provider answering with something unplayable is a degrade, not a
@@ -371,8 +684,7 @@ mod tests {
             ("OPENAI_BASE_URL", &server.base_url()),
         ]));
         assert_eq!(
-            runtime
-                .block_on(client.synthesize("Hello", "ilse"))
+            synthesize(&runtime, &client, "Hello", "ilse")
                 .expect_err("not a WAV")
                 .presentable,
             "generated WAV is invalid"

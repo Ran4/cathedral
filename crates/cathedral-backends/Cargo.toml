@@ -16,7 +16,7 @@ hound = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "sync", "macros", "io-util", "net", "process"] }
-reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "rustls-tls", "charset", "http2"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "rustls-tls", "charset", "http2", "stream"] }
 dotenvy = "0.15"
 # Local wall-clock time for the prompt archive's filenames, exactly the way the
 # game crate does it (src/session_log.rs); std has no local-time conversion.

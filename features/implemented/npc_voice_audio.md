@@ -240,7 +240,7 @@ smart_actors: (
 
 Pocket TTS does not expose a native speaking-rate control. Bevy therefore
 applies a fixed `1.05` playback multiplier only to local streaming audio. This
-slightly shortens the line and raises its pitch; cloud WAV playback remains at
+slightly shortens the line and raises its pitch; streamed cloud PCM remains at
 its provider-generated speed.
 
 If the configured mode is unavailable, prefer another free local backend only
@@ -254,18 +254,24 @@ wire protocol, status messages, or logs.
 
 ## Presentation and ordering
 
-Cloud speech retains the complete-WAV pipeline. Local speech uses a distinct
-streaming pipeline so playback does not wait for utterance completion:
+Both selected voice backends now converge on the streaming PCM presentation
+pipeline so playback does not wait for utterance completion:
 
 ```text
 NPC speech event
   -> bubble/subtitle immediately
-  -> persistent Pocket TTS worker
-  -> tts_chunk (mono 24 kHz signed 16-bit PCM, flushed immediately)
+  -> Pocket emits PCM, or cloud incrementally decodes the provider WAV body
+  -> tts_chunk (bounded mono signed 16-bit PCM, flushed immediately)
   -> Rust validates sequence/format and feeds a custom Bevy audio source
   -> spatial playback begins from chunk 0
   -> tts_stream_end closes the source after its buffer drains
 ```
+
+Cloud's usual response declares `0xFFFFFFFF` placeholder RIFF/data sizes. The
+backend validates its PCM16 header before releasing samples, downmixes stereo
+if necessary, keeps the complete response under the existing 16 MiB cap, and
+runs the complete WAV sanity gate at EOF. Honest finite WAVs and unusual
+supported formats retain the complete-clip compatibility path.
 
 Playback stays globally serialized. Generated clips may complete out of
 order, but `SpeechPresentationState.audio_order` waits for the corresponding
@@ -321,8 +327,9 @@ avoid transcribing speaker output as player speech.
   bounded per-chunk PCM limit.
 - Keep the TTS request queue bounded.
 - Permit only one active synthesis request per local model process.
-- Validate WAV headers for cloud audio and strict mono PCM metadata, base64,
-  size, and sequence for local audio.
+- Validate streaming WAV/PCM headers, size, frame alignment, and sequence for
+  cloud audio, and strict mono PCM metadata, base64, size, and sequence for
+  local audio.
 - Keep all generated and temporary files inside the per-session runtime
   directory.
 - Remove partial output after failure and generated output after
