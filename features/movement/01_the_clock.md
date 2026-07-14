@@ -211,24 +211,23 @@ it is what `lore/places/04_routes_and_sightlines.md` §"Night and bells" already
 
 ## 6. The numbers: how long is a day?
 
-This is the one hard decision in the clock, and there is no free lunch. Fix NPC walking speed at the
-lore's **1.2 m/s** and let `R` be the real seconds in a game day, so compression `C = 86400 / R`:
+This is settled: **1 game day = 1 real hour (24×)**, with NPC walking speed fixed at **1.8 m/s** — a
+brisk, purposeful medieval pace, the number the lore's one pedestrian timing was re-cut to
+(`04_routes_and_sightlines.md`: west doors to Tally Bridge, ~360 m on the ground, *"roughly three to
+four minutes"*). Let `R` be the real seconds in a game day, so compression `C = 86400 / R`; at 24×,
+`seconds_per_day = 3600`.
 
 | 1 game day = | C | 60 m — to the ward well | 200 m — across your ward | 500 m — across town | 1 km — wall to wall |
 |---|---|---|---|---|---|
-| 24 real min | 60× | 50 game min | 2 h 47 m | 6 h 56 m | 13 h 53 m |
-| **60 real min** | **24×** | **20 game min** | **1 h 07 m** | **2 h 46 m** | 5 h 33 m |
-| 120 real min | 12× | 10 game min | 33 game min | 1 h 23 m | 2 h 46 m |
-| 240 real min | 6× | 5 game min | 17 game min | 42 game min | 1 h 23 m |
+| 24 real min | 60× | 33 game min | 1 h 51 m | 4 h 38 m | 9 h 15 m |
+| **60 real min (chosen)** | **24×** | **13 game min** | **44 game min** | **1 h 51 m** | 3 h 42 m |
 
-Read the bottom-right corner of each row and ask whether a person could have that day.
+At 24× and 1.8 m/s the local round reads perfectly, and even a wall-to-wall trip is 3 h 42 m of game
+time. Long, but no longer absurd. The 60× row is kept
+only to show why the clock is not run faster: at that speed a stroll to the well already eats a third
+of a game morning.
 
-- **24× (1 real hour per day)** — the Skyrim number, and the one I recommend. Local errands read
-  perfectly. A cross-town commute reads as absurd, and needs the mitigations below.
-- **12× (2 real hours per day)** — everything reads correctly, with no mitigation whatsoever. The
-  cost is that seeing a full day/night cycle takes a two-hour sitting.
-
-Two mitigations make 24× honest, and they should both exist regardless:
+Two mitigations keep the genuine cross-town trips honest, and they should both exist regardless:
 
 **(a) Content: people live where they work.** This is not a hack; it is how medieval cities worked,
 and *the data already says so*. Every character has a `planning_ward` (8 values), and 2,566 buildings

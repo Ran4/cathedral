@@ -146,13 +146,15 @@ That is exactly right and it is not obvious. It is spelled out in
 [05_the_llm_seam.md](05_the_llm_seam.md) §2, because it is the difference between a bell that costs
 nothing and a bell that costs 3,500 inbox lines a day.
 
-**Walking speed is calibrated in the lore.** `lore/places/04_routes_and_sightlines.md`:
+**Walking speed is set at 1.8 m/s** — a brisk, purposeful medieval pace. The lore's one pedestrian
+timing was re-cut to match. `lore/places/04_routes_and_sightlines.md`:
 
-> The outdoor part from west doors to Tally Bridge is roughly **six to seven minutes**.
+> The outdoor part from west doors to Tally Bridge is roughly **three to four minutes**.
 
 West doors ≈ `(0, 81)`, Tally Bridge ≈ `(-305, 105)` — about 310 m as the crow flies, more on the
-ground. Six to seven minutes gives **1.0–1.3 m/s**. Use **1.2 m/s**. It is a real medieval walking
-pace and it is the number the city was written with.
+ground. At 1.8 m/s that ~360 m walk is ~3½ minutes. (It was first written at 1.2 m/s — the slower
+amble "six to seven minutes" implied; movement takes the brisker pace so cross-town trips read better
+under the 24× clock, and the lore follows the number.)
 
 **Twenty daily routes are already authored.** `lore/second_sun/05_dramatis_personae.md` gives every
 major character a `route:` line, and they all have the same shape — two to four legs, each pegged to
@@ -368,23 +370,21 @@ M0 and M1 are independent of each other and of everything else. **M1 is where th
 
 Laid out properly in [08_risks.md](08_risks.md). The three that change the shape of the work:
 
-**(a) How long is a day?** The arithmetic is unforgiving and there is no free lunch:
+**(a) How long is a day? — decided: 1 real hour (24×).** At 1.8 m/s the arithmetic reads:
 
 | 1 game day = | compression | 60 m, to the well | 200 m, across your ward | 500 m, across town |
 |---|---|---|---|---|
-| 24 real min | 60× | 50 game min | 2 h 47 m | 6 h 56 m |
-| **60 real min** | **24×** | **20 game min** | **1 h 07 m** | **2 h 46 m** |
-| 120 real min | 12× | 10 game min | 33 game min | 1 h 23 m |
+| 24 real min | 60× | 33 game min | 1 h 51 m | 4 h 38 m |
+| **60 real min (chosen)** | **24×** | **13 game min** | **44 game min** | **1 h 51 m** |
 
-At 24× a cross-town errand costs an implausible number of *game* hours. My recommendation is **1 game
-day = 1 real hour**, mitigated by content (medieval people lived where they worked — and
-`planning_ward` says they still do) plus an explicit, bounded **Long Errand** rule for the rare
-cross-city trip. But if you would rather the clock simply be honest, 120 minutes removes the problem
-entirely, at the price of a two-hour day/night cycle. Your call; I have written both.
+The chosen **1 game day = 1 real hour** is Skyrim's number: local life reads perfectly and a full
+day/night cycle fits one sitting. The cross-town cost is handled by content (medieval people lived
+where they worked — and `planning_ward` says they still do) plus an explicit, bounded **Long Errand**
+rule for the rare cross-city trip. It is one number in `config.ron` (`seconds_per_day: 3600.0`).
 
-**(b) The player walks at 8 m/s.** `WALK_SPEED` in `controller.rs:43` — six times a human. NPCs at
-1.2 m/s will look like they are standing still next to you, and you cross the 20 m hearing radius in
-2.5 seconds. I would drop the player's walk to ~4 m/s and leave the run at 8–12, but that is a feel
+**(b) The player walks at 8 m/s.** `WALK_SPEED` in `controller.rs:43` — more than four times an NPC's
+1.8 m/s. NPCs will still read as slow beside you, and you cross the 20 m hearing radius in 2.5
+seconds. I would drop the player's walk to ~4 m/s and leave the run at 8–12, but that is a feel
 question and it is yours.
 
 **(c) Buildings have no interiors.** They are solid extruded prisms; only the Lanthorn has an inside.

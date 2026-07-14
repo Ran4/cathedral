@@ -6,35 +6,29 @@
 
 ### (a) How long is a game day?
 
-The arithmetic is unforgiving. Fix NPC walking speed at the lore's **1.2 m/s** (calibrated from
-`04_routes_and_sightlines.md`: west doors to Tally Bridge, ~310 m, *"roughly six to seven minutes"*),
-and let `C` be the compression:
+**Decided: 1 game day = 1 real hour (24×), NPC walking speed 1.8 m/s.** (The speed was re-cut from the
+old 1.2 m/s; the lore's one pedestrian timing in `04_routes_and_sightlines.md` — west doors to Tally
+Bridge, ~360 m on the ground — now reads *"roughly three to four minutes"* to match.) The arithmetic:
 
 | 1 game day = | C | 60 m — the ward well | 200 m — across your ward | 500 m — across town |
 |---|---|---|---|---|
-| 24 real min | 60× | 50 game min | 2 h 47 m | 6 h 56 m |
-| **60 real min** | **24×** | **20 game min** | **1 h 07 m** | **2 h 46 m** |
-| 120 real min | 12× | 10 game min | 33 game min | 1 h 23 m |
+| 24 real min | 60× | 33 game min | 1 h 51 m | 4 h 38 m |
+| **60 real min (chosen)** | **24×** | **13 game min** | **44 game min** | **1 h 51 m** |
 
-**My recommendation: 60 real minutes.** It is Skyrim's number. Local life reads perfectly, a full
-day/night cycle fits in a sitting, and the cross-town problem is handled by content (people live where
-they work — and `planning_ward` says they already do) plus the bounded **Long Errand** rule
-([01](01_the_clock.md) §6).
-
-**But 120 minutes makes the problem vanish entirely**, with no mitigation and no fiat. Every commute in
-the city becomes plausible in game hours. The price is that a full cycle takes a two-hour sitting.
-
-I have written the clock so this is one number in `config.ron`. But it is a *feel* decision and it is
-yours. If you want to see both before deciding: M0 ships the `T` key.
+**60 real minutes is Skyrim's number.** Local life reads perfectly, a full day/night cycle fits in a
+sitting, and the cross-town cost is handled by content (people live where they work — and
+`planning_ward` says they already do) plus the bounded **Long Errand** rule ([01](01_the_clock.md) §6).
+It is one number in `config.ron` (`seconds_per_day: 3600.0`); M0's `T` key still lets you watch a whole
+game day in a minute.
 
 ### (b) The player walks at 8 m/s
 
 `WALK_SPEED = 8.0` (`controller.rs:43`), `RUN_SPEED = 12.0`. That is **six times a human walk**. It
 was surely chosen because the city is a kilometre across and walking it at 1.4 m/s is tedious.
 
-Two consequences once NPCs move at 1.2 m/s:
+Two consequences once NPCs move at 1.8 m/s:
 
-- **They will look like they are standing still next to you.** Every NPC will read as elderly.
+- **They will still read as slow next to you.** The player outpaces them more than four to one.
 - **You cross the 20 m hearing radius in 2.5 seconds.** You can outrun a conversation by accident.
 
 I would drop the player's **walk** to ~4 m/s and leave the **run** at 8–12, so that walking beside

@@ -45,8 +45,8 @@ The player walking already pays this. **Five hundred NPCs walking would pay it c
 current }` (`controller.rs:301-305`), and lerps by `overstep_fraction()` in `interpolate_player`
 (`controller.rs:533-541`). Do exactly that for NPCs, at 20 Hz.
 
-**Take 20 Hz, not 10.** At 1.2 m/s, a 20 Hz tick moves someone 6 cm — invisible after interpolation.
-10 Hz moves them 12 cm, which is also fine for walking, but 20 Hz gives local avoidance enough
+**Take 20 Hz, not 10.** At 1.8 m/s, a 20 Hz tick moves someone 9 cm — invisible after interpolation.
+10 Hz moves them 18 cm, which is also fine for walking, but 20 Hz gives local avoidance enough
 resolution not to look mushy, and the cost difference is nothing (§6).
 
 ---
