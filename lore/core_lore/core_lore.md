@@ -23,7 +23,9 @@ The default present year is **F.437**, the 437th year since the first stone of t
 - River cargo lands at wharves beyond the south wall and comes through the river gate by cart and porter. The **Old Sluice** at the Cut's east end is a dry historic landmark.
 - **The Lanthorn** stands a little west of the city's centre, with its quire east and its Great Rose facing west over the Gradine.
 - Streets pinch, widen, and dogleg between mismatched facades. Jettied storeys, covered passages, courts, and bridges between lofts make the city dense and irregular.
-- The city is walkable and crowded, but has no fixed population number.
+- Ombreval once held approximately **15,000 people**, but only about **4,000**
+  live there in F.437 after a still-undefined depopulating event. [The game
+  simulates only a few hundred of them; see `lore/core_lore/population.md`].
 
 ## The five squares
 
@@ -97,6 +99,7 @@ People use given names with inherited or earned bynames from trade, place, origi
 ## Detailed files to load only when relevant
 
 - World premise, wider geography, and open canon: `lore/core_lore/setting_and_geography.md`
+- Historical, present, and game-represented population: `lore/core_lore/population.md`
 - Squares, streets, bridges, and landmarks: `lore/core_lore/places.md`
 - Work, trade, money, measures, markets, and daily time: `lore/core_lore/trade_and_daily_life.md`
 - Candor hierarchy, churches, saints, and bells: `lore/core_lore/candor_and_churches.md`
