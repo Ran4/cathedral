@@ -1,6 +1,6 @@
 # Session log format
 
-One directory per game run; `latest_session` is a symlink to the newest one.
+One directory per game run; `logs/latest_session` is a symlink to the newest one.
 
 ```
 logs/

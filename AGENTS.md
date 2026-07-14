@@ -27,8 +27,8 @@ threads and no filesystem. Domain details (the world model, the action verbs, th
 people" rule) are in `crates/cathedral-sim/AGENTS.md`.
 
 Three capabilities are probed at startup and reported independently: LLM cognition, player speech-to-text
-(cloud OpenAI gpt-4o-transcribe or local Canary-Qwen), and NPC voices (local streaming Pocket TTS, cloud
-OpenAI, or off). Each degrades on its own — a missing API key never takes the others down. The Esc settings
+(cloud OpenAI gpt-4o-transcribe or local Canary-Qwen), and NPC voices (streaming local Pocket TTS, streaming
+cloud OpenAI, or off). Each degrades on its own — a missing API key never takes the others down. The Esc settings
 menu switches STT/TTS backends at runtime and persists the choice to `config.ron`; the X key cycles the NPC
 voice backend.
 
@@ -57,6 +57,21 @@ diagnostics (and, with `-v`, the prompts and raw replies) go to stderr.
 
 To verify a change in a running game, see .claude/rules/CATHEDRAL_DRIVE.md (do NOT use xdotool/XTEST (winit
 never sees synthetic core events).
+
+## Logs
+
+Automatically written:
+
+```
+logs/
+    latest_session -> session_46_2026-07-13_10_28_52
+    session_<n>_<YYYY-MM-DD_HH_MM_SS>/   # run counter, local start time
+        logs.jsonl
+        screenshots/
+        prompts/
+```
+
+See `.claude/rules/LOGS_FOLDER.md` for more info.
 
 ## Lore
 
