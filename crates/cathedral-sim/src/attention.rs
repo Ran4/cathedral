@@ -477,10 +477,15 @@ pub const CURIOSITY_WITHOUT_LORE: f64 = 1.0;
 /// place the `max_actors` cap, the turn rate and the real spatial clustering of
 /// the cast are all in the room at once, and between them they cost about half a
 /// roll per person that the arithmetic above does not know about.
-pub const CURIOSITY_BASE: f64 = 0.09;
+pub const CURIOSITY_BASE: f64 = 0.082;
 
 /// Nobody is *entirely* deaf to a stranger, and nobody accosts every single one.
-const CURIOSITY_FLOOR: f64 = 0.01;
+///
+/// The floor is deliberately a number a player can actually meet. At 0.01 the
+/// reserved half of the city was not aloof, it was scenery: a watchman you walk
+/// past thirty times has spoken to you once, which reads as a broken NPC rather
+/// than a taciturn one. Rarely is a character; never is a bug.
+const CURIOSITY_FLOOR: f64 = 0.03;
 const CURIOSITY_CEILING: f64 = 0.60;
 
 /// So that the roll is not a re-reading of the context hash's own bits.
@@ -611,7 +616,7 @@ fn derived_curiosity(profile: &LoreProfile) -> f64 {
     curiosity += match profile.occupation_id.as_deref() {
         None => 0.10,
         Some(occupation) if STREET_TRADES.contains(&occupation) => 0.09,
-        Some(occupation) if RESERVED_TRADES.contains(&occupation) => -0.05,
+        Some(occupation) if RESERVED_TRADES.contains(&occupation) => -0.02,
         Some(_) => 0.0,
     };
 
@@ -631,12 +636,12 @@ fn derived_curiosity(profile: &LoreProfile) -> f64 {
         profile.rank.as_deref(),
         Some("master" | "mistress" | "warden")
     ) {
-        curiosity -= 0.03;
+        curiosity -= 0.02;
     }
     // A sworn conspirator keeps his head down: the last thing a paid moth of the
     // Custody wants is to be the man who struck up a conversation.
     if profile.faction_role.is_some() {
-        curiosity -= 0.04;
+        curiosity -= 0.03;
     }
 
     // Professionally curious in the most literal sense: a beggar has to speak
@@ -654,8 +659,8 @@ fn derived_curiosity(profile: &LoreProfile) -> f64 {
     for status in &profile.statuses {
         curiosity += match status.as_str() {
             "unhoused" => 0.02,
-            "enclosed_religious" => -0.06,
-            "prisoner" => -0.04,
+            "enclosed_religious" => -0.05,
+            "prisoner" => -0.03,
             "retired" => -0.02,
             _ => 0.0,
         };

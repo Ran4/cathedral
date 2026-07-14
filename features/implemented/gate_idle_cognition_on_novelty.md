@@ -69,21 +69,30 @@ right angles — 545 encounters, nobody speaking, no bells
 | | of the people you walk past, how many think about you |
 | --- | --- |
 | `curiosity: false` (before) | **100%** — all 545 |
-| `curiosity: true` (after) | **19.3%** — 105 |
+| `curiosity: true` (after) | **20.0%** — 109 |
 
-Against a ~20% target. And who the fifth is, is a fact about them:
+Against a ~20% target. And who the fifth is, is a fact about them. Per-encounter
+chance, derived, averaged over the shipped cast:
 
-| | rate |
+| | chance |
 | --- | --- |
-| beggars, hawkers, entertainers, tavern folk, pilgrims (`no_fixed_trade`, `market_seller`, `food_provisioner`, `fish_trader`, `entertainer`, `tavern_worker`, `pilgrim`, `scavenger`) | **38%** |
-| the whole city | 19% |
-| the watch, the chapter and the ledger (`watchman_and_keeper`, `militia_and_soldier`, `bailiff_and_gaoler`, `civic_officer`, `candor_cleric`, `church_attendant`, `scribe_and_clerk`, `merchant`) | **3%** |
+| the destitute and the street-callers — `no_fixed_trade` 31%, `pilgrim` 25%, `scavenger` 24%, `messenger` 23%, `food_provisioner` 22%, `market_seller` 21%, `entertainer` 20% | **20–31%** |
+| the trades — `domestic_servant` (45 people, the biggest, and given no bonus either way) 12%, the crafts 8–9% | **8–12%** |
+| the watch, the chapter and the ledger — `militia_and_soldier` 6.7%, `scribe_and_clerk` 6.5%, `candor_cleric` 6.1%, `watchman_and_keeper` 5.5%, `church_attendant` 5.4% | **5–7%** |
+| `anchoress` — walled into a cell by vocation | **3%** (the floor) |
 
-Best of the trades with a real sample: entertainers 64%, food provisioners 45%,
-`no_fixed_trade` 42%, tavern workers 36%. Worst: the watch, the gaolers, the
-clerks and the militia at 0%. The 45 domestic servants — the biggest single
-trade, and deliberately given no bonus either way — land on 19%, i.e. exactly
-the city.
+Cast mean 12.2%, which the walk turns into 20.0% because most people get more
+than one chance to notice you.
+
+**The floor was raised once, deliberately, after the first calibration.** At
+`CURIOSITY_FLOOR = 0.01` the reserved half of the city sat at 3–4% and *measured
+zero* over 545 encounters: a watchman you walk past thirty times had spoken to
+you once. That is not a taciturn man, it is a broken one — rarely is a
+character, never is a bug. The floor is now 0.03, the reserved-trade penalty
+0.02 rather than 0.05, and the base was trimmed from 0.09 to 0.082 to hold the
+city at 20%. The bottom of the table rose without flattening onto the floor: the
+watch is still less than half as forward as the crafts, and a sixth as forward
+as a beggar.
 
 ### Three deviations in §2
 
@@ -111,9 +120,9 @@ the city.
    clustered by trade, so `max_actors` (6) regularly hands the outer members of a
    tavern their first turn only once the player is *already* in earshot, costing
    them the first of their two rolls. The measured city behaves like ~1.6 rolls a
-   head, not 2. `CURIOSITY_BASE` is 0.09 and the mean derived curiosity is 0.123,
-   which the arithmetic says is 23% and the city says is 19.3%. Do not re-derive
-   this number; re-measure it.
+   head, not 2. `CURIOSITY_BASE` is 0.082 and the mean derived curiosity is 0.122,
+   which the arithmetic says is 23% and the city says is 20.0%. Do not re-derive
+   this number; re-measure it — `curiosity_walk.rs` is the only thing that knows.
 
 The derivation is a caricature and is meant to be — `lore/characters/**/*.json`
 takes an optional `curiosity` that beats it outright, and none of the 500 shipped
