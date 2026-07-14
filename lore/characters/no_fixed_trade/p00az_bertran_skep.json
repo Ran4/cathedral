@@ -1,0 +1,35 @@
+{
+  "id": "p00az",
+  "name": "Bertran Skep",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 13,
+  "gender": "m",
+  "occupation_id": null,
+  "title": null,
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward streets",
+  "knows": [
+    "p0022",
+    "p0077"
+  ],
+  "father": "p0022",
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 122.5,
+    "y": 0.91,
+    "z": 412.5,
+    "facing": -2.7517
+  },
+  "statuses": [
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You have no fixed trade and pass your days in Wick Ward streets with the Skep household. Irregular work and neighbours' small alms barely keep you fed. You speak softly but refuse to be talked over. Today you need to have a bent buckle straightened. One shoe has a new wooden sole.",
+  "extended_character_description": "",
+  "goal": "Have a bent buckle straightened"
+}

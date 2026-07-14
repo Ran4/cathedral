@@ -1,0 +1,35 @@
+{
+  "id": "p004v",
+  "name": "Sible Wren",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 52,
+  "gender": "f",
+  "occupation_id": "instrument_maker",
+  "title": "Lens grinder",
+  "rank": "mistress",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward streets",
+  "knows": [
+    "p007o",
+    "p006x"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p006x"
+  ],
+  "spawn_location": {
+    "x": 322.5,
+    "y": 0.91,
+    "z": 412.5,
+    "facing": 1.8448
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a lens grinder in Cloth Ward streets, working beside the Wren household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to stretch supper to one more bowl. A chipped green bead hangs at your throat.",
+  "extended_character_description": "",
+  "goal": "Stretch supper to one more bowl"
+}

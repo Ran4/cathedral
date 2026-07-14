@@ -1,0 +1,33 @@
+{
+  "id": "p0092",
+  "name": "Havise Rill",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 57,
+  "gender": "f",
+  "occupation_id": "food_provisioner",
+  "title": "Food-stall helper",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p005i",
+    "p009o"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 222.5,
+    "y": 0.91,
+    "z": -557.5,
+    "facing": 0.4026
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a food-stall helper in Bell-and-Sluice streets, working beside the Rill household. Your wages, barter and place in the shared household pot keep you fed. You bargain cheerfully and remember exact sums. Today you need to learn who moved your market basket. You carry a smooth tally stick.",
+  "extended_character_description": "",
+  "goal": "Learn who moved your market basket"
+}

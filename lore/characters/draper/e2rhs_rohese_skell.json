@@ -25,10 +25,10 @@
     "e3cob"
   ],
   "spawn_location": {
-    "x": 117.44,
+    "x": 152.5,
     "y": 0.91,
-    "z": 262.56,
-    "facing": -0.785398
+    "z": 192.5,
+    "facing": -0.1946
   },
   "statuses": [],
   "conditions": [],

@@ -1,0 +1,35 @@
+{
+  "id": "p00b0",
+  "name": "Aubin Clove",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 43,
+  "gender": "m",
+  "occupation_id": null,
+  "title": null,
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 482.5,
+    "y": 0.91,
+    "z": -147.5,
+    "facing": -0.1207
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "pauper",
+    "prisoner"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You have no fixed trade and pass your days in Bell-and-Sluice streets with a shared bell-and-sluice work-and-lodging group. Stone House rations and food carried in by kin are your present support. You bargain cheerfully and remember exact sums. Today you need to clear mud from your only coat. Your hair is cropped close on one side.",
+  "extended_character_description": "",
+  "goal": "Clear mud from your only coat"
+}

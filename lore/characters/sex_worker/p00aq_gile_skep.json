@@ -1,0 +1,33 @@
+{
+  "id": "p00aq",
+  "name": "Gile Skep",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 30,
+  "gender": "m",
+  "occupation_id": "sex_worker",
+  "title": "House keeper",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "protection and intimidation",
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00al",
+    "p00an"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 452.5,
+    "y": 0.91,
+    "z": -207.5,
+    "facing": 2.0524
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a house keeper in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You use few words and watch hands more than faces. Today you need to find the owner of a missing hen. Your cap is pinned with a goose feather. You quietly supplement that living through protection and intimidation.",
+  "extended_character_description": "",
+  "goal": "Find the owner of a missing hen"
+}

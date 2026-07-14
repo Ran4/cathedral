@@ -1,0 +1,35 @@
+{
+  "id": "p0097",
+  "name": "Warin Quern",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 10,
+  "gender": "m",
+  "occupation_id": "food_provisioner",
+  "title": "Food-stall helper",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward streets",
+  "knows": [
+    "p0080",
+    "p0026"
+  ],
+  "father": "p0080",
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 92.5,
+    "y": 0.91,
+    "z": 292.5,
+    "facing": -0.1719
+  },
+  "statuses": [
+    "dependent"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a food-stall helper in Wick Ward streets, working beside the Quern household. You eat from a shared household pot and earn only an occasional penny. You answer in quick, literal phrases and grow wary when adults crowd you. Today you need to stretch supper to one more bowl. You carry a smooth tally stick.",
+  "extended_character_description": "",
+  "goal": "Stretch supper to one more bowl"
+}

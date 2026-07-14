@@ -1,0 +1,35 @@
+{
+  "id": "p002p",
+  "name": "Osanne Rasp",
+  "significance": "ambient",
+  "planning_ward": "cinder",
+  "age": 16,
+  "gender": "f",
+  "occupation_id": "cloth_worker",
+  "title": "Seamstress",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward streets",
+  "knows": [
+    "p002m",
+    "p002n"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -267.5,
+    "y": 0.91,
+    "z": 342.5,
+    "facing": -0.8005
+  },
+  "statuses": [],
+  "conditions": [
+    "tooth pain"
+  ],
+  "memories": [],
+  "core_character_description": "You are a seamstress in Cinder Ward streets, working beside a shared cinder work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to collect a late wage. You have ink on one thumb. The visible bodily condition you live with is tooth pain.",
+  "extended_character_description": "",
+  "goal": "Collect a late wage"
+}

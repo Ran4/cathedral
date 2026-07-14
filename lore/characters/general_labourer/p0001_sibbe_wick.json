@@ -1,0 +1,38 @@
+{
+  "id": "p0001",
+  "name": "Sibbe Wick",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 21,
+  "gender": "f",
+  "occupation_id": "general_labourer",
+  "title": "Fabric labourer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward streets",
+  "knows": [
+    "p0005",
+    "p0007"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -417.5,
+    "y": 0.91,
+    "z": -657.5,
+    "facing": 1.8475
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a fabric labourer in Reed Ward streets, working beside a shared reed work-and-lodging group. Irregular work, doorstep alms and a regular begging pitch keep you fed. You are quick with dry jokes but slow with trust. Today you need to find the key to a shared chest. A burn mark crosses the back of your right hand.",
+  "extended_character_description": "",
+  "goal": "Find the key to a shared chest"
+}

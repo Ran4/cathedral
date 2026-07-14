@@ -1,0 +1,35 @@
+{
+  "id": "p009m",
+  "name": "Tib Mott",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 9,
+  "gender": "m",
+  "occupation_id": "entertainer",
+  "title": "Storyteller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p004w",
+    "p00a3"
+  ],
+  "father": "p004w",
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 292.5,
+    "y": 0.91,
+    "z": -487.5,
+    "facing": 2.4193
+  },
+  "statuses": [
+    "dependent"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a storyteller in Bell-and-Sluice streets, working beside the Mott household. You eat from a shared household pot and earn only an occasional penny. You answer in quick, literal phrases and grow wary when adults crowd you. Today you need to dry a blanket before curfew. One shoe has a new wooden sole.",
+  "extended_character_description": "",
+  "goal": "Dry a blanket before curfew"
+}

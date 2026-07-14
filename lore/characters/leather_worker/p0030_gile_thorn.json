@@ -1,0 +1,38 @@
+{
+  "id": "p0030",
+  "name": "Gile Thorn",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 56,
+  "gender": "m",
+  "occupation_id": "leather_worker",
+  "title": "Hide carrier",
+  "rank": "warden",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward streets",
+  "knows": [
+    "p006g",
+    "p0061"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0061",
+    "p006l"
+  ],
+  "spawn_location": {
+    "x": 252.5,
+    "y": 0.91,
+    "z": 322.5,
+    "facing": 0.6814
+  },
+  "statuses": [
+    "widower"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a hide carrier in Cloth Ward streets, working beside the Thorn household. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to find the owner of a missing hen. A tiny clay bird rides in your pocket.",
+  "extended_character_description": "",
+  "goal": "Find the owner of a missing hen"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "p00a1",
+  "name": "Segwin Vell",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 24,
+  "gender": "m",
+  "occupation_id": "bailiff_and_gaoler",
+  "title": "Court usher",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00a0",
+    "p00a2"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 342.5,
+    "y": 0.91,
+    "z": -437.5,
+    "facing": 0.6103
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a court usher in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to dry a blanket before curfew. A brass button replaces the clasp at your neck.",
+  "extended_character_description": "",
+  "goal": "Dry a blanket before curfew"
+}

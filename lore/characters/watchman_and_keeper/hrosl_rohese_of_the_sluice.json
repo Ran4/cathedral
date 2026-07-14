@@ -28,10 +28,10 @@
     "hansl"
   ],
   "spawn_location": {
-    "x": -316.0,
+    "x": -377.5,
     "y": 0.91,
-    "z": -610.0,
-    "facing": -1.570796
+    "z": -167.5,
+    "facing": 1.3186
   },
   "statuses": [
     "pauper",

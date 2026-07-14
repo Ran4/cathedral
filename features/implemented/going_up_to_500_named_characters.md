@@ -530,6 +530,14 @@ spawn transform is validated spatially against its intended ward and area.
 | Bell and Sluice Wards | 50 |
 | **Total** | **500** |
 
+Implementation follow-up after city-scale playtesting: those soft counts made
+the compact named-ward rectangles crowded while leaving most of the roughly
+one-square-kilometre city empty. Spawn allocation now follows each ward's share
+of the full safe city footprint: Fabric 42, Wick 40, Cloth 43, Wallwright 31,
+Cinder 37, Weigh 74, Reed 64, and Bell-and-Sluice 169. The allocator enforces
+at most three NPCs in any actor's 20 m neighbourhood and at most ten in every
+sliding 100 x 100 m window.
+
 These are not social ghettos. Every ward needs some combination of households,
 food, children, servants, poor residents, petty trade and maintenance work.
 Named trade districts should influence weighting, not monopolise an occupation.
@@ -729,4 +737,3 @@ Known count assumptions currently include tests in
 - The Bevy game loads the full roster without invalid transforms, severe spawn
   overlap or unacceptable frame/simulation cost.
 - All hard-coded 103-character assumptions are removed or updated to 500.
-

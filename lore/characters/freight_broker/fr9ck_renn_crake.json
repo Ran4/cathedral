@@ -25,10 +25,10 @@
   "mother": "fp6ck",
   "children": [],
   "spawn_location": {
-    "x": -311.875,
+    "x": -457.5,
     "y": 0.91,
-    "z": 105.0,
-    "facing": -1.570796
+    "z": -7.5,
+    "facing": 0.6416
   },
   "statuses": [],
   "conditions": [],

@@ -1,0 +1,35 @@
+{
+  "id": "p007z",
+  "name": "Clemence Pell",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 80,
+  "gender": "f",
+  "occupation_id": "animal_worker",
+  "title": "Swineherd",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "poaching",
+  "district": "Reed Ward streets",
+  "knows": [
+    "p0073",
+    "p0028"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0028"
+  ],
+  "spawn_location": {
+    "x": -167.5,
+    "y": 0.91,
+    "z": -597.5,
+    "facing": 0.104
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a swineherd in Reed Ward streets, working beside the Pell household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to avoid losing a rented stool. A burn mark crosses the back of your right hand. You quietly supplement that living through poaching.",
+  "extended_character_description": "",
+  "goal": "Avoid losing a rented stool"
+}

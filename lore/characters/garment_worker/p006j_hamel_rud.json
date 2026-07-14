@@ -1,0 +1,36 @@
+{
+  "id": "p006j",
+  "name": "Hamel Rud",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 40,
+  "gender": "m",
+  "occupation_id": "garment_worker",
+  "title": "Cutter",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward streets",
+  "knows": [
+    "p002t",
+    "p003u"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p003u",
+    "p005z"
+  ],
+  "spawn_location": {
+    "x": 32.5,
+    "y": 0.91,
+    "z": 302.5,
+    "facing": 1.5319
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a cutter in Wick Ward streets, working beside the Rud household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to collect a late wage. A brass button replaces the clasp at your neck.",
+  "extended_character_description": "",
+  "goal": "Collect a late wage"
+}

@@ -25,10 +25,10 @@
     "davqn"
   ],
   "spawn_location": {
-    "x": -57.25,
+    "x": -307.5,
     "y": 0.91,
-    "z": 332.667,
-    "facing": -2.244146
+    "z": 482.5,
+    "facing": -2.0576
   },
   "statuses": [],
   "conditions": [

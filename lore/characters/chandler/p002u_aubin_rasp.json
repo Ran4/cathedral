@@ -1,0 +1,37 @@
+{
+  "id": "p002u",
+  "name": "Aubin Rasp",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 54,
+  "gender": "m",
+  "occupation_id": "chandler",
+  "title": "Chandler",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward streets",
+  "knows": [
+    "p007h",
+    "p003p"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p003p"
+  ],
+  "spawn_location": {
+    "x": -77.5,
+    "y": 0.91,
+    "z": 282.5,
+    "facing": -1.3751
+  },
+  "statuses": [
+    "widower"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a chandler in Wick Ward streets, working beside the Rasp household. Your wages, barter and place in the shared household pot keep you fed. You answer strangers in clipped practical phrases. Today you need to have a bent buckle straightened. You carry a basket with one broken handle.",
+  "extended_character_description": "",
+  "goal": "Have a bent buckle straightened"
+}

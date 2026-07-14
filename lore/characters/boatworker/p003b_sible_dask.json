@@ -1,0 +1,40 @@
+{
+  "id": "p003b",
+  "name": "Sible Dask",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 60,
+  "gender": "f",
+  "occupation_id": "boatworker",
+  "title": "Bargeman",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p003d",
+    "p0084"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0084",
+    "p0085"
+  ],
+  "spawn_location": {
+    "x": -407.5,
+    "y": 0.91,
+    "z": 272.5,
+    "facing": 1.219
+  },
+  "statuses": [
+    "intermittently_employed",
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work bargeman in Weigh Ward streets, relying on the Dask household while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You bargain cheerfully and remember exact sums. Today you need to trade for a sound length of cord. You have ink on one thumb.",
+  "extended_character_description": "",
+  "goal": "Trade for a sound length of cord"
+}

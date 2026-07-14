@@ -1,0 +1,35 @@
+{
+  "id": "p0057",
+  "name": "Osanne Tarn",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 41,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Kitchen maid",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p0055",
+    "p0056"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -7.5,
+    "y": 0.91,
+    "z": -157.5,
+    "facing": 0.6984
+  },
+  "statuses": [
+    "prisoner"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You worked as a kitchen maid and are now held from Bell-and-Sluice streets, still tied to a shared bell-and-sluice work-and-lodging group. Stone House rations and food carried in by kin are your present support. You use few words and watch hands more than faces. Today you need to recover a disputed penny. Your coat is too large and belted twice.",
+  "extended_character_description": "",
+  "goal": "Recover a disputed penny"
+}

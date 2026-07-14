@@ -1,0 +1,33 @@
+{
+  "id": "p008x",
+  "name": "Havise Kett",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 60,
+  "gender": "f",
+  "occupation_id": "food_provisioner",
+  "title": "Egg seller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "adulterating food",
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p008n",
+    "p0099"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 202.5,
+    "y": 0.91,
+    "z": -327.5,
+    "facing": 2.0012
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an egg seller in Bell-and-Sluice streets, working beside the Kett household. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to have a sore heel looked at. You carry a smooth tally stick. You quietly supplement that living through adulterating food.",
+  "extended_character_description": "",
+  "goal": "Have a sore heel looked at"
+}

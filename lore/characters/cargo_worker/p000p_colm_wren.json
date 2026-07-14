@@ -1,0 +1,37 @@
+{
+  "id": "p000p",
+  "name": "Colm Wren",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 18,
+  "gender": "m",
+  "occupation_id": "cargo_worker",
+  "title": "Wharf hand",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p000r",
+    "p000w"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -447.5,
+    "y": 0.91,
+    "z": 262.5,
+    "facing": -0.3653
+  },
+  "statuses": [
+    "insecure_lodging",
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work wharf hand in Weigh Ward streets, relying on a shared weigh work-and-lodging group while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You tell small stories instead of giving straight answers. Today you need to return a borrowed knife. White lime dust sits in the seams of your coat.",
+  "extended_character_description": "",
+  "goal": "Return a borrowed knife"
+}

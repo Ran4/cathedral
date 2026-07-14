@@ -1,0 +1,36 @@
+{
+  "id": "p00ay",
+  "name": "Colm Dunn",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 11,
+  "gender": "m",
+  "occupation_id": null,
+  "title": null,
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p0089",
+    "p001d"
+  ],
+  "father": null,
+  "mother": "p0089",
+  "children": [],
+  "spawn_location": {
+    "x": 482.5,
+    "y": 0.91,
+    "z": -237.5,
+    "facing": -0.1235
+  },
+  "statuses": [
+    "dependent",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You have no fixed trade and pass your days in Bell-and-Sluice streets with the Dunn household. You eat from a shared household pot and earn only an occasional penny. You answer in quick, literal phrases and grow wary when adults crowd you. Today you need to learn why a promised cart is late. You have ink on one thumb.",
+  "extended_character_description": "",
+  "goal": "Learn why a promised cart is late"
+}

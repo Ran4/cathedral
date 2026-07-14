@@ -1,0 +1,33 @@
+{
+  "id": "p006h",
+  "name": "Havise Skep",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 52,
+  "gender": "f",
+  "occupation_id": "garment_worker",
+  "title": "Tailor's apprentice",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward streets",
+  "knows": [
+    "p002v",
+    "p004e"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 192.5,
+    "y": 0.91,
+    "z": -7.5,
+    "facing": 0.5051
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tailor's apprentice in Fabric Ward streets, working beside a shared fabric work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to secure tomorrow's place in the hiring line. Three keys knock together at your belt.",
+  "extended_character_description": "",
+  "goal": "Secure tomorrow's place in the hiring line"
+}

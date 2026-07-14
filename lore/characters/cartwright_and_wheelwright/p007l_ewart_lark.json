@@ -1,0 +1,33 @@
+{
+  "id": "p007l",
+  "name": "Ewart Lark",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 18,
+  "gender": "m",
+  "occupation_id": "cartwright_and_wheelwright",
+  "title": "Wheelwright's apprentice",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p007v",
+    "p007x"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -267.5,
+    "y": 0.91,
+    "z": 12.5,
+    "facing": -0.8005
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a wheelwright's apprentice in Weigh Ward streets, working beside a shared weigh work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to learn why a promised cart is late. A reed whistle sticks from your sleeve.",
+  "extended_character_description": "",
+  "goal": "Learn why a promised cart is late"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "p0065",
+  "name": "Bertran Dask",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 14,
+  "gender": "m",
+  "occupation_id": "domestic_servant",
+  "title": "Household servant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00am",
+    "p0090"
+  ],
+  "father": null,
+  "mother": "p00am",
+  "children": [],
+  "spawn_location": {
+    "x": 72.5,
+    "y": 0.91,
+    "z": -467.5,
+    "facing": 2.5956
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a household servant in Bell-and-Sluice streets, working beside the Dask household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to dry a blanket before curfew. Your belt is tied with bright sail thread.",
+  "extended_character_description": "",
+  "goal": "Dry a blanket before curfew"
+}

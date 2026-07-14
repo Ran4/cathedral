@@ -28,10 +28,10 @@
     "e2rhs"
   ],
   "spawn_location": {
-    "x": 122.56,
+    "x": 142.5,
     "y": 0.91,
-    "z": 257.44,
-    "facing": 2.356194
+    "z": 322.5,
+    "facing": 2.573
   },
   "statuses": [],
   "conditions": [],

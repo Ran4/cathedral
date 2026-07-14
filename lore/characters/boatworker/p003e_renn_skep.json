@@ -1,0 +1,37 @@
+{
+  "id": "p003e",
+  "name": "Renn Skep",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 71,
+  "gender": "m",
+  "occupation_id": "boatworker",
+  "title": "Waterman",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p003g",
+    "p005o"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p005o"
+  ],
+  "spawn_location": {
+    "x": -387.5,
+    "y": 0.91,
+    "z": -7.5,
+    "facing": -0.3824
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired waterman in Weigh Ward streets, still part of the Skep household. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to clear mud from your only coat. A string of nutshells circles one wrist.",
+  "extended_character_description": "",
+  "goal": "Clear mud from your only coat"
+}

@@ -2,7 +2,7 @@
   "id": "p005t",
   "name": "Nan Skep",
   "significance": "ambient",
-  "planning_ward": "weigh",
+  "planning_ward": "bell_and_sluice",
   "age": 7,
   "gender": "f",
   "occupation_id": "domestic_servant",
@@ -10,19 +10,19 @@
   "rank": null,
   "faction_role": null,
   "illegal_activity": null,
-  "district": "Weigh Ward lodging streets",
+  "district": "Bell-and-Sluice streets",
   "knows": [
-    "p008l",
-    "p007z"
+    "p0040",
+    "p00ai"
   ],
   "father": null,
   "mother": null,
   "children": [],
   "spawn_location": {
-    "x": -432.5,
+    "x": 52.5,
     "y": 0.91,
-    "z": -17.5,
-    "facing": -1.159
+    "z": -357.5,
+    "facing": -2.5412
   },
   "statuses": [
     "dependent",
@@ -30,7 +30,7 @@
   ],
   "conditions": [],
   "memories": [],
-  "core_character_description": "You are an errand child in Weigh Ward lodging streets, working beside the Skep household. You eat from a shared household pot and earn only an occasional penny. You use short, earnest sentences and stay close to familiar adults. Today you need to find the familiar adult you lost sight of. A tiny clay bird rides in your pocket.",
+  "core_character_description": "You are an errand child in Bell-and-Sluice streets, working beside the Skep household. You eat from a shared household pot and earn only an occasional penny. You use short, earnest sentences and stay close to familiar adults. Today you need to find the familiar adult you lost sight of. A tiny clay bird rides in your pocket.",
   "extended_character_description": "",
   "goal": "Find the familiar adult you lost sight of"
 }

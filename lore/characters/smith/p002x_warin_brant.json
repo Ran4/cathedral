@@ -1,0 +1,35 @@
+{
+  "id": "p002x",
+  "name": "Warin Brant",
+  "significance": "ambient",
+  "planning_ward": "cinder",
+  "age": 64,
+  "gender": "m",
+  "occupation_id": "smith",
+  "title": "Blacksmith",
+  "rank": "master",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward streets",
+  "knows": [
+    "p002q",
+    "p002r"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -227.5,
+    "y": 0.91,
+    "z": 352.5,
+    "facing": -2.9764
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired blacksmith in Cinder Ward streets, still part of a shared cinder work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak slowly and test every claim. Today you need to avoid losing a rented stool. A brass button replaces the clasp at your neck.",
+  "extended_character_description": "",
+  "goal": "Avoid losing a rented stool"
+}

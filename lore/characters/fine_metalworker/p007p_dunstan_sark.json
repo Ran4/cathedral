@@ -1,0 +1,33 @@
+{
+  "id": "p007p",
+  "name": "Dunstan Sark",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 16,
+  "gender": "m",
+  "occupation_id": "fine_metalworker",
+  "title": "Metalworker's apprentice",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward streets",
+  "knows": [
+    "p007n",
+    "p007s"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 472.5,
+    "y": 0.91,
+    "z": 362.5,
+    "facing": 1.2531
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a metalworker's apprentice in Cloth Ward streets, working beside a shared cloth work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to collect a late wage. Your nose has been broken and set slightly sideways.",
+  "extended_character_description": "",
+  "goal": "Collect a late wage"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "p0090",
+  "name": "Sibbe Dask",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 64,
+  "gender": "f",
+  "occupation_id": "food_provisioner",
+  "title": "Poulterer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00am",
+    "p0065"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 212.5,
+    "y": 0.91,
+    "z": -137.5,
+    "facing": -0.6242
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a poulterer in Bell-and-Sluice streets, working beside the Dask household. Your wages, barter and place in the shared household pot keep you fed. You use few words and watch hands more than faces. Today you need to collect kindling without a fine. You carry a horn spoon tucked through your belt.",
+  "extended_character_description": "",
+  "goal": "Collect kindling without a fine"
+}

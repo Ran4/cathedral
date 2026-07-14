@@ -1,0 +1,33 @@
+{
+  "id": "p003u",
+  "name": "Grigor Rud",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 14,
+  "gender": "m",
+  "occupation_id": "pilgrim",
+  "title": "Pilgrim",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward streets",
+  "knows": [
+    "p006j",
+    "p002t"
+  ],
+  "father": "p006j",
+  "mother": "p002t",
+  "children": [],
+  "spawn_location": {
+    "x": -47.5,
+    "y": 0.91,
+    "z": 262.5,
+    "facing": 1.5489
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a pilgrim in Wick Ward streets, working beside the Rud household. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to deliver a message before the next bell. A pale scar notches your lower lip.",
+  "extended_character_description": "",
+  "goal": "Deliver a message before the next bell"
+}

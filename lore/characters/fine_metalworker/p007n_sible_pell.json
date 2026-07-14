@@ -1,0 +1,33 @@
+{
+  "id": "p007n",
+  "name": "Sible Pell",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 40,
+  "gender": "f",
+  "occupation_id": "fine_metalworker",
+  "title": "Pewterer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward streets",
+  "knows": [
+    "p007p",
+    "p007s"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 472.5,
+    "y": 0.91,
+    "z": 212.5,
+    "facing": 0.2263
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a pewterer in Cloth Ward streets, working beside a shared cloth work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You tell small stories instead of giving straight answers. Today you need to keep rain off a bundle of kindling. You carry a smooth tally stick.",
+  "extended_character_description": "",
+  "goal": "Keep rain off a bundle of kindling"
+}

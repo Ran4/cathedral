@@ -1,0 +1,35 @@
+{
+  "id": "p0015",
+  "name": "Aubin Crake",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 9,
+  "gender": "m",
+  "occupation_id": "market_seller",
+  "title": "Honey seller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward streets",
+  "knows": [
+    "p0012",
+    "p002f"
+  ],
+  "father": "p002f",
+  "mother": "p0012",
+  "children": [],
+  "spawn_location": {
+    "x": 72.5,
+    "y": 0.91,
+    "z": -17.5,
+    "facing": 0.542
+  },
+  "statuses": [
+    "dependent"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a honey seller in Fabric Ward streets, working beside the Crake household. You eat from a shared household pot and earn only an occasional penny. You answer in quick, literal phrases and grow wary when adults crowd you. Today you need to borrow a handcart for an hour. Your broad hat has lost half its brim.",
+  "extended_character_description": "",
+  "goal": "Borrow a handcart for an hour"
+}

@@ -1,0 +1,35 @@
+{
+  "id": "p0056",
+  "name": "Lise Skell",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 47,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Errand child",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p0055",
+    "p0057"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -17.5,
+    "y": 0.91,
+    "z": -247.5,
+    "facing": -2.9566
+  },
+  "statuses": [
+    "prisoner"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You worked as an errand child and are now held from Bell-and-Sluice streets, still tied to a shared bell-and-sluice work-and-lodging group. Stone House rations and food carried in by kin are your present support. You chatter when nervous and laugh at yourself. Today you need to learn who moved your market basket. Your belt is tied with bright sail thread.",
+  "extended_character_description": "",
+  "goal": "Learn who moved your market basket"
+}

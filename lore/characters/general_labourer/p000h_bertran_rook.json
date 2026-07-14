@@ -1,0 +1,36 @@
+{
+  "id": "p000h",
+  "name": "Bertran Rook",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 51,
+  "gender": "m",
+  "occupation_id": "general_labourer",
+  "title": "Seasonal worker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward streets",
+  "knows": [
+    "p000b",
+    "p000c"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -387.5,
+    "y": 0.91,
+    "z": -297.5,
+    "facing": 1.8106
+  },
+  "statuses": [
+    "noncitizen",
+    "recent_migrant"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a seasonal worker in Reed Ward streets, working beside a shared reed work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You use few words and watch hands more than faces. Today you need to deliver a message before the next bell. A pale scar notches your lower lip. You arrived recently and still measure local speech before trusting it.",
+  "extended_character_description": "",
+  "goal": "Deliver a message before the next bell"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "p00a9",
+  "name": "Gile Rasp",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 21,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "Militiaman",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00a7",
+    "p00a8"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 382.5,
+    "y": 0.91,
+    "z": -547.5,
+    "facing": -1.5656
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a militiaman in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You are courteous, direct and hard to hurry. Today you need to get an employer to count the full day. You carry a basket with one broken handle.",
+  "extended_character_description": "",
+  "goal": "Get an employer to count the full day"
+}

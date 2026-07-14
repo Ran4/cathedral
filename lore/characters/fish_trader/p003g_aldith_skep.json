@@ -1,0 +1,37 @@
+{
+  "id": "p003g",
+  "name": "Aldith Skep",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 76,
+  "gender": "f",
+  "occupation_id": "fish_trader",
+  "title": "Fishwife",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p003e",
+    "p005o"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p005o"
+  ],
+  "spawn_location": {
+    "x": -377.5,
+    "y": 0.91,
+    "z": -97.5,
+    "facing": 0.6444
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired fishwife in Weigh Ward streets, still part of the Skep household. Your wages, barter and place in the shared household pot keep you fed. You answer strangers in clipped practical phrases. Today you need to sell the last bruised apple. Your hair is cropped close on one side.",
+  "extended_character_description": "",
+  "goal": "Sell the last bruised apple"
+}

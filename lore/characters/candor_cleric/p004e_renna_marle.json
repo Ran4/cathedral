@@ -1,0 +1,35 @@
+{
+  "id": "p004e",
+  "name": "Renna Marle",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 28,
+  "gender": "f",
+  "occupation_id": "candor_cleric",
+  "title": "Wick-priest",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward streets",
+  "knows": [
+    "p002v",
+    "p004f"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 152.5,
+    "y": 0.91,
+    "z": 22.5,
+    "facing": 2.5416
+  },
+  "statuses": [],
+  "conditions": [
+    "nursing an infant"
+  ],
+  "memories": [],
+  "core_character_description": "You are a wick-priest in Fabric Ward streets, working beside a shared fabric work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You are quick with dry jokes but slow with trust. Today you need to get an employer to count the full day. Your basket is lined with striped cloth. You are nursing an infant and keep listening for the child's cry.",
+  "extended_character_description": "",
+  "goal": "Get an employer to count the full day"
+}

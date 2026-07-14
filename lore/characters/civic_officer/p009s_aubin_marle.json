@@ -2,7 +2,7 @@
   "id": "p009s",
   "name": "Aubin Marle",
   "significance": "ambient",
-  "planning_ward": "fabric",
+  "planning_ward": "bell_and_sluice",
   "age": 48,
   "gender": "m",
   "occupation_id": "civic_officer",
@@ -10,27 +10,24 @@
   "rank": null,
   "faction_role": null,
   "illegal_activity": null,
-  "district": "Fabric Ward household streets",
+  "district": "Bell-and-Sluice streets",
   "knows": [
-    "p004v",
-    "p009l"
+    "p009j",
+    "p009t"
   ],
   "father": null,
   "mother": null,
-  "children": [
-    "p009l",
-    "p009m"
-  ],
+  "children": [],
   "spawn_location": {
-    "x": 122.5,
+    "x": 302.5,
     "y": 0.91,
-    "z": -142.5,
-    "facing": 2.843
+    "z": -127.5,
+    "facing": -0.7834
   },
   "statuses": [],
   "conditions": [],
   "memories": [],
-  "core_character_description": "You are a bencher in Fabric Ward household streets, working beside the Marle household. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to collect kindling without a fine. A chipped green bead hangs at your throat.",
+  "core_character_description": "You are a bencher in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to collect kindling without a fine. A chipped green bead hangs at your throat.",
   "extended_character_description": "",
   "goal": "Collect kindling without a fine"
 }

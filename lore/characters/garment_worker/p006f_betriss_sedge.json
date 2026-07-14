@@ -1,0 +1,33 @@
+{
+  "id": "p006f",
+  "name": "Betriss Sedge",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 16,
+  "gender": "f",
+  "occupation_id": "garment_worker",
+  "title": "Tailor's apprentice",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward streets",
+  "knows": [
+    "p0027",
+    "p004a"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 12.5,
+    "y": 0.91,
+    "z": 352.5,
+    "facing": -0.5218
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tailor's apprentice in Wick Ward streets, working beside a shared wick work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You bargain cheerfully and remember exact sums. Today you need to return a borrowed knife. Your basket is lined with striped cloth.",
+  "extended_character_description": "",
+  "goal": "Return a borrowed knife"
+}

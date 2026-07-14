@@ -1,0 +1,36 @@
+{
+  "id": "p008o",
+  "name": "Hamel Tarn",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 45,
+  "gender": "m",
+  "occupation_id": "water_and_bath_worker",
+  "title": "Private bath attendant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p008m",
+    "p008p"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 152.5,
+    "y": 0.91,
+    "z": -217.5,
+    "facing": 0.5221
+  },
+  "statuses": [
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work private bath attendant in Bell-and-Sluice streets, relying on a shared bell-and-sluice work-and-lodging group while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You ask one blunt question before offering help. Today you need to learn why a promised cart is late. A brass button replaces the clasp at your neck.",
+  "extended_character_description": "",
+  "goal": "Learn why a promised cart is late"
+}

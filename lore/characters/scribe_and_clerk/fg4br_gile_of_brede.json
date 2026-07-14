@@ -26,10 +26,10 @@
     "ecbrd"
   ],
   "spawn_location": {
-    "x": -325.625,
+    "x": -477.5,
     "y": 0.91,
-    "z": 105.0,
-    "facing": -1.570796
+    "z": 372.5,
+    "facing": 2.5388
   },
   "statuses": [
     "pauper"

@@ -2,7 +2,7 @@
   "id": "p009d",
   "name": "Grigor Sedge",
   "significance": "ambient",
-  "planning_ward": "wick",
+  "planning_ward": "cloth",
   "age": 77,
   "gender": "m",
   "occupation_id": "grocer_and_spicer",
@@ -10,26 +10,27 @@
   "rank": null,
   "faction_role": null,
   "illegal_activity": null,
-  "district": "Wick Ward lodging streets",
+  "district": "Cloth Ward streets",
   "knows": [
-    "p00a6",
-    "p005y"
+    "p005h",
+    "p0016"
   ],
   "father": null,
   "mother": null,
   "children": [
-    "p005y"
+    "p0016",
+    "p005q"
   ],
   "spawn_location": {
-    "x": 77.5,
+    "x": 492.5,
     "y": 0.91,
-    "z": 407.5,
-    "facing": -1.8388
+    "z": 252.5,
+    "facing": 0.9402
   },
   "statuses": [],
   "conditions": [],
   "memories": [],
-  "core_character_description": "You are a spicer in Wick Ward lodging streets, working beside the Sedge household. Your wages, barter and place in the shared household pot keep you fed. You meet strangers with guarded good manners. Today you need to mend a leaking shoe. Your nose has been broken and set slightly sideways.",
+  "core_character_description": "You are a spicer in Cloth Ward streets, working beside the Sedge household. Your wages, barter and place in the shared household pot keep you fed. You meet strangers with guarded good manners. Today you need to mend a leaking shoe. Your nose has been broken and set slightly sideways.",
   "extended_character_description": "",
   "goal": "Mend a leaking shoe"
 }

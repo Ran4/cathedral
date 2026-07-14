@@ -1,0 +1,37 @@
+{
+  "id": "p000o",
+  "name": "Sible Skell",
+  "significance": "ambient",
+  "planning_ward": "wallwright",
+  "age": 19,
+  "gender": "f",
+  "occupation_id": "cargo_worker",
+  "title": "Freight porter",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wallwright Ward streets",
+  "knows": [
+    "p0002",
+    "p000f"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 352.5,
+    "y": 0.91,
+    "z": 32.5,
+    "facing": 2.2629
+  },
+  "statuses": [
+    "intermittently_employed",
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work freight porter in Wallwright Ward streets, relying on a shared wallwright work-and-lodging group while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You bargain cheerfully and remember exact sums. Today you need to keep a sleeping place for tonight. Your basket is lined with striped cloth.",
+  "extended_character_description": "",
+  "goal": "Keep a sleeping place for tonight"
+}

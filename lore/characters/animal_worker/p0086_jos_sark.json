@@ -1,0 +1,33 @@
+{
+  "id": "p0086",
+  "name": "Jos Sark",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 12,
+  "gender": "m",
+  "occupation_id": "animal_worker",
+  "title": "Stable child",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward streets",
+  "knows": [
+    "p0036",
+    "p0033"
+  ],
+  "father": null,
+  "mother": "p0036",
+  "children": [],
+  "spawn_location": {
+    "x": -167.5,
+    "y": 0.91,
+    "z": -337.5,
+    "facing": -0.4678
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a stable child in Reed Ward streets, working beside the Sark household. Your wages, barter and place in the shared household pot keep you fed. You are courteous, direct and hard to hurry. Today you need to recover a disputed penny. You keep counting on the fingers of one hand.",
+  "extended_character_description": "",
+  "goal": "Recover a disputed penny"
+}

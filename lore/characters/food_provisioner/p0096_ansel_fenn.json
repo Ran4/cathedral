@@ -1,0 +1,35 @@
+{
+  "id": "p0096",
+  "name": "Ansel Fenn",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 11,
+  "gender": "m",
+  "occupation_id": "food_provisioner",
+  "title": "Food-stall helper",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p008a",
+    "p00ae"
+  ],
+  "father": "p00ae",
+  "mother": "p008a",
+  "children": [],
+  "spawn_location": {
+    "x": 242.5,
+    "y": 0.91,
+    "z": -477.5,
+    "facing": 2.4562
+  },
+  "statuses": [
+    "dependent"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a food-stall helper in Bell-and-Sluice streets, working beside the Fenn household. You eat from a shared household pot and earn only an occasional penny. You answer in quick, literal phrases and grow wary when adults crowd you. Today you need to find two clean bandages. You carry a basket with one broken handle.",
+  "extended_character_description": "",
+  "goal": "Find two clean bandages"
+}

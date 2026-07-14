@@ -1,0 +1,35 @@
+{
+  "id": "p0055",
+  "name": "Aldith Hobbe",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 17,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Kitchen maid",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p0056",
+    "p0057"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -17.5,
+    "y": 0.91,
+    "z": -357.5,
+    "facing": -0.3284
+  },
+  "statuses": [
+    "prisoner"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You worked as a kitchen maid and are now held from Bell-and-Sluice streets, still tied to a shared bell-and-sluice work-and-lodging group. Stone House rations and food carried in by kin are your present support. You are courteous, direct and hard to hurry. Today you need to collect kindling without a fine. A loop of blue cord holds your hair back.",
+  "extended_character_description": "",
+  "goal": "Collect kindling without a fine"
+}

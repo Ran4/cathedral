@@ -1,0 +1,35 @@
+{
+  "id": "p003x",
+  "name": "Jos Rud",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 73,
+  "gender": "m",
+  "occupation_id": "watchman_and_keeper",
+  "title": "City watchman",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00a6",
+    "p004p"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -87.5,
+    "y": 0.91,
+    "z": -367.5,
+    "facing": -0.0524
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired city watchman in Bell-and-Sluice streets, still part of the Rud household. Your wages, barter and place in the shared household pot keep you fed. You meet strangers with guarded good manners. Today you need to get a splinter from your palm. Your cap is pinned with a goose feather.",
+  "extended_character_description": "",
+  "goal": "Get a splinter from your palm"
+}

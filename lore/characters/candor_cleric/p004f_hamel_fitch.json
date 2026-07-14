@@ -1,0 +1,33 @@
+{
+  "id": "p004f",
+  "name": "Hamel Fitch",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 28,
+  "gender": "m",
+  "occupation_id": "candor_cleric",
+  "title": "Taper",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward streets",
+  "knows": [
+    "p002v",
+    "p004e"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 162.5,
+    "y": 0.91,
+    "z": -57.5,
+    "facing": -0.0866
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a taper in Fabric Ward streets, working beside a shared fabric work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You bargain cheerfully and remember exact sums. Today you need to dry a blanket before curfew. White lime dust sits in the seams of your coat.",
+  "extended_character_description": "",
+  "goal": "Dry a blanket before curfew"
+}

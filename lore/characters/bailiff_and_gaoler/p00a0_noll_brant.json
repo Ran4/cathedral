@@ -1,0 +1,33 @@
+{
+  "id": "p00a0",
+  "name": "Noll Brant",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 46,
+  "gender": "m",
+  "occupation_id": "bailiff_and_gaoler",
+  "title": "Debt officer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00a1",
+    "p00a2"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 342.5,
+    "y": 0.91,
+    "z": -487.5,
+    "facing": -3.0447
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a debt officer in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You meet strangers with guarded good manners. Today you need to locate a younger sibling. Your knuckles are stained with soot.",
+  "extended_character_description": "",
+  "goal": "Locate a younger sibling"
+}

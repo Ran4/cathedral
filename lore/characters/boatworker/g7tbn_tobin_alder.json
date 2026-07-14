@@ -22,10 +22,10 @@
   "mother": "gw4ld",
   "children": [],
   "spawn_location": {
-    "x": -364.25,
+    "x": -437.5,
     "y": 0.91,
-    "z": -422.0,
-    "facing": 2.456771
+    "z": -297.5,
+    "facing": 2.2772
   },
   "statuses": [],
   "conditions": [],

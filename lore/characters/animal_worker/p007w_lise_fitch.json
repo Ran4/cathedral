@@ -1,0 +1,35 @@
+{
+  "id": "p007w",
+  "name": "Lise Fitch",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 34,
+  "gender": "f",
+  "occupation_id": "animal_worker",
+  "title": "Poultry keeper",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward streets",
+  "knows": [],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -177.5,
+    "y": 0.91,
+    "z": -397.5,
+    "facing": 1.7054
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a poultry keeper in Reed Ward streets, working beside a shared reed work-and-lodging group. Irregular work, doorstep alms and a regular begging pitch keep you fed. You are quick with dry jokes but slow with trust. Today you need to settle whose turn it is at the well. You keep counting on the fingers of one hand.",
+  "extended_character_description": "",
+  "goal": "Settle whose turn it is at the well"
+}

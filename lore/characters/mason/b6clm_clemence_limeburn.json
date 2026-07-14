@@ -26,10 +26,10 @@
     "b0nll"
   ],
   "spawn_location": {
-    "x": 260.875,
+    "x": 252.5,
     "y": 0.91,
-    "z": 164.0,
-    "facing": -1.570796
+    "z": 142.5,
+    "facing": -1.9695
   },
   "statuses": [
     "widow"

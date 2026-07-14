@@ -1,0 +1,37 @@
+{
+  "id": "p008c",
+  "name": "Betriss Hobbe",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 43,
+  "gender": "f",
+  "occupation_id": "sanitation_worker",
+  "title": "Privy cleaner",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p008b",
+    "p008d"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 102.5,
+    "y": 0.91,
+    "z": -357.5,
+    "facing": 0.6444
+  },
+  "statuses": [
+    "intermittently_employed",
+    "pauper",
+    "unhoused"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a privy cleaner in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Irregular work and neighbours' small alms barely keep you fed. You bargain cheerfully and remember exact sums. Today you need to return a borrowed knife. Your knuckles are stained with soot.",
+  "extended_character_description": "",
+  "goal": "Return a borrowed knife"
+}

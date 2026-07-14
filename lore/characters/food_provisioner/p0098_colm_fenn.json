@@ -1,0 +1,33 @@
+{
+  "id": "p0098",
+  "name": "Colm Fenn",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 13,
+  "gender": "m",
+  "occupation_id": "food_provisioner",
+  "title": "Fruit seller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p008a",
+    "p00ae"
+  ],
+  "father": "p00ae",
+  "mother": "p008a",
+  "children": [],
+  "spawn_location": {
+    "x": 242.5,
+    "y": 0.91,
+    "z": -167.5,
+    "facing": -2.8001
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a fruit seller in Bell-and-Sluice streets, working beside the Fenn household. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to have a sore heel looked at. A reed whistle sticks from your sleeve.",
+  "extended_character_description": "",
+  "goal": "Have a sore heel looked at"
+}

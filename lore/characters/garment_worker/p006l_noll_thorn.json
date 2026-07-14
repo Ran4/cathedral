@@ -1,0 +1,33 @@
+{
+  "id": "p006l",
+  "name": "Noll Thorn",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 12,
+  "gender": "m",
+  "occupation_id": "garment_worker",
+  "title": "Tailor's apprentice",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward streets",
+  "knows": [
+    "p006g",
+    "p0030"
+  ],
+  "father": "p0030",
+  "mother": "p006g",
+  "children": [],
+  "spawn_location": {
+    "x": 422.5,
+    "y": 0.91,
+    "z": 242.5,
+    "facing": 2.5587
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tailor's apprentice in Cloth Ward streets, working beside the Thorn household. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to find a quiet corner to sleep. White lime dust sits in the seams of your coat.",
+  "extended_character_description": "",
+  "goal": "Find a quiet corner to sleep"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "p00a5",
+  "name": "Rohese Marle",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 16,
+  "gender": "f",
+  "occupation_id": "militia_and_soldier",
+  "title": "File leader",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "protection and intimidation",
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00a0",
+    "p00a1"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 362.5,
+    "y": 0.91,
+    "z": -657.5,
+    "facing": 2.6639
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a file leader in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to find a quiet corner to sleep. You carry a smooth tally stick. You quietly supplement that living through protection and intimidation.",
+  "extended_character_description": "",
+  "goal": "Find a quiet corner to sleep"
+}

@@ -2,7 +2,7 @@
   "id": "p005c",
   "name": "Betriss Skell",
   "significance": "ambient",
-  "planning_ward": "cinder",
+  "planning_ward": "cloth",
   "age": 49,
   "gender": "f",
   "occupation_id": "domestic_servant",
@@ -10,28 +10,26 @@
   "rank": null,
   "faction_role": null,
   "illegal_activity": null,
-  "district": "Cinder Ward work courts",
+  "district": "Cloth Ward streets",
   "knows": [
-    "p002y",
-    "p0099"
+    "p0047",
+    "p004k"
   ],
   "father": null,
   "mother": null,
-  "children": [
-    "p0099"
-  ],
+  "children": [],
   "spawn_location": {
-    "x": -202.5,
+    "x": 332.5,
     "y": 0.91,
-    "z": 132.5,
-    "facing": -1.0197
+    "z": 482.5,
+    "facing": -1.8444
   },
   "statuses": [
     "prisoner"
   ],
   "conditions": [],
   "memories": [],
-  "core_character_description": "You worked as an errand child and are now held from Cinder Ward work courts, still tied to the Skell household. Stone House rations and food carried in by kin are your present support. You speak slowly and test every claim. Today you need to return a borrowed knife. Your coat is too large and belted twice.",
+  "core_character_description": "You worked as an errand child and are now held from Cloth Ward streets, still tied to a shared cloth work-and-lodging group. Stone House rations and food carried in by kin are your present support. You speak slowly and test every claim. Today you need to return a borrowed knife. Your coat is too large and belted twice.",
   "extended_character_description": "",
   "goal": "Return a borrowed knife"
 }

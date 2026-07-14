@@ -1,0 +1,35 @@
+{
+  "id": "p005a",
+  "name": "Havise Pike",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 17,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Household servant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p005f",
+    "p005g"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 12.5,
+    "y": 0.91,
+    "z": -207.5,
+    "facing": -2.8712
+  },
+  "statuses": [
+    "prisoner"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You worked as a household servant and are now held from Bell-and-Sluice streets, still tied to a shared bell-and-sluice work-and-lodging group. Stone House rations and food carried in by kin are your present support. You bargain cheerfully and remember exact sums. Today you need to have a sore heel looked at. A loop of blue cord holds your hair back.",
+  "extended_character_description": "",
+  "goal": "Have a sore heel looked at"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "p007c",
+  "name": "Warin Pike",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 23,
+  "gender": "m",
+  "occupation_id": "potter",
+  "title": "Potter",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward streets",
+  "knows": [
+    "p0071",
+    "p0075"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -177.5,
+    "y": 0.91,
+    "z": -487.5,
+    "facing": -2.2796
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a potter in Reed Ward streets, working beside a shared reed work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You tell small stories instead of giving straight answers. Today you need to find two clean bandages. Your basket is lined with striped cloth.",
+  "extended_character_description": "",
+  "goal": "Find two clean bandages"
+}

@@ -1,0 +1,36 @@
+{
+  "id": "p00ao",
+  "name": "Renna Stott",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 78,
+  "gender": "f",
+  "occupation_id": "sex_worker",
+  "title": "Independent companion",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p009r",
+    "p004n"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 442.5,
+    "y": 0.91,
+    "z": -597.5,
+    "facing": 1.0256
+  },
+  "statuses": [
+    "pauper",
+    "unhoused"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an independent companion in Bell-and-Sluice streets, working beside the Stott household. Irregular work and neighbours' small alms barely keep you fed. You are courteous, direct and hard to hurry. Today you need to mend a leaking shoe. Your boots are polished only across the toes.",
+  "extended_character_description": "",
+  "goal": "Mend a leaking shoe"
+}

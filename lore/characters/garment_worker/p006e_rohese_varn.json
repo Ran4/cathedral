@@ -1,0 +1,33 @@
+{
+  "id": "p006e",
+  "name": "Rohese Varn",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 49,
+  "gender": "f",
+  "occupation_id": "garment_worker",
+  "title": "Mender",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward streets",
+  "knows": [
+    "p006d",
+    "p006i"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 412.5,
+    "y": 0.91,
+    "z": 302.5,
+    "facing": 2.1064
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a mender in Cloth Ward streets, working beside a shared cloth work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You tell small stories instead of giving straight answers. Today you need to learn why a promised cart is late. A brass button replaces the clasp at your neck.",
+  "extended_character_description": "",
+  "goal": "Learn why a promised cart is late"
+}

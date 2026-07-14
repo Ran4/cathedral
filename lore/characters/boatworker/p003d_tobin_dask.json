@@ -1,0 +1,40 @@
+{
+  "id": "p003d",
+  "name": "Tobin Dask",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 63,
+  "gender": "m",
+  "occupation_id": "boatworker",
+  "title": "Ferrywoman",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p003b",
+    "p0084"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0084",
+    "p0085"
+  ],
+  "spawn_location": {
+    "x": -397.5,
+    "y": 0.91,
+    "z": 132.5,
+    "facing": 2.2458
+  },
+  "statuses": [
+    "insecure_lodging",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a ferrywoman in Weigh Ward streets, working beside the Dask household. Irregular work and neighbours' small alms barely keep you fed. You speak softly but refuse to be talked over. Today you need to get a splinter from your palm. Your hair is cropped close on one side.",
+  "extended_character_description": "",
+  "goal": "Get a splinter from your palm"
+}

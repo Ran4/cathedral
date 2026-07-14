@@ -1,0 +1,33 @@
+{
+  "id": "p0079",
+  "name": "Sible Crake",
+  "significance": "ambient",
+  "planning_ward": "wallwright",
+  "age": 24,
+  "gender": "f",
+  "occupation_id": "potter",
+  "title": "Vessel maker",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wallwright Ward streets",
+  "knows": [
+    "p0024",
+    "p002y"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 432.5,
+    "y": 0.91,
+    "z": 112.5,
+    "facing": 1.2901
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a vessel maker in Wallwright Ward streets, working beside a shared wallwright work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to find a quiet corner to sleep. Three keys knock together at your belt.",
+  "extended_character_description": "",
+  "goal": "Find a quiet corner to sleep"
+}

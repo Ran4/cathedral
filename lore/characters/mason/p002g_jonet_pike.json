@@ -1,0 +1,36 @@
+{
+  "id": "p002g",
+  "name": "Jonet Pike",
+  "significance": "minor",
+  "planning_ward": "fabric",
+  "age": 45,
+  "gender": "f",
+  "occupation_id": "mason",
+  "title": "Quarry worker",
+  "rank": "mistress",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward streets",
+  "knows": [
+    "p0000",
+    "p003o",
+    "p007m"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 82.5,
+    "y": 0.91,
+    "z": 172.5,
+    "facing": -2.2796
+  },
+  "statuses": [
+    "widow"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a quarry worker in Fabric Ward streets, working beside the established fabric ward circle. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to dry a blanket before curfew. A reed whistle sticks from your sleeve. People in this ward return to you because you remember agreements and faces. You mean to keep your place without pretending that every local quarrel concerns the Great Rose.",
+  "extended_character_description": "",
+  "goal": "Dry a blanket before curfew"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "p0091",
+  "name": "Clemence Quern",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 70,
+  "gender": "f",
+  "occupation_id": "food_provisioner",
+  "title": "Cheesemonger",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p004q",
+    "p005p"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 222.5,
+    "y": 0.91,
+    "z": -667.5,
+    "facing": 3.0308
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a cheesemonger in Bell-and-Sluice streets, working beside the Quern household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to collect a late wage. You carry a basket with one broken handle.",
+  "extended_character_description": "",
+  "goal": "Collect a late wage"
+}

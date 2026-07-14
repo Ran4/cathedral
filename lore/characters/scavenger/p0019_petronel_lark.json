@@ -1,0 +1,39 @@
+{
+  "id": "p0019",
+  "name": "Petronel Lark",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 31,
+  "gender": "f",
+  "occupation_id": "scavenger",
+  "title": "Rope-picker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p0018",
+    "p001e"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -337.5,
+    "y": 0.91,
+    "z": -177.5,
+    "facing": 2.5956
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "intermittently_employed",
+    "pauper",
+    "unhoused"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a rope-picker in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Irregular work, doorstep alms and a regular begging pitch keep you fed. You use few words and watch hands more than faces. Today you need to locate a younger sibling. You smell faintly of woodsmoke and mint.",
+  "extended_character_description": "",
+  "goal": "Locate a younger sibling"
+}

@@ -437,65 +437,6 @@
       ]
     },
     {
-      "id": "fabric_ward_households",
-      "label": "The household streets of Fabric Ward",
-      "boxes": [
-        { "min_m": { "x": 90.0, "y": -1.0, "z": -155.0 }, "max_m": { "x": 150.0, "y": 24.0, "z": -110.0 } },
-        { "min_m": { "x": 100.0, "y": -1.0, "z": 40.0 }, "max_m": { "x": 170.0, "y": 24.0, "z": 90.0 } }
-      ]
-    },
-    {
-      "id": "wick_ward_households",
-      "label": "The lodging and storage streets of Wick Ward",
-      "boxes": [
-        { "min_m": { "x": -160.0, "y": -1.0, "z": 400.0 }, "max_m": { "x": -80.0, "y": 24.0, "z": 480.0 } },
-        { "min_m": { "x": 40.0, "y": -1.0, "z": 400.0 }, "max_m": { "x": 120.0, "y": 24.0, "z": 480.0 } }
-      ]
-    },
-    {
-      "id": "cloth_ward_households",
-      "label": "The workshops and lofts of Cloth Ward",
-      "boxes": [
-        { "min_m": { "x": 140.0, "y": -1.0, "z": 280.0 }, "max_m": { "x": 270.0, "y": 24.0, "z": 400.0 } }
-      ]
-    },
-    {
-      "id": "wallwright_ward_households",
-      "label": "The yards and food stores of Wallwright Ward",
-      "boxes": [
-        { "min_m": { "x": 330.0, "y": -1.0, "z": 40.0 }, "max_m": { "x": 470.0, "y": 24.0, "z": 260.0 } }
-      ]
-    },
-    {
-      "id": "cinder_ward_households",
-      "label": "The courts and work lanes of Cinder Ward",
-      "boxes": [
-        { "min_m": { "x": -270.0, "y": -1.0, "z": 130.0 }, "max_m": { "x": -190.0, "y": 24.0, "z": 180.0 } },
-        { "min_m": { "x": -250.0, "y": -1.0, "z": 250.0 }, "max_m": { "x": -190.0, "y": 24.0, "z": 320.0 } }
-      ]
-    },
-    {
-      "id": "weigh_ward_households",
-      "label": "The warehouse and lodging streets of Weigh Ward",
-      "boxes": [
-        { "min_m": { "x": -435.0, "y": -1.0, "z": -30.0 }, "max_m": { "x": -370.0, "y": 24.0, "z": 260.0 } }
-      ]
-    },
-    {
-      "id": "reed_ward_households",
-      "label": "The boat-family streets of Reed Ward",
-      "boxes": [
-        { "min_m": { "x": -450.0, "y": -1.0, "z": -520.0 }, "max_m": { "x": -426.0, "y": 24.0, "z": -250.0 } }
-      ]
-    },
-    {
-      "id": "bell_and_sluice_households",
-      "label": "The eastern housing of Bell-and-Sluice Ward",
-      "boxes": [
-        { "min_m": { "x": 80.0, "y": -1.0, "z": -430.0 }, "max_m": { "x": 300.0, "y": 24.0, "z": -180.0 } }
-      ]
-    },
-    {
       "id": "outer_wharves",
       "label": "The outer Serle wharves",
       "boxes": [

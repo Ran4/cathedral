@@ -1,0 +1,35 @@
+{
+  "id": "p004j",
+  "name": "Ansel Vell",
+  "significance": "ambient",
+  "planning_ward": "cinder",
+  "age": 36,
+  "gender": "m",
+  "occupation_id": "glazier",
+  "title": "Master glazier",
+  "rank": "master",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward streets",
+  "knows": [
+    "p004u",
+    "p005e"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -217.5,
+    "y": 0.91,
+    "z": 202.5,
+    "facing": 1.9671
+  },
+  "statuses": [
+    "widower"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a master glazier in Cinder Ward streets, working beside a shared cinder work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You tell small stories instead of giving straight answers. Today you need to keep a sleeping place for tonight. A pale scar notches your lower lip.",
+  "extended_character_description": "",
+  "goal": "Keep a sleeping place for tonight"
+}

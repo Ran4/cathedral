@@ -1,0 +1,33 @@
+{
+  "id": "p0099",
+  "name": "Noll Kett",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 12,
+  "gender": "m",
+  "occupation_id": "food_provisioner",
+  "title": "Food-stall helper",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p008n",
+    "p008x"
+  ],
+  "father": null,
+  "mother": "p008n",
+  "children": [],
+  "spawn_location": {
+    "x": 252.5,
+    "y": 0.91,
+    "z": -437.5,
+    "facing": 0.8549
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a food-stall helper in Bell-and-Sluice streets, working beside the Kett household. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to secure tomorrow's place in the hiring line. Your nose has been broken and set slightly sideways.",
+  "extended_character_description": "",
+  "goal": "Secure tomorrow's place in the hiring line"
+}

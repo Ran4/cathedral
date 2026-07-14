@@ -27,10 +27,10 @@
     "g8rnn"
   ],
   "spawn_location": {
-    "x": -388.76,
+    "x": -437.5,
     "y": 0.91,
-    "z": -347.24,
-    "facing": 2.356194
+    "z": -607.5,
+    "facing": 1.3556
   },
   "statuses": [
     "pauper"

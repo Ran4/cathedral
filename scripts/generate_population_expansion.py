@@ -15,6 +15,7 @@ import json
 import math
 import random
 import re
+from bisect import bisect_left, bisect_right
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -23,6 +24,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CHARACTERS = ROOT / "lore/characters"
 OCCUPATIONS_PATH = ROOT / "lore/core_lore/occupations.json"
+CITY_PLAN_PATH = ROOT / "lore/places/ombreval_buildings.json"
+
+SPAWN_GRID_M = 10.0
+SPAWN_CLEARANCE_M = 1.5
+NEARBY_RADIUS_M = 20.0
+MAX_NEARBY_NPCS = 3
+REGION_SIZE_M = 100.0
+MAX_NPCS_PER_REGION = 10
 
 MAJOR_IDS = {
     # The twenty canonical dramatis personae.
@@ -32,6 +41,12 @@ MAJOR_IDS = {
     # Opening cast and recurring quest/rumour anchors.
     "sv3n1", "cb947", "k0fb1", "ft3tb", "e3cob", "e6ptr", "bm3ot",
     "e9nan", "dtib0", "ar5tl",
+}
+
+RESERVED_CANON_NAMES = {
+    # Naming-guide examples are canonical lesser lines even when they do not
+    # yet have a character sheet; generated ambient people must not claim them.
+    "Sibbe Crake",
 }
 
 EXISTING_ADDITIONS = {
@@ -108,27 +123,33 @@ YOUNGEST_AGES = {
 }
 
 WARD_TARGETS_NEW = {
-    "fabric": 63, "wick": 55, "cloth": 50, "wallwright": 53,
-    "cinder": 45, "weigh": 42, "reed": 48, "bell_and_sluice": 41,
+    # The original feature's near-even counts concentrated people inside the
+    # compact named-ward rectangles. These totals follow each ward's share of
+    # the full safe city footprint instead.
+    "fabric": 25, "wick": 30, "cloth": 38, "wallwright": 19,
+    "cinder": 27, "weigh": 51, "reed": 47, "bell_and_sluice": 160,
 }
 
-WARD_SITES = {
-    "fabric": ("Fabric Ward household streets", "fabric_ward_households", [
-        (90.0, 150.0, -155.0, -110.0), (100.0, 170.0, 40.0, 90.0)]),
-    "wick": ("Wick Ward lodging streets", "wick_ward_households", [
-        (-160.0, -80.0, 400.0, 480.0), (40.0, 120.0, 400.0, 480.0)]),
-    "cloth": ("Cloth Ward workshop lofts", "cloth_ward_households", [
-        (140.0, 270.0, 280.0, 400.0)]),
-    "wallwright": ("Wallwright Ward yards", "wallwright_ward_households", [
-        (330.0, 470.0, 40.0, 260.0)]),
-    "cinder": ("Cinder Ward work courts", "cinder_ward_households", [
-        (-270.0, -190.0, 130.0, 180.0), (-250.0, -190.0, 250.0, 320.0)]),
-    "weigh": ("Weigh Ward lodging streets", "weigh_ward_households", [
-        (-435.0, -370.0, -30.0, 260.0)]),
-    "reed": ("Reed Ward boat-family streets", "reed_ward_households", [
-        (-450.0, -426.0, -520.0, -250.0)]),
-    "bell_and_sluice": ("Bell-and-Sluice eastern housing", "bell_and_sluice_households", [
-        (80.0, 300.0, -430.0, -180.0)]),
+WARD_LABELS = {
+    "fabric": "Fabric Ward streets",
+    "wick": "Wick Ward streets",
+    "cloth": "Cloth Ward streets",
+    "wallwright": "Wallwright Ward streets",
+    "cinder": "Cinder Ward streets",
+    "weigh": "Weigh Ward streets",
+    "reed": "Reed Ward streets",
+    "bell_and_sluice": "Bell-and-Sluice streets",
+}
+
+WARD_BOUNDS = {
+    "fabric": (-110.0, 180.0, -160.0, 235.0),
+    "wick": (-170.0, 130.0, 235.0, 500.0),
+    "cloth": (80.0, 275.0, 190.0, 390.0),
+    "wallwright": (175.0, 485.0, 40.0, 260.0),
+    "cinder": (-270.0, 20.0, 115.0, 315.0),
+    "weigh": (-435.0, -175.0, -40.0, 235.0),
+    "reed": (-455.0, -160.0, -500.0, -235.0),
+    "bell_and_sluice": (-180.0, 330.0, -620.0, -150.0),
 }
 
 ALL_WARDS = list(WARD_TARGETS_NEW)
@@ -792,6 +813,7 @@ def assign_names_and_relationships(drafts: list[Draft]) -> None:
         for path in CHARACTERS.rglob("*.json")
         if not re.fullmatch(r"p[0-9a-z]{4}", json.loads(path.read_text())["id"])
     }
+    used_names.update(RESERVED_CANON_NAMES)
     original_name_count = len(used_names)
     cohort_number = 0
 
@@ -869,17 +891,279 @@ def assign_names_and_relationships(drafts: list[Draft]) -> None:
     assert len(used_names) == original_name_count + 397
 
 
-def grid_position(ward: str, index: int) -> tuple[float, float]:
-    boxes = WARD_SITES[ward][2]
-    box_index = index % len(boxes)
-    slot = index // len(boxes)
-    min_x, max_x, min_z, max_z = boxes[box_index]
-    spacing = 5.0
-    columns = max(1, int((max_x - min_x - spacing) // spacing))
-    x = min_x + 2.5 + (slot % columns) * spacing
-    z = min_z + 2.5 + (slot // columns) * spacing
-    assert x < max_x and z < max_z, (ward, index, x, z)
-    return round(x, 2), round(z, 2)
+def point_in_polygon(point: tuple[float, float], polygon: list[list[float]]) -> bool:
+    x, z = point
+    inside = False
+    for a, b in zip(polygon, polygon[1:] + polygon[:1]):
+        if (a[1] > z) != (b[1] > z):
+            edge_x = (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]
+            if x < edge_x:
+                inside = not inside
+    return inside
+
+
+def point_segment_distance_squared(
+    point: tuple[float, float],
+    a: list[float],
+    b: list[float],
+) -> float:
+    x, z = point
+    dx = b[0] - a[0]
+    dz = b[1] - a[1]
+    length_squared = dx * dx + dz * dz
+    if length_squared == 0:
+        return (x - a[0]) ** 2 + (z - a[1]) ** 2
+    along = ((x - a[0]) * dx + (z - a[1]) * dz) / length_squared
+    along = max(0.0, min(1.0, along))
+    return (x - (a[0] + along * dx)) ** 2 + (z - (a[1] + along * dz)) ** 2
+
+
+def polygon_distance_squared(point: tuple[float, float], polygon: list[list[float]]) -> float:
+    return min(
+        point_segment_distance_squared(point, a, b)
+        for a, b in zip(polygon, polygon[1:] + polygon[:1])
+    )
+
+
+def prepare_spawn_geometry(city_plan: dict) -> dict:
+    buildings = []
+    for building in city_plan["buildings"]:
+        polygon = building["polygon"]
+        xs = [vertex[0] for vertex in polygon]
+        zs = [vertex[1] for vertex in polygon]
+        buildings.append((min(xs), max(xs), min(zs), max(zs), polygon))
+    fixtures = []
+    for fixture in city_plan["fixtures"]:
+        angle = math.radians(-fixture["angle_deg"])
+        fixtures.append((
+            fixture["position"][0],
+            fixture["position"][1],
+            math.cos(angle),
+            math.sin(angle),
+            fixture["size"][0] * 0.5 + SPAWN_CLEARANCE_M,
+            fixture["size"][1] * 0.5 + SPAWN_CLEARANCE_M,
+        ))
+    return {
+        "wall": city_plan["wall_polygon_xz"],
+        "buildings": buildings,
+        "fixtures": fixtures,
+    }
+
+
+def safe_spawn_candidate(point: tuple[float, float], geometry: dict) -> bool:
+    wall = geometry["wall"]
+    clearance_squared = SPAWN_CLEARANCE_M * SPAWN_CLEARANCE_M
+    if not point_in_polygon(point, wall) or polygon_distance_squared(point, wall) < clearance_squared:
+        return False
+
+    x, z = point
+    for min_x, max_x, min_z, max_z, polygon in geometry["buildings"]:
+        if not (
+            min_x - SPAWN_CLEARANCE_M <= x <= max_x + SPAWN_CLEARANCE_M
+            and min_z - SPAWN_CLEARANCE_M <= z <= max_z + SPAWN_CLEARANCE_M
+        ):
+            continue
+        if point_in_polygon(point, polygon) or polygon_distance_squared(point, polygon) < clearance_squared:
+            return False
+
+    for center_x, center_z, cosine, sine, half_x, half_z in geometry["fixtures"]:
+        local_x = (x - center_x) * cosine - (z - center_z) * sine
+        local_z = (x - center_x) * sine + (z - center_z) * cosine
+        if abs(local_x) < half_x and abs(local_z) < half_z:
+            return False
+    return True
+
+
+def planning_ward_for_position(x: float, z: float) -> str:
+    """The cadastral map's district rules, with outer fabric assigned by proximity."""
+    if -170 <= x <= 130 and z >= 235:
+        return "wick"
+    if x >= 120 and z >= 175:
+        return "cloth"
+    if x >= 175 and z >= 35:
+        return "wallwright"
+    if -280 <= x <= 30 and 110 <= z <= 320:
+        return "cinder"
+    if -440 <= x <= -170 and -40 <= z <= 240:
+        return "weigh"
+    if x <= -160 and z <= -235:
+        return "reed"
+    if z <= -145:
+        return "bell_and_sluice"
+    if -120 <= x <= 190 and -170 <= z <= 235:
+        return "fabric"
+
+    def distance_squared(bounds: tuple[float, float, float, float]) -> float:
+        min_x, max_x, min_z, max_z = bounds
+        dx = max(min_x - x, 0.0, x - max_x)
+        dz = max(min_z - z, 0.0, z - max_z)
+        return dx * dx + dz * dz
+
+    return min(
+        ALL_WARDS,
+        key=lambda ward: (distance_squared(WARD_BOUNDS[ward]), ALL_WARDS.index(ward)),
+    )
+
+
+@dataclass
+class SpawnCandidate:
+    x: float
+    z: float
+    ward: str
+    minimum_distance_squared: float = math.inf
+    unavailable: bool = False
+
+
+def full_city_spawn_candidates(geometry: dict) -> list[SpawnCandidate]:
+    wall = geometry["wall"]
+    min_x = math.floor(min(vertex[0] for vertex in wall) / SPAWN_GRID_M)
+    max_x = math.ceil(max(vertex[0] for vertex in wall) / SPAWN_GRID_M)
+    min_z = math.floor(min(vertex[1] for vertex in wall) / SPAWN_GRID_M)
+    max_z = math.ceil(max(vertex[1] for vertex in wall) / SPAWN_GRID_M)
+    offset = SPAWN_GRID_M * 0.25
+    candidates = []
+    for x_index in range(min_x, max_x + 1):
+        for z_index in range(min_z, max_z + 1):
+            x = x_index * SPAWN_GRID_M + offset
+            z = z_index * SPAWN_GRID_M + offset
+            if safe_spawn_candidate((x, z), geometry):
+                candidates.append(SpawnCandidate(x, z, planning_ward_for_position(x, z)))
+    return candidates
+
+
+def maximum_region_count_with_candidate(
+    candidate: tuple[float, float],
+    placed: list[tuple[float, float]],
+) -> int:
+    """Maximum population in any 100 m square that contains `candidate`."""
+    x, z = candidate
+    relevant = [
+        point for point in placed
+        if x - REGION_SIZE_M <= point[0] <= x + REGION_SIZE_M
+        and z - REGION_SIZE_M <= point[1] <= z + REGION_SIZE_M
+    ]
+    relevant.append(candidate)
+    x_starts = {x - REGION_SIZE_M}
+    x_starts.update(
+        point[0] for point in relevant if x - REGION_SIZE_M <= point[0] <= x
+    )
+    maximum = 0
+    for start_x in x_starts:
+        zs = sorted(
+            point[1] for point in relevant
+            if start_x <= point[0] <= start_x + REGION_SIZE_M
+        )
+        z_starts = {z - REGION_SIZE_M}
+        z_starts.update(value for value in zs if z - REGION_SIZE_M <= value <= z)
+        for start_z in z_starts:
+            count = bisect_right(zs, start_z + REGION_SIZE_M) - bisect_left(zs, start_z)
+            maximum = max(maximum, count)
+    return maximum
+
+
+def maximum_region_occupancy(points: list[tuple[float, float]]) -> int:
+    """Exact maximum for any axis-aligned 100 x 100 m sliding window."""
+    by_x = sorted(points)
+    maximum = 0
+    for left_index, left in enumerate(by_x):
+        zs = sorted(
+            point[1] for point in by_x[left_index:]
+            if point[0] <= left[0] + REGION_SIZE_M
+        )
+        low = 0
+        for high, z in enumerate(zs):
+            while zs[low] < z - REGION_SIZE_M:
+                low += 1
+            maximum = max(maximum, high - low + 1)
+    return maximum
+
+
+def assign_population_spawns(existing: list[dict], new: list[dict], geometry: dict) -> None:
+    sheets = existing + new
+    fixed = [sheet for sheet in sheets if sheet["significance"] == "major"]
+    movable = [sheet for sheet in sheets if sheet["significance"] != "major"]
+    assert len(fixed) == 30 and len(movable) == 470
+    placed = [
+        (sheet["spawn_location"]["x"], sheet["spawn_location"]["z"])
+        for sheet in fixed
+    ]
+    radius_squared = NEARBY_RADIUS_M * NEARBY_RADIUS_M
+    nearby_counts = [
+        sum(
+            (left[0] - right[0]) ** 2 + (left[1] - right[1]) ** 2 <= radius_squared
+            for other_index, right in enumerate(placed)
+            if index != other_index
+        )
+        for index, left in enumerate(placed)
+    ]
+    assert max(nearby_counts) <= MAX_NEARBY_NPCS - 1
+    required_by_ward = Counter(sheet["planning_ward"] for sheet in movable)
+    candidates = full_city_spawn_candidates(geometry)
+    for candidate in candidates:
+        candidate.minimum_distance_squared = min(
+            (candidate.x - x) ** 2 + (candidate.z - z) ** 2 for x, z in placed
+        )
+    selected_by_ward = defaultdict(list)
+    while sum(len(points) for points in selected_by_ward.values()) < len(movable):
+        eligible = [
+            index for index, candidate in enumerate(candidates)
+            if not candidate.unavailable
+        ]
+        assert eligible
+        chosen_index = max(
+            eligible,
+            key=lambda index: (candidates[index].minimum_distance_squared, -index),
+        )
+        chosen = candidates[chosen_index]
+        point = (chosen.x, chosen.z)
+        nearby = [
+            index for index, other in enumerate(placed)
+            if (point[0] - other[0]) ** 2 + (point[1] - other[1]) ** 2 <= radius_squared
+        ]
+        if len(nearby) >= MAX_NEARBY_NPCS or any(
+            nearby_counts[index] >= MAX_NEARBY_NPCS - 1 for index in nearby
+        ):
+            chosen.unavailable = True
+            continue
+        if maximum_region_count_with_candidate(point, placed) > MAX_NPCS_PER_REGION:
+            chosen.unavailable = True
+            continue
+
+        chosen.unavailable = True
+        for index in nearby:
+            nearby_counts[index] += 1
+        placed.append(point)
+        nearby_counts.append(len(nearby))
+        selected_by_ward[chosen.ward].append(point)
+        for candidate in candidates:
+            if candidate.unavailable:
+                continue
+            distance_squared = (candidate.x - chosen.x) ** 2 + (candidate.z - chosen.z) ** 2
+            candidate.minimum_distance_squared = min(
+                candidate.minimum_distance_squared,
+                distance_squared,
+            )
+
+    assert Counter({ward: len(points) for ward, points in selected_by_ward.items()}) == required_by_ward
+
+    for ward in ALL_WARDS:
+        ward_sheets = sorted(
+            (sheet for sheet in movable if sheet["planning_ward"] == ward),
+            key=lambda sheet: sheet["id"],
+        )
+        positions = sorted(selected_by_ward[ward])
+        assert len(ward_sheets) == len(positions)
+        for sheet, (x, z) in zip(ward_sheets, positions, strict=True):
+            facing_seed = sum(
+                (index + 1) * ord(character)
+                for index, character in enumerate(sheet["id"])
+            )
+            sheet["spawn_location"] = {
+                "x": round(x, 2),
+                "y": 0.91,
+                "z": round(z, 2),
+                "facing": round(((facing_seed * 0.731) % math.tau) - math.pi, 4),
+            }
 
 
 def material_sentence(draft: Draft) -> str:
@@ -898,7 +1182,7 @@ def material_sentence(draft: Draft) -> str:
 
 
 def description(draft: Draft, index: int) -> str:
-    district = WARD_SITES[draft.ward][0]
+    district = WARD_LABELS[draft.ward]
     role = "person with no fixed trade" if draft.title is None else draft.title.lower()
     article = "an" if role[0] in "aeiou" else "a"
     if draft.title and "prisoner" in draft.statuses:
@@ -942,7 +1226,6 @@ def description(draft: Draft, index: int) -> str:
 
 
 def make_new_sheets(drafts: list[Draft]) -> list[dict]:
-    by_ward_index = defaultdict(int)
     sheets = []
     for index, draft in enumerate(drafts):
         if draft.age < 8:
@@ -962,18 +1245,15 @@ def make_new_sheets(drafts: list[Draft]) -> list[dict]:
         if draft.significance == "minor" and draft.family in MINOR_ROLE_CONCERNS:
             draft.concern = MINOR_ROLE_CONCERNS[draft.family]
         draft.visible = VISIBLE_FACTS[(index * 11 + draft.local_index) % len(VISIBLE_FACTS)]
-        position_index = by_ward_index[draft.ward]
-        by_ward_index[draft.ward] += 1
-        x, z = grid_position(draft.ward, position_index)
         sheet = {
             "id": draft.id, "name": draft.name, "significance": draft.significance,
             "planning_ward": draft.ward, "age": draft.age, "gender": draft.gender,
             "occupation_id": draft.occupation_id, "title": draft.title, "rank": draft.rank,
             "faction_role": None, "illegal_activity": draft.illegal_activity,
-            "district": WARD_SITES[draft.ward][0], "knows": draft.knows,
+            "district": WARD_LABELS[draft.ward], "knows": draft.knows,
             "father": draft.father, "mother": draft.mother, "children": draft.children,
             "spawn_location": {
-                "x": x, "y": 0.91, "z": z,
+                "x": 0.0, "y": 0.91, "z": 0.0,
                 "facing": round(((index * 0.731) % math.tau) - math.pi, 4),
             },
             "statuses": draft.statuses, "conditions": draft.conditions, "memories": [],
@@ -989,7 +1269,12 @@ def slug(name: str) -> str:
     return value or "unnamed"
 
 
-def validate(existing: list[dict], new: list[dict], catalog: dict[str, dict]) -> None:
+def validate(
+    existing: list[dict],
+    new: list[dict],
+    catalog: dict[str, dict],
+    geometry: dict,
+) -> None:
     sheets = existing + new
     assert len(sheets) == 500
     assert len({sheet["id"] for sheet in sheets}) == 500
@@ -1009,9 +1294,55 @@ def validate(existing: list[dict], new: list[dict], catalog: dict[str, dict]) ->
                         "20-39": 180, "40-59": 125, "60+": 65}
     assert Counter(sheet["planning_ward"] for sheet in new) == WARD_TARGETS_NEW
     assert Counter(sheet["planning_ward"] for sheet in sheets) == {
-        "fabric": 80, "wick": 65, "cloth": 55, "wallwright": 65,
-        "cinder": 55, "weigh": 65, "reed": 65, "bell_and_sluice": 50,
+        "fabric": 42, "wick": 40, "cloth": 43, "wallwright": 31,
+        "cinder": 37, "weigh": 74, "reed": 64, "bell_and_sluice": 169,
     }
+
+    positions = [
+        (sheet["spawn_location"]["x"], sheet["spawn_location"]["z"])
+        for sheet in sheets
+    ]
+    movable_positions = [
+        (sheet["spawn_location"]["x"], sheet["spawn_location"]["z"])
+        for sheet in sheets if sheet["significance"] != "major"
+    ]
+    assert all(safe_spawn_candidate(position, geometry) for position in movable_positions)
+    for sheet in sheets:
+        if sheet["significance"] == "major":
+            continue
+        location = sheet["spawn_location"]
+        assert planning_ward_for_position(location["x"], location["z"]) == sheet["planning_ward"]
+    for index, left in enumerate(positions):
+        for right in positions[index + 1:]:
+            assert left != right
+    neighbor_counts = [
+        sum(
+            (left[0] - right[0]) ** 2 + (left[1] - right[1]) ** 2
+            <= NEARBY_RADIUS_M**2
+            for right in positions
+        )
+        for left in positions
+    ]
+    assert max(neighbor_counts) <= MAX_NEARBY_NPCS, max(neighbor_counts)
+    assert maximum_region_occupancy(positions) <= MAX_NPCS_PER_REGION
+
+    wall = geometry["wall"]
+    city_x_span = max(vertex[0] for vertex in wall) - min(vertex[0] for vertex in wall)
+    city_z_span = max(vertex[1] for vertex in wall) - min(vertex[1] for vertex in wall)
+    occupied_x_span = max(point[0] for point in positions) - min(point[0] for point in positions)
+    occupied_z_span = max(point[1] for point in positions) - min(point[1] for point in positions)
+    assert occupied_x_span >= city_x_span * 0.80, occupied_x_span
+    assert occupied_z_span >= city_z_span * 0.80, occupied_z_span
+    safe_cells = {
+        (math.floor(candidate.x / REGION_SIZE_M), math.floor(candidate.z / REGION_SIZE_M))
+        for candidate in full_city_spawn_candidates(geometry)
+    }
+    occupied_cells = {
+        (math.floor(x / REGION_SIZE_M), math.floor(z / REGION_SIZE_M))
+        for x, z in positions
+    }
+    assert len(safe_cells - occupied_cells) <= 1, safe_cells - occupied_cells
+
     assert sum("pauper" in sheet["statuses"] for sheet in sheets) == 100
     assert sum("begs_regularly" in sheet["statuses"] for sheet in sheets) == 38
     assert sum(bool({"unhoused", "insecure_lodging"} & set(sheet["statuses"])) for sheet in sheets) == 32
@@ -1071,7 +1402,9 @@ def validate(existing: list[dict], new: list[dict], catalog: dict[str, dict]) ->
     canon_text = "\n".join(canon_text_parts)
     for sheet in ambient:
         assert sheet["id"] not in stable_text and sheet["name"] not in stable_text
-        assert sheet["id"] not in canon_text and sheet["name"] not in canon_text
+        assert sheet["id"] not in canon_text and sheet["name"] not in canon_text, (
+            sheet["id"], sheet["name"]
+        )
 
 
 def write_new(sheets: list[dict]) -> None:
@@ -1082,8 +1415,21 @@ def write_new(sheets: list[dict]) -> None:
         path.write_text(json.dumps(sheet, indent=2, ensure_ascii=False) + "\n")
 
 
+def write_existing(sheets: list[dict]) -> None:
+    paths = {}
+    for path in CHARACTERS.rglob("*.json"):
+        raw = json.loads(path.read_text())
+        if not re.fullmatch(r"p[0-9a-z]{4}", raw["id"]):
+            paths[raw["id"]] = path
+    assert set(paths) == {sheet["id"] for sheet in sheets}
+    for sheet in sheets:
+        paths[sheet["id"]].write_text(json.dumps(sheet, indent=2, ensure_ascii=False) + "\n")
+
+
 def main() -> None:
     occupations = json.loads(OCCUPATIONS_PATH.read_text())
+    city_plan = json.loads(CITY_PLAN_PATH.read_text())
+    geometry = prepare_spawn_geometry(city_plan)
     catalog = {entry["occupation_id"]: entry for entry in occupations}
     assert len(catalog) == 65
     assert set(NEW_FAMILY_ADDITIONS) <= set(catalog)
@@ -1097,7 +1443,9 @@ def main() -> None:
     assign_titles(drafts, catalog)
     assign_names_and_relationships(drafts)
     new = make_new_sheets(drafts)
-    validate(existing, new, catalog)
+    assign_population_spawns(existing, new, geometry)
+    validate(existing, new, catalog, geometry)
+    write_existing(existing)
     write_new(new)
     print("wrote 397 new sheets; validated 500 people (30 major / 120 minor / 350 ambient)")
 

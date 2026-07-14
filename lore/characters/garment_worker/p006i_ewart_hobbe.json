@@ -2,7 +2,7 @@
   "id": "p006i",
   "name": "Ewart Hobbe",
   "significance": "ambient",
-  "planning_ward": "wick",
+  "planning_ward": "cloth",
   "age": 36,
   "gender": "m",
   "occupation_id": "garment_worker",
@@ -10,24 +10,24 @@
   "rank": null,
   "faction_role": null,
   "illegal_activity": null,
-  "district": "Wick Ward lodging streets",
+  "district": "Cloth Ward streets",
   "knows": [
-    "p006f",
-    "p006h"
+    "p006d",
+    "p006e"
   ],
   "father": null,
   "mother": null,
   "children": [],
   "spawn_location": {
-    "x": 42.5,
+    "x": 422.5,
     "y": 0.91,
-    "z": 407.5,
-    "facing": -1.7336
+    "z": 192.5,
+    "facing": -2.1231
   },
   "statuses": [],
   "conditions": [],
   "memories": [],
-  "core_character_description": "You are an embroiderer in Wick Ward lodging streets, working beside a shared wick work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You are courteous, direct and hard to hurry. Today you need to get an employer to count the full day. Your knuckles are stained with soot.",
+  "core_character_description": "You are an embroiderer in Cloth Ward streets, working beside a shared cloth work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You are courteous, direct and hard to hurry. Today you need to get an employer to count the full day. Your knuckles are stained with soot.",
   "extended_character_description": "",
   "goal": "Get an employer to count the full day"
 }

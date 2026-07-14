@@ -25,10 +25,10 @@
     "fa8tn"
   ],
   "spawn_location": {
-    "x": -310.2,
+    "x": -477.5,
     "y": 0.91,
-    "z": 86.5,
-    "facing": -1.570796
+    "z": 332.5,
+    "facing": 1.8249
   },
   "statuses": [],
   "conditions": [

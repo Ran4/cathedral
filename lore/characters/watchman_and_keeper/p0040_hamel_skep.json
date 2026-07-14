@@ -1,0 +1,37 @@
+{
+  "id": "p0040",
+  "name": "Hamel Skep",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 69,
+  "gender": "m",
+  "occupation_id": "watchman_and_keeper",
+  "title": "Watchman",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00ai",
+    "p005t"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p005x"
+  ],
+  "spawn_location": {
+    "x": -77.5,
+    "y": 0.91,
+    "z": -537.5,
+    "facing": -2.6778
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired watchman in Bell-and-Sluice streets, still part of the Skep household. Your wages, barter and place in the shared household pot keep you fed. You ask one blunt question before offering help. Today you need to have a sore heel looked at. Your boots are polished only across the toes.",
+  "extended_character_description": "",
+  "goal": "Have a sore heel looked at"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "p0038",
+  "name": "Dunstan Rill",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 23,
+  "gender": "m",
+  "occupation_id": "roper",
+  "title": "Rope-walker",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p0020",
+    "p003c"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -407.5,
+    "y": 0.91,
+    "z": -77.5,
+    "facing": -1.4946
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a rope-walker in Weigh Ward streets, working beside a shared weigh work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to clear mud from your only coat. You smell faintly of woodsmoke and mint.",
+  "extended_character_description": "",
+  "goal": "Clear mud from your only coat"
+}

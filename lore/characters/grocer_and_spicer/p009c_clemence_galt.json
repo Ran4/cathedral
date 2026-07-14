@@ -1,0 +1,33 @@
+{
+  "id": "p009c",
+  "name": "Clemence Galt",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 25,
+  "gender": "f",
+  "occupation_id": "grocer_and_spicer",
+  "title": "Spicer",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": "guild evasion",
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p007l",
+    "p007v"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -147.5,
+    "y": 0.91,
+    "z": -37.5,
+    "facing": -2.7148
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a spicer in Weigh Ward streets, working beside a shared weigh work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak slowly and test every claim. Today you need to keep a sleeping place for tonight. A reed whistle sticks from your sleeve. You quietly supplement that living through guild evasion.",
+  "extended_character_description": "",
+  "goal": "Keep a sleeping place for tonight"
+}

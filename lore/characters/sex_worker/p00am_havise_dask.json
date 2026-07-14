@@ -1,0 +1,38 @@
+{
+  "id": "p00am",
+  "name": "Havise Dask",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 65,
+  "gender": "f",
+  "occupation_id": "sex_worker",
+  "title": "Registered-house worker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p0090",
+    "p0065"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0065"
+  ],
+  "spawn_location": {
+    "x": 432.5,
+    "y": 0.91,
+    "z": -457.5,
+    "facing": -0.0012
+  },
+  "statuses": [
+    "pauper",
+    "unhoused"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a registered-house worker in Bell-and-Sluice streets, working beside the Dask household. Irregular work and neighbours' small alms barely keep you fed. You bargain cheerfully and remember exact sums. Today you need to learn why a promised cart is late. A chipped green bead hangs at your throat.",
+  "extended_character_description": "",
+  "goal": "Learn why a promised cart is late"
+}

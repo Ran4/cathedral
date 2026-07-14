@@ -1,0 +1,33 @@
+{
+  "id": "p004r",
+  "name": "Corin Rusk",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 37,
+  "gender": "m",
+  "occupation_id": "guide",
+  "title": "Pilgrim guide",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "selling counterfeit pilgrim badges",
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p004l",
+    "p004m"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -47.5,
+    "y": 0.91,
+    "z": -457.5,
+    "facing": -0.2089
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a pilgrim guide in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You use few words and watch hands more than faces. Today you need to replace a cracked cup. Three keys knock together at your belt. You quietly supplement that living through selling counterfeit pilgrim badges.",
+  "extended_character_description": "",
+  "goal": "Replace a cracked cup"
+}

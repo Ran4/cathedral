@@ -1,0 +1,37 @@
+{
+  "id": "p0035",
+  "name": "Sibbe Ashe",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 37,
+  "gender": "f",
+  "occupation_id": "laundress",
+  "title": "Washerwoman",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward streets",
+  "knows": [
+    "p0034",
+    "p003a"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -287.5,
+    "y": 0.91,
+    "z": -307.5,
+    "facing": 0.1068
+  },
+  "statuses": [
+    "insecure_lodging",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a washerwoman in Reed Ward streets, working beside a shared reed work-and-lodging group. Irregular work and neighbours' small alms barely keep you fed. You are quick with dry jokes but slow with trust. Today you need to have a bent buckle straightened. A brass button replaces the clasp at your neck.",
+  "extended_character_description": "",
+  "goal": "Have a bent buckle straightened"
+}

@@ -1,0 +1,35 @@
+{
+  "id": "p00ad",
+  "name": "Colm Bram",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 62,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "Wall guard",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p005d",
+    "p0094"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0095"
+  ],
+  "spawn_location": {
+    "x": 392.5,
+    "y": 0.91,
+    "z": -587.5,
+    "facing": -1.4803
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a wall guard in Bell-and-Sluice streets, working beside the Bram household. Your wages, barter and place in the shared household pot keep you fed. You bargain cheerfully and remember exact sums. Today you need to secure tomorrow's place in the hiring line. You carry a horn spoon tucked through your belt.",
+  "extended_character_description": "",
+  "goal": "Secure tomorrow's place in the hiring line"
+}

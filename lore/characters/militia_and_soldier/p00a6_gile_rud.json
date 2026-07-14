@@ -1,0 +1,35 @@
+{
+  "id": "p00a6",
+  "name": "Gile Rud",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 74,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "Militiaman",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "warehouse sabotage",
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p003x",
+    "p004p"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p004p"
+  ],
+  "spawn_location": {
+    "x": 362.5,
+    "y": 0.91,
+    "z": -617.5,
+    "facing": 0.0357
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a militiaman in Bell-and-Sluice streets, working beside the Rud household. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to borrow a handcart for an hour. A reed whistle sticks from your sleeve. You quietly supplement that living through warehouse sabotage.",
+  "extended_character_description": "",
+  "goal": "Borrow a handcart for an hour"
+}

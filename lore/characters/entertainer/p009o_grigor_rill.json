@@ -1,0 +1,33 @@
+{
+  "id": "p009o",
+  "name": "Grigor Rill",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 15,
+  "gender": "m",
+  "occupation_id": "entertainer",
+  "title": "Musician",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p005i",
+    "p0092"
+  ],
+  "father": null,
+  "mother": "p005i",
+  "children": [],
+  "spawn_location": {
+    "x": 292.5,
+    "y": 0.91,
+    "z": -247.5,
+    "facing": -2.8371
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a musician in Bell-and-Sluice streets, working beside the Rill household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to find a quiet corner to sleep. A string of nutshells circles one wrist.",
+  "extended_character_description": "",
+  "goal": "Find a quiet corner to sleep"
+}

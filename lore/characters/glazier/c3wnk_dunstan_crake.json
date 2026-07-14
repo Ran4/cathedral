@@ -25,10 +25,10 @@
     "c5tbo"
   ],
   "spawn_location": {
-    "x": -130.0,
+    "x": -397.5,
     "y": 0.91,
-    "z": 201.587,
-    "facing": -3.141593
+    "z": 482.5,
+    "facing": -0.9256
   },
   "statuses": [],
   "conditions": [],

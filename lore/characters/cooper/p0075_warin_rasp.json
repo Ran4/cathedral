@@ -1,0 +1,33 @@
+{
+  "id": "p0075",
+  "name": "Warin Rasp",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 40,
+  "gender": "m",
+  "occupation_id": "cooper",
+  "title": "Barrel-maker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward streets",
+  "knows": [
+    "p0071",
+    "p007b"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -187.5,
+    "y": 0.91,
+    "z": -297.5,
+    "facing": -0.7636
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a barrel-maker in Reed Ward streets, working beside a shared reed work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to learn why a promised cart is late. You carry a basket with one broken handle.",
+  "extended_character_description": "",
+  "goal": "Learn why a promised cart is late"
+}

@@ -1,0 +1,37 @@
+{
+  "id": "p001g",
+  "name": "Sibbe Pell",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 48,
+  "gender": "f",
+  "occupation_id": "tavern_worker",
+  "title": "Server",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p001h",
+    "p001k"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -237.5,
+    "y": 0.91,
+    "z": -217.5,
+    "facing": 1.0796
+  },
+  "statuses": [
+    "intermittently_employed",
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work server in Bell-and-Sluice streets, relying on a shared bell-and-sluice work-and-lodging group while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You speak softly but refuse to be talked over. Today you need to collect kindling without a fine. You keep counting on the fingers of one hand.",
+  "extended_character_description": "",
+  "goal": "Collect kindling without a fine"
+}

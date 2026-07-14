@@ -1,0 +1,37 @@
+{
+  "id": "p0004",
+  "name": "Idonea Pike",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 24,
+  "gender": "f",
+  "occupation_id": "general_labourer",
+  "title": "Day labourer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward streets",
+  "knows": [
+    "p0003",
+    "p000d"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -47.5,
+    "y": 0.91,
+    "z": 2.5,
+    "facing": 0.2462
+  },
+  "statuses": [
+    "insecure_lodging",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a day labourer in Fabric Ward streets, working beside a shared fabric work-and-lodging group. Irregular work and neighbours' small alms barely keep you fed. You speak softly but refuse to be talked over. Today you need to collect kindling without a fine. Your sleeves are rolled to different heights.",
+  "extended_character_description": "",
+  "goal": "Collect kindling without a fine"
+}

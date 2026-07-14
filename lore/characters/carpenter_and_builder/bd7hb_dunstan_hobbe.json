@@ -26,10 +26,10 @@
     "bt4hb"
   ],
   "spawn_location": {
-    "x": 260.875,
+    "x": 292.5,
     "y": 0.91,
-    "z": 188.0,
-    "facing": -0.777524
+    "z": 102.5,
+    "facing": -1.4291
   },
   "statuses": [],
   "conditions": [],

@@ -22,10 +22,10 @@
   "mother": "br2sk",
   "children": [],
   "spawn_location": {
-    "x": 20.0,
+    "x": -57.5,
     "y": 0.91,
-    "z": 68.0,
-    "facing": 1.570796
+    "z": -47.5,
+    "facing": 2.8176
   },
   "statuses": [],
   "conditions": [],

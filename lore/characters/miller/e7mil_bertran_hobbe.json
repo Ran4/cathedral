@@ -26,10 +26,10 @@
     "e8sib"
   ],
   "spawn_location": {
-    "x": -308.0,
+    "x": -497.5,
     "y": 0.91,
-    "z": 200.0,
-    "facing": 0.0
+    "z": -17.5,
+    "facing": -1.3778
   },
   "statuses": [],
   "conditions": [],

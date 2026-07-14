@@ -1,0 +1,35 @@
+{
+  "id": "p0059",
+  "name": "Jonet Marle",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 42,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Chamber servant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p0055",
+    "p0056"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 2.5,
+    "y": 0.91,
+    "z": -447.5,
+    "facing": 1.7252
+  },
+  "statuses": [
+    "prisoner"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You worked as a chamber servant and are now held from Bell-and-Sluice streets, still tied to a shared bell-and-sluice work-and-lodging group. Stone House rations and food carried in by kin are your present support. You talk warmly until money is mentioned. Today you need to keep rain off a bundle of kindling. A tiny clay bird rides in your pocket.",
+  "extended_character_description": "",
+  "goal": "Keep rain off a bundle of kindling"
+}

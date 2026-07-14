@@ -1,0 +1,33 @@
+{
+  "id": "p008q",
+  "name": "Noll Marle",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 17,
+  "gender": "m",
+  "occupation_id": "water_and_bath_worker",
+  "title": "Water carrier",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p008m",
+    "p008o"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 162.5,
+    "y": 0.91,
+    "z": -557.5,
+    "facing": 1.5489
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a water carrier in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to clear mud from your only coat. White lime dust sits in the seams of your coat.",
+  "extended_character_description": "",
+  "goal": "Clear mud from your only coat"
+}

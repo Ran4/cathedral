@@ -1,0 +1,36 @@
+{
+  "id": "p003p",
+  "name": "Renna Rasp",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 3,
+  "gender": "f",
+  "occupation_id": "pilgrim",
+  "title": "Pilgrim",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward streets",
+  "knows": [
+    "p002u",
+    "p007h"
+  ],
+  "father": "p002u",
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -77.5,
+    "y": 0.91,
+    "z": 382.5,
+    "facing": 2.1235
+  },
+  "statuses": [
+    "dependent",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a pilgrim in Wick Ward streets, working beside the Rasp household. You eat from a shared household pot and earn only an occasional penny. You use short, earnest sentences and stay close to familiar adults. Today you need to find where the older children hid your cup. A pale scar notches your lower lip.",
+  "extended_character_description": "",
+  "goal": "Find where the older children hid your cup"
+}

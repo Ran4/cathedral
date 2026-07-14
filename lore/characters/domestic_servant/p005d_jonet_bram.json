@@ -1,0 +1,37 @@
+{
+  "id": "p005d",
+  "name": "Jonet Bram",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 62,
+  "gender": "f",
+  "occupation_id": "domestic_servant",
+  "title": "Manservant",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00ad",
+    "p0094"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0095"
+  ],
+  "spawn_location": {
+    "x": 22.5,
+    "y": 0.91,
+    "z": -627.5,
+    "facing": 1.8106
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired manservant in Bell-and-Sluice streets, still part of the Bram household. Your wages, barter and place in the shared household pot keep you fed. You bargain cheerfully and remember exact sums. Today you need to secure tomorrow's place in the hiring line. Your apron bears three square repairs.",
+  "extended_character_description": "",
+  "goal": "Secure tomorrow's place in the hiring line"
+}

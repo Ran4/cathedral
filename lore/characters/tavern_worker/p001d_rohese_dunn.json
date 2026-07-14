@@ -1,0 +1,39 @@
+{
+  "id": "p001d",
+  "name": "Rohese Dunn",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 52,
+  "gender": "f",
+  "occupation_id": "tavern_worker",
+  "title": "Scullion",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p0089",
+    "p00ay"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -277.5,
+    "y": 0.91,
+    "z": -187.5,
+    "facing": 2.681
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "insecure_lodging",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a scullion in Bell-and-Sluice streets, working beside the Dunn household. Irregular work, doorstep alms and a regular begging pitch keep you fed. You ask one blunt question before offering help. Today you need to collect a late wage. Your left cuff is carefully patched in red.",
+  "extended_character_description": "",
+  "goal": "Collect a late wage"
+}

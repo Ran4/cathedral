@@ -1,0 +1,38 @@
+{
+  "id": "p002t",
+  "name": "Clemence Rud",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 38,
+  "gender": "f",
+  "occupation_id": "chandler",
+  "title": "Wick maker",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward streets",
+  "knows": [
+    "p006j",
+    "p003u"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p003u",
+    "p005z"
+  ],
+  "spawn_location": {
+    "x": -97.5,
+    "y": 0.91,
+    "z": 452.5,
+    "facing": 1.2531
+  },
+  "statuses": [
+    "widow"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a wick maker in Wick Ward streets, working beside the Rud household. Your wages, barter and place in the shared household pot keep you fed. You talk warmly until money is mentioned. Today you need to clear mud from your only coat. You carry a horn spoon tucked through your belt.",
+  "extended_character_description": "",
+  "goal": "Clear mud from your only coat"
+}

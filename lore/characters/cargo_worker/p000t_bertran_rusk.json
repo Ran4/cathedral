@@ -1,0 +1,36 @@
+{
+  "id": "p000t",
+  "name": "Bertran Rusk",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 63,
+  "gender": "m",
+  "occupation_id": "cargo_worker",
+  "title": "Porter",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward streets",
+  "knows": [
+    "p004d",
+    "p005u"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -357.5,
+    "y": 0.91,
+    "z": -267.5,
+    "facing": 1.6883
+  },
+  "statuses": [
+    "noncitizen",
+    "recent_migrant"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a porter in Reed Ward streets, working beside the Rusk household. Your wages, barter and place in the shared household pot keep you fed. You use few words and watch hands more than faces. Today you need to borrow a handcart for an hour. Your basket is lined with striped cloth. You arrived recently and still measure local speech before trusting it.",
+  "extended_character_description": "",
+  "goal": "Borrow a handcart for an hour"
+}

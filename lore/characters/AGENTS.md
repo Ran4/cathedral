@@ -90,6 +90,11 @@ Most don't really have any conditions.
 * `planning_ward` is one of `fabric`, `wick`, `cloth`, `wallwright`, `cinder`,
   `weigh`, `reed`, or `bell_and_sluice`. It is authoring/spatial metadata and is
   not injected into the NPC prompt.
+* The shipped roster is deliberately dispersed over the full walled city.
+  Counting the subject, no 20 m neighbourhood may contain more than three
+  NPCs, and no sliding axis-aligned 100 x 100 m region may contain more than
+  ten. Major canonical scenes may retain groups of up to three; household and
+  workplace relationships do not imply that everyone starts in one cluster.
 * `appearance_key`, `voice_key`, `holds`, and `goal` are optional runtime overrides. Most characters omit
   them and receive the generic body plus a deterministic voice from the existing three-voice pool. Held
   item ids must exist in `assets/world/seed.json`.

@@ -26,10 +26,10 @@
     "hrnsk"
   ],
   "spawn_location": {
-    "x": 13.0,
+    "x": -467.5,
     "y": 0.91,
-    "z": -257.0,
-    "facing": -1.570796
+    "z": -157.5,
+    "facing": 2.4848
   },
   "statuses": [],
   "conditions": [

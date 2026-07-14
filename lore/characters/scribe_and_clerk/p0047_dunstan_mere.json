@@ -1,0 +1,33 @@
+{
+  "id": "p0047",
+  "name": "Dunstan Mere",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 18,
+  "gender": "m",
+  "occupation_id": "scribe_and_clerk",
+  "title": "Accountant",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": "filing false manifests",
+  "district": "Cloth Ward streets",
+  "knows": [
+    "p004k",
+    "p004t"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 292.5,
+    "y": 0.91,
+    "z": 352.5,
+    "facing": -2.2256
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an accountant in Cloth Ward streets, working beside a shared cloth work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to clear mud from your only coat. Your belt is tied with bright sail thread. You quietly supplement that living through filing false manifests.",
+  "extended_character_description": "",
+  "goal": "Clear mud from your only coat"
+}

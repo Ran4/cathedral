@@ -1,0 +1,33 @@
+{
+  "id": "p004t",
+  "name": "Grigor Kern",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 25,
+  "gender": "m",
+  "occupation_id": "scholar",
+  "title": "Tutor",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward streets",
+  "knows": [
+    "p0047",
+    "p004k"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 322.5,
+    "y": 0.91,
+    "z": 212.5,
+    "facing": 0.8179
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a tutor in Cloth Ward streets, working beside a shared cloth work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You are quick with dry jokes but slow with trust. Today you need to mend a leaking shoe. Your belt is tied with bright sail thread.",
+  "extended_character_description": "",
+  "goal": "Mend a leaking shoe"
+}

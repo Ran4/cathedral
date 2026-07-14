@@ -1,0 +1,33 @@
+{
+  "id": "p00a8",
+  "name": "Colm Vell",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 33,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "Wall guard",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00a7",
+    "p00a9"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 372.5,
+    "y": 0.91,
+    "z": -177.5,
+    "facing": 1.0625
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a wall guard in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak slowly and test every claim. Today you need to learn who moved your market basket. You carry a horn spoon tucked through your belt.",
+  "extended_character_description": "",
+  "goal": "Learn who moved your market basket"
+}

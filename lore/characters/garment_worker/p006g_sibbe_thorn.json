@@ -1,0 +1,38 @@
+{
+  "id": "p006g",
+  "name": "Sibbe Thorn",
+  "significance": "ambient",
+  "planning_ward": "cloth",
+  "age": 68,
+  "gender": "f",
+  "occupation_id": "garment_worker",
+  "title": "Hosier",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward streets",
+  "knows": [
+    "p0030",
+    "p0061"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0061",
+    "p006l"
+  ],
+  "spawn_location": {
+    "x": 412.5,
+    "y": 0.91,
+    "z": 372.5,
+    "facing": 3.1332
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired hosier in Cloth Ward streets, still part of the Thorn household. Your wages, barter and place in the shared household pot keep you fed. You use few words and watch hands more than faces. Today you need to settle whose turn it is at the well. White lime dust sits in the seams of your coat.",
+  "extended_character_description": "",
+  "goal": "Settle whose turn it is at the well"
+}

@@ -1,0 +1,37 @@
+{
+  "id": "p0011",
+  "name": "Jonet Ashe",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 34,
+  "gender": "f",
+  "occupation_id": "market_seller",
+  "title": "Badge seller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward streets",
+  "knows": [
+    "p000u",
+    "p0025"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -347.5,
+    "y": 0.91,
+    "z": -457.5,
+    "facing": -1.5116
+  },
+  "statuses": [
+    "intermittently_employed",
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work badge seller in Reed Ward streets, relying on a shared reed work-and-lodging group while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You talk warmly until money is mentioned. Today you need to trade for a sound length of cord. You have ink on one thumb.",
+  "extended_character_description": "",
+  "goal": "Trade for a sound length of cord"
+}

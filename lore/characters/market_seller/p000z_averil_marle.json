@@ -1,0 +1,38 @@
+{
+  "id": "p000z",
+  "name": "Averil Marle",
+  "significance": "ambient",
+  "planning_ward": "fabric",
+  "age": 51,
+  "gender": "f",
+  "occupation_id": "market_seller",
+  "title": "Honey seller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward streets",
+  "knows": [
+    "p0003",
+    "p0004"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 22.5,
+    "y": 0.91,
+    "z": -107.5,
+    "facing": -1.5144
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a honey seller in Fabric Ward streets, working beside a shared fabric work-and-lodging group. Irregular work, doorstep alms and a regular begging pitch keep you fed. You meet strangers with guarded good manners. Today you need to borrow a handcart for an hour. A string of nutshells circles one wrist.",
+  "extended_character_description": "",
+  "goal": "Borrow a handcart for an hour"
+}

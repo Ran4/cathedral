@@ -1,0 +1,33 @@
+{
+  "id": "p007j",
+  "name": "Grigor Galt",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 27,
+  "gender": "m",
+  "occupation_id": "cartwright_and_wheelwright",
+  "title": "Wheelwright",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p0074",
+    "p0076"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -277.5,
+    "y": 0.91,
+    "z": 62.5,
+    "facing": -1.8273
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a wheelwright in Weigh Ward streets, working beside a shared weigh work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You are quick with dry jokes but slow with trust. Today you need to replace a cracked cup. You carry a basket with one broken handle.",
+  "extended_character_description": "",
+  "goal": "Replace a cracked cup"
+}

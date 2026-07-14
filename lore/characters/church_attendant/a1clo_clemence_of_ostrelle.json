@@ -25,10 +25,10 @@
   "mother": null,
   "children": [],
   "spawn_location": {
-    "x": 8.0,
+    "x": -127.5,
     "y": 0.91,
-    "z": 25.0,
-    "facing": 3.141593
+    "z": -7.5,
+    "facing": -2.7005
   },
   "statuses": [
     "pauper",

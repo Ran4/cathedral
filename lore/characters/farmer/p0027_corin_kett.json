@@ -1,0 +1,37 @@
+{
+  "id": "p0027",
+  "name": "Corin Kett",
+  "significance": "ambient",
+  "planning_ward": "wick",
+  "age": 25,
+  "gender": "m",
+  "occupation_id": "farmer",
+  "title": "Shepherd",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward streets",
+  "knows": [
+    "p004a",
+    "p005l"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -107.5,
+    "y": 0.91,
+    "z": 302.5,
+    "facing": -1.7904
+  },
+  "statuses": [
+    "intermittently_employed",
+    "pauper",
+    "unemployed"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an out-of-work shepherd in Wick Ward streets, relying on a shared wick work-and-lodging group while seeking hire. Irregular work and neighbours' small alms barely keep you fed. You answer strangers in clipped practical phrases. Today you need to buy lamp oil before dusk. One shoe has a new wooden sole.",
+  "extended_character_description": "",
+  "goal": "Buy lamp oil before dusk"
+}

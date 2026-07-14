@@ -1,0 +1,40 @@
+{
+  "id": "p0089",
+  "name": "Jonet Dunn",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 53,
+  "gender": "f",
+  "occupation_id": "sanitation_worker",
+  "title": "Gutter raker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p001d",
+    "p00ay"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p00ay"
+  ],
+  "spawn_location": {
+    "x": 82.5,
+    "y": 0.91,
+    "z": -217.5,
+    "facing": -2.0691
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a gutter raker in Bell-and-Sluice streets, working beside the Dunn household. Irregular work, doorstep alms and a regular begging pitch keep you fed. You are quick with dry jokes but slow with trust. Today you need to find the owner of a missing hen. Your basket is lined with striped cloth.",
+  "extended_character_description": "",
+  "goal": "Find the owner of a missing hen"
+}

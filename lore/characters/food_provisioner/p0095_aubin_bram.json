@@ -1,0 +1,35 @@
+{
+  "id": "p0095",
+  "name": "Aubin Bram",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 9,
+  "gender": "m",
+  "occupation_id": "food_provisioner",
+  "title": "Food-stall helper",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p005d",
+    "p00ad"
+  ],
+  "father": "p00ad",
+  "mother": "p005d",
+  "children": [],
+  "spawn_location": {
+    "x": 242.5,
+    "y": 0.91,
+    "z": -517.5,
+    "facing": -1.1988
+  },
+  "statuses": [
+    "dependent"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a food-stall helper in Bell-and-Sluice streets, working beside the Bram household. You eat from a shared household pot and earn only an occasional penny. You answer in quick, literal phrases and grow wary when adults crowd you. Today you need to find the owner of a missing hen. You carry a horn spoon tucked through your belt.",
+  "extended_character_description": "",
+  "goal": "Find the owner of a missing hen"
+}

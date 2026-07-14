@@ -1,0 +1,33 @@
+{
+  "id": "p00ab",
+  "name": "Noll Rud",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 18,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "File leader",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00a7",
+    "p00a8"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 382.5,
+    "y": 0.91,
+    "z": -447.5,
+    "facing": -2.5071
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a file leader in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak slowly and test every claim. Today you need to collect a late wage. A reed whistle sticks from your sleeve.",
+  "extended_character_description": "",
+  "goal": "Collect a late wage"
+}

@@ -1,0 +1,36 @@
+{
+  "id": "p0029",
+  "name": "Ede Nett",
+  "significance": "minor",
+  "planning_ward": "cloth",
+  "age": 59,
+  "gender": "f",
+  "occupation_id": "carpenter_and_builder",
+  "title": "Scaffold worker",
+  "rank": "mistress",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cloth Ward streets",
+  "knows": [
+    "p002l",
+    "p003m",
+    "p0045"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 202.5,
+    "y": 0.91,
+    "z": 482.5,
+    "facing": -0.7636
+  },
+  "statuses": [
+    "widow"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a scaffold worker in Cloth Ward streets, working beside the established cloth ward circle. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to borrow a handcart for an hour. You have ink on one thumb. People in this ward return to you because you remember agreements and faces. You mean to keep your place without pretending that every local quarrel concerns the Great Rose.",
+  "extended_character_description": "",
+  "goal": "Borrow a handcart for an hour"
+}

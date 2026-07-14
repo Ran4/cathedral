@@ -326,11 +326,7 @@ mod tests {
             "outer_wharves",
         ];
 
-        assert_eq!(
-            map.areas.len(),
-            68,
-            "59 lore places, Lanthorn grounds and eight ward household areas"
-        );
+        assert_eq!(map.areas.len(), 60, "59 lore places plus Lanthorn grounds");
         for (place, expected_id) in plan.named_place_index.iter().zip(expected_area_ids) {
             let height = if place.number == 2 { 84.0 } else { 0.91 };
             let position =
@@ -347,5 +343,98 @@ mod tests {
                 place.number, place.name
             );
         }
+    }
+
+    #[test]
+    fn distributed_population_spawns_clear_city_buildings_walls_and_fixtures() {
+        const CLEARANCE_M: f32 = 1.49;
+
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let seed = cathedral_backends::world_data::load_world_seed(
+            &root.join("assets"),
+            &root.join("lore"),
+        )
+        .expect("the shipped population loads");
+        let plan = load();
+        let distributed: Vec<_> = seed
+            .characters
+            .iter()
+            .filter(|character| {
+                character
+                    .lore
+                    .as_ref()
+                    .is_some_and(|lore| lore.significance != cathedral_sim::Significance::Major)
+            })
+            .collect();
+        assert_eq!(distributed.len(), 470);
+
+        for character in distributed {
+            let point = [character.position_m.x as f32, character.position_m.z as f32];
+            assert!(
+                point_in_polygon(point, &plan.wall_polygon_xz)
+                    && polygon_distance_squared(point, &plan.wall_polygon_xz)
+                        >= CLEARANCE_M * CLEARANCE_M,
+                "{} is outside or too close to the city wall",
+                character.id
+            );
+            for building in &plan.buildings {
+                assert!(
+                    !point_in_polygon(point, &building.polygon)
+                        && polygon_distance_squared(point, &building.polygon)
+                            >= CLEARANCE_M * CLEARANCE_M,
+                    "{} intersects building {}",
+                    character.id,
+                    building.id
+                );
+            }
+            for fixture in &plan.fixtures {
+                let angle = (-fixture.angle_deg).to_radians();
+                let dx = point[0] - fixture.position[0];
+                let dz = point[1] - fixture.position[1];
+                let local_x = dx * angle.cos() - dz * angle.sin();
+                let local_z = dx * angle.sin() + dz * angle.cos();
+                let half_x = fixture.size[0] * 0.5 + CLEARANCE_M;
+                let half_z = fixture.size[1] * 0.5 + CLEARANCE_M;
+                assert!(
+                    local_x.abs() >= half_x || local_z.abs() >= half_z,
+                    "{} intersects fixture {}",
+                    character.id,
+                    fixture.id
+                );
+            }
+        }
+    }
+
+    fn point_in_polygon(point: [f32; 2], polygon: &[[f32; 2]]) -> bool {
+        let mut inside = false;
+        for (a, b) in polygon.iter().zip(polygon.iter().cycle().skip(1)) {
+            if (a[1] > point[1]) != (b[1] > point[1])
+                && point[0] < (b[0] - a[0]) * (point[1] - a[1]) / (b[1] - a[1]) + a[0]
+            {
+                inside = !inside;
+            }
+        }
+        inside
+    }
+
+    fn polygon_distance_squared(point: [f32; 2], polygon: &[[f32; 2]]) -> f32 {
+        polygon
+            .iter()
+            .zip(polygon.iter().cycle().skip(1))
+            .map(|(a, b)| point_segment_distance_squared(point, *a, *b))
+            .reduce(f32::min)
+            .expect("validated polygons are non-empty")
+    }
+
+    fn point_segment_distance_squared(point: [f32; 2], a: [f32; 2], b: [f32; 2]) -> f32 {
+        let dx = b[0] - a[0];
+        let dz = b[1] - a[1];
+        let length_squared = dx * dx + dz * dz;
+        if length_squared == 0.0 {
+            return (point[0] - a[0]).powi(2) + (point[1] - a[1]).powi(2);
+        }
+        let along =
+            (((point[0] - a[0]) * dx + (point[1] - a[1]) * dz) / length_squared).clamp(0.0, 1.0);
+        (point[0] - (a[0] + along * dx)).powi(2) + (point[1] - (a[1] + along * dz)).powi(2)
     }
 }

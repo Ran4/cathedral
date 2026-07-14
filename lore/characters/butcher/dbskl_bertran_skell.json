@@ -29,10 +29,10 @@
     "dgskl"
   ],
   "spawn_location": {
-    "x": -417.5,
+    "x": -507.5,
     "y": 0.91,
-    "z": 315.0,
-    "facing": -1.570796
+    "z": -127.5,
+    "facing": -1.9182
   },
   "statuses": [],
   "conditions": [],

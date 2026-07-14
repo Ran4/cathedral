@@ -27,10 +27,10 @@
     "fr9ck"
   ],
   "spawn_location": {
-    "x": -294.6,
+    "x": -467.5,
     "y": 0.91,
-    "z": 86.5,
-    "facing": 1.570796
+    "z": 482.5,
+    "facing": -2.5782
   },
   "statuses": [
     "widow"

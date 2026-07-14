@@ -223,14 +223,14 @@ mod tests {
         assert_eq!(
             wards,
             BTreeMap::from([
-                (PlanningWard::Fabric, 80),
-                (PlanningWard::Wick, 65),
-                (PlanningWard::Cloth, 55),
-                (PlanningWard::Wallwright, 65),
-                (PlanningWard::Cinder, 55),
-                (PlanningWard::Weigh, 65),
-                (PlanningWard::Reed, 65),
-                (PlanningWard::BellAndSluice, 50),
+                (PlanningWard::Fabric, 42),
+                (PlanningWard::Wick, 40),
+                (PlanningWard::Cloth, 43),
+                (PlanningWard::Wallwright, 31),
+                (PlanningWard::Cinder, 37),
+                (PlanningWard::Weigh, 74),
+                (PlanningWard::Reed, 64),
+                (PlanningWard::BellAndSluice, 169),
             ])
         );
 
@@ -393,34 +393,39 @@ mod tests {
     }
 
     #[test]
-    fn every_authored_spawn_is_distinct_and_inside_its_intended_place() {
+    fn authored_spawns_cover_the_city_without_crowding() {
         let root = root();
         let seed = load_world_seed(&root.join("assets"), &root.join("lore")).unwrap();
         let areas = AreaMap::from_json_str(
             &fs::read_to_string(root.join("assets/world/areas.json")).unwrap(),
         )
         .unwrap();
-        let mut positions = BTreeSet::new();
-        for character in seed
+        let npcs: Vec<_> = seed
             .characters
             .iter()
             .filter(|character| character.lore.is_some())
-        {
+            .collect();
+        assert_eq!(npcs.len(), 500);
+
+        let mut positions = BTreeSet::new();
+        for character in &npcs {
             let lore = character.lore.as_ref().unwrap();
-            let expected = match character.id.as_str() {
-                // The original trio deliberately keep their opening-scene
-                // transforms even though Sven and Conny work elsewhere.
-                "sv3n1" | "cb947" | "k0fb1" => "gradine",
-                _ => area_for_district(&lore.district),
-            };
-            let actual = areas
-                .containing_area(character.position_m)
-                .unwrap_or_else(|| panic!("{} is outside every named area", character.id));
-            assert_eq!(
-                actual.id, expected,
-                "{} ({}) is in the wrong place",
-                character.id, lore.district
-            );
+            if lore.significance == Significance::Major {
+                let expected = match character.id.as_str() {
+                    // The opening trio deliberately share the Gradine.
+                    "sv3n1" | "cb947" | "k0fb1" => "gradine",
+                    _ => area_for_district(&lore.district),
+                };
+                let actual = areas
+                    .containing_area(character.position_m)
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "major character {} is outside their named area",
+                            character.id
+                        )
+                    });
+                assert_eq!(actual.id, expected);
+            }
             let key = (
                 character.position_m.x.to_bits(),
                 character.position_m.y.to_bits(),
@@ -443,18 +448,94 @@ mod tests {
         assert_eq!(find("cb947").position_m, Vec3::new(0.0, 0.91, 112.0));
         assert_eq!(find("k0fb1").position_m, Vec3::new(1.8, 0.91, 114.0));
 
-        let generated: Vec<_> = seed
-            .characters
+        let maximum_nearby = npcs
             .iter()
-            .filter(|character| character.id.as_str().starts_with('p'))
+            .map(|left| {
+                npcs.iter()
+                    .filter(|right| {
+                        let dx = left.position_m.x - right.position_m.x;
+                        let dz = left.position_m.z - right.position_m.z;
+                        dx * dx + dz * dz <= 20.0 * 20.0
+                    })
+                    .count()
+            })
+            .max()
+            .unwrap();
+        assert_eq!(
+            maximum_nearby, 3,
+            "at most three NPCs may share a 20 m neighborhood"
+        );
+
+        let mut maximum_region = 0;
+        for left in &npcs {
+            let mut zs: Vec<_> = npcs
+                .iter()
+                .filter(|character| {
+                    left.position_m.x <= character.position_m.x
+                        && character.position_m.x <= left.position_m.x + 100.0
+                })
+                .map(|character| character.position_m.z)
+                .collect();
+            zs.sort_by(f64::total_cmp);
+            let mut low = 0;
+            for high in 0..zs.len() {
+                while zs[low] < zs[high] - 100.0 {
+                    low += 1;
+                }
+                maximum_region = maximum_region.max(high - low + 1);
+            }
+        }
+        assert!(
+            maximum_region <= 10,
+            "a sliding 100 x 100 m region contains {maximum_region} NPCs"
+        );
+
+        let x_span = npcs
+            .iter()
+            .map(|character| character.position_m.x)
+            .reduce(f64::max)
+            .unwrap()
+            - npcs
+                .iter()
+                .map(|character| character.position_m.x)
+                .reduce(f64::min)
+                .unwrap();
+        let z_span = npcs
+            .iter()
+            .map(|character| character.position_m.z)
+            .reduce(f64::max)
+            .unwrap()
+            - npcs
+                .iter()
+                .map(|character| character.position_m.z)
+                .reduce(f64::min)
+                .unwrap();
+        assert!(
+            x_span >= 1_000.0 && z_span >= 1_100.0,
+            "the cast covers only {x_span:.1} x {z_span:.1} m"
+        );
+        let occupied_cells: BTreeSet<_> = npcs
+            .iter()
+            .map(|character| {
+                (
+                    (character.position_m.x / 100.0).floor() as i32,
+                    (character.position_m.z / 100.0).floor() as i32,
+                )
+            })
             .collect();
-        for (index, left) in generated.iter().enumerate() {
-            for right in &generated[index + 1..] {
+        assert!(
+            occupied_cells.len() >= 120,
+            "the cast reaches only {} fixed 100 m grid cells",
+            occupied_cells.len()
+        );
+
+        for (index, left) in npcs.iter().enumerate() {
+            for right in &npcs[index + 1..] {
                 let dx = left.position_m.x - right.position_m.x;
                 let dz = left.position_m.z - right.position_m.z;
                 assert!(
-                    dx * dx + dz * dz >= 24.99,
-                    "generated spawns {} and {} are less than 5 m apart",
+                    dx != 0.0 || dz != 0.0,
+                    "NPCs {} and {} have the same horizontal spawn",
                     left.id,
                     right.id
                 );
@@ -555,14 +636,6 @@ mod tests {
             "The Old Sluice" => "old_sluice",
             "The Tally Bridge" => "tally_bridge",
             "The Wickmarket" => "wickmarket",
-            "Fabric Ward household streets" => "fabric_ward_households",
-            "Wick Ward lodging streets" => "wick_ward_households",
-            "Cloth Ward workshop lofts" => "cloth_ward_households",
-            "Wallwright Ward yards" => "wallwright_ward_households",
-            "Cinder Ward work courts" => "cinder_ward_households",
-            "Weigh Ward lodging streets" => "weigh_ward_households",
-            "Reed Ward boat-family streets" => "reed_ward_households",
-            "Bell-and-Sluice eastern housing" => "bell_and_sluice_households",
             "The shambles" => "shambles",
             other => panic!("district '{other}' needs an explicit spawn-area mapping"),
         }

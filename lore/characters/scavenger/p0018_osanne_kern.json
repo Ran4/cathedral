@@ -1,0 +1,38 @@
+{
+  "id": "p0018",
+  "name": "Osanne Kern",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 34,
+  "gender": "f",
+  "occupation_id": "scavenger",
+  "title": "Rope-picker",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "receiving stolen household goods",
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p0019",
+    "p001e"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -367.5,
+    "y": 0.91,
+    "z": -217.5,
+    "facing": -1.0594
+  },
+  "statuses": [
+    "alms_dependent",
+    "begs_regularly",
+    "intermittently_employed",
+    "pauper"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a rope-picker in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Irregular work, doorstep alms and a regular begging pitch keep you fed. You are quick with dry jokes but slow with trust. Today you need to settle whose turn it is at the well. A chipped green bead hangs at your throat. You quietly supplement that living through receiving stolen household goods.",
+  "extended_character_description": "",
+  "goal": "Settle whose turn it is at the well"
+}

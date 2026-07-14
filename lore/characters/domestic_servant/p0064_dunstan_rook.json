@@ -1,0 +1,33 @@
+{
+  "id": "p0064",
+  "name": "Dunstan Rook",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 15,
+  "gender": "m",
+  "occupation_id": "domestic_servant",
+  "title": "Errand child",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p000g",
+    "p0072"
+  ],
+  "father": "p000g",
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -307.5,
+    "y": 0.91,
+    "z": -57.5,
+    "facing": -1.0594
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an errand child in Weigh Ward streets, working beside the Rook household. Your wages, barter and place in the shared household pot keep you fed. You tell small stories instead of giving straight answers. Today you need to clear mud from your only coat. A loop of blue cord holds your hair back.",
+  "extended_character_description": "",
+  "goal": "Clear mud from your only coat"
+}

@@ -1,0 +1,38 @@
+{
+  "id": "p004h",
+  "name": "Ansel Rook",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 66,
+  "gender": "m",
+  "occupation_id": "bell_ringer",
+  "title": "Bell-ringer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p0058",
+    "p0060"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0060",
+    "p0062"
+  ],
+  "spawn_location": {
+    "x": -77.5,
+    "y": 0.91,
+    "z": -417.5,
+    "facing": 0.9402
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired bell-ringer in Bell-and-Sluice streets, still part of the Rook household. Your wages, barter and place in the shared household pot keep you fed. You bargain cheerfully and remember exact sums. Today you need to trade for a sound length of cord. A loop of blue cord holds your hair back.",
+  "extended_character_description": "",
+  "goal": "Trade for a sound length of cord"
+}

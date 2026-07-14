@@ -1,0 +1,36 @@
+{
+  "id": "p00ae",
+  "name": "Noll Fenn",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 61,
+  "gender": "m",
+  "occupation_id": "militia_and_soldier",
+  "title": "File leader",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p008a",
+    "p0096"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p0096",
+    "p0098"
+  ],
+  "spawn_location": {
+    "x": 392.5,
+    "y": 0.91,
+    "z": -217.5,
+    "facing": 2.1747
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a file leader in Bell-and-Sluice streets, working beside the Fenn household. Your wages, barter and place in the shared household pot keep you fed. You tell small stories instead of giving straight answers. Today you need to learn why a promised cart is late. You carry a basket with one broken handle.",
+  "extended_character_description": "",
+  "goal": "Learn why a promised cart is late"
+}

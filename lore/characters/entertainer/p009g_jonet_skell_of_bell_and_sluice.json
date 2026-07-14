@@ -1,0 +1,33 @@
+{
+  "id": "p009g",
+  "name": "Jonet Skell of Bell And Sluice",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 41,
+  "gender": "f",
+  "occupation_id": "entertainer",
+  "title": "Storyteller",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": "rigging games",
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p008z",
+    "p009h"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 262.5,
+    "y": 0.91,
+    "z": -637.5,
+    "facing": -0.6611
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a storyteller in Bell-and-Sluice streets, working beside a shared bell-and-sluice work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak slowly and test every claim. Today you need to find a quiet corner to sleep. You have ink on one thumb. You quietly supplement that living through rigging games.",
+  "extended_character_description": "",
+  "goal": "Find a quiet corner to sleep"
+}

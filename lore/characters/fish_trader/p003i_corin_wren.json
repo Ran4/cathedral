@@ -1,0 +1,33 @@
+{
+  "id": "p003i",
+  "name": "Corin Wren",
+  "significance": "ambient",
+  "planning_ward": "weigh",
+  "age": 31,
+  "gender": "m",
+  "occupation_id": "fish_trader",
+  "title": "Eel-girl",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Weigh Ward streets",
+  "knows": [
+    "p003k",
+    "p003l"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -377.5,
+    "y": 0.91,
+    "z": 242.5,
+    "facing": 1.6712
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are an eel-girl in Weigh Ward streets, working beside a shared weigh work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You speak slowly and test every claim. Today you need to return a borrowed knife. Your broad hat has lost half its brim.",
+  "extended_character_description": "",
+  "goal": "Return a borrowed knife"
+}

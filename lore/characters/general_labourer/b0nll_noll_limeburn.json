@@ -26,10 +26,10 @@
   "mother": "b6clm",
   "children": [],
   "spawn_location": {
-    "x": 260.875,
+    "x": 212.5,
     "y": 0.91,
-    "z": 140.0,
-    "facing": -2.364068
+    "z": 132.5,
+    "facing": -2.8398
   },
   "statuses": [],
   "conditions": [],

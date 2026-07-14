@@ -1,0 +1,40 @@
+{
+  "id": "p008v",
+  "name": "Aldith Wren",
+  "significance": "ambient",
+  "planning_ward": "bell_and_sluice",
+  "age": 55,
+  "gender": "f",
+  "occupation_id": "food_provisioner",
+  "title": "Poulterer",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p00aa",
+    "p00aw"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [
+    "p00aw",
+    "p00ax"
+  ],
+  "spawn_location": {
+    "x": 192.5,
+    "y": 0.91,
+    "z": -387.5,
+    "facing": 0.9744
+  },
+  "statuses": [
+    "intermittently_employed",
+    "pauper",
+    "unhoused"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a poulterer in Bell-and-Sluice streets, working beside the Wren household. Irregular work and neighbours' small alms barely keep you fed. You are courteous, direct and hard to hurry. Today you need to buy lamp oil before dusk. You carry a horn spoon tucked through your belt.",
+  "extended_character_description": "",
+  "goal": "Buy lamp oil before dusk"
+}

@@ -1,0 +1,35 @@
+{
+  "id": "p004u",
+  "name": "Tobin Brant",
+  "significance": "ambient",
+  "planning_ward": "cinder",
+  "age": 76,
+  "gender": "m",
+  "occupation_id": "painter",
+  "title": "Panel painter",
+  "rank": "master",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Cinder Ward streets",
+  "knows": [
+    "p004j",
+    "p005e"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -207.5,
+    "y": 0.91,
+    "z": 242.5,
+    "facing": -1.8102
+  },
+  "statuses": [
+    "retired"
+  ],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a retired panel painter in Cinder Ward streets, still part of a shared cinder work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You meet strangers with guarded good manners. Today you need to replace a cracked cup. A pale scar notches your lower lip.",
+  "extended_character_description": "",
+  "goal": "Replace a cracked cup"
+}

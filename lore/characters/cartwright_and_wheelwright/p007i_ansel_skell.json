@@ -1,0 +1,33 @@
+{
+  "id": "p007i",
+  "name": "Ansel Skell",
+  "significance": "ambient",
+  "planning_ward": "wallwright",
+  "age": 23,
+  "gender": "m",
+  "occupation_id": "cartwright_and_wheelwright",
+  "title": "Wheelwright's apprentice",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wallwright Ward streets",
+  "knows": [
+    "p007e",
+    "p007q"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 492.5,
+    "y": 0.91,
+    "z": -17.5,
+    "facing": 0.8009
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a wheelwright's apprentice in Wallwright Ward streets, working beside a shared wallwright work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to trade for a sound length of cord. You carry a horn spoon tucked through your belt.",
+  "extended_character_description": "",
+  "goal": "Trade for a sound length of cord"
+}

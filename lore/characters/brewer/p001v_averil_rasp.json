@@ -1,0 +1,36 @@
+{
+  "id": "p001v",
+  "name": "Averil Rasp",
+  "significance": "minor",
+  "planning_ward": "bell_and_sluice",
+  "age": 19,
+  "gender": "f",
+  "occupation_id": "brewer",
+  "title": "Brewhouse worker",
+  "rank": "apprentice",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Bell-and-Sluice streets",
+  "knows": [
+    "p001j",
+    "p001p",
+    "p003v"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -117.5,
+    "y": 0.91,
+    "z": -397.5,
+    "facing": -0.6441
+  },
+  "statuses": [],
+  "conditions": [
+    "missing two fingers"
+  ],
+  "memories": [],
+  "core_character_description": "You are a brewhouse worker in Bell-and-Sluice streets, working beside the established bell-and-sluice ward circle. Your wages, barter and place in the shared household pot keep you fed. You are courteous, direct and hard to hurry. Today you need to buy lamp oil before dusk. You smell faintly of woodsmoke and mint. The visible bodily condition you live with is missing two fingers. People in this ward return to you because you remember agreements and faces. You mean to keep your place without pretending that every local quarrel concerns the Great Rose.",
+  "extended_character_description": "",
+  "goal": "Buy lamp oil before dusk"
+}

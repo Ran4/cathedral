@@ -1,0 +1,33 @@
+{
+  "id": "p006z",
+  "name": "Sibbe Tarn",
+  "significance": "ambient",
+  "planning_ward": "reed",
+  "age": 31,
+  "gender": "f",
+  "occupation_id": "cooper",
+  "title": "Hoop-setter",
+  "rank": "journeyman",
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Reed Ward streets",
+  "knows": [
+    "p004c",
+    "p004g"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -207.5,
+    "y": 0.91,
+    "z": -337.5,
+    "facing": -2.82
+  },
+  "statuses": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You are a hoop-setter in Reed Ward streets, working beside a shared reed work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You are quick with dry jokes but slow with trust. Today you need to have a bent buckle straightened. You carry a horn spoon tucked through your belt.",
+  "extended_character_description": "",
+  "goal": "Have a bent buckle straightened"
+}
