@@ -44,7 +44,8 @@ pub use areas::{
 };
 pub use attention::{
     DEFAULT_STAGE_MAX_ACTORS, DEFAULT_STAGE_RADIUS_M, IdleCognitionMode, IdleGate,
-    STAGE_PARTNER_MEMORY_SECONDS, StageConfig, on_stage,
+    NOVELTY_MEMORY_SECONDS, Novelty, STAGE_PARTNER_MEMORY_SECONDS, StageConfig, context_hash,
+    on_stage,
 };
 pub use character::{Character, CharacterSheet, CharacterState, Control};
 pub use engine::{Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage};

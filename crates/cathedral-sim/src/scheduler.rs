@@ -132,6 +132,8 @@ pub struct NpcScheduler {
     /// Consecutive provider failures; only a successful turn resets it.
     provider_failures: u32,
     running: bool,
+    /// Whose prompt went out during this poll, for [`Self::take_submitted`].
+    submitted: Option<ActorId>,
 }
 
 impl NpcScheduler {
@@ -165,6 +167,7 @@ impl NpcScheduler {
             next_turn_at: now,
             provider_failures: 0,
             running: false,
+            submitted: None,
         }
     }
 
@@ -191,6 +194,24 @@ impl NpcScheduler {
 
     pub fn in_flight_actor_id(&self) -> Option<&ActorId> {
         self.in_flight.as_ref().map(|flight| &flight.actor_id)
+    }
+
+    /// The actor whose prompt went out during the last [`Self::poll`], taken once.
+    ///
+    /// A turn is the only thing that clears an actor's news, and this is the one
+    /// instant it happens — the render has just drained their inbox and the
+    /// prompt has left with the world as it stands. The engine stamps
+    /// [`Novelty`](crate::attention::Novelty) with it.
+    ///
+    /// Set only on a *successful* submit: a prompt that failed to render, or one
+    /// the worker refused, showed the actor nothing and must not mark their news
+    /// as seen. Both of those paths put a system line back in the inbox, so such
+    /// an actor stays eligible and is retried.
+    ///
+    /// Reported rather than stamped here because the scheduler must not be the
+    /// thing that decides how often derived per-poll state is recomputed (D20).
+    pub fn take_submitted(&mut self) -> Option<ActorId> {
+        self.submitted.take()
     }
 
     /// Whether the outstanding prompt was protected player-speech work.
@@ -645,6 +666,10 @@ impl NpcScheduler {
 
         match cognition.request_with_budget(prompt.clone(), output_token_budget) {
             Ok(request_id) => {
+                // Every lane lands here, and every lane clears news: an actor who
+                // has just answered the player has been shown the same world an
+                // idle turn would have shown them.
+                self.submitted = Some(actor_id.clone());
                 self.in_flight = Some(InFlight {
                     actor_id: actor_id.clone(),
                     request_id,

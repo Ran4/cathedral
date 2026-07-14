@@ -100,6 +100,14 @@ struct Args {
     #[arg(long)]
     stage: bool,
 
+    /// also require news for an idle turn, as the game does (implies --stage)
+    ///
+    /// This is the cost gate: with it, a tick spent on a cast with nothing to
+    /// react to buys no prompt at all. A run that ends early with fewer turns
+    /// than you asked for is the feature working — nobody had anything to say.
+    #[arg(long)]
+    news: bool,
+
     /// LLM provider override (moonshot | openai); beats LLM_PROVIDER
     #[arg(long)]
     provider: Option<String>,
@@ -242,11 +250,14 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             // The terminal has no microphone either: no recording will ever be
             // named, so there is no directory to name it in.
             runtime_dir: PathBuf::new(),
-            idle_mode: match args.stage {
+            // `--news` is meaningless ungated, so it implies `--stage` rather
+            // than silently doing nothing.
+            idle_mode: match args.stage || args.news {
                 true => IdleCognitionMode::Stage,
                 false => IdleCognitionMode::All,
             },
             stage: StageConfig::default(),
+            idle_requires_news: args.news,
         },
         &assets.seed,
         assets.areas,
@@ -270,6 +281,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         verbose: args.verbose,
         printed_lines: 0,
         provider_failed: false,
+        requires_news: args.news,
     };
     runner.run_ticks(args.ticks)?;
     runner.print_final_state();
@@ -304,12 +316,23 @@ struct Runner {
     /// How much of `engine.transcript()` has already been echoed.
     printed_lines: usize,
     provider_failed: bool,
+    /// Whether a tick that buys no turn is quiescence rather than a stall
+    /// (`--news`). Nothing external ever happens in a terminal run — no player
+    /// walks past, no bell rings — so a cast that has run out of news has run
+    /// out for good, and the run is simply over.
+    requires_news: bool,
 }
 
 impl Runner {
     fn run_ticks(&mut self, ticks: u32) -> Result<(), String> {
         for tick in 1..=ticks {
-            let actor_name = self.submit_turn()?;
+            let Some(actor_name) = self.submit_turn()? else {
+                println!(
+                    "\n== nobody has anything to react to; stopped after {} of {ticks} ticks ==",
+                    tick - 1
+                );
+                break;
+            };
             println!("\n== tick {tick}: {actor_name} ==");
             self.apply_turn()?;
             self.print_new_transcript_lines();
@@ -319,8 +342,10 @@ impl Runner {
 
     /// Pump until the scheduler has a turn in flight, advancing the clock past
     /// the inter-turn delay, a provider backoff, or a floor pause as needed.
-    /// Returns the name of the actor whose turn it is.
-    fn submit_turn(&mut self) -> Result<String, String> {
+    /// Returns the name of the actor whose turn it is, or `None` when the cast
+    /// has nothing to react to and `--news` says that is an ending rather than a
+    /// fault.
+    fn submit_turn(&mut self) -> Result<Option<String>, String> {
         let deadline = self.now + MAX_SIM_SECONDS_PER_PHASE;
         while self.engine.scheduler().in_flight_actor_id().is_none() {
             let commands = self.collect_completions(false)?;
@@ -329,7 +354,10 @@ impl Runner {
                 break;
             }
             if self.now > deadline {
-                return Err("the scheduler never started a turn".to_string());
+                return match self.requires_news {
+                    true => Ok(None),
+                    false => Err("the scheduler never started a turn".to_string()),
+                };
             }
             self.now += CLOCK_STEP_SECONDS;
         }
@@ -339,13 +367,14 @@ impl Runner {
             .in_flight_actor_id()
             .expect("the loop only exits with a turn in flight")
             .clone();
-        Ok(self
-            .engine
-            .world()
-            .characters
-            .get(&actor_id)
-            .map(|actor| actor.name().to_string())
-            .unwrap_or_else(|| actor_id.to_string()))
+        Ok(Some(
+            self.engine
+                .world()
+                .characters
+                .get(&actor_id)
+                .map(|actor| actor.name().to_string())
+                .unwrap_or_else(|| actor_id.to_string()),
+        ))
     }
 
     /// Feed the completion back and pump until the turn has been applied — which
@@ -842,6 +871,7 @@ mod tests {
             verbose: false,
             printed_lines: 0,
             provider_failed: false,
+            requires_news: false,
         };
 
         let started = std::time::Instant::now();

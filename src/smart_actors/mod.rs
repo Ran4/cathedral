@@ -68,7 +68,7 @@ pub struct SmartActorsConfig {
     pub idle_cognition: IdleCognitionSettings,
 }
 
-/// The proximity gate on *idle* NPC turns.
+/// The gates on *idle* NPC turns: proximity, then novelty.
 ///
 /// The three lanes that schedule an NPC turn are not equal: two of them fire
 /// because of a real event (you spoke; a sound reached them), and the third
@@ -88,6 +88,16 @@ pub struct IdleCognitionSettings {
     /// one request in flight, so this caps how *thinly* the turns are spread,
     /// not how many run at once.
     pub max_actors: usize,
+    /// Whether a neighbour also needs something to *react to*
+    /// (features/gate_idle_cognition_on_novelty.md). Ignored under `mode: "all"`.
+    ///
+    /// Proximity alone did not reduce the turn rate — it only aimed it at the
+    /// player's head. Standing still in a market still asked the six people
+    /// around you, every three seconds, whether anything had changed, and paid a
+    /// full prompt each time to hear that it had not. With this on, that costs
+    /// nothing: they think when somebody speaks, when a sound reaches them, or
+    /// when the crowd around them changes — and otherwise they are simply quiet.
+    pub require_news: bool,
 }
 
 impl Default for IdleCognitionSettings {
@@ -96,6 +106,7 @@ impl Default for IdleCognitionSettings {
             mode: IdleCognitionMode::Stage.as_str().into(),
             radius_m: DEFAULT_STAGE_RADIUS_M,
             max_actors: DEFAULT_STAGE_MAX_ACTORS,
+            require_news: true,
         }
     }
 }

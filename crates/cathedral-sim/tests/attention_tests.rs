@@ -16,8 +16,9 @@ use std::{cell::RefCell, rc::Rc};
 
 use cathedral_sim::{
     ActorId, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand, EngineConfig,
-    EngineMessage, FakeCognition, IdleCognitionMode, NullSight, NullTranscription, NullTts,
-    SpatialActorUpdate, StageConfig, TtsBackendKind, Vec3, WorldSeed, ids::RequestId,
+    EngineMessage, FakeCognition, IdleCognitionMode, NOVELTY_MEMORY_SECONDS, NullSight,
+    NullTranscription, NullTts, SpatialActorUpdate, StageConfig, TtsBackendKind, Vec3, WorldSeed,
+    ids::RequestId,
 };
 use prompt_support::{areas, catalog, prompt_env};
 
@@ -46,9 +47,20 @@ struct Harness {
 }
 
 impl Harness {
+    /// A proximity-gated engine: on stage is enough to think, every rotation.
+    fn staged(player_spawn: Vec3) -> Self {
+        Self::build(player_spawn, false)
+    }
+
+    /// The game's own configuration: on stage **and** with something to react to
+    /// (`features/gate_idle_cognition_on_novelty.md`).
+    fn with_news(player_spawn: Vec3) -> Self {
+        Self::build(player_spawn, true)
+    }
+
     /// A gated engine with a live (fake) provider, and the player standing where
     /// the caller says.
-    fn staged(player_spawn: Vec3) -> Self {
+    fn build(player_spawn: Vec3, idle_requires_news: bool) -> Self {
         let cognition = SharedCognition::default();
         let engine = Engine::new(
             EngineConfig {
@@ -57,6 +69,7 @@ impl Harness {
                 tts_selected: TtsBackendKind::Off,
                 idle_mode: IdleCognitionMode::Stage,
                 stage: StageConfig::default(),
+                idle_requires_news,
                 ..EngineConfig::default()
             },
             &WorldSeed::from_json_str(&prompt_support::demo_seed()).expect("the demo seed loads"),
@@ -120,6 +133,18 @@ impl Harness {
             updates: vec![update],
         }]);
     }
+
+    /// The player says something out loud, from where he is standing.
+    fn player_say(&mut self, request_id: &str, text: &str, position_m: Vec3) {
+        self.spatial_seq += 1;
+        self.send_all(vec![EngineCommand::DebugPlayerSay {
+            request_id: request_id.to_string(),
+            text: text.to_string(),
+            target_id: None,
+            position_m,
+            spatial_seq: self.spatial_seq,
+        }]);
+    }
 }
 
 fn distinct(actors: &[ActorId]) -> Vec<&str> {
@@ -167,6 +192,131 @@ fn walking_away_stops_the_thinking_and_walking_back_resumes_it() {
     assert!(!harness.run(60.0).is_empty(), "the cast never woke back up");
 }
 
+// ------------------------------------------------------- the novelty gate
+//
+// `features/gate_idle_cognition_on_novelty.md`. Proximity aimed the firehose at
+// the player's head; it did not shrink it. These pin the part that does — and
+// they count the same artifact, the `PromptExchange` that costs money.
+
+/// The headline number, and the one that was broken.
+///
+/// The same five minutes in the same crowd that costs `standing_in_a_crowd…`
+/// above a turn every ~3 seconds — every one of them asking somebody with
+/// nothing to say whether they have changed their mind about saying nothing.
+#[test]
+fn standing_in_a_crowd_stops_costing_money_once_the_news_runs_out() {
+    let mut harness = Harness::with_news(IN_THE_CROWD);
+
+    // The player arrives: three strangers appear in three sets of eyes, and each
+    // is worth exactly one thought.
+    let arrival = harness.run(30.0);
+    assert_eq!(distinct(&arrival), ["cb947", "k0fb1", "sv3n1"]);
+
+    // Then nothing happens, and nothing keeps happening. Under the proximity
+    // gate alone this window costs ~90 calls.
+    let settled = harness.run(300.0);
+    assert_eq!(
+        settled,
+        Vec::<ActorId>::new(),
+        "the crowd went back to paying to be told nothing happened: {settled:?}"
+    );
+}
+
+/// …and the arrival itself is *one* turn each, not a rotation of re-asked,
+/// re-waited ones. Walking down a street must not cost a prompt per person per
+/// three seconds for as long as you stand in it.
+#[test]
+fn walking_up_to_someone_costs_one_turn_each() {
+    let mut harness = Harness::with_news(IN_A_FIELD);
+    assert!(harness.run(10.0).is_empty());
+
+    harness.move_player(IN_THE_CROWD);
+    let prompts = harness.run(120.0);
+    assert_eq!(
+        prompts.len(),
+        3,
+        "the three of them should think once between them, not on a clock: {prompts:?}"
+    );
+}
+
+/// The gate is on *initiative*, never on *response*. An NPC who has been silent
+/// for five minutes because nothing has happened is not asleep — speak to him
+/// and he answers on the next poll, exactly as he always did.
+///
+/// This is the property that makes the whole feature safe: the reaction lane
+/// never consults novelty, so the latency the player actually feels is unchanged.
+#[test]
+fn speaking_to_a_settled_crowd_is_answered_at_once() {
+    let mut harness = Harness::with_news(IN_THE_CROWD);
+    harness.run(30.0);
+    assert!(harness.run(120.0).is_empty(), "the crowd never settled");
+
+    // A word into a silent street. The inbox is news, so the cast wakes.
+    harness.player_say("hoy", "What's your name?", IN_THE_CROWD);
+    let answered = harness.run(20.0);
+    assert!(
+        !answered.is_empty(),
+        "nobody answered the player: the reaction lane must never be gated on news"
+    );
+}
+
+/// An NPC-to-NPC exchange runs on real percepts, at the existing turn rate, and
+/// then *dies* — rather than ringing forever because each `wait` re-fires the
+/// next question.
+///
+/// Ilse answers the player out loud; Sven and Conny hear her, which is real news
+/// for both, so each is owed a turn. Neither has anything to add, and a silent
+/// turn creates no percept for anybody — so the room goes quiet and stays quiet.
+#[test]
+fn a_conversation_runs_to_its_end_and_then_stops_costing_money() {
+    let mut harness = Harness::with_news(IN_THE_CROWD);
+    harness.run(30.0);
+    assert!(harness.run(120.0).is_empty());
+
+    harness.player_say("ask-name", "What's your name?", IN_THE_CROWD);
+    let conversation = harness.run(60.0);
+    assert!(
+        conversation.contains(&ActorId::from_raw("k0fb1")),
+        "Ilse never answered: {conversation:?}"
+    );
+
+    // The words reached the others, so they got their turn. The point is that it
+    // ended.
+    let after = harness.run(300.0);
+    assert_eq!(
+        after,
+        Vec::<ActorId>::new(),
+        "the conversation rang on with nothing left to say: {after:?}"
+    );
+}
+
+/// The city does not freeze permanently behind you. Walk away for real, come
+/// back, and they look up — even though the street they last thought about is
+/// exactly the street they see now.
+///
+/// This is what [`NOVELTY_MEMORY_SECONDS`] buys, and it is why the memory lapses
+/// on *absence* rather than on silence: the quiet neighbour above is never
+/// forgotten, but the player who left is.
+#[test]
+fn walking_away_and_coming_back_is_news_again() {
+    let mut harness = Harness::with_news(IN_THE_CROWD);
+    harness.run(30.0);
+    assert!(harness.run(60.0).is_empty(), "the crowd never settled");
+
+    harness.move_player(IN_A_FIELD);
+    assert_eq!(
+        harness.run(NOVELTY_MEMORY_SECONDS * 2.0),
+        Vec::<ActorId>::new(),
+        "the cast kept thinking about a player who had left"
+    );
+
+    harness.move_player(IN_THE_CROWD);
+    assert!(
+        !harness.run(30.0).is_empty(),
+        "he walked back into the street and nobody noticed him"
+    );
+}
+
 /// An empty stage must not deafen the city. The gate is on the lane that fires
 /// because *time passed* — never on the lanes that fire because something
 /// happened, which is the only way an ambient NPC ever thinks at all.
@@ -187,6 +337,28 @@ fn a_sound_still_reaches_an_npc_the_player_cannot_see() {
         prompts.len(),
         1,
         "exactly one nudge per sound, gate or no gate: {prompts:?}"
+    );
+}
+
+/// …and novelty does not change that either. A bell is news for everyone who
+/// hears it, but the *nudge* is a priority turn, and priority is ungated: the
+/// far-off NPC who has never met the player still thinks when the world happens
+/// to him.
+#[test]
+fn a_sound_still_reaches_an_npc_who_has_no_news_and_no_player() {
+    let mut harness = Harness::with_news(IN_A_FIELD);
+    assert!(harness.run(10.0).is_empty());
+
+    harness.send_all(vec![EngineCommand::DebugSound {
+        sound_id: "town_bell".into(),
+        position_m: Vec3::new(0.0, 4.0, 113.0),
+    }]);
+
+    let prompts = harness.run(10.0);
+    assert_eq!(
+        prompts.len(),
+        1,
+        "the bell must reach exactly one witness, news gate or no news gate: {prompts:?}"
     );
 }
 

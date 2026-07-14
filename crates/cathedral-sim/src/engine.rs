@@ -23,7 +23,9 @@ use serde_json::{Value, json};
 use crate::{
     actions::apply_action,
     areas::AreaMap,
-    attention::{IdleCognitionMode, IdleGate, STAGE_PARTNER_MEMORY_SECONDS, StageConfig, on_stage},
+    attention::{
+        IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS, StageConfig, on_stage,
+    },
     character::Control,
     error::{CommandError, CommandErrorCode, EngineInitError},
     event::{DomainEvent, EventType},
@@ -190,6 +192,23 @@ pub struct EngineConfig {
     pub idle_mode: IdleCognitionMode,
     /// The neighborhood itself, when `idle_mode` is [`IdleCognitionMode::Stage`].
     pub stage: StageConfig,
+    /// Whether an on-stage actor also needs *news* to take an idle turn
+    /// (`features/gate_idle_cognition_on_novelty.md`).
+    ///
+    /// Proximity decides who is worth simulating; this decides whether there is
+    /// anything to simulate. Without it, standing still in a market re-asks the
+    /// six people around you every three seconds whether anything has changed,
+    /// and pays ~2.2k input tokens each time to be told it has not.
+    ///
+    /// Only consulted under [`IdleCognitionMode::Stage`]: `All` exists to
+    /// reproduce the pre-gate behavior exactly, and hashing the whole city's
+    /// perspective every poll would be a strange thing for the mode whose entire
+    /// point is that nothing is gated.
+    ///
+    /// Defaults to off for the same reason `idle_mode` defaults to `All` — the
+    /// tests and the headless runner keep the old behavior unless they ask for
+    /// this, and `config.ron` turns it on for the game as a rebuild-free A/B.
+    pub idle_requires_news: bool,
 }
 
 impl Default for EngineConfig {
@@ -208,6 +227,7 @@ impl Default for EngineConfig {
             runtime_dir: PathBuf::new(),
             idle_mode: IdleCognitionMode::All,
             stage: StageConfig::default(),
+            idle_requires_news: false,
         }
     }
 }
@@ -424,6 +444,12 @@ pub struct Engine {
     /// Broadcast lines need no entry here: to reach the player at all they came
     /// from inside the 20 m hearing radius, which the stage radius contains.
     last_player_exchange: Option<(ActorId, f64)>,
+    /// What each on-stage actor had already been told when they last thought.
+    ///
+    /// The stage's third question, after "who is near?" and "who is talking to
+    /// me?": *has anything happened to them since?* Empty and inert unless
+    /// `config.idle_requires_news`.
+    novelty: Novelty,
     ready_emitted: bool,
 }
 
@@ -542,6 +568,7 @@ impl Engine {
             last_snapshot_revision: 0,
             last_player_sound_at: f64::NEG_INFINITY,
             last_player_exchange: None,
+            novelty: Novelty::default(),
             ready_emitted: false,
         })
     }
@@ -592,17 +619,28 @@ impl Engine {
         } else {
             self.floor.busy(now)
         };
-        // The stage is computed here for the same reason, and it is the answer
-        // to one question: who is close enough to be worth a thought? Nobody in
-        // the empty field behind you is.
+        // The stage is computed here for the same reason, and it answers two
+        // questions in order. Who is close enough to be worth a thought? Nobody
+        // in the empty field behind you is. And then: has anything happened to
+        // them since they last thought? A man standing beside you with nothing
+        // to react to costs a full prompt to say `wait {}`, and saying it
+        // changes nothing — so the next poll would ask him again. Silence is the
+        // one thing that must be free.
         let stage = match self.config.idle_mode {
             IdleCognitionMode::All => None,
-            IdleCognitionMode::Stage => Some(on_stage(
-                &self.world,
-                &self.config.player_id,
-                self.conversation_partner(now),
-                &self.config.stage,
-            )),
+            IdleCognitionMode::Stage => {
+                let mut stage = on_stage(
+                    &self.world,
+                    &self.config.player_id,
+                    self.conversation_partner(now),
+                    &self.config.stage,
+                );
+                if self.config.idle_requires_news {
+                    self.novelty.observe(now, &stage);
+                    stage.retain(|actor_id| self.novelty.has_news(&self.world, actor_id));
+                }
+                Some(stage)
+            }
         };
         let idle = if self.speech_router.player_composing() {
             IdleGate::Suppressed
@@ -622,6 +660,18 @@ impl Engine {
             self.cognition.as_mut(),
             &self.env,
         );
+        // A prompt has just gone out showing somebody the world as it stands, so
+        // nothing in it is news to them any more. Taken unconditionally to keep
+        // the slot drained; recorded only when the gate is on.
+        //
+        // Every lane counts, not just the idle one: an NPC who has just answered
+        // the player has seen exactly what an idle turn would have shown him,
+        // and must not then be handed one for the privilege.
+        if let Some(actor_id) = self.scheduler.take_submitted()
+            && self.config.idle_requires_news
+        {
+            self.novelty.told(now, &self.world, &actor_id);
+        }
         for event in events {
             out.push(scheduler_message(event));
         }

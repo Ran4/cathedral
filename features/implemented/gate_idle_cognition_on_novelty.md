@@ -1,7 +1,69 @@
 # Gate idle NPC cognition on novelty (and on character)
 
-Status: proposed. No code written yet. Successor to
-`features/implemented/gate_idle_cognition_on_proximity.md`, which is in place.
+Status: **§1 implemented** (2026-07-14) — the novelty gate, which is the whole
+cost win. §2 (curiosity) and the boredom timer are **not** written; see *What is
+left* below. Successor to `features/implemented/gate_idle_cognition_on_proximity.md`.
+
+`attention.rs::Novelty` is the gate; the engine composes it with the stage once
+per poll (D20) and stamps it from `NpcScheduler::take_submitted`;
+`config.ron: smart_actors.idle_cognition.require_news` is the switch.
+
+Measured in the running game (fake backend, muted microphone), standing still at
+the player's spawn for 90 s:
+
+| | prompts | what they were |
+| --- | --- | --- |
+| `require_news: false` (before) | 90 | the same three people, re-asked every second, answering `wait` |
+| `require_news: true` (after) | **3** | one each, on arrival, then silence |
+
+**−96.7%**, against a ≥90% target. Every one of the three surviving prompts
+carries `since_your_last_turn: ["nothing"]` — the arrival round the acceptance
+criteria ask for, and nothing else. The same A/B headless:
+`--stage -t 8` spends all eight ticks re-asking Conny/Ilse/Sven in rotation;
+`--news -t 8` spends three and then stops, with *"nobody has anything to react
+to"*.
+
+An earlier measurement of the same runs read 19 prompts, not 3. The extra 16
+were real: this machine's microphone was open, ambient room noise was being
+recorded as an utterance every 15 s, and `fake_backend` transcribes any
+utterance as *"What's your name?"* — so a phantom player really was talking to
+the cast, and they really did have news. The gate was right and the measurement
+was wrong. Worth knowing before trusting a fake-mode prompt count on a machine
+with a live mic.
+
+## Two deviations from the design below
+
+1. **The memory lapses (`NOVELTY_MEMORY_SECONDS`, 60 s).** The design implies a
+   permanent per-actor hash. A permanent one never re-greets: walk away, come
+   back an hour later, and the street you last thought about is the street you
+   see now, so nothing has changed and nobody looks up — the city would freeze
+   behind you for good. Forgetting the moment an actor leaves the stage is the
+   obvious fix and is *worse*: `max_actors` (6) means the identity of the
+   nearest six churns as you move through a crowd, so every actor bumped off the
+   cap and back would buy a fresh turn, and the gate would leak exactly the bill
+   it removes. So the memory is refreshed for every on-stage actor each poll and
+   lapses on **absence, not silence** — a quiet neighbour is never forgotten
+   (`a_quiet_neighbour_is_never_forgotten`), a player who actually left is
+   (`walking_away_and_coming_back_is_news_again`).
+
+2. **The inbox is not hashed.** The design lists it as one of three signals. It
+   needs no memory of its own: a turn is what *drains* it, so a non-empty inbox
+   is by construction something the actor has not been shown. This is what makes
+   the stamp safe at submit-time — a line that lands during the two seconds a
+   prompt is in flight survives to be shown on the next turn, where hashing the
+   inbox at completion would have swallowed it.
+
+## What is left
+
+- **The boredom timer** (work order §2). Not written. Nothing in the city
+  initiates *ex nihilo* now: a fishmonger cannot decide to cry his wares into a
+  quiet street, because nothing has changed for him. The known cost the design
+  names, unchanged and still unbought.
+- **Curiosity** (work order §3, "who speaks first is a fact about the
+  character"). Not written. All six neighbours still greet you on arrival — one
+  turn each now rather than a rotation, which makes it affordable but no less
+  silly. This is the remaining *silliness* half of the feature; the *cost* half
+  is done.
 
 ## Goal
 

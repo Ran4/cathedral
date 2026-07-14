@@ -276,9 +276,10 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
             .unwrap_or_default(),
         // Unlike the tests and the headless runner, the game has a player who is
         // actually standing somewhere — so it is the one caller that gates idle
-        // turns on where that is.
+        // turns on where that is, and on whether anything has happened there.
         idle_mode: config.idle_cognition.mode(),
         stage: config.idle_cognition.stage(),
+        idle_requires_news: config.idle_cognition.require_news,
         ..EngineConfig::default()
     };
 
@@ -1149,29 +1150,34 @@ mod tests {
 
     /// The game is the one caller whose player is actually standing somewhere,
     /// so it is the one caller that gates idle turns
-    /// (features/gate_idle_cognition_on_proximity.md). The sim defaults to
-    /// ungated for the tests and the headless runner, so a broken mapping here
-    /// would silently restore the ~1,100 calls/hour this feature removes —
-    /// nothing else would fail.
+    /// (features/gate_idle_cognition_on_proximity.md, then
+    /// features/gate_idle_cognition_on_novelty.md). The sim defaults to ungated
+    /// for the tests and the headless runner, so a broken mapping here would
+    /// silently restore the ~1,100 calls/hour these features remove — nothing
+    /// else would fail.
     #[test]
-    fn the_game_gates_idle_cognition_on_the_players_neighborhood() {
+    fn the_game_gates_idle_cognition_on_the_players_neighborhood_and_on_news() {
         let (seed, _backends, _fake, _log) =
             build(&fake_config(), None).expect("the shipped assets");
         assert_eq!(seed.config.idle_mode, IdleCognitionMode::Stage);
         assert_eq!(seed.config.stage.radius_m, DEFAULT_STAGE_RADIUS_M);
         assert_eq!(seed.config.stage.max_actors, DEFAULT_STAGE_MAX_ACTORS);
+        assert!(seed.config.idle_requires_news);
 
         // `mode: "all"` is the documented rebuild-free way back to the old
-        // city-wide clock, so it has to actually reach the engine.
+        // city-wide clock, and `require_news: false` the way back to paying for
+        // silence. Both have to actually reach the engine.
         let ungated = SmartActorsConfig {
             idle_cognition: IdleCognitionSettings {
                 mode: "all".into(),
+                require_news: false,
                 ..IdleCognitionSettings::default()
             },
             ..fake_config()
         };
         let (seed, _backends, _fake, _log) = build(&ungated, None).expect("the shipped assets");
         assert_eq!(seed.config.idle_mode, IdleCognitionMode::All);
+        assert!(!seed.config.idle_requires_news);
     }
 
     /// The transcription backend is handed a path, and the microphone worker
