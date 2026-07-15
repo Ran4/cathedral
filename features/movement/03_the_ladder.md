@@ -92,9 +92,8 @@ content and all three are load-bearing in the prompt.
 
 And there is **no fourth thing.** seagame builds a derived, every-tick read-set — one `Set<string>`
 that all state is copied into, so behaviour code asks `has('hungry')` and never touches a raw scalar.
-An earlier draft of this doc imported that too, under the name `Cues` (the derived side couldn't be
-called `conditions` — authored bodily content owns that word). Drop it. The ladder reads the three
-axes and the world **directly**, with inline thresholds — exactly as the §4 rungs already do:
+We don't. The ladder reads the three axes and the world **directly**, with inline thresholds — exactly
+as the §4 rungs already do:
 
 ```rust
 // A rung is a question asked in place, against the four sources of truth.
@@ -114,13 +113,13 @@ if world.brightness < 0.35 && !near_a_lit_lamp(world, actor) { /* the dark */ }
 **Why no derived bag.** seagame builds one purely to avoid re-deriving `hungry` from the raw scalar on
 every one of its many reads within a tick — an amortisation. Our ladder is a **flat, first-match
 cascade** (§4): each rung asks its question *once* and returns. There is no repeated read to amortise,
-so a `Cues` set would buy nothing but a second name for state we already hold under three good names.
+so a derived set would buy nothing but a second name for state we already hold under three good names.
 The three axes plus the world are the entire vocabulary the ladder speaks.
 
 **A hundred paupers still behave differently at curfew without anyone authoring a hundred behaviours** —
 because `actor.circumstances.contains("pauper")` is one line in one rung, read against 500 characters'
-worth of authored social truth at zero authoring cost. That payoff never needed `Cues`; it needs the
-authored field to exist, and it does.
+worth of authored social truth at zero authoring cost. That payoff needs only the authored field to
+exist, and it does.
 
 ---
 

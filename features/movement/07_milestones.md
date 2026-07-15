@@ -196,7 +196,7 @@ aprons are *already walkable geometry* (`src/city/water.rs:14-16`), the four sou
 queue rules are authored in `lore/wells_and_water.md`, and `domestic_servant` is the single largest
 occupation in the city with `lore_locations: [..., "Markets and wells", ...]`.
 
-It exercises **the entire stack**: clock → need → cue → ladder → route → walk → queue → act → **sound**
+It exercises **the entire stack**: clock → need → ladder → route → walk → queue → act → **sound**
 → and the sound is heard by the LLM layer, so an NPC standing nearby can be asked about it.
 
 Zero tokens. Fully audible. Entirely lore.
