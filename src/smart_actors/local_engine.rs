@@ -42,9 +42,9 @@ use cathedral_backends::{
 };
 use cathedral_sim::{
     ActorId as SimActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand,
-    EngineConfig, EngineMessage, FakeCognition, ItemId as SimItemId, NullSight, PromptEnv,
+    EngineConfig, EngineMessage, FakeCognition, ItemId as SimItemId, NullSight, Office, PromptEnv,
     RequestId, SoundCatalog, SpatialActorUpdate, SpeechEventId, SttBackendKind, Transcription, Tts,
-    TtsBackendKind, Vec3 as SimVec3, WorldSeed,
+    TtsBackendKind, Vec3 as SimVec3, WorldClock, WorldSeed,
 };
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
@@ -281,6 +281,13 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
         stage: config.idle_cognition.stage(),
         idle_requires_news: config.idle_cognition.require_news,
         idle_curiosity: config.idle_cognition.curiosity(),
+        clock: WorldClock::new(
+            config.clock.seconds_per_day,
+            Office::from_config_name(&config.clock.start_office).unwrap_or(Office::Dayspring),
+            config.clock.start_day,
+            config.clock.night_brightness,
+        ),
+        ring_the_offices: config.clock.ring_the_offices,
         ..EngineConfig::default()
     };
 
@@ -637,6 +644,7 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
             sound_id,
             position_m: to_sim(position_m),
         },
+        BridgeCommand::CycleTimeScale => EngineCommand::CycleTimeScale,
         BridgeCommand::SpeechPresented { speech_event_id } => EngineCommand::SpeechPresented {
             event_id: SpeechEventId(speech_event_id),
         },

@@ -37,6 +37,37 @@ fn metric_people_have_distance_and_perspective_name() {
     assert_eq!(rendered["you_are"]["location_description"], "The Gradine");
 }
 
+/// The clock reaches the model through the sheet, not as a percept
+/// (`features/movement/01_the_clock.md` §7): a field when the world has a clock,
+/// and absent — keeping the frozen fixtures byte-identical — when it does not.
+#[test]
+fn the_sheet_carries_the_hour_only_when_the_world_has_a_clock() {
+    use cathedral_sim::{Office, WorldClock};
+
+    let env = prompt_env();
+    let mut world = seed_world();
+
+    // No clock (the golden fixtures' case): the hour is omitted entirely.
+    let before = sheet(&world, "sv3n1", &env);
+    assert!(
+        before["you_are"].get("the_hour").is_none(),
+        "the hour must be absent without a clock"
+    );
+
+    // With a clock, the office renders as a phrase between location and position.
+    world.current_time = Some(WorldClock::new(3600.0, Office::Lamplight, 0, 0.05).at(0.0));
+    let after = sheet(&world, "sv3n1", &env);
+    let the_hour = after["you_are"]["the_hour"].as_str().unwrap();
+    assert!(the_hour.starts_with("Lamplight"), "was: {the_hour}");
+    assert!(the_hour.contains("lamps are being lit"), "was: {the_hour}");
+    // Nothing else about `you_are` changed.
+    assert_eq!(
+        after["you_are"]["location_description"],
+        before["you_are"]["location_description"]
+    );
+    assert_eq!(after["you_are"]["position_m"], before["you_are"]["position_m"]);
+}
+
 #[test]
 fn a_moved_character_gets_a_freshly_resolved_prompt_location() {
     let env = prompt_env();

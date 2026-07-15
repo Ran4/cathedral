@@ -173,6 +173,11 @@ struct LoreRelation<'a> {
 #[derive(Serialize)]
 struct YouAre {
     location_description: String,
+    /// The office, as a short phrase — the clock reaches the model here, not as
+    /// a percept (`features/movement/01_the_clock.md` §7). Omitted when the host
+    /// carries no clock, which keeps the frozen golden fixtures byte-identical.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    the_hour: Option<String>,
     position_m: Position,
 }
 
@@ -369,6 +374,9 @@ pub fn render_prompt(
         back_story: actor.back_story(),
         you_are: YouAre {
             location_description,
+            the_hour: world.current_time.map(|time| {
+                format!("{} — {}", time.office.label(), time.office.prompt_phrase())
+            }),
             position_m: Position {
                 x: position.x,
                 y: position.y,

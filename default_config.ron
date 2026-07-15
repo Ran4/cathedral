@@ -48,5 +48,19 @@
             // spread, not how many run at once.
             max_actors: 6,
         ),
+        // The world clock (movement M0): the day/night cycle, the seven offices,
+        // and the town bell. Pure — a projection of the engine's `now`.
+        clock: (
+            // Real seconds per game day. 3600 is one game day per real hour (24×).
+            seconds_per_day: 3600.0,
+            // Which office the run opens on; "dayspring" is a working morning.
+            start_office: "dayspring",
+            // Day 0 is a Bellday; 2 opens on a Highmarket.
+            start_day: 0,
+            // Night's brightness floor. 0.05 is genuinely dark.
+            night_brightness: 0.05,
+            // Ring the town bell for the player as each office comes round.
+            ring_the_offices: true,
+        ),
     ),
 )

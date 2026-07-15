@@ -12,6 +12,7 @@ pub mod local_engine;
 pub mod model;
 
 mod area_debug;
+mod clock;
 mod config_menu;
 mod hud;
 mod interaction;
@@ -66,6 +67,9 @@ pub struct SmartActorsConfig {
     /// Who gets to think when nothing has happened
     /// (features/gate_idle_cognition_on_proximity.md).
     pub idle_cognition: IdleCognitionSettings,
+    /// The world clock: the day/night cycle, the offices, the bell
+    /// (features/movement/01_the_clock.md).
+    pub clock: ClockSettings,
 }
 
 /// The gates on *idle* NPC turns: proximity, then novelty.
@@ -151,6 +155,37 @@ impl IdleCognitionSettings {
     }
 }
 
+/// The world clock (movement M0). A day/night cycle, the seven offices, and the
+/// bell — all a pure projection of the engine's `now`, configured here and
+/// resolved in the sim (`features/movement/01_the_clock.md`).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct ClockSettings {
+    /// Real seconds per game day. 3600 is one game day per real hour (24×).
+    pub seconds_per_day: f64,
+    /// Which office the run opens on: `dayspring` puts you in a working morning.
+    pub start_office: String,
+    /// Which day the run opens on; day 0 is a Bellday, 2 a Highmarket.
+    pub start_day: i64,
+    /// Night's brightness floor. 0.05 is genuinely dark; raise it if the city
+    /// becomes unnavigable rather than atmospheric.
+    pub night_brightness: f64,
+    /// Whether crossing an office rings the town bell for the player.
+    pub ring_the_offices: bool,
+}
+
+impl Default for ClockSettings {
+    fn default() -> Self {
+        Self {
+            seconds_per_day: 3600.0,
+            start_office: "dayspring".into(),
+            start_day: 0,
+            night_brightness: 0.05,
+            ring_the_offices: true,
+        }
+    }
+}
+
 /// Settings for non-speech sound percepts. Perception runs in the engine;
 /// these values configure it at construction.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -188,6 +223,7 @@ impl Default for SmartActorsConfig {
             stt_trailing_silence_ms: 400,
             sounds: SoundsConfig::default(),
             idle_cognition: IdleCognitionSettings::default(),
+            clock: ClockSettings::default(),
         }
     }
 }
@@ -331,6 +367,7 @@ impl Plugin for SmartActorsPlugin {
             .insert_resource(inbox)
             .insert_resource(worker)
             .init_resource::<model::WorldMirror>()
+            .init_resource::<clock::WorldClockState>()
             .insert_resource(SmartActorRuntime::starting(self.config.fake_backend))
             .init_resource::<area_debug::AreaDebugState>()
             .init_resource::<ActorFocus>()
@@ -367,6 +404,7 @@ impl Plugin for SmartActorsPlugin {
                 (
                     actors::setup_actor_visual_assets,
                     area_debug::spawn_area_debug_ui,
+                    clock::spawn_clock_hud,
                 )
                     .after(hud::spawn_smart_actor_hud),
             )
@@ -443,6 +481,17 @@ impl Plugin for SmartActorsPlugin {
                 // lived alongside those systems, a completed source handoff
                 // could occasionally miss sink attachment.
                 speech::start_ready_audio,
+            )
+            .add_systems(
+                Update,
+                // The world clock's consumers: rotate the sun, keep the readout
+                // current, and cycle the debug time scale on the `T` key. They
+                // read `WorldClockState`, refreshed each frame in the drain.
+                (
+                    clock::drive_sun,
+                    clock::update_clock_hud,
+                    clock::handle_time_scale_key,
+                ),
             );
         if app.is_plugin_added::<bevy::gizmos::GizmoPlugin>() {
             app.add_systems(
@@ -490,6 +539,7 @@ fn drain_bridge_messages(
     mut microphone_input: ResMut<interaction::MicrophoneInputState>,
     mut spatial: ResMut<interaction::PlayerSpatialState>,
     mut presentation: BridgePresentationWriters,
+    mut world_clock: ResMut<clock::WorldClockState>,
     // Speech presentation dedupes and orders by this (speech.rs), and the
     // engine's messages no longer carry a sequence of their own. Counting them
     // here gives the same monotonic, gap-free stream the envelope did.
@@ -540,6 +590,7 @@ fn drain_bridge_messages(
                     &mut hud,
                     &mut interaction,
                     &mut presentation,
+                    &mut world_clock,
                 );
                 // Do not open the default input device before the engine
                 // handshake confirms that transcription is configured.
@@ -592,6 +643,7 @@ fn process_engine_message(
     hud: &mut hud::SmartActorHudState,
     interaction: &mut interaction::InteractionState,
     presentation: &mut BridgePresentationWriters,
+    world_clock: &mut clock::WorldClockState,
 ) {
     match message {
         EngineMessage::Ready {
@@ -609,6 +661,28 @@ fn process_engine_message(
         }
         EngineMessage::Snapshot(snapshot) => {
             accept_snapshot(mirror, runtime, hud, &snapshot);
+        }
+        EngineMessage::Clock {
+            day,
+            day_fraction,
+            office,
+            weekday,
+            brightness,
+            scale,
+            seconds_per_day: _,
+        } => {
+            // The sim owns the clock; this is the game's read-only projection,
+            // consumed by the sun and the HUD. No snapshot, no revision — the
+            // clock changes every frame and must never touch the mirror.
+            *world_clock = clock::WorldClockState {
+                present: true,
+                day,
+                fraction: day_fraction,
+                office,
+                weekday,
+                brightness,
+                scale,
+            };
         }
         EngineMessage::Speech {
             event_id,

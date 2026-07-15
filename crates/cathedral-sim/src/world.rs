@@ -11,6 +11,7 @@ use crate::{
     DEFAULT_VIEW_CONE_DEGREES,
     areas::AreaMap,
     character::Character,
+    clock::WorldTime,
     error::{SpatialUpdateError, SpatialUpdateErrorCode},
     event::DomainEvent,
     ids::{ActorId, ItemId},
@@ -59,6 +60,13 @@ pub struct World {
     pub view_cone_degrees: f64,
     /// The rows `make_sound` and the world-sound triggers resolve against.
     pub sound_catalog: SoundCatalog,
+    /// The resolved world time, refreshed by the engine each poll and read by the
+    /// prompt renderer for `you_are.the_hour`. Host-provided context like
+    /// `area_map`; it never bumps `world_revision` (the office changes far too
+    /// rarely to be worth a snapshot, and the clock advances every frame). `None`
+    /// until a clock-bearing host sets it — so a prompt rendered without one (the
+    /// frozen golden fixtures) simply omits the hour.
+    pub current_time: Option<WorldTime>,
     events: Vec<DomainEvent>,
 }
 
@@ -76,6 +84,7 @@ impl Default for World {
             sounds_enabled: true,
             view_cone_degrees: DEFAULT_VIEW_CONE_DEGREES,
             sound_catalog: SoundCatalog::empty(),
+            current_time: None,
             events: Vec::new(),
         }
     }

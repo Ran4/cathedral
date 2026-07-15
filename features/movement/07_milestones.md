@@ -8,12 +8,30 @@ it first, but do not discover the navigation problems while you are also debuggi
 
 ---
 
-## M0 — The Clock
+## M0 — The Clock  ✅ *implemented*
 
 **Ships.** `WorldClock` in the sim. The seven offices. The week. The sun moves. The bell rings its
 ordinal. A HUD readout. A `T` key that cycles the debug time-scale.
 
 **Nobody moves.**
+
+**Status — done and verified.** `crates/cathedral-sim/src/clock.rs` (pure, 15 unit tests);
+`EngineConfig.clock` + `EngineMessage::Clock` (republished every poll) + `EngineCommand::CycleTimeScale`;
+the bell is a *player-only* `Sound` (no NPC percept, no nudge — the offices are a clock, not events);
+`src/smart_actors/clock.rs` projects it into `WorldClockState`, rotates the `Sun`, writes the HUD, and
+cycles the scale on `T`. Configured under `smart_actors.clock` in `config.ron`.
+
+*Note on the verification recipe below:* drive `sleep`s are wall-clock, but the game clock advances in
+`Time<Virtual>` (what the engine's `now` reads), which lags wall-clock when debug frames are slow — so a
+real-time sleep advances game-time less than `scale × sleep`. Cycle up to 60× and/or set
+`clock.start_office` to reach a target hour. Working recipes:
+
+```sh
+# In-game: cycle to 60×, watch the sun cross the sky, read the HUD.
+CATHEDRAL_DRIVE='wait-online; shot morning; key KeyT; key KeyT; sleep 20; shot later; quit' cargo run
+# Start at dusk to see the dark end of the cycle.
+#   (set smart_actors.clock.start_office: "lamplight" in config.ron first)
+```
 
 **Touches.** `crates/cathedral-sim/src/clock.rs` (new), `EngineConfig`, `config.ron`,
 `src/scene.rs:1096` (the one `DirectionalLight`), `src/smart_actors/hud.rs`.

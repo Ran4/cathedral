@@ -18,9 +18,9 @@ use std::{cell::RefCell, rc::Rc, sync::Arc};
 use cathedral_sim::{
     ActorId, Capabilities, Cognition, CognitionBusy, Completion, Engine, EngineCommand,
     EngineConfig, EngineInitError, EngineMessage, FakeCognition, HEARING_RADIUS_M, ItemId,
-    NullSight, NullTranscription, PublicSnapshot, SpeechError, SpeechEventId, SpeechRouter,
+    NullSight, NullTranscription, Office, PublicSnapshot, SpeechError, SpeechEventId, SpeechRouter,
     SttBackendKind, Subsystem, Tts, TtsBackendKind, TtsOutcome, TtsRequest, TtsSubmitError, Vec3,
-    WorldSeed, apply_action, ids::RequestId, speech_reading_seconds,
+    WorldClock, WorldSeed, apply_action, ids::RequestId, speech_reading_seconds,
 };
 use prompt_support::{areas, catalog, prompt_env};
 use serde_json::json;
@@ -255,6 +255,85 @@ fn seed() -> WorldSeed {
 
 fn player() -> ActorId {
     ActorId::from_raw("player")
+}
+
+fn is_town_bell(message: &EngineMessage) -> bool {
+    matches!(message, EngineMessage::Sound { sound_id, .. } if sound_id == "town_bell")
+}
+
+fn clock_office(messages: &[EngineMessage]) -> Option<Office> {
+    messages.iter().find_map(|message| match message {
+        EngineMessage::Clock { office, .. } => Some(*office),
+        _ => None,
+    })
+}
+
+/// The offices ring as a *sound for the player alone* — never a percept, never a
+/// nudge — and every poll republishes the clock. This is the whole budget
+/// argument of `features/movement/01_the_clock.md` §7 in one test: a bell that
+/// costs nothing because no character ever hears it.
+#[test]
+fn the_offices_ring_for_the_player_only_and_publish_the_clock() {
+    // One game day in 60 s, opening at Dayspring (07:00); High Wick (noon) rings
+    // 12.5 s in. No cognition, so nothing but the clock moves the world.
+    let clock = WorldClock::new(60.0, Office::Dayspring, 0, 0.05);
+    let mut engine = Engine::new(
+        EngineConfig {
+            clock,
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player");
+
+    // The opening office is entered, not rung.
+    let opening = engine.poll(0.0, Vec::new());
+    assert_eq!(clock_office(&opening), Some(Office::Dayspring));
+    assert!(!opening.iter().any(is_town_bell));
+
+    // Past noon: High Wick rings once, and its recipient is the player alone.
+    let noon = engine.poll(13.0, Vec::new());
+    assert_eq!(clock_office(&noon), Some(Office::HighWick));
+    let bells: Vec<&EngineMessage> = noon.iter().filter(|message| is_town_bell(message)).collect();
+    assert_eq!(bells.len(), 1, "one stroke of High Wick's four is due by 13 s");
+    match bells[0] {
+        EngineMessage::Sound {
+            recipient_ids,
+            witness_ids,
+            actor_id,
+            text_for_player,
+            ..
+        } => {
+            assert_eq!(
+                recipient_ids,
+                &vec![player()],
+                "no NPC is a recipient, so no inbox is touched"
+            );
+            assert!(witness_ids.is_empty());
+            assert!(actor_id.is_none(), "a world sound is never attributed");
+            assert!(text_for_player.is_none(), "the HUD readout carries the hour, not a toast");
+        }
+        other => panic!("expected a bell, got {other:?}"),
+    }
+
+    // The T key speeds time up; the same poll's clock already carries 10×.
+    let cycled = engine.poll(13.0, vec![EngineCommand::CycleTimeScale]);
+    let scale = cycled.iter().find_map(|message| match message {
+        EngineMessage::Clock { scale, .. } => Some(*scale),
+        _ => None,
+    });
+    assert_eq!(scale, Some(10.0));
 }
 
 /// The yaw that points the player straight at `actor` (yaw 0 faces -Z).

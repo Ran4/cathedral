@@ -21,6 +21,12 @@ use crate::{
 
 pub struct CathedralPlugin;
 
+/// The one directional key light. Marked so the world clock can rotate it and
+/// set its strength as the day passes (`smart_actors::clock`); without the smart
+/// actors it keeps the fixed late-afternoon pose spawned in `build_lighting`.
+#[derive(Component)]
+pub struct Sun;
+
 impl Plugin for CathedralPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, (build_cathedral, build_daylight_atmosphere))
@@ -1094,6 +1100,7 @@ fn build_west_end(
 
 fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &CathedralMaterials) {
     commands.spawn((
+        Sun,
         DirectionalLight {
             // Raw sunlight is filtered by the atmosphere into a warm, late
             // afternoon key light and a cooler sky fill.

@@ -147,6 +147,9 @@ pub enum BridgeCommand {
         sound_id: String,
         position_m: Position,
     },
+    /// Advance the debug world-clock time scale (the `T` key). Fire-and-forget:
+    /// the new scale comes back on the next `EngineMessage::Clock`.
+    CycleTimeScale,
     /// Fire-and-forget notice that a speech event's audio presentation reached
     /// a terminal state (played, skipped, dropped, failed, or cut off). The
     /// engine frees the conversation floor on it; its failsafe covers a lost

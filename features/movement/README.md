@@ -352,7 +352,7 @@ already has (`cathedral-headless`, `CATHEDRAL_DRIVE`). Full recipes in
 
 | | | Ships | How you know |
 |---|---|---|---|
-| **M0** | **The Clock** | seven offices, the week, the sun moves, the bell rings, a HUD readout, a debug time-scale key. **Nobody moves.** | `CATHEDRAL_DRIVE='key T; key T; sleep 20; shot dusk'` — the sun is down, the HUD says Lamplight |
+| **M0 ✅** | **The Clock** *(implemented)* | seven offices, the week, the sun moves, the bell rings, a HUD readout, a debug time-scale key. **Nobody moves.** | `CATHEDRAL_DRIVE='wait-online; key KeyT; key KeyT; sleep 20; shot dusk'` — the sun has moved, the HUD reads the office and hour |
 | **M1** | **The bake** | `assets/world/navigation.json`, a debug overlay, and the connectivity tests. **Still nobody moves.** | `cargo test -p cathedral-sim navigation` — every named place and every door reachable |
 | **M2** | **One NPC walks** | hot/cold split, fixed tick, interpolation, the guard lifted. One hard-coded actor paces between two places forever. | headless prints their position advancing; a drive `shot` finds them somewhere new |
 | **M3** | **The water round** | needs → conditions → ladder → route → queue → draw → home. The vertical slice. | you can *hear* the windlass from thirty metres away, and ask the drawer about it |

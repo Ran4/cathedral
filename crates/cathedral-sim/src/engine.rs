@@ -16,7 +16,7 @@
 //! succeed while the action it came with fails, and that revision bump has to
 //! reach the game either way (`server.py:1013-1025`).
 
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::VecDeque, path::PathBuf, sync::Arc};
 
 use serde_json::{Value, json};
 
@@ -28,6 +28,7 @@ use crate::{
         StageConfig, on_stage,
     },
     character::Control,
+    clock::{Office, Weekday, WorldClock, stroke_times},
     error::{CommandError, CommandErrorCode, EngineInitError},
     event::{DomainEvent, EventType},
     floor::ConversationFloor,
@@ -84,6 +85,18 @@ pub const MIN_STT_STREAM_GRACE_SECONDS: f64 = 0.2;
 pub const MAX_COMMAND_MESSAGE_CHARS: usize = 300;
 /// `tts_failed.reason` is truncated here (`server.py:2018`).
 pub const MAX_TTS_FAILURE_REASON_CHARS: usize = 160;
+
+/// Default real seconds per game day: one game day per real hour (24×), Skyrim's
+/// number (`features/movement/01_the_clock.md` §9).
+pub const DEFAULT_SECONDS_PER_DAY: f64 = 3_600.0;
+/// Default night brightness floor — genuinely dark, lifted only by lamps and the
+/// moon (`features/movement/01_the_clock.md` §5).
+pub const DEFAULT_NIGHT_BRIGHTNESS: f64 = 0.05;
+/// The world sound the offices ring. Audible at 600 m — most of the city — which
+/// is exactly why it reaches the player as a bell but never as a percept: the
+/// office is a clock, not an event (`assets/sounds/catalog.toml`,
+/// `features/movement/01_the_clock.md` §7).
+const TOWN_BELL_SOUND_ID: &str = "town_bell";
 
 /// Status state the voice selection adds to the scheduler's `STATE_*` set.
 const STATE_SELECTED: &str = "selected";
@@ -222,6 +235,13 @@ pub struct EngineConfig {
     /// and defaults to off for the same reason: nothing but `config.ron` changes
     /// behavior that the shipped tests pin.
     pub idle_curiosity: CuriosityConfig,
+    /// The world's clock — the seven offices, the week, the sun's brightness
+    /// (`features/movement/01_the_clock.md`). A pure projection of the `now` the
+    /// host already passes to [`Engine::poll`], so it keeps the sim clock-free.
+    pub clock: WorldClock,
+    /// Whether crossing an office rings the town bell for the player. On by
+    /// default; the bell is a *sound*, never a percept, so it costs no tokens.
+    pub ring_the_offices: bool,
 }
 
 impl Default for EngineConfig {
@@ -242,6 +262,13 @@ impl Default for EngineConfig {
             stage: StageConfig::default(),
             idle_requires_news: false,
             idle_curiosity: CuriosityConfig::default(),
+            clock: WorldClock::new(
+                DEFAULT_SECONDS_PER_DAY,
+                Office::Dayspring,
+                0,
+                DEFAULT_NIGHT_BRIGHTNESS,
+            ),
+            ring_the_offices: true,
         }
     }
 }
@@ -290,6 +317,10 @@ pub enum EngineCommand {
         sound_id: String,
         position_m: Vec3,
     },
+    /// Advance the debug time scale to the next of 1× / 10× / 60× (the `T` key).
+    /// Fire-and-forget: the host learns the new scale from the next
+    /// [`EngineMessage::Clock`], so there is no `CommandResult`.
+    CycleTimeScale,
     DebugPlayerSay {
         request_id: String,
         text: String,
@@ -346,6 +377,28 @@ pub enum EngineMessage {
     },
     /// On every public-revision increase (`server.py:2223-2229`).
     Snapshot(PublicSnapshot),
+    /// The world clock, republished every poll so the host can drive the sun and
+    /// the HUD smoothly. Cheap by design — a handful of scalars, no allocation,
+    /// no world-revision bump — because the clock changes every frame and must
+    /// never re-trigger the snapshot chain. The office reaches the LLM through
+    /// the sheet, never here (`features/movement/01_the_clock.md` §7).
+    Clock {
+        /// Whole days since the epoch; day 0 is a Bellday.
+        day: i64,
+        /// `[0, 1)` through the day; 0.0 is midnight, 0.5 is noon.
+        day_fraction: f64,
+        /// The last office whose bell has rung.
+        office: Office,
+        /// Which of the seven weekdays.
+        weekday: Weekday,
+        /// 0.0 (the night floor) to 1.0 (full day) — the sun and the ladder read
+        /// the same number.
+        brightness: f64,
+        /// The live debug time multiplier (1.0 in a normal game).
+        scale: f64,
+        /// Real seconds per game day, before `scale`.
+        seconds_per_day: f64,
+    },
     Speech {
         event_id: SpeechEventId,
         speaker_id: ActorId,
@@ -464,6 +517,18 @@ pub struct Engine {
     /// me?": *has anything happened to them since?* Empty and inert unless
     /// `config.idle_requires_news`.
     novelty: Novelty,
+    /// The live world clock. Initialized from `config.clock`; the debug time
+    /// scale (the `T` key) mutates this copy, never the config's.
+    clock: WorldClock,
+    /// The `now` at which the offices were last checked for a bell, so a span —
+    /// never an instant — is tested and no office can be missed or double-rung.
+    last_clock_now: f64,
+    /// Future bell strokes owed to the player, in real `now`-seconds. An office
+    /// enqueues its ordinal here (the Watch one, the Snuffing seven) and each
+    /// poll drains the ones now due.
+    bell_strokes: VecDeque<f64>,
+    /// Monotonic id for the bell sound events, so each stroke is distinct.
+    bell_seq: u64,
     ready_emitted: bool,
 }
 
@@ -555,6 +620,9 @@ impl Engine {
             stt_stream_grace_seconds,
             ..config
         };
+        // Captured before `config` is moved into the struct below (`WorldClock`
+        // is `Copy`); the live clock starts as the configured one.
+        let clock = config.clock;
 
         // A run that *starts* on the local voice warms it now, not inside the
         // cast's first line (`server.py:594-599`). Without this the Pocket model
@@ -583,6 +651,12 @@ impl Engine {
             last_player_sound_at: f64::NEG_INFINITY,
             last_player_exchange: None,
             novelty: Novelty::default(),
+            clock,
+            // The construction `now`: the first poll's span opens here, so the
+            // office the run *starts* in is never rung, only entered.
+            last_clock_now: now,
+            bell_strokes: VecDeque::new(),
+            bell_seq: 0,
             ready_emitted: false,
         })
     }
@@ -620,6 +694,12 @@ impl Engine {
                 }));
             }
         }
+
+        // Ring the offices before commands, so a `CycleTimeScale` this same poll
+        // cannot retroactively move the bell span already tested here. The clock
+        // itself is published at the end of the poll, where it reflects that
+        // command.
+        self.ring_offices(now, &mut out);
 
         let mut completions: Vec<Completion> = Vec::new();
         for command in commands {
@@ -706,6 +786,9 @@ impl Engine {
         // The scheduler's turn produced domain events in this same poll; the
         // floor they acquire here gates the *next* one.
         self.flush(now, &mut out);
+
+        // Last: the clock, reflecting any `CycleTimeScale` applied above.
+        self.publish_clock(now, &mut out);
         out
     }
 
@@ -866,6 +949,17 @@ impl Engine {
                 sound_id,
                 position_m,
             } => self.debug_sound(now, &sound_id, position_m, out),
+
+            // Continuity-preserving (see `WorldClock::with_scale`): time speeds
+            // up without jumping. The next poll's `Clock` message carries the new
+            // scale to the HUD.
+            EngineCommand::CycleTimeScale => {
+                self.clock = self.clock.cycle_scale(now);
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[clock] debug time scale ×{}",
+                    self.clock.scale()
+                )));
+            }
 
             // Fire-and-forget, and idempotent by contract (D26): duplicates and
             // ids whose failsafe already expired are legitimately unknown.
@@ -1135,6 +1229,80 @@ impl Engine {
         let line = emit_sound(&mut self.world, None, &sound, Some(position_m));
         self.transcript.push(line);
         self.flush(now, out);
+    }
+
+    /// Ring the offices whose bells fell in the span since the last check, and
+    /// sound any strokes now due. Called once per poll, before commands, so the
+    /// span tested here is stable no matter what the commands do to the scale.
+    fn ring_offices(&mut self, now: f64, out: &mut Vec<EngineMessage>) {
+        // Publish the resolved time onto the world before this poll's turns are
+        // rendered, so `you_are.the_hour` reads the current office. A plain field
+        // write: it must not bump `world_revision`. Cycling the scale preserves
+        // `at(now)`, so a `CycleTimeScale` later this poll cannot change it.
+        self.world.current_time = Some(self.clock.at(now));
+
+        if self.config.ring_the_offices && self.world.sounds_enabled {
+            for (instant, office) in self.clock.offices_crossed(self.last_clock_now, now) {
+                for stroke_at in stroke_times(office, instant) {
+                    self.bell_strokes.push_back(stroke_at);
+                }
+            }
+        }
+        self.last_clock_now = now;
+
+        // Sound every stroke now due. `offices_crossed` never returns a future
+        // instant, so an office's first stroke rings the poll it is scheduled and
+        // the rest ring their own later polls, three seconds apart.
+        while self.bell_strokes.front().is_some_and(|&due| due <= now) {
+            self.bell_strokes.pop_front();
+            self.emit_bell(out);
+        }
+    }
+
+    /// Republish the clock for the host's sun and HUD — a handful of scalars,
+    /// every poll, so the day reads smoothly and no world-revision is bumped.
+    /// Emitted at the end of the poll so it reflects a `CycleTimeScale` applied
+    /// this frame.
+    fn publish_clock(&self, now: f64, out: &mut Vec<EngineMessage>) {
+        let time = self.clock.at(now);
+        out.push(EngineMessage::Clock {
+            day: time.day,
+            day_fraction: time.fraction,
+            office: time.office,
+            weekday: time.weekday,
+            brightness: self.clock.brightness(now),
+            scale: self.clock.scale(),
+            seconds_per_day: self.clock.seconds_per_day(),
+        });
+    }
+
+    /// Ring one stroke of the town bell — a sound *for the player only*, from the
+    /// Lanthorn. It reaches the player's ears (its lone recipient) but no LLM
+    /// inbox and nudges nobody: the office is a clock, not an event, so it queues
+    /// nothing and costs no tokens (`features/movement/01_the_clock.md` §7).
+    /// Deviations — the Ruin, the name-knell — stay real percepts, emitted the
+    /// ordinary way.
+    fn emit_bell(&mut self, out: &mut Vec<EngineMessage>) {
+        let Some(sound) = self.world.sound_catalog.get(TOWN_BELL_SOUND_ID).cloned() else {
+            return;
+        };
+        self.bell_seq += 1;
+        out.push(EngineMessage::Sound {
+            event_id: format!("bell-{}", self.bell_seq),
+            sound_id: sound.sound_id.clone(),
+            sound_class: sound.sound_class.clone(),
+            // A world sound is never attributed to anyone.
+            actor_id: None,
+            // The Lanthorn, near the heart of the city.
+            position_m: Vec3::new(0.0, 20.0, -10.0),
+            audible_distance: sound.audible_distance,
+            // The player alone: the host plays the sound for him, and no
+            // character is given a percept or handed a turn.
+            recipient_ids: vec![self.config.player_id.clone()],
+            witness_ids: Vec::new(),
+            // No toast; the persistent HUD readout already shows the office.
+            text_for_player: None,
+        });
     }
 
     /// `_handle_set_tts_backend` (`server.py:874-905`).

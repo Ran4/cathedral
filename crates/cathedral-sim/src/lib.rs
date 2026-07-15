@@ -14,6 +14,7 @@ pub mod actions;
 pub mod areas;
 pub mod attention;
 pub mod character;
+pub mod clock;
 pub mod engine;
 pub mod error;
 pub mod event;
@@ -48,6 +49,9 @@ pub use attention::{
     STAGE_PARTNER_MEMORY_SECONDS, StageConfig, context_hash, curiosity_of, on_stage,
 };
 pub use character::{Character, CharacterSheet, CharacterState, Control};
+pub use clock::{
+    BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
+};
 pub use engine::{Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage};
 pub use error::{
     ActionError, ActionErrorCode, CommandError, CommandErrorCode, EngineInitError, PromptError,

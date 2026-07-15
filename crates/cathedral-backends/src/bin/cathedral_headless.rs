@@ -42,11 +42,11 @@ use cathedral_backends::{
 use cathedral_sim::{
     ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion, CuriosityConfig,
     DEFAULT_VIEW_CONE_DEGREES, Engine, EngineCommand, EngineConfig, EngineMessage, FakeCognition,
-    IdleCognitionMode, NullSight, NullTranscription, NullTts, PlayerKnowledge, PromptEnv,
-    RequestId, SoundCatalog, StageConfig, TtsBackendKind, Vec3, World, WorldSeed,
+    IdleCognitionMode, NullSight, NullTranscription, NullTts, Office, PlayerKnowledge, PromptEnv,
+    RequestId, SoundCatalog, StageConfig, TtsBackendKind, Vec3, World, WorldClock, WorldSeed,
     engine::{
-        DEFAULT_MAXIMUM_BACKOFF_SECONDS, DEFAULT_SOUND_COOLDOWN_SECONDS,
-        DEFAULT_STT_STREAM_GRACE_SECONDS,
+        DEFAULT_MAXIMUM_BACKOFF_SECONDS, DEFAULT_NIGHT_BRIGHTNESS, DEFAULT_SECONDS_PER_DAY,
+        DEFAULT_SOUND_COOLDOWN_SECONDS, DEFAULT_STT_STREAM_GRACE_SECONDS,
     },
     llm_turn_order,
 };
@@ -127,6 +127,23 @@ struct Args {
     /// send FILE as the whole prompt and print the reply (the old `kimi.py`)
     #[arg(long, value_name = "FILE")]
     one_shot: Option<PathBuf>,
+
+    /// real seconds per game day (24× default is one game day per real hour)
+    #[arg(long, default_value_t = DEFAULT_SECONDS_PER_DAY, value_name = "SECONDS")]
+    seconds_per_day: f64,
+
+    /// which office the run opens on (watch|kindling|dayspring|high_wick|waning|lamplight|snuffing)
+    #[arg(long, default_value = "dayspring", value_name = "OFFICE")]
+    start_office: String,
+
+    /// which day the run opens on; day 0 is a Bellday, 2 a Highmarket
+    #[arg(long, default_value_t = 0, value_name = "DAY")]
+    start_day: i64,
+
+    /// instead of taking turns, watch the clock advance this many game days,
+    /// printing each office as its bell rings
+    #[arg(long, default_value_t = 0.0, value_name = "DAYS")]
+    watch_clock: f64,
 
     /// directory holding prompts/, sounds/ and world/
     #[arg(long, default_value = "assets", value_name = "DIR")]
@@ -240,6 +257,18 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
 
     let turn_delay_seconds = config.npc_turn_delay_seconds.max(MIN_TURN_DELAY_SECONDS);
     let (player_spawn, player_yaw) = assets.player_spawn();
+    let start_office = Office::from_config_name(&args.start_office).ok_or_else(|| {
+        format!(
+            "unknown --start-office `{}` (try watch, kindling, dayspring, high_wick, waning, lamplight, snuffing)",
+            args.start_office
+        )
+    })?;
+    let clock = WorldClock::new(
+        args.seconds_per_day,
+        start_office,
+        args.start_day,
+        DEFAULT_NIGHT_BRIGHTNESS,
+    );
     let engine = Engine::new(
         EngineConfig {
             player_id: ActorId::from_raw(PLAYER_ID),
@@ -271,6 +300,8 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
                 enabled: args.curiosity,
                 ..CuriosityConfig::default()
             },
+            clock,
+            ring_the_offices: true,
         },
         &assets.seed,
         assets.areas,
@@ -295,8 +326,13 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         printed_lines: 0,
         provider_failed: false,
         requires_news: args.news || args.curiosity,
+        last_office: None,
     };
-    runner.run_ticks(args.ticks)?;
+    if args.watch_clock > 0.0 {
+        runner.watch_clock(args.watch_clock, clock.seconds_per_day())?;
+    } else {
+        runner.run_ticks(args.ticks)?;
+    }
     runner.print_final_state();
     runner.print_cost();
 
@@ -334,6 +370,9 @@ struct Runner {
     /// walks past, no bell rings — so a cast that has run out of news has run
     /// out for good, and the run is simply over.
     requires_news: bool,
+    /// The last office the clock reported, so the runner prints each bell once
+    /// as it rings rather than on every poll.
+    last_office: Option<Office>,
 }
 
 impl Runner {
@@ -349,6 +388,26 @@ impl Runner {
             println!("\n== tick {tick}: {actor_name} ==");
             self.apply_turn()?;
             self.print_new_transcript_lines();
+        }
+        Ok(())
+    }
+
+    /// Watch the clock advance `game_days` days with no turns, so every office
+    /// prints as its bell rings — the pure-clock counterpart to `run_ticks`, and
+    /// the fastest way to see a whole game day pass.
+    fn watch_clock(&mut self, game_days: f64, seconds_per_day: f64) -> Result<(), String> {
+        let real_seconds = game_days * seconds_per_day;
+        let end = self.now + real_seconds;
+        // Small enough that even the closest two offices (the Kindling and
+        // Dayspring, two game hours apart) never share a step, so no bell's line
+        // is skipped.
+        let step = (seconds_per_day / 200.0).max(0.05);
+        println!(
+            "== watching {game_days} game day(s): {real_seconds:.0} s at {seconds_per_day:.0} s/day =="
+        );
+        while self.now < end {
+            self.now += step;
+            self.pump(Vec::new());
         }
         Ok(())
     }
@@ -450,6 +509,29 @@ impl Runner {
                         eprintln!("--- reply from {actor_name} ---\n{answer}");
                     }
                 }
+            }
+            // One line per bell, not per poll: the clock is republished every
+            // poll, but the office only occasionally changes.
+            EngineMessage::Clock {
+                day,
+                day_fraction,
+                office,
+                weekday,
+                ..
+            } if self.last_office != Some(office) => {
+                let first = self.last_office.is_none();
+                self.last_office = Some(office);
+                let minutes = (day_fraction * 24.0 * 60.0).round() as i64;
+                let (hour, minute) = (minutes.div_euclid(60).rem_euclid(24), minutes.rem_euclid(60));
+                let event = if first {
+                    format!("clock opens at {}", office.label())
+                } else {
+                    format!("{} rings", office.label())
+                };
+                println!(
+                    "== {hour:02}:{minute:02}  {event}  —  day {day}, {} ==",
+                    weekday.label()
+                );
             }
             _ => {}
         }
@@ -885,6 +967,7 @@ mod tests {
             printed_lines: 0,
             provider_failed: false,
             requires_news: false,
+            last_office: None,
         };
 
         let started = std::time::Instant::now();
