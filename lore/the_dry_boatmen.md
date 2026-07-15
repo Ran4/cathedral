@@ -106,6 +106,7 @@ They are proud, cash-poor, land-rich, and quietly coming apart:
 - **Wyn Alder** (34) is the best boatwoman on the Serle and has been since she
   took the fore-pole at twelve, in the season after the Moorings roof came down
   in the Hammering and killed her father.
+<!-- protected: designed ambiguity — Ewart's drunk "seventy years ago" (below) rounds the precise "sixty-eight years" the narrator gives later; in-character rounding, bracketed as unreliable ("By morning he is ashamed"). Do NOT reconcile. See lore/CONSISTENCY.md. -->
 - **Ewart Alder** (49), her elder half-brother, poles the Brede run on a finished pair of
   shoulders and tells the whole Hungry Ox in drink that the yard should be sold
   to a Tallage broker while it still fetches a price — that the water left it

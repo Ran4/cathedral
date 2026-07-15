@@ -336,6 +336,7 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
 - stance: none by policy; the room holds every position nightly and she holds the room
 - knows:
   - [TRUE] Everything said loudly under her roof: the Shut Door fury, the wagers on the doors this year.
+  <!-- protected: designed ambiguity — Renna sincerely repeats a false rumor (ledger §10 row 27 = FALSE-BUT-BELIEVED). The cell's real practice is bloodless ("No knife has ever answered our door", heretic_catechism.md:96-97); the gap is the authored payoff. Do NOT reconcile. See lore/CONSISTENCY.md. -->
   - [FALSE-BUT-BELIEVED] The Greensick cut the throats of those who cross them; she warns young fools of it sincerely.
   - [AMBIGUOUS] A beam from the rose once landed in a courtyard three streets away; her mother swore she saw it.
 - secret: she lets Ede sleep in the woodstore and pretends not to know

@@ -55,6 +55,7 @@ Masonry against heaven, course by course.
 **What is the Great Rose?**
 The flaw in the wall. The keyhole.
 
+<!-- protected: heretic misinformation ("Wrong on purpose") — "old glass remembers the sky" is falsified in-world by the new-plain-glass test (00_canon.md rule 2, impossible_light.md:15-17). Canon heads this doctrine as wrong on purpose; do NOT reconcile with canon. See lore/CONSISTENCY.md. -->
 **Why does glass show what stone hides?**
 Old glass remembers the sky it was cooled under.
 

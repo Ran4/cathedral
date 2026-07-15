@@ -20,6 +20,7 @@ something else. Its **observable rules** are fixed:
    directly without pain.
 4. It casts visible green-white beams but no heat. Wax does not soften in them.
    It heals nothing, speaks no words, and leaves no physical trace.
+   <!-- protected: designed ambiguity — this observable inertness ("speaks no words") coexists with the folk belief that the dead hear names in its beam (below, and 00_canon.md §(e)); different registers, both canonical, and §3f binds "whether it hears anything spoken into its light" as never-confirm/never-deny. Do NOT reconcile. See lore/CONSISTENCY.md. -->
 5. Within its light, people and objects cast a faint second **grave-shadow** at
    an angle inconsistent with the true sun. The two kinds of light overlap
    without visually mixing.

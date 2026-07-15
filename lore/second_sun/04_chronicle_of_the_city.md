@@ -53,6 +53,7 @@
 
 **F.219.** In this year a Taper wrote in the margin of a choir-book that the sky doubled behind the rose. The Chapter ruled it a fault of the eye, and set him to the kitchens, and the margin was scraped. It is the first such writing. It was not the last.
 
+<!-- protected: designed ambiguity — "six weeks" here vs "nine weeks" in the F.334 entry below is the chronicle-exaggeration device; the F.334 later-hand gloss cross-references this line. Do NOT reconcile. See lore/CONSISTENCY.md · 00_canon.md §10. -->
 **F.229.** The Cut froze from the Tally Bridge to the reeds and bore carts, six weeks together. An ox was roasted whole upon the ice at the Tallage; the butchers feasted and the boatmen went hungry, and neither has let the other forget it.
 
 **F.240.** In this year pilgrims came out of number, to stand in the nave at dawn for the [*here a word is scraped, and* Emblem *set above in a later hand*] that stands in the rose. The Chapter appointed hours of viewing, and badges of lead were struck and sold at the west door, and the great church, which all men now call the Lanthorn, was never empty at first light.
@@ -87,6 +88,7 @@
 
 **F.323.** The Serle rose in the spring, and the crypt of Saint Maren flooded, and the dead were disordered. Since that year the sexton chalks upon the lintel of the charnel door the name of each soul buried, and leaves it until the next, that the names be not lost to the water.
 
+<!-- protected: designed ambiguity — "nine weeks" vs the F.229 "six weeks" above; the later-hand gloss IS the device, not an error to fix. See lore/CONSISTENCY.md. -->
 **F.334.** The Cut froze again, though not as in the great frost of F.229, which stood nine weeks. *A later hand:* Thus in the Book; the entry of that year says six. Frost grows in the telling.
 
 **F.341.** Fire in the sacristy, from a censer left swinging. It took vestments, the wax-stores, and a leaf of the bell-register, wherein one of the four bells of F.312 had her name. She is called the Orphan since, for no man living remembers her baptism, and the folk will not be wed under her voice.
