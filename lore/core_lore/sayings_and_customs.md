@@ -26,6 +26,25 @@ same city:
   toward arches and covered ways even when no hail follows.
 - **“Gone in the Long Departure.”** Left Ombreval after F.415, often leaving
   property, debts, or unresolved kin behind.
+- **“The dry carry.”** The doubled handling of every load since the diversion;
+  the Reed Ward's name for the whole economic wound, and a line in a ledger,
+  not a poem.
+- **“To lift it twice.”** To pay for something already paid for.
+- **“Come by barrow.”** Untolled; smuggled through the Reed Postern as
+  handbarrow loads. To say a thing came by barrow is to call it stolen without
+  saying so.
+- **“A dry drowning.”** Ruin by debt: quietly, on land, in full view.
+- **“He poles the Cut.”** Works very hard at a thing that goes nowhere. Said of
+  a trade, a lawsuit, or a marriage that is finished.
+- **“Ask an Alder where the bed was.”** Said when a wall cracks, a floor tilts,
+  or a scheme fails for an unseen old cause: there is something under this,
+  somebody knew, and it was not written down.
+- **“Gate-caught.”** Shut outside at the Snuffing; more generally, late through
+  no fault of one's own, in a system that does not care.
+- **“Born inside.”** A boat-family child who has never been out to see the
+  water. Said as a light insult and heard as a heavy one.
+- **“There are more Hawsers than Alders.”** Most who had something have lost
+  it. Said as consolation, and as a threat.
 - **Belwyn's ward:** close one eye and lay two fingers on the lid. Clergy call it
   remembrance that darkness belongs to the Light; ordinary people use it
   against ill luck.
@@ -35,3 +54,7 @@ same city:
   shows; lead holds.” Burn scars are called Ambrelle's kisses.
 - Boatmen insist that the water knows one sun and state it with the same calm as
   a depth sounding.
+- Boat-families give directions by upstream and downstream on dry streets —
+  *two doors downstream of the Ox* — meaning the direction the Serle ran before
+  their grandparents were born. It is the fastest way to mark a speaker as Reed
+  Ward, and a stranger who asks for “up the street” is instantly a stranger.

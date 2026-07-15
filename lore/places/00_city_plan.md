@@ -203,6 +203,13 @@ fish carriers, funerals, and the Reed Ward. It cannot admit an ox cart. Maren's
 Slip climbs from it toward the Green. The postern gives boat-families a short
 working route without weakening the River Gate's customs role.
 
+It also has two roles the plan should not sand off. Once a year, at
+Vhairestide, it is opened wide for a crowd — the Walking Out — and the whole
+Reed Ward passes through it to see the river. And because handbarrows pass it
+tolled lightly or not at all, it is the ward's untolled barrow route: a
+working door that is pointedly not a customs house, and the substance of the
+Reed Ward's postern politics at every reckoning.
+
 The wall itself is about twelve to fifteen metres high, with towers at gates,
 corners, and a few vulnerable turns. Wall walks and roofs must not rival the
 Lanthorn towers. Houses may back onto the inner lane but do not casually punch
@@ -235,7 +242,10 @@ The Cut centreline stays close to `x = -305`. Its ordinary clear cart width is
 eight to twelve metres, widening at the Tallage and Maren's Green and narrowing
 under the Tally and Chain bridges. Bank-front buildings face it on slightly
 raised thresholds. At long range, its straight run is visible in fragments
-under awnings, bridges, dust, and traffic.
+under awnings, bridges, dust, and traffic. Houses over the filled channel
+settle where houses on the old banks do not — “built on the bed” — so cracked
+party walls, doors out of true, and shored fronts may follow an invisible line
+along the route (see `wells_and_water.md`).
 
 ### River Cartway
 

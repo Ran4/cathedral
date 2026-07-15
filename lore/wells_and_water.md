@@ -102,6 +102,30 @@ High northern ground has always favoured deep shafts and stored rain. A rise
 at the outer Serle can affect low groundwater after a delay, but it does not
 put flowing river water beneath the Cut or refill Saint Maren's crypt.
 
+Along the Cut the critical distinction is between the old channel and the old
+banks. What was channel is made ground — rubble, spoil, and ruin tipped in
+between F.363 and F.369 — and what was bank is old solid earth, and from the
+street the two are indistinguishable. From a foundation trench, a well shaft,
+a cellar, or a cracked party wall they are very distinguishable indeed: a
+house **built on the bed** settles, and a house on the old bank does not.
+Doors out of true, floors that run downhill, and stairs pulling off walls
+follow the line of a river that stopped flowing in F.369. Cut landlords deny
+the whole idea exists, because it prices their houses, and every Cut
+landlord's house was built on the bed according to somebody.
+
+No plan of the old channel was ever drawn. What exists instead is **the
+soundings**: the boat-families' unwritten oral map of the old bed — the deep
+line, the soft banks, the sills and shallows, the made ground and the rubbish
+— taught by walking a child up the Cut and asking where he would have poled.
+Well-diggers, cistern men, and cellar-diggers quietly pay old boat-family
+members for a walk-over and an opinion, because a shaft over the bed behaves
+differently from one on the bank; the Line-keeper consults old boatmen on
+disputed boundaries and shoring orders and does not put it in the minutes; the
+masons' lodge resents the fee, disputes it, and pays it. The saying for a
+cracked wall or a scheme that fails for an unseen old cause is **“ask an Alder
+where the bed was.”** The soundings are geology and memory, not a hidden
+channel: nothing in them puts water back under the city.
+
 Ford Well is especially misunderstood. Its site remembers the old ford-market,
 but its shaft reaches a deep groundwater source north of the former river
 crossing. It is not a surviving hole into the Serle's old bed. Water raised
@@ -1045,7 +1069,9 @@ that claim impossible antiquity because old custom sounds stronger in court.
 Reed Cistern's authority, Chain Well's heavy use, and the value of cask routes
 all grow from this transition. So does a continuing ward grievance: the city
 made the Serle a cart journey away, then treated the cost of carrying as a
-private inconvenience.
+private inconvenience. So, quietly, does a trade in knowledge: everyone who
+digs, shores, or buys along the filled Cut eventually pays a boat-family for
+the soundings (see “What lies under the streets”).
 
 ### The Wickmarket fire, F.407
 

@@ -13,14 +13,27 @@ Coswaldstide, F.436.”
 The ritual and civic year, from spring:
 
 - **Colm's Night** — unofficial, early spring; green-dipped candles are burned
-  at home for the drowned labourer Colm Attergate.
+  at home for the drowned labourer Colm Attergate. The Reed Ward's
+  boat-families burn theirs in the dry grate of the Old Sluice, where he
+  drowned when the Cut still ran; the keeper rakes out the stubs in the
+  morning, and a Custody grey coat is generally somewhere on the sluice road
+  that night, being seen.
 - **Vhairestide** — spring; first quarter-feast, blessing of the first boats at
-  the wharves beyond the south wall, and turn of the year.
+  the wharves beyond the south wall, and turn of the year. Because the
+  blessing happens outside the wall, the Reed Postern is opened wide once a
+  year for a crowd — **the Walking Out** — and the whole Reed Ward walks out to
+  see the river: the ledger-keepers, the children, the old, the born-inside,
+  some of them for the only time until next Vhairestide.
 - **Perrinstide** — late spring; bells washed and greased, with alms for the
   deaf.
 - **Feast of Saint Ambrelle / Ambrellestide** — early summer; second quarter-
   feast, with glass carried from Cinder Row to the Gradine.
-- **Marenstide** — late summer; eel fair and remembrance of the drowned.
+- **Marenstide** — late summer; eel fair and remembrance of the drowned. The
+  roll of the drowned is read at Saint Maren's and disputed (see
+  `candor_and_churches.md`). The week also holds **the Dry Race**: a retired
+  hull on a runner-cradle, poled down the dry Cut with river poles; other wards
+  enter, bets are laid and settled at the Hungry Ox, and the Bench's periodic
+  notice about obstruction is posted and ignored.
 - **The Hammering anniversary** — late summer; at the Waning bell a common
   mourning toll remembers the dead of F.415. Traditional households object
   that this never replaced the individual name-knells many dead were denied:

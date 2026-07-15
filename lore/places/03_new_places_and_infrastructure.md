@@ -129,6 +129,15 @@ river. Some wharf leases and inner warehouses have passed to larger families;
 others are held by absent heirs or used intermittently. The approaches should
 show active freight alongside more capacity than present trade requires.
 
+The strip also carries **the outlodge**: sheds, half-lofts over wharf shacks,
+unlicensed drinking huts, and beds outside the wall, used by crews caught out
+at the Snuffing. Because being gate-caught is normal, boat-families keep beds
+out here as a matter of course; old boatmen spend more nights on the strip
+than in the houses their grandmothers keep, which gives a boat-family its
+split-household shape — men half-resident outside the wall, women, children,
+and old wholly resident inside. The Bench cannot easily regulate the outlodge
+because it is outside; the Church dislikes it; everyone uses it.
+
 This is lore geography and a horizon/through-gate asset, not part of the
 current playable walled city. A future expansion may build it, but no present
 route should let the player accidentally wander from the Reed Postern into a

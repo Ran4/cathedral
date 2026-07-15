@@ -1,5 +1,8 @@
 # Patch the rest of the lore for `the_dry_boatmen.md`
 
+**Implemented 2026-07-15.** All per-file patches below are applied; the open
+questions at the bottom are resolved (see the Resolutions section).
+
 `lore/the_dry_boatmen.md` was written standalone and deliberately not merged into
 the other files. It introduces material that other documents should now know
 about, and it leans on a few facts that are currently *implied* by canon rather
@@ -99,10 +102,9 @@ Two things:
 ### `features/lore_ward_politics.md`
 That feature note already says *“Reed might fight to keep its postern open on
 Lowmarket”* and mentions *“enforcement of the Cut game”* — **the Cut game is
-defined nowhere in the lore corpus.** The Dry Race is the obvious candidate and I
-would just claim the phrase: an inter-ward boat-on-a-cradle race down the dry Cut,
-banned for obstruction every few years and never actually stopped. If the Cut game
-was meant to be something else, say so and I will keep them separate.
+defined nowhere in the lore corpus.** ~~The Dry Race is the obvious candidate~~
+**Decided: the Cut game is NOT the Dry Race.** It stays deliberately undefined;
+`features/design_the_cut_game.md` holds the design discussion for later.
 
 The postern fight now also has a concrete, playable substance (the barrow-toll) and
 a concrete Reed Ward platform (postern hours + the Serle tun).
@@ -162,13 +164,23 @@ keep them coherent going forward:
 - **Ewart Alder's** drunk threat to sell the Moorings now has a second and much
   worse version: selling *the soundings* to the masons' lodge.
 
-## Open questions for you
+## Resolutions (2026-07-15)
 
-1. **Is the Dry Race the "Cut game"?** I don't want it to be, let's figure out a new game together
-2. **Cobb Hawser as a fallen boatman** — confirm or correct.
-3. **The Reed Ward's two benchers** are deliberately left unnamed; the ward
-   politics work should name them, and their platform is already written (postern
-   hours, the tun).
-4. **Family-name-loss** as a general Ombreval rule, or only a Reed Ward pattern? I
-   wrote it as general and put it in the naming file's column, but it is the one
-   claim with reach beyond this document.
+1. **Is the Dry Race the "Cut game"?** No — decided they are separate. The Cut
+   game stays undefined for now; `features/design_the_cut_game.md` is the
+   parked design discussion.
+2. **Cobb Hawser as a fallen boatman** — confirmed. His sheet
+   (`lore/characters/scavenger/g6cbb_cobb_hawser.json`) now states the family
+   name went with the hull and that he still carries the soundings nobody has
+   asked him for in twenty years.
+3. **The Reed Ward's two benchers** — named: **Idonea Tarn** (Tarn cooperage
+   ledger-keeper, Tanners' Slip; kinsman Tobin is why the postern vote is never
+   quite about smuggling) and **Hamel of the Reach** (fallen boat-family Cut
+   tally-man; watches the tun proved at every Gaudry's Audit). Minor character
+   sheets created under `lore/characters/civic_officer/`; also referenced in
+   `the_dry_boatmen.md`, `family_tarn.md`, and `features/lore_ward_politics.md`.
+4. **Family-name-loss** — a general Ombreval rule, per The developer. Stated in
+   `core_lore/naming_language.md`: a fixed name lasts as long as the property
+   that anchored it; loss stops the name descending rather than renaming the
+   living. The Vell double-status (roster of standing + Averil Vell's fallen
+   warehouse branch) is cited there as the rule mid-motion.

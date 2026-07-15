@@ -108,6 +108,24 @@ never received. Traditional households, especially around Saint Maren's,
 still call them the Unknelled and answer that “one bell is not a name.” Belated
 name-knells remain a serious use of family, parish, and guild money.
 
+Saint Maren keeps the drowned tidy, and at Marenstide her **roll of the
+drowned** is read at the church. Since the diversion almost nobody drowns in
+Ombreval — there is no water in the city to drown in — so the roll grows only
+by boatmen lost outside the walls, a handful a decade. After F.415 the parish
+began adding the ward's Hammering dead to it, because those dead were denied
+their name-knells and this was a bell that could still be rung for them. The
+traditional objection, given in the ward's flattest voice, is **“you cannot
+drown under slate.”** This is the Unknelled argument fought on boat-family
+ground. The wick-priest of Saint Maren's in F.437, **Renn Hobbe**, is himself
+boat-family; he reads the same disputed list every year and takes the argument
+afterwards in the porch, where it belongs.
+
+Boat-family funerals keep the **pole over the door**. The dead man's pole is
+laid across the coffin on the way up Maren's Slip, taken back at the
+churchyard gate, and hung over the door of the house. A Reed Ward doorway with
+three poles over it has buried three boatmen; a boat-family house with no pole
+over the door has sold the boat, which is worse.
+
 ### The Ilvane Chapel and anchorhold
 
 The **Ilvane Chapel**, dedicated to Saint Ilvane the Twice-Shadowed, was

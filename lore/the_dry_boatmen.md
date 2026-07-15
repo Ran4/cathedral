@@ -269,6 +269,13 @@ uncommon for both halves to vote for it.
 
 *Say a thing came by barrow* and you have called it stolen without saying so.
 
+In F.437 the ward's two benchers are **Idonea Tarn**, who keeps the Tarn
+cooperage's ledgers on Tanners' Slip and whose kinsman Tobin is precisely why
+the postern vote is never quite about smuggling out loud, and **Hamel of the
+Reach**, a Cut tally-man whose family name went with its hull and who stands
+at every Gaudry's Audit to watch the proving of the tun. One name of standing
+and one byname — the ward's arithmetic, elected.
+
 ## The year
 
 The Reed Ward's calendar is a calendar of a river seen through a wall.
@@ -482,5 +489,3 @@ Deliberately open, per the canon rules:
   boatmen would be embarrassed to have it treated as a theory.
 - **Whether the tun is actually heavy.** Never resolve it in the boatmen's favour
   or against them. The grievance is the content.
-- **Who the Reed Ward's two benchers currently are.** Left open for the ward
-  politics work; the postern and the tun are their platform whoever they are.

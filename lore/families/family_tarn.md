@@ -10,7 +10,8 @@
 - **Heartland:** Reed Ward; **Tanners' Slip** and **Skinners' Court**
 - **Trades:** cooperage, tanning, leather; some revenue work and cartage
 - **Anchors:** Gile Tarn (63, on Tanners' Slip); Sibbe Tarn (hoop-setter); Tobin
-  Tarn (smuggler); Gude Tarn (runs an illegal game)
+  Tarn (smuggler); Gude Tarn (runs an illegal game); Idonea Tarn (54, ledger-keeper
+  and one of the Reed Ward's two benchers)
 
 When the river left, the Tarns answered *do we keep the boat* by making the
 safest thing a boat-family can make: a tub. It holds water and does not have to

@@ -103,20 +103,20 @@ mod tests {
         let root = root();
         let seed = load_world_seed(&root.join("assets"), &root.join("lore"))
             .expect("the shipped world data loads");
-        assert_eq!(seed.characters.len(), 501, "500 NPCs and the player");
+        assert_eq!(seed.characters.len(), 503, "502 NPCs and the player");
         assert_eq!(
             seed.characters
                 .iter()
                 .filter(|character| character.control == cathedral_sim::Control::Llm)
                 .count(),
-            500
+            502
         );
         let player = seed
             .characters
             .iter()
             .find(|character| character.id.as_str() == "player")
             .expect("the base seed retains the player");
-        assert_eq!(player.knows.len(), 154);
+        assert_eq!(player.knows.len(), 156);
 
         let sven = seed
             .characters
@@ -161,7 +161,7 @@ mod tests {
             .iter()
             .find(|character| character.id.as_str() == "player")
             .unwrap();
-        assert_eq!(player.knows.len(), 500);
+        assert_eq!(player.knows.len(), 502);
     }
 
     #[test]
@@ -177,7 +177,7 @@ mod tests {
             .iter()
             .filter(|character| character.lore.is_some())
             .collect();
-        assert_eq!(npcs.len(), 500);
+        assert_eq!(npcs.len(), 502);
 
         let mut positions = BTreeSet::new();
         for character in &npcs {
@@ -361,7 +361,7 @@ mod tests {
         );
 
         let snapshot = world.public_snapshot(&ActorId::from_raw("player"));
-        assert_eq!(snapshot.actors.len(), 501);
+        assert_eq!(snapshot.actors.len(), 503);
         let encoded = serde_json::to_vec(&snapshot).unwrap();
         assert!(
             encoded.len() <= 128 * 1024,

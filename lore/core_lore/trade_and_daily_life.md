@@ -39,7 +39,16 @@ The river's diversion after the Great Rains redistributed rather than simply
 ended this prosperity. Large boat houses, carriers, and toll interests could
 profit from the extra transfer between outer wharf and inner market while old
 Cut warehouses, small river households, and trades tied to an inside landing
-declined. The Hammering later destroyed stores, workshops, tools, crops, and
+declined. The mechanism of that redistribution has a name. Before F.362 a boat
+stopped at a door and one household made one lift for one profit; in F.437 the
+same basket of eels is landed at the outer wharf, carried up the bank by paid
+wharf hands, loaded by paid porters, tolled through the River Gate, hauled up
+the River Cartway, carted to the inner market, and lifted a second time into a
+dry warehouse. The Reed Ward calls this **the dry carry**: every load in
+Ombreval is now lifted twice, and the second lift belongs to someone else —
+carters, porters, freight brokers, gate clerks, and toll interests eat the
+difference. Any of those trades, not only boatmen, can be given an opinion
+about it. The Hammering later destroyed stores, workshops, tools, crops, and
 much of the cloth quarter's capital at once. The Draper's Reach still works in
 F.437, but at a smaller scale and with several bays and upper rooms never
 returned to trade.

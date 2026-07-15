@@ -23,6 +23,15 @@ from its own members. No civic office is hereditary, purchased, or held for
 life. Bribing a reckoning or selling an office is an offence even when the
 payment is disguised as a guild gift.
 
+Ward residency is settled by householding, and it is contested at the wall.
+The Reed Ward's boat-families are half-resident outside it: crews sleep on the
+outer wharf strip when gate-caught, and children are sometimes born in sheds
+there. Whether a wharf-born child is a Reed Ward resident, whether the
+household owes ward tax, and whether the father may stand for bencher are
+questions the rolls cannot presently answer — the wall says no and the parish
+register says whatever the sexton wrote down. The Bench has never ruled,
+because any ruling creates either untaxed residents or taxed outsiders.
+
 ## Rules, money and execution
 
 The Common Bench makes market rules, street and building rules, secular
@@ -44,6 +53,18 @@ Toll and market collectors remain in the revenue service. Their receipts go to
 the **Common Chest**. Expenditure is read aloud at every quarter reckoning and
 proved against the Tallage weights at Gaudry's Audit. The Chest pays the watch,
 wall repairs, wells, drains, gaol, fire equipment and hired militia service.
+
+The toll network has one standing gap. Freight through the River Gate is
+tolled; handbarrows through the Reed Postern are tolled lightly or not at all,
+because the postern was opened as a working door for wharf hands, fish baskets
+and funerals, not as a customs house. A boatload landed on the outer strip at
+dusk and walked up Maren's Slip at first light as a dozen small trips is, in
+the Bench's eyes, twelve honest handbarrows and, in the Tallage's, one
+untolled boat. This is the Reed Ward's standing petty crime and the real
+content of its postern politics: the ward fights at every reckoning to keep
+the postern's hours long and its toll off handcarts, half the Bench believes
+the *poor man's door* argument, the other half knows exactly what it is voting
+for, and both halves commonly vote for it.
 
 ### Hammering law and damaged property
 

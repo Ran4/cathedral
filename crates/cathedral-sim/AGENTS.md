@@ -171,7 +171,7 @@ strings baked into Rust. The host reads them and passes strings to this crate:
 | `assets/sounds/catalog.toml` | the sound catalog: percepts, radii, and the `sfx_prompt` `scripts/generate_sounds.py` synthesizes each asset from |
 | `assets/world/seed.json` | Shared items and the player record. |
 | `assets/world/areas.json` | named world geography: coordinate axes, stable IDs, prompt labels, and non-overlapping box unions used for containment and nearest-area descriptions |
-| `lore/characters/**/*.json` | The 500-NPC authored cast, significance/status metadata, relationships, memories, items and canonical spawn transforms. Sorted relative paths seed the significance-aware turn order. |
+| `lore/characters/**/*.json` | The 502-NPC authored cast, significance/status metadata, relationships, memories, items and canonical spawn transforms. Sorted relative paths seed the significance-aware turn order. |
 | `lore/core_lore/occupations.json` | Occupation display names, locations and valid character titles. |
 
 The loaders take `&str`, never a path: the host reads the file.

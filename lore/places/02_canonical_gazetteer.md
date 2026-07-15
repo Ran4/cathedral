@@ -454,6 +454,12 @@ the Old Sluice.
 In F.437 it is entirely dry. Historical water marks should be architectural,
 not a perpetual wet shader.
 
+Beneath the paving, old channel and old bank differ: houses over the filled
+bed settle, and those on the bank do not (“built on the bed”; “ask an Alder
+where the bed was”). The boat-families' unwritten map of the old bed, **the
+soundings**, is quietly bought by diggers, masons, and the Line-keeper — see
+`wells_and_water.md`, which is law on what is and is not under the street.
+
 ### The Chain Bridge
 
 The Chain Bridge is now fixed near the western end of the Cut at
@@ -476,7 +482,9 @@ rusted iron, and buildings pressed against later repairs.
 One arch carries pedestrians and small handcarts toward Harne Gate roads. The
 former water bed ends in filled, compacted ground rather than an opening onto a
 view of river. A keeper occupies part of the upper structure and rakes candle
-stubs from the dry grate after Colm's Night.
+stubs from the dry grate after Colm's Night. The candles are set there chiefly
+by boat-families, who burn theirs at the sluice rather than at home because
+Colm drowned here while the Cut still ran.
 
 Colm Attergate drowned at the sluice while the Cut still ran. Wyn Alder guides
 pilgrims to one arch, which is not the true arch. **Secret:** the Alder family
@@ -552,7 +560,8 @@ and a rough ledger table fill the yard.
 The family kept the name after the water left because the business and memory
 remained. The court has no mooring posts, quay edge, boat basin, wet paving, or
 river reflection. It is an inland transfer yard whose workers spend part of
-their day at the actual outer wharves.
+their day at the actual outer wharves. The yard's iron rings, forged for
+boats, now tie handcarts and dogs, and take rope for lanterns at the eel fair.
 
 An upper gallery joins the Eel Bridge system. The yard has a second service
 door into Eelback Alley, important for morning loading and family privacy.
@@ -616,6 +625,11 @@ The slip uses shallow ramps, a few side steps, retaining walls, handholds, and
 resting ledges. Fish carriers can climb it from the postern, but ox carts must
 use the River Gate. Its final turn hides the wall opening from the Green and
 hides the river from inside the city.
+
+That hidden turn is deliberate and canonical: a boatman's last sight of the
+Serle is going out, and coming back he does not see it at all. The ward's dead
+come home the same way — through the postern and up the slip, the dead man's
+pole laid across the coffin. Do not “fix” this sightline.
 
 ### Eelback Alley
 

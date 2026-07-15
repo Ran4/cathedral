@@ -1,0 +1,34 @@
+{
+  "id": "bn2hm",
+  "name": "Hamel of the Reach",
+  "significance": "minor",
+  "planning_ward": "reed",
+  "age": 58,
+  "gender": "m",
+  "occupation_id": "civic_officer",
+  "title": "Bencher",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "The Cut",
+  "knows": [
+    "bn1id",
+    "fw7ub",
+    "g4ewt",
+    "g6cbb"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -307.5,
+    "y": 0.91,
+    "z": -277.5,
+    "facing": -1.57
+  },
+  "circumstances": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You were born boat-family, and the family name went with the hull when your father sold it; the street named you for the reach, the Cut's cartway, where you have tallied freight into dry warehouses for thirty years. Now the Reed Ward's reckoning sends you to the Common Bench, because there are more Hawsers than Alders and the fallen like to see one of their own on a seat. You speak like a depth sounding — level, short, weather first — and you give directions by upstream and downstream on a street that has been dry since before you were born. Your platform is the tun: every Gaudry's Audit you stand at the proving of the Serle tun, watch the weights, and leave unsatisfied, and one year you mean to make the Bench prove it openly. Until then you vote for the postern's hours, keep your old name to yourself, and let nobody buy you a drink whose business you can guess.",
+  "extended_character_description": "TBA"
+}

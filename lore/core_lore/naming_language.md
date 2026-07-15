@@ -18,6 +18,18 @@ street, origin, physical feature, or an event. They are earned or inherited,
 not self-selected. Families of standing have fixed surnames. Women keep their
 own bynames at marriage. The poor may carry only a short given name.
 
+A fixed family name is held, not owned: it lasts only as long as the thing
+that anchored it — a boat, a yard, a warehouse, a bench of trade. This is a
+general Ombreval rule. A family that loses its property does not have the name
+stripped from the living, but the street stops giving it to their children,
+and within a generation the line falls back to bynames of place, gear, or
+trade like anyone else's. The rule bites hardest in the Reed Ward, where a
+boat-family that sells its hull becomes street-named — Cobb *Hawser* picks
+rope, Renn *of the Slip* picks salvage — and the ward's saying is exact:
+**“there are more Hawsers than Alders.”** The Vells show the rule mid-motion:
+a name still on the roster of standing, and a fallen warehouse branch whose
+last bearer sells pilgrim badges in the shadow of somebody else's loft.
+
 Established or approved given-name bank:
 
 - men: **Aubin, Colm, Corin, Dunstan, Grigor, Hamel, Jos, Noll, Segwin, Ansel,

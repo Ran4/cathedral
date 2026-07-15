@@ -376,7 +376,7 @@ mod tests {
                     .is_some_and(|lore| lore.significance != cathedral_sim::Significance::Major)
             })
             .collect();
-        assert_eq!(distributed.len(), 470);
+        assert_eq!(distributed.len(), 472);
 
         for character in distributed {
             let point = [character.position_m.x as f32, character.position_m.z as f32];
