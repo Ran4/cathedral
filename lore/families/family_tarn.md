@@ -7,7 +7,7 @@
 > [overview](overview.md).
 
 - **Standing:** family of standing — river-adjacent trades that never touch a river
-- **Heartland:** Reed Ward; **Tanners' Slip** and **Skinners' Court**
+- **Heartland:** Reed Ward; **Tanners' Slip**
 - **Trades:** cooperage, tanning, leather; some revenue work and cartage
 - **Anchors:** Gile Tarn (63, on Tanners' Slip); Sibbe Tarn (hoop-setter); Tobin
   Tarn (smuggler); Gude Tarn (runs an illegal game); Idonea Tarn (54, ledger-keeper
@@ -17,6 +17,6 @@ When the river left, the Tarns answered *do we keep the boat* by making the
 safest thing a boat-family can make: a tub. It holds water and does not have to
 float. They took the coopering and the tanning — trades that live off the river's
 old business (barrels, hides, salt-work) without ever standing on a deck — and
-settled onto the Slip and the Court on the edge of Maren's Green. Respectable,
+settled onto the Slip on the edge of Maren's Green. Respectable,
 close-mouthed, and with a smuggler and a gambler in the back rooms, because a
 family that can seal a cask can also seal one quietly.
