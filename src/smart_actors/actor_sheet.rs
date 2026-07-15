@@ -322,13 +322,11 @@ fn next_subject(current: Option<ActorId>, focused: Option<&ActorId>) -> Option<A
 const EMPTY_HINT: &str = "Aim the crosshair at an NPC.\n\nTheir sheet stays until you look at\nsomeone else, or press B to close.";
 
 pub(super) fn spawn_actor_sheet(mut commands: Commands, fonts: Option<Res<CathedralFonts>>) {
-    let body_font = fonts
+    // A fixed-width face throughout, so the fill bars and numeric columns line
+    // up character-for-character.
+    let mono_font = fonts
         .as_deref()
-        .map(CathedralFonts::body)
-        .unwrap_or_default();
-    let display_font = fonts
-        .as_deref()
-        .map(CathedralFonts::display)
+        .map(CathedralFonts::mono)
         .unwrap_or_default();
 
     commands
@@ -364,7 +362,7 @@ pub(super) fn spawn_actor_sheet(mut commands: Commands, fonts: Option<Res<Cathed
                 Name::new("Actor sheet mode label"),
                 Text::new("CHARACTER DEBUG"),
                 TextFont {
-                    font: display_font.clone(),
+                    font: mono_font.clone(),
                     font_size: FontSize::Px(LABEL_FONT_PX),
                     ..default()
                 },
@@ -375,7 +373,7 @@ pub(super) fn spawn_actor_sheet(mut commands: Commands, fonts: Option<Res<Cathed
                 ActorSheetName,
                 Text::new("CHARACTER DEBUG"),
                 TextFont {
-                    font: display_font,
+                    font: mono_font.clone(),
                     font_size: FontSize::Px(NAME_FONT_PX),
                     ..default()
                 },
@@ -387,7 +385,7 @@ pub(super) fn spawn_actor_sheet(mut commands: Commands, fonts: Option<Res<Cathed
                 ActorSheetBody,
                 Text::new(EMPTY_HINT),
                 TextFont {
-                    font: body_font,
+                    font: mono_font,
                     font_size: FontSize::Px(BODY_FONT_PX),
                     ..default()
                 },

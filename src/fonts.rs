@@ -4,12 +4,14 @@ use bevy::prelude::*;
 
 const BODY_FONT_PATH: &str = "fonts/EBGaramond12-Regular.otf";
 const DISPLAY_FONT_PATH: &str = "fonts/EBGaramondSC12-Regular.otf";
+const MONO_FONT_PATH: &str = "fonts/DejaVuSansMono.ttf";
 
 /// The book face handles used throughout the HUD and smart-actor UI.
 #[derive(Resource, Clone)]
 pub struct CathedralFonts {
     body: Handle<Font>,
     display: Handle<Font>,
+    mono: Handle<Font>,
 }
 
 impl CathedralFonts {
@@ -19,6 +21,13 @@ impl CathedralFonts {
 
     pub fn display(&self) -> FontSource {
         self.display.clone().into()
+    }
+
+    /// A fixed-width face, for developer readouts whose columns and fill bars
+    /// only line up when every glyph is the same width (the character debug
+    /// sheet).
+    pub fn mono(&self) -> FontSource {
+        self.mono.clone().into()
     }
 }
 
@@ -31,6 +40,7 @@ impl Plugin for CathedralFontsPlugin {
         app.insert_resource(CathedralFonts {
             body: asset_server.load(BODY_FONT_PATH),
             display: asset_server.load(DISPLAY_FONT_PATH),
+            mono: asset_server.load(MONO_FONT_PATH),
         });
     }
 }
