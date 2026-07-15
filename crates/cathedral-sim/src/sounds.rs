@@ -431,10 +431,11 @@ mod tests {
         assert_eq!(bell.seen, None);
         assert!(!bell.actor_emittable);
 
-        // The water sounds are world sounds for the same reason the bell is: the
-        // sim has no water items, actions or source state to decide with, so no
-        // actor may claim to have drawn a bucket. They stay unattributed until it
-        // does. Adding one to the emittable list changes every prompt in the city.
+        // M3 (the water round) made the water sounds attributable — a keeper
+        // works the curb, so a witness sees who drew — but deliberately NOT
+        // `actor_emittable`: the keeper emits them from code (`emit_sound`), which
+        // needs no flag, and listing them as `make_sound` verbs would regenerate
+        // every golden fixture (that is M5's sheet change, not M3's).
         for water in [
             "draw_water",
             "chain_windlass",
@@ -442,8 +443,8 @@ mod tests {
             "pail_clatter",
         ] {
             let sound = catalog.get(water).unwrap();
-            assert_eq!(sound.seen, None, "{water} may not be attributed yet");
-            assert!(!sound.actor_emittable, "{water} may not be chosen yet");
+            assert!(sound.seen.is_some(), "{water} attributes the drawer now");
+            assert!(!sound.actor_emittable, "{water} is not yet a make_sound verb");
             assert!(sound.heard.starts_with("[You heard"));
         }
         assert_eq!(catalog.emittable_sound_ids(), ["fart", "glass_break"]);

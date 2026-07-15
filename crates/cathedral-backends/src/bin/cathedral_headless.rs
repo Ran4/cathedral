@@ -162,6 +162,12 @@ struct Args {
     /// `--assets`; without one nobody moves and nothing prints.
     #[arg(long)]
     trace_positions: bool,
+
+    /// watch the M3 water round: a `[water]` census each tick, and a `[water]`
+    /// line per draw as a keeper works a curb. Pairs well with `--watch-clock`
+    /// (turn-free) or a long `--fake -t` run. Needs a nav graph under `--assets`.
+    #[arg(long)]
+    trace_water: bool,
 }
 
 fn main() -> ExitCode {
@@ -194,6 +200,15 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// The catalog ids the M3 water round emits, so `--trace-water` can pick a draw
+/// out of the general sound stream.
+fn is_water_sound(sound_id: &str) -> bool {
+    matches!(
+        sound_id,
+        "draw_water" | "chain_windlass" | "pour_trough" | "pail_clatter"
+    )
 }
 
 // --------------------------------------------------------------- one-shot mode
@@ -340,6 +355,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         requires_news: args.news || args.curiosity,
         last_office: None,
         trace_positions: args.trace_positions,
+        trace_water: args.trace_water,
     };
     if args.watch_clock > 0.0 {
         runner.watch_clock(args.watch_clock, clock.seconds_per_day())?;
@@ -388,6 +404,8 @@ struct Runner {
     last_office: Option<Office>,
     /// `--trace-positions`: echo every mover's pose to the transcript stream.
     trace_positions: bool,
+    /// `--trace-water`: echo the water round's census and every draw.
+    trace_water: bool,
 }
 
 impl Runner {
@@ -403,6 +421,9 @@ impl Runner {
             println!("\n== tick {tick}: {actor_name} ==");
             self.apply_turn()?;
             self.print_new_transcript_lines();
+            if self.trace_water {
+                println!("[water] {}", self.engine.water_summary());
+            }
         }
         Ok(())
     }
@@ -415,14 +436,24 @@ impl Runner {
         let end = self.now + real_seconds;
         // Small enough that even the closest two offices (the Kindling and
         // Dayspring, two game hours apart) never share a step, so no bell's line
-        // is skipped.
-        let step = (seconds_per_day / 200.0).max(0.05);
+        // is skipped. When tracing the water round the step must also stay under
+        // the mover accumulator's catch-up budget (3.2 s), or a coarse step snaps
+        // walkers forward and drops the walk — so cap it at a stride there.
+        let mut step = (seconds_per_day / 200.0).max(0.05);
+        if self.trace_water {
+            step = step.min(1.0);
+        }
         println!(
             "== watching {game_days} game day(s): {real_seconds:.0} s at {seconds_per_day:.0} s/day =="
         );
+        let mut next_census = self.now;
         while self.now < end {
             self.now += step;
             self.pump(Vec::new());
+            if self.trace_water && self.now >= next_census {
+                println!("[water] {}", self.engine.water_summary());
+                next_census = self.now + 3.0;
+            }
         }
         Ok(())
     }
@@ -557,6 +588,23 @@ impl Runner {
                         motion.actor_id, motion.position_m.x, motion.position_m.z, motion.speed
                     );
                 }
+            }
+            // A keeper working a curb: one line per draw, so a queue reads as a
+            // rhythm on the transcript stream.
+            EngineMessage::Sound {
+                sound_id,
+                actor_id,
+                position_m,
+                recipient_ids,
+                ..
+            } if self.trace_water && is_water_sound(&sound_id) => {
+                let keeper = actor_id.map(|id| id.to_string()).unwrap_or_else(|| "?".to_string());
+                println!(
+                    "[water] {keeper} :: {sound_id} at x={:.1} z={:.1} ({} heard)",
+                    position_m.x,
+                    position_m.z,
+                    recipient_ids.len()
+                );
             }
             _ => {}
         }
@@ -1024,6 +1072,7 @@ mod tests {
             requires_news: false,
             last_office: None,
             trace_positions: false,
+            trace_water: false,
         };
 
         let started = std::time::Instant::now();

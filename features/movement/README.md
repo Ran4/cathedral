@@ -1,7 +1,8 @@
 # Movement: the city gets up in the morning
 
-Status: in progress. **M0 (the clock) and M1 (the nav bake) are implemented**; M2–M7 remain (see
-[07_milestones.md](07_milestones.md) for the per-milestone status). This folder is the plan.
+Status: in progress. **M0 (the clock), M1 (the nav bake), M2 (one NPC walks) and M3 (the water round) are
+implemented**; M4–M7 remain (see [07_milestones.md](07_milestones.md) for the per-milestone status). This
+folder is the plan.
 
 | | |
 |---|---|
@@ -356,7 +357,7 @@ already has (`cathedral-headless`, `CATHEDRAL_DRIVE`). Full recipes in
 | **M0 ✅** | **The Clock** *(implemented)* | seven offices, the week, the sun moves, the bell rings, a HUD readout, a debug time-scale key. **Nobody moves.** | `CATHEDRAL_DRIVE='wait-online; key KeyT; key KeyT; sleep 20; shot dusk'` — the sun has moved, the HUD reads the office and hour |
 | **M1 ✅** | **The bake** *(implemented)* | `assets/world/navigation.json` + the walkable bitset, the door fix, an F7 debug overlay, and the connectivity tests. **Still nobody moves.** | `cargo test -p cathedral-sim navigation` — every named place and every door reachable; `key F7` draws the graph |
 | **M2** | **One NPC walks** | hot/cold split, fixed tick, interpolation, the guard lifted. One hard-coded actor paces between two places forever. | headless prints their position advancing; a drive `shot` finds them somewhere new |
-| **M3** | **The water round** | needs → conditions → ladder → route → queue → draw → home. The vertical slice. | you can *hear* the windlass from thirty metres away, and ask the drawer about it |
+| **M3 ✅** | **The water round** *(implemented)* | needs (thirst) → the ladder (rungs 2/6/11/12) → route → a household-first queue → draw (the keeper's windlass, heard) → home. The vertical slice. | headless `--trace-water` shows the whole cast cycling through ten kept wells; each draw reports how many NPCs heard it; stand thirty metres from a staffed well in-game and you hear the windlass |
 | **M4** | **The Round** | homes, workplaces, the 20 authored routes, market days, and the Snuffing emptying the streets | headless `-t` across a full day prints a plausible city; stand in the Wickmarket at curfew and watch it clear |
 | **M5** | **`go_to`** | the LLM verb; the prompt and sheet change; 20 golden fixtures regenerated | tell someone to meet you at the Gradine, and walk there, and they are there |
 | **M6** | **The Night Office** | reflection, agenda rewriting, the second cognition lane | an NPC's goal changes overnight because of something that happened to them yesterday |

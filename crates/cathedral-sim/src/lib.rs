@@ -28,6 +28,7 @@ pub mod nav;
 pub mod offer;
 pub mod perception;
 pub mod prompt;
+pub mod round;
 /// CPython text semantics (`str.strip`, `float.__repr__`, `repr`) — internal,
 /// but shared by the action validators, the sheet renderer and the scheduler.
 mod pyfmt;
@@ -49,7 +50,7 @@ pub use attention::{
     DEFAULT_STAGE_RADIUS_M, IdleCognitionMode, IdleGate, NOVELTY_MEMORY_SECONDS, Novelty,
     STAGE_PARTNER_MEMORY_SECONDS, StageConfig, context_hash, curiosity_of, on_stage,
 };
-pub use character::{Character, CharacterSheet, CharacterState, Control, Movement, Patrol};
+pub use character::{Character, CharacterSheet, CharacterState, Control, Movement, Needs, Patrol};
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
 };
@@ -75,6 +76,7 @@ pub use nav::{
 };
 pub use offer::Offer;
 pub use perception::{cap_first, emit_sound, identify, sees};
+pub use round::{WaterRound, WaterSource};
 pub use prompt::{
     ParsedAction, PromptEnv, PromptStrings, parse_reply, parse_reply_value, py_round,
     render_prompt, render_prompt_and_drain, to_py_json,
@@ -126,6 +128,39 @@ pub const WALK_SPEED_MPS: f64 = 1.8;
 /// the square is not news at every step, but the moment he stops (speed → 0) his
 /// arrival is (`features/movement/05_the_llm_seam.md` §5.1).
 pub const SETTLED_SPEED_MPS: f64 = 0.15;
+
+// --- The water round (M3): the dynamic thirst need and the behaviour ladder
+// (`features/movement/03_the_ladder.md`). Every gauge runs `0..=THIRST_MAX`,
+// high = satisfied.
+/// Full satisfaction, and the seed cap for a need gauge.
+pub const THIRST_MAX: f64 = 255.0;
+/// Rung 2 — "parched": drop everything and go to the nearest ward well now.
+pub const THIRST_PARCHED: f64 = 38.0;
+/// Rung 6 — "thirsty": go to the well, but only if its queue is short.
+pub const THIRST_THIRSTY: f64 = 178.0;
+/// Thirst lost per game-second. ~255 over four game hours — the fastest gauge,
+/// so a servant's day is punctuated by trips to the curb. Read against game
+/// time (the clock), never wall-clock, so the debug time-scale speeds it up too.
+pub const THIRST_DECAY_PER_GAME_SECOND: f64 = THIRST_MAX / (4.0 * 3600.0);
+/// How long one draw takes at the curb, in real seconds — long enough to read as
+/// an act, short enough that a queue keeps moving.
+pub const WATER_DRAW_SECONDS: f64 = 3.0;
+/// While a source is busy, its keeper works the gear this often (real seconds),
+/// so the windlass is heard as a steady rhythm rather than one clank per drawer.
+pub const WELL_KEEPER_SOUND_INTERVAL_SECONDS: f64 = 4.0;
+/// The behaviour ladder re-evaluates an idle actor on a jittered cadence in this
+/// range (real seconds), staggered across the cast by a per-actor hash so no
+/// scheduler is needed (`features/movement/03_the_ladder.md` §5).
+pub const LADDER_DECISION_MIN_SECONDS: f64 = 1.0;
+pub const LADDER_DECISION_MAX_SECONDS: f64 = 6.0;
+/// A mover is "at the well" once within this of the source's draw point.
+pub const WELL_ARRIVE_RADIUS_M: f64 = 3.0;
+/// A queue longer than this turns the non-urgent rung 6 away (rung 2 still goes).
+pub const WELL_QUEUE_SHORT: usize = 4;
+/// Rung 11 — the social pull reaches a known, settled neighbour within this.
+pub const SOCIAL_PULL_RADIUS_M: f64 = 8.0;
+/// Rung 12 — an idle actor wanders no further than this from its home/post.
+pub const WANDER_LEASH_M: f64 = 6.0;
 /// Bounds the per-poll movement catch-up. A huge `now` jump — a resume from a
 /// long pause — must not spin through thousands of slices: past this many, the
 /// movement clock snaps forward and the backlog is dropped rather than walked.

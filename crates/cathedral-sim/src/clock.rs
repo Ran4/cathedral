@@ -302,6 +302,14 @@ impl WorldClock {
         self.epoch_days + (now * self.scale) / self.seconds_per_day
     }
 
+    /// Monotonic game time in whole and fractional days since the epoch —
+    /// [`total_days`](Self::total_days) made public so a need gauge can decay by
+    /// the *game* clock (so the debug time-scale speeds thirst up with the sun),
+    /// not by wall-clock. The behaviour layer differences this across polls.
+    pub fn game_days(self, now: f64) -> f64 {
+        self.total_days(now)
+    }
+
     /// Resolve `now` to a [`WorldTime`].
     pub fn at(self, now: f64) -> WorldTime {
         let total = self.total_days(now);

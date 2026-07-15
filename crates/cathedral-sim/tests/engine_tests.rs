@@ -464,11 +464,11 @@ fn movement_advances_on_the_hot_channel_without_touching_the_revision() {
             path: vec![Vec3::new(100.0, WALK_Y, 0.0)],
             speed: WALK_SPEED_MPS,
             gait_phase: 0.0,
-            patrol: Patrol {
+            patrol: Some(Patrol {
                 a: "here".into(),
                 b: "there".into(),
                 heading_to_b: true,
-            },
+            }),
         });
     }
 

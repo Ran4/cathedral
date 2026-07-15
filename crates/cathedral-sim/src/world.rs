@@ -297,13 +297,18 @@ impl World {
                     .as_mut()
                     .expect("checked non-None above");
 
-                // Arrived: flip the patrol and route from here to the new end.
-                if movement.path.is_empty() {
-                    movement.patrol.heading_to_b = !movement.patrol.heading_to_b;
-                    let target = if movement.patrol.heading_to_b {
-                        &movement.patrol.b
+                // Arrived. A patrolling mover (the M2 pacer) flips its patrol and
+                // routes to the far end; a mover with no patrol (the M3 water
+                // round) simply stops — the behaviour ladder owns what happens on
+                // arrival, not the mover (`features/movement/03_the_ladder.md` §4).
+                if movement.path.is_empty()
+                    && let Some(patrol) = movement.patrol.as_mut()
+                {
+                    patrol.heading_to_b = !patrol.heading_to_b;
+                    let target = if patrol.heading_to_b {
+                        &patrol.b
                     } else {
-                        &movement.patrol.a
+                        &patrol.a
                     };
                     match nav
                         .place(target)
@@ -698,11 +703,11 @@ mod tests {
             path,
             speed: WALK_SPEED_MPS,
             gait_phase: 0.0,
-            patrol: Patrol {
+            patrol: Some(Patrol {
                 a: "a".into(),
                 b: "b".into(),
                 heading_to_b: true,
-            },
+            }),
         });
         character
     }
@@ -766,7 +771,10 @@ mod tests {
         // One more slice: the patrol flips and routes back toward `a`.
         world.step_movement(TICK, &nav);
         let movement = world.characters[&id].state.movement.as_ref().unwrap();
-        assert!(!movement.patrol.heading_to_b, "the patrol reversed on arrival");
+        assert!(
+            !movement.patrol.as_ref().unwrap().heading_to_b,
+            "the patrol reversed on arrival"
+        );
         assert!(!movement.path.is_empty(), "a fresh route back to `a` was laid");
         assert!(
             world.characters[&id].position_m().x < goal.x,

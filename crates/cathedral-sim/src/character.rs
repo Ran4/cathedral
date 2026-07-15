@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    GOAL_NONE, INBOX_MAX_ENTRIES, RECENT_HISTORY_MAX_ENTRIES, SETTLED_SPEED_MPS,
+    GOAL_NONE, INBOX_MAX_ENTRIES, RECENT_HISTORY_MAX_ENTRIES, SETTLED_SPEED_MPS, THIRST_MAX,
     ids::{ActorId, ItemId},
     lore::{LoreProfile, Significance},
     math::Vec3,
@@ -81,10 +81,11 @@ pub struct Patrol {
     pub heading_to_b: bool,
 }
 
-/// A character's live walk: the remaining polyline, the current gait, and the
-/// patrol that refills the path once it empties. `None` on a character means it
-/// never walks (the player, a statue); [`CharacterState::from_sheet`] starts it
-/// `None` and only the mover pipeline ever sets it.
+/// A character's live walk: the remaining polyline, the current gait, and an
+/// optional [`Patrol`] that refills the path once it empties. `None` on a
+/// character means it never walks (the player, a statue);
+/// [`CharacterState::from_sheet`] starts it `None` and only the mover pipeline
+/// ever sets it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Movement {
     /// Remaining waypoints; the next target is `path[0]`. Empty means arrived.
@@ -95,7 +96,33 @@ pub struct Movement {
     /// renders the bob and swing from it. Never reset, so the gait is seamless
     /// across legs.
     pub gait_phase: f64,
-    pub patrol: Patrol,
+    /// `Some` — the M2 ping-pong: [`crate::World::step_movement`] flips it and
+    /// re-routes to the far end when the path empties. `None` — the walk simply
+    /// stops on arrival (speed → 0) and a higher layer decides what happens next;
+    /// this is what the M3 water round uses, since the behaviour ladder owns the
+    /// arrival, not the mover (`features/movement/03_the_ladder.md` §4).
+    pub patrol: Option<Patrol>,
+}
+
+/// The dynamic drive layer — the "statuses" axis of
+/// `features/movement/03_the_ladder.md` §2/§3: raw, sim-written need state the
+/// behaviour ladder reads inline (`needs.thirst < THIRST_PARCHED`). Small on
+/// purpose; M3 ships thirst only, with hunger/fatigue/duty following in M4.
+/// Every gauge runs `0..=`[`THIRST_MAX`], high = satisfied. Never rendered into
+/// the prompt in M3 (that is M5's sheet change), so a world without a nav graph
+/// leaves the frozen golden fixtures byte-identical.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Needs {
+    /// Falls with time; refilled at a well. The fastest gauge to decay.
+    pub thirst: f64,
+}
+
+impl Default for Needs {
+    /// A freshly seeded character is fully watered; the water round seeds a
+    /// spread of starting values for the drawers it enrolls.
+    fn default() -> Self {
+        Self { thirst: THIRST_MAX }
+    }
 }
 
 /// Everything an action may change.
@@ -122,6 +149,11 @@ pub struct CharacterState {
     /// from the sheet — the mover pipeline sets it — so a world with no nav graph
     /// has nobody walking and the frozen fixtures are unaffected.
     pub movement: Option<Movement>,
+    /// The dynamic drive gauges the behaviour ladder reads. Seeded to
+    /// [`Needs::default`] (fully satisfied); the water round overrides the
+    /// starting thirst of the drawers it enrolls. Never rendered in M3, so the
+    /// golden fixtures stay byte-identical.
+    pub needs: Needs,
 }
 
 impl CharacterState {
@@ -137,6 +169,7 @@ impl CharacterState {
             recent_history: Vec::new(),
             pending_history: Vec::new(),
             movement: None,
+            needs: Needs::default(),
         }
     }
 }
@@ -201,6 +234,21 @@ impl Character {
     /// (`features/movement/05_the_llm_seam.md` §5.1).
     pub fn is_settled(&self) -> bool {
         self.speed() < SETTLED_SPEED_MPS
+    }
+
+    /// The character's dynamic need gauges (thirst, …).
+    pub fn needs(&self) -> Needs {
+        self.state.needs
+    }
+
+    /// Whether the character currently has waypoints left to walk. A mover whose
+    /// path has emptied has *arrived*, which is how the water round's arrival
+    /// transitions are detected.
+    pub fn is_walking(&self) -> bool {
+        self.state
+            .movement
+            .as_ref()
+            .is_some_and(|movement| !movement.path.is_empty())
     }
 
     pub fn holds(&self) -> &[ItemId] {

@@ -729,11 +729,11 @@ mod tests {
             path: vec![Vec3::new(100.0, 0.0, 0.0)],
             speed: WALK_SPEED_MPS,
             gait_phase: 0.0,
-            patrol: Patrol {
+            patrol: Some(Patrol {
                 a: "a".into(),
                 b: "b".into(),
                 heading_to_b: true,
-            },
+            }),
         }
     }
 

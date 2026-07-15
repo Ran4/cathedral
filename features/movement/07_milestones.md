@@ -184,11 +184,65 @@ teleporting.
 
 ---
 
-## M3 — The water round  ⭐ *the vertical slice*
+## M3 — The water round  ✅ *implemented* — ⭐ *the vertical slice*
 
 **Ships.** Needs (thirst first), on the dynamic `statuses` axis. The ladder, with rungs 2, 6, 11 and 12 only. Routes to the
 nine public water sources. A queue at the curb. `draw_water` / `chain_windlass` / `pour_trough` /
 `pail_clatter` flipped to `actor_emittable`. And home again.
+
+**Status — done and verified.** The whole non-LLM behaviour layer lives in one new pure module,
+`crates/cathedral-sim/src/round.rs`, driven once per poll right after `tick_movement` and gated on
+`config.nav` (so a world without a nav graph — every frozen fixture — stays inert and byte-identical).
+`CharacterState` gained the dynamic `statuses` axis as `needs: Needs { thirst }` (0–255, high = satisfied;
+never rendered in M3, so the 20 golden prompts are untouched); `Movement.patrol` became `Option` (`None`
+means the behaviour ladder owns the arrival, not the M2 ping-pong). `WorldClock::game_days` exposes game
+time so thirst decays by the *game* clock (the `T` key speeds it up with the sun). The **nine** public
+drinking sources are resolved from the nav graph (`lore/wells_and_water.md` puts the Shambles *work* well and
+`Seven Lofts fire tanks` outside the ward drinking list, so both are excluded); each takes a **keeper** from
+the nearest idle *ambient* townsperson (so no named character is pinned to a curb) and every water-drawing
+character (`domestic_servant` households plus `cloth_worker` / `garment_worker` trade vessels) is bound to
+their nearest staffed source. The ladder is a flat first-match cascade — **rung 2** parched → the well now;
+**rung 6** thirsty → the well if its queue is short; **rung 11** the social pull → drift to a known, settled
+neighbour; **rung 12** wander within a leash of home. A queue forms at the curb with **household vessels ahead
+of trade vessels**, the keeper works the gear so the windlass is *heard*, the draw refills thirst, and the
+drawer walks **home again**. Determinism is preserved: no RNG, every choice a pure hash of
+`(salt, actor_id, epoch)`; the round path never bumps `world_revision` (positions ride the hot channel exactly
+as M2's do).
+
+**The sound model is the load-bearing subtlety, and an adversarial review caught the trap.** The windlass is
+emitted **exactly like the bell — an unattributed world sound heard only by the player** — because a sound
+event with an NPC recipient hands the scheduler's single, *proximity-ungated* priority slot to that NPC
+(`flush_sound`), and ten curbs clanking every few seconds would pin that slot forever and fire back-to-back
+LLM turns at off-stage ambient NPCs: a continuous token bill on people the player never meets, and the exact
+opposite of M3's "zero tokens". So the well sound nudges nobody; the affordance the milestone actually wants —
+*"ask the woman what she is doing… the percept is in her recent history"* — is served instead by the **drawer
+remembering their own draw** (`remember_percept`, no sound, no nudge) as their turn begins.
+
+**Two further deliberate departures, both documented in the code:** (1) the four water sounds gained a `seen`
+line — used now for the *drawer's own* memory of the act ("You drew water at the well.") — but kept
+`actor_emittable = false`: *flipping* it would list them as `make_sound` verb choices in every prompt and
+regenerate all twenty golden fixtures, which is M5's sheet change, not M3's. (2) trade drawers (fullers/dyers)
+are enrolled alongside the household servants so the household-before-trade precedence is *observable live*,
+not only in a unit test.
+
+**Verification.** `cargo test -p cathedral-sim round` — five new tests including the end-to-end slice (a
+parched servant walks to the well, queues, draws — remembering it, and with the windlass a nudge-free world
+sound — and goes home); the full suite stays green (378), the M1 door tests unaffected. Headless on the real
+500-strong cast shows the city breathe — ~69 drawers, the thirsty count rising and falling in waves as the
+whole cast cycles through the staffed wells, each ringing the right sound. The game runs the round in-engine
+(`[smart actors] water round: 9 sources, 8 staffed, 69 drawers` — one well's ward has no ambient nearby to
+keep it, which is allowed) with no regression.
+
+*Note on hearing it in-game:* the player spawns ~107 m from the nearest well and `CATHEDRAL_DRIVE`'s `key`
+action injects a single-frame tap (it cannot walk the player 100 m to a curb), so the *audibility* is proven
+headless — every draw reports its recipient count (`N heard`), i.e. that many NPCs got the percept — rather
+than by an automated screenshot. Stand thirty metres from a staffed well in a real session and you hear the
+windlass.
+
+```sh
+# Watch the whole city fetch water, turn-free, over ~0.15 game days.
+cargo run -p cathedral-backends --bin cathedral-headless -- --fake --watch-clock 0.15 --trace-water
+```
 
 **Why this one.** Because it is already 80% built and nobody noticed — the wells are areas, the queue
 aprons are *already walkable geometry* (`src/city/water.rs:14-16`), the four sounds are already in
