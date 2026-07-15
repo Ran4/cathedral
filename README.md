@@ -1,18 +1,34 @@
 # The Cathedral-City of Impossible Light
 
-A first-person, procedural cathedral-city inspired by the monumental engraving
-in `docs/reference_image.png`. The scene is assembled entirely in Rust with
-Bevy 0.19 and uses original generated material artwork for cathedral limestone,
-weathered city plaster, half-timber infill, dark fieldstone, terracotta and
-slate roofs, and the rose window.
+A first-person "walking simulation", taking place in the Cathedral-City of Ombreval.
 
-The cathedral opens into a roughly 1.2 × 1.0 km fortified medieval city. Most
+The cathedral opens into a roughly 1.2 by 1.0 km fortified medieval city. Most
 streets pinch and change width between independently offset façades; each block
 contains a 4.6 m route that doglegs twice, lateral alleys, projecting upper
 floors, covered passages, small courts, and frequent overhead bridges.
 Those dense quarters open selectively into five town squares, markets, a canal
 and bridges, secondary churches and towers, and the cathedral's ceremonial
-forecourt. Flight makes the full skyline explorable.
+forecourt.
+
+# Tech
+
+Core game: Rust + Bevy 0.19
+
+## Maps
+
+Ombreval is part of a wider world. The river Serle from its source in the Combs,
+past Brede and Ombreval, down to Harne and the salt-pans of Salorge at the sea,
+with Ostrelle far off up the Lantern Road. Everything on it is drawn from lore
+and from what the city could know at second hand:
+
+![Hand-drawn parchment map of the river Serle from the Combs to the sea, with the walled city of Ombreval at its centre](lore/places/world_map.png)
+
+The authoritative top-down cadastral plan of Ombreval itself, including the wall circuit
+with its square gates and mural towers, the five squares, wards, routes, the
+Serle and outer wharves, and every building footprint
+(see [`lore/places/`](lore/places/README.md)):
+
+![Full top-down cadastral plan of Ombreval showing the wall circuit, square gates and towers, wards, routes, and every building footprint](lore/places/ombreval_top_down_map.svg)
 
 ## Run
 
@@ -26,8 +42,8 @@ The first build is large because Bevy and its renderer compile from source.
 
 The app starts in borderless fullscreen by default. Edit [config.ron](config.ron)
 to change the window or smart-actor settings. The actor engine runs in-process;
-each of its three capabilities — NPC cognition, microphone transcription, NPC
-voices — degrades to an offline HUD state on its own when a provider key, a
+each of its three capabilities - NPC cognition, microphone transcription, NPC
+voices - degrades to an offline HUD state on its own when a provider key, a
 microphone or a local speech worker is unavailable, and the cathedral remains
 playable. Set `smart_actors.enabled` to `false` to disable smart actors
 entirely. If the file cannot be read or parsed, the app safely uses the same
@@ -39,39 +55,40 @@ engine, world rules, HUD, and interaction paths.
 
 ## Controls
 
-- `W A S D` — walk (8 m/s)
-- Hold `Shift` — run (12 m/s)
-- Mouse — look
-- `Space` — jump
-- `F` — fart (a real sound percept: everyone within 20 m hears it, and anyone
-  whose view cone contains you knows it was you — see `features/sounds.md`)
-- `'` — toggle gravity-free flight (physical key position; `ä` on sv-SE)
-- `Space` / `Ctrl` — rise / descend while flying
-- `Esc` — release the mouse
-- Left click — recapture the mouse
-- `F5` / `´` — save a PNG to
+- `W A S D` - walk (8 m/s)
+- Hold `Shift` - run (12 m/s)
+- Mouse - look
+- `Space` - jump
+- `B` - Debug menu
+- `F` - fart (a real sound percept: everyone within 20 m hears it, and anyone
+  whose view cone contains you knows it was you - see `features/sounds.md`)
+- `'` - toggle gravity-free flight (physical key position; `ä` on sv-SE)
+- `Space` / `Ctrl` - rise / descend while flying
+- `Esc` - release the mouse
+- Left click - recapture the mouse
+- `F5` / `´` - save a PNG to
   `logs/latest_session/screenshots/cathedral_screenshot_<timestamp>__<nn>.png`
   (`nn` counts up when several captures land in the same second)
-- `V` — toggle the microphone on/off (on by default); speech is heard openly
+- `V` - toggle the microphone on/off (on by default); speech is heard openly
   by every actor within 20 m. Recognized speech appears in tiny text near the
   bottom with a nearby-recipient count
-- `Z` — toggle player transcription between the configured cloud model and
+- `Z` - toggle player transcription between the configured cloud model and
   local `nvidia/canary-qwen-2.5b` in FP16. The first local utterance installs
   the isolated NeMo environment and downloads about 5 GB of model weights;
   later utterances reuse the GPU-resident model. The bottom-left voice panel
   shows microphone, download/load, transcription, failure, and ready states
-- `X` — cycle NPC voice audio through available OpenAI cloud, local Pocket TTS,
+- `X` - cycle NPC voice audio through available OpenAI cloud, local Pocket TTS,
   and off modes
-- Mouse wheel / `1`–`9` — select an inventory item
-- Right click — offer the selected item to the focused actor
-- `Y` / `N` — accept or decline the active incoming offer
-- `R` — retract the selected item's pending offer
+- Mouse wheel / `1`–`9` - select an inventory item
+- Right click - offer the selected item to the focused actor
+- `Y` / `N` - accept or decline the active incoming offer
+- `R` - retract the selected item's pending offer
 
 Each game start increments `session` in `cathedral_meta.json` once, creates
 `logs/session_<n>_<start time>/`, and repoints the `logs/latest_session`
 symlink at it. The session directory collects that run's `screenshots/`, a
 structured `logs.jsonl` (game, actor engine, speech workers, and drive-script
-lines as JSON lines), and `prompts/` — every LLM prompt/answer exchange as a
+lines as JSON lines), and `prompts/` - every LLM prompt/answer exchange as a
 readable `.md` plus a machine-readable `.json`.
 
 Walking uses acceleration, friction, air control, gravity, collision, coyote
