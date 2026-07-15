@@ -42,7 +42,7 @@ use crate::{
     nav::NavData,
     perception::{cap_first, emit_sound, identify},
     prompt::PromptEnv,
-    round::{self, WaterRound},
+    round::{self, Census, Round},
     scheduler::{NpcScheduler, SchedulerEvent, background_turn_order, stage_turn_order},
     seed::{WorldConfig, WorldSeed, build_world},
     snapshot::PublicSnapshot,
@@ -585,7 +585,7 @@ pub struct Engine {
     /// The M3 water round: thirst, the behaviour ladder, the queues at the wells.
     /// Empty and inert unless the host supplied a nav graph
     /// (`features/movement/03_the_ladder.md`).
-    water_round: WaterRound,
+    round: Round,
     /// Diagnostics raised at construction (the M2 mover seeding), emitted with
     /// the first poll's `Ready` because `Engine::new` has no `out` to push to.
     startup_diagnostics: Vec<String>,
@@ -648,15 +648,15 @@ impl Engine {
         // actor, place or route is a seed/nav mismatch we report and skip, never
         // a panic; the notice rides out with the first poll's `Ready`.
         let mut startup_diagnostics: Vec<String> = Vec::new();
-        let mut water_round = WaterRound::new();
+        let mut round = Round::new();
         if let Some(nav) = config.nav.as_deref() {
             if let Err(reason) = seed_pacing_actor(&mut world, nav) {
                 startup_diagnostics.push(format!("[smart actors] movement: {reason}"));
             }
-            // The water round (M3): thirst, the ladder, the queues. Like the
-            // pacer it only runs with a nav graph, and reports rather than panics
-            // on anything that does not resolve.
-            startup_diagnostics.extend(water_round.seed(&mut world, nav, now, &config.clock));
+            // The daily round (M4, subsuming M3's water): homes, workplaces, the
+            // ladder, the queues. Like the pacer it only runs with a nav graph,
+            // and reports rather than panics on anything that does not resolve.
+            startup_diagnostics.extend(round.seed(&mut world, nav, now, &config.clock));
         }
 
         let mut capabilities = capabilities;
@@ -735,7 +735,7 @@ impl Engine {
             bell_seq: 0,
             // The first movement span opens at construction, mirroring the clock.
             movement_now: now,
-            water_round,
+            round,
             startup_diagnostics,
             ready_emitted: false,
         })
@@ -799,7 +799,7 @@ impl Engine {
         // nav graph and is otherwise inert.
         if let Some(nav) = self.config.nav.clone() {
             round::tick(
-                &mut self.water_round,
+                &mut self.round,
                 &mut self.world,
                 &nav,
                 &self.clock,
@@ -930,14 +930,19 @@ impl Engine {
         &self.scheduler
     }
 
-    /// The M3 water round, for tests and the `--trace-water` census.
-    pub fn water_round(&self) -> &WaterRound {
-        &self.water_round
+    /// The daily round (M4, subsuming M3's water), for tests and tracing.
+    pub fn round(&self) -> &Round {
+        &self.round
     }
 
     /// A one-line census of the water round for `--trace-water`.
     pub fn water_summary(&self) -> String {
-        self.water_round.summary(&self.world)
+        self.round.water_summary(&self.world)
+    }
+
+    /// A behavioural census of the enrolled cast for `--census-by-area`.
+    pub fn round_census(&self, now: f64) -> Census {
+        self.round.census(&self.world, &self.clock, now)
     }
 
     /// The microphone/voice state machines, for tests and diagnostics.

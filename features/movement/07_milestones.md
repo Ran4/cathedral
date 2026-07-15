@@ -266,33 +266,62 @@ CATHEDRAL_DRIVE='wait-online; sleep 40; shot chain_well; quit' cargo run
 
 ---
 
-## M4 — The Round
+## M4 — The Round  ✅ *implemented*
 
-**Ships.** The home-binding bake (`assets/world/homes.json`). The occupation → workplace mapping
-(`assets/world/workplaces.json` — the ~150 lines of new content this feature actually needs). The 65
-occupation templates. The twenty authored routes, transcribed. Market days. **Curfew.**
+**Ships.** The home-binding bake (`scripts/bake_homes.py` → `assets/world/homes.json`). The
+occupation → workplace mapping and the 65 occupation templates and the twenty authored routes, all in
+one authored `assets/world/rounds.json`. Market days. **Curfew.**
 
-**How you know.** Two ways, and take both.
+**Status — done and verified.** M4 generalises the M3 water round in place: `WaterRound` became
+`Round` (`crates/cathedral-sim/src/round.rs`), which now enrols the **whole LLM cast** — each with a
+**home** (baked), a **workplace** (the nearest of the occupation's candidate nav places to home), and
+a **round** of office-pegged legs (the 19 authored routes for the majors that resolve to a 5-char id;
+the 65 occupation templates, grouped into eight archetypes, for everyone else). Water is now just two
+rungs of one flat ladder. The ladder each decision epoch is **curfew (5) → parched (2) → thirsty (6)
+→ the round (9) → social (11) → wander (12)**, first match wins. Market-day legs (`only_on`) move the
+crowd to the squares on Highmarket/Lowmarket; the curfew rung sends the housed home at the Snuffing
+while the night trades (a `curfew_exempt` archetype flag: tavern, watch, lamplighter) keep their
+posts, and the ~100 homeless (a homeless circumstance → no `homes.json` entry) are left in the street,
+exactly as the lore intends.
+
+**Two load-bearing subtleties, both caught during bring-up.** (1) The **home-binding bake falls back
+across wards** — the literal "nearest unclaimed residential in my ward" runs out of houses in five of
+eight wards (Weigh/Reed/Wick), so `bake_homes.py` binds ward-local where it can (290 of 400) and to
+the nearest unclaimed residential city-wide otherwise (110). (2) The **wander/social leash is anchored
+at the current post, not home** — anchoring it at home yanked every worker who reached the Wickmarket
+straight back to his own door, so nobody ever settled anywhere during the day.
+
+**The content and the round are embedded** (`include_str!`) exactly as the game host embeds the nav
+graph, so both hosts get M4 with no wiring, and the layer stays **inert without a nav graph** (the
+frozen golden prompts pass `nav: None`, so nobody is enrolled and the 20 fixtures are byte-identical).
+Pure and deterministic: every choice is a hash of `(salt, actor_id, epoch)`, positions ride the hot
+channel and never bump `world_revision`.
+
+**How you know.**
 
 ```sh
-# A full game day, headless, and read the city.
+# A full game day, headless, and read the city as each office rings.
 cargo run -p cathedral-backends --bin cathedral-headless -- \
-    --fake --seconds-per-day 120 -t 130 --census-by-area
+    --fake --start-office watch --watch-clock 1 --census-by-area
 ```
 
-At the Kindling the bakehouses and the Moorings should be occupied and the streets nearly empty. At
-High Wick the squares should be full. At the Snuffing the streets should empty *again*, and the
-Hungry Ox and the Bell and Ladle should not.
+`[census]` samples *within* each office (not at the bell, when the whole cast has just re-routed). A
+real run: at the **Kindling** the Alder Moorings and the taverns are occupied and the housed are still
+abed; through **Dayspring** the posts climb past 200 as the streets empty; at **High Wick** the
+squares are full (the Wickmarket ~45, Coswald's Yard ~30, the Tallage ~20); at the **Snuffing** the
+streets clear again — *home* climbs past 240 — while the **Hungry Ox (27) and the Bell and Ladle
+(~18) do not empty**, exactly as the milestone asks.
 
 ```sh
 # And watch it. Stand in the Wickmarket and let curfew happen around you.
 CATHEDRAL_DRIVE='wait-online; shot noon; sleep 90; shot curfew; quit' cargo run
 ```
 
-**The real test is the boatmen.** Give the gates hours (`open: Dayspring, shut: Snuffing`). Run a
-week. Somebody will be **gate-caught** — shut outside the wall at the Snuffing, sleeping in an
-outlodge, his household eating without him. Nobody wrote that; it happened. If it happens, everything
-under it works.
+**The boatmen, and what is deferred.** The wharf archetype gives the boat trades a Moorings day, but
+the **gate-caught** emergent test needs `outer_wharves` and gate-hours geometry the baked graph does
+not yet reach outside the wall (there is no nav node there), so it is noted as follow-up rather than
+claimed. `hunger`/`fatigue` needs and an `Indoors` render-hide are likewise out of M4's ship list —
+the round's office-pegged legs plus the curfew rung already empty the streets without them.
 
 ---
 

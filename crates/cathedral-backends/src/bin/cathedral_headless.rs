@@ -168,6 +168,13 @@ struct Args {
     /// (turn-free) or a long `--fake -t` run. Needs a nav graph under `--assets`.
     #[arg(long)]
     trace_water: bool,
+
+    /// watch the M4 daily round: a `[census]` line each time an office rings,
+    /// counting who is home, at their post, walking, or left in the street, and
+    /// which posts are populated. Read a full game day with
+    /// `--fake --seconds-per-day 120 -t 130 --census-by-area` (or `--watch-clock 1`).
+    #[arg(long)]
+    census_by_area: bool,
 }
 
 fn main() -> ExitCode {
@@ -356,6 +363,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         last_office: None,
         trace_positions: args.trace_positions,
         trace_water: args.trace_water,
+        census_by_area: args.census_by_area,
     };
     if args.watch_clock > 0.0 {
         runner.watch_clock(args.watch_clock, clock.seconds_per_day())?;
@@ -406,6 +414,8 @@ struct Runner {
     trace_positions: bool,
     /// `--trace-water`: echo the water round's census and every draw.
     trace_water: bool,
+    /// `--census-by-area`: echo a behavioural census as each office rings.
+    census_by_area: bool,
 }
 
 impl Runner {
@@ -424,6 +434,9 @@ impl Runner {
             if self.trace_water {
                 println!("[water] {}", self.engine.water_summary());
             }
+            if self.census_by_area {
+                println!("[census] {}", self.engine.round_census(self.now).summary());
+            }
         }
         Ok(())
     }
@@ -440,19 +453,30 @@ impl Runner {
         // the mover accumulator's catch-up budget (3.2 s), or a coarse step snaps
         // walkers forward and drops the walk — so cap it at a stride there.
         let mut step = (seconds_per_day / 200.0).max(0.05);
-        if self.trace_water {
-            step = step.min(1.0);
+        // Tracing positions (water or the round census) needs the step under the
+        // mover accumulator's catch-up budget (3.2 s), or a coarse step snaps
+        // walkers forward and drops the walk — nobody would ever be seen to arrive.
+        if self.trace_water || self.census_by_area {
+            step = step.min(3.0);
         }
         println!(
             "== watching {game_days} game day(s): {real_seconds:.0} s at {seconds_per_day:.0} s/day =="
         );
-        let mut next_census = self.now;
+        // The census samples *within* each office, not at the bell — right when a
+        // bell rings the whole cast has just re-routed and everyone is walking.
+        let census_interval = (real_seconds / (16.0 * game_days).max(1.0)).max(step);
+        let mut next_water = self.now;
+        let mut next_census = self.now + census_interval;
         while self.now < end {
             self.now += step;
             self.pump(Vec::new());
-            if self.trace_water && self.now >= next_census {
+            if self.trace_water && self.now >= next_water {
                 println!("[water] {}", self.engine.water_summary());
-                next_census = self.now + 3.0;
+                next_water = self.now + 3.0;
+            }
+            if self.census_by_area && self.now >= next_census {
+                println!("[census] {}", self.engine.round_census(self.now).summary());
+                next_census = self.now + census_interval;
             }
         }
         Ok(())
@@ -1073,6 +1097,7 @@ mod tests {
             last_office: None,
             trace_positions: false,
             trace_water: false,
+            census_by_area: false,
         };
 
         let started = std::time::Instant::now();

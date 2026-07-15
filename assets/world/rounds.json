@@ -1,0 +1,355 @@
+{
+ "schema_version": 1,
+ "generated_by": "hand-authored (features/movement/04_the_round.md)",
+ "_comment": "The daily round (movement M4). `workplaces` maps an occupation to candidate nav places (the sim binds the nearest to home). `archetypes` are the office-pegged leg templates; `occupations` assigns each of the 65 trades one. `routes` overrides the ~20 authored majors by 5-char id. A leg's `at` is `home`, `workplace`, or a nav place display name / site id; `doing` is work|trade|sleep|pray|idle|draw_water|stand; `from` is the office the leg begins at; `only_on` restricts it to weekdays (market days move the crowd). `curfew_exempt` keeps night trades in the street at the Snuffing.",
+
+ "workplaces": {
+  "candor_cleric": ["The Lanthorn", "Chapter house and Grey Press"],
+  "church_attendant": ["The Lanthorn", "The Gradine"],
+  "funerary_worker": ["Saint Maren's churchyard", "Saint Maren's church"],
+  "bell_ringer": ["The Bellstand", "Saint Maren's church"],
+  "custody_clerk": ["Chapter house and Grey Press", "The Tallage"],
+  "anchoress": ["The Ilvane anchorhold"],
+  "mason": ["Coswald's Yard", "The masons' lodge"],
+  "glazier": ["Cinder Row", "The glaziers' guildhall"],
+  "carpenter_and_builder": ["Coswald's Yard"],
+  "smith": ["Coswald's Yard"],
+  "bellfounder": ["Bellfounders' Yard"],
+  "chandler": ["The Wickmarket"],
+  "lamplighter": ["The Wickmarket", "The Gradine"],
+  "roper": ["The Cut ropewalk"],
+  "painter": ["Cinder Row"],
+  "instrument_maker": ["Cinder Row"],
+  "cloth_worker": ["The Draper's Reach", "Tenterhook Lane", "The Cut"],
+  "draper": ["The Draper's Reach", "The Tallage"],
+  "leather_worker": ["Tanners' Slip", "Skinners' Court"],
+  "laundress": ["The Cut"],
+  "scavenger": ["The Cut ropewalk"],
+  "boatworker": ["The Alder Moorings"],
+  "fish_trader": ["Maren's Green", "The Alder Moorings"],
+  "cargo_worker": ["The Alder Moorings", "Gaunt Passage"],
+  "freight_broker": ["The Tallage", "Bonded warehouse"],
+  "salt_trader": ["The Tallage", "Gaunt Passage"],
+  "salt_worker": ["Gaunt Passage"],
+  "guide": ["Maren's Green", "The Gradine", "The Old Sluice"],
+  "merchant": ["The Tallage", "The Wickmarket"],
+  "market_seller": ["The Wickmarket", "The Gradine", "Maren's Green"],
+  "money_dealer": ["The Tallage", "The Tally Bridge"],
+  "scribe_and_clerk": ["The Tallage", "Chapter house and Grey Press"],
+  "revenue_worker": ["Tallage toll-house", "The Tallage"],
+  "baker": ["The Wickmarket"],
+  "butcher": ["The Shambles", "The Tallage"],
+  "brewer": ["The Hungry Ox"],
+  "cook": ["The Hungry Ox", "The Bellstand"],
+  "tavern_worker": ["The Hungry Ox", "The Bellstand"],
+  "miller": ["The Wool Gate"],
+  "healer": ["Doctor Ferrant's house", "Maren's Green"],
+  "scholar": ["The Lanthorn", "Doctor Ferrant's house"],
+  "messenger": ["The Bellstand", "The Wickmarket", "The Needle"],
+  "watchman_and_keeper": ["The Bellstand", "The Old Sluice"],
+  "court_officer": ["Chapter house and Grey Press", "The Gradine"],
+  "executioner": ["The Bellstand"],
+  "farmer": ["The Wool Gate"],
+  "general_labourer": ["Coswald's Yard", "The Cut"],
+  "pilgrim": ["The Gradine", "The Lanthorn"],
+  "domestic_servant": ["The Wickmarket"],
+  "garment_worker": ["The Draper's Reach"],
+  "shoemaker": ["Skinners' Court"],
+  "cooper": ["The Cut"],
+  "potter": ["Cinder Row"],
+  "cartwright_and_wheelwright": ["Coswald's Yard"],
+  "fine_metalworker": ["Cinder Row"],
+  "animal_worker": ["The Harne Gate"],
+  "sanitation_worker": ["The Cut"],
+  "water_and_bath_worker": ["Chain Well"],
+  "food_provisioner": ["The Wickmarket"],
+  "grocer_and_spicer": ["The Tallage", "The Wickmarket"],
+  "entertainer": ["The Hungry Ox", "The Wickmarket"],
+  "civic_officer": ["The Tallage"],
+  "bailiff_and_gaoler": ["The Bellstand"],
+  "militia_and_soldier": ["The Stone Gate", "The Bellstand"],
+  "sex_worker": ["The Hungry Ox"]
+ },
+
+ "archetypes": {
+  "day_worker": {
+   "leash_m": 10.0,
+   "curfew_exempt": false,
+   "legs": [
+    {"from": "kindling", "at": "workplace", "doing": "work"},
+    {"from": "dayspring", "at": "workplace", "doing": "work"},
+    {"from": "waning", "at": "workplace", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+   ]
+  },
+  "market_trader": {
+   "leash_m": 12.0,
+   "curfew_exempt": false,
+   "legs": [
+    {"from": "kindling", "at": "workplace", "doing": "work"},
+    {"from": "dayspring", "at": "workplace", "doing": "trade"},
+    {"from": "dayspring", "at": "The Wickmarket", "doing": "trade", "only_on": ["highmarket"]},
+    {"from": "dayspring", "at": "The Tallage", "doing": "trade", "only_on": ["lowmarket"]},
+    {"from": "waning", "at": "workplace", "doing": "trade"},
+    {"from": "waning", "at": "The Wickmarket", "doing": "trade", "only_on": ["highmarket"]},
+    {"from": "waning", "at": "The Tallage", "doing": "trade", "only_on": ["lowmarket"]},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+   ]
+  },
+  "cleric": {
+   "leash_m": 10.0,
+   "curfew_exempt": false,
+   "legs": [
+    {"from": "kindling", "at": "workplace", "doing": "pray"},
+    {"from": "dayspring", "at": "workplace", "doing": "pray"},
+    {"from": "high_wick", "at": "workplace", "doing": "pray"},
+    {"from": "waning", "at": "workplace", "doing": "pray"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+   ]
+  },
+  "tavern": {
+   "leash_m": 8.0,
+   "curfew_exempt": true,
+   "legs": [
+    {"from": "watch", "at": "home", "doing": "sleep"},
+    {"from": "dayspring", "at": "workplace", "doing": "work"},
+    {"from": "waning", "at": "workplace", "doing": "work"},
+    {"from": "lamplight", "at": "workplace", "doing": "work"},
+    {"from": "snuffing", "at": "workplace", "doing": "work"}
+   ]
+  },
+  "night_watch": {
+   "leash_m": 24.0,
+   "curfew_exempt": true,
+   "legs": [
+    {"from": "kindling", "at": "home", "doing": "sleep"},
+    {"from": "dayspring", "at": "home", "doing": "sleep"},
+    {"from": "high_wick", "at": "home", "doing": "idle"},
+    {"from": "waning", "at": "workplace", "doing": "work"},
+    {"from": "lamplight", "at": "workplace", "doing": "work"},
+    {"from": "snuffing", "at": "workplace", "doing": "work"},
+    {"from": "watch", "at": "workplace", "doing": "work"}
+   ]
+  },
+  "lamplighter": {
+   "leash_m": 20.0,
+   "curfew_exempt": true,
+   "legs": [
+    {"from": "dayspring", "at": "home", "doing": "idle"},
+    {"from": "lamplight", "at": "The Wickmarket", "doing": "work"},
+    {"from": "snuffing", "at": "The Gradine", "doing": "work"}
+   ]
+  },
+  "wharf": {
+   "leash_m": 15.0,
+   "curfew_exempt": false,
+   "legs": [
+    {"from": "kindling", "at": "workplace", "doing": "work"},
+    {"from": "dayspring", "at": "workplace", "doing": "work"},
+    {"from": "waning", "at": "workplace", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+   ]
+  },
+  "stationary": {
+   "leash_m": 2.0,
+   "curfew_exempt": true,
+   "legs": [
+    {"from": "watch", "at": "workplace", "doing": "pray"}
+   ]
+  }
+ },
+
+ "occupations": {
+  "candor_cleric": "cleric",
+  "church_attendant": "cleric",
+  "funerary_worker": "cleric",
+  "bell_ringer": "cleric",
+  "custody_clerk": "cleric",
+  "court_officer": "cleric",
+  "scholar": "cleric",
+  "anchoress": "stationary",
+  "mason": "day_worker",
+  "glazier": "day_worker",
+  "carpenter_and_builder": "day_worker",
+  "smith": "day_worker",
+  "bellfounder": "day_worker",
+  "chandler": "market_trader",
+  "lamplighter": "lamplighter",
+  "roper": "wharf",
+  "painter": "day_worker",
+  "instrument_maker": "day_worker",
+  "cloth_worker": "day_worker",
+  "draper": "market_trader",
+  "leather_worker": "day_worker",
+  "laundress": "day_worker",
+  "scavenger": "day_worker",
+  "boatworker": "wharf",
+  "fish_trader": "market_trader",
+  "cargo_worker": "wharf",
+  "freight_broker": "wharf",
+  "salt_trader": "market_trader",
+  "salt_worker": "wharf",
+  "guide": "day_worker",
+  "merchant": "market_trader",
+  "market_seller": "market_trader",
+  "money_dealer": "day_worker",
+  "scribe_and_clerk": "day_worker",
+  "revenue_worker": "day_worker",
+  "baker": "market_trader",
+  "butcher": "market_trader",
+  "brewer": "tavern",
+  "cook": "tavern",
+  "tavern_worker": "tavern",
+  "miller": "day_worker",
+  "healer": "day_worker",
+  "messenger": "day_worker",
+  "watchman_and_keeper": "night_watch",
+  "executioner": "day_worker",
+  "farmer": "day_worker",
+  "general_labourer": "day_worker",
+  "pilgrim": "day_worker",
+  "domestic_servant": "day_worker",
+  "garment_worker": "day_worker",
+  "shoemaker": "day_worker",
+  "cooper": "day_worker",
+  "potter": "day_worker",
+  "cartwright_and_wheelwright": "day_worker",
+  "fine_metalworker": "day_worker",
+  "animal_worker": "day_worker",
+  "sanitation_worker": "day_worker",
+  "water_and_bath_worker": "day_worker",
+  "food_provisioner": "market_trader",
+  "grocer_and_spicer": "market_trader",
+  "entertainer": "tavern",
+  "civic_officer": "day_worker",
+  "bailiff_and_gaoler": "night_watch",
+  "militia_and_soldier": "night_watch",
+  "sex_worker": "tavern"
+ },
+
+ "routes": {
+  "ak3vd": {"_who": "Havise Dorn, Praelucent", "leash_m": 10.0, "legs": [
+    {"from": "kindling", "at": "The Lanthorn", "doing": "pray"},
+    {"from": "dayspring", "at": "The Lanthorn", "doing": "pray"},
+    {"from": "high_wick", "at": "Chapter house and Grey Press", "doing": "work"},
+    {"from": "waning", "at": "The Lanthorn", "doing": "pray"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "a9prs": {"_who": "Segwin Rasp, custodian of the Grey Press", "legs": [
+    {"from": "kindling", "at": "Chapter house and Grey Press", "doing": "work"},
+    {"from": "dayspring", "at": "Chapter house and Grey Press", "doing": "work"},
+    {"from": "waning", "at": "The Lanthorn", "doing": "pray"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "b4hst": {"_who": "Hamel Stott, Warden of the Fabric", "legs": [
+    {"from": "kindling", "at": "Coswald's Yard", "doing": "work"},
+    {"from": "dayspring", "at": "Coswald's Yard", "doing": "work"},
+    {"from": "waning", "at": "The masons' lodge", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "cj9sp": {"_who": "Jonet Sparr, glazier", "legs": [
+    {"from": "kindling", "at": "Cinder Row", "doing": "work"},
+    {"from": "dayspring", "at": "Cinder Row", "doing": "work"},
+    {"from": "high_wick", "at": "The Wickmarket", "doing": "trade", "only_on": ["highmarket"]},
+    {"from": "waning", "at": "Cinder Row", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "dv8ll": {"_who": "Osanne Vell, chandler", "legs": [
+    {"from": "kindling", "at": "workplace", "doing": "work"},
+    {"from": "dayspring", "at": "workplace", "doing": "work"},
+    {"from": "dayspring", "at": "Osanne Vell's stall", "doing": "trade", "only_on": ["highmarket"]},
+    {"from": "waning", "at": "workplace", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "fg2sh": {"_who": "Grigor Ashe, salt trader", "legs": [
+    {"from": "kindling", "at": "workplace", "doing": "work"},
+    {"from": "dayspring", "at": "workplace", "doing": "trade"},
+    {"from": "dayspring", "at": "The Tallage", "doing": "trade", "only_on": ["lowmarket"]},
+    {"from": "waning", "at": "Gaunt Passage", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "cf2rr": {"_who": "Aubin Ferrant, doctor", "legs": [
+    {"from": "kindling", "at": "Doctor Ferrant's house", "doing": "idle"},
+    {"from": "dayspring", "at": "Maren's Green", "doing": "work"},
+    {"from": "waning", "at": "The Lanthorn", "doing": "pray"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "fl5cp": {"_who": "Lise Copp, pawnbroker", "legs": [
+    {"from": "kindling", "at": "Lise Copp's pawnshop", "doing": "trade"},
+    {"from": "dayspring", "at": "Lise Copp's pawnshop", "doing": "trade"},
+    {"from": "waning", "at": "Lise Copp's pawnshop", "doing": "trade"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "fc9rn": {"_who": "Corin Copp, scrivener (and forger by night)", "curfew_exempt": true, "legs": [
+    {"from": "kindling", "at": "The Tallage", "doing": "work"},
+    {"from": "dayspring", "at": "The Tallage", "doing": "work"},
+    {"from": "waning", "at": "The Tallage", "doing": "work"},
+    {"from": "lamplight", "at": "Lise Copp's pawnshop", "doing": "work"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "amt4p": {"_who": "Dunstan Pike, Verger", "legs": [
+    {"from": "kindling", "at": "The Lanthorn", "doing": "work"},
+    {"from": "dayspring", "at": "The Lanthorn", "doing": "work"},
+    {"from": "waning", "at": "The Lanthorn", "doing": "work"},
+    {"from": "lamplight", "at": "The Bellstand", "doing": "idle"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "hj6br": {"_who": "Jos Brant, Crier", "legs": [
+    {"from": "kindling", "at": "The Bellstand", "doing": "work"},
+    {"from": "dayspring", "at": "The Wickmarket", "doing": "work"},
+    {"from": "high_wick", "at": "The Tallage", "doing": "work"},
+    {"from": "waning", "at": "Maren's Green", "doing": "work"},
+    {"from": "lamplight", "at": "The Bellstand", "doing": "idle"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "em3rl": {"_who": "Betriss Marle, needleworker", "legs": [
+    {"from": "kindling", "at": "The Lanthorn", "doing": "pray"},
+    {"from": "dayspring", "at": "The Lanthorn", "doing": "work"},
+    {"from": "waning", "at": "The Lanthorn", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "aq7ld": {"_who": "Dame Aldith, anchoress (immovable — bricked into her cell)", "leash_m": 1.0, "curfew_exempt": true, "legs": [
+    {"from": "watch", "at": "The Ilvane anchorhold", "doing": "pray"}
+  ]},
+  "ax5nf": {"_who": "Noll Fitch, gravedigger", "legs": [
+    {"from": "kindling", "at": "Saint Maren's churchyard", "doing": "work"},
+    {"from": "dayspring", "at": "Saint Maren's churchyard", "doing": "work"},
+    {"from": "waning", "at": "Saint Maren's churchyard", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "gw4ld": {"_who": "Wyn Alder, boatman", "legs": [
+    {"from": "kindling", "at": "The Alder Moorings", "doing": "work"},
+    {"from": "dayspring", "at": "Maren's Green", "doing": "trade"},
+    {"from": "dayspring", "at": "The Lanthorn", "doing": "pray", "only_on": ["bellday"]},
+    {"from": "waning", "at": "The Old Sluice", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "az2sm": {"_who": "Sible Mott, custody clerk", "legs": [
+    {"from": "kindling", "at": "Chapter house and Grey Press", "doing": "work"},
+    {"from": "dayspring", "at": "Chapter house and Grey Press", "doing": "work"},
+    {"from": "high_wick", "at": "The Tally Bridge", "doing": "work"},
+    {"from": "waning", "at": "Chapter house and Grey Press", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "gr8tp": {"_who": "Renna Tapster, of the Bell and Ladle", "curfew_exempt": true, "leash_m": 6.0, "legs": [
+    {"from": "watch", "at": "home", "doing": "sleep"},
+    {"from": "dayspring", "at": "The Bellstand", "doing": "work"},
+    {"from": "waning", "at": "The Bellstand", "doing": "work"},
+    {"from": "lamplight", "at": "The Bellstand", "doing": "work"},
+    {"from": "snuffing", "at": "The Bellstand", "doing": "work"}
+  ]},
+  "et7rd": {"_who": "Tam Rud, fuller", "legs": [
+    {"from": "kindling", "at": "The Cut", "doing": "work"},
+    {"from": "dayspring", "at": "Tenterhook Lane", "doing": "work"},
+    {"from": "high_wick", "at": "The Draper's Reach", "doing": "work"},
+    {"from": "waning", "at": "The Cut", "doing": "work"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "cg6ud": {"_who": "Mother Gude, herb-seller", "legs": [
+    {"from": "kindling", "at": "Maren's Green", "doing": "work"},
+    {"from": "dayspring", "at": "Maren's Green", "doing": "trade"},
+    {"from": "waning", "at": "Maren's Green", "doing": "trade"},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]}
+ }
+}

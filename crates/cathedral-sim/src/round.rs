@@ -1,33 +1,44 @@
-//! The water round (M3) — the first vertical slice of the movement feature's
-//! non-LLM behaviour layer (`features/movement/03_the_ladder.md`,
-//! [README §8](../../../features/movement/README.md)).
+//! The daily round (M4) — the non-LLM behaviour layer that gets the city up in
+//! the morning, sends it to work, moves the crowd on market days, and empties the
+//! streets at the Snuffing (`features/movement/04_the_round.md`,
+//! `features/movement/03_the_ladder.md`). It subsumes the M3 water round: water
+//! is now two rungs (2 & 6) of one flat, first-match-wins ladder.
 //!
-//! It is the whole stack, end to end and for zero tokens: the clock decays a
-//! **thirst** need, a flat first-match-wins **ladder** (rungs 2, 6, 11, 12)
-//! turns that need into a **route** to a public well, a **queue** forms at the
-//! curb with household vessels going before trade ones, the drawer's turn
-//! **draws** water (thirst refilled) while the keeper works the gear and the
-//! windlass is *heard* — a percept the LLM layer can be asked about — and then
-//! the drawer walks **home again**.
+//! Every LLM townsperson is enrolled with a **home** (baked into
+//! `assets/world/homes.json`), a **workplace** (bound from `assets/world/rounds.json`'s
+//! occupation → nav-place map), and a **round** — a short list of office-pegged
+//! legs, taken from the 19 authored route overrides for the majors that resolve to
+//! a 5-char id and from the 65 occupation templates for everyone else. The ladder
+//! each decision epoch is:
 //!
-//! All state lives on the [`Engine`](crate::Engine) (a [`WaterRound`]), driven
-//! once per poll right after the movement tick. It is pure and deterministic:
-//! every "random" choice is a hash of `(actor_id, epoch, salt)`, never an RNG,
-//! following the `attention.rs` curiosity idiom the ladder doc points at. With
-//! no nav graph the whole thing no-ops, so the frozen golden fixtures are
-//! untouched.
+//! | rung | fires when | goes to |
+//! |------|------------|---------|
+//! | 5 curfew  | night (Snuffing/Watch), housed, not a night trade | home, to sleep |
+//! | 2 parched | `thirst < THIRST_PARCHED`, a water source bound   | the well now |
+//! | 6 thirsty | `thirst < THIRST_THIRSTY`, queue short            | the well |
+//! | 9 round   | the current office's leg says "be at X", I am not | X |
+//! | 11 social | a known, settled neighbour is near               | drift toward them |
+//! | 12 wander | — (a gated hash roll)                            | mill near home |
+//!
+//! Everything is embedded (`include_str!`) so both hosts get it with no wiring,
+//! and the whole layer is **inert without a nav graph** — the frozen golden
+//! fixtures pass `nav: None`, so nobody is enrolled and nothing moves. It is
+//! pure and deterministic: every "random" choice is a hash of
+//! `(salt, actor_id, epoch)`, never an RNG (the `attention.rs` curiosity idiom).
 
 use std::{
-    collections::{BTreeMap, hash_map::DefaultHasher},
+    collections::{BTreeMap, HashMap, hash_map::DefaultHasher},
     hash::{Hash, Hasher},
 };
 
+use serde::Deserialize;
+
 use crate::{
     LADDER_DECISION_MAX_SECONDS, LADDER_DECISION_MIN_SECONDS, SOCIAL_PULL_RADIUS_M, THIRST_MAX,
-    THIRST_PARCHED, THIRST_THIRSTY, WALK_SPEED_MPS, WANDER_LEASH_M, WATER_DRAW_SECONDS,
+    THIRST_PARCHED, THIRST_THIRSTY, WALK_SPEED_MPS, WATER_DRAW_SECONDS,
     WELL_ARRIVE_RADIUS_M, WELL_KEEPER_SOUND_INTERVAL_SECONDS, WELL_QUEUE_SHORT,
     character::{Character, Movement},
-    clock::WorldClock,
+    clock::{Office, WorldClock, Weekday},
     event::DomainEvent,
     ids::ActorId,
     lore::Significance,
@@ -36,7 +47,7 @@ use crate::{
     world::{World, planar_close},
 };
 
-/// The M2 pacer, excluded from the water round so it keeps its own ping-pong.
+/// The M2 pacer, excluded from the round so it keeps its own ping-pong.
 const PACING_ACTOR_ID: &str = "p0012";
 /// Occupations that fetch water with a **household** vessel — chiefly the
 /// servant, whose day is a trip to the ward well and back (the single largest
@@ -61,16 +72,22 @@ fn vessel_of(occupation: Option<&str>) -> Option<bool> {
 /// A source only takes a keeper from an NPC standing within this of its curb, so
 /// nobody is dragged across the city to work a well.
 const KEEPER_MAX_DIST_M: f64 = 55.0;
+/// A mover is "at" a round leg's anchor (a square, a workshop, the moorings) once
+/// within this of it. Looser than [`WELL_ARRIVE_RADIUS_M`]: a place's node is one
+/// point in a wide site, not a curb.
+const ROUND_ARRIVE_RADIUS_M: f64 = 6.0;
+/// A mover is "at home" once within this of their door — tight, so a sleeper
+/// stands on their own step rather than in the street outside a neighbour's.
+const HOME_ARRIVE_RADIUS_M: f64 = 3.0;
+/// Leg leash when a route/template does not name one.
+const DEFAULT_ROUND_LEASH_M: f64 = 10.0;
+/// Census: how close counts as "at your post" / "at home".
+const CENSUS_POST_RADIUS_M: f64 = 9.0;
+const CENSUS_HOME_RADIUS_M: f64 = 5.0;
 
-/// The **nine** public drinking sources (`07_milestones.md` M3), by their
-/// nav-graph display name (the nav places are keyed by name, not by the
-/// `chain_well` area id), each paired with the sound its gear makes: the deep
-/// chain well clanks its windlass, the rope wells break a bucket on the water far
-/// below, the roof-fed cisterns pour a pail into a trough. `lore/wells_and_water.md`
-/// names exactly these nine as household water and puts **both** the Shambles
-/// well (a slaughter-yard *work* well — "not a preferred household source") and
-/// `Seven Lofts fire tanks` (a fire reserve) outside the ward drinking list, so
-/// both are deliberately absent here.
+/// The nine public drinking sources (`07_milestones.md` M3), by nav-graph display
+/// name, each paired with its gear's sound. See the M3 notes: the Shambles work
+/// well and the Seven Lofts fire tanks are deliberately excluded.
 const SOURCES: &[(&str, &str)] = &[
     ("Ford Well", "draw_water"),
     ("Chain Well", "chain_windlass"),
@@ -83,6 +100,106 @@ const SOURCES: &[(&str, &str)] = &[
     ("Step Cistern", "pour_trough"),
 ];
 
+/// The authored round content, embedded so both hosts get it with no wiring —
+/// exactly as `bake_navigation.py`'s output is embedded in the game host. Static
+/// data, compiled in, not read at runtime: the sim keeps its no-IO decree.
+const ROUNDS_JSON: &str = include_str!("../../../assets/world/rounds.json");
+/// The baked home-binding (`scripts/bake_homes.py`). A character absent from it
+/// has no bed — the ~100 with a homeless circumstance — and is the person still
+/// in the street at the Snuffing (`features/movement/04_the_round.md` §6).
+const HOMES_JSON: &str = include_str!("../../../assets/world/homes.json");
+
+/// What an actor means to do on arrival — the pathfind-then-act bridge lifted
+/// from seagame's `targetState` (`features/movement/02_navigation.md` §4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Arrival {
+    Work,
+    Trade,
+    Sleep,
+    Pray,
+    Idle,
+    DrawWater,
+    Stand,
+}
+
+// --------------------------------------------------------------------------- //
+// The embedded content, straight off the JSON
+// --------------------------------------------------------------------------- //
+#[derive(Debug, Deserialize)]
+struct RoundsDoc {
+    workplaces: HashMap<String, Vec<String>>,
+    archetypes: HashMap<String, TemplateSpec>,
+    occupations: HashMap<String, String>,
+    routes: HashMap<String, RouteSpec>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TemplateSpec {
+    leash_m: f64,
+    #[serde(default)]
+    curfew_exempt: bool,
+    legs: Vec<LegSpec>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RouteSpec {
+    #[serde(default)]
+    leash_m: Option<f64>,
+    #[serde(default)]
+    curfew_exempt: Option<bool>,
+    legs: Vec<LegSpec>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LegSpec {
+    from: Office,
+    at: String,
+    doing: Arrival,
+    #[serde(default)]
+    only_on: Option<Vec<Weekday>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HomesDoc {
+    homes: HashMap<String, HomeEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HomeEntry {
+    point: [f64; 2],
+}
+
+/// Resolves a leg's `at` string to a world point: a nav place display name, a
+/// nav site id or name, or the keywords `home` / `workplace` (handled by the
+/// caller). Built once per seed.
+struct PlaceResolver<'a> {
+    nav: &'a NavData,
+    site_by_key: HashMap<String, usize>,
+}
+
+impl<'a> PlaceResolver<'a> {
+    fn new(nav: &'a NavData) -> Self {
+        let mut site_by_key = HashMap::new();
+        for site in nav.sites() {
+            site_by_key.insert(site.name.clone(), site.node);
+            site_by_key.insert(site.id.clone(), site.node);
+        }
+        Self { nav, site_by_key }
+    }
+
+    /// A named place/site to a walkable point, or `None` if it is not in the graph.
+    fn resolve(&self, name: &str) -> Option<Vec3> {
+        if let Some(place) = self.nav.place(name) {
+            return Some(self.nav.node_point(place.node));
+        }
+        self.site_by_key.get(name).map(|&node| self.nav.node_point(node))
+    }
+}
+
+// --------------------------------------------------------------------------- //
+// The public model
+// --------------------------------------------------------------------------- //
 /// One public well or cistern: where its water is drawn, what it sounds like, who
 /// keeps it, and the queue waiting at the curb.
 #[derive(Debug, Clone, PartialEq)]
@@ -97,8 +214,7 @@ pub struct WaterSource {
     /// to keep it (which then draws no water and makes no sound).
     pub keeper: Option<ActorId>,
     /// Ordered turns: the front draws next. Household vessels are inserted ahead
-    /// of trade vessels (`lore/wells_and_water.md`), preserving arrival order
-    /// within each class.
+    /// of trade vessels (`lore/wells_and_water.md`).
     pub queue: Vec<ActorId>,
     /// The drawer currently at the curb and the real-clock time their draw ends.
     serving: Option<(ActorId, f64)>,
@@ -106,10 +222,23 @@ pub struct WaterSource {
     keeper_next_sound: f64,
 }
 
-/// Where an enrolled drawer is in its water errand.
+/// One leg of a resolved daily round: the office it begins at, where it puts your
+/// feet, what you do there, and which weekdays it applies to.
+#[derive(Debug, Clone, PartialEq)]
+struct RoundLeg {
+    from: Office,
+    at: Vec3,
+    /// The place name for the census (`"Coswald's Yard"`, or `"home"`).
+    label: String,
+    doing: Arrival,
+    only_on: Option<Vec<Weekday>>,
+    is_home: bool,
+}
+
+/// Where an enrolled townsperson is in their errand.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Phase {
-    /// At or near home, milling about; the ladder may send them to a well.
+    /// Standing at some anchor; the ladder may send them somewhere.
     Idle,
     /// Walking to their assigned well.
     Approaching,
@@ -119,14 +248,27 @@ enum Phase {
     Drawing,
     /// Walking home again after drawing.
     Returning,
+    /// Walking to a round leg's anchor (or home, at curfew).
+    Travelling,
 }
 
-/// One person who fetches water: where home is, which source they use, whether
-/// their vessel takes household precedence, and where they are in the errand.
+/// One enrolled townsperson: where they sleep, their day, their well (if any),
+/// and where they are in it right now.
 #[derive(Debug, Clone, PartialEq)]
-struct Waterer {
-    home: Vec3,
-    source: usize,
+struct Townsperson {
+    /// Their bed, or `None` for the homeless — who are then still in the street
+    /// at the Snuffing, exactly as the lore intends.
+    home: Option<Vec3>,
+    /// Home if housed, else spawn: the point the wander leash and the walk back
+    /// from the well are measured from, so even the homeless have somewhere to be.
+    base: Vec3,
+    /// The office-pegged legs of the day (2–4), anchors already resolved.
+    legs: Vec<RoundLeg>,
+    leash_m: f64,
+    /// A night trade (tavern, watch, lamplighter) that ignores the curfew rung.
+    curfew_exempt: bool,
+    /// The water source they draw from, or `None` for the non-drawing majority.
+    source: Option<usize>,
     is_household: bool,
     phase: Phase,
     /// Real-clock time of this idle actor's next ladder evaluation.
@@ -135,20 +277,62 @@ struct Waterer {
     epoch: u64,
 }
 
-/// The whole water round: the staffed sources and everyone who draws from them.
-/// Inert until [`WaterRound::seed`] runs (only when the host supplies a nav
-/// graph), so a world without nav has an empty round and no behaviour.
+impl Townsperson {
+    /// A drawer bound to a water source (M3 rungs 2 & 6 apply).
+    fn draws_water(&self) -> bool {
+        self.source.is_some()
+    }
+}
+
+/// A one-tick behavioural census of the enrolled cast, for `--census-by-area`.
 #[derive(Debug, Clone, Default, PartialEq)]
-pub struct WaterRound {
+pub struct Census {
+    pub total: usize,
+    pub walking: usize,
+    pub at_home: usize,
+    pub at_post: usize,
+    pub in_street: usize,
+    /// Populated posts, place → head count, for the "squares should be full at
+    /// High Wick" check.
+    pub by_place: BTreeMap<String, usize>,
+}
+
+impl Census {
+    /// A one-line summary for the headless tracer.
+    pub fn summary(&self) -> String {
+        let mut posts: Vec<(&String, &usize)> = self.by_place.iter().collect();
+        posts.sort_by(|a, b| b.1.cmp(a.1).then_with(|| a.0.cmp(b.0)));
+        let top: Vec<String> = posts
+            .iter()
+            .take(6)
+            .map(|(place, count)| format!("{place} {count}"))
+            .collect();
+        format!(
+            "{} enrolled | home {} | post {} | walking {} | street {} || {}",
+            self.total,
+            self.at_home,
+            self.at_post,
+            self.walking,
+            self.in_street,
+            top.join(", ")
+        )
+    }
+}
+
+/// The whole daily round: the staffed water sources and every enrolled
+/// townsperson. Inert until [`Round::seed`] runs (only when the host supplies a
+/// nav graph), so a world without nav has an empty round and no behaviour.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Round {
     sources: Vec<WaterSource>,
-    waterers: BTreeMap<ActorId, Waterer>,
+    people: BTreeMap<ActorId, Townsperson>,
     /// Game-days at the last tick, so thirst decays by the game clock (and speeds
     /// up with the debug time-scale), not by wall-clock.
     last_game_days: f64,
     seeded: bool,
 }
 
-impl WaterRound {
+impl Round {
     pub fn new() -> Self {
         Self::default()
     }
@@ -174,35 +358,82 @@ impl WaterRound {
             .is_some_and(|source| source.serving.is_some())
     }
 
-    /// A one-line census of the round for `--trace-water`: how many sources are
-    /// kept, how many drawers there are and how many are thirsty, and how many
-    /// stand in a queue or at a curb right now.
-    pub fn summary(&self, world: &World) -> String {
+    /// The number of enrolled townsfolk, for diagnostics and tests.
+    pub fn enrolled(&self) -> usize {
+        self.people.len()
+    }
+
+    /// A one-line census of the water round for `--trace-water`.
+    pub fn water_summary(&self, world: &World) -> String {
         let staffed = self.sources.iter().filter(|source| source.keeper.is_some()).count();
         let queued: usize = self.sources.iter().map(|source| source.queue.len()).sum();
         let drawing = self.sources.iter().filter(|source| source.serving.is_some()).count();
+        let drawers = self.people.values().filter(|person| person.draws_water()).count();
         let thirsty = self
-            .waterers
-            .keys()
-            .filter(|id| {
-                world
-                    .characters
-                    .get(*id)
-                    .is_some_and(|character| character.needs().thirst < THIRST_THIRSTY)
+            .people
+            .iter()
+            .filter(|(id, person)| {
+                person.draws_water()
+                    && world
+                        .characters
+                        .get(*id)
+                        .is_some_and(|character| character.needs().thirst < THIRST_THIRSTY)
             })
             .count();
         format!(
-            "water: {} sources / {staffed} kept | {} drawers, {thirsty} thirsty | queued {queued}, drawing {drawing}",
+            "water: {} sources / {staffed} kept | {drawers} drawers, {thirsty} thirsty | queued {queued}, drawing {drawing}",
             self.sources.len(),
-            self.waterers.len(),
         )
     }
 
-    /// Enrol the round: resolve each source's draw point from the nav graph, give
-    /// each a keeper from the nearest idle NPC, and sign up every water-drawing
-    /// character to their nearest staffed source. Returns one human line per
-    /// thing that did not resolve, so the caller can log and carry on — it never
-    /// panics and only touches the actors it enrols.
+    /// A behavioural census of the enrolled cast at the current instant: how many
+    /// are home, at a post, walking, or left in the street, and which posts are
+    /// populated. Reads the current office/weekday off the clock so a leg's
+    /// market-day and night rules are respected.
+    pub fn census(&self, world: &World, clock: &WorldClock, now: f64) -> Census {
+        let time = clock.at(now);
+        let mut census = Census {
+            total: self.people.len(),
+            ..Census::default()
+        };
+        for (id, person) in &self.people {
+            let Some(character) = world.characters.get(id) else {
+                continue;
+            };
+            let position = character.position_m();
+            // Near their current post counts as *at* it, walking or standing — a
+            // seller milling a few metres across the Wickmarket is still at the
+            // Wickmarket. Check this before "walking", so a wander on the spot does
+            // not read as a journey.
+            if let Some(leg) = active_leg(&person.legs, time.office, time.weekday)
+                && position.distance(leg.at) <= CENSUS_POST_RADIUS_M
+            {
+                if leg.is_home || leg.doing == Arrival::Sleep {
+                    census.at_home += 1;
+                } else {
+                    census.at_post += 1;
+                    *census.by_place.entry(leg.label.clone()).or_insert(0) += 1;
+                }
+                continue;
+            }
+            if person
+                .home
+                .is_some_and(|home| position.distance(home) <= CENSUS_HOME_RADIUS_M)
+            {
+                census.at_home += 1;
+            } else if character.is_walking() {
+                census.walking += 1;
+            } else {
+                census.in_street += 1;
+            }
+        }
+        census
+    }
+
+    /// Enrol the round. Resolves the water sources and their keepers exactly as
+    /// M3 did, then signs up every LLM townsperson with a home, a workplace and a
+    /// resolved daily round. Returns one human line per thing that did not
+    /// resolve, so the caller can log and carry on — it never panics.
     pub fn seed(&mut self, world: &mut World, nav: &NavData, now: f64, clock: &WorldClock) -> Vec<String> {
         let mut diagnostics = Vec::new();
         if self.seeded {
@@ -211,7 +442,7 @@ impl WaterRound {
         self.seeded = true;
         self.last_game_days = clock.game_days(now);
 
-        // Resolve the sources present in this nav graph.
+        // Resolve the water sources present in this nav graph.
         for &(name, sound) in SOURCES {
             match nav.place(name) {
                 Some(place) => self.sources.push(WaterSource {
@@ -224,19 +455,13 @@ impl WaterRound {
                     keeper_next_sound: now,
                 }),
                 None => diagnostics.push(format!(
-                    "[smart actors] water round: nav place {name:?} is missing; source skipped"
+                    "[smart actors] round: nav place {name:?} is missing; source skipped"
                 )),
             }
         }
-        if self.sources.is_empty() {
-            diagnostics.push("[smart actors] water round: no water sources resolved".to_string());
-            return diagnostics;
-        }
 
         // Every LLM townsperson except the player and the M2 pacer, in
-        // deterministic roster order — the pool drawers come from (any
-        // significance, so the one minor servant and any minor fullers still
-        // fetch water).
+        // deterministic roster order.
         let townsfolk: Vec<ActorId> = world
             .roster
             .iter()
@@ -251,16 +476,15 @@ impl WaterRound {
             .collect();
 
         // A keeper each: the nearest free **ambient** townsperson to the curb,
-        // pinned there so a queue has someone to form on. Restricting keepers to
-        // ambients means pinning one never overrides a named character's authored
-        // place; a source with no ambient nearby simply goes unkept, which is fine.
-        let mut used: std::collections::BTreeSet<ActorId> = std::collections::BTreeSet::new();
+        // pinned there so a queue has someone to form on and never dragged off by
+        // their own round (keepers are excluded from enrolment below).
+        let mut keepers: std::collections::BTreeSet<ActorId> = std::collections::BTreeSet::new();
         for index in 0..self.sources.len() {
             let draw_point = self.sources[index].draw_point;
             let keeper = townsfolk
                 .iter()
                 .filter(|id| {
-                    !used.contains(*id)
+                    !keepers.contains(*id)
                         && world.characters[*id].significance() == Significance::Ambient
                 })
                 .filter_map(|id| {
@@ -275,53 +499,92 @@ impl WaterRound {
                 })
                 .map(|(_, id)| id.clone());
             if let Some(keeper) = keeper {
-                used.insert(keeper.clone());
-                // Stand the keeper at the curb (a keeper works their well). Set
-                // before the first snapshot, so it is a spawn, not a teleport.
+                keepers.insert(keeper.clone());
                 world.characters.get_mut(&keeper).expect("keeper exists").state.position_m = draw_point;
                 self.sources[index].keeper = Some(keeper);
             }
         }
 
-        // Everyone who draws water: bound to the nearest *staffed* source, home is
-        // their spawn, thirst spread across the range so the curbs get busy at
-        // once instead of all at the same later moment.
         let staffed: Vec<usize> = (0..self.sources.len())
             .filter(|index| self.sources[*index].keeper.is_some())
             .collect();
-        if staffed.is_empty() {
-            diagnostics
-                .push("[smart actors] water round: no source could be staffed".to_string());
-            return diagnostics;
-        }
+
+        // The embedded content. A parse failure disables the daily round but not
+        // the water sources already resolved above.
+        let content: Option<(RoundsDoc, HomesDoc)> = match (
+            serde_json::from_str::<RoundsDoc>(ROUNDS_JSON),
+            serde_json::from_str::<HomesDoc>(HOMES_JSON),
+        ) {
+            (Ok(rounds), Ok(homes)) => Some((rounds, homes)),
+            (rounds, homes) => {
+                if let Err(error) = rounds {
+                    diagnostics.push(format!("[smart actors] round: rounds.json did not load: {error}"));
+                }
+                if let Err(error) = homes {
+                    diagnostics.push(format!("[smart actors] round: homes.json did not load: {error}"));
+                }
+                None
+            }
+        };
+        let resolver = PlaceResolver::new(nav);
 
         let mut enrolled = 0usize;
+        let mut housed = 0usize;
+        let mut drawers = 0usize;
         for id in &townsfolk {
-            if used.contains(id) {
-                continue; // a keeper does not also queue at their own well
+            if keepers.contains(id) {
+                continue; // a keeper works their well; it is their whole day
             }
-            let occupation = world.characters[id]
-                .lore()
-                .and_then(|lore| lore.occupation_id.as_deref());
-            let Some(is_household) = vessel_of(occupation) else {
-                continue;
-            };
-            let home = world.characters[id].position_m();
-            let source = *staffed
-                .iter()
-                .min_by(|left, right| {
-                    let dl = self.sources[**left].draw_point.distance(home);
-                    let dr = self.sources[**right].draw_point.distance(home);
-                    dl.partial_cmp(&dr).unwrap_or(std::cmp::Ordering::Equal)
-                })
-                .expect("staffed is non-empty");
+            let character = &world.characters[id];
+            let spawn = character.position_m();
+            let occupation = character.lore().and_then(|lore| lore.occupation_id.clone());
 
-            let thirst = THIRST_MAX * hash01("water_thirst_seed", id, 0);
-            world.characters.get_mut(id).expect("drawer exists").state.needs.thirst = thirst;
-            self.waterers.insert(
+            let home = content
+                .as_ref()
+                .and_then(|(_, homes)| homes.homes.get(id.as_str()))
+                .map(|entry| Vec3::new(entry.point[0], WALK_Y, entry.point[1]));
+            if home.is_some() {
+                housed += 1;
+            }
+            let base = home.unwrap_or(spawn);
+
+            let (legs, leash_m, curfew_exempt) = content
+                .as_ref()
+                .map(|(rounds, _)| build_legs(rounds, &resolver, id, occupation.as_deref(), home, base))
+                .unwrap_or((Vec::new(), DEFAULT_ROUND_LEASH_M, false));
+
+            // Water binding: only the drawing occupations get a source, bound to
+            // the nearest staffed well; their thirst is spread so the curbs get
+            // busy at once rather than all later.
+            let (source, is_household) = match vessel_of(occupation.as_deref()) {
+                Some(is_household) if !staffed.is_empty() => {
+                    let nearest = *staffed
+                        .iter()
+                        .min_by(|left, right| {
+                            let dl = self.sources[**left].draw_point.distance(base);
+                            let dr = self.sources[**right].draw_point.distance(base);
+                            dl.partial_cmp(&dr)
+                                .unwrap_or(std::cmp::Ordering::Equal)
+                                // Explicit tie-break by source index for determinism.
+                                .then_with(|| left.cmp(right))
+                        })
+                        .expect("staffed is non-empty");
+                    let thirst = THIRST_MAX * hash01("water_thirst_seed", id, 0);
+                    world.characters.get_mut(id).expect("drawer exists").state.needs.thirst = thirst;
+                    drawers += 1;
+                    (Some(nearest), is_household)
+                }
+                _ => (None, false),
+            };
+
+            self.people.insert(
                 id.clone(),
-                Waterer {
+                Townsperson {
                     home,
+                    base,
+                    legs,
+                    leash_m,
+                    curfew_exempt,
                     source,
                     is_household,
                     phase: Phase::Idle,
@@ -333,7 +596,7 @@ impl WaterRound {
         }
 
         diagnostics.push(format!(
-            "[smart actors] water round: {} sources, {} staffed, {enrolled} drawers",
+            "[smart actors] round: {} water sources, {} staffed | {enrolled} enrolled, {housed} housed, {drawers} water drawers",
             self.sources.len(),
             staffed.len(),
         ));
@@ -341,33 +604,122 @@ impl WaterRound {
     }
 }
 
-/// Advance the round one poll. Split from the [`WaterRound`] methods as a free
-/// function so it can borrow the round and the world (disjoint [`Engine`] fields)
-/// at once. A no-op until [`WaterRound::seed`] has run. `player_id` is who the
-/// well sounds play *for*: they are player-audible ambience, never an NPC percept
-/// or a reaction nudge (see [`service_sources`]).
+/// Build a townsperson's resolved legs from their route override (the 19 authored
+/// majors) or their occupation template, dropping any leg whose anchor does not
+/// resolve.
+fn build_legs(
+    rounds: &RoundsDoc,
+    resolver: &PlaceResolver,
+    id: &ActorId,
+    occupation: Option<&str>,
+    home: Option<Vec3>,
+    base: Vec3,
+) -> (Vec<RoundLeg>, f64, bool) {
+    // The workplace: the nearest of the occupation's candidate places to home.
+    let (work_point, work_label) = occupation
+        .and_then(|occupation| rounds.workplaces.get(occupation))
+        .into_iter()
+        .flatten()
+        .filter_map(|name| resolver.resolve(name).map(|point| (point, name.clone())))
+        .min_by(|left, right| {
+            left.0
+                .distance(base)
+                .partial_cmp(&right.0.distance(base))
+                .unwrap_or(std::cmp::Ordering::Equal)
+                // Explicit tie-break by place name, so an exact distance tie is
+                // resolved the same way every run (matching the keeper code).
+                .then_with(|| left.1.cmp(&right.1))
+        })
+        .map_or((None, None), |(point, label)| (Some(point), Some(label)));
+
+    // Route override for the majors, else the occupation's archetype.
+    let (leg_specs, leash_m, curfew_exempt): (&[LegSpec], f64, bool) =
+        if let Some(route) = rounds.routes.get(id.as_str()) {
+            (
+                &route.legs,
+                route.leash_m.unwrap_or(DEFAULT_ROUND_LEASH_M),
+                route.curfew_exempt.unwrap_or(false),
+            )
+        } else if let Some(template) = occupation
+            .and_then(|occupation| rounds.occupations.get(occupation))
+            .and_then(|archetype| rounds.archetypes.get(archetype))
+        {
+            (&template.legs, template.leash_m, template.curfew_exempt)
+        } else {
+            (&[], DEFAULT_ROUND_LEASH_M, false)
+        };
+
+    let mut legs = Vec::with_capacity(leg_specs.len());
+    for spec in leg_specs {
+        let (at, label, is_home) = match spec.at.as_str() {
+            "home" => match home {
+                Some(home) => (home, "home".to_string(), true),
+                None => continue, // the homeless have no bed to walk to
+            },
+            "workplace" => match (work_point, &work_label) {
+                (Some(point), Some(label)) => (point, label.clone(), false),
+                _ => continue, // no workplace resolved for this trade
+            },
+            name => match resolver.resolve(name) {
+                Some(point) => (point, name.to_string(), false),
+                None => continue, // a place not in this graph
+            },
+        };
+        legs.push(RoundLeg {
+            from: spec.from,
+            at,
+            label,
+            doing: spec.doing,
+            only_on: spec.only_on.clone(),
+            is_home,
+        });
+    }
+    (legs, leash_m, curfew_exempt)
+}
+
+/// The active leg at a given office and weekday: among the eligible legs (begun
+/// by `office`, allowed today), the one with the greatest `from`, later
+/// array-position winning a tie — so a market-day leg placed after the generic
+/// one wins on its day and is filtered out otherwise. If nothing has begun yet
+/// (deep night before the first leg), the day's tail leg carries over.
+fn active_leg(legs: &[RoundLeg], office: Office, weekday: Weekday) -> Option<&RoundLeg> {
+    let eligible = |leg: &&RoundLeg| leg.only_on.as_ref().is_none_or(|days| days.contains(&weekday));
+    let pick = |filter: &dyn Fn(&&RoundLeg) -> bool| -> Option<&RoundLeg> {
+        let mut best: Option<&RoundLeg> = None;
+        for leg in legs.iter().filter(|leg| filter(leg)) {
+            if best.is_none_or(|current| leg.from >= current.from) {
+                best = Some(leg);
+            }
+        }
+        best
+    };
+    pick(&|leg| leg.from <= office && eligible(leg)).or_else(|| pick(&eligible))
+}
+
+/// Advance the round one poll: decay thirst, resolve arrivals, work the well
+/// queues, and run the ladder. A no-op until [`Round::seed`] has run. `player_id`
+/// is who the well sounds play *for*.
 pub fn tick(
-    round: &mut WaterRound,
+    round: &mut Round,
     world: &mut World,
     nav: &NavData,
     clock: &WorldClock,
     now: f64,
     player_id: &ActorId,
 ) {
-    if round.sources.is_empty() {
+    if !round.seeded {
         return;
     }
-
     decay_thirst(round, world, clock, now);
     resolve_arrivals(round, world);
     service_sources(round, world, nav, now, player_id);
-    run_ladder(round, world, nav, now);
+    run_ladder(round, world, nav, clock, now);
 }
 
-/// Thirst falls by the game clock so it keeps pace with the sun and the debug
-/// time-scale. Only enrolled drawers decay — the rest of the cast has no need
-/// gauge in play until M4.
-fn decay_thirst(round: &mut WaterRound, world: &mut World, clock: &WorldClock, now: f64) {
+/// Thirst falls by the game clock, so it keeps pace with the sun and the debug
+/// time-scale. Only water-drawers decay — the rest of the cast has no thirst gauge
+/// in play.
+fn decay_thirst(round: &mut Round, world: &mut World, clock: &WorldClock, now: f64) {
     let game_days = clock.game_days(now);
     let delta_days = (game_days - round.last_game_days).max(0.0);
     round.last_game_days = game_days;
@@ -375,21 +727,24 @@ fn decay_thirst(round: &mut WaterRound, world: &mut World, clock: &WorldClock, n
     if drop <= 0.0 {
         return;
     }
-    for id in round.waterers.keys() {
+    for (id, person) in &round.people {
+        if !person.draws_water() {
+            continue;
+        }
         if let Some(character) = world.characters.get_mut(id) {
             character.state.needs.thirst = (character.state.needs.thirst - drop).max(0.0);
         }
     }
 }
 
-/// Move arrivals through the state machine: an approacher who has reached the
-/// curb joins the queue; a returner who has reached home falls idle again.
-fn resolve_arrivals(round: &mut WaterRound, world: &mut World) {
-    let ids: Vec<ActorId> = round.waterers.keys().cloned().collect();
+/// Move arrivals through the state machine: an approacher who reached the curb
+/// joins the queue; a returner or traveller who reached their anchor falls idle.
+fn resolve_arrivals(round: &mut Round, world: &mut World) {
+    let ids: Vec<ActorId> = round.people.keys().cloned().collect();
     for id in ids {
         let (phase, source_idx) = {
-            let waterer = &round.waterers[&id];
-            (waterer.phase, waterer.source)
+            let person = &round.people[&id];
+            (person.phase, person.source)
         };
         let Some(character) = world.characters.get(&id) else {
             continue;
@@ -401,22 +756,20 @@ fn resolve_arrivals(round: &mut WaterRound, world: &mut World) {
 
         match phase {
             Phase::Approaching => {
+                let source_idx = source_idx.expect("an approacher has a water source");
                 let at_curb =
                     position.distance(round.sources[source_idx].draw_point) <= WELL_ARRIVE_RADIUS_M;
                 if at_curb {
                     enqueue(round, source_idx, id.clone());
-                    round.waterers.get_mut(&id).expect("waterer exists").phase = Phase::Queued;
-                    // Stop being a mover while queued.
+                    round.people.get_mut(&id).expect("person exists").phase = Phase::Queued;
                     world.characters.get_mut(&id).expect("drawer exists").state.movement = None;
                 } else {
-                    // The route stopped short (blocked or already close-but-not
-                    // arrived); re-decide next cadence rather than stranding them.
-                    round.waterers.get_mut(&id).expect("waterer exists").phase = Phase::Idle;
+                    round.people.get_mut(&id).expect("person exists").phase = Phase::Idle;
                 }
             }
-            Phase::Returning => {
-                round.waterers.get_mut(&id).expect("waterer exists").phase = Phase::Idle;
-                world.characters.get_mut(&id).expect("drawer exists").state.movement = None;
+            Phase::Returning | Phase::Travelling => {
+                round.people.get_mut(&id).expect("person exists").phase = Phase::Idle;
+                world.characters.get_mut(&id).expect("mover exists").state.movement = None;
             }
             _ => {}
         }
@@ -425,13 +778,13 @@ fn resolve_arrivals(round: &mut WaterRound, world: &mut World) {
 
 /// Insert `actor` into the source's queue, household vessels ahead of trade ones,
 /// preserving arrival order within each class (`lore/wells_and_water.md`).
-fn enqueue(round: &mut WaterRound, source_idx: usize, actor: ActorId) {
-    let is_household = round.waterers[&actor].is_household;
+fn enqueue(round: &mut Round, source_idx: usize, actor: ActorId) {
+    let is_household = round.people[&actor].is_household;
     if is_household {
         let insert_at = round.sources[source_idx]
             .queue
             .iter()
-            .position(|id| !round.waterers.get(id).is_some_and(|waterer| waterer.is_household))
+            .position(|id| !round.people.get(id).is_some_and(|person| person.is_household))
             .unwrap_or(round.sources[source_idx].queue.len());
         round.sources[source_idx].queue.insert(insert_at, actor);
     } else {
@@ -443,20 +796,16 @@ fn enqueue(round: &mut WaterRound, source_idx: usize, actor: ActorId) {
 /// start the next one, and clank the gear while anybody is waiting.
 ///
 /// **The well sound is a clock, not an event** (`features/movement/05_the_llm_seam.md`
-/// §5.2, exactly as the bell is): it is emitted as an *unattributed world sound
-/// heard only by the player*, so it reaches no NPC inbox and — critically — never
-/// nudges a reaction turn. Ten curbs clanking every few seconds would otherwise
-/// pin the scheduler's single priority slot forever (`scheduler.rs`: a nudge is
-/// ungated by proximity) and burn the token budget the round is meant to cost
-/// nothing. The drawer instead *remembers their own draw*, so the person the
-/// player walks up to and asks can still say what they are doing (README §8).
-fn service_sources(round: &mut WaterRound, world: &mut World, nav: &NavData, now: f64, player_id: &ActorId) {
+/// §5.2, exactly as the bell is): an unattributed world sound heard only by the
+/// player, so it reaches no NPC inbox and never nudges a reaction turn. The
+/// drawer instead *remembers their own draw*, so the person the player asks can
+/// still say what they are doing.
+fn service_sources(round: &mut Round, world: &mut World, nav: &NavData, now: f64, player_id: &ActorId) {
     let mut finished: Vec<ActorId> = Vec::new();
     let mut started: Vec<ActorId> = Vec::new();
     let mut emissions: Vec<(&'static str, Vec3)> = Vec::new();
 
     for source in &mut round.sources {
-        // Finish the current draw.
         if let Some((drawer, ends_at)) = source.serving.clone()
             && now >= ends_at
         {
@@ -468,7 +817,6 @@ fn service_sources(round: &mut WaterRound, world: &mut World, nav: &NavData, now
             }
             finished.push(drawer);
         }
-        // Start the next one, if the well is kept and somebody is waiting.
         if source.serving.is_none()
             && source.keeper.is_some()
             && let Some(front) = source.queue.first().cloned()
@@ -476,30 +824,24 @@ fn service_sources(round: &mut WaterRound, world: &mut World, nav: &NavData, now
             source.serving = Some((front.clone(), now + WATER_DRAW_SECONDS));
             started.push(front);
         }
-        // Keep the gear turning while the source is busy.
         let busy = source.serving.is_some() || !source.queue.is_empty();
-        if busy
-            && source.keeper.is_some()
-            && now >= source.keeper_next_sound
-        {
+        if busy && source.keeper.is_some() && now >= source.keeper_next_sound {
             source.keeper_next_sound = now + WELL_KEEPER_SOUND_INTERVAL_SECONDS;
             emissions.push((source.draw_sound, source.draw_point));
         }
     }
 
     for drawer in started {
-        // The memory of drawing lands as the turn *begins*, so the person now at
-        // the front — the one the player walks up to and asks — can already say
-        // what they are doing (README §8). No sound broadcast, no nudge.
         let self_line = round
-            .waterers
+            .people
             .get(&drawer)
-            .map(|waterer| round.sources[waterer.source].draw_sound)
+            .and_then(|person| person.source)
+            .map(|source| round.sources[source].draw_sound)
             .and_then(|sound_id| world.sound_catalog.get(sound_id))
             .and_then(|sound| sound.seen.as_ref())
             .map(|seen| seen.replace("{actor}", "You"));
-        if let Some(waterer) = round.waterers.get_mut(&drawer) {
-            waterer.phase = Phase::Drawing;
+        if let Some(person) = round.people.get_mut(&drawer) {
+            person.phase = Phase::Drawing;
         }
         if let (Some(line), Some(character)) = (self_line, world.characters.get_mut(&drawer)) {
             character.remember_percept(line);
@@ -509,23 +851,23 @@ fn service_sources(round: &mut WaterRound, world: &mut World, nav: &NavData, now
         if let Some(character) = world.characters.get_mut(&drawer) {
             character.state.needs.thirst = THIRST_MAX; // a full vessel
         }
-        // Walk home again; the ladder resumes there.
-        let home = round.waterers.get(&drawer).map(|waterer| waterer.home);
+        // Walk back to base (home if housed, else spawn); the ladder resumes there.
+        let base = round.people.get(&drawer).map(|person| person.base);
         let position = world.characters.get(&drawer).map(Character::position_m);
-        if let (Some(home), Some(position)) = (home, position) {
-            match route_path(nav, position, home) {
+        if let (Some(base), Some(position)) = (base, position) {
+            match route_path(nav, position, base) {
                 Some(path) => set_route(world, &drawer, path),
                 None => {
                     world.characters.get_mut(&drawer).expect("drawer exists").state.movement = None;
                 }
             }
         }
-        if let Some(waterer) = round.waterers.get_mut(&drawer) {
-            waterer.phase = Phase::Returning;
+        if let Some(person) = round.people.get_mut(&drawer) {
+            person.phase = Phase::Returning;
         }
     }
-    // The player-audible ambient: an unattributed world sound at the curb, heard
-    // only if the player is within range — no NPC recipient, so no reaction nudge.
+
+    // The player-audible ambient: an unattributed world sound at the curb.
     let player_pos = world.characters.get(player_id).map(Character::position_m);
     for (sound_id, position) in emissions {
         if !world.sounds_enabled {
@@ -550,18 +892,20 @@ fn service_sources(round: &mut WaterRound, world: &mut World, nav: &NavData, now
     }
 }
 
-/// The behaviour ladder, run for idle drawers whose walk has ended and whose
+/// The behaviour ladder, run for idle people whose walk has ended and whose
 /// cadence has come round. First match wins (`features/movement/03_the_ladder.md`
-/// §4); M3 ships rungs 2, 6, 11 and 12.
-fn run_ladder(round: &mut WaterRound, world: &mut World, nav: &NavData, now: f64) {
-    let ids: Vec<ActorId> = round.waterers.keys().cloned().collect();
+/// §4); M4 adds the curfew (5) and round (9) rungs to M3's water (2, 6), social
+/// (11) and wander (12).
+fn run_ladder(round: &mut Round, world: &mut World, nav: &NavData, clock: &WorldClock, now: f64) {
+    let time = clock.at(now);
+    let ids: Vec<ActorId> = round.people.keys().cloned().collect();
     for id in ids {
-        let (phase, epoch, source_idx, home, next_decision) = {
-            let waterer = &round.waterers[&id];
-            (waterer.phase, waterer.epoch, waterer.source, waterer.home, waterer.next_decision)
+        let (phase, epoch, next_decision) = {
+            let person = &round.people[&id];
+            (person.phase, person.epoch, person.next_decision)
         };
         if phase != Phase::Idle {
-            continue; // committed to a well trip; nothing re-decides mid-errand
+            continue; // committed to an errand; nothing re-decides mid-walk
         }
         let Some(character) = world.characters.get(&id) else {
             continue;
@@ -570,90 +914,154 @@ fn run_ladder(round: &mut WaterRound, world: &mut World, nav: &NavData, now: f64
             continue;
         }
 
-        let position = character.position_m();
-        let thirst = character.needs().thirst;
-        let queue_len = round.sources[source_idx].queue.len();
-        let decision = decide(world, nav, &id, epoch, position, home, thirst, queue_len);
+        let decision = decide(round, world, nav, &id, epoch, time.office, time.weekday);
 
         // Schedule the next evaluation and advance the salt.
         {
-            let waterer = round.waterers.get_mut(&id).expect("waterer exists");
-            waterer.epoch = epoch.wrapping_add(1);
-            waterer.next_decision = now + decision_jitter(&id, waterer.epoch);
+            let person = round.people.get_mut(&id).expect("person exists");
+            person.epoch = epoch.wrapping_add(1);
+            person.next_decision = now + decision_jitter(&id, person.epoch);
         }
 
-        match decision {
-            Decision::Approach => {
-                let draw_point = round.sources[source_idx].draw_point;
-                match route_path(nav, position, draw_point) {
-                    Some(path) => {
-                        set_route(world, &id, path);
-                        round.waterers.get_mut(&id).expect("waterer exists").phase = Phase::Approaching;
-                    }
-                    // Already standing at the curb: join the queue now.
-                    None => {
-                        enqueue(round, source_idx, id.clone());
-                        round.waterers.get_mut(&id).expect("waterer exists").phase = Phase::Queued;
-                        world.characters.get_mut(&id).expect("drawer exists").state.movement = None;
-                    }
-                }
-            }
-            Decision::Wander(target) => {
-                if let Some(path) = route_path(nav, position, target) {
-                    set_route(world, &id, path);
-                }
-            }
-            Decision::Stay => {}
-        }
+        apply_decision(round, world, nav, &id, decision);
     }
 }
 
-/// One idle drawer's rung, read against the four sources of truth
-/// (`features/movement/03_the_ladder.md` §2).
+/// The outcome of one idle person's ladder pass.
+#[derive(Debug)]
 enum Decision {
     /// Rungs 2 & 6: set off for the assigned well.
-    Approach,
+    ApproachWell,
+    /// Rungs 5 & 9: walk to a round anchor (or home, at curfew).
+    Travel(Vec3),
     /// Rungs 11 & 12: drift toward a friend, or mill about near home.
     Wander(Vec3),
     /// Stand where you are this cadence.
     Stay,
 }
 
-#[allow(clippy::too_many_arguments)]
 fn decide(
+    round: &Round,
     world: &World,
     nav: &NavData,
     id: &ActorId,
     epoch: u64,
-    position: Vec3,
-    home: Vec3,
-    thirst: f64,
-    queue_len: usize,
+    office: Office,
+    weekday: Weekday,
 ) -> Decision {
-    // Rung 2 — parched: the well, now, whatever the queue.
-    if thirst < THIRST_PARCHED {
-        return Decision::Approach;
+    let person = &round.people[id];
+    let character = &world.characters[id];
+    let position = character.position_m();
+    let night = matches!(office, Office::Snuffing | Office::Watch);
+    let water = person
+        .source
+        .map(|source| (character.needs().thirst, round.sources[source].queue.len()));
+
+    // Rung 2 — parched: drop everything and go to the well now, whatever the hour.
+    // This *precedes* curfew (`03_the_ladder.md` §4: a thirsty man goes to the well
+    // "regardless of the hour"), so a parched drawer is never sent to bed instead.
+    if let Some((thirst, _)) = water
+        && thirst < THIRST_PARCHED
+    {
+        return Decision::ApproachWell;
     }
+
+    // Rung 5 — curfew: at night, the housed go home (unless a night trade). The
+    // homeless have nowhere to go and fall through to linger in the street, which
+    // is exactly the person the watch stops (`04_the_round.md` §6).
+    if night && !person.curfew_exempt
+        && let Some(home) = person.home
+    {
+        return if position.distance(home) <= HOME_ARRIVE_RADIUS_M {
+            Decision::Stay
+        } else {
+            Decision::Travel(home)
+        };
+    }
+
     // Rung 6 — thirsty: the well, but only if its queue is short.
-    if thirst < THIRST_THIRSTY && queue_len < WELL_QUEUE_SHORT {
-        return Decision::Approach;
+    if let Some((thirst, queue_len)) = water
+        && thirst < THIRST_THIRSTY
+        && queue_len < WELL_QUEUE_SHORT
+    {
+        return Decision::ApproachWell;
     }
-    // Rung 11 — the social pull: drift toward a known, settled neighbour so the
-    // people the player walks up to are already a scene.
+
+    // Rung 9 — the round: be where the current leg says. Skipped at night for the
+    // non-exempt (curfew already sent the housed home; the homeless linger rather
+    // than march to a workshop at 2 a.m.).
+    let leg = if night && !person.curfew_exempt {
+        None
+    } else {
+        active_leg(&person.legs, office, weekday)
+    };
+    if let Some(leg) = leg {
+        let radius = if leg.is_home { HOME_ARRIVE_RADIUS_M } else { ROUND_ARRIVE_RADIUS_M };
+        if position.distance(leg.at) > radius {
+            return Decision::Travel(leg.at);
+        }
+    }
+    // The leash centre is the *post* once we have reached it — not home, or the
+    // social pull and the wander would march a working mason all the way back to
+    // his own door. With no active leg (a homeless idler), fall back to base.
+    let anchor = leg.map_or(person.base, |leg| leg.at);
+
+    // Rung 11 — the social pull: drift toward a known, settled neighbour.
     if let Some(friend) = nearest_known_settled(world, id, position) {
-        let toward = drift_target(home, position, friend);
+        let toward = drift_target(anchor, position, friend, person.leash_m);
         if nav.is_walkable(toward.x, toward.z) {
             return Decision::Wander(toward);
         }
     }
-    // Rung 12 — wander: mill about within a leash of home, but not every time —
-    // people mostly stand.
-    if hash01("water_wander_gate", id, epoch) < 0.4
-        && let Some(target) = wander_target(nav, id, epoch, home)
+    // Rung 12 — wander: mill near the post, but not every time — people mostly
+    // stand and work.
+    if hash01("round_wander_gate", id, epoch) < 0.35
+        && let Some(target) = wander_target(nav, id, epoch, anchor, person.leash_m)
     {
         return Decision::Wander(target);
     }
     Decision::Stay
+}
+
+/// Carry out a decision: set the walk and the phase, or stand.
+fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &ActorId, decision: Decision) {
+    match decision {
+        Decision::ApproachWell => {
+            let source = round.people[id].source.expect("a well decision has a source");
+            let draw_point = round.sources[source].draw_point;
+            let position = world.characters[id].position_m();
+            match route_path(nav, position, draw_point) {
+                Some(path) => {
+                    set_route(world, id, path);
+                    round.people.get_mut(id).expect("person exists").phase = Phase::Approaching;
+                }
+                None => {
+                    // Already at the curb: join the queue now.
+                    enqueue(round, source, id.clone());
+                    round.people.get_mut(id).expect("person exists").phase = Phase::Queued;
+                    world.characters.get_mut(id).expect("drawer exists").state.movement = None;
+                }
+            }
+        }
+        Decision::Travel(target) => {
+            let position = world.characters[id].position_m();
+            if let Some(path) = route_path(nav, position, target) {
+                set_route(world, id, path);
+                round.people.get_mut(id).expect("person exists").phase = Phase::Travelling;
+            }
+        }
+        Decision::Wander(target) => {
+            let position = world.characters[id].position_m();
+            if let Some(path) = route_path(nav, position, target) {
+                set_route(world, id, path);
+                // A wander is a short errand like any other: mark it Travelling so
+                // resolve_arrivals clears the (now empty) `movement` on arrival,
+                // rather than leaving a stale `Some(path: [])` behind.
+                round.people.get_mut(id).expect("person exists").phase = Phase::Travelling;
+            }
+        }
+        Decision::Stay => {}
+    }
 }
 
 /// The nearest LLM neighbour within the social radius that this actor knows by
@@ -670,9 +1078,8 @@ fn nearest_known_settled(world: &World, id: &ActorId, position: Vec3) -> Option<
     None
 }
 
-/// A point a stride short of `friend`, clamped to the leash around `home`, so the
-/// drift reads as "coming over" without piling onto them.
-fn drift_target(home: Vec3, position: Vec3, friend: Vec3) -> Vec3 {
+/// A point a stride short of `friend`, clamped to the leash around `base`.
+fn drift_target(base: Vec3, position: Vec3, friend: Vec3, leash_m: f64) -> Vec3 {
     let toward = friend - position;
     let length = toward.length();
     let target = if length > 1.5 {
@@ -680,16 +1087,16 @@ fn drift_target(home: Vec3, position: Vec3, friend: Vec3) -> Vec3 {
     } else {
         position
     };
-    clamp_to_leash(home, target)
+    clamp_to_leash(base, target, leash_m)
 }
 
-/// A deterministic walkable point within [`WANDER_LEASH_M`] of home, or `None` if
-/// a few hashed tries all land on stone.
-fn wander_target(nav: &NavData, id: &ActorId, epoch: u64, home: Vec3) -> Option<Vec3> {
+/// A deterministic walkable point within `leash_m` of base, or `None` if a few
+/// hashed tries all land on stone.
+fn wander_target(nav: &NavData, id: &ActorId, epoch: u64, base: Vec3, leash_m: f64) -> Option<Vec3> {
     for attempt in 0..4 {
-        let angle = hash01("water_wander_angle", id, epoch ^ (attempt as u64)) * std::f64::consts::TAU;
-        let radius = hash01("water_wander_radius", id, epoch.wrapping_add(attempt as u64)) * WANDER_LEASH_M;
-        let target = Vec3::new(home.x + angle.cos() * radius, WALK_Y, home.z + angle.sin() * radius);
+        let angle = hash01("round_wander_angle", id, epoch ^ (attempt as u64)) * std::f64::consts::TAU;
+        let radius = hash01("round_wander_radius", id, epoch.wrapping_add(attempt as u64)) * leash_m;
+        let target = Vec3::new(base.x + angle.cos() * radius, WALK_Y, base.z + angle.sin() * radius);
         if nav.is_walkable(target.x, target.z) {
             return Some(target);
         }
@@ -697,21 +1104,20 @@ fn wander_target(nav: &NavData, id: &ActorId, epoch: u64, home: Vec3) -> Option<
     None
 }
 
-/// Pull `target` back to the edge of the leash circle around `home` if it strays.
-fn clamp_to_leash(home: Vec3, target: Vec3) -> Vec3 {
-    let offset = Vec3::new(target.x - home.x, 0.0, target.z - home.z);
+/// Pull `target` back to the edge of the leash circle around `base` if it strays.
+fn clamp_to_leash(base: Vec3, target: Vec3, leash_m: f64) -> Vec3 {
+    let offset = Vec3::new(target.x - base.x, 0.0, target.z - base.z);
     let length = offset.length();
-    if length <= WANDER_LEASH_M {
+    if length <= leash_m {
         Vec3::new(target.x, WALK_Y, target.z)
     } else {
-        let edge = offset / length * WANDER_LEASH_M;
-        Vec3::new(home.x + edge.x, WALK_Y, home.z + edge.z)
+        let edge = offset / length * leash_m;
+        Vec3::new(base.x + edge.x, WALK_Y, base.z + edge.z)
     }
 }
 
 /// Route `from` → `to` and trim the leading node when it is where we already
-/// stand (else the first leg is zero-length). `None` means already there or no
-/// route — the same discipline `seed_pacing_actor` uses.
+/// stand. `None` means already there or no route.
 fn route_path(nav: &NavData, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
     let route = nav.route_between(from, to)?;
     let mut path = route.points;
@@ -721,7 +1127,7 @@ fn route_path(nav: &NavData, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
     if path.is_empty() { None } else { Some(path) }
 }
 
-/// Give a drawer a fresh walk with no patrol, keeping their gait phase seamless.
+/// Give a mover a fresh walk with no patrol, keeping their gait phase seamless.
 fn set_route(world: &mut World, id: &ActorId, path: Vec<Vec3>) {
     let Some(character) = world.characters.get_mut(id) else {
         return;
@@ -744,12 +1150,11 @@ fn set_route(world: &mut World, id: &ActorId, path: Vec<Vec3>) {
 fn decision_jitter(id: &ActorId, epoch: u64) -> f64 {
     LADDER_DECISION_MIN_SECONDS
         + (LADDER_DECISION_MAX_SECONDS - LADDER_DECISION_MIN_SECONDS)
-            * hash01("water_decision", id, epoch)
+            * hash01("round_decision", id, epoch)
 }
 
 /// A pure `[0, 1)` roll from `(salt, actor_id, epoch)` — the sim's deterministic
-/// stand-in for an RNG (`attention.rs` curiosity idiom; the sim has no clock and
-/// no randomness by decree).
+/// stand-in for an RNG (`attention.rs` curiosity idiom).
 fn hash01(salt: &str, id: &ActorId, epoch: u64) -> f64 {
     let mut hasher = DefaultHasher::new();
     salt.hash(&mut hasher);
@@ -759,282 +1164,4 @@ fn hash01(salt: &str, id: &ActorId, epoch: u64) -> f64 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        Office, WorldClock,
-        character::{CharacterSheet, Control},
-        event::EventType,
-        lore::{LoreProfile, PlanningWard, Significance},
-        sounds::SoundCatalog,
-    };
-    use std::collections::BTreeSet;
-
-    const NAV_JSON: &str = include_str!("../../../assets/world/navigation.json");
-    const NAV_BIN: &[u8] = include_bytes!("../../../assets/world/navigation.bin");
-    const CATALOG: &str = include_str!("../../../assets/sounds/catalog.toml");
-
-    fn nav() -> NavData {
-        NavData::from_parts(NAV_JSON, NAV_BIN).expect("the committed nav loads")
-    }
-
-    fn clock() -> WorldClock {
-        // One game day per real hour, opening at Dayspring — the shipped default.
-        WorldClock::new(3600.0, Office::Dayspring, 0, 0.05)
-    }
-
-    /// A character at `position`, optionally a `domestic_servant` (the occupation
-    /// the round enrols) — otherwise a plain LLM townsperson (a keeper candidate).
-    fn person(id: &str, position: Vec3, occupation: Option<&str>) -> Character {
-        let lore = occupation.map(|occupation_id| LoreProfile {
-            significance: Significance::Ambient,
-            planning_ward: PlanningWard::Fabric,
-            age: 30,
-            gender: "f".into(),
-            occupation_id: Some(occupation_id.into()),
-            occupation_display: None,
-            title: None,
-            rank: None,
-            faction_role: None,
-            illegal_activity: None,
-            district: "Fabric".into(),
-            father: None,
-            mother: None,
-            children: Vec::new(),
-            circumstances: Vec::new(),
-            conditions: Vec::new(),
-            core_character_description: String::new(),
-            extended_character_description: String::new(),
-            curiosity: None,
-        });
-        Character::from_sheet(CharacterSheet {
-            id: ActorId::from_raw(id),
-            name: id.to_uppercase(),
-            control: Control::Llm,
-            back_story: String::new(),
-            location_description: String::new(),
-            appearance_key: id.into(),
-            voice_key: None,
-            position_m: position,
-            facing_yaw: 0.0,
-            holds: Vec::new(),
-            goal: "None".into(),
-            memories: Vec::new(),
-            knows: BTreeSet::new(),
-            lore,
-        })
-    }
-
-    fn base_world() -> World {
-        let mut world = World::new();
-        world.sound_catalog = SoundCatalog::from_toml_str(CATALOG).expect("catalog loads");
-        world
-    }
-
-    fn player() -> ActorId {
-        ActorId::from_raw("player")
-    }
-
-    /// One engine-style beat: walk the movers a slice, then run the round.
-    fn beat(round: &mut WaterRound, world: &mut World, nav: &NavData, clock: &WorldClock, now: f64, dt: f64) {
-        world.step_movement(dt, nav);
-        tick(round, world, nav, clock, now, &player());
-    }
-
-    /// The vertical slice: a parched servant walks to the well, queues, draws
-    /// (thirst refilled, the windlass heard), then heads home again.
-    #[test]
-    fn a_parched_servant_walks_to_the_well_draws_and_goes_home() {
-        let nav = nav();
-        let clock = clock();
-        let ford = nav.place("Ford Well").expect("Ford Well is a nav place").node;
-        let curb = nav.node_point(ford);
-        // A short, guaranteed route: start the servant one graph hop from the well.
-        let hop = nav.adjacency()[ford]
-            .first()
-            .expect("the well node has a neighbour")
-            .to;
-        let home = nav.node_point(hop);
-
-        let mut world = base_world();
-        world.add_character(person("keeper", curb, Some("mason"))); // an ambient at the curb -> keeper
-        world.add_character(person("servant", home, Some(HOUSEHOLD_OCCUPATIONS[0])));
-
-        let mut round = WaterRound::new();
-        let diagnostics = round.seed(&mut world, &nav, 0.0, &clock);
-        assert!(
-            round.sources().iter().any(|source| source.name == "Ford Well" && source.keeper.is_some()),
-            "Ford Well was staffed: {diagnostics:?}"
-        );
-        // The keeper stands at the curb; the servant enrolled as a drawer.
-        assert_eq!(world.characters[&ActorId::from_raw("keeper")].position_m(), curb);
-
-        // Parch the servant so rung 2 fires at once.
-        world
-            .characters
-            .get_mut(&ActorId::from_raw("servant"))
-            .unwrap()
-            .state
-            .needs
-            .thirst = 0.0;
-
-        let servant = ActorId::from_raw("servant");
-        let dt = 0.2;
-        let mut now = 0.0;
-        let mut drew = false;
-        let mut drew_at_max = false;
-        let mut windlass_events = 0;
-        let mut remembered = false;
-        let mut went_home = false;
-
-        for _ in 0..3000 {
-            now += dt;
-            beat(&mut round, &mut world, &nav, &clock, now, dt);
-            for event in world.drain_events() {
-                // A world sound at the well: unattributed (no actor) so it never
-                // nudges an NPC — the whole point of the M3 sound model.
-                if event.event_type == EventType::Sound
-                    && event.sound_id.as_deref() == Some("draw_water")
-                {
-                    windlass_events += 1;
-                    assert!(event.actor_id.is_none(), "the windlass is a world sound, never attributed");
-                    assert!(event.witness_ids.is_empty(), "a world sound has no witnesses to nudge");
-                }
-            }
-            if round.is_drawing_at("Ford Well") {
-                drew = true;
-            }
-            // The drawer remembers drawing, so the player can ask them.
-            if world.characters[&servant]
-                .recent_history()
-                .iter()
-                .any(|line| line.contains("drew water"))
-            {
-                remembered = true;
-            }
-            // Refilled by a completed draw.
-            if drew && world.characters[&servant].needs().thirst >= THIRST_MAX - 1.0 {
-                drew_at_max = true;
-            }
-            // Home again: back within a stride of where they started, after drawing.
-            if drew_at_max
-                && !world.characters[&servant].is_walking()
-                && world.characters[&servant].position_m().distance(home) < 2.0
-                && now > 5.0
-            {
-                went_home = true;
-                break;
-            }
-        }
-
-        assert!(drew, "the servant reached the front of the queue and drew");
-        assert!(windlass_events > 0, "the well's windlass was emitted as a world sound");
-        assert!(remembered, "the drawer remembers drawing, so they can be asked about it");
-        assert!(drew_at_max, "the draw refilled the servant's thirst");
-        assert!(went_home, "the servant walked home again after drawing");
-    }
-
-    /// Household vessels go before trade vessels in an ordinary queue, arrival
-    /// order preserved within each class (`lore/wells_and_water.md`).
-    #[test]
-    fn household_vessels_queue_ahead_of_trade_vessels() {
-        let mut round = WaterRound::default();
-        round.sources.push(WaterSource {
-            name: "Test Well".into(),
-            draw_point: Vec3::new(0.0, WALK_Y, 0.0),
-            draw_sound: "draw_water",
-            keeper: Some(ActorId::from_raw("k")),
-            queue: Vec::new(),
-            serving: None,
-            keeper_next_sound: 0.0,
-        });
-        let waterer = |household: bool| Waterer {
-            home: Vec3::ZERO,
-            source: 0,
-            is_household: household,
-            phase: Phase::Idle,
-            next_decision: 0.0,
-            epoch: 0,
-        };
-        for (id, household) in [
-            ("trade_a", false),
-            ("house_a", true),
-            ("trade_b", false),
-            ("house_b", true),
-        ] {
-            round.waterers.insert(ActorId::from_raw(id), waterer(household));
-            enqueue(&mut round, 0, ActorId::from_raw(id));
-        }
-        let order: Vec<&str> = round.sources[0].queue.iter().map(ActorId::as_str).collect();
-        // Households first (in arrival order), then trades (in arrival order).
-        assert_eq!(order, ["house_a", "house_b", "trade_a", "trade_b"]);
-    }
-
-    /// Thirst falls by the game clock, and the debug time-scale speeds it up.
-    #[test]
-    fn thirst_decays_by_the_game_clock() {
-        let nav = nav();
-        let clock = clock();
-        let ford = nav.place("Ford Well").unwrap().node;
-        let mut world = base_world();
-        world.add_character(person("keeper", nav.node_point(ford), Some("mason")));
-        world.add_character(person(
-            "servant",
-            nav.node_point(nav.adjacency()[ford][0].to),
-            Some(HOUSEHOLD_OCCUPATIONS[0]),
-        ));
-
-        let mut round = WaterRound::new();
-        round.seed(&mut world, &nav, 0.0, &clock);
-        let servant = ActorId::from_raw("servant");
-        // Top the servant up so the well trip does not refill it during the test.
-        world.characters.get_mut(&servant).unwrap().state.needs.thirst = THIRST_MAX;
-
-        // One game hour is 3600 s of game time; at 3600 s/day that is 1/24 day.
-        let one_game_hour = 3600.0 / 24.0;
-        tick(&mut round, &mut world, &nav, &clock, one_game_hour, &player());
-        let expected = THIRST_MAX - 3600.0 * crate::THIRST_DECAY_PER_GAME_SECOND;
-        let thirst = world.characters[&servant].needs().thirst;
-        assert!(
-            (thirst - expected).abs() < 1.0,
-            "thirst {thirst} decayed to ~{expected} over one game hour"
-        );
-    }
-
-    /// No lore-bearing drawers and no keeper means an inert round — the frozen
-    /// fixtures' world (no nav, no lore) never grows a queue or a mover.
-    #[test]
-    fn the_round_is_inert_without_drawers() {
-        let nav = nav();
-        let clock = clock();
-        let mut world = base_world();
-        // A lone ambient non-drawer: eligible to keep a well, but nobody draws.
-        world.add_character(person("stranger", Vec3::new(89.4, WALK_Y, 36.1), Some("mason")));
-        let mut round = WaterRound::new();
-        round.seed(&mut world, &nav, 0.0, &clock);
-        for step in 1..50 {
-            tick(&mut round, &mut world, &nav, &clock, step as f64 * 0.5, &player());
-        }
-        assert!(
-            round.sources().iter().all(|source| source.queue.is_empty()),
-            "no drawer, no queue"
-        );
-        assert!(
-            world.characters[&ActorId::from_raw("stranger")].state.movement.is_none(),
-            "a keeper never walks"
-        );
-    }
-
-    /// The deterministic decision hash gives the same city every run.
-    #[test]
-    fn the_decision_hash_is_stable() {
-        let id = ActorId::from_raw("servant");
-        assert_eq!(hash01("water_decision", &id, 3), hash01("water_decision", &id, 3));
-        assert_ne!(hash01("water_decision", &id, 3), hash01("water_decision", &id, 4));
-        // The jitter always lands inside the 1–6 s cadence band.
-        for epoch in 0..64 {
-            let jitter = decision_jitter(&id, epoch);
-            assert!((LADDER_DECISION_MIN_SECONDS..=LADDER_DECISION_MAX_SECONDS).contains(&jitter));
-        }
-    }
-}
+mod tests;
