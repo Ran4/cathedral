@@ -21,7 +21,17 @@ Nobody knows why the hail was so violent or so local. Outsiders call Ombreval ac
 
 ## Bells and hours
 
-Seven offices ring the day: the Watch, the Kindling, Dayspring, High Wick, the Waning, Lamplight, and the Snuffing — curfew, rung on the Scold. Perrin Evenblow rings the hours; Great Ambrelle, called Gravemouth, rings great feasts and great dead; no one weds under the Orphan, whose baptismal record burned. The ring rung backward is the Ruin: fire or flood, drop everything. There was no hail alarm when the Hammering began. Maren Smallvoice rings the name-knell, one stroke per year of the life, and everyone in hearing counts.
+Seven offices (the Church’s fixed daily services, announced by bells and used throughout the city to tell time) ring the day: the Watch, the Kindling, Dayspring, High Wick, the Waning, Lamplight, and the Snuffing — curfew, rung on the Scold. Perrin Evenblow rings the hours; Great Ambrelle, called Gravemouth, rings great feasts and great dead; no one weds under the Orphan, whose baptismal record burned. The ring rung backward is the Ruin: fire or flood, drop everything. There was no hail alarm when the Hammering began. Maren Smallvoice rings the name-knell, one stroke per year of the life, and everyone in hearing counts.
+
+| Office           | Time          | Daily life |
+|------------------|---------------|------------|
+| **The Watch**    | Deep night    | Most of the city is asleep. |
+| **The Kindling** | Before dawn   | Bakers, cooks, servants, carriers, and well keepers begin work. |
+| **Dayspring**    | Sunrise       | Markets, apprentices, animals, and school-bound children enter the streets. |
+| **High Wick**    | Noon          | Trade and professional carrying are in full motion. |
+| **The Waning**   | Mid-afternoon | Returning workers, cooks, and laundresses make their later errands. |
+| **Lamplight**    | Sunset        | Markets contract, shutters close, public lamps are lit, and people finish their errands. |
+| **The Snuffing** | Curfew        | Gates shut and public wells and cisterns are secured. |
 
 ## Money and markets
 
