@@ -1,18 +1,95 @@
 # The Cathedral-City of Impossible Light
 
-A first-person "walking simulation", taking place in the Cathedral-City of Ombreval.
+A first-person walking simulation set in **Ombreval**, a fortified medieval
+city-state built entirely in Rust with Bevy. You explore it on foot — no quests,
+no HUD to speak of, just a living city to wander through and the people in it to
+talk to.
 
-The cathedral opens into a roughly 1.2 by 1.0 km fortified medieval city. Most
-streets pinch and change width between independently offset façades; each block
-contains a 4.6 m route that doglegs twice, lateral alleys, projecting upper
-floors, covered passages, small courts, and frequent overhead bridges.
-Those dense quarters open selectively into five town squares, markets, a canal
-and bridges, secondary churches and towers, and the cathedral's ceremonial
-forecourt.
+The city takes its silhouette from the monumental engraving below: a colossus of
+domes, spires, colonnades, staircases, and bridges crowded down to the waterline
+with people going about their day. The scene is assembled procedurally from
+original generated material artwork — cathedral limestone, weathered city
+plaster, half-timber infill, dark fieldstone, terracotta and slate roofs, and
+the great rose window.
 
-# Tech
+The cathedral, **the Lanthorn**, opens into a roughly 1.2 × 1.0 km walled city.
+Most streets pinch and change width between independently offset façades; each
+block hides a 4.6 m route that doglegs twice, lateral alleys, projecting upper
+floors, covered passages, small courts, and frequent overhead bridges between
+lofts. Those dense quarters open selectively into five town squares, markets,
+the dry channel of a diverted river, secondary churches and towers, and the
+cathedral's ceremonial forecourt. For developer playtesting, gravity-free flight
+makes the full skyline explorable.
 
-Core game: Rust + Bevy 0.19
+Two things make Ombreval more than scenery:
+
+- **The impossible light.** Through the cathedral's Great Rose — and nowhere else
+  in the world — a cold green-white second sun hangs in the sky. It casts a faint
+  second shadow but no heat, heals nothing, and has never been explained. The
+  Church calls it *the Emblem*; the street calls it *the Green Sun*.
+- **Smart actors.** The city's inhabitants are LLM-driven characters who work,
+  remember, gossip, form opinions of you, and can be spoken to out loud with your
+  own microphone. They live real daily routines — homes, workplaces, market days,
+  a curfew bell.
+
+## The world
+
+> The full canon lives in [`lore/`](lore/) — history, families, occupations, the
+> rose-window iconography, folk custom, and a rumor pool NPCs can draw on. What
+> follows is only the shape of it. Note that most of the lore is *not* directly
+> represented in the game.
+
+**Ombreval** is a free walled city-state on the river **Serle**, roughly 1.2 km
+west-to-east and 1.0 km north-to-south. Its oldest ground was a ford-market;
+the Lanthorn — properly the Great Church of Saint Ambrelle, and the city's
+cathedral, civic clock, largest employer, and perpetual building project — rose
+a little west of the centre, its west front and Great Rose facing the stepped
+forecourt called **the Gradine**.
+
+**A city in the shell of a larger one.** Ombreval was built for about **15,000
+people**; only about **5,000** remain. Three disasters explain the difference:
+the *Great Rains* of F.362, which flooded the lower city and broke its river
+channel; the *Hammering* of F.415, a freak hailstorm that killed thousands in a
+quarter of an hour; and the *Long Departure* that followed. The city still works
+— streets cluster with life around work, worship, water, and markets — but lively
+ground floors now sit beneath empty upper rooms, and flood-lines and patched
+rooflines are everywhere. It is a functioning city living inside its more
+populous past, not a ruin.
+
+**The five squares** organize the wards:
+
+1. **The Wickmarket** — western chandlers' square: wax, tallow, wicks, and lamps.
+2. **Coswald's Yard** — northern builders' square: stone, timber, lime, and the masons' lodge.
+3. **The Tallage** — customs square on the dry river channel: tolls, weights, and pawnshops.
+4. **Maren's Green** — south-eastern fish and boatmen's square, with Saint Maren's church.
+5. **The Bellstand** — eastern proclamation square beneath the secular watch-bell.
+
+Between them run named places with their own reputations — Cinder Row (the
+glaziers' street), the Needle (the narrowest lane; "past the Needle" means beyond
+saving), the Draper's Reach, Gaunt Passage, the Eel Bridge, the Hungry Ox tavern.
+From F.83 the Serle ran straight *through* the city in a channel called **the
+Cut**; after the Great Rains it was closed and turned into its present bed outside
+the south wall, so the filled Cut survives as an unusually straight trade street
+whose bridges and moorings keep working river-names in dry ground.
+
+**The river and the world beyond.** The Serle keeps one name from source to sea —
+*nobody renames water*. It rises in **the Combs**, passes the wool town of
+**Brede**, and runs down past Ombreval to the lord's toll-town of **Harne** ("to
+buy peace of Harne" means paying an unavoidable price), the salt-pans of
+**Salorge** at the river mouth, with the distant primatial city of **Ostrelle**
+six weeks off up the Lantern Road. These lie beyond the walls and outside the
+playable game, but the city knows them at second hand, and news travels only at
+the speed of feet, boats, and carried paper.
+
+**Time, money, and faith.** Years are counted in the **Fabric era** — F.1 is the
+laying of the Lanthorn's first stone, and the default present year is **F.437**.
+The seven-day week opens on Bellday; bells divide the day from the Watch and
+Kindling through to the Snuffing curfew. Coins are the copper **spark** (penny),
+the silver **bell** (twelve sparks), and the gold **lantern** (sixty bells). The
+dominant church is the **Candor**, the Church of the Sole Light, which teaches
+*one light, undivided* and shapes oaths, burial, the calendar, and public
+language — but trade, guilds, family, ward loyalty, crime, and civic politics all
+have lives of their own.
 
 ## Maps
 
@@ -29,6 +106,36 @@ Serle and outer wharves, and every building footprint
 (see [`lore/places/`](lore/places/README.md)):
 
 ![Full top-down cadastral plan of Ombreval showing the wall circuit, square gates and towers, wards, routes, and every building footprint](lore/places/ombreval_top_down_map.svg)
+
+
+## Smart actors
+
+NPCs are LLM-driven "smart actors" run by an in-process simulation
+([`crates/cathedral-sim`](crates/cathedral-sim), a pure IO-free Rust crate that
+owns the world state, prompt format, action parser, and turn scheduler). Three
+capabilities are probed at startup and degrade independently: **cognition** (an
+LLM provider drives NPC decisions and speech), **transcription** (your microphone,
+via cloud OpenAI or a local Canary-Qwen model), and **NPC voices** (streaming
+local Pocket TTS, streaming cloud OpenAI, or off). A missing API key never takes
+the others down. To spend LLM turns economically, idle NPC "thinking" can be gated
+to the player's neighborhood while speech and world sounds still reach anyone,
+anywhere.
+
+The whole cast also plays out **headlessly**, which is the fastest way to iterate
+on the prompt, the scheduler, or an action verb:
+
+```sh
+cargo run -p cathedral-backends --bin cathedral-headless -- --fake -t 6    # offline, instant
+cargo run -p cathedral-backends --bin cathedral-headless -- -t 10 -v       # live provider, full prompts
+```
+
+See [`AGENTS.md`](AGENTS.md) and
+[`crates/cathedral-sim/AGENTS.md`](crates/cathedral-sim/AGENTS.md) for the full
+architecture, the action verbs, and the "unknown people" rule.
+
+## Tech
+
+Core game: Rust + Bevy 0.19
 
 ## Run
 
