@@ -152,6 +152,16 @@ impl LocalEngine {
             .map(|engine| &engine.world().area_map)
             .or_else(|| self.seed.as_ref().map(|seed| &seed.areas))
     }
+
+    /// The live simulation world, once the handshake has moved the pending seed
+    /// into a running [`Engine`]. Borrowed for developer inspection (the
+    /// character debug sheet) exactly as [`Self::area_map`] borrows the map: a
+    /// view of the authoritative sim, never a copy. `None` until the engine is
+    /// live — the seed alone has no characters — so the sheet simply shows
+    /// nothing before the cast comes online.
+    pub(super) fn world(&self) -> Option<&cathedral_sim::World> {
+        self.engine.as_ref().map(|engine| engine.world())
+    }
 }
 
 /// Start the engine and hand the ECS its resources.

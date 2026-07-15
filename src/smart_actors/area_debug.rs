@@ -26,7 +26,8 @@ pub(super) struct AreaDebugState {
 }
 
 impl AreaDebugState {
-    #[cfg(test)]
+    /// Whether the `B` developer layer is on. Read by the sibling
+    /// [`super::actor_sheet`] overlay, which shares this one toggle.
     pub(super) fn is_enabled(&self) -> bool {
         self.enabled
     }

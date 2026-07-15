@@ -11,6 +11,7 @@ pub mod bridge;
 pub mod local_engine;
 pub mod model;
 
+mod actor_sheet;
 mod area_debug;
 mod clock;
 mod config_menu;
@@ -371,6 +372,7 @@ impl Plugin for SmartActorsPlugin {
             .init_resource::<model::MovementInbox>()
             .insert_resource(SmartActorRuntime::starting(self.config.fake_backend))
             .init_resource::<area_debug::AreaDebugState>()
+            .init_resource::<actor_sheet::InspectedActor>()
             .init_resource::<ActorFocus>()
             .init_resource::<interaction::InteractionState>()
             .init_resource::<interaction::PlayerSpatialState>()
@@ -405,6 +407,7 @@ impl Plugin for SmartActorsPlugin {
                 (
                     actors::setup_actor_visual_assets,
                     area_debug::spawn_area_debug_ui,
+                    actor_sheet::spawn_actor_sheet,
                     clock::spawn_clock_hud,
                 )
                     .after(hud::spawn_smart_actor_hud),
@@ -474,6 +477,7 @@ impl Plugin for SmartActorsPlugin {
                     sound::expire_stalled_sound_effects,
                     area_debug::update_area_debug_ui,
                     area_debug::update_actor_status_visibility,
+                    actor_sheet::update_actor_sheet,
                     hud::update_smart_actor_hud,
                 )
                     .chain()
