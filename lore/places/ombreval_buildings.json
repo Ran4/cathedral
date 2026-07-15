@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "title": "Authoritative top-down building plan of Ombreval, F.437",
-  "generated_by": "generate_top_down_map.py",
+  "generated_by": "scripts/generate_top_down_map.py",
   "seed": 11810721,
   "coordinate_system": {
     "units": "meters",

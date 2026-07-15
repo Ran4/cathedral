@@ -198,6 +198,25 @@ The ward's saying is exact and merciless:
 
 > **There are more Hawsers than Alders.**
 
+### The rest — Reed Ward, not boat-blood
+
+Not every heavy name on the Green came off the water, and the class system above
+does not include them. It belongs to the **boat-families proper**: the five
+houses — Alder, Skell, Hobbe, Tarn, Crake — and the fallen bynames of gear and
+place — Hawser, Underbridge, Vell, "of the Slip." A boat-family is one that had
+to answer *do we keep the boat?* Plenty of Reed Ward households never faced the
+question, because they were never on the water.
+
+These names are **ward-resident, not boat-blood**: the **Fitches** (Noll Fitch
+keeps the keys and the parish register as sexton of Saint Maren of the Reeds),
+the **Rasps**, the **Ruds**, the **Pells** and the **Sarks**. They keep shops,
+tubs, benches and altars on the Green, marry into the boat-houses, and work
+beside them — a Warin Rasp or a Colm Pell sets hoops at a Tarn's tubs — but the
+name carries no share in the boat argument, no pole to lay over the door, and no
+soundings in the head. On the Green the line is drawn without malice and never
+forgotten: a man can live his whole life in the Reed Ward and still not be *of
+the water*.
+
 ## The soundings
 
 The boat-families keep one asset the diversion could not take, and they keep it

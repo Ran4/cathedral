@@ -108,15 +108,16 @@ schematic in the spatial index:
   inventory behind the drawing. The current revision contains 2,566 individual
   building footprints: 2,501 ordinary urban-fabric buildings and 65 named,
   reserved, gate, bridge, church, civic, or complex-building footprints.
-- [`generate_top_down_map.py`](generate_top_down_map.py) contains the
-  deterministic geometry and layout rules. It validates IDs, numbered places,
-  the wall containment of ordinary buildings, and accidental footprint
-  overlaps before writing the SVG, HTML, and JSON.
+- [`scripts/generate_top_down_map.py`](../../scripts/generate_top_down_map.py)
+  contains the deterministic geometry and layout rules. It validates IDs,
+  numbered places, the wall containment of ordinary buildings, and accidental
+  footprint overlaps before writing the SVG, HTML, and JSON here in
+  `lore/places/`. Each output records the generator's repo-relative path.
 
 Regenerate the authoritative outputs from the repository root with:
 
 ```sh
-uv run lore/places/generate_top_down_map.py
+uv run scripts/generate_top_down_map.py
 ```
 
 The building inventory and SVG are two serializations of the same generated
@@ -124,6 +125,19 @@ plan; neither should be hand-edited. Change the generator and regenerate them
 together. Exact building footprints and IDs come from the JSON/generator,
 while the guide files remain authoritative for meaning, movement, sensory
 character, and the binding relationships listed below.
+
+## Ward map
+
+- [`ombreval_ward_map.svg`](ombreval_ward_map.svg) is a companion top-down map
+  that colours the eight planning wards as filled regions over the same walled
+  enclosure, with each ward's area and share of the enclosure. It is generated
+  by [`scripts/generate_ward_map.py`](../../scripts/generate_ward_map.py), which
+  imports the cadastral generator so the two maps stay in exact registration.
+- The regions are the cadastral generator's own `district_for()` partition
+  (first-match-wins, non-overlapping), **not** the overlapping ward bounding
+  boxes tabulated in [`00_city_plan.md`](00_city_plan.md). By that partition the
+  Bell-and-Sluice wards are ~33% of the enclosure; the boxes give a smaller ~21%.
+  Regenerate with `uv run scripts/generate_ward_map.py`.
 
 ## Source ledger
 
