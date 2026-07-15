@@ -47,8 +47,6 @@ use crate::{
     world::{World, planar_close},
 };
 
-/// The M2 pacer, excluded from the round so it keeps its own ping-pong.
-const PACING_ACTOR_ID: &str = "p0012";
 /// Occupations that fetch water with a **household** vessel — chiefly the
 /// servant, whose day is a trip to the ward well and back (the single largest
 /// occupation in the city, `features/movement/README.md` §8). A household vessel
@@ -72,6 +70,10 @@ fn vessel_of(occupation: Option<&str>) -> Option<bool> {
 /// A source only takes a keeper from an NPC standing within this of its curb, so
 /// nobody is dragged across the city to work a well.
 const KEEPER_MAX_DIST_M: f64 = 55.0;
+/// A keeper's wander leash: a stride or two off the curb, never out of reach of
+/// the gear — well inside [`CENSUS_POST_RADIUS_M`], so a milling keeper still
+/// censuses as at their post.
+const KEEPER_LEASH_M: f64 = 4.0;
 /// A mover is "at" a round leg's anchor (a square, a workshop, the moorings) once
 /// within this of it. Looser than [`WELL_ARRIVE_RADIUS_M`]: a place's node is one
 /// point in a wide site, not a curb.
@@ -246,7 +248,8 @@ enum Phase {
     Queued,
     /// At the front, drawing.
     Drawing,
-    /// Walking home again after drawing.
+    /// Carrying the full vessel to its delivery point (home for a household
+    /// vessel, the current post for a trade one) after drawing.
     Returning,
     /// Walking to a round leg's anchor (or home, at curfew).
     Travelling,
@@ -271,6 +274,11 @@ struct Townsperson {
     source: Option<usize>,
     is_household: bool,
     phase: Phase,
+    /// The destination of the current [`Phase::Travelling`] walk, so a mid-walk
+    /// re-decision can tell a genuinely new destination from the journey already
+    /// under way (the routed path ends at a snapped nav node, not the target,
+    /// so the path itself cannot be compared).
+    travel_target: Option<Vec3>,
     /// Real-clock time of this idle actor's next ladder evaluation.
     next_decision: f64,
     /// Bumped each decision; the salt that makes the deterministic choices vary.
@@ -460,31 +468,30 @@ impl Round {
             }
         }
 
-        // Every LLM townsperson except the player and the M2 pacer, in
-        // deterministic roster order.
+        // Every LLM townsperson except the player, in deterministic roster order.
         let townsfolk: Vec<ActorId> = world
             .roster
             .iter()
             .filter(|id| {
-                id.as_str() != PACING_ACTOR_ID
-                    && world
-                        .characters
-                        .get(*id)
-                        .is_some_and(|character| character.control().is_llm())
+                world
+                    .characters
+                    .get(*id)
+                    .is_some_and(|character| character.control().is_llm())
             })
             .cloned()
             .collect();
 
         // A keeper each: the nearest free **ambient** townsperson to the curb,
-        // pinned there so a queue has someone to form on and never dragged off by
-        // their own round (keepers are excluded from enrolment below).
-        let mut keepers: std::collections::BTreeSet<ActorId> = std::collections::BTreeSet::new();
+        // pinned there so a queue has someone to form on. Keepers are enrolled
+        // like everyone else below, but with the well as their round's one post,
+        // so their own day never drags them off the curb.
+        let mut keepers: BTreeMap<ActorId, usize> = BTreeMap::new();
         for index in 0..self.sources.len() {
             let draw_point = self.sources[index].draw_point;
             let keeper = townsfolk
                 .iter()
                 .filter(|id| {
-                    !keepers.contains(*id)
+                    !keepers.contains_key(*id)
                         && world.characters[*id].significance() == Significance::Ambient
                 })
                 .filter_map(|id| {
@@ -499,7 +506,7 @@ impl Round {
                 })
                 .map(|(_, id)| id.clone());
             if let Some(keeper) = keeper {
-                keepers.insert(keeper.clone());
+                keepers.insert(keeper.clone(), index);
                 world.characters.get_mut(&keeper).expect("keeper exists").state.position_m = draw_point;
                 self.sources[index].keeper = Some(keeper);
             }
@@ -532,9 +539,6 @@ impl Round {
         let mut housed = 0usize;
         let mut drawers = 0usize;
         for id in &townsfolk {
-            if keepers.contains(id) {
-                continue; // a keeper works their well; it is their whole day
-            }
             let character = &world.characters[id];
             let spawn = character.position_m();
             let occupation = character.lore().and_then(|lore| lore.occupation_id.clone());
@@ -547,6 +551,53 @@ impl Round {
                 housed += 1;
             }
             let base = home.unwrap_or(spawn);
+
+            // A keeper's round *is* their well: at the curb from the Kindling,
+            // home to sleep at the Lamplight like any day worker — and the
+            // curfew rung sends the housed home at night regardless (keepers
+            // are not on `04_the_round.md` §6's list of who stays out). They
+            // are never water-bound themselves: the curb is theirs to work,
+            // not to queue at. The homeless among them behave like any other
+            // homeless actor — still at the curb at the Snuffing.
+            if let Some(&source_idx) = keepers.get(id) {
+                let source = &self.sources[source_idx];
+                let mut legs = vec![RoundLeg {
+                    from: Office::Kindling,
+                    at: source.draw_point,
+                    label: source.name.clone(),
+                    doing: Arrival::Work,
+                    only_on: None,
+                    is_home: false,
+                }];
+                if let Some(home) = home {
+                    legs.push(RoundLeg {
+                        from: Office::Lamplight,
+                        at: home,
+                        label: "home".to_string(),
+                        doing: Arrival::Sleep,
+                        only_on: None,
+                        is_home: true,
+                    });
+                }
+                self.people.insert(
+                    id.clone(),
+                    Townsperson {
+                        home,
+                        base,
+                        legs,
+                        leash_m: KEEPER_LEASH_M,
+                        curfew_exempt: false,
+                        source: None,
+                        is_household: false,
+                        phase: Phase::Idle,
+                        travel_target: None,
+                        next_decision: now + decision_jitter(id, 0),
+                        epoch: 0,
+                    },
+                );
+                enrolled += 1;
+                continue;
+            }
 
             let (legs, leash_m, curfew_exempt) = content
                 .as_ref()
@@ -588,6 +639,7 @@ impl Round {
                     source,
                     is_household,
                     phase: Phase::Idle,
+                    travel_target: None,
                     next_decision: now + decision_jitter(id, 0),
                     epoch: 0,
                 },
@@ -596,9 +648,10 @@ impl Round {
         }
 
         diagnostics.push(format!(
-            "[smart actors] round: {} water sources, {} staffed | {enrolled} enrolled, {housed} housed, {drawers} water drawers",
+            "[smart actors] round: {} water sources, {} staffed | {enrolled} enrolled ({} well keepers), {housed} housed, {drawers} water drawers",
             self.sources.len(),
             staffed.len(),
+            keepers.len(),
         ));
         diagnostics
     }
@@ -718,7 +771,7 @@ pub fn tick(
     }
     decay_thirst(round, world, clock, now);
     resolve_arrivals(round, world);
-    service_sources(round, world, nav, now, player_id, in_conversation);
+    service_sources(round, world, nav, clock, now, player_id, in_conversation);
     run_ladder(round, world, nav, clock, now, in_conversation);
 }
 
@@ -731,8 +784,8 @@ pub fn tick(
 /// standing still and keeps their place. Dropping the walker to [`Phase::Idle`]
 /// hands them back to the ladder, which re-decides once the exchange goes cold
 /// (the [`tick`] hold above) — so an interrupted errand resumes on its own.
-/// Anyone not enrolled (the M2 pacing walker, a scripted mover) is none of the
-/// round's business and is left alone.
+/// Anyone not enrolled (a scripted mover) is none of the round's business and
+/// is left alone.
 pub fn interrupt_for_conversation(round: &mut Round, world: &mut World, id: &ActorId) {
     let Some(person) = round.people.get_mut(id) else {
         return;
@@ -837,10 +890,12 @@ fn service_sources(
     round: &mut Round,
     world: &mut World,
     nav: &NavData,
+    clock: &WorldClock,
     now: f64,
     player_id: &ActorId,
     in_conversation: Option<&ActorId>,
 ) {
+    let time = clock.at(now);
     let mut finished: Vec<ActorId> = Vec::new();
     let mut started: Vec<ActorId> = Vec::new();
     let mut emissions: Vec<(&'static str, Vec3)> = Vec::new();
@@ -898,11 +953,17 @@ fn service_sources(
             round.people.get_mut(&drawer).expect("person exists").phase = Phase::Idle;
             continue;
         }
-        // Walk back to base (home if housed, else spawn); the ladder resumes there.
-        let base = round.people.get(&drawer).map(|person| person.base);
+        // Carry the full vessel where its water is owed: a household vessel to
+        // the home, a trade vessel to the workshop the current leg names — so a
+        // fuller resumes their post instead of trudging home first. The ladder
+        // resumes on arrival either way (`delivery_point`).
+        let target = round
+            .people
+            .get(&drawer)
+            .map(|person| delivery_point(person, time.office, time.weekday));
         let position = world.characters.get(&drawer).map(Character::position_m);
-        if let (Some(base), Some(position)) = (base, position) {
-            match route_path(nav, position, base) {
+        if let (Some(target), Some(position)) = (target, position) {
+            match route_path(nav, position, target) {
                 Some(path) => set_route(world, &drawer, path),
                 None => {
                     world.characters.get_mut(&drawer).expect("drawer exists").state.movement = None;
@@ -939,10 +1000,35 @@ fn service_sources(
     }
 }
 
+/// Where a finished drawer carries the full vessel. A household vessel is water
+/// for the home, so it goes to `base` (home if housed, else spawn); a trade
+/// vessel is water for the workshop, so it goes to the active round leg's
+/// anchor — the fuller "arrives late" at his post rather than walking home
+/// first (`04_the_round.md` §8) — falling back to `base` when no leg is active.
+/// At night the non-exempt deliver homeward (`base` *is* home for the housed),
+/// so the committed return leg never marches against the curfew rung that runs
+/// on arrival.
+fn delivery_point(person: &Townsperson, office: Office, weekday: Weekday) -> Vec3 {
+    let night = matches!(office, Office::Snuffing | Office::Watch);
+    if person.is_household || (night && !person.curfew_exempt) {
+        return person.base;
+    }
+    active_leg(&person.legs, office, weekday).map_or(person.base, |leg| leg.at)
+}
+
 /// The behaviour ladder, run for idle people whose walk has ended and whose
 /// cadence has come round. First match wins (`features/movement/03_the_ladder.md`
 /// §4); M4 adds the curfew (5) and round (9) rungs to M3's water (2, 6), social
 /// (11) and wander (12).
+///
+/// A [`Phase::Travelling`] walk is re-decided on the same cadence, so a higher
+/// rung — curfew at the Snuffing, a new schedule leg at an office change, parched
+/// thirst — *preempts* the journey instead of waiting for the obsolete one to
+/// finish (`04_the_round.md` §5: the higher rungs all preempt the round). The
+/// traveller is only ever re-aimed, never stopped: a wander/stay outcome does not
+/// interrupt them, and a decision for the destination already under way changes
+/// nothing. The well errand's own phases (Approaching/Queued/Drawing/Returning)
+/// stay committed as before.
 fn run_ladder(
     round: &mut Round,
     world: &mut World,
@@ -961,14 +1047,21 @@ fn run_ladder(
             let person = &round.people[&id];
             (person.phase, person.epoch, person.next_decision)
         };
-        if phase != Phase::Idle {
-            continue; // committed to an errand; nothing re-decides mid-walk
-        }
         let Some(character) = world.characters.get(&id) else {
             continue;
         };
-        if character.is_walking() || now < next_decision {
+        if now < next_decision {
             continue;
+        }
+        match phase {
+            // Standing at an anchor: wait out any leftover walk slice, then decide.
+            Phase::Idle if character.is_walking() => continue,
+            Phase::Idle => {}
+            // Mid-journey: re-decide, so curfew, a new leg or parched thirst can
+            // preempt the walk (see the doc comment above).
+            Phase::Travelling => {}
+            // The well errand's phases stay committed until it resolves.
+            _ => continue,
         }
 
         let decision = decide(round, world, nav, &id, epoch, time.office, time.weekday);
@@ -978,6 +1071,21 @@ fn run_ladder(
             let person = round.people.get_mut(&id).expect("person exists");
             person.epoch = epoch.wrapping_add(1);
             person.next_decision = now + decision_jitter(&id, person.epoch);
+        }
+
+        // A traveller is only re-aimed by a genuinely different destination:
+        // travelling to where we are already headed changes nothing (no re-route
+        // thrash), and a wander/stay never interrupts a committed journey.
+        if phase == Phase::Travelling {
+            let under_way = round.people[&id].travel_target;
+            let diverts = match &decision {
+                Decision::Travel(target) => under_way != Some(*target),
+                Decision::ApproachWell => true,
+                Decision::Wander(_) | Decision::Stay => false,
+            };
+            if !diverts {
+                continue;
+            }
         }
 
         apply_decision(round, world, nav, &id, decision);
@@ -1014,18 +1122,12 @@ fn decide(
         .source
         .map(|source| (character.needs().thirst, round.sources[source].queue.len()));
 
-    // Rung 2 — parched: drop everything and go to the well now, whatever the hour.
-    // This *precedes* curfew (`03_the_ladder.md` §4: a thirsty man goes to the well
-    // "regardless of the hour"), so a parched drawer is never sent to bed instead.
-    if let Some((thirst, _)) = water
-        && thirst < THIRST_PARCHED
-    {
-        return Decision::ApproachWell;
-    }
-
-    // Rung 5 — curfew: at night, the housed go home (unless a night trade). The
-    // homeless have nowhere to go and fall through to linger in the street, which
-    // is exactly the person the watch stops (`04_the_round.md` §6).
+    // Rung 5 — curfew: at night, the housed go home (unless a night trade), even
+    // parched — the well can wait until the Kindling; the watch cannot
+    // (`07_milestones.md` M4: the ladder is curfew → parched → thirsty). The
+    // homeless have nowhere to go and fall through — the parched rung below still
+    // works for them, and the rest linger in the street, which is exactly the
+    // person the watch stops (`04_the_round.md` §6).
     if night && !person.curfew_exempt
         && let Some(home) = person.home
     {
@@ -1034,6 +1136,15 @@ fn decide(
         } else {
             Decision::Travel(home)
         };
+    }
+
+    // Rung 2 — parched: drop everything and go to the well now. Below curfew, so
+    // a housed drawer waits out the night at home and sets off at the Kindling;
+    // the homeless and the night trades still draw at any hour.
+    if let Some((thirst, _)) = water
+        && thirst < THIRST_PARCHED
+    {
+        return Decision::ApproachWell;
     }
 
     // Rung 6 — thirsty: the well, but only if its queue is short.
@@ -1058,6 +1169,14 @@ fn decide(
             return Decision::Travel(leg.at);
         }
     }
+    // A zero leash is a pin: the anchoress is bricked into her cell
+    // (`04_the_round.md` §1 — zero legs, `route: none`), and neither the social
+    // pull nor the wander may take a single step. Without this, `Wander(base)`
+    // would still route her to the *nearest nav node*, metres off her squint.
+    if person.leash_m <= 0.0 {
+        return Decision::Stay;
+    }
+
     // The leash centre is the *post* once we have reached it — not home, or the
     // social pull and the wander would march a working mason all the way back to
     // his own door. With no active leg (a homeless idler), fall back to base.
@@ -1104,7 +1223,9 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
             let position = world.characters[id].position_m();
             if let Some(path) = route_path(nav, position, target) {
                 set_route(world, id, path);
-                round.people.get_mut(id).expect("person exists").phase = Phase::Travelling;
+                let person = round.people.get_mut(id).expect("person exists");
+                person.phase = Phase::Travelling;
+                person.travel_target = Some(target);
             }
         }
         Decision::Wander(target) => {
@@ -1114,7 +1235,9 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
                 // A wander is a short errand like any other: mark it Travelling so
                 // resolve_arrivals clears the (now empty) `movement` on arrival,
                 // rather than leaving a stale `Some(path: [])` behind.
-                round.people.get_mut(id).expect("person exists").phase = Phase::Travelling;
+                let person = round.people.get_mut(id).expect("person exists");
+                person.phase = Phase::Travelling;
+                person.travel_target = Some(target);
             }
         }
         Decision::Stay => {}

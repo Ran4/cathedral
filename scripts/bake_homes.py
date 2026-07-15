@@ -40,8 +40,11 @@ OUT_PATH = ROOT / "assets" / "world" / "homes.json"
 
 # A homeless circumstance means no bed — and being in the street at curfew is the
 # point (04_the_round.md §3/§6). pauper(100)+unhoused(18)+insecure_lodging(14) is
-# the ~132 the lore names.
-HOMELESS_CIRCUMSTANCES = {"pauper", "unhoused", "insecure_lodging"}
+# the ~132 the lore names. `enclosed_religious` is Dame Aldith the anchoress:
+# not homeless, but her bed is the anchorhold cell she is bricked into, never a
+# residential door — binding her to a house would give the curfew rung somewhere
+# to march her (04_the_round.md §1: her Round has zero legs).
+HOMELESS_CIRCUMSTANCES = {"pauper", "unhoused", "insecure_lodging", "enclosed_religious"}
 
 # planning_ward (character) → building.district spellings. bell_and_sluice
 # absorbs its sub-spellings; 'Outer wards' / 'City wall' / 'Parish reserve' have

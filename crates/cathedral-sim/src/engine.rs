@@ -25,14 +25,14 @@ use std::{
 use serde_json::{Value, json};
 
 use crate::{
-    MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS, WALK_SPEED_MPS,
+    MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS,
     actions::apply_action,
     areas::AreaMap,
     attention::{
         CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS,
         StageConfig, on_stage,
     },
-    character::{Control, Movement, Patrol},
+    character::Control,
     clock::{Office, Weekday, WorldClock, stroke_times},
     error::{CommandError, CommandErrorCode, EngineInitError},
     event::{DomainEvent, EventType},
@@ -53,7 +53,7 @@ use crate::{
         Cognition, Completion, Sight, SttBackendKind, Transcription, TranscriptionOutcome, Tts,
         TtsBackendKind, TtsOutcome,
     },
-    world::{SpatialActorUpdate, World, planar_close},
+    world::{SpatialActorUpdate, World},
 };
 
 /// The borrows the speech router needs, taken from disjoint [`Engine`] fields.
@@ -107,20 +107,6 @@ const TOWN_BELL_SOUND_ID: &str = "town_bell";
 
 /// Status state the voice selection adds to the scheduler's `STATE_*` set.
 const STATE_SELECTED: &str = "selected";
-
-/// The single hard-coded M2 walker (`features/movement/07_milestones.md` M2): one
-/// real citizen paces between two nearby places, proving the mover pipeline end to
-/// end before M4 gives everyone a daily round. Ede Crake, a market-seller, spawns on
-/// the open west side of the cathedral forecourt at (42.5, 142.5) — clear of the
-/// central market stalls, so from the player's spawn at (0, 95) facing +Z her whole
-/// body reads on the left of frame (facing +Z puts world +X on the left). Her route
-/// runs up the west edge of the square toward the Seraph statue, keeping her out on
-/// the open flagstones the player can see rather than funnelling behind the stalls, so
-/// the walk stays in plain view. It never crosses a bridge or the malt-house's phantom
-/// door; on arrival the patrol reverses toward Tenterhook Lane and returns.
-const PACING_ACTOR_ID: &str = "p0012";
-const PACING_PLACE_A: &str = "Tenterhook Lane";
-const PACING_PLACE_B: &str = "Seraph statue";
 
 /// What this engine can actually do (`server.py:837-849`).
 ///
@@ -643,19 +629,14 @@ impl Engine {
             )
             .map_err(EngineInitError::PlayerSpawn)?;
 
-        // M2: seed the one hard-coded walker, but only if the host gave us a nav
-        // graph — the frozen fixtures pass `None` and nobody moves. A missing
-        // actor, place or route is a seed/nav mismatch we report and skip, never
-        // a panic; the notice rides out with the first poll's `Ready`.
+        // The daily round (M4, subsuming M3's water and M2's hard-coded pacer):
+        // homes, workplaces, the ladder, the queues. It only runs if the host
+        // gave us a nav graph — the frozen fixtures pass `None` and nobody moves
+        // — and reports rather than panics on anything that does not resolve;
+        // the notices ride out with the first poll's `Ready`.
         let mut startup_diagnostics: Vec<String> = Vec::new();
         let mut round = Round::new();
         if let Some(nav) = config.nav.as_deref() {
-            if let Err(reason) = seed_pacing_actor(&mut world, nav) {
-                startup_diagnostics.push(format!("[smart actors] movement: {reason}"));
-            }
-            // The daily round (M4, subsuming M3's water): homes, workplaces, the
-            // ladder, the queues. Like the pacer it only runs with a nav graph,
-            // and reports rather than panics on anything that does not resolve.
             startup_diagnostics.extend(round.seed(&mut world, nav, now, &config.clock));
         }
 
@@ -1695,46 +1676,6 @@ impl Engine {
             }
         }
     }
-}
-
-/// Give the M2 walker a [`Movement`] routed from where it stands to the far end
-/// of its patrol. Returns a human reason on any mismatch so the caller can log
-/// and skip; it never panics and never moves anyone but the one actor.
-fn seed_pacing_actor(world: &mut World, nav: &NavData) -> Result<(), String> {
-    let actor_id = ActorId::from_raw(PACING_ACTOR_ID);
-    // Both endpoints must resolve, so the ping-pong has somewhere to bounce back
-    // to on arrival — check the near end before committing to the far one.
-    if nav.place(PACING_PLACE_A).is_none() {
-        return Err(format!("nav place {PACING_PLACE_A:?} is missing; no pacing walk"));
-    }
-    let place_b = nav
-        .place(PACING_PLACE_B)
-        .ok_or_else(|| format!("nav place {PACING_PLACE_B:?} is missing; no pacing walk"))?;
-    let target = nav.node_point(place_b.node);
-
-    let character = world
-        .characters
-        .get_mut(&actor_id)
-        .ok_or_else(|| format!("actor {PACING_ACTOR_ID:?} is not in the seed; no pacing walk"))?;
-    let start = character.state.position_m;
-    let route = nav.route_between(start, target).ok_or_else(|| {
-        format!("no route from {PACING_ACTOR_ID:?}'s spawn to {PACING_PLACE_B:?}; no pacing walk")
-    })?;
-    let mut path = route.points;
-    if path.first().is_some_and(|point| planar_close(*point, start)) {
-        path.remove(0);
-    }
-    character.state.movement = Some(Movement {
-        path,
-        speed: WALK_SPEED_MPS,
-        gait_phase: 0.0,
-        patrol: Some(Patrol {
-            a: PACING_PLACE_A.to_string(),
-            b: PACING_PLACE_B.to_string(),
-            heading_to_b: true,
-        }),
-    });
-    Ok(())
 }
 
 fn flush_world_event(event: &DomainEvent, out: &mut Vec<EngineMessage>) {

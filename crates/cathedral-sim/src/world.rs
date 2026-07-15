@@ -297,7 +297,7 @@ impl World {
                     .as_mut()
                     .expect("checked non-None above");
 
-                // Arrived. A patrolling mover (the M2 pacer) flips its patrol and
+                // Arrived. A patrolling mover (a scripted walk) flips its patrol and
                 // routes to the far end; a mover with no patrol (the M3 water
                 // round) simply stops — the behaviour ladder owns what happens on
                 // arrival, not the mover (`features/movement/03_the_ladder.md` §4).

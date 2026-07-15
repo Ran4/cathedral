@@ -102,15 +102,6 @@
     122.125
    ]
   },
-  "aq7ld": {
-   "building": "omb_i0177",
-   "edge": 0,
-   "door_node": 5737,
-   "point": [
-    190.875,
-    -152.875
-   ]
-  },
   "ar5tl": {
    "building": "omb_i0195",
    "edge": 0,
@@ -228,6 +219,24 @@
     145.375
    ]
   },
+  "bn1id": {
+   "building": "omb_f0343",
+   "edge": 0,
+   "door_node": 2063,
+   "point": [
+    -355.875,
+    -292.625
+   ]
+  },
+  "bn2hm": {
+   "building": "omb_f0094",
+   "edge": 0,
+   "door_node": 1080,
+   "point": [
+    -294.125,
+    -272.625
+   ]
+  },
   "br2sk": {
    "building": "omb_i0188",
    "edge": 2,
@@ -328,12 +337,12 @@
    ]
   },
   "cg6ud": {
-   "building": "omb_f0343",
+   "building": "omb_f1018",
    "edge": 0,
-   "door_node": 2063,
+   "door_node": 4953,
    "point": [
-    -355.875,
-    -292.625
+    -358.625,
+    -286.375
    ]
   },
   "cj9sp": {
@@ -562,12 +571,12 @@
    ]
   },
   "et7rd": {
-   "building": "omb_f0094",
+   "building": "omb_f1017",
    "edge": 0,
-   "door_node": 1080,
+   "door_node": 4952,
    "point": [
-    -294.125,
-    -272.625
+    -370.625,
+    -283.625
    ]
   },
   "fa4sg": {
@@ -715,12 +724,12 @@
    ]
   },
   "g3ans": {
-   "building": "omb_f1017",
-   "edge": 0,
-   "door_node": 4952,
+   "building": "omb_i0994",
+   "edge": 3,
+   "door_node": 8031,
    "point": [
-    -370.625,
-    -283.625
+    -387.125,
+    -246.625
    ]
   },
   "g4ewt": {
@@ -733,21 +742,21 @@
    ]
   },
   "g5brt": {
-   "building": "omb_i0994",
-   "edge": 3,
-   "door_node": 8031,
+   "building": "omb_i0527",
+   "edge": 1,
+   "door_node": 6839,
    "point": [
-    -387.125,
-    -246.625
+    -205.375,
+    -246.375
    ]
   },
   "g7tbn": {
-   "building": "omb_f1018",
+   "building": "omb_f1033",
    "edge": 0,
-   "door_node": 4953,
+   "door_node": 5026,
    "point": [
-    -358.625,
-    -286.375
+    -204.625,
+    -284.375
    ]
   },
   "g8rnn": {
@@ -859,12 +868,12 @@
    ]
   },
   "p0007": {
-   "building": "omb_f1033",
-   "edge": 0,
-   "door_node": 5026,
+   "building": "omb_i0302",
+   "edge": 2,
+   "door_node": 6162,
    "point": [
-    -204.625,
-    -284.375
+    -181.125,
+    -234.875
    ]
   },
   "p0008": {
@@ -904,12 +913,12 @@
    ]
   },
   "p000c": {
-   "building": "omb_i0527",
-   "edge": 1,
-   "door_node": 6839,
+   "building": "omb_i0944",
+   "edge": 2,
+   "door_node": 7886,
    "point": [
-    -205.375,
-    -246.375
+    -164.125,
+    -266.875
    ]
   },
   "p000d": {
@@ -949,12 +958,12 @@
    ]
   },
   "p000h": {
-   "building": "omb_i0302",
+   "building": "omb_i0056",
    "edge": 2,
-   "door_node": 6162,
+   "door_node": 5315,
    "point": [
-    -181.125,
-    -234.875
+    -208.125,
+    -472.375
    ]
   },
   "p000i": {
@@ -976,12 +985,12 @@
    ]
   },
   "p000q": {
-   "building": "omb_i0056",
-   "edge": 2,
-   "door_node": 5315,
+   "building": "omb_i0106",
+   "edge": 0,
+   "door_node": 5464,
    "point": [
-    -208.125,
-    -472.375
+    -232.875,
+    -513.625
    ]
   },
   "p000r": {
@@ -1003,12 +1012,12 @@
    ]
   },
   "p000t": {
-   "building": "omb_i0944",
-   "edge": 2,
-   "door_node": 7886,
+   "building": "omb_i0729",
+   "edge": 1,
+   "door_node": 7343,
    "point": [
-    -164.125,
-    -266.875
+    -181.875,
+    -478.625
    ]
   },
   "p000u": {
@@ -1210,12 +1219,12 @@
    ]
   },
   "p001y": {
-   "building": "omb_i0106",
-   "edge": 0,
-   "door_node": 5464,
+   "building": "omb_i1395",
+   "edge": 3,
+   "door_node": 8911,
    "point": [
-    -232.875,
-    -513.625
+    -224.875,
+    -555.875
    ]
   },
   "p001z": {
@@ -1255,12 +1264,12 @@
    ]
   },
   "p0023": {
-   "building": "omb_i0729",
-   "edge": 1,
-   "door_node": 7343,
+   "building": "omb_i0208",
+   "edge": 3,
+   "door_node": 5856,
    "point": [
-    -181.875,
-    -478.625
+    -200.625,
+    -562.875
    ]
   },
   "p0029": {
@@ -1498,12 +1507,12 @@
    ]
   },
   "p002z": {
-   "building": "omb_i1395",
-   "edge": 3,
-   "door_node": 8911,
+   "building": "omb_i1240",
+   "edge": 2,
+   "door_node": 8571,
    "point": [
-    -224.875,
-    -555.875
+    -178.875,
+    -595.875
    ]
   },
   "p0030": {
@@ -1525,12 +1534,12 @@
    ]
   },
   "p0032": {
-   "building": "omb_i0208",
-   "edge": 3,
-   "door_node": 5856,
+   "building": "omb_i0563",
+   "edge": 1,
+   "door_node": 6916,
    "point": [
     -200.625,
-    -562.875
+    -612.375
    ]
   },
   "p0037": {
@@ -1768,21 +1777,21 @@
    ]
   },
   "p0048": {
-   "building": "omb_i0563",
-   "edge": 1,
-   "door_node": 6916,
+   "building": "omb_i1019",
+   "edge": 2,
+   "door_node": 8089,
    "point": [
-    -200.625,
-    -612.375
+    -156.375,
+    -582.125
    ]
   },
   "p0049": {
-   "building": "omb_i1240",
-   "edge": 2,
-   "door_node": 8571,
+   "building": "omb_i1186",
+   "edge": 1,
+   "door_node": 8464,
    "point": [
-    -178.875,
-    -595.875
+    -157.625,
+    -430.875
    ]
   },
   "p004a": {
@@ -1795,12 +1804,12 @@
    ]
   },
   "p004b": {
-   "building": "omb_i1186",
-   "edge": 1,
-   "door_node": 8464,
+   "building": "omb_i0590",
+   "edge": 3,
+   "door_node": 6983,
    "point": [
-    -157.625,
-    -430.875
+    -152.625,
+    -459.125
    ]
   },
   "p004c": {
@@ -1975,12 +1984,12 @@
    ]
   },
   "p004y": {
-   "building": "omb_i0590",
-   "edge": 3,
-   "door_node": 6983,
+   "building": "omb_i0977",
+   "edge": 0,
+   "door_node": 7986,
    "point": [
-    -152.625,
-    -459.125
+    -139.375,
+    -523.875
    ]
   },
   "p0055": {
@@ -2209,12 +2218,12 @@
    ]
   },
   "p005u": {
-   "building": "omb_i1019",
-   "edge": 2,
-   "door_node": 8089,
+   "building": "omb_i0305",
+   "edge": 3,
+   "door_node": 6171,
    "point": [
-    -156.375,
-    -582.125
+    -132.875,
+    -561.375
    ]
   },
   "p005v": {
@@ -2290,12 +2299,12 @@
    ]
   },
   "p0063": {
-   "building": "omb_i0305",
-   "edge": 3,
-   "door_node": 6171,
+   "building": "omb_i0131",
+   "edge": 2,
+   "door_node": 5548,
    "point": [
-    -132.875,
-    -561.375
+    -123.125,
+    -549.625
    ]
   },
   "p0064": {
@@ -2695,12 +2704,12 @@
    ]
   },
   "p007c": {
-   "building": "omb_i0977",
-   "edge": 0,
-   "door_node": 7986,
+   "building": "omb_i1311",
+   "edge": 3,
+   "door_node": 8739,
    "point": [
-    -139.375,
-    -523.875
+    -100.875,
+    -442.875
    ]
   },
   "p007d": {
@@ -2866,12 +2875,12 @@
    ]
   },
   "p007z": {
-   "building": "omb_i0131",
-   "edge": 2,
-   "door_node": 5548,
+   "building": "omb_i0192",
+   "edge": 1,
+   "door_node": 5779,
    "point": [
-    -123.125,
-    -549.625
+    -68.875,
+    -599.125
    ]
   },
   "p0080": {

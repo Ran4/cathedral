@@ -168,6 +168,14 @@ wins; every rung ends by setting a `Route` with an `Arrival`, and returning.
 | **11** | **the social pull** | someone I `knows` is within 8 m and idle | drift toward them; turn to face them |
 | **12** | **wander** | — | a random walkable point within a leash of my post |
 
+> **Amendment (M4, as implemented):** the table's rung *numbers* are names, not the evaluation
+> order — **curfew (5) is evaluated before parched (2)** (`07_milestones.md` M4: curfew → parched →
+> thirsty → the round). A parched but housed drawer is sent home at the Snuffing and draws at the
+> Kindling; without the swap the ~69 drawers would repopulate the wells all night (a full gauge runs
+> parched in ~3.4 game hours; the curfew lasts ~8) and "curfew empties the streets" (§5, rung 5)
+> would be false. The homeless and the `curfew_exempt` night trades skip the curfew rung, so the
+> parched rung still reaches them at any hour.
+
 **Rungs 4 vs 8 are seagame's sleep gate, and it is the whole daily rhythm in one line.** The tired go
 to bed *only when it is dark*; the exhausted go to bed *whenever*. Nothing anywhere says "sleep at
 21:00". The city beds down as it darkens because tiredness and darkness happen to coincide, and it

@@ -151,10 +151,12 @@ tick window in `drive_npc_bodies` (`src/smart_actors/actors.rs`), ordered *after
 so it owns the mover's transform — no second `Time<Fixed>` schedule, so it never fights the player's
 120 Hz controller. **The §5.1 novelty fix shipped here:** `context_hash` counts a neighbour only if
 `is_settled()` (speed < `SETTLED_SPEED_MPS = 0.15`), so a man crossing the square is not news at every
-step but a man who stops is. The hard-coded pacer is `p0012` (a market-seller) walking the west
+step but a man who stops is. The hard-coded pacer was `p0012` (a market-seller) walking the west
 forecourt flagstones between "Tenterhook Lane" and the "Seraph statue" — visible from the player's
 spawn — set up in `Engine::new::seed_pacing_actor` (diagnostic-and-skip if the actor/place/route does
-not resolve; never panics). *Note:* in-game **visible** travel per real second trails the nominal
+not resolve; never panics). *Since retired:* M4's round subsumed the bring-up artifact — `p0012` is now
+enrolled like everyone else (`seed_pacing_actor` is gone), and the `Movement.patrol` ping-pong mechanism
+survives only as test scaffolding. *Note:* in-game **visible** travel per real second trails the nominal
 1.8 m/s because the engine runs on `Time<Virtual>`, which lags wall-clock under a heavy frame — the
 same lag the clock/sun already have (M0 note above); the sim itself moves at a verified 1.8 m/s.
 
@@ -279,10 +281,19 @@ a **round** of office-pegged legs (the 19 authored routes for the majors that re
 the 65 occupation templates, grouped into eight archetypes, for everyone else). Water is now just two
 rungs of one flat ladder. The ladder each decision epoch is **curfew (5) → parched (2) → thirsty (6)
 → the round (9) → social (11) → wander (12)**, first match wins. Market-day legs (`only_on`) move the
-crowd to the squares on Highmarket/Lowmarket; the curfew rung sends the housed home at the Snuffing
+crowd to **all four** market squares — two market-trader archetypes split the trades so Highmarket
+fills the Wickmarket *and* Coswald's Yard and Lowmarket the Tallage *and* Maren's Green, per
+`trade_and_daily_life.md` — and **Bellday closes the generic trades and fills the nave** (the
+day-worker/market templates lie in at the Kindling and pray at The Lanthorn from Dayspring through
+the Waning; the wharf joins at Dayspring after its before-dawn work, per Wyn Alder's route; night
+trades, clerics and the anchoress are the exceptions); the curfew rung sends the housed home at the Snuffing
 while the night trades (a `curfew_exempt` archetype flag: tavern, watch, lamplighter) keep their
 posts, and the ~100 homeless (a homeless circumstance → no `homes.json` entry) are left in the street,
-exactly as the lore intends.
+exactly as the lore intends. The **whole cast** means the well keepers and the old M2 pacer too: a
+keeper's round is their well (the curb from the Kindling, on a stride-short leash, so the source stays
+staffed through the working day; never water-bound themselves) and the housed among them go home at the
+Snuffing like anyone else — the queues and the windlass only need `WaterSource::keeper` to be assigned,
+not the keeper's body at the curb at 2 a.m.
 
 **Two load-bearing subtleties, both caught during bring-up.** (1) The **home-binding bake falls back
 across wards** — the literal "nearest unclaimed residential in my ward" runs out of houses in five of

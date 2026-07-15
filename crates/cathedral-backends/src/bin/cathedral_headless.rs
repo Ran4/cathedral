@@ -157,8 +157,8 @@ struct Args {
 
     /// print each mover's position on the transcript stream as it walks
     ///
-    /// One `[pos]` line per moved actor per poll, so you can watch the M2 pacing
-    /// walker advance along its street and turn around. Needs a nav graph under
+    /// One `[pos]` line per moved actor per poll, so you can watch the daily
+    /// round walk the cast about their errands. Needs a nav graph under
     /// `--assets`; without one nobody moves and nothing prints.
     #[arg(long)]
     trace_positions: bool,
@@ -334,7 +334,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             },
             clock,
             ring_the_offices: true,
-            // The M2 pacing walker only exists when a nav graph is present.
+            // Movement and the daily round only exist when a nav graph is present.
             nav: assets.nav.clone(),
         },
         &assets.seed,
