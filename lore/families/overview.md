@@ -132,6 +132,106 @@ Standing: **S** = family of standing (fixed surname, canonical or well-rooted).
 | [Dorn](family_dorn.md) | 1 | Fabric (the Lanthorn) | the Praelucent's office | S | one name, one throne of the Church |
 | [Ferrant](family_ferrant.md) | 1 | Weigh (off the Tallage) | physic, astronomy | S | a learned singular name under the Rose |
 
+## The families by ward
+
+The roster above is ordered by size; this is the same houses ordered by *place*.
+Each family is listed **Rooted** under the one ward that holds its weight, and as
+a **Branch** wherever else it keeps a real presence — because *spread is the
+story*, and few names sit in a single ward. This section is only a reordering of
+the **Heartland** column above, which stays the single source of truth; a house
+that is all branch and no root (the scattered Crakes, the thin-spread Wicks) is
+one that *broke and travelled*, and that is the point, not an omission.
+
+### Reed Ward — the water quarter
+*Maren's Green, Tanners' Slip, Alder Moorings; the old boat-streets.*
+
+- **Rooted:** Skell · Fitch · Tarn · Sark · Alder
+- **Branches:** Ashe (salt cellar, from Weigh) · Pell (smallholding, from Cloth) ·
+  Rusk (tavern-streets, from Bell-and-Sluice)
+
+The boat-blood ward. Alder is the last boat *of standing*; Skell and Tarn are the
+houses that gave the water up, and the fallen Hawsers and Underbridges the ones it
+took the name from. Worked out in full in `../the_dry_boatmen.md`.
+
+### Fabric — the cathedral quarter
+*The Lanthorn and the streets under the works.*
+
+- **Rooted:** Hobbe · Pike · Dorn
+- **Branches:** Fitch (parish burial, from Reed) · Marle (the bede-roll, from
+  Bell-and-Sluice) · Mott (bell-metal, from Bell-and-Sluice) · Crake (a thin
+  strand of the scattered name)
+
+The keys and the office: Pike holds the cathedral's doors, Dorn holds the
+Praelucent's throne, Hobbe rings and serves. The Lanthorn is where the
+church-service names cluster.
+
+### Cinder Row — the glass quarter
+*The furnace-streets; the numbered furnaces along the Row.*
+
+- **Rooted:** Sparr
+- **Branches:** Crake (Dunstan's furnace, and his deed-claim on the Sparr plot) ·
+  Rud (the fulling stocks at the Cinder end of the Cut)
+
+The smallest, hottest ward: two glazier houses over one plot. The Sparr ↔ Crake
+feud and the venerated Idonea Sparr sit here — the three-way glass story
+(Sparrs / Crakes / the Unwalled) that the gazetteer still doesn't name.
+
+### Weigh — the weighing quarter
+*The Tallage and the counting-streets.*
+
+- **Rooted:** Sedge · Ashe · Wren · Clove · Lark · Dunn · Husk · Copp · Ferrant
+- **Branches:** Skell (drapery, from Reed) · Skep (muscle) · Dask (droving) ·
+  Thorn (portering) · Rook (service) · Kern (clerks) · Nett (timber) — most of
+  them rooted across the Cloth or Bell-and-Sluice line
+
+The small-fraud ward: false weights, watered ale, two prices (Sedge is its family
+proper). Copp and Ferrant sit *off the Tallage* — the forger and the physician,
+the quarter's two singular dangers.
+
+### Bell-and-Sluice — the mixing bowl
+*The crowded central ward around the Bellstand.*
+
+- **Rooted:** Rud · Rasp · Skep · Rusk · Brant · Marle · Dask · Rook · Fenn ·
+  Mott · Rill
+- **Branches:** *nearly every house in the city.* Only rooted names are listed —
+  a Bell-and-Sluice branch is the rule, not a distinction. A family with *only* a
+  presence here is poor and un-rooted; one with a branch here **and** a heartland
+  elsewhere has pushed its overflow into the middle of the city.
+
+Both shadows run through this ward: the Grey Press (Rasp, Mott) and the Unwalled
+(Marle, and the raw Ruds).
+
+### Wallwright — the wall quarter
+*The ramparts, Coswald's Yard, and the masons' lodge.*
+
+- **Rooted:** Stott · Toll · Crake (thickest here)
+- **Branches:** Skell (potters and painters, from Reed)
+
+Stott is the masons' warden and his plumb-line grudges; Toll works stone and clay
+and runs a shakedown along the wall. Crake is *thickest* here yet rooted nowhere —
+the residue of the Long Departure.
+
+### Cloth — the cloth streets
+*Leather, garment, tannery.*
+
+- **Rooted:** Pell · Thorn · Kern · Mere · Nett
+- **Branches:** Sedge (grocer, from Weigh) · Wren (makers, from Weigh) ·
+  Sark (washhouse, from Reed) · Rusk (a food branch, from Bell-and-Sluice)
+
+Tanners, porters and small makers. Kern is the most literate — and shabbiest —
+house on these streets.
+
+### Wick — the light quarter
+*Wickmarket; wax, tallow, and the milling-poor.*
+
+- **Rooted:** Vell · Quern · Bram · Kett
+- **Branches:** Rud (fulling) · Rasp (scavenging) — the Bell-and-Sluice poor spill
+  west into Wick
+
+The Vells rose on wax and light and put a heretic (Osanne, the Unwalled's Tracer)
+at their head. The **Wick** family itself is thin-spread and merely shares the
+ward's name — a house, not a landmark; do not confuse it with the ward.
+
 ## Not on this list
 
 - **The bynamed poor** — Hawser, Underbridge, Threefinger, Halfbell, Bluehand,
