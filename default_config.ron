@@ -15,7 +15,7 @@
         tts_backend: "local",
         // Player transcription: "cloud" (OpenAI gpt-4o-transcribe) or "local"
         // (Canary-Qwen FP16).
-        stt_backend: "cloud",
+        stt_backend: "local",
         // false enables full-duplex capture: NPC audio never pauses the microphone,
         // and microphone activity never interrupts NPC playback.
         pause_microphone_during_npc_voice: true,
@@ -23,7 +23,7 @@
         // transcription of the finished recording remains the fallback.
         stt_streaming: true,
         // Silence that ends an utterance, in milliseconds (clamped 300..=1500).
-        stt_trailing_silence_ms: 500,
+        stt_trailing_silence_ms: 400,
         // Non-speech sound percepts (F = fart; see features/sounds.md).
         sounds: (
             enabled: true,
@@ -47,6 +47,9 @@
             // request in flight at a time — this caps how thinly the turns are
             // spread, not how many run at once.
             max_actors: 6,
+            require_news: true,
+            curiosity: true,
+            curiosity_scale: 1.0,
         ),
         // The world clock (movement M0): the day/night cycle, the seven offices,
         // and the town bell. Pure — a projection of the engine's `now`.
