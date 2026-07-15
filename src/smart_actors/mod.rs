@@ -1869,7 +1869,12 @@ mod tests {
             .query_filtered::<Entity, With<actors::ActorView>>()
             .iter(world)
             .count();
-        assert_eq!(actor_count, 502);
+        let expected_cast = cathedral_backends::world_data::character_sources(
+            &std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("lore"),
+        )
+        .expect("the lore cast is readable")
+        .len();
+        assert_eq!(actor_count, expected_cast);
         let runtime_dir = world
             .resource::<bridge::BridgeHandle>()
             .runtime_dir()

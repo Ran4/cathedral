@@ -376,7 +376,16 @@ mod tests {
                     .is_some_and(|lore| lore.significance != cathedral_sim::Significance::Major)
             })
             .collect();
-        assert_eq!(distributed.len(), 472);
+        let non_major = cathedral_backends::world_data::character_sources(&root.join("lore"))
+            .expect("the lore cast is readable")
+            .iter()
+            .filter(|(path, source)| {
+                let sheet: serde_json::Value = serde_json::from_str(source)
+                    .unwrap_or_else(|error| panic!("character file {path} does not parse: {error}"));
+                sheet["significance"] != "major"
+            })
+            .count();
+        assert_eq!(distributed.len(), non_major);
 
         for character in distributed {
             let point = [character.position_m.x as f32, character.position_m.z as f32];

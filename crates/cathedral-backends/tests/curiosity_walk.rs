@@ -2,7 +2,7 @@
 //! (`features/implemented/gate_idle_cognition_on_novelty.md` §2).
 //!
 //! The curiosity gate's whole claim is a number, and the number is only true of
-//! the *shipped cast*: 502 authored people, thinly spread over 1.2 × 1.0 km, each
+//! the *shipped cast*: some 500 authored people, thinly spread over 1.2 × 1.0 km, each
 //! with an age, a trade and a station that the derivation reads. Nothing in
 //! `cathedral-sim`'s own tests can check it, because nothing there has a city.
 //! This crate owns the filesystem, so this is where the city is.

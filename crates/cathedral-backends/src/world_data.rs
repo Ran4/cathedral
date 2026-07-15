@@ -26,6 +26,18 @@ pub fn load_world_seed_with_knowledge(
 
     let occupations_path = lore_dir.join("core_lore/occupations.json");
     let occupations = read(&occupations_path)?;
+    let cast = LoreCast::from_json_sources(&occupations, character_sources(lore_dir)?)
+        .map_err(|error| format!("invalid lore cast: {error}"))?;
+    base.with_lore_cast_knowledge(cast, knowledge)
+        .map_err(|error| format!("invalid composed world seed: {error}"))
+}
+
+/// Discover and read every character sheet below `lore/characters`, as sorted
+/// `(relative path, contents)` pairs — the exact inputs the loader composes
+/// into the world. Public so tests and bins can derive cast counts from the
+/// same discovery the loader uses, instead of hardcoding a roster size that
+/// goes stale whenever the city gains a citizen.
+pub fn character_sources(lore_dir: &Path) -> Result<Vec<(String, String)>, String> {
     let characters_root = lore_dir.join("characters");
     let mut files = Vec::new();
     collect_json_files(&characters_root, &mut files)?;
@@ -48,10 +60,7 @@ pub fn load_world_seed_with_knowledge(
         })?;
         sources.push((relative.to_string_lossy().into_owned(), read(&path)?));
     }
-    let cast = LoreCast::from_json_sources(&occupations, sources)
-        .map_err(|error| format!("invalid lore cast: {error}"))?;
-    base.with_lore_cast_knowledge(cast, knowledge)
-        .map_err(|error| format!("invalid composed world seed: {error}"))
+    Ok(sources)
 }
 
 fn read(path: &Path) -> Result<String, String> {
@@ -98,25 +107,48 @@ mod tests {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
     }
 
+    /// Counts derived from the shipped character files themselves: total
+    /// sheets, and how many are public figures (non-ambient). Comparing the
+    /// composed world against these keeps the tests from going stale when the
+    /// city gains a citizen, while still catching a sheet that silently fails
+    /// to compose into the seed.
+    fn cast_counts(root: &Path) -> (usize, usize) {
+        let sources = character_sources(&root.join("lore")).expect("the lore cast is readable");
+        let public = sources
+            .iter()
+            .filter(|(path, source)| {
+                let sheet: serde_json::Value = serde_json::from_str(source)
+                    .unwrap_or_else(|error| panic!("character file {path} does not parse: {error}"));
+                sheet["significance"] != "ambient"
+            })
+            .count();
+        (sources.len(), public)
+    }
+
     #[test]
     fn shipped_world_loads_all_lore_characters() {
         let root = root();
         let seed = load_world_seed(&root.join("assets"), &root.join("lore"))
             .expect("the shipped world data loads");
-        assert_eq!(seed.characters.len(), 503, "502 NPCs and the player");
+        let (cast_total, cast_public) = cast_counts(&root);
+        assert_eq!(
+            seed.characters.len(),
+            cast_total + 1,
+            "every lore character and the player"
+        );
         assert_eq!(
             seed.characters
                 .iter()
                 .filter(|character| character.control == cathedral_sim::Control::Llm)
                 .count(),
-            502
+            cast_total
         );
         let player = seed
             .characters
             .iter()
             .find(|character| character.id.as_str() == "player")
             .expect("the base seed retains the player");
-        assert_eq!(player.knows.len(), 156);
+        assert_eq!(player.knows.len(), cast_public);
 
         let sven = seed
             .characters
@@ -161,7 +193,7 @@ mod tests {
             .iter()
             .find(|character| character.id.as_str() == "player")
             .unwrap();
-        assert_eq!(player.knows.len(), 502);
+        assert_eq!(player.knows.len(), cast_counts(&root).0);
     }
 
     #[test]
@@ -177,7 +209,7 @@ mod tests {
             .iter()
             .filter(|character| character.lore.is_some())
             .collect();
-        assert_eq!(npcs.len(), 502);
+        assert_eq!(npcs.len(), cast_counts(&root).0);
 
         let mut positions = BTreeSet::new();
         for character in &npcs {
@@ -361,7 +393,7 @@ mod tests {
         );
 
         let snapshot = world.public_snapshot(&ActorId::from_raw("player"));
-        assert_eq!(snapshot.actors.len(), 503);
+        assert_eq!(snapshot.actors.len(), cast_counts(&root).0 + 1);
         let encoded = serde_json::to_vec(&snapshot).unwrap();
         assert!(
             encoded.len() <= 128 * 1024,

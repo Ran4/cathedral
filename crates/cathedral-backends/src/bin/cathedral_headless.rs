@@ -957,23 +957,6 @@ mod tests {
         assert_eq!(py_repr("a\nb\\c"), "'a\\nb\\\\c'");
     }
 
-    /// Recursively count the character files the loader would discover.
-    fn count_character_files(directory: &Path) -> usize {
-        std::fs::read_dir(directory)
-            .expect("the lore character directory is readable")
-            .map(|entry| entry.expect("a readable directory entry").path())
-            .map(|path| {
-                if path.is_dir() {
-                    count_character_files(&path)
-                } else {
-                    usize::from(
-                        path.extension()
-                            .is_some_and(|extension| extension == "json"),
-                    )
-                }
-            })
-            .sum()
-    }
 
     #[test]
     fn the_shipped_assets_load() {
@@ -994,7 +977,9 @@ mod tests {
             .as_array()
             .expect("the seed lists characters")
             .len();
-        let in_lore = count_character_files(Path::new("../../lore/characters"));
+        let in_lore = cathedral_backends::world_data::character_sources(Path::new("../../lore"))
+            .expect("the lore cast is readable")
+            .len();
 
         assert!(
             in_lore > 100,
