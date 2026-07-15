@@ -53,12 +53,15 @@ CATHEDRAL_DRIVE='sleep 2; shot dawn; key KeyT; key KeyT; sleep 25; shot dusk; qu
 ```
 
 ```sh
-# Two whole game days in two real minutes, every office printed as it rings.
+# Two whole game days, every office printed as its bell rings. `--watch-clock`
+# steps the clock deterministically (it takes game *days*, not turns — `-t` is a
+# turn count, so it would not run "two days"), so no bell's line is ever skipped.
 cargo run -p cathedral-backends --bin cathedral-headless -- \
-    --fake --seconds-per-day 60 -t 120
+    --fake --seconds-per-day 60 --watch-clock 2
 ```
 
-Expect seven bells per minute of wall-clock, in order, wrapping correctly at the Snuffing.
+Expect all seven offices printed in order each game day — fourteen across the two days — wrapping
+correctly from the Snuffing back to the Watch.
 
 ---
 
@@ -128,14 +131,36 @@ CATHEDRAL_DRIVE='sleep 2; key F7; shot navgraph; quit' cargo run
 
 ---
 
-## M2 — One NPC walks
+## M2 — One NPC walks  ✅ *implemented*
 
 **Ships.** The hot/cold snapshot split (perf-doc item 1). The fixed 20 Hz movement tick + render
 interpolation (item 2). `World::step_movement`. One hard-coded actor pacing between two named places,
 forever.
 
+**Status — done and verified.** The sim owns the walk: `NavData` is now wired into the engine
+(`EngineConfig.nav: Option<Arc<NavData>>`, `None` by default so the frozen fixtures are untouched);
+`CharacterState.movement: Option<Movement>` carries the remaining polyline, speed and a continuous
+gait phase (`character.rs`); `World::step_movement` advances every mover one fixed slice **without
+bumping `world_revision`** — positions ride a new *hot* channel, `EngineMessage::Movement { moved:
+Vec<ActorMotion> }`, exactly as the `Clock` message does (that IS the hot/cold split — the cold
+name/knows snapshot only rebuilds on a real revision change). The engine drives a **fixed 20 Hz
+accumulator** (`MOVEMENT_TICK_SECONDS = 0.05`, `WALK_SPEED_MPS = 1.8`) in `poll`, before the stage
+block, so `context_hash`/`characters_within` read current positions. The host consumes the hot channel
+into a `MovementInbox` resource and interpolates each mover's `Transform` prev→current over the 50 ms
+tick window in `drive_npc_bodies` (`src/smart_actors/actors.rs`), ordered *after* `reconcile_actor_views`
+so it owns the mover's transform — no second `Time<Fixed>` schedule, so it never fights the player's
+120 Hz controller. **The §5.1 novelty fix shipped here:** `context_hash` counts a neighbour only if
+`is_settled()` (speed < `SETTLED_SPEED_MPS = 0.15`), so a man crossing the square is not news at every
+step but a man who stops is. The hard-coded pacer is `p0012` (a market-seller) walking the west
+forecourt flagstones between "Tenterhook Lane" and the "Seraph statue" — visible from the player's
+spawn — set up in `Engine::new::seed_pacing_actor` (diagnostic-and-skip if the actor/place/route does
+not resolve; never panics). *Note:* in-game **visible** travel per real second trails the nominal
+1.8 m/s because the engine runs on `Time<Virtual>`, which lags wall-clock under a heavy frame — the
+same lag the clock/sun already have (M0 note above); the sim itself moves at a verified 1.8 m/s.
+
 **Touches.** This is the big structural one:
-`crates/cathedral-sim/src/{world,engine,nav/*}.rs`, `src/smart_actors/{model,actors}.rs`.
+`crates/cathedral-sim/src/{world,engine,character,attention,nav/mod,lib}.rs`,
+`crates/cathedral-backends/src/bin/cathedral_headless.rs`, `src/smart_actors/{model,actors,mod,local_engine}.rs`.
 
 **And the novelty fix ships here, not later.** [05](05_the_llm_seam.md) §5.1 —
 `context_hash` must only count *settled* neighbours before anybody starts walking past anybody. If it

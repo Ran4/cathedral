@@ -30,6 +30,7 @@ use std::{
     path::{Path, PathBuf},
     process::ExitCode,
     rc::Rc,
+    sync::Arc,
     time::Duration,
 };
 
@@ -42,8 +43,9 @@ use cathedral_backends::{
 use cathedral_sim::{
     ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion, CuriosityConfig,
     DEFAULT_VIEW_CONE_DEGREES, Engine, EngineCommand, EngineConfig, EngineMessage, FakeCognition,
-    IdleCognitionMode, NullSight, NullTranscription, NullTts, Office, PlayerKnowledge, PromptEnv,
-    RequestId, SoundCatalog, StageConfig, TtsBackendKind, Vec3, World, WorldClock, WorldSeed,
+    IdleCognitionMode, NavData, NullSight, NullTranscription, NullTts, Office, PlayerKnowledge,
+    PromptEnv, RequestId, SoundCatalog, StageConfig, TtsBackendKind, Vec3, World, WorldClock,
+    WorldSeed,
     engine::{
         DEFAULT_MAXIMUM_BACKOFF_SECONDS, DEFAULT_NIGHT_BRIGHTNESS, DEFAULT_SECONDS_PER_DAY,
         DEFAULT_SOUND_COOLDOWN_SECONDS, DEFAULT_STT_STREAM_GRACE_SECONDS,
@@ -152,6 +154,14 @@ struct Args {
     /// directory holding characters/ and core_lore/; defaults beside assets/
     #[arg(long, value_name = "DIR")]
     lore: Option<PathBuf>,
+
+    /// print each mover's position on the transcript stream as it walks
+    ///
+    /// One `[pos]` line per moved actor per poll, so you can watch the M2 pacing
+    /// walker advance along its street and turn around. Needs a nav graph under
+    /// `--assets`; without one nobody moves and nothing prints.
+    #[arg(long)]
+    trace_positions: bool,
 }
 
 fn main() -> ExitCode {
@@ -302,6 +312,8 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             },
             clock,
             ring_the_offices: true,
+            // The M2 pacing walker only exists when a nav graph is present.
+            nav: assets.nav.clone(),
         },
         &assets.seed,
         assets.areas,
@@ -327,6 +339,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         provider_failed: false,
         requires_news: args.news || args.curiosity,
         last_office: None,
+        trace_positions: args.trace_positions,
     };
     if args.watch_clock > 0.0 {
         runner.watch_clock(args.watch_clock, clock.seconds_per_day())?;
@@ -373,6 +386,8 @@ struct Runner {
     /// The last office the clock reported, so the runner prints each bell once
     /// as it rings rather than on every poll.
     last_office: Option<Office>,
+    /// `--trace-positions`: echo every mover's pose to the transcript stream.
+    trace_positions: bool,
 }
 
 impl Runner {
@@ -533,6 +548,16 @@ impl Runner {
                     weekday.label()
                 );
             }
+            // The mover trace: one line per moved actor per poll, on stdout so it
+            // rides the transcript stream with `2>/dev/null` still clean.
+            EngineMessage::Movement { moved } if self.trace_positions => {
+                for motion in &moved {
+                    println!(
+                        "[pos] {} x={:.2} z={:.2} speed={:.2}",
+                        motion.actor_id, motion.position_m.x, motion.position_m.z, motion.speed
+                    );
+                }
+            }
             _ => {}
         }
     }
@@ -680,6 +705,9 @@ struct Assets {
     areas: AreaMap,
     catalog: SoundCatalog,
     prompts: PromptEnv,
+    /// The street graph, when both baked files are present under `--assets`.
+    /// Missing files are a warning, not an error: the run simply has no movers.
+    nav: Option<Arc<NavData>>,
 }
 
 impl Assets {
@@ -701,11 +729,13 @@ impl Assets {
             .map_err(|error| format!("invalid sound catalog: {error}"))?;
         let prompts = PromptEnv::new(&read("prompts/turn.j2")?, &read("prompts/strings.toml")?)
             .map_err(|error| format!("invalid prompt assets: {error}"))?;
+        let nav = load_nav(directory);
         Ok(Self {
             seed,
             areas,
             catalog,
             prompts,
+            nav,
         })
     }
 
@@ -718,6 +748,31 @@ impl Assets {
             .find(|character| character.id.as_str() == PLAYER_ID)
             .map(|player| (player.position_m, player.facing_yaw))
             .unwrap_or((Vec3::ZERO, 0.0))
+    }
+}
+
+/// Load the baked street graph the same way the host does — `navigation.json`
+/// plus its `navigation.bin` companion, relative to `--assets`. Missing files
+/// warn and disable movement rather than failing the run.
+fn load_nav(directory: &Path) -> Option<Arc<NavData>> {
+    let json_path = directory.join("world/navigation.json");
+    let bin_path = directory.join("world/navigation.bin");
+    let (json, bin) = match (fs::read_to_string(&json_path), fs::read(&bin_path)) {
+        (Ok(json), Ok(bin)) => (json, bin),
+        _ => {
+            eprintln!(
+                "warning: no navigation graph under {}; movement is off",
+                directory.display()
+            );
+            return None;
+        }
+    };
+    match NavData::from_parts(&json, &bin) {
+        Ok(nav) => Some(Arc::new(nav)),
+        Err(error) => {
+            eprintln!("warning: navigation graph did not load: {error}; movement is off");
+            None
+        }
     }
 }
 
@@ -968,6 +1023,7 @@ mod tests {
             provider_failed: false,
             requires_news: false,
             last_office: None,
+            trace_positions: false,
         };
 
         let started = std::time::Instant::now();

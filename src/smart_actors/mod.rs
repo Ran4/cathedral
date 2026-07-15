@@ -368,6 +368,7 @@ impl Plugin for SmartActorsPlugin {
             .insert_resource(worker)
             .init_resource::<model::WorldMirror>()
             .init_resource::<clock::WorldClockState>()
+            .init_resource::<model::MovementInbox>()
             .insert_resource(SmartActorRuntime::starting(self.config.fake_backend))
             .init_resource::<area_debug::AreaDebugState>()
             .init_resource::<ActorFocus>()
@@ -426,6 +427,10 @@ impl Plugin for SmartActorsPlugin {
                     actors::reconcile_actor_views,
                     actors::reconcile_offered_item_views,
                     interaction::reconcile_interaction_state,
+                    // After reconcile, so it overrides the stale snapshot position
+                    // reconcile writes for a mover between revisions with the live
+                    // interpolated pose off the hot channel.
+                    actors::drive_npc_bodies,
                 )
                     .chain()
                     .in_set(SmartActorSet::ReconcileMirror),
@@ -540,6 +545,7 @@ fn drain_bridge_messages(
     mut spatial: ResMut<interaction::PlayerSpatialState>,
     mut presentation: BridgePresentationWriters,
     mut world_clock: ResMut<clock::WorldClockState>,
+    mut movement_inbox: ResMut<model::MovementInbox>,
     // Speech presentation dedupes and orders by this (speech.rs), and the
     // engine's messages no longer carry a sequence of their own. Counting them
     // here gives the same monotonic, gap-free stream the envelope did.
@@ -591,6 +597,7 @@ fn drain_bridge_messages(
                     &mut interaction,
                     &mut presentation,
                     &mut world_clock,
+                    &mut movement_inbox,
                 );
                 // Do not open the default input device before the engine
                 // handshake confirms that transcription is configured.
@@ -644,6 +651,7 @@ fn process_engine_message(
     interaction: &mut interaction::InteractionState,
     presentation: &mut BridgePresentationWriters,
     world_clock: &mut clock::WorldClockState,
+    movement_inbox: &mut model::MovementInbox,
 ) {
     match message {
         EngineMessage::Ready {
@@ -703,6 +711,25 @@ fn process_engine_message(
                 brightness,
                 scale,
             };
+        }
+        EngineMessage::Movement { moved } => {
+            // The hot channel, like `Clock`: mover poses arrive every 20 Hz tick
+            // and must never touch the mirror or bump a revision — routing them
+            // through the cold snapshot would republish the whole world 20 times
+            // a second (06_engineering.md, the hot/cold split). Each mover's
+            // latest pose lands in a plain resource, `seq` bumped so
+            // `actors::drive_npc_bodies` (which runs after the reconcile pass and
+            // wins over the stale snapshot position it wrote) can interpolate
+            // between successive ticks.
+            for motion in moved {
+                let actor_id = model::actor_id_from_sim(&motion.actor_id);
+                let sample = movement_inbox.0.entry(actor_id).or_default();
+                sample.position = model::vec3_from_sim(motion.position_m);
+                sample.facing_yaw = motion.facing_yaw as f32;
+                sample.speed = motion.speed;
+                sample.gait_phase = motion.gait_phase;
+                sample.seq = sample.seq.wrapping_add(1);
+            }
         }
         EngineMessage::Speech {
             event_id,

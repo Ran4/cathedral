@@ -36,6 +36,28 @@ pub struct ActorId(pub String);
 #[serde(transparent)]
 pub struct ItemId(pub String);
 
+/// One mover's latest pose off the engine's hot channel — the host-side twin of
+/// `cathedral_sim::ActorMotion`, projected out of [`cathedral_sim::EngineMessage::Movement`]
+/// exactly as the clock is projected out of its own message: a plain per-poll
+/// value, never a snapshot, never a revision bump (features/movement/06_engineering.md,
+/// the hot/cold split). `seq` bumps on every fresh sample so the interpolator can
+/// tell a new 20 Hz tick from a re-read of the same one.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct MotionSample {
+    pub position: Vec3,
+    pub facing_yaw: f32,
+    pub speed: f32,
+    pub gait_phase: f32,
+    pub seq: u64,
+}
+
+/// The latest [`MotionSample`] for each mover, written in the `Movement` arm of
+/// `process_engine_message` and read by `actors::drive_npc_bodies`. Non-movers
+/// never appear here, so the interpolator leaves them entirely to the snapshot
+/// reconcile pass.
+#[derive(Resource, Default, Debug)]
+pub struct MovementInbox(pub HashMap<ActorId, MotionSample>);
+
 /// A protocol position, in metres.
 ///
 /// Deserialization is intentionally stricter than serde_json's default: NaN

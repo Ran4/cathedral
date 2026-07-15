@@ -33,6 +33,7 @@ use std::{
     panic::{self, AssertUnwindSafe},
     path::{Path, PathBuf},
     rc::Rc,
+    sync::Arc,
 };
 
 use bevy::prelude::*;
@@ -42,9 +43,9 @@ use cathedral_backends::{
 };
 use cathedral_sim::{
     ActorId as SimActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand,
-    EngineConfig, EngineMessage, FakeCognition, ItemId as SimItemId, NullSight, Office, PromptEnv,
-    RequestId, SoundCatalog, SpatialActorUpdate, SpeechEventId, SttBackendKind, Transcription, Tts,
-    TtsBackendKind, Vec3 as SimVec3, WorldClock, WorldSeed,
+    EngineConfig, EngineMessage, FakeCognition, ItemId as SimItemId, NavData, NullSight, Office,
+    PromptEnv, RequestId, SoundCatalog, SpatialActorUpdate, SpeechEventId, SttBackendKind,
+    Transcription, Tts, TtsBackendKind, Vec3 as SimVec3, WorldClock, WorldSeed,
 };
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
@@ -63,6 +64,13 @@ use super::{
 fn assets_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets")
 }
+
+/// The committed navigation artifact — the baked walkable surface and the welded
+/// street graph the movers route on — embedded so the sim walks on exactly the
+/// bytes the F7 overlay draws (`nav_overlay.rs`) and the city renderer reads
+/// (`city/mod.rs`): one geometry, three consumers (features/movement/02_navigation.md).
+const NAV_JSON: &str = include_str!("../../assets/world/navigation.json");
+const NAV_BIN: &[u8] = include_bytes!("../../assets/world/navigation.bin");
 
 /// Owns the backends, and through them the session's private audio directory.
 /// Dropping it stops the speech workers and removes the directory with
@@ -258,6 +266,18 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
     let prompt_log = backends
         .prompt_log(crate::session_log::paths().map(|session| session.root.join("prompts")));
 
+    // The walkable graph the engine steps its movers on. A parse failure is not
+    // fatal: the engine keeps `nav: None`, nobody walks, and the rest of the cast
+    // is none the wiser — exactly the frozen-fixture default (engine.rs). Only
+    // handing it a `Some` turns movement on (features/movement/02_navigation.md).
+    let nav = match NavData::from_parts(NAV_JSON, NAV_BIN) {
+        Ok(nav) => Some(Arc::new(nav)),
+        Err(error) => {
+            warn!("navigation graph did not load; NPCs will not walk: {error}");
+            None
+        }
+    };
+
     let engine_config = EngineConfig {
         player_id: SimActorId::from_raw(PLAYER_ID),
         fake_mode: config.fake_backend,
@@ -294,6 +314,7 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
             config.clock.night_brightness,
         ),
         ring_the_offices: config.clock.ring_the_offices,
+        nav,
         ..EngineConfig::default()
     };
 

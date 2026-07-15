@@ -58,12 +58,20 @@ DOOR_STAND_M = 0.8     # how far outside the threshold a person waits at a door
 DOOR_MIN_EDGE_M = 3.2  # add_facade_openings skips edges shorter than this
 FORECOURT_XZ = (0.0, 95.0)  # PLAYER_SPAWN — a guaranteed-walkable reference
 
-# The Lanthorn's cathedral interior is built by scene.rs (CathedralPlugin), not
-# by build_city, so its colliders are absent from the collision export; its front
-# doors are baked there too, not by add_facade_openings (city/mod.rs:582). Its
-# footprint is subtracted explicitly so the nave is not treated as open walkable
-# ground; routing inside the cathedral is a later interior carve-in, not M1.
-SKIP_DOOR_IDS = {"named_lanthorn"}
+# Buildings add_facade_openings (city/mod.rs) renders NO door for, so the bake
+# must not emit one either — the sim's door has to be the door the player sees.
+#   * named_lanthorn: its cathedral interior is built by scene.rs (CathedralPlugin),
+#     not build_city, so its colliders are absent from the collision export and its
+#     front doors are baked there too, not by add_facade_openings. Its footprint is
+#     subtracted explicitly (build_walkable) so the nave is not treated as open
+#     ground; routing inside the cathedral is a later interior carve-in, not M1.
+#   * named_malt_house and the three `use == "bridge"` buildings: overhead scenery.
+#     "roads win" leaves the ground *under* them walkable (their collider starts
+#     above head height), so choose_door_edge would otherwise bake a door standing
+#     on open ground beneath a structure with no threshold the player can see. The
+#     malt-house is matched by id (its `use` is "trade", not "bridge"); the bridges
+#     by `use`, mirroring add_facade_openings' `use_name == "bridge"` check exactly.
+SKIP_DOOR_IDS = {"named_lanthorn", "named_malt_house"}
 # Places whose anchor sits deep inside a large footprint (the Lanthorn nave is
 # ~44 m from its nearest wall) still resolve to the nearest walkable apron.
 PLACE_SNAP_M = 60.0
@@ -599,8 +607,8 @@ def bake():
     doors = []
     door_far = 0
     for b in sorted(plan["buildings"], key=lambda b: b["id"]):
-        if b["id"] in SKIP_DOOR_IDS:
-            continue  # the Lanthorn's doors are built by scene.rs, not baked
+        if b["id"] in SKIP_DOOR_IDS or b.get("use") == "bridge":
+            continue  # renderer draws no door here (Lanthorn, malt-house, bridges)
         chosen = choose_door_edge(b, surface)
         if chosen is None:
             door_far += 1

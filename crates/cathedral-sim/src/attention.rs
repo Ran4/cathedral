@@ -411,7 +411,17 @@ pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
         .into_iter()
         .collect();
     for other_id in &seen {
-        other_id.as_str().hash(&mut hasher);
+        // Only a *settled* neighbour counts (`05_the_llm_seam.md` §5.1). A man
+        // crossing the square at 1.8 m/s must not make his every step news; the
+        // moment he stops (speed → 0) his arrival does. The player carries no
+        // `Movement`, so he is always settled and always counted — unchanged.
+        if world
+            .characters
+            .get(other_id)
+            .is_some_and(|other| other.is_settled())
+        {
+            other_id.as_str().hash(&mut hasher);
+        }
     }
 
     // `world.offers` is keyed by item id and iterates in that order, so this is
@@ -709,9 +719,23 @@ fn uniform(hash: u64) -> f64 {
 mod tests {
     use super::*;
     use crate::{
-        CharacterSheet, Vec3,
-        character::{Character, Control},
+        CharacterSheet, Vec3, WALK_SPEED_MPS,
+        character::{Character, Control, Movement, Patrol},
     };
+
+    /// A live walk, fast enough to count as unsettled.
+    fn walking() -> Movement {
+        Movement {
+            path: vec![Vec3::new(100.0, 0.0, 0.0)],
+            speed: WALK_SPEED_MPS,
+            gait_phase: 0.0,
+            patrol: Patrol {
+                a: "a".into(),
+                b: "b".into(),
+                heading_to_b: true,
+            },
+        }
+    }
 
     fn character(id: &str, x: f64, control: Control) -> Character {
         Character::from_sheet(CharacterSheet {
@@ -903,6 +927,43 @@ mod tests {
             .state
             .position_m = Vec3::new(0.0, 0.0, 0.0);
         assert_eq!(context_hash(&world, &near), with_player);
+    }
+
+    /// 05_the_llm_seam.md §5.1: a neighbour in motion drops out of the hash so
+    /// his every step is not news; the moment he stops he is counted again, so a
+    /// genuine arrival still fires.
+    #[test]
+    fn a_moving_neighbour_is_not_news_but_a_stopped_one_is() {
+        let mut world = world();
+        let near = ActorId::from_raw("near");
+        let mid = ActorId::from_raw("mid");
+
+        // Baseline: everyone within earshot is settled and counted.
+        let all_settled = context_hash(&world, &near);
+
+        // `mid` starts walking — excluded from `near`'s hash, so it changes.
+        world.characters.get_mut(&mid).unwrap().state.movement = Some(walking());
+        let mid_walking = context_hash(&world, &near);
+        assert_ne!(
+            mid_walking, all_settled,
+            "a mover drops out of the settled-neighbour hash"
+        );
+
+        // `mid` stops (speed 0): settled again, counted again, back to baseline.
+        world
+            .characters
+            .get_mut(&mid)
+            .unwrap()
+            .state
+            .movement
+            .as_mut()
+            .unwrap()
+            .speed = 0.0;
+        assert_eq!(
+            context_hash(&world, &near),
+            all_settled,
+            "a man who stops is an arrival again"
+        );
     }
 
     #[test]

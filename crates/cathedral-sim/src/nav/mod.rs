@@ -193,7 +193,11 @@ pub struct Route {
 }
 
 /// The validated walkable surface and street graph.
-#[derive(Debug, Clone)]
+///
+/// `PartialEq` (all fields already are) so it can sit behind an `Arc` inside a
+/// `#[derive(PartialEq)]` [`crate::EngineConfig`]; not `Eq`, because the node
+/// coordinates are `f64`.
+#[derive(Debug, Clone, PartialEq)]
 pub struct NavData {
     grid: NavGrid,
     bitset: Vec<u8>,

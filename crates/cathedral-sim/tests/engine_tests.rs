@@ -17,10 +17,11 @@ use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use cathedral_sim::{
     ActorId, Capabilities, Cognition, CognitionBusy, Completion, Engine, EngineCommand,
-    EngineConfig, EngineInitError, EngineMessage, FakeCognition, HEARING_RADIUS_M, ItemId,
-    NullSight, NullTranscription, Office, PublicSnapshot, SpeechError, SpeechEventId, SpeechRouter,
-    SttBackendKind, Subsystem, Tts, TtsBackendKind, TtsOutcome, TtsRequest, TtsSubmitError, Vec3,
-    WorldClock, WorldSeed, apply_action, ids::RequestId, speech_reading_seconds,
+    EngineConfig, EngineInitError, EngineMessage, FakeCognition, HEARING_RADIUS_M, ItemId, Movement,
+    NavData, NullSight, NullTranscription, Office, Patrol, PublicSnapshot, SpeechError,
+    SpeechEventId, SpeechRouter, SttBackendKind, Subsystem, Tts, TtsBackendKind, TtsOutcome,
+    TtsRequest, TtsSubmitError, Vec3, WALK_SPEED_MPS, WALK_Y, WorldClock, WorldSeed, apply_action,
+    ids::RequestId, speech_reading_seconds,
 };
 use prompt_support::{areas, catalog, prompt_env};
 use serde_json::json;
@@ -336,12 +337,184 @@ fn the_offices_ring_for_the_player_only_and_publish_the_clock() {
     assert_eq!(scale, Some(10.0));
 }
 
+/// A clock-only engine (no cognition moves the world), opened on `clock` at the
+/// construction `now == 0.0`, so a later poll's span begins at 0.
+fn clock_only_engine(clock: WorldClock) -> Engine {
+    Engine::new(
+        EngineConfig {
+            clock,
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player")
+}
+
+/// When one poll span crosses two offices whose ordinals overlap in time — High
+/// Wick's fourth stroke (noon + 9 s) falls after the Waning's first (three game
+/// hours later, ~7.5 s away at 60 s/day) — every owed stroke must still ring in
+/// due-time order, none stranded behind a later-office stroke. This is the
+/// regression for the per-office FIFO that only drained its front
+/// (`features/movement/code_review.md` finding 1).
+#[test]
+fn overlapping_office_ordinals_ring_in_due_order() {
+    // 60 s/day opening at Dayspring (07:00). High Wick (noon) rings at 12.5 s
+    // with four strokes 3 s apart (12.5/15.5/18.5/21.5); the Waning (15:00) at
+    // 20.0 s with five (20.0/23.0/26.0/29.0/32.0). Their strokes interleave —
+    // the Waning's first (20.0) lands *between* High Wick's third (18.5) and
+    // fourth (21.5) — so a per-office FIFO strands 20.0 behind 21.5.
+    let clock = WorldClock::new(60.0, Office::Dayspring, 0, 0.05);
+    let mut engine = clock_only_engine(clock);
+
+    let count_bells = |messages: &[EngineMessage]| messages.iter().filter(|m| is_town_bell(m)).count();
+
+    // Enter Dayspring; nothing rings yet.
+    assert_eq!(count_bells(&engine.poll(0.0, Vec::new())), 0);
+
+    // One span (0, 21] crosses *both* High Wick and the Waning. Four strokes are
+    // due by 21 s (12.5, 15.5, 18.5, 20.0). The old front-only FIFO stranded the
+    // Waning's 20.0 behind High Wick's not-yet-due 21.5 and rang only three.
+    assert_eq!(
+        count_bells(&engine.poll(21.0, Vec::new())),
+        4,
+        "the Waning's first stroke (20.0 s) is due and must not wait behind High Wick's 21.5 s stroke"
+    );
+
+    // Drain the rest of the game day in one big span (21, 70]: High Wick's and
+    // the Waning's five remaining strokes plus Lamplight, the Snuffing, and day
+    // 1's Watch / Kindling / Dayspring. Every owed stroke of the day must ring,
+    // and the whole day's total is the sum of the seven ordinals.
+    let rest = count_bells(&engine.poll(70.0, Vec::new()));
+    assert_eq!(
+        rest + 4,
+        (1 + 2 + 3 + 4 + 5 + 6 + 7),
+        "one game day rings each office's full ordinal exactly once — nothing lost, nothing doubled"
+    );
+}
+
 /// The yaw that points the player straight at `actor` (yaw 0 faces -Z).
 fn yaw_towards(harness: &Harness, actor: &str) -> f64 {
     let world = harness.engine.world();
     let from = world.characters[&player()].position_m();
     let to = world.characters[&ActorId::from_raw(actor)].position_m();
     (-(to.x - from.x)).atan2(-(to.z - from.z))
+}
+
+// ------------------------------------------------------------------- movement
+
+/// The committed street graph — a valid `Some(nav)` so `tick_movement` runs. The
+/// mover's path is injected below and long enough never to need re-routing, so
+/// the map's geometry does not enter the assertions.
+const NAV_JSON: &str = include_str!("../../../assets/world/navigation.json");
+const NAV_BIN: &[u8] = include_bytes!("../../../assets/world/navigation.bin");
+
+fn real_nav() -> std::sync::Arc<NavData> {
+    std::sync::Arc::new(NavData::from_parts(NAV_JSON, NAV_BIN).expect("the committed nav loads"))
+}
+
+/// Movement rides the HOT channel: polling across time advances a mover's
+/// `position_m` in fixed 20 Hz slices and republishes it as
+/// `EngineMessage::Movement`, and — the whole point of the hot/cold split —
+/// **never** bumps `world_revision` or emits a `Snapshot`.
+#[test]
+fn movement_advances_on_the_hot_channel_without_touching_the_revision() {
+    // No cognition, so nothing but movement and the clock can move the world.
+    let mut engine = Engine::new(
+        EngineConfig {
+            nav: Some(real_nav()),
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player");
+
+    // The demo seed has no pacing actor, so seed one by hand: a demo NPC set on a
+    // straight 100 m leg due +x that it cannot exhaust within the test window.
+    let mover = ActorId::from_raw("cb947");
+    {
+        let character = engine
+            .world_mut()
+            .characters
+            .get_mut(&mover)
+            .expect("cb947 is in the demo seed");
+        character.state.position_m = Vec3::new(0.0, WALK_Y, 0.0);
+        character.state.movement = Some(Movement {
+            path: vec![Vec3::new(100.0, WALK_Y, 0.0)],
+            speed: WALK_SPEED_MPS,
+            gait_phase: 0.0,
+            patrol: Patrol {
+                a: "here".into(),
+                b: "there".into(),
+                heading_to_b: true,
+            },
+        });
+    }
+
+    // First poll drains `Ready`; the mover has not moved yet (span (0,0] is empty).
+    let ready = engine.poll(0.0, Vec::new());
+    assert!(matches!(ready[0], EngineMessage::Ready { .. }));
+    let revision_before = engine.world().world_revision;
+
+    // One second later: whole 0.05 s slices of 0.09 m each, ~1.8 m due +x. The
+    // exact count is 19 or 20 depending on where 0.05's f64 rounding lands on the
+    // boundary — the leftover carries in `movement_now`, so the average holds at
+    // 1.8 m/s and any single sample is within one slice of the ideal.
+    let messages = engine.poll(1.0, Vec::new());
+
+    let moved = messages
+        .iter()
+        .find_map(|message| match message {
+            EngineMessage::Movement { moved } => Some(moved),
+            _ => None,
+        })
+        .expect("a Movement message was published");
+    assert_eq!(moved.len(), 1);
+    assert_eq!(moved[0].actor_id, mover);
+    let advance = moved[0].position_m.x;
+    assert!(
+        (advance - 1.8).abs() <= WALK_SPEED_MPS * 0.05 + 1e-9,
+        "advanced ~1.8 m/s (got {advance})"
+    );
+    // Every slice is an exact 0.09 m, so the total is a whole multiple of it.
+    let slices = advance / (WALK_SPEED_MPS * 0.05);
+    assert!((slices - slices.round()).abs() < 1e-6, "a whole number of slices");
+    assert_eq!(moved[0].speed, WALK_SPEED_MPS as f32);
+
+    // The world itself agrees, and it did so without a snapshot or a revision bump.
+    assert_eq!(engine.world().characters[&mover].position_m().x, advance);
+    assert_eq!(
+        engine.world().world_revision,
+        revision_before,
+        "a movement-only poll must not touch the public revision"
+    );
+    assert!(
+        !messages
+            .iter()
+            .any(|message| matches!(message, EngineMessage::Snapshot(_))),
+        "movement must not re-trigger the snapshot chain"
+    );
 }
 
 // ------------------------------------------------------------------- matchers

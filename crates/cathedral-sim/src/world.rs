@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    DEFAULT_VIEW_CONE_DEGREES,
+    DEFAULT_VIEW_CONE_DEGREES, WALK_SPEED_MPS,
     areas::AreaMap,
     character::Character,
     clock::WorldTime,
@@ -17,10 +17,16 @@ use crate::{
     ids::{ActorId, ItemId},
     item::Item,
     math::Vec3,
+    nav::{NavData, WALK_Y},
     offer::Offer,
     snapshot::{ActorSnapshot, ItemSnapshot, OfferSnapshot, PublicSnapshot},
     sounds::SoundCatalog,
 };
+
+/// Walk-cadence multiplier: `gait_phase += speed * dt * GAIT_CADENCE`. A stride
+/// per ~1.3 m at the brisk pace, which M7's animation reads; it never affects
+/// where anyone ends up.
+const GAIT_CADENCE: f64 = 1.4;
 
 /// One actor's new position (and optionally facing) in a spatial update.
 #[derive(Debug, Clone, PartialEq)]
@@ -263,6 +269,101 @@ impl World {
         Ok(changed)
     }
 
+    /// Advance every mover by one fixed slice and return the ids whose pose
+    /// actually changed. Pure and deterministic, and — unlike [`update_positions`]
+    /// — it deliberately does **not** call [`touch_public_state`]: an NPC's
+    /// position rides the engine's hot `Movement` channel, never the cold public
+    /// snapshot, and that split is the whole point of the fixed tick
+    /// (`features/movement/06_engineering.md`). O(movers), not O(cast).
+    ///
+    /// [`touch_public_state`]: World::touch_public_state
+    pub fn step_movement(&mut self, dt: f64, nav: &NavData) -> Vec<ActorId> {
+        let mut moved: Vec<ActorId> = Vec::new();
+        for (id, character) in self.characters.iter_mut() {
+            if character.state.movement.is_none() {
+                continue;
+            }
+            let start = character.state.position_m;
+            let old_yaw = character.state.facing_yaw;
+            let mut new_pos = start;
+            let mut new_yaw = old_yaw;
+
+            // `movement` and the position/facing fields are disjoint parts of the
+            // same state; the writes below happen after this borrow ends.
+            {
+                let movement = character
+                    .state
+                    .movement
+                    .as_mut()
+                    .expect("checked non-None above");
+
+                // Arrived: flip the patrol and route from here to the new end.
+                if movement.path.is_empty() {
+                    movement.patrol.heading_to_b = !movement.patrol.heading_to_b;
+                    let target = if movement.patrol.heading_to_b {
+                        &movement.patrol.b
+                    } else {
+                        &movement.patrol.a
+                    };
+                    match nav
+                        .place(target)
+                        .and_then(|place| nav.route_between(start, nav.node_point(place.node)))
+                    {
+                        Some(route) => {
+                            let mut points = route.points;
+                            // A route snaps `start` to the nearest node, so its
+                            // first point is usually exactly where we stand — drop
+                            // it, or the first leg is zero-length.
+                            if points.first().is_some_and(|point| planar_close(*point, start)) {
+                                points.remove(0);
+                            }
+                            movement.path = points;
+                        }
+                        // A missing place or an unroutable target is not a panic:
+                        // the actor simply stops until the pipeline is fixed.
+                        None => movement.speed = 0.0,
+                    }
+                }
+
+                // Walk toward the next waypoint, in the XZ plane only — every
+                // mover stays on the walk plane.
+                if let Some(&waypoint) = movement.path.first() {
+                    let to = Vec3::new(waypoint.x - start.x, 0.0, waypoint.z - start.z);
+                    let distance = to.length();
+                    let step = WALK_SPEED_MPS * dt;
+                    if distance <= step {
+                        // Snap onto the waypoint and drop it; the final partial
+                        // leg's speed is its own length over the slice.
+                        new_pos = Vec3::new(waypoint.x, WALK_Y, waypoint.z);
+                        movement.path.remove(0);
+                        movement.speed = if dt > 0.0 { distance / dt } else { 0.0 };
+                    } else {
+                        let dir = to / distance;
+                        new_pos = Vec3::new(start.x + dir.x * step, WALK_Y, start.z + dir.z * step);
+                        movement.speed = WALK_SPEED_MPS;
+                    }
+                    if distance > 1e-9 {
+                        let dir = to / distance;
+                        // yaw 0 faces -Z, matching the rest of the codebase.
+                        new_yaw = (-dir.x).atan2(-dir.z);
+                    }
+                    movement.gait_phase += movement.speed * dt * GAIT_CADENCE;
+                } else {
+                    movement.speed = 0.0;
+                }
+            }
+
+            // A step, or a pure turn — both are visible and both ride the hot
+            // channel, so both count as moved.
+            if new_pos != start || new_yaw != old_yaw {
+                character.state.position_m = new_pos;
+                character.state.facing_yaw = new_yaw;
+                moved.push(id.clone());
+            }
+        }
+        moved
+    }
+
     pub fn public_snapshot(&self, player_id: &ActorId) -> PublicSnapshot {
         let player = self.characters.get(player_id);
         let actors = self
@@ -367,12 +468,20 @@ impl World {
     }
 }
 
+/// Whether two points coincide on the walk plane (XZ), within a hair. Used to
+/// drop a route's leading point when it is exactly where the mover stands.
+pub(crate) fn planar_close(a: Vec3, b: Vec3) -> bool {
+    let dx = a.x - b.x;
+    let dz = a.z - b.z;
+    dx * dx + dz * dz < 1e-9
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
-        HEARING_RADIUS_M,
-        character::{CharacterSheet, Control},
+        HEARING_RADIUS_M, WALK_SPEED_MPS,
+        character::{CharacterSheet, Control, Movement, Patrol},
     };
     use std::collections::BTreeSet;
 
@@ -529,5 +638,187 @@ mod tests {
             )
             .unwrap_err();
         assert_eq!(error.code, SpatialUpdateErrorCode::InvalidPosition);
+    }
+
+    // ------------------------------------------------------------- movement
+
+    /// A tiny hand-built graph: four nodes 10 m apart along +x, welded into one
+    /// straight corridor, with a named place at each end. All-walkable bitset —
+    /// `step_movement` never consults it, only [`NavData::from_parts`] validates
+    /// its length.
+    fn line_nav() -> NavData {
+        let w = 60usize;
+        let h = 10usize;
+        let bytes = (w * h).div_ceil(8);
+        let bitset = vec![0xFF_u8; bytes];
+        let json = format!(
+            r#"{{
+              "schema_version": 1,
+              "grid": {{"x0": -5.0, "z0": -5.0, "cell_m": 1.0, "w": {w}, "h": {h},
+                        "agent_radius_m": 0.35, "bitset_file": "x.bin",
+                        "bitset_bits": {bits}, "bitset_sha256": ""}},
+              "nodes": [[0.0, 0.0], [10.0, 0.0], [20.0, 0.0], [30.0, 0.0]],
+              "edges": [[0, 1, 2.0], [1, 2, 2.0], [2, 3, 2.0]],
+              "places": [{{"name": "a", "node": 0, "kind": "place"}},
+                         {{"name": "b", "node": 3, "kind": "place"}}],
+              "sites": [],
+              "doors": [],
+              "reference": {{"forecourt": 0}}
+            }}"#,
+            bits = w * h
+        );
+        NavData::from_parts(&json, &bitset).expect("the hand-built nav validates")
+    }
+
+    /// A mover parked at place `a`, already routed toward place `b`.
+    fn walker(nav: &NavData) -> Character {
+        let start = nav.node_point(nav.place("a").unwrap().node);
+        let mut character = Character::from_sheet(CharacterSheet {
+            id: ActorId::from_raw("walker"),
+            name: "WALKER".into(),
+            control: Control::Llm,
+            back_story: "test".into(),
+            location_description: "the corridor".into(),
+            appearance_key: "walker".into(),
+            voice_key: None,
+            position_m: start,
+            facing_yaw: 0.0,
+            holds: Vec::new(),
+            goal: "None".into(),
+            memories: Vec::new(),
+            knows: BTreeSet::new(),
+            lore: None,
+        });
+        let target = nav.node_point(nav.place("b").unwrap().node);
+        let mut path = nav.route_between(start, target).unwrap().points;
+        if path.first().is_some_and(|p| planar_close(*p, start)) {
+            path.remove(0);
+        }
+        character.state.movement = Some(Movement {
+            path,
+            speed: WALK_SPEED_MPS,
+            gait_phase: 0.0,
+            patrol: Patrol {
+                a: "a".into(),
+                b: "b".into(),
+                heading_to_b: true,
+            },
+        });
+        character
+    }
+
+    fn walker_world() -> (World, NavData, ActorId) {
+        let nav = line_nav();
+        let mut world = World::new();
+        world.add_character(walker(&nav));
+        let id = ActorId::from_raw("walker");
+        (world, nav, id)
+    }
+
+    const TICK: f64 = 0.05;
+
+    #[test]
+    fn a_mover_advances_one_walk_step_per_slice() {
+        let (mut world, nav, id) = walker_world();
+
+        let revision = world.world_revision;
+        let moved = world.step_movement(TICK, &nav);
+        assert_eq!(moved, vec![id.clone()]);
+        // A movement slice never touches the public revision (the hot/cold split).
+        assert_eq!(world.world_revision, revision);
+
+        let character = &world.characters[&id];
+        // Exactly WALK_SPEED_MPS * dt along +x, still on the walk plane.
+        assert!((character.position_m().x - WALK_SPEED_MPS * TICK).abs() < 1e-12);
+        assert!(character.position_m().z.abs() < 1e-12);
+        assert!((character.position_m().y - WALK_Y).abs() < 1e-12);
+        assert_eq!(character.speed(), WALK_SPEED_MPS);
+        // yaw 0 faces -Z; heading +x is a quarter turn to -π/2.
+        assert!((character.facing_yaw() - (-std::f64::consts::FRAC_PI_2)).abs() < 1e-12);
+        assert!(character.state.movement.as_ref().unwrap().gait_phase > 0.0);
+    }
+
+    #[test]
+    fn a_mover_arrives_within_epsilon_then_reverses_and_reroutes() {
+        let (mut world, nav, id) = walker_world();
+        let goal = nav.node_point(nav.place("b").unwrap().node);
+
+        // Walk until the path empties — arrival. 30 m at 0.09 m/slice is ~340.
+        let mut slices = 0;
+        while !world.characters[&id]
+            .state
+            .movement
+            .as_ref()
+            .unwrap()
+            .path
+            .is_empty()
+        {
+            world.step_movement(TICK, &nav);
+            slices += 1;
+            assert!(slices < 500, "the mover never arrived");
+        }
+        let arrival = world.characters[&id].position_m();
+        assert!(
+            arrival.distance(goal) < 1e-9,
+            "arrived at {arrival:?}, wanted {goal:?}"
+        );
+
+        // One more slice: the patrol flips and routes back toward `a`.
+        world.step_movement(TICK, &nav);
+        let movement = world.characters[&id].state.movement.as_ref().unwrap();
+        assert!(!movement.patrol.heading_to_b, "the patrol reversed on arrival");
+        assert!(!movement.path.is_empty(), "a fresh route back to `a` was laid");
+        assert!(
+            world.characters[&id].position_m().x < goal.x,
+            "the mover is now walking back the way it came"
+        );
+    }
+
+    /// The whole route's length falls out of the per-slice sum, so the mover walks
+    /// the graph distance and no more — the acceptance that positions are metres.
+    #[test]
+    fn the_total_walk_matches_the_route_length() {
+        let (mut world, nav, id) = walker_world();
+        let start = world.characters[&id].position_m();
+        let route_length = nav
+            .route_between(start, nav.node_point(nav.place("b").unwrap().node))
+            .unwrap()
+            .length_m;
+
+        let mut travelled = 0.0;
+        let mut previous = start;
+        for _ in 0..500 {
+            world.step_movement(TICK, &nav);
+            let now = world.characters[&id].position_m();
+            travelled += previous.distance(now);
+            previous = now;
+            if world.characters[&id]
+                .state
+                .movement
+                .as_ref()
+                .unwrap()
+                .path
+                .is_empty()
+            {
+                break;
+            }
+        }
+        assert!(
+            (travelled - route_length).abs() < 1e-6,
+            "walked {travelled} m, route is {route_length} m"
+        );
+    }
+
+    #[test]
+    fn a_character_without_movement_never_moves() {
+        let nav = line_nav();
+        let mut world = World::new();
+        world.add_character(character("still", 7.0));
+        let before = world.characters[&ActorId::from_raw("still")].position_m();
+        assert!(world.step_movement(TICK, &nav).is_empty());
+        assert_eq!(
+            world.characters[&ActorId::from_raw("still")].position_m(),
+            before
+        );
     }
 }

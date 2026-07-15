@@ -49,11 +49,13 @@ pub use attention::{
     DEFAULT_STAGE_RADIUS_M, IdleCognitionMode, IdleGate, NOVELTY_MEMORY_SECONDS, Novelty,
     STAGE_PARTNER_MEMORY_SECONDS, StageConfig, context_hash, curiosity_of, on_stage,
 };
-pub use character::{Character, CharacterSheet, CharacterState, Control};
+pub use character::{Character, CharacterSheet, CharacterState, Control, Movement, Patrol};
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
 };
-pub use engine::{Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage};
+pub use engine::{
+    ActorMotion, Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage,
+};
 pub use error::{
     ActionError, ActionErrorCode, CommandError, CommandErrorCode, EngineInitError, PromptError,
     SpatialUpdateError, SpatialUpdateErrorCode,
@@ -113,6 +115,21 @@ pub const RECENT_HISTORY_MAX_ENTRIES: usize = 32;
 /// (`character.rs`; `features/movement/05_the_llm_seam.md` §5.3). Generous
 /// against `RECENT_HISTORY_MAX_ENTRIES` so a normal turn never loses a percept.
 pub const INBOX_MAX_ENTRIES: usize = 64;
+/// The fixed movement slice: NPC positions advance in whole 20 Hz steps, so a
+/// stutter in the host's frame time can never change how far anyone walks — the
+/// sim is the authoritative mover and the host only interpolates between the
+/// samples it publishes (`features/movement/06_engineering.md`).
+pub const MOVEMENT_TICK_SECONDS: f64 = 0.05;
+/// A brisk medieval walking pace (`features/movement/01_the_clock.md` §6).
+pub const WALK_SPEED_MPS: f64 = 1.8;
+/// Below this an actor counts as "settled" for the novelty gate: a man crossing
+/// the square is not news at every step, but the moment he stops (speed → 0) his
+/// arrival is (`features/movement/05_the_llm_seam.md` §5.1).
+pub const SETTLED_SPEED_MPS: f64 = 0.15;
+/// Bounds the per-poll movement catch-up. A huge `now` jump — a resume from a
+/// long pause — must not spin through thousands of slices: past this many, the
+/// movement clock snaps forward and the backlog is dropped rather than walked.
+pub const MAX_MOVEMENT_CATCHUP_SLICES: usize = 64;
 /// Total horizontal FOV for the sound witness test; overridable per run.
 pub const DEFAULT_VIEW_CONE_DEGREES: f64 = 135.0;
 /// An override narrower than this sees nothing at all (`server.py:449-451`).

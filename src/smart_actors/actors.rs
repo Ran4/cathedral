@@ -5,13 +5,14 @@
 //! are created, updated, or removed only to match the current `WorldMirror`.
 
 use std::collections::{HashMap, HashSet};
-use std::f32::consts::{FRAC_PI_2, PI};
+use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::prelude::*;
+use cathedral_sim::MOVEMENT_TICK_SECONDS;
 
 use crate::{controller::PlayerCamera, fonts::CathedralFonts};
 
-use super::model::{ActorControl, ActorId, ItemId, WorldMirror};
+use super::model::{ActorControl, ActorId, ItemId, MovementInbox, WorldMirror};
 use super::targeting::ActorTarget;
 use super::{HEARING_RADIUS_M, SmartActorRuntime};
 
@@ -31,6 +32,25 @@ const OFFER_TURN_RADIANS_PER_SECOND: f32 = 1.15;
 /// Marker for an NPC root projected from the authoritative snapshot.
 #[derive(Component, Debug)]
 pub struct ActorView;
+
+/// Per-mover interpolation state for [`drive_npc_bodies`].
+///
+/// The engine steps movers on a fixed [`MOVEMENT_TICK_SECONDS`] slice and ships
+/// each new pose on the hot channel; this carries the previous and current
+/// samples so the body sweeps smoothly between them at render rate rather than
+/// snapping 20 times a second. `t0` is the host `elapsed_secs_f64()` at which
+/// `current` was last set, and `seq` mirrors the inbox sample's so a re-read of
+/// the same tick does not restart the sweep. Only movers carry it; it is
+/// inserted lazily on their first sample.
+#[derive(Component, Debug)]
+pub struct NpcMotion {
+    previous: Vec3,
+    current: Vec3,
+    prev_yaw: f32,
+    cur_yaw: f32,
+    t0: f64,
+    seq: u64,
+}
 
 /// The world-space attachment point for an actor's speech bubble.
 ///
@@ -216,6 +236,81 @@ pub(crate) fn reconcile_actor_views(
             }
         }
     }
+}
+
+/// Interpolates the walking NPCs between the engine's 20 Hz movement samples.
+///
+/// The sim is the authoritative mover: it ships one [`MotionSample`](super::model::MotionSample)
+/// per [`MOVEMENT_TICK_SECONDS`] tick on the hot channel ([`MovementInbox`]).
+/// Reusing the player controller's global 120 Hz `Time<Fixed>` would fight it,
+/// so this does its own two-sample interpolation over the known tick window: as
+/// each fresh sample arrives it becomes `current` and the old one `previous`,
+/// and the body lerps between them by `t = (now - t0) / tick`, clamped to
+/// `[0, 1]`, so `t` sweeps 0→1 across each 50 ms window.
+///
+/// Runs after `reconcile_actor_views` (same `ReconcileMirror` set), which writes
+/// a mover's *stale* snapshot position on every revision bump; this corrects it
+/// the same frame. Non-movers never appear in `MovementInbox`, so they are left
+/// entirely to reconcile. Children (body, head, labels) ride the root
+/// automatically. The visual gait (bob/swing off `speed`/`gait_phase`) is M7's;
+/// this only moves and turns the root.
+pub(crate) fn drive_npc_bodies(
+    mut commands: Commands,
+    time: Res<Time>,
+    inbox: Res<MovementInbox>,
+    mut movers: Query<(Entity, &ActorId, &mut Transform, Option<&mut NpcMotion>), With<ActorView>>,
+) {
+    if inbox.0.is_empty() {
+        return;
+    }
+    let now = time.elapsed_secs_f64();
+    for (entity, actor_id, mut transform, motion) in &mut movers {
+        let Some(sample) = inbox.0.get(actor_id) else {
+            continue;
+        };
+        match motion {
+            // First sample: sweep from where reconcile last placed the body to
+            // the sample, so the opening tick reads as a step, not a teleport.
+            // Deferred insertion means there is nothing to interpolate this frame;
+            // reconcile already owns the transform, so leave it be.
+            None => {
+                commands.entity(entity).insert(NpcMotion {
+                    previous: transform.translation,
+                    current: sample.position,
+                    prev_yaw: sample.facing_yaw,
+                    cur_yaw: sample.facing_yaw,
+                    t0: now,
+                    seq: sample.seq,
+                });
+            }
+            Some(mut motion) => {
+                if sample.seq != motion.seq {
+                    motion.previous = motion.current;
+                    motion.prev_yaw = motion.cur_yaw;
+                    motion.current = sample.position;
+                    motion.cur_yaw = sample.facing_yaw;
+                    motion.t0 = now;
+                    motion.seq = sample.seq;
+                }
+                let t = ((now - motion.t0) / MOVEMENT_TICK_SECONDS).clamp(0.0, 1.0) as f32;
+                transform.translation = motion.previous.lerp(motion.current, t);
+                transform.rotation =
+                    Quat::from_rotation_y(lerp_angle(motion.prev_yaw, motion.cur_yaw, t));
+            }
+        }
+    }
+}
+
+/// Shortest-arc interpolation between two yaw angles (radians), so a mover
+/// turning past ±π sweeps the short way round instead of unwinding the long way.
+fn lerp_angle(from: f32, to: f32, t: f32) -> f32 {
+    let mut delta = (to - from) % TAU;
+    if delta > PI {
+        delta -= TAU;
+    } else if delta < -PI {
+        delta += TAU;
+    }
+    from + delta * t
 }
 
 fn spawn_actor(
@@ -727,6 +822,19 @@ mod tests {
             base_translation: Vec3::ZERO,
             phase: 0.0,
         }
+    }
+
+    #[test]
+    fn lerp_angle_takes_the_short_way_round() {
+        // A quarter turn is unambiguous.
+        assert!((lerp_angle(0.0, FRAC_PI_2, 0.5) - FRAC_PI_2 / 2.0).abs() < 1e-6);
+        // Endpoints are exact.
+        assert!((lerp_angle(1.0, 2.0, 0.0) - 1.0).abs() < 1e-6);
+        assert!((lerp_angle(1.0, 2.0, 1.0) - 2.0).abs() < 1e-6);
+        // The seam: -0.9π to +0.9π is a 0.2π step across ±π, not a 1.8π unwind.
+        // The short arc at t=0.5 lands just past ±π (equivalently ∓π), never 0.
+        let mid = lerp_angle(-0.9 * PI, 0.9 * PI, 0.5);
+        assert!(mid.abs() > 0.99 * PI, "took the long way: {mid}");
     }
 
     #[test]

@@ -264,11 +264,21 @@ impl WorldClock {
         } else {
             MIN_SECONDS_PER_DAY
         };
+        // `f64::clamp` propagates a NaN `self` unchanged, so a non-finite floor
+        // from config (RON parses `NaN`/`inf`) would sail through and become a
+        // NaN `brightness`, then a NaN sun illuminance and ambient fill on the
+        // host. Reject non-finite here, as `seconds_per_day` already does, and
+        // fall back to full dark (`features/movement/code_review.md` finding 4).
+        let night_brightness = if night_brightness.is_finite() {
+            night_brightness.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
         Self {
             seconds_per_day,
             epoch_days: start_day as f64 + start_office.start_fraction(),
             scale: 1.0,
-            night_brightness: night_brightness.clamp(0.0, 1.0),
+            night_brightness,
         }
     }
 
@@ -585,6 +595,24 @@ mod tests {
         assert!(dusk > 0.05 && dusk < 1.0, "dusk ramps: {dusk}");
         // The floor is configurable.
         approx(brightness_at(0.0, 0.2), 0.2);
+    }
+
+    #[test]
+    fn a_non_finite_night_floor_is_rejected_not_propagated() {
+        // A NaN or infinite floor from a bad config must never reach the
+        // consumers as a NaN brightness (it would become a NaN sun illuminance
+        // and ambient fill on the host).
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let clock = WorldClock::new(DAY, Office::Watch, 0, bad);
+            assert!(clock.night_brightness().is_finite(), "floor from {bad} must be finite");
+            assert!(clock.brightness(0.0).is_finite(), "midnight brightness from {bad} must be finite");
+            assert!(clock.brightness(10.0 * 3600.0).is_finite(), "noon brightness from {bad} must be finite");
+            // The whole trapezoid stays finite and in range.
+            for hour in 0..24 {
+                let b = clock.brightness(f64::from(hour) * 3600.0);
+                assert!((0.0..=1.0).contains(&b), "brightness at {hour}:00 out of range: {b}");
+            }
+        }
     }
 
     #[test]

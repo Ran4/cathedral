@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    GOAL_NONE, INBOX_MAX_ENTRIES, RECENT_HISTORY_MAX_ENTRIES,
+    GOAL_NONE, INBOX_MAX_ENTRIES, RECENT_HISTORY_MAX_ENTRIES, SETTLED_SPEED_MPS,
     ids::{ActorId, ItemId},
     lore::{LoreProfile, Significance},
     math::Vec3,
@@ -70,6 +70,34 @@ pub struct CharacterSheet {
     pub lore: Option<LoreProfile>,
 }
 
+/// The M2 ping-pong: an actor walks back and forth between two named nav places.
+/// M4 replaces this with the character's real daily round, so it stays a plain
+/// pair of place names plus which end we are currently heading for.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Patrol {
+    pub a: String,
+    pub b: String,
+    /// True while the next arrival is `b`; flipped each time the path empties.
+    pub heading_to_b: bool,
+}
+
+/// A character's live walk: the remaining polyline, the current gait, and the
+/// patrol that refills the path once it empties. `None` on a character means it
+/// never walks (the player, a statue); [`CharacterState::from_sheet`] starts it
+/// `None` and only the mover pipeline ever sets it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Movement {
+    /// Remaining waypoints; the next target is `path[0]`. Empty means arrived.
+    pub path: Vec<Vec3>,
+    /// Current speed in m/s — 0 when arrived or idle.
+    pub speed: f64,
+    /// Continuous walk cadence, advanced by `speed * dt * k` each slice; M7
+    /// renders the bob and swing from it. Never reset, so the gait is seamless
+    /// across legs.
+    pub gait_phase: f64,
+    pub patrol: Patrol,
+}
+
 /// Everything an action may change.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CharacterState {
@@ -90,6 +118,10 @@ pub struct CharacterState {
     /// Percepts delivered but not yet presented in a prompt. Disjoint from
     /// `recent_history` at all times.
     pub pending_history: Vec<String>,
+    /// The live walk, or `None` for a character that never moves. Not seeded
+    /// from the sheet — the mover pipeline sets it — so a world with no nav graph
+    /// has nobody walking and the frozen fixtures are unaffected.
+    pub movement: Option<Movement>,
 }
 
 impl CharacterState {
@@ -104,6 +136,7 @@ impl CharacterState {
             inbox: Vec::new(),
             recent_history: Vec::new(),
             pending_history: Vec::new(),
+            movement: None,
         }
     }
 }
@@ -155,6 +188,19 @@ impl Character {
 
     pub fn facing_yaw(&self) -> f64 {
         self.state.facing_yaw
+    }
+
+    /// The character's current walking speed in m/s — 0 for anyone not walking.
+    pub fn speed(&self) -> f64 {
+        self.state.movement.as_ref().map_or(0.0, |movement| movement.speed)
+    }
+
+    /// Whether the character is settled enough to count as "present" for the
+    /// novelty gate. A mover crossing the square is not news at every step; a man
+    /// who has stopped — and the player, who never carries a [`Movement`] — is
+    /// (`features/movement/05_the_llm_seam.md` §5.1).
+    pub fn is_settled(&self) -> bool {
+        self.speed() < SETTLED_SPEED_MPS
     }
 
     pub fn holds(&self) -> &[ItemId] {
@@ -241,6 +287,21 @@ impl Character {
         for text in presented {
             self.remember_percept(text.clone());
         }
+    }
+
+    /// Re-apply the [`INBOX_MAX_ENTRIES`] cap after a path that mutated the
+    /// percept buffers directly rather than through [`notify_percept`].
+    ///
+    /// The scheduler's failure / busy / prompt-failed paths restore drained
+    /// percepts onto the front and append a `system:` line without going through
+    /// the capping methods, so a run of provider failures would otherwise grow
+    /// `inbox` and `pending_history` one line past the bound each time, without
+    /// limit (`features/movement/05_the_llm_seam.md` §5.3;
+    /// `features/movement/code_review.md` finding 2). This keeps the same
+    /// invariant those methods do — the oldest, stalest lines fall off the front.
+    pub fn rebound_percepts(&mut self) {
+        cap_front(&mut self.state.inbox, INBOX_MAX_ENTRIES);
+        cap_front(&mut self.state.pending_history, INBOX_MAX_ENTRIES);
     }
 }
 

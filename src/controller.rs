@@ -40,6 +40,21 @@ const PLAYER_START_YAW: f32 = PI;
 const PLAYER_HALF_SIZE: Vec3 = Vec3::new(0.35, 0.9, 0.35);
 const EYE_OFFSET: f32 = 0.65;
 
+// A standing player is a full-height AABB centred at WALK_Y, so its body spans
+// the vertical band [WALK_Y - half_height, WALK_Y + half_height]. The collision
+// sweep expands every collider by that half-height, so a solid blocks the XZ an
+// NPC stands on iff its [min_y, max_y] *overlaps* this band — not merely when it
+// crosses WALK_Y. (The Minkowski-expanded collider contains the standing centre
+// exactly when the interval overlap holds.) Derived from PLAYER_SPAWN.y (0.91) ∓
+// PLAYER_HALF_SIZE.y (0.9); glam const field access is unavailable in a `const`,
+// so the endpoints are written out. The navigation bake subtracts exactly the
+// footprints in this band, so its walkable surface matches what stops the player
+// — including solids that top out below 0.91 (troughs, low platforms, rims).
+#[allow(dead_code)] // used by the collision-export and walkable-surface tests
+pub const WALK_BAND_LO: f32 = 0.01; // PLAYER_SPAWN.y - PLAYER_HALF_SIZE.y
+#[allow(dead_code)] // used by the collision-export and walkable-surface tests
+pub const WALK_BAND_HI: f32 = 1.81; // PLAYER_SPAWN.y + PLAYER_HALF_SIZE.y
+
 const WALK_SPEED: f32 = 8.0;
 const RUN_SPEED: f32 = 12.0;
 const MAX_HORIZONTAL_SPEED: f32 = RUN_SPEED;
@@ -294,15 +309,19 @@ impl CollisionWorld {
         })
     }
 
-    /// The XZ footprint polygon of every solid whose vertical extent contains
-    /// `y` — a box as its four corners, a prism as the polygon it was built from.
-    /// This is what the navigation bake subtracts, so the walkable surface is the
-    /// exact complement of what stops the player at walking height.
+    /// The XZ footprint polygon of every solid whose vertical extent overlaps the
+    /// band `[lo, hi]` — a box as its four corners, a prism as the polygon it was
+    /// built from. This is what the navigation bake subtracts, so the walkable
+    /// surface is the exact complement of what stops the player across the whole
+    /// band its standing AABB sweeps (`WALK_BAND_LO`..=`WALK_BAND_HI`), not only
+    /// the colliders that happen to cross the single walk plane. A solid overlaps
+    /// iff `max.y >= lo && min.y <= hi` — the standard interval-overlap test, so a
+    /// trough (top 0.68) or a low platform (top 0.8) beneath the walk plane counts.
     #[allow(dead_code)] // used by the collision-export and walkable-surface tests
-    pub fn solid_footprints_at_height(&self, y: f32) -> Vec<Vec<Vec2>> {
+    pub fn solid_footprints_in_band(&self, lo: f32, hi: f32) -> Vec<Vec<Vec2>> {
         let mut out = Vec::new();
         for solid in &self.boxes {
-            if y >= solid.min.y && y <= solid.max.y {
+            if solid.max.y >= lo && solid.min.y <= hi {
                 out.push(vec![
                     Vec2::new(solid.min.x, solid.min.z),
                     Vec2::new(solid.max.x, solid.min.z),
@@ -312,11 +331,42 @@ impl CollisionWorld {
             }
         }
         for solid in &self.convex_prisms {
-            if y >= solid.min_y && y <= solid.max_y {
+            if solid.max_y >= lo && solid.min_y <= hi {
                 out.push(solid.footprint.to_vec());
             }
         }
         out
+    }
+
+    /// Whether the vertical band `[lo, hi]` at world XZ `(x, z)` lies inside any
+    /// static solid — i.e. whether a standing player's AABB collides there. This
+    /// mirrors [`Self::contains_point`]'s XZ tests (box corners, prism half-planes)
+    /// but swaps its single-plane `y` check for band overlap, so it also catches
+    /// solids topping out below the walk plane (troughs, cistern rims, the
+    /// bellstand platform). The walkable-surface test uses it to prove no baked
+    /// cell overlaps a collider the player's body sweeps.
+    #[allow(dead_code)] // exercised by the walkable-surface test
+    pub fn blocks_walk_band(&self, x: f32, z: f32, lo: f32, hi: f32) -> bool {
+        let xz = Vec2::new(x, z);
+        let in_box = self.boxes.iter().any(|solid| {
+            solid.max.y >= lo
+                && solid.min.y <= hi
+                && x >= solid.min.x
+                && x <= solid.max.x
+                && z >= solid.min.z
+                && z <= solid.max.z
+        });
+        if in_box {
+            return true;
+        }
+        self.convex_prisms.iter().any(|solid| {
+            solid.max_y >= lo
+                && solid.min_y <= hi
+                && solid
+                    .planes
+                    .iter()
+                    .all(|plane| plane.normal.dot(xz) <= plane.offset)
+        })
     }
 
     /// Number of static colliders registered by the scene.
@@ -345,7 +395,7 @@ struct SolidConvexPrism {
     planes: Box<[PrismPlane]>,
     /// The XZ footprint the prism was built from — kept so the navigation bake
     /// can subtract the exact solid, not its axis-aligned bound.
-    #[allow(dead_code)] // read via solid_footprints_at_height in tests
+    #[allow(dead_code)] // read via solid_footprints_in_band in tests
     footprint: Box<[Vec2]>,
 }
 

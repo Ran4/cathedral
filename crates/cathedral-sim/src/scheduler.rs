@@ -480,6 +480,10 @@ impl NpcScheduler {
         prepend(&mut actor.state.pending_history, flight.presented.clone());
         // Appended last, so it lands after the mid-flight arrivals too.
         actor.state.inbox.push(SYSTEM_PROVIDER_FAILED.to_string());
+        // Restoring the whole drained inbox and appending a system line grows it
+        // by one past the bound; across a run of failures that is unbounded, so
+        // re-cap it here (code_review.md finding 2).
+        actor.rebound_percepts();
 
         events.push(SchedulerEvent::Diagnostic(format!(
             "[smart actors] LLM request for {actor_name} failed: {error}"
@@ -594,6 +598,15 @@ impl NpcScheduler {
             }
         }
 
+        // The `system:` lines pushed above (invalid output, failed actions) can
+        // carry the inbox past its bound when mid-flight percepts already filled
+        // it; keep the invariant every path shares.
+        world
+            .characters
+            .get_mut(&flight.actor_id)
+            .expect("the actor exists")
+            .rebound_percepts();
+
         events.push(SchedulerEvent::Status(StatusEvent::llm(
             STATE_IDLE,
             Some(flight.actor_id.clone()),
@@ -648,6 +661,10 @@ impl NpcScheduler {
                     .get_mut(&actor_id)
                     .expect("the actor exists");
                 actor.state.inbox.push(SYSTEM_PROMPT_FAILED.to_string());
+                // The renderer restored the (possibly full) inbox; the appended
+                // line then pushes one past the bound — re-cap it so repeated
+                // prompt failures cannot grow it without limit.
+                actor.rebound_percepts();
                 if player_reaction {
                     self.requeue_player_reaction_front(&actor_id);
                 }
@@ -692,6 +709,9 @@ impl NpcScheduler {
                 prepend(&mut actor.state.inbox, drained_events);
                 prepend(&mut actor.state.pending_history, presented);
                 actor.state.inbox.push(SYSTEM_WORKER_BUSY.to_string());
+                // Same restore-and-append as the provider-failure path: re-cap so
+                // a run of busy rejections cannot grow the buffers past the bound.
+                actor.rebound_percepts();
                 if player_reaction {
                     self.requeue_player_reaction_front(&actor_id);
                 }

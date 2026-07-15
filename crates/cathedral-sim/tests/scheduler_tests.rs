@@ -12,9 +12,9 @@
 mod prompt_support;
 
 use cathedral_sim::{
-    Cognition, CognitionBusy, CognitionError, Completion, Control, IdleGate, NpcScheduler,
-    PromptEnv, RequestId, SchedulerEvent, StatusEvent, Subsystem, Vec3, World, apply_action,
-    llm_turn_order,
+    Cognition, CognitionBusy, CognitionError, Completion, Control, INBOX_MAX_ENTRIES, IdleGate,
+    NpcScheduler, PromptEnv, RequestId, SchedulerEvent, StatusEvent, Subsystem, Vec3, World,
+    apply_action, llm_turn_order,
 };
 use prompt_support::{actor, prompt_env, seed_world, sheet_of};
 use serde_json::json;
@@ -326,6 +326,52 @@ fn provider_failure_requeues_percepts_without_duplication() {
         std::slice::from_ref(&heard)
     );
     assert!(harness.world.characters[&sven].pending_history().is_empty());
+}
+
+/// A run of provider failures must not grow the inbox without bound. Each
+/// failure restores the drained percepts and appends a `system:` line; before
+/// the re-cap that pushed the buffer one entry past `INBOX_MAX_ENTRIES` every
+/// time, so a persistently-failing provider leaked memory one line per retry
+/// (`features/movement/code_review.md` finding 2). No player is nearby, so the
+/// only thing touching the inbox is the failure path itself.
+#[test]
+fn repeated_provider_failures_keep_the_inbox_bounded() {
+    let mut harness = Harness::with_backoff(
+        Box::new(|_, _| Err(CognitionError::new("boom"))),
+        0.0,
+        0.0, // no backoff, so the failing actor is retried without advancing `now`
+        0.0,
+    );
+    // Seed Sven's inbox right at the bound, so any off-by-one overflows it.
+    let sven = actor("sv3n1");
+    harness
+        .world
+        .characters
+        .get_mut(&sven)
+        .unwrap()
+        .state
+        .inbox = (0..INBOX_MAX_ENTRIES).map(|i| format!("percept {i}")).collect();
+
+    harness.start();
+    // Enough polls to submit and fail Sven several times over.
+    for _ in 0..24 {
+        harness.poll();
+        let inbox_len = harness.world.characters[&sven].inbox().len();
+        assert!(
+            inbox_len <= INBOX_MAX_ENTRIES,
+            "the inbox must stay bounded across failures, saw {inbox_len}"
+        );
+    }
+
+    // Still full, and the newest line is the system failure notice — the oldest
+    // seeded percepts fell off the front rather than the buffer growing.
+    let inbox = harness.world.characters[&sven].inbox();
+    assert_eq!(inbox.len(), INBOX_MAX_ENTRIES);
+    assert!(
+        !inbox.last().unwrap().starts_with("percept"),
+        "the most recent entry should be the failure notice, not a seeded percept: {:?}",
+        inbox.last()
+    );
 }
 
 /// 14. `test_player_is_skipped_and_round_robin_is_global`

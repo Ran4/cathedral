@@ -16,24 +16,30 @@
 //! succeed while the action it came with fails, and that revision bump has to
 //! reach the game either way (`server.py:1013-1025`).
 
-use std::{collections::VecDeque, path::PathBuf, sync::Arc};
+use std::{
+    collections::{BTreeSet, VecDeque},
+    path::PathBuf,
+    sync::Arc,
+};
 
 use serde_json::{Value, json};
 
 use crate::{
+    MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS, WALK_SPEED_MPS,
     actions::apply_action,
     areas::AreaMap,
     attention::{
         CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS,
         StageConfig, on_stage,
     },
-    character::Control,
+    character::{Control, Movement, Patrol},
     clock::{Office, Weekday, WorldClock, stroke_times},
     error::{CommandError, CommandErrorCode, EngineInitError},
     event::{DomainEvent, EventType},
     floor::ConversationFloor,
     ids::{ActorId, ItemId, SpeechEventId},
     math::Vec3,
+    nav::NavData,
     perception::{cap_first, emit_sound, identify},
     prompt::PromptEnv,
     scheduler::{NpcScheduler, SchedulerEvent, background_turn_order, stage_turn_order},
@@ -46,7 +52,7 @@ use crate::{
         Cognition, Completion, Sight, SttBackendKind, Transcription, TranscriptionOutcome, Tts,
         TtsBackendKind, TtsOutcome,
     },
-    world::{SpatialActorUpdate, World},
+    world::{SpatialActorUpdate, World, planar_close},
 };
 
 /// The borrows the speech router needs, taken from disjoint [`Engine`] fields.
@@ -100,6 +106,20 @@ const TOWN_BELL_SOUND_ID: &str = "town_bell";
 
 /// Status state the voice selection adds to the scheduler's `STATE_*` set.
 const STATE_SELECTED: &str = "selected";
+
+/// The single hard-coded M2 walker (`features/movement/07_milestones.md` M2): one
+/// real citizen paces between two nearby places, proving the mover pipeline end to
+/// end before M4 gives everyone a daily round. Ede Crake, a market-seller, spawns on
+/// the open west side of the cathedral forecourt at (42.5, 142.5) — clear of the
+/// central market stalls, so from the player's spawn at (0, 95) facing +Z her whole
+/// body reads on the left of frame (facing +Z puts world +X on the left). Her route
+/// runs up the west edge of the square toward the Seraph statue, keeping her out on
+/// the open flagstones the player can see rather than funnelling behind the stalls, so
+/// the walk stays in plain view. It never crosses a bridge or the malt-house's phantom
+/// door; on arrival the patrol reverses toward Tenterhook Lane and returns.
+const PACING_ACTOR_ID: &str = "p0012";
+const PACING_PLACE_A: &str = "Tenterhook Lane";
+const PACING_PLACE_B: &str = "Seraph statue";
 
 /// What this engine can actually do (`server.py:837-849`).
 ///
@@ -242,6 +262,13 @@ pub struct EngineConfig {
     /// Whether crossing an office rings the town bell for the player. On by
     /// default; the bell is a *sound*, never a percept, so it costs no tokens.
     pub ring_the_offices: bool,
+    /// The baked walkable surface and street graph, when the host has one to
+    /// give. `None` — the default — means nobody walks: every existing caller
+    /// builds config as `EngineConfig { .., ..default() }`, so the whole test
+    /// suite and the frozen fixtures inherit `None` and are byte-for-byte
+    /// unchanged. Movement only happens once a host sets this
+    /// (`features/movement/02_navigation.md`).
+    pub nav: Option<Arc<NavData>>,
 }
 
 impl Default for EngineConfig {
@@ -269,6 +296,7 @@ impl Default for EngineConfig {
                 DEFAULT_NIGHT_BRIGHTNESS,
             ),
             ring_the_offices: true,
+            nav: None,
         }
     }
 }
@@ -367,6 +395,18 @@ pub enum EngineCommand {
     BackendStatus(StatusEvent),
 }
 
+/// One mover's pose on the hot channel: where it is, which way it faces, and the
+/// gait state M7 will animate. `f32` for the render-only scalars — the host wants
+/// them that way and no sim boundary is tested against them.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ActorMotion {
+    pub actor_id: ActorId,
+    pub position_m: Vec3,
+    pub facing_yaw: f64,
+    pub speed: f32,
+    pub gait_phase: f32,
+}
+
 /// Everything the engine tells the host.
 #[derive(Debug, Clone, PartialEq)]
 pub enum EngineMessage {
@@ -399,6 +439,14 @@ pub enum EngineMessage {
         /// Real seconds per game day, before `scale`.
         seconds_per_day: f64,
     },
+    /// The NPCs that moved this poll, on the HOT channel — republished only when
+    /// at least one mover actually changed pose. Like [`EngineMessage::Clock`] it
+    /// is cheap by design and must **never** bump `world_revision` or re-trigger
+    /// the snapshot chain: positions change every tick, and routing them through
+    /// the cold public snapshot would republish the whole world 20 times a second
+    /// (`features/movement/06_engineering.md`, the hot/cold split). The host
+    /// interpolates between successive samples to render smoothly.
+    Movement { moved: Vec<ActorMotion> },
     Speech {
         event_id: SpeechEventId,
         speaker_id: ActorId,
@@ -529,6 +577,13 @@ pub struct Engine {
     bell_strokes: VecDeque<f64>,
     /// Monotonic id for the bell sound events, so each stroke is distinct.
     bell_seq: u64,
+    /// The `now` up to which movement has been stepped, so a fixed 20 Hz slice —
+    /// never a variable frame — decides how far anyone walks. Starts at the
+    /// construction `now`, like `last_clock_now`.
+    movement_now: f64,
+    /// Diagnostics raised at construction (the M2 mover seeding), emitted with
+    /// the first poll's `Ready` because `Engine::new` has no `out` to push to.
+    startup_diagnostics: Vec<String>,
     ready_emitted: bool,
 }
 
@@ -582,6 +637,17 @@ impl Engine {
                 )],
             )
             .map_err(EngineInitError::PlayerSpawn)?;
+
+        // M2: seed the one hard-coded walker, but only if the host gave us a nav
+        // graph — the frozen fixtures pass `None` and nobody moves. A missing
+        // actor, place or route is a seed/nav mismatch we report and skip, never
+        // a panic; the notice rides out with the first poll's `Ready`.
+        let mut startup_diagnostics: Vec<String> = Vec::new();
+        if let Some(nav) = config.nav.as_deref()
+            && let Err(reason) = seed_pacing_actor(&mut world, nav)
+        {
+            startup_diagnostics.push(format!("[smart actors] movement: {reason}"));
+        }
 
         let mut capabilities = capabilities;
         // One source of truth for the selection: the config's, which the host
@@ -657,6 +723,9 @@ impl Engine {
             last_clock_now: now,
             bell_strokes: VecDeque::new(),
             bell_seq: 0,
+            // The first movement span opens at construction, mirroring the clock.
+            movement_now: now,
+            startup_diagnostics,
             ready_emitted: false,
         })
     }
@@ -693,6 +762,11 @@ impl Engine {
                     backend: None,
                 }));
             }
+            // Any construction-time notice (the M2 mover seeding) rides out here,
+            // since `Engine::new` had no `out` to push it to.
+            for line in std::mem::take(&mut self.startup_diagnostics) {
+                out.push(EngineMessage::Diagnostic(line));
+            }
         }
 
         // Ring the offices before commands, so a `CycleTimeScale` this same poll
@@ -700,6 +774,12 @@ impl Engine {
         // itself is published at the end of the poll, where it reflects that
         // command.
         self.ring_offices(now, &mut out);
+
+        // Step the movers on the fixed slice before this poll's stage is
+        // computed, so `context_hash` and `characters_within` see where everyone
+        // stands right now. Positions ride the hot channel below, never the cold
+        // snapshot the scheduler block emits.
+        self.tick_movement(now, &mut out);
 
         let mut completions: Vec<Completion> = Vec::new();
         for command in commands {
@@ -1242,21 +1322,87 @@ impl Engine {
         self.world.current_time = Some(self.clock.at(now));
 
         if self.config.ring_the_offices && self.world.sounds_enabled {
+            let mut queued_any = false;
             for (instant, office) in self.clock.offices_crossed(self.last_clock_now, now) {
                 for stroke_at in stroke_times(office, instant) {
                     self.bell_strokes.push_back(stroke_at);
+                    queued_any = true;
                 }
+            }
+            // Adjacent offices' strokes interleave in time — High Wick's fourth
+            // stroke (noon + 9 s) falls *after* the Waning's first (three game
+            // hours later, only ~7.5 s away at 60 s/day) — and a single poll span
+            // can cross more than one office at a high debug scale or a slow
+            // frame. A plain per-office FIFO then strands one office's late
+            // strokes ahead of another's already-due ones, so the front-only
+            // drain below rings them delayed and clumped instead of on the
+            // three-second beat. Keep the queue ordered by due time so the
+            // earliest owed stroke is always at the front.
+            if queued_any {
+                self.bell_strokes
+                    .make_contiguous()
+                    .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
             }
         }
         self.last_clock_now = now;
 
         // Sound every stroke now due. `offices_crossed` never returns a future
         // instant, so an office's first stroke rings the poll it is scheduled and
-        // the rest ring their own later polls, three seconds apart.
+        // the rest ring their own later polls, three seconds apart. The queue is
+        // due-time ordered, so the front is always the earliest owed stroke.
         while self.bell_strokes.front().is_some_and(|&due| due <= now) {
             self.bell_strokes.pop_front();
             self.emit_bell(out);
         }
+    }
+
+    /// Advance every mover by whole [`MOVEMENT_TICK_SECONDS`] slices up to `now`,
+    /// then publish the ones that moved on the hot channel. A no-op with no nav.
+    ///
+    /// Fixed slices, not the poll's variable span, so a slow frame or a fast one
+    /// never changes how far anyone walks; [`MAX_MOVEMENT_CATCHUP_SLICES`] bounds
+    /// a resume-from-pause so a huge `now` jump snaps forward instead of spinning.
+    fn tick_movement(&mut self, now: f64, out: &mut Vec<EngineMessage>) {
+        let Some(nav) = self.config.nav.clone() else {
+            return;
+        };
+
+        let mut moved_ids: BTreeSet<ActorId> = BTreeSet::new();
+        let mut slices = 0usize;
+        while self.movement_now + MOVEMENT_TICK_SECONDS <= now && slices < MAX_MOVEMENT_CATCHUP_SLICES
+        {
+            for id in self.world.step_movement(MOVEMENT_TICK_SECONDS, &nav) {
+                moved_ids.insert(id);
+            }
+            self.movement_now += MOVEMENT_TICK_SECONDS;
+            slices += 1;
+        }
+        // Overflowed the catch-up budget: drop the backlog and snap forward.
+        if self.movement_now + MOVEMENT_TICK_SECONDS <= now {
+            self.movement_now = now;
+        }
+
+        if moved_ids.is_empty() {
+            return;
+        }
+        let moved = moved_ids
+            .into_iter()
+            .map(|actor_id| {
+                let character = &self.world.characters[&actor_id];
+                ActorMotion {
+                    position_m: character.position_m(),
+                    facing_yaw: character.facing_yaw(),
+                    speed: character.speed() as f32,
+                    gait_phase: character
+                        .state
+                        .movement
+                        .as_ref()
+                        .map_or(0.0, |movement| movement.gait_phase) as f32,
+                    actor_id,
+                }
+            })
+            .collect();
+        out.push(EngineMessage::Movement { moved });
     }
 
     /// Republish the clock for the host's sun and HUD — a handful of scalars,
@@ -1495,6 +1641,46 @@ impl Engine {
             }
         }
     }
+}
+
+/// Give the M2 walker a [`Movement`] routed from where it stands to the far end
+/// of its patrol. Returns a human reason on any mismatch so the caller can log
+/// and skip; it never panics and never moves anyone but the one actor.
+fn seed_pacing_actor(world: &mut World, nav: &NavData) -> Result<(), String> {
+    let actor_id = ActorId::from_raw(PACING_ACTOR_ID);
+    // Both endpoints must resolve, so the ping-pong has somewhere to bounce back
+    // to on arrival — check the near end before committing to the far one.
+    if nav.place(PACING_PLACE_A).is_none() {
+        return Err(format!("nav place {PACING_PLACE_A:?} is missing; no pacing walk"));
+    }
+    let place_b = nav
+        .place(PACING_PLACE_B)
+        .ok_or_else(|| format!("nav place {PACING_PLACE_B:?} is missing; no pacing walk"))?;
+    let target = nav.node_point(place_b.node);
+
+    let character = world
+        .characters
+        .get_mut(&actor_id)
+        .ok_or_else(|| format!("actor {PACING_ACTOR_ID:?} is not in the seed; no pacing walk"))?;
+    let start = character.state.position_m;
+    let route = nav.route_between(start, target).ok_or_else(|| {
+        format!("no route from {PACING_ACTOR_ID:?}'s spawn to {PACING_PLACE_B:?}; no pacing walk")
+    })?;
+    let mut path = route.points;
+    if path.first().is_some_and(|point| planar_close(*point, start)) {
+        path.remove(0);
+    }
+    character.state.movement = Some(Movement {
+        path,
+        speed: WALK_SPEED_MPS,
+        gait_phase: 0.0,
+        patrol: Patrol {
+            a: PACING_PLACE_A.to_string(),
+            b: PACING_PLACE_B.to_string(),
+            heading_to_b: true,
+        },
+    });
+    Ok(())
 }
 
 fn flush_world_event(event: &DomainEvent, out: &mut Vec<EngineMessage>) {

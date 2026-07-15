@@ -1,6 +1,7 @@
 # Movement: the city gets up in the morning
 
-Status: proposed. No code written. This folder is the plan.
+Status: in progress. **M0 (the clock) and M1 (the nav bake) are implemented**; M2–M7 remain (see
+[07_milestones.md](07_milestones.md) for the per-milestone status). This folder is the plan.
 
 | | |
 |---|---|
