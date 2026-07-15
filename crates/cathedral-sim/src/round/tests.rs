@@ -100,10 +100,46 @@ fn the_round_content_parses_and_every_destination_resolves() {
     let nav = nav();
     let resolver = PlaceResolver::new(&nav);
 
-    assert_eq!(
-        homes.homes.len(),
-        401,
-        "the committed bake houses 401 of the cast (the anchoress gets no house)"
+    // `homes.json` is baked by `scripts/bake_homes.py`: every sheet under
+    // `lore/characters` is bound to a residential door except the player and
+    // anyone whose circumstances say they have no such bed (the bake script's
+    // skip set). Deriving the expected ids from the lore instead of pinning a
+    // count makes a stale bake fail here with the ids that drifted.
+    let bedless = ["pauper", "unhoused", "insecure_lodging", "enclosed_religious"];
+    let characters_dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../lore/characters");
+    let mut expected_housed = BTreeSet::new();
+    let mut stack = vec![characters_dir];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir).expect("lore/characters is readable") {
+            let path = entry.expect("directory entry").path();
+            if path.is_dir() {
+                stack.push(path);
+                continue;
+            }
+            if path.extension().is_none_or(|extension| extension != "json") {
+                continue;
+            }
+            let sheet: serde_json::Value = serde_json::from_str(
+                &std::fs::read_to_string(&path).expect("character sheet is readable"),
+            )
+            .expect("character sheet parses");
+            let id = sheet["id"].as_str().expect("character sheet has an id");
+            let has_bed = !sheet["circumstances"]
+                .as_array()
+                .is_some_and(|c| c.iter().any(|c| bedless.contains(&c.as_str().unwrap_or(""))));
+            if id != "player" && has_bed {
+                expected_housed.insert(id.to_owned());
+            }
+        }
+    }
+    let housed: BTreeSet<String> = homes.homes.keys().cloned().collect();
+    let unhoused: Vec<&String> = expected_housed.difference(&housed).collect();
+    let overhoused: Vec<&String> = housed.difference(&expected_housed).collect();
+    assert!(
+        unhoused.is_empty() && overhoused.is_empty(),
+        "homes.json is out of step with lore/characters — re-run scripts/bake_homes.py \
+         (missing a home: {unhoused:?}; housed but bedless: {overhoused:?})"
     );
     assert!(
         !homes.homes.contains_key("aq7ld"),
