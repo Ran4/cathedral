@@ -1,8 +1,14 @@
 # Family crests
 
-Procedural heraldry for the families of Ombreval, drawn by
-`scripts/generate_family_crests.py` (re-run it to regenerate). Preview them
-together in [`showcase.html`](showcase.html).
+Heraldry for the families of Ombreval, in **two variants**, drawn by
+`scripts/generate_family_crests.py`. Preview both together in
+[`showcase.html`](showcase.html).
+
+- **`family_<name>_crest.svg`** — procedural vector line-art (free, no network):
+  `uv run scripts/generate_family_crests.py` (default `--backend svg`).
+- **`family_<name>_crest.png`** — realistic painted crest from `gpt-image-2`:
+  `uv run scripts/generate_family_crests.py --backend image` (needs `OPENAI_API_KEY`).
+  Every prompt is logged in [`image_prompts.md`](image_prompts.md).
 
 **Not every family bears arms.** Heraldry follows standing: a house needs
 property, an office, or a workshop worth naming. The nameless poor carry
@@ -37,10 +43,10 @@ bynames, not arms (*"There are more Hawsers than Alders"*).
 - **The boat-families** (Alder, Skell, Hobbe, Crake, Tarn) all bear a **wavy
   base** — the Serle that was moved outside the wall — over which each sets
   its own charge for the answer it gave to *do we keep the boat?*
-- **Grand houses** get clean, tincture-correct arms with a gold trim; **minor**
-  houses (a verger, a crier, a bellfounder) get plainer versions.
+- **Grand houses** get rich, gilded arms; **minor** houses (a verger, a crier,
+  a bellfounder) get plainer ones.
 - **Assumed arms** (Skep's beehive, Kern's wheatsheaf) are drawn crooked and
-  muddy on purpose — the tell of a house inventing a crest above its station.
+  muddy on purpose — a house inventing a crest above its station.
 
 ## Who bears none, and why
 
