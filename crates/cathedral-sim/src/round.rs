@@ -699,6 +699,11 @@ fn active_leg(legs: &[RoundLeg], office: Office, weekday: Weekday) -> Option<&Ro
 /// Advance the round one poll: decay thirst, resolve arrivals, work the well
 /// queues, and run the ladder. A no-op until [`Round::seed`] has run. `player_id`
 /// is who the well sounds play *for*.
+///
+/// `in_conversation` is the player's current exchange partner, if any: their
+/// round is on hold — the ladder skips them and a finished draw does not send
+/// them home — because nobody walks off mid-conversation. The hold ends when
+/// the exchange goes cold and the caller stops naming them.
 pub fn tick(
     round: &mut Round,
     world: &mut World,
@@ -706,14 +711,42 @@ pub fn tick(
     clock: &WorldClock,
     now: f64,
     player_id: &ActorId,
+    in_conversation: Option<&ActorId>,
 ) {
     if !round.seeded {
         return;
     }
     decay_thirst(round, world, clock, now);
     resolve_arrivals(round, world);
-    service_sources(round, world, nav, now, player_id);
-    run_ladder(round, world, nav, clock, now);
+    service_sources(round, world, nav, now, player_id, in_conversation);
+    run_ladder(round, world, nav, clock, now, in_conversation);
+}
+
+/// Stop `id`'s round errand where they stand: they have just exchanged a line
+/// with the player, and nobody keeps walking away from a conversation. Called
+/// the moment the exchange is registered — before the next movement slice —
+/// so the partner does not drift out of interaction range while answering.
+///
+/// Only walks are interrupted; someone Queued or Drawing at a well is already
+/// standing still and keeps their place. Dropping the walker to [`Phase::Idle`]
+/// hands them back to the ladder, which re-decides once the exchange goes cold
+/// (the [`tick`] hold above) — so an interrupted errand resumes on its own.
+/// Anyone not enrolled (the M2 pacing walker, a scripted mover) is none of the
+/// round's business and is left alone.
+pub fn interrupt_for_conversation(round: &mut Round, world: &mut World, id: &ActorId) {
+    let Some(person) = round.people.get_mut(id) else {
+        return;
+    };
+    if !matches!(
+        person.phase,
+        Phase::Approaching | Phase::Travelling | Phase::Returning
+    ) {
+        return;
+    }
+    person.phase = Phase::Idle;
+    if let Some(character) = world.characters.get_mut(id) {
+        character.state.movement = None;
+    }
 }
 
 /// Thirst falls by the game clock, so it keeps pace with the sun and the debug
@@ -800,7 +833,14 @@ fn enqueue(round: &mut Round, source_idx: usize, actor: ActorId) {
 /// player, so it reaches no NPC inbox and never nudges a reaction turn. The
 /// drawer instead *remembers their own draw*, so the person the player asks can
 /// still say what they are doing.
-fn service_sources(round: &mut Round, world: &mut World, nav: &NavData, now: f64, player_id: &ActorId) {
+fn service_sources(
+    round: &mut Round,
+    world: &mut World,
+    nav: &NavData,
+    now: f64,
+    player_id: &ActorId,
+    in_conversation: Option<&ActorId>,
+) {
     let mut finished: Vec<ActorId> = Vec::new();
     let mut started: Vec<ActorId> = Vec::new();
     let mut emissions: Vec<(&'static str, Vec3)> = Vec::new();
@@ -851,6 +891,13 @@ fn service_sources(round: &mut Round, world: &mut World, nav: &NavData, now: f64
         if let Some(character) = world.characters.get_mut(&drawer) {
             character.state.needs.thirst = THIRST_MAX; // a full vessel
         }
+        // Mid-exchange with the player: stand at the curb instead of walking
+        // off; the ladder takes over once the conversation goes cold.
+        if in_conversation == Some(&drawer) {
+            world.characters.get_mut(&drawer).expect("drawer exists").state.movement = None;
+            round.people.get_mut(&drawer).expect("person exists").phase = Phase::Idle;
+            continue;
+        }
         // Walk back to base (home if housed, else spawn); the ladder resumes there.
         let base = round.people.get(&drawer).map(|person| person.base);
         let position = world.characters.get(&drawer).map(Character::position_m);
@@ -896,10 +943,20 @@ fn service_sources(round: &mut Round, world: &mut World, nav: &NavData, now: f64
 /// cadence has come round. First match wins (`features/movement/03_the_ladder.md`
 /// §4); M4 adds the curfew (5) and round (9) rungs to M3's water (2, 6), social
 /// (11) and wander (12).
-fn run_ladder(round: &mut Round, world: &mut World, nav: &NavData, clock: &WorldClock, now: f64) {
+fn run_ladder(
+    round: &mut Round,
+    world: &mut World,
+    nav: &NavData,
+    clock: &WorldClock,
+    now: f64,
+    in_conversation: Option<&ActorId>,
+) {
     let time = clock.at(now);
     let ids: Vec<ActorId> = round.people.keys().cloned().collect();
     for id in ids {
+        if in_conversation == Some(&id) {
+            continue; // talking with the player; the round waits
+        }
         let (phase, epoch, next_decision) = {
             let person = &round.people[&id];
             (person.phase, person.epoch, person.next_decision)

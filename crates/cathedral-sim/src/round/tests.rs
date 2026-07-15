@@ -77,7 +77,7 @@ fn base_world() -> World {
 /// One engine-style beat: walk the movers a slice, then run the round.
 fn beat(round: &mut Round, world: &mut World, nav: &NavData, clock: &WorldClock, now: f64, dt: f64) {
     world.step_movement(dt, nav);
-    tick(round, world, nav, clock, now, &player());
+    tick(round, world, nav, clock, now, &player(), None);
 }
 
 // --------------------------------------------------------------------------- //
@@ -220,6 +220,41 @@ fn the_round_rung_walks_a_worker_to_their_post() {
         ),
         other => panic!("expected Travel to the yard, got {other:?}"),
     }
+}
+
+/// An exchange with the player holds the round: the partner neither sets off
+/// on an errand nor keeps walking one already begun, and the round resumes on
+/// its own once the exchange goes cold.
+#[test]
+fn a_conversation_with_the_player_pins_the_round() {
+    let nav = nav();
+    let clock = clock_at(Office::Kindling);
+    let id = ActorId::from_raw("b4hst");
+    let mut world = base_world();
+    world.add_character(person("b4hst", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    // In conversation: his cadence comes due and he stays put.
+    let due = round.people[&id].next_decision + 1.0;
+    tick(&mut round, &mut world, &nav, &clock, due, &player(), Some(&id));
+    assert!(
+        !world.characters[&id].is_walking(),
+        "nobody sets off for their post mid-conversation"
+    );
+
+    // The exchange goes cold: the same cadence now sends him to his post.
+    tick(&mut round, &mut world, &nav, &clock, due, &player(), None);
+    assert!(
+        world.characters[&id].is_walking(),
+        "the round resumes once the conversation lapses"
+    );
+    assert_eq!(round.people[&id].phase, Phase::Travelling);
+
+    // Addressed mid-stride: he stops on the spot and is the ladder's again.
+    interrupt_for_conversation(&mut round, &mut world, &id);
+    assert!(!world.characters[&id].is_walking(), "a walker stops to talk");
+    assert_eq!(round.people[&id].phase, Phase::Idle);
 }
 
 #[test]
@@ -460,7 +495,7 @@ fn thirst_decays_by_the_game_clock() {
     world.characters.get_mut(&servant).unwrap().state.needs.thirst = THIRST_MAX;
 
     let one_game_hour = 3600.0 / 24.0;
-    tick(&mut round, &mut world, &nav, &clock, one_game_hour, &player());
+    tick(&mut round, &mut world, &nav, &clock, one_game_hour, &player(), None);
     let expected = THIRST_MAX - 3600.0 * crate::THIRST_DECAY_PER_GAME_SECOND;
     let thirst = world.characters[&servant].needs().thirst;
     assert!((thirst - expected).abs() < 1.0, "thirst {thirst} decayed to ~{expected} over one game hour");

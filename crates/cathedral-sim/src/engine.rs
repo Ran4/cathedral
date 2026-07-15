@@ -798,6 +798,10 @@ impl Engine {
         // which `flush` fans out below — so, like the mover pipeline, it needs a
         // nav graph and is otherwise inert.
         if let Some(nav) = self.config.nav.clone() {
+            // The player's conversation partner (warm for the same 30 s the
+            // stage reserves their seat) keeps their round on hold: no new
+            // errand walks them away mid-exchange.
+            let in_conversation = self.conversation_partner(now).cloned();
             round::tick(
                 &mut self.round,
                 &mut self.world,
@@ -805,6 +809,7 @@ impl Engine {
                 &self.clock,
                 now,
                 &self.config.player_id,
+                in_conversation.as_ref(),
             );
         }
 
@@ -1571,12 +1576,19 @@ impl Engine {
         // Who the player is talking with, from the only signal that means it: a
         // line one of them addressed to the other. It survives him walking out
         // of the stage radius, and it lapses on its own.
+        //
+        // The partner also stops walking on the spot — before the next movement
+        // slice, or a round errand started this same poll would carry them out
+        // of interaction range while the words are still in the air. The round's
+        // tick keeps them held for as long as the exchange stays warm.
         if speaker_is_player {
             if let Some(target_id) = &event.target_id {
                 self.last_player_exchange = Some((target_id.clone(), now));
+                round::interrupt_for_conversation(&mut self.round, &mut self.world, target_id);
             }
         } else if event.target_id.as_ref() == Some(&self.config.player_id) {
             self.last_player_exchange = Some((actor_id.clone(), now));
+            round::interrupt_for_conversation(&mut self.round, &mut self.world, &actor_id);
         }
 
         let event_id = event.speech_event_id();
