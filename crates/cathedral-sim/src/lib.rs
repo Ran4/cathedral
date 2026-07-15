@@ -24,6 +24,7 @@ pub mod ids;
 pub mod item;
 pub mod lore;
 pub mod math;
+pub mod nav;
 pub mod offer;
 pub mod perception;
 pub mod prompt;
@@ -67,6 +68,9 @@ pub use lore::{
     NO_FIXED_TRADE_FOLDER, PlanningWard, Significance,
 };
 pub use math::{Vec3, vec3, vec3_from_json, vec3_to_json};
+pub use nav::{
+    Door, Edge, NavData, NavError, NavGrid, Place, Route, Site, WALK_Y, door_edges_from_json,
+};
 pub use offer::Offer;
 pub use perception::{cap_first, emit_sound, identify, sees};
 pub use prompt::{

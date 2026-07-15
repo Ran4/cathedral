@@ -62,7 +62,7 @@ Expect seven bells per minute of wall-clock, in order, wrapping correctly at the
 
 ---
 
-## M1 — The bake
+## M1 — The bake  ✅ *implemented*
 
 **Ships.** `scripts/bake_navigation.py` → `assets/world/navigation.json` + the walkable bitset. **The
 door fix** — pick the door edge by reachability, tie-broken by `stable_hash`, in *both* the bake and
@@ -71,6 +71,34 @@ F-key) that draws the graph and the walkable surface. The full test suite from
 [02_navigation.md](02_navigation.md) §8.
 
 **Still nobody moves.**
+
+**Status — done and verified.** `scripts/bake_navigation.py` produces `assets/world/navigation.json`
+(the street graph — ~9k nodes, 68 places, 23 sites, 2,562 doors) and `navigation.bin` (the 2.4 MB
+walkable bitset). `crates/cathedral-sim/src/nav/` loads them (`NavData::from_parts`) and does
+walkability, `nearest_node`, A*/Dijkstra routing. The door fix lives in `choose_door_edge` (bake) and
+`add_facade_openings` (consumes the baked edge via `cathedral_sim::door_edges_from_json`).
+
+**Load-bearing change vs. the original plan.** The walkable surface is baked as the *exact complement of
+`CollisionWorld` at walking height*, not re-derived from the plan — the divergence the plan hoped was
+small (§2) is not: the curtain-wall thickness, tower boxes and gatehouses alone are ~19 ha. So a game
+test `export_collision_footprints` (ignored) writes `assets/world/collision_footprints.json` — every
+collider footprint crossing y = 0.91 — and the bake subtracts exactly those. This makes **"roads win"
+automatic**: an overhead structure's collider starts above head height, so it is absent from the export
+and the covered way beneath (Malt Passage, the Cut under its bridges) stays open with no special case.
+Regenerate that file whenever scene collision changes, then re-bake.
+
+**How you know (all green):**
+
+```sh
+cargo test -p cathedral-sim navigation      # 11 tests: reachability, doors, graph↔bitset, roads/Cut/Reach/Malt
+cargo test --bins no_walkable_cell_is_solid the_door_you_see   # the two game-crate closes-the-loop tests
+CATHEDRAL_DRIVE='sleep 3; key F7; shot navgraph; quit' cargo run   # look at it
+```
+
+**Touches.** `scripts/bake_navigation.py` (new), `crates/cathedral-sim/src/nav/*` (new),
+`assets/world/{navigation.json,navigation.bin,collision_footprints.json}` (new),
+`src/city/mod.rs` (door fix + the two closes-the-loop tests + the collision exporter),
+`src/controller.rs` (`CollisionWorld::contains_point` + footprint export), `src/nav_overlay.rs` (new, F7).
 
 **Why this is the risky one, and it is not hypothetical.** Everything downstream assumes you can get
 from A to B. I ran the probe, and the answer was *mostly* yes — 65.9 ha walkable, 99.9% of it in one

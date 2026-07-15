@@ -9,7 +9,10 @@ mod monuments;
 mod plan;
 pub mod water;
 
-use std::{collections::BTreeMap, f32::consts::PI};
+use std::{
+    collections::{BTreeMap, HashMap},
+    f32::consts::PI,
+};
 
 use bevy::{
     asset::RenderAssetUsages,
@@ -199,6 +202,7 @@ fn build_city(
         &mut meshes,
         &city_materials,
         &plan,
+        &door_edges(),
         &mut collision_world,
     );
     build_fixtures(
@@ -562,11 +566,20 @@ fn build_sites_and_roads(
     spawn_batch(commands, meshes, &materials.dry_cut, cut, "The dry Cut");
 }
 
+/// The building → door-edge map baked into `navigation.json`. The renderer draws
+/// each door on the same polygon edge the sim walks to, so the visible door and
+/// the nav door are the same door; a building with no reachable edge has no door.
+fn door_edges() -> HashMap<String, usize> {
+    cathedral_sim::door_edges_from_json(include_str!("../../assets/world/navigation.json"))
+        .expect("the committed navigation.json parses")
+}
+
 fn build_buildings(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &CityMaterials,
     plan: &CityPlan,
+    door_edges: &HashMap<String, usize>,
     collision_world: &mut CollisionWorld,
 ) -> usize {
     let mut walls = BTreeMap::<WallKind, MeshData>::new();
@@ -594,7 +607,14 @@ fn build_buildings(
             &building.polygon,
             eave_y,
         );
-        add_facade_openings(&mut windows, &mut doors, building, base_y, eave_y);
+        add_facade_openings(
+            &mut windows,
+            &mut doors,
+            building,
+            door_edges.get(&building.id).copied(),
+            base_y,
+            eave_y,
+        );
         add_footprint_colliders(
             collision_world,
             &building.polygon,
@@ -875,6 +895,7 @@ fn add_facade_openings(
     windows: &mut MeshData,
     doors: &mut MeshData,
     building: &Building,
+    door_edge: Option<usize>,
     base_y: f32,
     eave_y: f32,
 ) {
@@ -917,7 +938,11 @@ fn add_facade_openings(
             }
         }
 
-        if edge_index == stable_hash(&building.id) as usize % building.polygon.len() {
+        // The door goes on the edge the bake chose for reachability (still a pure
+        // `stable_hash` pick, but only among edges you can stand at). A building
+        // with no reachable edge — `door_edge` is `None` — is sealed and gets no
+        // door, matching the sim, which gives it no resident.
+        if door_edge == Some(edge_index) {
             let center2 = a + direction * (length * 0.5) + normal2 * 0.045;
             add_facade_panel(doors, center2, base_y + 1.25, direction, normal, 1.35, 2.5);
         }
@@ -2076,6 +2101,172 @@ mod tests {
     use bevy::asset::{AssetApp, AssetPlugin};
 
     use super::*;
+
+    const NAV_JSON: &str = include_str!("../../assets/world/navigation.json");
+    const NAV_BIN: &[u8] = include_bytes!("../../assets/world/navigation.bin");
+
+    fn built_collision_world() -> CollisionWorld {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<Image>()
+            .init_asset::<StandardMaterial>()
+            .init_resource::<CollisionWorld>()
+            .add_systems(Startup, build_city);
+        app.update();
+        std::mem::take(app.world_mut().resource_mut::<CollisionWorld>().as_mut())
+    }
+
+    /// Closes the loop between the two obstacle sets: the sim bakes the walkable
+    /// surface from the cadastral plan, and this proves the bake agrees with what
+    /// actually stops the player. No cell that an NPC may stand on is inside a
+    /// `CollisionWorld` solid at walking height (02_navigation.md §2, §8).
+    #[test]
+    fn no_walkable_cell_is_solid() {
+        let collision = built_collision_world();
+        let nav = cathedral_sim::NavData::from_parts(NAV_JSON, NAV_BIN)
+            .expect("the committed navigation artifact loads");
+        let grid = nav.grid();
+        let y = cathedral_sim::WALK_Y as f32;
+
+        // Scan only the ground beneath each collider, not all 19 M cells.
+        let mut violations = Vec::new();
+        for footprint in collision.solid_footprints_at_height(y) {
+            let min_x = footprint.iter().map(|p| p.x).fold(f32::INFINITY, f32::min);
+            let max_x = footprint.iter().map(|p| p.x).fold(f32::NEG_INFINITY, f32::max);
+            let min_z = footprint.iter().map(|p| p.y).fold(f32::INFINITY, f32::min);
+            let max_z = footprint.iter().map(|p| p.y).fold(f32::NEG_INFINITY, f32::max);
+            let col_lo = (((min_x as f64 - grid.x0) / grid.cell_m).floor()).max(0.0) as usize;
+            let col_hi = (((max_x as f64 - grid.x0) / grid.cell_m).ceil() as usize).min(grid.w - 1);
+            let row_lo = (((min_z as f64 - grid.z0) / grid.cell_m).floor()).max(0.0) as usize;
+            let row_hi = (((max_z as f64 - grid.z0) / grid.cell_m).ceil() as usize).min(grid.h - 1);
+            for row in row_lo..=row_hi {
+                for col in col_lo..=col_hi {
+                    let (cx, cz) = grid.centre(row, col);
+                    if nav.is_walkable(cx, cz)
+                        && collision.contains_point(Vec3::new(cx as f32, y, cz as f32))
+                    {
+                        violations.push((cx, cz));
+                    }
+                }
+            }
+        }
+        assert!(
+            violations.is_empty(),
+            "{} baked walkable cells are inside a collider, e.g. {:?}",
+            violations.len(),
+            &violations[..violations.len().min(12)]
+        );
+    }
+
+    /// Regenerate `assets/world/collision_footprints.json` — the exact XZ
+    /// footprints of everything that stops the player at walking height (walls,
+    /// towers, gatehouses, buildings, fixtures, bridge piers, the ropewalk). The
+    /// navigation bake subtracts these, so the walkable surface is the true
+    /// complement of the collision world. Overhead structures (the bridges, the
+    /// malt-house) are absent because their collider starts above head height.
+    ///
+    /// Run when scene collision changes:
+    ///   cargo test export_collision_footprints -- --ignored --nocapture
+    /// then re-run `scripts/bake_navigation.py`.
+    #[test]
+    #[ignore = "writes an asset; run manually when scene collision changes"]
+    fn export_collision_footprints() {
+        let collision = built_collision_world();
+        let y = cathedral_sim::WALK_Y as f32;
+        let footprints: Vec<Vec<[f32; 2]>> = collision
+            .solid_footprints_at_height(y)
+            .into_iter()
+            .map(|poly| poly.into_iter().map(|p| [p.x, p.y]).collect())
+            .collect();
+        let doc = serde_json::json!({
+            "walk_y": y,
+            "note": "XZ footprints of colliders crossing walk height; \
+                     generated by `cargo test export_collision_footprints -- --ignored`",
+            "footprints": footprints,
+        });
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/world/collision_footprints.json");
+        std::fs::write(path, serde_json::to_string(&doc).unwrap()).expect("write footprints");
+        println!("wrote {} footprints to {path}", footprints.len());
+    }
+
+    /// Re-running the deterministic bake reproduces the committed artifact byte
+    /// for byte, so `navigation.json` / `navigation.bin` cannot silently drift
+    /// from the plan and collision export they are baked from (02_navigation.md
+    /// §8). Ignored because it shells out to `uv` + Python.
+    #[test]
+    #[ignore = "requires uv + python; re-runs the bake and checks it is byte-stable"]
+    fn bake_is_reproducible() {
+        let root = env!("CARGO_MANIFEST_DIR");
+        let bake = std::process::Command::new("uv")
+            .args(["run", "scripts/bake_navigation.py"])
+            .current_dir(root)
+            .output()
+            .expect("run the navigation bake");
+        assert!(
+            bake.status.success(),
+            "bake failed: {}",
+            String::from_utf8_lossy(&bake.stderr)
+        );
+        let clean = std::process::Command::new("git")
+            .args([
+                "diff",
+                "--quiet",
+                "--",
+                "assets/world/navigation.json",
+                "assets/world/navigation.bin",
+            ])
+            .current_dir(root)
+            .status()
+            .expect("run git diff");
+        assert!(
+            clean.success(),
+            "re-baking changed the committed navigation artifact — it is not reproducible"
+        );
+    }
+
+    /// The door the sim walks to and the door the player sees are the same door:
+    /// every baked door sits on a render-eligible polygon edge, and its walkable
+    /// node is one pace outward from that edge's midpoint — exactly where
+    /// `add_facade_openings` now draws the panel (02_navigation.md §1, §8).
+    #[test]
+    fn the_door_you_see_is_the_door_you_walk_to() {
+        let plan = plan::load();
+        let nav = cathedral_sim::NavData::from_parts(NAV_JSON, NAV_BIN)
+            .expect("the committed navigation artifact loads");
+        let by_id: HashMap<&str, &Building> =
+            plan.buildings.iter().map(|b| (b.id.as_str(), b)).collect();
+
+        for door in nav.doors() {
+            let building = by_id[door.building.as_str()];
+            let poly = &building.polygon;
+            let n = poly.len();
+            assert!(door.edge < n, "door edge index in range for {}", door.building);
+
+            let a = Vec2::from_array(poly[door.edge]);
+            let b = Vec2::from_array(poly[(door.edge + 1) % n]);
+            let edge = b - a;
+            let length = edge.length();
+            assert!(
+                length >= 3.2,
+                "{} door is on a {length:.2} m edge the renderer would skip",
+                door.building
+            );
+
+            let mut normal = Vec2::new(edge.y, -edge.x).normalize();
+            if plan::signed_area(poly).signum() < 0.0 {
+                normal = -normal;
+            }
+            let stand = a + edge * 0.5 + normal * 0.8;
+            let node = nav.node_xz(door.node);
+            let offset = (Vec2::new(node[0] as f32, node[1] as f32) - stand).length();
+            assert!(
+                offset < 0.5,
+                "{} door node {node:?} is {offset:.2} m from its edge's threshold",
+                door.building
+            );
+        }
+    }
 
     #[test]
     fn city_builds_every_cadastral_building_and_named_place() {

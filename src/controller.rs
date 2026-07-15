@@ -230,6 +230,7 @@ impl CollisionWorld {
             min_y: lower_y,
             max_y: upper_y,
             planes: planes.into_boxed_slice(),
+            footprint: vertices.into_boxed_slice(),
         });
     }
 
@@ -266,6 +267,58 @@ impl CollisionWorld {
             .min_by(f32::total_cmp)
     }
 
+    /// Whether a world point lies inside any static solid. The same coarse
+    /// geometry that stops the player, queried as a point test — used to prove
+    /// the baked walkable surface never overlaps a collider.
+    #[allow(dead_code)] // exercised by tests; movement will read it in M2
+    pub fn contains_point(&self, point: Vec3) -> bool {
+        let xz = Vec2::new(point.x, point.z);
+        let in_box = self.boxes.iter().any(|solid| {
+            point.x >= solid.min.x
+                && point.x <= solid.max.x
+                && point.y >= solid.min.y
+                && point.y <= solid.max.y
+                && point.z >= solid.min.z
+                && point.z <= solid.max.z
+        });
+        if in_box {
+            return true;
+        }
+        self.convex_prisms.iter().any(|solid| {
+            point.y >= solid.min_y
+                && point.y <= solid.max_y
+                && solid
+                    .planes
+                    .iter()
+                    .all(|plane| plane.normal.dot(xz) <= plane.offset)
+        })
+    }
+
+    /// The XZ footprint polygon of every solid whose vertical extent contains
+    /// `y` — a box as its four corners, a prism as the polygon it was built from.
+    /// This is what the navigation bake subtracts, so the walkable surface is the
+    /// exact complement of what stops the player at walking height.
+    #[allow(dead_code)] // used by the collision-export and walkable-surface tests
+    pub fn solid_footprints_at_height(&self, y: f32) -> Vec<Vec<Vec2>> {
+        let mut out = Vec::new();
+        for solid in &self.boxes {
+            if y >= solid.min.y && y <= solid.max.y {
+                out.push(vec![
+                    Vec2::new(solid.min.x, solid.min.z),
+                    Vec2::new(solid.max.x, solid.min.z),
+                    Vec2::new(solid.max.x, solid.max.z),
+                    Vec2::new(solid.min.x, solid.max.z),
+                ]);
+            }
+        }
+        for solid in &self.convex_prisms {
+            if y >= solid.min_y && y <= solid.max_y {
+                out.push(solid.footprint.to_vec());
+            }
+        }
+        out
+    }
+
     /// Number of static colliders registered by the scene.
     #[cfg(test)]
     pub fn len(&self) -> usize {
@@ -290,6 +343,10 @@ struct SolidConvexPrism {
     min_y: f32,
     max_y: f32,
     planes: Box<[PrismPlane]>,
+    /// The XZ footprint the prism was built from — kept so the navigation bake
+    /// can subtract the exact solid, not its axis-aligned bound.
+    #[allow(dead_code)] // read via solid_footprints_at_height in tests
+    footprint: Box<[Vec2]>,
 }
 
 #[derive(Debug, Clone, Copy)]
