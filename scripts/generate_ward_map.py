@@ -29,6 +29,7 @@ it (guaranteeing exact registration), then splices in the overlay:
 from __future__ import annotations
 
 import importlib.util
+import math
 import sys
 from html import escape
 from pathlib import Path
@@ -86,6 +87,47 @@ HL_OPACITY = 0.44     # the highlight ward, a touch stronger
 # String anchors that must exist in the cadastral output for the splice to work.
 ANCHOR_LAYER = '<g id="direct-labels">'
 ANCHOR_END = "</svg>"
+
+# World (x, z) positions of the cadastral map's own text labels — its bold
+# direct-labels and faint ward labels (mirrored from generate_top_down_map.py).
+# Bold ward names are placed to keep clear of these so the two label sets do not
+# overprint. Distances are 1:1 with screen distance (screen = (-z, -x)).
+MAP_LABELS: list[tuple[float, float]] = [
+    (0, -12), (0, 132), (-25, 355), (255, 155), (-305, 90), (-305, -365),
+    (45, -255), (360, 335), (-395, 315), (155, -485), (-305, -610), (-225, -390),
+    (-380, -418), (175, -92), (-35, 530), (515, 135), (15, -687), (-527, -135),
+    (-474, -535),
+    (-45, 420), (170, 320), (345, 120), (20, 15), (-185, 220), (-260, 5),
+    (-365, -300), (205, -285), (-120, -540),
+]
+
+
+def open_label_pos(ward_key: str, centroid: tuple[float, float], avoid: list) -> tuple[float, float]:
+    """Pick a spot near the ward centroid that stays in the ward and keeps clear
+    of the map's labels (and of already-placed ward names in ``avoid``).
+
+    Searches the centroid plus rings of offsets, scoring by clearance to the
+    nearest thing to avoid, penalised by distance from the centroid so labels
+    stay roughly central unless a collision forces them out.
+    """
+    cx, cz = centroid
+    best = (cx, cz)
+    best_score = -1e9
+    for radius in (0.0, 60.0, 120.0, 180.0):
+        offsets = [(0.0, 0.0)] if radius == 0.0 else [
+            (1, 0), (-1, 0), (0, 1), (0, -1),
+            (0.7, 0.7), (0.7, -0.7), (-0.7, 0.7), (-0.7, -0.7),
+        ]
+        for dx, dz in offsets:
+            candidate = (cx + dx * radius, cz + dz * radius)
+            if not point_in_polygon(candidate, WALL) or district_for(*candidate) != ward_key:
+                continue
+            clearance = min(math.dist(candidate, other) for other in avoid)
+            score = clearance - 0.25 * math.dist(candidate, centroid)
+            if score > best_score:
+                best_score = score
+                best = candidate
+    return best
 
 
 def sample() -> tuple[dict[str, list[tuple[float, float, float]]], dict[str, list], float]:
@@ -155,6 +197,8 @@ def ward_names(accum, total) -> tuple[str, list]:
     cell = STEP * STEP
     lines = ['<g id="ward-names">']
     stats: list[tuple[dict, float, float]] = []
+    # Grow the avoid-list as names are placed, so ward names dodge each other too.
+    avoid: list[tuple[float, float]] = list(MAP_LABELS)
     for ward in WARDS:
         sum_x, sum_z, count = accum[ward["key"]]
         if count == 0:
@@ -162,8 +206,10 @@ def ward_names(accum, total) -> tuple[str, list]:
         area = count * cell
         pct = 100.0 * count / total
         stats.append((ward, area, pct))
-        cx, cz = sum_x / count, sum_z / count
-        sx, sy = screen((cx, cz))
+        centroid = (sum_x / count, sum_z / count)
+        pos = open_label_pos(ward["key"], centroid, avoid)
+        avoid.append(pos)
+        sx, sy = screen(pos)
         size = 17 if ward["hl"] else 12
         name_style = (
             "font-family:Georgia,serif;font-weight:bold;letter-spacing:1.4px;fill:#241b12;"
