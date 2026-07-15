@@ -245,9 +245,10 @@ def image_prompt(a: Arms) -> str:
     parts.append(STYLE_WORDS[a.style])
     parts.append(
         "Matte historical pigments, subtle age, craquelure and wear. The shield is "
-        "perfectly centred and front-facing on a plain dark charcoal background, "
-        "soft even museum lighting. Absolutely no text, no letters, no numerals, no "
-        "words, no motto scroll, no banner or ribbon — a single shield only."
+        "perfectly centred and front-facing, isolated on a fully transparent "
+        "background (no backdrop, no ground shadow, nothing behind or around it), "
+        "soft even lighting. Absolutely no text, no letters, no numerals, no words, "
+        "no motto scroll, no banner or ribbon — a single cut-out shield only."
     )
     return " ".join(parts)
 
@@ -741,7 +742,8 @@ async def generate_images(jobs, api_key, size, quality, concurrency):
             print(f"  generate {path.relative_to(REPO_ROOT)}", flush=True)
             try:
                 resp = await client.images.generate(
-                    model=MODEL, prompt=image_prompt(arms), size=size, quality=quality)
+                    model=MODEL, prompt=image_prompt(arms), size=size, quality=quality,
+                    background="transparent")
                 b64 = resp.data[0].b64_json if resp.data else None
                 if not b64:
                     raise RuntimeError("empty image response")
