@@ -320,15 +320,31 @@ fuel, ash, cullet, lead came, wrapped panes, handcarts, and quenching equipment
 make it a production street rather than a shop display. Furnace glow is
 restrained and material; coloured glass never glows by magic.
 
-The glaziers' guildhall and Sparr workshops cluster near `(-140, 235)`. Their
-procession route runs north/east along the Row, takes the final working bend,
-and enters the Gradine from the side before aligning with the west doors. It is
-long enough for citizens to join and narrow enough for wrapped panes to matter.
+The glaziers' guildhall and the Sparrs' first furnace cluster near
+`(-140, 235)`. Their procession route runs north/east along the Row, takes the
+final working bend, and enters the Gradine from the side before aligning with
+the west doors. It is long enough for citizens to join and narrow enough for
+wrapped panes to matter.
+
+The Row's furnaces are numbered, and the number is a rank. The Sparrs, of
+Idonea Sparr's line, hold the first and cut every Fabric repair pane under a
+grey clerk's tally. The second belongs to the Crakes' Cinder Row branch,
+further down the Row toward the Gradine, where Master Dunstan Crake keeps a
+clean, courteous shop and speaks of losing the last Fabric re-leading to the
+Sparrs "by two panes" as a small technical curiosity. The rivalry is old guild
+gossip the street trades on lightly.
 
 Practical fire precautions—sand, shutters, masonry, separated fuel, iron
 hooks—repeat without looking modern. Smoke darkens eaves. Burn scars are
 Ambrelle's kisses; the street remains silent if a stranger says glass
 remembers.
+
+**Secret:** Dunstan Crake keeps in his strongbox a deed-claim on the very plot
+the Sparrs' furnace stands on, older than the F.171 fire and never brought
+before the guild—a claim unspent so it stays unlost. Set against the Glazier
+Rule and the Unwalled's quiet veneration of Idonea Sparr (see
+`../second_sun/02_the_heretic_cell.md`), Cinder Row carries a three-way glass
+story—Sparrs, Crakes, and the cell—that ordinary trade never voices.
 
 ### Burnt Court
 

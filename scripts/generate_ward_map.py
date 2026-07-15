@@ -2,25 +2,28 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Generate Ombreval's *ward map* — a complementary top-down plan.
+"""Generate Ombreval's *ward map* — the cadastral plan with a ward overlay.
 
-The authoritative cadastral plan (``generate_top_down_map.py`` ->
-``ombreval_top_down_map.svg``) draws every building. This companion map draws
-only the eight planning wards as filled coloured regions over the same walled
-enclosure, so the districts themselves are legible at a glance.
+This is the authoritative top-down map (``generate_top_down_map.py`` ->
+``ombreval_top_down_map.svg``: every building footprint, road, wall, gate and
+label) with a translucent colour wash laid over the eight planning wards, so the
+districts read at a glance while the building contours stay visible underneath.
+It is written as a separate file, ``lore/places/ombreval_ward_map.svg``.
 
-The regions are the *real* partition the cadastral generator uses to assign
-every building to a ward: ``district_for(x, z)`` — a first-match-wins decision
+The wards are the *real* partition the cadastral generator uses to assign every
+building to a district: ``district_for(x, z)`` — a first-match-wins decision
 tree, not the overlapping bounding boxes tabulated in ``00_city_plan.md``. That
 partition tiles the whole enclosure with no gaps or overlaps, so each ward's
-share of the city is well defined. This script imports the authoritative
-generator for its coordinate transform (``screen`` == ``(-z, -x)``), the wall
-polygon, the point-in-polygon test, and the parchment palette, so the two maps
-stay in exact registration.
+share of the city is well defined.
 
-Output: ``lore/places/ombreval_ward_map.svg`` (deterministic).
+This script imports the authoritative generator, renders the base map through
+it (guaranteeing exact registration), then splices in the overlay:
 
-    uv run lore/places/generate_ward_map.py
+- the ward colour wash goes *inside* ``<g id="map-art">``, right before
+  ``<g id="direct-labels">`` — over the buildings, under the map's own labels;
+- bold ward names, area figures and a ward key go on top, before ``</svg>``.
+
+    uv run scripts/generate_ward_map.py
 """
 
 from __future__ import annotations
@@ -32,9 +35,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-# Import the authoritative generator (its sibling) as a module so the two maps
-# share exactly one coordinate system, wall polygon, ward partition, repo-root
-# discovery, and colour register.
+# Import the authoritative generator (its sibling) so the two maps share exactly
+# one coordinate system, wall polygon, ward partition, repo-root discovery, and
+# rendered base image.
 _spec = importlib.util.spec_from_file_location("_ombreval_plan", HERE / "generate_top_down_map.py")
 assert _spec and _spec.loader
 plan = importlib.util.module_from_spec(_spec)
@@ -46,59 +49,50 @@ screen = plan.screen
 svg_points = plan.svg_points
 district_for = plan.district_for
 point_in_polygon = plan.point_in_polygon
-inline = plan.inline_svg_class_styles
 
 # The ward map lands beside the cadastral plan in lore/places/, wherever this
 # script is run from. Its provenance line self-corrects if the file moves.
+BASE_SVG_PATH = plan.SVG_PATH
 OUTPUT_PATH = plan.OUTPUT_DIR / "ombreval_ward_map.svg"
 GENERATED_BY = Path(__file__).resolve().relative_to(plan.REPO_ROOT).as_posix()
 
-
-# One entry per ward. Colour, and the short "character" line from
-# lore/places/00_city_plan.md. Order controls the legend and the z-order of the
-# label draw; Bell-and-Sluice is the highlight ward.
+# One entry per ward: colour, short label, and the "character" line from
+# lore/places/00_city_plan.md. Bell-and-Sluice is the highlight ward.
 WARDS: list[dict] = [
-    {"key": "Bell and Sluice Wards", "short": "BELL & SLUICE", "fill": "#c56a3e",
-     "note": "Bellstand, Ilvane Chapel, bellfounding, Old Sluice, eastern housing", "hl": True},
-    {"key": "Reed Ward", "short": "REED", "fill": "#5f8f8a",
-     "note": "Maren's Green, crypt, fish, Moorings, tanners, boat-families", "hl": False},
-    {"key": "Cloth Ward", "short": "CLOTH", "fill": "#9c6e86",
-     "note": "Draper's Reach, tentering, cloth halls, merchant lofts", "hl": False},
-    {"key": "Fabric Ward", "short": "FABRIC", "fill": "#9aa079",
-     "note": "Lanthorn, Gradine, Chapter, pilgrims, fabric workers", "hl": False},
-    {"key": "Wick Ward", "short": "WICK", "fill": "#cba64f",
-     "note": "Wickmarket, west gate, chandlers, honey, lodging", "hl": False},
-    {"key": "Weigh Ward", "short": "WEIGH", "fill": "#b98a4e",
-     "note": "Tallage, salt houses, Tally Bridge, customs, pawning", "hl": False},
-    {"key": "Cinder Ward", "short": "CINDER", "fill": "#93795f",
-     "note": "Cinder Row, fire-conscious workshops, Burnt Court, glass", "hl": False},
-    {"key": "Wallwright Ward", "short": "WALLWRIGHT", "fill": "#8b909c",
-     "note": "Coswald's Yard, stone, timber, lime, masons, north gate", "hl": False},
-    {"key": "Outer wards", "short": "OUTER WARDS", "fill": "#b7a888",
-     "note": "wall margins: bakers, brewers, gardens, stables, parish reserves", "hl": False},
+    {"key": "Bell and Sluice Wards", "short": "BELL & SLUICE", "fill": "#c1502a",
+     "note": "Bellstand, Ilvane, bellfounding, Old Sluice", "hl": True},
+    {"key": "Reed Ward", "short": "REED", "fill": "#2f7d78",
+     "note": "Maren's Green, crypt, fish, moorings, boat-families", "hl": False},
+    {"key": "Cloth Ward", "short": "CLOTH", "fill": "#8f4f74",
+     "note": "Draper's Reach, tentering, cloth halls", "hl": False},
+    {"key": "Fabric Ward", "short": "FABRIC", "fill": "#6f8a3f",
+     "note": "Lanthorn, Gradine, Chapter, pilgrims", "hl": False},
+    {"key": "Wick Ward", "short": "WICK", "fill": "#d19a1f",
+     "note": "Wickmarket, west gate, chandlers, lodging", "hl": False},
+    {"key": "Weigh Ward", "short": "WEIGH", "fill": "#b06a1f",
+     "note": "Tallage, salt, Tally Bridge, customs, pawning", "hl": False},
+    {"key": "Cinder Ward", "short": "CINDER", "fill": "#7a5a3a",
+     "note": "Cinder Row, fire-conscious workshops, glass", "hl": False},
+    {"key": "Wallwright Ward", "short": "WALLWRIGHT", "fill": "#556072",
+     "note": "Coswald's Yard, stone, timber, lime, masons", "hl": False},
+    {"key": "Outer wards", "short": "OUTER WARDS", "fill": "#8a7a4a",
+     "note": "wall margins: bakers, brewers, gardens, reserves", "hl": False},
 ]
 
-# Faint orientation anchors reused from the cadastral map (world x, z).
-ANCHORS = [
-    ("THE LANTHORN", (0, -12), "major"),
-    ("THE BELLSTAND", (45, -255), "minor"),
-    ("OLD SLUICE", (-305, -610), "minor"),
-    ("COSWALD'S YARD", (255, 155), "minor"),
-]
-GATES = [
-    ("WOOL GATE", (-35, 510)), ("STONE GATE", (495, 135)),
-    ("HARNE GATE", (15, -665)), ("RIVER GATE", (-505, -135)),
-    ("REED POSTERN", (-455, -535)),
-]
+STEP = 2.0            # sampling / fill-band resolution in metres
+WASH_OPACITY = 0.34   # translucency of the ordinary ward wash
+HL_OPACITY = 0.44     # the highlight ward, a touch stronger
 
-STEP = 2.0  # sampling / fill-band resolution in metres
+# String anchors that must exist in the cadastral output for the splice to work.
+ANCHOR_LAYER = '<g id="direct-labels">'
+ANCHOR_END = "</svg>"
 
 
 def sample() -> tuple[dict[str, list[tuple[float, float, float]]], dict[str, list], float]:
-    """Return per-ward horizontal fill runs, centroids, and total cell count.
+    """Return per-ward horizontal fill runs, centroid accumulators, and cell count.
 
-    Runs are ``(x, z_lo, z_hi)`` bands of constant world-x. Centroid data is a
-    ``[sum_x, sum_z, count]`` accumulator per ward.
+    Runs are ``(x, z_lo, z_hi)`` bands of constant world-x. The accumulator is
+    ``[sum_x, sum_z, count]`` per ward, for centroid labels and areas.
     """
     xs = [p[0] for p in WALL]
     zs = [p[1] for p in WALL]
@@ -137,138 +131,126 @@ def sample() -> tuple[dict[str, list[tuple[float, float, float]]], dict[str, lis
     return runs, accum, float(total)
 
 
-def render() -> None:
-    runs, accum, total = sample()
-    cell = STEP * STEP
-    enclosure = total * cell
-
-    # Reuse the cadastral header verbatim (same viewBox, palette, fonts), then
-    # append ward-specific style and geometry before the closing tag.
-    header = plan.svg_header().rstrip()
-    # Splice ward styles in just before the stylesheet close.
-    ward_css = "\n".join(
-        f"    .fill-{i} {{ fill: {w['fill']}; }}" for i, w in enumerate(WARDS)
-    )
-    extra_css = (
-        ward_css
-        + "\n    .ward-fill { stroke: none; opacity: 0.52; }"
-        + "\n    .ward-fill.hl { opacity: 0.66; }"
-        + "\n    .ward-outline { fill: none; stroke: #6f5c3f; stroke-width: 1.1; opacity: 0.5; }"
-        + "\n    .ward-name { font-family: Georgia, serif; font-weight: bold; letter-spacing: 1.3px;"
-        " fill: #2c2318; text-anchor: middle; paint-order: stroke; stroke: #f4ecd7; stroke-width: 1.1px;"
-        " stroke-linejoin: round; }"
-        + "\n    .ward-name-hl { font-size: 15px; }"
-        + "\n    .ward-name-sm { font-size: 11px; }"
-        + "\n    .ward-stat { font-family: Arial, sans-serif; fill: #3a2f20; text-anchor: middle;"
-        " paint-order: stroke; stroke: #f4ecd7; stroke-width: 0.9px; }"
-        + "\n    .ward-stat-hl { font-size: 11px; }"
-        + "\n    .ward-stat-sm { font-size: 7px; }"
-        + "\n    .gate-mark { fill: #3b3328; stroke: #f4ecd7; stroke-width: 1; }"
-    )
-    header = header.replace("  ]]></style>", extra_css + "\n  ]]></style>")
-    # New title/desc.
-    header = header.replace(
-        "<title id=\"map-title\">Authoritative top-down building plan of Ombreval, F.437</title>",
-        "<title id=\"map-title\">Ward map of Ombreval, F.437</title>",
-    ).replace(
-        "<desc id=\"map-desc\">A detailed cadastral city map showing every planned building"
-        " footprint, streets, walls, gates, the dry Cut, the Serle outside the south wall, and"
-        " numbered locations for all named places.</desc>",
-        "<desc id=\"map-desc\">The eight planning wards of Ombreval drawn as filled regions over"
-        " the walled enclosure, using the cadastral generator's own district partition.</desc>",
-    )
-
-    parts: list[str] = [header]
-    parts.append(
-        f"<!-- Generated by {GENERATED_BY}. Do not edit by hand; re-run the script to regenerate. -->"
-    )
-    parts.append('<rect class="map-bg" x="-690" y="-610" width="1810" height="1440"/>')
-
-    # Terrain / river context, dimmed, purely for orientation.
-    parts.append('<rect class="outer-ground" x="-650" y="-545" width="1370" height="1250" opacity="0.6"/>')
-    river_poly = [(-575, 640), (-575, -735), (-690, -735), (-690, 640)]
-    parts.append(f'<polygon class="river" points="{svg_points(river_poly)}" opacity="0.7"/>')
-    parts.append(f'<polygon class="city-ground" points="{svg_points(WALL)}"/>')
-
-    # Ward fills (horizontal run bands per ward).
-    parts.append('<g id="ward-fills">')
+def overlay_group(runs) -> str:
+    """The translucent ward wash, plus a crisp wall outline over it."""
     half = STEP / 2.0
-    for index, ward in enumerate(WARDS):
-        hl = " hl" if ward["hl"] else ""
-        parts.append(f'<g class="ward-fill fill-{index}{hl}" data-ward="{escape(ward["key"])}">')
+    lines = ['<g id="ward-overlay">']
+    for ward in WARDS:
+        opacity = HL_OPACITY if ward["hl"] else WASH_OPACITY
+        lines.append(f'<g fill="{ward["fill"]}" opacity="{opacity}" stroke="none" data-ward="{escape(ward["key"])}">')
         for x, z_lo, z_hi in runs[ward["key"]]:
             sx = -z_hi - half           # svg_x = -z; leftmost is the largest z
             width = (z_hi - z_lo) + STEP
             sy = -x - half              # svg_y = -x
-            parts.append(
-                f'<rect x="{sx:.1f}" y="{sy:.1f}" width="{width:.1f}" height="{STEP:.1f}"/>'
-            )
-        parts.append('</g>')
-    parts.append('</g>')
+            lines.append(f'<rect x="{sx:.1f}" y="{sy:.1f}" width="{width:.1f}" height="{STEP:.1f}"/>')
+        lines.append('</g>')
+    # Redraw the wall so the wash does not muddy the fortification line.
+    lines.append(f'<polygon points="{svg_points(WALL)}" fill="none" stroke="#3d382e" stroke-width="5" opacity="0.55"/>')
+    lines.append('</g>')
+    return "\n".join(lines)
 
-    # Crisp wall outline on top so the ragged fill edge reads as intentional.
-    parts.append(f'<polygon class="wall-casing" points="{svg_points(WALL)}"/>')
-    parts.append(f'<polygon class="wall" points="{svg_points(WALL)}"/>')
 
-    # Orientation anchors and gates.
-    parts.append('<g id="anchors">')
-    for text_value, point, weight in ANCHORS:
-        sx, sy = screen(point)
-        parts.append(f'<text class="direct-{weight}" x="{sx:.1f}" y="{sy:.1f}" opacity="0.72">{escape(text_value)}</text>')
-    for text_value, point in GATES:
-        sx, sy = screen(point)
-        parts.append(f'<rect class="gate-mark" x="{sx - 4:.1f}" y="{sy - 4:.1f}" width="8" height="8"/>')
-        parts.append(f'<text class="direct-minor" x="{sx:.1f}" y="{sy - 9:.1f}" opacity="0.8">{escape(text_value)}</text>')
-    parts.append('</g>')
-
-    # Ward name + area + share, centred on each ward's centroid.
-    parts.append('<g id="ward-labels">')
-    stats: list[tuple[dict, float, float]] = []  # (ward, area, pct) for the legend
+def ward_names(accum, total) -> tuple[str, list]:
+    """Bold ward names + area/share, centred on each ward. Returns (svg, stats)."""
+    cell = STEP * STEP
+    lines = ['<g id="ward-names">']
+    stats: list[tuple[dict, float, float]] = []
     for ward in WARDS:
-        sx_sum, sz_sum, count = accum[ward["key"]]
+        sum_x, sum_z, count = accum[ward["key"]]
         if count == 0:
             continue
         area = count * cell
         pct = 100.0 * count / total
         stats.append((ward, area, pct))
-        cx, cz = sx_sum / count, sz_sum / count
+        cx, cz = sum_x / count, sum_z / count
         sx, sy = screen((cx, cz))
-        size = 15 if ward["hl"] else 11
-        name_class = "ward-name ward-name-hl" if ward["hl"] else "ward-name ward-name-sm"
-        stat_class = "ward-stat ward-stat-hl" if ward["hl"] else "ward-stat ward-stat-sm"
-        parts.append(f'<text class="{name_class}" x="{sx:.1f}" y="{sy:.1f}">{escape(ward["short"])}</text>')
-        parts.append(f'<text class="{stat_class}" x="{sx:.1f}" y="{sy + size + 1:.1f}">{area / 1000:.0f}k m² · {pct:.1f}%</text>')
-    parts.append('</g>')
+        size = 17 if ward["hl"] else 12
+        name_style = (
+            "font-family:Georgia,serif;font-weight:bold;letter-spacing:1.4px;fill:#241b12;"
+            "text-anchor:middle;paint-order:stroke;stroke:#f6efdb;stroke-width:2.2px;"
+            f"stroke-linejoin:round;font-size:{size}px"
+        )
+        stat_style = (
+            "font-family:Arial,sans-serif;font-weight:bold;fill:#3a2a18;text-anchor:middle;"
+            f"paint-order:stroke;stroke:#f6efdb;stroke-width:1.6px;font-size:{size - 4}px"
+        )
+        lines.append(f'<text x="{sx:.1f}" y="{sy:.1f}" style="{name_style}">{escape(ward["short"])}</text>')
+        lines.append(f'<text x="{sx:.1f}" y="{sy + size + 1:.1f}" style="{stat_style}">{area / 1000:.0f}k m² · {pct:.1f}%</text>')
+    lines.append('</g>')
+    return "\n".join(lines), stats
 
-    # Title block, compass, scale (reuse the cadastral idiom).
-    parts.append('<g id="map-information">')
-    parts.append('<text class="map-title" x="-640" y="-566">OMBREVAL — THE WARDS</text>')
-    parts.append('<text class="map-subtitle" x="-638" y="-548">EIGHT PLANNING WARDS · F.437 · NORTH +X · EAST −Z · REGIONS = district_for() PARTITION</text>')
-    parts.append('<g transform="translate(-610,-505)"><path d="M 0 35 L 0 -20 L -7 -6 L 0 -28 L 7 -6 L 0 -20" fill="#3b3328"/><text class="panel-text" x="0" y="-34" text-anchor="middle">N +X</text><text class="panel-small" x="0" y="48" text-anchor="middle">south −X</text><text class="panel-small" x="-30" y="8" text-anchor="middle">W +Z</text><text class="panel-small" x="31" y="8" text-anchor="middle">E −Z</text></g>')
-    parts.append('<g transform="translate(-620,690)"><path d="M 0 0 L 200 0" stroke="#30291f" stroke-width="3"/><path d="M 0 -5 L 0 5 M 50 -5 L 50 5 M 100 -5 L 100 5 M 150 -5 L 150 5 M 200 -5 L 200 5" stroke="#30291f" stroke-width="2"/><text class="panel-text" x="0" y="16">0</text><text class="panel-text" x="100" y="16" text-anchor="middle">100 m</text><text class="panel-text" x="200" y="16" text-anchor="end">200 m</text></g>')
-    parts.append(f'<text class="panel-small" x="-620" y="730">Generated by {escape(GENERATED_BY)} · 1 SVG unit = 1 m</text>')
 
-    # Legend / area table, sorted by share.
-    stats.sort(key=lambda item: -item[1])
-    panel_h = 60 + len(stats) * 30 + 60
-    parts.append(f'<rect class="panel" x="735" y="-535" width="350" height="{panel_h}" rx="5"/>')
-    parts.append('<text class="panel-title" x="750" y="-510">WARD AREAS · SHARE OF ENCLOSURE</text>')
-    for row, (ward, area, pct) in enumerate(stats):
-        y = -483 + row * 30
-        parts.append(f'<rect x="752" y="{y - 9:.0f}" width="20" height="14" rx="2" fill="{ward["fill"]}" opacity="{0.66 if ward["hl"] else 0.52}" stroke="#6f5c3f" stroke-width="0.8"/>')
-        parts.append(f'<text class="panel-text" x="780" y="{y:.0f}"><tspan font-weight="bold">{escape(ward["short"])}</tspan>  ·  {area / 1000:.0f}k m²  ·  {pct:.1f}%</text>')
-        parts.append(f'<text class="panel-small" x="780" y="{y + 10:.0f}">{escape(ward["note"])}</text>')
-    note_y = -483 + len(stats) * 30 + 6
-    parts.append(f'<text class="panel-small" x="750" y="{note_y:.0f}">Enclosure ≈ {enclosure / 1e6:.2f} km². Regions are the cadastral generator\'s non-overlapping</text>')
-    parts.append(f'<text class="panel-small" x="750" y="{note_y + 11:.0f}">district_for() partition (first-match-wins), NOT the overlapping boxes in 00_city_plan.md,</text>')
-    parts.append(f'<text class="panel-small" x="750" y="{note_y + 22:.0f}">which give Bell &amp; Sluice a smaller 21% by bounding box.</text>')
-    parts.append('</g>')
+def key_panel(stats, enclosure) -> str:
+    """A compact ward colour key, below the cadastral map's own panels."""
+    stats = sorted(stats, key=lambda item: -item[1])
+    px, py, pw, ph = 735, 723, 350, 104
+    panel_style = "fill:#f4ecd7;stroke:#574b39;stroke-width:1.2"
+    title_style = "font-family:Georgia,serif;font-size:11px;font-weight:bold;fill:#30291f;letter-spacing:1px"
+    text_style = "font-family:Arial,sans-serif;font-size:6.4px;fill:#30291f"
+    small_style = "font-family:Arial,sans-serif;font-size:5.6px;fill:#514636"
 
-    parts.append('</svg>')
-    svg = "\n".join(parts) + "\n"
-    OUTPUT_PATH.write_text(inline(svg), encoding="utf-8")
-    print(f"Wrote {OUTPUT_PATH.name}: enclosure {enclosure:,.0f} m², "
-          + ", ".join(f"{w['short']} {p:.1f}%" for w, _, p in stats))
+    lines = [f'<rect x="{px}" y="{py}" width="{pw}" height="{ph}" rx="5" style="{panel_style}"/>']
+    lines.append(f'<text x="{px + 15}" y="{py + 20}" style="{title_style}">PLANNING WARDS · SHARE OF ENCLOSURE</text>')
+    # Two columns of swatch + label.
+    col_x = [px + 15, px + 185]
+    per_col = (len(stats) + 1) // 2
+    for index, (ward, area, pct) in enumerate(stats):
+        column = index // per_col
+        row = index % per_col
+        x = col_x[column]
+        y = py + 36 + row * 14
+        lines.append(f'<rect x="{x}" y="{y - 8}" width="16" height="10" rx="2" fill="{ward["fill"]}" opacity="{HL_OPACITY if ward["hl"] else WASH_OPACITY}" stroke="#6f5c3f" stroke-width="0.7"/>')
+        lines.append(f'<text x="{x + 22}" y="{y}" style="{text_style}"><tspan font-weight="bold">{escape(ward["short"])}</tspan>  {area / 1000:.0f}k m² · {pct:.1f}%</text>')
+    lines.append(f'<text x="{px + 15}" y="{py + ph - 8}" style="{small_style}">Regions = district_for() partition (non-overlapping); the overlapping boxes in 00_city_plan.md give Bell &amp; Sluice a smaller ~21%.</text>')
+    return "\n".join(lines)
+
+
+def retitle(svg: str) -> str:
+    """Rename the cadastral map's title/subtitle to name the ward map."""
+    replacements = [
+        (
+            "<title id=\"map-title\">Authoritative top-down building plan of Ombreval, F.437</title>",
+            "<title id=\"map-title\">Ward map of Ombreval, F.437</title>",
+        ),
+        (
+            "<desc id=\"map-desc\">A detailed cadastral city map showing every planned building"
+            " footprint, streets, walls, gates, the dry Cut, the Serle outside the south wall, and"
+            " numbered locations for all named places.</desc>",
+            "<desc id=\"map-desc\">The authoritative cadastral plan of Ombreval with a translucent"
+            " colour wash over its eight planning wards (the district_for() partition).</desc>",
+        ),
+        ("-566\">OMBREVAL</text>", "-566\">OMBREVAL — THE WARDS</text>"),
+        ("AUTHORITATIVE TOP-DOWN BUILDING PLAN", "PLANNING WARDS OVER THE BUILDING PLAN"),
+    ]
+    for old, new in replacements:
+        if old not in svg:
+            raise ValueError(f"cadastral base map is missing an expected string to retitle: {old[:60]}...")
+        svg = svg.replace(old, new, 1)
+    return svg
+
+
+def render() -> None:
+    runs, accum, total = sample()
+    enclosure = total * STEP * STEP
+
+    # Render the authoritative base map, then read it back to compose onto.
+    plan.render_svg()
+    base = BASE_SVG_PATH.read_text(encoding="utf-8")
+    if ANCHOR_LAYER not in base or not base.rstrip().endswith(ANCHOR_END):
+        raise ValueError("cadastral base map does not have the expected layer structure to splice into")
+
+    names_svg, stats = ward_names(accum, total)
+    provenance = f"<!-- Ward overlay generated by {GENERATED_BY} over the cadastral base map. Re-run the script to regenerate. -->"
+
+    out = base
+    out = out.replace('<g id="map-art">', provenance + '\n<g id="map-art">', 1)
+    out = out.replace(ANCHOR_LAYER, overlay_group(runs) + "\n" + ANCHOR_LAYER, 1)
+    out = out.replace(ANCHOR_END, names_svg + "\n" + key_panel(stats, enclosure) + "\n" + ANCHOR_END, 1)
+    out = retitle(out)
+
+    OUTPUT_PATH.write_text(out, encoding="utf-8")
+    ordered = ", ".join(f"{w['short']} {p:.1f}%" for w, _, p in sorted(stats, key=lambda i: -i[1]))
+    print(f"Wrote {OUTPUT_PATH.name}: cadastral base + ward overlay · enclosure {enclosure:,.0f} m² · {ordered}")
 
 
 if __name__ == "__main__":
