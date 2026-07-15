@@ -19,7 +19,11 @@ ordinal. A HUD readout. A `T` key that cycles the debug time-scale.
 `EngineConfig.clock` + `EngineMessage::Clock` (republished every poll) + `EngineCommand::CycleTimeScale`;
 the bell is a *player-only* `Sound` (no NPC percept, no nudge — the offices are a clock, not events);
 `src/smart_actors/clock.rs` projects it into `WorldClockState`, rotates the `Sun`, writes the HUD, and
-cycles the scale on `T`. Configured under `smart_actors.clock` in `config.ron`.
+cycles the scale on `T`. Configured under `smart_actors.clock` in `config.ron`. **The clock reaches the
+NPC** through the sheet's `you_are.the_hour` (§7 — a field, not a percept; `Option`, so the frozen golden
+fixtures stay byte-identical). **The office and time-scale are mirrored into `logs.jsonl`** on change
+(source `"clock"`), so a `CATHEDRAL_DRIVE` script can assert on the clock in text, not only by screenshot
+(§6).
 
 *Note on the verification recipe below:* drive `sleep`s are wall-clock, but the game clock advances in
 `Time<Virtual>` (what the engine's `now` reads), which lags wall-clock when debug frames are slow — so a

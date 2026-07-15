@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    GOAL_NONE, RECENT_HISTORY_MAX_ENTRIES,
+    GOAL_NONE, INBOX_MAX_ENTRIES, RECENT_HISTORY_MAX_ENTRIES,
     ids::{ActorId, ItemId},
     lore::{LoreProfile, Significance},
     math::Vec3,
@@ -200,6 +200,7 @@ impl Character {
     pub fn notify(&mut self, text: impl Into<String>) {
         if self.control().is_llm() {
             self.state.inbox.push(text.into());
+            cap_front(&mut self.state.inbox, INBOX_MAX_ENTRIES);
         }
     }
 
@@ -210,14 +211,7 @@ impl Character {
             return;
         }
         self.state.recent_history.push(text.into());
-        let overflow = self
-            .state
-            .recent_history
-            .len()
-            .saturating_sub(RECENT_HISTORY_MAX_ENTRIES);
-        if overflow > 0 {
-            self.state.recent_history.drain(..overflow);
-        }
+        cap_front(&mut self.state.recent_history, RECENT_HISTORY_MAX_ENTRIES);
     }
 
     /// Deliver a new percept; it becomes short-term history once presented.
@@ -228,6 +222,10 @@ impl Character {
         let text = text.into();
         self.state.inbox.push(text.clone());
         self.state.pending_history.push(text);
+        // An actor the stage gate never prompts drains neither, so both are
+        // bounded here — the oldest, stalest percepts fall off first.
+        cap_front(&mut self.state.inbox, INBOX_MAX_ENTRIES);
+        cap_front(&mut self.state.pending_history, INBOX_MAX_ENTRIES);
     }
 
     /// Detach the percepts a prompt is about to present as
@@ -243,6 +241,15 @@ impl Character {
         for text in presented {
             self.remember_percept(text.clone());
         }
+    }
+}
+
+/// Drop the oldest entries so `buffer` holds at most `max`, preserving order.
+/// The shared shape of every bounded percept window in this file.
+fn cap_front(buffer: &mut Vec<String>, max: usize) {
+    let overflow = buffer.len().saturating_sub(max);
+    if overflow > 0 {
+        buffer.drain(..overflow);
     }
 }
 
@@ -281,7 +288,7 @@ mod tests {
         for index in 0..offered {
             character.notify_percept(format!("line {index}"));
         }
-        // pending_history is unbounded — everything perceived is offered.
+        // Well under INBOX_MAX_ENTRIES, so pending_history still holds them all.
         let presented = character.take_pending_history();
         assert_eq!(presented.len(), offered);
         assert!(character.pending_history().is_empty());
@@ -295,6 +302,35 @@ mod tests {
             history[RECENT_HISTORY_MAX_ENTRIES - 1],
             format!("line {}", offered - 1)
         );
+    }
+
+    /// A character the scheduler never prompts still receives sounds and speech,
+    /// so its inbox and pending_history are bounded — the oldest, stalest lines
+    /// fall off rather than growing for the whole session
+    /// (`features/movement/05_the_llm_seam.md` §5.3).
+    #[test]
+    fn the_never_prompted_inbox_is_bounded_and_keeps_the_newest() {
+        const OVERFLOW: usize = 5;
+        let offered = INBOX_MAX_ENTRIES + OVERFLOW;
+
+        let mut character = Character::from_sheet(sheet(Control::Llm));
+        for index in 0..offered {
+            character.notify_percept(format!("line {index}"));
+        }
+        // Both buffers cap at the bound, and it is the newest lines they keep.
+        for buffer in [character.inbox(), character.pending_history()] {
+            assert_eq!(buffer.len(), INBOX_MAX_ENTRIES);
+            assert_eq!(buffer[0], format!("line {OVERFLOW}"));
+            assert_eq!(buffer[INBOX_MAX_ENTRIES - 1], format!("line {}", offered - 1));
+        }
+
+        // `notify` (private prose, no pending_history) caps the inbox too.
+        let mut chatterer = Character::from_sheet(sheet(Control::Llm));
+        for index in 0..offered {
+            chatterer.notify(format!("note {index}"));
+        }
+        assert_eq!(chatterer.inbox().len(), INBOX_MAX_ENTRIES);
+        assert!(chatterer.pending_history().is_empty());
     }
 
     #[test]

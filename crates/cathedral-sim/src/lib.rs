@@ -102,6 +102,13 @@ pub const GOAL_MAX_CHARS: usize = 1_000;
 pub const MEMORY_MAX_CHARS: usize = 2_000;
 /// Rolling per-character percept window.
 pub const RECENT_HISTORY_MAX_ENTRIES: usize = 32;
+/// Upper bound on a character's unread `inbox` (and its `pending_history`). A
+/// scheduled actor drains its inbox every turn, so this only ever bites an actor
+/// the stage gate never prompts — whose oldest unread percepts are stale anyway.
+/// Without it, an ambient NPC near steady activity accumulates prose forever
+/// (`character.rs`; `features/movement/05_the_llm_seam.md` §5.3). Generous
+/// against `RECENT_HISTORY_MAX_ENTRIES` so a normal turn never loses a percept.
+pub const INBOX_MAX_ENTRIES: usize = 64;
 /// Total horizontal FOV for the sound witness test; overridable per run.
 pub const DEFAULT_VIEW_CONE_DEGREES: f64 = 135.0;
 /// An override narrower than this sees nothing at all (`server.py:449-451`).

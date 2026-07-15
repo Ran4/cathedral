@@ -671,6 +671,26 @@ fn process_engine_message(
             scale,
             seconds_per_day: _,
         } => {
+            // Mirror the office and the debug time scale into `logs.jsonl` on
+            // change, so a `CATHEDRAL_DRIVE` script can assert on the clock in
+            // text instead of reading a screenshot (01_the_clock.md §6). One line
+            // per change, never per poll.
+            let office_changed = world_clock.office != office || !world_clock.present;
+            let scale_changed = (world_clock.scale - scale).abs() > 0.5;
+            if office_changed || scale_changed {
+                let minutes = (day_fraction * 24.0 * 60.0).round() as i64;
+                let (hour, minute) = (minutes.div_euclid(60).rem_euclid(24), minutes.rem_euclid(60));
+                crate::session_log::log_line(
+                    "clock",
+                    "INFO",
+                    &format!(
+                        "[clock] {} {hour:02}:{minute:02} · day {day} {} · {}×",
+                        office.label(),
+                        weekday.label(),
+                        scale.round() as i64,
+                    ),
+                );
+            }
             // The sim owns the clock; this is the game's read-only projection,
             // consumed by the sun and the HUD. No snapshot, no revision — the
             // clock changes every frame and must never touch the mirror.

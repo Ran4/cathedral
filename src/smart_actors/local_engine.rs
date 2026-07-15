@@ -283,7 +283,13 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
         idle_curiosity: config.idle_cognition.curiosity(),
         clock: WorldClock::new(
             config.clock.seconds_per_day,
-            Office::from_config_name(&config.clock.start_office).unwrap_or(Office::Dayspring),
+            Office::from_config_name(&config.clock.start_office).unwrap_or_else(|| {
+                warn!(
+                    "unknown clock.start_office `{}` in config.ron; opening at Dayspring",
+                    config.clock.start_office
+                );
+                Office::Dayspring
+            }),
             config.clock.start_day,
             config.clock.night_brightness,
         ),
