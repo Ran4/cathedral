@@ -660,14 +660,14 @@ fn derived_curiosity(profile: &LoreProfile) -> f64 {
     // that carries one carries the other, so adding both would buy the same
     // person the bonus twice over on nothing but bookkeeping.
     if profile
-        .statuses
+        .circumstances
         .iter()
-        .any(|status| matches!(status.as_str(), "begs_regularly" | "alms_dependent"))
+        .any(|circumstance| matches!(circumstance.as_str(), "begs_regularly" | "alms_dependent"))
     {
         curiosity += 0.10;
     }
-    for status in &profile.statuses {
-        curiosity += match status.as_str() {
+    for circumstance in &profile.circumstances {
+        curiosity += match circumstance.as_str() {
             "unhoused" => 0.02,
             "enclosed_religious" => -0.05,
             "prisoner" => -0.03,
@@ -1133,7 +1133,7 @@ mod tests {
             father: None,
             mother: None,
             children: Vec::new(),
-            statuses: Vec::new(),
+            circumstances: Vec::new(),
             conditions: Vec::new(),
             core_character_description: "You lay stone.".into(),
             extended_character_description: String::new(),
@@ -1240,7 +1240,7 @@ mod tests {
             occupation_id: None,
             occupation_display: None,
             title: None,
-            statuses: vec!["pauper".into(), "begs_regularly".into()],
+            circumstances: vec!["pauper".into(), "begs_regularly".into()],
             ..profile()
         });
         let hawker = derived_curiosity(&LoreProfile {

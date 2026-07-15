@@ -24,7 +24,7 @@
     "z": 482.5,
     "facing": 0.5221
   },
-  "statuses": [
+  "circumstances": [
     "dependent",
     "insecure_lodging",
     "pauper"

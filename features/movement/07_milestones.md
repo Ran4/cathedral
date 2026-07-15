@@ -186,7 +186,7 @@ teleporting.
 
 ## M3 — The water round  ⭐ *the vertical slice*
 
-**Ships.** Needs (thirst first). `Cues`. The ladder, with rungs 2, 6, 11 and 12 only. Routes to the
+**Ships.** Needs (thirst first), on the dynamic `statuses` axis. The ladder, with rungs 2, 6, 11 and 12 only. Routes to the
 nine public water sources. A queue at the curb. `draw_water` / `chain_windlass` / `pour_trough` /
 `pail_clatter` flipped to `actor_emittable`. And home again.
 

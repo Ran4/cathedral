@@ -72,7 +72,7 @@ This has a helpful consequence: movement can improve the entire cast without wea
 
 ## 1.7 The cast is large and heterogeneous
 
-The authored population has roughly 500 people: major, minor, and ambient characters with occupations, districts, statuses, conditions, family relationships, descriptions, and frequently a prose goal. The data contains useful behavioral signals—watchmen, bell ringers, lamplighters, servants, porters, clergy, market trades, poverty, injury, pregnancy, age—but no stable home, workplace, schedule, mobility profile, or activity anchors.
+The authored population has roughly 500 people: major, minor, and ambient characters with occupations, districts, circumstances, conditions, family relationships, descriptions, and frequently a prose goal. The data contains useful behavioral signals—watchmen, bell ringers, lamplighters, servants, porters, clergy, market trades, poverty, injury, pregnancy, age—but no stable home, workplace, schedule, mobility profile, or activity anchors.
 
 Do not turn free-form occupation and condition strings into a permanent runtime rules engine. They are excellent inputs to an offline deterministic assignment pass. Runtime code should consume normalized fields:
 

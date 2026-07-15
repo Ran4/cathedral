@@ -398,7 +398,7 @@ class Draft:
     name: str = ""
     title: str | None = None
     rank: str | None = None
-    statuses: list[str] = field(default_factory=list)
+    circumstances: list[str] = field(default_factory=list)
     conditions: list[str] = field(default_factory=list)
     illegal_activity: str | None = None
     knows: list[str] = field(default_factory=list)
@@ -457,14 +457,14 @@ def ordered_sheet(sheet: dict) -> dict:
         "id", "name", "significance", "planning_ward", "age", "gender",
         "occupation_id", "title", "rank", "faction_role", "illegal_activity",
         "district", "knows", "father", "mother", "children", "spawn_location",
-        "statuses", "conditions", "memories", "core_character_description",
+        "circumstances", "conditions", "memories", "core_character_description",
         "extended_character_description", "appearance_key", "voice_key", "holds", "goal",
     ]
     return {key: sheet[key] for key in keys if key in sheet}
 
 
 def migrate_existing() -> list[dict]:
-    status_map = {
+    circumstance_map = {
         "widow": "widow", "pauper": "pauper", "orphan": "orphan",
         "enclosed": "enclosed_religious", "recanted heretic": "recanted_heretic",
         "one of the Spared": "spared", "illiterate": "illiterate",
@@ -477,14 +477,14 @@ def migrate_existing() -> list[dict]:
             continue
         raw["significance"] = "major" if raw["id"] in MAJOR_IDS else "minor"
         raw["planning_ward"] = existing_ward(raw)
-        statuses = list(raw.get("statuses", []))
+        circumstances = list(raw.get("circumstances", []))
         kept_conditions = []
         for condition in raw.get("conditions", []):
-            if condition in status_map:
-                statuses.append(status_map[condition])
+            if condition in circumstance_map:
+                circumstances.append(circumstance_map[condition])
             else:
                 kept_conditions.append(condition)
-        raw["statuses"] = sorted(set(statuses))
+        raw["circumstances"] = sorted(set(circumstances))
         raw["conditions"] = kept_conditions
         raw = ordered_sheet(raw)
         path.write_text(json.dumps(raw, indent=2, ensure_ascii=False) + "\n")
@@ -622,13 +622,13 @@ def assign_ranks(drafts: list[Draft]) -> None:
         draft.rank = "journeyman"
 
 
-def add_status(draft: Draft, *statuses: str) -> None:
-    for status in statuses:
-        if status not in draft.statuses:
-            draft.statuses.append(status)
+def add_circumstance(draft: Draft, *circumstances: str) -> None:
+    for circumstance in circumstances:
+        if circumstance not in draft.circumstances:
+            draft.circumstances.append(circumstance)
 
 
-def assign_statuses_and_conditions(drafts: list[Draft]) -> None:
+def assign_circumstances_and_conditions(drafts: list[Draft]) -> None:
     no_trade = [draft for draft in drafts if draft.occupation_id is None]
     poor_minors = round_robin(
         drafts, LOW_INCOME,
@@ -641,7 +641,7 @@ def assign_statuses_and_conditions(drafts: list[Draft]) -> None:
     poor = no_trade + poor_minors + poverty_candidates[:92 - len(no_trade) - len(poor_minors)]
     assert len(poor) == 92
     for draft in poor:
-        add_status(draft, "pauper")
+        add_circumstance(draft, "pauper")
     child_beggars = [draft for draft in poor if draft.age < 16 and draft.significance == "ambient"][:4]
     adult_beggars = [
         draft for draft in poor
@@ -650,13 +650,13 @@ def assign_statuses_and_conditions(drafts: list[Draft]) -> None:
     beggars = poor_minors[:3] + child_beggars + adult_beggars
     assert len(beggars) == 38
     for draft in beggars:
-        add_status(draft, "alms_dependent", "begs_regularly")
+        add_circumstance(draft, "alms_dependent", "begs_regularly")
     housing = poor.copy()
     random.Random(244).shuffle(housing)
     for draft in housing[:18]:
-        add_status(draft, "unhoused")
+        add_circumstance(draft, "unhoused")
     for draft in housing[18:32]:
-        add_status(draft, "insecure_lodging")
+        add_circumstance(draft, "insecure_lodging")
     precarious = round_robin(
         drafts,
         ["general_labourer", "cargo_worker", "market_seller", "scavenger",
@@ -666,78 +666,78 @@ def assign_statuses_and_conditions(drafts: list[Draft]) -> None:
     )[:60]
     assert len(precarious) == 60
     for draft in precarious:
-        add_status(draft, "intermittently_employed")
+        add_circumstance(draft, "intermittently_employed")
     for draft in drafts:
         if draft.age < 12:
-            add_status(draft, "dependent")
+            add_circumstance(draft, "dependent")
     children = [draft for draft in drafts if draft.age < 16]
     random.Random(301).shuffle(children)
     for draft in children[:15]:
-        add_status(draft, "orphan")
+        add_circumstance(draft, "orphan")
     migrants = sorted(
         [draft for draft in drafts if draft.age >= 12 and draft.significance == "ambient"],
-        key=lambda draft: (len(draft.statuses), draft.id),
+        key=lambda draft: (len(draft.circumstances), draft.id),
     )[:35]
     assert len(migrants) == 35
     for index, draft in enumerate(migrants):
-        add_status(draft, "recent_migrant")
+        add_circumstance(draft, "recent_migrant")
         if index < 25:
-            add_status(draft, "noncitizen")
+            add_circumstance(draft, "noncitizen")
     unemployed = sorted(
-        [draft for draft in poor if draft.age >= 16 and "prisoner" not in draft.statuses],
-        key=lambda draft: (len(draft.statuses), draft.id),
+        [draft for draft in poor if draft.age >= 16 and "prisoner" not in draft.circumstances],
+        key=lambda draft: (len(draft.circumstances), draft.id),
     )[:20]
     for draft in unemployed:
-        add_status(draft, "unemployed")
+        add_circumstance(draft, "unemployed")
     elders = sorted(
         [draft for draft in drafts if draft.age >= 60],
-        key=lambda draft: (len(draft.statuses), draft.id),
+        key=lambda draft: (len(draft.circumstances), draft.id),
     )[:20]
     for draft in elders:
-        add_status(draft, "retired")
+        add_circumstance(draft, "retired")
     widowed = sorted(
         [draft for draft in drafts if draft.age >= 35],
-        key=lambda draft: (len(draft.statuses), draft.id),
+        key=lambda draft: (len(draft.circumstances), draft.id),
     )[:18]
     for draft in widowed:
-        add_status(draft, "widow" if draft.gender == "f" else "widower")
+        add_circumstance(draft, "widow" if draft.gender == "f" else "widower")
     prison_candidates = [draft for draft in drafts if draft.age >= 16 and draft.family in {
         "no_fixed_trade", "general_labourer", "cargo_worker", "domestic_servant",
         "militia_and_soldier", "sex_worker", "market_seller", "animal_worker",
     }]
-    prison_candidates.sort(key=lambda draft: (len(draft.statuses), draft.significance != "ambient", draft.id))
+    prison_candidates.sort(key=lambda draft: (len(draft.circumstances), draft.significance != "ambient", draft.id))
     no_trade_adult = next(draft for draft in prison_candidates if draft.occupation_id is None)
     prisoners = [no_trade_adult] + [draft for draft in prison_candidates if draft is not no_trade_adult][:7]
     assert len(prisoners) == 8
     for draft in prisoners:
-        add_status(draft, "prisoner")
+        add_circumstance(draft, "prisoner")
     # Every null occupation explicitly records a material means of support.
     for draft in drafts:
-        if draft.occupation_id is None and not set(draft.statuses) & {
+        if draft.occupation_id is None and not set(draft.circumstances) & {
             "dependent", "alms_dependent", "pauper", "prisoner"
         }:
-            add_status(draft, "pauper", "alms_dependent")
+            add_circumstance(draft, "pauper", "alms_dependent")
 
     disabled = sorted(
         [draft for draft in drafts if draft.age >= 16],
-        key=lambda draft: (len(draft.statuses) + (draft.illegal_activity is not None), draft.id),
+        key=lambda draft: (len(draft.circumstances) + (draft.illegal_activity is not None), draft.id),
     )[:20]
     for draft, condition in zip(disabled, CONDITIONS, strict=True):
         draft.conditions.append(condition)
     pregnant = sorted(
         [draft for draft in drafts if draft.gender == "f" and 20 <= draft.age <= 39],
-        key=lambda draft: (len(draft.statuses), draft.id),
+        key=lambda draft: (len(draft.circumstances), draft.id),
     )[:6]
     for draft in pregnant:
         draft.conditions.append("pregnant")
     nursing = sorted(
         [draft for draft in drafts if draft.gender == "f" and 20 <= draft.age <= 39 and draft not in pregnant],
-        key=lambda draft: (len(draft.statuses), draft.id),
+        key=lambda draft: (len(draft.circumstances), draft.id),
     )[:4]
     for draft in nursing:
         draft.conditions.append("nursing an infant")
     for draft in drafts:
-        draft.statuses.sort()
+        draft.circumstances.sort()
 
 
 def assign_crime(drafts: list[Draft]) -> None:
@@ -755,7 +755,7 @@ def assign_crime(drafts: list[Draft]) -> None:
         if draft.significance == "ambient" and draft.family in CRIME_FAMILIES and draft.age >= 16:
             by_family[draft.family].append(draft)
     for values in by_family.values():
-        values.sort(key=lambda draft: (len(draft.statuses), draft.id))
+        values.sort(key=lambda draft: (len(draft.circumstances), draft.id))
     ambient_candidates = []
     for index in range(max(map(len, by_family.values()))):
         for family in CRIME_FAMILIES:
@@ -871,7 +871,7 @@ def assign_names_and_relationships(drafts: list[Draft]) -> None:
                 mother = next((draft for draft in parents if draft.gender == "f"), None)
                 father = next((draft for draft in parents if draft.gender == "m"), None)
                 for child in kids:
-                    if "orphan" in child.statuses:
+                    if "orphan" in child.circumstances:
                         continue
                     if mother:
                         child.mother = mother.id
@@ -1167,16 +1167,16 @@ def assign_population_spawns(existing: list[dict], new: list[dict], geometry: di
 
 
 def material_sentence(draft: Draft) -> str:
-    statuses = set(draft.statuses)
-    if "prisoner" in statuses:
+    circumstances = set(draft.circumstances)
+    if "prisoner" in circumstances:
         return "Stone House rations and food carried in by kin are your present support."
-    if "dependent" in statuses:
+    if "dependent" in circumstances:
         return "You eat from a shared household pot and earn only an occasional penny."
-    if "begs_regularly" in statuses:
+    if "begs_regularly" in circumstances:
         return "Irregular work, doorstep alms and a regular begging pitch keep you fed."
-    if "pauper" in statuses:
+    if "pauper" in circumstances:
         return "Irregular work and neighbours' small alms barely keep you fed."
-    if "intermittently_employed" in statuses:
+    if "intermittently_employed" in circumstances:
         return "Day wages and a place in the hiring line keep your household going."
     return "Your wages, barter and place in the shared household pot keep you fed."
 
@@ -1185,11 +1185,11 @@ def description(draft: Draft, index: int) -> str:
     district = WARD_LABELS[draft.ward]
     role = "person with no fixed trade" if draft.title is None else draft.title.lower()
     article = "an" if role[0] in "aeiou" else "a"
-    if draft.title and "prisoner" in draft.statuses:
+    if draft.title and "prisoner" in draft.circumstances:
         action = f"You worked as {article} {role} and are now held from {district}, still tied to {draft.cohort}."
-    elif draft.title and "unemployed" in draft.statuses:
+    elif draft.title and "unemployed" in draft.circumstances:
         action = f"You are an out-of-work {role} in {district}, relying on {draft.cohort} while seeking hire."
-    elif draft.title and "retired" in draft.statuses:
+    elif draft.title and "retired" in draft.circumstances:
         action = f"You are a retired {role} in {district}, still part of {draft.cohort}."
     elif draft.title:
         action = f"You are {article} {role} in {district}, working beside {draft.cohort}."
@@ -1206,7 +1206,7 @@ def description(draft: Draft, index: int) -> str:
             sentences.append(f"The visible bodily condition you live with is {draft.conditions[0]}.")
     if draft.illegal_activity:
         sentences.append(f"You quietly supplement that living through {draft.illegal_activity}.")
-    if "recent_migrant" in draft.statuses:
+    if "recent_migrant" in draft.circumstances:
         sentences.append("You arrived recently and still measure local speech before trusting it.")
     if draft.significance == "minor":
         if draft.family in MINOR_ROLE_DETAILS:
@@ -1256,7 +1256,7 @@ def make_new_sheets(drafts: list[Draft]) -> list[dict]:
                 "x": 0.0, "y": 0.91, "z": 0.0,
                 "facing": round(((index * 0.731) % math.tau) - math.pi, 4),
             },
-            "statuses": draft.statuses, "conditions": draft.conditions, "memories": [],
+            "circumstances": draft.circumstances, "conditions": draft.conditions, "memories": [],
             "core_character_description": description(draft, index),
             "extended_character_description": "", "goal": draft.concern.capitalize(),
         }
@@ -1343,10 +1343,10 @@ def validate(
     }
     assert len(safe_cells - occupied_cells) <= 1, safe_cells - occupied_cells
 
-    assert sum("pauper" in sheet["statuses"] for sheet in sheets) == 100
-    assert sum("begs_regularly" in sheet["statuses"] for sheet in sheets) == 38
-    assert sum(bool({"unhoused", "insecure_lodging"} & set(sheet["statuses"])) for sheet in sheets) == 32
-    assert sum("intermittently_employed" in sheet["statuses"] for sheet in sheets) == 60
+    assert sum("pauper" in sheet["circumstances"] for sheet in sheets) == 100
+    assert sum("begs_regularly" in sheet["circumstances"] for sheet in sheets) == 38
+    assert sum(bool({"unhoused", "insecure_lodging"} & set(sheet["circumstances"])) for sheet in sheets) == 32
+    assert sum("intermittently_employed" in sheet["circumstances"] for sheet in sheets) == 60
     conventional_existing = sum(
         sheet["illegal_activity"] is not None and "heresy" not in sheet["illegal_activity"]
         for sheet in existing
@@ -1438,7 +1438,7 @@ def main() -> None:
     assign_ages(drafts)
     assign_wards(drafts)
     assign_ranks(drafts)
-    assign_statuses_and_conditions(drafts)
+    assign_circumstances_and_conditions(drafts)
     assign_crime(drafts)
     assign_titles(drafts, catalog)
     assign_names_and_relationships(drafts)

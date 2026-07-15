@@ -24,7 +24,7 @@
     "z": 2.5,
     "facing": 0.2462
   },
-  "statuses": [
+  "circumstances": [
     "insecure_lodging",
     "intermittently_employed",
     "pauper"

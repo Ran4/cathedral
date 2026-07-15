@@ -29,7 +29,7 @@
     "z": 25.0,
     "facing": 3.141593
   },
-  "statuses": [
+  "circumstances": [
     "recanted_heretic"
   ],
   "conditions": [],

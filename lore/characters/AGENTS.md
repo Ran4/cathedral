@@ -51,7 +51,7 @@ lore/
     "mother": null,
     "children": [],
     "spawn_location": {"x": 43.19, "y": 0.91, "z": 0.5, "facing": 0.3},
-    "statuses": [],
+    "circumstances": [],
     "conditions": ["crippled"],
     "memories": [],
     "core_character_description": "...",
@@ -99,7 +99,7 @@ Most don't really have any conditions.
   them and receive the generic body plus a deterministic voice from the existing three-voice pool. Held
   item ids must exist in `assets/world/seed.json`.
 
-# Occupation and status model
+# Occupation and circumstance model
 
 `occupation_id` remains a trade or livelihood family. These belong in separate
 fields:
@@ -107,14 +107,20 @@ fields:
 - `rank`: guild or institutional rank;
 - `faction_role`: a special role in a faction;
 - `illegal_activity`: prohibited conduct;
-- `statuses`: poverty, housing, family, residency and legal statuses;
+- `circumstances`: poverty, housing, family, residency and legal standing —
+  authored, durable social/economic/legal tags (formerly named `statuses`);
 - `conditions`: physical and health conditions;
 - `significance`: canonical and computational importance.
+
+Note: the field was renamed from `statuses` to `circumstances` so the word
+`statuses` can be reused for the transient internal-drive/mood layer (hunger,
+health, drunkenness, …) introduced by the movement work. See
+`features/movement/03_the_ladder.md`.
 
 A character who begs should usually retain a real former, occasional or
 intermittent occupation. Examples include an injured porter, an unemployed
 labourer, a widowed laundress, a retired watchman or an out-of-work servant.
-Begging is then represented by statuses such as `pauper`, `alms_dependent`,
+Begging is then represented by circumstances such as `pauper`, `alms_dependent`,
 `unhoused` and `begs_regularly`, plus the description and goal.
 
 `occupation_id`, `title`, and `rank` may all be null only for genuine

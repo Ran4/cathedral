@@ -21,7 +21,7 @@
     "z": -147.5,
     "facing": -0.1207
   },
-  "statuses": [
+  "circumstances": [
     "alms_dependent",
     "begs_regularly",
     "pauper",

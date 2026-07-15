@@ -66,8 +66,8 @@ pub use floor::{ConversationFloor, floor_audio_failsafe_seconds, speech_reading_
 pub use ids::{ActorId, InvalidId, ItemId, RequestId, SpeechEventId};
 pub use item::Item;
 pub use lore::{
-    CONTROLLED_STATUSES, LoreCast, LoreCharacterSheet, LoreError, LoreProfile, LoreSpawnLocation,
-    NO_FIXED_TRADE_FOLDER, PlanningWard, Significance,
+    CONTROLLED_CIRCUMSTANCES, LoreCast, LoreCharacterSheet, LoreError, LoreProfile,
+    LoreSpawnLocation, NO_FIXED_TRADE_FOLDER, PlanningWard, Significance,
 };
 pub use math::{Vec3, vec3, vec3_from_json, vec3_to_json};
 pub use nav::{

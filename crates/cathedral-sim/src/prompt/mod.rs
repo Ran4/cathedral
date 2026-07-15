@@ -160,7 +160,7 @@ struct PromptLoreProfile<'a> {
     father: Option<LoreRelation<'a>>,
     mother: Option<LoreRelation<'a>>,
     children: Vec<LoreRelation<'a>>,
-    statuses: &'a [String],
+    circumstances: &'a [String],
     conditions: &'a [String],
 }
 
@@ -365,7 +365,7 @@ pub fn render_prompt(
         father: profile.father.as_ref().map(&relation),
         mother: profile.mother.as_ref().map(&relation),
         children: profile.children.iter().map(relation).collect(),
-        statuses: &profile.statuses,
+        circumstances: &profile.circumstances,
         conditions: &profile.conditions,
     });
     let sheet = Sheet {

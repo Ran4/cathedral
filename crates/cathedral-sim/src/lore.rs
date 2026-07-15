@@ -59,9 +59,11 @@ pub enum PlanningWard {
     BellAndSluice,
 }
 
-/// Status spellings shared by authoring and loader validation. Health and
-/// bodily conditions do not belong here; they remain in `conditions`.
-pub const CONTROLLED_STATUSES: &[&str] = &[
+/// Circumstance spellings shared by authoring and loader validation. Social,
+/// economic and legal standing only; health and bodily conditions do not belong
+/// here (they remain in `conditions`), nor do transient drives (those are the
+/// dynamic `statuses` layer — see `features/movement/03_the_ladder.md`).
+pub const CONTROLLED_CIRCUMSTANCES: &[&str] = &[
     "alms_dependent",
     "begs_regularly",
     "dependent",
@@ -122,7 +124,7 @@ pub struct LoreProfile {
     pub father: Option<ActorId>,
     pub mother: Option<ActorId>,
     pub children: Vec<ActorId>,
-    pub statuses: Vec<String>,
+    pub circumstances: Vec<String>,
     pub conditions: Vec<String>,
     pub core_character_description: String,
     pub extended_character_description: String,
@@ -170,7 +172,7 @@ pub struct LoreCharacterSheet {
     pub children: Vec<ActorId>,
     pub spawn_location: LoreSpawnLocation,
     #[serde(default)]
-    pub statuses: Vec<String>,
+    pub circumstances: Vec<String>,
     #[serde(default)]
     pub conditions: Vec<String>,
     #[serde(default)]
@@ -217,14 +219,14 @@ impl LoreCharacterSheet {
             (Some(occupation), Some(title))
                 if !occupation.trim().is_empty() && !title.trim().is_empty() => {}
             (None, None) if self.rank.is_none() => {
-                if !self.statuses.iter().any(|status| {
+                if !self.circumstances.iter().any(|circumstance| {
                     matches!(
-                        status.as_str(),
+                        circumstance.as_str(),
                         "alms_dependent" | "dependent" | "pauper" | "prisoner"
                     )
                 }) {
                     return Err(LoreError::new(format!(
-                        "character '{}' has no fixed trade and needs a support status",
+                        "character '{}' has no fixed trade and needs a support circumstance",
                         self.id
                     )));
                 }
@@ -264,17 +266,17 @@ impl LoreCharacterSheet {
                 self.id
             )));
         }
-        let mut seen_statuses = BTreeSet::new();
-        for status in &self.statuses {
-            if !CONTROLLED_STATUSES.contains(&status.as_str()) {
+        let mut seen_circumstances = BTreeSet::new();
+        for circumstance in &self.circumstances {
+            if !CONTROLLED_CIRCUMSTANCES.contains(&circumstance.as_str()) {
                 return Err(LoreError::new(format!(
-                    "character '{}' has unknown status '{status}'",
+                    "character '{}' has unknown circumstance '{circumstance}'",
                     self.id
                 )));
             }
-            if !seen_statuses.insert(status) {
+            if !seen_circumstances.insert(circumstance) {
                 return Err(LoreError::new(format!(
-                    "character '{}' repeats status '{status}'",
+                    "character '{}' repeats circumstance '{circumstance}'",
                     self.id
                 )));
             }
@@ -334,7 +336,7 @@ impl LoreCharacterSheet {
                 father: self.father,
                 mother: self.mother,
                 children: self.children,
-                statuses: self.statuses,
+                circumstances: self.circumstances,
                 conditions: self.conditions,
                 core_character_description: self.core_character_description,
                 extended_character_description: self.extended_character_description,
@@ -554,7 +556,7 @@ mod tests {
 
     fn character(id: &str, knows: &str) -> String {
         format!(
-            r#"{{"id":"{id}","name":"N","significance":"minor","planning_ward":"cinder","age":20,"gender":"m","occupation_id":"smith","title":"Blacksmith","rank":null,"faction_role":null,"illegal_activity":null,"district":"Cinder Row","knows":{knows},"father":null,"mother":null,"children":[],"spawn_location":{{"x":1.0,"y":0.91,"z":2.0,"facing":0.0}},"statuses":[],"conditions":[],"memories":[],"core_character_description":"You smith.","extended_character_description":"More."}}"#
+            r#"{{"id":"{id}","name":"N","significance":"minor","planning_ward":"cinder","age":20,"gender":"m","occupation_id":"smith","title":"Blacksmith","rank":null,"faction_role":null,"illegal_activity":null,"district":"Cinder Row","knows":{knows},"father":null,"mother":null,"children":[],"spawn_location":{{"x":1.0,"y":0.91,"z":2.0,"facing":0.0}},"circumstances":[],"conditions":[],"memories":[],"core_character_description":"You smith.","extended_character_description":"More."}}"#
         )
     }
 
@@ -615,7 +617,7 @@ mod tests {
         let source = character("aaaaa", "[]")
             .replace(r#""occupation_id":"smith""#, r#""occupation_id":null"#)
             .replace(r#""title":"Blacksmith""#, r#""title":null"#)
-            .replace(r#""statuses":[]"#, r#""statuses":["dependent"]"#);
+            .replace(r#""circumstances":[]"#, r#""circumstances":["dependent"]"#);
         let cast = LoreCast::from_json_sources(
             OCCUPATIONS,
             [("no_fixed_trade/aaaaa_n.json".into(), source)],
@@ -629,15 +631,15 @@ mod tests {
     }
 
     #[test]
-    fn statuses_are_controlled_and_stable_characters_cannot_name_ambient_people() {
-        let unknown_status =
-            character("aaaaa", "[]").replace(r#""statuses":[]"#, r#""statuses":["very_poor"]"#);
+    fn circumstances_are_controlled_and_stable_characters_cannot_name_ambient_people() {
+        let unknown_circumstance = character("aaaaa", "[]")
+            .replace(r#""circumstances":[]"#, r#""circumstances":["very_poor"]"#);
         let error = LoreCast::from_json_sources(
             OCCUPATIONS,
-            [("smith/aaaaa_n.json".into(), unknown_status)],
+            [("smith/aaaaa_n.json".into(), unknown_circumstance)],
         )
         .unwrap_err();
-        assert!(error.message.contains("unknown status 'very_poor'"));
+        assert!(error.message.contains("unknown circumstance 'very_poor'"));
 
         let ambient = character("bbbbb", "[]")
             .replace(r#""significance":"minor""#, r#""significance":"ambient""#);

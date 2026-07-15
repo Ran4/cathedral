@@ -27,7 +27,7 @@
     "z": 32.5,
     "facing": -1.8444
   },
-  "statuses": [
+  "circumstances": [
     "noncitizen",
     "recent_migrant"
   ],

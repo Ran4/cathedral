@@ -60,84 +60,76 @@ a crew member has a 50% chance to refuse any order, clearing their whole queued 
 
 ---
 
-## 2. The trap: `statuses` and `conditions` already mean something else here
+## 2. Three axes, no collision: `circumstances`, `conditions`, `statuses`
 
-seagame's cleanest idea is a two-layer split: **`statuses`** is raw persisted state that you *write*,
-**`conditions`** is a `Set<string>` **rebuilt from scratch every tick** that you *read*. Behaviour
-code never touches a raw number; it asks `conditions.has('hungry')`.
+seagame's cleanest idea is a two-layer split: **raw persisted state you *write*** on one side, and a
+**`Set<string>` rebuilt from scratch every tick that you *read*** on the other. Behaviour code never
+touches a raw number; it asks `has('hungry')`.
 
-**Do not import those two names.** Every one of the 500 character sheets already has both, meaning
-something entirely different:
+seagame names those two layers `statuses` (the raw side) and `conditions` (the derived side). Both
+names were already taken on our sheets, meaning something else entirely — so before touching the
+ladder we settle the vocabulary into **three axes that do not collide**:
+
+| Field | Axis | Nature | Timescale | Examples |
+|---|---|---|---|---|
+| **`circumstances`** *(was `statuses`)* | social / economic / legal | authored tag list | durable — months to years | `pauper`, `orphan`, `noncitizen`, `widow`, `recent_migrant` |
+| **`conditions`** *(unchanged)* | body / health | authored tag list | durable — mostly permanent | `lame`, `blind`, `gout`, `pregnant`, `deaf` |
+| **`statuses`** *(word recycled)* | internal drive / mood | dynamic — the sim writes it | transient — minute to minute | `hunger`, health (`hp`), `drunkenness`, `lustfulness` |
+
+The authored social field on every one of the 500 sheets is renamed from `statuses` to
+**`circumstances`** (100 paupers, 18 `unhoused`, 20 `retired`, 8 `prisoner`):
 
 ```json
-"statuses":   ["alms_dependent", "begs_regularly", "insecure_lodging",
-               "intermittently_employed", "pauper"],
-"conditions": ["failing eyesight"]
+"circumstances": ["alms_dependent", "begs_regularly", "insecure_lodging",
+                  "intermittently_employed", "pauper"],
+"conditions":    ["failing eyesight"]
 ```
 
-Here, `statuses` is **authored social standing** (100 paupers, 18 `unhoused`, 20 `retired`, 8
-`prisoner`) and `conditions` is **authored bodily condition** (*"deaf in the left ear"*, *"a pale scar
-notches her lower lip"*). Both are static, both are content, and both are already load-bearing in the
-prompt.
+That rename **frees the word `statuses`** to mean exactly what it means in seagame: the raw,
+sim-written drive layer — the needs of §3, plus mood. `conditions` keeps its authored bodily meaning
+(*"deaf in the left ear"*, *"a pale scar notches her lower lip"*). All three are static-or-dynamic
+content and all three are load-bearing in the prompt.
 
-So take seagame's *structure* and give it a name that does not collide. Call the derived set **`Cues`**
-— what is cueing this person's behaviour right now:
+And there is **no fourth thing.** seagame builds a derived, every-tick read-set — one `Set<string>`
+that all state is copied into, so behaviour code asks `has('hungry')` and never touches a raw scalar.
+An earlier draft of this doc imported that too, under the name `Cues` (the derived side couldn't be
+called `conditions` — authored bodily content owns that word). Drop it. The ladder reads the three
+axes and the world **directly**, with inline thresholds — exactly as the §4 rungs already do:
 
 ```rust
-/// Rebuilt from scratch every movement tick. Read-only to the ladder.
-/// Nothing else in the sim ever writes it.
-pub struct Cues(BTreeSet<Cue>);
+// A rung is a question asked in place, against the four sources of truth.
+// Nothing is copied into an intermediate set; nothing can go stale.
+
+// the dynamic `statuses` gauges — compared inline:
+if actor.statuses.thirst < 15 { /* rung 2: parched → the nearest well */ }
+
+// the authored `circumstances` — read straight off the sheet:
+if actor.circumstances.contains("pauper") { /* the temper penalty of §6 */ }
+
+// the world — read straight off world state:
+if world.curfew && !actor.circumstances.contains("watchman") { /* rung 5 */ }
+if world.brightness < 0.35 && !near_a_lit_lamp(world, actor) { /* the dark */ }
 ```
 
-And now the payoff, which is the reason to do it this way rather than with a pile of `if`s: **the
-authored `statuses` and `conditions` copy straight in.** seagame's `refreshConditions` begins by
-copying every raw status key into the condition set, so a trait added anywhere becomes readable
-everywhere for free. Do the same:
+**Why no derived bag.** seagame builds one purely to avoid re-deriving `hungry` from the raw scalar on
+every one of its many reads within a tick — an amortisation. Our ladder is a **flat, first-match
+cascade** (§4): each rung asks its question *once* and returns. There is no repeated read to amortise,
+so a `Cues` set would buy nothing but a second name for state we already hold under three good names.
+The three axes plus the world are the entire vocabulary the ladder speaks.
 
-```rust
-fn refresh_cues(actor: &Character, world: &World, clock: WorldTime) -> Cues {
-    let mut cues = Cues::default();
-
-    // 1. The authored sheet, verbatim. `pauper`, `unhoused`, `prisoner`,
-    //    `enclosed_religious`, `begs_regularly` — 500 characters' worth of
-    //    social truth, made behaviour-readable at zero authoring cost.
-    for status in actor.lore().map(|l| &l.statuses).unwrap_or_default() {
-        cues.insert(Cue::Status(status));
-    }
-
-    // 2. The needs, quantized. Continuous scalars never reach the ladder.
-    if actor.needs.thirst  < 15 { cues.insert(Cue::Parched);  }
-    else if actor.needs.thirst  < 70 { cues.insert(Cue::Thirsty); }
-    if actor.needs.hunger  < 15 { cues.insert(Cue::Starving); }
-    else if actor.needs.hunger  < 70 { cues.insert(Cue::Hungry);  }
-    if actor.needs.fatigue < 25 { cues.insert(Cue::Exhausted); }
-    else if actor.needs.fatigue < 60 { cues.insert(Cue::Tired);   }
-
-    // 3. The world.
-    if clock.office == Office::Snuffing || clock.office == Office::Watch {
-        cues.insert(Cue::Curfew);
-    }
-    if world.brightness < 0.35 && !near_a_lit_lamp(world, actor) {
-        cues.insert(Cue::InTheDark);
-    }
-    if actor.indoors.is_some() { cues.insert(Cue::Indoors); }
-    if at(actor, actor.round.workplace) { cues.insert(Cue::AtWork); }
-    if at(actor, actor.round.home)      { cues.insert(Cue::AtHome); }
-
-    cues
-}
-```
-
-**A hundred paupers now behave differently at curfew without anyone authoring a hundred behaviours.**
-That is the whole argument for the pattern, and it is worth more here than it is in seagame, because
-here the content already exists.
+**A hundred paupers still behave differently at curfew without anyone authoring a hundred behaviours** —
+because `actor.circumstances.contains("pauper")` is one line in one rung, read against 500 characters'
+worth of authored social truth at zero authoring cost. That payoff never needed `Cues`; it needs the
+authored field to exist, and it does.
 
 ---
 
 ## 3. The needs
 
-Small, and each one exists only because it makes somebody *walk somewhere that is already in the
-city*. A need with no destination is a stat, not a behaviour.
+These four scalars **are the dynamic `statuses` layer** from §2's table — the raw, sim-written drive
+state the rungs compare against inline (`actor.statuses.thirst < 15`). Small, and each one exists only
+because it makes somebody *walk somewhere that is already in the city*. A need with no destination is a
+stat, not a behaviour.
 
 | Need | 0–255, high = satisfied | Destination | Already built? |
 |---|---|---|---|
@@ -253,10 +245,10 @@ history.
 ```rust
 // Drifts toward `target` at ~0.3/s, like seagame's morale — a lagging
 // indicator, never a snap. What it *is* is a history, not a stat.
-let target = mean(needs.hunger, needs.fatigue, standing_in_ward)
-           + if cues.has(InTheDark)  { -25 } else { 0 }
-           + if cues.has(Status::Pauper) { -15 } else { 0 }
-           + if cues.has(AtHome)     { +15 } else { 0 }
+let target = mean(statuses.hunger, statuses.fatigue, standing_in_ward)
+           + if world.brightness < 0.35               { -25 } else { 0 }  // in the dark
+           + if actor.circumstances.contains("pauper") { -15 } else { 0 }
+           + if at(actor, actor.round.home)           { +15 } else { 0 }  // at home
            + market_day_bonus
            + recent_kindness_from_the_player;
 ```
@@ -281,8 +273,9 @@ difference between a cast and a set of puppets, and seagame proves it out.
 
 **Take:**
 
-- the two-layer split — raw state you write, a derived set you read, rebuilt every tick (renamed to
-  `Cues`, §2);
+- the raw dynamic-state layer you write each tick — our `statuses` axis — but **read directly** by the
+  rungs with inline thresholds, not copied into a derived every-tick set (§2 explains why we leave that
+  half of seagame's split behind);
 - the flat first-match-wins ladder, over a utility system. It is debuggable (*"why is he doing that?"*
   → read down the list), it is authorable, and adding a behaviour is adding a rung, not retuning a
   weight matrix;

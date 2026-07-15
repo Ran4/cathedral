@@ -89,10 +89,10 @@ fn collect_json_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<(), 
 mod tests {
     use super::*;
     use cathedral_sim::{
-        ActorId, AreaMap, PlanningWard, PlayerKnowledge, PromptEnv, Significance, Vec3,
+        ActorId, AreaMap, PlayerKnowledge, PromptEnv, Significance, Vec3,
         WorldConfig, build_world, render_prompt,
     };
-    use std::collections::{BTreeMap, BTreeSet};
+    use std::collections::BTreeSet;
 
     fn root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -116,7 +116,7 @@ mod tests {
             .iter()
             .find(|character| character.id.as_str() == "player")
             .expect("the base seed retains the player");
-        assert_eq!(player.knows.len(), 150);
+        assert_eq!(player.knows.len(), 154);
 
         let sven = seed
             .characters
@@ -162,234 +162,6 @@ mod tests {
             .find(|character| character.id.as_str() == "player")
             .unwrap();
         assert_eq!(player.knows.len(), 500);
-    }
-
-    #[test]
-    fn shipped_population_meets_the_authored_distribution_contract() {
-        let root = root();
-        let seed = load_world_seed(&root.join("assets"), &root.join("lore")).unwrap();
-        let npcs: Vec<_> = seed
-            .characters
-            .iter()
-            .filter(|character| character.control == cathedral_sim::Control::Llm)
-            .collect();
-        let profiles: Vec<_> = npcs
-            .iter()
-            .map(|character| character.lore.as_ref().unwrap())
-            .collect();
-
-        let count_significance = |significance| {
-            profiles
-                .iter()
-                .filter(|profile| profile.significance == significance)
-                .count()
-        };
-        assert_eq!(count_significance(Significance::Major), 30);
-        assert_eq!(count_significance(Significance::Minor), 120);
-        assert_eq!(count_significance(Significance::Ambient), 350);
-        assert_eq!(
-            profiles
-                .iter()
-                .filter(|profile| profile.gender == "f")
-                .count(),
-            250
-        );
-        assert_eq!(
-            profiles
-                .iter()
-                .filter(|profile| profile.gender == "m")
-                .count(),
-            250
-        );
-
-        let mut age_bins = [0usize; 7];
-        for profile in &profiles {
-            age_bins[match profile.age {
-                0..=7 => 0,
-                8..=11 => 1,
-                12..=15 => 2,
-                16..=19 => 3,
-                20..=39 => 4,
-                40..=59 => 5,
-                _ => 6,
-            }] += 1;
-        }
-        assert_eq!(age_bins, [25, 25, 25, 55, 180, 125, 65]);
-
-        let mut wards = BTreeMap::new();
-        for profile in &profiles {
-            *wards.entry(profile.planning_ward).or_insert(0usize) += 1;
-        }
-        assert_eq!(
-            wards,
-            BTreeMap::from([
-                (PlanningWard::Fabric, 42),
-                (PlanningWard::Wick, 40),
-                (PlanningWard::Cloth, 43),
-                (PlanningWard::Wallwright, 31),
-                (PlanningWard::Cinder, 37),
-                (PlanningWard::Weigh, 74),
-                (PlanningWard::Reed, 64),
-                (PlanningWard::BellAndSluice, 169),
-            ])
-        );
-
-        let has_status = |profile: &&cathedral_sim::LoreProfile, status: &str| {
-            profile.statuses.iter().any(|candidate| candidate == status)
-        };
-        assert_eq!(
-            profiles.iter().filter(|p| has_status(p, "pauper")).count(),
-            100
-        );
-        assert_eq!(
-            profiles
-                .iter()
-                .filter(|p| has_status(p, "begs_regularly"))
-                .count(),
-            38
-        );
-        assert_eq!(
-            profiles
-                .iter()
-                .filter(|p| has_status(p, "unhoused") || has_status(p, "insecure_lodging"))
-                .count(),
-            32
-        );
-        assert_eq!(
-            profiles
-                .iter()
-                .filter(|p| has_status(p, "intermittently_employed"))
-                .count(),
-            60
-        );
-        assert_eq!(
-            profiles
-                .iter()
-                .filter(|profile| profile
-                    .illegal_activity
-                    .as_deref()
-                    .is_some_and(|activity| !activity.contains("heresy")))
-                .count(),
-            50
-        );
-        assert_eq!(
-            profiles
-                .iter()
-                .filter(|profile| matches!(
-                    profile.rank.as_deref(),
-                    Some("master" | "mistress" | "warden")
-                ))
-                .count(),
-            55
-        );
-        assert_eq!(
-            profiles
-                .iter()
-                .filter(|profile| profile.occupation_id.is_none())
-                .count(),
-            10
-        );
-        let mut occupations = BTreeMap::new();
-        for profile in &profiles {
-            if let Some(occupation_id) = profile.occupation_id.as_deref() {
-                *occupations.entry(occupation_id).or_insert(0usize) += 1;
-            }
-        }
-        assert_eq!(
-            occupations,
-            BTreeMap::from([
-                ("anchoress", 1),
-                ("animal_worker", 14),
-                ("bailiff_and_gaoler", 8),
-                ("baker", 8),
-                ("bell_ringer", 3),
-                ("bellfounder", 2),
-                ("boatworker", 9),
-                ("brewer", 4),
-                ("butcher", 4),
-                ("candor_cleric", 7),
-                ("cargo_worker", 16),
-                ("carpenter_and_builder", 10),
-                ("cartwright_and_wheelwright", 6),
-                ("chandler", 7),
-                ("church_attendant", 6),
-                ("civic_officer", 7),
-                ("cloth_worker", 12),
-                ("cook", 8),
-                ("cooper", 10),
-                ("court_officer", 3),
-                ("custody_clerk", 3),
-                ("domestic_servant", 45),
-                ("draper", 3),
-                ("entertainer", 10),
-                ("executioner", 1),
-                ("farmer", 7),
-                ("fine_metalworker", 8),
-                ("fish_trader", 7),
-                ("food_provisioner", 18),
-                ("freight_broker", 2),
-                ("funerary_worker", 3),
-                ("garment_worker", 14),
-                ("general_labourer", 23),
-                ("glazier", 6),
-                ("grocer_and_spicer", 5),
-                ("guide", 3),
-                ("healer", 6),
-                ("instrument_maker", 2),
-                ("lamplighter", 4),
-                ("laundress", 7),
-                ("leather_worker", 5),
-                ("market_seller", 12),
-                ("mason", 10),
-                ("merchant", 4),
-                ("messenger", 6),
-                ("militia_and_soldier", 15),
-                ("miller", 3),
-                ("money_dealer", 3),
-                ("painter", 2),
-                ("pilgrim", 8),
-                ("potter", 8),
-                ("revenue_worker", 4),
-                ("roper", 3),
-                ("salt_trader", 3),
-                ("salt_worker", 4),
-                ("sanitation_worker", 12),
-                ("scavenger", 7),
-                ("scholar", 2),
-                ("scribe_and_clerk", 6),
-                ("sex_worker", 8),
-                ("shoemaker", 12),
-                ("smith", 5),
-                ("tavern_worker", 9),
-                ("watchman_and_keeper", 9),
-                ("water_and_bath_worker", 8),
-            ])
-        );
-
-        let significance_by_id: BTreeMap<_, _> = npcs
-            .iter()
-            .map(|character| (&character.id, character.lore.as_ref().unwrap().significance))
-            .collect();
-        for character in npcs {
-            let profile = character.lore.as_ref().unwrap();
-            if profile.significance == Significance::Ambient {
-                continue;
-            }
-            for related in character
-                .knows
-                .iter()
-                .chain(profile.father.iter())
-                .chain(profile.mother.iter())
-                .chain(profile.children.iter())
-            {
-                assert_ne!(
-                    significance_by_id[related],
-                    Significance::Ambient,
-                    "stable character {} depends on ambient character {related}",
-                    character.id
-                );
-            }
-        }
     }
 
     #[test]

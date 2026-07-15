@@ -457,7 +457,7 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
         father: None,
         mother: None,
         children: vec![actor("k0fb1")],
-        statuses: vec!["recent_migrant".into()],
+        circumstances: vec!["recent_migrant".into()],
         conditions: vec!["singed eyebrows".into()],
         core_character_description: "The prompt uses back_story for this.".into(),
         extended_character_description: "SECRET EXTENDED DETAIL".into(),
@@ -471,7 +471,10 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
     assert_eq!(sheet["lore_profile"]["rank"], "apprentice");
     assert!(sheet["lore_profile"].get("significance").is_none());
     assert!(sheet["lore_profile"].get("planning_ward").is_none());
-    assert_eq!(sheet["lore_profile"]["statuses"], json!(["recent_migrant"]));
+    assert_eq!(
+        sheet["lore_profile"]["circumstances"],
+        json!(["recent_migrant"])
+    );
     assert_eq!(
         sheet["lore_profile"]["children"][0],
         json!({"id": "k0fb1", "name": "Ilse"})

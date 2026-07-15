@@ -24,7 +24,7 @@
     "z": 72.5,
     "facing": -0.189
   },
-  "statuses": [
+  "circumstances": [
     "alms_dependent",
     "begs_regularly",
     "intermittently_employed",

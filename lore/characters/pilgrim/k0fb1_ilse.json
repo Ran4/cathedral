@@ -21,7 +21,7 @@
     "z": 114.0,
     "facing": 3.141592653589793
   },
-  "statuses": [],
+  "circumstances": [],
   "conditions": [
     "hungry",
     "travel-worn"
