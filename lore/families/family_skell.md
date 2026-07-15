@@ -1,5 +1,8 @@
 # The Skells
 
+<img src="crests/family_skell_crest.png" alt="Arms of The Skells" width="150" align="right">
+
+
 > *Let the boat go.* — stub. See `../the_dry_boatmen.md` and [overview](overview.md).
 
 - **Standing:** family of standing — numerically the largest house in the roster

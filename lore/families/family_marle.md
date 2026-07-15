@@ -1,5 +1,8 @@
 # The Marles
 
+<img src="crests/family_marle_crest.png" alt="Arms of The Marles" width="150" align="right">
+
+
 > *A cloth-and-cathedral house with a heretic heart.* — stub. See
 > [overview](overview.md) and `../second_sun/02_the_heretic_cell.md`.
 

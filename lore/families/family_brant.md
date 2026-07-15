@@ -1,5 +1,8 @@
 # The Brants
 
+<img src="crests/family_brant_crest.png" alt="Arms of The Brants" width="150" align="right">
+
+
 > *The city hears a Brant before its own bells.* — stub. See [overview](overview.md).
 
 - **Standing:** family of standing — the public voice of the squares

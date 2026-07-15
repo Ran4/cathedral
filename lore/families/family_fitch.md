@@ -1,5 +1,8 @@
 # The Fitches
 
+<img src="crests/family_fitch_crest.png" alt="Arms of The Fitches" width="150" align="right">
+
+
 > *The register and the grave.* — stub. See [overview](overview.md) and
 > `../the_dry_boatmen.md` (Noll Fitch and what his lintel is read for).
 

@@ -1,5 +1,8 @@
 # The Stotts
 
+<img src="crests/family_stott_crest.png" alt="Arms of The Stotts" width="150" align="right">
+
+
 > *The lodge and the plumb-line grudge.* — stub. See [overview](overview.md).
 
 - **Standing:** family of standing — masons

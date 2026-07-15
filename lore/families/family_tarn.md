@@ -1,5 +1,8 @@
 # The Tarns
 
+<img src="crests/family_tarn_crest.png" alt="Arms of The Tarns" width="150" align="right">
+
+
 > *Went to barrel and hide.* — stub. See `../the_dry_boatmen.md` and
 > [overview](overview.md).
 

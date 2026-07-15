@@ -1,5 +1,8 @@
 # The Ferrants
 
+<img src="crests/family_ferrant_crest.png" alt="Arms of The Ferrants" width="150" align="right">
+
+
 > *A learned singular name under the Rose.* — stub. See [overview](overview.md).
 
 - **Standing:** family of standing — learned, and (so far) a house of one

@@ -1,5 +1,8 @@
 # The Rasps
 
+<img src="crests/family_rasp_crest.png" alt="Arms of The Rasps" width="150" align="right">
+
+
 > *One grey eminence over a mass of poor.* — stub. See [overview](overview.md)
 > and `../second_sun/05_dramatis_personae.md`.
 

@@ -1,5 +1,8 @@
 # The Hobbes
 
+<img src="crests/family_hobbe_crest.png" alt="Arms of The Hobbes" width="150" align="right">
+
+
 > *Went to the cart.* — stub. See `../the_dry_boatmen.md` and [overview](overview.md).
 
 - **Standing:** family of standing — boat-blood turned land-carriers

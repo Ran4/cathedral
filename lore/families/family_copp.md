@@ -1,5 +1,8 @@
 # The Copps
 
+<img src="crests/family_copp_crest.png" alt="Arms of The Copps" width="150" align="right">
+
+
 > *A tiny, dangerous house of two prices.* — stub. See [overview](overview.md)
 > and `../second_sun/02_the_heretic_cell.md` (the Ledger Theft).
 

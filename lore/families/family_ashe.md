@@ -1,5 +1,8 @@
 # The Ashes
 
+<img src="crests/family_ashe_crest.png" alt="Arms of The Ashes" width="150" align="right">
+
+
 > *The salt house whose cellar hides the grate.* — stub. See [overview](overview.md)
 > and `../second_sun/02_the_heretic_cell.md`.
 

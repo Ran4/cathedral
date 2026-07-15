@@ -1,5 +1,8 @@
 # The Skeps
 
+<img src="crests/family_skep_crest.png" alt="Arms of The Skeps" width="150" align="right">
+
+
 > *A rougher house — protection and threat.* — stub. See [overview](overview.md).
 
 - **Standing:** ambient house

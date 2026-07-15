@@ -67,6 +67,20 @@ The whole conflict is personified by two families: the **Rasps**, who supply the
 man who watches, and the **Vells**, who supply the woman who is watched — and
 neither family, top to bottom, mostly knows it.
 
+## Crests
+
+Some — not all — of these families bear **arms**. Heraldry follows standing: a
+house needs property, an office, or a workshop worth naming, so the houses of
+standing get crests and the nameless poor do not. The five boat-families share a
+**wavy base** (the diverted Serle) but keep their own charge; two jumped-up
+ambient houses (Skep, Kern) bear crooked *assumed* arms nobody granted them. The
+crests are drawn procedurally by
+[`../../scripts/generate_family_crests.py`](../../scripts/generate_family_crests.py);
+see [`crests/`](crests/) — [`crests/showcase.html`](crests/showcase.html) previews
+them all and [`crests/README.md`](crests/README.md) lists who bears which and why.
+Where a family has a crest it appears at the top of its file, linked from the
+roster below.
+
 ## Roster
 
 Standing: **S** = family of standing (fixed surname, canonical or well-rooted).

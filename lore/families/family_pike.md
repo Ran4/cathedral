@@ -1,5 +1,8 @@
 # The Pikes
 
+<img src="crests/family_pike_crest.png" alt="Arms of The Pikes" width="150" align="right">
+
+
 > *The keys of the cathedral.* — stub. See [overview](overview.md).
 
 - **Standing:** family of standing — cathedral servants

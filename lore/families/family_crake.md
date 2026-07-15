@@ -1,5 +1,8 @@
 # The Crakes
 
+<img src="crests/family_crake_crest.png" alt="Arms of The Crakes" width="150" align="right">
+
+
 > *Went downriver.* The Long Departure family. — stub. See
 > `../the_dry_boatmen.md` and [overview](overview.md).
 

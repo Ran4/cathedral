@@ -1,5 +1,8 @@
 # The Vells
 
+<img src="crests/family_vell_crest.png" alt="Arms of The Vells" width="150" align="right">
+
+
 > *Risen chandlers with a heretic at the head.* — stub. See [overview](overview.md),
 > `../second_sun/02_the_heretic_cell.md`, and `../the_dry_boatmen.md` (the fallen
 > Reed-Ward Vells).

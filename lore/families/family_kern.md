@@ -1,5 +1,8 @@
 # The Kerns
 
+<img src="crests/family_kern_crest.png" alt="Arms of The Kerns" width="150" align="right">
+
+
 > *The most literate — and shabbiest — of the ambient houses.* — stub. See
 > [overview](overview.md).
 

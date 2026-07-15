@@ -1,5 +1,8 @@
 # The Sparrs
 
+<img src="crests/family_sparr_crest.png" alt="Arms of The Sparrs" width="150" align="right">
+
+
 > *Idonea's line — the watched glass.* — stub. See [overview](overview.md) and
 > `../second_sun/02_the_heretic_cell.md` (the Glazier Rule).
 

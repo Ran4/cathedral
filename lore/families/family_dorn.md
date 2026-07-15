@@ -1,5 +1,8 @@
 # The Dorns
 
+<img src="crests/family_dorn_crest.png" alt="Arms of The Dorns" width="150" align="right">
+
+
 > *One name, one throne of the Church.* — stub. See [overview](overview.md),
 > `../core_lore/candor_and_churches.md`, `../second_sun/05_dramatis_personae.md`.
 

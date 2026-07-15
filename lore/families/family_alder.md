@@ -1,5 +1,8 @@
 # The Alders
 
+<img src="crests/family_alder_crest.png" alt="Arms of The Alders" width="150" align="right">
+
+
 > *Kept the boat.* — stub; the fullest treatment is in `../the_dry_boatmen.md`.
 > See [overview](overview.md).
 

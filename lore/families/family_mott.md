@@ -1,5 +1,8 @@
 # The Motts
 
+<img src="crests/family_mott_crest.png" alt="Arms of The Motts" width="150" align="right">
+
+
 > *A foot in the Grey Press.* — stub. See [overview](overview.md) and
 > `../second_sun/05_dramatis_personae.md`.
 
