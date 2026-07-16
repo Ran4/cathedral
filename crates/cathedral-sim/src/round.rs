@@ -963,11 +963,12 @@ pub fn interrupt_for_conversation(round: &mut Round, world: &mut World, id: &Act
     }
 }
 
-/// The per-poll intent pass (M5): stamp fresh deadlines, detect arrival, track
-/// a followed person, and lapse what expired. Runs every poll rather than on
-/// the ladder cadence, because a follow re-paths against a moving target and
-/// an arrival percept should land the tick it happens
-/// (`features/movement/05_the_llm_seam.md` §2).
+/// The per-poll intent pass (M5): stamp fresh deadlines — and set a fresh
+/// errand walking the same tick — detect arrival, track a followed person,
+/// and lapse what expired. Runs every poll rather than on the ladder cadence,
+/// because "sets off for the Wickmarket" should mean now, a follow re-paths
+/// against a moving target, and an arrival percept should land the tick it
+/// happens (`features/movement/05_the_llm_seam.md` §2).
 fn tick_intents(
     round: &mut Round,
     world: &mut World,
@@ -1002,7 +1003,8 @@ fn tick_intents(
         };
         let position = character.position_m();
         // The verb has no clock, so the first tick that sees the intent stamps
-        // its expiry.
+        // its expiry — and, below, sets the feet moving in the same breath.
+        let fresh = intent.deadline.is_none();
         let deadline = *intent.deadline.get_or_insert(now + intent.budget_seconds);
 
         // The endings, in order: arrival first (an errand that arrives on its
@@ -1086,36 +1088,49 @@ fn tick_intents(
             .state
             .intent = Some(intent.clone());
 
-        // The follow: while the target is visible the path tracks them, re-laid
-        // as they move. Only in the free phases — a committed well errand keeps
-        // its queue place. A conversation does not pin it (the errand is
-        // self-willed, same as the ladder rung); a fresh addressed line still
-        // stops the walk for the answer, and the re-path here resumes it.
-        if let IntentTarget::Person {
-            last_seen,
-            visible: true,
-            ..
-        } = &intent.target
-        {
-            let target = *last_seen;
-            let person = &round.people[&id];
-            let repath = match person.phase {
-                Phase::Idle => true,
-                Phase::Travelling => person
-                    .travel_target
-                    .is_none_or(|aimed| aimed.distance(target) > FOLLOW_REPATH_EPSILON_M),
-                _ => false,
-            };
-            if repath
-                && position.distance(target) > PERSON_ARRIVE_RADIUS_M
-                && let Some(path) = route_path_to_point(nav, position, target)
-            {
-                set_route(world, &id, path);
-                let person = round.people.get_mut(&id).expect("person exists");
-                person.phase = Phase::Travelling;
-                person.travel_target = Some(target);
-                person.travel_for_intent = true;
+        // Lay the walk. Two cases run here, per poll, instead of waiting for
+        // the ladder's 1–6 s cadence:
+        //
+        //   * a **fresh** intent sets off THIS tick — "sets off for the
+        //     Wickmarket" should mean now, not after a hesitation beat
+        //     (playtest: even the cadence read as standing around);
+        //   * a **follow** whose target is visible tracks them, re-laid as
+        //     they move.
+        //
+        // Everything else — resuming after a conversation interrupt, walking
+        // to a lost target's last-seen spot — goes through the ladder rung on
+        // its cadence: the pause after answering a line is the answer's beat,
+        // and the rung order is what lets the needs outrank the errand. Only
+        // the free phases lay anything; a committed well errand keeps its
+        // queue place, and the rung picks the intent up when it resolves.
+        let (target, arrive_radius) = match &intent.target {
+            IntentTarget::Place { point, .. } => (*point, PLACE_ARRIVE_RADIUS_M),
+            IntentTarget::Person { last_seen, .. } => (*last_seen, PERSON_ARRIVE_RADIUS_M),
+        };
+        let tracking = matches!(
+            &intent.target,
+            IntentTarget::Person { visible: true, .. }
+        );
+        let person = &round.people[&id];
+        let lay = match person.phase {
+            Phase::Idle => fresh || tracking,
+            Phase::Travelling => {
+                (fresh || tracking)
+                    && person
+                        .travel_target
+                        .is_none_or(|aimed| aimed.distance(target) > FOLLOW_REPATH_EPSILON_M)
             }
+            _ => false,
+        };
+        if lay
+            && position.distance(target) > arrive_radius
+            && let Some(path) = route_path_to_point(nav, position, target)
+        {
+            set_route(world, &id, path);
+            let person = round.people.get_mut(&id).expect("person exists");
+            person.phase = Phase::Travelling;
+            person.travel_target = Some(target);
+            person.travel_for_intent = true;
         }
     }
 }

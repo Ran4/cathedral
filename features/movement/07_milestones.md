@@ -384,10 +384,12 @@ lane, so the ask-the-way chain runs off stage. The errand rung is **exempt from
 the conversation hold** (play-tested: holding it left a "meet me at the
 Gradine" walker standing ~20–30 s after their goodbye — the exchange's warm
 memory — which reads as broken, not polite): leaving is the character's own
-decision, made in the same reply as the goodbye, so the walk starts within the
-ladder's 1–6 s cadence; a fresh addressed line still stops them to answer and
-the errand resumes on its own, with `stop {}` as the way the mind chooses to
-stay. The sheet
+decision, made in the same reply as the goodbye, and a **fresh errand sets off
+the very tick the round sees it** (`tick_intents` lays the first walk on the
+deadline-stamping tick — even the ladder's 1–6 s cadence read as hesitation);
+a fresh addressed line still stops them to answer, with the resume going
+through the ladder cadence so the pause is the answer's beat, and `stop {}` is
+the way the mind chooses to stay. The sheet
 gained `places_you_know` (after `you_are`; sorted by name; `place_id` keys) and
 `moving` on `you_see` people (`!is_settled()`); `the_hour` had landed with M0.
 The four water sounds flipped `actor_emittable` (the M3 deferral), `turn.j2`

@@ -1335,8 +1335,16 @@ fn go_to_walks_there_and_arrival_is_a_percept_and_a_nudge() {
         "the walker remembers their own errand"
     );
 
+    // "Sets off" means now: the very first tick lays the walk — no ladder
+    // cadence beat between the reply and the first stride.
+    tick_collect(&mut round, &mut world, &nav, &clock, 0.1);
+    assert!(
+        world.characters[&id].is_walking(),
+        "a fresh errand walks the tick the round first sees it"
+    );
+
     let gradine = world.places.named("The Gradine").unwrap().point;
-    let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.0, 2000, |world| {
+    let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.1, 2000, |world| {
         world.characters[&id].state.intent.is_none()
     });
     let walker = &world.characters[&id];
@@ -1573,18 +1581,14 @@ fn a_conversation_does_not_pin_a_self_willed_errand() {
     let gradine = world.places.named("The Gradine").unwrap().id.clone();
     apply_action(&mut world, &id, "go_to", &json!({"place_id": gradine.as_str()})).unwrap();
 
-    // Held in a warm exchange the whole time: the errand walks anyway, within
-    // the ladder's jittered 1-6 s cadence — never the exchange's 30 s memory.
-    let mut now = 0.0;
-    while !world.characters[&id].is_walking() {
-        now += 0.5;
-        assert!(
-            now <= LADDER_DECISION_MAX_SECONDS + 1.0,
-            "the errand waited out the conversation instead of walking"
-        );
-        world.step_movement(0.5, &nav);
-        tick(&mut round, &mut world, &nav, &clock, now, &player(), &warm(&id));
-    }
+    // Held in a warm exchange the whole time: a fresh errand walks on the very
+    // first tick — never the exchange's 30 s memory, not even a cadence beat.
+    let mut now = 0.1;
+    tick(&mut round, &mut world, &nav, &clock, now, &player(), &warm(&id));
+    assert!(
+        world.characters[&id].is_walking(),
+        "the errand set off immediately despite the warm exchange"
+    );
     assert!(world.characters[&id].state.intent.is_some());
 
     // A fresh addressed line stops them mid-stride to answer...
