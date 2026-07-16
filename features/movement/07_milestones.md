@@ -339,7 +339,11 @@ the round's office-pegged legs plus the curfew rung already empty the streets wi
 ## M5 — `go_to`
 
 **Ships.** The verbs go_to and related verbs.
-The go_to intent, with expiry. The refusal. The arrival percept.
+The go_to intent, with route-derived expiry (a multiple of the route's expected travel time in
+*real* seconds — never a flat span of game time; see [05](05_the_llm_seam.md) §2). The person target
+gated on sight, degrading to last-seen position. The arrival percept **and the lapse percept** (an
+expired or need-preempted intent tells its owner so). Validation errors `unknown_place` / `no_route`
+— **`too_far` is deferred** until the hunger need exists (05 §2; reserve the enum variant now).
 The `turn.j2` change (deleting the paragraph that says *"if what you want
 to do has no verb here (like walking somewhere)…"*). The sheet's three additions —
 `the_hour`, `places_you_know`, `moving`. **All twenty golden fixtures regenerated.**

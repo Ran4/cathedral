@@ -41,7 +41,7 @@ That paragraph is the first thing this feature deletes.
 
 ```
 go_to {"place_id": "pl_x2vw"}       # set off for a place you know (an entry in places_you_know)
-go_to {"person": "sv3n1"}           # set off toward someone, and keep after them while they move
+go_to {"person": "sv3n1"}           # set off toward someone you can SEE; keep after them while you see them
 stop {}                             # abandon it; go back to your own business
 ```
 
@@ -51,9 +51,34 @@ stop {}                             # abandon it; go back to your own business
 `Ok("Osanne Vell sets off for the Wickmarket")` — and the body carries it out over the next seconds or
 minutes, through the ladder's rung 0.
 
-**It expires.** Default ten game minutes. An LLM that says "go to the market" does not own that NPC
-for the rest of the day; when the intent lapses, the Round resumes. This is the single most important
-line in this document, because without it one confused reply strands a character permanently.
+**It expires — on a budget derived from the route, not a constant.** The route is computed at intent
+time, so the intent lives for a small multiple (say 2.5×) of the route's expected travel time,
+`route_length / WALK_SPEED_MPS`, in the **real** seconds movement actually runs on — with a small
+floor for doorstep trips. It cannot be a flat span of *game* time: the clock is 60× compressed
+(`seconds_per_day: 3600`) while walking is 1.8 m/s of real time, so "ten game minutes" would be 25
+real seconds — about 45 m — and every cross-city errand would lapse in its first street. An LLM that
+says "go to the market" still does not own that NPC for the rest of the day; when the intent lapses,
+the Round resumes. This is the single most important line in this document, because without it one
+confused reply strands a character permanently.
+
+**And lapsing is a percept.** The refusal below exists to keep the mind's picture of the world
+truthful — silent abandonment fails that test the same way. When an intent expires, or a need
+preempts it, one inbox line says so: *"Thirst turned you back before you reached the wharves."* Same
+channel as arrival, nearly free, and the model never narrates an arrival that did not happen through
+the back door the refusal so carefully closed at the front.
+
+**`go_to {"person"}` is gated on sight.** Valid only for someone currently in `you_see`; while the
+follow holds, losing sight of the target degrades the intent to their last-seen position, and losing
+them is a percept (*"You've lost sight of the stranger near the Chain Bridge."*). Without the gate a
+hoarded id is a tracking device — `sv3n1` kept in `memories` would let an NPC beeline to Sven from
+across the city, the sim feeding it his live position the whole way, which is exactly the friction
+the place whitelist is so careful to preserve. Finding an *absent* person must route through the
+knowledge system, not around it — and the composed pieces already make that a scene. To buy meat:
+learn where the butcher plies his trade (knowledge-of, and asking around until someone hands over the
+`place_id`) → `go_to` the shop → he is there in working hours, because the Round put him there →
+`go_to` the person now in `you_see`, which closes twenty metres to conversation distance → and the
+coin-for-meat exchange is `offer_item` / `accept_offered_item` inside their existing 4 m radius. Five
+steps, every one of them existing machinery, and every one of them can fail interestingly.
 
 **It can be refused.** A starving man told to walk half a mile does not go. The action fails with a
 real `ActionError`, and the model gets the existing `system:` line —
@@ -82,6 +107,13 @@ there is no push-through verb — arguing next turn does not get him there. That
 one extreme, mechanical threshold (a real starvation state plus a real distance); it is not acceptable
 as a personality system in disguise. Ship `too_far` gated on something simple and defensible, and do
 not add a second refusal condition until one proves necessary in play.
+
+> **`too_far` is deferred out of M5 — do not forget it.** Its gate is "a real starvation state plus
+> a real distance", and the starvation state does not exist yet: `Needs` is `{ thirst }` only
+> (hunger was deliberately deferred out of M4). Inventing a threshold just to have a refusal is
+> exactly what the paragraph above warns against. So M5 ships `unknown_place` and `no_route` only,
+> reserves the `TooFar` variant in `ActionErrorCode`, and the refusal lands together with the hunger
+> need at a later stage of this feature (M6 or after).
 
 **Arrival is a percept.** When they get there, an inbox line: *"You have arrived at the Wickmarket."*
 Which is news, which gives them a turn if they are on stage, which means **the NPC narrates their own
