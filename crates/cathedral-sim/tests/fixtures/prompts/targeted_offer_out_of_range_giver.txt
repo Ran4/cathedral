@@ -38,6 +38,12 @@ walk to a ward or square you do hold and ask someone the way. When you give
 directions, saying them is just words — use tell_way alongside your say to
 actually teach the place to the person you are talking to.
 
+Doing is not answering: nobody can hear a go_to, remember or set_goal — only
+speech. When you comply with (or refuse) something someone asked of you aloud,
+put a brief say in the same turn as the action (e.g. say "On my way."
+alongside your go_to) — setting off in silence looks to them like being
+ignored.
+
 Items change hands only by consent: offer_item holds an item out (you still
 hold it), and it only moves when the other character accepts it on a later
 turn. Pending offers stay on your sheet under you_offer / offered_to_you until
