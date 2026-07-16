@@ -21,10 +21,11 @@ use super::bridge::{BridgeCommand, BridgeHandle};
 /// fill and the interior lamps remain. Matches the default
 /// `clock.night_brightness` the sim floors at.
 const NIGHT_FLOOR: f32 = 0.05;
-/// Ambient sky fill at night and at full day (the day value is scene.rs's
-/// original `GlobalAmbientLight.brightness`).
-const NIGHT_AMBIENT: f32 = 18.0;
-const DAY_AMBIENT: f32 = 300.0;
+/// Ambient sky fill at night and at full day (the day value matches scene.rs's
+/// `GlobalAmbientLight.brightness`; both dropped from 300 when SSAO arrived —
+/// a strong constant term fills back in exactly the crevices SSAO darkens).
+const NIGHT_AMBIENT: f32 = 14.0;
+const DAY_AMBIENT: f32 = 110.0;
 
 /// The game's copy of the sim clock, refreshed from
 /// [`cathedral_sim::EngineMessage::Clock`] every poll. `present` stays false
@@ -87,10 +88,13 @@ pub fn drive_sun(
     let fraction = clock.fraction as f32;
     let angle = (fraction - 0.5) * std::f32::consts::TAU;
     let east = angle.sin();
-    let elevation = angle.cos();
-    // Keep it just above the horizon at night so the (near-dark) key never lights
-    // the city from directly underneath.
-    let direction = Vec3::new(east * 0.9, elevation.max(-0.2), 0.35).normalize();
+    // The vertical component is deliberately capped well below the zenith
+    // (temperate-town arc, ~50° at noon): overhead light flattens every façade
+    // and shrinks shadows to doormats, while a raking sun keeps streets
+    // modelled all day. The floor keeps the (near-dark) key from ever lighting
+    // the city from underneath at night.
+    let elevation = (angle.cos() * 0.42).max(-0.2);
+    let direction = Vec3::new(east * 0.9, elevation, 0.35).normalize();
     *transform =
         Transform::from_translation(direction * 500.0).looking_at(Vec3::new(0.0, 0.0, 40.0), Vec3::Y);
 

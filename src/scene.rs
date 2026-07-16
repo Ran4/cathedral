@@ -8,7 +8,8 @@ use std::f32::consts::{FRAC_PI_2, PI, TAU};
 use bevy::{
     asset::RenderAssetUsages,
     light::{
-        Atmosphere, CascadeShadowConfigBuilder, atmosphere::ScatteringMedium, light_consts::lux,
+        Atmosphere, CascadeShadowConfigBuilder, DirectionalLightShadowMap,
+        atmosphere::ScatteringMedium, light_consts::lux,
     },
     mesh::{Indices, MeshBuilder, PrimitiveTopology},
     prelude::*,
@@ -90,9 +91,12 @@ fn build_cathedral(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut collision_world: ResMut<CollisionWorld>,
 ) {
+    // Modest flat fill: the atmosphere environment map carries most sky light,
+    // and SSAO needs crevices it can actually darken — a strong constant term
+    // (this was 300 lux pre-SSAO) fills every reveal and alley mouth back in.
     commands.insert_resource(GlobalAmbientLight {
         color: Color::srgb(0.58, 0.66, 0.72),
-        brightness: 300.0,
+        brightness: 110.0,
         ..default()
     });
 
@@ -1110,13 +1114,18 @@ fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &Ca
             ..default()
         },
         Transform::from_xyz(-420.0, 560.0, 300.0).looking_at(Vec3::new(0.0, 0.0, 40.0), Vec3::Y),
+        // Concentrate shadow texels where façade detail lives. Beyond ~320 m
+        // the distance fog owns depth anyway, so spending cascade range there
+        // bought blur everywhere; the tight first cascade keeps door frames,
+        // eaves, and window reveals crisp at arm's length.
         CascadeShadowConfigBuilder {
-            first_cascade_far_bound: 24.0,
-            maximum_distance: 520.0,
+            first_cascade_far_bound: 14.0,
+            maximum_distance: 320.0,
             ..default()
         }
         .build(),
     ));
+    commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
 
     // A cool shaft from the oculus and a warm focus on the high altar.
     commands.spawn((
