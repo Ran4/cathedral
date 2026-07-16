@@ -70,16 +70,24 @@ Small courts in several wards may be called **widow courts** because most
 households there lost someone in the Hammering. This is a local description,
 not one fixed official place-name, and current residents need not be widows.
 
-### Approved names not yet required to occupy a fixed site
+### Formerly floating names, now fixed
 
-The naming handbook supplies the following as in-register examples. A future
-writer may establish them as real locations if useful, provided their stated
-kind is preserved:
+The naming handbook's in-register example names have all since been fixed to
+real sites by the authoritative spatial canon in `../places/` — see
+`../places/01_spatial_index.md` for coordinates and
+`../places/02_canonical_gazetteer.md` for descriptions. Their kinds were
+preserved:
 
-- **Tenterhook Lane** — a trade street by fullers' frames.
-- **Burnt Court** — a place renamed after fire.
-- **Maren's Slip** — a saint-name attached to a walkway
-- **Crookneck Lane** and **Eelback Alley** — names from street shape.
-- **Malt Passage** — a passage beneath a malt-house at Coswald's Yard.
-- **The Chain Bridge** — a working bridge name inherited from the former harbour
-  chain-house.
+- **Tenterhook Lane** — the fullers'-frames lane south of the cloth halls.
+- **Burnt Court** — behind Cinder Row, renamed by the F.171 fire.
+- **Maren's Slip** — the stepped funeral way from Maren's Green to the Reed
+  Postern (also established in `../the_dry_boatmen.md`).
+- **Crookneck Lane** — the two-bend route from the builders' quarter toward
+  the Bell ward; **Eelback Alley** — the humped alley behind the Maren's Green
+  smokehouses.
+- **Malt Passage** — beneath the malt-house at Coswald's Yard.
+- **The Chain Bridge** — the western dry bridge at the former chain-house.
+
+New place names should be minted per the rules above and then fixed in
+`../places/`, not left floating; check `../places/01_spatial_index.md` before
+attaching any name to a site.

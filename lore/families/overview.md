@@ -1,10 +1,13 @@
 # The Families of Ombreval
 
 > Author-facing index of the city's family names: who carries them, where they
-> cluster, what trades they hold, and what the name *means* socially. This is a
-> **rough first pass** — a few sentences per family, stubbed from the 500-strong
-> character roster in `lore/characters/` and the existing lore. Not all of it is
-> hard canon yet; treat the individual files as seeds to expand, not law.
+> cluster, what trades they hold, and what the name *means* socially. Nine
+> anchored houses — **Alder, Vell, Rasp, Copp, Sparr, Marle, Ashe, Rud, Fitch**
+> — carry **full treatments** on the `the_dry_boatmen.md` model: those files
+> are worked-out canon, roster-checked, with designer-only secret tiers fenced
+> at the bottom. The remaining files are stubs — a few sentences per family,
+> seeded from the 500-strong character roster in `lore/characters/` and the
+> existing lore; treat the stubs as seeds to expand, not law.
 >
 > Complements, and should stay consistent with:
 > - `core_lore/naming_language.md` — the naming rule these families obey.
@@ -45,6 +48,17 @@ Bell-and-Sluice streets, the crowded central ward around the Bellstand. A family
 with *only* a Bell-and-Sluice presence is usually poor and un-rooted; a family
 with a Bell-and-Sluice branch *and* a heartland elsewhere has sent its overflow
 into the middle of the city.
+
+**Given names repeat.** The approved given-name bank is small and the city is
+not (`../core_lore/naming_language.md`), so the same given name recurs across
+houses — canon, and lampshaded inside `family_rasp.md`. The dense spots, for
+prompt-builders: five living teenage **Tobins** (Alder 17, Ashe 17, Vell 16,
+Hobbe 16, Crake 15); four-plus living **Roheses**, **Sibles** and **Averils**;
+recurring **Corins**, **Ewarts**, **Giles**, **Idoneas** and **Petronels**; and
+the short names of the poor (Pin, Ib, Sef, Dob, Nan, Mote...) repeat hardest of
+all — on lintels, in registers, and in the charnel-door pass-names. Disambiguate
+by surname or byname when injecting, and check a name against
+`lore/characters/` before assuming two mentions are one person.
 
 ## The two shadows that cut across every family
 
@@ -100,7 +114,7 @@ Standing: **S** = family of standing (fixed surname, canonical or well-rooted).
 | [Skep](family_skep.md) | 15 | Bell-and-Sluice / Weigh | service, cooperage, muscle | A | a rougher house; protection and threat |
 | [Vell](family_vell.md) | 15 | Wick (Wickmarket) | chandlery, wax, light | S | risen chandlers with a heretic at the head |
 | [Stott](family_stott.md) | 15 | Wallwright | masonry, the lodge | S | the masons' warden and his plumb-line grudges |
-| [Ashe](family_ashe.md) | 15 | Weigh / Reed | salt | S | the salt house whose cellar hides the grate |
+| [Ashe](family_ashe.md) | 15 | Weigh / Reed | salt, laundry | S | the salt house whose cellar hides the grate |
 | [Pike](family_pike.md) | 14 | Fabric (the Lanthorn) | vergers, keys, cathedral service | S | the keys of the cathedral and small door-graft |
 | [Pell](family_pell.md) | 14 | Cloth / Reed | smallholding, victualling | A | a three-ward family of small gates and poaching |
 | [Rusk](family_rusk.md) | 13 | Bell-and-Sluice / Reed | tavern, baking, hustle | A | the victualler-and-hustle house |
@@ -147,7 +161,9 @@ one that *broke and travelled*, and that is the point, not an omission.
 
 - **Rooted:** Skell · Fitch · Tarn · Sark · Alder
 - **Branches:** Ashe (salt cellar, from Weigh) · Pell (smallholding, from Cloth) ·
-  Rusk (tavern-streets, from Bell-and-Sluice)
+  Rusk (tavern-streets, from Bell-and-Sluice) · Marle (the south-wall plots, from
+  Bell-and-Sluice) · Rud (fullers on the Cut below the Green, from
+  Bell-and-Sluice)
 
 The boat-blood ward. Alder is the last boat *of standing*; Skell and Tarn are the
 houses that gave the water up, and the fallen Hawsers and Underbridges the ones it

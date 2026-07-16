@@ -32,7 +32,8 @@ one, it is wrong"); its truth-value ledger (§10) and designed-ambiguity clause
 2. **River diversion — "seventy years" vs "sixty-eight years".**
    `the_dry_boatmen.md`. Ewart, in drink, rounds to "seventy years ago"; the
    narrator gives the precise "sixty-eight years" (F.437 − F.369). His line is
-   bracketed as unreliable ("By morning he is ashamed"). Both stay.
+   bracketed as unreliable ("By morning he is ashamed"). Both stay. (Echoed,
+   under its own inline `protected:` comment, in `families/family_alder.md`.)
 
 3. **Night-storm open-sky sighting vs "never at night / only through the rose".**
    `second_sun/00_canon.md` rule 9 (bracketed, `AMBIGUOUS-BY-DESIGN`, ledgered
@@ -56,3 +57,13 @@ one, it is wrong"); its truth-value ledger (§10) and designed-ambiguity clause
    `second_sun/design/03_questlines.md:55`) vs the cell's actual practice
    (`heretic_catechism.md:96-97`, "No knife has ever answered our door"). Ledger
    §10 row 27 = **F**. The gap is the authored payoff; stays.
+
+7. **Maud Alder's sworn warmth vs the warmthless light.**
+   `second_sun/documents/trial_records.md` (fol. xxx, the Third Witness) and
+   `families/family_alder.md` ("The dead, and the poles over the door") vs
+   `00_canon.md` §2.4 (render-true: the Emblem's beams carry no warmth; wax
+   does not soften in them). Maud's F.288 sworn "it warmed me," her later
+   unsaying, and her cut-out first-statement leaf ("this office does not know
+   whose knife") are authored ambiguity — a widow's grief-memory honestly
+   sworn against a render-true rule. Do not resolve whether the light warmed
+   her, what her first statement said, or whose knife cut the leaf. All stay.
