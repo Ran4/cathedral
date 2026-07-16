@@ -10,7 +10,10 @@
 - **Trades:** carting, freight, milling, bell-ringing, building, clergy
 - **Anchors:** Renn Hobbe (34, wick-priest of Saint Maren of the Reeds — a
   boat-family son in the boat-family's pulpit); Gile Hobbe (a paid moth of the
-  Custody, a word he will not use)
+  Custody, a word he will not use); Segwin Hobbe (56, carter to the Fabric
+  works and one of the Fabric Ward's two benchers — the ward's tax quarrel
+  with the Chapter rides on his own wagon; see
+  `../core_lore/ward_politics.md`)
 
 The Hobbes made peace with the enemy: they carry wool and freight up from the
 gate, which means they eat off the **dry carry** — the doubled handling every

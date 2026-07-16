@@ -5,7 +5,10 @@
 - **Standing:** ambient house
 - **Heartland:** Cloth and Weigh streets, evenly split
 - **Trades:** garment-work, cooperage, cargo, grocer-spicer, carpentry
-- **Anchors:** none of note
+- **Anchors:** Averil Nett (47, garment-mistress and one of the Cloth Ward's
+  two benchers — the house's first name worth writing down, elected for being
+  exactly as honest as the family's reputation; see
+  `../core_lore/ward_politics.md`)
 
 The Netts are a small, steady house of the cloth and weighing streets — a
 garment-hand, a cooper, a couple of carpenters, a grocer-spicer, a cargo-hand —

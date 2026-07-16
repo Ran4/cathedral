@@ -17,6 +17,9 @@ The guilds exert influence through organised votes, credit and expertise, but
 hold no guaranteed seats. Sixteen benchers make the Common Bench. Nine form a
 quorum and nine agreeing votes make an ordinary rule.
 
+The wards' reputations, standing grievances, the customs of a reckoning, and
+the benchers of F.437 are in `ward_politics.md`.
+
 Benchers are unpaid and may serve no more than three consecutive years. The
 Bench chooses its paid working officers from any qualified citizen, not only
 from its own members. No civic office is hereditary, purchased, or held for

@@ -45,6 +45,18 @@ same city:
   water. Said as a light insult and heard as a heavy one.
 - **“There are more Hawsers than Alders.”** Most who had something have lost
   it. Said as consolation, and as a threat.
+- **“To sit the bench.”** To stand for civic office at a ward reckoning — the
+  candidate sits on the ward's plain bench, the householders stand and
+  complain to their face. More generally: to hear a complaint one may not
+  answer.
+- **“He fed the ward past herring.”** Vote-buying. Bread, herring, and small
+  ale — *bench-fare* — is the lawful limit of a candidate's table at a
+  reckoning.
+- **“Water runs downhill; so does money.”** Wallwright's answer to every
+  assessment for the low streets; elsewhere, any refusal dressed up as a law
+  of nature.
+- **“Nobody's ward.”** Bell-and-Sluice, according to everyone else; more
+  generally, a place or person that belongs to all and is owed by none.
 - **Belwyn's ward:** close one eye and lay two fingers on the lid. Clergy call it
   remembrance that darkness belongs to the Light; ordinary people use it
   against ill luck.

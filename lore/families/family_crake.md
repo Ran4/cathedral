@@ -12,7 +12,10 @@
   freight, potter, market-selling, cargo
 - **Anchors:** Havise Crake (31, warehouse hand — *the one who stayed*); Dunstan
   Crake (53, Cinder Row glazier nursing a buried grudge against the Sparrs);
-  Betriss, Idonea and Ede Crake (cargo-pilfering, thieving, false weights)
+  Betriss, Idonea and Ede Crake (cargo-pilfering, thieving, false weights);
+  Bertran Crake (45, came back up the river after the Long Departure — one of
+  Wallwright's two benchers, with a Hammering claim of his own on a half-owned
+  ruin; see `../core_lore/ward_politics.md`)
 
 A boatman, unlike a mason or a glazier, has the road under him and it goes
 somewhere — and when the Hammering broke the Reed Ward in F.415 the Crakes left

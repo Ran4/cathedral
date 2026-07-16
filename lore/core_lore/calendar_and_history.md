@@ -46,6 +46,13 @@ The ritual and civic year, from spring:
 - **Belwyn's Dark** — midwinter; the year's one office sung without lights.
 - **Gaudry's Audit / Weighday** — late winter; standards are proved and ledgers
   closed.
+- **The head reckonings** — late winter, in the days after Gaudry's Audit:
+  each tax ward's open reckoning chooses its two benchers for the coming year,
+  the proved ledgers still fresh in every householder's ears. Candidates sit
+  the ward's plain bench while householders state complaints to their faces;
+  the chosen take their seats at Vhairestide. The other quarter reckonings
+  (after Vhairestide, Ambrellestide, and Coswaldstide) hear the accounts read
+  and the standing quarrels rehearsed (`ward_politics.md`).
 
 Do not turn the calendar into a list of magical effects. Feasts regulate work,
 contracts, fairs, eating, processions, maintenance, alms, travel, and memory as

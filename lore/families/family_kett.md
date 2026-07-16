@@ -6,7 +6,9 @@
 - **Heartland:** Wick and Bell-and-Sluice streets
 - **Trades:** food-selling, water-and-bath work, revenue, farming, entertaining
 - **Anchors:** Ede Kett (taking bribes during inspection); Havise Kett
-  (adulterating food)
+  (adulterating food); Jonet Kett (49, market-food householder, one of the
+  Wick Ward's two benchers — knows every Wickmarket stall licence by heart;
+  see `../core_lore/ward_politics.md`)
 
 The Ketts sell food and water in the Wick and central markets — provisioners, a
 bath-house hand, a farmer, an entertainer, with a foot in the revenue office. The

@@ -5,7 +5,10 @@
 - **Standing:** ambient house
 - **Heartland:** Wallwright and Bell-and-Sluice streets
 - **Trades:** masonry, pottery, animal-work, baking, service, watch
-- **Anchor:** Colm Toll (protection and intimidation)
+- **Anchors:** Colm Toll (protection and intimidation); Ewart Toll (51,
+  lime-burner and one of Wallwright's two benchers — his kilns feed the
+  masons' lodge without belonging to it; see
+  `../core_lore/ward_politics.md`)
 
 For a family named for a levy, the Tolls do their own collecting. They fill the
 building and service trades of the wall quarter — masons, a potter, a baker,

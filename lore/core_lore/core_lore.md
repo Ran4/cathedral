@@ -74,7 +74,7 @@ The default present year is **F.437**, the 437th year since the first stone of t
 - The **Chapter** contains Provosts of the Fabric, Rite, and Custody over the Canons of the Rose. Parish priests are called **wick-priests**.
 - The **Custody of the Eye** is a grey-clad office concerned with the Great Rose, pilgrims, records, and forbidden claims about the light.
 - The **masons' lodge** at Coswald's Yard and the **glaziers' guild** on Cinder Row are established trade powers.
-- Ombreval's exact secular constitution is open canon. Do not make the Praelucent a temporal monarch by default.
+- Ombreval governs its streets, markets, and money through the **Common Bench**: sixteen unpaid **benchers**, two chosen yearly by each of the eight tax wards at open ward reckonings (`lore/core_lore/secular_government.md`). The Praelucent is not a temporal monarch.
 
 The three established sacred sites inside Ombreval are:
 
@@ -112,6 +112,8 @@ People use given names with inherited or earned bynames from trade, place, origi
 - Squares, streets, bridges, and landmarks: `lore/core_lore/places.md`
 - Work, trade, money, measures, markets, and daily time: `lore/core_lore/trade_and_daily_life.md`
 - Candor hierarchy, churches, saints, and bells: `lore/core_lore/candor_and_churches.md`
+- The Common Bench, courts, gaol, walls, and licences: `lore/core_lore/secular_government.md`
+- Ward reputations, grievances, reckoning customs, and the benchers of F.437: `lore/core_lore/ward_politics.md`
 - Full observable rules and beliefs around the light: `lore/core_lore/impossible_light.md`
 - Feasts and shared historical chronology: `lore/core_lore/calendar_and_history.md`
 - The Great Rains, the Hammering, and the Long Departure:
