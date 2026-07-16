@@ -411,6 +411,45 @@ fn priority_runs_after_current_then_round_robin_resumes() {
     assert_eq!(harness.prompted_names()[..3], ["Sven", "Ilse", "Conny"]);
 }
 
+/// Two handoffs landing between turns must BOTH run, oldest first. The lane
+/// used to be a single last-write-wins slot: the second event silently erased
+/// the first, and while the on-stage idle rotation eventually recovered the
+/// dropped actor, an off-stage exchange (two NPCs talking in a far ward) has
+/// no rotation to fall back on — the conversation just died.
+#[test]
+fn queued_handoffs_all_fire_oldest_first() {
+    let mut harness = Harness::new(Box::new(noop), 0.0);
+    harness.start();
+    harness.poll_pending(); // Sven's turn is outstanding
+
+    assert!(
+        harness
+            .scheduler
+            .prioritize(&harness.world, &actor("k0fb1"), false, harness.now)
+    );
+    assert!(
+        harness
+            .scheduler
+            .prioritize(&harness.world, &actor("cb947"), false, harness.now)
+    );
+    // Re-queueing an already-queued actor is accepted but must not buy a
+    // second turn: the one turn answers everything that has reached them.
+    assert!(
+        harness
+            .scheduler
+            .prioritize(&harness.world, &actor("k0fb1"), false, harness.now)
+    );
+
+    harness.poll_times(4);
+    // Ilse then Conny drain from the queue in arrival order; the round robin
+    // then resumes where it left off (Conny again), which also proves the
+    // re-queued Ilse did not buy a second priority turn.
+    assert_eq!(
+        harness.prompted_names()[..4],
+        ["Sven", "Ilse", "Conny", "Conny"]
+    );
+}
+
 /// 16. `test_prioritize_immediate_pulls_the_next_turn_forward`
 #[test]
 fn prioritize_immediate_pulls_the_next_turn_forward() {

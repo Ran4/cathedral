@@ -1,11 +1,11 @@
 //! The global NPC turn stream (`scheduler.py`): one request in flight, ever.
 //!
-//! Round-robin over the LLM cast, with an ordinary priority slot for NPC
+//! Round-robin over the LLM cast, with an ordinary priority lane for NPC
 //! turn-taking, a protected FIFO lane for reactions to player speech, provider
 //! backoff, and floor gating.
 //!
 //! Three lanes select the next actor, and only one of them is a clock. The
-//! player-reaction lane fires because the player spoke; the priority slot fires
+//! player-reaction lane fires because the player spoke; the priority lane fires
 //! because an addressed `say` or an audible sound reached someone. The round
 //! robin fired because time passed — so it, alone, is gated on an [`IdleGate`]
 //! the engine computes from the player's neighborhood
@@ -116,14 +116,20 @@ pub struct NpcScheduler {
     minimum_delay_seconds: f64,
     maximum_backoff_seconds: f64,
     round_robin_index: usize,
-    /// Ordinary turn-taking handoff. NPC speech and sound nudges still use the
-    /// legacy last-write-wins slot.
-    priority_actor_id: Option<ActorId>,
+    /// Ordinary turn-taking handoffs — addressed `say`s and sound nudges —
+    /// oldest first and de-duplicated, like `player_reactions`.
+    ///
+    /// This used to be a single last-write-wins slot, which silently dropped a
+    /// handoff whenever two real events landed between turns. On stage the idle
+    /// rotation eventually recovered the dropped actor; an off-stage exchange
+    /// (two NPCs talking in a far ward) has no rotation to fall back on, so a
+    /// dropped handoff there killed the conversation outright.
+    priority_handoffs: VecDeque<ActorId>,
     /// Protected reactions to player speech, oldest first and de-duplicated.
     ///
-    /// This is deliberately separate from `priority_actor_id`: a background
+    /// This is deliberately separate from `priority_handoffs`: a background
     /// NPC reply can finish in the same poll as STT and hand its addressee the
-    /// ordinary slot. That must not erase the listener the player just woke.
+    /// ordinary lane. That must not erase the listener the player just woke.
     player_reactions: VecDeque<ActorId>,
     in_flight: Option<InFlight>,
     /// A finished turn the floor would not let us apply yet.
@@ -159,7 +165,7 @@ impl NpcScheduler {
             minimum_delay_seconds,
             maximum_backoff_seconds,
             round_robin_index: 0,
-            priority_actor_id: None,
+            priority_handoffs: VecDeque::new(),
             player_reactions: VecDeque::new(),
             in_flight: None,
             held_result: None,
@@ -225,11 +231,11 @@ impl NpcScheduler {
     }
 
     /// Who has been handed the next selection slot, if anyone. Protected player
-    /// reactions are reported before the ordinary sound/post-`say` slot.
+    /// reactions are reported before the ordinary sound/post-`say` lane.
     pub fn priority_actor_id(&self) -> Option<&ActorId> {
         self.player_reactions
             .front()
-            .or(self.priority_actor_id.as_ref())
+            .or(self.priority_handoffs.front())
     }
 
     /// Whether a finished turn is parked waiting for the floor.
@@ -241,12 +247,18 @@ impl NpcScheduler {
         &self.order
     }
 
-    /// Give `actor` the next turn. Returns whether the slot was taken.
+    /// Queue `actor` for the next free selection slots, oldest handoff first.
+    /// Returns whether the handoff was accepted.
     ///
     /// A non-LLM or unknown target is rejected — which is exactly what makes an
     /// NPC's `say` to the *player* a silent no-op instead of a broken handoff.
     /// The check is against the world, not against `order`: Python looked
     /// `world.characters` up (`scheduler.py:166-176`) and so do we.
+    ///
+    /// An actor already queued is not queued twice: their one turn answers
+    /// everything that has reached them, because the render drains the whole
+    /// inbox. De-duplication is also what bounds the queue (by the cast size)
+    /// without a cap.
     ///
     /// `immediate` collapses the remaining inter-turn/backoff delay. It never
     /// preempts the in-flight request and never bypasses floor gating; without
@@ -264,7 +276,9 @@ impl NpcScheduler {
         if actor.control() != Control::Llm {
             return false;
         }
-        self.priority_actor_id = Some(actor_id.clone());
+        if !self.priority_handoffs.contains(actor_id) {
+            self.priority_handoffs.push_back(actor_id.clone());
+        }
         if immediate {
             self.next_turn_at = self.next_turn_at.min(now);
         }
@@ -583,7 +597,7 @@ impl NpcScheduler {
             // global round robin. Deliberately not immediate — the inter-turn
             // delay and the floor still govern *when*, only selection changes.
             // `prioritize` rejects the player itself, so this is best-effort;
-            // with several targeted says in one reply, the last one wins.
+            // several targeted says in one reply all queue, oldest first.
             if verb == "say"
                 && let Some(Value::String(target)) = args.get("target")
                 && let Ok(target_id) = ActorId::new(target.clone())
@@ -623,7 +637,7 @@ impl NpcScheduler {
         env: &PromptEnv,
         events: &mut Vec<SchedulerEvent>,
     ) {
-        // Selection happens — and the rotation advances / the priority slot is
+        // Selection happens — and the rotation advances / the queued handoff is
         // consumed — BEFORE the validity check: a skipped actor still burns its
         // turn, and so do a failed render and a refused submit. Intentional
         // (scheduler.md risk 8).
@@ -728,10 +742,10 @@ impl NpcScheduler {
         }
     }
 
-    /// Protected player reactions win first, then the ordinary priority slot,
-    /// then the gated round robin. Neither of the first two advances the round
-    /// robin, so the rotation resumes exactly where it left off
-    /// (`scheduler.py:360-367`).
+    /// Protected player reactions win first, then the ordinary priority
+    /// handoffs (oldest first), then the gated round robin. Neither of the
+    /// first two advances the round robin, so the rotation resumes exactly
+    /// where it left off (`scheduler.py:360-367`).
     ///
     /// `None` means no turn is owed at all — the lane that would have supplied
     /// one is empty or closed. It is the poll that buys nothing, and not
@@ -751,7 +765,7 @@ impl NpcScheduler {
         // Ungated by proximity: an addressed `say` or an audible sound reached
         // them. This is also the only way an ambient NPC ever thinks, and it
         // must stay that way.
-        if let Some(actor_id) = self.priority_actor_id.take() {
+        if let Some(actor_id) = self.priority_handoffs.pop_front() {
             return Some((actor_id, false));
         }
         self.next_idle_actor(idle).map(|actor_id| (actor_id, false))

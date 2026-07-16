@@ -40,7 +40,7 @@ That paragraph is the first thing this feature deletes.
 ### The verb
 
 ```
-go_to {"place": "wickmarket"}       # set off for a named place
+go_to {"place_id": "pl_x2vw"}       # set off for a place you know (an entry in places_you_know)
 go_to {"person": "sv3n1"}           # set off toward someone, and keep after them while they move
 stop {}                             # abandon it; go back to your own business
 ```
@@ -59,7 +59,7 @@ line in this document, because without it one confused reply strands a character
 real `ActionError`, and the model gets the existing `system:` line —
 
 ```
-system: your action "go_to {'place': 'outer_wharves'}" failed: too far — you are starving
+system: your action "go_to {'place_id': 'pl_9q2v'}" failed: too far — you are starving
 and the wharves are half a mile beyond the River Gate
 ```
 
@@ -67,14 +67,31 @@ and the wharves are half a mile beyond the River Gate
 (`scheduler.rs:556-574`). The model can argue about it next turn. Three lines of code; a cast instead
 of a set of puppets.
 
+**Refusal reasons must stay few, physical, and obvious.** Two of the three error codes are not really
+refusal at all — `unknown_place` and `no_route` are validation against hallucinated ids and unreachable
+places, needed under any design. Only `too_far` is the body saying no, and it earns its place for one
+reason: needs preempt intents anyway, so the alternative to refusing upfront is accepting the intent,
+returning `Ok("sets off for the wharves")`, and then silently abandoning it — after which the LLM
+*believes* it is headed to the wharves and may later narrate an arrival that never happened. The
+refusal keeps the mind's picture of the world truthful, on a channel that already exists.
+
+The temptation to resist is adding more "realistic" refusal conditions — tired, curfew, weather, fear
+of a ward. Each one is code making a *willpower* judgment on behalf of a character. A starving man who
+drags himself half a mile to see his dying brother is exactly the drama the LLM might reach for, and
+there is no push-through verb — arguing next turn does not get him there. That trade is acceptable for
+one extreme, mechanical threshold (a real starvation state plus a real distance); it is not acceptable
+as a personality system in disguise. Ship `too_far` gated on something simple and defensible, and do
+not add a second refusal condition until one proves necessary in play.
+
 **Arrival is a percept.** When they get there, an inbox line: *"You have arrived at the Wickmarket."*
 Which is news, which gives them a turn if they are on stage, which means **the NPC narrates their own
 arrival** without anybody scripting it. Elegant, and free.
 
-**The model never sees coordinates.** `place` takes an **area id** — the vocabulary the sheet already
-speaks, since `location_description` has always rendered area labels. The model picks a *place*, like
-a person would. It does not pick a point, it cannot pick an unreachable one, and the failure modes
-collapse to three: `unknown_place`, `no_route`, `too_far`.
+**The model never sees coordinates.** `place_id` takes an **opaque handle** from `places_you_know`
+(§3) — the same mental model the sheet already uses for people (`sv3n1`): things you can act on are
+handles you were given. The model picks a *place*, like a person would. It does not pick a point, it
+cannot pick an unreachable one, and the failure modes collapse to three: `unknown_place`, `no_route`,
+`too_far`.
 
 ### What it touches
 
@@ -104,8 +121,12 @@ not four times.
     "the_hour": "Lamplight — the lamps are being lit; the market is closing",
     "position_m": { "x": -37.75, "y": 0.91, "z": 379.3 }
 },
-"places_you_know": ["wickmarket", "coswalds_yard", "the_gradine", "ford_well",
-                    "the_lanthorn", "cinder_row", "the_needle"],
+"places_you_know": [
+    { "place_id": "pl_x2vw", "name": "The Wickmarket" },
+    { "place_id": "pl_7f3k", "name": "Coswald's Yard" },
+    { "place_id": "pl_qq81", "name": "Reed Ward" },
+    { "place_id": "pl_m4rd", "name": "Ford Well" }
+],
 "you_see": {
     "description": "People within 20 metres, nearest first",
     "people": [
@@ -119,10 +140,99 @@ not four times.
 **`the_hour`** — the clock, as a *field*. Not a percept. §5 below explains why that one decision is
 worth thousands of tokens a day.
 
-**`places_you_know`** — you cannot `go_to` an id you have never been given. This is the smallest list
-that makes the verb usable: the places in this character's own ward, plus the five squares, plus
-anywhere their Round takes them. Not all seventy. It is also, quietly, a *characterisation* device —
-a Reed Ward boatman who does not know the id for the glaziers' guildhall is a Reed Ward boatman.
+**`places_you_know`** — the wayfinding whitelist: you cannot `go_to` a place you have not been handed
+a `place_id` for. Each entry is a pair, the same shape `you_see` already uses for people.
+
+*Two kinds of knowledge, deliberately split.* **Knowledge-of** is lore — "Tam Rud lives somewhere in
+Reed Ward" — free text in the prompt, injectable as liberally as we like (and we intend to inject a
+lot of it), granting no ability. **Wayfinding** is possession of a `place_id` in this list, and only
+ids can be walked to. The gap between the two is gameplay, not a limitation: an NPC told *"you'll find
+what you seek at Tam Rud's house"* knows *of* the place, walks to Reed Ward — coarse destinations
+(the wards, the five squares) are ids **everyone** holds, so getting somewhere always has a legal
+first step — and asks around until someone who holds the id shares it. The player can only ever
+confer knowledge-of, never an id: player speech is free text, and grounding "Tam Rud's house" from it
+would reopen the guessing problem. Telling an NPC where to find something sends them on a journey; it
+does not teleport the knowledge. That is a feature.
+
+*The ids are opaque, and the key is `place_id`.* Opaque because the whitelist alone only makes
+guessing **fail** — with semantic ids the model will still *try*, deriving `tam_ruds_house` from lore
+text and burning turns on `unknown_place` errors. An id it cannot construct is an id it does not
+attempt, which redirects the model from guessing the API to acting in the world (walk there, ask
+someone). We are steering behavior, not just validating input. The key is `place_id` rather than `id`
+so a place handle can never be conflated with a person handle even out of context, and the `pl_`
+prefix on the value gives the same distinction at the shape level. Keep the ids short — long opaque
+strings invite copy errors.
+
+*The list is assembled dynamically, per actor:* home, workplace, the legs of their Round, the places
+of their own ward, the five squares and the wards themselves, the homes of people they know — plus
+anything later shared with them. A per-actor set in `CharacterState`, grown by sim events, rendered at
+prompt time. Not all seventy places. It is also, quietly, a *characterisation* device — a Reed Ward
+boatman who does not hold the id for the glaziers' guildhall is a Reed Ward boatman, and *which* ids
+someone holds is who they are.
+
+*The transfer mechanic — a verb, deferred past M5.* Directions travel as an ordinary action beside
+the speech. A turn is already *"Take one or more actions"* (`turn.j2:116`), so the verb costs no
+extra turn and duplicates nothing:
+
+```
+say      {"text": "Tam Rud? The corner house past the Ford Well, ask for the blue door."}
+tell_way {"person": "ask3r", "place_id": "pl_7f3k"}
+```
+
+The rules:
+
+- **The receiving LLM stores nothing (regarding the place_id), ever.** Storage of the place_id is sim state:
+  the verb writes the id into the target's `places_you_know` set in `CharacterState`,
+  and the sheet *is* the model's memory — at the
+  next render the place is simply there. One inbox line ("Betriss told you the way to Tam Rud's
+  house" — the name from the world registry, not from anyone's prose) makes the arrival of knowledge
+  narratable news.
+- **The speaker must hold the id**, and the target must be in earshot (the existing 20 m hearing
+  rule). Violations are ordinary `ActionError`s on the standard `system:` self-correction channel.
+- **Targeted, not broadcast.** Sharing is deliberate; eavesdroppers learn nothing. Knowledge keeps
+  its friction, which is the taste of this whole document.
+- **Nothing parses anybody's sentences.** The speech and the verb are independent channels: a
+  helpful answer with no verb is just vague directions, and a verb with no speech is a silent point
+  of the finger. Both are fine.
+
+The precedent check: names deliberately have *no* introduction verb — "characters introduce
+themselves in speech" (`crates/cathedral-sim/AGENTS.md`), and listeners keep names as free-text
+memories. But a name's payoff is narrative, and a memory line carries it. A place id's payoff is
+mechanical — `go_to` needs it in a structured set — so it needs what names never did. Different
+requirement, different mechanism.
+
+*Off the stage, the same conversation runs — on the lane that was never gated.* There is no seek
+verb, no registry name-matching, and no parallel code mechanic: the ask-around is `say` + `tell_way`
+wherever it happens, because the machinery already exists. The stage gate only gates the round-robin
+*idle* lane; an addressed `say` (or an audible sound) puts its recipient in the **priority slot**,
+which is never gated, anywhere in the city (`attention.rs`' three lanes), and hearing already
+computes its recipients globally. So off stage: the asker arrives in the Reed, asks someone by name;
+the addressed say nudges the answerer — a real turn, off stage, with today's scheduler; the answerer
+replies with `say` + `tell_way`; the reply nudges the asker, who now holds the id and sets off. The
+errand itself is carried in the asker's own memories and goal ("find out where Tam Rud lives" — free
+text, consumed only by the LLM that wrote it), so **the sim never needs to know what is being
+sought**. That is the piece a `seek {"place_name": ...}` verb was sketched to provide, and with it
+gone, so is the verb — along with the registry alias table and the name-matching heuristics it would
+have needed. One path, watched or not.
+
+The one missing link: today the arrival percept produces a turn *only on stage* — an asker reaching
+the ward alone would stand mute until the intent expired. Arrival from a `go_to` must grant the same
+priority nudge an addressed say does. That is the whole change, and it is bounded by construction:
+arrivals only happen because a `go_to` was issued, `go_to`s are rare and LLM-initiated, and the nudge
+is one turn, not a lease on the scheduler.
+
+(The priority lane used to be a single last-write-wins slot, which would have made off-stage chains
+best-effort: any other addressed say landing mid-errand silently erased a link, and off stage there
+is no idle rotation to recover the dropped actor. Fixed — handoffs are now a de-duplicated FIFO like
+the player-reaction lane, `scheduler.rs::priority_handoffs`.)
+
+The cost is a handful of provider calls per errand, spent where nobody is looking — acceptable
+because errands are rare and born only from conversation. §6's acceptance test survives untouched:
+with cognition off, errands cannot start, but the city never depended on them; the Round runs
+regardless.
+
+M5 ships the static + dynamic assembly only. But the id *format* must be right now, because it
+touches the sheet — and the sheet changes once.
 
 **`moving`** — one bool per visible person. Once people walk, `you_see` churns, and the model needs to
 tell *"a man is crossing the square"* from *"a man has stopped in front of me."* One bool, and it makes
@@ -272,7 +382,7 @@ present.
 
 Stated positively, because the restraint is the design:
 
-- **It does not pick coordinates.** It picks places.
+- **It does not pick coordinates.** It picks places — opaque `place_id` handles it has been given.
 - **It does not plan a day.** It may edit one leg of one, once a night.
 - **It does not steer.** Avoidance, corridors, the Needle's pinch — all code.
 - **It does not decide when to eat, drink, or sleep.** Needs decide that, and needs preempt it.

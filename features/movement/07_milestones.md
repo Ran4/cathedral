@@ -338,8 +338,9 @@ the round's office-pegged legs plus the curfew rung already empty the streets wi
 
 ## M5 — `go_to`
 
-**Ships.** The verb. `ActionErrorCode::{UnknownPlace, NoRoute, TooFar}`. The intent, with expiry. The
-refusal. The arrival percept. The `turn.j2` change (deleting the paragraph that says *"if what you want
+**Ships.** The verbs go_to and related verbs.
+The go_to intent, with expiry. The refusal. The arrival percept.
+The `turn.j2` change (deleting the paragraph that says *"if what you want
 to do has no verb here (like walking somewhere)…"*). The sheet's three additions —
 `the_hour`, `places_you_know`, `moving`. **All twenty golden fixtures regenerated.**
 
