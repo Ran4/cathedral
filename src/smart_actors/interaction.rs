@@ -69,6 +69,13 @@ pub enum PlayerIntent {
         spatial_seq: u64,
         position: Vec3,
     },
+    /// Typed chat (the Enter box): a real `say` in any mode, unlike `DebugSay`.
+    Say {
+        request_id: String,
+        text: String,
+        spatial_seq: u64,
+        position: Vec3,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -79,6 +86,7 @@ pub enum PendingKind {
     Decline { item_id: ItemId },
     Retract { item_id: ItemId },
     DebugSay,
+    Say,
 }
 
 impl PendingKind {
@@ -88,12 +96,12 @@ impl PendingKind {
             | Self::Accept { item_id }
             | Self::Decline { item_id }
             | Self::Retract { item_id } => Some(item_id),
-            Self::Recording | Self::DebugSay => None,
+            Self::Recording | Self::DebugSay | Self::Say => None,
         }
     }
 
     fn expects_snapshot(&self) -> bool {
-        !matches!(self, Self::Recording | Self::DebugSay)
+        !matches!(self, Self::Recording | Self::DebugSay | Self::Say)
     }
 }
 
@@ -894,6 +902,36 @@ pub fn inject_debug_say(
         request_id,
         text: text.trim().to_string(),
         target_id,
+        spatial_seq: spatial.position_for_action(position),
+        position,
+    })
+}
+
+/// Typed chat (the Enter box). Unlike [`inject_debug_say`] this is a real
+/// player action in any mode; only the engine being offline refuses it.
+pub fn prepare_player_say(
+    text: &str,
+    position: Vec3,
+    runtime: &SmartActorRuntime,
+    spatial: &mut PlayerSpatialState,
+    interaction: &mut InteractionState,
+) -> Option<PlayerIntent> {
+    let text = text.trim();
+    if !runtime.interactions_enabled()
+        || text.is_empty()
+        || text.chars().count() > super::PLAYER_SPEECH_MAX_CHARS
+    {
+        return None;
+    }
+    let request_id = interaction.request_id();
+    interaction.insert_pending(
+        request_id.clone(),
+        PendingKind::Say,
+        runtime.mirror_revision.unwrap_or(0),
+    );
+    Some(PlayerIntent::Say {
+        request_id,
+        text: text.to_string(),
         spatial_seq: spatial.position_for_action(position),
         position,
     })

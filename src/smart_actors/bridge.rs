@@ -112,6 +112,14 @@ pub enum BridgeCommand {
         position_m: Position,
         spatial_seq: u64,
     },
+    /// The typed-chat box (the Enter key): the player's text spoken as a real
+    /// `say`, in any mode — `DebugPlayerSay` stays the fake-mode test hook.
+    PlayerSay {
+        request_id: String,
+        text: String,
+        position_m: Position,
+        spatial_seq: u64,
+    },
     PlayerOffer {
         request_id: String,
         target_id: ActorId,

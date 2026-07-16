@@ -16,8 +16,10 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use bevy::input::InputSystems;
+use bevy::input::keyboard::{Key, KeyboardInput};
+use bevy::input::{ButtonState, InputSystems};
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 use bevy::reflect::enums::{DynamicEnum, DynamicVariant};
 use bevy::reflect::{TypeInfo, Typed};
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk};
@@ -103,8 +105,12 @@ impl Plugin for DrivePlugin {
             // After InputSystems so the injected press survives the frame's
             // `ButtonInput` clear, and after UiSystems::Focus so an injected
             // `Interaction::Pressed` is not overwritten until the focus
-            // system naturally resets it (to None) on the next frame.
-            run_drive_script.after(InputSystems).after(UiSystems::Focus),
+            // system naturally resets it (to None) on the next frame. Before
+            // the chat box, which reads (and then eats) the frame's keyboard.
+            run_drive_script
+                .after(InputSystems)
+                .after(UiSystems::Focus)
+                .before(crate::smart_actors::ChatInputSet),
         );
     }
 }
@@ -128,6 +134,9 @@ fn spawn_watchdog(timeout: Duration) {
 #[derive(Debug, Clone, PartialEq)]
 enum Action {
     Key(KeyCode),
+    /// Inject text as a raw `KeyboardInput` message, the stream the chat box
+    /// reads. `;` cannot appear in the text — it separates script actions.
+    Type(String),
     Click(String),
     Shot(String),
     Sleep(f64),
@@ -143,6 +152,7 @@ impl Action {
     fn describe(&self) -> String {
         match self {
             Self::Key(key) => format!("key {key:?}"),
+            Self::Type(text) => format!("type {text}"),
             Self::Click(name) => format!("click {name}"),
             Self::Shot(name) => format!("shot {name}"),
             Self::Sleep(seconds) => format!("sleep {seconds}"),
@@ -179,6 +189,8 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
         }
         "click" if !argument.is_empty() => Ok(Action::Click(argument.into())),
         "click" => Err("`click` needs a name substring, e.g. `click Continue`".into()),
+        "type" if !argument.is_empty() => Ok(Action::Type(argument.into())),
+        "type" => Err("`type` needs text, e.g. `type Hello there`".into()),
         "shot" => {
             if argument.is_empty() {
                 return Err("`shot` needs a file name, e.g. `shot menu_open`".into());
@@ -232,6 +244,7 @@ fn keycode_from_name(name: &str) -> Option<KeyCode> {
 #[derive(Debug, Clone, PartialEq)]
 enum Directive {
     PressKey(KeyCode),
+    Type(String),
     Click(String),
     Shot(String),
     Sound(String),
@@ -318,6 +331,7 @@ impl Scheduler {
         self.push_log(now, &action.describe());
         match action {
             Action::Key(key) => Some(Directive::PressKey(key)),
+            Action::Type(text) => Some(Directive::Type(text)),
             Action::Click(name) => Some(Directive::Click(name)),
             Action::Shot(name) => {
                 self.awaiting_shot = true;
@@ -373,6 +387,8 @@ fn run_drive_script(
     time: Res<Time<Real>>,
     mut state: ResMut<DriveState>,
     mut keys: ResMut<ButtonInput<KeyCode>>,
+    mut keyboard_events: MessageWriter<KeyboardInput>,
+    windows: Query<Entity, With<PrimaryWindow>>,
     runtime: Option<Res<SmartActorRuntime>>,
     bridge: Option<Res<BridgeHandle>>,
     players: Query<&GlobalTransform, With<PlayerController>>,
@@ -404,6 +420,27 @@ fn run_drive_script(
             keys.press(key);
             state.pressed_key = Some(key);
         }
+        Some(Directive::Type(text)) => match windows.single() {
+            // One raw keyboard message carrying the whole string: the chat box
+            // inserts `text` verbatim, exactly as a real keypress would arrive.
+            // F35 exists on no keybinding, so the ButtonInput echo Bevy's input
+            // system produces from this message next frame stays inert.
+            Ok(window) => {
+                for state in [ButtonState::Pressed, ButtonState::Released] {
+                    keyboard_events.write(KeyboardInput {
+                        key_code: KeyCode::F35,
+                        logical_key: Key::Character(text.as_str().into()),
+                        state,
+                        text: (state == ButtonState::Pressed).then(|| text.as_str().into()),
+                        repeat: false,
+                        window,
+                    });
+                }
+            }
+            Err(_) => drive_log(&format!(
+                "[drive] {now:.1}s warning: no primary window; `type` skipped"
+            )),
+        },
         Some(Directive::Click(name)) => {
             let needle = name.to_lowercase();
             let mut target = interactions
@@ -489,6 +526,19 @@ mod tests {
                 Action::Quit,
             ]
         );
+    }
+
+    #[test]
+    fn type_keeps_inner_spaces_and_requires_text() {
+        assert_eq!(
+            parse_script("key Enter; type Hello there, Ilse!; key Enter"),
+            Ok(vec![
+                Action::Key(KeyCode::Enter),
+                Action::Type("Hello there, Ilse!".into()),
+                Action::Key(KeyCode::Enter),
+            ])
+        );
+        assert!(parse_script("type").is_err());
     }
 
     #[test]

@@ -1132,6 +1132,57 @@ fn debug_say_is_fake_only_and_gets_the_real_sim_validation() {
     assert_eq!(code.as_deref(), Some("text_too_long"));
 }
 
+/// The Enter chat box: a typed `say` is a real `say` in ANY mode — the fake
+/// gate is `DebugPlayerSay`'s alone — and, like a transcribed utterance, it
+/// hands the nearest LLM hearer the protected player-reaction slot.
+#[test]
+fn typed_player_say_works_outside_fake_mode_and_nudges_the_nearest_hearer() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    assert_eq!(harness.engine.scheduler().priority_actor_id(), None);
+
+    let messages = harness.send(EngineCommand::PlayerSay {
+        request_id: "say-1".into(),
+        text: "Good morning!".into(),
+        position_m: PLAYER_SPAWN,
+        spatial_seq: 1,
+    });
+    let (success, code, _) = result(&messages);
+    assert!(success, "{code:?}");
+
+    let said = speeches(&messages);
+    assert_eq!(said.len(), 1);
+    let EngineMessage::Speech {
+        speaker_id,
+        target_id,
+        recipient_ids,
+        ..
+    } = said[0]
+    else {
+        unreachable!()
+    };
+    assert_eq!(*speaker_id, player());
+    assert_eq!(*target_id, None, "typed chat is a broadcast");
+    assert!(recipient_ids.contains(&ActorId::from_raw("k0fb1")));
+    // The nearest LLM hearer got the protected reaction slot (it may already
+    // have been submitted within the same poll).
+    assert!(
+        harness.engine.scheduler().priority_actor_id().is_some()
+            || harness.engine.scheduler().in_flight_is_player_reaction()
+    );
+
+    // Full sim validation still applies: the 500-character `say` cap.
+    let messages = harness.send(EngineCommand::PlayerSay {
+        request_id: "say-2".into(),
+        text: "x".repeat(501),
+        position_m: PLAYER_SPAWN,
+        spatial_seq: 2,
+    });
+    let (success, code, _) = result(&messages);
+    assert!(!success);
+    assert_eq!(code.as_deref(), Some("text_too_long"));
+}
+
 /// A targeted debug say hands the addressee the next *selection* slot — not an
 /// immediate turn: the inter-turn delay and the floor still govern the timing
 /// (`server.py:1050-1051`).

@@ -638,6 +638,17 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
             position_m: to_sim(position_m),
             spatial_seq: to_seq(spatial_seq),
         },
+        BridgeCommand::PlayerSay {
+            request_id,
+            text,
+            position_m,
+            spatial_seq,
+        } => EngineCommand::PlayerSay {
+            request_id,
+            text,
+            position_m: to_sim(position_m),
+            spatial_seq: to_seq(spatial_seq),
+        },
         BridgeCommand::PlayerOffer {
             request_id,
             target_id,

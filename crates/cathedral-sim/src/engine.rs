@@ -25,7 +25,7 @@ use std::{
 use serde_json::{Value, json};
 
 use crate::{
-    MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS,
+    HEARING_RADIUS_M, MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS,
     actions::apply_action,
     areas::AreaMap,
     attention::{
@@ -340,6 +340,16 @@ pub enum EngineCommand {
         request_id: String,
         text: String,
         target_id: Option<ActorId>,
+        position_m: Vec3,
+        spatial_seq: i64,
+    },
+    /// The typed-chat box (the Enter key). Unlike [`Self::DebugPlayerSay`] it
+    /// is available in every mode: typing is a first-class way to speak, not a
+    /// test hook. No target — like a transcribed utterance, whoever is in
+    /// hearing range hears it.
+    PlayerSay {
+        request_id: String,
+        text: String,
         position_m: Vec3,
         spatial_seq: i64,
     },
@@ -1076,6 +1086,13 @@ impl Engine {
                 out,
             ),
 
+            EngineCommand::PlayerSay {
+                request_id,
+                text,
+                position_m,
+                spatial_seq,
+            } => self.player_say(now, &request_id, &text, position_m, spatial_seq, out),
+
             EngineCommand::PlayerSound { sound_id } => self.player_sound(now, &sound_id, out),
 
             EngineCommand::DebugSound {
@@ -1305,6 +1322,42 @@ impl Engine {
         {
             self.scheduler
                 .prioritize(&self.world, target_id, false, now);
+        }
+        self.finish_player_action(now, request_id, result, out);
+    }
+
+    /// The typed-chat `say` (the Enter box), available in every mode. From the
+    /// applied `say` onward this is the transcription path
+    /// (`speech_router::resolve_transcription`): full sim validation, and being
+    /// heard is followed by the earliest possible reaction — the nearest LLM
+    /// listener takes the next protected player-reaction slot.
+    fn player_say(
+        &mut self,
+        now: f64,
+        request_id: &str,
+        text: &str,
+        position_m: Vec3,
+        spatial_seq: i64,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        let result = self.apply_player_action("say", &json!({"text": text}), Some((spatial_seq, position_m)));
+        if result.is_ok() {
+            let player_id = self.config.player_id.clone();
+            let utterance_position = self.world.characters[&player_id].position_m();
+            let nearest = self
+                .world
+                .characters_within(utterance_position, HEARING_RADIUS_M, Some(&player_id))
+                .into_iter()
+                .find(|candidate| {
+                    self.world
+                        .characters
+                        .get(candidate)
+                        .is_some_and(|character| character.control() == Control::Llm)
+                });
+            if let Some(nearest) = nearest {
+                self.scheduler
+                    .prioritize_player_reaction(&self.world, &nearest, now);
+            }
         }
         self.finish_player_action(now, request_id, result, out);
     }

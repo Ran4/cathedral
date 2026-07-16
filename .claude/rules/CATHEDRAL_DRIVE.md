@@ -6,8 +6,10 @@ The game runs windowed 1280x720, executes the actions (~0.5 s apart),
 prints a `[drive] 3.2s key Escape` evidence line per action to stdout,
 and exits on its own — no `pkill` needed.
 
-Actions: `key <KeyCode>` (e.g. `Escape`, `KeyZ`, `F5`), `click <Name
-substring>` (case-insensitive match on UI `Name`), `shot <name>` (PNG to
+Actions: `key <KeyCode>` (e.g. `Escape`, `KeyZ`, `F5`), `type <text>` (inject
+text into the Enter chat box as a raw keyboard message; `;` cannot appear in
+the text), `click <Name substring>` (case-insensitive match on UI `Name`),
+`shot <name>` (PNG to
 `logs/latest_session/screenshots/<name>.png`), `sleep <seconds>`, `wait-online` (until the
 actor engine is ready; 30 s timeout), `sound <sound_id>` (emit a catalog
 world sound, e.g. `sound town_bell` — the stand-in trigger for world causes

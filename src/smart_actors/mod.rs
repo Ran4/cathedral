@@ -13,6 +13,7 @@ pub mod model;
 
 mod actor_sheet;
 mod area_debug;
+mod chat;
 mod clock;
 mod config_menu;
 mod hud;
@@ -32,6 +33,7 @@ use cathedral_sim::{
 };
 use serde::{Deserialize, Serialize};
 
+pub use chat::ChatInputSet;
 pub use config_menu::ConfigMenuState;
 pub use targeting::ActorFocus;
 
@@ -376,12 +378,16 @@ impl Plugin for SmartActorsPlugin {
             .init_resource::<ActorFocus>()
             .init_resource::<interaction::InteractionState>()
             .init_resource::<interaction::PlayerSpatialState>()
+            .init_resource::<chat::ChatInputState>()
             .insert_resource(interaction::MicrophoneInputState::with_backend(
                 self.config.initial_stt_backend(),
             ))
             .init_resource::<speech::SpeechPresentationState>()
             .add_message::<interaction::PlayerIntent>()
             .add_message::<InjectPlayerTranscript>()
+            // Idempotent when InputPlugin already registered it; needed for the
+            // chat box in headless harnesses that skip Bevy's input plugin.
+            .add_message::<bevy::input::keyboard::KeyboardInput>()
             .add_message::<speech::PresentSpeech>()
             .add_message::<speech::TtsClipReady>()
             .add_message::<speech::TtsClipFailed>()
@@ -409,8 +415,19 @@ impl Plugin for SmartActorsPlugin {
                     area_debug::spawn_area_debug_ui,
                     actor_sheet::spawn_actor_sheet,
                     clock::spawn_clock_hud,
+                    chat::spawn_chat_input,
                 )
                     .after(hud::spawn_smart_actor_hud),
+            )
+            .add_systems(
+                PreUpdate,
+                // After input collection (and after drive-mode injection, which
+                // orders itself before this set) so the box reads this frame's
+                // keys and its `ButtonInput` reset hides them from everyone
+                // running later.
+                chat::collect_chat_input
+                    .in_set(chat::ChatInputSet)
+                    .after(bevy::input::InputSystems),
             )
             // The city marks its wells and cisterns during Startup; their loops
             // start once, after every fixture exists.
@@ -478,6 +495,7 @@ impl Plugin for SmartActorsPlugin {
                     area_debug::update_area_debug_ui,
                     area_debug::update_actor_status_visibility,
                     actor_sheet::update_actor_sheet,
+                    chat::update_chat_input_ui,
                     hud::update_smart_actor_hud,
                 )
                     .chain()
@@ -1395,6 +1413,17 @@ fn intent_to_command(intent: &interaction::PlayerIntent) -> Result<bridge::Bridg
             position_m: position(*value)?,
             spatial_seq: *spatial_seq,
         },
+        interaction::PlayerIntent::Say {
+            request_id,
+            text,
+            spatial_seq,
+            position: value,
+        } => bridge::BridgeCommand::PlayerSay {
+            request_id: request_id.clone(),
+            text: text.clone(),
+            position_m: position(*value)?,
+            spatial_seq: *spatial_seq,
+        },
     })
 }
 
@@ -1407,7 +1436,8 @@ fn intent_request_id(intent: &interaction::PlayerIntent) -> Option<&str> {
         | interaction::PlayerIntent::Accept { request_id, .. }
         | interaction::PlayerIntent::Decline { request_id, .. }
         | interaction::PlayerIntent::Retract { request_id, .. }
-        | interaction::PlayerIntent::DebugSay { request_id, .. } => Some(request_id),
+        | interaction::PlayerIntent::DebugSay { request_id, .. }
+        | interaction::PlayerIntent::Say { request_id, .. } => Some(request_id),
     }
 }
 
