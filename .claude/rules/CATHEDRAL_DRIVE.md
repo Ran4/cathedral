@@ -13,7 +13,9 @@ the text), `click <Name substring>` (case-insensitive match on UI `Name`),
 `logs/latest_session/screenshots/<name>.png`), `sleep <seconds>`, `wait-online` (until the
 actor engine is ready; 30 s timeout), `sound <sound_id>` (emit a catalog
 world sound, e.g. `sound town_bell` — the stand-in trigger for world causes
-the sim lacks), `quit`. Without `quit` the game exits
+the sim lacks), `tp <x> <y> <z> [yaw_deg [pitch_deg]]` (teleport the player
+and aim the view — yaw 0 looks toward -Z, positive pitch looks up; switches
+to flying so an elevated vantage holds for a `shot`), `quit`. Without `quit` the game exits
 ~2 s after the last action; a watchdog aborts after `CATHEDRAL_DRIVE_TIMEOUT`
 seconds (default 60). The `[drive]` lines are also mirrored into the
 session's `logs/latest_session/logs.jsonl` (source `"drive"`).

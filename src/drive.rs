@@ -25,7 +25,7 @@ use bevy::reflect::{TypeInfo, Typed};
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk};
 use bevy::ui::UiSystems;
 
-use crate::controller::PlayerController;
+use crate::controller::{PlayerController, TeleportPlayer};
 use crate::session_log;
 use crate::smart_actors::SmartActorRuntime;
 use crate::smart_actors::bridge::{BridgeCommand, BridgeHandle};
@@ -145,6 +145,13 @@ enum Action {
     /// stand-in for world causes the sim does not model yet — nothing rings
     /// the town bell (no clock, no calendar), so drive scripts do.
     Sound(String),
+    /// Teleport the player to a world position and aim the view. Yaw 0 looks
+    /// toward -Z, positive pitch looks up; flight engages so the pose holds.
+    Tp {
+        position: Vec3,
+        yaw_degrees: f32,
+        pitch_degrees: f32,
+    },
     Quit,
 }
 
@@ -158,6 +165,14 @@ impl Action {
             Self::Sleep(seconds) => format!("sleep {seconds}"),
             Self::WaitOnline => "wait-online".into(),
             Self::Sound(sound_id) => format!("sound {sound_id}"),
+            Self::Tp {
+                position,
+                yaw_degrees,
+                pitch_degrees,
+            } => format!(
+                "tp {} {} {} {yaw_degrees} {pitch_degrees}",
+                position.x, position.y, position.z
+            ),
             Self::Quit => "quit".into(),
         }
     }
@@ -219,6 +234,33 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
                 ))
             }
         }
+        "tp" => {
+            let numbers = argument
+                .split_whitespace()
+                .map(|token| token.parse::<f32>())
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|error| format!("bad number in `{statement}`: {error}"))?;
+            match numbers[..] {
+                [x, y, z] => Ok(Action::Tp {
+                    position: Vec3::new(x, y, z),
+                    yaw_degrees: 0.0,
+                    pitch_degrees: 0.0,
+                }),
+                [x, y, z, yaw] => Ok(Action::Tp {
+                    position: Vec3::new(x, y, z),
+                    yaw_degrees: yaw,
+                    pitch_degrees: 0.0,
+                }),
+                [x, y, z, yaw, pitch] => Ok(Action::Tp {
+                    position: Vec3::new(x, y, z),
+                    yaw_degrees: yaw,
+                    pitch_degrees: pitch,
+                }),
+                _ => Err(format!(
+                    "`tp` needs `x y z [yaw_deg [pitch_deg]]`, got `{statement}`"
+                )),
+            }
+        }
         "wait-online" if argument.is_empty() => Ok(Action::WaitOnline),
         "quit" if argument.is_empty() => Ok(Action::Quit),
         "wait-online" | "quit" => Err(format!("`{verb}` takes no argument, got `{statement}`")),
@@ -248,6 +290,11 @@ enum Directive {
     Click(String),
     Shot(String),
     Sound(String),
+    Tp {
+        position: Vec3,
+        yaw_degrees: f32,
+        pitch_degrees: f32,
+    },
     Quit,
 }
 
@@ -346,6 +393,15 @@ impl Scheduler {
                 None
             }
             Action::Sound(sound_id) => Some(Directive::Sound(sound_id)),
+            Action::Tp {
+                position,
+                yaw_degrees,
+                pitch_degrees,
+            } => Some(Directive::Tp {
+                position,
+                yaw_degrees,
+                pitch_degrees,
+            }),
             Action::Quit => {
                 self.finished = true;
                 Some(Directive::Quit)
@@ -393,6 +449,7 @@ fn run_drive_script(
     bridge: Option<Res<BridgeHandle>>,
     players: Query<&GlobalTransform, With<PlayerController>>,
     mut interactions: Query<(&Name, &mut Interaction)>,
+    mut teleports: MessageWriter<TeleportPlayer>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if let Some(key) = state.pressed_key.take() {
@@ -498,6 +555,17 @@ fn run_drive_script(
                 )),
             }
         }
+        Some(Directive::Tp {
+            position,
+            yaw_degrees,
+            pitch_degrees,
+        }) => {
+            teleports.write(TeleportPlayer {
+                position,
+                yaw_degrees,
+                pitch_degrees,
+            });
+        }
         Some(Directive::Quit) => {
             exit.write(AppExit::Success);
         }
@@ -539,6 +607,29 @@ mod tests {
             ])
         );
         assert!(parse_script("type").is_err());
+    }
+
+    #[test]
+    fn tp_parses_position_and_optional_view() {
+        assert_eq!(
+            parse_script("tp 10 2 -30"),
+            Ok(vec![Action::Tp {
+                position: Vec3::new(10.0, 2.0, -30.0),
+                yaw_degrees: 0.0,
+                pitch_degrees: 0.0,
+            }])
+        );
+        assert_eq!(
+            parse_script("tp 64 28 -270 90 -15.5"),
+            Ok(vec![Action::Tp {
+                position: Vec3::new(64.0, 28.0, -270.0),
+                yaw_degrees: 90.0,
+                pitch_degrees: -15.5,
+            }])
+        );
+        assert!(parse_script("tp 1 2").is_err());
+        assert!(parse_script("tp 1 2 3 4 5 6").is_err());
+        assert!(parse_script("tp here").is_err());
     }
 
     #[test]

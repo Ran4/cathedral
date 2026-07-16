@@ -19,13 +19,16 @@
 use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::{
+    anti_alias::smaa::Smaa,
     audio::SpatialListener,
     camera::Exposure,
     core_pipeline::tonemapping::Tonemapping,
     input::mouse::AccumulatedMouseMotion,
     light::AtmosphereEnvironmentMapLight,
-    pbr::AtmosphereSettings,
+    pbr::{AtmosphereSettings, ScreenSpaceAmbientOcclusion},
+    post_process::bloom::Bloom,
     prelude::*,
+    render::view::Msaa,
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 
@@ -90,13 +93,14 @@ impl Plugin for ControllerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CollisionWorld>()
             .init_resource::<ControllerInput>()
+            .add_message::<TeleportPlayer>()
             .insert_resource(Time::<Fixed>::from_hz(FIXED_HZ))
             .add_systems(Startup, (spawn_player, initially_capture_cursor))
             .add_systems(FixedUpdate, fixed_player_movement)
             .add_systems(
                 RunFixedMainLoop,
                 (
-                    (collect_input, mouse_look)
+                    (collect_input, mouse_look, apply_teleports)
                         .chain()
                         .in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop),
                     interpolate_player.in_set(RunFixedMainLoopSystems::AfterFixedMainLoop),
@@ -460,9 +464,54 @@ fn spawn_player(mut commands: Commands) {
                 },
                 Exposure { ev100: 12.8 },
                 Tonemapping::AcesFitted,
+                // Screen-space AO is the only occlusion signal a fully dynamic
+                // city has: it darkens reveals, eaves, and alley mouths that the
+                // flat ambient otherwise fills in. It requires MSAA off, so SMAA
+                // takes over edge smoothing.
+                Msaa::Off,
+                Smaa::default(),
+                ScreenSpaceAmbientOcclusion::default(),
+                // Subtle energy bleed for the sky, sunlit plaster, and the rose
+                // window; NATURAL keeps it below music-video threshold.
+                Bloom::NATURAL,
                 Transform::from_xyz(0.0, EYE_OFFSET, 0.0),
             ));
         });
+}
+
+/// Script-driven relocation (the drive `tp` action): place the player, aim the
+/// view, and hold still in flight so elevated vantages keep for a screenshot.
+#[derive(Message, Debug, Clone, Copy)]
+pub struct TeleportPlayer {
+    pub position: Vec3,
+    pub yaw_degrees: f32,
+    pub pitch_degrees: f32,
+}
+
+fn apply_teleports(
+    mut teleports: MessageReader<TeleportPlayer>,
+    player: Single<
+        (&mut PlayerController, &mut PhysicalPosition, &mut Transform),
+        Without<PlayerCamera>,
+    >,
+    mut camera: Single<&mut Transform, (With<PlayerCamera>, Without<PlayerController>)>,
+) {
+    let Some(teleport) = teleports.read().last().copied() else {
+        return;
+    };
+    let (mut controller, mut physical, mut transform) = player.into_inner();
+    controller.flying = true;
+    controller.velocity = Vec3::ZERO;
+    controller.yaw = teleport.yaw_degrees.to_radians();
+    controller.pitch = teleport
+        .pitch_degrees
+        .to_radians()
+        .clamp(-PITCH_LIMIT, PITCH_LIMIT);
+    physical.previous = teleport.position;
+    physical.current = teleport.position;
+    transform.translation = teleport.position;
+    transform.rotation = Quat::from_rotation_y(controller.yaw);
+    camera.rotation = Quat::from_rotation_x(controller.pitch);
 }
 
 fn initially_capture_cursor(mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>) {
