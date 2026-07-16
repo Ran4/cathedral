@@ -38,9 +38,9 @@ impl Significance {
     /// actions while making reactive ambient turns materially cheaper.
     pub const fn output_token_budget(self) -> u32 {
         match self {
-            Self::Major => 1_200,
-            Self::Minor => 700,
-            Self::Ambient => 350,
+            Self::Major => 2_400,
+            Self::Minor => 1_400,
+            Self::Ambient => 700,
         }
     }
 }
