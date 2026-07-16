@@ -436,6 +436,29 @@ count increase in the plan generator (§1 D6 — *your* call, it's a map revisio
 smoke, AutoExposure (recommended; needs a compensation curve so night stays night), volumetric fog
 (compiled in, one component away), NPC bodies.
 
+### 8.0 Cross-checks from a parallel code survey
+
+A second, independent code-mapping pass (separate agent, same night) confirmed the diagnosis and
+added three things this doc should own:
+
+- **The cathedral interior has its own texture bug**: `scene.rs:153` loads `limestone.png` with the
+  default *clamp* sampler and the interior is built from scaled unit cuboids (0..1 UVs per face), so
+  one texture tile stretches across every wall slab. The city avoided this via
+  `load_repeating_texture` + real UVs; the cathedral needs the same treatment — but note a repeating
+  sampler alone won't fix it, since the scaled-cuboid UVs never leave 0..1: either author UVs in a
+  custom mesh (like `cathedral_floor_mesh` already does) or set `StandardMaterial::uv_transform`
+  per broad face class. Untouched tonight; the interior deserves its own evening.
+- **Existing docs to fold in rather than duplicate**: `features/more_interesting_houses.md` is the
+  *gameplay* half of §5.6 (shopfronts, signs, functions, sounds — my hanging-sign props are its
+  visual advance guard) and `features/performance_improvements.md` (1,500 walking actors) already
+  plans `VisibilityRange` fades, shorter cascades and an optional depth prepass + occlusion culling
+  — §7 here should be executed together with it.
+- **Backface culling**: every `textured()` city material is `double_sided + cull_mode: None`. The
+  survey flags reclaiming it as a free perf win — *partially true now*: since tonight, roof
+  undersides at the eaves and the hollow shells behind punched windows genuinely need the inner
+  faces on walls and roofs; but ground/road/site surfaces and most props don't. Reclaim it
+  per-material, not wholesale.
+
 ### 8.1 Compare for yourself
 
 | Claim | Before | After |
