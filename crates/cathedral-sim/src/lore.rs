@@ -143,6 +143,16 @@ pub struct LoreProfile {
     pub children: Vec<ActorId>,
     pub circumstances: Vec<String>,
     pub conditions: Vec<String>,
+    /// Where they live, as a resident would say it — the baked
+    /// `place_description` from `assets/world/homes.json` ("a house in the
+    /// Cinder Ward, near the Shambles well"), or the explicit no-fixed-bed
+    /// framing for the ~100 bedless. Not authored in the character sheet:
+    /// [`LoreCast::into_character_sheets`] joins it in from the bake, so the
+    /// answer to "Where do you live?" stays consistent with where the round
+    /// walks them at the Snuffing. `None` only for a sheet the bake has not
+    /// seen yet (and for non-lore fixtures, which have no profile at all).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub home: Option<String>,
     pub core_character_description: String,
     pub extended_character_description: String,
     /// How readily this person speaks *first* — the authored override on the
@@ -315,7 +325,11 @@ impl LoreCharacterSheet {
         Ok(())
     }
 
-    fn into_character_sheet(self, occupation_display: Option<String>) -> CharacterSheet {
+    fn into_character_sheet(
+        self,
+        occupation_display: Option<String>,
+        home: Option<String>,
+    ) -> CharacterSheet {
         let voice_key = self
             .voice_key
             .clone()
@@ -355,6 +369,7 @@ impl LoreCharacterSheet {
                 children: self.children,
                 circumstances: self.circumstances,
                 conditions: self.conditions,
+                home,
                 core_character_description: self.core_character_description,
                 extended_character_description: self.extended_character_description,
                 curiosity: self.curiosity,
@@ -558,9 +573,16 @@ impl LoreCast {
     }
 
     pub(crate) fn into_character_sheets(self) -> Vec<CharacterSheet> {
+        // The baked home-binding's spoken form, joined in by id so every
+        // profile knows where it lives (or that it has no bed) — see
+        // `homes.rs`.
+        let mut homes = crate::homes::place_descriptions();
         self.characters
             .into_iter()
-            .map(|(sheet, display)| sheet.into_character_sheet(display))
+            .map(|(sheet, display)| {
+                let home = homes.remove(sheet.id.as_str());
+                sheet.into_character_sheet(display, home)
+            })
             .collect()
     }
 }

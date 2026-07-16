@@ -19,9 +19,20 @@ The algorithm, deterministic and byte-reproducible like ``bake_navigation.py``:
         home = the nearest candidate door (by XZ to my spawn), tie-broken by id
         claim it
 
-The ~132 people with a homeless circumstance get *no* entry — the absence of a
-home is content (``04_the_round.md`` §3): they are the ones still in the street
-at the Snuffing, exactly whom the watch stops.
+The ~132 people with a homeless circumstance get no ``homes`` entry — the
+absence of a home is content (``04_the_round.md`` §3): they are the ones still
+in the street at the Snuffing, exactly whom the watch stops.
+
+Each entry also carries a **readable place**, so the prompt can tell the model
+where it lives without ids or coordinates
+(``features/npc_knows_where_it_lives__inject_home_into_prompt.md``): the
+building's ward-level ``district`` plus the nearest named place from the
+wayfinding bake (``assets/world/places.json``), folded into a spoken
+``place_description`` ("a house in the Cinder Ward, near the Shambles well").
+The bedless get the same treatment under ``bedless``: an explicit no-fixed-bed
+framing anchored to their spawn ("no fixed bed — you sleep rough in the Reed
+Ward, near the Alder Moorings, wherever the watch will let you lie"), so the
+LLM can *play* the circumstance instead of silently improvising a cottage.
 
 Run: ``uv run scripts/bake_homes.py`` (or plain ``python3``; no dependencies).
 """
@@ -36,6 +47,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CHARACTERS_DIR = ROOT / "lore" / "characters"
 BUILDINGS_PATH = ROOT / "lore" / "places" / "ombreval_buildings.json"
 NAV_PATH = ROOT / "assets" / "world" / "navigation.json"
+PLACES_PATH = ROOT / "assets" / "world" / "places.json"
 OUT_PATH = ROOT / "assets" / "world" / "homes.json"
 
 # A homeless circumstance means no bed — and being in the street at curfew is the
@@ -61,6 +73,40 @@ WARD_TO_DISTRICTS = {
 }
 
 
+def spoken(name: str) -> str:
+    """A place name as it sits mid-sentence: 'The Tallage' → 'the Tallage'."""
+    return "the " + name[4:] if name.startswith("The ") else name
+
+
+# Beyond this, the nearest named place is a direction, not a neighbour:
+# "toward the Ilvane anchorhold" instead of a misleading "near".
+NEARBY_M = 120.0
+
+
+def location_phrase(place: dict, distance: float) -> str:
+    """How a resident hangs a spot on the nearest named place: 'near the
+    Tallage', 'off Cinder Row', 'by the Wool Gate' — or, out in the unnamed
+    streets, 'toward' whatever is closest."""
+    if distance > NEARBY_M:
+        return f"toward {spoken(place['name'])}"
+    preposition = {"route": "off", "gate": "by", "bridge": "by"}.get(place["kind"], "near")
+    return f"{preposition} {spoken(place['name'])}"
+
+
+def bedless_description(circumstances: set[str], ward: str, place: dict, distance: float) -> str:
+    """The explicit no-fixed-bed framing (the feature's 'the homeless are
+    content here too'): the model should *know* the circumstance, not stare at
+    an empty field. The anchoress is bedless in the bake but not homeless —
+    her bed is the cell she is bricked into."""
+    if "enclosed_religious" in circumstances:
+        return f"the anchorhold cell at {spoken(place['name'])}; you are enclosed there for life"
+    phrase = location_phrase(place, distance)
+    where = f"in the {ward}, {phrase}" if ward else phrase
+    if "insecure_lodging" in circumstances:
+        return f"no bed of your own — a night-to-night lodging {where}, easily lost"
+    return f"no fixed bed — you sleep rough {where}, wherever the watch will let you lie"
+
+
 def load_characters() -> list[dict]:
     chars = []
     for path in sorted(CHARACTERS_DIR.rglob("*.json")):
@@ -76,6 +122,28 @@ def main() -> None:
     nav = json.loads(NAV_PATH.read_text())
     nodes = nav["nodes"]
     door_node_by_building = {d["building"]: (d["edge"], d["node"]) for d in nav["doors"]}
+
+    # The wayfinding bake's named places (the speakable city) and ward names.
+    places_doc = json.loads(PLACES_PATH.read_text())
+    named_places = [
+        {**place, "x": nodes[place["node"]][0], "z": nodes[place["node"]][1]}
+        for place in places_doc["places"]
+    ]
+    ward_names = {ward["ward"]: ward["name"] for ward in places_doc["wards"]}
+
+    def nearest_place(x: float, z: float, skip_names: str | None = None) -> tuple[dict, float]:
+        best = None
+        best_key = None
+        for place in named_places:
+            if skip_names and skip_names in place["name"].lower():
+                continue
+            d2 = (place["x"] - x) ** 2 + (place["z"] - z) ** 2
+            key = (d2, place["id"])  # tie-break by place id for determinism
+            if best_key is None or key < best_key:
+                best_key = key
+                best = place
+        assert best is not None and best_key is not None
+        return best, math.sqrt(best_key[0])
 
     # Residential buildings that actually have a baked (reachable) door.
     residential: list[dict] = []
@@ -99,6 +167,8 @@ def main() -> None:
 
     claimed: set[str] = set()
     homes: dict[str, dict] = {}
+    bedless: dict[str, dict] = {}
+    landmark_distances: list[float] = []
     stats = {"housed": 0, "homeless_by_circumstance": 0, "ward_local": 0, "fallback": 0, "no_candidate": 0}
 
     def nearest_unclaimed(pool: list[dict], sx: float, sz: float) -> dict | None:
@@ -118,12 +188,27 @@ def main() -> None:
         cid = c["id"]
         if cid == "player":
             continue
-        if HOMELESS_CIRCUMSTANCES.intersection(c.get("circumstances", [])):
-            stats["homeless_by_circumstance"] += 1
-            continue
         spawn = c["spawn_location"]
         sx, sz = spawn["x"], spawn["z"]
         ward = c.get("planning_ward", "")
+
+        circumstances = HOMELESS_CIRCUMSTANCES.intersection(c.get("circumstances", []))
+        if circumstances:
+            stats["homeless_by_circumstance"] += 1
+            # The framing is anchored to the spawn: where they actually are is
+            # where they actually sleep. The anchoress skips her own cell so
+            # "the anchorhold cell at the anchorhold" never bakes.
+            skip = "anchorhold" if "enclosed_religious" in circumstances else None
+            place, distance = nearest_place(sx, sz, skip_names=skip)
+            landmark_distances.append(distance)
+            bedless[cid] = {
+                "ward": ward_names.get(ward, ""),
+                "landmark": place["name"],
+                "place_description": bedless_description(
+                    circumstances, ward_names.get(ward, ""), place, distance
+                ),
+            }
+            continue
 
         ward_pool: list[dict] = []
         for district in WARD_TO_DISTRICTS.get(ward, []):
@@ -140,20 +225,27 @@ def main() -> None:
             continue
 
         claimed.add(home["id"])
+        place, distance = nearest_place(home["x"], home["z"])
+        landmark_distances.append(distance)
+        district_phrase = f"a house in the {home['district']}" if home["district"] else "a house"
         homes[cid] = {
             "building": home["id"],
             "edge": home["edge"],
             "door_node": home["node"],
             "point": [round(home["x"], 4), round(home["z"], 4)],
+            "ward": home["district"],
+            "landmark": place["name"],
+            "place_description": f"{district_phrase}, {location_phrase(place, distance)}",
         }
         stats["housed"] += 1
         stats[source] += 1
 
     doc = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_by": "scripts/bake_homes.py",
         "source_seed": nav.get("source_seed"),
         "homes": dict(sorted(homes.items())),
+        "bedless": dict(sorted(bedless.items())),
     }
     OUT_PATH.write_text(json.dumps(doc, indent=1) + "\n")
 
@@ -163,6 +255,9 @@ def main() -> None:
           f"(ward-local {stats['ward_local']}, fallback {stats['fallback']})")
     print(f"  homeless by circumstance: {stats['homeless_by_circumstance']}")
     print(f"  eligible but no candidate left: {stats['no_candidate']}")
+    print(f"  nearest-landmark distance: "
+          f"max {max(landmark_distances):.0f} m, "
+          f"mean {sum(landmark_distances) / len(landmark_distances):.0f} m")
 
 
 if __name__ == "__main__":

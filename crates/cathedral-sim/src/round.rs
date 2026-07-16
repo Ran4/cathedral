@@ -41,6 +41,7 @@ use crate::{
     character::{Character, IntentTarget, Movement},
     clock::{Office, WorldClock, Weekday},
     event::DomainEvent,
+    homes::{HOMES_JSON, HomesDoc},
     ids::{ActorId, PlaceId},
     lore::Significance,
     math::Vec3,
@@ -113,10 +114,6 @@ const SOURCES: &[(&str, &str)] = &[
 /// exactly as `bake_navigation.py`'s output is embedded in the game host. Static
 /// data, compiled in, not read at runtime: the sim keeps its no-IO decree.
 const ROUNDS_JSON: &str = include_str!("../../../assets/world/rounds.json");
-/// The baked home-binding (`scripts/bake_homes.py`). A character absent from it
-/// has no bed — the ~100 with a homeless circumstance — and is the person still
-/// in the street at the Snuffing (`features/movement/04_the_round.md` §6).
-const HOMES_JSON: &str = include_str!("../../../assets/world/homes.json");
 
 /// What an actor means to do on arrival — the pathfind-then-act bridge lifted
 /// from seagame's `targetState` (`features/movement/02_navigation.md` §4).
@@ -167,16 +164,6 @@ struct LegSpec {
     doing: Arrival,
     #[serde(default)]
     only_on: Option<Vec<Weekday>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct HomesDoc {
-    homes: HashMap<String, HomeEntry>,
-}
-
-#[derive(Debug, Deserialize)]
-struct HomeEntry {
-    point: [f64; 2],
 }
 
 /// Resolves a leg's `at` string to a world point: a nav place display name, a

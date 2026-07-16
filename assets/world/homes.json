@@ -1,5 +1,5 @@
 {
- "schema_version": 1,
+ "schema_version": 2,
  "generated_by": "scripts/bake_homes.py",
  "source_seed": 11810721,
  "homes": {
@@ -10,7 +10,10 @@
    "point": [
     -109.375,
     -63.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "The Lanthorn",
+   "place_description": "a house in the Fabric Ward, near the Lanthorn"
   },
   "a3crk": {
    "building": "omb_i0918",
@@ -19,7 +22,10 @@
    "point": [
     -107.125,
     55.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "The Lanthorn",
+   "place_description": "a house in the Fabric Ward, near the Lanthorn"
   },
   "a4anh": {
    "building": "omb_i0324",
@@ -28,7 +34,10 @@
    "point": [
     -93.875,
     9.875
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "The Lanthorn",
+   "place_description": "a house in the Fabric Ward, near the Lanthorn"
   },
   "a5sbp": {
    "building": "omb_i1380",
@@ -37,7 +46,10 @@
    "point": [
     -96.625,
     -7.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "The Lanthorn",
+   "place_description": "a house in the Fabric Ward, near the Lanthorn"
   },
   "a6avh": {
    "building": "omb_i0500",
@@ -46,7 +58,10 @@
    "point": [
     -32.125,
     -127.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "The Lanthorn",
+   "place_description": "a house in the Fabric Ward, toward the Lanthorn"
   },
   "a7pcr": {
    "building": "omb_i1387",
@@ -55,7 +70,10 @@
    "point": [
     -9.375,
     -147.625
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Bellfoot Passage",
+   "place_description": "a house in the Fabric Ward, off Bellfoot Passage"
   },
   "a8ewf": {
    "building": "omb_i1316",
@@ -64,7 +82,10 @@
    "point": [
     -452.375,
     -321.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Tanners' Slip",
+   "place_description": "a house in the Reed Ward, off Tanners' Slip"
   },
   "a9prs": {
    "building": "omb_f0334",
@@ -73,7 +94,10 @@
    "point": [
     97.625,
     -63.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Chapter house and Grey Press",
+   "place_description": "a house in the Fabric Ward, near Chapter house and Grey Press"
   },
   "a9rnh": {
    "building": "omb_i1177",
@@ -82,7 +106,10 @@
    "point": [
     -462.625,
     -382.125
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Empty brine-rotted cellar",
+   "place_description": "a house in the Reed Ward, near Empty brine-rotted cellar"
   },
   "ak3vd": {
    "building": "omb_i0308",
@@ -91,7 +118,10 @@
    "point": [
     91.375,
     -31.375
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Chapter house and Grey Press",
+   "place_description": "a house in the Fabric Ward, near Chapter house and Grey Press"
   },
   "amt4p": {
    "building": "omb_i0009",
@@ -100,7 +130,10 @@
    "point": [
     58.625,
     122.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "ar5tl": {
    "building": "omb_i0195",
@@ -109,7 +142,10 @@
    "point": [
     -239.875,
     -313.125
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Saint Maren's churchyard",
+   "place_description": "a house in the Reed Ward, near Saint Maren's churchyard"
   },
   "ax5nf": {
    "building": "omb_i0420",
@@ -118,7 +154,10 @@
    "point": [
     -171.875,
     -379.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Reed Ward, near Saint Maren's church"
   },
   "az2sm": {
    "building": "omb_f0331",
@@ -127,7 +166,10 @@
    "point": [
     131.875,
     -48.875
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Crookneck Lane",
+   "place_description": "a house in the Fabric Ward, off Crookneck Lane"
   },
   "b0nll": {
    "building": "omb_i0066",
@@ -136,7 +178,10 @@
    "point": [
     220.375,
     64.875
-   ]
+   ],
+   "ward": "Wallwright Ward",
+   "landmark": "Malt Passage",
+   "place_description": "a house in the Wallwright Ward, off Malt Passage"
   },
   "b1sbb": {
    "building": "omb_f0315",
@@ -145,7 +190,10 @@
    "point": [
     191.875,
     61.375
-   ]
+   ],
+   "ward": "Wallwright Ward",
+   "landmark": "Malt Passage",
+   "place_description": "a house in the Wallwright Ward, off Malt Passage"
   },
   "b3glc": {
    "building": "omb_f0852",
@@ -154,7 +202,10 @@
    "point": [
     268.375,
     70.625
-   ]
+   ],
+   "ward": "Wallwright Ward",
+   "landmark": "Malt Passage",
+   "place_description": "a house in the Wallwright Ward, off Malt Passage"
   },
   "b4hst": {
    "building": "omb_f0845",
@@ -163,7 +214,10 @@
    "point": [
     358.625,
     98.625
-   ]
+   ],
+   "ward": "Wallwright Ward",
+   "landmark": "Coswald's Yard",
+   "place_description": "a house in the Wallwright Ward, near Coswald's Yard"
   },
   "b5ewk": {
    "building": "omb_f0853",
@@ -172,7 +226,10 @@
    "point": [
     314.125,
     57.375
-   ]
+   ],
+   "ward": "Wallwright Ward",
+   "landmark": "Malt Passage",
+   "place_description": "a house in the Wallwright Ward, off Malt Passage"
   },
   "b6clm": {
    "building": "omb_i0783",
@@ -181,7 +238,10 @@
    "point": [
     343.625,
     44.875
-   ]
+   ],
+   "ward": "Wallwright Ward",
+   "landmark": "Malt Passage",
+   "place_description": "a house in the Wallwright Ward, toward Malt Passage"
   },
   "b9stt": {
    "building": "omb_f0840",
@@ -190,7 +250,10 @@
    "point": [
     379.875,
     97.625
-   ]
+   ],
+   "ward": "Wallwright Ward",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Wallwright Ward, toward the Stone Gate"
   },
   "ba8hf": {
    "building": "omb_i0643",
@@ -199,7 +262,10 @@
    "point": [
     403.625,
     57.625
-   ]
+   ],
+   "ward": "Wallwright Ward",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Wallwright Ward, by the Stone Gate"
   },
   "bc6tf": {
    "building": "omb_i1116",
@@ -208,7 +274,10 @@
    "point": [
     406.125,
     52.375
-   ]
+   ],
+   "ward": "Wallwright Ward",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Wallwright Ward, toward the Stone Gate"
   },
   "bd7hb": {
    "building": "omb_f0131",
@@ -217,7 +286,10 @@
    "point": [
     415.875,
     145.375
-   ]
+   ],
+   "ward": "Wallwright Ward",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Wallwright Ward, by the Stone Gate"
   },
   "bn1id": {
    "building": "omb_f0343",
@@ -226,7 +298,10 @@
    "point": [
     -355.875,
     -292.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Tanners' Slip",
+   "place_description": "a house in the Reed Ward, off Tanners' Slip"
   },
   "bn2hm": {
    "building": "omb_f0094",
@@ -235,7 +310,10 @@
    "point": [
     -294.125,
     -272.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Reed Cistern",
+   "place_description": "a house in the Reed Ward, near Reed Cistern"
   },
   "br2sk": {
    "building": "omb_i0188",
@@ -244,7 +322,10 @@
    "point": [
     317.125,
     22.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Malt Passage",
+   "place_description": "a house in the Outer wards, toward Malt Passage"
   },
   "brn5o": {
    "building": "omb_i0895",
@@ -253,7 +334,10 @@
    "point": [
     46.375,
     140.375
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "The Gradine",
+   "place_description": "a house in the Fabric Ward, near the Gradine"
   },
   "bt4hb": {
    "building": "omb_i1310",
@@ -262,7 +346,10 @@
    "point": [
     57.375,
     -146.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Chapter house and Grey Press",
+   "place_description": "a house in the Fabric Ward, near Chapter house and Grey Press"
   },
   "c2nsl": {
    "building": "omb_i1047",
@@ -271,7 +358,10 @@
    "point": [
     -237.125,
     255.875
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Cinder Ward, near the Cut ropewalk"
   },
   "c3wnk": {
    "building": "omb_i1017",
@@ -280,7 +370,10 @@
    "point": [
     -249.375,
     236.875
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Cinder Ward, near the Cut ropewalk"
   },
   "c5tbo": {
    "building": "omb_i1037",
@@ -289,7 +382,10 @@
    "point": [
     -233.875,
     229.625
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Cinder Ward, near the Cut ropewalk"
   },
   "c6pkl": {
    "building": "omb_i0397",
@@ -298,7 +394,10 @@
    "point": [
     -240.125,
     191.375
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Cinder Ward, near the Cut ropewalk"
   },
   "c7kbd": {
    "building": "omb_f0295",
@@ -307,7 +406,10 @@
    "point": [
     -240.125,
     161.875
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Tallage toll-house",
+   "place_description": "a house in the Cinder Ward, near Tallage toll-house"
   },
   "c8ghd": {
    "building": "omb_f0289",
@@ -316,7 +418,10 @@
    "point": [
     -198.625,
     190.375
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Burnt Court",
+   "place_description": "a house in the Cinder Ward, near Burnt Court"
   },
   "cb947": {
    "building": "omb_i1256",
@@ -325,7 +430,10 @@
    "point": [
     67.875,
     124.625
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "cf2rr": {
    "building": "omb_i1042",
@@ -334,7 +442,10 @@
    "point": [
     -368.125,
     93.125
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "cg6ud": {
    "building": "omb_f1018",
@@ -343,7 +454,10 @@
    "point": [
     -358.625,
     -286.375
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Tanners' Slip",
+   "place_description": "a house in the Reed Ward, off Tanners' Slip"
   },
   "cj9sp": {
    "building": "omb_f0300",
@@ -352,7 +466,10 @@
    "point": [
     -138.125,
     215.125
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Cinder Row",
+   "place_description": "a house in the Cinder Ward, off Cinder Row"
   },
   "danqn": {
    "building": "omb_i0225",
@@ -361,7 +478,10 @@
    "point": [
     -165.875,
     439.625
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Wool Gate",
+   "place_description": "a house in the Wick Ward, toward the Wool Gate"
   },
   "davqn": {
    "building": "omb_f0703",
@@ -370,7 +490,10 @@
    "point": [
     -150.875,
     417.125
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Wool Gate",
+   "place_description": "a house in the Wick Ward, toward the Wool Gate"
   },
   "dbskl": {
    "building": "omb_f0768",
@@ -379,7 +502,10 @@
    "point": [
     -423.625,
     11.625
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "dclsk": {
    "building": "omb_f0701",
@@ -388,7 +514,10 @@
    "point": [
     -122.125,
     415.375
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Wool Gate",
+   "place_description": "a house in the Wick Ward, by the Wool Gate"
   },
   "dewvl": {
    "building": "omb_i0200",
@@ -397,7 +526,10 @@
    "point": [
     -107.375,
     394.875
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Wickmarket",
+   "place_description": "a house in the Wick Ward, near the Wickmarket"
   },
   "dgskl": {
    "building": "omb_f0952",
@@ -406,7 +538,10 @@
    "point": [
     -176.375,
     289.125
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "Burnt Court",
+   "place_description": "a house in the Wick Ward, near Burnt Court"
   },
   "dnnsl": {
    "building": "omb_i1328",
@@ -415,7 +550,10 @@
    "point": [
     132.125,
     472.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Cloth Ward, toward Slate Cistern"
   },
   "dpcrk": {
    "building": "omb_f0688",
@@ -424,7 +562,10 @@
    "point": [
     -83.875,
     432.375
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Wool Gate",
+   "place_description": "a house in the Wick Ward, by the Wool Gate"
   },
   "drhcr": {
    "building": "omb_i1081",
@@ -433,7 +574,10 @@
    "point": [
     -84.125,
     379.875
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Wickmarket",
+   "place_description": "a house in the Wick Ward, near the Wickmarket"
   },
   "dsbhb": {
    "building": "omb_i0497",
@@ -442,7 +586,10 @@
    "point": [
     -57.125,
     394.875
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Wickmarket",
+   "place_description": "a house in the Wick Ward, near the Wickmarket"
   },
   "dtbvl": {
    "building": "omb_i1261",
@@ -451,7 +598,10 @@
    "point": [
     -65.625,
     279.875
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The glaziers' guildhall",
+   "place_description": "a house in the Wick Ward, near the glaziers' guildhall"
   },
   "dv8ll": {
    "building": "omb_f0478",
@@ -460,7 +610,10 @@
    "point": [
     -2.375,
     451.875
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Wool Gate",
+   "place_description": "a house in the Wick Ward, by the Wool Gate"
   },
   "e1skl": {
    "building": "omb_i0321",
@@ -469,7 +622,10 @@
    "point": [
     175.625,
     325.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "e2rhs": {
    "building": "omb_i1084",
@@ -478,7 +634,10 @@
    "point": [
     145.875,
     193.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Tenter Cistern",
+   "place_description": "a house in the Cloth Ward, near Tenter Cistern"
   },
   "e3cob": {
    "building": "omb_f0270",
@@ -487,7 +646,10 @@
    "point": [
     136.125,
     240.125
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "e4bln": {
    "building": "omb_f1009",
@@ -496,7 +658,10 @@
    "point": [
     -372.125,
     8.875
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "e5hob": {
    "building": "omb_f0294",
@@ -505,7 +670,10 @@
    "point": [
     -211.375,
     164.125
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Burnt Court",
+   "place_description": "a house in the Cinder Ward, near Burnt Court"
   },
   "e6ptr": {
    "building": "omb_f0065",
@@ -514,7 +682,10 @@
    "point": [
     -279.125,
     226.625
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Weigh Ward, near the Cut ropewalk"
   },
   "e7mil": {
    "building": "omb_f0979",
@@ -523,7 +694,10 @@
    "point": [
     -407.875,
     61.125
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "e8sib": {
    "building": "omb_f0755",
@@ -532,7 +706,10 @@
    "point": [
     -408.375,
     134.875
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "eatan": {
    "building": "omb_f0785",
@@ -541,7 +718,10 @@
    "point": [
     -421.875,
     -450.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Maren's Slip",
+   "place_description": "a house in the Reed Ward, off Maren's Slip"
   },
   "ebhid": {
    "building": "omb_f0934",
@@ -550,7 +730,10 @@
    "point": [
     41.375,
     172.875
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Tenterhook Lane",
+   "place_description": "a house in the Fabric Ward, off Tenterhook Lane"
   },
   "ecbrd": {
    "building": "omb_f0454",
@@ -559,7 +742,10 @@
    "point": [
     171.375,
     270.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "em3rl": {
    "building": "omb_i0697",
@@ -568,7 +754,10 @@
    "point": [
     -57.375,
     -143.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Lanthorn",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Lanthorn"
   },
   "et7rd": {
    "building": "omb_f1017",
@@ -577,7 +766,10 @@
    "point": [
     -370.625,
     -283.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Tanners' Slip",
+   "place_description": "a house in the Reed Ward, off Tanners' Slip"
   },
   "fa4sg": {
    "building": "omb_f0019",
@@ -586,7 +778,10 @@
    "point": [
     -323.875,
     3.375
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Lise Copp's pawnshop",
+   "place_description": "a house in the Weigh Ward, near Lise Copp's pawnshop"
   },
   "fa8tn": {
    "building": "omb_f1003",
@@ -595,7 +790,10 @@
    "point": [
     -401.125,
     169.125
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "fb3sk": {
    "building": "omb_f0744",
@@ -604,7 +802,10 @@
    "point": [
     -408.625,
     239.125
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Weigh Ward, near the Shambles"
   },
   "fc2hb": {
    "building": "omb_f0997",
@@ -613,7 +814,10 @@
    "point": [
     -390.875,
     241.875
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Weigh Ward, near the Shambles"
   },
   "fc7sk": {
    "building": "omb_i1092",
@@ -622,7 +826,10 @@
    "point": [
     -370.875,
     232.625
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "The Shambles well",
+   "place_description": "a house in the Weigh Ward, near the Shambles well"
   },
   "fc9rn": {
    "building": "omb_i0820",
@@ -631,7 +838,10 @@
    "point": [
     -350.125,
     174.625
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "fe2tn": {
    "building": "omb_i0955",
@@ -640,7 +850,10 @@
    "point": [
     -361.125,
     180.125
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "fg2sh": {
    "building": "omb_f0075",
@@ -649,7 +862,10 @@
    "point": [
     -272.625,
     -26.125
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Doctor Ferrant's house",
+   "place_description": "a house in the Weigh Ward, near Doctor Ferrant's house"
   },
   "fl5cp": {
    "building": "omb_f0968",
@@ -658,7 +874,10 @@
    "point": [
     -201.125,
     113.625
-   ]
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Chain Well",
+   "place_description": "a house in the Weigh Ward, near Chain Well"
   },
   "fo6gl": {
    "building": "omb_i0250",
@@ -667,7 +886,10 @@
    "point": [
     -458.375,
     402.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Outer wards, near the Shambles"
   },
   "fp6ck": {
    "building": "omb_i0551",
@@ -676,7 +898,10 @@
    "point": [
     -452.375,
     452.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Outer wards, toward the Shambles"
   },
   "fr5as": {
    "building": "omb_f1013",
@@ -685,7 +910,10 @@
    "point": [
     -439.125,
     -101.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The River Gate",
+   "place_description": "a house in the Outer wards, by the River Gate"
   },
   "fr9ck": {
    "building": "omb_f0765",
@@ -694,7 +922,10 @@
    "point": [
     -467.875,
     -10.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The River Gate",
+   "place_description": "a house in the Outer wards, toward the River Gate"
   },
   "ft1as": {
    "building": "omb_i0934",
@@ -703,7 +934,10 @@
    "point": [
     -448.375,
     96.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Outer wards, near Bonded warehouse"
   },
   "fw7ub": {
    "building": "omb_i0083",
@@ -712,7 +946,10 @@
    "point": [
     -451.875,
     -411.375
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Empty brine-rotted cellar",
+   "place_description": "a house in the Reed Ward, near Empty brine-rotted cellar"
   },
   "g2rhs": {
    "building": "omb_f0255",
@@ -721,7 +958,10 @@
    "point": [
     -428.375,
     -492.125
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Maren's Slip",
+   "place_description": "a house in the Reed Ward, off Maren's Slip"
   },
   "g3ans": {
    "building": "omb_i0994",
@@ -730,7 +970,10 @@
    "point": [
     -387.125,
     -246.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Tanners' Slip",
+   "place_description": "a house in the Reed Ward, off Tanners' Slip"
   },
   "g4ewt": {
    "building": "omb_i0507",
@@ -739,7 +982,10 @@
    "point": [
     -418.625,
     -558.125
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Reed Postern",
+   "place_description": "a house in the Reed Ward, by the Reed Postern"
   },
   "g5brt": {
    "building": "omb_i0527",
@@ -748,7 +994,10 @@
    "point": [
     -205.375,
     -246.375
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Reed Ward, toward Saint Maren's church"
   },
   "g7tbn": {
    "building": "omb_f1033",
@@ -757,7 +1006,10 @@
    "point": [
     -204.625,
     -284.375
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Reed Ward, near Saint Maren's church"
   },
   "g8rnn": {
    "building": "omb_i0054",
@@ -766,7 +1018,10 @@
    "point": [
     -359.625,
     -552.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Maren's Slip",
+   "place_description": "a house in the Reed Ward, off Maren's Slip"
   },
   "g9sib": {
    "building": "omb_f0049",
@@ -775,7 +1030,10 @@
    "point": [
     -315.875,
     -544.125
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Reed Ward, near the Old Sluice"
   },
   "gr8tp": {
    "building": "omb_f0396",
@@ -784,7 +1042,10 @@
    "point": [
     -5.375,
     -262.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Bellstand",
+   "place_description": "a house in the Bell and Sluice Wards, near the Bellstand"
   },
   "gw4ld": {
    "building": "omb_i0958",
@@ -793,7 +1054,10 @@
    "point": [
     -403.375,
     -576.875
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Reed Postern",
+   "place_description": "a house in the Reed Ward, by the Reed Postern"
   },
   "hansl": {
    "building": "omb_f0772",
@@ -802,7 +1066,10 @@
    "point": [
     -462.375,
     -222.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The River Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the River Gate"
   },
   "he3nd": {
    "building": "omb_f0302",
@@ -811,7 +1078,10 @@
    "point": [
     -145.875,
     179.625
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Three-Curb",
+   "place_description": "a house in the Cinder Ward, near Three-Curb"
   },
   "hewsk": {
    "building": "omb_f0164",
@@ -820,7 +1090,10 @@
    "point": [
     -459.125,
     -154.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The River Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the River Gate"
   },
   "hgiha": {
    "building": "omb_f0777",
@@ -829,7 +1102,10 @@
    "point": [
     -441.125,
     -204.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The River Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the River Gate"
   },
   "hj6br": {
    "building": "omb_i0306",
@@ -838,7 +1114,10 @@
    "point": [
     52.625,
     -210.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfoot Passage",
+   "place_description": "a house in the Bell and Sluice Wards, off Bellfoot Passage"
   },
   "hrnsk": {
    "building": "omb_i0341",
@@ -847,7 +1126,10 @@
    "point": [
     -407.125,
     -189.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The River Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the River Gate"
   },
   "k0fb1": {
    "building": "omb_i0495",
@@ -856,7 +1138,10 @@
    "point": [
     60.875,
     151.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Seraph statue",
+   "place_description": "a house in the Fabric Ward, near Seraph statue"
   },
   "p0006": {
    "building": "omb_i1109",
@@ -865,7 +1150,10 @@
    "point": [
     -468.125,
     201.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Outer wards, toward the Shambles"
   },
   "p0007": {
    "building": "omb_i0302",
@@ -874,7 +1162,10 @@
    "point": [
     -181.125,
     -234.875
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Reed Ward, toward Saint Maren's church"
   },
   "p0008": {
    "building": "omb_i1384",
@@ -883,7 +1174,10 @@
    "point": [
     -386.375,
     -614.375
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Reed Ward, near the Old Sluice"
   },
   "p0009": {
    "building": "omb_i0438",
@@ -892,7 +1186,10 @@
    "point": [
     -444.875,
     438.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Outer wards, toward the Shambles"
   },
   "p000a": {
    "building": "omb_f0769",
@@ -901,7 +1198,10 @@
    "point": [
     -462.375,
     -59.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The River Gate",
+   "place_description": "a house in the Outer wards, by the River Gate"
   },
   "p000b": {
    "building": "omb_i1411",
@@ -910,7 +1210,10 @@
    "point": [
     -364.625,
     -594.875
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Reed Ward, near the Old Sluice"
   },
   "p000c": {
    "building": "omb_i0944",
@@ -919,7 +1222,10 @@
    "point": [
     -164.125,
     -266.875
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Reed Ward, near Saint Maren's church"
   },
   "p000d": {
    "building": "omb_i0190",
@@ -928,7 +1234,10 @@
    "point": [
     73.375,
     116.625
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "p000e": {
    "building": "omb_i0314",
@@ -937,7 +1246,10 @@
    "point": [
     -373.125,
     -605.125
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Reed Ward, near the Old Sluice"
   },
   "p000f": {
    "building": "omb_i1172",
@@ -946,7 +1258,10 @@
    "point": [
     358.875,
     -35.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Outer wards, toward the Ilvane anchorhold"
   },
   "p000g": {
    "building": "omb_i1148",
@@ -955,7 +1270,10 @@
    "point": [
     -458.125,
     30.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Outer wards, near Bonded warehouse"
   },
   "p000h": {
    "building": "omb_i0056",
@@ -964,7 +1282,10 @@
    "point": [
     -208.125,
     -472.375
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Reed Ward, near Saint Maren's church"
   },
   "p000i": {
    "building": "omb_f0189",
@@ -973,7 +1294,10 @@
    "point": [
     92.375,
     -132.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Chapter house and Grey Press",
+   "place_description": "a house in the Fabric Ward, near Chapter house and Grey Press"
   },
   "p000j": {
    "building": "omb_i0791",
@@ -982,7 +1306,10 @@
    "point": [
     -466.625,
     165.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Outer wards, near Bonded warehouse"
   },
   "p000q": {
    "building": "omb_i0106",
@@ -991,7 +1318,10 @@
    "point": [
     -232.875,
     -513.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Hungry Ox",
+   "place_description": "a house in the Reed Ward, near the Hungry Ox"
   },
   "p000r": {
    "building": "omb_f0733",
@@ -1000,7 +1330,10 @@
    "point": [
     -450.875,
     340.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Outer wards, near the Shambles"
   },
   "p000s": {
    "building": "omb_i1143",
@@ -1009,7 +1342,10 @@
    "point": [
     -443.625,
     112.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Outer wards, near Bonded warehouse"
   },
   "p000t": {
    "building": "omb_i0729",
@@ -1018,7 +1354,10 @@
    "point": [
     -181.875,
     -478.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Reed Ward, near Saint Maren's church"
   },
   "p000u": {
    "building": "omb_i0832",
@@ -1027,7 +1366,10 @@
    "point": [
     -251.875,
     -575.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Reed Ward, near the Old Sluice"
   },
   "p000v": {
    "building": "omb_i1214",
@@ -1036,7 +1378,10 @@
    "point": [
     350.625,
     183.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Coswald's Yard",
+   "place_description": "a house in the Cloth Ward, near Coswald's Yard"
   },
   "p000w": {
    "building": "omb_i0039",
@@ -1045,7 +1390,10 @@
    "point": [
     -424.375,
     419.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Outer wards, near the Shambles"
   },
   "p000x": {
    "building": "omb_i0021",
@@ -1054,7 +1402,10 @@
    "point": [
     -84.625,
     239.875
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The glaziers' guildhall",
+   "place_description": "a house in the Wick Ward, near the glaziers' guildhall"
   },
   "p0013": {
    "building": "omb_i0390",
@@ -1063,7 +1414,10 @@
    "point": [
     193.125,
     458.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Cloth Ward, toward Slate Cistern"
   },
   "p0014": {
    "building": "omb_f0161",
@@ -1072,7 +1426,10 @@
    "point": [
     112.375,
     79.875
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "p0015": {
    "building": "omb_i0271",
@@ -1081,7 +1438,10 @@
    "point": [
     103.375,
     20.875
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Ford Well",
+   "place_description": "a house in the Fabric Ward, near Ford Well"
   },
   "p0016": {
    "building": "omb_i0910",
@@ -1090,7 +1450,10 @@
    "point": [
     205.875,
     315.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "p001c": {
    "building": "omb_i0830",
@@ -1099,7 +1462,10 @@
    "point": [
     -464.125,
     214.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Outer wards, toward the Shambles"
   },
   "p001h": {
    "building": "omb_i0836",
@@ -1108,7 +1474,10 @@
    "point": [
     -210.375,
     -184.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Cut"
   },
   "p001i": {
    "building": "omb_i0157",
@@ -1117,7 +1486,10 @@
    "point": [
     -181.625,
     -160.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Cut"
   },
   "p001j": {
    "building": "omb_i0443",
@@ -1126,7 +1498,10 @@
    "point": [
     -195.375,
     -182.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Cut"
   },
   "p001o": {
    "building": "omb_i0485",
@@ -1135,7 +1510,10 @@
    "point": [
     -146.375,
     -257.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, toward Saint Maren's church"
   },
   "p001p": {
    "building": "omb_f0380",
@@ -1144,7 +1522,10 @@
    "point": [
     -120.875,
     -214.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Bellstand",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Bellstand"
   },
   "p001q": {
    "building": "omb_i1131",
@@ -1153,7 +1534,10 @@
    "point": [
     -124.375,
     -157.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bonded weighing yard"
   },
   "p001r": {
    "building": "omb_i0846",
@@ -1162,7 +1546,10 @@
    "point": [
     -124.875,
     -618.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Harne Gate"
   },
   "p001s": {
    "building": "omb_i1433",
@@ -1171,7 +1558,10 @@
    "point": [
     -129.375,
     -532.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, toward Saint Maren's church"
   },
   "p001t": {
    "building": "omb_i1234",
@@ -1180,7 +1570,10 @@
    "point": [
     -122.125,
     -512.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, toward Saint Maren's church"
   },
   "p001u": {
    "building": "omb_i0457",
@@ -1189,7 +1582,10 @@
    "point": [
     -107.375,
     -628.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Harne Gate"
   },
   "p001v": {
    "building": "omb_i1348",
@@ -1198,7 +1594,10 @@
    "point": [
     -101.625,
     -383.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, near Saint Maren's church"
   },
   "p001w": {
    "building": "omb_f0410",
@@ -1207,7 +1606,10 @@
    "point": [
     -127.875,
     -334.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, near Saint Maren's church"
   },
   "p001x": {
    "building": "omb_i0837",
@@ -1216,7 +1618,10 @@
    "point": [
     -110.875,
     -568.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Harne Gate"
   },
   "p001y": {
    "building": "omb_i1395",
@@ -1225,7 +1630,10 @@
    "point": [
     -224.875,
     -555.875
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Reed Ward, near the Old Sluice"
   },
   "p001z": {
    "building": "omb_i0033",
@@ -1234,7 +1642,10 @@
    "point": [
     -456.875,
     290.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Outer wards, near the Shambles"
   },
   "p0020": {
    "building": "omb_f0171",
@@ -1243,7 +1654,10 @@
    "point": [
     -426.125,
     -116.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The River Gate",
+   "place_description": "a house in the Outer wards, by the River Gate"
   },
   "p0021": {
    "building": "omb_i0231",
@@ -1252,7 +1666,10 @@
    "point": [
     -43.875,
     290.375
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Wickmarket",
+   "place_description": "a house in the Wick Ward, near the Wickmarket"
   },
   "p0022": {
    "building": "omb_f0475",
@@ -1261,7 +1678,10 @@
    "point": [
     36.875,
     429.125
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Wick Ward, near Slate Cistern"
   },
   "p0023": {
    "building": "omb_i0208",
@@ -1270,7 +1690,10 @@
    "point": [
     -200.625,
     -562.875
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Reed Ward, toward the Old Sluice"
   },
   "p0029": {
    "building": "omb_i0076",
@@ -1279,7 +1702,10 @@
    "point": [
     170.625,
     463.125
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Cloth Ward, toward Slate Cistern"
   },
   "p002a": {
    "building": "omb_f0190",
@@ -1288,7 +1714,10 @@
    "point": [
     96.875,
     -140.875
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Chapter house and Grey Press",
+   "place_description": "a house in the Fabric Ward, near Chapter house and Grey Press"
   },
   "p002b": {
    "building": "omb_i1421",
@@ -1297,7 +1726,10 @@
    "point": [
     194.875,
     179.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The masons' lodge",
+   "place_description": "a house in the Cloth Ward, near the masons' lodge"
   },
   "p002c": {
    "building": "omb_f0807",
@@ -1306,7 +1738,10 @@
    "point": [
     253.875,
     274.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The masons' lodge",
+   "place_description": "a house in the Cloth Ward, near the masons' lodge"
   },
   "p002d": {
    "building": "omb_f0471",
@@ -1315,7 +1750,10 @@
    "point": [
     238.625,
     224.125
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The masons' lodge",
+   "place_description": "a house in the Cloth Ward, near the masons' lodge"
   },
   "p002e": {
    "building": "omb_f0802",
@@ -1324,7 +1762,10 @@
    "point": [
     260.125,
     344.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts"
   },
   "p002f": {
    "building": "omb_i0078",
@@ -1333,7 +1774,10 @@
    "point": [
     107.625,
     40.875
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Ford Well",
+   "place_description": "a house in the Fabric Ward, near Ford Well"
   },
   "p002g": {
    "building": "omb_i1110",
@@ -1342,7 +1786,10 @@
    "point": [
     79.375,
     167.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Seraph statue",
+   "place_description": "a house in the Fabric Ward, near Seraph statue"
   },
   "p002h": {
    "building": "omb_i0217",
@@ -1351,7 +1798,10 @@
    "point": [
     77.625,
     144.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "p002i": {
    "building": "omb_i1023",
@@ -1360,7 +1810,10 @@
    "point": [
     100.375,
     238.625
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Tenter Cistern",
+   "place_description": "a house in the Fabric Ward, near Tenter Cistern"
   },
   "p002j": {
    "building": "omb_i1257",
@@ -1369,7 +1822,10 @@
    "point": [
     388.125,
     -51.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Outer wards, toward the Ilvane anchorhold"
   },
   "p002k": {
    "building": "omb_i0990",
@@ -1378,7 +1834,10 @@
    "point": [
     121.375,
     49.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Ford Well",
+   "place_description": "a house in the Fabric Ward, near Ford Well"
   },
   "p002l": {
    "building": "omb_f0799",
@@ -1387,7 +1846,10 @@
    "point": [
     281.625,
     447.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts fire tanks",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts fire tanks"
   },
   "p002m": {
    "building": "omb_i1153",
@@ -1396,7 +1858,10 @@
    "point": [
     -109.625,
     175.375
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Three-Curb",
+   "place_description": "a house in the Cinder Ward, near Three-Curb"
   },
   "p002n": {
    "building": "omb_f0351",
@@ -1405,7 +1870,10 @@
    "point": [
     -175.875,
     127.875
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Chain Well",
+   "place_description": "a house in the Cinder Ward, near Chain Well"
   },
   "p002o": {
    "building": "omb_i1052",
@@ -1414,7 +1882,10 @@
    "point": [
     -143.125,
     111.625
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Three-Curb",
+   "place_description": "a house in the Cinder Ward, near Three-Curb"
   },
   "p002p": {
    "building": "omb_f0312",
@@ -1423,7 +1894,10 @@
    "point": [
     -94.625,
     138.125
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Three-Curb",
+   "place_description": "a house in the Cinder Ward, near Three-Curb"
   },
   "p002q": {
    "building": "omb_f0358",
@@ -1432,7 +1906,10 @@
    "point": [
     -70.375,
     156.875
-   ]
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Dawn Bearer statue",
+   "place_description": "a house in the Cinder Ward, near Dawn Bearer statue"
   },
   "p002r": {
    "building": "omb_f0063",
@@ -1441,7 +1918,10 @@
    "point": [
     -294.125,
     252.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Outer wards, near the Cut ropewalk"
   },
   "p002s": {
    "building": "omb_i0523",
@@ -1450,7 +1930,10 @@
    "point": [
     -42.625,
     244.875
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "Dawn Bearer statue",
+   "place_description": "a house in the Wick Ward, near Dawn Bearer statue"
   },
   "p002t": {
    "building": "omb_i0926",
@@ -1459,7 +1942,10 @@
    "point": [
     85.875,
     474.375
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Wick Ward, near Slate Cistern"
   },
   "p002u": {
    "building": "omb_f0120",
@@ -1468,7 +1954,10 @@
    "point": [
     -3.375,
     271.625
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "Tenterhook Lane",
+   "place_description": "a house in the Wick Ward, off Tenterhook Lane"
   },
   "p002v": {
    "building": "omb_i1151",
@@ -1477,7 +1966,10 @@
    "point": [
     131.125,
     -98.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Chapter house and Grey Press",
+   "place_description": "a house in the Fabric Ward, near Chapter house and Grey Press"
   },
   "p002w": {
    "building": "omb_f0723",
@@ -1486,7 +1978,10 @@
    "point": [
     -246.125,
     344.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Outer wards, near the Cut ropewalk"
   },
   "p002x": {
    "building": "omb_f0721",
@@ -1495,7 +1990,10 @@
    "point": [
     -225.875,
     350.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Outer wards, near the Cut ropewalk"
   },
   "p002y": {
    "building": "omb_f0541",
@@ -1504,7 +2002,10 @@
    "point": [
     418.375,
     12.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Outer wards, toward the Stone Gate"
   },
   "p002z": {
    "building": "omb_i1240",
@@ -1513,7 +2014,10 @@
    "point": [
     -178.875,
     -595.875
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Reed Ward, toward the Old Sluice"
   },
   "p0030": {
    "building": "omb_f0812",
@@ -1522,7 +2026,10 @@
    "point": [
     267.625,
     274.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts"
   },
   "p0031": {
    "building": "omb_i0928",
@@ -1531,7 +2038,10 @@
    "point": [
     -227.375,
     -621.625
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Reed Ward, near the Old Sluice"
   },
   "p0032": {
    "building": "omb_i0563",
@@ -1540,7 +2050,10 @@
    "point": [
     -200.625,
     -612.375
-   ]
+   ],
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Reed Ward, near the Old Sluice"
   },
   "p0037": {
    "building": "omb_i0747",
@@ -1549,7 +2062,10 @@
    "point": [
     -474.125,
     182.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Outer wards, toward Bonded warehouse"
   },
   "p0038": {
    "building": "omb_f1011",
@@ -1558,7 +2074,10 @@
    "point": [
     -430.875,
     -73.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The River Gate",
+   "place_description": "a house in the Outer wards, by the River Gate"
   },
   "p0039": {
    "building": "omb_i0982",
@@ -1567,7 +2086,10 @@
    "point": [
     -384.875,
     -45.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p003e": {
    "building": "omb_i0425",
@@ -1576,7 +2098,10 @@
    "point": [
     -380.625,
     -78.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p003f": {
    "building": "omb_i1083",
@@ -1585,7 +2110,10 @@
    "point": [
     -471.625,
     221.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Outer wards, toward the Shambles"
   },
   "p003g": {
    "building": "omb_i0254",
@@ -1594,7 +2122,10 @@
    "point": [
     -355.875,
     -84.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p003h": {
    "building": "omb_i1288",
@@ -1603,7 +2134,10 @@
    "point": [
     -338.625,
     273.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles well",
+   "place_description": "a house in the Outer wards, near the Shambles well"
   },
   "p003i": {
    "building": "omb_i1004",
@@ -1612,7 +2146,10 @@
    "point": [
     -456.125,
     256.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles",
+   "place_description": "a house in the Outer wards, near the Shambles"
   },
   "p003j": {
    "building": "omb_f0730",
@@ -1621,7 +2158,10 @@
    "point": [
     -339.125,
     321.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles well",
+   "place_description": "a house in the Outer wards, near the Shambles well"
   },
   "p003m": {
    "building": "omb_f0531",
@@ -1630,7 +2170,10 @@
    "point": [
     247.875,
     426.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts fire tanks",
+   "place_description": "a house in the Cloth Ward, toward Seven Lofts fire tanks"
   },
   "p003n": {
    "building": "omb_i1343",
@@ -1639,7 +2182,10 @@
    "point": [
     199.875,
     383.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, toward the Draper's Reach"
   },
   "p003o": {
    "building": "omb_i0625",
@@ -1648,7 +2194,10 @@
    "point": [
     131.625,
     -3.625
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Crookneck Lane",
+   "place_description": "a house in the Fabric Ward, off Crookneck Lane"
   },
   "p003u": {
    "building": "omb_i0828",
@@ -1657,7 +2206,10 @@
    "point": [
     12.875,
     293.375
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "Osanne Vell's stall",
+   "place_description": "a house in the Wick Ward, near Osanne Vell's stall"
   },
   "p003v": {
    "building": "omb_f0388",
@@ -1666,7 +2218,10 @@
    "point": [
     -101.125,
     -200.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Bellstand",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Bellstand"
   },
   "p003w": {
    "building": "omb_i0784",
@@ -1675,7 +2230,10 @@
    "point": [
     -106.125,
     -459.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, toward Saint Maren's church"
   },
   "p003x": {
    "building": "omb_i1297",
@@ -1684,7 +2242,10 @@
    "point": [
     -104.375,
     -367.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, near Saint Maren's church"
   },
   "p003y": {
    "building": "omb_i0844",
@@ -1693,7 +2254,10 @@
    "point": [
     -80.875,
     -616.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p003z": {
    "building": "omb_i0335",
@@ -1702,7 +2266,10 @@
    "point": [
     -66.875,
     -607.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p0040": {
    "building": "omb_i0015",
@@ -1711,7 +2278,10 @@
    "point": [
     -65.125,
     -537.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Harne Gate"
   },
   "p0041": {
    "building": "omb_i0733",
@@ -1720,7 +2290,10 @@
    "point": [
     -338.125,
     -70.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p0042": {
    "building": "omb_f0007",
@@ -1729,7 +2302,10 @@
    "point": [
     -323.375,
     324.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles well",
+   "place_description": "a house in the Outer wards, near the Shambles well"
   },
   "p0043": {
    "building": "omb_i1067",
@@ -1738,7 +2314,10 @@
    "point": [
     30.375,
     287.375
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "Osanne Vell's stall",
+   "place_description": "a house in the Wick Ward, near Osanne Vell's stall"
   },
   "p0044": {
    "building": "omb_f0025",
@@ -1747,7 +2326,10 @@
    "point": [
     -315.875,
     -74.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p0045": {
    "building": "omb_i0795",
@@ -1756,7 +2338,10 @@
    "point": [
     298.125,
     264.125
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts"
   },
   "p0046": {
    "building": "omb_i0767",
@@ -1765,7 +2350,10 @@
    "point": [
     314.125,
     466.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts fire tanks",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts fire tanks"
   },
   "p0047": {
    "building": "omb_i0219",
@@ -1774,7 +2362,10 @@
    "point": [
     292.375,
     277.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts"
   },
   "p0048": {
    "building": "omb_i1019",
@@ -1783,7 +2374,10 @@
    "point": [
     -156.375,
     -582.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Old Sluice"
   },
   "p0049": {
    "building": "omb_i1186",
@@ -1792,7 +2386,10 @@
    "point": [
     -157.625,
     -430.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, near Saint Maren's church"
   },
   "p004a": {
    "building": "omb_f0445",
@@ -1801,7 +2398,10 @@
    "point": [
     75.375,
     383.625
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Wick Ward, near Slate Cistern"
   },
   "p004b": {
    "building": "omb_i0590",
@@ -1810,7 +2410,10 @@
    "point": [
     -152.625,
     -459.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, near Saint Maren's church"
   },
   "p004c": {
    "building": "omb_f0361",
@@ -1819,7 +2422,10 @@
    "point": [
     -243.625,
     -219.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Reed Cistern",
+   "place_description": "a house in the Bell and Sluice Wards, toward Reed Cistern"
   },
   "p004d": {
    "building": "omb_i0222",
@@ -1828,7 +2434,10 @@
    "point": [
     -165.375,
     -616.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Old Sluice",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Old Sluice"
   },
   "p004e": {
    "building": "omb_i1182",
@@ -1837,7 +2446,10 @@
    "point": [
     145.375,
     13.875
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Crookneck Lane",
+   "place_description": "a house in the Fabric Ward, off Crookneck Lane"
   },
   "p004f": {
    "building": "omb_f0338",
@@ -1846,7 +2458,10 @@
    "point": [
     151.875,
     -59.375
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "The Ilvane Chapel",
+   "place_description": "a house in the Fabric Ward, near the Ilvane Chapel"
   },
   "p004g": {
    "building": "omb_i0046",
@@ -1855,7 +2470,10 @@
    "point": [
     -157.375,
     -297.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, near Saint Maren's church"
   },
   "p004h": {
    "building": "omb_i1193",
@@ -1864,7 +2482,10 @@
    "point": [
     -77.375,
     -415.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, toward Saint Maren's church"
   },
   "p004i": {
    "building": "omb_i0907",
@@ -1873,7 +2494,10 @@
    "point": [
     -156.125,
     97.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Chain Well",
+   "place_description": "a house in the Outer wards, near Chain Well"
   },
   "p004j": {
    "building": "omb_i1167",
@@ -1882,7 +2506,10 @@
    "point": [
     -201.625,
     326.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Outer wards, near the Cut ropewalk"
   },
   "p004k": {
    "building": "omb_i0780",
@@ -1891,7 +2518,10 @@
    "point": [
     304.375,
     274.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts"
   },
   "p004l": {
    "building": "omb_i0711",
@@ -1900,7 +2530,10 @@
    "point": [
     -76.125,
     -269.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Bellstand",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Bellstand"
   },
   "p004m": {
    "building": "omb_i0118",
@@ -1909,7 +2542,10 @@
    "point": [
     -75.125,
     -487.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, toward Saint Maren's church"
   },
   "p004q": {
    "building": "omb_i1097",
@@ -1918,7 +2554,10 @@
    "point": [
     -43.875,
     -581.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p004r": {
    "building": "omb_i0855",
@@ -1927,7 +2566,10 @@
    "point": [
     -61.125,
     -457.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, toward Saint Maren's church"
   },
   "p004s": {
    "building": "omb_f0026",
@@ -1936,7 +2578,10 @@
    "point": [
     -335.875,
     -86.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p004t": {
    "building": "omb_i0969",
@@ -1945,7 +2590,10 @@
    "point": [
     337.625,
     189.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Coswald's Yard",
+   "place_description": "a house in the Cloth Ward, near Coswald's Yard"
   },
   "p004u": {
    "building": "omb_i0144",
@@ -1954,7 +2602,10 @@
    "point": [
     -208.875,
     345.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Outer wards, near the Cut ropewalk"
   },
   "p004v": {
    "building": "omb_i0744",
@@ -1963,7 +2614,10 @@
    "point": [
     361.125,
     430.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts fire tanks",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts fire tanks"
   },
   "p004w": {
    "building": "omb_i0275",
@@ -1972,7 +2626,10 @@
    "point": [
     -36.625,
     -617.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p004x": {
    "building": "omb_f0717",
@@ -1981,7 +2638,10 @@
    "point": [
     -340.875,
     369.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles well",
+   "place_description": "a house in the Outer wards, near the Shambles well"
   },
   "p004y": {
    "building": "omb_i0977",
@@ -1990,7 +2650,10 @@
    "point": [
     -139.375,
     -523.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, toward Saint Maren's church"
   },
   "p0055": {
    "building": "omb_i0401",
@@ -1999,7 +2662,10 @@
    "point": [
     -25.625,
     -338.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Step Cistern",
+   "place_description": "a house in the Bell and Sluice Wards, near Step Cistern"
   },
   "p0056": {
    "building": "omb_f0395",
@@ -2008,7 +2674,10 @@
    "point": [
     -20.875,
     -248.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Bellstand",
+   "place_description": "a house in the Bell and Sluice Wards, near the Bellstand"
   },
   "p0057": {
    "building": "omb_i1301",
@@ -2017,7 +2686,10 @@
    "point": [
     -14.375,
     -152.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfoot Passage",
+   "place_description": "a house in the Bell and Sluice Wards, off Bellfoot Passage"
   },
   "p0058": {
    "building": "omb_f0235",
@@ -2026,7 +2698,10 @@
    "point": [
     3.875,
     -571.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p0059": {
    "building": "omb_i0562",
@@ -2035,7 +2710,10 @@
    "point": [
     -0.625,
     -453.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, near Bitter Well"
   },
   "p005a": {
    "building": "omb_i0366",
@@ -2044,7 +2722,10 @@
    "point": [
     2.875,
     -191.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Bellstand",
+   "place_description": "a house in the Bell and Sluice Wards, near the Bellstand"
   },
   "p005b": {
    "building": "omb_i0829",
@@ -2053,7 +2734,10 @@
    "point": [
     -195.375,
     356.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Outer wards, near the Cut ropewalk"
   },
   "p005c": {
    "building": "omb_i0280",
@@ -2062,7 +2746,10 @@
    "point": [
     390.375,
     415.125
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts fire tanks",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts fire tanks"
   },
   "p005d": {
    "building": "omb_i0421",
@@ -2071,7 +2758,10 @@
    "point": [
     -10.625,
     -624.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p005e": {
    "building": "omb_i0897",
@@ -2080,7 +2770,10 @@
    "point": [
     -195.125,
     367.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Chain Bridge",
+   "place_description": "a house in the Outer wards, toward the Chain Bridge"
   },
   "p005f": {
    "building": "omb_f0236",
@@ -2089,7 +2782,10 @@
    "point": [
     2.375,
     -581.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p005g": {
    "building": "omb_f0218",
@@ -2098,7 +2794,10 @@
    "point": [
     23.875,
     -485.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, near Bitter Well"
   },
   "p005h": {
    "building": "omb_f0509",
@@ -2107,7 +2806,10 @@
    "point": [
     411.875,
     280.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts"
   },
   "p005i": {
    "building": "omb_i0561",
@@ -2116,7 +2818,10 @@
    "point": [
     17.125,
     -381.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Step Cistern",
+   "place_description": "a house in the Bell and Sluice Wards, near Step Cistern"
   },
   "p005j": {
    "building": "omb_i0236",
@@ -2125,7 +2830,10 @@
    "point": [
     -136.375,
     98.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Chain Well",
+   "place_description": "a house in the Outer wards, near Chain Well"
   },
   "p005k": {
    "building": "omb_i0529",
@@ -2134,7 +2842,10 @@
    "point": [
     22.125,
     -312.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Step Cistern",
+   "place_description": "a house in the Bell and Sluice Wards, near Step Cistern"
   },
   "p005l": {
    "building": "omb_i0640",
@@ -2143,7 +2854,10 @@
    "point": [
     26.375,
     268.375
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "Tenterhook Lane",
+   "place_description": "a house in the Wick Ward, off Tenterhook Lane"
   },
   "p005m": {
    "building": "omb_f0365",
@@ -2152,7 +2866,10 @@
    "point": [
     -246.375,
     -213.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Cut"
   },
   "p005n": {
    "building": "omb_i0681",
@@ -2161,7 +2878,10 @@
    "point": [
     21.125,
     -155.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfoot Passage",
+   "place_description": "a house in the Bell and Sluice Wards, off Bellfoot Passage"
   },
   "p005o": {
    "building": "omb_f0719",
@@ -2170,7 +2890,10 @@
    "point": [
     -356.125,
     377.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Shambles well",
+   "place_description": "a house in the Outer wards, near the Shambles well"
   },
   "p005p": {
    "building": "omb_i0446",
@@ -2179,7 +2902,10 @@
    "point": [
     23.375,
     -401.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, near Bitter Well"
   },
   "p005q": {
    "building": "omb_f0818",
@@ -2188,7 +2914,10 @@
    "point": [
     409.625,
     387.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts fire tanks",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts fire tanks"
   },
   "p005r": {
    "building": "omb_i0900",
@@ -2197,7 +2926,10 @@
    "point": [
     416.625,
     -83.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Outer wards, toward the Ilvane anchorhold"
   },
   "p005s": {
    "building": "omb_i0616",
@@ -2206,7 +2938,10 @@
    "point": [
     53.375,
     -520.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, near Bellfounders' Yard"
   },
   "p005t": {
    "building": "omb_f0207",
@@ -2215,7 +2950,10 @@
    "point": [
     54.125,
     -366.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, near Bitter Well"
   },
   "p005u": {
    "building": "omb_i0305",
@@ -2224,7 +2962,10 @@
    "point": [
     -132.875,
     -561.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Harne Gate"
   },
   "p005v": {
    "building": "omb_i0794",
@@ -2233,7 +2974,10 @@
    "point": [
     160.125,
     65.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Ford Well",
+   "place_description": "a house in the Fabric Ward, near Ford Well"
   },
   "p005w": {
    "building": "omb_i1024",
@@ -2242,7 +2986,10 @@
    "point": [
     -136.875,
     78.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Chain Well",
+   "place_description": "a house in the Outer wards, near Chain Well"
   },
   "p005x": {
    "building": "omb_i0662",
@@ -2251,7 +2998,10 @@
    "point": [
     72.375,
     -618.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p005y": {
    "building": "omb_i1275",
@@ -2260,7 +3010,10 @@
    "point": [
     -145.625,
     48.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Chain Well",
+   "place_description": "a house in the Outer wards, near Chain Well"
   },
   "p005z": {
    "building": "omb_f0260",
@@ -2269,7 +3022,10 @@
    "point": [
     42.375,
     310.875
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "Osanne Vell's stall",
+   "place_description": "a house in the Wick Ward, near Osanne Vell's stall"
   },
   "p0060": {
    "building": "omb_i0340",
@@ -2278,7 +3034,10 @@
    "point": [
     92.875,
     -291.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Step Cistern",
+   "place_description": "a house in the Bell and Sluice Wards, near Step Cistern"
   },
   "p0061": {
    "building": "omb_i0792",
@@ -2287,7 +3046,10 @@
    "point": [
     438.125,
     371.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts fire tanks",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts fire tanks"
   },
   "p0062": {
    "building": "omb_i0234",
@@ -2296,7 +3058,10 @@
    "point": [
     82.875,
     -617.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p0063": {
    "building": "omb_i0131",
@@ -2305,7 +3070,10 @@
    "point": [
     -123.125,
     -549.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Harne Gate"
   },
   "p0064": {
    "building": "omb_f0027",
@@ -2314,7 +3082,10 @@
    "point": [
     -315.875,
     -96.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p0065": {
    "building": "omb_f0227",
@@ -2323,7 +3094,10 @@
    "point": [
     56.625,
     -472.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, near Bitter Well"
   },
   "p0066": {
    "building": "omb_f0200",
@@ -2332,7 +3106,10 @@
    "point": [
     58.375,
     -331.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Step Cistern",
+   "place_description": "a house in the Bell and Sluice Wards, near Step Cistern"
   },
   "p0067": {
    "building": "omb_i1168",
@@ -2341,7 +3118,10 @@
    "point": [
     58.875,
     -164.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfoot Passage",
+   "place_description": "a house in the Bell and Sluice Wards, off Bellfoot Passage"
   },
   "p0068": {
    "building": "omb_i0382",
@@ -2350,7 +3130,10 @@
    "point": [
     52.875,
     282.375
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Wick Ward, off the Draper's Reach"
   },
   "p0069": {
    "building": "omb_i0608",
@@ -2359,7 +3142,10 @@
    "point": [
     458.125,
     446.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts fire tanks",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts fire tanks"
   },
   "p006a": {
    "building": "omb_i1416",
@@ -2368,7 +3154,10 @@
    "point": [
     383.625,
     213.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts",
+   "place_description": "a house in the Cloth Ward, toward Seven Lofts"
   },
   "p006b": {
    "building": "omb_i0813",
@@ -2377,7 +3166,10 @@
    "point": [
     436.125,
     287.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts"
   },
   "p006c": {
    "building": "omb_i1108",
@@ -2386,7 +3178,10 @@
    "point": [
     462.125,
     452.125
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts fire tanks",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts fire tanks"
   },
   "p006d": {
    "building": "omb_i1062",
@@ -2395,7 +3190,10 @@
    "point": [
     444.625,
     373.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts fire tanks",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts fire tanks"
   },
   "p006e": {
    "building": "omb_i0402",
@@ -2404,7 +3202,10 @@
    "point": [
     442.375,
     319.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts"
   },
   "p006f": {
    "building": "omb_f0266",
@@ -2413,7 +3214,10 @@
    "point": [
     78.125,
     266.625
-   ]
+   ],
+   "ward": "Wick Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Wick Ward, off the Draper's Reach"
   },
   "p006g": {
    "building": "omb_i0854",
@@ -2422,7 +3226,10 @@
    "point": [
     448.625,
     320.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Seven Lofts",
+   "place_description": "a house in the Cloth Ward, near Seven Lofts"
   },
   "p006h": {
    "building": "omb_f0320",
@@ -2431,7 +3238,10 @@
    "point": [
     171.375,
     3.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Crookneck Lane",
+   "place_description": "a house in the Fabric Ward, off Crookneck Lane"
   },
   "p006i": {
    "building": "omb_i0739",
@@ -2440,7 +3250,10 @@
    "point": [
     401.875,
     212.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Cloth Ward, toward the Stone Gate"
   },
   "p006j": {
    "building": "omb_f0274",
@@ -2449,7 +3262,10 @@
    "point": [
     59.625,
     218.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Seraph statue",
+   "place_description": "a house in the Fabric Ward, near Seraph statue"
   },
   "p006k": {
    "building": "omb_f0788",
@@ -2458,7 +3274,10 @@
    "point": [
     130.375,
     390.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Cloth Ward, near Slate Cistern"
   },
   "p006l": {
    "building": "omb_f0467",
@@ -2467,7 +3286,10 @@
    "point": [
     214.875,
     258.125
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The masons' lodge",
+   "place_description": "a house in the Cloth Ward, near the masons' lodge"
   },
   "p006m": {
    "building": "omb_i0041",
@@ -2476,7 +3298,10 @@
    "point": [
     -139.875,
     29.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p006n": {
    "building": "omb_i0518",
@@ -2485,7 +3310,10 @@
    "point": [
     -145.875,
     25.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p006o": {
    "building": "omb_i0835",
@@ -2494,7 +3322,10 @@
    "point": [
     -132.625,
     10.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p006p": {
    "building": "omb_i0586",
@@ -2503,7 +3334,10 @@
    "point": [
     98.875,
     198.625
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Tenter Cistern",
+   "place_description": "a house in the Fabric Ward, near Tenter Cistern"
   },
   "p006q": {
    "building": "omb_i0320",
@@ -2512,7 +3346,10 @@
    "point": [
     99.375,
     158.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "p006r": {
    "building": "omb_i0092",
@@ -2521,7 +3358,10 @@
    "point": [
     136.375,
     162.375
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "p006s": {
    "building": "omb_f0154",
@@ -2530,7 +3370,10 @@
    "point": [
     140.125,
     109.375
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "p006t": {
    "building": "omb_i0100",
@@ -2539,7 +3382,10 @@
    "point": [
     186.125,
     400.125
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Cloth Ward, toward Slate Cistern"
   },
   "p006u": {
    "building": "omb_f0272",
@@ -2548,7 +3394,10 @@
    "point": [
     144.875,
     226.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "p006v": {
    "building": "omb_f0158",
@@ -2557,7 +3406,10 @@
    "point": [
     137.375,
     89.625
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "p006w": {
    "building": "omb_i0345",
@@ -2566,7 +3418,10 @@
    "point": [
     178.625,
     -49.375
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "The Ilvane Chapel",
+   "place_description": "a house in the Fabric Ward, near the Ilvane Chapel"
   },
   "p006x": {
    "building": "omb_i0301",
@@ -2575,7 +3430,10 @@
    "point": [
     195.625,
     368.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, toward the Draper's Reach"
   },
   "p006y": {
    "building": "omb_i0923",
@@ -2584,7 +3442,10 @@
    "point": [
     -248.125,
     352.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Chain Bridge",
+   "place_description": "a house in the Outer wards, by the Chain Bridge"
   },
   "p006z": {
    "building": "omb_f0415",
@@ -2593,7 +3454,10 @@
    "point": [
     -146.625,
     -332.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, near Saint Maren's church"
   },
   "p0070": {
    "building": "omb_f0055",
@@ -2602,7 +3466,10 @@
    "point": [
     -275.625,
     382.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Chain Bridge",
+   "place_description": "a house in the Outer wards, by the Chain Bridge"
   },
   "p0071": {
    "building": "omb_i0716",
@@ -2611,7 +3478,10 @@
    "point": [
     -142.625,
     -417.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, near Saint Maren's church"
   },
   "p0072": {
    "building": "omb_i1370",
@@ -2620,7 +3490,10 @@
    "point": [
     -263.125,
     -59.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p0073": {
    "building": "omb_i1305",
@@ -2629,7 +3502,10 @@
    "point": [
     -107.875,
     -563.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Harne Gate"
   },
   "p0074": {
    "building": "omb_i0651",
@@ -2638,7 +3514,10 @@
    "point": [
     -253.375,
     -66.375
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p0075": {
    "building": "omb_f0370",
@@ -2647,7 +3526,10 @@
    "point": [
     -174.625,
     -219.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, toward Saint Maren's church"
   },
   "p0076": {
    "building": "omb_i0396",
@@ -2656,7 +3538,10 @@
    "point": [
     -216.375,
     -52.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p0077": {
    "building": "omb_i0627",
@@ -2665,7 +3550,10 @@
    "point": [
     164.625,
     237.125
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "p0078": {
    "building": "omb_i1029",
@@ -2674,7 +3562,10 @@
    "point": [
     445.125,
     17.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Outer wards, toward the Stone Gate"
   },
   "p0079": {
    "building": "omb_f0540",
@@ -2683,7 +3574,10 @@
    "point": [
     438.125,
     8.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Outer wards, toward the Stone Gate"
   },
   "p007a": {
    "building": "omb_f0152",
@@ -2692,7 +3586,10 @@
    "point": [
     162.125,
     127.375
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "p007b": {
    "building": "omb_i0576",
@@ -2701,7 +3598,10 @@
    "point": [
     -155.875,
     -174.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Cut"
   },
   "p007c": {
    "building": "omb_i1311",
@@ -2710,7 +3610,10 @@
    "point": [
     -100.875,
     -442.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, toward Saint Maren's church"
   },
   "p007d": {
    "building": "omb_i0936",
@@ -2719,7 +3622,10 @@
    "point": [
     449.375,
     -16.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Outer wards, toward the Stone Gate"
   },
   "p007e": {
    "building": "omb_i1076",
@@ -2728,7 +3634,10 @@
    "point": [
     458.125,
     -0.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Outer wards, toward the Stone Gate"
   },
   "p007f": {
    "building": "omb_i1323",
@@ -2737,7 +3646,10 @@
    "point": [
     429.375,
     -15.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Outer wards, toward the Stone Gate"
   },
   "p007g": {
    "building": "omb_i0071",
@@ -2746,7 +3658,10 @@
    "point": [
     469.125,
     -113.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Outer wards, toward the Stone Gate"
   },
   "p007h": {
    "building": "omb_f0491",
@@ -2755,7 +3670,10 @@
    "point": [
     161.125,
     431.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Cloth Ward, toward Slate Cistern"
   },
   "p007i": {
    "building": "omb_i0428",
@@ -2764,7 +3682,10 @@
    "point": [
     459.875,
     -29.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Stone Gate",
+   "place_description": "a house in the Outer wards, toward the Stone Gate"
   },
   "p007j": {
    "building": "omb_i0776",
@@ -2773,7 +3694,10 @@
    "point": [
     -236.625,
     -64.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p007k": {
    "building": "omb_i0528",
@@ -2782,7 +3706,10 @@
    "point": [
     -265.875,
     -77.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Cut",
+   "place_description": "a house in the Outer wards, off the Cut"
   },
   "p007l": {
    "building": "omb_i0287",
@@ -2791,7 +3718,10 @@
    "point": [
     -159.375,
     -26.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p007m": {
    "building": "omb_f0336",
@@ -2800,7 +3730,10 @@
    "point": [
     154.875,
     -31.625
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Crookneck Lane",
+   "place_description": "a house in the Fabric Ward, off Crookneck Lane"
   },
   "p007n": {
    "building": "omb_i1100",
@@ -2809,7 +3742,10 @@
    "point": [
     209.625,
     287.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "p007o": {
    "building": "omb_f0466",
@@ -2818,7 +3754,10 @@
    "point": [
     198.125,
     262.625
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "p007p": {
    "building": "omb_i0916",
@@ -2827,7 +3766,10 @@
    "point": [
     189.875,
     350.375
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "p007q": {
    "building": "omb_f0545",
@@ -2836,7 +3778,10 @@
    "point": [
     370.125,
     -5.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Malt Passage",
+   "place_description": "a house in the Outer wards, toward Malt Passage"
   },
   "p007r": {
    "building": "omb_f0319",
@@ -2845,7 +3790,10 @@
    "point": [
     166.375,
     20.625
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Crookneck Lane",
+   "place_description": "a house in the Fabric Ward, off Crookneck Lane"
   },
   "p007s": {
    "building": "omb_f0462",
@@ -2854,7 +3802,10 @@
    "point": [
     200.625,
     246.875
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "p007t": {
    "building": "omb_f0789",
@@ -2863,7 +3814,10 @@
    "point": [
     128.125,
     374.125
-   ]
+   ],
+   "ward": "Cloth Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Cloth Ward, near Slate Cistern"
   },
   "p007u": {
    "building": "omb_f0705",
@@ -2872,7 +3826,10 @@
    "point": [
     -171.375,
     401.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Chain Bridge",
+   "place_description": "a house in the Outer wards, toward the Chain Bridge"
   },
   "p007z": {
    "building": "omb_i0192",
@@ -2881,7 +3838,10 @@
    "point": [
     -68.875,
     -599.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p0080": {
    "building": "omb_i0478",
@@ -2890,7 +3850,10 @@
    "point": [
     -187.625,
     449.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Chain Bridge",
+   "place_description": "a house in the Outer wards, by the Chain Bridge"
   },
   "p0081": {
    "building": "omb_i0721",
@@ -2899,7 +3862,10 @@
    "point": [
     -173.875,
     -71.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p0082": {
    "building": "omb_i0110",
@@ -2908,7 +3874,10 @@
    "point": [
     -65.625,
     -547.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Harne Gate"
   },
   "p0083": {
    "building": "omb_i1446",
@@ -2917,7 +3886,10 @@
    "point": [
     365.875,
     -25.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Outer wards, toward the Ilvane anchorhold"
   },
   "p0084": {
    "building": "omb_i0053",
@@ -2926,7 +3898,10 @@
    "point": [
     -146.375,
     -50.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p0085": {
    "building": "omb_i0823",
@@ -2935,7 +3910,10 @@
    "point": [
     -126.375,
     -68.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p0086": {
    "building": "omb_f0412",
@@ -2944,7 +3922,10 @@
    "point": [
     -104.625,
     -329.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "a house in the Bell and Sluice Wards, near Saint Maren's church"
   },
   "p0087": {
    "building": "omb_i0140",
@@ -2953,7 +3934,10 @@
    "point": [
     -153.375,
     -92.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p008e": {
    "building": "omb_i0674",
@@ -2962,7 +3946,10 @@
    "point": [
     102.625,
     -602.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "a house in the Bell and Sluice Wards, by the Harne Gate"
   },
   "p008f": {
    "building": "omb_i0460",
@@ -2971,7 +3958,10 @@
    "point": [
     103.625,
     -321.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Step Cistern",
+   "place_description": "a house in the Bell and Sluice Wards, near Step Cistern"
   },
   "p008g": {
    "building": "omb_i0094",
@@ -2980,7 +3970,10 @@
    "point": [
     147.625,
     -585.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, near Bellfounders' Yard"
   },
   "p008h": {
    "building": "omb_i0789",
@@ -2989,7 +3982,10 @@
    "point": [
     124.125,
     -547.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, near Bellfounders' Yard"
   },
   "p008i": {
    "building": "omb_f0643",
@@ -2998,7 +3994,10 @@
    "point": [
     109.375,
     -432.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, near Bitter Well"
   },
   "p008j": {
    "building": "omb_i1373",
@@ -3007,7 +4006,10 @@
    "point": [
     94.375,
     -476.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, near Bellfounders' Yard"
   },
   "p008k": {
    "building": "omb_f0648",
@@ -3016,7 +4018,10 @@
    "point": [
     124.625,
     -409.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, near Bitter Well"
   },
   "p008p": {
    "building": "omb_i0870",
@@ -3025,7 +4030,10 @@
    "point": [
     169.875,
     -585.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, near Bellfounders' Yard"
   },
   "p008q": {
    "building": "omb_i1141",
@@ -3034,7 +4042,10 @@
    "point": [
     166.375,
     -581.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, near Bellfounders' Yard"
   },
   "p008r": {
    "building": "omb_i0659",
@@ -3043,7 +4054,10 @@
    "point": [
     143.125,
     -425.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, near Bitter Well"
   },
   "p008s": {
    "building": "omb_i0704",
@@ -3052,7 +4066,10 @@
    "point": [
     194.875,
     -612.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p008x": {
    "building": "omb_i0073",
@@ -3061,7 +4078,10 @@
    "point": [
     185.875,
     -328.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, near Bitter Well"
   },
   "p008y": {
    "building": "omb_i0650",
@@ -3070,7 +4090,10 @@
    "point": [
     216.375,
     -606.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p008z": {
    "building": "omb_f0889",
@@ -3079,7 +4102,10 @@
    "point": [
     213.625,
     -309.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bitter Well"
   },
   "p0090": {
    "building": "omb_f0862",
@@ -3088,7 +4114,10 @@
    "point": [
     236.625,
     -141.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, near the Ilvane anchorhold"
   },
   "p0091": {
    "building": "omb_i1374",
@@ -3097,7 +4126,10 @@
    "point": [
     262.625,
     -638.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p0092": {
    "building": "omb_f0653",
@@ -3106,7 +4138,10 @@
    "point": [
     218.125,
     -531.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, near Bellfounders' Yard"
   },
   "p0093": {
    "building": "omb_f0877",
@@ -3115,7 +4150,10 @@
    "point": [
     204.125,
     -223.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p0094": {
    "building": "omb_i1367",
@@ -3124,7 +4162,10 @@
    "point": [
     228.375,
     -384.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p0095": {
    "building": "omb_f0660",
@@ -3133,7 +4174,10 @@
    "point": [
     231.125,
     -524.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, near Bellfounders' Yard"
   },
   "p0096": {
    "building": "omb_i0931",
@@ -3142,7 +4186,10 @@
    "point": [
     229.375,
     -447.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, near Bellfounders' Yard"
   },
   "p0097": {
    "building": "omb_f0155",
@@ -3151,7 +4198,10 @@
    "point": [
     169.375,
     111.125
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "p0098": {
    "building": "omb_i0480",
@@ -3160,7 +4210,10 @@
    "point": [
     254.125,
     -183.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, near the Ilvane anchorhold"
   },
   "p0099": {
    "building": "omb_i0893",
@@ -3169,7 +4222,10 @@
    "point": [
     275.125,
     -440.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009a": {
    "building": "omb_i0842",
@@ -3178,7 +4234,10 @@
    "point": [
     -180.375,
     -86.125
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p009b": {
    "building": "omb_i1276",
@@ -3187,7 +4246,10 @@
    "point": [
     168.375,
     82.375
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Malt Passage",
+   "place_description": "a house in the Fabric Ward, off Malt Passage"
   },
   "p009c": {
    "building": "omb_i0307",
@@ -3196,7 +4258,10 @@
    "point": [
     -141.875,
     -107.625
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Bonded weighing yard",
+   "place_description": "a house in the Outer wards, near Bonded weighing yard"
   },
   "p009d": {
    "building": "omb_f0548",
@@ -3205,7 +4270,10 @@
    "point": [
     338.125,
     -5.875
-   ]
+   ],
+   "ward": "Outer wards",
+   "landmark": "Malt Passage",
+   "place_description": "a house in the Outer wards, toward Malt Passage"
   },
   "p009e": {
    "building": "omb_i0244",
@@ -3214,7 +4282,10 @@
    "point": [
     159.125,
     56.625
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Crookneck Lane",
+   "place_description": "a house in the Fabric Ward, off Crookneck Lane"
   },
   "p009f": {
    "building": "omb_f0883",
@@ -3223,7 +4294,10 @@
    "point": [
     239.125,
     -232.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p009g": {
    "building": "omb_i0455",
@@ -3232,7 +4306,10 @@
    "point": [
     246.875,
     -614.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009h": {
    "building": "omb_i0693",
@@ -3241,7 +4318,10 @@
    "point": [
     283.875,
     -596.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009i": {
    "building": "omb_i0338",
@@ -3250,7 +4330,10 @@
    "point": [
     290.125,
     -349.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009j": {
    "building": "omb_i1089",
@@ -3259,7 +4342,10 @@
    "point": [
     274.125,
     -297.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bitter Well"
   },
   "p009k": {
    "building": "omb_i0325",
@@ -3268,7 +4354,10 @@
    "point": [
     308.375,
     -152.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p009l": {
    "building": "omb_i1173",
@@ -3277,7 +4366,10 @@
    "point": [
     271.375,
     -200.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p009m": {
    "building": "omb_i0203",
@@ -3286,7 +4378,10 @@
    "point": [
     313.875,
     -485.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009n": {
    "building": "omb_f0915",
@@ -3295,7 +4390,10 @@
    "point": [
     293.875,
     -394.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009o": {
    "building": "omb_i0027",
@@ -3304,7 +4402,10 @@
    "point": [
     316.625,
     -224.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p009p": {
    "building": "omb_f0679",
@@ -3313,7 +4414,10 @@
    "point": [
     309.375,
     -565.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009q": {
    "building": "omb_i0379",
@@ -3322,7 +4426,10 @@
    "point": [
     296.875,
     -431.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009r": {
    "building": "omb_i0840",
@@ -3331,7 +4438,10 @@
    "point": [
     288.625,
     -283.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p009s": {
    "building": "omb_i1220",
@@ -3340,7 +4450,10 @@
    "point": [
     320.625,
     -152.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p009t": {
    "building": "omb_i0165",
@@ -3349,7 +4462,10 @@
    "point": [
     334.125,
     -639.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009u": {
    "building": "omb_f0611",
@@ -3358,7 +4474,10 @@
    "point": [
     344.875,
     -376.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009v": {
    "building": "omb_i1026",
@@ -3367,7 +4486,10 @@
    "point": [
     349.875,
     -144.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p009w": {
    "building": "omb_f0671",
@@ -3376,7 +4498,10 @@
    "point": [
     339.125,
     -593.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009x": {
    "building": "omb_i0937",
@@ -3385,7 +4510,10 @@
    "point": [
     330.875,
     -527.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p009y": {
    "building": "omb_f0596",
@@ -3394,7 +4522,10 @@
    "point": [
     336.375,
     -228.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p009z": {
    "building": "omb_i0487",
@@ -3403,7 +4534,10 @@
    "point": [
     340.375,
     -190.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00a0": {
    "building": "omb_f0619",
@@ -3412,7 +4546,10 @@
    "point": [
     356.375,
     -479.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00a1": {
    "building": "omb_i0386",
@@ -3421,7 +4558,10 @@
    "point": [
     334.125,
     -451.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00a2": {
    "building": "omb_i0022",
@@ -3430,7 +4570,10 @@
    "point": [
     367.875,
     -305.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00a3": {
    "building": "omb_i0183",
@@ -3439,7 +4582,10 @@
    "point": [
     370.375,
     -161.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00a4": {
    "building": "omb_i0622",
@@ -3448,7 +4594,10 @@
    "point": [
     391.375,
     -146.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00a5": {
    "building": "omb_i1022",
@@ -3457,7 +4606,10 @@
    "point": [
     352.875,
     -645.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00a6": {
    "building": "omb_f0674",
@@ -3466,7 +4618,10 @@
    "point": [
     372.875,
     -590.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00a7": {
    "building": "omb_f0907",
@@ -3475,7 +4630,10 @@
    "point": [
     383.125,
     -359.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00a8": {
    "building": "omb_f0586",
@@ -3484,7 +4642,10 @@
    "point": [
     376.875,
     -188.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00a9": {
    "building": "omb_f0627",
@@ -3493,7 +4654,10 @@
    "point": [
     399.625,
     -561.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00aa": {
    "building": "omb_f0634",
@@ -3502,7 +4666,10 @@
    "point": [
     381.375,
     -490.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00ab": {
    "building": "omb_f0630",
@@ -3511,7 +4678,10 @@
    "point": [
     375.375,
     -449.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00ac": {
    "building": "omb_i0750",
@@ -3520,7 +4690,10 @@
    "point": [
     375.125,
     -280.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00ad": {
    "building": "omb_i1287",
@@ -3529,7 +4702,10 @@
    "point": [
     385.875,
     -570.375
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00ae": {
    "building": "omb_i1002",
@@ -3538,7 +4714,10 @@
    "point": [
     408.625,
     -229.875
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00af": {
    "building": "omb_i1216",
@@ -3547,7 +4726,10 @@
    "point": [
     409.375,
     -383.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00ag": {
    "building": "omb_i0762",
@@ -3556,7 +4738,10 @@
    "point": [
     433.125,
     -168.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00ah": {
    "building": "omb_i1152",
@@ -3565,7 +4750,10 @@
    "point": [
     378.375,
     -642.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "a house in the Bell and Sluice Wards, toward Bellfounders' Yard"
   },
   "p00ai": {
    "building": "omb_i0038",
@@ -3574,7 +4762,10 @@
    "point": [
     426.125,
     -307.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00aj": {
    "building": "omb_f0591",
@@ -3583,7 +4774,10 @@
    "point": [
     410.875,
     -190.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00ap": {
    "building": "omb_i0412",
@@ -3592,7 +4786,10 @@
    "point": [
     466.375,
     -299.625
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "p00aq": {
    "building": "omb_i0548",
@@ -3601,7 +4798,10 @@
    "point": [
     435.125,
     -208.125
-   ]
+   ],
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "a house in the Bell and Sluice Wards, toward the Ilvane anchorhold"
   },
   "sv3n1": {
    "building": "omb_i0466",
@@ -3610,7 +4810,517 @@
    "point": [
     117.625,
     19.375
-   ]
+   ],
+   "ward": "Fabric Ward",
+   "landmark": "Ford Well",
+   "place_description": "a house in the Fabric Ward, near Ford Well"
+  }
+ },
+ "bedless": {
+  "a1clo": {
+   "ward": "Fabric Ward",
+   "landmark": "Bonded weighing yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Fabric Ward, near Bonded weighing yard, wherever the watch will let you lie"
+  },
+  "aq7ld": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane Chapel",
+   "place_description": "the anchorhold cell at the Ilvane Chapel; you are enclosed there for life"
+  },
+  "bm3ot": {
+   "ward": "Wallwright Ward",
+   "landmark": "Coswald's Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wallwright Ward, near Coswald's Yard, wherever the watch will let you lie"
+  },
+  "dtib0": {
+   "ward": "Cinder Ward",
+   "landmark": "The Needle",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Cinder Ward, off the Needle, wherever the watch will let you lie"
+  },
+  "e9nan": {
+   "ward": "Weigh Ward",
+   "landmark": "The Cut",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Weigh Ward, off the Cut, wherever the watch will let you lie"
+  },
+  "fg4br": {
+   "ward": "Weigh Ward",
+   "landmark": "The Shambles",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Weigh Ward, near the Shambles, wherever the watch will let you lie"
+  },
+  "ft3tb": {
+   "ward": "Weigh Ward",
+   "landmark": "Gaunt Passage",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Weigh Ward, off Gaunt Passage, wherever the watch will let you lie"
+  },
+  "g6cbb": {
+   "ward": "Reed Ward",
+   "landmark": "The Reed Postern",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, by the Reed Postern, wherever the watch will let you lie"
+  },
+  "hrosl": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, off the Cut, wherever the watch will let you lie"
+  },
+  "p0000": {
+   "ward": "Fabric Ward",
+   "landmark": "The Lanthorn",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Fabric Ward, toward the Lanthorn, wherever the watch will let you lie"
+  },
+  "p0001": {
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, near the Old Sluice, wherever the watch will let you lie"
+  },
+  "p0002": {
+   "ward": "Wallwright Ward",
+   "landmark": "Coswald's Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wallwright Ward, near Coswald's Yard, wherever the watch will let you lie"
+  },
+  "p0003": {
+   "ward": "Fabric Ward",
+   "landmark": "The Lanthorn",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Fabric Ward, near the Lanthorn, wherever the watch will let you lie"
+  },
+  "p0004": {
+   "ward": "Fabric Ward",
+   "landmark": "The Lanthorn",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Fabric Ward, near the Lanthorn, easily lost"
+  },
+  "p0005": {
+   "ward": "Reed Ward",
+   "landmark": "Maren's Slip",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, off Maren's Slip, wherever the watch will let you lie"
+  },
+  "p000k": {
+   "ward": "Wallwright Ward",
+   "landmark": "Coswald's Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wallwright Ward, near Coswald's Yard, wherever the watch will let you lie"
+  },
+  "p000l": {
+   "ward": "Reed Ward",
+   "landmark": "Maren's Slip",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, off Maren's Slip, wherever the watch will let you lie"
+  },
+  "p000m": {
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, near the Old Sluice, wherever the watch will let you lie"
+  },
+  "p000n": {
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, near the Old Sluice, wherever the watch will let you lie"
+  },
+  "p000o": {
+   "ward": "Wallwright Ward",
+   "landmark": "Malt Passage",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wallwright Ward, toward Malt Passage, wherever the watch will let you lie"
+  },
+  "p000p": {
+   "ward": "Weigh Ward",
+   "landmark": "The Shambles",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Weigh Ward, near the Shambles, easily lost"
+  },
+  "p000y": {
+   "ward": "Cloth Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Cloth Ward, toward Slate Cistern, wherever the watch will let you lie"
+  },
+  "p000z": {
+   "ward": "Fabric Ward",
+   "landmark": "Chapter house and Grey Press",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Fabric Ward, near Chapter house and Grey Press, wherever the watch will let you lie"
+  },
+  "p0010": {
+   "ward": "Wick Ward",
+   "landmark": "The Wool Gate",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wick Ward, by the Wool Gate, wherever the watch will let you lie"
+  },
+  "p0011": {
+   "ward": "Reed Ward",
+   "landmark": "Eelback Alley",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, off Eelback Alley, wherever the watch will let you lie"
+  },
+  "p0012": {
+   "ward": "Fabric Ward",
+   "landmark": "The Gradine",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Fabric Ward, near the Gradine, wherever the watch will let you lie"
+  },
+  "p0017": {
+   "ward": "Cinder Ward",
+   "landmark": "The Cut ropewalk",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Cinder Ward, near the Cut ropewalk, wherever the watch will let you lie"
+  },
+  "p0018": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Tanners' Slip",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Tanners' Slip, wherever the watch will let you lie"
+  },
+  "p0019": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, off the Cut, wherever the watch will let you lie"
+  },
+  "p001a": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, off the Cut, wherever the watch will let you lie"
+  },
+  "p001b": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Bell and Sluice Wards, off the Cut, easily lost"
+  },
+  "p001d": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Bell and Sluice Wards, off the Cut, easily lost"
+  },
+  "p001e": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, off the Cut, wherever the watch will let you lie"
+  },
+  "p001f": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Cut",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Bell and Sluice Wards, off the Cut, easily lost"
+  },
+  "p001g": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Reed Cistern",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Reed Cistern, wherever the watch will let you lie"
+  },
+  "p001k": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Old Sluice",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward the Old Sluice, wherever the watch will let you lie"
+  },
+  "p001l": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Bell and Sluice Wards, near Saint Maren's church, easily lost"
+  },
+  "p001m": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Bell and Sluice Wards, near Saint Maren's church, easily lost"
+  },
+  "p001n": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Saint Maren's church",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Saint Maren's church, wherever the watch will let you lie"
+  },
+  "p0024": {
+   "ward": "Wallwright Ward",
+   "landmark": "The Stone Gate",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wallwright Ward, toward the Stone Gate, wherever the watch will let you lie"
+  },
+  "p0025": {
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, near the Old Sluice, wherever the watch will let you lie"
+  },
+  "p0026": {
+   "ward": "Wick Ward",
+   "landmark": "The Wickmarket",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Wick Ward, near the Wickmarket, easily lost"
+  },
+  "p0027": {
+   "ward": "Wick Ward",
+   "landmark": "The glaziers' guildhall",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wick Ward, near the glaziers' guildhall, wherever the watch will let you lie"
+  },
+  "p0028": {
+   "ward": "Reed Ward",
+   "landmark": "The Hungry Ox",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, near the Hungry Ox, wherever the watch will let you lie"
+  },
+  "p0033": {
+   "ward": "Reed Ward",
+   "landmark": "The Hungry Ox",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, near the Hungry Ox, wherever the watch will let you lie"
+  },
+  "p0034": {
+   "ward": "Reed Ward",
+   "landmark": "The Hungry Ox",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, near the Hungry Ox, wherever the watch will let you lie"
+  },
+  "p0035": {
+   "ward": "Reed Ward",
+   "landmark": "Reed Cistern",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Reed Ward, near Reed Cistern, easily lost"
+  },
+  "p0036": {
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, near the Old Sluice, wherever the watch will let you lie"
+  },
+  "p003a": {
+   "ward": "Reed Ward",
+   "landmark": "The Old Sluice",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, near the Old Sluice, wherever the watch will let you lie"
+  },
+  "p003b": {
+   "ward": "Weigh Ward",
+   "landmark": "The Shambles",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Weigh Ward, near the Shambles, wherever the watch will let you lie"
+  },
+  "p003c": {
+   "ward": "Weigh Ward",
+   "landmark": "The Shambles",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Weigh Ward, near the Shambles, wherever the watch will let you lie"
+  },
+  "p003d": {
+   "ward": "Weigh Ward",
+   "landmark": "Bonded warehouse",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Weigh Ward, near Bonded warehouse, easily lost"
+  },
+  "p003k": {
+   "ward": "Weigh Ward",
+   "landmark": "The Cut",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Weigh Ward, off the Cut, wherever the watch will let you lie"
+  },
+  "p003l": {
+   "ward": "Weigh Ward",
+   "landmark": "The Cut",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Weigh Ward, off the Cut, wherever the watch will let you lie"
+  },
+  "p003p": {
+   "ward": "Wick Ward",
+   "landmark": "The Wickmarket",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wick Ward, near the Wickmarket, wherever the watch will let you lie"
+  },
+  "p003q": {
+   "ward": "Fabric Ward",
+   "landmark": "Skinners' Court",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Fabric Ward, near Skinners' Court, easily lost"
+  },
+  "p003r": {
+   "ward": "Wick Ward",
+   "landmark": "The Wool Gate",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wick Ward, by the Wool Gate, wherever the watch will let you lie"
+  },
+  "p003s": {
+   "ward": "Wick Ward",
+   "landmark": "The Wool Gate",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Wick Ward, by the Wool Gate, easily lost"
+  },
+  "p003t": {
+   "ward": "Wick Ward",
+   "landmark": "The Wickmarket",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wick Ward, near the Wickmarket, wherever the watch will let you lie"
+  },
+  "p004n": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Bellstand",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near the Bellstand, wherever the watch will let you lie"
+  },
+  "p004o": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Bellstand",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward the Bellstand, wherever the watch will let you lie"
+  },
+  "p004p": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Step Cistern",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Step Cistern, wherever the watch will let you lie"
+  },
+  "p004z": {
+   "ward": "Wallwright Ward",
+   "landmark": "The Stone Gate",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wallwright Ward, by the Stone Gate, wherever the watch will let you lie"
+  },
+  "p0050": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Step Cistern",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Step Cistern, wherever the watch will let you lie"
+  },
+  "p0051": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Step Cistern",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Step Cistern, wherever the watch will let you lie"
+  },
+  "p0052": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Bellstand",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near the Bellstand, wherever the watch will let you lie"
+  },
+  "p0053": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, by the Harne Gate, wherever the watch will let you lie"
+  },
+  "p0054": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Bitter Well, wherever the watch will let you lie"
+  },
+  "p007v": {
+   "ward": "Weigh Ward",
+   "landmark": "Doctor Ferrant's house",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Weigh Ward, near Doctor Ferrant's house, easily lost"
+  },
+  "p007w": {
+   "ward": "Reed Ward",
+   "landmark": "Saint Maren's church",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Reed Ward, near Saint Maren's church, wherever the watch will let you lie"
+  },
+  "p007x": {
+   "ward": "Weigh Ward",
+   "landmark": "Tallage toll-house",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Weigh Ward, near Tallage toll-house, wherever the watch will let you lie"
+  },
+  "p007y": {
+   "ward": "Weigh Ward",
+   "landmark": "Bonded weighing yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Weigh Ward, near Bonded weighing yard, wherever the watch will let you lie"
+  },
+  "p0088": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Harne Gate",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, by the Harne Gate, wherever the watch will let you lie"
+  },
+  "p0089": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfoot Passage",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, off Bellfoot Passage, wherever the watch will let you lie"
+  },
+  "p008a": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Bitter Well, wherever the watch will let you lie"
+  },
+  "p008b": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p008c": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Bitter Well, wherever the watch will let you lie"
+  },
+  "p008d": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellstand watch-bell tower",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Bellstand watch-bell tower, wherever the watch will let you lie"
+  },
+  "p008l": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Bitter Well, wherever the watch will let you lie"
+  },
+  "p008m": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near the Ilvane anchorhold, wherever the watch will let you lie"
+  },
+  "p008n": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Step Cistern",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Step Cistern, wherever the watch will let you lie"
+  },
+  "p008o": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfoot Passage",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, off Bellfoot Passage, wherever the watch will let you lie"
+  },
+  "p008t": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near the Ilvane anchorhold, wherever the watch will let you lie"
+  },
+  "p008u": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p008v": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bitter Well",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Bitter Well, wherever the watch will let you lie"
+  },
+  "p008w": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p00ak": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p00al": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p00am": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p00an": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward the Ilvane anchorhold, wherever the watch will let you lie"
+  },
+  "p00ao": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p00ar": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward the Ilvane anchorhold, wherever the watch will let you lie"
+  },
+  "p00as": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p00at": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p00au": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p00av": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward Bellfounders' Yard, wherever the watch will let you lie"
+  },
+  "p00aw": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "Bellfounders' Yard",
+   "place_description": "no bed of your own \u2014 a night-to-night lodging in the Bell and Sluice Wards, toward Bellfounders' Yard, easily lost"
+  },
+  "p00ax": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward the Ilvane anchorhold, wherever the watch will let you lie"
+  },
+  "p00ay": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Ilvane anchorhold",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward the Ilvane anchorhold, wherever the watch will let you lie"
+  },
+  "p00az": {
+   "ward": "Wick Ward",
+   "landmark": "Slate Cistern",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Wick Ward, near Slate Cistern, wherever the watch will let you lie"
+  },
+  "p00b0": {
+   "ward": "Bell and Sluice Wards",
+   "landmark": "The Stone Gate",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, toward the Stone Gate, wherever the watch will let you lie"
   }
  }
 }

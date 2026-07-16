@@ -20,6 +20,7 @@ pub mod error;
 pub mod event;
 pub mod fake;
 pub mod floor;
+mod homes;
 pub mod ids;
 pub mod item;
 pub mod lore;

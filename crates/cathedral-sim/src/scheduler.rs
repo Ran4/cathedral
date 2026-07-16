@@ -978,6 +978,7 @@ mod tests {
             children: Vec::new(),
             circumstances: Vec::new(),
             conditions: Vec::new(),
+            home: None,
             core_character_description: "You work carefully.".into(),
             extended_character_description: String::new(),
             curiosity: None,

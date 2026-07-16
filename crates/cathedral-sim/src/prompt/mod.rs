@@ -75,6 +75,8 @@ pub struct PromptStrings {
     pub the_hour_label: String,
     /// Introduces the lore profile's `illegal_activity` on the `**you**` line.
     pub illegal_activity_label: String,
+    /// Introduces the lore profile's `home` on the `**you**` line.
+    pub home_label: String,
 }
 
 impl PromptStrings {
@@ -182,6 +184,10 @@ struct PromptLoreProfile<'a> {
     faction_role: Option<&'a str>,
     illegal_activity: Option<&'a str>,
     district: &'a str,
+    /// The baked spoken home ("a house in the Cinder Ward, near the Shambles
+    /// well" — or the bedless framing), so "Where do you live?" is answered
+    /// from the sheet, not improvised (see `homes.rs`).
+    home: Option<&'a str>,
     father: Option<LoreRelation<'a>>,
     mother: Option<LoreRelation<'a>>,
     children: Vec<LoreRelation<'a>>,
@@ -468,6 +474,7 @@ fn build_sheet<'a>(
         faction_role: profile.faction_role.as_deref(),
         illegal_activity: profile.illegal_activity.as_deref(),
         district: &profile.district,
+        home: profile.home.as_deref(),
         father: profile.father.as_ref().map(&relation),
         mother: profile.mother.as_ref().map(&relation),
         children: profile.children.iter().map(relation).collect(),
@@ -642,6 +649,9 @@ fn you_line(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
         None => line.push_str(&format!(", of {}.", lore.district)),
     }
 
+    if let Some(home) = lore.home {
+        line.push_str(&format!(" {} {home}.", strings.home_label));
+    }
     if let Some(role) = lore.faction_role {
         line.push_str(&format!(" Faction role: {role}."));
     }
@@ -830,6 +840,7 @@ mod tests {
             places_note: "go_to takes these place_ids".into(),
             the_hour_label: "The hour:".into(),
             illegal_activity_label: "In secret:".into(),
+            home_label: "Home:".into(),
         }
     }
 
@@ -843,7 +854,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nillegal_activity_label = \"m\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\n";
         let error = PromptEnv::new("x", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
@@ -886,6 +897,7 @@ mod tests {
                 faction_role: None,
                 illegal_activity: Some("forger"),
                 district: "The Tallage",
+                home: Some("a house in the Weigh Ward, near the Tallage"),
                 father: None,
                 mother: Some(LoreRelation {
                     id: &mother_id,
@@ -915,18 +927,29 @@ mod tests {
         assert_eq!(
             you_line(&sheet, &strings()),
             "**you** — Corin Copp, 26, male — Scrivener (Scribe and clerk, journeyman) \
-             of The Tallage. In secret: forger. Family: mother Osanne Skell (id br2sk)."
+             of The Tallage. Home: a house in the Weigh Ward, near the Tallage. \
+             In secret: forger. Family: mother Osanne Skell (id br2sk)."
         );
+
+        // The bedless framing is just another home string — the bake wrote the
+        // words, the line renders whatever it says.
+        let mut bedless = sheet;
+        bedless.lore_profile.as_mut().unwrap().home =
+            Some("no fixed bed — you sleep rough in the Reed Ward, near the Alder Moorings");
+        assert!(you_line(&bedless, &strings()).contains(
+            "Home: no fixed bed — you sleep rough in the Reed Ward, near the Alder Moorings."
+        ));
 
         // A title equal to the occupation is not repeated — no "Anchoress
         // (Anchoress)".
-        let mut same_title = sheet;
+        let mut same_title = bedless;
         {
             let lore = same_title.lore_profile.as_mut().unwrap();
             lore.title = Some("Scribe and clerk");
             lore.rank = None;
             lore.illegal_activity = None;
             lore.mother = None;
+            lore.home = None;
         }
         assert_eq!(
             you_line(&same_title, &strings()),

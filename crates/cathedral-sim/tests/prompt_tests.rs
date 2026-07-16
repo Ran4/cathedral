@@ -462,6 +462,7 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
         children: vec![actor("k0fb1")],
         circumstances: vec!["recent_migrant".into()],
         conditions: vec!["singed eyebrows".into()],
+        home: Some("a house in the Cinder Ward, off Cinder Row".into()),
         core_character_description: "The prompt uses back_story for this.".into(),
         extended_character_description: "SECRET EXTENDED DETAIL".into(),
         curiosity: None,
@@ -488,10 +489,12 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
         sheet["lore_profile"]["conditions"],
         json!(["singed eyebrows"])
     );
-    // …and the markdown folds it into the `**you**` line.
+    // …and the markdown folds it into the `**you**` line — the baked home
+    // included, so "Where do you live?" is grounded (see `homes.rs`).
     assert!(
         rendered.contains(
             "**you** — Sven, 19, male — Blacksmith (Smith, apprentice) of Cinder Row. \
+             Home: a house in the Cinder Ward, off Cinder Row. \
              Family: children: Ilse (id k0fb1). Circumstances: recent_migrant. \
              Conditions: singed eyebrows."
         ),

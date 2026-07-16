@@ -53,6 +53,7 @@ fn person(id: &str, position: Vec3, occupation: Option<&str>, significance: Sign
         children: Vec::new(),
         circumstances: Vec::new(),
         conditions: Vec::new(),
+        home: None,
         core_character_description: String::new(),
         extended_character_description: String::new(),
         curiosity: None,
@@ -124,10 +125,11 @@ fn the_round_content_parses_and_every_destination_resolves() {
     // anyone whose circumstances say they have no such bed (the bake script's
     // skip set). Deriving the expected ids from the lore instead of pinning a
     // count makes a stale bake fail here with the ids that drifted.
-    let bedless = ["pauper", "unhoused", "insecure_lodging", "enclosed_religious"];
+    let bedless_circumstances = ["pauper", "unhoused", "insecure_lodging", "enclosed_religious"];
     let characters_dir =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../lore/characters");
     let mut expected_housed = BTreeSet::new();
+    let mut expected_bedless = BTreeSet::new();
     let mut stack = vec![characters_dir];
     while let Some(dir) = stack.pop() {
         for entry in std::fs::read_dir(&dir).expect("lore/characters is readable") {
@@ -144,11 +146,17 @@ fn the_round_content_parses_and_every_destination_resolves() {
             )
             .expect("character sheet parses");
             let id = sheet["id"].as_str().expect("character sheet has an id");
-            let has_bed = !sheet["circumstances"]
-                .as_array()
-                .is_some_and(|c| c.iter().any(|c| bedless.contains(&c.as_str().unwrap_or(""))));
-            if id != "player" && has_bed {
+            let has_bed = !sheet["circumstances"].as_array().is_some_and(|c| {
+                c.iter()
+                    .any(|c| bedless_circumstances.contains(&c.as_str().unwrap_or("")))
+            });
+            if id == "player" {
+                continue;
+            }
+            if has_bed {
                 expected_housed.insert(id.to_owned());
+            } else {
+                expected_bedless.insert(id.to_owned());
             }
         }
     }
@@ -163,6 +171,35 @@ fn the_round_content_parses_and_every_destination_resolves() {
     assert!(
         !homes.homes.contains_key("aq7ld"),
         "Dame Aldith is bricked into her cell, never bound to a residential door"
+    );
+
+    // The prompt side of the same bake: every housed entry speaks its home,
+    // every bedless character gets the explicit no-fixed-bed framing — so the
+    // `**you**` line's `Home:` is never an id, a coordinate, or silence
+    // (`features/npc_knows_where_it_lives__inject_home_into_prompt.md`).
+    let baked_bedless: BTreeSet<String> = homes.bedless.keys().cloned().collect();
+    assert_eq!(
+        baked_bedless, expected_bedless,
+        "homes.json bedless is out of step with lore/characters — re-run scripts/bake_homes.py"
+    );
+    for (id, entry) in &homes.homes {
+        assert!(
+            entry
+                .place_description
+                .as_deref()
+                .is_some_and(|description| !description.trim().is_empty()),
+            "{id}'s home has no place_description — re-run scripts/bake_homes.py"
+        );
+    }
+    for (id, entry) in &homes.bedless {
+        assert!(
+            !entry.place_description.trim().is_empty(),
+            "{id}'s bedless entry has an empty place_description"
+        );
+    }
+    assert!(
+        homes.bedless["aq7ld"].place_description.contains("anchorhold cell"),
+        "the anchoress is bedless but not homeless: her framing is the cell"
     );
     assert_eq!(rounds.workplaces.len(), 65, "every occupation has a workplace list");
     assert_eq!(rounds.occupations.len(), 65, "every occupation has an archetype");

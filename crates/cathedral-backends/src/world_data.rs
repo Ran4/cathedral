@@ -173,6 +173,17 @@ mod tests {
                 .extended_character_description
                 .contains("Present business")
         );
+        // The baked home-binding's spoken form is joined in during composition
+        // (`cathedral_sim::homes`), so every profile can answer "Where do you
+        // live?" — Sven is housed; a bedless sheet carries its framing instead.
+        assert!(
+            profile
+                .home
+                .as_deref()
+                .is_some_and(|home| home.starts_with("a house in the ")),
+            "Sven's composed profile lost its home: {:?}",
+            profile.home
+        );
         assert_eq!(
             sven.holds.iter().map(|id| id.as_str()).collect::<Vec<_>>(),
             ["fzbn9"]

@@ -1,5 +1,33 @@
 # Let an NPC answer "Where do you live?"
 
+> **Implemented** (2026-07-16). How it landed:
+>
+> - `scripts/bake_homes.py` now resolves each home to a readable place —
+>   `ward` (the building's district), `landmark` (nearest named place from
+>   `assets/world/places.json`, tie-broken by id) and a spoken
+>   `place_description` ("a house in the Cinder Ward, near the Shambles well";
+>   "off" for routes, "by" for gates/bridges, "toward" beyond 120 m so a far
+>   landmark is a direction, not a lie). The spatial fields are byte-identical
+>   to the previous bake; `schema_version` is now 2.
+> - The ~101 bedless get a new `bedless` map instead of silence: an explicit
+>   framing baked from their spawn ("no fixed bed — you sleep rough in the
+>   Reed Ward, near the Alder Moorings, wherever the watch will let you lie";
+>   "no bed of your own — a night-to-night lodging …, easily lost" for
+>   `insecure_lodging`; the anchoress gets "the anchorhold cell at the Ilvane
+>   Chapel; you are enclosed there for life").
+> - Sim side: `crates/cathedral-sim/src/homes.rs` owns the embedded
+>   `homes.json` (round.rs now reuses it); `LoreCast::into_character_sheets`
+>   joins `place_description` into a new `LoreProfile::home`;
+>   `PromptLoreProfile.home` renders it on the `**you**` line as
+>   `Home: …` (label in `strings.toml: home_label`).
+> - The golden fixtures did **not** change: their characters carry
+>   `lore: None`, and the home renders only from a lore profile. Coverage is
+>   pinned in `round/tests.rs` (homes ∪ bedless = the whole cast, every entry
+>   speaks) and `world_data.rs` (the composed profile keeps its home).
+
+Original design note follows.
+
+
 The home-binding bake already exists — `scripts/bake_homes.py` writes
 `assets/world/homes.json`, one residential door per non-homeless character, the
 ~132 `pauper`/`unhoused`/`insecure_lodging` deliberately left bedless

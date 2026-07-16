@@ -36,3 +36,6 @@ places_note = "go_to takes these place_ids"
 the_hour_label = "The hour:"
 # Introduces the lore profile's `illegal_activity` on the `**you**` line.
 illegal_activity_label = "In secret:"
+# Introduces the lore profile's `home` — the baked spoken home-binding — on
+# the `**you**` line.
+home_label = "Home:"
