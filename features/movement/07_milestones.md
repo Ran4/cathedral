@@ -380,8 +380,14 @@ off-graph stride appended to the routed path, or a follow stalls on the nearest
 node — degrading to last-seen on lost sight, catching up at 2 m), and every
 ending returns a **nudge** the engine feeds to `scheduler.prioritize`, the same
 priority lane an addressed `say` uses — `tell_way` also hands its receiver that
-lane, so the ask-the-way chain runs off stage. Conversations hold the errand
-(deferrable rung); the intent's clock keeps running through the hold. The sheet
+lane, so the ask-the-way chain runs off stage. The errand rung is **exempt from
+the conversation hold** (play-tested: holding it left a "meet me at the
+Gradine" walker standing ~20–30 s after their goodbye — the exchange's warm
+memory — which reads as broken, not polite): leaving is the character's own
+decision, made in the same reply as the goodbye, so the walk starts within the
+ladder's 1–6 s cadence; a fresh addressed line still stops them to answer and
+the errand resumes on its own, with `stop {}` as the way the mind chooses to
+stay. The sheet
 gained `places_you_know` (after `you_are`; sorted by name; `place_id` keys) and
 `moving` on `you_see` people (`!is_settled()`); `the_hour` had landed with M0.
 The four water sounds flipped `actor_emittable` (the M3 deferral), `turn.j2`

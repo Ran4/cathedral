@@ -855,8 +855,9 @@ fn active_leg(legs: &[RoundLeg], office: Office, weekday: Weekday) -> Option<&Ro
 /// deferrable rungs skip them and a finished draw does not send them home —
 /// because nobody walks off mid-conversation. The pressing rungs (curfew,
 /// parched) still break the hold, after one turn to excuse themselves
-/// ([`run_ladder`]). The hold ends when the exchange goes cold and the caller
-/// stops naming them.
+/// ([`run_ladder`]) — and a `go_to` errand never waits for it at all: leaving
+/// is the character's own decision, made in the same reply as the goodbye. The
+/// hold ends when the exchange goes cold and the caller stops naming them.
 ///
 /// Returns the actors owed a **priority nudge**: a `go_to` arrival or lapse
 /// grants the same handoff an addressed `say` does, because off stage the idle
@@ -878,7 +879,7 @@ pub fn tick(
     }
     decay_thirst(round, world, clock, now);
     resolve_arrivals(round, world);
-    tick_intents(round, world, nav, now, in_conversation, &mut nudges);
+    tick_intents(round, world, nav, now, &mut nudges);
     service_sources(round, world, nav, clock, now, player_id, in_conversation);
     run_ladder(round, world, nav, clock, now, in_conversation, &mut nudges);
     nudges
@@ -927,7 +928,6 @@ fn tick_intents(
     world: &mut World,
     nav: &NavData,
     now: f64,
-    in_conversation: &BTreeSet<ActorId>,
     nudges: &mut Vec<ActorId>,
 ) {
     let ids: Vec<ActorId> = round.people.keys().cloned().collect();
@@ -1043,13 +1043,14 @@ fn tick_intents(
 
         // The follow: while the target is visible the path tracks them, re-laid
         // as they move. Only in the free phases — a committed well errand keeps
-        // its queue place — and never while held in a conversation.
+        // its queue place. A conversation does not pin it (the errand is
+        // self-willed, same as the ladder rung); a fresh addressed line still
+        // stops the walk for the answer, and the re-path here resumes it.
         if let IntentTarget::Person {
             last_seen,
             visible: true,
             ..
         } = &intent.target
-            && !in_conversation.contains(&id)
         {
             let target = *last_seen;
             let person = &round.people[&id];
@@ -1417,8 +1418,15 @@ fn run_ladder(
 
         // The hold: mid-conversation, the deferrable rungs wait. The cadence is
         // left untouched — exactly like the old player-only skip — so the first
-        // tick after the lapse re-decides at once.
-        if held && pressure.is_none() {
+        // tick after the lapse re-decides at once. The errand rung is exempt:
+        // a `go_to` is the character's own will — the model says its goodbye in
+        // the same reply — and holding it pinned every "meet me there" walker
+        // for the exchange's whole 30 s memory. A fresh addressed line still
+        // stops them for the answer (`interrupt_for_conversation`); the walk
+        // resumes on the next cadence, and `stop {}` is how the mind chooses to
+        // stay instead.
+        let self_willed = matches!(decision, Decision::TravelIntent(_));
+        if held && pressure.is_none() && !self_willed {
             continue;
         }
         // Urgency beats chat — but gets one turn's grace: inject the pressure

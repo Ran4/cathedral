@@ -1553,10 +1553,13 @@ fn losing_sight_degrades_the_follow_to_the_last_seen_spot() {
     assert_eq!(nudges, std::slice::from_ref(&follower));
 }
 
-/// A conversation holds the errand — nobody walks off mid-sentence — and the
-/// walk begins once the exchange goes cold.
+/// A conversation never pins a `go_to`: leaving is the character's own
+/// decision, made in the same reply as the goodbye — the walk starts within
+/// the ladder cadence even while the exchange is warm (a 30 s statue after
+/// "meet me at the Gradine" reads as broken, not polite). A fresh addressed
+/// line still stops them for the answer, and the errand resumes on its own.
 #[test]
-fn a_conversation_defers_the_errand_until_it_goes_cold() {
+fn a_conversation_does_not_pin_a_self_willed_errand() {
     let nav = nav();
     let clock = clock_at(Office::Dayspring);
     let id = ActorId::from_raw("walkr");
@@ -1570,24 +1573,33 @@ fn a_conversation_defers_the_errand_until_it_goes_cold() {
     let gradine = world.places.named("The Gradine").unwrap().id.clone();
     apply_action(&mut world, &id, "go_to", &json!({"place_id": gradine.as_str()})).unwrap();
 
+    // Held in a warm exchange the whole time: the errand walks anyway, within
+    // the ladder's jittered 1-6 s cadence — never the exchange's 30 s memory.
     let mut now = 0.0;
-    for _ in 0..30 {
+    while !world.characters[&id].is_walking() {
         now += 0.5;
+        assert!(
+            now <= LADDER_DECISION_MAX_SECONDS + 1.0,
+            "the errand waited out the conversation instead of walking"
+        );
         world.step_movement(0.5, &nav);
         tick(&mut round, &mut world, &nav, &clock, now, &player(), &warm(&id));
     }
-    assert!(!world.characters[&id].is_walking(), "held in conversation: no walk starts");
-    assert!(world.characters[&id].state.intent.is_some(), "but the intent survives the hold");
+    assert!(world.characters[&id].state.intent.is_some());
 
-    for _ in 0..30 {
+    // A fresh addressed line stops them mid-stride to answer...
+    interrupt_for_conversation(&mut round, &mut world, &id);
+    assert!(!world.characters[&id].is_walking(), "they stop for the answer");
+    assert!(world.characters[&id].state.intent.is_some(), "without dropping the errand");
+
+    // ...and, still mid-conversation, the walk resumes on the next cadence.
+    let resumed_by = now + LADDER_DECISION_MAX_SECONDS + 1.0;
+    while !world.characters[&id].is_walking() {
         now += 0.5;
+        assert!(now <= resumed_by, "the interrupted errand never resumed");
         world.step_movement(0.5, &nav);
-        tick_collect(&mut round, &mut world, &nav, &clock, now);
-        if world.characters[&id].is_walking() {
-            return;
-        }
+        tick(&mut round, &mut world, &nav, &clock, now, &player(), &warm(&id));
     }
-    panic!("the errand never resumed after the exchange went cold");
 }
 
 /// `tell_way` writes the handle into the receiver's set — the sheet is the
