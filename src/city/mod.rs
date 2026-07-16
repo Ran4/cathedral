@@ -114,12 +114,28 @@ enum RoofKind {
     Thatch,
 }
 
-#[derive(Default)]
 struct MeshData {
     positions: Vec<[f32; 3]>,
     normals: Vec<[f32; 3]>,
     uvs: Vec<[f32; 2]>,
+    colors: Vec<[f32; 4]>,
     indices: Vec<u32>,
+    /// Multiplied into every vertex written while it is set — the per-building
+    /// tint jitter and grime bands ride this brush into the batched mesh.
+    brush: [f32; 4],
+}
+
+impl Default for MeshData {
+    fn default() -> Self {
+        Self {
+            positions: Vec::new(),
+            normals: Vec::new(),
+            uvs: Vec::new(),
+            colors: Vec::new(),
+            indices: Vec::new(),
+            brush: [1.0; 4],
+        }
+    }
 }
 
 impl MeshData {
@@ -127,11 +143,33 @@ impl MeshData {
         self.positions.is_empty()
     }
 
+    /// Every vertex written until the next call is multiplied by this colour.
+    /// One value per building breaks the 2,500-clones monotony for free; the
+    /// per-vertex grime gradient in `add_extruded_walls` stacks on top of it.
+    fn set_brush(&mut self, color: [f32; 3]) {
+        self.brush = [color[0], color[1], color[2], 1.0];
+    }
+
+    fn reset_brush(&mut self) {
+        self.brush = [1.0; 4];
+    }
+
     fn vertex(&mut self, position: Vec3, normal: Vec3, uv: Vec2) -> u32 {
+        self.vertex_shaded(position, normal, uv, 1.0)
+    }
+
+    /// `shade` darkens toward 0.0 on top of the brush — the grime dial.
+    fn vertex_shaded(&mut self, position: Vec3, normal: Vec3, uv: Vec2, shade: f32) -> u32 {
         let index = self.positions.len() as u32;
         self.positions.push(position.to_array());
         self.normals.push(normal.normalize_or(Vec3::Y).to_array());
         self.uvs.push(uv.to_array());
+        self.colors.push([
+            self.brush[0] * shade,
+            self.brush[1] * shade,
+            self.brush[2] * shade,
+            self.brush[3],
+        ]);
         index
     }
 
@@ -161,14 +199,19 @@ impl MeshData {
     }
 
     fn into_mesh(self) -> Mesh {
-        Mesh::new(
+        let mesh = Mesh::new(
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
         )
         .with_inserted_indices(Indices::U32(self.indices))
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, self.positions)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, self.normals)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, self.uvs);
+        if self.colors.iter().any(|color| *color != [1.0; 4]) {
+            mesh.with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, self.colors)
+        } else {
+            mesh
+        }
     }
 }
 
@@ -180,6 +223,7 @@ fn build_city(
     mut collision_world: ResMut<CollisionWorld>,
 ) {
     let plan = plan::load();
+    let doors = door_edges();
     let city_meshes = create_meshes(&mut meshes);
     let city_materials = create_materials(&asset_server, &mut materials);
 
@@ -202,7 +246,7 @@ fn build_city(
         &mut meshes,
         &city_materials,
         &plan,
-        &door_edges(),
+        &doors,
         &mut collision_world,
     );
     build_fixtures(
@@ -219,6 +263,14 @@ fn build_city(
         &plan,
         &mut collision_world,
     );
+    build_street_galleries(
+        &mut commands,
+        &city_meshes,
+        &city_materials,
+        &plan,
+        &mut collision_world,
+    );
+    build_street_props(&mut commands, &mut meshes, &city_materials, &plan, &doors);
     build_fortifications(
         &mut commands,
         &city_meshes,
@@ -353,7 +405,16 @@ fn create_materials(
             Color::srgb(0.72, 0.65, 0.56),
             0.88,
         ),
-        dark_wood: matte(materials, Color::srgb(0.075, 0.045, 0.028), 0.86),
+        dark_wood: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.075, 0.045, 0.028),
+            perceptual_roughness: 0.86,
+            // Door leaves and shutters are authored as single wall-plane
+            // panels; without this, half of them face the wrong way and
+            // vanish, leaving pale see-through doorways.
+            double_sided: true,
+            cull_mode: None,
+            ..default()
+        }),
         iron: matte(materials, Color::srgb(0.055, 0.06, 0.06), 0.68),
         bronze: materials.add(StandardMaterial {
             base_color: Color::srgb(0.16, 0.12, 0.075),
@@ -364,13 +425,28 @@ fn create_materials(
         window: materials.add(StandardMaterial {
             base_color: Color::srgb(0.035, 0.045, 0.052),
             emissive: LinearRgba::rgb(0.012, 0.014, 0.014),
-            perceptual_roughness: 0.3,
+            // Rough enough that the environment map reads as a dull sheen, not
+            // a sky-mirror: leaded quarrel glass, and most panes sit in shade.
+            perceptual_roughness: 0.55,
+            reflectance: 0.32,
             double_sided: true,
             cull_mode: None,
             ..default()
         }),
-        cloth_ochre: matte(materials, Color::srgb(0.45, 0.29, 0.095), 0.92),
-        cloth_russet: matte(materials, Color::srgb(0.38, 0.095, 0.055), 0.92),
+        cloth_ochre: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.33, 0.24, 0.12),
+            perceptual_roughness: 0.92,
+            double_sided: true,
+            cull_mode: None,
+            ..default()
+        }),
+        cloth_russet: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.30, 0.10, 0.07),
+            perceptual_roughness: 0.92,
+            double_sided: true,
+            cull_mode: None,
+            ..default()
+        }),
         water: materials.add(StandardMaterial {
             base_color: Color::srgba(0.12, 0.27, 0.30, 0.94),
             metallic: 0.05,
@@ -586,6 +662,7 @@ fn build_buildings(
     let mut roofs = BTreeMap::<RoofKind, MeshData>::new();
     let mut windows = MeshData::default();
     let mut doors = MeshData::default();
+    let mut frames = MeshData::default();
     let mut rendered = 0;
 
     for building in &plan.buildings {
@@ -598,23 +675,76 @@ fn build_buildings(
 
         let (base_y, eave_y) = building_verticals(building);
         let dominant_wall = wall_kind(&building.material);
-        add_building_walls(&mut walls, building, dominant_wall, base_y, eave_y);
-
-        let roof_kind = roof_kind(building);
-        let roof_height = add_building_roof(
-            roofs.entry(roof_kind).or_default(),
-            walls.entry(dominant_wall).or_default(),
-            &building.polygon,
-            eave_y,
-        );
-        add_facade_openings(
-            &mut windows,
-            &mut doors,
+        let tint = building_tint(building);
+        let openings = plan_facade_openings(
             building,
             door_edges.get(&building.id).copied(),
             base_y,
             eave_y,
         );
+        let bands = jetty_bands(building, base_y, eave_y);
+        let roof_polygon: Vec<[f32; 2]> = match &bands {
+            Some(bands) => {
+                add_jettied_walls(&mut walls, &mut frames, bands, tint, base_y, &openings);
+                bands
+                    .last()
+                    .expect("jetty_bands never returns an empty stack")
+                    .polygon
+                    .clone()
+            }
+            None => {
+                add_building_walls(
+                    &mut walls,
+                    building,
+                    dominant_wall,
+                    base_y,
+                    eave_y,
+                    tint,
+                    &openings,
+                );
+                building.polygon.clone()
+            }
+        };
+
+        // The Bellstand tower ends in an authored open belfry, not a gable.
+        let roof_height = if building.id == "named_bellstand_tower" {
+            0.0
+        } else {
+            let roof_kind = roof_kind(building);
+            let roof_mesh = roofs.entry(roof_kind).or_default();
+            roof_mesh.set_brush(tint);
+            let gable_mesh = walls.entry(dominant_wall).or_default();
+            gable_mesh.set_brush(tint);
+            let (roof_height, ridge) =
+                add_building_roof(roof_mesh, gable_mesh, &roof_polygon, eave_y);
+            roofs.entry(roof_kind).or_default().reset_brush();
+            walls.entry(dominant_wall).or_default().reset_brush();
+            if let Some(ridge) = ridge {
+                add_chimneys(walls.entry(WallKind::Fieldstone).or_default(), building, ridge);
+            }
+            roof_height
+        };
+        match &bands {
+            Some(bands) => {
+                for band in bands {
+                    let scoped = band_openings(&openings, band);
+                    add_facade_openings_on(
+                        &mut windows,
+                        &mut doors,
+                        &mut frames,
+                        &band.polygon,
+                        &scoped,
+                    );
+                }
+            }
+            None => add_facade_openings_on(
+                &mut windows,
+                &mut doors,
+                &mut frames,
+                &building.polygon,
+                &openings,
+            ),
+        }
         add_footprint_colliders(
             collision_world,
             &building.polygon,
@@ -671,56 +801,405 @@ fn build_buildings(
         doors,
         "Ombreval doors and shutters",
     );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.timber,
+        frames,
+        "Ombreval reveals, sills and lintels",
+    );
 
     rendered
 }
 
+/// A stable per-building colour multiplier: small value and warm/cool swings
+/// that keep 1,100 same-material façades from rendering as one wall.
+fn building_tint(building: &Building) -> [f32; 3] {
+    let hash = stable_hash(&building.id);
+    let value = 0.86 + (hash % 61) as f32 / 60.0 * 0.20;
+    let warmth = 0.965 + ((hash >> 8) % 41) as f32 / 40.0 * 0.07;
+    [value * warmth, value, value / warmth]
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum OpeningKind {
+    Window { shutters: bool },
+    Door,
+}
+
+/// One rectangular hole in one façade edge, in edge-local coordinates:
+/// `along` metres from the edge's first vertex, `center_y` in world height.
+#[derive(Debug, Clone, Copy)]
+struct FacadeOpening {
+    along: f32,
+    center_y: f32,
+    width: f32,
+    height: f32,
+    hash: u32,
+    kind: OpeningKind,
+}
+
+impl FacadeOpening {
+    fn min_y(&self) -> f32 {
+        self.center_y - self.height * 0.5
+    }
+
+    fn max_y(&self) -> f32 {
+        self.center_y + self.height * 0.5
+    }
+}
+
+/// Decide every opening of a building up front, per polygon edge, so the wall
+/// builder can punch the holes the modules then line. Openings are the reason
+/// the walls can no longer be four blind quads.
+fn plan_facade_openings(
+    building: &Building,
+    door_edge: Option<usize>,
+    base_y: f32,
+    eave_y: f32,
+) -> Vec<Vec<FacadeOpening>> {
+    let mut all = vec![Vec::new(); building.polygon.len()];
+    if building.use_name == "bridge" || building.id == "named_malt_house" {
+        return all;
+    }
+    let building_hash = stable_hash(&building.id);
+    let shutters_allowed = matches!(
+        wall_kind(&building.material),
+        WallKind::Plaster | WallKind::HalfTimber
+    );
+    for (edge_index, (a, b)) in building
+        .polygon
+        .iter()
+        .zip(building.polygon.iter().cycle().skip(1))
+        .enumerate()
+    {
+        let length = Vec2::from_array(*a).distance(Vec2::from_array(*b));
+        if length < 3.2 {
+            continue;
+        }
+        let openings = &mut all[edge_index];
+        let door_here = door_edge == Some(edge_index);
+        if door_here {
+            openings.push(FacadeOpening {
+                along: length * 0.5,
+                center_y: base_y + 1.25,
+                width: 1.35,
+                height: 2.5,
+                hash: building_hash,
+                kind: OpeningKind::Door,
+            });
+        }
+
+        let count = ((length - 1.0) / 4.2).floor().clamp(1.0, 4.0) as usize;
+        let floors = ((eave_y - base_y) / BUILDING_FLOOR_HEIGHT)
+            .floor()
+            .clamp(1.0, 4.0) as usize;
+        for floor in 0..floors {
+            let y = base_y + 2.05 + floor as f32 * BUILDING_FLOOR_HEIGHT;
+            if y + 0.75 >= eave_y {
+                continue;
+            }
+            for index in 0..count {
+                let opening_hash = building_hash
+                    ^ (edge_index as u32).wrapping_mul(0x9E37_79B9)
+                    ^ (floor as u32).wrapping_mul(0x85EB_CA6B)
+                    ^ (index as u32).wrapping_mul(0xC2B2_AE35);
+                // A skipped window here and there keeps the grid from reading
+                // as a punch card; the jitter keeps storeys off the plumb line.
+                if opening_hash % 9 == 0 {
+                    continue;
+                }
+                let jitter = ((opening_hash >> 4) % 61) as f32 / 60.0 - 0.5;
+                let along = (length * (index as f32 + 1.0) / (count as f32 + 1.0)
+                    + jitter * 0.7)
+                    .clamp(0.9, length - 0.9);
+                // Medieval ground floors are wall, not glass: smaller, higher
+                // openings on the street level, generous casements above.
+                let (width, height) = if floor == 0 {
+                    (0.78, 1.02)
+                } else {
+                    (1.0, 1.35)
+                };
+                // Nothing may overlap the doorway.
+                if door_here
+                    && floor == 0
+                    && (along - length * 0.5).abs() < (1.35 + width) * 0.5 + 0.3
+                {
+                    continue;
+                }
+                openings.push(FacadeOpening {
+                    along,
+                    center_y: y,
+                    width,
+                    height,
+                    hash: opening_hash,
+                    kind: OpeningKind::Window {
+                        shutters: shutters_allowed && floor <= 1 && opening_hash % 100 < 42,
+                    },
+                });
+            }
+        }
+    }
+    all
+}
+
+/// One storey band of a (possibly jettied) building: its own footprint and the
+/// per-edge shift that maps original-edge `along` coordinates onto it.
+struct StoreyBand {
+    polygon: Vec<[f32; 2]>,
+    bottom: f32,
+    top: f32,
+    /// Outward offset from the cadastral footprint (0 on the ground floor).
+    offset: f32,
+    /// Per edge: how far this band's edge start slid backward, i.e. what to add
+    /// to an original-polygon `along` to land on the same wall point here.
+    start_extensions: Vec<f32>,
+}
+
+/// Cantilever per jetty step. Two steps on a three-storey house add up to
+/// two-thirds of a metre of street closing in overhead.
+const JETTY_STEP: f32 = 0.34;
+
+/// Offset a convex polygon outward by `distance`, mitring the corners. Returns
+/// the new ring and, per edge, how far its start vertex slid backward along
+/// the edge direction (needed to keep openings on the same wall point).
+fn offset_convex_polygon(polygon: &[[f32; 2]], distance: f32) -> Option<(Vec<[f32; 2]>, Vec<f32>)> {
+    let n = polygon.len();
+    let orientation = plan::signed_area(polygon).signum();
+    let mut ring = Vec::with_capacity(n);
+    let mut extensions = vec![0.0_f32; n];
+    for i in 0..n {
+        let prev = Vec2::from_array(polygon[(i + n - 1) % n]);
+        let here = Vec2::from_array(polygon[i]);
+        let next = Vec2::from_array(polygon[(i + 1) % n]);
+        let dir_in = (here - prev).normalize_or_zero();
+        let dir_out = (next - here).normalize_or_zero();
+        let normal_in = Vec2::new(dir_in.y, -dir_in.x) * orientation;
+        let normal_out = Vec2::new(dir_out.y, -dir_out.x) * orientation;
+        let miter = (normal_in + normal_out).normalize_or_zero();
+        let denominator = miter.dot(normal_out);
+        if denominator < 0.4 {
+            // Sharper than ~130° of turn: the miter would spike; skip jetties
+            // on this footprint rather than render a blade.
+            return None;
+        }
+        let miter_length = distance / denominator;
+        ring.push((here + miter * miter_length).to_array());
+        // The offset corner moves against the outgoing edge direction by the
+        // projection of the miter onto it.
+        extensions[i] = -(miter * miter_length).dot(dir_out);
+    }
+    Some((ring, extensions))
+}
+
+/// The jettied storey stack for a building, or `None` for the plain path.
+/// Only ordinary convex half-timber quads of 2+ storeys cantilever.
+fn jetty_bands(building: &Building, base_y: f32, eave_y: f32) -> Option<Vec<StoreyBand>> {
+    if base_y > 0.1
+        || building.named
+        || building.polygon.len() != 4
+        || !polygon_is_convex(&building.polygon)
+        || !matches!(wall_kind(&building.material), WallKind::HalfTimber)
+        || building.levels < 2
+        || stable_hash(&building.id) % 10 >= 8
+    {
+        return None;
+    }
+    let mut bands = Vec::new();
+    let mut bottom = base_y;
+    let mut storey = 0;
+    while bottom < eave_y - 0.05 {
+        let top = (bottom + BUILDING_FLOOR_HEIGHT).min(eave_y);
+        // Ground floor sits on the cadastral line; each storey above steps out
+        // one jetty, capped after two steps so alleys stay passable.
+        let offset = JETTY_STEP * storey.min(2) as f32;
+        let (polygon, start_extensions) = if offset > 0.0 {
+            offset_convex_polygon(&building.polygon, offset)?
+        } else {
+            (building.polygon.clone(), vec![0.0; building.polygon.len()])
+        };
+        bands.push(StoreyBand {
+            polygon,
+            bottom,
+            top,
+            offset,
+            start_extensions,
+        });
+        bottom = top;
+        storey += 1;
+    }
+    (bands.len() >= 2).then_some(bands)
+}
+
+/// Openings re-addressed onto one storey band: only the rows inside the band,
+/// with `along` corrected for the band's slid edge starts.
+fn band_openings(
+    openings: &[Vec<FacadeOpening>],
+    band: &StoreyBand,
+) -> Vec<Vec<FacadeOpening>> {
+    openings
+        .iter()
+        .enumerate()
+        .map(|(edge, list)| {
+            list.iter()
+                .filter(|opening| opening.center_y > band.bottom && opening.center_y < band.top)
+                .map(|opening| FacadeOpening {
+                    along: opening.along + band.start_extensions[edge],
+                    ..*opening
+                })
+                .collect()
+        })
+        .collect()
+}
+
+#[allow(clippy::too_many_arguments)]
 fn add_building_walls(
     walls: &mut BTreeMap<WallKind, MeshData>,
     building: &Building,
     dominant: WallKind,
     base_y: f32,
     eave_y: f32,
+    tint: [f32; 3],
+    openings: &[Vec<FacadeOpening>],
 ) {
+    let tinted = |walls: &mut BTreeMap<WallKind, MeshData>,
+                  kind: WallKind,
+                  polygon: &[[f32; 2]],
+                  bottom: f32,
+                  top: f32,
+                  edge_openings: &[Vec<FacadeOpening>]| {
+        let mesh = walls.entry(kind).or_default();
+        mesh.set_brush(tint);
+        add_extruded_walls(mesh, polygon, bottom, top, base_y, edge_openings);
+        mesh.reset_brush();
+    };
     match dominant {
         WallKind::HalfTimber if base_y < 0.1 => {
             let stone_top = (base_y + 3.0).min(eave_y);
-            add_extruded_walls(
-                walls.entry(WallKind::Fieldstone).or_default(),
+            tinted(
+                walls,
+                WallKind::Fieldstone,
                 &building.polygon,
                 base_y,
                 stone_top,
+                openings,
             );
             if stone_top < eave_y {
-                add_extruded_walls(
-                    walls.entry(WallKind::HalfTimber).or_default(),
+                tinted(
+                    walls,
+                    WallKind::HalfTimber,
                     &building.polygon,
                     stone_top,
                     eave_y,
+                    openings,
                 );
             }
         }
         WallKind::Plaster if base_y < 0.1 => {
             let plinth_top = (base_y + 0.65).min(eave_y);
-            add_extruded_walls(
-                walls.entry(WallKind::Fieldstone).or_default(),
+            tinted(
+                walls,
+                WallKind::Fieldstone,
                 &building.polygon,
                 base_y,
                 plinth_top,
+                openings,
             );
-            add_extruded_walls(
-                walls.entry(WallKind::Plaster).or_default(),
+            tinted(
+                walls,
+                WallKind::Plaster,
                 &building.polygon,
                 plinth_top,
                 eave_y,
+                openings,
             );
         }
-        _ => add_extruded_walls(
-            walls.entry(dominant).or_default(),
+        _ => tinted(
+            walls,
+            dominant,
             &building.polygon,
             base_y,
             eave_y,
+            openings,
         ),
+    }
+}
+
+/// Walls for a jettied building: fieldstone ground floor on the cadastral
+/// line, then half-timber storeys stepping out over the street, each step
+/// closed underneath by a soffit ring and faced with a bressummer beam.
+#[allow(clippy::too_many_arguments)]
+fn add_jettied_walls(
+    walls: &mut BTreeMap<WallKind, MeshData>,
+    frames: &mut MeshData,
+    bands: &[StoreyBand],
+    tint: [f32; 3],
+    base_y: f32,
+    openings: &[Vec<FacadeOpening>],
+) {
+    for (index, band) in bands.iter().enumerate() {
+        let kind = if index == 0 {
+            WallKind::Fieldstone
+        } else {
+            WallKind::HalfTimber
+        };
+        let scoped = band_openings(openings, band);
+        let mesh = walls.entry(kind).or_default();
+        mesh.set_brush(tint);
+        add_extruded_walls(mesh, &band.polygon, band.bottom, band.top, base_y, &scoped);
+        mesh.reset_brush();
+
+        if index == 0 {
+            continue;
+        }
+        let below = &bands[index - 1];
+        if band.offset <= below.offset + 0.01 {
+            continue;
+        }
+        // Soffit: the visible underside of the cantilever, joist-dark.
+        let mesh = walls.entry(WallKind::HalfTimber).or_default();
+        mesh.set_brush(tint);
+        let inner = &below.polygon;
+        let outer = &band.polygon;
+        let count = inner.len();
+        for i in 0..count {
+            let j = (i + 1) % count;
+            let quad = [
+                Vec3::new(outer[i][0], band.bottom, outer[i][1]),
+                Vec3::new(outer[j][0], band.bottom, outer[j][1]),
+                Vec3::new(inner[j][0], band.bottom, inner[j][1]),
+                Vec3::new(inner[i][0], band.bottom, inner[i][1]),
+            ];
+            let first = mesh.positions.len() as u32;
+            for point in quad {
+                mesh.vertex_shaded(
+                    point,
+                    Vec3::NEG_Y,
+                    Vec2::new(point.x / 7.0, point.z / 7.0),
+                    0.5,
+                );
+            }
+            mesh.indices
+                .extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
+        }
+        mesh.reset_brush();
+
+        // Bressummer: the beam that carries the overhung wall.
+        for (a, b) in outer.iter().zip(outer.iter().cycle().skip(1)) {
+            let a2 = Vec2::from_array(*a);
+            let b2 = Vec2::from_array(*b);
+            let length = a2.distance(b2);
+            if length < 0.4 {
+                continue;
+            }
+            let center = (a2 + b2) * 0.5;
+            add_oriented_box(
+                frames,
+                Vec3::new(center.x, band.bottom + 0.1, center.y),
+                Vec3::new(length * 0.5, 0.1, 0.085),
+                (b2 - a2) / length,
+            );
+        }
     }
 }
 
@@ -733,7 +1212,9 @@ fn building_verticals(building: &Building) -> (f32, f32) {
     }
 
     let eave = match building.id.as_str() {
-        "named_bellstand_tower" => 31.5,
+        // The stone shaft only: the open belfry, bell, and spire that crown it
+        // are authored in `build_bellstand_belfry`.
+        "named_bellstand_tower" => 23.5,
         "named_old_sluice" => 12.5,
         "named_saint_marens" => 11.2,
         id if id.starts_with("gate_") => {
@@ -779,12 +1260,27 @@ fn roof_kind(building: &Building) -> RoofKind {
     }
 }
 
-fn add_extruded_walls(mesh: &mut MeshData, polygon: &[[f32; 2]], bottom: f32, top: f32) {
+/// Street filth climbs about a storey up a wall and then stops; below the knee
+/// every façade in the references is visibly darker than above it.
+fn grime_shade(y: f32, ground: f32) -> f32 {
+    0.74 + 0.26 * ((y - ground) / 2.8).clamp(0.0, 1.0)
+}
+
+/// Extrude the footprint into walls, leaving genuine holes where the façade
+/// plan put openings (an empty slice keeps every face blind).
+fn add_extruded_walls(
+    mesh: &mut MeshData,
+    polygon: &[[f32; 2]],
+    bottom: f32,
+    top: f32,
+    ground: f32,
+    openings: &[Vec<FacadeOpening>],
+) {
     if top <= bottom + 0.01 {
         return;
     }
     let orientation = plan::signed_area(polygon).signum();
-    for (a, b) in polygon.iter().zip(polygon.iter().cycle().skip(1)) {
+    for (edge_index, (a, b)) in polygon.iter().zip(polygon.iter().cycle().skip(1)).enumerate() {
         let a2 = Vec2::from_array(*a);
         let b2 = Vec2::from_array(*b);
         let edge = b2 - a2;
@@ -796,34 +1292,136 @@ fn add_extruded_walls(mesh: &mut MeshData, polygon: &[[f32; 2]], bottom: f32, to
         if orientation < 0.0 {
             normal = -normal;
         }
-        let points = [
-            Vec3::new(a2.x, bottom, a2.y),
-            Vec3::new(b2.x, bottom, b2.y),
-            Vec3::new(b2.x, top, b2.y),
-            Vec3::new(a2.x, top, a2.y),
-        ];
-        mesh.quad(
-            points,
+        let edge_openings = openings.get(edge_index).map(Vec::as_slice).unwrap_or(&[]);
+        add_wall_face_with_holes(
+            mesh,
+            a2,
+            edge / length,
             normal,
-            [
-                Vec2::new(0.0, bottom / 7.0),
-                Vec2::new(length / 7.0, bottom / 7.0),
-                Vec2::new(length / 7.0, top / 7.0),
-                Vec2::new(0.0, top / 7.0),
-            ],
+            length,
+            bottom,
+            top,
+            ground,
+            edge_openings,
         );
     }
 }
+
+/// Emit one wall face as the rectangle complement of its openings: horizontal
+/// bands where nothing opens, vertical piers between openings where they do.
+/// The scanline is over the y-extents of the openings clipped to this band.
+#[allow(clippy::too_many_arguments)]
+fn add_wall_face_with_holes(
+    mesh: &mut MeshData,
+    origin: Vec2,
+    direction: Vec2,
+    normal: Vec3,
+    length: f32,
+    bottom: f32,
+    top: f32,
+    ground: f32,
+    openings: &[FacadeOpening],
+) {
+    // Clip openings to this band and keep only the ones that actually cut it.
+    let mut cuts: Vec<(f32, f32, f32, f32)> = openings
+        .iter()
+        .filter(|opening| opening.max_y() > bottom + 0.01 && opening.min_y() < top - 0.01)
+        .map(|opening| {
+            (
+                opening.along - opening.width * 0.5,
+                opening.along + opening.width * 0.5,
+                opening.min_y().max(bottom),
+                opening.max_y().min(top),
+            )
+        })
+        .collect();
+    cuts.sort_by(|a, b| a.0.total_cmp(&b.0));
+
+    let mut emit = |x0: f32, x1: f32, y0: f32, y1: f32| {
+        if x1 - x0 < 0.005 || y1 - y0 < 0.005 {
+            return;
+        }
+        let shade0 = grime_shade(y0, ground);
+        let shade1 = grime_shade(y1, ground);
+        let p0 = origin + direction * x0;
+        let p1 = origin + direction * x1;
+        let first = mesh.vertex_shaded(
+            Vec3::new(p0.x, y0, p0.y),
+            normal,
+            Vec2::new(x0 / 7.0, y0 / 7.0),
+            shade0,
+        );
+        mesh.vertex_shaded(
+            Vec3::new(p1.x, y0, p1.y),
+            normal,
+            Vec2::new(x1 / 7.0, y0 / 7.0),
+            shade0,
+        );
+        mesh.vertex_shaded(
+            Vec3::new(p1.x, y1, p1.y),
+            normal,
+            Vec2::new(x1 / 7.0, y1 / 7.0),
+            shade1,
+        );
+        mesh.vertex_shaded(
+            Vec3::new(p0.x, y1, p0.y),
+            normal,
+            Vec2::new(x0 / 7.0, y1 / 7.0),
+            shade1,
+        );
+        mesh.indices
+            .extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
+    };
+
+    if cuts.is_empty() {
+        // Blind wall: still split at the grime knee so the gradient keeps its
+        // elbow instead of smearing evenly to the eaves.
+        let knee = (bottom + 2.8).min(top);
+        emit(0.0, length, bottom, knee);
+        emit(0.0, length, knee, top);
+        return;
+    }
+
+    // Scanline over the distinct y-levels the openings introduce.
+    let mut levels: Vec<f32> = vec![bottom, top];
+    for &(_, _, y0, y1) in &cuts {
+        levels.push(y0);
+        levels.push(y1);
+    }
+    levels.sort_by(f32::total_cmp);
+    levels.dedup_by(|a, b| (*a - *b).abs() < 0.005);
+
+    for pair in levels.windows(2) {
+        let (y0, y1) = (pair[0], pair[1]);
+        let mid = (y0 + y1) * 0.5;
+        let mut cursor = 0.0_f32;
+        for &(x0, x1, cy0, cy1) in &cuts {
+            if cy0 > mid || cy1 < mid {
+                continue;
+            }
+            emit(cursor, x0, y0, y1);
+            cursor = cursor.max(x1);
+        }
+        emit(cursor, length, y0, y1);
+    }
+}
+
+/// How far each roof plane continues past the wall face, following its own
+/// pitch. The shadow line this casts under the eaves is one of the strongest
+/// "real building" cues there is.
+const EAVES_OVERHANG: f32 = 0.55;
+/// The verge: how far the roof oversails the gable ends along the ridge.
+const VERGE_OVERHANG: f32 = 0.32;
 
 fn add_building_roof(
     roof: &mut MeshData,
     gable_wall: &mut MeshData,
     polygon: &[[f32; 2]],
     eave_y: f32,
-) -> f32 {
+) -> (f32, Option<[Vec3; 2]>) {
     if polygon.len() != 4 {
         add_polygon_surface(roof, polygon, eave_y + 0.08, 7.0);
-        return 0.16;
+        return (0.16, None);
     }
 
     let p = [
@@ -837,13 +1435,16 @@ fn add_building_roof(
     let roof_height = edge_01.min(edge_12).mul_add(0.32, 0.65).clamp(1.25, 4.2);
     let y_ridge = eave_y + roof_height;
 
-    let (ridge_a, ridge_b, planes, gables) = if edge_01 <= edge_12 {
+    // The ridge spans the midpoints of the two short edges; each plane's eave
+    // pair is listed (near, far) relative to the `ridge_a` end, and the gables
+    // fill the short walls up to the ridge.
+    let (ridge_a, ridge_b, eave_pairs, gables) = if edge_01 <= edge_12 {
         let a = (p[0] + p[1]) * 0.5;
         let b = (p[2] + p[3]) * 0.5;
         (
             a,
             b,
-            [([p[0], p[3]], [b, a]), ([p[1], p[2]], [b, a])],
+            [(p[0], p[3]), (p[1], p[2])],
             [(p[0], p[1], a), (p[3], p[2], b)],
         )
     } else {
@@ -852,27 +1453,86 @@ fn add_building_roof(
         (
             a,
             b,
-            [([p[0], p[1]], [a, b]), ([p[3], p[2]], [a, b])],
+            [(p[1], p[0]), (p[2], p[3])],
             [(p[1], p[2], a), (p[0], p[3], b)],
         )
     };
 
-    for (eave, ridge) in planes {
+    let ridge_dir = (ridge_b - ridge_a).normalize_or_zero();
+    let mid_ridge = (ridge_a + ridge_b) * 0.5;
+    for (near, far) in eave_pairs {
+        // Push the eave edge out along the plane's own pitch so the overhang
+        // droops instead of floating flat, and oversail both gable ends.
+        let out = (near + far) * 0.5 - mid_ridge;
+        let half_span = out.length().max(0.05);
+        let out = out / half_span;
+        let drop = EAVES_OVERHANG * roof_height / half_span;
+        let eave_low = eave_y - drop;
+        let e_near = near + out * EAVES_OVERHANG - ridge_dir * VERGE_OVERHANG;
+        let e_far = far + out * EAVES_OVERHANG + ridge_dir * VERGE_OVERHANG;
+        let r_near = ridge_a - ridge_dir * VERGE_OVERHANG;
+        let r_far = ridge_b + ridge_dir * VERGE_OVERHANG;
         let points = [
-            Vec3::new(eave[0].x, eave_y, eave[0].y),
-            Vec3::new(eave[1].x, eave_y, eave[1].y),
-            Vec3::new(ridge[0].x, y_ridge, ridge[0].y),
-            Vec3::new(ridge[1].x, y_ridge, ridge[1].y),
+            Vec3::new(e_near.x, eave_low, e_near.y),
+            Vec3::new(e_far.x, eave_low, e_far.y),
+            Vec3::new(r_far.x, y_ridge, r_far.y),
+            Vec3::new(r_near.x, y_ridge, r_near.y),
         ];
-        let normal = (points[1] - points[0])
+        let mut normal = (points[1] - points[0])
             .cross(points[3] - points[0])
             .normalize_or(Vec3::Y);
+        if normal.y < 0.0 {
+            normal = -normal;
+        }
+        // Tile courses run with the pitch: u along the eave, v up the slope —
+        // the old top-down planar map stretched tiles on every steep roof.
+        let eave_dir = (e_far - e_near).normalize_or_zero();
+        let slope_len =
+            ((half_span + EAVES_OVERHANG).powi(2) + (roof_height + drop).powi(2)).sqrt();
+        let u = |point: Vec2| (point - e_near).dot(eave_dir) / 7.0;
         roof.quad(
             points,
             normal,
-            points.map(|point| Vec2::new(point.x / 7.0, point.z / 7.0)),
+            [
+                Vec2::new(u(e_near), 0.0),
+                Vec2::new(u(e_far), 0.0),
+                Vec2::new(u(r_far), slope_len / 7.0),
+                Vec2::new(u(r_near), slope_len / 7.0),
+            ],
         );
     }
+
+    // A half-round ridge cap: two pitched strips meeting a touch above the
+    // ridge line, sailing the same verge as the planes.
+    let cap_a = ridge_a - ridge_dir * VERGE_OVERHANG;
+    let cap_b = ridge_b + ridge_dir * VERGE_OVERHANG;
+    let cap_side = Vec2::new(ridge_dir.y, -ridge_dir.x);
+    for side in [-1.0, 1.0] {
+        let skirt = cap_side * side * 0.20;
+        let points = [
+            Vec3::new(cap_a.x, y_ridge + 0.09, cap_a.y),
+            Vec3::new(cap_b.x, y_ridge + 0.09, cap_b.y),
+            Vec3::new(cap_b.x + skirt.x, y_ridge - 0.05, cap_b.y + skirt.y),
+            Vec3::new(cap_a.x + skirt.x, y_ridge - 0.05, cap_a.y + skirt.y),
+        ];
+        let mut normal = (points[1] - points[0])
+            .cross(points[3] - points[0])
+            .normalize_or(Vec3::Y);
+        if normal.y < 0.0 {
+            normal = -normal;
+        }
+        roof.quad(
+            points,
+            normal,
+            [
+                Vec2::ZERO,
+                Vec2::new(cap_a.distance(cap_b) / 7.0, 0.0),
+                Vec2::new(cap_a.distance(cap_b) / 7.0, 0.05),
+                Vec2::new(0.0, 0.05),
+            ],
+        );
+    }
+
     for (a, b, ridge) in gables {
         gable_wall.triangle(
             [
@@ -885,35 +1545,107 @@ fn add_building_roof(
         );
     }
 
-    // Explicitly use both values so a malformed rectangle cannot quietly
-    // collapse its ridge to a point.
     debug_assert!(ridge_a.distance(ridge_b) > 0.1);
-    roof_height
+    (
+        roof_height,
+        Some([
+            Vec3::new(ridge_a.x, y_ridge, ridge_a.y),
+            Vec3::new(ridge_b.x, y_ridge, ridge_b.y),
+        ]),
+    )
 }
 
-fn add_facade_openings(
-    windows: &mut MeshData,
-    doors: &mut MeshData,
-    building: &Building,
-    door_edge: Option<usize>,
-    base_y: f32,
-    eave_y: f32,
-) {
-    if building.use_name == "bridge" || building.id == "named_malt_house" {
+/// Chimneys are what a skyline is made of. One or two fieldstone stacks per
+/// gabled building, planted on the ridge at a stable per-building spot.
+fn add_chimneys(mesh: &mut MeshData, building: &Building, ridge: [Vec3; 2]) {
+    if building.use_name == "bridge" {
         return;
     }
-    let orientation = plan::signed_area(&building.polygon).signum();
-    for (edge_index, (a, b)) in building
-        .polygon
+    let [ridge_a, ridge_b] = ridge;
+    let ridge_len = ridge_a.distance(ridge_b);
+    if ridge_len < 2.5 {
+        return;
+    }
+    let hash = stable_hash(&building.id);
+    let along = Vec2::new(ridge_b.x - ridge_a.x, ridge_b.z - ridge_a.z) / ridge_len;
+    let count = if ridge_len > 15.0 && hash % 3 == 0 { 2 } else { 1 };
+    for index in 0..count {
+        let t = if count == 2 {
+            0.26 + 0.48 * index as f32
+        } else {
+            0.28 + (hash % 45) as f32 / 100.0
+        };
+        let base = ridge_a.lerp(ridge_b, t);
+        // Stack sunk into the ridge, flaring into a cap slab above.
+        add_oriented_box(mesh, base + Vec3::Y * 0.25, Vec3::new(0.36, 1.0, 0.36), along);
+        add_oriented_box(mesh, base + Vec3::Y * 1.3, Vec3::new(0.48, 0.08, 0.48), along);
+    }
+}
+
+/// An axis-defined box written straight into a batched mesh: `along` is the
+/// local +X direction in the ground plane, `half` the half-extents.
+fn add_oriented_box(mesh: &mut MeshData, center: Vec3, half: Vec3, along: Vec2) {
+    let ax = Vec3::new(along.x, 0.0, along.y);
+    let az = Vec3::new(-along.y, 0.0, along.x);
+    let ay = Vec3::Y;
+    for (normal, right, up, half_n, half_r, half_u) in [
+        (ax, az, ay, half.x, half.z, half.y),
+        (-ax, -az, ay, half.x, half.z, half.y),
+        (az, -ax, ay, half.z, half.x, half.y),
+        (-az, ax, ay, half.z, half.x, half.y),
+        (ay, ax, az, half.y, half.x, half.z),
+        (-ay, -ax, az, half.y, half.x, half.z),
+    ] {
+        let face_center = center + normal * half_n;
+        let points = [
+            face_center - right * half_r - up * half_u,
+            face_center + right * half_r - up * half_u,
+            face_center + right * half_r + up * half_u,
+            face_center - right * half_r + up * half_u,
+        ];
+        mesh.quad(
+            points,
+            normal,
+            [
+                Vec2::ZERO,
+                Vec2::new(half_r / 3.5, 0.0),
+                Vec2::new(half_r / 3.5, half_u / 3.5),
+                Vec2::new(0.0, half_u / 3.5),
+            ],
+        );
+    }
+}
+
+/// How deep every opening sits behind the wall face. The reveal this exposes
+/// is the difference between a window and a sticker.
+const OPENING_DEPTH: f32 = 0.15;
+
+/// Line the holes the wall builder left: glass, reveals, sills, lintels,
+/// shutters and door leaves. Purely decorative — the openings themselves were
+/// cut by `add_wall_face_with_holes`. Works on whichever footprint the walls
+/// actually used (a jettied storey's ring, or the cadastral polygon).
+fn add_facade_openings_on(
+    windows: &mut MeshData,
+    doors: &mut MeshData,
+    frames: &mut MeshData,
+    polygon: &[[f32; 2]],
+    openings: &[Vec<FacadeOpening>],
+) {
+    let orientation = plan::signed_area(polygon).signum();
+    for (edge_index, (a, b)) in polygon
         .iter()
-        .zip(building.polygon.iter().cycle().skip(1))
+        .zip(polygon.iter().cycle().skip(1))
         .enumerate()
     {
+        let edge_openings = match openings.get(edge_index) {
+            Some(list) if !list.is_empty() => list,
+            _ => continue,
+        };
         let a = Vec2::from_array(*a);
         let b = Vec2::from_array(*b);
         let edge = b - a;
         let length = edge.length();
-        if length < 3.2 {
+        if length < 0.01 {
             continue;
         }
         let direction = edge / length;
@@ -921,31 +1653,249 @@ fn add_facade_openings(
         if orientation < 0.0 {
             normal2 = -normal2;
         }
-        let normal = Vec3::new(normal2.x, 0.0, normal2.y);
-        let count = ((length - 1.0) / 4.2).floor().clamp(1.0, 4.0) as usize;
-        let floors = ((eave_y - base_y) / BUILDING_FLOOR_HEIGHT)
-            .floor()
-            .clamp(1.0, 4.0) as usize;
-        for floor in 0..floors {
-            let y = base_y + 2.05 + floor as f32 * BUILDING_FLOOR_HEIGHT;
-            if y + 0.75 >= eave_y {
-                continue;
-            }
-            for index in 0..count {
-                let along = length * (index as f32 + 1.0) / (count as f32 + 1.0);
-                let center2 = a + direction * along + normal2 * 0.035;
-                add_facade_panel(windows, center2, y, direction, normal, 1.0, 1.35);
+        for opening in edge_openings {
+            let wall_point = a + direction * opening.along;
+            match opening.kind {
+                OpeningKind::Window { shutters } => add_window_module(
+                    windows,
+                    doors,
+                    frames,
+                    wall_point,
+                    opening.center_y,
+                    direction,
+                    normal2,
+                    opening.width,
+                    opening.height,
+                    opening.hash,
+                    shutters,
+                ),
+                OpeningKind::Door => add_door_module(
+                    doors,
+                    frames,
+                    wall_point,
+                    opening.min_y(),
+                    direction,
+                    normal2,
+                ),
             }
         }
+    }
+}
 
-        // The door goes on the edge the bake chose for reachability (still a pure
-        // `stable_hash` pick, but only among edges you can stand at). A building
-        // with no reachable edge — `door_edge` is `None` — is sealed and gets no
-        // door, matching the sim, which gives it no resident.
-        if door_edge == Some(edge_index) {
-            let center2 = a + direction * (length * 0.5) + normal2 * 0.045;
-            add_facade_panel(doors, center2, base_y + 1.25, direction, normal, 1.35, 2.5);
+/// One real window: glass sunk behind the wall face, reveal returns, a
+/// projecting sill and lintel, a mullion cross, and sometimes open shutters.
+#[allow(clippy::too_many_arguments)]
+fn add_window_module(
+    windows: &mut MeshData,
+    doors: &mut MeshData,
+    frames: &mut MeshData,
+    wall_point: Vec2,
+    center_y: f32,
+    direction: Vec2,
+    normal2: Vec2,
+    width: f32,
+    height: f32,
+    hash: u32,
+    shutters_allowed: bool,
+) {
+    let normal = Vec3::new(normal2.x, 0.0, normal2.y);
+    // The glass slightly overlaps the hole so no slit into the hollow shell
+    // survives at the reveal borders.
+    let glass_center = wall_point - normal2 * OPENING_DEPTH;
+    add_facade_panel(
+        windows,
+        glass_center,
+        center_y,
+        direction,
+        normal,
+        width + 0.06,
+        height + 0.06,
+    );
+    add_reveal(
+        frames,
+        wall_point,
+        center_y,
+        direction,
+        normal2,
+        width,
+        height,
+        OPENING_DEPTH,
+        false,
+    );
+
+    // Mullion cross on the glass plane.
+    let mullion_center = wall_point - normal2 * (OPENING_DEPTH - 0.03);
+    add_facade_panel(
+        frames,
+        mullion_center,
+        center_y,
+        direction,
+        normal,
+        0.055,
+        height - 0.08,
+    );
+    add_facade_panel(
+        frames,
+        mullion_center,
+        center_y,
+        direction,
+        normal,
+        width - 0.08,
+        0.055,
+    );
+
+    // Sill: a slab proud of the wall below the opening; lintel above.
+    add_oriented_box(
+        frames,
+        Vec3::new(wall_point.x, center_y - height * 0.5 - 0.04, wall_point.y)
+            + normal * 0.05,
+        Vec3::new(width * 0.5 + 0.08, 0.045, 0.09),
+        direction,
+    );
+    add_oriented_box(
+        frames,
+        Vec3::new(wall_point.x, center_y + height * 0.5 + 0.05, wall_point.y)
+            + normal * 0.03,
+        Vec3::new(width * 0.5 + 0.06, 0.055, 0.07),
+        direction,
+    );
+
+    // Shutters folded back against the wall — one leaf or both.
+    if shutters_allowed {
+        let leaf_width = width * 0.52;
+        let sides: &[f32] = if hash % 5 < 3 { &[-1.0, 1.0] } else { &[1.0] };
+        for side in sides {
+            let leaf_center =
+                wall_point + direction * side * (width * 0.5 + leaf_width * 0.5 + 0.04);
+            add_facade_panel(
+                doors,
+                leaf_center + normal2 * 0.045,
+                center_y,
+                direction,
+                normal,
+                leaf_width,
+                height - 0.04,
+            );
         }
+    }
+}
+
+/// The door: leaf recessed behind the face, reveal returns, a proud lintel and
+/// a worn threshold slab at the foot.
+fn add_door_module(
+    doors: &mut MeshData,
+    frames: &mut MeshData,
+    wall_point: Vec2,
+    base_y: f32,
+    direction: Vec2,
+    normal2: Vec2,
+) {
+    let normal = Vec3::new(normal2.x, 0.0, normal2.y);
+    let width = 1.35;
+    let height = 2.5;
+    let center_y = base_y + height * 0.5;
+    add_facade_panel(
+        doors,
+        wall_point - normal2 * (OPENING_DEPTH - 0.03),
+        center_y,
+        direction,
+        normal,
+        width + 0.06,
+        height + 0.04,
+    );
+    add_reveal(
+        frames,
+        wall_point,
+        center_y,
+        direction,
+        normal2,
+        width,
+        height,
+        OPENING_DEPTH - 0.03,
+        true,
+    );
+    add_oriented_box(
+        frames,
+        Vec3::new(wall_point.x, base_y + height + 0.07, wall_point.y) + normal * 0.04,
+        Vec3::new(width * 0.5 + 0.12, 0.07, 0.09),
+        direction,
+    );
+    // Threshold: a step slab proud of the wall at ground level.
+    add_oriented_box(
+        frames,
+        Vec3::new(wall_point.x, base_y + 0.045, wall_point.y) + normal * 0.14,
+        Vec3::new(width * 0.5 + 0.05, 0.05, 0.24),
+        direction,
+    );
+}
+
+/// The four (or three, for a door) return faces connecting the wall plane to a
+/// recessed opening. This is what makes an opening read as a hole.
+#[allow(clippy::too_many_arguments)]
+fn add_reveal(
+    frames: &mut MeshData,
+    wall_point: Vec2,
+    center_y: f32,
+    direction: Vec2,
+    normal2: Vec2,
+    width: f32,
+    height: f32,
+    depth: f32,
+    skip_bottom: bool,
+) {
+    let normal = Vec3::new(normal2.x, 0.0, normal2.y);
+    let along = Vec3::new(direction.x, 0.0, direction.y);
+    let center = Vec3::new(wall_point.x, center_y, wall_point.y);
+    let half_w = along * (width * 0.5);
+    let half_h = Vec3::Y * (height * 0.5);
+    let inward = -normal * depth;
+
+    // Side returns face each other across the opening.
+    for side in [-1.0, 1.0] {
+        let outer_top = center + half_w * side + half_h;
+        let outer_bottom = center + half_w * side - half_h;
+        frames.quad(
+            [
+                outer_bottom,
+                outer_top,
+                outer_top + inward,
+                outer_bottom + inward,
+            ],
+            along * -side,
+            [
+                Vec2::ZERO,
+                Vec2::new(height / 7.0, 0.0),
+                Vec2::new(height / 7.0, depth / 7.0),
+                Vec2::new(0.0, depth / 7.0),
+            ],
+        );
+    }
+    // Head return faces down; sill return faces up.
+    let head_a = center - half_w + half_h;
+    let head_b = center + half_w + half_h;
+    frames.quad(
+        [head_a, head_b, head_b + inward, head_a + inward],
+        Vec3::NEG_Y,
+        [
+            Vec2::ZERO,
+            Vec2::new(width / 7.0, 0.0),
+            Vec2::new(width / 7.0, depth / 7.0),
+            Vec2::new(0.0, depth / 7.0),
+        ],
+    );
+    if !skip_bottom {
+        let foot_a = center - half_w - half_h;
+        let foot_b = center + half_w - half_h;
+        frames.quad(
+            [foot_a, foot_b, foot_b + inward, foot_a + inward],
+            Vec3::Y,
+            [
+                Vec2::ZERO,
+                Vec2::new(width / 7.0, 0.0),
+                Vec2::new(width / 7.0, depth / 7.0),
+                Vec2::new(0.0, depth / 7.0),
+            ],
+        );
     }
 }
 
@@ -1249,6 +2199,7 @@ fn build_named_details(
     collision_world: &mut CollisionWorld,
 ) {
     build_bellstand_stair(commands, meshes, materials, collision_world);
+    build_bellstand_belfry(commands, meshes, materials, collision_world);
     build_saint_maren_tower(commands, meshes, materials, collision_world);
     build_parish_towers(commands, meshes, materials, plan, collision_world);
     build_old_sluice_face(commands, meshes, materials);
@@ -1257,6 +2208,282 @@ fn build_named_details(
     build_ropewalk(commands, meshes, materials);
     build_osanne_stall(commands, meshes, materials, collision_world);
     build_wharf_cranes(commands, meshes, materials);
+}
+
+/// A cast bronze bell assembled from primitives, mouth down, hung from a
+/// headstock beam. `scale` 1.0 is the great Bellstand bell (~2.6 m mouth).
+fn spawn_bell(
+    commands: &mut Commands,
+    meshes: &CityMeshes,
+    materials: &CityMaterials,
+    center: Vec3,
+    scale: f32,
+    name: &str,
+) {
+    // Headstock the bell swings from.
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.dark_wood,
+        center + Vec3::Y * 2.6 * scale,
+        Vec3::new(5.2 * scale, 0.5 * scale, 0.55 * scale),
+        format!("{name} headstock"),
+    );
+    // Crown, shoulder, waist, flare, lip — the classic profile, coarsely.
+    spawn_mesh_named(
+        commands,
+        &meshes.sphere,
+        &materials.bronze,
+        Transform::from_translation(center + Vec3::Y * 2.15 * scale)
+            .with_scale(Vec3::splat(0.5 * scale)),
+        format!("{name} crown"),
+    );
+    spawn_mesh_named(
+        commands,
+        &meshes.sphere,
+        &materials.bronze,
+        Transform::from_translation(center + Vec3::Y * 1.55 * scale).with_scale(Vec3::new(
+            1.02 * scale,
+            0.85 * scale,
+            1.02 * scale,
+        )),
+        format!("{name} shoulder"),
+    );
+    spawn_cylinder(
+        commands,
+        meshes,
+        &materials.bronze,
+        center + Vec3::Y * 0.85 * scale,
+        0.95 * scale,
+        1.5 * scale,
+    );
+    spawn_cylinder(
+        commands,
+        meshes,
+        &materials.bronze,
+        center + Vec3::Y * 0.18 * scale,
+        1.22 * scale,
+        0.45 * scale,
+    );
+    spawn_cylinder(
+        commands,
+        meshes,
+        &materials.bronze,
+        center + Vec3::Y * 0.02 * scale,
+        1.3 * scale,
+        0.16 * scale,
+    );
+    // Clapper, just visible under the lip.
+    spawn_cylinder(
+        commands,
+        meshes,
+        &materials.iron,
+        center + Vec3::Y * 0.55 * scale,
+        0.09 * scale,
+        1.4 * scale,
+    );
+    spawn_mesh_named(
+        commands,
+        &meshes.sphere,
+        &materials.iron,
+        Transform::from_translation(center - Vec3::Y * 0.18 * scale)
+            .with_scale(Vec3::splat(0.22 * scale)),
+        format!("{name} clapper"),
+    );
+}
+
+/// The open bell stage crowning the Bellstand tower: piers, parapet,
+/// entablature, corner pinnacles, the great bell, and a slate spire — the
+/// silhouette `the_bellstand_001.png` promises. The stage floor is walkable.
+fn build_bellstand_belfry(
+    commands: &mut Commands,
+    meshes: &CityMeshes,
+    materials: &CityMaterials,
+    collision_world: &mut CollisionWorld,
+) {
+    let center = Vec2::new(64.0, -270.0);
+    let (half_x, half_z) = (11.0, 12.5);
+    let floor_y = 23.5;
+    let stage_top = 31.2;
+
+    // Stage floor caps the shaft; you can land and stand on it.
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.limestone,
+        Vec3::new(center.x, floor_y + 0.25, center.y),
+        Vec3::new(half_x * 2.0, 0.5, half_z * 2.0),
+        "Bellstand stage floor",
+    );
+    collision_world.add_box(
+        Vec3::new(center.x - half_x, floor_y, center.y - half_z),
+        Vec3::new(center.x + half_x, floor_y + 0.5, center.y + half_z),
+    );
+
+    // Corner and mid-face piers carry the entablature.
+    let pier_height = stage_top - floor_y;
+    let pier_y = floor_y + pier_height * 0.5;
+    let corner_inset = 1.1;
+    for sx in [-1.0, 1.0] {
+        for sz in [-1.0, 1.0] {
+            let position = Vec3::new(
+                center.x + sx * (half_x - corner_inset),
+                pier_y,
+                center.y + sz * (half_z - corner_inset),
+            );
+            spawn_box_named(
+                commands,
+                meshes,
+                &materials.limestone,
+                position,
+                Vec3::new(1.8, pier_height, 1.8),
+                "Bellstand corner pier",
+            );
+            collision_world.add_box(
+                position - Vec3::new(0.9, pier_height * 0.5, 0.9),
+                position + Vec3::new(0.9, pier_height * 0.5, 0.9),
+            );
+        }
+    }
+    for sz in [-1.0, 1.0] {
+        spawn_box_named(
+            commands,
+            meshes,
+            &materials.limestone,
+            Vec3::new(center.x, pier_y, center.y + sz * (half_z - 0.8)),
+            Vec3::new(1.5, pier_height, 1.6),
+            "Bellstand mid pier",
+        );
+    }
+    for sx in [-1.0, 1.0] {
+        spawn_box_named(
+            commands,
+            meshes,
+            &materials.limestone,
+            Vec3::new(center.x + sx * (half_x - 0.8), pier_y, center.y),
+            Vec3::new(1.6, pier_height, 1.5),
+            "Bellstand mid pier",
+        );
+    }
+
+    // Waist-high parapet between the piers.
+    for sz in [-1.0, 1.0] {
+        spawn_box_named(
+            commands,
+            meshes,
+            &materials.limestone,
+            Vec3::new(center.x, floor_y + 1.0, center.y + sz * (half_z - 0.55)),
+            Vec3::new(half_x * 2.0 - 1.4, 1.1, 0.5),
+            "Bellstand parapet",
+        );
+    }
+    for sx in [-1.0, 1.0] {
+        spawn_box_named(
+            commands,
+            meshes,
+            &materials.limestone,
+            Vec3::new(center.x + sx * (half_x - 0.55), floor_y + 1.0, center.y),
+            Vec3::new(0.5, 1.1, half_z * 2.0 - 1.4),
+            "Bellstand parapet",
+        );
+    }
+    collision_world.add_box(
+        Vec3::new(center.x - half_x, floor_y, center.y - half_z),
+        Vec3::new(center.x + half_x, floor_y + 1.55, center.y - half_z + 0.6),
+    );
+    collision_world.add_box(
+        Vec3::new(center.x - half_x, floor_y, center.y + half_z - 0.6),
+        Vec3::new(center.x + half_x, floor_y + 1.55, center.y + half_z),
+    );
+    collision_world.add_box(
+        Vec3::new(center.x - half_x, floor_y, center.y - half_z),
+        Vec3::new(center.x - half_x + 0.6, floor_y + 1.55, center.y + half_z),
+    );
+    collision_world.add_box(
+        Vec3::new(center.x + half_x - 0.6, floor_y, center.y - half_z),
+        Vec3::new(center.x + half_x, floor_y + 1.55, center.y + half_z),
+    );
+
+    // Entablature ring above the arcade.
+    for sz in [-1.0, 1.0] {
+        spawn_box_named(
+            commands,
+            meshes,
+            &materials.limestone,
+            Vec3::new(center.x, stage_top + 0.5, center.y + sz * (half_z - 0.7)),
+            Vec3::new(half_x * 2.0 + 0.7, 1.0, 1.7),
+            "Bellstand entablature",
+        );
+    }
+    for sx in [-1.0, 1.0] {
+        spawn_box_named(
+            commands,
+            meshes,
+            &materials.limestone,
+            Vec3::new(center.x + sx * (half_x - 0.7), stage_top + 0.5, center.y),
+            Vec3::new(1.7, 1.0, half_z * 2.0 + 0.7),
+            "Bellstand entablature",
+        );
+    }
+    // Corner pinnacles for the skyline.
+    for sx in [-1.0, 1.0] {
+        for sz in [-1.0, 1.0] {
+            spawn_mesh_named(
+                commands,
+                &meshes.pyramid,
+                &materials.slate,
+                Transform::from_xyz(
+                    center.x + sx * (half_x - corner_inset),
+                    stage_top + 1.9,
+                    center.y + sz * (half_z - corner_inset),
+                )
+                .with_scale(Vec3::new(1.5, 1.8, 1.5)),
+                "Bellstand pinnacle",
+            );
+        }
+    }
+
+    // The great bell, hung from the middle of the stage.
+    spawn_bell(
+        commands,
+        meshes,
+        materials,
+        Vec3::new(center.x, 26.4, center.y),
+        1.0,
+        "The Bellstand watch-bell",
+    );
+
+    // Slate spire and finial.
+    spawn_mesh_named(
+        commands,
+        &meshes.pyramid,
+        &materials.slate,
+        Transform::from_xyz(center.x, stage_top + 1.0 + 4.5, center.y).with_scale(Vec3::new(
+            15.5,
+            9.0,
+            17.5,
+        )),
+        "Bellstand spire",
+    );
+    collision_world.add_box(
+        Vec3::new(center.x - 7.0, stage_top + 1.0, center.y - 8.0),
+        Vec3::new(center.x + 7.0, stage_top + 8.0, center.y + 8.0),
+    );
+    spawn_cylinder(
+        commands,
+        meshes,
+        &materials.bronze,
+        Vec3::new(center.x, stage_top + 10.6, center.y),
+        0.07,
+        2.6,
+    );
+    spawn_mesh_named(
+        commands,
+        &meshes.sphere,
+        &materials.bronze,
+        Transform::from_xyz(center.x, stage_top + 12.0, center.y).with_scale(Vec3::splat(0.38)),
+        "Bellstand finial",
+    );
 }
 
 fn build_bellstand_stair(
@@ -1298,14 +2525,6 @@ fn build_bellstand_stair(
             "Bellfoot stair rail",
         );
     }
-    spawn_cylinder(
-        commands,
-        meshes,
-        &materials.bronze,
-        Vec3::new(64.0, 27.0, -270.0),
-        1.15,
-        1.9,
-    );
 }
 
 fn build_saint_maren_tower(
@@ -1314,25 +2533,99 @@ fn build_saint_maren_tower(
     materials: &CityMaterials,
     collision_world: &mut CollisionWorld,
 ) {
-    let center = Vec3::new(-253.0, 10.0, -402.0);
+    let center = Vec3::new(-253.0, 8.5, -402.0);
     spawn_box_named(
         commands,
         meshes,
         &materials.fieldstone,
         center,
-        Vec3::new(8.5, 20.0, 8.5),
+        Vec3::new(8.5, 17.0, 8.5),
         "Saint Maren's modest bell tower",
+    );
+    add_open_bell_stage(
+        commands,
+        meshes,
+        materials,
+        Vec2::new(center.x, center.z),
+        17.0,
+        4.25,
+        0.62,
+        "Saint Maren's",
+    );
+    collision_world.add_box(
+        Vec3::new(center.x - 4.25, 0.0, center.z - 4.25),
+        Vec3::new(center.x + 4.25, 24.5, center.z + 4.25),
+    );
+}
+
+/// A small open lantern for the parish landmarks: corner posts, a visible
+/// swinging bell, and the slate pyramid lifted back on top.
+#[allow(clippy::too_many_arguments)]
+fn add_open_bell_stage(
+    commands: &mut Commands,
+    meshes: &CityMeshes,
+    materials: &CityMaterials,
+    center: Vec2,
+    base_y: f32,
+    half_width: f32,
+    bell_scale: f32,
+    name: &str,
+) {
+    let stage_height = 3.4;
+    let post_inset = 0.55;
+    for sx in [-1.0, 1.0] {
+        for sz in [-1.0, 1.0] {
+            spawn_box_named(
+                commands,
+                meshes,
+                &materials.fieldstone,
+                Vec3::new(
+                    center.x + sx * (half_width - post_inset),
+                    base_y + stage_height * 0.5,
+                    center.y + sz * (half_width - post_inset),
+                ),
+                Vec3::new(0.9, stage_height, 0.9),
+                format!("{name} bell-stage post"),
+            );
+        }
+    }
+    // Low rail between the posts.
+    for sz in [-1.0, 1.0] {
+        spawn_box_named(
+            commands,
+            meshes,
+            &materials.fieldstone,
+            Vec3::new(center.x, base_y + 0.45, center.y + sz * (half_width - 0.35)),
+            Vec3::new(half_width * 2.0 - 1.0, 0.9, 0.35),
+            format!("{name} bell-stage rail"),
+        );
+    }
+    for sx in [-1.0, 1.0] {
+        spawn_box_named(
+            commands,
+            meshes,
+            &materials.fieldstone,
+            Vec3::new(center.x + sx * (half_width - 0.35), base_y + 0.45, center.y),
+            Vec3::new(0.35, 0.9, half_width * 2.0 - 1.0),
+            format!("{name} bell-stage rail"),
+        );
+    }
+    spawn_bell(
+        commands,
+        meshes,
+        materials,
+        Vec3::new(center.x, base_y + 0.9, center.y),
+        bell_scale,
+        name,
     );
     spawn_mesh_named(
         commands,
         &meshes.pyramid,
         &materials.slate,
-        Transform::from_xyz(center.x, 22.2, center.z).with_scale(Vec3::new(6.8, 4.2, 6.8)),
-        "Saint Maren's tower roof",
-    );
-    collision_world.add_box(
-        Vec3::new(center.x - 4.25, 0.0, center.z - 4.25),
-        Vec3::new(center.x + 4.25, 24.5, center.z + 4.25),
+        Transform::from_xyz(center.x, base_y + stage_height + 1.9, center.y).with_scale(
+            Vec3::new(half_width * 2.0 - 0.6, 4.0, half_width * 2.0 - 0.6),
+        ),
+        format!("{name} tower roof"),
     );
 }
 
@@ -1349,28 +2642,29 @@ fn build_parish_towers(
         .filter(|building| building.id.starts_with("reserve_church_"))
     {
         let center2 = polygon_center(&building.polygon);
-        let center = Vec3::new(center2.x, 7.8, center2.y);
+        let center = Vec3::new(center2.x, 6.7, center2.y);
+        let name = building.name.as_deref().unwrap_or(&building.id);
         spawn_box_named(
             commands,
             meshes,
             &materials.fieldstone,
             center,
-            Vec3::new(6.5, 15.6, 6.5),
-            format!(
-                "{} parish tower reserve",
-                building.name.as_deref().unwrap_or(&building.id)
-            ),
+            Vec3::new(6.5, 13.4, 6.5),
+            format!("{name} parish tower reserve"),
         );
-        spawn_mesh_named(
+        add_open_bell_stage(
             commands,
-            &meshes.pyramid,
-            &materials.slate,
-            Transform::from_xyz(center.x, 17.7, center.z).with_scale(Vec3::new(5.2, 3.6, 5.2)),
-            "Reserved parish tower roof",
+            meshes,
+            materials,
+            Vec2::new(center.x, center.z),
+            13.4,
+            3.25,
+            0.5,
+            name,
         );
         collision_world.add_box(
-            center + Vec3::new(-3.25, -7.8, -3.25),
-            center + Vec3::new(3.25, 12.0, 3.25),
+            center + Vec3::new(-3.25, -6.7, -3.25),
+            center + Vec3::new(3.25, 13.5, 3.25),
         );
     }
 }
@@ -1568,6 +2862,413 @@ fn build_wharf_cranes(commands: &mut Commands, meshes: &CityMeshes, materials: &
             &format!("Outer Serle wharf crane {}", index + 1),
         );
     }
+}
+
+/// Timber galleries spanning the narrower streets at first-floor height — the
+/// bridges full of onlookers in `the_bellstand_001.png`. A gallery only spawns
+/// where a 2+-storey building actually stands on each side, so every one is
+/// seated in masonry rather than floating.
+fn build_street_galleries(
+    commands: &mut Commands,
+    meshes: &CityMeshes,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+    collision_world: &mut CollisionWorld,
+) {
+    let tall_building_at = |point: Vec2| {
+        plan.buildings.iter().any(|building| {
+            building.levels >= 2
+                && building.use_name != "bridge"
+                && point_in_polygon(point, &building.polygon)
+        })
+    };
+
+    let mut built = 0;
+    for road in &plan.roads {
+        if !(2.0..=5.5).contains(&road.width_m) {
+            continue;
+        }
+        for (segment_index, pair) in road.points.windows(2).enumerate() {
+            let a = Vec2::from_array(pair[0]);
+            let b = Vec2::from_array(pair[1]);
+            let length = a.distance(b);
+            if length < 12.0 {
+                continue;
+            }
+            let hash = stable_hash(&format!("gallery-{}-{segment_index}", road.id));
+            if hash % 2 != 0 {
+                continue;
+            }
+            let t = 0.3 + (hash % 41) as f32 / 100.0;
+            let center = a.lerp(b, t);
+            let street_dir = (b - a) / length;
+            let across = Vec2::new(-street_dir.y, street_dir.x);
+            // Both flanks must carry a tall building right at the street edge;
+            // façades sit at varying setbacks, so probe outward until one is
+            // found and seat the gallery that deep into it.
+            let seat_depth = |side: f32| {
+                [0.7_f32, 1.6, 2.6].into_iter().find(|extra| {
+                    tall_building_at(center + across * side * (road.width_m * 0.5 + extra))
+                })
+            };
+            let (Some(seat_a), Some(seat_b)) = (seat_depth(1.0), seat_depth(-1.0)) else {
+                continue;
+            };
+
+            let span = road.width_m + seat_a + seat_b + 1.6;
+            let yaw = (-across.y).atan2(across.x);
+            let floor_y = 4.55;
+            let shifted = center + across * (seat_a - seat_b) * 0.5;
+            let base = Vec3::new(shifted.x, floor_y, shifted.y);
+            spawn_rotated_box_named(
+                commands,
+                meshes,
+                &materials.timber,
+                base,
+                Vec3::new(span, 0.26, 2.5),
+                yaw,
+                format!("Street gallery over {}", road.name),
+            );
+            // Half-timbered parapet walls and a slate hood.
+            for side in [-1.0, 1.0] {
+                spawn_rotated_box_named(
+                    commands,
+                    meshes,
+                    &materials.half_timber,
+                    base + Vec3::new(street_dir.x, 0.0, street_dir.y) * side * 1.13
+                        + Vec3::Y * 1.05,
+                    Vec3::new(span, 1.85, 0.24),
+                    yaw,
+                    "Street gallery parapet",
+                );
+            }
+            spawn_rotated_box_named(
+                commands,
+                meshes,
+                &materials.slate,
+                base + Vec3::Y * 2.35,
+                Vec3::new(span + 0.6, 0.16, 3.1),
+                yaw,
+                "Street gallery roof",
+            );
+            spawn_rotated_box_named(
+                commands,
+                meshes,
+                &materials.slate,
+                base + Vec3::Y * 2.55,
+                Vec3::new(span + 0.6, 0.14, 1.1),
+                yaw,
+                "Street gallery roof ridge",
+            );
+            add_rotated_box_collider_at(
+                collision_world,
+                base,
+                Vec3::new(span, 0.26, 2.5),
+                yaw,
+            );
+            built += 1;
+        }
+    }
+    info!("spanned {built} street galleries");
+}
+
+/// The street-life kit: barrels, crates, sacks, firewood and hanging signs
+/// hugging the façades beside doors. Everything is merged into five batched
+/// meshes (one per material), and none of it collides: the baked navigation
+/// predates these, so they are scenery for the eye, not walls for the feet —
+/// exactly like the NPCs, which never collide with props either.
+fn build_street_props(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+    door_edges: &HashMap<String, usize>,
+) {
+    let mut timber = MeshData::default();
+    let mut iron = MeshData::default();
+    let mut dark_wood = MeshData::default();
+    let mut ochre = MeshData::default();
+    let mut russet = MeshData::default();
+    let mut placed = 0;
+
+    for building in &plan.buildings {
+        let Some(&edge_index) = door_edges.get(&building.id) else {
+            continue;
+        };
+        let hash = stable_hash(&building.id).rotate_left(9);
+        // Two thirds of doorways get something standing outside.
+        if hash % 3 == 0 {
+            continue;
+        }
+        let polygon = &building.polygon;
+        let a = Vec2::from_array(polygon[edge_index]);
+        let b = Vec2::from_array(polygon[(edge_index + 1) % polygon.len()]);
+        let edge = b - a;
+        let length = edge.length();
+        if length < 4.5 {
+            continue;
+        }
+        let direction = edge / length;
+        let orientation = plan::signed_area(polygon).signum();
+        let mut normal = Vec2::new(edge.y, -edge.x).normalize() * orientation;
+        // `plan` polygons wind either way; make sure the props step outward.
+        if point_in_polygon(a + direction * (length * 0.5) + normal * 0.5, polygon) {
+            normal = -normal;
+        }
+        let door = a + direction * (length * 0.5);
+
+        // One or two clutter spots flanking the door, tight to the wall.
+        let spots = if hash % 5 < 2 { 2 } else { 1 };
+        for spot in 0..spots {
+            let side = if (spot == 0) == (hash % 2 == 0) { 1.0 } else { -1.0 };
+            let spot_hash = hash.rotate_left(5 + spot as u32 * 7) ^ 0xA5A5_5A5A;
+            let along_offset = 1.6 + (spot_hash % 90) as f32 / 100.0;
+            let position2 = door + direction * side * along_offset + normal * 0.55;
+            let position = Vec3::new(position2.x, 0.0, position2.y);
+            match spot_hash % 4 {
+                // A barrel, sometimes two.
+                0 => {
+                    add_barrel(&mut timber, &mut iron, position);
+                    if spot_hash % 7 == 0 {
+                        add_barrel(
+                            &mut timber,
+                            &mut iron,
+                            position + Vec3::new(direction.x, 0.0, direction.y) * side * 0.72,
+                        );
+                    }
+                }
+                // Crates, stacked when the hash feels like it.
+                1 => {
+                    let skew = rotate2(direction, (spot_hash % 7) as f32 * 0.1);
+                    add_oriented_box(
+                        &mut timber,
+                        position + Vec3::Y * 0.29,
+                        Vec3::new(0.30, 0.29, 0.30),
+                        skew,
+                    );
+                    if spot_hash % 3 == 0 {
+                        add_oriented_box(
+                            &mut timber,
+                            position + Vec3::Y * 0.82,
+                            Vec3::new(0.25, 0.24, 0.25),
+                            rotate2(skew, 0.35),
+                        );
+                    }
+                }
+                // Sacks slumped against the wall.
+                2 => {
+                    let cloth = if spot_hash % 2 == 0 {
+                        &mut ochre
+                    } else {
+                        &mut russet
+                    };
+                    for (offset, squash) in [(Vec2::ZERO, 0.24), (Vec2::new(0.42, 0.06), 0.19)] {
+                        let sack2 = position2 + direction * offset.x + normal * offset.y;
+                        add_sack(
+                            cloth,
+                            Vec3::new(sack2.x, squash * 0.8, sack2.y),
+                            Vec3::new(0.30, squash, 0.27),
+                        );
+                    }
+                }
+                // A firewood rick: split logs against the plinth.
+                _ => {
+                    for row in 0..3 {
+                        for column in 0..2 {
+                            let log2 = position2
+                                + direction * (column as f32 * 0.3 - 0.15)
+                                + normal * 0.05;
+                            add_log(
+                                &mut dark_wood,
+                                Vec3::new(log2.x, 0.14 + row as f32 * 0.24, log2.y),
+                                0.115,
+                                1.05,
+                                direction,
+                            );
+                        }
+                    }
+                }
+            }
+            placed += 1;
+        }
+
+        // A hanging trade sign over some doors: bracket arm and swinging board.
+        if hash % 8 == 0 {
+            let arm_center = door + normal * 0.55;
+            add_oriented_box(
+                &mut iron,
+                Vec3::new(arm_center.x, 3.35, arm_center.y),
+                Vec3::new(0.03, 0.03, 0.5),
+                direction,
+            );
+            let board2 = door + normal * 0.78;
+            add_oriented_box(
+                &mut dark_wood,
+                Vec3::new(board2.x, 2.78, board2.y),
+                Vec3::new(0.29, 0.33, 0.03),
+                direction,
+            );
+        }
+    }
+
+    spawn_batch(commands, meshes, &materials.timber, timber, "Street props: cooperage");
+    spawn_batch(commands, meshes, &materials.iron, iron, "Street props: ironmongery");
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.dark_wood,
+        dark_wood,
+        "Street props: firewood and signs",
+    );
+    spawn_batch(commands, meshes, &materials.cloth_ochre, ochre, "Street props: sacks");
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.cloth_russet,
+        russet,
+        "Street props: more sacks",
+    );
+    info!("scattered {placed} doorway prop clusters");
+}
+
+fn rotate2(v: Vec2, angle: f32) -> Vec2 {
+    let (sin, cos) = angle.sin_cos();
+    Vec2::new(v.x * cos - v.y * sin, v.x * sin + v.y * cos)
+}
+
+/// A coopered barrel: ten-sided drum with a lid and two iron hoops.
+fn add_barrel(timber: &mut MeshData, iron: &mut MeshData, base: Vec3) {
+    add_drum(timber, base + Vec3::Y * 0.42, 0.32, 0.84, true);
+    add_drum(iron, base + Vec3::Y * 0.22, 0.335, 0.06, false);
+    add_drum(iron, base + Vec3::Y * 0.62, 0.335, 0.06, false);
+}
+
+/// A vertical cylinder written into a batch: `cap` adds the top disc.
+fn add_drum(mesh: &mut MeshData, center: Vec3, radius: f32, height: f32, cap: bool) {
+    const SEGMENTS: usize = 10;
+    let half = height * 0.5;
+    for segment in 0..SEGMENTS {
+        let a0 = segment as f32 / SEGMENTS as f32 * (PI * 2.0);
+        let a1 = (segment + 1) as f32 / SEGMENTS as f32 * (PI * 2.0);
+        let n0 = Vec3::new(a0.cos(), 0.0, a0.sin());
+        let n1 = Vec3::new(a1.cos(), 0.0, a1.sin());
+        let mid = ((n0 + n1) * 0.5).normalize_or(Vec3::X);
+        mesh.quad(
+            [
+                center + n0 * radius - Vec3::Y * half,
+                center + n1 * radius - Vec3::Y * half,
+                center + n1 * radius + Vec3::Y * half,
+                center + n0 * radius + Vec3::Y * half,
+            ],
+            mid,
+            [
+                Vec2::new(0.0, 0.0),
+                Vec2::new(0.06, 0.0),
+                Vec2::new(0.06, height / 7.0),
+                Vec2::new(0.0, height / 7.0),
+            ],
+        );
+        if cap {
+            let top = center + Vec3::Y * half;
+            mesh.triangle(
+                [top, top + n0 * radius, top + n1 * radius],
+                [Vec2::ZERO, Vec2::new(0.05, 0.0), Vec2::new(0.05, 0.05)],
+                true,
+            );
+        }
+    }
+}
+
+/// A horizontal log lying along `along`, split-firewood scale.
+fn add_log(mesh: &mut MeshData, center: Vec3, radius: f32, length: f32, along: Vec2) {
+    const SEGMENTS: usize = 7;
+    let axis = Vec3::new(along.x, 0.0, along.y);
+    let side = Vec3::new(-along.y, 0.0, along.x);
+    let half = axis * (length * 0.5);
+    for segment in 0..SEGMENTS {
+        let a0 = segment as f32 / SEGMENTS as f32 * (PI * 2.0);
+        let a1 = (segment + 1) as f32 / SEGMENTS as f32 * (PI * 2.0);
+        let r0 = (side * a0.cos() + Vec3::Y * a0.sin()) * radius;
+        let r1 = (side * a1.cos() + Vec3::Y * a1.sin()) * radius;
+        let normal = ((r0 + r1) * 0.5).normalize_or(Vec3::Y);
+        mesh.quad(
+            [
+                center - half + r0,
+                center - half + r1,
+                center + half + r1,
+                center + half + r0,
+            ],
+            normal,
+            [
+                Vec2::ZERO,
+                Vec2::new(0.04, 0.0),
+                Vec2::new(0.04, 0.15),
+                Vec2::new(0.0, 0.15),
+            ],
+        );
+    }
+    // End discs so the rick reads as cut wood.
+    for (end, direction) in [(center + half, axis), (center - half, -axis)] {
+        for segment in 0..SEGMENTS {
+            let a0 = segment as f32 / SEGMENTS as f32 * (PI * 2.0);
+            let a1 = (segment + 1) as f32 / SEGMENTS as f32 * (PI * 2.0);
+            let r0 = (side * a0.cos() + Vec3::Y * a0.sin()) * radius;
+            let r1 = (side * a1.cos() + Vec3::Y * a1.sin()) * radius;
+            mesh.triangle(
+                [end, end + r0, end + r1],
+                [Vec2::ZERO, Vec2::new(0.03, 0.0), Vec2::new(0.03, 0.03)],
+                false,
+            );
+        }
+        let _ = direction;
+    }
+}
+
+/// A slumped sack: a low-resolution squashed dome, batched.
+fn add_sack(mesh: &mut MeshData, center: Vec3, radii: Vec3) {
+    const SECTORS: usize = 8;
+    const RINGS: usize = 4;
+    for ring in 0..RINGS {
+        let v0 = ring as f32 / RINGS as f32 * FRAC_PI_2_SACK;
+        let v1 = (ring + 1) as f32 / RINGS as f32 * FRAC_PI_2_SACK;
+        for sector in 0..SECTORS {
+            let u0 = sector as f32 / SECTORS as f32 * (PI * 2.0);
+            let u1 = (sector + 1) as f32 / SECTORS as f32 * (PI * 2.0);
+            let point = |u: f32, v: f32| {
+                center
+                    + Vec3::new(
+                        radii.x * v.cos() * u.cos(),
+                        radii.y * v.sin(),
+                        radii.z * v.cos() * u.sin(),
+                    )
+            };
+            let normal = (point(u0, v0) + point(u1, v1) - center * 2.0).normalize_or(Vec3::Y);
+            mesh.quad(
+                [
+                    point(u0, v0),
+                    point(u1, v0),
+                    point(u1, v1),
+                    point(u0, v1),
+                ],
+                normal,
+                [Vec2::ZERO, Vec2::new(0.05, 0.0), Vec2::new(0.05, 0.05), Vec2::new(0.0, 0.05)],
+            );
+        }
+    }
+}
+
+const FRAC_PI_2_SACK: f32 = PI * 0.5;
+
+fn point_in_polygon(point: Vec2, polygon: &[[f32; 2]]) -> bool {
+    let mut inside = false;
+    for (a, b) in polygon.iter().zip(polygon.iter().cycle().skip(1)) {
+        if (a[1] > point.y) != (b[1] > point.y)
+            && point.x < (b[0] - a[0]) * (point.y - a[1]) / (b[1] - a[1]) + a[0]
+        {
+            inside = !inside;
+        }
+    }
+    inside
 }
 
 fn build_fortifications(
