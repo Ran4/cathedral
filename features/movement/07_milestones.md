@@ -346,6 +346,10 @@ The person target gated on sight, degrading to last-seen position. The arrival p
 lapse percept** (an expired or need-preempted intent tells its owner so), both granting the
 priority nudge off stage. Validation errors `unknown_place` / `no_route`
 — **`too_far` is deferred** until the hunger need exists (05 §2; reserve the enum variant now).
+**`tell_way`** — the knowledge-transfer verb ([05](05_the_llm_seam.md) §3): speaker must hold the
+id, target in earshot, writes the id into the target's `places_you_know`, one inbox line. It ships
+here rather than later because the golden fixtures byte-diff the full rendered prompt, verb list
+included — deferring it would mean regenerating all twenty fixtures twice.
 The `turn.j2` change (deleting the paragraph that says *"if what you want
 to do has no verb here (like walking somewhere)…"*). The sheet's three additions —
 `the_hour`, `places_you_know`, `moving`. **All twenty golden fixtures regenerated.**
@@ -360,6 +364,11 @@ cargo run -p cathedral-backends --bin cathedral-headless -- -t 10 -v
 
 An NPC issues `go_to`, the prompt log shows it, and their position starts moving toward the right
 place. Then, in the game: **tell someone to meet you at the Gradine. Walk there. They are there.**
+
+And the knowledge loop, headless: give one NPC a goal that names a place only a *second* NPC holds
+the id for. The first walks coarse (a ward id everyone has), asks; the second answers with `say` +
+`tell_way`; the first — nudged, holding the id — sets off and arrives. Learn → walk → ask → be told
+→ walk, end-to-end, with `--fake` or live.
 
 ---
 

@@ -222,9 +222,12 @@ prompt time. Not all seventy places. It is also, quietly, a *characterisation* d
 boatman who does not hold the id for the glaziers' guildhall is a Reed Ward boatman, and *which* ids
 someone holds is who they are.
 
-*The transfer mechanic — a verb, deferred past M5.* Directions travel as an ordinary action beside
-the speech. A turn is already *"Take one or more actions"* (`turn.j2:116`), so the verb costs no
-extra turn and duplicates nothing:
+*The transfer mechanic — a verb, and it ships in M5.* (It was first sketched as deferred, but the
+golden fixtures byte-diff the *full rendered prompt*, verb list included — a later `tell_way` would
+mean a second `turn.j2` edit and a second regeneration of all twenty fixtures. The prompt changes
+once, so the verb rides along.) Directions travel as an ordinary action beside the speech. A turn is
+already *"Take one or more actions"* (`turn.j2:116`), so the verb costs no extra turn and duplicates
+nothing:
 
 ```
 say      {"text": "Tam Rud? The corner house past the Ford Well, ask for the blue door."}
@@ -289,8 +292,10 @@ because errands are rare and born only from conversation. §6's acceptance test 
 with cognition off, errands cannot start, but the city never depended on them; the Round runs
 regardless.
 
-M5 ships the static + dynamic assembly only. But the id *format* must be right now, because it
-touches the sheet — and the sheet changes once.
+M5 ships the static + dynamic assembly **and** `tell_way` — the sheet and the prompt change once,
+so everything that touches them lands together. And with the off-stage nudges in the same
+milestone, the whole knowledge loop — learn *of* a place, walk coarse, ask, be told, walk exact —
+is testable end-to-end in `cathedral-headless` the day M5 lands.
 
 **`moving`** — one bool per visible person. Once people walk, `you_see` churns, and the model needs to
 tell *"a man is crossing the square"* from *"a man has stopped in front of me."* One bool, and it makes
