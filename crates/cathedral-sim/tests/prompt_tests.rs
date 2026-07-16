@@ -485,3 +485,116 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
     );
     assert!(!rendered.contains("SECRET EXTENDED DETAIL"));
 }
+
+/// M5: `places_you_know` renders the actor's held handles — sorted by name so
+/// the list reads the same turn after turn — and an empty set renders as an
+/// empty list, never an omitted key.
+#[test]
+fn places_you_know_renders_the_held_handles_sorted_by_name() {
+    use cathedral_sim::{NavData, PlaceRegistry};
+
+    let env = prompt_env();
+    let mut world = seed_world();
+    assert_eq!(
+        sheet(&world, "sv3n1", &env)["places_you_know"],
+        json!([]),
+        "no registry, no handles: an honest empty list"
+    );
+
+    // A compact graph and registry — the line nav from the module tests.
+    let (w, h) = (60usize, 10usize);
+    let bitset = vec![0xFF_u8; (w * h).div_ceil(8)];
+    let nav_json = format!(
+        r#"{{
+          "schema_version": 1,
+          "grid": {{"x0": -5.0, "z0": -5.0, "cell_m": 1.0, "w": {w}, "h": {h},
+                    "agent_radius_m": 0.35, "bitset_file": "x.bin",
+                    "bitset_bits": {bits}, "bitset_sha256": ""}},
+          "nodes": [[0.0, 0.0], [10.0, 0.0], [20.0, 0.0], [30.0, 0.0]],
+          "edges": [[0, 1, 2.0], [1, 2, 2.0], [2, 3, 2.0]],
+          "places": [{{"name": "a", "node": 0, "kind": "place"}},
+                     {{"name": "b", "node": 3, "kind": "place"}}],
+          "sites": [],
+          "doors": [],
+          "reference": {{"forecourt": 0}}
+        }}"#,
+        bits = w * h
+    );
+    let nav = NavData::from_parts(&nav_json, &bitset).unwrap();
+    let registry_json = r#"{
+        "schema_version": 1,
+        "places": [
+            {"id": "pl_zz01", "name": "The Wickmarket", "node": 0, "kind": "major", "ward": "wick"},
+            {"id": "pl_aa01", "name": "Ford Well", "node": 3, "kind": "landmark", "ward": "fabric"}
+        ],
+        "wards": [
+            {"id": "pl_mm01", "ward": "reed", "name": "Reed Ward", "node": 1}
+        ]
+    }"#;
+    world.places = PlaceRegistry::from_json(registry_json, &nav).unwrap();
+    {
+        let sven = world.characters.get_mut(&actor("sv3n1")).unwrap();
+        for id in ["pl_zz01", "pl_aa01", "pl_mm01", "pl_gone"] {
+            sven.state.places_known.insert(cathedral_sim::PlaceId::from_raw(id));
+        }
+    }
+
+    let rendered = sheet(&world, "sv3n1", &env);
+    assert_eq!(
+        rendered["places_you_know"],
+        json!([
+            {"place_id": "pl_aa01", "name": "Ford Well"},
+            {"place_id": "pl_mm01", "name": "Reed Ward"},
+            {"place_id": "pl_zz01", "name": "The Wickmarket"}
+        ]),
+        "sorted by name, dangling handles skipped, place_id (not id) as the key"
+    );
+    // Nobody else's sheet gains a handle from Sven's knowledge.
+    assert_eq!(sheet(&world, "cb947", &env)["places_you_know"], json!([]));
+}
+
+/// M5: every `you_see` person carries `moving` — `!is_settled()`, the novelty
+/// gate's own threshold — and the offer sections stay `moving`-free.
+#[test]
+fn you_see_people_carry_the_moving_flag() {
+    use cathedral_sim::Movement;
+
+    let env = prompt_env();
+    let mut world = seed_world();
+    // Conny walks; Ilse stands.
+    world
+        .characters
+        .get_mut(&actor("cb947"))
+        .unwrap()
+        .state
+        .movement = Some(Movement {
+        path: vec![Vec3::new(50.0, 0.91, 0.0)],
+        speed: 1.8,
+        gait_phase: 0.0,
+        patrol: None,
+    });
+
+    let rendered = sheet(&world, "sv3n1", &env);
+    let people = rendered["you_see"]["people"].as_array().unwrap();
+    let moving: Vec<(&str, bool)> = people
+        .iter()
+        .map(|p| (p["id"].as_str().unwrap(), p["moving"].as_bool().unwrap()))
+        .collect();
+    assert_eq!(
+        moving,
+        [("cb947", true), ("k0fb1", false), ("player", false)],
+        "a man crossing the square is moving; the ones who stand are not"
+    );
+
+    // The offer sections reuse the person shape but never the flag.
+    apply_action(
+        &mut world,
+        &actor("sv3n1"),
+        "offer_item",
+        &json!({"item_id": "fzbn9", "target": "cb947"}),
+    )
+    .unwrap();
+    let rendered = sheet(&world, "sv3n1", &env);
+    let to = &rendered["you_offer"][0]["to"];
+    assert!(to.get("moving").is_none(), "no moving flag in you_offer: {to}");
+}

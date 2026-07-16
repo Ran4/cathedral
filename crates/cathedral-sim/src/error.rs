@@ -28,6 +28,15 @@ pub enum ActionErrorCode {
     BroadcastCannotDecline,
     UnknownSound,
     SoundsDisabled,
+    /// `go_to` / `tell_way` named a place the actor holds no handle for.
+    UnknownPlace,
+    /// `go_to` could not route from where the actor stands.
+    NoRoute,
+    /// Reserved for the body refusing a `go_to` (a real starvation state plus a
+    /// real distance). Deliberately unraised until the hunger need exists —
+    /// inventing a threshold just to have a refusal is what
+    /// `features/movement/05_the_llm_seam.md` §2 warns against.
+    TooFar,
 }
 
 impl ActionErrorCode {
@@ -50,6 +59,9 @@ impl ActionErrorCode {
             Self::BroadcastCannotDecline => "broadcast_cannot_decline",
             Self::UnknownSound => "unknown_sound",
             Self::SoundsDisabled => "sounds_disabled",
+            Self::UnknownPlace => "unknown_place",
+            Self::NoRoute => "no_route",
+            Self::TooFar => "too_far",
         }
     }
 }
@@ -191,6 +203,9 @@ pub enum CommandErrorCode {
     BroadcastCannotDecline,
     UnknownSound,
     SoundsDisabled,
+    UnknownPlace,
+    NoRoute,
+    TooFar,
     // ---- from `SpatialUpdateErrorCode` (the position that came with it)
     InvalidPosition,
     StaleSpatialSeq,
@@ -239,6 +254,9 @@ impl CommandErrorCode {
             Self::BroadcastCannotDecline => "broadcast_cannot_decline",
             Self::UnknownSound => "unknown_sound",
             Self::SoundsDisabled => "sounds_disabled",
+            Self::UnknownPlace => "unknown_place",
+            Self::NoRoute => "no_route",
+            Self::TooFar => "too_far",
             Self::InvalidPosition => "invalid_position",
             Self::StaleSpatialSeq => "stale_spatial_seq",
             Self::InvalidRequest => "invalid_request",
@@ -282,6 +300,9 @@ impl From<ActionErrorCode> for CommandErrorCode {
             ActionErrorCode::BroadcastCannotDecline => Self::BroadcastCannotDecline,
             ActionErrorCode::UnknownSound => Self::UnknownSound,
             ActionErrorCode::SoundsDisabled => Self::SoundsDisabled,
+            ActionErrorCode::UnknownPlace => Self::UnknownPlace,
+            ActionErrorCode::NoRoute => Self::NoRoute,
+            ActionErrorCode::TooFar => Self::TooFar,
         }
     }
 }

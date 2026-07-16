@@ -637,11 +637,16 @@ impl Engine {
             )
             .map_err(EngineInitError::PlayerSpawn)?;
 
+        // The street graph is world context (like the area map): `go_to` prices
+        // and validates its route against it at intent time (M5).
+        world.nav = config.nav.clone();
+
         // The daily round (M4, subsuming M3's water and M2's hard-coded pacer):
-        // homes, workplaces, the ladder, the queues. It only runs if the host
-        // gave us a nav graph — the frozen fixtures pass `None` and nobody moves
-        // — and reports rather than panics on anything that does not resolve;
-        // the notices ride out with the first poll's `Ready`.
+        // homes, workplaces, the ladder, the queues — and, since M5, the
+        // wayfinding registry and each townsperson's `places_you_know`. It only
+        // runs if the host gave us a nav graph — the frozen fixtures pass `None`
+        // and nobody moves — and reports rather than panics on anything that
+        // does not resolve; the notices ride out with the first poll's `Ready`.
         let mut startup_diagnostics: Vec<String> = Vec::new();
         let mut round = Round::new();
         if let Some(nav) = config.nav.as_deref() {
@@ -795,7 +800,7 @@ impl Engine {
             if let Some(partner) = self.conversation_partner(now) {
                 in_conversation.insert(partner.clone());
             }
-            round::tick(
+            let nudges = round::tick(
                 &mut self.round,
                 &mut self.world,
                 &nav,
@@ -804,6 +809,14 @@ impl Engine {
                 &self.config.player_id,
                 &in_conversation,
             );
+            // A `go_to` arrival or lapse grants the same priority handoff an
+            // addressed `say` does — off stage there is no idle rotation to
+            // render the percept, and without the nudge the errand chain dies
+            // silently (05_the_llm_seam.md §3). Not immediate: the inter-turn
+            // delay and the floor still govern when, only selection changes.
+            for actor_id in nudges {
+                self.scheduler.prioritize(&self.world, &actor_id, false, now);
+            }
         }
 
         let mut completions: Vec<Completion> = Vec::new();

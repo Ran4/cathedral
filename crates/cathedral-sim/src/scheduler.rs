@@ -594,12 +594,18 @@ impl NpcScheduler {
 
             // Turn-taking: an addressed `say` hands the next selection slot to
             // the addressee, so a two-way exchange does not braid through the
-            // global round robin. Deliberately not immediate — the inter-turn
+            // global round robin — and `tell_way` (M5) is addressed the same
+            // way: the way just given is news its holder should get to act on,
+            // on stage or off. Deliberately not immediate — the inter-turn
             // delay and the floor still govern *when*, only selection changes.
             // `prioritize` rejects the player itself, so this is best-effort;
             // several targeted says in one reply all queue, oldest first.
-            if verb == "say"
-                && let Some(Value::String(target)) = args.get("target")
+            let addressed = match verb.as_str() {
+                "say" => args.get("target"),
+                "tell_way" => args.get("person"),
+                _ => None,
+            };
+            if let Some(Value::String(target)) = addressed
                 && let Ok(target_id) = ActorId::new(target.clone())
             {
                 self.prioritize(world, &target_id, false, now);

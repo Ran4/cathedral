@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     GOAL_NONE, INBOX_MAX_ENTRIES, RECENT_HISTORY_MAX_ENTRIES, SETTLED_SPEED_MPS, THIRST_MAX,
-    ids::{ActorId, ItemId},
+    ids::{ActorId, ItemId, PlaceId},
     lore::{LoreProfile, Significance},
     math::Vec3,
 };
@@ -125,6 +125,44 @@ impl Default for Needs {
     }
 }
 
+/// Where a [`TravelIntent`] is headed.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IntentTarget {
+    /// A handle from `places_you_know`. The name and point are captured at
+    /// intent time so the percepts that end the errand need no registry.
+    Place {
+        place_id: PlaceId,
+        name: String,
+        point: Vec3,
+    },
+    /// Someone the actor could *see* when the intent was set — the sight gate
+    /// that keeps a hoarded id from becoming a tracking device
+    /// (`features/movement/05_the_llm_seam.md` §2). While they stay visible the
+    /// follow tracks them; losing sight degrades the intent to `last_seen`.
+    Person {
+        actor_id: ActorId,
+        last_seen: Vec3,
+        visible: bool,
+    },
+}
+
+/// An LLM-issued `go_to`: an intent, not a move. The verb returns immediately
+/// and the behaviour ladder carries the body there over the next seconds or
+/// minutes — a suggestion layered on an already-autonomous agent, never its
+/// brain (05_the_llm_seam.md §2). It expires on a route-derived budget, the
+/// pressing needs preempt it, and both endings are percepts.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TravelIntent {
+    pub target: IntentTarget,
+    /// Real-seconds lifetime, priced from the route at intent time
+    /// ([`crate::GO_TO_BUDGET_FACTOR`] × expected travel time, floored) —
+    /// without it one confused reply strands a character permanently.
+    pub budget_seconds: f64,
+    /// The absolute expiry, stamped by the round on the first tick that sees
+    /// the intent — the action layer has no clock to stamp it with.
+    pub deadline: Option<f64>,
+}
+
 /// Everything an action may change.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CharacterState {
@@ -154,6 +192,16 @@ pub struct CharacterState {
     /// starting thirst of the drawers it enrolls. Never rendered in M3, so the
     /// golden fixtures stay byte-identical.
     pub needs: Needs,
+    /// The wayfinding whitelist — which [`PlaceId`] handles this character
+    /// holds, i.e. the sheet's `places_you_know`. Seeded by the round (home,
+    /// workplace, the legs of the day, the own ward's places, the coarse
+    /// destinations everyone has), grown by `tell_way`: the verb writes here
+    /// and the sheet *is* the model's memory (05_the_llm_seam.md §3).
+    pub places_known: BTreeSet<PlaceId>,
+    /// The live `go_to` errand, or `None`. A second `go_to` replaces it
+    /// silently; `stop {}` clears it; arrival, expiry and a pressing need end
+    /// it with a percept.
+    pub intent: Option<TravelIntent>,
 }
 
 impl CharacterState {
@@ -170,6 +218,8 @@ impl CharacterState {
             pending_history: Vec::new(),
             movement: None,
             needs: Needs::default(),
+            places_known: BTreeSet::new(),
+            intent: None,
         }
     }
 }

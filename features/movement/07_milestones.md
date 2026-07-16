@@ -336,7 +336,7 @@ the round's office-pegged legs plus the curfew rung already empty the streets wi
 
 ---
 
-## M5 — `go_to`
+## M5 — `go_to`  ✅ *implemented*
 
 **Ships.** The verbs go_to and related verbs.
 The go_to intent, with route-derived expiry (a multiple of the route's expected travel time in
@@ -355,6 +355,42 @@ to do has no verb here (like walking somewhere)…"*). The sheet's three additio
 `the_hour`, `places_you_know`, `moving`. **All twenty golden fixtures regenerated.**
 
 **Change the sheet once.** It is the most expensive small change in the codebase.
+
+**Status — done and verified.** The verbs are three new `match` arms in
+`actions.rs` (`go_to` / `stop` / `tell_way`); the intent lives on
+`CharacterState.intent` (`TravelIntent`: target, route-derived `budget_seconds`,
+deadline stamped by the round's first tick — the action layer has no clock) and
+the wayfinding whitelist on `CharacterState.places_known`, both plain sim state.
+The registry behind the opaque handles is new: **`scripts/bake_places.py` →
+`assets/world/places.json`** (68 nav places classified into the eight wards by
+the authored `00_city_plan.md` bounds, + 8 walkable ward anchors, each under a
+baked `pl_xxxx` id) loaded by **`crates/cathedral-sim/src/places.rs`** into
+`World.places`, with the 401 baked homes registered at seed time as
+"<Name>'s house" entries. `Round::seed` hands out the whitelists — the 7
+`kind: "major"` places and all 8 wards to *everyone* (the legal first step),
+plus own-ward places, own home, workplace + route legs, and the homes of
+everyone in `knows` — and the engine now sets `World.nav` so `go_to` prices and
+validates its route at intent time (`unknown_place` / `no_route`; `TooFar` is
+reserved, unraised, until hunger exists). The ladder gained **rung 8** between
+thirsty (6) and the round (9), and a per-poll `tick_intents` pass owns the
+endings: arrival ("You have arrived at The Wickmarket."), route-budget expiry,
+pressing-rung preemption ("The curfew/Thirst turned you back before you reached
+…"), the person-follow (re-pathed each poll while visible — with the final
+off-graph stride appended to the routed path, or a follow stalls on the nearest
+node — degrading to last-seen on lost sight, catching up at 2 m), and every
+ending returns a **nudge** the engine feeds to `scheduler.prioritize`, the same
+priority lane an addressed `say` uses — `tell_way` also hands its receiver that
+lane, so the ask-the-way chain runs off stage. Conversations hold the errand
+(deferrable rung); the intent's clock keeps running through the hold. The sheet
+gained `places_you_know` (after `you_are`; sorted by name; `place_id` keys) and
+`moving` on `you_see` people (`!is_settled()`); `the_hour` had landed with M0.
+The four water sounds flipped `actor_emittable` (the M3 deferral), `turn.j2`
+lost the "like walking somewhere" clause and teaches the three verbs, and **all
+20 golden fixtures were regenerated once** — the documented path is the
+`#[ignore]`d `regenerate_golden_fixtures` test. Verified: 40 round tests incl.
+the full errand / follow / lapse / preemption / tell_way loop end-to-end on the
+committed graph, engine-level nudge wiring, sheet rendering, 423 sim tests
+green, headless run seeds `wayfinding: 477 places in the registry (401 homes)`.
 
 **How you know:**
 

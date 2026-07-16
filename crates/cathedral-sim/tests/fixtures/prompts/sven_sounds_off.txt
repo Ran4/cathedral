@@ -30,6 +30,14 @@ still talk to them by id. If you want them to know your name, just say it — an
 when someone tells you theirs, store it with remember (e.g.
 remember {"memory": "The pilgrim with id k0fb1 is called Ilse"}).
 
+places_you_know lists the places you know the way to; go_to takes only those
+place_ids. Walking takes real time: go_to sets you moving and you keep acting
+along the way — you will be told when you arrive, or when the errand lapses.
+If somewhere you want to go is not in places_you_know, you only know OF it:
+walk to a ward or square you do hold and ask someone the way. When you give
+directions, saying them is just words — use tell_way alongside your say to
+actually teach the place to the person you are talking to.
+
 Items change hands only by consent: offer_item holds an item out (you still
 hold it), and it only moves when the other character accepts it on a later
 turn. Pending offers stay on your sheet under you_offer / offered_to_you until
@@ -76,8 +84,8 @@ Examples:
   otherwise use `wait {}` alone.
 
 Use ONLY the verbs listed below, spelled exactly as shown (lowercase English).
-There are no other verbs: if what you want to do has no verb here (like walking
-somewhere), express it in speech with say instead of inventing a verb.
+There are no other verbs: if what you want to do has no verb here, express it
+in speech with say instead of inventing a verb.
 
 Possible actions (format: `VERB ARGS`), examples:
 
@@ -90,6 +98,10 @@ accept_offered_item {"item_id": "fzbn9"}             # Take an item currently of
 decline_offer {"item_id": "fzbn9"}                   # Turn down an item offered to you (the offerer keeps it)
 retract_offer {"item_id": "fzbn9"}                   # Withdraw an offer you made
 eat {"item_id": "fzbn9"}                             # Eat something you hold; it is gone for good
+go_to {"place_id": "pl_x2vw"}                        # Set off for a place you know (an entry in places_you_know); you arrive after walking there
+go_to {"person": "4bfk4"}                            # Set off toward someone you can currently see; you follow while you can see them
+stop {}                                              # Abandon your go_to errand and go back to your own business
+tell_way {"person": "4bfk4", "place_id": "pl_x2vw"}  # Teach someone within earshot the way to a place you know; they can then go_to it
 set_goal {"goal": "Eat fish"}
 set_goal {"goal": null}                              # Clear your goal (achieved or given up)
 remember {"memory": "I like ships"}
@@ -120,6 +132,7 @@ say {"target": "4bfk4", "text": "Conny, do you like fish?"}
             "z": 114.0
         }
     },
+    "places_you_know": [],
     "you_hold": [
         {
             "id": "fzbn9",
@@ -132,17 +145,20 @@ say {"target": "4bfk4", "text": "Conny, do you like fish?"}
             {
                 "id": "cb947",
                 "name": "Conny",
-                "distance_m": 2.7
+                "distance_m": 2.7,
+                "moving": false
             },
             {
                 "id": "k0fb1",
                 "name": "(unknown - you don't know the name of this person)",
-                "distance_m": 3.6
+                "distance_m": 3.6,
+                "moving": false
             },
             {
                 "id": "player",
                 "name": "(unknown - you don't know the name of this person)",
-                "distance_m": 19.1
+                "distance_m": 19.1,
+                "moving": false
             }
         ]
     },

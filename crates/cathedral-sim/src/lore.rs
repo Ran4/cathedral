@@ -59,6 +59,23 @@ pub enum PlanningWard {
     BellAndSluice,
 }
 
+impl PlanningWard {
+    /// The snake_case spelling the serde rename uses — also the key the baked
+    /// wayfinding registry (`assets/world/places.json`) files its wards under.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Fabric => "fabric",
+            Self::Wick => "wick",
+            Self::Cloth => "cloth",
+            Self::Wallwright => "wallwright",
+            Self::Cinder => "cinder",
+            Self::Weigh => "weigh",
+            Self::Reed => "reed",
+            Self::BellAndSluice => "bell_and_sluice",
+        }
+    }
+}
+
 /// Circumstance spellings shared by authoring and loader validation. Social,
 /// economic and legal standing only; health and bodily conditions do not belong
 /// here (they remain in `conditions`), nor do transient drives (those are the

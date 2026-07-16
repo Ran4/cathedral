@@ -146,6 +146,23 @@ like `"fish"` is an error, never a fallback.
   offer of it is implicitly retracted, with notification).
 - `make_sound {"sound_id": "<id>"}` — emit a catalog sound
   (`assets/sounds/catalog.toml`); only rows with `actor_emittable = true`.
+- `go_to {"place_id": "<pl_…>"}` / `go_to {"person": "<id>"}` — set a travel
+  *intent*; it moves nobody (M5, `features/movement/05_the_llm_seam.md`). The
+  behaviour ladder (`round.rs`) walks it as a rung between thirsty and the
+  round; the intent expires on a route-derived real-seconds budget and the
+  pressing needs preempt it — arrival and every lapse are percepts, and both
+  grant the priority-lane nudge an addressed `say` gets. `place_id` takes an
+  opaque handle from the sheet's `places_you_know` (the per-actor wayfinding
+  whitelist in `CharacterState.places_known`, resolved against
+  `World.places` — see `places.rs`); a person target must currently be in
+  `you_see`, and losing sight degrades the follow to their last-seen spot.
+  Errors: `unknown_place`, `no_route` (`too_far` is reserved until the hunger
+  need exists).
+- `stop {}` — abandon the current `go_to`; self-initiated, so no percept.
+- `tell_way {"person": "<id>", "place_id": "<pl_…>"}` — teach someone within
+  earshot a way you hold: the id is written into *their* `places_known` (the
+  sheet is the model's memory) and one inbox line tells them. Targeted, never
+  broadcast; eavesdroppers learn nothing.
 - `remember` / `forget` / `set_goal` — the durable state. `set_goal
   {"goal": null}` clears it back to the `"None"` sentinel.
 - `wait {}` — deliberately take no world action when speaking would only repeat
@@ -190,8 +207,9 @@ the prompt.
 
 ## Known gaps (intentional, for now)
 
-- `move_to` and other verbs from the original prompt sketch are not implemented
-  (`eat` is) — characters may narrate world changes the sim does not model.
+- Some verbs from the original prompt sketch are not implemented (`eat` and,
+  since M5, `go_to` are) — characters may narrate world changes the sim does
+  not model.
 - Memory/goal hygiene is prompt-enforced only: the prompt tells characters to
   record outcomes the turn they happen, forget superseded memories, and
   clear/replace achieved goals. Nothing in the sim guarantees it.

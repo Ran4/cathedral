@@ -432,10 +432,11 @@ mod tests {
         assert!(!bell.actor_emittable);
 
         // M3 (the water round) made the water sounds attributable — a keeper
-        // works the curb, so a witness sees who drew — but deliberately NOT
-        // `actor_emittable`: the keeper emits them from code (`emit_sound`), which
-        // needs no flag, and listing them as `make_sound` verbs would regenerate
-        // every golden fixture (that is M5's sheet change, not M3's).
+        // works the curb, so a witness sees who drew. M5 (the sheet change that
+        // regenerated the golden fixtures) also flipped them `actor_emittable`,
+        // so a deliberate clatter is a make_sound verb choice; the round's own
+        // steady windlass still bypasses the flag (an unattributed world sound
+        // from code, nudge-free).
         for water in [
             "draw_water",
             "chain_windlass",
@@ -444,10 +445,20 @@ mod tests {
         ] {
             let sound = catalog.get(water).unwrap();
             assert!(sound.seen.is_some(), "{water} attributes the drawer now");
-            assert!(!sound.actor_emittable, "{water} is not yet a make_sound verb");
+            assert!(sound.actor_emittable, "{water} is a make_sound verb since M5");
             assert!(sound.heard.starts_with("[You heard"));
         }
-        assert_eq!(catalog.emittable_sound_ids(), ["fart", "glass_break"]);
+        assert_eq!(
+            catalog.emittable_sound_ids(),
+            [
+                "fart",
+                "glass_break",
+                "draw_water",
+                "chain_windlass",
+                "pour_trough",
+                "pail_clatter"
+            ]
+        );
         assert_eq!(
             catalog.get("chain_windlass").unwrap().audible_distance,
             40.0,

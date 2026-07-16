@@ -545,6 +545,64 @@ fn round_engine() -> Engine {
     .expect("the seeded world has a player")
 }
 
+/// M5: a `go_to` ending — here a lapse — hands the walker the scheduler's
+/// priority slot through the engine's nudge forwarding, exactly as an
+/// addressed `say` would. Off stage there is no idle rotation, so without this
+/// the ending's percept would sit unread and the errand chain die silently
+/// (`features/movement/05_the_llm_seam.md` §3).
+#[test]
+fn an_intent_ending_hands_the_walker_the_priority_slot() {
+    let mut engine = round_engine();
+    engine.poll(0.0, Vec::new()); // drain Ready; the round seeded at construction
+    let walker = ActorId::from_raw("cb947");
+
+    let target = engine
+        .world()
+        .places
+        .named("The Gradine")
+        .expect("the registry is live")
+        .id
+        .clone();
+    cathedral_sim::apply_action(
+        engine.world_mut(),
+        &walker,
+        "go_to",
+        &serde_json::json!({"place_id": target.as_str()}),
+    )
+    .expect("the coarse handles are everyone's");
+    // Shrink the budget so the errand lapses within two polls.
+    engine
+        .world_mut()
+        .characters
+        .get_mut(&walker)
+        .unwrap()
+        .state
+        .intent
+        .as_mut()
+        .unwrap()
+        .budget_seconds = 0.5;
+
+    engine.poll(1.0, Vec::new()); // stamps the deadline
+    engine.poll(2.0, Vec::new()); // lapses it
+    assert!(
+        engine.world().characters[&walker].state.intent.is_none(),
+        "the intent lapsed"
+    );
+    assert!(
+        engine.world().characters[&walker]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("lapsed")),
+        "the lapse is a percept: {:?}",
+        engine.world().characters[&walker].inbox()
+    );
+    assert_eq!(
+        engine.scheduler().priority_actor_id(),
+        Some(&walker),
+        "the nudge reached the scheduler's priority lane"
+    );
+}
+
 /// NPC↔NPC lines get the player's courtesy
 /// (`features/npcs_stop_walking_when_talking_to_each_other.md`): a *targeted*
 /// line stops both speaker and target where they stand and holds their rounds

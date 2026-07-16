@@ -27,6 +27,7 @@ pub mod math;
 pub mod nav;
 pub mod offer;
 pub mod perception;
+pub mod places;
 pub mod prompt;
 pub mod round;
 /// CPython text semantics (`str.strip`, `float.__repr__`, `repr`) — internal,
@@ -50,7 +51,10 @@ pub use attention::{
     DEFAULT_STAGE_RADIUS_M, IdleCognitionMode, IdleGate, NOVELTY_MEMORY_SECONDS, Novelty,
     STAGE_PARTNER_MEMORY_SECONDS, StageConfig, WarmExchanges, context_hash, curiosity_of, on_stage,
 };
-pub use character::{Character, CharacterSheet, CharacterState, Control, Movement, Needs, Patrol};
+pub use character::{
+    Character, CharacterSheet, CharacterState, Control, IntentTarget, Movement, Needs, Patrol,
+    TravelIntent,
+};
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
 };
@@ -64,7 +68,7 @@ pub use error::{
 pub use event::{DomainEvent, EventType};
 pub use fake::{FakeCognition, fake_reply};
 pub use floor::{ConversationFloor, floor_audio_failsafe_seconds, speech_reading_seconds};
-pub use ids::{ActorId, InvalidId, ItemId, RequestId, SpeechEventId};
+pub use ids::{ActorId, InvalidId, ItemId, PlaceId, RequestId, SpeechEventId};
 pub use item::Item;
 pub use lore::{
     CONTROLLED_CIRCUMSTANCES, LoreCast, LoreCharacterSheet, LoreError, LoreProfile,
@@ -76,6 +80,7 @@ pub use nav::{
 };
 pub use offer::Offer;
 pub use perception::{cap_first, emit_sound, identify, sees};
+pub use places::{PlaceEntry, PlaceError, PlaceRegistry};
 pub use round::{Arrival, Census, Round, WaterSource};
 pub use prompt::{
     ParsedAction, PromptEnv, PromptStrings, parse_reply, parse_reply_value, py_round,
@@ -157,6 +162,26 @@ pub const LADDER_DECISION_MAX_SECONDS: f64 = 6.0;
 pub const WELL_ARRIVE_RADIUS_M: f64 = 3.0;
 /// A queue longer than this turns the non-urgent rung 6 away (rung 2 still goes).
 pub const WELL_QUEUE_SHORT: usize = 4;
+// --- `go_to` (M5): the LLM-issued travel intent
+// (`features/movement/05_the_llm_seam.md` §2). A suggestion layered on an
+// already-autonomous body: it expires, needs preempt it, and lapsing is a
+// percept.
+/// An intent lives for this multiple of its route's expected travel time in
+/// **real** seconds — never a flat span of game time: the clock is compressed
+/// while walking is real-time, so "ten game minutes" would strand every
+/// cross-city errand in its first street.
+pub const GO_TO_BUDGET_FACTOR: f64 = 2.5;
+/// The floor under the budget, so a doorstep trip is not strangled by a
+/// seconds-long route.
+pub const GO_TO_MIN_BUDGET_SECONDS: f64 = 30.0;
+/// A place target counts as reached within this of its nav node — "standing
+/// inside the area", by the same yardstick as the round's posts.
+pub const PLACE_ARRIVE_RADIUS_M: f64 = 6.0;
+/// A person target is reached at conversation distance — comfortably inside
+/// the 4 m exchange radius, so a `go_to` then an `offer_item` next turn just
+/// works.
+pub const PERSON_ARRIVE_RADIUS_M: f64 = 2.0;
+
 /// Rung 11 — the social pull reaches a known, settled neighbour within this.
 pub const SOCIAL_PULL_RADIUS_M: f64 = 8.0;
 /// Rung 12 — an idle actor wanders no further than this from its home/post.

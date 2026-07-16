@@ -5,7 +5,7 @@
 //! byte order, which equals Python's code-point order). Round-robin scheduling
 //! needs *insertion* order instead, so [`World::roster`] records it (D12).
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
 use crate::{
     DEFAULT_VIEW_CONE_DEGREES, WALK_SPEED_MPS,
@@ -19,6 +19,7 @@ use crate::{
     math::Vec3,
     nav::{NavData, WALK_Y},
     offer::Offer,
+    places::PlaceRegistry,
     snapshot::{ActorSnapshot, ItemSnapshot, OfferSnapshot, PublicSnapshot},
     sounds::SoundCatalog,
 };
@@ -73,6 +74,16 @@ pub struct World {
     /// until a clock-bearing host sets it — so a prompt rendered without one (the
     /// frozen golden fixtures) simply omits the hour.
     pub current_time: Option<WorldTime>,
+    /// The street graph, when the host carries one — host-provided context like
+    /// `area_map`, set by the engine at construction. `go_to` validates and
+    /// prices its route against it at intent time; `None` (the default) makes
+    /// every `go_to` fail `no_route`, which is honest for a world nobody can
+    /// walk in.
+    pub nav: Option<Arc<NavData>>,
+    /// The wayfinding registry `places_you_know` renders from and `go_to` /
+    /// `tell_way` resolve against. Empty (the default) in a world without a
+    /// nav graph.
+    pub places: PlaceRegistry,
     events: Vec<DomainEvent>,
 }
 
@@ -91,6 +102,8 @@ impl Default for World {
             view_cone_degrees: DEFAULT_VIEW_CONE_DEGREES,
             sound_catalog: SoundCatalog::empty(),
             current_time: None,
+            nav: None,
+            places: PlaceRegistry::default(),
             events: Vec::new(),
         }
     }

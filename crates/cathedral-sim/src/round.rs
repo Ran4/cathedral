@@ -34,16 +34,19 @@ use std::{
 use serde::Deserialize;
 
 use crate::{
-    LADDER_DECISION_MAX_SECONDS, LADDER_DECISION_MIN_SECONDS, SOCIAL_PULL_RADIUS_M, THIRST_MAX,
+    HEARING_RADIUS_M, LADDER_DECISION_MAX_SECONDS, LADDER_DECISION_MIN_SECONDS,
+    PERSON_ARRIVE_RADIUS_M, PLACE_ARRIVE_RADIUS_M, SOCIAL_PULL_RADIUS_M, THIRST_MAX,
     THIRST_PARCHED, THIRST_THIRSTY, WALK_SPEED_MPS, WATER_DRAW_SECONDS,
     WELL_ARRIVE_RADIUS_M, WELL_KEEPER_SOUND_INTERVAL_SECONDS, WELL_QUEUE_SHORT,
-    character::{Character, Movement},
+    character::{Character, IntentTarget, Movement},
     clock::{Office, WorldClock, Weekday},
     event::DomainEvent,
-    ids::ActorId,
+    ids::{ActorId, PlaceId},
     lore::Significance,
     math::Vec3,
     nav::{NavData, WALK_Y},
+    perception::identify_ids,
+    places::PlaceRegistry,
     world::{World, planar_close},
 };
 
@@ -78,6 +81,10 @@ const KEEPER_LEASH_M: f64 = 4.0;
 /// within this of it. Looser than [`WELL_ARRIVE_RADIUS_M`]: a place's node is one
 /// point in a wide site, not a curb.
 const ROUND_ARRIVE_RADIUS_M: f64 = 6.0;
+/// A follow re-lays its path once the target has drifted this far from where
+/// the standing path was aimed — "re-pathed every movement tick" without
+/// re-running A* for a target who is standing still.
+const FOLLOW_REPATH_EPSILON_M: f64 = 1.5;
 /// A mover is "at home" once within this of their door — tight, so a sleeper
 /// stands on their own step rather than in the street outside a neighbour's.
 const HOME_ARRIVE_RADIUS_M: f64 = 3.0;
@@ -279,6 +286,10 @@ struct Townsperson {
     /// under way (the routed path ends at a snapped nav node, not the target,
     /// so the path itself cannot be compared).
     travel_target: Option<Vec3>,
+    /// Whether the current walk serves the character's `go_to` intent (M5), so
+    /// a `stop {}` — or the intent ending any other way — halts exactly this
+    /// walk and never a round errand that happens to be under way.
+    travel_for_intent: bool,
     /// Real-clock time of this idle actor's next ladder evaluation.
     next_decision: f64,
     /// Bumped each decision; the salt that makes the deterministic choices vary.
@@ -541,6 +552,29 @@ impl Round {
         };
         let resolver = PlaceResolver::new(nav);
 
+        // The wayfinding registry (M5): the baked places and ward anchors, plus
+        // one home entry per housed townsperson — "Tam Rud's house" — so
+        // `places_you_know` has handles to hold and `tell_way` something to
+        // share. Every home is registered BEFORE anyone's whitelist is seeded:
+        // an actor early in the roster may know somebody housed later in it.
+        let mut registry = match PlaceRegistry::from_embedded(nav) {
+            Ok(registry) => registry,
+            Err(error) => {
+                diagnostics.push(format!(
+                    "[smart actors] round: places.json did not load: {error}"
+                ));
+                PlaceRegistry::default()
+            }
+        };
+        if let Some((_, homes)) = &content {
+            for id in &townsfolk {
+                if let Some(entry) = homes.homes.get(id.as_str()) {
+                    let point = Vec3::new(entry.point[0], WALK_Y, entry.point[1]);
+                    registry.add_home(id, world.characters[id].name(), point);
+                }
+            }
+        }
+
         let mut enrolled = 0usize;
         let mut housed = 0usize;
         let mut drawers = 0usize;
@@ -558,6 +592,28 @@ impl Round {
             }
             let base = home.unwrap_or(spawn);
 
+            // The wayfinding whitelist, assembled per actor (05_the_llm_seam.md
+            // §3): the coarse destinations everyone holds (the major squares
+            // and the wards, so getting somewhere always has a legal first
+            // step), the places of their own ward, their own home, and the
+            // homes of the people they know. The branch below adds what each
+            // kind of day touches — the keeper's well, the worker's legs. It
+            // is also, quietly, characterisation: which ids someone holds is
+            // who they are.
+            let mut known: BTreeSet<PlaceId> =
+                registry.coarse().map(|entry| entry.id.clone()).collect();
+            if let Some(ward) = character.lore().map(|lore| lore.planning_ward) {
+                known.extend(registry.ward_places(ward.as_str()).map(|entry| entry.id.clone()));
+            }
+            if let Some(entry) = registry.home_of(id) {
+                known.insert(entry.id.clone());
+            }
+            for friend in character.knows() {
+                if let Some(entry) = registry.home_of(friend) {
+                    known.insert(entry.id.clone());
+                }
+            }
+
             // A keeper's round *is* their well: at the curb from the Kindling,
             // home to sleep at the Lamplight like any day worker — and the
             // curfew rung sends the housed home at night regardless (keepers
@@ -567,6 +623,9 @@ impl Round {
             // homeless actor — still at the curb at the Snuffing.
             if let Some(&source_idx) = keepers.get(id) {
                 let source = &self.sources[source_idx];
+                if let Some(entry) = registry.named(&source.name) {
+                    known.insert(entry.id.clone());
+                }
                 let mut legs = vec![RoundLeg {
                     from: Office::Kindling,
                     at: source.draw_point,
@@ -585,6 +644,12 @@ impl Round {
                         is_home: true,
                     });
                 }
+                world
+                    .characters
+                    .get_mut(id)
+                    .expect("keeper exists")
+                    .state
+                    .places_known = known;
                 self.people.insert(
                     id.clone(),
                     Townsperson {
@@ -597,6 +662,7 @@ impl Round {
                         is_household: false,
                         phase: Phase::Idle,
                         travel_target: None,
+                        travel_for_intent: false,
                         next_decision: now + decision_jitter(id, 0),
                         epoch: 0,
                         excused: false,
@@ -610,6 +676,17 @@ impl Round {
                 .as_ref()
                 .map(|(rounds, _)| build_legs(rounds, &resolver, id, occupation.as_deref(), home, base))
                 .unwrap_or((Vec::new(), DEFAULT_ROUND_LEASH_M, false));
+
+            // The day's own stations — the workplace and every named leg — are
+            // ways this person necessarily knows.
+            for leg in &legs {
+                if leg.is_home {
+                    continue;
+                }
+                if let Some(entry) = registry.named(&leg.label) {
+                    known.insert(entry.id.clone());
+                }
+            }
 
             // Water binding: only the drawing occupations get a source, bound to
             // the nearest staffed well; their thirst is spread so the curbs get
@@ -635,6 +712,12 @@ impl Round {
                 _ => (None, false),
             };
 
+            world
+                .characters
+                .get_mut(id)
+                .expect("townsperson exists")
+                .state
+                .places_known = known;
             self.people.insert(
                 id.clone(),
                 Townsperson {
@@ -647,6 +730,7 @@ impl Round {
                     is_household,
                     phase: Phase::Idle,
                     travel_target: None,
+                    travel_for_intent: false,
                     next_decision: now + decision_jitter(id, 0),
                     epoch: 0,
                     excused: false,
@@ -661,6 +745,11 @@ impl Round {
             staffed.len(),
             keepers.len(),
         ));
+        diagnostics.push(format!(
+            "[smart actors] wayfinding: {} places in the registry ({housed} homes)",
+            registry.len(),
+        ));
+        world.places = registry;
         diagnostics
     }
 }
@@ -757,9 +846,9 @@ fn active_leg(legs: &[RoundLeg], office: Office, weekday: Weekday) -> Option<&Ro
     pick(&|leg| leg.from <= office && eligible(leg)).or_else(|| pick(&eligible))
 }
 
-/// Advance the round one poll: decay thirst, resolve arrivals, work the well
-/// queues, and run the ladder. A no-op until [`Round::seed`] has run. `player_id`
-/// is who the well sounds play *for*.
+/// Advance the round one poll: decay thirst, resolve arrivals, drive the `go_to`
+/// intents, work the well queues, and run the ladder. A no-op until
+/// [`Round::seed`] has run. `player_id` is who the well sounds play *for*.
 ///
 /// `in_conversation` is everyone currently in a warm exchange — the player's
 /// partner and every warm NPC↔NPC pair: their rounds are on hold — the ladder's
@@ -768,6 +857,12 @@ fn active_leg(legs: &[RoundLeg], office: Office, weekday: Weekday) -> Option<&Ro
 /// parched) still break the hold, after one turn to excuse themselves
 /// ([`run_ladder`]). The hold ends when the exchange goes cold and the caller
 /// stops naming them.
+///
+/// Returns the actors owed a **priority nudge**: a `go_to` arrival or lapse
+/// grants the same handoff an addressed `say` does, because off stage the idle
+/// rotation never runs — an arrival percept nobody renders would silently kill
+/// the errand chain (`features/movement/05_the_llm_seam.md` §3). The engine
+/// feeds them to the scheduler; the sim stays scheduler-free.
 pub fn tick(
     round: &mut Round,
     world: &mut World,
@@ -776,14 +871,17 @@ pub fn tick(
     now: f64,
     player_id: &ActorId,
     in_conversation: &BTreeSet<ActorId>,
-) {
+) -> Vec<ActorId> {
+    let mut nudges: Vec<ActorId> = Vec::new();
     if !round.seeded {
-        return;
+        return nudges;
     }
     decay_thirst(round, world, clock, now);
     resolve_arrivals(round, world);
+    tick_intents(round, world, nav, now, in_conversation, &mut nudges);
     service_sources(round, world, nav, clock, now, player_id, in_conversation);
-    run_ladder(round, world, nav, clock, now, in_conversation);
+    run_ladder(round, world, nav, clock, now, in_conversation, &mut nudges);
+    nudges
 }
 
 /// Stop `id`'s round errand where they stand: they have just exchanged a line
@@ -813,8 +911,195 @@ pub fn interrupt_for_conversation(round: &mut Round, world: &mut World, id: &Act
         return;
     }
     person.phase = Phase::Idle;
+    person.travel_for_intent = false;
     if let Some(character) = world.characters.get_mut(id) {
         character.state.movement = None;
+    }
+}
+
+/// The per-poll intent pass (M5): stamp fresh deadlines, detect arrival, track
+/// a followed person, and lapse what expired. Runs every poll rather than on
+/// the ladder cadence, because a follow re-paths against a moving target and
+/// an arrival percept should land the tick it happens
+/// (`features/movement/05_the_llm_seam.md` §2).
+fn tick_intents(
+    round: &mut Round,
+    world: &mut World,
+    nav: &NavData,
+    now: f64,
+    in_conversation: &BTreeSet<ActorId>,
+    nudges: &mut Vec<ActorId>,
+) {
+    let ids: Vec<ActorId> = round.people.keys().cloned().collect();
+    for id in ids {
+        let Some(character) = world.characters.get(&id) else {
+            continue;
+        };
+        let Some(mut intent) = character.state.intent.clone() else {
+            // The intent ended outside this pass — `stop {}` is self-initiated
+            // and emits no percept — but its walk may still be under way: halt
+            // exactly that walk and hand the body back to the ladder.
+            let person = round.people.get_mut(&id).expect("person exists");
+            if person.travel_for_intent {
+                person.travel_for_intent = false;
+                if person.phase == Phase::Travelling {
+                    person.phase = Phase::Idle;
+                    person.travel_target = None;
+                    world
+                        .characters
+                        .get_mut(&id)
+                        .expect("mover exists")
+                        .state
+                        .movement = None;
+                }
+            }
+            continue;
+        };
+        let position = character.position_m();
+        // The verb has no clock, so the first tick that sees the intent stamps
+        // its expiry.
+        let deadline = *intent.deadline.get_or_insert(now + intent.budget_seconds);
+
+        // The endings, in order: arrival first (an errand that arrives on its
+        // last second arrived), then expiry. `ending` clears the intent with a
+        // percept and the nudge; `notice` is a percept alone (losing sight
+        // degrades the follow, it does not end it).
+        let mut ending: Option<String> = None;
+        let mut notice: Option<String> = None;
+        match &mut intent.target {
+            IntentTarget::Place { name, point, .. } => {
+                if position.distance(*point) <= PLACE_ARRIVE_RADIUS_M {
+                    ending = Some(format!("You have arrived at {name}."));
+                }
+            }
+            IntentTarget::Person {
+                actor_id: target_id,
+                last_seen,
+                visible,
+            } => match world.characters.get(target_id).map(Character::position_m) {
+                // Characters are never removed; fail soft if one ever is.
+                None => ending = Some("Your errand has lapsed.".to_string()),
+                Some(target_position) => {
+                    if position.distance(target_position) <= HEARING_RADIUS_M {
+                        *last_seen = target_position;
+                        *visible = true;
+                        if position.distance(target_position) <= PERSON_ARRIVE_RADIUS_M {
+                            ending = Some(format!(
+                                "You have caught up with {}.",
+                                identify_ids(world, &id, target_id)
+                            ));
+                        }
+                    } else if *visible {
+                        // The sight gate: the follow degrades to the last-seen
+                        // position rather than tracking through walls.
+                        *visible = false;
+                        notice = Some(format!(
+                            "You have lost sight of {}.",
+                            identify_ids(world, &id, target_id)
+                        ));
+                    } else if position.distance(*last_seen) <= PLACE_ARRIVE_RADIUS_M {
+                        ending = Some(format!(
+                            "You reach the spot where you last saw {}, but they are gone.",
+                            identify_ids(world, &id, target_id)
+                        ));
+                    }
+                }
+            },
+        }
+
+        if let Some(line) = ending {
+            end_intent(round, world, &id, line, nudges);
+            continue;
+        }
+        if now >= deadline {
+            let line = match &intent.target {
+                IntentTarget::Place { name, .. } => {
+                    format!("Your errand to {name} lapsed before you arrived.")
+                }
+                IntentTarget::Person {
+                    actor_id: target_id, ..
+                } => format!(
+                    "You never caught up with {}; the errand has lapsed.",
+                    identify_ids(world, &id, target_id)
+                ),
+            };
+            end_intent(round, world, &id, line, nudges);
+            continue;
+        }
+        if let Some(line) = notice {
+            world
+                .characters
+                .get_mut(&id)
+                .expect("the follower exists")
+                .notify_percept(line);
+        }
+        // Persist the bookkeeping (the deadline stamp, the follow's last-seen).
+        world
+            .characters
+            .get_mut(&id)
+            .expect("the walker exists")
+            .state
+            .intent = Some(intent.clone());
+
+        // The follow: while the target is visible the path tracks them, re-laid
+        // as they move. Only in the free phases — a committed well errand keeps
+        // its queue place — and never while held in a conversation.
+        if let IntentTarget::Person {
+            last_seen,
+            visible: true,
+            ..
+        } = &intent.target
+            && !in_conversation.contains(&id)
+        {
+            let target = *last_seen;
+            let person = &round.people[&id];
+            let repath = match person.phase {
+                Phase::Idle => true,
+                Phase::Travelling => person
+                    .travel_target
+                    .is_none_or(|aimed| aimed.distance(target) > FOLLOW_REPATH_EPSILON_M),
+                _ => false,
+            };
+            if repath
+                && position.distance(target) > PERSON_ARRIVE_RADIUS_M
+                && let Some(path) = route_path_to_point(nav, position, target)
+            {
+                set_route(world, &id, path);
+                let person = round.people.get_mut(&id).expect("person exists");
+                person.phase = Phase::Travelling;
+                person.travel_target = Some(target);
+                person.travel_for_intent = true;
+            }
+        }
+    }
+}
+
+/// End a `go_to` intent: the percept that says why, the halt of the intent's
+/// own walk, and the **priority nudge** an addressed `say` gets — an arrival
+/// turn is how "the NPC narrates their own arrival" without anybody scripting
+/// it, on stage or off (05_the_llm_seam.md §2–3).
+fn end_intent(
+    round: &mut Round,
+    world: &mut World,
+    id: &ActorId,
+    line: String,
+    nudges: &mut Vec<ActorId>,
+) {
+    if let Some(character) = world.characters.get_mut(id) {
+        character.state.intent = None;
+        character.notify_percept(line);
+    }
+    nudges.push(id.clone());
+    let person = round.people.get_mut(id).expect("person exists");
+    if person.travel_for_intent {
+        person.travel_for_intent = false;
+        if person.phase == Phase::Travelling {
+            person.phase = Phase::Idle;
+            person.travel_target = None;
+            if let Some(character) = world.characters.get_mut(id) {
+                character.state.movement = None;
+            }
+        }
     }
 }
 
@@ -1062,6 +1347,7 @@ fn run_ladder(
     clock: &WorldClock,
     now: f64,
     in_conversation: &BTreeSet<ActorId>,
+    nudges: &mut Vec<ActorId>,
 ) {
     let time = clock.at(now);
     let ids: Vec<ActorId> = round.people.keys().cloned().collect();
@@ -1095,6 +1381,39 @@ fn run_ladder(
 
         let (decision, pressure) =
             decide(round, world, nav, &id, epoch, time.office, time.weekday);
+
+        // A pressing rung preempts a live `go_to` errand, and the lapse is a
+        // percept: silent abandonment would leave the mind believing it is
+        // still headed somewhere the body gave up on, the exact untruth the
+        // refusal codes exist to prevent (05_the_llm_seam.md §2).
+        if let Some(pressure) = pressure
+            && world
+                .characters
+                .get(&id)
+                .is_some_and(|character| character.state.intent.is_some())
+        {
+            let cause = if pressure == CURFEW_PRESSURE { "The curfew" } else { "Thirst" };
+            let destination = {
+                let intent = world.characters[&id]
+                    .state
+                    .intent
+                    .as_ref()
+                    .expect("checked above");
+                match &intent.target {
+                    IntentTarget::Place { name, .. } => name.clone(),
+                    IntentTarget::Person {
+                        actor_id: target_id, ..
+                    } => identify_ids(world, &id, target_id),
+                }
+            };
+            end_intent(
+                round,
+                world,
+                &id,
+                format!("{cause} turned you back before you reached {destination}."),
+                nudges,
+            );
+        }
 
         // The hold: mid-conversation, the deferrable rungs wait. The cadence is
         // left untouched — exactly like the old player-only skip — so the first
@@ -1132,7 +1451,9 @@ fn run_ladder(
         if phase == Phase::Travelling {
             let under_way = round.people[&id].travel_target;
             let diverts = match &decision {
-                Decision::Travel(target) => under_way != Some(*target),
+                Decision::Travel(target) | Decision::TravelIntent(target) => {
+                    under_way != Some(*target)
+                }
                 Decision::ApproachWell => true,
                 Decision::Wander(_) | Decision::Stay => false,
             };
@@ -1152,6 +1473,9 @@ enum Decision {
     ApproachWell,
     /// Rungs 5 & 9: walk to a round anchor (or home, at curfew).
     Travel(Vec3),
+    /// Rung 8: walk toward the `go_to` intent's target (M5) — the same walk as
+    /// [`Decision::Travel`], but flagged so a `stop {}` halts exactly it.
+    TravelIntent(Vec3),
     /// Rungs 11 & 12: drift toward a friend, or mill about near home.
     Wander(Vec3),
     /// Stand where you are this cadence.
@@ -1220,6 +1544,23 @@ fn decide(
         && queue_len < WELL_QUEUE_SHORT
     {
         return (Decision::ApproachWell, None);
+    }
+
+    // Rung 8 — the errand: an LLM-issued `go_to` sits between thirsty (6) and
+    // the round (9) — it outranks the day's routine, never the body's needs,
+    // and curfew preempting it is deliberate (05_the_llm_seam.md §2). Arrival,
+    // expiry and the follow's per-tick tracking live in [`tick_intents`]; the
+    // rung only aims the feet. Deferrable: a conversation holds it, and the
+    // clock on the intent keeps running while it does.
+    if let Some(intent) = &character.state.intent {
+        let (target, radius) = match &intent.target {
+            IntentTarget::Place { point, .. } => (*point, PLACE_ARRIVE_RADIUS_M),
+            IntentTarget::Person { last_seen, .. } => (*last_seen, PERSON_ARRIVE_RADIUS_M),
+        };
+        if position.distance(target) > radius {
+            return (Decision::TravelIntent(target), None);
+        }
+        return (Decision::Stay, None);
     }
 
     // Rung 9 — the round: be where the current leg says. Skipped at night for the
@@ -1293,6 +1634,17 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
                 let person = round.people.get_mut(id).expect("person exists");
                 person.phase = Phase::Travelling;
                 person.travel_target = Some(target);
+                person.travel_for_intent = false;
+            }
+        }
+        Decision::TravelIntent(target) => {
+            let position = world.characters[id].position_m();
+            if let Some(path) = route_path_to_point(nav, position, target) {
+                set_route(world, id, path);
+                let person = round.people.get_mut(id).expect("person exists");
+                person.phase = Phase::Travelling;
+                person.travel_target = Some(target);
+                person.travel_for_intent = true;
             }
         }
         Decision::Wander(target) => {
@@ -1305,6 +1657,7 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
                 let person = round.people.get_mut(id).expect("person exists");
                 person.phase = Phase::Travelling;
                 person.travel_target = Some(target);
+                person.travel_for_intent = false;
             }
         }
         Decision::Stay => {}
@@ -1370,6 +1723,23 @@ fn route_path(nav: &NavData, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
     let mut path = route.points;
     if path.first().is_some_and(|point| planar_close(*point, from)) {
         path.remove(0);
+    }
+    if path.is_empty() { None } else { Some(path) }
+}
+
+/// [`route_path`], plus the final off-graph stride: the street graph ends at a
+/// node, but a followed person — or the spot they were last seen at — usually
+/// stands a few metres off it, and a follow that stalls on the nearest node
+/// never closes to conversation distance. The target itself is appended when
+/// it is walkable ground; an unwalkable target keeps the node-only path and
+/// the intent's expiry ends the errand honestly. `None` still means "already
+/// there or unreachable".
+fn route_path_to_point(nav: &NavData, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
+    let to = Vec3::new(to.x, WALK_Y, to.z);
+    let mut path = route_path(nav, from, to).unwrap_or_default();
+    let tail_missing = !path.last().is_some_and(|point| planar_close(*point, to));
+    if tail_missing && !planar_close(from, to) && nav.is_walkable(to.x, to.z) {
+        path.push(to);
     }
     if path.is_empty() { None } else { Some(path) }
 }

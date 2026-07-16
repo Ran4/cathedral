@@ -11,11 +11,12 @@
 use serde_json::{Map, Value};
 
 use crate::{
-    GOAL_MAX_CHARS, GOAL_NONE, HEARING_RADIUS_M, ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS,
-    PLAYER_SPEECH_MAX_CHARS,
+    GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS, GOAL_MAX_CHARS, GOAL_NONE, HEARING_RADIUS_M,
+    ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS, PLAYER_SPEECH_MAX_CHARS, WALK_SPEED_MPS,
+    character::{IntentTarget, TravelIntent},
     error::{ActionError, ActionErrorCode},
     event::DomainEvent,
-    ids::{ActorId, ItemId},
+    ids::{ActorId, ItemId, PlaceId},
     math::Vec3,
     offer::Offer,
     perception::{cap_first, emit_sound, identify_ids},
@@ -87,6 +88,9 @@ fn dispatch(
         "make_sound" => make_sound(world, actor_id, args),
         "remember" => remember(world, actor_id, args),
         "forget" => forget(world, actor_id, args),
+        "go_to" => go_to(world, actor_id, args),
+        "stop" => stop(world, actor_id, args),
+        "tell_way" => tell_way(world, actor_id, args),
         // Checked last, after every verb has had its chance to match.
         unknown => Err(ActionError::new(
             ActionErrorCode::UnknownVerb,
@@ -996,6 +1000,276 @@ fn forget(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String,
     ))
 }
 
+fn parse_place_id(value: &Value) -> Result<PlaceId, ActionError> {
+    value
+        .as_str()
+        .and_then(|text| PlaceId::new(text).ok())
+        .ok_or_else(|| {
+            ActionError::new(
+                ActionErrorCode::InvalidArguments,
+                "place_id must be a non-empty place id",
+            )
+        })
+}
+
+/// The route a fresh intent would walk, and the real-seconds budget it earns:
+/// [`GO_TO_BUDGET_FACTOR`] × the route's expected travel time, floored for
+/// doorstep trips. Both computed at intent time, which is what lets `no_route`
+/// fail here instead of stranding the walker later
+/// (`features/movement/05_the_llm_seam.md` §2).
+fn route_budget(
+    world: &World,
+    actor_id: &ActorId,
+    target: Vec3,
+    no_route_message: String,
+) -> Result<f64, ActionError> {
+    let route = world
+        .nav
+        .as_deref()
+        .and_then(|nav| nav.route_between(world.characters[actor_id].position_m(), target));
+    let Some(route) = route else {
+        return Err(ActionError::new(ActionErrorCode::NoRoute, no_route_message));
+    };
+    Ok((GO_TO_BUDGET_FACTOR * route.length_m / WALK_SPEED_MPS).max(GO_TO_MIN_BUDGET_SECONDS))
+}
+
+/// `go_to` — set a travel intent; it does not move anyone
+/// (`features/movement/05_the_llm_seam.md` §2). The behaviour ladder walks it,
+/// arrival and lapse are percepts, and a second `go_to` replaces the first
+/// silently — the model issued both; it needs no telling.
+fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &[], &["place_id", "person"])?;
+    let place_value = optional_arg(parsed, "place_id");
+    let person_value = optional_arg(parsed, "person");
+
+    let intent = match (place_value, person_value) {
+        (Some(_), Some(_)) => {
+            return Err(ActionError::new(
+                ActionErrorCode::InvalidArguments,
+                "go_to takes either place_id or person, not both",
+            ));
+        }
+        (None, None) => {
+            return Err(ActionError::new(
+                ActionErrorCode::InvalidArguments,
+                "go_to needs a place_id or a person",
+            ));
+        }
+        (Some(place_value), None) => {
+            let place_id = parse_place_id(place_value)?;
+            // The whitelist: you cannot walk to a place you were never handed a
+            // handle for. An id outside the actor's set and an id outside the
+            // world are the same error — no information leak about which
+            // handles exist.
+            let entry = world
+                .places
+                .get(&place_id)
+                .filter(|_| world.characters[actor_id].state.places_known.contains(&place_id));
+            let Some(entry) = entry else {
+                return Err(ActionError::new(
+                    ActionErrorCode::UnknownPlace,
+                    format!(
+                        "you know no way to a place with id {} (places_you_know lists the ways you know)",
+                        repr_id(place_id.as_str())
+                    ),
+                ));
+            };
+            let (name, point) = (entry.name.clone(), entry.point);
+            let budget_seconds = route_budget(
+                world,
+                actor_id,
+                point,
+                format!("no way through the streets leads to {name} from where you stand"),
+            )?;
+            TravelIntent {
+                target: IntentTarget::Place {
+                    place_id,
+                    name,
+                    point,
+                },
+                budget_seconds,
+                deadline: None,
+            }
+        }
+        (None, Some(person_value)) => {
+            let target_id = parse_actor_id(person_value, "person")?;
+            if !world.characters.contains_key(&target_id) {
+                return Err(ActionError::new(
+                    ActionErrorCode::UnknownTarget,
+                    format!("there is nobody with id {}", repr_id(target_id.as_str())),
+                ));
+            }
+            if target_id == *actor_id {
+                return Err(ActionError::new(
+                    ActionErrorCode::SelfTarget,
+                    "you cannot follow yourself",
+                ));
+            }
+            // Gated on sight: valid only for someone currently in you_see.
+            // Without the gate a hoarded id is a tracking device — finding an
+            // absent person routes through the knowledge system, not around it.
+            let visible = nearby(world, actor_id, HEARING_RADIUS_M);
+            if !visible.contains(&target_id) {
+                return Err(ActionError::new(
+                    ActionErrorCode::OutOfRange,
+                    format!(
+                        "you cannot see {} from here (go_to a person needs them in you_see)",
+                        identify_ids(world, actor_id, &target_id)
+                    ),
+                ));
+            }
+            let last_seen = world.characters[&target_id].position_m();
+            let budget_seconds = route_budget(
+                world,
+                actor_id,
+                last_seen,
+                format!(
+                    "no way through the streets reaches {} from where you stand",
+                    identify_ids(world, actor_id, &target_id)
+                ),
+            )?;
+            TravelIntent {
+                target: IntentTarget::Person {
+                    actor_id: target_id,
+                    last_seen,
+                    visible: true,
+                },
+                budget_seconds,
+                deadline: None,
+            }
+        }
+    };
+
+    let destination = match &intent.target {
+        IntentTarget::Place { name, .. } => name.clone(),
+        IntentTarget::Person { actor_id: target_id, .. } => {
+            identify_ids(world, actor_id, target_id)
+        }
+    };
+    let (line, own_line) = match &intent.target {
+        IntentTarget::Place { .. } => (
+            format!(
+                "{} sets off for {destination}",
+                world.characters[actor_id].name()
+            ),
+            format!("You set off for {destination}."),
+        ),
+        IntentTarget::Person { actor_id: target_id, .. } => (
+            format!(
+                "{} sets off after {}",
+                world.characters[actor_id].name(),
+                world.characters[target_id].name()
+            ),
+            format!("You set off after {destination}."),
+        ),
+    };
+    let actor = world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world");
+    actor.state.intent = Some(intent);
+    // The walker's own recollection that they are under way — without it the
+    // model forgets its errand the turn after issuing it.
+    actor.remember_percept(own_line);
+    Ok(line)
+}
+
+/// `stop {}` — abandon the current `go_to` and go back to your own business.
+/// Self-initiated, so it emits no percept; the round halts the walk on its
+/// next tick.
+fn stop(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    args_object(args, &[], &[])?;
+    let actor = world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world");
+    if actor.state.intent.take().is_some() {
+        Ok(format!("{} turns back to their own business", actor.name()))
+    } else {
+        Ok(format!("{} has no errand to abandon", actor.name()))
+    }
+}
+
+/// `tell_way` — the knowledge-transfer verb
+/// (`features/movement/05_the_llm_seam.md` §3). The receiving LLM stores
+/// nothing: the id is written into the target's `places_known` — sim state —
+/// and at the next render the place is simply there. Targeted, not broadcast:
+/// eavesdroppers learn nothing.
+fn tell_way(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["person", "place_id"], &[])?;
+    let target_id = parse_actor_id(&parsed["person"], "person")?;
+    let place_id = parse_place_id(&parsed["place_id"])?;
+
+    if !world.characters.contains_key(&target_id) {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownTarget,
+            format!("there is nobody with id {}", repr_id(target_id.as_str())),
+        ));
+    }
+    if target_id == *actor_id {
+        return Err(ActionError::new(
+            ActionErrorCode::SelfTarget,
+            "you cannot tell yourself the way",
+        ));
+    }
+    // The speaker must hold the id — you cannot share a way you do not know.
+    let entry = world
+        .places
+        .get(&place_id)
+        .filter(|_| world.characters[actor_id].state.places_known.contains(&place_id));
+    let Some(entry) = entry else {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownPlace,
+            format!(
+                "you know no way to a place with id {} yourself",
+                repr_id(place_id.as_str())
+            ),
+        ));
+    };
+    let place_name = entry.name.clone();
+    // The target must be in earshot — the existing 20 m hearing rule.
+    let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
+    if !hearers.contains(&target_id) {
+        return Err(ActionError::new(
+            ActionErrorCode::OutOfRange,
+            format!(
+                "{} is more than {} metres away",
+                identify_ids(world, actor_id, &target_id),
+                format_g(HEARING_RADIUS_M)
+            ),
+        ));
+    }
+
+    // One inbox line makes the arrival of knowledge narratable news — the name
+    // from the world registry, not from anyone's prose.
+    let told = format!(
+        "{} told you the way to {place_name}.",
+        cap_first(&identify_ids(world, &target_id, actor_id))
+    );
+    let own = format!(
+        "You told {} the way to {place_name}.",
+        identify_ids(world, actor_id, &target_id)
+    );
+    world
+        .characters
+        .get_mut(&target_id)
+        .expect("the target is in the world")
+        .state
+        .places_known
+        .insert(place_id);
+    deliver(world, vec![(target_id.clone(), told)], true);
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the speaker is in the world")
+        .remember_percept(own);
+    Ok(format!(
+        "{} tells {} the way to {place_name}",
+        world.characters[actor_id].name(),
+        world.characters[&target_id].name()
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1740,6 +2014,55 @@ mod tests {
             line,
             "Giver tried to forget something they never knew: nothing"
         );
+    }
+
+    /// A held handle in a world with no street graph fails `no_route` — the
+    /// route is priced at intent time, so an unroutable errand never starts
+    /// (`features/movement/05_the_llm_seam.md` §2). And `stop` with nothing to
+    /// stop is a harmless line, not an error.
+    #[test]
+    fn go_to_without_a_graph_is_no_route_and_stop_is_always_safe() {
+        let mut world = offer_world();
+        let giver = ActorId::from_raw("giver");
+        // A home entry needs no nav graph to register.
+        let home_id = world
+            .places
+            .add_home(&ActorId::from_raw("receiver"), "Receiver", Vec3::new(9.0, 0.0, 0.0));
+        world
+            .characters
+            .get_mut(&giver)
+            .unwrap()
+            .state
+            .places_known
+            .insert(home_id.clone());
+
+        let error = apply_action(
+            &mut world,
+            &giver,
+            "go_to",
+            &json!({"place_id": home_id.as_str()}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::NoRoute);
+        assert!(
+            error.message.contains("Receiver's house"),
+            "the refusal names the place: {}",
+            error.message
+        );
+        assert!(world.characters[&giver].state.intent.is_none());
+
+        // An unheld handle is unknown_place even though the registry names it.
+        let error = apply_action(
+            &mut world,
+            &ActorId::from_raw("receiver"),
+            "go_to",
+            &json!({"place_id": home_id.as_str()}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::UnknownPlace);
+
+        let line = apply_action(&mut world, &giver, "stop", &json!({})).unwrap();
+        assert_eq!(line, "Giver has no errand to abandon");
     }
 
     #[test]

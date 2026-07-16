@@ -611,6 +611,7 @@ fn a_night_trade_is_not_sent_home_by_curfew() {
     match decide_only(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
         Decision::Travel(_) | Decision::Stay | Decision::Wander(_) => {}
         Decision::ApproachWell => panic!("a tavern worker draws no water here"),
+        Decision::TravelIntent(_) => panic!("no go_to intent was issued"),
     }
     // And their active Snuffing leg is a work post (the Hungry Ox / Bellstand).
     let leg = active_leg(&round.people[&id].legs, Office::Snuffing, Weekday::Bellday)
@@ -949,6 +950,7 @@ fn household_vessels_queue_ahead_of_trade_vessels() {
         is_household: household,
         phase: Phase::Idle,
         travel_target: None,
+        travel_for_intent: false,
         next_decision: 0.0,
         epoch: 0,
         excused: false,
@@ -986,6 +988,7 @@ fn a_full_vessel_is_delivered_by_kind() {
         is_household: household,
         phase: Phase::Drawing,
         travel_target: None,
+        travel_for_intent: false,
         next_decision: 0.0,
         epoch: 0,
         excused: false,
@@ -1213,5 +1216,477 @@ fn the_decision_hash_is_stable() {
     for epoch in 0..64 {
         let jitter = decision_jitter(&id, epoch);
         assert!((LADDER_DECISION_MIN_SECONDS..=LADDER_DECISION_MAX_SECONDS).contains(&jitter));
+    }
+}
+
+// --------------------------------------------------------------------------- //
+// M5 — go_to / stop / tell_way and the wayfinding registry
+// --------------------------------------------------------------------------- //
+
+use crate::{actions::apply_action, character::TravelIntent, error::ActionErrorCode};
+use serde_json::json;
+
+/// [`tick`], collecting the priority nudges the engine would forward.
+fn tick_collect(
+    round: &mut Round,
+    world: &mut World,
+    nav: &NavData,
+    clock: &WorldClock,
+    now: f64,
+) -> Vec<ActorId> {
+    tick(round, world, nav, clock, now, &player(), &BTreeSet::new())
+}
+
+/// Walk the sim forward in half-second beats until `stop` says done, collecting
+/// every nudge along the way. Panics past `max_beats` so a stuck walker fails
+/// loudly.
+fn beats_until(
+    round: &mut Round,
+    world: &mut World,
+    nav: &NavData,
+    clock: &WorldClock,
+    start: f64,
+    max_beats: usize,
+    mut done: impl FnMut(&World) -> bool,
+) -> (f64, Vec<ActorId>) {
+    let mut nudges = Vec::new();
+    let mut now = start;
+    for _ in 0..max_beats {
+        now += 0.5;
+        world.step_movement(0.5, nav);
+        nudges.extend(tick_collect(round, world, nav, clock, now));
+        if done(world) {
+            return (now, nudges);
+        }
+    }
+    panic!("still not done after {max_beats} beats");
+}
+
+/// Seeding hands everyone the coarse handles — the major squares and the eight
+/// wards, the "legal first step" of every journey — plus the places of their
+/// own ward and the homes of the people they know.
+#[test]
+fn seeding_hands_out_the_wayfinding_whitelist() {
+    let nav = nav();
+    let mut world = base_world();
+    // a2gpk is housed by the real bake; the friend knows them.
+    world.add_character(person("a2gpk", Vec3::new(0.0, WALK_Y, 95.0), Some("domestic_servant"), Significance::Minor));
+    let mut friend = person("frnd1", Vec3::new(2.0, WALK_Y, 95.0), Some("mason"), Significance::Minor);
+    friend.state.knows.insert(ActorId::from_raw("a2gpk"));
+    world.add_character(friend);
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    assert!(!world.places.is_empty(), "the registry reached the world");
+    let coarse: Vec<&str> = world.places.coarse().map(|entry| entry.name.as_str()).collect();
+    assert!(coarse.contains(&"The Gradine") && coarse.contains(&"Reed Ward"), "{coarse:?}");
+
+    let servant = &world.characters[&ActorId::from_raw("a2gpk")];
+    for entry in world.places.coarse() {
+        assert!(
+            servant.state.places_known.contains(&entry.id),
+            "everyone holds the coarse handle for {}",
+            entry.name
+        );
+    }
+    let home = world.places.home_of(&ActorId::from_raw("a2gpk")).expect("a2gpk is housed");
+    assert_eq!(home.name, "A2GPK's house");
+    assert!(servant.state.places_known.contains(&home.id), "you know your own house");
+    // The Fabric-ward test lore puts both in Fabric Ward: its places are theirs.
+    let ford_well = world.places.named("Ford Well").expect("Ford Well is baked");
+    assert_eq!(ford_well.ward.as_deref(), Some("fabric"));
+    assert!(servant.state.places_known.contains(&ford_well.id), "own-ward places are known");
+
+    let friend = &world.characters[&ActorId::from_raw("frnd1")];
+    assert!(
+        friend.state.places_known.contains(&home.id),
+        "knowing somebody means knowing the way to their door"
+    );
+    assert!(
+        !servant.state.places_known.contains(
+            &world.places.home_of(&ActorId::from_raw("frnd1")).map(|entry| entry.id.clone())
+                .unwrap_or_else(|| PlaceId::from_raw("pl_none"))
+        ),
+        "the servant does not know the stranger's door"
+    );
+}
+
+/// The full errand: `go_to` sets the intent, the ladder walks it, arrival is a
+/// percept, and the walker is handed the same priority nudge an addressed say
+/// gets.
+#[test]
+fn go_to_walks_there_and_arrival_is_a_percept_and_a_nudge() {
+    let nav = nav();
+    let clock = clock_at(Office::Dayspring);
+    let id = ActorId::from_raw("walkr");
+    let start = nav.node_point(nav.place("Seraph statue").expect("baked").node);
+    let mut world = base_world();
+    world.add_character(person("walkr", start, None, Significance::Major));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    let target = world.places.named("The Gradine").expect("baked").id.clone();
+    let line = apply_action(&mut world, &id, "go_to", &json!({"place_id": target.as_str()})).unwrap();
+    assert_eq!(line, "WALKR sets off for The Gradine");
+    assert!(
+        world.characters[&id].recent_history().iter().any(|line| line == "You set off for The Gradine."),
+        "the walker remembers their own errand"
+    );
+
+    let gradine = world.places.named("The Gradine").unwrap().point;
+    let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.0, 2000, |world| {
+        world.characters[&id].state.intent.is_none()
+    });
+    let walker = &world.characters[&id];
+    assert!(
+        walker.position_m().distance(gradine) <= PLACE_ARRIVE_RADIUS_M + 0.5,
+        "the walker stands at the Gradine, not {:?}",
+        walker.position_m()
+    );
+    assert!(
+        walker.inbox().iter().any(|line| line == "You have arrived at The Gradine."),
+        "arrival is a percept: {:?}",
+        walker.inbox()
+    );
+    assert_eq!(nudges, std::slice::from_ref(&id), "arrival granted exactly one priority nudge");
+}
+
+/// A second `go_to` replaces the first silently, and `stop {}` abandons the
+/// errand — halting the walk without any percept.
+#[test]
+fn a_second_go_to_replaces_and_stop_halts_the_walk() {
+    let nav = nav();
+    let clock = clock_at(Office::Dayspring);
+    let id = ActorId::from_raw("walkr");
+    let start = nav.node_point(nav.place("Seraph statue").expect("baked").node);
+    let mut world = base_world();
+    world.add_character(person("walkr", start, None, Significance::Major));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    let gradine = world.places.named("The Gradine").unwrap().id.clone();
+    let lanthorn = world.places.named("The Lanthorn").unwrap().id.clone();
+    apply_action(&mut world, &id, "go_to", &json!({"place_id": gradine.as_str()})).unwrap();
+    apply_action(&mut world, &id, "go_to", &json!({"place_id": lanthorn.as_str()})).unwrap();
+    match &world.characters[&id].state.intent {
+        Some(TravelIntent { target: IntentTarget::Place { place_id, .. }, .. }) => {
+            assert_eq!(place_id, &lanthorn, "the second go_to replaced the first")
+        }
+        other => panic!("expected a place intent, got {other:?}"),
+    }
+
+    // Let the ladder set the walk, then stop: the walk halts, no percept lands.
+    let mut now = 0.0;
+    for _ in 0..20 {
+        now += 0.5;
+        world.step_movement(0.5, &nav);
+        tick_collect(&mut round, &mut world, &nav, &clock, now);
+        if world.characters[&id].is_walking() {
+            break;
+        }
+    }
+    assert!(world.characters[&id].is_walking(), "the errand walk is under way");
+    let inbox_before = world.characters[&id].inbox().len();
+    apply_action(&mut world, &id, "stop", &json!({})).unwrap();
+    now += 0.5;
+    tick_collect(&mut round, &mut world, &nav, &clock, now);
+    assert!(world.characters[&id].state.intent.is_none());
+    assert!(!world.characters[&id].is_walking(), "stop halted the intent walk");
+    assert_eq!(
+        world.characters[&id].inbox().len(),
+        inbox_before,
+        "stop is self-initiated: no percept"
+    );
+}
+
+/// An intent expires on its route-derived budget, and the lapse is a percept
+/// plus the nudge — the honest ending an off-stage errand needs.
+#[test]
+fn an_expired_intent_lapses_with_a_percept_and_a_nudge() {
+    let nav = nav();
+    let clock = clock_at(Office::Dayspring);
+    let id = ActorId::from_raw("walkr");
+    let start = nav.node_point(nav.place("Seraph statue").expect("baked").node);
+    let mut world = base_world();
+    world.add_character(person("walkr", start, None, Significance::Major));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    let tallage = world.places.named("The Tallage").unwrap().id.clone();
+    apply_action(&mut world, &id, "go_to", &json!({"place_id": tallage.as_str()})).unwrap();
+    // Shrink the budget so the errand cannot possibly finish.
+    world.characters.get_mut(&id).unwrap().state.intent.as_mut().unwrap().budget_seconds = 2.0;
+
+    let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.0, 40, |world| {
+        world.characters[&id].state.intent.is_none()
+    });
+    assert!(
+        world.characters[&id]
+            .inbox()
+            .iter()
+            .any(|line| line == "Your errand to The Tallage lapsed before you arrived."),
+        "lapse is a percept: {:?}",
+        world.characters[&id].inbox()
+    );
+    assert_eq!(nudges, std::slice::from_ref(&id), "the lapse granted the nudge");
+    assert!(!world.characters[&id].is_walking(), "the lapsed walk was halted");
+}
+
+/// Curfew — a pressing rung — preempts a live errand, and the preemption names
+/// its cause: "The curfew turned you back…".
+#[test]
+fn curfew_preempts_an_errand_with_a_cause_percept() {
+    let nav = nav();
+    let id = ActorId::from_raw("a2gpk"); // housed by the real bake
+    let start = nav.node_point(nav.place("Seraph statue").expect("baked").node);
+    let mut world = base_world();
+    world.add_character(person("a2gpk", start, Some("domestic_servant"), Significance::Minor));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+    assert!(round.people[&id].home.is_some(), "the bake houses a2gpk");
+
+    let tallage = world.places.named("The Tallage").unwrap().id.clone();
+    apply_action(&mut world, &id, "go_to", &json!({"place_id": tallage.as_str()})).unwrap();
+
+    // The same wall clock, but read at the Snuffing: the curfew rung fires.
+    let night = clock_at(Office::Snuffing);
+    let (_, nudges) = beats_until(&mut round, &mut world, &nav, &night, 0.0, 40, |world| {
+        world.characters[&id].state.intent.is_none()
+    });
+    assert!(
+        world.characters[&id]
+            .inbox()
+            .iter()
+            .any(|line| line == "The curfew turned you back before you reached The Tallage."),
+        "the preemption says why: {:?}",
+        world.characters[&id].inbox()
+    );
+    assert!(nudges.contains(&id), "the preempted errand still granted its nudge");
+}
+
+/// `go_to {"person"}`: the follow tracks a visible target to conversation
+/// distance; catching up is a percept and a nudge.
+#[test]
+fn a_followed_person_is_caught_at_conversation_distance() {
+    let nav = nav();
+    let clock = clock_at(Office::Dayspring);
+    let follower = ActorId::from_raw("follw");
+    let target = ActorId::from_raw("targt");
+    let gradine_node = nav.place("The Gradine").expect("baked").node;
+    let start = nav.node_point(gradine_node);
+    // The target stands a dozen metres up the street — on the walkable midline,
+    // where a real townsperson (who only ever walks the graph) stands.
+    let up_the_street = nav.node_point(nav.adjacency()[gradine_node][0].to);
+    let target_at = start + (up_the_street - start).normalize() * 12.0;
+    assert!(nav.is_walkable(target_at.x, target_at.z), "the street midline is walkable");
+    let mut world = base_world();
+    world.add_character(person("follw", start, None, Significance::Major));
+    world.add_character(person("targt", target_at, None, Significance::Major));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    apply_action(&mut world, &follower, "go_to", &json!({"person": "targt"})).unwrap();
+    let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.0, 200, |world| {
+        world.characters[&follower].state.intent.is_none()
+    });
+    let gap = world.characters[&follower]
+        .position_m()
+        .distance(world.characters[&target].position_m());
+    assert!(gap <= PERSON_ARRIVE_RADIUS_M + 0.5, "closed to conversation distance, gap {gap}");
+    assert!(
+        world.characters[&follower]
+            .inbox()
+            .iter()
+            .any(|line| line == "You have caught up with a stranger (id targt)."),
+        "{:?}",
+        world.characters[&follower].inbox()
+    );
+    assert_eq!(nudges, std::slice::from_ref(&follower));
+}
+
+/// Losing sight of a followed target is a percept, and the intent degrades to
+/// their last-seen position — a hoarded id is not a tracking device.
+#[test]
+fn losing_sight_degrades_the_follow_to_the_last_seen_spot() {
+    let nav = nav();
+    let clock = clock_at(Office::Dayspring);
+    let follower = ActorId::from_raw("follw");
+    let target = ActorId::from_raw("targt");
+    let start = nav.node_point(nav.place("The Gradine").expect("baked").node);
+    let mut world = base_world();
+    world.add_character(person("follw", start, None, Significance::Major));
+    let target_at = Vec3::new(start.x + 15.0, WALK_Y, start.z);
+    world.add_character(person("targt", target_at, None, Significance::Major));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    apply_action(&mut world, &follower, "go_to", &json!({"person": "targt"})).unwrap();
+    // One tick to stamp the follow, then the target vanishes across the city.
+    tick_collect(&mut round, &mut world, &nav, &clock, 0.5);
+    world.characters.get_mut(&target).unwrap().state.position_m = Vec3::new(start.x + 300.0, WALK_Y, start.z);
+
+    let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.5, 200, |world| {
+        world.characters[&follower].state.intent.is_none()
+    });
+    let inbox = world.characters[&follower].inbox();
+    assert!(
+        inbox.iter().any(|line| line == "You have lost sight of a stranger (id targt)."),
+        "{inbox:?}"
+    );
+    assert!(
+        inbox
+            .iter()
+            .any(|line| line == "You reach the spot where you last saw a stranger (id targt), but they are gone."),
+        "{inbox:?}"
+    );
+    // The follower ended near where the target was last seen, not where they went.
+    assert!(
+        world.characters[&follower].position_m().distance(target_at) <= PLACE_ARRIVE_RADIUS_M + 0.5
+    );
+    assert_eq!(nudges, std::slice::from_ref(&follower));
+}
+
+/// A conversation holds the errand — nobody walks off mid-sentence — and the
+/// walk begins once the exchange goes cold.
+#[test]
+fn a_conversation_defers_the_errand_until_it_goes_cold() {
+    let nav = nav();
+    let clock = clock_at(Office::Dayspring);
+    let id = ActorId::from_raw("walkr");
+    let start = nav.node_point(nav.place("Seraph statue").expect("baked").node);
+    let mut world = base_world();
+    world.add_character(person("walkr", start, None, Significance::Major));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    let gradine = world.places.named("The Gradine").unwrap().id.clone();
+    apply_action(&mut world, &id, "go_to", &json!({"place_id": gradine.as_str()})).unwrap();
+
+    let mut now = 0.0;
+    for _ in 0..30 {
+        now += 0.5;
+        world.step_movement(0.5, &nav);
+        tick(&mut round, &mut world, &nav, &clock, now, &player(), &warm(&id));
+    }
+    assert!(!world.characters[&id].is_walking(), "held in conversation: no walk starts");
+    assert!(world.characters[&id].state.intent.is_some(), "but the intent survives the hold");
+
+    for _ in 0..30 {
+        now += 0.5;
+        world.step_movement(0.5, &nav);
+        tick_collect(&mut round, &mut world, &nav, &clock, now);
+        if world.characters[&id].is_walking() {
+            return;
+        }
+    }
+    panic!("the errand never resumed after the exchange went cold");
+}
+
+/// `tell_way` writes the handle into the receiver's set — the sheet is the
+/// memory — and the whole ask-the-way exchange works end-to-end.
+#[test]
+fn tell_way_transfers_the_handle_and_go_to_accepts_it() {
+    let nav = nav();
+    let clock = clock_at(Office::Dayspring);
+    let teller = ActorId::from_raw("tellr");
+    let asker = ActorId::from_raw("askr1");
+    let start = nav.node_point(nav.place("The Gradine").expect("baked").node);
+    let mut world = base_world();
+    // The mason knows the masons' lodge (a Wallwright place); the fabric-ward
+    // asker does not.
+    let mut teller_character = person("tellr", start, None, Significance::Major);
+    teller_character.sheet.lore = person("x", Vec3::ZERO, Some("mason"), Significance::Major).sheet.lore.clone();
+    teller_character.sheet.lore.as_mut().unwrap().planning_ward = PlanningWard::Wallwright;
+    world.add_character(teller_character);
+    world.add_character(person("askr1", Vec3::new(start.x + 3.0, WALK_Y, start.z), None, Significance::Major));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    let lodge = world.places.named("The masons' lodge").expect("baked").id.clone();
+    assert!(world.characters[&teller].state.places_known.contains(&lodge));
+    assert!(!world.characters[&asker].state.places_known.contains(&lodge));
+
+    // The asker cannot walk there yet: the id is not theirs to use.
+    let error = apply_action(&mut world, &asker, "go_to", &json!({"place_id": lodge.as_str()})).unwrap_err();
+    assert_eq!(error.code, ActionErrorCode::UnknownPlace);
+
+    // The teller shares the way; the asker gets one inbox line and the handle.
+    let line = apply_action(
+        &mut world,
+        &teller,
+        "tell_way",
+        &json!({"person": "askr1", "place_id": lodge.as_str()}),
+    )
+    .unwrap();
+    assert_eq!(line, "TELLR tells ASKR1 the way to The masons' lodge");
+    assert!(world.characters[&asker].state.places_known.contains(&lodge));
+    assert!(
+        world.characters[&asker]
+            .inbox()
+            .iter()
+            .any(|line| line == "A stranger (id tellr) told you the way to The masons' lodge."),
+        "{:?}",
+        world.characters[&asker].inbox()
+    );
+    assert!(
+        world.characters[&teller]
+            .recent_history()
+            .iter()
+            .any(|line| line == "You told a stranger (id askr1) the way to The masons' lodge."),
+    );
+
+    // And now the errand is legal.
+    apply_action(&mut world, &asker, "go_to", &json!({"place_id": lodge.as_str()})).unwrap();
+    assert!(world.characters[&asker].state.intent.is_some());
+}
+
+/// The verb validation walls: sight-gating on person targets, earshot on
+/// tell_way, and the whitelist on both — the errors the model self-corrects on.
+#[test]
+fn go_to_and_tell_way_validation_walls() {
+    let nav = nav();
+    let clock = clock_at(Office::Dayspring);
+    let id = ActorId::from_raw("walkr");
+    let start = nav.node_point(nav.place("The Gradine").expect("baked").node);
+    let mut world = base_world();
+    world.add_character(person("walkr", start, None, Significance::Major));
+    world.add_character(person("farbd", Vec3::new(start.x + 50.0, WALK_Y, start.z), None, Significance::Major));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    for (args, code) in [
+        (json!({}), ActionErrorCode::InvalidArguments),
+        (json!({"place_id": "pl_x", "person": "farbd"}), ActionErrorCode::InvalidArguments),
+        (json!({"place_id": "pl_no_such"}), ActionErrorCode::UnknownPlace),
+        (json!({"person": "ghost"}), ActionErrorCode::UnknownTarget),
+        (json!({"person": "walkr"}), ActionErrorCode::SelfTarget),
+        // 50 m away: out of you_see, so not a legal follow target.
+        (json!({"person": "farbd"}), ActionErrorCode::OutOfRange),
+    ] {
+        let error = apply_action(&mut world, &id, "go_to", &args).unwrap_err();
+        assert_eq!(error.code, code, "go_to {args}");
+    }
+    assert!(world.characters[&id].state.intent.is_none(), "no failed go_to left an intent");
+
+    let gradine = world.places.named("The Gradine").unwrap().id.clone();
+    for (args, code) in [
+        // The teller holds the id, but the target is beyond earshot.
+        (json!({"person": "farbd", "place_id": gradine.as_str()}), ActionErrorCode::OutOfRange),
+        // A handle the teller does not hold cannot be shared.
+        (json!({"person": "farbd", "place_id": "pl_no_such"}), ActionErrorCode::UnknownPlace),
+        (json!({"person": "walkr", "place_id": gradine.as_str()}), ActionErrorCode::SelfTarget),
+    ] {
+        let error = apply_action(&mut world, &id, "tell_way", &args).unwrap_err();
+        assert_eq!(error.code, code, "tell_way {args}");
     }
 }

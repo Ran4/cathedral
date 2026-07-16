@@ -99,6 +99,7 @@ macro_rules! id_newtype {
 
 id_newtype!(ActorId, "an actor");
 id_newtype!(ItemId, "an item");
+id_newtype!(PlaceId, "a place the wayfinding registry names");
 
 /// Correlates a cognition submission with its completion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -1,8 +1,8 @@
 # Movement: the city gets up in the morning
 
-Status: in progress. **M0 (the clock), M1 (the nav bake), M2 (one NPC walks), M3 (the water round) and
-M4 (the daily round) are implemented**; M5–M7 remain (see [07_milestones.md](07_milestones.md) for the
-per-milestone status). This folder is the plan.
+Status: in progress. **M0 (the clock), M1 (the nav bake), M2 (one NPC walks), M3 (the water round),
+M4 (the daily round) and M5 (`go_to` and the wayfinding whitelist) are implemented**; M6–M7 remain
+(see [07_milestones.md](07_milestones.md) for the per-milestone status). This folder is the plan.
 
 | | |
 |---|---|
@@ -359,7 +359,7 @@ already has (`cathedral-headless`, `CATHEDRAL_DRIVE`). Full recipes in
 | **M2** | **One NPC walks** | hot/cold split, fixed tick, interpolation, the guard lifted. One hard-coded actor paces between two places forever. | headless prints their position advancing; a drive `shot` finds them somewhere new |
 | **M3 ✅** | **The water round** *(implemented)* | needs (thirst) → the ladder (rungs 2/6/11/12) → route → a household-first queue → draw (the keeper's windlass, heard) → home. The vertical slice. | headless `--trace-water` shows the whole cast cycling through ten kept wells; each draw reports how many NPCs heard it; stand thirty metres from a staffed well in-game and you hear the windlass |
 | **M4 ✅** | **The Round** *(implemented)* | homes (baked), workplaces + 65 occupation templates + the 20 authored routes (`rounds.json`), market days, and the Snuffing emptying the streets | headless `--watch-clock 1 --census-by-area` prints a plausible day — Moorings/taverns at the Kindling, squares full at High Wick, streets clear at the Snuffing but not the Hungry Ox |
-| **M5** | **`go_to`** | the LLM verb; the prompt and sheet change; 20 golden fixtures regenerated | tell someone to meet you at the Gradine, and walk there, and they are there |
+| **M5 ✅** | **`go_to`** *(implemented)* | the LLM verbs (`go_to`/`stop`/`tell_way`); the wayfinding registry (`places.json` baked, homes at seed) behind `places_you_know`; the intent rung with route-budget expiry, arrival/lapse percepts and their priority nudges; the prompt and sheet change; 20 golden fixtures regenerated | tell someone to meet you at the Gradine, and walk there, and they are there |
 | **M6** | **The Night Office** | reflection, agenda rewriting, the second cognition lane | an NPC's goal changes overnight because of something that happened to them yesterday |
 | **M7** | **Crowds and gait** | lane offsets, local avoidance, the lamplighter's round, the Needle's pinch | it looks like a city |
 

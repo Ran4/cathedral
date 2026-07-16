@@ -43,21 +43,22 @@ duration_seconds = 9.0
 
 # The water network (lore/wells_and_water.md). As of M3 (the water round) the
 # sim *does* draw water: the behaviour ladder sends thirsty NPCs to a well, a
-# queue forms, and a keeper works the curb. The windlass itself is emitted like
-# the bell — an unattributed WORLD sound heard only by the player (`crates/
+# queue forms, and a keeper works the curb. The round's own windlass is emitted
+# like the bell — an unattributed WORLD sound heard only by the player (`crates/
 # cathedral-sim/src/round.rs`), so ten curbs clanking never nudge an NPC into a
 # reaction turn (that would pin the scheduler and blow M3's zero-token budget).
-# The `seen` line is instead used for the drawer's OWN memory of the act ("You
-# drew water at the well."), so the person the player asks can say what they are
-# doing. Past tense so the same template reads for a witness and for "You". They
-# are deliberately NOT `actor_emittable`: that would list them as `make_sound`
-# verb choices in every prompt and regenerate all twenty golden fixtures, which is
-# M5's sheet change, not M3's.
+# The `seen` line doubles as the drawer's OWN memory of the act ("You drew water
+# at the well."), so the person the player asks can say what they are doing.
+# Past tense so the same template reads for a witness and for "You". Since M5
+# (the sheet change that regenerated the golden fixtures) they are also
+# `actor_emittable`: a *deliberate* clatter an LLM chooses via make_sound is a
+# rare social act and nudges one witness like any other actor sound — it is only
+# the round's steady background rhythm that must stay nudge-free.
 [[sounds]]
 sound_id = "draw_water"
 sound_class = "impact"
 audible_distance = 30.0
-actor_emittable = false
+actor_emittable = true
 seen = "{actor} drew water at the well."
 heard = "[You heard a windlass turn, and a bucket break the water far below.]"
 sfx_prompt = "A wooden well windlass creaking as its rope unwinds, then a bucket splashing into deep water far below in a stone shaft, echoing, then the rope creaking under load, outdoors, no music, no voices"
@@ -67,7 +68,7 @@ duration_seconds = 6.0
 sound_id = "chain_windlass"
 sound_class = "impact"
 audible_distance = 40.0
-actor_emittable = false
+actor_emittable = true
 seen = "{actor} worked the chain windlass at the well."
 heard = "[You heard the slow clank of a chain windlass, and a bucket knocking the shaft.]"
 sfx_prompt = "A heavy iron chain winding slowly over a wooden windlass barrel, a ratchet pawl clicking, an iron-bound bucket knocking against a stone well shaft, medieval street, no music, no voices"
@@ -77,7 +78,7 @@ duration_seconds = 7.0
 sound_id = "pour_trough"
 sound_class = "impact"
 audible_distance = 22.0
-actor_emittable = false
+actor_emittable = true
 seen = "{actor} emptied a pail into the trough."
 heard = "[You heard a pail emptied into a stone trough.]"
 sfx_prompt = "A wooden pail of water poured out into a shallow stone trough, a heavy splash settling into a ripple, the empty pail set down on wet stone, outdoors, no music, no voices"
@@ -87,7 +88,7 @@ duration_seconds = 4.0
 sound_id = "pail_clatter"
 sound_class = "impact"
 audible_distance = 26.0
-actor_emittable = false
+actor_emittable = true
 seen = "{actor} knocked a pail over on the wet stone."
 heard = "[You heard a pail go over on the stones, and the water run out.]"
 sfx_prompt = "A wooden pail dropped on stone paving, its iron hoop ringing as it rolls, water slopping out across the flags, close and dry, no music, no voices"

@@ -9,11 +9,16 @@
 //! divergence, and vice versa.
 //!
 //! **The fixtures are frozen.** The generator and the Python it read are
-//! deleted (P7), and there is nothing left to regenerate them from — the Rust
-//! renderer is the truth from here on. That is exactly what makes them worth
-//! keeping: they are the last independent witness that `assets/prompts/turn.j2`
-//! and `PyAsciiFormatter` still say what Python said. Change a fixture only
-//! when you have *decided* to change the prompt, and say so in the commit.
+//! deleted (P7) — the Rust renderer is the truth from here on. The scenarios'
+//! *worlds* still come from Python HEAD; their prompt bytes were regenerated
+//! from the Rust renderer for M5's deliberate sheet change (`places_you_know`,
+//! `moving`, the go_to/stop/tell_way verbs — `features/movement/05_the_llm_seam.md`
+//! §3, the one prompt change budgeted for the whole movement feature). They
+//! remain the last independent witness that `assets/prompts/turn.j2` and
+//! `PyAsciiFormatter` still say what they said. Change a fixture only when you
+//! have *decided* to change the prompt, and say so in the commit — the ignored
+//! [`regenerate_golden_fixtures`] test below is the documented way to do it
+//! (`cargo test -p cathedral-sim --test golden_prompts -- --ignored`).
 
 mod prompt_support;
 
@@ -182,6 +187,42 @@ fn every_scenario_renders_byte_identically_to_python() {
         };
 
         assert_bytes_eq(&scenario.name, &expected, &rendered);
+    }
+}
+
+/// Rewrite every fixture from the current renderer — the documented path for a
+/// *decided* prompt change (the M1 collision exporter's write-a-file idiom).
+/// Ignored so an ordinary `cargo test` can never silently bless a drift; run it
+/// deliberately, diff the result, and say so in the commit:
+///
+/// ```sh
+/// cargo test -p cathedral-sim --test golden_prompts -- --ignored
+/// ```
+#[test]
+#[ignore = "regenerates the frozen fixtures in place; run only for a decided prompt change"]
+fn regenerate_golden_fixtures() {
+    let env = prompt_env();
+    let dir = fixtures_dir();
+    let manifest: Manifest = serde_json::from_str(
+        &fs::read_to_string(dir.join("manifest.json")).expect("the manifest is checked in"),
+    )
+    .expect("the manifest parses");
+
+    for scenario in manifest.scenarios {
+        let actor_id = ActorId::from_raw(&scenario.actor_id);
+        let mut world = scenario.world.build();
+        let rendered = match scenario.mode.as_str() {
+            "preview" => render_prompt(&world, &actor_id, None, &env)
+                .unwrap_or_else(|error| panic!("{}: {error}", scenario.name)),
+            "drain" => {
+                render_prompt_and_drain(&mut world, &actor_id, &env)
+                    .unwrap_or_else(|error| panic!("{}: {error}", scenario.name))
+                    .0
+            }
+            other => panic!("{}: unknown mode '{other}'", scenario.name),
+        };
+        fs::write(dir.join(&scenario.file), rendered)
+            .unwrap_or_else(|error| panic!("write {}: {error}", scenario.file));
     }
 }
 

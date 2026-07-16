@@ -21,7 +21,7 @@ use crate::{
     HEARING_RADIUS_M, ITEM_INTERACTION_RADIUS_M,
     character::Character,
     error::PromptError,
-    ids::{ActorId, ItemId},
+    ids::{ActorId, ItemId, PlaceId},
     offer::Offer,
     world::World,
 };
@@ -128,6 +128,10 @@ struct Sheet<'a> {
     lore_profile: Option<PromptLoreProfile<'a>>,
     back_story: &'a str,
     you_are: YouAre,
+    /// The wayfinding whitelist (M5): the places this character can `go_to`,
+    /// each an opaque handle plus the name people speak of it by. Rendered even
+    /// when empty — an empty list honestly says "you know no ways".
+    places_you_know: Vec<PlaceRef<'a>>,
     you_hold: Vec<ItemRef<'a>>,
     /// Omitted entirely when empty — not rendered as `[]` (`prompt.py:227`).
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -196,13 +200,29 @@ struct ItemRef<'a> {
     name: &'a str,
 }
 
-/// `_person` (`prompt.py:144-155`): `distance_m` only appears in `you_see`.
+/// One `places_you_know` entry. The key is `place_id`, not `id`, so a place
+/// handle can never be conflated with a person handle even out of context
+/// (`features/movement/05_the_llm_seam.md` §3).
+#[derive(Serialize)]
+struct PlaceRef<'a> {
+    place_id: &'a PlaceId,
+    name: &'a str,
+}
+
+/// `_person` (`prompt.py:144-155`): `distance_m` and `moving` only appear in
+/// `you_see`.
 #[derive(Serialize)]
 struct Person<'a> {
     id: &'a ActorId,
     name: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     distance_m: Option<f64>,
+    /// Whether they are walking past rather than standing with you — the
+    /// difference between greeting everyone who passes and greeting people who
+    /// stop. One definition of moving everywhere: `!is_settled()`, the novelty
+    /// gate's own threshold (05_the_llm_seam.md §3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    moving: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -238,6 +258,7 @@ fn person<'a>(
     other: &'a Character,
     strings: &'a PromptStrings,
     distance_m: Option<f64>,
+    moving: Option<bool>,
 ) -> Person<'a> {
     Person {
         id: other.id(),
@@ -247,6 +268,7 @@ fn person<'a>(
             &strings.unknown_person_name
         },
         distance_m: distance_m.map(|distance| py_round(distance, 1)),
+        moving,
     }
 }
 
@@ -287,7 +309,7 @@ pub fn render_prompt(
                 .position_m()
                 .distance_squared(other.position_m())
                 .sqrt();
-            person(actor, other, strings, Some(distance))
+            person(actor, other, strings, Some(distance), Some(!other.is_settled()))
         })
         .collect();
 
@@ -314,7 +336,7 @@ pub fn render_prompt(
                 item,
                 to: match target {
                     None => OfferTo::Anyone(&strings.offer_to_anyone),
-                    Some(target) => OfferTo::Person(person(actor, target, strings, None)),
+                    Some(target) => OfferTo::Person(person(actor, target, strings, None, None)),
                 },
             });
         } else if offer.target_id.is_none() || offer.target_id.as_ref() == Some(actor_id) {
@@ -330,11 +352,31 @@ pub fn render_prompt(
             }
             offered_to_you.push(OfferedToYou {
                 item,
-                from: person(actor, giver, strings, None),
+                from: person(actor, giver, strings, None, None),
                 accept_with: strings.accept_with(&offer.item_id),
             });
         }
     }
+
+    // The wayfinding whitelist, resolved against the world registry and sorted
+    // by name (then id) — a stable, human order, so the list reads the same to
+    // the model turn after turn. A held handle the registry no longer names is
+    // silently skipped, like a dangling item id.
+    let mut places_you_know: Vec<PlaceRef<'_>> = actor
+        .state
+        .places_known
+        .iter()
+        .filter_map(|place_id| world.places.get(place_id))
+        .map(|entry| PlaceRef {
+            place_id: &entry.id,
+            name: &entry.name,
+        })
+        .collect();
+    places_you_know.sort_by(|left, right| {
+        left.name
+            .cmp(right.name)
+            .then_with(|| left.place_id.cmp(right.place_id))
+    });
 
     let events: &[String] = since.unwrap_or(actor.inbox());
     let since_your_last_turn = fallback(events, &strings.nothing);
@@ -383,6 +425,7 @@ pub fn render_prompt(
                 z: position.z,
             },
         },
+        places_you_know,
         you_hold: actor
             .holds()
             .iter()
