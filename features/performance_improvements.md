@@ -141,16 +141,9 @@ reuse the same neighbourhood notion the LLM attention gating already has
 (`crates/cathedral-sim/src/attention.rs`), so there is one answer to "is this actor near the player" and not
 three.
 
-### 7. Keep the gait cheap — protect the instancing
+### 7. REMOVED
 
-Capsules gliding across cobblestones without a gait look worse than capsules standing still, so movement will
-create pressure for character animation. Resist skinned meshes: skinning is what breaks the property that makes
-1500 NPCs affordable in the first place (three shared mesh handles, five materials, a handful of instanced
-draws). Skinned figures are not instanced and pay per-vertex work per instance.
-
-Fake it instead — bob the root, swing the merged primitives sinusoidally off a phase seeded per actor. It stays
-in the cheap regime, and at the distances where you can actually read a gait there are only a few dozen figures
-on screen. If real animation is wanted later, it should be a near-tier-only LOD, not the default rig.
+(this section used to talk about not having any gait etc; fuck that, we want realism!)
 
 ### 8. Distance culling and shadows
 

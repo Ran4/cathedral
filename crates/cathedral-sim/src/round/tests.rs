@@ -84,7 +84,26 @@ fn base_world() -> World {
 /// One engine-style beat: walk the movers a slice, then run the round.
 fn beat(round: &mut Round, world: &mut World, nav: &NavData, clock: &WorldClock, now: f64, dt: f64) {
     world.step_movement(dt, nav);
-    tick(round, world, nav, clock, now, &player(), None);
+    tick(round, world, nav, clock, now, &player(), &BTreeSet::new());
+}
+
+/// A warm-exchange set of one, for driving [`tick`] mid-conversation.
+fn warm(id: &ActorId) -> BTreeSet<ActorId> {
+    BTreeSet::from([id.clone()])
+}
+
+/// [`decide`] without the pressure line, for the rung tests that only care
+/// where the ladder points.
+fn decide_only(
+    round: &Round,
+    world: &World,
+    nav: &NavData,
+    id: &ActorId,
+    epoch: u64,
+    office: Office,
+    weekday: Weekday,
+) -> Decision {
+    decide(round, world, nav, id, epoch, office, weekday).0
 }
 
 // --------------------------------------------------------------------------- //
@@ -423,7 +442,7 @@ fn the_round_rung_walks_a_worker_to_their_post() {
         .expect("Kindling leg")
         .at;
     // At the working morning, away from his post, the round rung sends him there.
-    match decide(&round, &world, &nav, &id, 0, Office::Kindling, Weekday::Bellday) {
+    match decide_only(&round, &world, &nav, &id, 0, Office::Kindling, Weekday::Bellday) {
         Decision::Travel(target) => assert!(
             target.distance(coswalds) < 1.0,
             "he sets off for Coswald's Yard, not {target:?}"
@@ -447,14 +466,14 @@ fn a_conversation_with_the_player_pins_the_round() {
 
     // In conversation: his cadence comes due and he stays put.
     let due = round.people[&id].next_decision + 1.0;
-    tick(&mut round, &mut world, &nav, &clock, due, &player(), Some(&id));
+    tick(&mut round, &mut world, &nav, &clock, due, &player(), &warm(&id));
     assert!(
         !world.characters[&id].is_walking(),
         "nobody sets off for their post mid-conversation"
     );
 
     // The exchange goes cold: the same cadence now sends him to his post.
-    tick(&mut round, &mut world, &nav, &clock, due, &player(), None);
+    tick(&mut round, &mut world, &nav, &clock, due, &player(), &BTreeSet::new());
     assert!(
         world.characters[&id].is_walking(),
         "the round resumes once the conversation lapses"
@@ -467,11 +486,109 @@ fn a_conversation_with_the_player_pins_the_round() {
     assert_eq!(round.people[&id].phase, Phase::Idle);
 }
 
+/// The same courtesy between two NPCs: while their exchange is warm the ladder
+/// walks neither of them off to their post, and when it lapses both errands
+/// resume on their own.
+#[test]
+fn a_warm_npc_exchange_holds_both_parties_until_it_lapses() {
+    let nav = nav();
+    let clock = clock_at(Office::Kindling);
+    let a = ActorId::from_raw("mason_a");
+    let b = ActorId::from_raw("mason_b");
+    let mut world = base_world();
+    // Two masons at the forecourt, away from Coswald's Yard — Majors, so
+    // neither is drafted as a well keeper. Both owe the round rung a walk.
+    world.add_character(person("mason_a", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    world.add_character(person("mason_b", Vec3::new(1.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    let hold: BTreeSet<ActorId> = BTreeSet::from([a.clone(), b.clone()]);
+    let due = round.people[&a].next_decision.max(round.people[&b].next_decision) + 1.0;
+
+    // Both cadences come due mid-exchange: neither sets off.
+    tick(&mut round, &mut world, &nav, &clock, due, &player(), &hold);
+    assert!(!world.characters[&a].is_walking(), "the speaker's errand waits too");
+    assert!(!world.characters[&b].is_walking(), "and the listener's");
+
+    // The exchange goes cold: the same cadences send both to their post.
+    tick(&mut round, &mut world, &nav, &clock, due, &player(), &BTreeSet::new());
+    assert!(world.characters[&a].is_walking(), "the round resumes for one");
+    assert!(world.characters[&b].is_walking(), "and for the other");
+}
+
+/// Rung 5 outranks the chat — but not mid-sentence: the first pressing decision
+/// under a hold lands as a `system:` percept (the one excuse-yourself turn),
+/// the next one walks the body regardless, and a parting line no longer stops
+/// the released walker.
+#[test]
+fn curfew_breaks_a_warm_hold_after_one_excuse_turn() {
+    let nav = nav();
+    let clock = clock_at(Office::Snuffing);
+    let id = ActorId::from_raw("b4hst");
+    let mut world = base_world();
+    world.add_character(person("b4hst", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let hold = warm(&id);
+
+    // The first due cadence at the Snuffing: no marching off mid-sentence —
+    // the pressure is injected on the self-correction channel instead.
+    let due = round.people[&id].next_decision + 1.0;
+    tick(&mut round, &mut world, &nav, &clock, due, &player(), &hold);
+    assert!(!world.characters[&id].is_walking(), "the excuse turn comes before the walk");
+    assert!(
+        world.characters[&id]
+            .inbox()
+            .iter()
+            .any(|line| line.starts_with("system:") && line.contains("night is falling")),
+        "the curfew pressure lands as a system: percept"
+    );
+
+    // The next cadence releases the hold regardless of what was said.
+    let again = round.people[&id].next_decision + 1.0;
+    tick(&mut round, &mut world, &nav, &clock, again, &player(), &hold);
+    assert!(world.characters[&id].is_walking(), "urgency beats chat after the one excuse turn");
+    assert_eq!(round.people[&id].phase, Phase::Travelling);
+
+    // A parting line must not stop the released walker on the doorstep of night.
+    interrupt_for_conversation(&mut round, &mut world, &id);
+    assert!(world.characters[&id].is_walking(), "the excused walker keeps going");
+    assert_eq!(round.people[&id].phase, Phase::Travelling);
+
+    // Once the exchange lapses, the excuse is handed back for the next one.
+    tick(&mut round, &mut world, &nav, &clock, again, &player(), &BTreeSet::new());
+    assert!(!round.people[&id].excused, "a lapsed hold resets the excuse");
+}
+
+/// Only curfew (5) and parched (2) press hard enough to break a conversation
+/// hold; merely thirsty (6) — and everything below — defers to the exchange.
+#[test]
+fn only_the_pressing_rungs_carry_a_pressure_line() {
+    let (round, mut world, nav, servant) = seed_parched_servant();
+    // Parched at the Kindling: pressing.
+    let (decision, pressure) =
+        decide(&round, &world, &nav, &servant, 0, Office::Kindling, Weekday::Bellday);
+    assert!(matches!(decision, Decision::ApproachWell));
+    assert_eq!(pressure, Some(PARCHED_PRESSURE));
+    // Housed at the Snuffing: pressing.
+    let (decision, pressure) =
+        decide(&round, &world, &nav, &servant, 0, Office::Snuffing, Weekday::Bellday);
+    assert!(matches!(decision, Decision::Travel(_)));
+    assert_eq!(pressure, Some(CURFEW_PRESSURE));
+    // Merely thirsty: the well can wait out the conversation.
+    world.characters.get_mut(&servant).unwrap().state.needs.thirst = THIRST_PARCHED + 1.0;
+    let (decision, pressure) =
+        decide(&round, &world, &nav, &servant, 0, Office::Kindling, Weekday::Bellday);
+    assert!(matches!(decision, Decision::ApproachWell));
+    assert_eq!(pressure, None, "rung 6 defers to a conversation");
+}
+
 #[test]
 fn curfew_sends_the_housed_home_at_the_snuffing() {
     let (round, world, nav, id) = seed_hamel();
     let home = round.people[&id].home.expect("housed");
-    match decide(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
         Decision::Travel(target) => assert!(
             target.distance(home) < 1.0,
             "at the Snuffing he goes home, not to {target:?}"
@@ -491,7 +608,7 @@ fn a_night_trade_is_not_sent_home_by_curfew() {
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
     assert!(round.people[&id].curfew_exempt, "the tavern archetype is curfew-exempt");
     // At the Snuffing the tavern's Snuffing leg is active — they work, not sleep.
-    match decide(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
         Decision::Travel(_) | Decision::Stay | Decision::Wander(_) => {}
         Decision::ApproachWell => panic!("a tavern worker draws no water here"),
     }
@@ -518,7 +635,7 @@ fn the_anchoress_is_never_marched_home_at_curfew() {
     assert!(person.legs.is_empty(), "her Round has zero legs (`04_the_round.md` §1)");
     assert!(person.source.is_none(), "she is no water drawer; thirst never moves her");
     // At the Snuffing the ladder leaves her exactly where she stands.
-    match decide(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
         Decision::Stay => {}
         other => panic!("the anchoress stands at curfew, got {other:?}"),
     }
@@ -585,7 +702,7 @@ fn curfew_preempts_a_journey_already_under_way() {
 
     // His cadence comes due while it is still the Waning: he sets off for the lodge.
     let mut now = round.people[&id].next_decision + 0.1;
-    tick(&mut round, &mut world, &nav, &clock, now, &player(), None);
+    tick(&mut round, &mut world, &nav, &clock, now, &player(), &BTreeSet::new());
     assert_eq!(round.people[&id].phase, Phase::Travelling);
     assert_eq!(round.people[&id].travel_target, Some(lodge), "he is bound for the lodge");
 
@@ -647,7 +764,7 @@ fn a_parched_housed_drawer_is_still_sent_home_at_curfew() {
     let (round, world, nav, servant) = seed_parched_servant();
     let home = round.people[&servant].home.expect("housed");
     // Deep in curfew, home wins over the well; at the door, they stay in.
-    match decide(&round, &world, &nav, &servant, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(&round, &world, &nav, &servant, 0, Office::Snuffing, Weekday::Bellday) {
         Decision::Travel(target) => assert!(
             target.distance(home) < 1.0,
             "at the Snuffing a parched drawer heads home, not to {target:?}"
@@ -656,7 +773,7 @@ fn a_parched_housed_drawer_is_still_sent_home_at_curfew() {
         other => panic!("expected Travel home, got {other:?}"),
     }
     // And deeper still, at the Watch, the same.
-    match decide(&round, &world, &nav, &servant, 0, Office::Watch, Weekday::Bellday) {
+    match decide_only(&round, &world, &nav, &servant, 0, Office::Watch, Weekday::Bellday) {
         Decision::Travel(_) => {}
         other => panic!("the Watch is still curfew; expected Travel home, got {other:?}"),
     }
@@ -667,7 +784,7 @@ fn a_parched_housed_drawer_is_still_sent_home_at_curfew() {
 #[test]
 fn a_parched_drawer_heads_for_the_well_once_curfew_lifts() {
     let (round, world, nav, servant) = seed_parched_servant();
-    match decide(&round, &world, &nav, &servant, 0, Office::Kindling, Weekday::Bellday) {
+    match decide_only(&round, &world, &nav, &servant, 0, Office::Kindling, Weekday::Bellday) {
         Decision::ApproachWell => {}
         other => panic!("at the Kindling the parched drawer goes to the well, got {other:?}"),
     }
@@ -698,7 +815,7 @@ fn a_parched_homeless_drawer_still_draws_at_night() {
     assert!(person.source.is_some(), "but is bound to a staffed well");
 
     world.characters.get_mut(&servant).unwrap().state.needs.thirst = 0.0;
-    match decide(&round, &world, &nav, &servant, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(&round, &world, &nav, &servant, 0, Office::Snuffing, Weekday::Bellday) {
         Decision::ApproachWell => {}
         other => panic!("a homeless parched drawer still draws at night, got {other:?}"),
     }
@@ -834,6 +951,7 @@ fn household_vessels_queue_ahead_of_trade_vessels() {
         travel_target: None,
         next_decision: 0.0,
         epoch: 0,
+        excused: false,
     };
     for (id, household) in [("trade_a", false), ("house_a", true), ("trade_b", false), ("house_b", true)] {
         round.people.insert(ActorId::from_raw(id), townsperson(household));
@@ -870,6 +988,7 @@ fn a_full_vessel_is_delivered_by_kind() {
         travel_target: None,
         next_decision: 0.0,
         epoch: 0,
+        excused: false,
     };
     // Household: water for the home, even while the round leg says the shop.
     assert_eq!(delivery_point(&drawer(true), Office::Dayspring, Weekday::Bellday), home);
@@ -968,7 +1087,7 @@ fn thirst_decays_by_the_game_clock() {
     world.characters.get_mut(&servant).unwrap().state.needs.thirst = THIRST_MAX;
 
     let one_game_hour = 3600.0 / 24.0;
-    tick(&mut round, &mut world, &nav, &clock, one_game_hour, &player(), None);
+    tick(&mut round, &mut world, &nav, &clock, one_game_hour, &player(), &BTreeSet::new());
     let expected = THIRST_MAX - 3600.0 * crate::THIRST_DECAY_PER_GAME_SECOND;
     let thirst = world.characters[&servant].needs().thirst;
     assert!((thirst - expected).abs() < 1.0, "thirst {thirst} decayed to ~{expected} over one game hour");
@@ -1034,7 +1153,7 @@ fn a_housed_keeper_goes_home_at_curfew_and_returns_to_the_well_by_day() {
     assert!(!round.people[&keeper].curfew_exempt, "keeping a well is not a night trade");
 
     // At the Snuffing the curfew rung sends the keeper home.
-    match decide(&round, &world, &nav, &keeper, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(&round, &world, &nav, &keeper, 0, Office::Snuffing, Weekday::Bellday) {
         Decision::Travel(target) => assert!(
             target.distance(home) < 1.0,
             "at the Snuffing the keeper heads home, not to {target:?}"
@@ -1044,7 +1163,7 @@ fn a_housed_keeper_goes_home_at_curfew_and_returns_to_the_well_by_day() {
 
     // Morning: from their own doorstep, the round rung walks them back to the curb.
     world.characters.get_mut(&keeper).unwrap().state.position_m = home;
-    match decide(&round, &world, &nav, &keeper, 0, Office::Kindling, Weekday::Bellday) {
+    match decide_only(&round, &world, &nav, &keeper, 0, Office::Kindling, Weekday::Bellday) {
         Decision::Travel(target) => assert!(
             target.distance(curb) < 1.0,
             "at the Kindling the keeper returns to the well, not to {target:?}"

@@ -498,3 +498,33 @@ fn nothing_starts_thinking_while_the_player_holds_the_microphone() {
     assert!(!harness.engine.speech_router().player_composing());
     assert!(!harness.run(30.0).is_empty());
 }
+
+/// The pair-keyed warm-exchange bookkeeping the NPC↔NPC conversation hold rides
+/// on (`features/npcs_stop_walking_when_talking_to_each_other.md`): a targeted
+/// line warms both members whoever spoke, the same 30 s silence rule lapses the
+/// pair, and talking to yourself warms nothing.
+#[test]
+fn warm_exchanges_hold_both_parties_and_lapse_on_silence() {
+    use cathedral_sim::{STAGE_PARTNER_MEMORY_SECONDS, WarmExchanges};
+    use std::collections::BTreeSet;
+
+    let mut exchanges = WarmExchanges::default();
+    let a = ActorId::from_raw("aaaaa");
+    let b = ActorId::from_raw("bbbbb");
+
+    // Order-blind: who spoke and who listened is the same conversation.
+    exchanges.note(&b, &a, 10.0);
+    assert_eq!(
+        exchanges.warm_actors(10.0 + STAGE_PARTNER_MEMORY_SECONDS - 1.0),
+        BTreeSet::from([a.clone(), b.clone()])
+    );
+
+    // A later line refreshes the pair; silence after it lapses the hold.
+    exchanges.note(&a, &b, 20.0);
+    assert!(!exchanges.warm_actors(20.0 + STAGE_PARTNER_MEMORY_SECONDS - 1.0).is_empty());
+    assert!(exchanges.warm_actors(20.0 + STAGE_PARTNER_MEMORY_SECONDS).is_empty());
+
+    // Talking to yourself is not a conversation.
+    exchanges.note(&a, &a, 100.0);
+    assert!(exchanges.warm_actors(100.0).is_empty());
+}

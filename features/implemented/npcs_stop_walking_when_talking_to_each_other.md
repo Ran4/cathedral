@@ -92,3 +92,37 @@ existing seam (`features/movement/05_the_llm_seam.md`), not new plumbing.
   offer/accept interrupts; hold lapses on 30 s silence and the errand resumes;
   curfew breaks a warm hold (after the one excuse-yourself turn); broadcast
   lines interrupt nobody.
+
+## Implementation notes (2026-07-16)
+
+Implemented as specified, with these concretions:
+
+- **The warm set** is `attention::WarmExchanges` (pair-keyed `BTreeMap`,
+  expired by `STAGE_PARTNER_MEMORY_SECONDS`), owned by the `Engine` beside
+  `Novelty`. The player's `last_player_exchange` slot was kept as-is rather
+  than folded in, so the stage seat / hot-channel behaviour is untouched;
+  `Engine::poll` passes the union (warm pairs ∪ player partner) to
+  `round::tick` as a `BTreeSet<ActorId>`.
+- **Triggers**: `flush_speech` gained the NPC→NPC targeted branch (warms the
+  pair, interrupts both); `Engine::hold_for_handoff` does the same for the
+  `offer_item` / `accept_offered_item` world events. A handoff involving the
+  player interrupts the NPC party but does *not* warm the player pair — the
+  player machinery stays speech-only and byte-identical. Untargeted offers,
+  like broadcast lines, hold nobody.
+- **The rung override**: `round::decide` now returns the decision plus an
+  optional *pressure line* — `Some` only when curfew (5) or parched (2) fired
+  a walk. `run_ladder` skips a held actor whose decision carries no pressure
+  (cadence untouched, like the old player skip). A pressing decision first
+  lands as the pressure line via `notify_percept` (`system: night is
+  falling…` / `system: your thirst is pressing…`) and sets
+  `Townsperson::excused`; the *next* pressing cadence (1–6 s later) walks the
+  body regardless. `interrupt_for_conversation` skips an excused walker, so a
+  parting line cannot stop the released walk; the flag resets when the hold
+  lapses.
+- **The per-actor hold cap** (one warm pair, newest) was not needed and is
+  not implemented — the 30 s lapse plus the rung override bound chains; it
+  remains the documented escape hatch if a plaza ever gels.
+- Tests: `round/tests.rs` (pair hold + lapse, curfew excuse turn, pressing
+  vs deferrable rungs), `tests/engine_tests.rs` (targeted line stops the
+  walker / broadcast doesn't / 30 s hold; fish handoff holds giver and
+  receiver), `tests/attention_tests.rs` (`WarmExchanges` bookkeeping).

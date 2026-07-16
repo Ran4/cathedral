@@ -146,24 +146,11 @@ because at 150 m they are already fading out.
 
 ## 5. The gait — protect the instancing
 
-`performance_improvements.md` item 7, and it is right:
-
-> Resist skinned meshes: skinning is what breaks the property that makes 1500 NPCs affordable in the
-> first place (three shared mesh handles, five materials, a handful of instanced draws). [...] Fake it
-> instead — **bob the root, swing the merged primitives sinusoidally off a phase seeded per actor.**
-
-An NPC today is a capsule, a sphere and a cone (`actors.rs:112-117`). glTF and `AnimationPlayer` are
-available with no `Cargo.toml` change — Bevy's `3d` feature pulls `bevy_gltf` and `gltf_animation`
-transitively — and it would be a trap.
-
-So the hot channel carries **two extra floats per actor**:
+The hot channel carries **two extra floats per actor**:
 
 - `speed` — how fast they are actually going, which drives the gait's frequency and amplitude;
 - `gait_phase` — accumulated in the sim (`phase += speed * dt * k`), so that it is *continuous* across
-  ticks and does not reset when someone stops and starts.
-
-Bevy reads them and applies a sinusoidal bob + lean + arm-swing to the single merged mesh. Zero
-skeletons, zero extra draws, and the instancing property survives.
+  ticks and does not reset when someone stops and starts. NOTE: no animation of this yet..
 
 **Two floats × 500 actors = 4 KB per tick.** The hot channel is 500 × ~24 bytes ≈ **12 KB per tick, a
 memcpy**.

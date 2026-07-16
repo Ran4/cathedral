@@ -71,6 +71,55 @@ pub const MAX_STAGE_RADIUS_M: f64 = 2_000.0;
 /// field" would cost one prompt per rotation for the rest of the run.
 pub const STAGE_PARTNER_MEMORY_SECONDS: f64 = 30.0;
 
+/// The warm NPC↔NPC exchanges, keyed by unordered actor pair → when the last
+/// targeted line (or item handoff) between them landed.
+///
+/// The pair-keyed generalization of the engine's single `last_player_exchange`
+/// slot: while a pair is warm, the daily round holds both of them where they
+/// stand — nobody keeps walking away from a conversation — and the same
+/// [`STAGE_PARTNER_MEMORY_SECONDS`] silence lapses it, with no explicit
+/// "conversation over" event. The player's own slot stays separate, because it
+/// also feeds the stage's reserved seat and must keep its exact semantics.
+///
+/// Like [`Novelty`], this is derived bookkeeping, not world state: it lives on
+/// the engine, never in [`World`], and a save file must not carry it. It is
+/// bounded by the number of *concurrent* conversations — in practice a handful
+/// — so a plain `BTreeMap` is the whole data structure.
+#[derive(Debug, Clone, Default)]
+pub struct WarmExchanges {
+    pairs: BTreeMap<(ActorId, ActorId), f64>,
+}
+
+impl WarmExchanges {
+    /// Record a targeted exchange between `a` and `b` at `now`. Order-blind:
+    /// who spoke and who listened is the same conversation.
+    pub fn note(&mut self, a: &ActorId, b: &ActorId, now: f64) {
+        if a == b {
+            return;
+        }
+        let key = if a <= b {
+            (a.clone(), b.clone())
+        } else {
+            (b.clone(), a.clone())
+        };
+        self.pairs.insert(key, now);
+    }
+
+    /// Everyone currently in a warm exchange — the set whose round errands are
+    /// on hold. Prunes lapsed pairs as it goes, which is what keeps the map
+    /// from accumulating every conversation of the run.
+    pub fn warm_actors(&mut self, now: f64) -> BTreeSet<ActorId> {
+        self.pairs
+            .retain(|_, last_line_at| now - *last_line_at < STAGE_PARTNER_MEMORY_SECONDS);
+        let mut actors = BTreeSet::new();
+        for (a, b) in self.pairs.keys() {
+            actors.insert(a.clone());
+            actors.insert(b.clone());
+        }
+        actors
+    }
+}
+
 /// Whether the idle lane is gated on the player's neighborhood at all.
 ///
 /// `All` reproduces the pre-gate behavior exactly, which is what makes this

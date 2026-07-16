@@ -48,7 +48,7 @@ pub use areas::{
 pub use attention::{
     CURIOSITY_BASE, CURIOSITY_WITHOUT_LORE, CuriosityConfig, DEFAULT_STAGE_MAX_ACTORS,
     DEFAULT_STAGE_RADIUS_M, IdleCognitionMode, IdleGate, NOVELTY_MEMORY_SECONDS, Novelty,
-    STAGE_PARTNER_MEMORY_SECONDS, StageConfig, context_hash, curiosity_of, on_stage,
+    STAGE_PARTNER_MEMORY_SECONDS, StageConfig, WarmExchanges, context_hash, curiosity_of, on_stage,
 };
 pub use character::{Character, CharacterSheet, CharacterState, Control, Movement, Needs, Patrol};
 pub use clock::{

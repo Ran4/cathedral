@@ -27,7 +27,7 @@
 //! `(salt, actor_id, epoch)`, never an RNG (the `attention.rs` curiosity idiom).
 
 use std::{
-    collections::{BTreeMap, HashMap, hash_map::DefaultHasher},
+    collections::{BTreeMap, BTreeSet, HashMap, hash_map::DefaultHasher},
     hash::{Hash, Hasher},
 };
 
@@ -283,6 +283,12 @@ struct Townsperson {
     next_decision: f64,
     /// Bumped each decision; the salt that makes the deterministic choices vary.
     epoch: u64,
+    /// A pressing rung (curfew, parched) came due while they were held in a
+    /// conversation, and the pressure has been injected as a `system:` percept:
+    /// they have had their one turn to excuse themselves, and the next pressing
+    /// decision walks them regardless of what they said. Cleared once the
+    /// exchange lapses.
+    excused: bool,
 }
 
 impl Townsperson {
@@ -593,6 +599,7 @@ impl Round {
                         travel_target: None,
                         next_decision: now + decision_jitter(id, 0),
                         epoch: 0,
+                        excused: false,
                     },
                 );
                 enrolled += 1;
@@ -642,6 +649,7 @@ impl Round {
                     travel_target: None,
                     next_decision: now + decision_jitter(id, 0),
                     epoch: 0,
+                    excused: false,
                 },
             );
             enrolled += 1;
@@ -753,10 +761,13 @@ fn active_leg(legs: &[RoundLeg], office: Office, weekday: Weekday) -> Option<&Ro
 /// queues, and run the ladder. A no-op until [`Round::seed`] has run. `player_id`
 /// is who the well sounds play *for*.
 ///
-/// `in_conversation` is the player's current exchange partner, if any: their
-/// round is on hold — the ladder skips them and a finished draw does not send
-/// them home — because nobody walks off mid-conversation. The hold ends when
-/// the exchange goes cold and the caller stops naming them.
+/// `in_conversation` is everyone currently in a warm exchange — the player's
+/// partner and every warm NPC↔NPC pair: their rounds are on hold — the ladder's
+/// deferrable rungs skip them and a finished draw does not send them home —
+/// because nobody walks off mid-conversation. The pressing rungs (curfew,
+/// parched) still break the hold, after one turn to excuse themselves
+/// ([`run_ladder`]). The hold ends when the exchange goes cold and the caller
+/// stops naming them.
 pub fn tick(
     round: &mut Round,
     world: &mut World,
@@ -764,7 +775,7 @@ pub fn tick(
     clock: &WorldClock,
     now: f64,
     player_id: &ActorId,
-    in_conversation: Option<&ActorId>,
+    in_conversation: &BTreeSet<ActorId>,
 ) {
     if !round.seeded {
         return;
@@ -776,20 +787,25 @@ pub fn tick(
 }
 
 /// Stop `id`'s round errand where they stand: they have just exchanged a line
-/// with the player, and nobody keeps walking away from a conversation. Called
-/// the moment the exchange is registered — before the next movement slice —
-/// so the partner does not drift out of interaction range while answering.
+/// (or an item) with another character, and nobody keeps walking away from a
+/// conversation. Called the moment the exchange is registered — before the
+/// next movement slice — so the partner does not drift out of interaction
+/// range while answering.
 ///
 /// Only walks are interrupted; someone Queued or Drawing at a well is already
 /// standing still and keeps their place. Dropping the walker to [`Phase::Idle`]
 /// hands them back to the ladder, which re-decides once the exchange goes cold
 /// (the [`tick`] hold above) — so an interrupted errand resumes on its own.
 /// Anyone not enrolled (a scripted mover) is none of the round's business and
-/// is left alone.
+/// is left alone — as is an *excused* walker: their pressing errand has already
+/// outranked the conversation, and a parting line must not stop them again.
 pub fn interrupt_for_conversation(round: &mut Round, world: &mut World, id: &ActorId) {
     let Some(person) = round.people.get_mut(id) else {
         return;
     };
+    if person.excused {
+        return;
+    }
     if !matches!(
         person.phase,
         Phase::Approaching | Phase::Travelling | Phase::Returning
@@ -893,7 +909,7 @@ fn service_sources(
     clock: &WorldClock,
     now: f64,
     player_id: &ActorId,
-    in_conversation: Option<&ActorId>,
+    in_conversation: &BTreeSet<ActorId>,
 ) {
     let time = clock.at(now);
     let mut finished: Vec<ActorId> = Vec::new();
@@ -946,9 +962,9 @@ fn service_sources(
         if let Some(character) = world.characters.get_mut(&drawer) {
             character.state.needs.thirst = THIRST_MAX; // a full vessel
         }
-        // Mid-exchange with the player: stand at the curb instead of walking
-        // off; the ladder takes over once the conversation goes cold.
-        if in_conversation == Some(&drawer) {
+        // Mid-exchange (with the player or a neighbour): stand at the curb
+        // instead of walking off; the ladder takes over once it goes cold.
+        if in_conversation.contains(&drawer) {
             world.characters.get_mut(&drawer).expect("drawer exists").state.movement = None;
             round.people.get_mut(&drawer).expect("person exists").phase = Phase::Idle;
             continue;
@@ -1029,24 +1045,37 @@ fn delivery_point(person: &Townsperson, office: Office, weekday: Weekday) -> Vec
 /// interrupt them, and a decision for the destination already under way changes
 /// nothing. The well errand's own phases (Approaching/Queued/Drawing/Returning)
 /// stay committed as before.
+///
+/// A warm conversation (`in_conversation`) holds its members — but only against
+/// the rungs below curfew: the round (9), the social pull (11) and the wander
+/// (12) wait for the exchange to lapse, while curfew (5) and parched (2) break
+/// the hold — a long chat must not leave both of them in the street at the
+/// Snuffing, *exactly the person the watch stops* (`04_the_round.md` §6). Even
+/// then the body is not marched off mid-sentence: the first pressing decision
+/// is converted into a `system:` percept on the standard self-correction
+/// channel, so the LLM gets one turn to excuse itself; the next one walks them
+/// regardless of what it said.
 fn run_ladder(
     round: &mut Round,
     world: &mut World,
     nav: &NavData,
     clock: &WorldClock,
     now: f64,
-    in_conversation: Option<&ActorId>,
+    in_conversation: &BTreeSet<ActorId>,
 ) {
     let time = clock.at(now);
     let ids: Vec<ActorId> = round.people.keys().cloned().collect();
     for id in ids {
-        if in_conversation == Some(&id) {
-            continue; // talking with the player; the round waits
-        }
-        let (phase, epoch, next_decision) = {
+        let held = in_conversation.contains(&id);
+        let (phase, epoch, next_decision, excused) = {
             let person = &round.people[&id];
-            (person.phase, person.epoch, person.next_decision)
+            (person.phase, person.epoch, person.next_decision, person.excused)
         };
+        // The exchange has lapsed: the next pressing rung under a *new* hold is
+        // owed a fresh excuse-yourself turn.
+        if !held && excused {
+            round.people.get_mut(&id).expect("person exists").excused = false;
+        }
         let Some(character) = world.characters.get(&id) else {
             continue;
         };
@@ -1064,7 +1093,31 @@ fn run_ladder(
             _ => continue,
         }
 
-        let decision = decide(round, world, nav, &id, epoch, time.office, time.weekday);
+        let (decision, pressure) =
+            decide(round, world, nav, &id, epoch, time.office, time.weekday);
+
+        // The hold: mid-conversation, the deferrable rungs wait. The cadence is
+        // left untouched — exactly like the old player-only skip — so the first
+        // tick after the lapse re-decides at once.
+        if held && pressure.is_none() {
+            continue;
+        }
+        // Urgency beats chat — but gets one turn's grace: inject the pressure
+        // as a percept, and only the *next* pressing decision moves the body.
+        if held && !excused
+            && let Some(pressure) = pressure
+        {
+            {
+                let person = round.people.get_mut(&id).expect("person exists");
+                person.excused = true;
+                person.epoch = epoch.wrapping_add(1);
+                person.next_decision = now + decision_jitter(&id, person.epoch);
+            }
+            if let Some(character) = world.characters.get_mut(&id) {
+                character.notify_percept(pressure);
+            }
+            continue;
+        }
 
         // Schedule the next evaluation and advance the salt.
         {
@@ -1105,6 +1158,20 @@ enum Decision {
     Stay,
 }
 
+/// The `system:` line a pressing rung injects when it is about to break a
+/// conversation hold — the nudge through the existing self-correction seam
+/// (`features/movement/05_the_llm_seam.md`) that buys the LLM one turn to
+/// excuse itself before the body walks.
+const CURFEW_PRESSURE: &str =
+    "system: night is falling and the watch clears the streets — you need to be home; excuse yourself.";
+const PARCHED_PRESSURE: &str =
+    "system: your thirst is pressing — excuse yourself and get to the well.";
+
+/// The ladder pass for one idle person: the decision, plus — when it came off a
+/// *pressing* rung (curfew, parched) that outranks a conversation hold — the
+/// pressure line [`run_ladder`] injects before releasing the hold. `None` for
+/// the deferrable rungs, and for a pressing rung already satisfied (standing at
+/// home during curfew is a `Stay` that presses nobody).
 fn decide(
     round: &Round,
     world: &World,
@@ -1113,7 +1180,7 @@ fn decide(
     epoch: u64,
     office: Office,
     weekday: Weekday,
-) -> Decision {
+) -> (Decision, Option<&'static str>) {
     let person = &round.people[id];
     let character = &world.characters[id];
     let position = character.position_m();
@@ -1132,9 +1199,9 @@ fn decide(
         && let Some(home) = person.home
     {
         return if position.distance(home) <= HOME_ARRIVE_RADIUS_M {
-            Decision::Stay
+            (Decision::Stay, None)
         } else {
-            Decision::Travel(home)
+            (Decision::Travel(home), Some(CURFEW_PRESSURE))
         };
     }
 
@@ -1144,7 +1211,7 @@ fn decide(
     if let Some((thirst, _)) = water
         && thirst < THIRST_PARCHED
     {
-        return Decision::ApproachWell;
+        return (Decision::ApproachWell, Some(PARCHED_PRESSURE));
     }
 
     // Rung 6 — thirsty: the well, but only if its queue is short.
@@ -1152,7 +1219,7 @@ fn decide(
         && thirst < THIRST_THIRSTY
         && queue_len < WELL_QUEUE_SHORT
     {
-        return Decision::ApproachWell;
+        return (Decision::ApproachWell, None);
     }
 
     // Rung 9 — the round: be where the current leg says. Skipped at night for the
@@ -1166,7 +1233,7 @@ fn decide(
     if let Some(leg) = leg {
         let radius = if leg.is_home { HOME_ARRIVE_RADIUS_M } else { ROUND_ARRIVE_RADIUS_M };
         if position.distance(leg.at) > radius {
-            return Decision::Travel(leg.at);
+            return (Decision::Travel(leg.at), None);
         }
     }
     // A zero leash is a pin: the anchoress is bricked into her cell
@@ -1174,7 +1241,7 @@ fn decide(
     // pull nor the wander may take a single step. Without this, `Wander(base)`
     // would still route her to the *nearest nav node*, metres off her squint.
     if person.leash_m <= 0.0 {
-        return Decision::Stay;
+        return (Decision::Stay, None);
     }
 
     // The leash centre is the *post* once we have reached it — not home, or the
@@ -1186,7 +1253,7 @@ fn decide(
     if let Some(friend) = nearest_known_settled(world, id, position) {
         let toward = drift_target(anchor, position, friend, person.leash_m);
         if nav.is_walkable(toward.x, toward.z) {
-            return Decision::Wander(toward);
+            return (Decision::Wander(toward), None);
         }
     }
     // Rung 12 — wander: mill near the post, but not every time — people mostly
@@ -1194,9 +1261,9 @@ fn decide(
     if hash01("round_wander_gate", id, epoch) < 0.35
         && let Some(target) = wander_target(nav, id, epoch, anchor, person.leash_m)
     {
-        return Decision::Wander(target);
+        return (Decision::Wander(target), None);
     }
-    Decision::Stay
+    (Decision::Stay, None)
 }
 
 /// Carry out a decision: set the walk and the phase, or stand.

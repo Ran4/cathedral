@@ -517,6 +517,155 @@ fn movement_advances_on_the_hot_channel_without_touching_the_revision() {
     );
 }
 
+// ---------------------------------------------------- the conversation hold
+
+/// An engine with the committed nav graph and no cognition: the daily round is
+/// live (the whole demo cast enrols — lore-less, they read as Majors, so nobody
+/// is drafted to keep a well) and nothing but the round and the test moves the
+/// world.
+fn round_engine() -> Engine {
+    Engine::new(
+        EngineConfig {
+            nav: Some(real_nav()),
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player")
+}
+
+/// NPC↔NPC lines get the player's courtesy
+/// (`features/npcs_stop_walking_when_talking_to_each_other.md`): a *targeted*
+/// line stops both speaker and target where they stand and holds their rounds
+/// while the exchange is warm; a broadcast line interrupts nobody; and the
+/// 30 s lapse hands the errand back with no "conversation over" event.
+#[test]
+fn an_npc_to_npc_line_stops_the_walker_and_a_broadcast_does_not() {
+    let mut engine = round_engine();
+    engine.poll(0.0, Vec::new()); // drain Ready
+    let sven = ActorId::from_raw("sv3n1");
+    let ilse = ActorId::from_raw("k0fb1");
+
+    // The wander rung eventually sets Sven milling about his spawn.
+    let mut now = 0.0;
+    while !engine.world().characters[&sven].is_walking() {
+        now += 1.0;
+        assert!(now < 600.0, "the wander rung never moved Sven");
+        engine.poll(now, Vec::new());
+    }
+
+    // A broadcast line from two strides away: Sven keeps walking.
+    apply_action(
+        engine.world_mut(),
+        &ilse,
+        "say",
+        &json!({"text": "Fresh fish, straight off the boat!"}),
+    )
+    .expect("Ilse speaks");
+    engine.poll(now, Vec::new());
+    assert!(
+        engine.world().characters[&sven].is_walking(),
+        "a broadcast line interrupts nobody"
+    );
+
+    // A targeted line: he stops on the spot, before the next movement slice.
+    apply_action(
+        engine.world_mut(),
+        &ilse,
+        "say",
+        &json!({"text": "Sven — a word.", "target": "sv3n1"}),
+    )
+    .expect("Ilse addresses Sven");
+    engine.poll(now, Vec::new());
+    assert!(
+        !engine.world().characters[&sven].is_walking(),
+        "a targeted line stops the walker mid-stride"
+    );
+
+    // While the exchange is warm, the round holds them both where they stand.
+    let spoke_at = now;
+    while now < spoke_at + 29.0 {
+        now += 1.0;
+        engine.poll(now, Vec::new());
+        assert!(!engine.world().characters[&sven].is_walking(), "held while warm");
+        assert!(!engine.world().characters[&ilse].is_walking(), "the speaker too");
+    }
+
+    // The lapse: silence hands the errand back on its own.
+    let deadline = now + 600.0;
+    while !engine.world().characters[&sven].is_walking()
+        && !engine.world().characters[&ilse].is_walking()
+    {
+        now += 1.0;
+        assert!(now < deadline, "no errand resumed after the exchange lapsed");
+        engine.poll(now, Vec::new());
+    }
+}
+
+/// A physical handoff is as conversation-shaped as a line — the fish-and-coin
+/// case the feature exists for: `offer_item` and `accept_offered_item` hold
+/// giver and receiver standing until the exchange goes cold.
+#[test]
+fn an_item_handoff_holds_giver_and_receiver_standing() {
+    let mut engine = round_engine();
+    engine.poll(0.0, Vec::new()); // drain Ready
+    let sven = ActorId::from_raw("sv3n1"); // holds the fish
+    let ilse = ActorId::from_raw("k0fb1"); // 3.6 m away — inside offer range
+
+    // Sven holds out the fish before anyone's first ladder cadence fires.
+    apply_action(
+        engine.world_mut(),
+        &sven,
+        "offer_item",
+        &json!({"item_id": "fzbn9", "target": "k0fb1"}),
+    )
+    .expect("Sven offers the fish");
+    let mut now = 0.5;
+    engine.poll(now, Vec::new());
+
+    // The pair is warm: through the whole window neither sets off on an errand.
+    while now < 29.5 {
+        now += 1.0;
+        engine.poll(now, Vec::new());
+        assert!(!engine.world().characters[&sven].is_walking(), "the giver stands");
+        assert!(!engine.world().characters[&ilse].is_walking(), "the receiver stands");
+    }
+
+    // The accept re-warms the exchange; only its lapse frees them.
+    apply_action(
+        engine.world_mut(),
+        &ilse,
+        "accept_offered_item",
+        &json!({"item_id": "fzbn9"}),
+    )
+    .expect("Ilse takes the fish");
+    let accepted_at = now;
+    engine.poll(now, Vec::new());
+    let deadline = now + 600.0;
+    while !engine.world().characters[&sven].is_walking()
+        && !engine.world().characters[&ilse].is_walking()
+    {
+        now += 1.0;
+        assert!(now < deadline, "no errand resumed after the handoff went cold");
+        engine.poll(now, Vec::new());
+    }
+    assert!(
+        now >= accepted_at + 30.0,
+        "the handoff held them for the full warm window (freed at {now})"
+    );
+}
+
 // ------------------------------------------------------------------- matchers
 
 fn sounds(messages: &[EngineMessage]) -> Vec<&EngineMessage> {

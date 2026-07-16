@@ -30,7 +30,7 @@ use crate::{
     areas::AreaMap,
     attention::{
         CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS,
-        StageConfig, on_stage,
+        StageConfig, WarmExchanges, on_stage,
     },
     character::Control,
     clock::{Office, Weekday, WorldClock, stroke_times},
@@ -546,6 +546,14 @@ pub struct Engine {
     /// Broadcast lines need no entry here: to reach the player at all they came
     /// from inside the 20 m hearing radius, which the stage radius contains.
     last_player_exchange: Option<(ActorId, f64)>,
+    /// The warm NPC↔NPC exchanges, pair-keyed — the same courtesy the slot
+    /// above extends to the player, generalized to the rest of the cast: while
+    /// a pair is warm the round holds both of them where they stand
+    /// (`features/npcs_stop_walking_when_talking_to_each_other.md`). Kept
+    /// separate from `last_player_exchange` so the player pair's behaviour —
+    /// the stage's reserved seat, the hot-channel snapshot — stays exactly as
+    /// it was.
+    npc_exchanges: WarmExchanges,
     /// What each on-stage actor had already been told when they last thought.
     ///
     /// The stage's third question, after "who is near?" and "who is talking to
@@ -707,6 +715,7 @@ impl Engine {
             last_snapshot_revision: 0,
             last_player_sound_at: f64::NEG_INFINITY,
             last_player_exchange: None,
+            npc_exchanges: WarmExchanges::default(),
             novelty: Novelty::default(),
             clock,
             // The construction `now`: the first poll's span opens here, so the
@@ -779,10 +788,13 @@ impl Engine {
         // which `flush` fans out below — so, like the mover pipeline, it needs a
         // nav graph and is otherwise inert.
         if let Some(nav) = self.config.nav.clone() {
-            // The player's conversation partner (warm for the same 30 s the
-            // stage reserves their seat) keeps their round on hold: no new
-            // errand walks them away mid-exchange.
-            let in_conversation = self.conversation_partner(now).cloned();
+            // Everyone in a warm exchange (each pair warm for the same 30 s the
+            // stage reserves the player's partner a seat) keeps their round on
+            // hold: no new errand walks them away mid-exchange.
+            let mut in_conversation = self.npc_exchanges.warm_actors(now);
+            if let Some(partner) = self.conversation_partner(now) {
+                in_conversation.insert(partner.clone());
+            }
             round::tick(
                 &mut self.round,
                 &mut self.world,
@@ -790,7 +802,7 @@ impl Engine {
                 &self.clock,
                 now,
                 &self.config.player_id,
-                in_conversation.as_ref(),
+                &in_conversation,
             );
         }
 
@@ -1528,7 +1540,10 @@ impl Engine {
             match event.event_type {
                 EventType::Speech => self.flush_speech(now, &event, out),
                 EventType::Sound => self.flush_sound(now, &event, out),
-                EventType::WorldEvent => flush_world_event(&event, out),
+                EventType::WorldEvent => {
+                    self.hold_for_handoff(now, &event);
+                    flush_world_event(&event, out);
+                }
             }
         }
         if self.world.world_revision > self.last_snapshot_revision {
@@ -1570,6 +1585,14 @@ impl Engine {
         } else if event.target_id.as_ref() == Some(&self.config.player_id) {
             self.last_player_exchange = Some((actor_id.clone(), now));
             round::interrupt_for_conversation(&mut self.round, &mut self.world, &actor_id);
+        } else if let Some(target_id) = &event.target_id {
+            // An NPC→NPC targeted line gets the same courtesy, pair-keyed:
+            // both stop walking — the speaker may themselves be mid-errand —
+            // and the round holds both while the exchange stays warm.
+            // Broadcast lines fall through all three branches and hold nobody.
+            self.npc_exchanges.note(&actor_id, target_id, now);
+            round::interrupt_for_conversation(&mut self.round, &mut self.world, &actor_id);
+            round::interrupt_for_conversation(&mut self.round, &mut self.world, target_id);
         }
 
         let event_id = event.speech_event_id();
@@ -1596,6 +1619,31 @@ impl Engine {
             self.floor
                 .acquire_scoped(now, &event_id, &text, queued, player_can_hear);
         }
+    }
+
+    /// A targeted item handoff is at least as conversation-shaped as a line —
+    /// it is the fish-and-coin-at-full-stride case this exists for — so
+    /// `offer_item` / `accept_offered_item` stop giver and receiver exactly as
+    /// a targeted line does (`require_interaction_range` already forces
+    /// proximity; this adds *standing*). An untargeted "to anyone" offer, like
+    /// a broadcast line, holds nobody.
+    ///
+    /// A handoff with the player warms no pair: the player slot's machinery is
+    /// speech-only and stays byte-identical — but the NPC party still stops on
+    /// the spot for the exchange itself.
+    fn hold_for_handoff(&mut self, now: f64, event: &DomainEvent) {
+        if !matches!(event.kind.as_str(), "offer_item" | "accept_offered_item") {
+            return;
+        }
+        let (Some(actor_id), Some(target_id)) = (&event.actor_id, &event.target_id) else {
+            return;
+        };
+        let player_id = &self.config.player_id;
+        if actor_id != player_id && target_id != player_id {
+            self.npc_exchanges.note(actor_id, target_id, now);
+        }
+        round::interrupt_for_conversation(&mut self.round, &mut self.world, actor_id);
+        round::interrupt_for_conversation(&mut self.round, &mut self.world, target_id);
     }
 
     /// `_send_sound_event` (`server.py:2166-2221`): the player's percept, the

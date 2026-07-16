@@ -378,7 +378,7 @@ the id for. The first walks coarse (a ward id everyone has), asks; the second an
 Individual reflection for the 31 Majors, at their own bedtimes. Ward-batched reflection for the 120
 Minors. Code-rolled Rounds for the 350 Ambients. The `set_round` verb.
 
-**39 provider calls per game day.**
+Roughly **39 provider calls per game day.**
 
 **How you know.** Play an evening, sleep the night, come back in the morning: **an NPC's goal has
 changed because of something that happened to them yesterday**, and their day is slightly different
@@ -389,9 +389,8 @@ player's reply is ever slower because a Major was reflecting, the lane is wrong.
 
 ## M7 — Crowds and gait
 
-**Ships.** Lane offsets (or you get a conga line). Local avoidance on stage. The gait — bob and swing,
-phase-seeded, no skeletons (perf-doc item 7). The Needle's one-person claim. The lamplighter's dusk
-round. `VisibilityRange`. The shadow cascade.
+**Ships.** Lane offsets (or you get a conga line). Local avoidance on stage..
+The Needle's one-person claim. The lamplighter's dusk round. `VisibilityRange`. The shadow cascade.
 
 **How you know.** It looks like a city. And `features/50_cool_suggestions.md` #21 becomes true:
 
