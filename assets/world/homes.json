@@ -352,16 +352,16 @@
    "place_description": "a house in the Wick Ward, near Osanne Vell's stall"
   },
   "bn6gb": {
-   "building": "omb_f0445",
+   "building": "omb_f0260",
    "edge": 2,
-   "door_node": 2483,
+   "door_node": 1742,
    "point": [
-    75.375,
-    383.625
+    42.375,
+    310.875
    ],
    "ward": "Wick Ward",
-   "landmark": "Slate Cistern",
-   "place_description": "a house in the Wick Ward, near Slate Cistern"
+   "landmark": "Osanne Vell's stall",
+   "place_description": "a house in the Wick Ward, near Osanne Vell's stall"
   },
   "bn7an": {
    "building": "omb_f0270",
@@ -376,16 +376,16 @@
    "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "bn8jm": {
-   "building": "omb_i1084",
-   "edge": 0,
-   "door_node": 8211,
+   "building": "omb_f0272",
+   "edge": 3,
+   "door_node": 1784,
    "point": [
-    145.875,
-    193.875
+    144.875,
+    226.625
    ],
    "ward": "Cloth Ward",
-   "landmark": "Tenter Cistern",
-   "place_description": "a house in the Cloth Ward, near Tenter Cistern"
+   "landmark": "The Draper's Reach",
+   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "bn9et": {
    "building": "omb_i1421",
@@ -424,18 +424,6 @@
    "place_description": "a house in the Cloth Ward, toward the Stone Gate"
   },
   "bndhk": {
-   "building": "omb_i1047",
-   "edge": 1,
-   "door_node": 8147,
-   "point": [
-    -237.125,
-    255.875
-   ],
-   "ward": "Cinder Ward",
-   "landmark": "The Cut ropewalk",
-   "place_description": "a house in the Cinder Ward, near the Cut ropewalk"
-  },
-  "bnpro": {
    "building": "omb_f0300",
    "edge": 3,
    "door_node": 1888,
@@ -447,17 +435,29 @@
    "landmark": "Cinder Row",
    "place_description": "a house in the Cinder Ward, off Cinder Row"
   },
-  "bnrse": {
-   "building": "omb_i1042",
-   "edge": 2,
-   "door_node": 8138,
+  "bnpro": {
+   "building": "omb_f0302",
+   "edge": 1,
+   "door_node": 1896,
    "point": [
-    -368.125,
-    93.125
+    -145.875,
+    179.625
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "Three-Curb",
+   "place_description": "a house in the Cinder Ward, near Three-Curb"
+  },
+  "bnrse": {
+   "building": "omb_f0075",
+   "edge": 2,
+   "door_node": 1025,
+   "point": [
+    -272.625,
+    -26.125
    ],
    "ward": "Weigh Ward",
-   "landmark": "Bonded warehouse",
-   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
+   "landmark": "Doctor Ferrant's house",
+   "place_description": "a house in the Weigh Ward, near Doctor Ferrant's house"
   },
   "br2sk": {
    "building": "omb_i0188",
@@ -496,6 +496,18 @@
    "place_description": "a house in the Fabric Ward, near Chapter house and Grey Press"
   },
   "c2nsl": {
+   "building": "omb_i1047",
+   "edge": 1,
+   "door_node": 8147,
+   "point": [
+    -237.125,
+    255.875
+   ],
+   "ward": "Cinder Ward",
+   "landmark": "The Cut ropewalk",
+   "place_description": "a house in the Cinder Ward, near the Cut ropewalk"
+  },
+  "c3wnk": {
    "building": "omb_i1017",
    "edge": 0,
    "door_node": 8085,
@@ -507,7 +519,7 @@
    "landmark": "The Cut ropewalk",
    "place_description": "a house in the Cinder Ward, near the Cut ropewalk"
   },
-  "c3wnk": {
+  "c5tbo": {
    "building": "omb_i1037",
    "edge": 2,
    "door_node": 8130,
@@ -519,7 +531,7 @@
    "landmark": "The Cut ropewalk",
    "place_description": "a house in the Cinder Ward, near the Cut ropewalk"
   },
-  "c5tbo": {
+  "c6pkl": {
    "building": "omb_i0397",
    "edge": 0,
    "door_node": 6436,
@@ -530,18 +542,6 @@
    "ward": "Cinder Ward",
    "landmark": "The Cut ropewalk",
    "place_description": "a house in the Cinder Ward, near the Cut ropewalk"
-  },
-  "c6pkl": {
-   "building": "omb_f0289",
-   "edge": 2,
-   "door_node": 1826,
-   "point": [
-    -198.625,
-    190.375
-   ],
-   "ward": "Cinder Ward",
-   "landmark": "Burnt Court",
-   "place_description": "a house in the Cinder Ward, near Burnt Court"
   },
   "c7kbd": {
    "building": "omb_f0295",
@@ -556,12 +556,12 @@
    "place_description": "a house in the Cinder Ward, near Tallage toll-house"
   },
   "c8ghd": {
-   "building": "omb_f0294",
-   "edge": 1,
-   "door_node": 1850,
+   "building": "omb_f0289",
+   "edge": 2,
+   "door_node": 1826,
    "point": [
-    -211.375,
-    164.125
+    -198.625,
+    190.375
    ],
    "ward": "Cinder Ward",
    "landmark": "Burnt Court",
@@ -580,16 +580,16 @@
    "place_description": "a house in the Fabric Ward, near Skinners' Court"
   },
   "cf2rr": {
-   "building": "omb_f0019",
-   "edge": 3,
-   "door_node": 883,
+   "building": "omb_i1042",
+   "edge": 2,
+   "door_node": 8138,
    "point": [
-    -323.875,
-    3.375
+    -368.125,
+    93.125
    ],
    "ward": "Weigh Ward",
-   "landmark": "Lise Copp's pawnshop",
-   "place_description": "a house in the Weigh Ward, near Lise Copp's pawnshop"
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "cg6ud": {
    "building": "omb_f1018",
@@ -604,12 +604,12 @@
    "place_description": "a house in the Reed Ward, off Tanners' Slip"
   },
   "cj9sp": {
-   "building": "omb_f0302",
-   "edge": 1,
-   "door_node": 1896,
+   "building": "omb_i1153",
+   "edge": 3,
+   "door_node": 8379,
    "point": [
-    -145.875,
-    179.625
+    -109.625,
+    175.375
    ],
    "ward": "Cinder Ward",
    "landmark": "Three-Curb",
@@ -772,16 +772,16 @@
    "place_description": "a house in the Cloth Ward, off the Draper's Reach"
   },
   "e2rhs": {
-   "building": "omb_f0272",
-   "edge": 3,
-   "door_node": 1784,
+   "building": "omb_i1084",
+   "edge": 0,
+   "door_node": 8211,
    "point": [
-    144.875,
-    226.625
+    145.875,
+    193.875
    ],
    "ward": "Cloth Ward",
-   "landmark": "The Draper's Reach",
-   "place_description": "a house in the Cloth Ward, off the Draper's Reach"
+   "landmark": "Tenter Cistern",
+   "place_description": "a house in the Cloth Ward, near Tenter Cistern"
   },
   "e3cob": {
    "building": "omb_i0627",
@@ -808,16 +808,16 @@
    "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "e5hob": {
-   "building": "omb_i1153",
-   "edge": 3,
-   "door_node": 8379,
+   "building": "omb_f0294",
+   "edge": 1,
+   "door_node": 1850,
    "point": [
-    -109.625,
-    175.375
+    -211.375,
+    164.125
    ],
    "ward": "Cinder Ward",
-   "landmark": "Three-Curb",
-   "place_description": "a house in the Cinder Ward, near Three-Curb"
+   "landmark": "Burnt Court",
+   "place_description": "a house in the Cinder Ward, near Burnt Court"
   },
   "e6ptr": {
    "building": "omb_f0065",
@@ -916,24 +916,24 @@
    "place_description": "a house in the Reed Ward, off Tanners' Slip"
   },
   "fa4sg": {
+   "building": "omb_f0019",
+   "edge": 3,
+   "door_node": 883,
+   "point": [
+    -323.875,
+    3.375
+   ],
+   "ward": "Weigh Ward",
+   "landmark": "Lise Copp's pawnshop",
+   "place_description": "a house in the Weigh Ward, near Lise Copp's pawnshop"
+  },
+  "fa8tn": {
    "building": "omb_f1003",
    "edge": 0,
    "door_node": 4901,
    "point": [
     -401.125,
     169.125
-   ],
-   "ward": "Weigh Ward",
-   "landmark": "Bonded warehouse",
-   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
-  },
-  "fa8tn": {
-   "building": "omb_i0955",
-   "edge": 0,
-   "door_node": 7928,
-   "point": [
-    -361.125,
-    180.125
    ],
    "ward": "Weigh Ward",
    "landmark": "Bonded warehouse",
@@ -988,16 +988,16 @@
    "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "fe2tn": {
-   "building": "omb_f0075",
-   "edge": 2,
-   "door_node": 1025,
+   "building": "omb_i0955",
+   "edge": 0,
+   "door_node": 7928,
    "point": [
-    -272.625,
-    -26.125
+    -361.125,
+    180.125
    ],
    "ward": "Weigh Ward",
-   "landmark": "Doctor Ferrant's house",
-   "place_description": "a house in the Weigh Ward, near Doctor Ferrant's house"
+   "landmark": "Bonded warehouse",
+   "place_description": "a house in the Weigh Ward, near Bonded warehouse"
   },
   "fg2sh": {
    "building": "omb_i0396",
@@ -2536,16 +2536,16 @@
    "place_description": "a house in the Bell and Sluice Wards, near Saint Maren's church"
   },
   "p004a": {
-   "building": "omb_f0260",
+   "building": "omb_f0445",
    "edge": 2,
-   "door_node": 1742,
+   "door_node": 2483,
    "point": [
-    42.375,
-    310.875
+    75.375,
+    383.625
    ],
    "ward": "Wick Ward",
-   "landmark": "Osanne Vell's stall",
-   "place_description": "a house in the Wick Ward, near Osanne Vell's stall"
+   "landmark": "Slate Cistern",
+   "place_description": "a house in the Wick Ward, near Slate Cistern"
   },
   "p004b": {
    "building": "omb_i0590",
