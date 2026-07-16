@@ -1928,10 +1928,11 @@ mod tests {
             world.characters[&receiver].inbox().last().unwrap(),
             "A stranger (id giver) farted."
         );
-        // The emitter remembers their own act, with an empty inbox.
+        // The emitter remembers their own act, with an empty inbox — the
+        // repeat coalesced into one counted history entry.
         assert_eq!(
             world.characters[&giver].recent_history(),
-            ["You farted.", "You farted."]
+            ["You farted. (2 times now)"]
         );
         assert!(world.characters[&giver].inbox().is_empty());
 

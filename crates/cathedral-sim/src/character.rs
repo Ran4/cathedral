@@ -350,11 +350,26 @@ impl Character {
 
     /// Retain one bounded, model-visible history line. Speech and other
     /// percepts share the window, including the actor's own lines.
+    ///
+    /// A line that repeats the newest entry coalesces into it with a running
+    /// count — `boom (3 times now)` — so a percept barrage (a player spamming
+    /// one sound, the town bell) cannot flush real dialogue out of the window,
+    /// and the count itself carries the escalation. Only *consecutive*
+    /// duplicates coalesce: `boom, "hello", boom` stays three entries, because
+    /// the interleaving is itself information.
     pub fn remember_percept(&mut self, text: impl Into<String>) {
         if !self.control().is_llm() {
             return;
         }
-        self.state.recent_history.push(text.into());
+        let text = text.into();
+        if let Some(last) = self.state.recent_history.last_mut() {
+            let (base, count) = split_repeat_count(last);
+            if base == text {
+                *last = format!("{text} ({} times now)", count.saturating_add(1));
+                return;
+            }
+        }
+        self.state.recent_history.push(text);
         cap_front(&mut self.state.recent_history, RECENT_HISTORY_MAX_ENTRIES);
     }
 
@@ -400,6 +415,20 @@ impl Character {
     pub fn rebound_percepts(&mut self) {
         cap_front(&mut self.state.inbox, INBOX_MAX_ENTRIES);
         cap_front(&mut self.state.pending_history, INBOX_MAX_ENTRIES);
+    }
+}
+
+/// A history entry's base line and how many consecutive times it has occurred:
+/// `"boom (3 times now)"` → `("boom", 3)`, anything else → `(entry, 1)`.
+fn split_repeat_count(entry: &str) -> (&str, u32) {
+    let Some(rest) = entry.strip_suffix(" times now)") else {
+        return (entry, 1);
+    };
+    match rest.rsplit_once(" (") {
+        Some((base, digits)) if digits.bytes().all(|b| b.is_ascii_digit()) => {
+            digits.parse().map_or((entry, 1), |count| (base, count))
+        }
+        _ => (entry, 1),
     }
 }
 
@@ -490,6 +519,77 @@ mod tests {
         }
         assert_eq!(chatterer.inbox().len(), INBOX_MAX_ENTRIES);
         assert!(chatterer.pending_history().is_empty());
+    }
+
+    /// The barrage case from
+    /// `features/small_thing_deduplicate_repeat_recent_history.md`: consecutive
+    /// identical percepts collapse into one counted entry, while an interleaved
+    /// line keeps repeats apart — the ordering is itself information.
+    #[test]
+    fn consecutive_duplicate_percepts_coalesce_with_a_count() {
+        let mut character = Character::from_sheet(sheet(Control::Llm));
+        character.remember_percept("[You heard a big fart!]");
+        character.remember_percept("[You heard a big fart!]");
+        character.remember_percept("[You heard a big fart!]");
+        assert_eq!(
+            character.recent_history(),
+            ["[You heard a big fart!] (3 times now)"]
+        );
+
+        // A different line breaks the run; the same percept afterwards is a
+        // fresh entry, not an increment of the earlier one.
+        character.remember_percept("Anna says: \"hello\"");
+        character.remember_percept("[You heard a big fart!]");
+        assert_eq!(
+            character.recent_history(),
+            [
+                "[You heard a big fart!] (3 times now)",
+                "Anna says: \"hello\"",
+                "[You heard a big fart!]",
+            ]
+        );
+    }
+
+    /// Duplicates coalesce across the graduation path too: percepts presented
+    /// as `since_your_last_turn` stay per-event there (the delta is drained
+    /// each turn and its rate limits bound it), but collapse when they land in
+    /// `recent_history`.
+    #[test]
+    fn graduated_percepts_coalesce_but_the_inbox_delta_does_not() {
+        let mut character = Character::from_sheet(sheet(Control::Llm));
+        character.notify_percept("[The town bell tolls.]");
+        character.notify_percept("[The town bell tolls.]");
+
+        let presented = character.take_pending_history();
+        assert_eq!(
+            presented,
+            ["[The town bell tolls.]", "[The town bell tolls.]"]
+        );
+
+        character.absorb_presented_history(&presented);
+        assert_eq!(
+            character.recent_history(),
+            ["[The town bell tolls.] (2 times now)"]
+        );
+
+        // The next round continues the same run.
+        character.remember_percept("[The town bell tolls.]");
+        assert_eq!(
+            character.recent_history(),
+            ["[The town bell tolls.] (3 times now)"]
+        );
+    }
+
+    #[test]
+    fn split_repeat_count_only_matches_the_counted_suffix() {
+        assert_eq!(split_repeat_count("boom"), ("boom", 1));
+        assert_eq!(split_repeat_count("boom (3 times now)"), ("boom", 3));
+        // Near-misses stay opaque strings rather than half-parsing.
+        assert_eq!(
+            split_repeat_count("boom (many times now)"),
+            ("boom (many times now)", 1)
+        );
+        assert_eq!(split_repeat_count("(3 times now)"), ("(3 times now)", 1));
     }
 
     #[test]

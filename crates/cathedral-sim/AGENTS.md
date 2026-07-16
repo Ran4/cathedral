@@ -28,8 +28,11 @@ nearby event wakes them (see *Who gets an idle turn* below). Each turn:
    `assets/prompts/turn.j2`; the strings are `assets/prompts/strings.toml`.
    Nothing about the LLM text format lives anywhere else.
 2. The prompt goes to the provider as one stateless call — no provider-side chat
-   history. Each character carries a bounded `recent_history` (16 entries) of
-   received speech, heard sound percepts, and its own lines. The two fields never
+   history. Each character carries a bounded `recent_history`
+   (`RECENT_HISTORY_MAX_ENTRIES` = 32 entries) of received speech, heard sound
+   percepts, and its own lines; a line repeating the newest entry coalesces
+   into it with a running count (`… (3 times now)`), so a percept barrage
+   cannot flush real dialogue out of the window. The two fields never
    overlap: a percept is *pending* while unread, appears once as
    `since_your_last_turn`, and graduates into `recent_history` when that turn
    **succeeds** (a failed turn re-queues it as new). `memories` and `goal` are
@@ -216,8 +219,6 @@ prompt, via the ignored `regenerate_golden_fixtures` test.
 - Memory/goal hygiene is prompt-enforced only: the prompt tells characters to
   record outcomes the turn they happen, forget superseded memories, and
   clear/replace achieved goals. Nothing in the sim guarantees it.
-- Recent history is a bounded short-term aid, not durable memory. Repeated
-  identical percepts are not yet coalesced
-  (`features/small_thing_deduplicate_repeat_recent_history.md`).
+- Recent history is a bounded short-term aid, not durable memory.
 - `Sight` (occlusion, NPC-eye screenshots) is plumbed as a trait but stubbed:
   `line_of_sight` always returns true and `npc_pov_frame` always returns `None`.
