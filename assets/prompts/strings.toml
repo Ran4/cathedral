@@ -39,3 +39,5 @@ illegal_activity_label = "In secret:"
 # Introduces the lore profile's `home` — the baked spoken home-binding — on
 # the `**you**` line.
 home_label = "Home:"
+# The parenthesis tying `home` to its wayfinding handle: `(go_to pl_x9k2)`.
+home_place_label = "go_to"

@@ -20,6 +20,14 @@
 >   joins `place_description` into a new `LoreProfile::home`;
 >   `PromptLoreProfile.home` renders it on the `**you**` line as
 >   `Home: …` (label in `strings.toml: home_label`).
+> - In a seeded world the sentence also carries the wayfinding handle the
+>   round mints for the actor's own door — `Home: a house in the Wick Ward,
+>   toward the Wool Gate (go_to pl_x9k2).` — the same id `places_you_know`
+>   lists as "<Name>'s house", so walking home is one `go_to` off the you-line
+>   and telling someone where you live pairs naturally with `tell_way`. Looked
+>   up at render time from `world.places.home_of` (`strings.toml:
+>   home_place_label`); absent for the bedless and in nav-less worlds, where
+>   the prose stands alone.
 > - The golden fixtures did **not** change: their characters carry
 >   `lore: None`, and the home renders only from a lore profile. Coverage is
 >   pinned in `round/tests.rs` (homes ∪ bedless = the whole cast, every entry

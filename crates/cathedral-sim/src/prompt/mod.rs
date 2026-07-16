@@ -77,6 +77,9 @@ pub struct PromptStrings {
     pub illegal_activity_label: String,
     /// Introduces the lore profile's `home` on the `**you**` line.
     pub home_label: String,
+    /// The parenthesis tying `home` to its wayfinding handle — `(go_to
+    /// pl_x9k2)` — so walking home never needs a scan of `places_you_know`.
+    pub home_place_label: String,
 }
 
 impl PromptStrings {
@@ -188,6 +191,12 @@ struct PromptLoreProfile<'a> {
     /// well" — or the bedless framing), so "Where do you live?" is answered
     /// from the sheet, not improvised (see `homes.rs`).
     home: Option<&'a str>,
+    /// The same home as a wayfinding handle — the registry entry
+    /// [`Round::seed`](crate::round::Round::seed) minted for this actor's own
+    /// door — rendered as a `go_to` hint after the description. `None` for
+    /// the bedless (no door) and in nav-less worlds (no registry), where the
+    /// prose stands alone.
+    home_place_id: Option<&'a PlaceId>,
     father: Option<LoreRelation<'a>>,
     mother: Option<LoreRelation<'a>>,
     children: Vec<LoreRelation<'a>>,
@@ -475,6 +484,7 @@ fn build_sheet<'a>(
         illegal_activity: profile.illegal_activity.as_deref(),
         district: &profile.district,
         home: profile.home.as_deref(),
+        home_place_id: world.places.home_of(actor.id()).map(|entry| &entry.id),
         father: profile.father.as_ref().map(&relation),
         mother: profile.mother.as_ref().map(&relation),
         children: profile.children.iter().map(relation).collect(),
@@ -650,7 +660,11 @@ fn you_line(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
     }
 
     if let Some(home) = lore.home {
-        line.push_str(&format!(" {} {home}.", strings.home_label));
+        line.push_str(&format!(" {} {home}", strings.home_label));
+        if let Some(place_id) = lore.home_place_id {
+            line.push_str(&format!(" ({} {place_id})", strings.home_place_label));
+        }
+        line.push('.');
     }
     if let Some(role) = lore.faction_role {
         line.push_str(&format!(" Faction role: {role}."));
@@ -841,6 +855,7 @@ mod tests {
             the_hour_label: "The hour:".into(),
             illegal_activity_label: "In secret:".into(),
             home_label: "Home:".into(),
+            home_place_label: "go_to".into(),
         }
     }
 
@@ -854,7 +869,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
         let error = PromptEnv::new("x", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
@@ -886,6 +901,7 @@ mod tests {
     #[test]
     fn the_you_line_folds_lore_and_omits_absent_fields() {
         let mother_id = ActorId::from_raw("br2sk");
+        let home_place = PlaceId::from_raw("pl_x9k2");
         let sheet = Sheet {
             name: "Corin Copp",
             lore_profile: Some(PromptLoreProfile {
@@ -898,6 +914,7 @@ mod tests {
                 illegal_activity: Some("forger"),
                 district: "The Tallage",
                 home: Some("a house in the Weigh Ward, near the Tallage"),
+                home_place_id: None,
                 father: None,
                 mother: Some(LoreRelation {
                     id: &mother_id,
@@ -931,11 +948,23 @@ mod tests {
              In secret: forger. Family: mother Osanne Skell (id br2sk)."
         );
 
+        // With the registry handle the round's seed mints for the actor's own
+        // door, the same sentence carries its go_to hint.
+        let mut with_handle = sheet;
+        with_handle.lore_profile.as_mut().unwrap().home_place_id = Some(&home_place);
+        assert!(you_line(&with_handle, &strings()).contains(
+            "Home: a house in the Weigh Ward, near the Tallage (go_to pl_x9k2)."
+        ));
+
         // The bedless framing is just another home string — the bake wrote the
-        // words, the line renders whatever it says.
-        let mut bedless = sheet;
-        bedless.lore_profile.as_mut().unwrap().home =
-            Some("no fixed bed — you sleep rough in the Reed Ward, near the Alder Moorings");
+        // words, the line renders whatever it says. No door, no handle.
+        let mut bedless = with_handle;
+        {
+            let lore = bedless.lore_profile.as_mut().unwrap();
+            lore.home =
+                Some("no fixed bed — you sleep rough in the Reed Ward, near the Alder Moorings");
+            lore.home_place_id = None;
+        }
         assert!(you_line(&bedless, &strings()).contains(
             "Home: no fixed bed — you sleep rough in the Reed Ward, near the Alder Moorings."
         ));

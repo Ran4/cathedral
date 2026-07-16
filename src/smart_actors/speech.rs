@@ -19,7 +19,9 @@ use crossbeam_channel::{Receiver, TryRecvError, bounded};
 use crate::{controller::PlayerController, fonts::CathedralFonts, smart_actors::HEARING_RADIUS_M};
 
 use super::{
-    SmartActorsConfig, bridge,
+    SmartActorsConfig,
+    actors::{SPEECH_ANCHOR_Y, SpeechAnchor},
+    bridge,
     hud::SmartActorHudState,
     microphone::{MicrophoneCommand, MicrophoneService},
     model::ActorId,
@@ -268,6 +270,10 @@ impl SpeechPresentationState {
 
 #[derive(Component, Debug)]
 pub(super) struct SpeechBubbleStack {
+    speaker_id: ActorId,
+    /// Last known anchor position; refreshed each frame from the speaker's
+    /// live [`SpeechAnchor`] so the bubble follows a moving NPC, and kept as
+    /// a fallback for the frames where the actor view is missing.
     world_position: Vec3,
 }
 
@@ -350,19 +356,19 @@ fn spawn_speech_bubble(
     expires_at: f64,
     font: FontSource,
 ) {
-    let world_position = speaker + Vec3::Y * 1.35;
+    let world_position = speaker + Vec3::Y * SPEECH_ANCHOR_Y;
     // `Commands::spawn` reserves the entity immediately, so even several
     // messages read in this frame can attach to the same speaker stack.
     let stack_entity = if let Some(entity) = bubble_stacks.get(speaker_id).copied() {
-        commands
-            .entity(entity)
-            .insert(SpeechBubbleStack { world_position });
         entity
     } else {
         let entity = commands
             .spawn((
                 Name::new(format!("NPC speech stack: {}", speaker_id.0)),
-                SpeechBubbleStack { world_position },
+                SpeechBubbleStack {
+                    speaker_id: speaker_id.clone(),
+                    world_position,
+                },
                 Node {
                     position_type: PositionType::Absolute,
                     flex_direction: FlexDirection::Column,
@@ -409,8 +415,9 @@ pub fn update_speech_bubbles(
     time: Res<Time>,
     state: Res<SpeechPresentationState>,
     cameras: Query<(&Camera, &GlobalTransform), With<crate::controller::PlayerCamera>>,
+    anchors: Query<(&SpeechAnchor, &GlobalTransform)>,
     bubbles: Query<(Entity, &SpeechBubble)>,
-    mut stacks: Query<(&SpeechBubbleStack, &mut Node, &mut Visibility)>,
+    mut stacks: Query<(&mut SpeechBubbleStack, &mut Node, &mut Visibility)>,
 ) {
     let now = time.elapsed_secs_f64();
     for (entity, bubble) in &bubbles {
@@ -427,8 +434,15 @@ pub fn update_speech_bubbles(
         }
     }
 
+    let anchor_positions: HashMap<&ActorId, Vec3> = anchors
+        .iter()
+        .map(|(anchor, transform)| (&anchor.0, transform.translation()))
+        .collect();
     let camera = cameras.single().ok();
-    for (stack, mut node, mut visibility) in &mut stacks {
+    for (mut stack, mut node, mut visibility) in &mut stacks {
+        if let Some(position) = anchor_positions.get(&stack.speaker_id) {
+            stack.world_position = *position;
+        }
         let Some((camera, camera_transform)) = camera else {
             *visibility = Visibility::Hidden;
             continue;
@@ -1206,6 +1220,38 @@ mod tests {
         assert_ne!(sven_stack, conny_stack);
         assert_eq!(app.world().get::<Children>(sven_stack).unwrap().len(), 1);
         assert_eq!(app.world().get::<Children>(conny_stack).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn bubble_stack_follows_its_speakers_moving_anchor() {
+        let mut app = speech_test_app();
+        app.add_systems(Update, update_speech_bubbles.after(receive_speech_events));
+        let anchor = app
+            .world_mut()
+            .spawn((
+                SpeechAnchor(ActorId("sven".into())),
+                GlobalTransform::from_translation(Vec3::new(4.0, 1.35, -2.0)),
+            ))
+            .id();
+        app.world_mut()
+            .write_message(npc_speech(1, "sven", "walking while talking"));
+        app.update();
+
+        let stack_entity = app.world().resource::<SpeechPresentationState>().bubble_stacks
+            [&ActorId("sven".into())];
+        let stack_position = |app: &App| {
+            app.world()
+                .get::<SpeechBubbleStack>(stack_entity)
+                .unwrap()
+                .world_position
+        };
+        assert_eq!(stack_position(&app), Vec3::new(4.0, 1.35, -2.0));
+
+        app.world_mut()
+            .entity_mut(anchor)
+            .insert(GlobalTransform::from_translation(Vec3::new(9.0, 1.35, 6.0)));
+        app.update();
+        assert_eq!(stack_position(&app), Vec3::new(9.0, 1.35, 6.0));
     }
 
     #[test]

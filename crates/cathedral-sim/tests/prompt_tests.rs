@@ -503,6 +503,60 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
     assert!(!rendered.contains("SECRET EXTENDED DETAIL"));
 }
 
+/// The `Home:` sentence carries the wayfinding handle the seed mints for the
+/// actor's own door — `(go_to pl_…)` — and it is the same handle
+/// `places_you_know` lists as their house, so walking home is one `go_to`
+/// straight off the `**you**` line.
+#[test]
+fn the_home_line_carries_its_wayfinding_handle_when_registered() {
+    use cathedral_sim::PlaceRegistry;
+
+    let env = prompt_env();
+    let mut world = seed_world();
+
+    let mut registry = PlaceRegistry::default();
+    let home_id = registry.add_home(&actor("sv3n1"), "Sven", Vec3::new(1.0, 0.91, 2.0));
+    world.places = registry;
+    {
+        let sven = world.characters.get_mut(&actor("sv3n1")).unwrap();
+        sven.state.places_known.insert(home_id.clone());
+        sven.sheet.lore = Some(LoreProfile {
+            significance: cathedral_sim::Significance::Major,
+            planning_ward: cathedral_sim::PlanningWard::Cinder,
+            age: 19,
+            gender: "m".into(),
+            occupation_id: Some("smith".into()),
+            occupation_display: Some("Smith".into()),
+            title: Some("Blacksmith".into()),
+            rank: None,
+            faction_role: None,
+            illegal_activity: None,
+            district: "Cinder Row".into(),
+            father: None,
+            mother: None,
+            children: Vec::new(),
+            circumstances: Vec::new(),
+            conditions: Vec::new(),
+            home: Some("a house in the Cinder Ward, off Cinder Row".into()),
+            core_character_description: String::new(),
+            extended_character_description: String::new(),
+            curiosity: None,
+        });
+    }
+
+    let rendered = render_prompt(&world, &actor("sv3n1"), None, &env).unwrap();
+    assert!(
+        rendered.contains(&format!(
+            "Home: a house in the Cinder Ward, off Cinder Row (go_to {home_id})."
+        )),
+        "{rendered}"
+    );
+    assert!(
+        rendered.contains(&format!("{home_id} Sven's house")),
+        "the Home handle must be the places_you_know house entry: {rendered}"
+    );
+}
+
 /// M5: `places_you_know` renders the actor's held handles — sorted by name so
 /// the list reads the same turn after turn — and an empty set renders as an
 /// empty list, never an omitted key.
