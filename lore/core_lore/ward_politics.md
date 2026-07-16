@@ -106,10 +106,10 @@ noticing.
 ## The eight wards
 
 Each ward below: the virtue it claims, the insult its neighbours make of it,
-its present grievances, and its benchers of F.437. The Reed pair and the First
-Seat have full character sheets (`../characters/civic_officer/`); the twelve
-benchers named for the other wards are established here for the first time and
-are open to be developed.
+its present grievances, and its benchers of F.437. Every named bencher has a
+character sheet in `../characters/civic_officer/`; the twelve named for the
+wards beyond Reed were established by this file and are open to be developed
+further.
 
 ### Fabric — the cathedral quarter
 
@@ -336,8 +336,8 @@ that the placeholder decides what comes up when.
 - **Benchers past F.437 are open.** Seats turn over yearly; three consecutive
   years is the limit; nothing here fixes any future reckoning.
 - **The new benchers are seeds.** The twelve named here for the first time
-  have a ward, a trade, and a position each, and no more; character sheets on
-  the Reed pair's model may follow.
+  have a ward, a trade, a position, and a character sheet each
+  (`../characters/civic_officer/`, on the Reed pair's model), and no more.
 
 ## The wards in one breath — safe common talk
 

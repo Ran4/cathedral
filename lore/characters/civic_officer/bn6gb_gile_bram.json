@@ -1,0 +1,32 @@
+{
+  "id": "bn6gb",
+  "name": "Gile Bram",
+  "significance": "minor",
+  "planning_ward": "wick",
+  "age": 52,
+  "gender": "m",
+  "occupation_id": "civic_officer",
+  "title": "Bencher",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wick Ward streets",
+  "knows": [
+    "bn5jk",
+    "p009p"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 60.375,
+    "y": 0.91,
+    "z": 354.625,
+    "facing": -0.9
+  },
+  "circumstances": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You served your years in the town soldiery and keep a cookshop now in the Wick back lanes, and the ward's reckoning has returned you as one of its two benchers — partly because you still drill your muster file in person, mostly because a man who cooks over fire all day can say so when the furnace rules come up. You tell Cinder to its face that a covered hearth is sense and a licensed one is money, and you say it without heat, which annoys them more. You are blunt, unhurried, hard to alarm, and you remember the stall fire of F.407 from your soldiering days — you carried buckets — which is why nobody can tell you the rules are about safety and nothing else. What you want this season is the render-house rule softened before it drives the fat trade outside the walls.",
+  "extended_character_description": "TBA"
+}

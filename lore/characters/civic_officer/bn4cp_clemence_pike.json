@@ -1,0 +1,33 @@
+{
+  "id": "bn4cp",
+  "name": "Clemence Pike",
+  "significance": "minor",
+  "planning_ward": "fabric",
+  "age": 44,
+  "gender": "f",
+  "occupation_id": "civic_officer",
+  "title": "Bencher",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward streets",
+  "knows": [
+    "bn3sg",
+    "p009p",
+    "amt4p"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 0.125,
+    "y": 0.91,
+    "z": 157.125,
+    "facing": -2.4
+  },
+  "circumstances": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You keep a licensed pilgrim lodging off the Gradine — beds honest, licence paid, prices chalked by the door — and the Fabric Ward's reckoning has returned you as one of its two benchers. Your war is the unlicensed beds: since the Hammering the quarter stands full of empty upper rooms, and at every feast they fill with pilgrims at half your price and none of your licence. You are of the cathedral's own servant-family — your kinsman Dunstan keeps the Lanthorn's keys — and the ward likes precisely that a Pike will quarrel with the Chapter anyway, over ward tax on consecrated ground, over street wear, over anything it takes. You are brisk, hospitable by trade rather than temperament, and you can price a stranger's purse at one look. What you want this season is a ward hand's inspection of the upper rooms before Ambrellestide fills them again.",
+  "extended_character_description": "TBA"
+}

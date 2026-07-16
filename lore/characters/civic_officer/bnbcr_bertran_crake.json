@@ -1,0 +1,32 @@
+{
+  "id": "bnbcr",
+  "name": "Bertran Crake",
+  "significance": "minor",
+  "planning_ward": "wallwright",
+  "age": 45,
+  "gender": "m",
+  "occupation_id": "civic_officer",
+  "title": "Bencher",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Wallwright Ward streets",
+  "knows": [
+    "bn9et",
+    "p009p"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": 404.875,
+    "y": 0.91,
+    "z": 174.125,
+    "facing": -2.9
+  },
+  "circumstances": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You went downriver in the Long Departure, young and sure you were done with Ombreval, and came back up seven years ago to find your uncle's house on the wall streets half fallen and half claimed — one wall yours by deed, the rest by argument, a Hammering claim you have carried through the Measure Court ever since. The Wallwright reckoning has returned you as one of the ward's two benchers, and you are the one bencher who argues shoring orders from experience on both sides: you have been the neighbour whose wall was propped at your cost, and the owner who was not there to answer the notice. You keep the Crake habit of speaking of other towns as if they were rooms in a house you once lived in. You are watchful, slow to promise, quick to pay. What you want this season is your claim heard before the winter — and no assessment on high ground to pay for low culverts while it waits.",
+  "extended_character_description": "TBA"
+}

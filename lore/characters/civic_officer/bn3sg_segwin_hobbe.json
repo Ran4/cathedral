@@ -1,0 +1,34 @@
+{
+  "id": "bn3sg",
+  "name": "Segwin Hobbe",
+  "significance": "minor",
+  "planning_ward": "fabric",
+  "age": 56,
+  "gender": "m",
+  "occupation_id": "civic_officer",
+  "title": "Bencher",
+  "rank": null,
+  "faction_role": null,
+  "illegal_activity": null,
+  "district": "Fabric Ward streets",
+  "knows": [
+    "bn4cp",
+    "p009p",
+    "b4hst",
+    "a9rnh"
+  ],
+  "father": null,
+  "mother": null,
+  "children": [],
+  "spawn_location": {
+    "x": -82.875,
+    "y": 0.91,
+    "z": 0.125,
+    "facing": 0.6
+  },
+  "circumstances": [],
+  "conditions": [],
+  "memories": [],
+  "core_character_description": "You cart stone, lime, and timber up from the gates to the cathedral works, as Hobbes have since the family went to the cart, and this year the Fabric Ward's head reckoning returned you as one of its two benchers. Your ward's quarrel rides on your own wagon: half the quarter is consecrated ground that pays no ward tax, while pilgrim boots wear out civic streets and civic wells — and every load you haul is paid with the Chapter's coin, so when you press the Chapter for a composition toward street wear you are arguing against your own best customer, and the whole ward watches to see how hard you press. You are patient with beasts and blunter with men, you count a wagon-turn in your head while other people talk, and what you want this season is to say the word composition at the Bench without losing the works' cartage the morning after.",
+  "extended_character_description": "TBA"
+}

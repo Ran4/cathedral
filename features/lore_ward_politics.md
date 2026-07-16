@@ -30,12 +30,17 @@ Nett, Mere, Toll, Crake, Sedge, Wren, Dask).
 The Reed Ward's two benchers were already canonical (`lore/the_dry_boatmen.md`
 and their character sheets): **Idonea Tarn** and **Hamel of the Reach**,
 platform postern hours + the Serle tun. The twelve benchers named for the
-other wards are seeds (a ward, a trade, a position each); character sheets on
-the Reed pair's model may follow, respecting the roster's dispersal rules.
-Bell-and-Sluice's second seat is held by a deliberately unnamed Marle
-(consistent with `lore/families/family_marle.md`); the F.437 First Seat is
-**Gude Dask**, who already had a sheet
-(`lore/characters/civic_officer/p009p_gude_dask.json`).
+other wards now have character sheets on the Reed pair's model
+(`lore/characters/civic_officer/bn*.json`, minor significance), with spawn
+points chosen from baked nav nodes and verified against the roster's dispersal
+rules (`world_data.rs` tests pass; `bake_homes.py` re-run). Bell-and-Sluice's
+second seat is held by a deliberately unnamed Marle in the lore (consistent
+with `lore/families/family_marle.md`) — his sheet, `p009s_aubin_marle.json`,
+stays ambient and carries the seat's scrupulous-clean dread; the F.437 First
+Seat is **Gude Dask** (`p009p_gude_dask.json`), whose sheet now tells the
+compromise-chair story. The two surplus ambient "benchers" (Betriss Clove,
+Osanne Stott) were reconciled as former benchers kept as courtesy-titled
+**viewers**, per the title-for-life custom.
 
 ## Gameplay — OPEN
 
