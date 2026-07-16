@@ -249,6 +249,25 @@ impl PlaceRegistry {
             .iter()
             .filter(move |entry| entry.ward.as_deref() == Some(ward))
     }
+
+    /// The nearest registered place to `point` in the walk (XZ) plane — homes
+    /// included — within `max_m`. Best-name lookup for the developer sheet's
+    /// walk destinations, which end at a snapped nav node rather than the
+    /// place's own point. Ties break to the earliest-registered entry.
+    pub fn nearest(&self, point: Vec3, max_m: f64) -> Option<&PlaceEntry> {
+        let mut best: Option<(&PlaceEntry, f64)> = None;
+        for entry in &self.entries {
+            let dx = entry.point.x - point.x;
+            let dz = entry.point.z - point.z;
+            let distance_squared = dx * dx + dz * dz;
+            if distance_squared <= max_m * max_m
+                && best.is_none_or(|(_, best_squared)| distance_squared < best_squared)
+            {
+                best = Some((entry, distance_squared));
+            }
+        }
+        best.map(|(entry, _)| entry)
+    }
 }
 
 fn fnv1a64(text: &str) -> u64 {
@@ -322,6 +341,20 @@ mod tests {
         assert_eq!(registry.add_home(&owner, "Tam Rud", Vec3::ZERO), home_id);
         // Homes never enter the name lookup.
         assert!(registry.named("Tam Rud's house").is_none());
+    }
+
+    #[test]
+    fn nearest_snaps_to_the_closest_entry_within_the_radius_ignoring_y() {
+        let mut registry = PlaceRegistry::default();
+        registry.add_home(&ActorId::from_raw("tam4r"), "Tam Rud", Vec3::new(0.0, 0.0, 0.0));
+        registry.add_home(&ActorId::from_raw("ulla9"), "Ulla Brant", Vec3::new(10.0, 0.0, 0.0));
+        // The closest entry wins; a large y offset must not count (walk plane).
+        let near = registry.nearest(Vec3::new(4.0, 30.0, 0.0), 15.0).expect("in range");
+        assert_eq!(near.name, "Tam Rud's house");
+        let other = registry.nearest(Vec3::new(8.0, 0.0, 0.0), 15.0).expect("in range");
+        assert_eq!(other.name, "Ulla Brant's house");
+        // Beyond the radius resolves to nothing.
+        assert!(registry.nearest(Vec3::new(100.0, 0.0, 0.0), 15.0).is_none());
     }
 
     #[test]

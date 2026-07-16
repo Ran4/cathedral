@@ -162,6 +162,13 @@ impl LocalEngine {
     pub(super) fn world(&self) -> Option<&cathedral_sim::World> {
         self.engine.as_ref().map(|engine| engine.world())
     }
+
+    /// The daily round, borrowed exactly like [`Self::world`]: the character
+    /// debug sheet reads a walker's errand (destination, well queue standing)
+    /// from it. `None` until the engine is live.
+    pub(super) fn round(&self) -> Option<&cathedral_sim::Round> {
+        self.engine.as_ref().map(|engine| engine.round())
+    }
 }
 
 /// Start the engine and hand the ECS its resources.

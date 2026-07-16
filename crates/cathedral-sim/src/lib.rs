@@ -81,7 +81,7 @@ pub use nav::{
 pub use offer::Offer;
 pub use perception::{cap_first, emit_sound, identify, sees};
 pub use places::{PlaceEntry, PlaceError, PlaceRegistry};
-pub use round::{Arrival, Census, Round, WaterSource};
+pub use round::{Arrival, Census, ErrandDebug, Phase as RoundPhase, Round, WaterSource};
 pub use prompt::{
     ParsedAction, PromptEnv, PromptStrings, parse_reply, parse_reply_value, py_round,
     render_prompt, render_prompt_and_drain, to_py_json,

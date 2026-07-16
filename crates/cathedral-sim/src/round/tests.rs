@@ -1702,3 +1702,66 @@ fn go_to_and_tell_way_validation_walls() {
         assert_eq!(error.code, code, "tell_way {args}");
     }
 }
+
+/// [`Round::errand_debug`] — the character sheet's read-only errand view —
+/// reduces the phase, the well, the queue standing and the walk target.
+#[test]
+fn errand_debug_reduces_the_phase_the_well_and_the_walk() {
+    let ana = ActorId::from_raw("ana11");
+    let mut round = Round::new();
+    round.sources.push(WaterSource {
+        name: "Chain Well".into(),
+        draw_point: Vec3::new(5.0, WALK_Y, 5.0),
+        draw_sound: "well_windlass",
+        keeper: None,
+        queue: vec![ActorId::from_raw("first"), ana.clone()],
+        serving: None,
+        keeper_next_sound: 0.0,
+    });
+    round.people.insert(
+        ana.clone(),
+        Townsperson {
+            home: None,
+            base: Vec3::ZERO,
+            legs: Vec::new(),
+            leash_m: 6.0,
+            curfew_exempt: false,
+            source: Some(0),
+            is_household: true,
+            phase: Phase::Queued,
+            travel_target: None,
+            travel_for_intent: false,
+            next_decision: 0.0,
+            epoch: 0,
+            excused: false,
+        },
+    );
+
+    // Never enrolled → no errand.
+    assert_eq!(round.errand_debug(&ActorId::from_raw("ghost")), None);
+
+    // Queued: the well is named and the standing counted (one drawer ahead).
+    let queued = round.errand_debug(&ana).expect("enrolled");
+    assert_eq!(queued.phase, Phase::Queued);
+    assert_eq!(queued.well.as_deref(), Some("Chain Well"));
+    assert_eq!(queued.ahead_in_queue, Some(1));
+    assert_eq!(queued.walk_target, None);
+    assert!(!queued.for_intent);
+
+    // Approaching aims at the draw point; the queue standing no longer applies.
+    round.people.get_mut(&ana).unwrap().phase = Phase::Approaching;
+    let approaching = round.errand_debug(&ana).expect("enrolled");
+    assert_eq!(approaching.walk_target, Some(Vec3::new(5.0, WALK_Y, 5.0)));
+    assert_eq!(approaching.ahead_in_queue, None);
+
+    // Travelling for the intent reports the decided target and the flag.
+    {
+        let person = round.people.get_mut(&ana).unwrap();
+        person.phase = Phase::Travelling;
+        person.travel_target = Some(Vec3::new(9.0, WALK_Y, 9.0));
+        person.travel_for_intent = true;
+    }
+    let travelling = round.errand_debug(&ana).expect("enrolled");
+    assert_eq!(travelling.walk_target, Some(Vec3::new(9.0, WALK_Y, 9.0)));
+    assert!(travelling.for_intent);
+}

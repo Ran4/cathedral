@@ -244,9 +244,11 @@ struct RoundLeg {
     is_home: bool,
 }
 
-/// Where an enrolled townsperson is in their errand.
+/// Where an enrolled townsperson is in their errand. Public for the developer
+/// character sheet's [`Round::errand_debug`] view; nothing outside the round
+/// ever writes one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Phase {
+pub enum Phase {
     /// Standing at some anchor; the ladder may send them somewhere.
     Idle,
     /// Walking to their assigned well.
@@ -307,6 +309,27 @@ impl Townsperson {
     fn draws_water(&self) -> bool {
         self.source.is_some()
     }
+}
+
+/// One enrolled townsperson's errand, reduced for the developer character
+/// sheet: the phase, their well, their standing in its queue, where the current
+/// walk ends, and whether that walk serves the character's `go_to` intent. A
+/// read-only projection of [`Townsperson`]; never handed back to the ladder.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ErrandDebug {
+    pub phase: Phase,
+    /// The assigned water source's display name, for the drawing minority.
+    pub well: Option<String>,
+    /// People ahead of them in the well queue (0 = next up); `Some` only while
+    /// [`Phase::Queued`].
+    pub ahead_in_queue: Option<usize>,
+    /// Where the current walk ends: the draw point while approaching, the
+    /// decided target while travelling. `None` in the standing phases (and for
+    /// [`Phase::Returning`], whose delivery point is not recorded — the walk's
+    /// own last waypoint is the fallback there).
+    pub walk_target: Option<Vec3>,
+    /// True while a [`Phase::Travelling`] walk serves the `go_to` intent.
+    pub for_intent: bool,
 }
 
 /// A one-tick behavioural census of the enrolled cast, for `--census-by-area`.
@@ -386,6 +409,28 @@ impl Round {
     /// The number of enrolled townsfolk, for diagnostics and tests.
     pub fn enrolled(&self) -> usize {
         self.people.len()
+    }
+
+    /// The errand view of one enrolled townsperson, for the developer character
+    /// sheet — or `None` for anyone the round never enrolled (the player, test
+    /// fixtures).
+    pub fn errand_debug(&self, id: &ActorId) -> Option<ErrandDebug> {
+        let person = self.people.get(id)?;
+        let source = person.source.map(|index| &self.sources[index]);
+        let walk_target = match person.phase {
+            Phase::Approaching => source.map(|source| source.draw_point),
+            Phase::Travelling => person.travel_target,
+            _ => None,
+        };
+        Some(ErrandDebug {
+            phase: person.phase,
+            well: source.map(|source| source.name.clone()),
+            ahead_in_queue: (person.phase == Phase::Queued)
+                .then(|| source.and_then(|source| source.queue.iter().position(|queued| queued == id)))
+                .flatten(),
+            walk_target,
+            for_intent: person.phase == Phase::Travelling && person.travel_for_intent,
+        })
     }
 
     /// A one-line census of the water round for `--trace-water`.

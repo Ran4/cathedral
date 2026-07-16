@@ -15,8 +15,8 @@
 
 use bevy::prelude::*;
 use cathedral_sim::{
-    Character, LoreProfile, Significance, THIRST_MAX, THIRST_PARCHED, THIRST_THIRSTY,
-    Vec3 as SimVec3, World,
+    Character, ErrandDebug, IntentTarget, LoreProfile, RoundPhase, Significance, THIRST_MAX,
+    THIRST_PARCHED, THIRST_THIRSTY, Vec3 as SimVec3, World,
 };
 
 use crate::fonts::CathedralFonts;
@@ -67,6 +67,26 @@ enum MoveState {
     Walking { speed: f64, waypoints: usize },
 }
 
+/// Radius within which a walk endpoint counts as *at* a registered place. The
+/// routed path ends at a snapped nav node rather than the place's own point,
+/// so this is deliberately wider than the arrival radii.
+const DESTINATION_SNAP_M: f64 = 15.0;
+
+/// The live walk, resolved against the world: where it ends by name, how much
+/// polyline is left, and the real-time ETA at the current speed.
+#[derive(Debug, Clone, PartialEq)]
+struct Heading {
+    /// Best name first: the `go_to` target, the assigned well, the nearest
+    /// registered place, the area label, or bare coordinates.
+    destination: String,
+    /// Which layer aims the feet, when the round knows.
+    reason: Option<&'static str>,
+    /// Metres left along the waypoints, in the walk (XZ) plane.
+    distance_m: f64,
+    /// `distance_m / speed` in real seconds; `None` if the speed is zero.
+    eta_seconds: Option<f64>,
+}
+
 /// The authored biography behind the identity header. Lore-less fixtures (the
 /// player, test doubles) have none, and the header falls back to the bare name.
 #[derive(Debug, Clone, PartialEq)]
@@ -95,6 +115,14 @@ pub(super) struct CharacterDebug {
     goal: String,
     thirst: f64,
     movement: MoveState,
+    /// The current walk's destination and ETA; `None` while standing.
+    heading: Option<Heading>,
+    /// The round activity while standing at a well (queued / drawing), which
+    /// says more than "Arrived · idle".
+    well_activity: Option<String>,
+    /// A live `go_to` the feet are *not* currently walking (held by a
+    /// conversation, or waiting for the next ladder decision), by name.
+    pending_intent: Option<String>,
     position: SimVec3,
     facing_yaw: f64,
     holds: Vec<String>,
@@ -104,8 +132,9 @@ pub(super) struct CharacterDebug {
 
 impl CharacterDebug {
     /// Read one character out of the live world, resolving the ids it references
-    /// (held items, its named location) against the same world.
-    fn from_world(world: &World, character: &Character) -> Self {
+    /// (held items, its named location, its walk destination) against the same
+    /// world. `errand` is the round's view of the same person, when enrolled.
+    fn from_world(world: &World, character: &Character, errand: Option<&ErrandDebug>) -> Self {
         let holds = character
             .holds()
             .iter()
@@ -124,6 +153,15 @@ impl CharacterDebug {
                 waypoints: movement.path.len(),
             },
         };
+        let heading = heading_of(world, character, errand);
+        // An intent whose walk is already under way is named on the heading
+        // line; anything else is still pending and gets its own line.
+        let pending_intent = character.state.intent.as_ref().and_then(|intent| {
+            let walking_it = heading
+                .as_ref()
+                .is_some_and(|heading| heading.reason == Some("go_to"));
+            (!walking_it).then(|| intent_target_name(world, &intent.target))
+        });
         let recent = character
             .recent_history()
             .iter()
@@ -142,6 +180,9 @@ impl CharacterDebug {
             goal: character.goal().to_string(),
             thirst: character.needs().thirst,
             movement,
+            heading,
+            well_activity: well_activity(errand),
+            pending_intent,
             position: character.position_m(),
             facing_yaw: character.facing_yaw(),
             holds,
@@ -224,13 +265,140 @@ fn bar(fraction: f64, cells: usize) -> String {
         .collect()
 }
 
-fn move_summary(movement: &MoveState) -> String {
+/// Resolve the live walk into a [`Heading`]: name the destination, measure the
+/// path left, and price it in real seconds. `None` when there is no walk.
+fn heading_of(world: &World, character: &Character, errand: Option<&ErrandDebug>) -> Option<Heading> {
+    let movement = character.state.movement.as_ref()?;
+    let final_point = *movement.path.last()?;
+    let distance_m = path_length_m(character.position_m(), &movement.path);
+    let eta_seconds = (movement.speed > 0.0).then(|| distance_m / movement.speed);
+    // The most specific name wins: the go_to target this walk serves, the
+    // assigned well, then whatever the walk's endpoint resolves to.
+    let (destination, reason) = match errand {
+        Some(errand) if errand.for_intent && character.state.intent.is_some() => {
+            let intent = character.state.intent.as_ref().expect("checked in the guard");
+            (intent_target_name(world, &intent.target), Some("go_to"))
+        }
+        Some(errand) if errand.phase == RoundPhase::Approaching => (
+            errand.well.clone().unwrap_or_else(|| "their well".to_string()),
+            Some("water round"),
+        ),
+        Some(errand) if errand.phase == RoundPhase::Returning => {
+            (name_point(world, final_point), Some("delivering water"))
+        }
+        Some(errand) => (
+            name_point(world, errand.walk_target.unwrap_or(final_point)),
+            Some("daily round"),
+        ),
+        None => (name_point(world, final_point), None),
+    };
+    Some(Heading {
+        destination,
+        reason,
+        distance_m,
+        eta_seconds,
+    })
+}
+
+/// Metres left along the waypoint polyline, measured in the walk (XZ) plane
+/// exactly like the mover itself.
+fn path_length_m(from: SimVec3, path: &[SimVec3]) -> f64 {
+    let mut total = 0.0;
+    let mut previous = from;
+    for point in path {
+        total += f64::hypot(point.x - previous.x, point.z - previous.z);
+        previous = *point;
+    }
+    total
+}
+
+/// The best available name for a walk target: the nearest registered place
+/// (homes included) within the snap radius, else the area label, else bare
+/// coordinates.
+fn name_point(world: &World, point: SimVec3) -> String {
+    if let Some(place) = world.places.nearest(point, DESTINATION_SNAP_M) {
+        return place.name.clone();
+    }
+    world
+        .area_map
+        .location_description(point)
+        .unwrap_or_else(|| format!("x {:.0}, z {:.0}", point.x, point.z))
+}
+
+/// The `go_to` target as the sheet names it — the true names, this being a
+/// debug view: `"The Gradine"`, `"Tam Rud (in sight)"`, `"Tam Rud (last seen)"`.
+fn intent_target_name(world: &World, target: &IntentTarget) -> String {
+    match target {
+        IntentTarget::Place { name, .. } => name.clone(),
+        IntentTarget::Person {
+            actor_id, visible, ..
+        } => {
+            let name = world.characters.get(actor_id).map_or_else(
+                || actor_id.as_str().to_string(),
+                |person| person.name().to_string(),
+            );
+            if *visible {
+                format!("{name} (in sight)")
+            } else {
+                format!("{name} (last seen)")
+            }
+        }
+    }
+}
+
+/// The standing well activity — queued (with standing) or drawing — or `None`
+/// in every phase the mover state already narrates.
+fn well_activity(errand: Option<&ErrandDebug>) -> Option<String> {
+    let errand = errand?;
+    let well = errand.well.as_deref().unwrap_or("the well");
+    match errand.phase {
+        RoundPhase::Queued => Some(match errand.ahead_in_queue {
+            Some(0) => format!("Queued at {well} · next up"),
+            Some(ahead) => format!("Queued at {well} · {ahead} ahead"),
+            None => format!("Queued at {well}"),
+        }),
+        RoundPhase::Drawing => Some(format!("Drawing water at {well}")),
+        _ => None,
+    }
+}
+
+fn move_summary(movement: &MoveState, well_activity: Option<&str>) -> String {
+    if let Some(activity) = well_activity
+        && !matches!(movement, MoveState::Walking { .. })
+    {
+        return activity.to_string();
+    }
     match movement {
         MoveState::Still => "Stationary (never walks)".to_string(),
         MoveState::Arrived => "Arrived · idle".to_string(),
         MoveState::Walking { speed, waypoints } => {
             format!("Walking · {speed:.1} m/s · {waypoints} waypoint(s) left")
         }
+    }
+}
+
+/// `"→ The Gradine · 47 m · ETA 26 s (go_to)"` — destination, walk left,
+/// real-time ETA at the current speed, and the layer aiming the feet.
+fn heading_line(heading: &Heading) -> String {
+    use std::fmt::Write as _;
+    let mut line = format!("→ {} · {:.0} m", heading.destination, heading.distance_m);
+    if let Some(eta) = heading.eta_seconds {
+        let _ = write!(line, " · ETA {}", format_eta(eta));
+    }
+    if let Some(reason) = heading.reason {
+        let _ = write!(line, " ({reason})");
+    }
+    line
+}
+
+/// Whole real-life seconds up to two minutes (`"94 s"`), then minutes and
+/// seconds (`"3 m 12 s"`).
+fn format_eta(seconds: f64) -> String {
+    let seconds = seconds.round().max(0.0) as u64;
+    if seconds < 120 {
+        format!("{seconds} s")
+    } else {
+        format!("{} m {} s", seconds / 60, seconds % 60)
     }
 }
 
@@ -285,7 +453,17 @@ fn format_body(sheet: &CharacterDebug) -> String {
         bar(sheet.thirst / THIRST_MAX, GAUGE_CELLS),
     );
 
-    let _ = write!(out, "\n\nMOVEMENT\n  {}", move_summary(&sheet.movement));
+    let _ = write!(
+        out,
+        "\n\nMOVEMENT\n  {}",
+        move_summary(&sheet.movement, sheet.well_activity.as_deref())
+    );
+    if let Some(heading) = &sheet.heading {
+        let _ = write!(out, "\n  {}", heading_line(heading));
+    }
+    if let Some(intent) = &sheet.pending_intent {
+        let _ = write!(out, "\n  go_to (pending) → {intent}");
+    }
 
     let _ = write!(
         out,
@@ -436,10 +614,12 @@ pub(super) fn update_actor_sheet(
     let sheet = inspected.actor_id.as_ref().and_then(|id| {
         let sim_id = cathedral_sim::ActorId::from_raw(id.0.clone());
         engine.world().and_then(|world| {
-            world
-                .characters
-                .get(&sim_id)
-                .map(|character| CharacterDebug::from_world(world, character))
+            world.characters.get(&sim_id).map(|character| {
+                let errand = engine
+                    .round()
+                    .and_then(|round| round.errand_debug(&sim_id));
+                CharacterDebug::from_world(world, character, errand.as_ref())
+            })
         })
     });
 
@@ -487,8 +667,16 @@ mod tests {
                 speed: 1.2,
                 waypoints: 3,
             },
+            heading: Some(Heading {
+                destination: "The Gradine".into(),
+                reason: Some("go_to"),
+                distance_m: 47.3,
+                eta_seconds: Some(26.2),
+            }),
+            well_activity: None,
+            pending_intent: None,
             position: SimVec3::new(12.34, 0.0, -45.6),
-            facing_yaw: 1.5707,
+            facing_yaw: std::f64::consts::FRAC_PI_2,
             holds: vec!["a clay jug".into()],
             memory_count: 5,
             recent: vec!["The bell rang for Sext".into()],
@@ -578,6 +766,7 @@ mod tests {
             "Thirst  40/255 · THIRSTY", // 40 is between PARCHED (38) and THIRSTY (178)
             "░", // the gauge bar is present
             "MOVEMENT\n  Walking · 1.2 m/s · 3 waypoint(s) left",
+            "→ The Gradine · 47 m · ETA 26 s (go_to)",
             "POSE",
             "x 12.3",
             "z -45.6",
@@ -599,8 +788,67 @@ mod tests {
         let mut sheet = sample();
         sheet.holds.clear();
         sheet.movement = MoveState::Still;
+        sheet.heading = None;
         let body = format_body(&sheet);
         assert!(body.contains("HOLDS\n  (empty-handed)"));
         assert!(body.contains("MOVEMENT\n  Stationary (never walks)"));
+        assert!(!body.contains("ETA"));
+    }
+
+    #[test]
+    fn eta_reads_in_seconds_then_minutes() {
+        assert_eq!(format_eta(0.4), "0 s");
+        assert_eq!(format_eta(93.6), "94 s");
+        assert_eq!(format_eta(119.4), "119 s");
+        assert_eq!(format_eta(192.0), "3 m 12 s");
+        assert_eq!(format_eta(-5.0), "0 s");
+    }
+
+    #[test]
+    fn heading_line_degrades_without_eta_or_reason() {
+        let mut heading = Heading {
+            destination: "Chain Well".into(),
+            reason: Some("water round"),
+            distance_m: 12.4,
+            eta_seconds: Some(6.9),
+        };
+        assert_eq!(heading_line(&heading), "→ Chain Well · 12 m · ETA 7 s (water round)");
+        heading.eta_seconds = None;
+        heading.reason = None;
+        assert_eq!(heading_line(&heading), "→ Chain Well · 12 m");
+    }
+
+    #[test]
+    fn well_activity_outranks_the_arrived_summary_but_never_a_walk() {
+        assert_eq!(
+            move_summary(&MoveState::Arrived, Some("Queued at Chain Well · 2 ahead")),
+            "Queued at Chain Well · 2 ahead"
+        );
+        assert_eq!(
+            move_summary(
+                &MoveState::Walking { speed: 1.8, waypoints: 2 },
+                Some("Queued at Chain Well · 2 ahead"),
+            ),
+            "Walking · 1.8 m/s · 2 waypoint(s) left"
+        );
+        assert_eq!(move_summary(&MoveState::Arrived, None), "Arrived · idle");
+    }
+
+    #[test]
+    fn a_pending_intent_gets_its_own_line() {
+        let mut sheet = sample();
+        sheet.heading = None;
+        sheet.movement = MoveState::Arrived;
+        sheet.pending_intent = Some("Tam Rud (last seen)".into());
+        let body = format_body(&sheet);
+        assert!(body.contains("go_to (pending) → Tam Rud (last seen)"));
+    }
+
+    #[test]
+    fn walk_lengths_are_measured_in_the_walk_plane() {
+        let path = [SimVec3::new(3.0, 9.0, 0.0), SimVec3::new(3.0, 9.0, 4.0)];
+        // 3 m along x, then 4 m along z; the y jump must not count.
+        assert!((path_length_m(SimVec3::new(0.0, 0.0, 0.0), &path) - 7.0).abs() < 1e-9);
+        assert_eq!(path_length_m(SimVec3::new(1.0, 2.0, 3.0), &[]), 0.0);
     }
 }
