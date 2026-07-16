@@ -67,6 +67,15 @@ preempts it, one inbox line says so: *"Thirst turned you back before you reached
 channel as arrival, nearly free, and the model never narrates an arrival that did not happen through
 the back door the refusal so carefully closed at the front.
 
+**Where it sits in the ladder.** The intent is a rung between thirsty (6) and the round (9): an
+errand outranks the day's routine, never the body's needs. Curfew (5) preempting it is deliberate,
+not an accident of ordering — an errand still running at the Snuffing turns for home, so the player
+cannot send someone out past curfew; that refusal is drama the city already knows how to stage, and
+the lapse percept (above) tells the errand-runner why.
+
+**A second `go_to` replaces the first, silently** — the model issued both; it needs no telling. And
+`stop {}` emits no percept either: it is self-initiated.
+
 **`go_to {"person"}` is gated on sight.** Valid only for someone currently in `you_see`; while the
 follow holds, losing sight of the target degrades the intent to their last-seen position, and losing
 them is a percept (*"You've lost sight of the stranger near the Chain Bridge."*). Without the gate a
@@ -117,7 +126,11 @@ not add a second refusal condition until one proves necessary in play.
 
 **Arrival is a percept.** When they get there, an inbox line: *"You have arrived at the Wickmarket."*
 Which is news, which gives them a turn if they are on stage, which means **the NPC narrates their own
-arrival** without anybody scripting it. Elegant, and free.
+arrival** without anybody scripting it. Elegant, and free. "There" means: for a place, standing
+inside the area (the route targets the area's nearest nav node); for a person, closing to ~2 m —
+conversation distance, comfortably inside the 4 m exchange radius, so a `go_to` followed by an
+`offer_item` next turn just works. A moving target is re-pathed every movement tick; at city scales
+that is cheap.
 
 **The model never sees coordinates.** `place_id` takes an **opaque handle** from `places_you_know`
 (§3) — the same mental model the sheet already uses for people (`sv3n1`): things you can act on are
@@ -186,6 +199,13 @@ confer knowledge-of, never an id: player speech is free text, and grounding "Tam
 would reopen the guessing problem. Telling an NPC where to find something sends them on a journey; it
 does not teleport the knowledge. That is a feature.
 
+*Grounding happens on the LLM's side of the seam, against its own list.* "Meet me at the Gradine"
+works because the model matches the spoken name to a `places_you_know` entry it already holds (the
+squares are ids everyone has). That makes the rendered names **prompt-facing UX** — they must match
+how people *speak* of places ("the Wick", "the Gradine") — and it is the whole mechanism: no
+registry alias table, no name-matching heuristics, and nothing to "fix" later. A spoken place the
+model holds no id for is exactly the knowledge-of case above: walk coarse, ask around.
+
 *The ids are opaque, and the key is `place_id`.* Opaque because the whitelist alone only makes
 guessing **fail** — with semantic ids the model will still *try*, deriving `tam_ruds_house` from lore
 text and burning turns on `unknown_place` errors. An id it cannot construct is an id it does not
@@ -231,7 +251,10 @@ The precedent check: names deliberately have *no* introduction verb — "charact
 themselves in speech" (`crates/cathedral-sim/AGENTS.md`), and listeners keep names as free-text
 memories. But a name's payoff is narrative, and a memory line carries it. A place id's payoff is
 mechanical — `go_to` needs it in a structured set — so it needs what names never did. Different
-requirement, different mechanism.
+requirement, different mechanism. (One acknowledged wrinkle, parked: an introduction writes the
+listener's *memories* but not their `knows`, so the sheet keeps rendering an introduced person as
+`(unknown …)` while a memory says otherwise. Not M5's problem — but when it is fixed, `tell_way`'s
+pattern — an event writes sim state; the sheet is the memory — is the template.)
 
 *Off the stage, the same conversation runs — on the lane that was never gated.* There is no seek
 verb, no registry name-matching, and no parallel code mechanic: the ask-around is `say` + `tell_way`
@@ -248,10 +271,13 @@ gone, so is the verb — along with the registry alias table and the name-matchi
 have needed. One path, watched or not.
 
 The one missing link: today the arrival percept produces a turn *only on stage* — an asker reaching
-the ward alone would stand mute until the intent expired. Arrival from a `go_to` must grant the same
-priority nudge an addressed say does. That is the whole change, and it is bounded by construction:
-arrivals only happen because a `go_to` was issued, `go_to`s are rare and LLM-initiated, and the nudge
-is one turn, not a lease on the scheduler.
+the ward alone would stand mute until the intent expired. Arrival from a `go_to` — **and lapse** —
+must grant the same priority nudge an addressed say does. (Without the lapse nudge, an off-stage
+errand that expires writes its percept into an inbox nobody may ever render and the chain silently
+dies; with it, the asker comes home and says "I couldn't find it," which is the honest ending.) That
+is the whole change, and it is bounded by construction: arrivals and lapses only happen because a
+`go_to` was issued, `go_to`s are rare and LLM-initiated, and the nudge is one turn, not a lease on
+the scheduler.
 
 (The priority lane used to be a single last-write-wins slot, which would have made off-stage chains
 best-effort: any other addressed say landing mid-errand silently erased a link, and off stage there
@@ -268,7 +294,8 @@ touches the sheet — and the sheet changes once.
 
 **`moving`** — one bool per visible person. Once people walk, `you_see` churns, and the model needs to
 tell *"a man is crossing the square"* from *"a man has stopped in front of me."* One bool, and it makes
-the difference between an NPC who greets everyone who passes and one who greets people who stop.
+the difference between an NPC who greets everyone who passes and one who greets people who stop. One
+definition of moving everywhere: `!is_settled()`, the same threshold the novelty gate uses (§5.1).
 
 ---
 

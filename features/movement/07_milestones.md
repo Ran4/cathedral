@@ -340,9 +340,11 @@ the round's office-pegged legs plus the curfew rung already empty the streets wi
 
 **Ships.** The verbs go_to and related verbs.
 The go_to intent, with route-derived expiry (a multiple of the route's expected travel time in
-*real* seconds — never a flat span of game time; see [05](05_the_llm_seam.md) §2). The person target
-gated on sight, degrading to last-seen position. The arrival percept **and the lapse percept** (an
-expired or need-preempted intent tells its owner so). Validation errors `unknown_place` / `no_route`
+*real* seconds — never a flat span of game time; see [05](05_the_llm_seam.md) §2). The intent's
+ladder rung sits between thirsty (6) and the round (9) — curfew and parched preempt it, deliberately.
+The person target gated on sight, degrading to last-seen position. The arrival percept **and the
+lapse percept** (an expired or need-preempted intent tells its owner so), both granting the
+priority nudge off stage. Validation errors `unknown_place` / `no_route`
 — **`too_far` is deferred** until the hunger need exists (05 §2; reserve the enum variant now).
 The `turn.j2` change (deleting the paragraph that says *"if what you want
 to do has no verb here (like walking somewhere)…"*). The sheet's three additions —
