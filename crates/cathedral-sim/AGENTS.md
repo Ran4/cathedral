@@ -22,10 +22,11 @@ nearby event wakes them (see *Who gets an idle turn* below). Each turn:
 
 1. `prompt::render_prompt_and_drain` renders the character's full sheet
    (backstory, location, visible people, held items, memories, goal) plus a
-   `since_your_last_turn` field drained from that character's **inbox**. The
-   template is `assets/prompts/turn.j2`; the strings are
-   `assets/prompts/strings.toml`. Nothing about the LLM text format lives
-   anywhere else.
+   `since_your_last_turn` section drained from that character's **inbox**. The
+   sheet is markdown (`**you_hold**:` over `- fzbn9 fish` bullets — about half
+   the tokens of the JSON it replaced); the template is
+   `assets/prompts/turn.j2`; the strings are `assets/prompts/strings.toml`.
+   Nothing about the LLM text format lives anywhere else.
 2. The prompt goes to the provider as one stateless call — no provider-side chat
    history. Each character carries a bounded `recent_history` (16 entries) of
    received speech, heard sound percepts, and its own lines. The two fields never
@@ -196,14 +197,16 @@ The loaders take `&str`, never a path: the host reads the file.
 ## Tests
 
 `cargo test -p cathedral-sim`. All offline, all deterministic — `FakeCognition`
-parses the *rendered* prompt's ```json fence, so a template that drifts breaks
-the end-to-end test instead of silently passing.
+parses the *rendered* prompt's markdown sheet (the `**you**` line and the
+`**since_your_last_turn**` section), so a renderer that drifts breaks the
+end-to-end test instead of silently passing.
 
-`tests/golden_prompts.rs` is the byte-diff against Python. Its fixtures were
-generated from Python HEAD and are now **frozen**: the generator is deleted and
-the Rust renderer is the truth. They remain the last independent witness that the
-prompt still says what it said — change one only when you have decided to change
-the prompt.
+`tests/golden_prompts.rs` is the byte-diff that pins the prompt. Its scenario
+worlds were generated from Python HEAD; the prompt bytes are **blessed** — the
+Rust renderer is the truth, and the sheet has rendered as markdown (not JSON)
+since the token-cost change of 2026-07. They remain the witness that the prompt
+still says what it said — change one only when you have decided to change the
+prompt, via the ignored `regenerate_golden_fixtures` test.
 
 ## Known gaps (intentional, for now)
 

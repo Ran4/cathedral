@@ -7,7 +7,7 @@
 
 mod prompt_support;
 
-use cathedral_sim::{Item, ItemId, Offer, Vec3, apply_action, prompt::render_prompt, to_py_json};
+use cathedral_sim::{Item, ItemId, Offer, Vec3, apply_action, prompt::render_prompt};
 use prompt_support::{actor, prompt_env, seed_world, sheet};
 use serde_json::json;
 
@@ -111,11 +111,11 @@ fn offers_sort_by_created_seq_then_item_id_in_both_sections() {
     );
 }
 
-/// 4. The sheet is `ensure_ascii=True`: non-ASCII becomes lowercase `\uXXXX`,
-///    astral characters become surrogate pairs, and `0x7f` is escaped too.
-///    (The PromptLog `.json` is the opposite — raw UTF-8 — but that lands in P4.)
+/// 4. The markdown sheet is raw UTF-8: non-ASCII history reaches the model
+///    verbatim, where the JSON sheet used to `ensure_ascii`-escape it into
+///    `\uXXXX` (and pay tokens for the privilege).
 #[test]
-fn non_ascii_history_renders_as_lowercase_unicode_escapes() {
+fn non_ascii_history_renders_verbatim() {
     let env = prompt_env();
     let mut world = seed_world();
     world
@@ -123,26 +123,11 @@ fn non_ascii_history_renders_as_lowercase_unicode_escapes() {
         .get_mut(&actor("sv3n1"))
         .unwrap()
         .state
-        .recent_history = vec!["I\u{2019}ll go \u{1F41F}\u{7f}".into()];
+        .recent_history = vec!["I\u{2019}ll go \u{1F41F}".into()];
 
     let rendered = render_prompt(&world, &actor("sv3n1"), None, &env).unwrap();
-    // Lowercase hex; the astral fish becomes a UTF-16 surrogate pair; DEL is
-    // escaped even though it is printable-adjacent ASCII.
-    assert!(
-        rendered.contains(r#""I\u2019ll go \ud83d\udc1f\u007f""#),
-        "{rendered}"
-    );
-    // Nothing non-ASCII survives inside the fence, while the FOOTER outside it
-    // keeps its em dashes raw.
-    let fence = rendered
-        .split_once("```json\n")
-        .unwrap()
-        .1
-        .split_once("\n```")
-        .unwrap()
-        .0;
-    assert!(fence.is_ascii());
-    assert!(!rendered.is_ascii(), "the footer keeps its em dashes");
+    assert!(rendered.contains("- I\u{2019}ll go \u{1F41F}"), "{rendered}");
+    assert!(!rendered.contains("\\u2019"), "{rendered}");
 }
 
 /// 5. The verb matcher's corners: uppercase is accepted and lowercased, a bare
@@ -210,34 +195,27 @@ fn empty_people_and_the_history_fallbacks() {
 }
 
 /// 8. `you_offer` / `offered_to_you` are OMITTED when empty, not rendered as
-///    `[]`, and they sit between `you_hold` and `you_see`: the sheet's key order is
-///    insertion order, not the alphabetical order a `serde_json::Map` would give.
+///    empty sections, and they sit between `you_hold` and `you_see`: the sheet's
+///    section order is the `Sheet` struct's declaration order.
 #[test]
-fn the_sheet_key_order_and_the_omitted_offer_sections() {
+fn the_sheet_section_order_and_the_omitted_offer_sections() {
     let env = prompt_env();
     let mut world = seed_world();
 
-    let keys = |world: &cathedral_sim::World| -> Vec<String> {
+    let sections = |world: &cathedral_sim::World| -> Vec<String> {
         let prompt = render_prompt(world, &actor("sv3n1"), None, &env).unwrap();
-        let fence = prompt
-            .split_once("```json\n")
-            .unwrap()
-            .1
-            .split_once("\n```")
-            .unwrap()
-            .0;
-        // Top-level keys only: they are the ones at exactly one indent level.
-        fence
+        // A section header is a line that opens with a bold label.
+        prompt
             .lines()
-            .filter(|line| line.starts_with("    \""))
-            .map(|line| line.trim_start().split('"').nth(1).unwrap().to_string())
+            .filter(|line| line.starts_with("**"))
+            .map(|line| line[2..].split("**").next().unwrap().to_string())
             .collect()
     };
 
     assert_eq!(
-        keys(&world),
+        sections(&world),
         [
-            "name",
+            "you",
             "back_story",
             "you_are",
             "places_you_know",
@@ -267,9 +245,9 @@ fn the_sheet_key_order_and_the_omitted_offer_sections() {
     .unwrap();
 
     assert_eq!(
-        keys(&world),
+        sections(&world),
         [
-            "name",
+            "you",
             "back_story",
             "you_are",
             "places_you_know",
@@ -283,17 +261,5 @@ fn the_sheet_key_order_and_the_omitted_offer_sections() {
             "the_only_languages_you_know",
             "current_goal",
         ]
-    );
-}
-
-/// The escaper itself, against the `json.dumps(..., ensure_ascii=True)` rules
-/// the sheet depends on — `serde_json::to_string_pretty` fails every one of them.
-#[test]
-fn the_py_ascii_formatter_matches_ensure_ascii() {
-    assert_eq!(
-        to_py_json(&json!({"a": "\u{7f}", "b": "\u{1F600}", "c": "\u{2019}", "d": "\t\u{1}"}))
-            .unwrap(),
-        "{\n    \"a\": \"\\u007f\",\n    \"b\": \"\\ud83d\\ude00\",\n    \
-         \"c\": \"\\u2019\",\n    \"d\": \"\\t\\u0001\"\n}"
     );
 }

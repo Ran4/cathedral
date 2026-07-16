@@ -1,3 +1,38 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:78fd199acf5a76ff693c50b4dbdbcd1bd0bff0f2dd347d9ef2dc7736d63d6c0b
-size 1138
+# The LLM-visible micro-strings the character sheet embeds.
+#
+# The sheet is built in Rust before templating, so these cannot live in
+# `turn.j2` — but they are still prose the model reads, so they are data, not
+# code (D3). The sheet's section labels (`**you_hold**`, `**since_your_last_turn**`,
+# …) are NOT here: they mirror the old JSON keys, `turn.j2`'s prose names them,
+# and they are structure, not prose. `accept_with` is a pattern: `%s` is
+# replaced with the item id.
+
+# Rendered instead of a real name for anyone outside the actor's `knows` set.
+unknown_person_name = "a stranger (you don't know their name)"
+# The parenthesis after `**you_see**` — the radius here is HEARING_RADIUS_M, in prose.
+you_see_description = "people within 20 metres, nearest first"
+# `since_your_last_turn` when the inbox drained empty.
+nothing = "nothing"
+# `recent_history` when the actor has perceived nothing yet.
+nothing_yet = "nothing yet"
+# `you_offer` for a broadcast offer — and, quirk intact, for an offer whose
+# target has left the world (D-quirk R9/R21: replicate, do not "fix").
+offer_to_anyone = "anyone"
+# `the_only_languages_you_know`.
+languages = "English"
+# `offered_to_you`: the literal action line that takes the offer.
+accept_with = 'accept_offered_item {"item_id": "%s"}'
+# `you_see` when nobody is within earshot.
+nobody = "nobody"
+# `stored_memories` when there are none.
+no_memories = "none"
+# `places_you_know` when the actor holds no place handles.
+no_places = "none"
+# `you_hold` when the hands are empty.
+holding_nothing = "nothing"
+# The parenthesis after `**places_you_know**`.
+places_note = "go_to takes these place_ids"
+# Introduces `you_are`'s clock phrase.
+the_hour_label = "The hour:"
+# Introduces the lore profile's `illegal_activity` on the `**you**` line.
+illegal_activity_label = "In secret:"

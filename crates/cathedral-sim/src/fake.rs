@@ -1,16 +1,14 @@
 //! Deterministic offline cognition (`server.py:393-412` `fake_llm_complete`).
 //!
-//! It parses the *rendered* prompt — pulling the character sheet out of its
-//! ```` ```json ```` fence exactly as Python does (D25, option (a)) — instead of
-//! being handed structured data. That is the point: the fake doubles as a
-//! regression test that the minijinja templates still render a machine-readable
-//! sheet carrying `name` and `since_your_last_turn`. If the template drifts, the
-//! scripted conversation stops working and a test says so.
+//! It parses the *rendered* prompt — reading the name off the markdown sheet's
+//! `**you**` line and the news out of its `**since_your_last_turn**` section —
+//! instead of being handed structured data. That is the point: the fake doubles
+//! as a regression test that the rendered sheet still carries a machine-readable
+//! name and history. If the renderer drifts, the scripted conversation stops
+//! working and a test says so.
 //!
 //! There are deliberately no phrase hooks anywhere in production code paths;
 //! this is the only place the words "Ilse" and "coin" mean anything.
-
-use serde_json::Value;
 
 use crate::{
     ids::RequestId,
@@ -34,14 +32,10 @@ const REPLY_OFFER_COIN: &str = concat!(
 /// 2. Ilse, asked to offer her coin → she says so and offers `c0prs`.
 /// 3. anyone else → a no-op turn.
 pub fn fake_reply(prompt: &str) -> String {
-    let Some(sheet) = sheet_from_prompt(prompt) else {
+    let Some(name) = sheet_name(prompt) else {
         return REPLY_NOOP.to_string();
     };
-    let name = sheet
-        .get("name")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
-    let history = history_text(&sheet).to_lowercase();
+    let history = history_text(prompt).to_lowercase();
 
     if name == "Ilse" && history.contains("what's your name") {
         return REPLY_INTRODUCE.to_string();
@@ -52,28 +46,36 @@ pub fn fake_reply(prompt: &str) -> String {
     REPLY_NOOP.to_string()
 }
 
-/// `prompt.split("```json\n", 1)[1].split("\n```", 1)[0]`, then `json.loads`.
-fn sheet_from_prompt(prompt: &str) -> Option<Value> {
-    let (_, after) = prompt.split_once("```json\n")?;
-    let (block, _) = after.split_once("\n```")?;
-    serde_json::from_str(block).ok()
+/// The name on the sheet's `**you**` line.
+///
+/// Without lore the line is the bare name (`**you** — Sven`); with lore the
+/// name ends at the first comma (`**you** — Corin Copp, 26, male — …`).
+pub fn sheet_name(prompt: &str) -> Option<&str> {
+    let rest = prompt
+        .lines()
+        .find_map(|line| line.strip_prefix("**you** — "))?;
+    let head = rest.split(" — ").next().unwrap_or(rest);
+    Some(head.split(',').next().unwrap_or(head).trim())
 }
 
-/// The sheet's `since_your_last_turn` entries, newline-joined.
-fn history_text(sheet: &Value) -> String {
-    let Some(events) = sheet.get("since_your_last_turn").and_then(Value::as_array) else {
+/// The sheet's `**since_your_last_turn**` bullets, newline-joined; the inline
+/// empty form (`**since_your_last_turn** — nothing`) yields the empty string.
+fn history_text(prompt: &str) -> String {
+    let mut lines = prompt.lines();
+    let Some(header) = lines.find(|line| line.starts_with("**since_your_last_turn**")) else {
         return String::new();
     };
-    events
-        .iter()
-        .map(|event| match event {
-            // Python's `str(event)`: a string stays itself, anything else is
-            // repr'd. Only strings ever occur.
-            Value::String(text) => text.clone(),
-            other => other.to_string(),
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+    if !header.ends_with(':') {
+        return String::new();
+    }
+    let mut collected: Vec<&str> = Vec::new();
+    for line in lines {
+        let Some(text) = line.strip_prefix("- ") else {
+            break;
+        };
+        collected.push(text);
+    }
+    collected.join("\n")
 }
 
 /// [`Cognition`] with the script above and no provider at all.
@@ -124,23 +126,29 @@ impl Cognition for FakeCognition {
 mod tests {
     use super::*;
 
-    fn prompt_with(sheet: &str) -> String {
-        format!("HEADER\n```json\n{sheet}\n```\nFOOTER\n")
+    /// A minimal markdown sheet, shaped like [`super::super::prompt`] renders it.
+    fn prompt_with(name: &str, since: &[&str]) -> String {
+        let mut sheet = format!("**you** — {name}, 30, female — Pilgrim of The Gradine.\n\n");
+        if since.is_empty() {
+            sheet.push_str("**since_your_last_turn** — nothing\n");
+        } else {
+            sheet.push_str("**since_your_last_turn**:\n");
+            for line in since {
+                sheet.push_str(&format!("- {line}\n"));
+            }
+        }
+        format!("HEADER\n\nYour sheet:\n\n{sheet}\nFOOTER\n")
     }
 
     #[test]
     fn ilse_introduces_herself_when_asked_her_name() {
-        let prompt = prompt_with(
-            r#"{"name": "Ilse", "since_your_last_turn": ["Someone said: \"What's your name?\""]}"#,
-        );
+        let prompt = prompt_with("Ilse", &[r#"Someone said: "What's your name?""#]);
         assert_eq!(fake_reply(&prompt), REPLY_INTRODUCE);
     }
 
     #[test]
     fn ilse_offers_the_coin_when_asked_to() {
-        let prompt = prompt_with(
-            r#"{"name": "Ilse", "since_your_last_turn": ["Please OFFER me your Coin"]}"#,
-        );
+        let prompt = prompt_with("Ilse", &["Please OFFER me your Coin"]);
         let reply = fake_reply(&prompt);
         assert!(reply.contains("You may have my copper coin."), "{reply}");
         assert!(reply.contains(r#"offer_item {"item_id": "c0prs", "target": "player"}"#));
@@ -148,13 +156,21 @@ mod tests {
 
     #[test]
     fn everyone_else_and_every_malformed_sheet_takes_a_no_op_turn() {
-        let prompt =
-            prompt_with(r#"{"name": "Sven", "since_your_last_turn": ["what's your name"]}"#);
+        let prompt = prompt_with("Sven", &["what's your name"]);
         assert_eq!(fake_reply(&prompt), REPLY_NOOP);
-        assert_eq!(fake_reply("no fence at all"), REPLY_NOOP);
-        assert_eq!(fake_reply(&prompt_with("{not json")), REPLY_NOOP);
-        // A sheet that is valid JSON but not an object must not panic either.
-        assert_eq!(fake_reply(&prompt_with("5")), REPLY_NOOP);
+        assert_eq!(fake_reply("no sheet at all"), REPLY_NOOP);
+        // The inline empty-history form reads as no news.
+        assert_eq!(fake_reply(&prompt_with("Ilse", &[])), REPLY_NOOP);
+    }
+
+    #[test]
+    fn the_you_line_parses_with_and_without_lore() {
+        assert_eq!(sheet_name("**you** — Ilse\nrest"), Some("Ilse"));
+        assert_eq!(
+            sheet_name("**you** — Corin Copp, 26, male — Scrivener of The Tallage.\n"),
+            Some("Corin Copp")
+        );
+        assert_eq!(sheet_name("no you line"), None);
     }
 
     #[test]

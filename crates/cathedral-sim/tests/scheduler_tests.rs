@@ -16,7 +16,7 @@ use cathedral_sim::{
     NpcScheduler, PromptEnv, RequestId, SchedulerEvent, StatusEvent, Subsystem, Vec3, World,
     apply_action, llm_turn_order,
 };
-use prompt_support::{actor, prompt_env, seed_world, sheet_of};
+use prompt_support::{actor, md_section, prompt_env, seed_world};
 use serde_json::json;
 
 // --------------------------------------------------------------------- doubles
@@ -159,7 +159,11 @@ impl Harness {
         self.cognition
             .prompts
             .iter()
-            .map(|prompt| sheet_of(prompt)["name"].as_str().unwrap().to_string())
+            .map(|prompt| {
+                cathedral_sim::fake::sheet_name(prompt)
+                    .expect("every prompt carries a sheet")
+                    .to_string()
+            })
             .collect()
     }
 
@@ -244,8 +248,10 @@ fn event_arriving_during_completion_remains_for_next_turn() {
     harness.poll_pending(); // Sven's prompt is out; the provider is thinking
 
     // The prompt that went out carries only what had already arrived.
-    let prompted = sheet_of(&harness.cognition.prompts[0]);
-    assert_eq!(prompted["since_your_last_turn"], json!(["old event"]));
+    assert_eq!(
+        md_section(&harness.cognition.prompts[0], "since_your_last_turn").unwrap(),
+        ["old event"]
+    );
 
     // A percept lands mid-request …
     player_says(&mut harness.world, "sv3n1", "new event");
@@ -308,15 +314,15 @@ fn provider_failure_requeues_percepts_without_duplication() {
         .cognition
         .prompts
         .iter()
-        .filter(|prompt| sheet_of(prompt)["name"] == "Sven")
+        .filter(|prompt| cathedral_sim::fake::sheet_name(prompt) == Some("Sven"))
         .collect();
     assert_eq!(sven_prompts.len(), 2, "Sven must have been retried");
 
-    let retry = sheet_of(sven_prompts[1]);
-    assert_eq!(retry["since_your_last_turn"][0], json!(heard));
-    let recent = retry["recent_history"].as_array().unwrap();
+    let since = md_section(sven_prompts[1], "since_your_last_turn").unwrap();
+    assert_eq!(since[0], heard);
+    let recent = md_section(sven_prompts[1], "recent_history").unwrap();
     assert!(
-        !recent.iter().any(|line| *line == json!(heard)),
+        !recent.iter().any(|line| *line == heard),
         "the retried prompt must not show the percept twice: {recent:?}"
     );
 
@@ -559,11 +565,11 @@ fn player_reaction_survives_a_same_poll_background_handoff() {
         "the background handoff remains queued behind the player reaction"
     );
     assert_eq!(
-        sheet_of(&harness.cognition.prompts[1])["since_your_last_turn"],
-        json!([
+        md_section(&harness.cognition.prompts[1], "since_your_last_turn").unwrap(),
+        [
             "A stranger (id player) said to you: \"Where is the rail?\"",
             "Sven said to a stranger (id k0fb1): \"Ilse, a word?\""
-        ])
+        ]
     );
 
     // Once Conny succeeds, the ordinary delay and handoff resume unchanged.
@@ -979,7 +985,10 @@ fn every_harvested_exchange_is_archived() {
                 duration_seconds,
                 ..
             } => {
-                assert!(prompt.contains("```json"), "the archive keeps the prompt");
+                assert!(
+                    prompt.contains("**since_your_last_turn**"),
+                    "the archive keeps the prompt"
+                );
                 assert_eq!(*duration_seconds, 0.25, "the backend measured it");
                 Some((actor_name.as_str(), answer.as_deref(), error.as_deref()))
             }

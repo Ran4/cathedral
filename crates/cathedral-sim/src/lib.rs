@@ -31,7 +31,7 @@ pub mod places;
 pub mod prompt;
 pub mod round;
 /// CPython text semantics (`str.strip`, `float.__repr__`, `repr`) — internal,
-/// but shared by the action validators, the sheet renderer and the scheduler.
+/// but shared by the action validators, the reply parser and the scheduler.
 mod pyfmt;
 pub mod scheduler;
 pub mod seed;
@@ -84,7 +84,7 @@ pub use places::{PlaceEntry, PlaceError, PlaceRegistry};
 pub use round::{Arrival, Census, ErrandDebug, Phase as RoundPhase, Round, WaterSource};
 pub use prompt::{
     ParsedAction, PromptEnv, PromptStrings, parse_reply, parse_reply_value, py_round,
-    render_prompt, render_prompt_and_drain, to_py_json,
+    render_prompt, render_prompt_and_drain, render_sheet_value,
 };
 pub use scheduler::{
     NpcScheduler, SchedulerEvent, background_turn_order, llm_turn_order, stage_turn_order,

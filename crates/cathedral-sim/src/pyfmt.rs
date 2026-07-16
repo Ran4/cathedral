@@ -1,17 +1,15 @@
 //! CPython text semantics the port depends on: `str.strip()`, `float.__repr__`
 //! and `repr()`.
 //!
-//! Three separate places need these and must agree:
+//! The places that need these must agree:
 //!
 //! * `actions::parse_text` strips exactly like `str.strip()` — Python's
 //!   whitespace set is *wider* than Rust's, so a value Python accepts must not
 //!   become an error here (`sim.py:502`);
-//! * `prompt::json_fmt` renders floats the way `json.dumps` does, which is
-//!   `float.__repr__` — and that disagrees with Rust/ryu at both ends of the
-//!   magnitude range;
 //! * `actions` and `scheduler` interpolate `{value!r}` / `str(dict)` into
 //!   messages that become model-visible `system:` inbox lines, i.e. prompt
-//!   bytes.
+//!   bytes — and `repr()` of a float argument is `float.__repr__`, which
+//!   disagrees with Rust/ryu at both ends of the magnitude range.
 
 use serde_json::{Map, Value};
 
@@ -27,13 +25,13 @@ pub(crate) fn py_strip(text: &str) -> &str {
     text.trim_matches(is_py_space)
 }
 
-/// CPython's `repr(float)` — which is also what `json.dumps` writes.
+/// CPython's `repr(float)`.
 ///
 /// Rust and CPython both produce the shortest round-tripping digits, but they
 /// lay them out differently: CPython switches to scientific notation when the
 /// decimal point sits at or below `1e-5` or above `1e16`, and pads the exponent
 /// to two digits (`1e-05`, not ryu's `1e-5`; `0.00001` in Rust's `Display`).
-/// Positions in a rendered sheet are raw `f64`, so this is reachable.
+/// A float argument in an action error message reaches this via [`py_repr`].
 ///
 /// Non-finite input yields Python's `repr` spelling (`nan` / `inf` / `-inf`).
 /// The JSON path cannot reach it: serde_json writes `null` for non-finite floats
@@ -259,8 +257,8 @@ mod tests {
     ///
     /// These bit patterns are exactly halfway between two 17-digit decimals — the
     /// value below is precisely `2181495296738027.25` — and Rust's `{:e}` says
-    /// `…27.3` where CPython says `…27.2`. Both round-trip; only one is what the
-    /// golden prompts contain. (Verified against CPython over 206k values: a
+    /// `…27.3` where CPython says `…27.2`. Both round-trip; only one is what
+    /// CPython prints. (Verified against CPython over 206k values: a
     /// random bit-pattern sweep plus every decade from 1e-320 to 1e308.)
     #[test]
     fn an_exact_decimal_tie_rounds_to_even_like_cpython() {

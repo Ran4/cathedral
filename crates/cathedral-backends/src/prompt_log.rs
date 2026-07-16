@@ -184,8 +184,8 @@ fn write_pair(
 
     let markdown = markdown(exchange, &meta);
 
-    // `ensure_ascii=False, indent=2` + a trailing newline: raw UTF-8, unlike the
-    // ASCII-escaped character sheet inside the prompt itself.
+    // `ensure_ascii=False, indent=2` + a trailing newline: raw UTF-8, like the
+    // markdown character sheet inside the prompt itself.
     let record = Record {
         prompt: &exchange.prompt,
         answer: exchange.answer.as_deref(),
@@ -509,8 +509,7 @@ mod tests {
                 "timestamp"
             ]
         );
-        // ensure_ascii=False: the archive is raw UTF-8 even though the sheet
-        // inside the prompt is \uXXXX-escaped.
+        // ensure_ascii=False: the archive is raw UTF-8.
         assert!(raw.contains("Hej då"), "{raw}");
         assert!(
             raw.contains("\"timestamp\": \"2026-07-13T09:52:30\""),

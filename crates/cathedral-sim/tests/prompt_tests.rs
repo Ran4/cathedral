@@ -7,7 +7,7 @@ use cathedral_sim::{
     ActorId, Control, ItemId, LoreProfile, Vec3, apply_action,
     prompt::{render_prompt, render_prompt_and_drain},
 };
-use prompt_support::{actor, compact, prompt_env, seed_world, sheet, sheet_of};
+use prompt_support::{actor, compact, md_section, prompt_env, seed_world, sheet};
 use serde_json::json;
 
 /// 1. `test_metric_people_have_distance_and_perspective_name`
@@ -23,7 +23,7 @@ fn metric_people_have_distance_and_perspective_name() {
 
     assert_eq!(people[0]["name"], "Conny");
     assert!(
-        people[1]["name"].as_str().unwrap().contains("unknown"),
+        people[1]["name"].as_str().unwrap().contains("stranger"),
         "{}",
         people[1]["name"]
     );
@@ -166,12 +166,14 @@ fn render_and_drain_moves_old_events_to_prompt() {
     }
 
     let (prompt, presented) = render_prompt_and_drain(&mut world, &sven, &env).unwrap();
-    let rendered = sheet_of(&prompt);
 
-    assert_eq!(rendered["since_your_last_turn"], json!(["first", "second"]));
     assert_eq!(
-        rendered["recent_history"],
-        json!([r#"You said aloud: "earlier""#])
+        md_section(&prompt, "since_your_last_turn").unwrap(),
+        ["first", "second"]
+    );
+    assert_eq!(
+        md_section(&prompt, "recent_history").unwrap(),
+        [r#"You said aloud: "earlier""#]
     );
     assert_eq!(presented, ["first", "second"]);
 
@@ -332,17 +334,17 @@ fn wait_rule_sound_exemption_and_example_track_sounds_enabled() {
     assert!(rendered.contains("\nset_goal {\"goal\": \"Eat fish\"}\n"));
 }
 
-/// The fence FakeCognition parses must keep its shape (R4): a template drift
-/// that renamed either key would break the flagship offline e2e silently.
+/// The markers FakeCognition parses must keep their shape (R4): a renderer
+/// drift that lost either would break the flagship offline e2e silently.
 #[test]
-fn the_json_fence_carries_the_keys_the_fake_cognition_reads() {
+fn the_sheet_carries_the_markers_the_fake_cognition_reads() {
     let env = prompt_env();
     let world = seed_world();
     let rendered = render_prompt(&world, &actor("k0fb1"), None, &env).unwrap();
-    let fence = sheet_of(&rendered);
-    assert!(fence.get("name").is_some());
-    assert!(fence.get("since_your_last_turn").is_some());
-    assert_eq!(rendered.matches("```json").count(), 1);
+    assert_eq!(cathedral_sim::fake::sheet_name(&rendered), Some("Ilse"));
+    assert!(md_section(&rendered, "since_your_last_turn").is_some());
+    assert_eq!(rendered.matches("**you** — ").count(), 1);
+    assert_eq!(rendered.matches("**since_your_last_turn**").count(), 1);
 }
 
 /// 11/12 (SchedulerTests, re-hosted): the prompt snapshots the inbox at drain
@@ -363,10 +365,11 @@ fn a_failed_turn_requeues_percepts_without_duplication() {
     // Turn 1 drains…
     let (prompt, presented) = render_prompt_and_drain(&mut world, &sven, &env).unwrap();
     assert_eq!(
-        sheet_of(&prompt)["since_your_last_turn"],
-        json!([r#"Conny said to you: "Fresh fish!""#])
+        md_section(&prompt, "since_your_last_turn").unwrap(),
+        [r#"Conny said to you: "Fresh fish!""#]
     );
-    assert_eq!(sheet_of(&prompt)["recent_history"], json!(["nothing yet"]));
+    // The empty-history sentinel renders inline, not as a bullet.
+    assert!(prompt.contains("**recent_history** — nothing yet"), "{prompt}");
 
     // …an event arrives while the completion is in flight…
     world
@@ -390,13 +393,13 @@ fn a_failed_turn_requeues_percepts_without_duplication() {
     // The retry shows the percept as new again, and NOT in recent_history.
     let (retry, presented) = render_prompt_and_drain(&mut world, &sven, &env).unwrap();
     assert_eq!(
-        sheet_of(&retry)["since_your_last_turn"],
-        json!([
+        md_section(&retry, "since_your_last_turn").unwrap(),
+        [
             r#"Conny said to you: "Fresh fish!""#,
             "[You heard a big fart!]"
-        ])
+        ]
     );
-    assert_eq!(sheet_of(&retry)["recent_history"], json!(["nothing yet"]));
+    assert!(retry.contains("**recent_history** — nothing yet"), "{retry}");
 
     // After the successful retry each line graduates exactly once.
     world
@@ -465,12 +468,14 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
     });
 
     let rendered = render_prompt(&world, &actor("sv3n1"), None, &env).unwrap();
-    let sheet = sheet_of(&rendered);
+    let sheet = sheet(&world, "sv3n1", &env);
     assert_eq!(sheet["lore_profile"]["age"], 19);
     assert_eq!(sheet["lore_profile"]["occupation"], "Smith");
     assert_eq!(sheet["lore_profile"]["rank"], "apprentice");
     assert!(sheet["lore_profile"].get("significance").is_none());
     assert!(sheet["lore_profile"].get("planning_ward").is_none());
+    // The internal occupation id never reaches the model's data.
+    assert!(sheet["lore_profile"].get("occupation_id").is_none());
     assert_eq!(
         sheet["lore_profile"]["circumstances"],
         json!(["recent_migrant"])
@@ -482,6 +487,15 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
     assert_eq!(
         sheet["lore_profile"]["conditions"],
         json!(["singed eyebrows"])
+    );
+    // …and the markdown folds it into the `**you**` line.
+    assert!(
+        rendered.contains(
+            "**you** — Sven, 19, male — Blacksmith (Smith, apprentice) of Cinder Row. \
+             Family: children: Ilse (id k0fb1). Circumstances: recent_migrant. \
+             Conditions: singed eyebrows."
+        ),
+        "{rendered}"
     );
     assert!(!rendered.contains("SECRET EXTENDED DETAIL"));
 }

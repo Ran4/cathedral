@@ -1,23 +1,21 @@
-//! The byte-diff that proved the port (ARCHITECTURE §4.1).
+//! The byte-diff that proved the port (ARCHITECTURE §4.1) — now the byte-diff
+//! that pins the prompt.
 //!
-//! `tests/fixtures/prompts/` was generated from Python HEAD by
-//! `prompt_playgound/scripts/gen_prompt_goldens.py`, which rendered each
-//! scenario through `prompt.py` and wrote the exact bytes an NPC's turn was
-//! asked in. Each scenario's manifest row carries the FULL world state its
-//! prompt was rendered from, so this test rebuilds the world declaratively: a
-//! divergence in `build_world` or `apply_action` can never mask a prompt
-//! divergence, and vice versa.
+//! `tests/fixtures/prompts/` began as Python HEAD output; each scenario's
+//! manifest row carries the FULL world state its prompt was rendered from, so
+//! this test rebuilds the world declaratively: a divergence in `build_world`
+//! or `apply_action` can never mask a prompt divergence, and vice versa.
 //!
-//! **The fixtures are frozen.** The generator and the Python it read are
-//! deleted (P7) — the Rust renderer is the truth from here on. The scenarios'
-//! *worlds* still come from Python HEAD; their prompt bytes were regenerated
-//! from the Rust renderer for M5's deliberate sheet change (`places_you_know`,
-//! `moving`, the go_to/stop/tell_way verbs — `features/movement/05_the_llm_seam.md`
-//! §3, the one prompt change budgeted for the whole movement feature). They
-//! remain the last independent witness that `assets/prompts/turn.j2` and
-//! `PyAsciiFormatter` still say what they said. Change a fixture only when you
-//! have *decided* to change the prompt, and say so in the commit — the ignored
-//! [`regenerate_golden_fixtures`] test below is the documented way to do it
+//! **The fixtures are blessed, not incidental.** The scenarios' *worlds* still
+//! come from Python HEAD; their prompt bytes have been regenerated twice, both
+//! times for a *decided* prompt change: M5's sheet additions
+//! (`places_you_know`, `moving` — `features/movement/05_the_llm_seam.md` §3),
+//! and the markdown sheet (the JSON fence became `sheet_markdown`'s sections
+//! at roughly half the token cost). They remain the witness that
+//! `assets/prompts/turn.j2` and `sheet_markdown` still say what they said.
+//! Change a fixture only when you have *decided* to change the prompt, and say
+//! so in the commit — the ignored [`regenerate_golden_fixtures`] test below is
+//! the documented way to do it
 //! (`cargo test -p cathedral-sim --test golden_prompts -- --ignored`).
 
 mod prompt_support;
@@ -133,8 +131,8 @@ fn assert_bytes_eq(name: &str, expected: &str, actual: &str) {
         .unwrap_or_else(|| expected.len().min(actual.len()));
     let from = at.saturating_sub(60);
     panic!(
-        "{name}: byte {at} differs (python {} bytes, rust {} bytes)\n\
-         python: {:?}\n  rust: {:?}",
+        "{name}: byte {at} differs (fixture {} bytes, rust {} bytes)\n\
+         fixture: {:?}\n   rust: {:?}",
         expected.len(),
         actual.len(),
         &expected.as_bytes()[from..(at + 60).min(expected.len())]
@@ -147,7 +145,7 @@ fn assert_bytes_eq(name: &str, expected: &str, actual: &str) {
 }
 
 #[test]
-fn every_scenario_renders_byte_identically_to_python() {
+fn every_scenario_renders_byte_identically_to_the_fixtures() {
     let env = prompt_env();
     let dir = fixtures_dir();
     let manifest: Manifest = serde_json::from_str(

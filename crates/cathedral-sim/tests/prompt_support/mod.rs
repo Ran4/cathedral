@@ -10,7 +10,7 @@ use std::{fs, path::PathBuf};
 
 use cathedral_sim::{
     ActorId, AreaMap, PromptEnv, SoundCatalog, World, WorldConfig, WorldSeed, build_world,
-    prompt::render_prompt,
+    prompt::render_sheet_value,
 };
 use serde_json::Value;
 
@@ -71,25 +71,29 @@ pub fn actor(id: &str) -> ActorId {
     ActorId::from_raw(id)
 }
 
-/// The ```json fence of a rendered prompt, parsed back — the Python tests'
-/// `sheet()` helper.
-pub fn sheet_of(prompt: &str) -> Value {
-    let after = prompt
-        .split_once("```json\n")
-        .expect("the prompt carries a json fence")
-        .1;
-    let block = after
-        .split_once("\n```")
-        .expect("the json fence is closed")
-        .0;
-    serde_json::from_str(block).expect("the sheet is valid JSON")
+/// The sheet's structured JSON view — [`render_sheet_value`] serializes the
+/// very struct the prompt renders as markdown, so the many tests that assert
+/// on sheet *data* (not layout) read it here.
+pub fn sheet(world: &World, actor_id: &str, env: &PromptEnv) -> Value {
+    render_sheet_value(world, &actor(actor_id), None, env).expect("the actor renders a sheet")
 }
 
-/// Render and return the sheet, for the many tests that only look at the JSON.
-pub fn sheet(world: &World, actor_id: &str, env: &PromptEnv) -> Value {
-    let prompt =
-        render_prompt(world, &actor(actor_id), None, env).expect("the actor renders a prompt");
-    sheet_of(&prompt)
+/// One markdown sheet section of a rendered prompt, as its bullet texts —
+/// `None` if the section is absent (`you_offer` when empty), `Some(vec![])`
+/// for the inline empty form (`**you_hold** — nothing`).
+pub fn md_section(prompt: &str, label: &str) -> Option<Vec<String>> {
+    let header = format!("**{label}**");
+    let mut lines = prompt.lines();
+    let found = lines.find(|line| line.starts_with(&header))?;
+    if !found.ends_with(':') {
+        return Some(Vec::new());
+    }
+    Some(
+        lines
+            .take_while(|line| line.starts_with("- "))
+            .map(|line| line["- ".len()..].to_string())
+            .collect(),
+    )
 }
 
 /// Whitespace-normalized prompt — the Python footer assertions compare against

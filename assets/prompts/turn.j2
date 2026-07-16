@@ -25,7 +25,7 @@ Keep current_goal current: when your goal is achieved (check you_hold and your
 memories) or has become impossible, set_goal a new one — or clear it with
 set_goal {"goal": null} — and remember how it ended.
 
-People marked (unknown) are strangers: you don't know their name, but you can
+People shown as a stranger are people whose name you don't know: you can
 still talk to them by id. If you want them to know your name, just say it — and
 when someone tells you theirs, store it with remember (e.g.
 remember {"memory": "The pilgrim with id k0fb1 is called Ilse"}).
@@ -127,9 +127,9 @@ set_goal {"goal": "Eat fish"}  # We're hungry
 say {"target": "4bfk4", "text": "Conny, do you like fish?"}
 ```
 
-```json
-{{ sheet_json }}
-```
+Your sheet:
+
+{{ sheet_md }}
 
 Take one or more actions.
 Make SURE that what you're doing matches what you see, who you are, what you can think about/understand etc.

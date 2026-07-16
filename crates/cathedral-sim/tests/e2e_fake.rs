@@ -215,19 +215,13 @@ fn item_id(id: &str) -> ItemId {
 
 /// Whose sheet a rendered prompt is.
 ///
-/// The sheet has to be read out of its ```` ```json ```` fence, not grepped for:
+/// The name has to be read off the sheet's `**you**` line, not grepped for:
 /// every prompt also lists the *other* people's names under `you_see`, so a
-/// substring match for `"name": "Sven"` hits Conny's prompt too. Parsing it is
-/// also the assertion that matters — the fake cognition reads the same fence.
+/// substring match for `Sven` hits Conny's prompt too. Parsing it is also the
+/// assertion that matters — the fake cognition reads the same line.
 fn sheet_name(prompt: &str) -> String {
-    let (_, after) = prompt
-        .split_once("```json\n")
-        .expect("every prompt carries a machine-readable sheet");
-    let (sheet, _) = after.split_once("\n```").expect("the fence is closed");
-    let sheet: serde_json::Value = serde_json::from_str(sheet).expect("the sheet is valid JSON");
-    sheet["name"]
-        .as_str()
-        .expect("the sheet names its character")
+    cathedral_sim::fake::sheet_name(prompt)
+        .expect("every prompt carries a machine-readable sheet")
         .to_string()
 }
 
