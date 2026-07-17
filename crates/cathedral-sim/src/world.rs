@@ -22,7 +22,7 @@ use crate::{
     error::{SpatialUpdateError, SpatialUpdateErrorCode},
     event::DomainEvent,
     ids::{ActorId, ItemId},
-    item::Item,
+    item::{Item, ItemCatalog},
     math::Vec3,
     nav::{NavData, WALK_Y},
     offer::Offer,
@@ -77,6 +77,12 @@ pub struct World {
     /// Character insertion order — the round-robin turn order (D12).
     pub roster: Vec<ActorId>,
     pub items: BTreeMap<ItemId, Item>,
+    /// The embedded item catalog: the single source of truth for derived display
+    /// names, visuals, stackability, edibility and prices. Host-provided context
+    /// like `area_map` — defaulted to the crate's embedded catalog, so every
+    /// `World` has it with no wiring. Shared behind an `Arc`; it never changes at
+    /// runtime and never bumps `world_revision`.
+    pub item_catalog: Arc<ItemCatalog>,
     /// Keyed by item id: at most one live offer per item.
     pub offers: BTreeMap<ItemId, Offer>,
     /// Monotonic public-state counter.
@@ -120,6 +126,7 @@ impl Default for World {
             characters: BTreeMap::new(),
             roster: Vec::new(),
             items: BTreeMap::new(),
+            item_catalog: ItemCatalog::embedded(),
             offers: BTreeMap::new(),
             world_revision: 0,
             event_sequence: 0,
@@ -624,8 +631,13 @@ impl World {
             .values()
             .map(|item| ItemSnapshot {
                 id: item.id.clone(),
-                name: item.name.clone(),
-                visual_key: item.visual_key.clone(),
+                kind: item.kind.clone(),
+                // Derived once here so the host never needs the catalog.
+                display_name: self.item_catalog.display_name(item),
+                display_plural: self.item_catalog.display_plural(item),
+                visual_key: self.item_catalog.visual_key(item),
+                quantity: item.quantity,
+                metadata: item.metadata.clone(),
             })
             .collect();
         let mut offers: Vec<OfferSnapshot> = self
@@ -652,11 +664,30 @@ impl World {
         }
     }
 
+    /// The catalog display name of a stack, e.g. `rye loaf`.
+    pub fn item_display_name(&self, item: &Item) -> String {
+        self.item_catalog.display_name(item)
+    }
+
+    /// A stack for a world dump: `spark (c0prs) ×3`, or `herring (fzbn9)` at 1.
+    pub fn item_dump_label(&self, item: &Item) -> String {
+        let display = self.item_catalog.display_name(item);
+        if item.quantity > 1 {
+            format!("{display} ({}) ×{}", item.id, item.quantity)
+        } else {
+            format!("{display} ({})", item.id)
+        }
+    }
+
     /// Sim-bug level checks, run after every successful offer/accept/decline/
     /// retract/eat. Panics on violation; tests call it directly.
     pub fn assert_invariants(&self) {
         let mut owners: BTreeMap<&ItemId, &ActorId> = BTreeMap::new();
         for actor in self.characters.values() {
+            // The stackable same-stuff stacks this holder already carries, to
+            // catch a merge that should have folded two of them into one.
+            let mut seen_stuff: Vec<(&ItemId, &std::collections::BTreeMap<String, String>)> =
+                Vec::new();
             for item_id in actor.holds() {
                 assert!(
                     self.items.contains_key(item_id),
@@ -667,6 +698,34 @@ impl World {
                     owners.insert(item_id, actor.id()).is_none(),
                     "item {item_id} has multiple owners"
                 );
+                let item = &self.items[item_id];
+                // Quantity 0 is unrepresentable — the operation that would
+                // produce it removes the stack instead.
+                assert!(
+                    item.quantity >= 1,
+                    "item {item_id} held by {} has quantity 0",
+                    actor.id()
+                );
+                // Metadata must be catalog-valid for a known kind (a test prop's
+                // ad-hoc kind is tolerated).
+                if let Err(message) = self.item_catalog.validate_item(item) {
+                    panic!("{message}");
+                }
+                // No two same-stuff **stackable** stacks on one holder: they
+                // should have merged. A non-stackable kind (a bowl of stew) may
+                // legitimately appear twice.
+                if self.item_catalog.stackable(item) {
+                    for (other_id, other_meta) in &seen_stuff {
+                        if self.items[*other_id].kind == item.kind && *other_meta == &item.metadata {
+                            panic!(
+                                "actor {} holds two same-stuff stacks {other_id} and {item_id} \
+                                 that should have merged",
+                                actor.id()
+                            );
+                        }
+                    }
+                    seen_stuff.push((item_id, &item.metadata));
+                }
             }
         }
         for (item_id, offer) in &self.offers {
@@ -705,6 +764,26 @@ pub(crate) fn planar_within(a: Vec3, b: Vec3, radius: f64) -> bool {
     let dx = a.x - b.x;
     let dz = a.z - b.z;
     dx * dx + dz * dz <= radius * radius
+}
+
+/// A fresh, deterministic 5-char item id for a partial-split residue, hashed
+/// from `(parent_id, salt)` where `salt` is the unique event sequence of the
+/// accept that created it — so headless runs stay reproducible and never
+/// collide (`01_items_and_stacks.md` §6). Rendered in the base-32 style the cast
+/// already uses.
+pub(crate) fn mint_item_id(parent: &ItemId, salt: i64) -> ItemId {
+    const ALPHABET: &[u8; 32] = b"0123456789abcdefghijklmnopqrstuv";
+    let mut hasher = DefaultHasher::new();
+    "item_split".hash(&mut hasher);
+    parent.as_str().hash(&mut hasher);
+    salt.hash(&mut hasher);
+    let mut value = hasher.finish();
+    let mut chars = [0u8; 5];
+    for slot in chars.iter_mut() {
+        *slot = ALPHABET[(value & 31) as usize];
+        value >>= 5;
+    }
+    ItemId::from_raw(String::from_utf8(chars.to_vec()).expect("ASCII alphabet"))
 }
 
 /// A pure `[0, 1)` roll from `(salt, actor_id, epoch)` — the sim's deterministic

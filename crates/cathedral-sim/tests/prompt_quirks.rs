@@ -87,6 +87,7 @@ fn offers_sort_by_created_seq_then_item_id_in_both_sections() {
                 giver_id: conny.clone(),
                 target_id: Some(sven.clone()),
                 created_seq,
+                quantity: 1,
             },
         );
     }

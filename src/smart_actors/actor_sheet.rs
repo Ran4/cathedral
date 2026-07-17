@@ -141,10 +141,17 @@ impl CharacterDebug {
             .holds()
             .iter()
             .map(|item_id| {
-                world
-                    .items
-                    .get(item_id)
-                    .map_or_else(|| item_id.as_str().to_string(), |item| item.name.clone())
+                world.items.get(item_id).map_or_else(
+                    || item_id.as_str().to_string(),
+                    |item| {
+                        let name = world.item_catalog.display_name(item);
+                        if item.quantity > 1 {
+                            format!("{name} ×{}", item.quantity)
+                        } else {
+                            name
+                        }
+                    },
+                )
             })
             .collect();
         let movement = match character.state.movement.as_ref() {

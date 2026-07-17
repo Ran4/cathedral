@@ -1113,7 +1113,7 @@ mod tests {
         let coin = crate::ids::ItemId::from_raw("c0prs");
         world
             .items
-            .insert(coin.clone(), crate::item::Item::new(coin.clone(), "a coin"));
+            .insert(coin.clone(), crate::item::Item::new(coin.clone(), "spark"));
         world.offers.insert(
             coin.clone(),
             crate::offer::Offer {
@@ -1121,6 +1121,7 @@ mod tests {
                 giver_id: ActorId::from_raw("mid"),
                 target_id: Some(near.clone()),
                 created_seq: 1,
+                quantity: 1,
             },
         );
         assert_eq!(context_hash(&world, &near), before);

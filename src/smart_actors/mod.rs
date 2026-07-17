@@ -874,6 +874,7 @@ fn process_engine_message(
             actor_id,
             target_id,
             item_id,
+            quantity,
             recipient_ids,
         } => {
             // Presentation feedback only. Offers and ownership still reconcile
@@ -883,6 +884,7 @@ fn process_engine_message(
                 &model::actor_id_from_sim(&actor_id),
                 target_id.as_ref().map(model::actor_id_from_sim).as_ref(),
                 item_id.as_ref().map(model::item_id_from_sim).as_ref(),
+                quantity,
                 &recipient_ids
                     .iter()
                     .map(model::actor_id_from_sim)
@@ -1231,6 +1233,7 @@ fn describe_world_event(
     actor_id: &model::ActorId,
     target_id: Option<&model::ActorId>,
     item_id: Option<&model::ItemId>,
+    quantity: u32,
     recipient_ids: &[model::ActorId],
     mirror: &model::WorldMirror,
 ) -> Option<String> {
@@ -1244,9 +1247,15 @@ fn describe_world_event(
     } else {
         mirror.actor(actor_id)?.name_for_player.as_str()
     };
-    let item = item_id
-        .and_then(|item_id| mirror.item(item_id))
-        .map(|item| item.name.as_str())?;
+    let snapshot = item_id.and_then(|item_id| mirror.item(item_id))?;
+    // Counted for a transient toast: "3 sparks", "3 loaves" — the plural is
+    // catalog-derived host-side, so irregulars read correctly.
+    let count = quantity.max(1);
+    let item = if count > 1 {
+        format!("{count} {}", snapshot.display_plural)
+    } else {
+        snapshot.name.clone()
+    };
     let offer_verb = if player_acted { "offer" } else { "offers" };
     match kind {
         "offer_item" if target_id == Some(player_id) => {
@@ -1749,8 +1758,12 @@ mod tests {
                 ],
                 items: vec![model::ItemSnapshot {
                     id: coin.clone(),
+                    kind: "spark".into(),
                     name: "copper coin".into(),
+                    display_plural: "copper coins".into(),
                     visual_key: "coin".into(),
+                    quantity: 1,
+                    metadata: Default::default(),
                 }],
                 offers: vec![],
             })
@@ -1762,6 +1775,7 @@ mod tests {
                 &giver,
                 Some(&player),
                 Some(&coin),
+                1,
                 std::slice::from_ref(&player),
                 &mirror,
             )
@@ -1778,6 +1792,7 @@ mod tests {
                 &giver,
                 Some(&other),
                 Some(&coin),
+                1,
                 &[player, other.clone()],
                 &mirror,
             ),
@@ -2014,7 +2029,7 @@ mod tests {
             app.world()
                 .resource::<hud::SmartActorHudState>()
                 .offer_card
-                .contains("copper coin")
+                .contains("spark")
         );
 
         app.world_mut()

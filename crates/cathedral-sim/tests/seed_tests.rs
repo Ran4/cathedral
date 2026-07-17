@@ -155,18 +155,21 @@ fn the_seeded_facings_survive_the_json_round_trip_bit_for_bit() {
 }
 
 #[test]
-fn the_two_items_are_seeded_in_order_with_their_visual_keys() {
+fn the_two_items_are_seeded_in_order_with_their_kinds() {
     let seed = WorldSeed::from_json_str(SEED_JSON).unwrap();
     let ids: Vec<&str> = seed.items.iter().map(|item| item.id.as_str()).collect();
     assert_eq!(ids, ["fzbn9", "c0prs"]);
 
     let world = seeded_world();
     let fish = &world.items[&ItemId::from_raw("fzbn9")];
-    assert_eq!(fish.name, "fish");
-    assert_eq!(fish.visual_key, "fish");
+    assert_eq!(fish.kind.as_str(), "herring");
+    assert_eq!(fish.quantity, 1);
+    assert_eq!(world.item_catalog.display_name(fish), "herring");
+    assert_eq!(world.item_catalog.visual_key(fish), "fish");
     let coin = &world.items[&ItemId::from_raw("c0prs")];
-    assert_eq!(coin.name, "copper coin");
-    assert_eq!(coin.visual_key, "copper_coin");
+    assert_eq!(coin.kind.as_str(), "spark");
+    assert_eq!(world.item_catalog.display_name(coin), "spark");
+    assert_eq!(world.item_catalog.visual_key(coin), "copper_coin");
 }
 
 /// Test 26: the player is not a special case — the same validator, the same

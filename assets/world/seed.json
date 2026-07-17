@@ -1,7 +1,7 @@
 {
   "items": [
-    { "id": "fzbn9", "name": "fish", "visual_key": "fish" },
-    { "id": "c0prs", "name": "copper coin", "visual_key": "copper_coin" }
+    { "id": "fzbn9", "kind": "herring" },
+    { "id": "c0prs", "kind": "spark" }
   ],
   "characters": [
     {

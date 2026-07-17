@@ -28,6 +28,10 @@ pub struct DomainEvent {
     pub actor_id: Option<ActorId>,
     pub target_id: Option<ActorId>,
     pub item_id: Option<ItemId>,
+    /// How many units the item event moved (offer/accept/eat). 1 for every
+    /// non-item event and for single-unit item traffic, so the HUD toast can
+    /// pluralize ("You accept the 3 sparks").
+    pub quantity: u32,
     /// Stripped speech text only.
     pub text: Option<String>,
     /// Actor position for speech/world events, origin for sounds.
@@ -70,6 +74,7 @@ impl DomainEvent {
             actor_id: None,
             target_id: None,
             item_id: None,
+            quantity: 1,
             text: None,
             position_m: None,
             recipient_ids: Vec::new(),
@@ -96,11 +101,13 @@ impl DomainEvent {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn world_event(
         kind: impl Into<String>,
         actor_id: ActorId,
         target_id: Option<ActorId>,
         item_id: Option<ItemId>,
+        quantity: u32,
         position_m: Vec3,
         recipient_ids: Vec<ActorId>,
     ) -> Self {
@@ -108,6 +115,7 @@ impl DomainEvent {
             actor_id: Some(actor_id),
             target_id,
             item_id,
+            quantity,
             position_m: Some(position_m),
             recipient_ids,
             ..Self::blank(EventType::WorldEvent, kind)

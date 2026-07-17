@@ -785,6 +785,24 @@ fn spawn_offer_visual(
                     Transform::from_rotation(Quat::from_rotation_z(FRAC_PI_2)),
                 ));
             }
+            "loaf" => {
+                // A flattened brown capsule — a loaf on the palm.
+                prop.spawn((
+                    Name::new("Loaf"),
+                    Mesh3d(assets.generic_item_mesh.clone()),
+                    MeshMaterial3d(assets.generic_item.clone()),
+                    Transform::from_scale(Vec3::new(0.34, 0.16, 0.22)),
+                ));
+            }
+            "stew" => {
+                // A squat cylinder standing in for a bowl.
+                prop.spawn((
+                    Name::new("Bowl of stew"),
+                    Mesh3d(assets.coin_mesh.clone()),
+                    MeshMaterial3d(assets.generic_item.clone()),
+                    Transform::from_scale(Vec3::new(1.6, 0.7, 1.6)),
+                ));
+            }
             _ => {
                 prop.spawn((
                     Name::new("Generic offered item"),
@@ -1004,13 +1022,21 @@ mod tests {
                 items: vec![
                     ItemSnapshot {
                         id: ItemId("coin".into()),
+                        kind: "spark".into(),
                         name: "coin".into(),
+                        display_plural: "coins".into(),
                         visual_key: "copper_coin".into(),
+                        quantity: 1,
+                        metadata: Default::default(),
                     },
                     ItemSnapshot {
                         id: ItemId("fish".into()),
+                        kind: "herring".into(),
                         name: "fish".into(),
+                        display_plural: "fish".into(),
                         visual_key: "fish".into(),
+                        quantity: 1,
+                        metadata: Default::default(),
                     },
                 ],
                 offers: vec![

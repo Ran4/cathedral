@@ -69,16 +69,8 @@ fn offer_world() -> World {
     world.add_character(giver);
     world.add_character(character("receiver", "Receiver", 3.0));
     world.add_character(character("other", "Other", 2.0));
-    world.add_item(Item {
-        id: item("apple"),
-        name: "apple".into(),
-        visual_key: "apple".into(),
-    });
-    world.add_item(Item {
-        id: item("pear"),
-        name: "pear".into(),
-        visual_key: "pear".into(),
-    });
+    world.add_item(Item::new(item("apple"), "apple"));
+    world.add_item(Item::new(item("pear"), "pear"));
     world
 }
 
@@ -910,5 +902,395 @@ fn event_ids_carry_the_type_prefix() {
     assert_eq!(
         events[1].event_id(),
         format!("world-{}", events[1].sequence)
+    );
+}
+
+// ------------------------------------------------- M0: kinds, stacks & merges
+//
+// The split/merge logic is the only genuinely subtle code in M0, so it is
+// tested hard here — including the risk ledger's property test (any sequence of
+// offers/accepts/eats conserves total quantity per kind).
+
+/// Giver@0, receiver@1 (well within the 4 m exchange radius), no items yet.
+fn stack_world() -> World {
+    let mut world = World::new();
+    world.add_character(character("giver", "Giver", 0.0));
+    world.add_character(character("receiver", "Receiver", 1.0));
+    world
+}
+
+/// Put a stack on a holder.
+fn hold_stack(world: &mut World, holder: &str, id: &str, kind: &str, quantity: u32) {
+    world.add_item(Item::stack(item(id), kind, quantity));
+    world
+        .characters
+        .get_mut(&actor(holder))
+        .unwrap()
+        .state
+        .holds
+        .push(item(id));
+}
+
+fn hold_loaf(world: &mut World, holder: &str, id: &str, flour: &str) {
+    world.add_item(Item::new(item(id), "loaf").with_metadata("flour", flour));
+    world
+        .characters
+        .get_mut(&actor(holder))
+        .unwrap()
+        .state
+        .holds
+        .push(item(id));
+}
+
+fn offer_n(world: &mut World, giver: &str, id: &str, target: &str, quantity: Option<u32>) {
+    let args = match quantity {
+        Some(q) => json!({"item_id": id, "target": target, "quantity": q}),
+        None => json!({"item_id": id, "target": target}),
+    };
+    apply_action(world, &actor(giver), "offer_item", &args)
+        .unwrap_or_else(|error| panic!("offer failed: {error}"));
+}
+
+fn accept(world: &mut World, taker: &str, id: &str) -> Result<String, ActionErrorCode> {
+    apply_action(world, &actor(taker), "accept_offered_item", &json!({"item_id": id}))
+        .map_err(|error| error.code)
+}
+
+/// The milestone's headline scenario: a scripted turn offers `quantity: 2`, the
+/// counterpart accepts, and the giver is left with 1 and the receiver holds 2 —
+/// under a fresh, deterministic id.
+#[test]
+fn a_partial_offer_splits_the_stack_leaving_one_and_two() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "spk", "spark", 3);
+
+    offer_n(&mut world, "giver", "spk", "receiver", Some(2));
+    accept(&mut world, "receiver", "spk").unwrap();
+
+    // Giver keeps the remainder under the original id.
+    assert_eq!(world.characters[&actor("giver")].holds(), [item("spk")]);
+    assert_eq!(world.items[&item("spk")].quantity, 1);
+
+    // Receiver holds exactly one new stack of 2, with a fresh id.
+    let received = world.characters[&actor("receiver")].holds().to_vec();
+    assert_eq!(received.len(), 1);
+    assert_ne!(received[0], item("spk"));
+    assert_eq!(world.items[&received[0]].quantity, 2);
+    assert_eq!(world.items[&received[0]].kind.as_str(), "spark");
+    world.assert_invariants();
+}
+
+/// The split id is a pure function of parent id and event sequence, so the same
+/// world replays to the same id.
+#[test]
+fn the_split_id_is_deterministic() {
+    let mint = |()| {
+        let mut world = stack_world();
+        hold_stack(&mut world, "giver", "spk", "spark", 3);
+        offer_n(&mut world, "giver", "spk", "receiver", Some(2));
+        accept(&mut world, "receiver", "spk").unwrap();
+        world.characters[&actor("receiver")].holds()[0].clone()
+    };
+    assert_eq!(mint(()), mint(()));
+}
+
+/// A whole-stack offer to a receiver holding no same-stuff keeps the stack's id.
+#[test]
+fn a_whole_stack_offer_moves_the_id_intact() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "spk", "spark", 4);
+
+    offer_n(&mut world, "giver", "spk", "receiver", None);
+    accept(&mut world, "receiver", "spk").unwrap();
+
+    assert!(world.characters[&actor("giver")].holds().is_empty());
+    assert_eq!(world.characters[&actor("receiver")].holds(), [item("spk")]);
+    assert_eq!(world.items[&item("spk")].quantity, 4);
+    world.assert_invariants();
+}
+
+/// A whole-stack offer folds into the receiver's same-stuff stack: the receiver's
+/// id survives, the moving id disappears.
+#[test]
+fn a_whole_stack_offer_merges_into_the_receivers_stack() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "give", "spark", 2);
+    hold_stack(&mut world, "receiver", "keep", "spark", 5);
+
+    offer_n(&mut world, "giver", "give", "receiver", None);
+    accept(&mut world, "receiver", "give").unwrap();
+
+    assert!(world.characters[&actor("giver")].holds().is_empty());
+    assert_eq!(world.characters[&actor("receiver")].holds(), [item("keep")]);
+    assert_eq!(world.items[&item("keep")].quantity, 7);
+    assert!(!world.items.contains_key(&item("give")), "the moving id is gone");
+    world.assert_invariants();
+}
+
+/// A partial offer into an existing same-stuff stack mints no new id.
+#[test]
+fn a_partial_offer_folds_into_an_existing_stack_without_a_new_id() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "give", "spark", 3);
+    hold_stack(&mut world, "receiver", "keep", "spark", 1);
+
+    offer_n(&mut world, "giver", "give", "receiver", Some(2));
+    accept(&mut world, "receiver", "give").unwrap();
+
+    assert_eq!(world.items[&item("give")].quantity, 1);
+    assert_eq!(world.characters[&actor("receiver")].holds(), [item("keep")]);
+    assert_eq!(world.items[&item("keep")].quantity, 3);
+    world.assert_invariants();
+}
+
+/// Metadata is part of identity: a rye loaf never merges with a wheat loaf.
+#[test]
+fn different_metadata_never_merges() {
+    let mut world = stack_world();
+    hold_loaf(&mut world, "giver", "rye", "rye");
+    hold_loaf(&mut world, "receiver", "wheat", "wheat");
+
+    offer_n(&mut world, "giver", "rye", "receiver", None);
+    accept(&mut world, "receiver", "rye").unwrap();
+
+    let mut held = world.characters[&actor("receiver")].holds().to_vec();
+    held.sort();
+    assert_eq!(held, [item("rye"), item("wheat")]);
+    world.assert_invariants();
+}
+
+/// A non-stackable kind (a served bowl of stew) is one stack of quantity 1; a
+/// second bowl is a second id, and the two coexist on one holder.
+#[test]
+fn non_stackable_bowls_do_not_merge() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "bowl1", "stew", 1);
+    hold_stack(&mut world, "receiver", "bowl2", "stew", 1);
+
+    offer_n(&mut world, "giver", "bowl1", "receiver", None);
+    accept(&mut world, "receiver", "bowl1").unwrap();
+
+    let mut held = world.characters[&actor("receiver")].holds().to_vec();
+    held.sort();
+    assert_eq!(held, [item("bowl1"), item("bowl2")]);
+    world.assert_invariants();
+}
+
+/// `offer_item` rejects a quantity outside `1..=stack`.
+#[test]
+fn offering_a_bad_quantity_is_an_error() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "spk", "spark", 2);
+
+    for bad in [0u32, 3, 99] {
+        let error = apply_action(
+            &mut world,
+            &actor("giver"),
+            "offer_item",
+            &json!({"item_id": "spk", "target": "receiver", "quantity": bad}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::BadQuantity, "quantity {bad}");
+    }
+    assert!(world.offers.is_empty());
+}
+
+/// `eat` decrements a stack, removes it at zero, and refuses non-food.
+#[test]
+fn eating_decrements_then_removes_and_refuses_non_food() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "hrr", "herring", 2);
+    hold_stack(&mut world, "giver", "spk", "spark", 1);
+
+    apply_action(&mut world, &actor("giver"), "eat", &json!({"item_id": "hrr"})).unwrap();
+    assert_eq!(world.items[&item("hrr")].quantity, 1);
+
+    apply_action(&mut world, &actor("giver"), "eat", &json!({"item_id": "hrr"})).unwrap();
+    assert!(!world.items.contains_key(&item("hrr")), "the last unit is gone");
+
+    let error =
+        apply_action(&mut world, &actor("giver"), "eat", &json!({"item_id": "spk"})).unwrap_err();
+    assert_eq!(error.code, ActionErrorCode::NotEdible);
+    world.assert_invariants();
+}
+
+/// An accept whose promised quantity no longer fits the shrunken stack fails as
+/// a stale offer (and repairs it).
+#[test]
+fn an_accept_of_more_than_remains_is_a_stale_offer() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "hrr", "herring", 2);
+
+    offer_n(&mut world, "giver", "hrr", "receiver", Some(2));
+    // The giver eats one before the receiver accepts.
+    apply_action(&mut world, &actor("giver"), "eat", &json!({"item_id": "hrr"})).unwrap();
+
+    assert_eq!(accept(&mut world, "receiver", "hrr"), Err(ActionErrorCode::StaleOffer));
+    assert!(world.offers.is_empty(), "the stale offer was repaired");
+    assert_eq!(world.items[&item("hrr")].quantity, 1);
+    world.assert_invariants();
+}
+
+/// Definition of done: two same-stuff stacks on one holder is a bug the
+/// invariants catch.
+#[test]
+#[should_panic(expected = "same-stuff")]
+fn two_same_stuff_stacks_on_one_holder_panics() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "a", "spark", 1);
+    hold_stack(&mut world, "giver", "b", "spark", 1);
+    world.assert_invariants();
+}
+
+/// Definition of done: quantity 0 is unrepresentable.
+#[test]
+#[should_panic(expected = "quantity 0")]
+fn a_zero_quantity_stack_panics() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "z", "spark", 0);
+    world.assert_invariants();
+}
+
+/// Total quantity per kind is conserved by any sequence of offers/accepts/eats —
+/// eaten units are the only sink (risk ledger's property test).
+#[test]
+fn any_sequence_conserves_quantity_per_kind() {
+    use std::collections::BTreeMap;
+
+    let mut world = World::new();
+    world.add_character(character("a0", "A0", 0.0));
+    world.add_character(character("a1", "A1", 1.0));
+    world.add_character(character("a2", "A2", 2.0));
+    hold_stack(&mut world, "a0", "s0", "spark", 4);
+    hold_stack(&mut world, "a0", "h0", "herring", 3);
+    hold_stack(&mut world, "a1", "s1", "spark", 2);
+    hold_stack(&mut world, "a1", "h1", "herring", 2);
+    hold_stack(&mut world, "a2", "s2", "spark", 5);
+    hold_stack(&mut world, "a2", "h2", "herring", 1);
+    let initial_spark = 11u32;
+    let initial_herring = 6u32;
+
+    let actors = ["a0", "a1", "a2"];
+    let total_by_kind = |world: &World| -> BTreeMap<String, u32> {
+        let mut totals = BTreeMap::new();
+        for item in world.items.values() {
+            *totals.entry(item.kind.as_str().to_string()).or_insert(0) += item.quantity;
+        }
+        totals
+    };
+
+    let mut rng: u64 = 0x0123_4567_89ab_cdef;
+    let next = |rng: &mut u64| -> u64 {
+        *rng = rng
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        *rng >> 33
+    };
+
+    let mut eaten_spark = 0u32;
+    let mut eaten_herring = 0u32;
+
+    for _ in 0..400 {
+        let holder = actors[(next(&mut rng) % 3) as usize];
+        let held = world.characters[&actor(holder)].holds().to_vec();
+        match next(&mut rng) % 3 {
+            0 => {
+                // offer a random slice to a random other actor
+                if !held.is_empty() {
+                    let id = &held[(next(&mut rng) % held.len() as u64) as usize];
+                    let stack_q = world.items[id].quantity;
+                    let quantity = 1 + (next(&mut rng) % stack_q as u64) as u32;
+                    let target = actors[(next(&mut rng) % 3) as usize];
+                    if target != holder {
+                        let _ = apply_action(
+                            &mut world,
+                            &actor(holder),
+                            "offer_item",
+                            &json!({"item_id": id.as_str(), "target": target, "quantity": quantity}),
+                        );
+                    }
+                }
+            }
+            1 => {
+                // accept a random live offer, as its target
+                let offers: Vec<(String, Option<String>)> = world
+                    .offers
+                    .values()
+                    .map(|offer| {
+                        (
+                            offer.item_id.as_str().to_string(),
+                            offer.target_id.as_ref().map(|id| id.as_str().to_string()),
+                        )
+                    })
+                    .collect();
+                if !offers.is_empty() {
+                    let (id, target) = &offers[(next(&mut rng) % offers.len() as u64) as usize];
+                    let taker = target
+                        .clone()
+                        .unwrap_or_else(|| actors[(next(&mut rng) % 3) as usize].to_string());
+                    let _ = apply_action(
+                        &mut world,
+                        &actor(&taker),
+                        "accept_offered_item",
+                        &json!({"item_id": id}),
+                    );
+                }
+            }
+            _ => {
+                // eat something edible
+                if !held.is_empty() {
+                    let id = held[(next(&mut rng) % held.len() as u64) as usize].clone();
+                    let is_food = world.item_catalog.is_edible(&world.items[&id]);
+                    if is_food {
+                        let kind = world.items[&id].kind.as_str().to_string();
+                        if apply_action(
+                            &mut world,
+                            &actor(holder),
+                            "eat",
+                            &json!({"item_id": id.as_str()}),
+                        )
+                        .is_ok()
+                        {
+                            if kind == "spark" {
+                                eaten_spark += 1;
+                            } else if kind == "herring" {
+                                eaten_herring += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        world.assert_invariants();
+        let totals = total_by_kind(&world);
+        assert_eq!(
+            totals.get("spark").copied().unwrap_or(0) + eaten_spark,
+            initial_spark,
+            "spark conservation"
+        );
+        assert_eq!(
+            totals.get("herring").copied().unwrap_or(0) + eaten_herring,
+            initial_herring,
+            "herring conservation"
+        );
+    }
+    // The run actually exercised eating (herring is the only edible kind here).
+    assert!(eaten_herring > 0, "the sequence never ate");
+}
+
+/// The world-dump label counts a stack: `spark (c0prs) ×3`, single items plain.
+#[test]
+fn the_dump_label_counts_stacks() {
+    let mut world = stack_world();
+    hold_stack(&mut world, "giver", "c0prs", "spark", 3);
+    hold_stack(&mut world, "receiver", "one", "herring", 1);
+    assert_eq!(
+        world.item_dump_label(&world.items[&item("c0prs")]),
+        "spark (c0prs) ×3"
+    );
+    assert_eq!(
+        world.item_dump_label(&world.items[&item("one")]),
+        "herring (one)"
     );
 }

@@ -272,7 +272,11 @@ struct Position {
 #[derive(Serialize)]
 struct ItemRef<'a> {
     id: &'a ItemId,
-    name: &'a str,
+    /// The catalog-derived display name — one source of truth, so a vendor
+    /// cannot render a "loaf" that disagrees with its kind.
+    name: String,
+    /// The stack (or offered) quantity; rendered as `×N` when above 1.
+    quantity: u32,
 }
 
 /// One `places_you_know` entry. The key is `place_id`, not `id`, so a place
@@ -448,7 +452,9 @@ fn build_sheet<'a>(
         };
         let item = ItemRef {
             id: &offer.item_id,
-            name: &entity.name,
+            name: world.item_catalog.display_name(entity),
+            // The offer's own quantity, which may be a slice of a larger stack.
+            quantity: offer.quantity,
         };
         if offer.giver_id == *actor.id() {
             let target = offer
@@ -562,7 +568,8 @@ fn build_sheet<'a>(
             .filter_map(|item_id| {
                 world.items.get(item_id).map(|item| ItemRef {
                     id: item_id,
-                    name: &item.name,
+                    name: world.item_catalog.display_name(item),
+                    quantity: item.quantity,
                 })
             })
             .collect(),
@@ -826,9 +833,15 @@ fn you_are_line(you_are: &YouAre, strings: &PromptStrings) -> String {
     line
 }
 
-/// `fzbn9 smoked fish` — items are always id-first, like places.
+/// `fzbn9 herring` — items are always id-first, like places — with a `×N` count
+/// suffix when the stack (or offered) quantity is above 1: `c0prs spark ×7`.
+/// Single-item traffic keeps its exact bytes.
 fn item_md(item: &ItemRef<'_>) -> String {
-    format!("{} {}", item.id, item.name)
+    if item.quantity > 1 {
+        format!("{} {} ×{}", item.id, item.name, item.quantity)
+    } else {
+        format!("{} {}", item.id, item.name)
+    }
 }
 
 /// `id cb947: Conny` — how a person is referenced outside `you_see`.

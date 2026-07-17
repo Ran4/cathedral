@@ -698,7 +698,7 @@ impl Runner {
             let holds: Vec<String> = actor
                 .holds()
                 .iter()
-                .map(|item_id| format!("{} ({item_id})", world.items[item_id].name))
+                .map(|item_id| world.item_dump_label(&world.items[item_id]))
                 .collect();
             println!(
                 "{}: goal={}, knows={}, holds={}",
@@ -711,6 +711,18 @@ impl Runner {
                 println!("  - {memory}");
             }
         }
+        // The player never takes an LLM turn, but their held stacks show the
+        // counted-stack rendering (`spark (spr03) ×3`) the item catalog adds.
+        if let Some(player) = world.characters.get(&ActorId::from_raw(PLAYER_ID))
+            && !player.holds().is_empty()
+        {
+            let holds: Vec<String> = player
+                .holds()
+                .iter()
+                .map(|item_id| world.item_dump_label(&world.items[item_id]))
+                .collect();
+            println!("{}: holds={}", player.name(), py_list(&holds));
+        }
         for (item_id, offer) in &world.offers {
             let target = offer
                 .target_id
@@ -718,10 +730,18 @@ impl Runner {
                 .and_then(|id| world.characters.get(id))
                 .map(|target| target.name())
                 .unwrap_or("anyone");
+            let offered = if offer.quantity > 1 {
+                format!(
+                    "{} {}",
+                    offer.quantity,
+                    world.item_catalog.display_plural(&world.items[item_id])
+                )
+            } else {
+                world.item_catalog.display_name(&world.items[item_id])
+            };
             println!(
-                "pending offer: {} offers {} ({item_id}) to {target}",
+                "pending offer: {} offers {offered} ({item_id}) to {target}",
                 world.characters[&offer.giver_id].name(),
-                world.items[item_id].name,
             );
         }
     }

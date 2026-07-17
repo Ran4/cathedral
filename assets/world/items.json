@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kinds": [
+    { "kind": "spark", "display": "spark", "display_plural": "sparks",
+      "visual_key": "copper_coin", "stackable": true },
+    { "kind": "loaf", "display": "loaf", "display_plural": "loaves",
+      "visual_key": "loaf", "stackable": true, "edible": { "satiety": 150 },
+      "metadata": { "flour": ["rye", "wheat"] },
+      "price_sparks": { "": 2, "flour=wheat": 4 } },
+    { "kind": "herring", "display": "herring", "display_plural": "herrings",
+      "visual_key": "fish", "stackable": true, "edible": { "satiety": 70 },
+      "price_sparks": { "": 1 } },
+    { "kind": "smoked_eel", "display": "smoked eel", "display_plural": "smoked eels",
+      "visual_key": "fish", "stackable": true, "edible": { "satiety": 100 },
+      "price_sparks": { "": 3 } },
+    { "kind": "stew", "display": "bowl of stew", "display_plural": "bowls of stew",
+      "visual_key": "stew", "stackable": false, "edible": { "satiety": 170 },
+      "price_sparks": { "": 2 } },
+    { "kind": "generic", "display": "thing", "visual_key": "generic", "stackable": true }
+  ]
+}

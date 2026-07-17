@@ -70,7 +70,10 @@ pub use event::{DomainEvent, EventType};
 pub use fake::{FakeCognition, fake_reply};
 pub use floor::{ConversationFloor, floor_audio_failsafe_seconds, speech_reading_seconds};
 pub use ids::{ActorId, InvalidId, ItemId, PlaceId, RequestId, SpeechEventId};
-pub use item::Item;
+pub use item::{
+    DISPLAY_METADATA_KEY, Edible, InvalidKind, Item, ItemCatalog, ItemCatalogError, ItemKind,
+    ItemKindDef,
+};
 pub use lore::{
     CONTROLLED_CIRCUMSTANCES, LoreCast, LoreCharacterSheet, LoreError, LoreProfile,
     LoreSpawnLocation, NO_FIXED_TRADE_FOLDER, PlanningWard, Significance,

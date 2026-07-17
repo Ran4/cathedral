@@ -278,12 +278,14 @@ fn require_interaction_range(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn world_event(
     world: &mut World,
     kind: &str,
     actor_id: &ActorId,
     target_id: Option<ActorId>,
     item_id: Option<ItemId>,
+    quantity: u32,
     recipients: Vec<ActorId>,
 ) -> i64 {
     let position = world.characters[actor_id].position_m();
@@ -292,9 +294,57 @@ fn world_event(
         actor_id.clone(),
         target_id,
         item_id,
+        quantity,
         position,
         recipients,
     ))
+}
+
+/// "a herring" for a single unit, "3 sparks" for many — the noun phrase (with
+/// article) that the counted percept lines embed where the old wording said
+/// "a {name}" (`01_items_and_stacks.md` §4). `n <= 1` keeps the exact "a {name}"
+/// wording, so single-item traffic renders byte-identically to today.
+fn counted_phrase(world: &World, item: &crate::item::Item, quantity: u32) -> String {
+    if quantity <= 1 {
+        format!("a {}", world.item_catalog.display_name(item))
+    } else {
+        format!("{quantity} {}", world.item_catalog.display_plural(item))
+    }
+}
+
+/// The bare counted noun — "herring" / "3 sparks" — for the "the {noun}" and
+/// "the offered {noun}" positions (accept/decline/retract), where no article is
+/// wanted. `n <= 1` is the singular display name, byte-identical to today.
+fn counted_noun(world: &World, item: &crate::item::Item, quantity: u32) -> String {
+    if quantity <= 1 {
+        world.item_catalog.display_name(item)
+    } else {
+        format!("{quantity} {}", world.item_catalog.display_plural(item))
+    }
+}
+
+/// Parse `offer_item`'s optional `quantity` argument: an integer `1..=stack`, or
+/// the whole stack when omitted.
+fn parse_offer_quantity(
+    args: &Map<String, Value>,
+    stack_quantity: u32,
+) -> Result<u32, ActionError> {
+    let Some(value) = optional_arg(args, "quantity") else {
+        return Ok(stack_quantity);
+    };
+    match value
+        .as_u64()
+        .and_then(|raw| u32::try_from(raw).ok())
+        .filter(|quantity| *quantity >= 1 && *quantity <= stack_quantity)
+    {
+        Some(quantity) => Ok(quantity),
+        None => Err(ActionError::new(
+            ActionErrorCode::BadQuantity,
+            format!(
+                "quantity must be a whole number between 1 and {stack_quantity} (you hold {stack_quantity})"
+            ),
+        )),
+    }
 }
 
 /// A failed action that still mutates: the offer was stale, so it is deleted
@@ -447,7 +497,7 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
 }
 
 fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
-    let parsed = args_object(args, &["item_id"], &["target"])?;
+    let parsed = args_object(args, &["item_id"], &["target", "quantity"])?;
     let item_id = parse_item_id(&parsed["item_id"])?;
     if !world.characters[actor_id].holds().contains(&item_id) {
         return Err(ActionError::new(
@@ -458,13 +508,18 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
             ),
         ));
     }
-    let Some(item) = world.items.get(&item_id) else {
+    let Some(item) = world.items.get(&item_id).cloned() else {
         return Err(ActionError::new(
             ActionErrorCode::UnknownItem,
             format!("there is no item with id {}", repr_id(item_id.as_str())),
         ));
     };
-    let item_name = item.name.clone();
+
+    // Optional quantity: an integer `1..=stack`, defaulting to the whole stack.
+    // The offered portion stays in the giver's stack until accepted.
+    let quantity = parse_offer_quantity(parsed, item.quantity)?;
+    let held_phrase = counted_phrase(world, &item, quantity);
+    let offered_noun = counted_noun(world, &item, quantity);
 
     let mut target: Option<ActorId> = None;
     if let Some(value) = optional_arg(parsed, "target") {
@@ -491,13 +546,15 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
     // Re-offering to a different target displaces the old one: a nearby jilted
     // target is told and gets a structured retract_offer BEFORE the new offer.
     // Displaced-but-absent or out-of-range targets get neither.
-    if let Some(old_target) = old_offer.as_ref().and_then(|offer| offer.target_id.clone())
+    if let Some(old) = old_offer.as_ref()
+        && let Some(old_target) = old.target_id.clone()
         && Some(&old_target) != target.as_ref()
         && world.characters.contains_key(&old_target)
         && hearers.contains(&old_target)
     {
+        let old_noun = counted_noun(world, &item, old.quantity);
         let line = format!(
-            "{} withdrew the offered {item_name} (id {item_id})",
+            "{} withdrew the offered {old_noun} (id {item_id})",
             cap_first(&identify_ids(world, &old_target, actor_id))
         );
         deliver(world, vec![(old_target.clone(), line)], false);
@@ -507,6 +564,7 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
             actor_id,
             Some(old_target.clone()),
             Some(item_id.clone()),
+            old.quantity,
             vec![old_target],
         );
     }
@@ -517,10 +575,10 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
             .map(|observer| {
                 let giver = cap_first(&identify_ids(world, observer, actor_id));
                 let line = if observer == target_id {
-                    format!("{giver} held out a {item_name} (id {item_id}) to you")
+                    format!("{giver} held out {held_phrase} (id {item_id}) to you")
                 } else {
                     format!(
-                        "{giver} offered a {item_name} to {}",
+                        "{giver} offered {held_phrase} to {}",
                         identify_ids(world, observer, target_id)
                     )
                 };
@@ -529,7 +587,7 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
             .collect();
         deliver(world, lines, false);
         format!(
-            "{} offers the {item_name} to {}",
+            "{} offers the {offered_noun} to {}",
             world.characters[actor_id].name(),
             world.characters[target_id].name()
         )
@@ -541,14 +599,14 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
                 (
                     observer.clone(),
                     format!(
-                        "{giver} held out a {item_name} (id {item_id}) to anyone who wanted it"
+                        "{giver} held out {held_phrase} (id {item_id}) to anyone who wanted it"
                     ),
                 )
             })
             .collect();
         deliver(world, lines, false);
         format!(
-            "{} offers the {item_name} to anyone nearby",
+            "{} offers the {offered_noun} to anyone nearby",
             world.characters[actor_id].name()
         )
     };
@@ -560,6 +618,7 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
         actor_id,
         target.clone(),
         Some(item_id.clone()),
+        quantity,
         hearers,
     );
     world.offers.insert(
@@ -569,6 +628,7 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
             giver_id: actor_id.clone(),
             target_id: target,
             created_seq: sequence,
+            quantity,
         },
     );
     world.touch_public_state();
@@ -612,7 +672,7 @@ fn accept_offered_item(
             ),
         ));
     }
-    let giver_id = offer.giver_id;
+    let giver_id = offer.giver_id.clone();
     if !world.characters.contains_key(&giver_id) {
         return Err(repair_and_fail(
             world,
@@ -635,7 +695,7 @@ fn accept_offered_item(
             message,
         ));
     }
-    let Some(item) = world.items.get(&item_id) else {
+    let Some(item) = world.items.get(&item_id).cloned() else {
         return Err(repair_and_fail(
             world,
             &item_id,
@@ -643,18 +703,106 @@ fn accept_offered_item(
             "the offered item no longer exists",
         ));
     };
-    let item_name = item.name.clone();
+
+    // The offered quantity may have shrunk below what was promised (the giver
+    // ate or sold some meanwhile) — a stale offer, repaired like any other.
+    let quantity = offer.quantity;
+    if item.quantity < quantity {
+        return Err(repair_and_fail(
+            world,
+            &item_id,
+            ActionErrorCode::StaleOffer,
+            "they no longer hold that many",
+        ));
+    }
+
+    let accepted_noun = counted_noun(world, &item, quantity);
+    let took_phrase = counted_phrase(world, &item, quantity);
 
     world.offers.remove(&item_id);
-    let giver = world.characters.get_mut(&giver_id).expect("checked above");
-    giver.state.holds.retain(|held| held != &item_id);
-    world
-        .characters
-        .get_mut(actor_id)
-        .expect("the taker is in the world")
-        .state
-        .holds
-        .push(item_id.clone());
+
+    // Split-and-merge, atomically. Same-stuff (same kind + metadata) stacks fold
+    // together on the receiver; the receiver's id wins so every id its LLM has
+    // seen stays valid. Non-stackable kinds never merge (a bowl each).
+    let stackable = world.item_catalog.stackable(&item);
+    let merge_target: Option<ItemId> = if stackable {
+        world.characters[actor_id]
+            .holds()
+            .iter()
+            .find(|held| {
+                *held != &item_id
+                    && world.items.get(*held).is_some_and(|other| other.same_stuff_as(&item))
+            })
+            .cloned()
+    } else {
+        None
+    };
+    let whole_stack = quantity == item.quantity;
+
+    if whole_stack {
+        world
+            .characters
+            .get_mut(&giver_id)
+            .expect("checked above")
+            .state
+            .holds
+            .retain(|held| held != &item_id);
+        match &merge_target {
+            Some(target_stack) => {
+                world
+                    .items
+                    .get_mut(target_stack)
+                    .expect("receiver stack exists")
+                    .quantity += quantity;
+                world.items.remove(&item_id);
+            }
+            None => {
+                world
+                    .characters
+                    .get_mut(actor_id)
+                    .expect("the taker is in the world")
+                    .state
+                    .holds
+                    .push(item_id.clone());
+            }
+        }
+    } else {
+        world
+            .items
+            .get_mut(&item_id)
+            .expect("giver stack exists")
+            .quantity -= quantity;
+        match &merge_target {
+            Some(target_stack) => {
+                world
+                    .items
+                    .get_mut(target_stack)
+                    .expect("receiver stack exists")
+                    .quantity += quantity;
+            }
+            None => {
+                // The moved part needs a fresh, deterministic id (`§6`).
+                let salt = world.event_sequence + 1;
+                let mut new_id = crate::world::mint_item_id(&item_id, salt);
+                let mut bump = 0i64;
+                while world.items.contains_key(&new_id) {
+                    bump += 1;
+                    new_id = crate::world::mint_item_id(&item_id, salt.wrapping_add(bump));
+                }
+                let mut moved = item.clone();
+                moved.id = new_id.clone();
+                moved.quantity = quantity;
+                world.items.insert(new_id.clone(), moved);
+                world
+                    .characters
+                    .get_mut(actor_id)
+                    .expect("the taker is in the world")
+                    .state
+                    .holds
+                    .push(new_id);
+            }
+        }
+    }
 
     // The giver is guaranteed inside this radius, being at most 4 m away.
     let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
@@ -663,10 +811,10 @@ fn accept_offered_item(
         .map(|observer| {
             let taker = cap_first(&identify_ids(world, observer, actor_id));
             let line = if observer == &giver_id {
-                format!("{taker} accepted the {item_name} (id {item_id}) you offered")
+                format!("{taker} accepted the {accepted_noun} (id {item_id}) you offered")
             } else {
                 format!(
-                    "{taker} took a {item_name} from {}",
+                    "{taker} took {took_phrase} from {}",
                     identify_ids(world, observer, &giver_id)
                 )
             };
@@ -680,12 +828,13 @@ fn accept_offered_item(
         actor_id,
         Some(giver_id.clone()),
         Some(item_id),
+        quantity,
         hearers,
     );
     world.touch_public_state();
     world.assert_invariants();
     Ok(format!(
-        "{} takes the {item_name} from {}",
+        "{} takes the {accepted_noun} from {}",
         world.characters[actor_id].name(),
         world.characters[&giver_id].name()
     ))
@@ -730,7 +879,7 @@ fn decline_offer(
     }
     // The offer survives a failed range check.
     require_interaction_range(world, actor_id, &giver_id)?;
-    let Some(item) = world.items.get(&item_id) else {
+    let Some(item) = world.items.get(&item_id).cloned() else {
         return Err(repair_and_fail(
             world,
             &item_id,
@@ -738,7 +887,8 @@ fn decline_offer(
             "the offered item no longer exists",
         ));
     };
-    let item_name = item.name.clone();
+    let declined_noun = counted_noun(world, &item, offer.quantity);
+    let declined_phrase = counted_phrase(world, &item, offer.quantity);
 
     // The giver keeps the item.
     world.offers.remove(&item_id);
@@ -748,10 +898,10 @@ fn decline_offer(
         .map(|observer| {
             let decliner = cap_first(&identify_ids(world, observer, actor_id));
             let line = if observer == &giver_id {
-                format!("{decliner} declined the {item_name} (id {item_id}) you offered")
+                format!("{decliner} declined the {declined_noun} (id {item_id}) you offered")
             } else {
                 format!(
-                    "{decliner} declined a {item_name} from {}",
+                    "{decliner} declined {declined_phrase} from {}",
                     identify_ids(world, observer, &giver_id)
                 )
             };
@@ -765,12 +915,13 @@ fn decline_offer(
         actor_id,
         Some(giver_id.clone()),
         Some(item_id),
+        offer.quantity,
         hearers,
     );
     world.touch_public_state();
     world.assert_invariants();
     Ok(format!(
-        "{} declines the {item_name} from {}",
+        "{} declines the {declined_noun} from {}",
         world.characters[actor_id].name(),
         world.characters[&giver_id].name()
     ))
@@ -798,7 +949,7 @@ fn retract_offer(
             ),
         ));
     };
-    let Some(item) = world.items.get(&item_id) else {
+    let Some(item) = world.items.get(&item_id).cloned() else {
         return Err(repair_and_fail(
             world,
             &item_id,
@@ -806,7 +957,7 @@ fn retract_offer(
             "the offered item no longer exists",
         ));
     };
-    let item_name = item.name.clone();
+    let withdrawn_noun = counted_noun(world, &item, offer.quantity);
 
     // No proximity requirement at all — but a distant target gets no percept.
     world.offers.remove(&item_id);
@@ -819,7 +970,7 @@ fn retract_offer(
             <= HEARING_RADIUS_M * HEARING_RADIUS_M
     {
         let line = format!(
-            "{} withdrew the offered {item_name} (id {item_id})",
+            "{} withdrew the offered {withdrawn_noun} (id {item_id})",
             cap_first(&identify_ids(world, target_id, actor_id))
         );
         deliver(world, vec![(target_id.clone(), line)], false);
@@ -832,12 +983,13 @@ fn retract_offer(
         actor_id,
         offer.target_id,
         Some(item_id),
+        offer.quantity,
         recipients,
     );
     world.touch_public_state();
     world.assert_invariants();
     Ok(format!(
-        "{} retracts the offer of the {item_name}",
+        "{} retracts the offer of the {withdrawn_noun}",
         world.characters[actor_id].name()
     ))
 }
@@ -854,52 +1006,75 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
             ),
         ));
     }
-    let Some(item) = world.items.get(&item_id) else {
+    let Some(item) = world.items.get(&item_id).cloned() else {
         return Err(ActionError::new(
             ActionErrorCode::UnknownItem,
             format!("there is no item with id {}", repr_id(item_id.as_str())),
         ));
     };
-    let item_name = item.name.clone();
-
-    let offer = world.offers.remove(&item_id);
-    let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
-    // The implicit retraction notifies, but deliberately emits NO
-    // retract_offer event (asymmetric with re-offer displacement).
-    if let Some(target_id) = offer.and_then(|offer| offer.target_id)
-        && world.characters.contains_key(&target_id)
-        && hearers.contains(&target_id)
-    {
-        let line = format!(
-            "{} withdrew the offered {item_name} (id {item_id})",
-            cap_first(&identify_ids(world, &target_id, actor_id))
-        );
-        deliver(world, vec![(target_id, line)], false);
+    // Eating a non-food kind fails; today's `eat` allowed anything.
+    if !world.item_catalog.is_edible(&item) {
+        return Err(ActionError::new(
+            ActionErrorCode::NotEdible,
+            format!(
+                "a {} is not food",
+                world.item_catalog.display_name(&item)
+            ),
+        ));
     }
+    // `eat` consumes exactly one unit, so the wording is always singular.
+    let eaten_phrase = counted_phrase(world, &item, 1);
+    let eaten_noun = counted_noun(world, &item, 1);
 
-    world
-        .characters
-        .get_mut(actor_id)
-        .expect("the eater is in the world")
-        .state
-        .holds
-        .retain(|held| held != &item_id);
-    // Items are singular: eating one removes it from the world forever.
-    world.items.remove(&item_id);
+    let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
+    let last_unit = item.quantity <= 1;
+
+    if last_unit {
+        // The last unit leaves the world forever. The implicit retraction of any
+        // pending offer notifies but deliberately emits NO retract_offer event
+        // (asymmetric with re-offer displacement) — the HUD learns of the
+        // removal from the snapshot instead. It fires only now, at zero.
+        let offer = world.offers.remove(&item_id);
+        if let Some(target_id) = offer.and_then(|offer| offer.target_id)
+            && world.characters.contains_key(&target_id)
+            && hearers.contains(&target_id)
+        {
+            let line = format!(
+                "{} withdrew the offered {eaten_noun} (id {item_id})",
+                cap_first(&identify_ids(world, &target_id, actor_id))
+            );
+            deliver(world, vec![(target_id, line)], false);
+        }
+        world
+            .characters
+            .get_mut(actor_id)
+            .expect("the eater is in the world")
+            .state
+            .holds
+            .retain(|held| held != &item_id);
+        world.items.remove(&item_id);
+    } else {
+        // One unit off a stack: the rest, and any pending offer of it, remain.
+        world
+            .items
+            .get_mut(&item_id)
+            .expect("the eater still holds the stack")
+            .quantity -= 1;
+    }
 
     let lines = hearers
         .iter()
         .map(|observer| {
             let eater = cap_first(&identify_ids(world, observer, actor_id));
-            (observer.clone(), format!("{eater} ate a {item_name}"))
+            (observer.clone(), format!("{eater} ate {eaten_phrase}"))
         })
         .collect();
     deliver(world, lines, false);
-    world_event(world, "eat", actor_id, None, Some(item_id), hearers);
+    world_event(world, "eat", actor_id, None, Some(item_id), 1, hearers);
     world.touch_public_state();
     world.assert_invariants();
     Ok(format!(
-        "{} eats the {item_name}",
+        "{} eats the {eaten_noun}",
         world.characters[actor_id].name()
     ))
 }

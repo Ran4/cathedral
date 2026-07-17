@@ -10,13 +10,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -141,13 +139,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -272,13 +268,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -403,13 +397,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -534,13 +526,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -665,13 +655,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -807,13 +795,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -949,13 +935,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -1091,13 +1075,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -1233,13 +1215,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -1375,13 +1355,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -1517,13 +1495,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -1629,8 +1605,7 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           }
         ],
         "characters": [
@@ -1775,8 +1750,7 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           }
         ],
         "characters": [
@@ -1921,28 +1895,29 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           },
           {
             "id": "zz001",
-            "name": "anvil",
-            "visual_key": "generic"
+            "kind": "generic",
+            "metadata": {
+              "display": "anvil"
+            }
           },
           {
             "id": "aa002",
-            "name": "loaf",
-            "visual_key": "generic"
+            "kind": "loaf"
           },
           {
             "id": "mm003",
-            "name": "rope",
-            "visual_key": "generic"
+            "kind": "generic",
+            "metadata": {
+              "display": "rope"
+            }
           }
         ],
         "characters": [
@@ -2090,28 +2065,29 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           },
           {
             "id": "zz001",
-            "name": "anvil",
-            "visual_key": "generic"
+            "kind": "generic",
+            "metadata": {
+              "display": "anvil"
+            }
           },
           {
             "id": "aa002",
-            "name": "loaf",
-            "visual_key": "generic"
+            "kind": "loaf"
           },
           {
             "id": "mm003",
-            "name": "rope",
-            "visual_key": "generic"
+            "kind": "generic",
+            "metadata": {
+              "display": "rope"
+            }
           }
         ],
         "characters": [
@@ -2259,13 +2235,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -2286,10 +2260,10 @@
             "holds": [
               "fzbn9"
             ],
-            "goal": "Buy a fish \u2014 pay Conny back \ud83d\udc1f",
+            "goal": "Buy a fish — pay Conny back 🐟",
             "memories": [
-              "I owe Conny two coppers \u2014 he calls it \"the fish debt\"",
-              "Sm\u00f6rg\u00e5sbord, \u0161\u010de, \u0442\u0435\u0441\u0442"
+              "I owe Conny two coppers — he calls it \"the fish debt\"",
+              "Smörgåsbord, šče, тест"
             ],
             "knows": [
               "cb947"
@@ -2298,9 +2272,9 @@
               "system: your action \"say {}\" failed: text must be a string"
             ],
             "recent_history": [
-              "Conny said to you: \"I\u2019ll not sell you a fish, Sven \u2014 not today.\"",
-              "A stranger (id k0fb1) said aloud: \u00abbonjour\u00bb, \u4f60\u597d, \ud83d\ude00",
-              "[You heard a big fart!]\u007f\u0001"
+              "Conny said to you: \"I’ll not sell you a fish, Sven — not today.\"",
+              "A stranger (id k0fb1) said aloud: «bonjour», 你好, 😀",
+              "[You heard a big fart!]\u0001"
             ],
             "pending_history": []
           },
@@ -2397,13 +2371,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -2540,13 +2512,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [
@@ -2671,13 +2641,11 @@
         "items": [
           {
             "id": "fzbn9",
-            "name": "fish",
-            "visual_key": "fish"
+            "kind": "herring"
           },
           {
             "id": "c0prs",
-            "name": "copper coin",
-            "visual_key": "copper_coin"
+            "kind": "spark"
           }
         ],
         "characters": [

@@ -14,7 +14,11 @@
 //! item labels are written by an LLM, and this is where that text is bounded
 //! and shape-checked before it reaches the ECS or a UI node.
 
-use std::{collections::HashMap, error::Error, fmt};
+use std::{
+    collections::{BTreeMap, HashMap},
+    error::Error,
+    fmt,
+};
 
 use bevy::prelude::{Component, Resource, Vec3};
 use serde::{Deserialize, Deserializer, Serialize, de};
@@ -25,6 +29,9 @@ const MAX_ACTORS: usize = 1_024;
 const MAX_ITEMS: usize = 4_096;
 const MAX_OFFERS: usize = 4_096;
 const MAX_LABEL_CHARS: usize = 256;
+/// A stack's metadata is a handful of short catalog-declared descriptors; a
+/// projection carrying more is malformed.
+const MAX_METADATA_ENTRIES: usize = 16;
 
 /// Stable, opaque identity of an actor in the engine's world.
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -172,8 +179,20 @@ pub struct ActorSnapshot {
 #[serde(deny_unknown_fields)]
 pub struct ItemSnapshot {
     pub id: ItemId,
+    /// The catalog kind ("spark", "loaf"); the display name below is derived
+    /// from it sim-side so the host never needs the catalog.
+    pub kind: String,
+    /// The catalog-derived display name shown to the player.
     pub name: String,
+    /// The catalog-derived plural noun phrase, so the host can pluralize counts
+    /// (including irregulars like "loaves") without the catalog.
+    pub display_plural: String,
     pub visual_key: String,
+    /// How many units in this stack (always ≥ 1).
+    pub quantity: u32,
+    /// The catalog-declared descriptors that are part of stack identity.
+    #[serde(default)]
+    pub metadata: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -260,8 +279,12 @@ impl From<&cathedral_sim::PublicSnapshot> for WorldSnapshot {
                 .iter()
                 .map(|item| ItemSnapshot {
                     id: item_id_from_sim(&item.id),
-                    name: item.name.clone(),
+                    kind: item.kind.as_str().to_owned(),
+                    name: item.display_name.clone(),
+                    display_plural: item.display_plural.clone(),
                     visual_key: item.visual_key.clone(),
+                    quantity: item.quantity,
+                    metadata: item.metadata.clone(),
                 })
                 .collect(),
             offers: snapshot
@@ -290,6 +313,8 @@ pub enum SnapshotError {
     InvalidItemId(ItemId),
     DuplicateActor(ActorId),
     DuplicateItem(ItemId),
+    /// A stack with quantity 0 — unrepresentable; the sim removes such stacks.
+    NonPositiveQuantity(ItemId),
     NonFinitePosition(ActorId),
     UnknownHeldItem {
         actor_id: ActorId,
@@ -337,6 +362,9 @@ impl fmt::Display for SnapshotError {
             Self::InvalidItemId(id) => write!(formatter, "invalid item id {:?}", id.0),
             Self::DuplicateActor(id) => write!(formatter, "duplicate actor id {:?}", id.0),
             Self::DuplicateItem(id) => write!(formatter, "duplicate item id {:?}", id.0),
+            Self::NonPositiveQuantity(id) => {
+                write!(formatter, "item {:?} has a non-positive quantity", id.0)
+            }
             Self::NonFinitePosition(id) => {
                 write!(formatter, "actor {:?} has a non-finite position", id.0)
             }
@@ -550,9 +578,18 @@ impl ValidatedSnapshot {
             if item_indices.insert(item.id.clone(), index).is_some() {
                 return Err(SnapshotError::DuplicateItem(item.id.clone()));
             }
+            if item.quantity < 1 {
+                return Err(SnapshotError::NonPositiveQuantity(item.id.clone()));
+            }
             if !valid_projection_text(&item.name, MAX_LABEL_CHARS) {
                 return Err(SnapshotError::InvalidText {
                     field: "item name",
+                    owner_id: item.id.0.clone(),
+                });
+            }
+            if !valid_projection_text(&item.display_plural, MAX_LABEL_CHARS) {
+                return Err(SnapshotError::InvalidText {
+                    field: "item plural",
                     owner_id: item.id.0.clone(),
                 });
             }
@@ -561,6 +598,25 @@ impl ValidatedSnapshot {
                     field: "item visual key",
                     owner_id: item.id.0.clone(),
                 });
+            }
+            if !item.kind.is_empty() && !valid_projection_text(&item.kind, MAX_ID_CHARS) {
+                return Err(SnapshotError::InvalidText {
+                    field: "item kind",
+                    owner_id: item.id.0.clone(),
+                });
+            }
+            if item.metadata.len() > MAX_METADATA_ENTRIES {
+                return Err(SnapshotError::LimitExceeded("item metadata entries"));
+            }
+            for (key, value) in &item.metadata {
+                if !valid_projection_text(key, MAX_LABEL_CHARS)
+                    || !valid_projection_text(value, MAX_LABEL_CHARS)
+                {
+                    return Err(SnapshotError::InvalidText {
+                        field: "item metadata",
+                        owner_id: item.id.0.clone(),
+                    });
+                }
             }
         }
 
@@ -705,8 +761,12 @@ mod tests {
     fn item(id: &str) -> ItemSnapshot {
         ItemSnapshot {
             id: ItemId(id.into()),
+            kind: "generic".into(),
             name: id.into(),
+            display_plural: format!("{id}s"),
             visual_key: id.into(),
+            quantity: 1,
+            metadata: BTreeMap::new(),
         }
     }
 
@@ -796,5 +856,38 @@ mod tests {
             Err(SnapshotError::InvalidText { .. })
         ));
         assert_eq!(mirror.revision(), None);
+    }
+
+    /// Definition of done (host side): an item nobody holds is rejected wholesale
+    /// — the mirror never carries a ground item.
+    #[test]
+    fn an_unowned_item_is_rejected_by_the_projection() {
+        let mut mirror = WorldMirror::default();
+        mirror.replace_snapshot(snapshot(1)).unwrap();
+        let mut invalid = snapshot(2);
+        // Nobody holds the item, and there is no offer keeping it live.
+        invalid.actors[0].holds.clear();
+        invalid.offers.clear();
+        assert!(matches!(
+            mirror.replace_snapshot(invalid),
+            Err(SnapshotError::UnownedItem(_))
+        ));
+        // The good projection stands.
+        assert_eq!(mirror.revision(), Some(1));
+    }
+
+    /// Definition of done (host side): quantity 0 is unrepresentable — the
+    /// projection rejects it, the twin of the unowned-item rejection.
+    #[test]
+    fn a_zero_quantity_stack_is_rejected_by_the_projection() {
+        let mut mirror = WorldMirror::default();
+        mirror.replace_snapshot(snapshot(1)).unwrap();
+        let mut invalid = snapshot(2);
+        invalid.items[0].quantity = 0;
+        assert!(matches!(
+            mirror.replace_snapshot(invalid),
+            Err(SnapshotError::NonPositiveQuantity(_))
+        ));
+        assert_eq!(mirror.revision(), Some(1));
     }
 }

@@ -963,13 +963,20 @@ fn inventory_text(mirror: &WorldMirror, holds: &[ItemId], selected: Option<&Item
         .iter()
         .enumerate()
         .map(|(index, item_id)| {
-            let name = mirror
-                .item(item_id)
-                .map_or(item_id.0.as_str(), |item| item.name.as_str());
+            let label = mirror.item(item_id).map_or_else(
+                || item_id.0.clone(),
+                |item| {
+                    if item.quantity > 1 {
+                        format!("{} ×{}", item.name, item.quantity)
+                    } else {
+                        item.name.clone()
+                    }
+                },
+            );
             if selected == Some(item_id) {
-                format!("▶ [{}] {}", index + 1, name)
+                format!("▶ [{}] {}", index + 1, label)
             } else {
-                format!("[{}] {}", index + 1, name)
+                format!("[{}] {}", index + 1, label)
             }
         })
         .collect::<Vec<_>>()
@@ -1128,13 +1135,21 @@ mod tests {
                 items: vec![
                     ItemSnapshot {
                         id: ItemId("coin".into()),
+                        kind: "spark".into(),
                         name: "copper coin".into(),
+                        display_plural: "copper coins".into(),
                         visual_key: "copper_coin".into(),
+                        quantity: 1,
+                        metadata: Default::default(),
                     },
                     ItemSnapshot {
                         id: ItemId("fish".into()),
+                        kind: "herring".into(),
                         name: "fish".into(),
+                        display_plural: "fish".into(),
                         visual_key: "fish".into(),
+                        quantity: 1,
+                        metadata: Default::default(),
                     },
                 ],
                 offers: vec![
@@ -1167,6 +1182,52 @@ mod tests {
         normalize_selection(&mut state, &[fish, coin.clone()]);
         assert_eq!(state.selected_item, Some(coin));
         assert_eq!(state.selected_index, 1);
+    }
+
+    #[test]
+    fn the_inventory_renders_a_stack_count() {
+        let mut mirror = WorldMirror::default();
+        mirror
+            .replace_snapshot(WorldSnapshot {
+                world_revision: 1,
+                player_id: ActorId("player".into()),
+                actors: vec![ActorSnapshot {
+                    id: ActorId("player".into()),
+                    name_for_player: "You".into(),
+                    control: ActorControl::Player,
+                    position_m: Position::new(0.0, 0.0, 0.0).unwrap(),
+                    facing_yaw: 0.0,
+                    appearance_key: "player".into(),
+                    holds: vec![ItemId("spk".into()), ItemId("one".into())],
+                }],
+                items: vec![
+                    ItemSnapshot {
+                        id: ItemId("spk".into()),
+                        kind: "spark".into(),
+                        name: "spark".into(),
+                        display_plural: "sparks".into(),
+                        visual_key: "copper_coin".into(),
+                        quantity: 3,
+                        metadata: Default::default(),
+                    },
+                    ItemSnapshot {
+                        id: ItemId("one".into()),
+                        kind: "herring".into(),
+                        name: "herring".into(),
+                        display_plural: "herrings".into(),
+                        visual_key: "fish".into(),
+                        quantity: 1,
+                        metadata: Default::default(),
+                    },
+                ],
+                offers: vec![],
+            })
+            .unwrap();
+        let holds = [ItemId("spk".into()), ItemId("one".into())];
+        let text = inventory_text(&mirror, &holds, None);
+        // A stack above 1 shows a ×N count; a single item shows none.
+        assert!(text.contains("spark ×3"), "{text}");
+        assert!(text.contains("herring") && !text.contains("herring ×"), "{text}");
     }
 
     #[test]

@@ -6,7 +6,7 @@
 //! filesystem. Production composes its player/items seed with the lore cast;
 //! compact compatibility tests retain a dedicated four-character fixture.
 
-use std::fmt;
+use std::{collections::BTreeMap, fmt};
 
 use serde::{Deserialize, Serialize};
 
@@ -15,7 +15,7 @@ use crate::{
     areas::AreaMap,
     character::{Character, CharacterSheet},
     ids::{ActorId, ItemId},
-    item::Item,
+    item::{Item, ItemCatalog, ItemKind},
     lore::LoreCast,
     sounds::SoundCatalog,
     world::World,
@@ -43,27 +43,31 @@ impl fmt::Display for SeedError {
 
 impl std::error::Error for SeedError {}
 
-fn generic_visual_key() -> String {
-    "generic".to_string()
+fn one() -> u32 {
+    1
 }
 
-/// One item's static definition. (`Item` itself, with the seed file's rules:
-/// no unknown keys, `visual_key` optional.)
+/// One item's static definition: a kind, an optional quantity (default 1) and
+/// optional catalog-declared metadata (default empty). The display name and
+/// visuals are derived from the catalog, not stored.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ItemSeed {
     pub id: ItemId,
-    pub name: String,
-    #[serde(default = "generic_visual_key")]
-    pub visual_key: String,
+    pub kind: ItemKind,
+    #[serde(default = "one")]
+    pub quantity: u32,
+    #[serde(default)]
+    pub metadata: BTreeMap<String, String>,
 }
 
 impl From<&ItemSeed> for Item {
     fn from(seed: &ItemSeed) -> Self {
         Item {
             id: seed.id.clone(),
-            name: seed.name.clone(),
-            visual_key: seed.visual_key.clone(),
+            kind: seed.kind.clone(),
+            quantity: seed.quantity,
+            metadata: seed.metadata.clone(),
         }
     }
 }
@@ -102,6 +106,7 @@ impl WorldSeed {
     }
 
     pub fn validate(&self) -> Result<(), SeedError> {
+        let catalog = ItemCatalog::embedded();
         let mut item_ids: Vec<&ItemId> = Vec::with_capacity(self.items.len());
         for item in &self.items {
             if !item.id.is_valid() {
@@ -109,6 +114,11 @@ impl WorldSeed {
             }
             if item_ids.contains(&&item.id) {
                 return Err(SeedError::new(format!("duplicate item id '{}'", item.id)));
+            }
+            // The kind must be catalog-known and the metadata catalog-declared —
+            // this is what stops seed content from forking the stack space.
+            if let Err(message) = catalog.validate_seed_item(&Item::from(item)) {
+                return Err(SeedError::new(message));
             }
             item_ids.push(&item.id);
         }
@@ -383,19 +393,29 @@ mod tests {
     }
 
     #[test]
-    fn items_default_to_the_generic_visual_key() {
-        let seed =
-            WorldSeed::from_json_str(r#"{"items": [{"id": "x1", "name": "thing"}]}"#).unwrap();
-        assert_eq!(seed.items[0].visual_key, "generic");
+    fn items_default_to_one_and_derive_visuals_from_the_catalog() {
+        let seed = WorldSeed::from_json_str(r#"{"items": [{"id": "x1", "kind": "generic"}]}"#)
+            .unwrap();
+        assert_eq!(seed.items[0].quantity, 1);
         let world = build_world(&seed, WorldConfig::default());
-        assert_eq!(world.items[&ItemId::from_raw("x1")].visual_key, "generic");
+        let item = &world.items[&ItemId::from_raw("x1")];
+        assert_eq!(item.quantity, 1);
+        assert_eq!(world.item_catalog.visual_key(item), "generic");
+    }
+
+    #[test]
+    fn the_loader_rejects_unknown_kinds() {
+        let error =
+            WorldSeed::from_json_str(r#"{"items": [{"id": "x1", "kind": "unobtanium"}]}"#)
+                .unwrap_err();
+        assert!(error.message.contains("unknown kind"), "{}", error.message);
     }
 
     #[test]
     fn the_loader_rejects_seeds_that_would_panic_the_world() {
         // Duplicate ids: `World::add_*` treats these as programmer errors.
         let error = WorldSeed::from_json_str(
-            r#"{"items": [{"id": "a", "name": "one"}, {"id": "a", "name": "two"}]}"#,
+            r#"{"items": [{"id": "a", "kind": "spark"}, {"id": "a", "kind": "herring"}]}"#,
         )
         .unwrap_err();
         assert_eq!(error.message, "duplicate item id 'a'");
@@ -420,7 +440,7 @@ mod tests {
         );
 
         let two_holders = format!(
-            r#"{{"items": [{{"id": "fzbn9", "name": "fish"}}], "characters": [{}, {}]}}"#,
+            r#"{{"items": [{{"id": "fzbn9", "kind": "herring"}}], "characters": [{}, {}]}}"#,
             character_json("sv3n1", r#"["fzbn9"]"#),
             character_json("cb947", r#"["fzbn9"]"#)
         );

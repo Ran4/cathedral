@@ -3,11 +3,14 @@
 //! Privacy invariant: no `back_story`, `memories`, `goal`, `voice_key`,
 //! `inbox`, `recent_history`, `pending_history`, or `knows` ever appears here.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
     character::Control,
     ids::{ActorId, ItemId},
+    item::ItemKind,
     math::Vec3,
 };
 
@@ -40,8 +43,18 @@ pub struct ActorSnapshot {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ItemSnapshot {
     pub id: ItemId,
-    pub name: String,
+    pub kind: ItemKind,
+    /// The catalog-derived display name, sent so the host never needs the
+    /// catalog.
+    pub display_name: String,
+    /// The catalog-derived plural noun phrase ("loaves", "bowls of stew"), sent
+    /// for the same reason: the host pluralizes counts without the catalog.
+    pub display_plural: String,
     pub visual_key: String,
+    /// How many units in this stack (always ≥ 1).
+    pub quantity: u32,
+    /// The catalog-declared descriptors that are part of stack identity.
+    pub metadata: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -493,6 +493,9 @@ pub enum EngineMessage {
         actor_id: ActorId,
         target_id: Option<ActorId>,
         item_id: Option<ItemId>,
+        /// Units moved (offer/accept/eat); 1 for single-item traffic, so the HUD
+        /// toast can pluralize.
+        quantity: u32,
         recipient_ids: Vec<ActorId>,
     },
     CommandResult {
@@ -1864,6 +1867,7 @@ fn flush_world_event(event: &DomainEvent, out: &mut Vec<EngineMessage>) {
         actor_id,
         target_id: event.target_id.clone(),
         item_id: event.item_id.clone(),
+        quantity: event.quantity,
         recipient_ids: event.recipient_ids.clone(),
     });
 }

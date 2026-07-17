@@ -28,6 +28,10 @@ pub enum ActionErrorCode {
     BroadcastCannotDecline,
     UnknownSound,
     SoundsDisabled,
+    /// `eat` of a kind the catalog does not mark edible ("a spark is not food").
+    NotEdible,
+    /// `offer_item` with a `quantity` outside `1..=stack.quantity`.
+    BadQuantity,
     /// `go_to` / `tell_way` named a place the actor holds no handle for.
     UnknownPlace,
     /// `go_to` could not route from where the actor stands.
@@ -59,6 +63,8 @@ impl ActionErrorCode {
             Self::BroadcastCannotDecline => "broadcast_cannot_decline",
             Self::UnknownSound => "unknown_sound",
             Self::SoundsDisabled => "sounds_disabled",
+            Self::NotEdible => "not_edible",
+            Self::BadQuantity => "bad_quantity",
             Self::UnknownPlace => "unknown_place",
             Self::NoRoute => "no_route",
             Self::TooFar => "too_far",
@@ -203,6 +209,8 @@ pub enum CommandErrorCode {
     BroadcastCannotDecline,
     UnknownSound,
     SoundsDisabled,
+    NotEdible,
+    BadQuantity,
     UnknownPlace,
     NoRoute,
     TooFar,
@@ -254,6 +262,8 @@ impl CommandErrorCode {
             Self::BroadcastCannotDecline => "broadcast_cannot_decline",
             Self::UnknownSound => "unknown_sound",
             Self::SoundsDisabled => "sounds_disabled",
+            Self::NotEdible => "not_edible",
+            Self::BadQuantity => "bad_quantity",
             Self::UnknownPlace => "unknown_place",
             Self::NoRoute => "no_route",
             Self::TooFar => "too_far",
@@ -300,6 +310,8 @@ impl From<ActionErrorCode> for CommandErrorCode {
             ActionErrorCode::BroadcastCannotDecline => Self::BroadcastCannotDecline,
             ActionErrorCode::UnknownSound => Self::UnknownSound,
             ActionErrorCode::SoundsDisabled => Self::SoundsDisabled,
+            ActionErrorCode::NotEdible => Self::NotEdible,
+            ActionErrorCode::BadQuantity => Self::BadQuantity,
             ActionErrorCode::UnknownPlace => Self::UnknownPlace,
             ActionErrorCode::NoRoute => Self::NoRoute,
             ActionErrorCode::TooFar => Self::TooFar,
