@@ -39,7 +39,7 @@ use crate::{
     THIRST_MAX, THIRST_PARCHED, THIRST_THIRSTY, WALK_SPEED_MPS, WALLET_SEED_MIN, WALLET_SEED_SALT,
     WALLET_SEED_SPREAD, WATER_DRAW_SECONDS, WELL_ARRIVE_RADIUS_M,
     WELL_KEEPER_SOUND_INTERVAL_SECONDS, WELL_QUEUE_SHORT,
-    character::{Character, IntentTarget, Movement},
+    character::{Character, IntentTarget, Movement, VendorListing},
     clock::{Office, WorldClock, Weekday},
     event::DomainEvent,
     homes::{HOMES_JSON, HomesDoc},
@@ -1404,7 +1404,21 @@ impl Round {
     /// already delivers them to the stall's site (a leg labelled it). Rebinding
     /// a stall to a new vendor releases whoever was queued at the old one.
     fn bind_vendors(&mut self, world: &mut World, weekday: Weekday) {
+        // Two-phase, so `you_sell` bookkeeping keys off the *settled* set of
+        // vendors rather than a per-stall interleave. If clear-old and write-new
+        // ran per stall in index order, a vendor reassigned from a higher-index
+        // stall to a lower-index one in the same pass (a fish trader moved from
+        // Maren's Green to Coswald's on a Highmarket day) would be bound and
+        // written at the low index, then wiped when the high stall cleared its
+        // now-stale previous vendor — leaving an actively-bound vendor with no
+        // price list.
+
+        // Phase 1: pick every stall's new vendor (respecting `taken`) before
+        // mutating any stall, and remember who kept each stall going in.
+        let previous: Vec<Option<ActorId>> =
+            self.stalls.iter().map(|stall| stall.vendor.clone()).collect();
         let mut taken: BTreeSet<ActorId> = BTreeSet::new();
+        let mut chosen: Vec<Option<ActorId>> = Vec::with_capacity(self.stalls.len());
         for s in 0..self.stalls.len() {
             let new = if self.stalls[s].open.open_today(weekday) {
                 self.pick_vendor(world, s, &taken)
@@ -1414,11 +1428,71 @@ impl Round {
             if let Some(vendor) = &new {
                 taken.insert(vendor.clone());
             }
-            if new != self.stalls[s].vendor {
+            chosen.push(new);
+        }
+
+        // Phase 2: apply the bindings — release the buyers at any stall whose
+        // vendor changed, then install the new vendor.
+        for s in 0..self.stalls.len() {
+            if chosen[s] != self.stalls[s].vendor {
                 self.release_stall(world, s);
-                self.stalls[s].vendor = new;
+                self.stalls[s].vendor = chosen[s].clone();
             }
         }
+
+        // Phase 3: `you_sell` — clear it for anyone who was a vendor and now keeps
+        // NO stall, then (re)write it for every current vendor. Computed only once
+        // the whole set has settled, so a reassigned vendor is never wiped by the
+        // stall they left. Priced off the catalog's trade template, not current
+        // stock, so a sold-out baker still knows what they charge.
+        let current: BTreeSet<ActorId> =
+            self.stalls.iter().filter_map(|stall| stall.vendor.clone()).collect();
+        for old in previous.into_iter().flatten() {
+            if !current.contains(&old)
+                && let Some(character) = world.characters.get_mut(&old)
+            {
+                character.state.you_sell.clear();
+            }
+        }
+        for s in 0..self.stalls.len() {
+            if let Some(vendor) = self.stalls[s].vendor.clone() {
+                let listings = self.sell_listings(world, s);
+                if let Some(character) = world.characters.get_mut(&vendor) {
+                    character.state.you_sell = listings;
+                }
+            }
+        }
+    }
+
+    /// The `you_sell` price list for stall `s`: each kind in the trade's stock
+    /// template (or the pot's per-serving bowl), named and priced from the item
+    /// catalog in template order (`05_the_llm_seam.md` §3). A kind the catalog
+    /// does not price is skipped rather than invented.
+    fn sell_listings(&self, world: &World, s: usize) -> Vec<VendorListing> {
+        let Some(trade) = self.food_trades.get(&self.stalls[s].trade) else {
+            return Vec::new();
+        };
+        let probe = |kind: &str, metadata: &BTreeMap<String, String>| -> Option<VendorListing> {
+            let mut item = Item::new(ItemId::from_raw("sell_probe"), kind);
+            item.metadata = metadata.clone();
+            world.item_catalog.price_sparks(&item).map(|price_sparks| VendorListing {
+                name: world.item_catalog.display_name(&item),
+                price_sparks,
+            })
+        };
+        let mut listings: Vec<VendorListing> = trade
+            .stock
+            .iter()
+            .filter_map(|spec| probe(&spec.kind, &spec.metadata))
+            .collect();
+        // The never-scraped pot sells a bowl it conjures per serving; it belongs
+        // on the sheet exactly like a stock kind so the cook quotes the list too.
+        if let Some(kind) = &trade.per_serving
+            && let Some(listing) = probe(kind, &BTreeMap::new())
+        {
+            listings.push(listing);
+        }
+        listings
     }
 
     /// The keeper for stall `s`: the authored preferred keeper first (Renna at

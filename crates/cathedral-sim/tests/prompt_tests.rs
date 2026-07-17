@@ -840,3 +840,50 @@ fn the_hunger_condition_computes_and_clears_when_the_actor_eats() {
         "the fed actor's sheet drops the hunger word with no memory hygiene"
     );
 }
+
+/// A bound vendor's `you_sell` price list renders between `you_hold` and
+/// `you_see`, priced off the catalog: plural `sparks` above one, singular
+/// `spark` at exactly one — matching the purchase percept's `for 1 spark`
+/// (`features/food_and_items/05_the_llm_seam.md` §3). An unbound actor never
+/// shows the section at all, which is what keeps the frozen fixtures stable.
+#[test]
+fn a_bound_vendor_lists_you_sell_prices_off_the_catalog() {
+    use cathedral_sim::VendorListing;
+
+    let env = prompt_env();
+    let mut world = seed_world();
+    let id = actor("sv3n1");
+
+    // Unbound: no section.
+    let before = render_prompt(&world, &id, None, &env).unwrap();
+    assert!(!before.contains("**you_sell**"), "an unbound actor has no price list");
+    assert_eq!(md_section(&before, "you_sell"), None);
+
+    // The round binds a vendor by writing the catalog-priced listings onto the
+    // sheet; the herring at one spark pins the singular unit word.
+    world.characters.get_mut(&id).unwrap().state.you_sell = vec![
+        VendorListing { name: "herring".into(), price_sparks: 1 },
+        VendorListing { name: "rye loaf".into(), price_sparks: 2 },
+        VendorListing { name: "wheat loaf".into(), price_sparks: 4 },
+    ];
+    let after = render_prompt(&world, &id, None, &env).unwrap();
+    assert!(
+        after.contains("**you_sell** (your stall's prices):"),
+        "the section renders with its note"
+    );
+    assert_eq!(
+        md_section(&after, "you_sell"),
+        Some(vec![
+            "herring, 1 spark".to_string(),
+            "rye loaf, 2 sparks".to_string(),
+            "wheat loaf, 4 sparks".to_string(),
+        ]),
+        "prices come off the catalog, singular only at one spark"
+    );
+
+    // It sits between you_hold and you_see, where a vendor reads their board.
+    let hold_at = after.find("**you_hold**").unwrap();
+    let sell_at = after.find("**you_sell**").unwrap();
+    let see_at = after.find("**you_see**").unwrap();
+    assert!(hold_at < sell_at && sell_at < see_at, "you_sell is between you_hold and you_see");
+}

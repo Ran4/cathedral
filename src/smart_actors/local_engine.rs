@@ -653,12 +653,14 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
             request_id,
             target_id,
             item_id,
+            quantity,
             position_m,
             spatial_seq,
         } => EngineCommand::PlayerOffer {
             request_id,
             item_id: SimItemId::from_raw(item_id.0),
             target_id: SimActorId::from_raw(target_id.0),
+            quantity,
             position_m: to_sim(position_m),
             spatial_seq: to_seq(spatial_seq),
         },
@@ -979,6 +981,7 @@ mod tests {
             request_id: "offer-conny".into(),
             target_id: ActorId("cb947".into()),
             item_id: ItemId("c0prs".into()),
+            quantity: None,
             position_m: player_position(),
             spatial_seq: 1,
         });

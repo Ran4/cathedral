@@ -1,6 +1,9 @@
 # Food & items: the city eats
 
-Status: designed, not started. This folder is the plan.
+Status: M0–M4 implemented (2026-07-18). M5 (the supply chain) remains deferred — see
+[06_milestones.md](06_milestones.md). The specs below were updated where the implementation
+differed (rung-3 meal-office gate, tavern-node hearths, silent auto-eat, template-derived
+`you_sell`).
 
 | | |
 |---|---|

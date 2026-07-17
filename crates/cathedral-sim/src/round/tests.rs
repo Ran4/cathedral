@@ -2369,6 +2369,113 @@ fn the_restock_and_watch_ledger_close_the_books() {
     world.assert_invariants();
 }
 
+/// Regression (`bind_vendors` two-phase, `05` §3): when a vendor is reassigned
+/// from a higher-index stall to a lower-index one in a single pass — a fish
+/// trader moved off Maren's Green onto Coswald's on a Highmarket day — their
+/// freshly-written `you_sell` must survive the departed stall's clear of its now
+/// stale previous vendor. The old per-stall interleave wiped it, leaving an
+/// actively-bound vendor with no price list. A genuinely-unbound former vendor
+/// is still cleared in the same pass.
+#[test]
+fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
+    use std::collections::BTreeMap;
+
+    let mut world = base_world();
+    // Three fish traders: V nearest the low-index stall, Z its former keeper a
+    // little farther, U the keeper of the high-index stall.
+    world.add_character(person("v0000", Vec3::new(1.0, WALK_Y, 0.0), Some("fish_trader"), Significance::Minor));
+    world.add_character(person("z0000", Vec3::new(5.0, WALK_Y, 0.0), Some("fish_trader"), Significance::Minor));
+    world.add_character(person("u0000", Vec3::new(99.0, WALK_Y, 100.0), Some("fish_trader"), Significance::Minor));
+
+    let mut round = Round::default();
+    round.food_trades.insert(
+        "fish".into(),
+        ResolvedTrade {
+            occupations: vec!["fish_trader".into()],
+            stock: vec![
+                StockSpec { kind: "herring".into(), metadata: BTreeMap::new(), quantity: 10 },
+                StockSpec { kind: "smoked_eel".into(), metadata: BTreeMap::new(), quantity: 4 },
+            ],
+            per_serving: None,
+        },
+    );
+
+    // Enrol each with legs that route them to the stall sites (the eligibility
+    // key `pick_vendor` reads) and a base that fixes the nearest-vendor tie-break.
+    let mut enrol = |id: &str, base: Vec3, sites: &[&str]| {
+        round.people.insert(
+            ActorId::from_raw(id),
+            Townsperson {
+                home: None,
+                base,
+                legs: sites.iter().map(|site| leg(Office::HighWick, site, None)).collect(),
+                leash_m: 2.0,
+                curfew_exempt: false,
+                source: None,
+                is_household: false,
+                food: None,
+                phase: Phase::Idle,
+                travel_target: None,
+                travel_for_intent: false,
+                next_decision: 0.0,
+                epoch: 0,
+                excused: false,
+            },
+        );
+    };
+    enrol("v0000", Vec3::new(1.0, WALK_Y, 0.0), &["SITE_LOW", "SITE_HIGH"]);
+    enrol("z0000", Vec3::new(5.0, WALK_Y, 0.0), &["SITE_LOW"]);
+    enrol("u0000", Vec3::new(99.0, WALK_Y, 100.0), &["SITE_HIGH"]);
+
+    let stall = |site: &str, pitch: Vec3, weekdays: Option<Vec<Weekday>>, vendor: &str| FoodStall {
+        name: site.into(),
+        site: site.into(),
+        pitch,
+        trade: "fish".into(),
+        vendor: Some(ActorId::from_raw(vendor)),
+        queue: Vec::new(),
+        serving: None,
+        stock_ids: Vec::new(),
+        preferred: None,
+        open: OpenSpec { offices: vec![Office::HighWick], weekdays },
+        cry_next: 0.0,
+    };
+    // idx 0 (low): Highmarket-only, former keeper Z. idx 1 (high): every day,
+    // former keeper V — the vendor about to move down onto idx 0.
+    round.stalls.push(stall("SITE_LOW", Vec3::new(0.0, WALK_Y, 0.0), Some(vec![Weekday::Highmarket]), "z0000"));
+    round.stalls.push(stall("SITE_HIGH", Vec3::new(100.0, WALK_Y, 100.0), None, "v0000"));
+
+    // The price lists the previous pass left on the two former vendors.
+    for id in ["v0000", "z0000"] {
+        world.characters.get_mut(&ActorId::from_raw(id)).unwrap().state.you_sell =
+            vec![VendorListing { name: "herring".into(), price_sparks: 1 }];
+    }
+
+    round.bind_vendors(&mut world, Weekday::Highmarket);
+
+    // V moved idx1 → idx0; U took idx1; Z is bumped from idx0.
+    assert_eq!(round.stalls[0].vendor.as_ref(), Some(&ActorId::from_raw("v0000")));
+    assert_eq!(round.stalls[1].vendor.as_ref(), Some(&ActorId::from_raw("u0000")));
+    // The bug: V's you_sell is wiped by idx1's clear of its stale previous vendor.
+    assert!(
+        !world.characters[&ActorId::from_raw("v0000")].state.you_sell.is_empty(),
+        "the reassigned vendor keeps its price list across the same pass"
+    );
+    // The genuinely-unbound former vendor is cleared in the same pass.
+    assert!(
+        world.characters[&ActorId::from_raw("z0000")].state.you_sell.is_empty(),
+        "the bumped former vendor's price list is cleared"
+    );
+    // The new keeper of idx1 gets the fish list off the catalog.
+    assert_eq!(
+        world.characters[&ActorId::from_raw("u0000")].state.you_sell,
+        vec![
+            VendorListing { name: "herring".into(), price_sparks: 1 },
+            VendorListing { name: "smoked eel".into(), price_sparks: 3 },
+        ]
+    );
+}
+
 /// End to end on the real graph: a famished passer-by at the Wickmarket seeks the
 /// bread stall, joins its queue, buys a loaf and eats it — the whole rung-3 → walk
 /// → queue → silent purchase → eat chain, with the self-percept both parties can
@@ -2441,6 +2548,49 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
     assert!(clink.is_some(), "the purchase emits a coin_clink");
     assert!(clink.unwrap().actor_id.is_none(), "the clink is an unattributed world sound");
     world.assert_invariants();
+}
+
+/// A vendor's `you_sell` price list is written the instant the round binds them
+/// to a stall — off the catalog's stock template, not the current stock
+/// (`05_the_llm_seam.md` §3) — and swept the instant they are unbound, so the
+/// section only ever appears on a currently-bound vendor.
+#[test]
+fn binding_a_vendor_writes_you_sell_and_unbinding_clears_it() {
+    let nav = nav();
+    let clock = clock_on(Office::HighWick, 2); // Highmarket noon, the market's peak
+    let mut world = base_world();
+    let wickmarket = nav.node_point(nav.place("The Wickmarket").expect("baked").node);
+    world.add_character(person("bakr3", wickmarket, Some("baker"), Significance::Minor));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    let baker = ActorId::from_raw("bakr3");
+    assert!(
+        round.stalls().iter().any(|s| s.name.contains("bread") && s.vendor.as_ref() == Some(&baker)),
+        "the baker keeps the bread stall"
+    );
+    assert_eq!(
+        world.characters[&baker].state.you_sell,
+        vec![
+            VendorListing { name: "rye loaf".into(), price_sparks: 2 },
+            VendorListing { name: "wheat loaf".into(), price_sparks: 4 },
+        ],
+        "binding writes the catalog-priced list, keyed off the stock template"
+    );
+
+    // Strip the baker from the enrolled cast and rebind: nobody is left to keep
+    // the bread stall, so the vendor and the price list both fall away.
+    round.people.remove(&baker);
+    round.bind_vendors(&mut world, clock.at(0.0).weekday);
+    assert!(
+        round.stalls().iter().find(|s| s.name.contains("bread")).unwrap().vendor.is_none(),
+        "the bread stall unbinds with no eligible keeper"
+    );
+    assert!(
+        world.characters[&baker].state.you_sell.is_empty(),
+        "an unbound vendor's sheet drops the you_sell section"
+    );
 }
 
 /// A stall stack an LLM had offered and nobody accepted, swept by the Watch

@@ -32,6 +32,8 @@ no_places = "none"
 holding_nothing = "nothing"
 # The parenthesis after `**places_you_know**`.
 places_note = "go_to takes these place_ids"
+# The parenthesis after `**you_sell**` — a bound vendor's stall prices.
+sell_note = "your stall's prices"
 # Introduces `you_are`'s clock phrase.
 the_hour_label = "The hour:"
 # Introduces `you_are`'s weekday phrase.

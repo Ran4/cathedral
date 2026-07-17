@@ -74,6 +74,8 @@ pub struct PromptStrings {
     pub holding_nothing: String,
     /// The parenthesis after `**places_you_know**`.
     pub places_note: String,
+    /// The parenthesis after `**you_sell**` — a bound vendor's price list.
+    pub sell_note: String,
     /// Introduces `you_are`'s clock phrase.
     pub the_hour_label: String,
     /// Introduces `you_are`'s weekday phrase.
@@ -189,6 +191,14 @@ struct Sheet<'a> {
     /// when empty — an empty list honestly says "you know no ways".
     places_you_know: Vec<PlaceRef<'a>>,
     you_hold: Vec<ItemRef<'a>>,
+    /// A bound vendor's price list, rendered between `you_hold` and `you_see`
+    /// so a vendor quotes its stall's prices off the sheet instead of inventing
+    /// them (`05_the_llm_seam.md` §3). Priced from the catalog's stock template,
+    /// not from current stock, so a sold-out baker still knows what they charge.
+    /// Omitted entirely when empty — an unbound actor never sees the section,
+    /// the `you_offer` pattern — which keeps the frozen golden fixtures stable.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    you_sell: Vec<SellLine<'a>>,
     /// Omitted entirely when empty — not rendered as `[]` (`prompt.py:227`).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     you_offer: Vec<YouOffer<'a>>,
@@ -282,6 +292,15 @@ struct ItemRef<'a> {
     name: String,
     /// The stack (or offered) quantity; rendered as `×N` when above 1.
     quantity: u32,
+}
+
+/// One `you_sell` line: a kind's display name and its catalog price in sparks.
+/// Borrowed from the vendor's [`crate::character::VendorListing`], which the
+/// round computed at bind time.
+#[derive(Serialize)]
+struct SellLine<'a> {
+    name: &'a str,
+    price_sparks: u32,
 }
 
 /// One `places_you_know` entry. The key is `place_id`, not `id`, so a place
@@ -587,6 +606,15 @@ fn build_sheet<'a>(
                 })
             })
             .collect(),
+        you_sell: actor
+            .state
+            .you_sell
+            .iter()
+            .map(|listing| SellLine {
+                name: &listing.name,
+                price_sparks: listing.price_sparks,
+            })
+            .collect(),
         you_offer,
         offered_to_you,
         you_see: YouSee {
@@ -688,6 +716,16 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
         sheet.you_hold.iter().map(item_md),
         &strings.holding_nothing,
     ));
+
+    // A bound vendor's price list — omitted entirely for everyone else, like
+    // `you_offer`, so the section never appears on a non-vendor's sheet.
+    if !sheet.you_sell.is_empty() {
+        sections.push(bullet_section(
+            &format!("**you_sell** ({})", strings.sell_note),
+            sheet.you_sell.iter().map(sell_md),
+            "",
+        ));
+    }
 
     if !sheet.you_offer.is_empty() {
         sections.push(bullet_section(
@@ -873,6 +911,14 @@ fn item_md(item: &ItemRef<'_>) -> String {
     }
 }
 
+/// `rye loaf, 2 sparks` — one `you_sell` line: the kind's display name and its
+/// price, singular `spark` only at exactly one (matching the purchase percept's
+/// `for 1 spark`).
+fn sell_md(listing: &SellLine<'_>) -> String {
+    let unit = if listing.price_sparks == 1 { "spark" } else { "sparks" };
+    format!("{}, {} {unit}", listing.name, listing.price_sparks)
+}
+
 /// `id cb947: Conny` — how a person is referenced outside `you_see`.
 fn person_md(person: &Person<'_>) -> String {
     format!("id {}: {}", person.id, person.name)
@@ -996,6 +1042,7 @@ mod tests {
             no_places: "none".into(),
             holding_nothing: "nothing".into(),
             places_note: "go_to takes these place_ids".into(),
+            sell_note: "your stall's prices".into(),
             the_hour_label: "The hour:".into(),
             the_day_label: "The day:".into(),
             round_note: "your standing day, leg by leg; each begins when its bell rings".into(),
@@ -1018,7 +1065,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
         let error = PromptEnv::new("x", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
@@ -1084,6 +1131,7 @@ mod tests {
             your_round: Vec::new(),
             places_you_know: Vec::new(),
             you_hold: Vec::new(),
+            you_sell: Vec::new(),
             you_offer: Vec::new(),
             offered_to_you: Vec::new(),
             you_see: YouSee { description: "", people: Vec::new() },

@@ -296,6 +296,7 @@ fn the_scripted_conversation_offers_accepts_and_re_offers_the_coin() {
         request_id: "offer-conny".to_string(),
         item_id: item_id(COIN),
         target_id: actor_id(CONNY),
+        quantity: None,
         position_m: PLAYER_SPAWN,
         spatial_seq: 4,
     });

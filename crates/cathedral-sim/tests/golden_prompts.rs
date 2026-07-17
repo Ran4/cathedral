@@ -23,7 +23,8 @@ mod prompt_support;
 use std::{collections::BTreeSet, fs};
 
 use cathedral_sim::{
-    ActorId, Character, CharacterSheet, Control, Item, ItemId, Offer, Vec3, World,
+    ActorId, Character, CharacterSheet, Control, Item, ItemId, LoreProfile, Offer, Vec3,
+    VendorListing, World,
     prompt::{render_prompt, render_prompt_and_drain},
     py_round,
 };
@@ -72,6 +73,19 @@ struct CharacterDump {
     inbox: Vec<String>,
     recent_history: Vec<String>,
     pending_history: Vec<String>,
+    /// Optional, M4-additive: a lore profile so a fixture can render the
+    /// `**you**` sentence and the computed hunger condition. Existing fixtures
+    /// omit it (`None`), keeping their bytes stable.
+    #[serde(default)]
+    lore: Option<LoreProfile>,
+    /// Optional, M4-additive: the hunger gauge, so the famished-holder fixture
+    /// pins the computed `famished` condition. Omitted → the seed default (full).
+    #[serde(default)]
+    hunger: Option<f64>,
+    /// Optional, M4-additive: a bound vendor's `you_sell` price list, so the
+    /// vendor-with-stock fixture pins the section the round writes at bind time.
+    #[serde(default)]
+    you_sell: Vec<VendorListing>,
 }
 
 #[derive(Deserialize)]
@@ -104,11 +118,15 @@ impl WorldDump {
                 goal: dump.goal,
                 memories: dump.memories,
                 knows: dump.knows,
-                lore: None,
+                lore: dump.lore,
             });
             character.state.inbox = dump.inbox;
             character.state.recent_history = dump.recent_history;
             character.state.pending_history = dump.pending_history;
+            if let Some(hunger) = dump.hunger {
+                character.state.needs.hunger = hunger;
+            }
+            character.state.you_sell = dump.you_sell;
             world.add_character(character);
         }
         for offer in self.offers {

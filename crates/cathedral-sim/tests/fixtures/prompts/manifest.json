@@ -2757,6 +2757,117 @@
         "offers": []
       },
       "presented": null
+    },
+    {
+      "name": "vendor_with_stock",
+      "file": "vendor_with_stock.txt",
+      "actor_id": "b4kr1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          { "id": "ryel1", "kind": "loaf", "quantity": 12, "metadata": { "flour": "rye" } },
+          { "id": "whel1", "kind": "loaf", "quantity": 3, "metadata": { "flour": "wheat" } },
+          { "id": "flot1", "kind": "spark", "quantity": 6 }
+        ],
+        "characters": [
+          {
+            "id": "b4kr1",
+            "name": "Ansel Quern",
+            "control": "llm",
+            "back_story": "The common oven of the quarter is yours: half the Wickmarket brings its dough to your door before Dayspring, and you take your toll in a fist of dough from every batch.",
+            "location_description": "At your bread stall on the Wickmarket",
+            "appearance_key": "generic",
+            "voice_key": null,
+            "position_m": {
+              "x": -305.0,
+              "y": 0.91,
+              "z": 480.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [
+              "ryel1",
+              "whel1",
+              "flot1"
+            ],
+            "goal": "Sell the morning's bread",
+            "memories": [],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": [],
+            "you_sell": [
+              { "name": "rye loaf", "price_sparks": 2 },
+              { "name": "wheat loaf", "price_sparks": 4 }
+            ]
+          }
+        ],
+        "offers": []
+      },
+      "presented": null
+    },
+    {
+      "name": "famished_holder",
+      "file": "famished_holder.txt",
+      "actor_id": "k0fb1",
+      "mode": "preview",
+      "world": {
+        "sounds_enabled": true,
+        "items": [
+          { "id": "c0prs", "kind": "spark", "quantity": 3 }
+        ],
+        "characters": [
+          {
+            "id": "k0fb1",
+            "name": "Ilse",
+            "control": "llm",
+            "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here.",
+            "location_description": "On the edge of the Wickmarket, among the stalls",
+            "appearance_key": "ilse",
+            "voice_key": "ilse",
+            "position_m": {
+              "x": -300.0,
+              "y": 0.91,
+              "z": 478.0
+            },
+            "facing_yaw": 0.0,
+            "holds": [
+              "c0prs"
+            ],
+            "goal": "Find affordable food",
+            "memories": [
+              "I have not eaten since the last village on the road"
+            ],
+            "knows": [],
+            "inbox": [],
+            "recent_history": [],
+            "pending_history": [],
+            "hunger": 8.0,
+            "lore": {
+              "significance": "minor",
+              "planning_ward": "wick",
+              "age": 34,
+              "gender": "f",
+              "occupation_id": null,
+              "occupation_display": null,
+              "title": null,
+              "rank": null,
+              "faction_role": null,
+              "illegal_activity": null,
+              "district": "The Wickmarket",
+              "father": null,
+              "mother": null,
+              "children": [],
+              "circumstances": [],
+              "conditions": [],
+              "core_character_description": "A pilgrim far from home, footsore and hungry.",
+              "extended_character_description": "TBA"
+            }
+          }
+        ],
+        "offers": []
+      },
+      "presented": null
     }
   ]
 }

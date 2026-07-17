@@ -303,6 +303,11 @@ pub enum EngineCommand {
         /// Mandatory and non-null, even though the sim supports broadcast offers
         /// (D13): the game UI always has a gaze target.
         target_id: ActorId,
+        /// How many units of a stack to hold out — `None` offers the whole
+        /// stack. The offer UI only sets this for the coin purse, where the
+        /// player picks a count (`features/food_and_items/05_the_llm_seam.md`
+        /// §7); every other item stays whole-stack in v1.
+        quantity: Option<u32>,
         position_m: Vec3,
         spatial_seq: i64,
     },
@@ -1076,16 +1081,25 @@ impl Engine {
                 request_id,
                 item_id,
                 target_id,
+                quantity,
                 position_m,
                 spatial_seq,
-            } => self.player_action(
-                now,
-                &request_id,
-                "offer_item",
-                json!({"item_id": item_id.as_str(), "target": target_id.as_str()}),
-                Some((spatial_seq, position_m)),
-                out,
-            ),
+            } => {
+                // A `None` quantity offers the whole stack — the arg is simply
+                // omitted, exactly as an LLM `offer_item` without `quantity`.
+                let mut args = json!({"item_id": item_id.as_str(), "target": target_id.as_str()});
+                if let Some(quantity) = quantity {
+                    args["quantity"] = json!(quantity);
+                }
+                self.player_action(
+                    now,
+                    &request_id,
+                    "offer_item",
+                    args,
+                    Some((spatial_seq, position_m)),
+                    out,
+                )
+            }
 
             EngineCommand::PlayerAccept {
                 request_id,

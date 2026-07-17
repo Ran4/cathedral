@@ -1131,6 +1131,63 @@ fn an_accept_of_more_than_remains_is_a_stale_offer() {
     world.assert_invariants();
 }
 
+/// The M4 acceptance walk (`features/food_and_items/06_milestones.md` §M4),
+/// mechanically: famished Ilse holds one spark; she offers it to the vendor, who
+/// accepts, offers a herring back, and she accepts and eats it. The world dump
+/// then shows her hands empty, her hunger lifted clear of the condition, and the
+/// spark in the vendor's purse — the completed trade session 224's hallucinated
+/// market only ever pretended to make.
+#[test]
+fn the_ilse_purchase_walks_offer_accept_and_eat() {
+    use cathedral_sim::{HUNGER_FAMISHED, HUNGER_HUNGRY};
+
+    let mut world = World::new();
+    world.add_character(character("ilse", "Ilse", 0.0));
+    world.add_character(character("wyn", "Wyn", 1.0)); // within the 4 m exchange radius
+    // Famished, one spark to her name — Ilse's exact arithmetic.
+    world.characters.get_mut(&actor("ilse")).unwrap().state.needs.hunger = HUNGER_FAMISHED - 7.0;
+    hold_stack(&mut world, "ilse", "c0prs", "spark", 1);
+    hold_stack(&mut world, "wyn", "hrr", "herring", 6);
+    world.assert_invariants();
+
+    // 1. Ilse offers her one spark; 2. the vendor accepts — the coin moves once.
+    offer_n(&mut world, "ilse", "c0prs", "wyn", Some(1));
+    accept(&mut world, "wyn", "c0prs").expect("the vendor takes the spark");
+    assert!(
+        world.characters[&actor("ilse")].holds().is_empty(),
+        "Ilse spent her only spark"
+    );
+    assert_eq!(world.items[&item("c0prs")].quantity, 1, "the spark is whole, just moved");
+    assert!(
+        world.characters[&actor("wyn")].holds().contains(&item("c0prs")),
+        "the spark is in the vendor's purse"
+    );
+
+    // 3. The vendor offers a herring; 4. Ilse accepts — one splits off the board.
+    offer_n(&mut world, "wyn", "hrr", "ilse", Some(1));
+    accept(&mut world, "ilse", "hrr").expect("Ilse takes the herring");
+    assert_eq!(world.items[&item("hrr")].quantity, 5, "one herring left the board");
+    let herring = world.characters[&actor("ilse")]
+        .holds()
+        .iter()
+        .find(|id| world.items.get(*id).is_some_and(|item| item.kind.as_str() == "herring"))
+        .cloned()
+        .expect("Ilse now holds a herring");
+
+    // 5. Ilse eats it: the herring's satiety (70) lifts her clear of the condition.
+    apply_action(&mut world, &actor("ilse"), "eat", &json!({ "item_id": herring.as_str() })).unwrap();
+    assert!(
+        world.characters[&actor("ilse")].holds().is_empty(),
+        "she carries nothing after the meal — wallet empty, hands empty"
+    );
+    assert!(
+        world.characters[&actor("ilse")].needs().hunger >= HUNGER_HUNGRY,
+        "the meal cleared the hunger condition: hunger is {}",
+        world.characters[&actor("ilse")].needs().hunger
+    );
+    world.assert_invariants();
+}
+
 /// Definition of done: two same-stuff stacks on one holder is a bug the
 /// invariants catch.
 #[test]

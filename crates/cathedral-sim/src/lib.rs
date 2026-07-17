@@ -54,7 +54,7 @@ pub use attention::{
 };
 pub use character::{
     Character, CharacterSheet, CharacterState, Control, IntentTarget, Movement, Needs, Patrol,
-    TravelIntent,
+    TravelIntent, VendorListing,
 };
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,

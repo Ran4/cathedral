@@ -1053,6 +1053,7 @@ fn a_failed_player_action_returns_its_code_and_moves_nothing() {
         request_id: "offer-1".into(),
         item_id: fish.clone(),
         target_id: ActorId::from_raw("cb947"),
+        quantity: None,
         position_m: PLAYER_SPAWN,
         spatial_seq: 1,
     });

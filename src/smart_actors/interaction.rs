@@ -43,6 +43,9 @@ pub enum PlayerIntent {
         request_id: String,
         target_id: ActorId,
         item_id: ItemId,
+        /// Units of a stack to offer — `None` offers the whole stack. Only the
+        /// coin purse sets it, via the count picker (05_the_llm_seam.md §7).
+        quantity: Option<u32>,
         spatial_seq: u64,
         position: Vec3,
     },
@@ -81,7 +84,7 @@ pub enum PlayerIntent {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PendingKind {
     Recording,
-    Offer { item_id: ItemId, target_id: ActorId },
+    Offer { item_id: ItemId, target_id: ActorId, quantity: Option<u32> },
     Accept { item_id: ItemId },
     Decline { item_id: ItemId },
     Retract { item_id: ItemId },
@@ -127,12 +130,23 @@ pub struct InteractionState {
     pub selected_item: Option<ItemId>,
     selected_index: usize,
     pub active_offer: Option<ActiveOfferCard>,
+    /// How many coins the purse's offer picker hands over
+    /// (`features/food_and_items/05_the_llm_seam.md` §7). Meaningful only while
+    /// the coin stack is selected; clamped to the live stack, and a raw 0 reads
+    /// as 1 so a fresh state offers a single coin, never the whole purse.
+    coin_offer_count: u32,
     dismissed_broadcasts: HashMap<ItemId, u64>,
     pending: HashMap<String, PendingCommand>,
     next_request: u64,
 }
 
 impl InteractionState {
+    /// The effective coin-offer count for a stack of `stack` units: at least
+    /// one, never more than the stack.
+    fn coin_count(&self, stack: u32) -> u32 {
+        self.coin_offer_count.clamp(1, stack.max(1))
+    }
+
     fn request_id(&mut self) -> String {
         self.next_request = self.next_request.wrapping_add(1).max(1);
         format!("rust-{}", self.next_request)
@@ -190,14 +204,27 @@ impl InteractionState {
             .any(|pending| pending.kind.item_id() == Some(item_id))
     }
 
-    fn identical_offer_pending(&self, item_id: &ItemId, target_id: &ActorId) -> bool {
+    /// Whether an identical offer — same item, same target, **same quantity** —
+    /// is already in flight, so a repeated right-click is idempotent. Quantity is
+    /// part of the identity: re-offering the coin purse at a *different* count is
+    /// a genuinely new offer the sim will replace, so it must not be deduped
+    /// (05 §7 — otherwise the player would have to press R before changing it).
+    fn identical_offer_pending(
+        &self,
+        item_id: &ItemId,
+        target_id: &ActorId,
+        quantity: Option<u32>,
+    ) -> bool {
         self.pending.values().any(|pending| {
             matches!(
                 &pending.kind,
                 PendingKind::Offer {
                     item_id: pending_item,
                     target_id: pending_target,
-                } if pending_item == item_id && pending_target == target_id
+                    quantity: pending_quantity,
+                } if pending_item == item_id
+                    && pending_target == target_id
+                    && *pending_quantity == quantity
             )
         })
     }
@@ -376,7 +403,15 @@ pub fn reconcile_interaction_state(
             .any(|offer| &offer.item_id == item_id && offer.created_seq == *sequence)
     });
 
-    hud.inventory = inventory_text(&mirror, holds, state.selected_item.as_ref());
+    // Keep the coin-offer count within the live purse; `Some` only while the
+    // coin stack is the current selection, which is where the HUD shows it.
+    let coin_stack = selected_coin_stack(&mirror, state.selected_item.as_ref());
+    if let Some(stack) = coin_stack {
+        state.coin_offer_count = state.coin_count(stack);
+    }
+    let coin_count = coin_stack.map(|stack| state.coin_count(stack));
+
+    hud.inventory = inventory_text(&mirror, holds, state.selected_item.as_ref(), coin_count);
 
     let player_position = players
         .single()
@@ -419,7 +454,7 @@ pub fn reconcile_interaction_state(
         });
 
     hud.focus_hint = if runtime.interactions_enabled() {
-        focus_hint(&mirror, &focus, state.selected_item.as_ref())
+        focus_hint(&mirror, &focus, state.selected_item.as_ref(), coin_count)
     } else {
         String::new()
     };
@@ -497,6 +532,25 @@ pub fn collect_item_interaction_input(
     let position = player.translation();
     let revision = runtime.mirror_revision.unwrap_or(0);
 
+    // The coin purse's count picker (05 §7): while the spark stack is selected,
+    // `[` and `]` dial how many coins a right-click will offer, within the stack.
+    // (`Equal` is the screenshot key; the brackets stay clear of every existing
+    // binding.) No other item has a picker — they offer whole-stack in v1.
+    if let Some(stack) = selected_coin_stack(&mirror, state.selected_item.as_ref()) {
+        let down = keyboard.just_pressed(KeyCode::BracketLeft)
+            || keyboard.just_pressed(KeyCode::NumpadSubtract);
+        let up = keyboard.just_pressed(KeyCode::BracketRight)
+            || keyboard.just_pressed(KeyCode::NumpadAdd);
+        if down || up {
+            let current = state.coin_count(stack);
+            state.coin_offer_count = if up {
+                (current + 1).min(stack)
+            } else {
+                current.saturating_sub(1).max(1)
+            };
+        }
+    }
+
     if mouse.just_pressed(MouseButton::Right) {
         let (Some(item_id), Some(target)) = (state.selected_item.clone(), focus.item.as_ref())
         else {
@@ -506,10 +560,14 @@ pub fn collect_item_interaction_input(
         let player_holds_item = mirror
             .actor(&player_id)
             .is_some_and(|actor| actor.holds.contains(&item_id));
+        // The coin purse hands over the picked count; every other item is whole.
+        // Quantity is decided before the dedup guard so re-offering the purse at a
+        // different count is not mistaken for a repeat of the one in flight.
+        let quantity = selected_coin_stack(&mirror, Some(&item_id)).map(|stack| state.coin_count(stack));
         if !player_holds_item
             || target.actor_id == player_id
             || target.body_distance_m > ITEM_INTERACTION_RADIUS_M
-            || state.identical_offer_pending(&item_id, &target.actor_id)
+            || state.identical_offer_pending(&item_id, &target.actor_id, quantity)
         {
             return;
         }
@@ -519,15 +577,21 @@ pub fn collect_item_interaction_input(
             .map_or(target.actor_id.0.as_str(), |actor| {
                 actor.name_for_player.as_str()
             });
-        let item_name = mirror
-            .item(&item_id)
-            .map_or(item_id.0.as_str(), |item| item.name.as_str());
-        hud.toast(format!("Offering {item_name} to {target_name}…"));
+        let offered = mirror.item(&item_id).map_or_else(
+            || item_id.0.clone(),
+            |item| match quantity {
+                Some(count) if count > 1 => format!("{count} {}", item.display_plural),
+                Some(count) => format!("{count} {}", item.name),
+                None => item.name.clone(),
+            },
+        );
+        hud.toast(format!("Offering {offered} to {target_name}…"));
         state.insert_pending(
             request_id.clone(),
             PendingKind::Offer {
                 item_id: item_id.clone(),
                 target_id: target.actor_id.clone(),
+                quantity,
             },
             revision,
         );
@@ -536,6 +600,7 @@ pub fn collect_item_interaction_input(
             request_id,
             target_id: target.actor_id.clone(),
             item_id,
+            quantity,
             spatial_seq,
             position,
         });
@@ -955,7 +1020,29 @@ fn normalize_selection(state: &mut InteractionState, holds: &[ItemId]) {
     }
 }
 
-fn inventory_text(mirror: &WorldMirror, holds: &[ItemId], selected: Option<&ItemId>) -> String {
+/// The selected item's stack size when it is the coin purse (kind `spark`), else
+/// `None` — the one stack the offer flow prompts a count for (05 §7).
+fn selected_coin_stack(mirror: &WorldMirror, selected: Option<&ItemId>) -> Option<u32> {
+    let item = mirror.item(selected?)?;
+    (item.kind == "spark").then_some(item.quantity)
+}
+
+/// The coin purse's phrase for `count` units — `1 spark` / `3 sparks`, straight
+/// off the catalog display so the plural matches the sheet.
+fn coin_phrase(mirror: &WorldMirror, item_id: &ItemId, count: u32) -> String {
+    match mirror.item(item_id) {
+        Some(item) if count == 1 => format!("{count} {}", item.name),
+        Some(item) => format!("{count} {}", item.display_plural),
+        None => format!("{count}"),
+    }
+}
+
+fn inventory_text(
+    mirror: &WorldMirror,
+    holds: &[ItemId],
+    selected: Option<&ItemId>,
+    coin_count: Option<u32>,
+) -> String {
     if holds.is_empty() {
         return "INVENTORY  empty".into();
     }
@@ -974,7 +1061,12 @@ fn inventory_text(mirror: &WorldMirror, holds: &[ItemId], selected: Option<&Item
                 },
             );
             if selected == Some(item_id) {
-                format!("▶ [{}] {}", index + 1, label)
+                // The coin purse shows the picked offer count inline, so the
+                // player can dial it before ever aiming at a vendor (05 §7).
+                let picker = coin_count
+                    .map(|count| format!("  ·  offering {count} ([ / ])"))
+                    .unwrap_or_default();
+                format!("▶ [{}] {}{}", index + 1, label, picker)
             } else {
                 format!("[{}] {}", index + 1, label)
             }
@@ -984,7 +1076,12 @@ fn inventory_text(mirror: &WorldMirror, holds: &[ItemId], selected: Option<&Item
     format!("INVENTORY    {slots}")
 }
 
-fn focus_hint(mirror: &WorldMirror, focus: &ActorFocus, selected: Option<&ItemId>) -> String {
+fn focus_hint(
+    mirror: &WorldMirror,
+    focus: &ActorFocus,
+    selected: Option<&ItemId>,
+    coin_count: Option<u32>,
+) -> String {
     let Some(target) = focus.actor.as_ref() else {
         return String::new();
     };
@@ -996,6 +1093,14 @@ fn focus_hint(mirror: &WorldMirror, focus: &ActorFocus, selected: Option<&ItemId
     if focus.item.is_some()
         && let Some(item_id) = selected
     {
+        // The coin purse offers a chosen count, adjustable in place; every other
+        // item offers whole-stack in v1.
+        if let Some(count) = coin_count {
+            return format!(
+                "{name}  ·  Right click to offer {}  ·  [ / ] to change",
+                coin_phrase(mirror, item_id, count)
+            );
+        }
         let item = mirror
             .item(item_id)
             .map_or(item_id.0.as_str(), |item| item.name.as_str());
@@ -1224,10 +1329,15 @@ mod tests {
             })
             .unwrap();
         let holds = [ItemId("spk".into()), ItemId("one".into())];
-        let text = inventory_text(&mirror, &holds, None);
+        let text = inventory_text(&mirror, &holds, None, None);
         // A stack above 1 shows a ×N count; a single item shows none.
         assert!(text.contains("spark ×3"), "{text}");
         assert!(text.contains("herring") && !text.contains("herring ×"), "{text}");
+
+        // Selecting the coin stack surfaces the offer count picker inline.
+        let picker = inventory_text(&mirror, &holds, Some(&ItemId("spk".into())), Some(2));
+        assert!(picker.contains("spark ×3"), "{picker}");
+        assert!(picker.contains("offering 2 ([ / ])"), "{picker}");
     }
 
     #[test]
@@ -1266,13 +1376,17 @@ mod tests {
             PendingKind::Offer {
                 item_id: item_id.clone(),
                 target_id: target_id.clone(),
+                quantity: Some(2),
             },
             3,
         );
-        assert!(state.identical_offer_pending(&item_id, &target_id));
+        assert!(state.identical_offer_pending(&item_id, &target_id, Some(2)));
+        // A different coin count to the same vendor is a genuinely new offer, not
+        // a repeat — so it is not deduped and needs no prior retract (05 §7).
+        assert!(!state.identical_offer_pending(&item_id, &target_id, Some(3)));
 
         state.clear_pending();
-        assert!(!state.identical_offer_pending(&item_id, &target_id));
+        assert!(!state.identical_offer_pending(&item_id, &target_id, Some(2)));
     }
 
     #[test]
@@ -1447,9 +1561,99 @@ mod tests {
             }),
             item: None,
         };
-        let hint = focus_hint(&mirror, &focus, None);
+        let hint = focus_hint(&mirror, &focus, None, None);
         assert!(!hint.contains("mic"));
         assert!(!hint.contains("talk"));
+    }
+
+    /// The coin purse's count picker (05 §7): only the spark stack is a purse,
+    /// the count clamps into `[1, stack]`, and both the inventory line and the
+    /// focus hint surface it — pluralized off the catalog — so the player is
+    /// never forced to offer their whole purse.
+    #[test]
+    fn the_coin_purse_prompts_for_an_offer_count() {
+        let mut mirror = WorldMirror::default();
+        mirror
+            .replace_snapshot(WorldSnapshot {
+                world_revision: 1,
+                player_id: ActorId("player".into()),
+                actors: vec![
+                    ActorSnapshot {
+                        id: ActorId("player".into()),
+                        name_for_player: "You".into(),
+                        control: ActorControl::Player,
+                        position_m: Position::new(0.0, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "player".into(),
+                        holds: vec![ItemId("purse".into()), ItemId("loaf".into())],
+                    },
+                    ActorSnapshot {
+                        id: ActorId("wyn".into()),
+                        name_for_player: "Wyn".into(),
+                        control: ActorControl::Llm,
+                        position_m: Position::new(2.0, 0.0, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance_key: "wyn".into(),
+                        holds: vec![],
+                    },
+                ],
+                items: vec![
+                    ItemSnapshot {
+                        id: ItemId("purse".into()),
+                        kind: "spark".into(),
+                        name: "spark".into(),
+                        display_plural: "sparks".into(),
+                        visual_key: "copper_coin".into(),
+                        quantity: 3,
+                        metadata: Default::default(),
+                    },
+                    ItemSnapshot {
+                        id: ItemId("loaf".into()),
+                        kind: "loaf".into(),
+                        name: "rye loaf".into(),
+                        display_plural: "rye loaves".into(),
+                        visual_key: "loaf".into(),
+                        quantity: 1,
+                        metadata: Default::default(),
+                    },
+                ],
+                offers: vec![],
+            })
+            .unwrap();
+
+        // Only the spark stack is a purse; the loaf never gets a picker.
+        assert_eq!(selected_coin_stack(&mirror, Some(&ItemId("purse".into()))), Some(3));
+        assert_eq!(selected_coin_stack(&mirror, Some(&ItemId("loaf".into()))), None);
+
+        // The count clamps into [1, stack]: a fresh 0 reads as one coin, and it
+        // never exceeds the purse.
+        let mut state = InteractionState::default();
+        assert_eq!(state.coin_count(3), 1, "a fresh purse offers a single coin");
+        state.coin_offer_count = 5;
+        assert_eq!(state.coin_count(3), 3, "never more than the purse holds");
+
+        // A focused vendor plus the purse selected: the hint prompts for a count,
+        // pluralized off the catalog.
+        let facing_wyn = ActorFocus {
+            actor: Some(super::super::targeting::FocusedActor {
+                actor_id: ActorId("wyn".into()),
+                entity: Entity::PLACEHOLDER,
+                ray_distance_m: 2.0,
+                body_distance_m: 2.0,
+            }),
+            item: Some(super::super::targeting::FocusedActor {
+                actor_id: ActorId("wyn".into()),
+                entity: Entity::PLACEHOLDER,
+                ray_distance_m: 2.0,
+                body_distance_m: 2.0,
+            }),
+        };
+        let purse = ItemId("purse".into());
+        let many = focus_hint(&mirror, &facing_wyn, Some(&purse), Some(3));
+        assert!(many.contains("offer 3 sparks"), "{many}");
+        assert!(many.contains("[ / ] to change"), "{many}");
+        let one = focus_hint(&mirror, &facing_wyn, Some(&purse), Some(1));
+        assert!(one.contains("offer 1 spark"), "singular at one: {one}");
     }
 
     #[test]
@@ -1460,6 +1664,7 @@ mod tests {
             request_id: "r".into(),
             target_id: ActorId("conny".into()),
             item_id: holds[0].clone(),
+            quantity: None,
             spatial_seq: 3,
             position: Vec3::ZERO,
         };

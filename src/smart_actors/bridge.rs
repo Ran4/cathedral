@@ -124,6 +124,9 @@ pub enum BridgeCommand {
         request_id: String,
         target_id: ActorId,
         item_id: ItemId,
+        /// Units of a stack to offer — `None` offers the whole stack. Set only
+        /// for the coin purse's count picker (05_the_llm_seam.md §7).
+        quantity: Option<u32>,
         position_m: Position,
         spatial_seq: u64,
     },

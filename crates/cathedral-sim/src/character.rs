@@ -141,6 +141,22 @@ impl Default for Needs {
     }
 }
 
+/// One line of a bound vendor's `you_sell` price list: a kind's display name
+/// and its catalog price in sparks (`05_the_llm_seam.md` §3). Written by the
+/// round the moment it binds a vendor to a stall, read straight onto the sheet
+/// so an LLM vendor quotes prices *off the sheet* instead of inventing them.
+/// Owned strings, because the round computes the display name from the catalog
+/// once at bind time; the sheet only borrows it. Empty for everyone the round
+/// never made a vendor, so the section is omitted and the frozen golden
+/// fixtures are byte-identical (the `you_offer` skip-when-empty pattern).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VendorListing {
+    /// The catalog display name of the kind sold — `"rye loaf"`, `"herring"`.
+    pub name: String,
+    /// The catalog list price of one, in sparks.
+    pub price_sparks: u32,
+}
+
 /// Where a [`TravelIntent`] is headed.
 #[derive(Debug, Clone, PartialEq)]
 pub enum IntentTarget {
@@ -224,6 +240,14 @@ pub struct CharacterState {
     /// section. Empty for anyone the round never enrolled — the section is
     /// then omitted, keeping the frozen golden fixtures byte-identical.
     pub daily_round: Vec<String>,
+    /// The bound vendor's price list, rendered as the sheet's `you_sell`
+    /// section: what this actor's stall charges, priced from the item catalog's
+    /// stock template — not from current stock, so a sold-out baker still knows
+    /// their prices (`05_the_llm_seam.md` §3). Written by
+    /// [`crate::round::Round`] when it binds a vendor and cleared when it
+    /// unbinds one; empty for everyone else, which omits the section and keeps
+    /// the frozen golden fixtures byte-identical.
+    pub you_sell: Vec<VendorListing>,
 }
 
 impl CharacterState {
@@ -243,6 +267,7 @@ impl CharacterState {
             places_known: BTreeSet::new(),
             intent: None,
             daily_round: Vec::new(),
+            you_sell: Vec::new(),
         }
     }
 }
