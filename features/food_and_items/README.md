@@ -180,18 +180,12 @@ pure content and can run in parallel. M2–M4 stack on M0.
    clear hunger at meal legs (home hearth / tavern) without items, the way most of a medieval city
    actually ate. The alternative — items for every meal of 500 NPCs — is 1,000+ items a day for
    nobody to see. I recommend the cheat and the plan assumes it.
-2. **The word "spark".** The retcon keeps *copper* and *penny* and retires *spark* (three names for
-   one coin is the confusion we are deleting). But *"not worth a spark"* is a good idiom and the
-   glossary is fond of it. Keep the idiom as an archaism, or sweep it to *"not worth a copper"*?
-   The sweep list marks every site either way.
-   ANSWER: The coin is called the **spark**, not "copper coin" — the canonical name and the idiom
-   stay literal; *penny*/*a copper* survive as street slang. Swept through this folder; the ruling
-   lives in [02_the_spark_standard.md](02_the_spark_standard.md).
-3. **Day-old bread.** Unsold stock vanishes at the nightly reset. A `day_old: true` metadata flag at
+   ANSWER: Yes, let everyone decay.
+2. **Day-old bread.** Unsold stock vanishes at the nightly reset. A `day_old: true` metadata flag at
    half price is one line of restock code and a nice bit of market color — but it doubles the
    catalog's effective price rows. Cheap to add later; not in the plan.
-   Skip old bread.
-4. **Player hunger.** The player currently cannot even `eat` (no `PlayerEat` engine command). The
+   ANSWER: Skip old bread.
+3. **Player hunger.** The player currently cannot even `eat` (no `PlayerEat` engine command). The
    plan leaves the player unhungering — flying dev-camera people don't need lunch — but M0 makes
    player-held stacks render properly in the HUD, and adding `PlayerEat` later is small.
    ANSWER: No player hunger right now.
