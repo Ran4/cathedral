@@ -1,8 +1,10 @@
 # Items described in the lore
 
+tl;dr: implement all items in Tier 1 and Tier 2 below.
+
 *A structural/meta document: an inventory of every portable physical thing the canon lore
 mentions that could plausibly become an item kind. Compiled 2026-07-17 from `core_lore/`,
-`families/`, `second_sun/` (including the documents, design notes and index.html),
+`families/`, `second_sun/` (including the documents and design notes),
 `places/`, the root chronicles (`wells_and_water.md`, `founding_story_the_four_hundred_marks.md`,
 `the_dry_boatmen.md`, `the_great_rains_and_the_hammering.md`), the inspiration-image prompts,
 and all 516 character bios. `wip_lore_please_ignore_this_is_NOT_canon/` was excluded.*
