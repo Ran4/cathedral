@@ -15,8 +15,9 @@
 
 use bevy::prelude::*;
 use cathedral_sim::{
-    Character, ErrandDebug, IntentTarget, LoreProfile, RoundPhase, Significance, THIRST_MAX,
-    THIRST_PARCHED, THIRST_THIRSTY, Vec3 as SimVec3, WALK_DESTINATION_SNAP_M, World,
+    Character, ErrandDebug, HUNGER_FAMISHED, HUNGER_HUNGRY, HUNGER_MAX, IntentTarget, LoreProfile,
+    RoundPhase, Significance, THIRST_MAX, THIRST_PARCHED, THIRST_THIRSTY, Vec3 as SimVec3,
+    WALK_DESTINATION_SNAP_M, World,
 };
 
 use crate::fonts::CathedralFonts;
@@ -116,6 +117,7 @@ pub(super) struct CharacterDebug {
     location: Option<String>,
     goal: String,
     thirst: f64,
+    hunger: f64,
     movement: MoveState,
     /// The current walk's destination and ETA; `None` while standing.
     heading: Option<Heading>,
@@ -188,6 +190,7 @@ impl CharacterDebug {
             location: world.area_map.location_description(character.position_m()),
             goal: character.goal().to_string(),
             thirst: character.needs().thirst,
+            hunger: character.needs().hunger,
             movement,
             heading,
             well_activity: well_activity(errand),
@@ -262,6 +265,18 @@ fn thirst_label(thirst: f64) -> &'static str {
         "THIRSTY"
     } else {
         "WATERED"
+    }
+}
+
+/// A coarse name for the hunger gauge, matching the ladder's rungs 3 & 7 and the
+/// sheet's computed `famished`/`hungry` condition (food & items M2).
+fn hunger_label(hunger: f64) -> &'static str {
+    if hunger < HUNGER_FAMISHED {
+        "FAMISHED"
+    } else if hunger < HUNGER_HUNGRY {
+        "HUNGRY"
+    } else {
+        "FED"
     }
 }
 
@@ -455,11 +470,15 @@ fn format_body(sheet: &CharacterDebug) -> String {
     // the level reads at a glance.
     let _ = write!(
         out,
-        "\n\nSTATUSES\n  Thirst  {:.0}/{:.0} · {}\n  {}",
+        "\n\nSTATUSES\n  Thirst  {:.0}/{:.0} · {}\n  {}\n  Hunger  {:.0}/{:.0} · {}\n  {}",
         sheet.thirst,
         THIRST_MAX,
         thirst_label(sheet.thirst),
         bar(sheet.thirst / THIRST_MAX, GAUGE_CELLS),
+        sheet.hunger,
+        HUNGER_MAX,
+        hunger_label(sheet.hunger),
+        bar(sheet.hunger / HUNGER_MAX, GAUGE_CELLS),
     );
 
     let _ = write!(
@@ -672,6 +691,7 @@ mod tests {
             location: Some("The Gradine".into()),
             goal: "Fetch water from the well".into(),
             thirst: 40.0,
+            hunger: 120.0,
             movement: MoveState::Walking {
                 speed: 1.2,
                 waypoints: 3,

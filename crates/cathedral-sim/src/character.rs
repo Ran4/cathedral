@@ -8,7 +8,8 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    GOAL_NONE, INBOX_MAX_ENTRIES, RECENT_HISTORY_MAX_ENTRIES, SETTLED_SPEED_MPS, THIRST_MAX,
+    GOAL_NONE, HUNGER_MAX, INBOX_MAX_ENTRIES, RECENT_HISTORY_MAX_ENTRIES, SETTLED_SPEED_MPS,
+    THIRST_MAX,
     ids::{ActorId, ItemId, PlaceId},
     lore::{LoreProfile, Significance},
     math::Vec3,
@@ -113,21 +114,30 @@ pub struct Movement {
 /// The dynamic drive layer — the "statuses" axis of
 /// `features/movement/03_the_ladder.md` §2/§3: raw, sim-written need state the
 /// behaviour ladder reads inline (`needs.thirst < THIRST_PARCHED`). Small on
-/// purpose; M3 ships thirst only, with hunger/fatigue/duty following in M4.
-/// Every gauge runs `0..=`[`THIRST_MAX`], high = satisfied. Never rendered into
-/// the prompt in M3 (that is M5's sheet change), so a world without a nav graph
-/// leaves the frozen golden fixtures byte-identical.
+/// purpose; M3 shipped thirst, food & items M2 grows hunger, with fatigue/duty
+/// still following. Every gauge runs `0..=`[`THIRST_MAX`], high = satisfied.
+/// Only hunger is surfaced to the prompt (a computed condition, never a raw
+/// number, `features/food_and_items/03_hunger.md` §5); a world without a nav
+/// graph enrols nobody, so both gauges stay full and the frozen golden fixtures
+/// are byte-identical.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Needs {
     /// Falls with time; refilled at a well. The fastest gauge to decay.
     pub thirst: f64,
+    /// Falls with time; refilled by eating (satiety) or the hearth. Slower and
+    /// heavier than thirst — ten game hours across the gauge, not four.
+    pub hunger: f64,
 }
 
 impl Default for Needs {
-    /// A freshly seeded character is fully watered; the water round seeds a
-    /// spread of starting values for the drawers it enrolls.
+    /// A freshly seeded character is fully watered and fed; the round seeds a
+    /// spread of starting thirst for the drawers it enrols and of hunger for
+    /// everyone, so the city neither drinks nor eats in lockstep.
     fn default() -> Self {
-        Self { thirst: THIRST_MAX }
+        Self {
+            thirst: THIRST_MAX,
+            hunger: HUNGER_MAX,
+        }
     }
 }
 

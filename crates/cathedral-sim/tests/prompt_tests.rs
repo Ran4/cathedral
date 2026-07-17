@@ -4,8 +4,8 @@
 mod prompt_support;
 
 use cathedral_sim::{
-    ActorId, Control, IntentTarget, ItemId, LoreProfile, Movement, PlaceId, TravelIntent, Vec3,
-    apply_action,
+    ActorId, Control, IntentTarget, Item, ItemId, LoreProfile, Movement, PlaceId, TravelIntent,
+    Vec3, apply_action,
     prompt::{render_prompt, render_prompt_and_drain},
 };
 use prompt_support::{actor, compact, md_section, prompt_env, seed_world, sheet};
@@ -772,4 +772,71 @@ fn you_see_people_carry_the_moving_flag() {
     let rendered = sheet(&world, "sv3n1", &env);
     let to = &rendered["you_offer"][0]["to"];
     assert!(to.get("moving").is_none(), "no moving flag in you_offer: {to}");
+}
+
+/// The whole hunger loop closes on the sheet (`features/food_and_items/03_hunger.md`
+/// §5): a famished actor's `Conditions:` line computes `famished`; after eating a
+/// loaf the satiety lifts the gauge and the *next* sheet simply stops saying it —
+/// no memory hygiene, the sheet is the truth. The authored `travel-worn`
+/// condition rides through untouched.
+#[test]
+fn the_hunger_condition_computes_and_clears_when_the_actor_eats() {
+    use cathedral_sim::{HUNGER_FAMISHED, HUNGER_HUNGRY};
+
+    let env = prompt_env();
+    let mut world = seed_world();
+    let id = actor("sv3n1");
+
+    // A lore-bearing actor with one authored bodily condition — the computed
+    // drive word is appended after it, never in place of it.
+    world.characters.get_mut(&id).unwrap().sheet.lore = Some(LoreProfile {
+        significance: cathedral_sim::Significance::Major,
+        planning_ward: cathedral_sim::PlanningWard::Cinder,
+        age: 31,
+        gender: "f".into(),
+        occupation_id: Some("pilgrim".into()),
+        occupation_display: Some("Pilgrim".into()),
+        title: None,
+        rank: None,
+        faction_role: None,
+        illegal_activity: None,
+        district: "The Gradine".into(),
+        father: None,
+        mother: None,
+        children: Vec::new(),
+        circumstances: Vec::new(),
+        conditions: vec!["travel-worn".into()],
+        home: None,
+        core_character_description: String::new(),
+        extended_character_description: String::new(),
+        curiosity: None,
+    });
+
+    // Seed hungry: below FAMISHED, the sheet computes `famished` after the
+    // authored condition.
+    world.characters.get_mut(&id).unwrap().state.needs.hunger = HUNGER_FAMISHED - 5.0;
+    let before = sheet(&world, "sv3n1", &env);
+    assert_eq!(
+        before["lore_profile"]["conditions"],
+        json!(["travel-worn", "famished"]),
+        "a famished actor's sheet computes the word after the authored condition"
+    );
+
+    // Give the actor a rye loaf and eat it — satiety 150 lifts the gauge clear
+    // of both thresholds.
+    let loaf = ItemId::from_raw("ld001");
+    world.add_item(Item::new(loaf.clone(), "loaf").with_metadata("flour", "rye"));
+    world.characters.get_mut(&id).unwrap().state.holds.push(loaf.clone());
+    apply_action(&mut world, &id, "eat", &json!({ "item_id": "ld001" })).unwrap();
+
+    assert!(
+        world.characters[&id].needs().hunger >= HUNGER_HUNGRY,
+        "a loaf's satiety carries the gauge above HUNGER_HUNGRY"
+    );
+    let after = sheet(&world, "sv3n1", &env);
+    assert_eq!(
+        after["lore_profile"]["conditions"],
+        json!(["travel-worn"]),
+        "the fed actor's sheet drops the hunger word with no memory hygiene"
+    );
 }

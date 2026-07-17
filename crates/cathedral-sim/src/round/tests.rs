@@ -677,6 +677,7 @@ fn a_night_trade_is_not_sent_home_by_curfew() {
         Decision::Travel(_) | Decision::Stay | Decision::Wander(_) => {}
         Decision::ApproachWell => panic!("a tavern worker draws no water here"),
         Decision::TravelIntent(_) => panic!("no go_to intent was issued"),
+        Decision::EatHeld(_) => panic!("a well-fed tavern worker holds no food to eat"),
         Decision::WalkToLamp(_) | Decision::LightLamp(_) => {
             panic!("a tavern worker carries no taper")
         }
@@ -2001,4 +2002,174 @@ fn a_conversation_holds_the_taper() {
         }
     }
     assert!(resumed, "the beat resumes once the talk goes cold");
+}
+
+/// Wallets and hunger, seeded across the enrolled cast (food & items M2,
+/// `02_the_spark_standard.md` §4, `03_hunger.md` §1): every enrolled townsperson
+/// carries a spark stack unless the sheet already gave them coin, and their
+/// hunger is spread off the deterministic hash (floored at 40) unless the sheet
+/// declares them hungry, when they seed low.
+#[test]
+fn the_round_seeds_wallets_and_hunger() {
+    let nav = nav();
+    let mut world = base_world();
+
+    // A plain enrolled townsperson: no authored coin, no hunger memory.
+    world.add_character(person("wlta", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+
+    // One who already holds a spark keeps exactly it — no wallet minted.
+    let purse = ItemId::from_raw("purse");
+    world.add_item(Item::stack(purse.clone(), "spark", 1));
+    let mut holder = person("wltb", Vec3::new(1.0, WALK_Y, 95.0), Some("mason"), Significance::Major);
+    holder.state.holds.push(purse.clone());
+    world.add_character(holder);
+
+    // One whose memory declares hunger seeds low (the Ilse hook: her static
+    // `hungry` condition is dropped, the memory carries the low seed).
+    let mut hungry = person("wltc", Vec3::new(2.0, WALK_Y, 95.0), Some("mason"), Significance::Major);
+    hungry.state.memories.push("I am very hungry after the long road here".to_string());
+    world.add_character(hungry);
+
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    // A fresh spark wallet, in 2..=7, held and present in the world.
+    let a = &world.characters[&ActorId::from_raw("wlta")];
+    let wallet = ItemId::from_raw("w_wlta");
+    assert!(a.holds().contains(&wallet), "a coinless townsperson is given a wallet");
+    let sparks = world.items[&wallet].quantity;
+    assert!((2..=7).contains(&sparks), "the seeded wallet is 2..=7, got {sparks}");
+    assert!(a.needs().hunger >= HUNGER_SEED_FLOOR, "hunger seeds no lower than the floor");
+
+    // The authored purse stands alone — no second same-stuff stack minted.
+    let b = &world.characters[&ActorId::from_raw("wltb")];
+    assert_eq!(b.holds(), [purse], "an authored purse is kept, not doubled");
+    assert!(world.items.get(&ItemId::from_raw("w_wltb")).is_none(), "no wallet for a coin-holder");
+
+    // The declared-hungry actor seeds low, and still gets a wallet.
+    let c = &world.characters[&ActorId::from_raw("wltc")];
+    assert_eq!(c.needs().hunger, HUNGER_SEED_DECLARED_HUNGRY, "a hunger memory seeds low");
+    assert!(c.holds().contains(&ItemId::from_raw("w_wltc")), "the hungry still carry a purse");
+}
+
+/// The tavern hearth (food & items M2, `03_hunger.md` §4): a tavern trade
+/// (curfew-exempt, never home) standing at a tavern is fed during a meal office
+/// exactly as a diner at home — and *only* then. Without this branch the ~39
+/// tavern trades, who work straight through every meal office, decay to nothing
+/// forever, which was the review bug.
+#[test]
+fn the_tavern_hearth_feeds_its_trade_only_at_a_meal_office() {
+    // Stand a famished tavern worker at a resolved tavern node and let a slice of
+    // game time pass under `office`; return their hunger afterward.
+    let hunger_at = |office: Office| -> f64 {
+        let nav = nav();
+        let mut world = base_world();
+        world.add_character(person(
+            "brew",
+            Vec3::new(0.0, WALK_Y, 95.0),
+            Some("tavern_worker"),
+            Significance::Major,
+        ));
+        let mut round = Round::new();
+        round.seed(&mut world, &nav, 0.0, &clock_at(office));
+        assert!(!round.taverns.is_empty(), "the committed graph has taverns");
+        let brew = ActorId::from_raw("brew");
+        assert!(round.people[&brew].home.is_none(), "the test worker has no house — only the tavern can feed them");
+        let tavern = round.taverns[0];
+        {
+            let state = &mut world.characters.get_mut(&brew).expect("enrolled").state;
+            state.position_m = tavern;
+            state.needs.hunger = HUNGER_FAMISHED / 2.0;
+        }
+        decay_needs(&mut round, &mut world, &clock_at(office), 40.0);
+        world.characters[&brew].needs().hunger
+    };
+
+    // High Wick — a meal office: the tavern hearth is warm, the trade is fed past
+    // famished.
+    assert!(
+        hunger_at(Office::HighWick) > HUNGER_FAMISHED,
+        "the tavern feeds its trade at High Wick"
+    );
+    // The Kindling — no meal office: even at the tavern the hearth is cold, so
+    // they only decay.
+    assert!(
+        hunger_at(Office::Kindling) < HUNGER_FAMISHED / 2.0,
+        "no meal office, no tavern hearth — the trade decays"
+    );
+}
+
+/// The anchoress, bricked into her cell (`stationary` archetype: zero legs, no
+/// homes.json house), has no home hearth and no tavern — so where she stands is
+/// her hearth, fed during a meal office, or she starves forever (`03_hunger.md`
+/// §4). The legless-actor case the review flagged.
+#[test]
+fn the_anchoress_is_fed_in_her_cell() {
+    let nav = nav();
+    let spawn = Vec3::new(194.5, WALK_Y, -92.0); // her authored squint
+    let mut world = base_world();
+    world.add_character(person("aq7ld", spawn, Some("anchoress"), Significance::Major));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::HighWick));
+    let id = ActorId::from_raw("aq7ld");
+    assert!(round.people[&id].legs.is_empty(), "the anchoress has zero legs");
+    assert!(round.people[&id].home.is_none(), "and no homes.json house");
+    world.characters.get_mut(&id).expect("enrolled").state.needs.hunger = HUNGER_FAMISHED / 2.0;
+    decay_needs(&mut round, &mut world, &clock_at(Office::HighWick), 40.0);
+    assert!(
+        world.characters[&id].needs().hunger > HUNGER_FAMISHED,
+        "her cell is her hearth during a meal office"
+    );
+}
+
+/// Rung 3 sends a famished actor home to the hearth **only while a meal office is
+/// serving** (`03_hunger.md` §3/§4). Outside one the hearth is cold, so the
+/// famished worker keeps to the round instead of abandoning the morning city for
+/// a dead grate — the census bug the review caught. The `FAMISHED_PRESSURE`
+/// percept rides only with the divert.
+#[test]
+fn famished_diverts_home_only_while_the_hearth_is_serving() {
+    let nav = nav();
+    let mut world = base_world();
+    world.add_character(person(
+        "merc",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("merchant"),
+        Significance::Major,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_on(Office::Dayspring, 1));
+    let merc = ActorId::from_raw("merc");
+    // Housed (a hearth to make for) and famished, standing well away from it.
+    let home = Vec3::new(0.0, WALK_Y, 0.0);
+    round.people.get_mut(&merc).expect("enrolled").home = Some(home);
+    assert!(!round.people[&merc].curfew_exempt, "a market trader keeps no night post");
+    world.characters.get_mut(&merc).expect("enrolled").state.needs.hunger = HUNGER_FAMISHED / 3.0;
+
+    // Dawn (Dayspring, no meal office): the hearth is cold — hunger does not march
+    // them home; they keep to the round, and no famished pressure is injected.
+    let (dawn, dawn_pressure) =
+        decide(&round, &world, &nav, &merc, 0, Office::Dayspring, Weekday::of_day(1));
+    assert_ne!(dawn_pressure, Some(FAMISHED_PRESSURE), "a cold hearth does not march the famished home at dawn");
+    assert!(!matches!(dawn, Decision::Travel(t) if t == home), "the famished worker is not sent home at dawn");
+
+    // High Wick (a meal office): the hearth is warm — now hunger sends them home,
+    // with the excuse-yourself pressure.
+    let (noon, noon_pressure) =
+        decide(&round, &world, &nav, &merc, 0, Office::HighWick, Weekday::of_day(1));
+    assert!(matches!(noon, Decision::Travel(t) if t == home), "famished at High Wick makes for the hearth, got {noon:?}");
+    assert_eq!(noon_pressure, Some(FAMISHED_PRESSURE), "and injects the famished pressure");
+}
+
+/// The low-hunger memory hook is a *first-person present* declaration, not a bare
+/// substring (`03_hunger.md` §1/§6). Ilse's memory still seeds her; third-person
+/// lore about someone else's hunger, or `hungry` embedded in a larger word, does
+/// not — the silent-famine risk the review flagged.
+#[test]
+fn the_memory_hunger_hook_is_first_person_only() {
+    assert!(memory_declares_hunger("I am very hungry after the long road here"), "Ilse still matches");
+    assert!(memory_declares_hunger("I feel hungry."), "a plain first-person declaration matches");
+    assert!(!memory_declares_hunger("the winter everyone went hungry"), "third-person lore does not seed famine");
+    assert!(!memory_declares_hunger("hungrycrake was the fisher's nickname"), "an embedded substring is not the word");
+    assert!(!memory_declares_hunger("I am weary after the long road"), "no hunger, no match");
 }

@@ -167,6 +167,39 @@ pub const WELL_ARRIVE_RADIUS_M: f64 = 3.0;
 /// A queue longer than this turns the non-urgent rung 6 away (rung 2 still goes).
 pub const WELL_QUEUE_SHORT: usize = 4;
 
+// --- Hunger (food & items M2): the second dynamic need, thirst's slower twin
+// (`features/food_and_items/03_hunger.md`). Same `0..=HUNGER_MAX` gauge, high =
+// satisfied; unlike thirst, it decays for *every* enrolled townsperson — everyone
+// eats (README §8.1). Surfaced to the LLM as a computed `hungry`/`famished`
+// condition on the sheet, never as a raw number.
+/// Full satisfaction, and the seed cap for the hunger gauge.
+pub const HUNGER_MAX: f64 = 255.0;
+/// Rung 3 — "famished": drop everything, eat what you hold or go to the hearth
+/// now. The ladder spec's reserved number (`features/movement/03_the_ladder.md`).
+pub const HUNGER_FAMISHED: f64 = 15.0;
+/// Rung 7 — "hungry": seek food when convenient (a short queue at an open,
+/// affordable stall — M3). The ladder spec's other reserved number.
+pub const HUNGER_HUNGRY: f64 = 70.0;
+/// Hunger lost per game-second. ~255 over ten game hours — deliberately the
+/// slower, heavier need (thirst crosses its whole gauge in four). A full meal at
+/// noon carries someone to supper: two real meals a day, which is the lore's day.
+/// Read against game time, so the debug time-scale speeds it up identically.
+pub const HUNGER_DECAY_PER_GAME_SECOND: f64 = HUNGER_MAX / (10.0 * 3600.0);
+/// Hunger regained per game-second while sitting at the hearth (home or tavern)
+/// during a meal office — full in ~20 game minutes, no items, no coins (the
+/// honest cheat of `03_hunger.md` §4, symmetric with the magic restock).
+pub const HEARTH_REFILL_PER_GAME_SECOND: f64 = HUNGER_MAX / (20.0 * 60.0);
+/// Seeded hunger floors here so nobody spawns mid-crisis; the spread above it is
+/// `HUNGER_MAX * hash01("hunger_seed", id, 0)` (`03_hunger.md` §1).
+pub const HUNGER_SEED_FLOOR: f64 = 40.0;
+/// The seed for an actor whose lore sheet already declares the `hungry`
+/// condition — Ilse, hungry now and famished within the hour, her story made
+/// mechanical (`03_hunger.md` §1/§6).
+pub const HUNGER_SEED_DECLARED_HUNGRY: f64 = 25.0;
+/// A food stall's queue is "short" below this — the [`WELL_QUEUE_SHORT`] twin,
+/// the predicate rung 7 joins on (M3 binds the stalls this reads against).
+pub const FOOD_QUEUE_SHORT: usize = 4;
+
 // --- Wallets (food & items M1/M2): starting-purse seeding
 // (`features/food_and_items/02_the_spark_standard.md` §4). M1 pins these
 // constants; M2's round seeding consumes them (this milestone decides the

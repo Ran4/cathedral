@@ -1005,6 +1005,11 @@ impl Engine {
         self.round.water_summary(&self.world)
     }
 
+    /// A one-line census of the cast's hunger for `--trace-food` (food & items M2).
+    pub fn food_summary(&self) -> String {
+        self.round.food_summary(&self.world)
+    }
+
     /// A behavioural census of the enrolled cast for `--census-by-area`.
     pub fn round_census(&self, now: f64) -> Census {
         self.round.census(&self.world, &self.clock, now)

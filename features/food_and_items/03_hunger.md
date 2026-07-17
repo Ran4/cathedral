@@ -70,7 +70,7 @@ Into `decide()` (`round.rs:1804-1944`), in the ladder's established order — ne
 
 | rung | fires when | does |
 |---|---|---|
-| **3 famished** (after parched, before thirsty) | `hunger < HUNGER_FAMISHED` and: holding edible food → **eat it now, standing**; else a food source is open and bound → go buy ([04](04_the_bread_round.md)); else (night, nothing open) → home to the hearth (§4) | injects `FAMISHED_PRESSURE` |
+| **3 famished** (after parched, before thirsty) | `hunger < HUNGER_FAMISHED` and: holding edible food → **eat it now, standing** (any hour); else a food source is open and bound → go buy ([04](04_the_bread_round.md)); else, **only while a meal office is serving the hearth** (High Wick, or the Waning-through-Lamplight supper span) → home to the hearth (§4). Outside a meal office an empty-handed famished actor keeps working: the whole cast is famished by dawn (a 10 h gauge, supper at 18:00), so an ungated home-divert would abandon the morning legs and empty the city — the hearth only earns the divert once it is warm. | injects `FAMISHED_PRESSURE`, but **only when it actually diverts home** |
 | **7 hungry** (after thirsty, before go_to) | `hunger < HUNGER_HUNGRY`, a bound food source is **open** and its queue is short (`FOOD_QUEUE_SHORT`, the `WELL_QUEUE_SHORT` twin), and the actor can afford list price | join the stall queue |
 
 Details that matter:
@@ -100,6 +100,17 @@ the Waning through Lamplight) refills hunger** at `HEARTH_REFILL_PER_GAME_SECOND
 minutes of sitting) — no items, no coins. The round already sends everyone home or to the tavern at
 the right hours (`rounds.json` legs; the tavern archetype works through the evening); the hearth
 just makes those legs *feed*.
+
+*"At a tavern"* is resolved from the nav graph at seed, not hardcoded: the tavern archetype's two
+work-nodes — `The Hungry Ox` and `The Bellstand` (the `TAVERNS` list) — are looked up by name
+exactly as the work legs are (`PlaceResolver::resolve`), and any actor within a post's reach
+(`TAVERN_HEARTH_RADIUS_M`, the wide-floor twin of the home hearth's tighter doorstep radius) of one
+during a meal office is fed. This is what carries the ~39 tavern trades
+(brewer/cook/tavern_worker/entertainer/sex_worker), who work straight through the meal offices and
+are never home — without it they decayed to nothing forever. A **stationary** actor with no `home`
+leg — the anchoress, bricked into her cell — has her spawn treated as her hearth by the same rule
+(any legless enrolled actor's base is its hearth), so she is not starved merely for having no bed in
+`homes.json`.
 
 What this buys: the market rungs fire mostly at **midday, on market days, in the squares** — which
 is exactly where the player is watching and exactly what the lore says the market's peak is. The

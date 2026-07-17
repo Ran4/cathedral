@@ -12,7 +12,8 @@ use serde_json::{Map, Value};
 
 use crate::{
     GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS, GOAL_MAX_CHARS, GOAL_NONE, HEARING_RADIUS_M,
-    ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS, PLAYER_SPEECH_MAX_CHARS, WALK_SPEED_MPS,
+    HUNGER_MAX, ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS, PLAYER_SPEECH_MAX_CHARS,
+    WALK_SPEED_MPS,
     character::{IntentTarget, TravelIntent},
     error::{ActionError, ActionErrorCode},
     event::DomainEvent,
@@ -1022,6 +1023,10 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
             ),
         ));
     }
+    // The satiety this unit restores, applied to the eater's hunger below
+    // (`features/food_and_items/03_hunger.md` §2). An ad-hoc test kind that is
+    // edible-by-tolerance carries no catalog satiety and simply feeds nothing.
+    let satiety = world.item_catalog.satiety(&item).unwrap_or(0);
     // `eat` consumes exactly one unit, so the wording is always singular.
     let eaten_phrase = counted_phrase(world, &item, 1);
     let eaten_noun = counted_noun(world, &item, 1);
@@ -1060,6 +1065,15 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
             .get_mut(&item_id)
             .expect("the eater still holds the stack")
             .quantity -= 1;
+    }
+
+    // The gauge: satiety lifts hunger toward full, and the eater's next sheet
+    // simply stops calling them hungry — the loop closes with no memory hygiene
+    // (`03_hunger.md` §5). The eater is never the player (no `PlayerEat`), so
+    // this only ever moves an enrolled townsperson's need.
+    if let Some(eater) = world.characters.get_mut(actor_id) {
+        let hunger = &mut eater.state.needs.hunger;
+        *hunger = (*hunger + f64::from(satiety)).min(HUNGER_MAX);
     }
 
     let lines = hearers

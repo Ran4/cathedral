@@ -230,7 +230,12 @@ struct PromptLoreProfile<'a> {
     mother: Option<LoreRelation<'a>>,
     children: Vec<LoreRelation<'a>>,
     circumstances: &'a [String],
-    conditions: &'a [String],
+    /// Authored bodily conditions plus the one *computed* drive condition the
+    /// sim writes each prompt — `hungry`/`famished` off the hunger gauge
+    /// (`features/food_and_items/03_hunger.md` §5). Owned, not borrowed, because
+    /// the computed word is appended per render; an un-enrolled actor's hunger
+    /// stays full, so nothing is appended and the frozen fixtures are unchanged.
+    conditions: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -538,7 +543,16 @@ fn build_sheet<'a>(
         mother: profile.mother.as_ref().map(&relation),
         children: profile.children.iter().map(relation).collect(),
         circumstances: &profile.circumstances,
-        conditions: &profile.conditions,
+        conditions: {
+            // Authored conditions first, then the computed drive word (if any),
+            // so the sheet reads "…, travel-worn, famished." — recomputed each
+            // prompt, which is how eating clears the line with no memory hygiene.
+            let mut conditions = profile.conditions.clone();
+            if let Some(word) = hunger_condition(actor.needs().hunger) {
+                conditions.push(word.to_string());
+            }
+            conditions
+        },
     });
     Sheet {
         name: actor.name(),
@@ -802,6 +816,21 @@ fn you_line(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
     line
 }
 
+/// The computed drive condition the hunger gauge renders into the sheet's
+/// `Conditions:` line — the one need surfaced as a word rather than left
+/// un-narrated like thirst (`features/food_and_items/03_hunger.md` §5). `None`
+/// above [`crate::HUNGER_HUNGRY`], which is where an un-enrolled (always full)
+/// actor sits, so it never touches the frozen fixtures.
+fn hunger_condition(hunger: f64) -> Option<&'static str> {
+    if hunger < crate::HUNGER_FAMISHED {
+        Some("famished")
+    } else if hunger < crate::HUNGER_HUNGRY {
+        Some("hungry")
+    } else {
+        None
+    }
+}
+
 /// "m"/"f" are lore-data codes; the model reads words.
 fn gender_word(gender: &str) -> &str {
     match gender {
@@ -1042,7 +1071,7 @@ mod tests {
                 }),
                 children: Vec::new(),
                 circumstances: &[],
-                conditions: &[],
+                conditions: Vec::new(),
             }),
             back_story: "",
             you_are: YouAre {

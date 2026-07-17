@@ -175,6 +175,13 @@ struct Args {
     /// `--fake --seconds-per-day 120 -t 130 --census-by-area` (or `--watch-clock 1`).
     #[arg(long)]
     census_by_area: bool,
+
+    /// watch the food & items M2 hunger census: a `[food]` line counting who is
+    /// fed, hungry or famished, the mean gauge, and the coin held. Pairs with
+    /// `--watch-clock 1` to see hunger climb through the morning and collapse at
+    /// High Wick (the hearth). Needs a nav graph under `--assets`.
+    #[arg(long)]
+    trace_food: bool,
 }
 
 fn main() -> ExitCode {
@@ -364,6 +371,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         trace_positions: args.trace_positions,
         trace_water: args.trace_water,
         census_by_area: args.census_by_area,
+        trace_food: args.trace_food,
     };
     if args.watch_clock > 0.0 {
         runner.watch_clock(args.watch_clock, clock.seconds_per_day())?;
@@ -416,6 +424,8 @@ struct Runner {
     trace_water: bool,
     /// `--census-by-area`: echo a behavioural census as each office rings.
     census_by_area: bool,
+    /// `--trace-food`: echo the M2 hunger census.
+    trace_food: bool,
 }
 
 impl Runner {
@@ -437,6 +447,9 @@ impl Runner {
             if self.census_by_area {
                 println!("[census] {}", self.engine.round_census(self.now).summary());
             }
+            if self.trace_food {
+                println!("[food] {}", self.engine.food_summary());
+            }
         }
         Ok(())
     }
@@ -456,7 +469,7 @@ impl Runner {
         // Tracing positions (water or the round census) needs the step under the
         // mover accumulator's catch-up budget (3.2 s), or a coarse step snaps
         // walkers forward and drops the walk — nobody would ever be seen to arrive.
-        if self.trace_water || self.census_by_area {
+        if self.trace_water || self.census_by_area || self.trace_food {
             step = step.min(3.0);
         }
         println!(
@@ -467,6 +480,7 @@ impl Runner {
         let census_interval = (real_seconds / (16.0 * game_days).max(1.0)).max(step);
         let mut next_water = self.now;
         let mut next_census = self.now + census_interval;
+        let mut next_food = self.now;
         while self.now < end {
             self.now += step;
             self.pump(Vec::new());
@@ -477,6 +491,10 @@ impl Runner {
             if self.census_by_area && self.now >= next_census {
                 println!("[census] {}", self.engine.round_census(self.now).summary());
                 next_census = self.now + census_interval;
+            }
+            if self.trace_food && self.now >= next_food {
+                println!("[food] {}", self.engine.food_summary());
+                next_food = self.now + census_interval;
             }
         }
         Ok(())
@@ -1109,6 +1127,7 @@ mod tests {
             trace_positions: false,
             trace_water: false,
             census_by_area: false,
+            trace_food: false,
         };
 
         let started = std::time::Instant::now();

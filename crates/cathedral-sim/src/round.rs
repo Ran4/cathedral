@@ -31,15 +31,18 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use serde::Deserialize;
 
 use crate::{
-    HEARING_RADIUS_M, LADDER_DECISION_MAX_SECONDS, LADDER_DECISION_MIN_SECONDS,
-    PERSON_ARRIVE_RADIUS_M, PLACE_ARRIVE_RADIUS_M, SOCIAL_PULL_RADIUS_M, THIRST_MAX,
-    THIRST_PARCHED, THIRST_THIRSTY, WALK_SPEED_MPS, WATER_DRAW_SECONDS,
+    HEARING_RADIUS_M, HEARTH_REFILL_PER_GAME_SECOND, HUNGER_DECAY_PER_GAME_SECOND, HUNGER_FAMISHED,
+    HUNGER_HUNGRY, HUNGER_MAX, HUNGER_SEED_DECLARED_HUNGRY, HUNGER_SEED_FLOOR,
+    LADDER_DECISION_MAX_SECONDS, LADDER_DECISION_MIN_SECONDS, PERSON_ARRIVE_RADIUS_M,
+    PLACE_ARRIVE_RADIUS_M, SOCIAL_PULL_RADIUS_M, THIRST_MAX, THIRST_PARCHED, THIRST_THIRSTY,
+    WALK_SPEED_MPS, WALLET_SEED_MIN, WALLET_SEED_SALT, WALLET_SEED_SPREAD, WATER_DRAW_SECONDS,
     WELL_ARRIVE_RADIUS_M, WELL_KEEPER_SOUND_INTERVAL_SECONDS, WELL_QUEUE_SHORT,
     character::{Character, IntentTarget, Movement},
     clock::{Office, WorldClock, Weekday},
     event::DomainEvent,
     homes::{HOMES_JSON, HomesDoc},
-    ids::{ActorId, PlaceId},
+    ids::{ActorId, ItemId, PlaceId},
+    item::Item,
     lore::Significance,
     math::Vec3,
     nav::{NavData, WALK_Y},
@@ -91,6 +94,11 @@ const DEFAULT_ROUND_LEASH_M: f64 = 10.0;
 /// Census: how close counts as "at your post" / "at home".
 const CENSUS_POST_RADIUS_M: f64 = 9.0;
 const CENSUS_HOME_RADIUS_M: f64 = 5.0;
+/// A tavern's hearth reaches this far from its node (food & items M2, §4). Looser
+/// than the home hearth ([`CENSUS_HOME_RADIUS_M`]) because a tavern is a wide
+/// floor a worker mills across (the `tavern` archetype leash is 8 m), not a
+/// doorstep — matched to [`CENSUS_POST_RADIUS_M`], the same "at this post" reach.
+const TAVERN_HEARTH_RADIUS_M: f64 = CENSUS_POST_RADIUS_M;
 
 /// The nine public drinking sources (`07_milestones.md` M3), by nav-graph display
 /// name, each paired with its gear's sound. See the M3 notes: the Shambles work
@@ -122,6 +130,15 @@ const LAMP_SQUARES: &[&str] = &[
     "Maren's Green",
     "The Gradine",
 ];
+/// The city's taverns, by nav-graph display name — the hearths of the evening
+/// trade (`03_hunger.md` §4). An actor within [`TAVERN_HEARTH_RADIUS_M`] of one
+/// during a meal office is fed exactly as one at home: the `tavern` archetype's
+/// legs (`rounds.json`) keep its workers at the workplace right through the
+/// evening, and the hearth makes those legs *feed*. These are the tavern
+/// archetype's work nodes — resolved to points from the nav graph at seed, never
+/// hardcoded coordinates. (The Wickmarket, where an entertainer may also perform,
+/// is a market square, not a hearth, and is deliberately not one of them.)
+const TAVERNS: &[&str] = &["The Hungry Ox", "The Bellstand"];
 /// Posts per square, rung around the square's interior node.
 const LAMPS_PER_SQUARE: usize = 4;
 /// The ring the posts stand on, probed inward until each lands on pavement.
@@ -410,6 +427,11 @@ impl Census {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Round {
     sources: Vec<WaterSource>,
+    /// The taverns' hearths (food & items M2), resolved from the nav graph at
+    /// seed: an actor within [`TAVERN_HEARTH_RADIUS_M`] of one during a meal
+    /// office is fed like one at home (`03_hunger.md` §4). Empty without a nav
+    /// graph, so a world with no round feeds nobody and the fixtures stay inert.
+    taverns: Vec<Vec3>,
     people: BTreeMap<ActorId, Townsperson>,
     /// Game-days at the last tick, so thirst decays by the game clock (and speeds
     /// up with the debug time-scale), not by wall-clock.
@@ -522,6 +544,46 @@ impl Round {
         )
     }
 
+    /// A one-line census of the cast's hunger for `--trace-food` (M2): how many
+    /// are fed, hungry or famished, the mean gauge, and the coin in circulation.
+    /// The morning climb and the High Wick collapse (the hearth feeding the
+    /// dinner legs) read straight off the hungry/famished counts; the spark
+    /// total holds steady, since nothing spends a wallet until M3.
+    pub fn food_summary(&self, world: &World) -> String {
+        let total = self.people.len();
+        let mut fed = 0usize;
+        let mut hungry = 0usize;
+        let mut famished = 0usize;
+        let mut sum = 0.0;
+        for id in self.people.keys() {
+            let Some(character) = world.characters.get(id) else {
+                continue;
+            };
+            let hunger = character.needs().hunger;
+            sum += hunger;
+            if hunger < HUNGER_FAMISHED {
+                famished += 1;
+            } else if hunger < HUNGER_HUNGRY {
+                hungry += 1;
+            } else {
+                fed += 1;
+            }
+        }
+        let mean = if total > 0 { sum / total as f64 } else { 0.0 };
+        let sparks: u32 = self
+            .people
+            .keys()
+            .filter_map(|id| world.characters.get(id))
+            .flat_map(|character| character.holds())
+            .filter_map(|item_id| world.items.get(item_id))
+            .filter(|item| item.kind.as_str() == "spark")
+            .map(|item| item.quantity)
+            .sum();
+        format!(
+            "food: {total} enrolled | fed {fed}, hungry {hungry}, famished {famished} | mean {mean:.0} | {sparks} sparks held",
+        )
+    }
+
     /// A behavioural census of the enrolled cast at the current instant: how many
     /// are home, at a post, walking, or left in the street, and which posts are
     /// populated. Reads the current office/weekday off the clock so a leg's
@@ -609,6 +671,70 @@ impl Round {
             .cloned()
             .collect();
 
+        // Hunger and wallets, seeded together for every enrolled townsperson
+        // (`03_hunger.md` §1, `02_the_spark_standard.md` §4). Both are a spread
+        // off the deterministic-hash idiom, so the city neither starves nor goes
+        // broke in lockstep — and both are inert without a nav graph, since a
+        // world with no round enrols nobody, keeping the frozen fixtures stable.
+        // This is exactly the `townsfolk` set the enrolment loop below inserts
+        // into `people`, and `decay_needs` decays hunger for every one of them —
+        // so nobody is seeded a hunger they never work off (`03_hunger.md` §7:
+        // the un-enrolled stay full because they are never seeded low here at
+        // all, seeding running only inside a nav-graph `seed`).
+        for id in &townsfolk {
+            // Whether the sheet declares this actor hungry — as an authored
+            // `hungry` condition, or in a memory ("I am very hungry after the
+            // long road here"). The condition case is the general future-proof
+            // hook; the memory case carries Ilse, whose static `hungry`
+            // condition M2 drops to stop it double-printing with the computed
+            // one (`03_hunger.md` §6) — the memory stays and is now truthful.
+            let character = &world.characters[id];
+            let declares_hungry = character
+                .lore()
+                .is_some_and(|lore| lore.conditions.iter().any(|c| c == "hungry"))
+                || character.memories().iter().any(|memory| memory_declares_hunger(memory));
+            let hunger = if declares_hungry {
+                // Hungry now, famished within the hour — Ilse's story made
+                // mechanical, and a reliable famished demo for M4.
+                HUNGER_SEED_DECLARED_HUNGRY
+            } else {
+                (HUNGER_MAX * hash01("hunger_seed", id, 0)).max(HUNGER_SEED_FLOOR)
+            };
+            world
+                .characters
+                .get_mut(id)
+                .expect("townsperson exists")
+                .state
+                .needs
+                .hunger = hunger;
+
+            // A starting purse of `WALLET_SEED_MIN + floor(WALLET_SEED_SPREAD *
+            // hash01)` sparks (2..=7) — unless a lore sheet already handed this
+            // actor coin, which stands (Ilse keeps her authored single spark,
+            // her reluctance to spend it being her character). The wallet is an
+            // ordinary `spark` stack in `world.items`, so it is visible in
+            // `you_hold`, offerable, and needs no special money concept.
+            let holds_spark = world.characters[id].holds().iter().any(|item_id| {
+                world
+                    .items
+                    .get(item_id)
+                    .is_some_and(|item| item.kind.as_str() == "spark")
+            });
+            if !holds_spark {
+                let sparks =
+                    WALLET_SEED_MIN + (WALLET_SEED_SPREAD as f64 * hash01(WALLET_SEED_SALT, id, 0)) as u32;
+                let wallet_id = ItemId::from_raw(format!("w_{}", id.as_str()));
+                world.add_item(Item::stack(wallet_id.clone(), "spark", sparks));
+                world
+                    .characters
+                    .get_mut(id)
+                    .expect("townsperson exists")
+                    .state
+                    .holds
+                    .push(wallet_id);
+            }
+        }
+
         // A keeper each: the nearest free **ambient** townsperson to the curb,
         // pinned there so a queue has someone to form on. Keepers are enrolled
         // like everyone else below, but with the well as their round's one post,
@@ -662,6 +788,21 @@ impl Round {
             }
         };
         let resolver = PlaceResolver::new(nav);
+
+        // The taverns' hearths (food & items M2, §4): the evening trade eats
+        // where it works, so an actor at a tavern during a meal office is fed
+        // like one at home. Positions come from the nav graph exactly as the
+        // work legs' do (`resolver.resolve`); the names are authored content, the
+        // twin of `SOURCES`/`LAMP_SQUARES`. A tavern the graph lacks simply feeds
+        // nobody, one diagnostic line, no panic.
+        for &name in TAVERNS {
+            match resolver.resolve(name) {
+                Some(point) => self.taverns.push(point),
+                None => diagnostics.push(format!(
+                    "[smart actors] round: tavern {name:?} is missing from the graph; its hearth is cold"
+                )),
+            }
+        }
 
         // The wayfinding registry (M5): the baked places and ward anchors, plus
         // one home entry per housed townsperson — "Tam Rud's house" — so
@@ -1045,7 +1186,7 @@ pub fn tick(
     if !round.seeded {
         return nudges;
     }
-    decay_thirst(round, world, clock, now);
+    decay_needs(round, world, clock, now);
     tick_lamps(round, clock, now);
     resolve_arrivals(round, world);
     tick_intents(round, world, nav, now, &mut nudges);
@@ -1392,23 +1533,68 @@ fn end_intent(
     }
 }
 
-/// Thirst falls by the game clock, so it keeps pace with the sun and the debug
-/// time-scale. Only water-drawers decay — the rest of the cast has no thirst gauge
-/// in play.
-fn decay_thirst(round: &mut Round, world: &mut World, clock: &WorldClock, now: f64) {
+/// Whether an office is a meal office — the hours the hearth feeds
+/// (`03_hunger.md` §4): dinner at High Wick, and the supper span from the Waning
+/// through Lamplight.
+fn is_meal_office(office: Office) -> bool {
+    matches!(office, Office::HighWick | Office::Waning | Office::Lamplight)
+}
+
+/// The needs fall by the game clock, so they keep pace with the sun and the
+/// debug time-scale. **Thirst** decays only for the bound water-drawers;
+/// **hunger** decays for *every* enrolled townsperson — everyone eats
+/// (`03_hunger.md` §1, README §8.1) — and climbs back at the hearth for those
+/// the round has home during a meal office (§4: no items, no coins).
+fn decay_needs(round: &mut Round, world: &mut World, clock: &WorldClock, now: f64) {
     let game_days = clock.game_days(now);
     let delta_days = (game_days - round.last_game_days).max(0.0);
     round.last_game_days = game_days;
-    let drop = delta_days * 86_400.0 * crate::THIRST_DECAY_PER_GAME_SECOND;
-    if drop <= 0.0 {
+    let game_seconds = delta_days * 86_400.0;
+    if game_seconds <= 0.0 {
         return;
     }
+    let thirst_drop = game_seconds * crate::THIRST_DECAY_PER_GAME_SECOND;
+    let hunger_drop = game_seconds * HUNGER_DECAY_PER_GAME_SECOND;
+    let hearth_gain = game_seconds * HEARTH_REFILL_PER_GAME_SECOND;
+    // Read the office once for the whole cast — the hearth feeds only at a meal
+    // office (the round's `home`/`sleep` legs then become supper).
+    let meal_office = is_meal_office(clock.at(now).office);
     for (id, person) in &round.people {
-        if !person.draws_water() {
+        let Some(character) = world.characters.get_mut(id) else {
             continue;
+        };
+        if person.draws_water() {
+            let thirst = &mut character.state.needs.thirst;
+            *thirst = (*thirst - thirst_drop).max(0.0);
         }
-        if let Some(character) = world.characters.get_mut(id) {
-            character.state.needs.thirst = (character.state.needs.thirst - drop).max(0.0);
+        // Physical presence at a hearth is the test, so a straggler the famished
+        // rung sent home is fed exactly like a diner the round did — computed
+        // before the mutable borrow of the gauge below. A hearth is the actor's
+        // own home *or any tavern* (`03_hunger.md` §4): the ~39 tavern trades
+        // (brewer/cook/tavern_worker/entertainer/sex_worker) work straight
+        // through the meal offices and are never home, so without the tavern
+        // branch they would decay to nothing forever.
+        let position = character.position_m();
+        let at_hearth = meal_office
+            && (person
+                .home
+                .is_some_and(|home| position.distance(home) <= CENSUS_HOME_RADIUS_M)
+                || round
+                    .taverns
+                    .iter()
+                    .any(|tavern| position.distance(*tavern) <= TAVERN_HEARTH_RADIUS_M)
+                // A stationary actor never walks to a hearth — the anchoress is
+                // bricked into her cell (`stationary` archetype: zero legs), with
+                // no homes.json house and no tavern — so where she stands *is*
+                // her hearth, or she decays to nothing forever (`03_hunger.md`
+                // §4). General to any legless enrolled actor: her base (her spawn,
+                // since a legless actor is never housed here) feeds her.
+                || (person.legs.is_empty()
+                    && position.distance(person.base) <= CENSUS_HOME_RADIUS_M));
+        let hunger = &mut character.state.needs.hunger;
+        *hunger = (*hunger - hunger_drop).max(0.0);
+        if at_hearth {
+            *hunger = (*hunger + hearth_gain).min(HUNGER_MAX);
         }
     }
 }
@@ -1681,7 +1867,13 @@ fn run_ladder(
                 .get(&id)
                 .is_some_and(|character| character.state.intent.is_some())
         {
-            let cause = if pressure == CURFEW_PRESSURE { "The curfew" } else { "Thirst" };
+            let cause = if pressure == CURFEW_PRESSURE {
+                "The curfew"
+            } else if pressure == FAMISHED_PRESSURE {
+                "Hunger"
+            } else {
+                "Thirst"
+            };
             let destination = {
                 let intent = world.characters[&id]
                     .state
@@ -1751,7 +1943,7 @@ fn run_ladder(
                     under_way != Some(*target)
                 }
                 Decision::WalkToLamp(index) => under_way != Some(round.lamps[*index].position),
-                Decision::ApproachWell | Decision::LightLamp(_) => true,
+                Decision::EatHeld(_) | Decision::ApproachWell | Decision::LightLamp(_) => true,
                 Decision::Wander(_) | Decision::Stay => false,
             };
             if !diverts {
@@ -1766,6 +1958,10 @@ fn run_ladder(
 /// The outcome of one idle person's ladder pass.
 #[derive(Debug)]
 enum Decision {
+    /// Rung 3: a famished actor eats a food item it already holds, standing —
+    /// the market is for empty hands (`03_hunger.md` §3). The stack decrement
+    /// and satiety are the `eat` action's, routed through it in [`apply_decision`].
+    EatHeld(ItemId),
     /// Rungs 2 & 6: set off for the assigned well.
     ApproachWell,
     /// Rungs 5 & 9: walk to a round anchor (or home, at curfew).
@@ -1795,6 +1991,8 @@ const CURFEW_PRESSURE: &str =
     "system: night is falling and the watch clears the streets — you need to be home; excuse yourself.";
 const PARCHED_PRESSURE: &str =
     "system: your thirst is pressing — excuse yourself and get to the well.";
+const FAMISHED_PRESSURE: &str =
+    "system: you are famished; your feet are taking you to food — excuse yourself.";
 
 /// The ladder pass for one idle person: the decision, plus — when it came off a
 /// *pressing* rung (curfew, parched) that outranks a conversation hold — the
@@ -1843,6 +2041,46 @@ fn decide(
         return (Decision::ApproachWell, Some(PARCHED_PRESSURE));
     }
 
+    // Rung 3 — famished: drop everything. Eat what you hold first — the market is
+    // for empty hands (`03_hunger.md` §3) — else, while the hearth is serving,
+    // head home to it. The pressure percept gives an on-stage actor one turn to
+    // excuse itself before the body walks (the `excused` flag), exactly as
+    // parched does — and rides only with the divert, so it injects only when the
+    // rung actually acts.
+    if character.needs().hunger < HUNGER_FAMISHED {
+        // Eat what you hold, standing — for anyone, the night trades included,
+        // at any hour: a famished actor with food in hand always eats it.
+        if let Some(item_id) = held_edible(world, character) {
+            return (Decision::EatHeld(item_id), None);
+        }
+        // M3 slot: a bound food source is open → go buy it (the bread round,
+        // [04](04_the_bread_round.md)). It ranks above the hearth — an open
+        // market is the right place to feed — and drops in here when M3 lands.
+        //
+        // Else head home to the hearth, but *only while a meal office is
+        // serving* (`03_hunger.md` §3/§4). Outside one the hearth is cold, so
+        // diverting there would abandon the day's work to sit at a dead grate —
+        // and since the whole cast is famished by dawn (a 10 h gauge, supper at
+        // 18:00), an ungated divert empties the morning city. Gated, a famished
+        // worker keeps working through the morning (medieval and correct) and is
+        // sent home only once High Wick opens the hearth — which, with the
+        // round's own dinner leg, is what makes the noon collapse land at noon. A
+        // night trade keeps its post (curfew-exempt — the lamps must be lit and
+        // the wall kept), fed at the tavern instead (§4); the homeless have no
+        // hearth to make for; both fall through to the lesser rungs. Night needs
+        // no branch here — the curfew rung already has the non-exempt home.
+        if is_meal_office(office)
+            && !person.curfew_exempt
+            && let Some(home) = person.home
+        {
+            return if position.distance(home) <= HOME_ARRIVE_RADIUS_M {
+                (Decision::Stay, None)
+            } else {
+                (Decision::Travel(home), Some(FAMISHED_PRESSURE))
+            };
+        }
+    }
+
     // Rung 6 — thirsty: the well, but only if its queue is short.
     if let Some((thirst, queue_len)) = water
         && thirst < THIRST_THIRSTY
@@ -1850,6 +2088,14 @@ fn decide(
     {
         return (Decision::ApproachWell, None);
     }
+
+    // Rung 7 — hungry: seek food when convenient — join a bound food stall's
+    // queue when it is open, its queue is short (`FOOD_QUEUE_SHORT`) and the
+    // actor can afford list price. Reserved: the stalls it queues at and the
+    // vendor binding it reads arrive in M3 (the bread round), so it has nothing
+    // to act on yet and stays quiet, like thirsty. Its place in the ladder —
+    // after thirsty (6), before the `go_to` errand (8) — is fixed here so M3
+    // only fills in the body.
 
     // Rung 8 — the errand: an LLM-issued `go_to` sits between thirsty (6) and
     // the round (9) — it outranks the day's routine, never the body's needs,
@@ -1946,6 +2192,15 @@ fn decide(
 /// Carry out a decision: set the walk and the phase, or stand.
 fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &ActorId, decision: Decision) {
     match decision {
+        Decision::EatHeld(item_id) => {
+            // Routed through the real `eat` handler so the stack decrement,
+            // satiety and self/percepts are exactly the action's — a code-driven
+            // meal standing where they are (`04_the_bread_round.md` §5, minus the
+            // bench). `held_edible` already proved the hold, so a failure here is
+            // a benign race (the item left the hand) and is simply dropped.
+            let args = serde_json::json!({ "item_id": item_id.as_str() });
+            let _ = crate::apply_action(world, id, "eat", &args);
+        }
         Decision::ApproachWell => {
             let source = round.people[id].source.expect("a well decision has a source");
             let draw_point = round.sources[source].draw_point;
@@ -2027,6 +2282,66 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
         }
         Decision::Stay => {}
     }
+}
+
+/// Whether a memory line is a first-person declaration of *present* hunger — the
+/// low-hunger seed hook for a character written hungry (Ilse: "I am very hungry
+/// after the long road here", `03_hunger.md` §1/§6).
+///
+/// Deliberately narrow. A bare case-insensitive `contains("hungry")` — or even a
+/// plain word-boundary match — would also fire on third-person lore like "the
+/// winter everyone went hungry", silently seeding an unrelated character
+/// famished. So this requires the standalone word `hungry` **and** a first-person
+/// present-tense subject before it ("I am" / "I'm" / "I feel"): Ilse's memory has
+/// both; that stray sentence has neither. The general, future-proof hook is the
+/// authored `hungry` *condition* — this only carries Ilse, whose static condition
+/// M2 drops to stop it double-printing with the computed one.
+fn memory_declares_hunger(memory: &str) -> bool {
+    let lower = memory.to_ascii_lowercase();
+    // The standalone word `hungry`, not a substring of a larger token.
+    let Some(hungry_at) = word_index(&lower, "hungry") else {
+        return false;
+    };
+    // A first-person present-tense subject somewhere before it.
+    ["i am", "i'm", "i feel"].iter().any(|lead| lower[..hungry_at].contains(lead))
+}
+
+/// The byte index of the first standalone-word occurrence of `word` in `haystack`
+/// (both already lowercase), or `None`. "Standalone" = not flanked by ASCII
+/// alphanumerics, so `hungry` hits "hungry." and "very hungry" but not
+/// "hungrycrake"; later occurrences are tried if the first is embedded.
+fn word_index(haystack: &str, word: &str) -> Option<usize> {
+    let bytes = haystack.as_bytes();
+    let mut from = 0;
+    while let Some(rel) = haystack[from..].find(word) {
+        let start = from + rel;
+        let end = start + word.len();
+        let before_ok = start == 0 || !bytes[start - 1].is_ascii_alphanumeric();
+        let after_ok = end == bytes.len() || !bytes[end].is_ascii_alphanumeric();
+        if before_ok && after_ok {
+            return Some(start);
+        }
+        from = start + 1;
+    }
+    None
+}
+
+/// The id of the first real food item this character holds (positive catalog
+/// satiety), or `None`. A spark is not food (its kind is un-edible); an ad-hoc
+/// test kind carries no satiety and is skipped too — the famished rung only eats
+/// what actually feeds.
+fn held_edible(world: &World, character: &Character) -> Option<ItemId> {
+    character
+        .holds()
+        .iter()
+        .find(|item_id| {
+            world
+                .items
+                .get(*item_id)
+                .and_then(|item| world.item_catalog.satiety(item))
+                .is_some_and(|satiety| satiety > 0)
+        })
+        .cloned()
 }
 
 /// The nearest LLM neighbour within the social radius that this actor knows by
