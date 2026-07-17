@@ -110,8 +110,9 @@ for the player's purse ([05_the_llm_seam.md](05_the_llm_seam.md) §7).
 (`logs/session_224_2026-07-17_14_46_02`), replayed against a real market:
 
 1. Ilse (famished, 1 copper) is told to try the Wickmarket;
-2. she arrives; the *sheet* — not improvisation — says the baker sells heels at 1 copper;
-3. she offers `c0prs` ×1, the baker accepts, offers a heel, she accepts, she **eats**;
+2. she arrives; the *sheet* — not improvisation — prices the baker's loaf at 2 coppers, which she
+   cannot pay, and the provisions stall's herring at 1, which she can;
+3. she offers `c0prs` ×1, the vendor accepts, offers a herring, she accepts, she **eats**;
 4. her next sheet has no hunger condition, her wallet is empty, and her goal
    ("Find affordable food") is hers to clear.
 

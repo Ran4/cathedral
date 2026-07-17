@@ -58,7 +58,7 @@ Exception: an actor whose lore sheet declares the `hungry` condition seeds low �
 eater.state.needs.hunger = (eater.state.needs.hunger + satiety).min(HUNGER_MAX);
 ```
 
-A heel (60) buys the morning; a rye loaf (150) is dinner; tavern stew (170) is the best meal in the
+A herring (70) buys the morning; a rye loaf (150) is dinner; tavern stew (170) is the best meal in the
 city, as the Hungry Ox would want. Eating remains instant for LLM actors (a turn action); the
 ladder's code-driven meal takes `EAT_SECONDS` at a bench so it reads visually
 ([04](04_the_bread_round.md) §5).
@@ -117,7 +117,7 @@ computed**:
 - `hunger < HUNGER_FAMISHED` → `famished`; `< HUNGER_HUNGRY` → `hungry`; else nothing. (Thirst
   deliberately stays un-surfaced — the water round runs fine without narrating it, and one new
   word-pair is enough for this regeneration. Revisit if thirsty dialogue is ever wanted.)
-- The condition is recomputed per prompt, so **the loop closes**: famished Ilse eats a heel, and
+- The condition is recomputed per prompt, so **the loop closes**: famished Ilse eats a herring, and
   her next sheet simply does not say famished. No memory hygiene required, no "forget you were
   hungry" — the sheet is the truth, which is what the prompt already teaches ("you_hold … are the
   current truth").
@@ -134,10 +134,11 @@ The demo character finally works end to end:
   it would double-print) — `travel-worn` stays, static conditions remain the right place for
   states the sim doesn't model;
 - her `memories` keep *"I am very hungry after the long road here"* — flavor, and now truthful;
-- she seeds at hunger 25 (§1), holds her 1 copper, and a heel of rye costs exactly 1
-  ([02](02_the_copper_standard.md)) — the purchase the character was authored for is finally
-  solvable, and *only just*, which is the drama;
-- after eating: satiety 60 carries her to the Waning, and her sheet stops calling her hungry —
+- she seeds at hunger 25 (§1), holds her 1 copper, and a herring costs exactly 1
+  ([02](02_the_copper_standard.md)) — the loaf she asked for is 2, which she cannot pay, and the
+  fish stall feeds her anyway: the purchase the character was authored for is finally solvable,
+  and *only just*, which is the drama;
+- after eating: satiety 70 carries her to the Waning, and her sheet stops calling her hungry —
   the acceptance test of [06_milestones.md](06_milestones.md) M4.
 
 ## 7. Who does not hunger

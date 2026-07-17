@@ -49,8 +49,8 @@ canonical anchors, restated:
 | thing | was | becomes |
 |---|---|---|
 | a loaf | 2 sparks | **2 coppers** (unchanged — the catalog's anchor price) |
-| a heel, a herring, a message run | a penny | **1 copper** |
-| Conny's fish | 2 coppers | **2 coppers** |
+| a herring, a message run | a penny | **1 copper** |
+| Sven's debt to Conny for that fish | 2 coppers | **2 coppers** (a debt in the lore, not a list price — the catalog sells herring at 1) |
 | a journeyman's day | 3 bells | **36 coppers** |
 | gatehouse week's wage | a roof + 8 sparks | **a roof + 8 coppers** |
 | a pauper's funeral with knell | 8 bells | **96 coppers** |
@@ -132,7 +132,7 @@ flow to both consumers:
 - the **LLM vendor's sheet** quotes list price in a `you_sell` line
   ([05](05_the_llm_seam.md) §3), so a baker asked "how much?" stops improvising and says "two
   coppers." Haggling stays legal — the sheet is an anchor, not a cage; an LLM vendor charmed into
-  offering a heel for free is roleplay working as intended.
+  offering a herring for free is roleplay working as intended.
 
 The prompt needs no glossary of coinage. "Copper coin" in `you_hold`, a price in `you_sell`, and
 the transcript's own "I have but one copper" — the model already speaks this language; we are

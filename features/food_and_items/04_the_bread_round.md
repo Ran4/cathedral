@@ -30,7 +30,7 @@ The stall table lives in a new embedded `assets/world/food.json` (the `rounds.js
 | The Wickmarket | 2 (bread, provisions) | copied from two of the `wick_fixture_*` stall fixtures (`lore/places/ombreval_buildings.json`) so the queue forms at real geometry | market hours (Dayspring→the Waning), busiest Highmarket |
 | Coswald's Yard | 1 | ditto | Highmarket only |
 | The Tallage | 1 | ditto | Lowmarket only |
-| Maren's Green | 2 (fish, eel) | ditto | market hours, busiest Lowmarket |
+| Maren's Green | 2 (herring, eel) | ditto | market hours, busiest Lowmarket |
 | The Hungry Ox | 1 (the pot) | at the door — the area exists (`hungry_ox`, areas.json) | the tavern archetype's whole day; curfew-exempt |
 | The Bell and Ladle | 1 (the pot) | **blocked: the area does not exist** — `features/movement/08_risks.md:100` already demands it: *"Named in 4 of the 20 authored routes and it does not exist in areas.json. Add it, at the Bellstand."* This feature adds it. | as the Ox |
 
@@ -71,9 +71,9 @@ At each day's Kindling bell (the `offices_crossed` hook, `clock.rs:361-386`, con
 
    | occupation | morning stock |
    |---|---|
-   | baker | 10× `loaf {flour: rye}`, 2× `loaf {flour: wheat}`, 8× `heel {flour: rye}` |
+   | baker | 12× `loaf {flour: rye}`, 3× `loaf {flour: wheat}` |
    | food_provisioner / grocer / market_seller | 6× `herring`, 4× `loaf {flour: rye}` |
-   | fish_trader | 8× `fish`, 4× `herring`, 3× `smoked_eel` |
+   | fish_trader | 10× `herring`, 4× `smoked_eel` |
    | cook / tavern_worker | the pot: `stew` is conjured **per serving at sale time** — the lore's never-scraped pot is the one licensed infinite inventory |
 
 2. vendor wallets reset to their float (6 coppers — change for a market morning), buyer wallets
@@ -105,7 +105,7 @@ coin counted, a loaf wrapped), then the atomic swap, all inside the sim tick:
 - price = catalog list price for the kind+metadata; the buyer's coin stack −price, the vendor's
   +price (merge rules from [01](01_items_and_stacks.md) §2.2);
 - one unit of the cheapest edible stock the buyer can afford moves vendor→buyer (famished buyers
-  take the cheapest that satisfies; a heel if a copper is all they have — Ilse's exact
+  take the cheapest that satisfies; a herring if a copper is all they have — Ilse's exact
   arithmetic);
 - then the buyer **eats it at the pitch** over `EAT_SECONDS` unless their next leg is home within
   the supper span, in which case they carry it (and rung 3's eat-what-you-hold finishes the story
@@ -114,8 +114,8 @@ coin counted, a loaf wrapped), then the atomic swap, all inside the sim tick:
 **Percepts follow the water round's discipline** (*"a clock, not an event"*, `round.rs:1474-1478`):
 
 - **self-percepts, both parties** (`remember_percept`, `character.rs:373-387`): buyer — *"You
-  bought a heel of rye bread from Petronel for 1 copper."*; vendor — *"You sold a heel of rye
-  bread for 1 copper."* Consecutive-repeat dedup already collapses a busy morning into one line,
+  bought a herring from Wyn for 1 copper."*; vendor — *"You sold a herring for 1
+  copper."* Consecutive-repeat dedup already collapses a busy morning into one line,
   which is exactly right. The player can ask either party what they bought or sold, and they can
   answer, for zero tokens.
 - **no NPC inbox lines, no nudges.** Thirty sales an hour in a market square must not schedule a
@@ -157,7 +157,7 @@ verbs. That is the test that the M3 shapes are right.
 
 ## 7. Bevy
 
-- **New offer-prop visual keys** (`loaf`, `heel`, `stew`) per [01](01_items_and_stacks.md) §7;
+- **New offer-prop visual keys** (`loaf`, `stew`) per [01](01_items_and_stacks.md) §7;
   `herring`/`smoked_eel` reuse the fish mesh at reduced scale.
 - **Stall dressing** (nice-to-have, ships with M3 if cheap): the bound stall renders a bread board
   whose prop count tracks the vendor's stock stack — the first time item *state* has had a world

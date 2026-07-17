@@ -81,14 +81,8 @@ binary get it with no wiring. One row per kind:
       "stackable": true, "edible": { "satiety": 150 },
       "metadata": { "flour": ["rye", "wheat"] },
       "price_coppers": { "": 2, "flour=wheat": 4 } },
-    { "kind": "heel", "display": "heel of bread", "visual_key": "heel",
-      "stackable": true, "edible": { "satiety": 60 },
-      "metadata": { "flour": ["rye", "wheat"] },
-      "price_coppers": { "": 1, "flour=wheat": 2 } },
     { "kind": "herring", "display": "herring", "visual_key": "fish",
       "stackable": true, "edible": { "satiety": 70 }, "price_coppers": { "": 1 } },
-    { "kind": "fish", "display": "fish", "visual_key": "fish",
-      "stackable": true, "edible": { "satiety": 90 }, "price_coppers": { "": 2 } },
     { "kind": "smoked_eel", "display": "smoked eel", "visual_key": "fish",
       "stackable": true, "edible": { "satiety": 100 }, "price_coppers": { "": 3 } },
     { "kind": "stew", "display": "bowl of stew", "visual_key": "stew",
@@ -177,11 +171,11 @@ fixture — renders **byte-identically** to today:
 
 | n | line |
 |---|---|
-| 1 | `Sven held out a fish (id fzbn9) to you` |
+| 1 | `Sven held out a herring (id fzbn9) to you` |
 | 3 | `Ilse held out 3 copper coins (id c0prs) to you` |
 | 3 | `Ilse offered 3 copper coins to a stranger (id p003n)` |
 | 2 | `You accepted the 2 copper coins (id c0prs) Ilse offered` |
-| 1 | `Petronel ate a heel of bread` |
+| 1 | `Petronel ate a herring` |
 
 Pluralization is naive ("s" appended) with an optional `display_plural` in the catalog for the
 irregulars ("loaves"). `DomainEvent`/`EngineMessage::WorldEvent` gain `quantity: u32` so the HUD
@@ -207,7 +201,7 @@ places"*), gaining a count suffix only when n > 1:
 **you_offer**:
 - c0prs copper coin ×3 — to id p003n: a stranger (you don't know their name)
 **offered_to_you**:
-- bd7k2 heel of bread — from id p003n: Bertran Kern (accept with: accept_offered_item {"item_id": "bd7k2"})
+- hr7k2 herring — from id p003n: Bertran Kern (accept with: accept_offered_item {"item_id": "hr7k2"})
 ```
 
 The `accept_with` template string (`assets/prompts/strings.toml`) is unchanged — accepting takes
@@ -237,7 +231,7 @@ dependency order:
 | layer | change |
 |---|---|
 | `item.rs` | new struct; `display_name(&catalog)`; the catalog loader + validation |
-| `seed.rs` | `ItemSeed {id, kind, quantity?, metadata?}` (name dropped, defaults: 1, empty); validation against the catalog; `assets/world/seed.json` rewritten (2 items: `fzbn9` → `kind: fish`; `c0prs` → `kind: copper_coin`) |
+| `seed.rs` | `ItemSeed {id, kind, quantity?, metadata?}` (name dropped, defaults: 1, empty); validation against the catalog; `assets/world/seed.json` rewritten (2 items: `fzbn9` "fish" → `kind: herring` — there is no generic fish kind; `c0prs` → `kind: copper_coin`) |
 | `actions.rs` | `offer_item` quantity, split/merge in accept, `eat` decrement + `NotEdible`, `BadQuantity`; counted percept lines |
 | `offer.rs` | `quantity: u32` on `Offer` |
 | `world.rs` | invariants (§2.2); merge helper |
@@ -245,7 +239,7 @@ dependency order:
 | `snapshot.rs` | `ItemSnapshot {id, kind, display_name, visual_key, quantity, metadata}` — keep sending the *derived* display name so the host never needs the catalog |
 | `engine.rs` | `WorldEvent.quantity`; player commands unchanged (player offers whole stacks in v1 — a HUD quantity picker is later polish) |
 | `model.rs` (Bevy) | mirror the new snapshot fields; validation limits (quantity ≥ 1, metadata size cap); HUD toasts pluralize |
-| `actors.rs` (Bevy) | new `visual_key` matches: `loaf`/`heel` (a flattened brown capsule), `stew` (a squat cylinder "bowl") — everything else already falls back to the yellow generic cuboid. One offer prop per stack regardless of quantity (a floating armful of seven coins is not the medieval look; revisit with stall dressing in [04](04_the_bread_round.md) §7) |
+| `actors.rs` (Bevy) | new `visual_key` matches: `loaf` (a flattened brown capsule), `stew` (a squat cylinder "bowl") — everything else already falls back to the yellow generic cuboid. One offer prop per stack regardless of quantity (a floating armful of seven coins is not the medieval look; revisit with stall dressing in [04](04_the_bread_round.md) §7) |
 | headless | the world-dump prints `name (id) ×n` |
 | tests | `fixtures/prompts/manifest.json` items gain kinds (anvil/rope/loaf → `generic` with display overrides, or real kinds where they exist); **regenerate all fixtures once**: `cargo test -p cathedral-sim --test golden_prompts -- --ignored` |
 
@@ -262,5 +256,5 @@ The fixture regeneration is the "most expensive small change" the movement plan 
 - **No containers, no weight, no encumbrance.** A stack is a number, not a basket.
 - **No item quality decay.** `day_old` bread is a decision for later (README §8.3).
 - **No multi-item trades.** A trade remains two offer/accept pairs; the quantity argument makes
-  "two coppers for a fish" a *two-step* trade instead of a three-step one, which is enough
+  "two coppers for a loaf" a *two-step* trade instead of a three-step one, which is enough
   (the trust question is discussed in [05](05_the_llm_seam.md) §6).

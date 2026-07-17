@@ -50,7 +50,6 @@ A bound vendor ([04](04_the_bread_round.md) §2) gets one extra sheet section, r
 **you_sell** (your stall's prices):
 - rye loaf, 2 coppers
 - wheat loaf, 4 coppers
-- heel of rye bread, 1 copper
 ```
 
 Generated from the catalog's `price_coppers` for the kinds in the vendor's stock template — not
@@ -71,11 +70,11 @@ into generosity is the game working. The ladder's silent customers always pay li
 
 Counted lines per [01](01_items_and_stacks.md) §4. Two additions worth calling out:
 
-- **The purchase self-percepts** (*"You bought a heel of rye bread from Petronel for 1 copper"*)
+- **The purchase self-percepts** (*"You bought a herring from Wyn for 1 copper"*)
   land in `recent_history` via `remember_percept`, not the inbox — they never schedule a turn, but
   the next time that actor *does* speak, their morning is in their memory. The player asking a
   queue "what did you pay?" gets a true answer for the price of one ordinary turn.
-- **The eat percept stays terse** (*"Ilse ate a heel of bread"*) — bystander lines don't carry
+- **The eat percept stays terse** (*"Ilse ate a herring"*) — bystander lines don't carry
   prices; commerce detail belongs to the parties.
 
 ## 5. Fixtures and cost
@@ -95,7 +94,7 @@ Counted lines per [01](01_items_and_stacks.md) §4. Two additions worth calling 
 
 A trade is still two one-way gifts: coin offered and accepted, then bread offered and accepted —
 *"one side trusts first"* (`features/implemented/giving_things.md`). With quantities this is now a
-clean two-beat ("two coppers for the fish" is one offer each way), but a counterparty can still
+clean two-beat ("two coppers for the loaf" is one offer each way), but a counterparty can still
 take the coin and walk.
 
 We keep it. Reasons:

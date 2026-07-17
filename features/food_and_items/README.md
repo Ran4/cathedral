@@ -119,22 +119,22 @@ vendors' sheets gain a `you_sell` price line so they stop inventing prices.
 
 ## 5. The catalog
 
-Deliberately small — one coin, six foods. Everything else the market *talks about* (honey, cheese,
-eggs, simples) stays talk until a feature needs it.
+Deliberately small — one coin, four foods. No item explosion: one bread, two named fishes, one
+tavern dish. Everything else the market *talks about* (honey, cheese, eggs, simples) stays talk
+until a feature needs it, and there is no generic "fish" — a fish on a slab in Ombreval is a
+herring or an eel.
 
 | kind | metadata | price | satiety | sold by | note |
 |---|---|---|---|---|---|
 | `copper_coin` | — | — | — | — | the only money; fungible stack |
 | `loaf` | `flour: rye\|wheat` | 2 / 4 | 150 | baker, food_provisioner | the canonical 2-copper rye loaf; wheat is fine bread |
-| `heel` | `flour: rye\|wheat` | 1 / 2 | 60 | baker | the poor cut — what one copper buys (Ilse's session already negotiated exactly this) |
-| `herring` | — | 1 | 70 | fish_trader, market_seller | lawful bench-fare |
-| `fish` | — | 2 | 90 | fish_trader | Conny's canonical two-copper fish; the existing `fzbn9` migrates to this kind |
+| `herring` | — | 1 | 70 | fish_trader, market_seller | lawful bench-fare — and what one copper buys; Sven's `fzbn9` "fish" migrates to this kind |
 | `smoked_eel` | — | 3 | 100 | fish_trader | Maren's Green pride; Bertran's courting gift |
 | `stew` | — | 2 | 170 | cook, tavern_worker | tavern-only; the never-scraped pot, so it never runs out |
 
 Satiety is on a 0..=255 gauge (high = satisfied), same convention as thirst. A loaf is most of a
-day; a heel takes the edge off. Ale is deliberately absent — drink belongs to the thirst system and
-opens a tavern-vs-well question this feature does not need to answer yet.
+day; a herring takes the edge off. Ale is deliberately absent — drink belongs to the thirst system
+and opens a tavern-vs-well question this feature does not need to answer yet.
 
 ---
 
@@ -164,7 +164,7 @@ Each shippable, each with a verification recipe using the repo's existing tools.
 | **M1** | **The copper standard** | the lore sweep (bell/lantern excised as money), the price table live in the catalog | `grep -ri 'silver bell\|gold lantern' lore/` finds only history; a vendor's sheet quotes copper prices |
 | **M2** | **Hunger** | the gauge, decay, `eat` satiety, computed conditions on the sheet, meal legs, seeded wallets | headless `--trace-food` census: hunger falls all morning, the city eats at High Wick; Ilse's sheet says famished, she eats, it stops saying it |
 | **M3** | **The bread round** *(the vertical slice)* | stalls bound to vendors, the Kindling restock, the queue, the silent purchase, self-percepts, the coin-clink | headless `--trace-food` logs dozens of sales at the Wickmarket on Highmarket; `tp` to the square at noon and watch the queue; ask a buyer what they paid |
-| **M4** | **The Ilse purchase** | `you_sell` price lines, quantity verbs in the prompt, the LLM seam polished | replay yesterday's session and it *ends in a sale*: Ilse offers her copper, the baker offers a heel, both accept, she eats, her hunger line clears |
+| **M4** | **The Ilse purchase** | `you_sell` price lines, quantity verbs in the prompt, the LLM seam polished | replay yesterday's session and it *ends in a sale*: the baker's loaf is 2 coppers, Ilse has 1, the fish stall's herring is 1 — she offers her copper, accepts the herring, eats, and her hunger line clears |
 | **M5** | **The supply chain** *(deferred, sketched)* | bakehouse mornings, flour purchases, grain carts by the Wool Gate, Seven Lofts stock — replaces both nightly resets | *not in this plan's scope; see [04](04_the_bread_round.md) §6 for the sketch* |
 
 M0 is where the risk lives (every layer touches items; ~13 golden fixtures pin the bytes). M1 is
