@@ -262,7 +262,7 @@ exactly this, "from the Kindling bell," and hauls the sodden cloth up afterward
 to the tenter-yards with his arms dead to the shoulder, and the stub's summary
 of his day is the trade's summary entire:
 
-> *Stale piss, hot lye and wet wool: that is your day, for three bells a day and
+> *Stale piss, hot lye and wet wool: that is your day, for thirty-six sparks a day and
 > a master who counts every ell.*
 
 **The liquor, and who pays for it.** The trough is not water. It is water made
@@ -325,20 +325,20 @@ in their lives and many never; the panel that shows their work to a thousand
 pilgrims is a thing they are told about and do not go to look at, because
 looking costs a morning's wage and the cloth will not tread itself.
 
-### The arithmetic of three bells
+### The arithmetic of thirty-six sparks
 
-The wage is the same three silver bells a journeyman gets anywhere
+The wage is the same thirty-six sparks a journeyman gets anywhere
 (`../core_lore/trade_and_daily_life.md`), and it is the ceiling: a Rud fuller is
 paid by the day, not by the piece, so working harder fills the master's cloth
 and not the fuller's purse. Set against it:
 
-- A **loaf** is two sparks; a day's three bells is thirty-six sparks, which is
+- A **loaf** is two sparks; a day's wage of thirty-six sparks is
   eighteen loaves before anything else — and there is a great deal else. A
   corner in a **widow court**, water by the bucket, the piss-penny, fuller's
   earth and lye against the master's dock, fuel that is dear in the cold, a
   patch of thread, and whatever the household pot must hold for the ones too
   young or too old or too sick to earn.
-- A **pauper's funeral with a knell costs eight bells** — near three days' work
+- A **pauper's funeral with a knell costs ninety-six sparks** — near three days' work
   — which is why a Rud who dies poor does not pay for his own burying; *some
   quiet purse pays, nobody says whose*
   (`../second_sun/07_what_everyone_knows.md`), and the family takes the charity
@@ -355,10 +355,10 @@ and not the fuller's purse. Set against it:
 > inside:*
 >
 > > Fulled this week at the Cinder tubs — six hands.
-> > **Rud** (T.), five days, dockt half a bell the grey broadcloth run
-> > narrow at the list, one ell short of measure — paid two bells ten.
-> > **Rud** (the widow), four days, well-water her own, no dock — one bell eight.
-> > Owing to me for earth and lye, carried: **Rud** (T.), a bell and four.
+> > **Rud** (T.), five days, dockt six sparks the grey broadcloth run
+> > narrow at the list, one ell short of measure — paid thirty-four sparks.
+> > **Rud** (the widow), four days, well-water her own, no dock — twenty sparks.
+> > Owing to me for earth and lye, carried: **Rud** (T.), sixteen sparks.
 >
 > Nobody at that tub is *of* the name to the master; they are stock he keeps a
 > book on, and the book is where "Rud" gets written this week, and next, whether
@@ -805,7 +805,7 @@ the poor everywhere in Ombreval, and the family's only mark on it is small
 enough to break your heart if you let it, so do not — handle the grief at arm's
 length, the way the corpus does.
 
-**The quiet purse.** A pauper's funeral with a knell costs eight bells, near
+**The quiet purse.** A pauper's funeral with a knell costs ninety-six sparks, near
 three days' work, and a Rud who dies poor cannot pay it, so a Rud who dies poor
 is buried on charity: *some quiet purse pays the paupers' funerals, and nobody
 says whose* (`../second_sun/07_what_everyone_knows.md`). The family takes it —

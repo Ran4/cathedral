@@ -164,7 +164,7 @@ other value could be assessed. No one laid four hundred round pieces in rows.
 Coins from several mints circulated, many clipped or worn, and valuable metal
 had to be weighed and sometimes assayed.
 
-Nor should the F.54 mark be converted neatly into F.437 bells or lanterns.
+Nor should the F.54 mark be converted neatly into F.437 sparks.
 The silver standard, coin fineness, local pounds, mint charges, and price of
 goods all changed in the intervening centuries. Clerks can reconstruct
 ranges, and every reconstruction serves an argument. The only safe economic

@@ -284,12 +284,12 @@ point of it.*
 
 > **Coswaldstide quarter, F.436 — Lanthorn, office of the Rite.**
 > White wax, high altar and quire, cast, iij baskets — weighed at the charter
-> pound, proved on our beam — vj lantern, x bell.
-> White wax, Rose chapels and the night offices, dipped — ij lantern, iiij bell.
+> pound, proved on our beam — iiijM ccccxxxx sparks.
+> White wax, Rose chapels and the night offices, dipped — Mcccclxxxviij sparks.
 > Paschal-work and the great tapers, to the Concurrence, part-delivered — held to
 > account, weight noted at door.
 > Tallow, fabric and the works, common dips, for the scaffold-men and the
-> counting-rooms — xviij bell.
+> counting-rooms — ccxvj sparks.
 > Wick and tow, own drawing, to a thread.
 > *Received and counted at the fabric door by weight, verger's tally agreeing.*
 > *Sworn by the light that does not lie.*

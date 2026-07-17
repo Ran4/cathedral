@@ -117,7 +117,9 @@ spark — which is *why* every purchase demo dead-ends).
   id, 0))` sparks (2–7), the deterministic-hash idiom the round already uses for thirst spread
   (`round.rs:877-878`). Majors with authored holds keep them — **Ilse keeps exactly 1**; her
   reluctance to spend it is her character sheet. Vendors additionally seed a float
-  ([04](04_the_bread_round.md) §3).
+  ([04](04_the_bread_round.md) §3). *M1 pins the constants — `WALLET_SEED_MIN = 2`,
+  `WALLET_SEED_SPREAD = 6`, `WALLET_SEED_SALT = "wallet"` in `crates/cathedral-sim/src/lib.rs`;
+  M2's seeding consumes them.*
 - **Implementation:** wallets are ordinary `spark` stacks in `World.items`, conjured at round
   seed with deterministic ids (`w_<actor id>`), so they are visible in `you_hold`, offerable,
   stealable-by-consent, and the LLM needs no special money concept — money is just a stack you

@@ -486,7 +486,7 @@ needle, the *face of the family trade*, and there is nothing they can do about
 it but square more stone.
 
 **Piece-work, in coin.** Betriss lives thin, and the thinness is exact. A
-journeyman's day in Ombreval is about three bells; a seamstress on piece-work
+journeyman's day in Ombreval is about thirty-six sparks; a seamstress on piece-work
 does not see a journeyman's day. A shirt made up whole earns a few sparks over
 the cloth; mending is by the seam and the patch, a spark here, two there; a good
 week is bread and rent and thread and not much past it, and a slack week is the

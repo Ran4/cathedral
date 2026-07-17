@@ -25,7 +25,7 @@ First the Edict of two hundred and forty-four was read aloud, and every witness 
 
 He says that from the north triforium, where the lodge kept scaffold two summers past, he saw the false light stand in the glass at dawn, high in the eye, green as pond-ice. That his mason's level, stood on the pavement, cast two shadows, and the false shadow leaned toward Cinder Row. That at the re-setting he heard the accused whispering over the panes, words he could not make out.
 
-He says further: "Saint Coswald mortared the breach with his own body and got a side altar. The glaziers made a window and got the whole church. Now the window makes pilgrim coin, and the second s—" *(here the witness was fined a bell-coin, and paid it angrily)* "—the Emblem, then. The Emblem makes them rich. Ask who profits by it. Ask the guild. I have asked it in the Yard these two years, and I will ask it here, fine or no fine."
+He says further: "Saint Coswald mortared the breach with his own body and got a side altar. The glaziers made a window and got the whole church. Now the window makes pilgrim coin, and the second s—" *(here the witness was fined a dozen sparks, and paid them angrily)* "—the Emblem, then. The Emblem makes them rich. Ask who profits by it. Ask the guild. I have asked it in the Yard these two years, and I will ask it here, fine or no fine."
 
 ## The Second Witness
 

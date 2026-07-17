@@ -87,7 +87,7 @@ world.second_sun = {
 
 ## 4. Items of the conspiracy: offer_item, unchanged
 
-The contraband economy compiles entirely to the existing offer / accept / decline / retract verbs at 4 m. Proposed item set: green-dipped candles, pilgrim badges, bell-coins, coin (dues, page-money, dry money), Sparr pages, *Colm's Last Letter*, the Green Almanac cloth, sealed archive packets.
+The contraband economy compiles entirely to the existing offer / accept / decline / retract verbs at 4 m. Proposed item set: green-dipped candles, pilgrim badges, coin (dues, page-money, dry money), Sparr pages, *Colm's Last Letter*, the Green Almanac cloth, sealed archive packets.
 
 Item fields **[proposed]**: `{id, name, description, lore_text?, provenance?}`.
 
@@ -144,7 +144,7 @@ Each knob gates exactly one mechanism named above. Where a knob restates a desig
 - **C3 — Pike's keys.** Subject change on phenomenon talk; a fixed coin-for-odd-hours offer through the offer verb.
 - **C4 — the moth relay.** Brant re-emits any phenomenon-vocabulary transcript into his patter after `moth_report_delay_days`, warped by a fixed substitution table ("second sun" → "the two lights, neighbours") — deterministic drift standing in for LLM drift.
 - **C5 — the sexton.** Warm fixed answers on strokes and chalk; topic-change deflection on who reads the lintel or why.
-- **C6 — Ede.** Bell-coin accepted → the canonical rhyme; the persuade path → the counter-sign spoken exactly once.
+- **C6 — Ede.** Penny accepted → the canonical rhyme; the persuade path → the counter-sign spoken exactly once.
 - **C7 — the squint.** Aldith trades verse for news on a fixed judgement rule (transcript length plus one keyword) standing in for LLM honesty-judging.
 - **C8 — the counter.** Lise's two-offer page trade at fixed prices; forged and genuine pages indistinguishable in every output.
 - **C9 — the meeting.** One full fixed transcript: bede-roll, sky-drawing, dues, and the closing recitation carrying next quarter's sign after "unwalled", as a single broadcast `say`.

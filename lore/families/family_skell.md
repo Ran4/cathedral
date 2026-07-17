@@ -9,7 +9,7 @@
 - **Heartland:** Reed Ward (Maren's Green), now branched into half the city
 - **Trades:** fish, eel, smoke-racks, wharf wages, burial, drapery, healing, watch
 - **Anchors:** Averil Skell (52, fish-smoker, the practical power of the Green,
-  lends at a spark on the bell); Petronel Skell (midwife, sent for at hard
+  lends at a spark on the dozen); Petronel Skell (midwife, sent for at hard
   births); Gile Skell (thief)
 
 The Skells got off the water and took the trades that stayed *inside* the wall,

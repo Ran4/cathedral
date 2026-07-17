@@ -13,7 +13,7 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 
 **Badge-money** — revenue from licensed pilgrim badges of the Emblem — sold while forbidden to describe; part-funds the Custody.
 
-**Bell** — the silver coin of Ombreval, stamped with the Bellstand's watch-bell; the street says *bell-coin*. Twelve copper **sparks** to the bell ("not worth a spark"); sixty bells to the lantern. In the street a spark is called a *penny*, and always has been — the coin says spark, the mouth says penny, and no clerk has ever won that argument. A loaf, two sparks; a journeyman's day, three bells; a pauper's funeral with knell, eight.
+**Bell** — a bell, and only a bell: the bronze in the Bellstand and the Lanthorn ring, by which the city tells its hours and knells its dead. No coin ever bore the name — the mint of Ostrelle strikes copper and nothing else. (See **Spark**.)
 
 **Bellday** — the weekly holy day; the nave at its fullest.
 
@@ -69,8 +69,6 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 
 **Keyhole and Breach †** — the heresy's factions: the Keyhole holds the rose sacred, the one honest eye; the Breach whispers that the building itself is the wall.
 
-**Lantern** — the gold coin of the Ostrelle mint; in Ombreval mostly money of account. "A lantern says otherwise" ends arguments.
-
 **The Lanthorn** — the Great Church of Saint Ambrelle: formally that, and never called it.
 
 **Lead †** — a sworn member's one contact above their light; named for the strips that hold glass.
@@ -118,6 +116,8 @@ A dagger (†) marks a secret: inject only into NPCs canon says know it. Entries
 **Sky-drawing †** — the meeting rite: those who saw the Emblem that week describe its pane and colour aloud for the Green Almanac.
 
 **The Spared** — the few who claim to see only one sun through the rose; pitied, envied, doubted.
+
+**Spark** — the copper coin, and the only one: the whole of Ombreval's money. The street calls it a *penny* and always has — the coin says spark, the mouth says penny, and no clerk has ever won that argument. "Not worth a spark" is the smallest contempt there is. A loaf, two sparks; a journeyman's day, thirty-six; a pauper's funeral with knell, ninety-six.
 
 **A Sparr page** — any alleged leaf of the sealed deposition of F.204; the costliest contraband in Ombreval.
 

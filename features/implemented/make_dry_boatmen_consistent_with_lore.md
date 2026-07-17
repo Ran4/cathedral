@@ -158,7 +158,7 @@ keep them coherent going forward:
   most want corrected.
 - **Averil Vell** (badge attendant) is read as a fallen warehouse house.
 - **Averil Skell** is the practical power of Maren's Green — smoke, fish, and
-  lending at a spark on the bell.
+  lending at a spark on the dozen.
 - **Renn Hobbe** (wick-priest of Saint Maren's) is read as boat-family, which makes
   him the man who has to read the disputed roll of the drowned to his own kin.
 - **Ewart Alder's** drunk threat to sell the Moorings now has a second and much

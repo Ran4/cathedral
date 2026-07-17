@@ -61,7 +61,7 @@ Purpose: the recruitment funnel as playable steps, mirroring the admission proce
 1. **Hear the bell.** Maren Smallvoice rings the name-knell: one slow stroke per year of the life. Scheduled by the simulation's own deaths.
 2. **Learn what it counts.** Sexton Noll Fitch explains freely: his injected goal answers bell questions with pride, credits "some kind soul" for paupers' funerals, and goes slow and general on WHO reads the lintel or WHY (guard: never say "Unwalled", "pass", or "meeting" — he is not lying, he is not saying). Range: warm on strokes and chalk, evasive by topic-change on readers; he may mention the grey clerk at funerals, seeding 4b from the other side.
 3. **Read the lintel.** The charnel door carries the newest buried name in chalk until the next burial.
-4. **See the diamond.** Chalk at the Needle's midpoint: high, low, doorside, struck through. Ede, if befriended (bell-coin messages, the offer verb), warns: never touch it, never be seen looking. She will not gloss it.
+4. **See the diamond.** Chalk at the Needle's midpoint: high, low, doorside, struck through. Ede, if befriended (penny messages, the offer verb), warns: never touch it, never be seen looking. She will not gloss it.
 5. **Crack the rule.** The step with no teacher: the funerals the unnamed purse pays for are the ones whose names open doors. The name is public; the rule is the secret (§10.28).
 6. **The whisper.** Gaunt Passage, arm's reach of the grate, an actually lowered voice in the player's actual room.
 

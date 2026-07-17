@@ -244,7 +244,7 @@ while it fetches a price*, the voice underneath is not greed; it is the Hawser
 in him, who has seen where the road goes and would rather leave the Moorings on
 his own terms than watch his sister's grandchildren become Hawsers on someone
 else's. He would never say this either. He is not sure he has the words for it.
-He owes Averil Skell four bells at a spark on the bell and crosses the Green the
+He owes Averil Skell forty-eight sparks at a spark on the dozen and crosses the Green the
 long way to keep clear of her smoke, which everybody including Averil thinks is
 funny, and which is also, if you watch him do it, a man practising in small the
 thing he is most afraid of: owing more than he can carry and being seen at it.
@@ -525,9 +525,9 @@ the content):
 Leave the exact sums soft in the injectable ("a thin hand of bells," "the small
 half") unless a scene needs a hard figure, and keep any hard figure the family's
 own claim rather than an audited fact — the whole point of the Alder account is
-that it cannot be proved and will not be dropped. In the coinage: a bell is
-twelve sparks, a loaf two sparks, a journeyman's day about three bells; a run
-that grosses the boat a few tens of bells must still feed three poles, keep a
+that it cannot be proved and will not be dropped. In the coinage: a loaf
+two sparks, a journeyman's day about thirty-six sparks; a run
+that grosses the boat a few hundred sparks must still feed three poles, keep a
 patched hull afloat, and leave something in the yard against the frost, and in a
 bad season it does not, and that is a dry drowning coming on slowly, in full
 view, with the whole Green watching and nobody putting out a hand.
@@ -535,7 +535,7 @@ view, with the whole Green watching and nobody putting out a hand.
 **The frost is the number that ends the argument.** When the Serle freezes, the
 boats stop, the wharf wages stop, the Brede run stops, and the yard eats debt:
 the storage trade thins because nothing is landing, the credit tightens, and
-Averil Skell's book gets longer by exactly the four bells Ewart already owes her
+Averil Skell's book gets longer by exactly the forty-eight sparks Ewart already owes her
 and then some. Wyn's dearest wish — a winter cold enough to keep the eels and
 the debts down but not cold enough to lock the river — is a wish about this
 exact ledger. A hard freeze is the one event that could force the sale nobody
@@ -785,8 +785,8 @@ she will not read it aloud.
 **What the house owes, and to whom.** The debts are small and grinding, not
 grand:
 
-- Ewart owes **Averil Skell** four bells at a spark on the bell — forty-eight
-  sparks of principal and a penny's interest on each bell, the practical power
+- Ewart owes **Averil Skell** forty-eight sparks at a spark on the dozen — the
+  principal, and a penny's interest on every twelve, the practical power
   of the Green lending to the proud house that will not admit it borrows. He
   crosses the Green the long way to avoid her smoke; she thinks it is funny; the
   whole ward thinks it is funny; it is also the exact mechanism by which an
@@ -805,7 +805,7 @@ grand:
   that is never on the book and never forgotten.
 
 **The dry drowning.** No single event ruins an Alder. The yard slides — a thin
-run, a hard frost, a broker who takes his storage elsewhere, a spark on the bell
+run, a hard frost, a broker who takes his storage elsewhere, a spark on the dozen
 compounding, the shingle bay leaking onto stored wool that then has to be made
 good — and one year the book at the bottom says a thing Wyn cannot un-see, and
 the sale that was unspeakable becomes the only sentence left, and it will have
@@ -1050,7 +1050,7 @@ across the Alder table.
    carries between them. If a scene ever makes them say it, it should cost the
    house something real.
 
-6. **Ewart's four bells.** Averil Skell holds the debt at a spark on the bell
+6. **Ewart's forty-eight sparks.** Averil Skell holds the debt at a spark on the dozen
    and holds it lightly, and could call it in any Lowmarket and make an Alder a
    Hawser, and does not. Ewart crosses the Green the long way. The quarrel is
    whether pride or debt is the thing killing the house, and the answer is both,

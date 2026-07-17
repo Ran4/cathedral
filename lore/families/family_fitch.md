@@ -340,7 +340,7 @@ Fitch-shaped competence, the same memory-for-names that runs the register,
 turned to the humbler book of who owes whom a hide and a half.
 
 Her answer to the house's question is the flat one of the working poor: **a
-name is a thing that costs eight bells you have not got, so you do not think
+name is a thing that costs ninety-six sparks you have not got, so you do not think
 about it.** Ede is the Fitch who proves the family's standing is a bench and
 not a bloodline — she carries the name of the house that buries the ward for a
 living, and she could not pay for her own knell if it fell due tomorrow, and
@@ -489,13 +489,13 @@ The Fitches deal in the one service every household in the city will need
 exactly once and cannot decline, and a writer should know the money, because in
 Ombreval a name has a price and the whole gentle tragedy of the trade is that
 the people who most need one can least afford it. The coin is fixed
-(`../core_lore/trade_and_daily_life.md`): twelve copper **sparks** to the
-silver **bell**, sixty bells to the gold **lantern**; a loaf is two sparks, a
-journeyman's day about three bells. Against that scale:
+(`../core_lore/trade_and_daily_life.md`): the copper **spark**, the city's only
+money — a loaf is two sparks, a journeyman's day about thirty-six. Against that
+scale:
 
-- **A pauper's funeral with a knell costs eight bells.** This is the anchor
+- **A pauper's funeral with a knell costs ninety-six sparks.** This is the anchor
   price and everyone in the city knows it — grave, shroud, the office, the
-  name-knell, the chalk, the entry. Eight bells is most of three days of a
+  name-knell, the chalk, the entry. Ninety-six sparks is most of three days of a
   journeyman's wage, and to a pauper it is the moon. It is the price of being
   remembered, and it is set exactly where the poor cannot reach it.
 - **The sexton's fees** are the ground and the bell and the digging, and they
@@ -513,7 +513,7 @@ journeyman's day about three bells. Against that scale:
   Saint Maren's; some quiet purse pays; nobody says whose.* What Noll knows
   beyond that bare fact, and keeps behind his teeth, is fenced below and in the
   secret tier. What matters for the economics is simply that the price of a name
-  is eight bells, the poor cannot pay it, and something in this ward pays it for
+  is ninety-six sparks, the poor cannot pay it, and something in this ward pays it for
   them, so that the list stays complete.
 
 ### The grief-debt — the ledger that is never on the book
@@ -605,7 +605,7 @@ the ward is of two minds about all of them:
   weather rather than an omen.** That phrase is the truest single line about
   Noll Fitch in the corpus. He gives the hangman the same flat courtesy he gives
   the grey clerk and the widow: a nod, the weather, and the dead man's name in
-  the book. The executed still get eight bells' worth of rite from a purse or a
+  the book. The executed still get ninety-six sparks' worth of rite from a purse or a
   parish, still get their years rung, still get chalked plain — because the bell
   does not know what a man did, and Noll has decided, in the only court that
   sits on it, that neither does he.
@@ -1027,8 +1027,8 @@ Every one is live in F.437 and none has a right answer.
    father who cannot say whether he means to pass the dangerous half — and do not
    resolve who ends with what.
 
-5. **Should the poor pay for a name?** A pauper's funeral with a knell is eight
-   bells; a pauper cannot pay eight bells; a purse pays it. But a belated
+5. **Should the poor pay for a name?** A pauper's funeral with a knell is ninety-six
+   sparks; a pauper cannot pay ninety-six sparks; a purse pays it. But a belated
    name-knell for a family's Unknelled is also money, and traditional houses
    scrape for years to buy their dead a bell they were already owed once. Is the
    grief-debt a debt the living should have to pay at all — or did the Chapter

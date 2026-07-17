@@ -67,8 +67,8 @@ Source tags are abbreviated: a specific file where one file owns the item, or a 
 ### Money & tokens
 
 - **spark** — the copper coin; the mouth says "penny", the coin says spark; "piss-penny" the slang smallest (everywhere)
-- **bell** — the silver coin, twelve sparks (historical under the spark standard — see Part 3) (everywhere)
-- **lantern** — the gold Ostrelle coin, mostly money of account (historical) (core_lore, second_sun/11)
+- **bell** — the silver coin the old lore named, excised by the spark standard: no coin ever bore the name, only the bronze in the towers (chronicle only — see Part 3) (everywhere)
+- **lantern** — the gold Ostrelle coin the old lore named, likewise excised as money; now a lamp, never a coin (see Part 3) (core_lore, second_sun/11)
 - **mark** — the founding's unit: four hundred marks for the peace of Harne (founding)
 - **silver / plate / bullion** — weighed for the ransom; sacred plate laid down (founding)
 - **pennyhand token** — wood/lead tokens marked with hand, dots, salt sack or chain (founding)

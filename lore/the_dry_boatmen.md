@@ -131,8 +131,8 @@ wharf hand — but a Skell crews for a *wage*, on someone else's boat, and goes
 home at the gate without a care in the world for what the hull cost.
 
 **Averil Skell** (52), fish smoker, is the practical power of Maren's Green: she
-smokes, she sells, and she lends at a spark on the bell. Ewart Alder owes her
-four bells and crosses the Green the long way to avoid her smoke, which
+smokes, she sells, and she lends at a spark on the dozen. Ewart Alder owes her
+forty-eight sparks and crosses the Green the long way to avoid her smoke, which
 everybody, including Averil, thinks is funny.
 
 The Green's summary of the whole argument, said with a shrug:

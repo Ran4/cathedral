@@ -252,7 +252,7 @@ reads about like this — kept apart here so it can be dropped into a scene whol
 > the sky.*
 
 The economics of two people are brutal and specific. A journeyman's day on the
-Row is the city's three bells like anyone's, but a Sparr does not sell days; the
+Row is the city's thirty-six sparks like anyone's, but a Sparr does not sell days; the
 house sells *panes*, at rates set against the Fabric and dragged slow by the watch,
 for you cannot hurry work a clerk is tallying and you cannot quietly reuse an
 offcut he has entered in a book. Between Fabric jobs the furnace lives on the

@@ -174,9 +174,9 @@ every ten — and the Ashe boast is precisely that in *that* world they cannot b
 had. Exactness, to an Ashe, is not virtue. It is armour.
 
 **The numbers, roughly**, so a designer can price a scene. A journeyman's day is
-about three bells; a pauper's funeral with a knell, eight; a loaf, two sparks —
-twelve sparks to the silver bell, sixty bells to the gold lantern, which no
-salt-hand ever handles. Salt is bulk, and coin is thin: the money is in the
+about thirty-six sparks; a pauper's funeral with a knell, ninety-six; a loaf,
+two sparks. Copper is the only coin the mint strikes, and little enough of it
+passes a salt-hand's palm. Salt is bulk, and coin is thin: the money is in the
 *weigh* and the *store*, not the pinch. An Ashe lives on the spread between what
 salt costs landed and what it fetches out of a dry cellar in a hard month; on
 the barge-hire Rohese lets against the season; on the cellar-rent other

@@ -27,7 +27,7 @@ INASMUCH as the creed of the Church of the Sole Light is *Lux una et indivisa* �
 
 **Article V.** The nave of the Great Church of Saint Ambrelle stands open for beholding at the hours the Chapter appoints and at no other; outside those hours, entry is by the verger's leave alone.
 
-**Article VI.** Penalties. For the first citation, a fine of twelve sparks — one bell-coin — to the Fabric. For the second, recantation upon the Gradine on a Bellday, the creed said thrice before witnesses. For obstinacy, the Praelucent's court. Children under the age of oath are not citable.
+**Article VI.** Penalties. For the first citation, a fine of a dozen sparks to the Fabric. For the second, recantation upon the Gradine on a Bellday, the creed said thrice before witnesses. For obstinacy, the Praelucent's court. Children under the age of oath are not citable.
 
 **Article VII.** Nothing in this edict binds the eye. Let no soul be cited, questioned, or penanced for what it has seen, but only for what it affirms. Whoever confesses the sight shall be absolved freely and without penance. To see is no sin; to affirm is.
 

@@ -61,17 +61,11 @@ party walls are ordinary parts of the present economy.
 
 ### Money
 
-Ombreval's usual coinage is:
-
-- **spark**: copper; the street normally calls it a **penny**;
-- **bell** or **bell-coin**: silver; twelve sparks to one bell;
-- **lantern**: gold, struck at Ostrelle; sixty bells to one lantern and mostly a
-  money of account in ordinary Ombreval trade.
-
-Useful price anchors in F.437 are two sparks for a loaf, roughly three bells
-for a journeyman's day, and eight bells for a pauper's funeral with a knell.
-Prices can vary with harvest, flood, scarcity, feast, guild pressure, and the
-buyer, but new lore should not treat a lantern as tavern change.
+Ombreval mints one coin: the **spark**, copper, which the street normally calls
+a **penny** (or a **copper**). Useful price anchors in F.437 are two sparks for a
+loaf, roughly thirty-six sparks for a journeyman's day, and ninety-six sparks for
+a pauper's funeral with a knell. Prices can vary with harvest, flood, scarcity,
+feast, guild pressure, and the buyer.
 
 ### Measures
 

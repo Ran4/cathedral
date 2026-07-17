@@ -98,7 +98,7 @@ The local rule is simple: **nobody renames water**.
 - **Salorge** lies at the river mouth among salt pans: about six days down with
   the current and twelve back against it. Pan-salt comes upriver in barges.
 - **Ostrelle** is the distant primatial city, seat of the Luminary, a great
-  school, and the mint that strikes gold lanterns. It is about six weeks away
+  school, and the mint that strikes the copper spark. It is about six weeks away
   by the **Lantern Road**, through two toll-gates. To most Ombreval citizens it
   is a coin, a rank, a letterhead, and a nearly legendary distance.
 

@@ -284,8 +284,8 @@ spent, and exactly where the player will go to eavesdrop.
 
 Post them diegetically on boards where literate, by crier where not:
 mug of ale 1 spark; cookshop pie 1–2 sparks; bath 2 sparks (towel extra);
-bed at the gate inn 3 sparks shared / 1 bell private; cup of Ostrelle wine
-4–6 sparks; the stews — not posted. A journeyman's 3-bell day makes all of
+bed at the gate inn 3 sparks shared / 12 sparks private; cup of Ostrelle wine
+4–6 sparks; the stews — not posted. A journeyman's 36-spark day makes all of
 this affordable-but-felt, which is the right texture.
 
 ---

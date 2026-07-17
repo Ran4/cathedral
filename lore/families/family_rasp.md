@@ -547,7 +547,7 @@ scatter of rented pots — which is the naming law's cruelty drawn in stone: **a
 name of standing whose standing is a locked room, and whose family is everywhere
 except inside it.**
 
-## The dead, and the eight bells
+## The dead, and the ninety-six sparks
 
 A family treatment is mostly a treatment of its dead, and the Rasp dead pose the
 same problem the Rasp living do: there is nowhere to keep them. A house with
@@ -570,7 +570,7 @@ that fails, buries his people in chalk — and knows, better than anyone alive, 
 exact worth of a name written in a medium that wipes.
 
 Then there is the price of the writing, because even the chalk costs. A pauper's
-funeral **with a knell** runs **eight bells** — silver a shared pot does not
+funeral **with a knell** runs **ninety-six sparks** — copper a shared pot does not
 always hold — and whether a dead Rasp gets **Maren Smallvoice** rung for them,
 one slow stroke for every year of the life, or only the common mourning toll of
 the poor, is a coin-question the household answers or fails to answer week by
@@ -603,7 +603,7 @@ and injectable on its own:
 > never the surname — so a Rasp of standing and a nameless pauper are chalked
 > the same, and cannot be told one from the other:)*
 > **SIBBE** — *and beneath it, half-rubbed from the burial before,* ~~IB~~ —
-> *and the knell, when the pot had found the eight bells, nine slow strokes of
+> *and the knell, when the pot had found the ninety-six sparks, nine slow strokes of
 > Maren Smallvoice for nine years, counted by everyone in the yard, and gone on
 > the wind before the chalk was.*
 
@@ -618,8 +618,8 @@ theirs on nothing.
 
 The Rasps have two economies and they never touch. At the bottom is the ordinary
 coin of the poor central streets: the loaf at **two sparks**, the journeyman's
-day at about **three bells**, the pauper's funeral with a knell at **eight
-bells** — the sum that decides whether a dead Rasp gets a name-knell or a common
+day at about **thirty-six sparks**, the pauper's funeral with a knell at **ninety-six
+sparks** — the sum that decides whether a dead Rasp gets a name-knell or a common
 toll — and under all of it the shared household pot, where a brewhouse wage and a
 scavenger's pennies and an old woman's begged pitch are tipped together because no
 one of them is a living alone. This is money measured in whether there is oil for
@@ -658,7 +658,7 @@ never be introduced.
 
 Out of all this the family gets the one thing the wage buys that the poverty
 cannot: a Rasp who dies in the grey coat will be knelled and named without a
-shared pot having to be scraped for the eight bells, while a Rasp who dies in the
+shared pot having to be scraped for the ninety-six sparks, while a Rasp who dies in the
 Bell-and-Sluice may or may not be, depending on the week's coin — which is to say
 the office pays for the good death of the man who least needs the comfort and
 cannot pay for the good deaths of the sixteen who most do. The shame and the

@@ -88,7 +88,7 @@ Other parishes exist but are not yet named in core canon.
 
 Wool comes downriver from Brede, salt comes upriver from Salorge, and Ombreval exports finished cloth. The cargo is landed outside the walls and carried into the city. Fish, eels, glass, stone, timber, lime, wax, tallow, freight, copying, tolls, food, and lodging sustain ordinary city life.
 
-The coins are the copper **spark** or penny, the silver **bell** worth twelve sparks, and the gold **lantern** worth sixty bells. A lantern is mostly money of account, not tavern change.
+The city's one coin is the copper **spark**, which the street calls a **penny** (or a **copper**). The mint of Ostrelle strikes it and nothing else — no coin of silver or gold, only copper; "bell" means only the bronze in the towers.
 
 **Bellday** begins the seven-day week. **Highmarket** is third and **Lowmarket** sixth. Bells divide the day from the Watch and Kindling through Dayspring, High Wick, Waning, Lamplight, and the Snuffing curfew.
 

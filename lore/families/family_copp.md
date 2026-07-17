@@ -250,7 +250,7 @@ pledge. You take the coin and a **tally** — a notched stick split in two, half
 kept on the shop's cord and half kept by you, so the counterfoils must marry to
 redeem; the Copps have cut the same tallies for the Tallage since before they
 wrote anything worse. The loan runs a **term** — a month and a day is the
-ordinary one — and carries **interest** by the bell: a spark on the bell the
+ordinary one — and carries **interest** by the dozen: a spark on the dozen the
 month is the rate the Bench licenses, and the licensed rate is what Lise charges
 the honest pledge, because the poverty of the poor is not where the money is and
 she has always known it. Redeem in term and you take your coat back and your
@@ -599,9 +599,9 @@ Highmarket and the rites were so overwhelmed that thousands got a common toll
 and no name-knell of their own. The bench-right died with him, because there was
 no Copp left to keep it: his son had a better reason than grief to be elsewhere,
 and took it. Somewhere in the family's own conscience is a **belated
-name-knell** old Corin Copp is still owed — eight bells of Maren Smallvoice, one
-slow stroke for every year of the life, the rite the ward calls *giving a man
-back his name* — and whether Lise, who can now afford the eight bells her
+name-knell** old Corin Copp is still owed — ninety-six sparks, and a
+slow stroke of Maren Smallvoice for every year of the life, the rite the ward calls *giving a man
+back his name* — and whether Lise, who can now afford the ninety-six sparks her
 father's death could not command, has ever paid it, or keeps meaning to, or
 cannot make herself climb to Saint Maren's and stand at the charnel door where
 the grey clerk counts the faces, is a live and unanswered thing. *One bell is
@@ -640,7 +640,7 @@ because destroyed you can mourn and removed you can only wonder about.
 
 **Funerals** in this house are, by the standard of their customers, comfortable
 — which is its own quiet shame. The Copps are of standing; Lise can find the
-eight bells for a knell where a pauper of the Cut cannot, and a Copp who dies at
+ninety-six sparks for a knell where a pauper of the Cut cannot, and a Copp who dies at
 the shop will be named on Maren Smallvoice and chalked on the charnel lintel
 like anyone with coin. The poor whose blankets fill her shelf will not, unless
 some quiet purse pays, and Lise knows exactly which of her customers went into
@@ -919,9 +919,9 @@ handed to the Copps themselves.
    the proximity and the discipline of not-hearing; never let Lise learn what
    the store is for.
 
-8. **The knell old Corin Copp never got.** Lise can now afford the eight bells
-   her father's death could not command in the ruin of F.415, and she has never
-   rung them. Whether the keeper of everyone's record finally climbs to Saint
+8. **The knell old Corin Copp never got.** Lise can now afford the ninety-six sparks
+   her father's death could not command in the ruin of F.415, and the knell has never
+   been rung. Whether the keeper of everyone's record finally climbs to Saint
    Maren's and gives her own father back his name — at the charnel door where
    the grey clerk stands counting the faces of the mourners — or cannot make
    herself do it, year after year, is a small scene with the whole family folded

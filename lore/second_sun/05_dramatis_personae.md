@@ -235,7 +235,7 @@ Twenty souls of Ombreval, F.437. Format is fixed per person. Tags on the *knows*
 ## 13. Ede of the Needle
 
 - id: ede-of-the-needle
-- occupation: orphan; message-runner for a bell-coin; keeper of every skipping rhyme in the city
+- occupation: orphan; message-runner for a penny; keeper of every skipping rhyme in the city
 - district: the Needle and everywhere; the Bell and Ladle's woodstore on cold nights
 - route: wherever a penny goes; the Needle's midpoint, from a hiding place no adult fits
 - temperament: feral, watchful, unbought

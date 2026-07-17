@@ -35,7 +35,7 @@ Seven offices (the Church’s fixed daily services, announced by bells and used 
 
 ## Money and markets
 
-The coin is the silver bell: twelve copper sparks to the bell, sixty bells to the gold lantern. A loaf, two sparks; a journeyman's day, three bells; a pauper's funeral with knell, eight — yet the poor get knell and chalked name at Saint Maren's charnel door; some quiet purse pays, nobody says whose. Bellday opens the week; Highmarket is third (Wickmarket, Coswald's Yard), Lowmarket sixth (the Tallage, Maren's Green). Every oath and verdict is sworn "by the light that does not lie."
+The coin is the copper spark, the only one the mint of Ostrelle strikes; the street calls it a penny. A loaf, two sparks; a journeyman's day, thirty-six sparks; a pauper's funeral with knell, ninety-six — yet the poor get knell and chalked name at Saint Maren's charnel door; some quiet purse pays, nobody says whose. Bellday opens the week; Highmarket is third (Wickmarket, Coswald's Yard), Lowmarket sixth (the Tallage, Maren's Green). Every oath and verdict is sworn "by the light that does not lie."
 
 ## The wards and the Bench
 

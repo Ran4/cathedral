@@ -59,7 +59,7 @@ The core dramatic mechanic, and it costs zero new code: every line of the exchan
 - **The player as leaker.** Speak the pass with a grey clerk in the passage mouth and the Custody holds both layers — though the name goes stale at the next funeral, the cell's actuarial defence. An overheard pass is a wasting asset.
 - **The player as thief.** Stand in Gaunt Passage while a genuine neighbour is admitted and harvest the exchange whole. Ashe's vigilance (§3.2) makes this cost patience and position — a Lowmarket crowd, a rain-shelter pretext, the dogleg's blind corner — not make it impossible. The eavesdropped route in is legitimate design: the grate opens to words.
 - **The informant economy.** What a bystander does with a heard pass is actor judgment, not script: a neighbour keeps silence, a frightened citizen tells a wick-priest, a moth sells it through Lise Copp's pawnshop as dry-money work, Crier Jos Brant repeats crowd-talk without knowing what he is — ledger rows 24, 25, 27, 28 (canon §10), riding in the relevant prompts.
-- **Ede of the Needle** holds the current counter-sign and not the rule (canon §7.13): the designed leak, the child-shaped path by which a stuck player buys half the key for a bell-coin and some honesty.
+- **Ede of the Needle** holds the current counter-sign and not the rule (canon §7.13): the designed leak, the child-shaped path by which a stuck player buys half the key for a penny and some honesty.
 - **The cell's counterplay** is simulated, not narrated: meetings sit where the diamond says; the Wicket delays under observation; repeated strange faces reach the Tracer, whose answer is §7's cracked pane.
 
 ## 6. Rotation as live content

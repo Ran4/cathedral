@@ -166,6 +166,27 @@ pub const LADDER_DECISION_MAX_SECONDS: f64 = 6.0;
 pub const WELL_ARRIVE_RADIUS_M: f64 = 3.0;
 /// A queue longer than this turns the non-urgent rung 6 away (rung 2 still goes).
 pub const WELL_QUEUE_SHORT: usize = 4;
+
+// --- Wallets (food & items M1/M2): starting-purse seeding
+// (`features/food_and_items/02_the_spark_standard.md` §4). M1 pins these
+// constants; M2's round seeding consumes them (this milestone decides the
+// numbers only — no seeding is wired here). Every enrolled townsperson gets
+// `WALLET_SEED_MIN + floor(WALLET_SEED_SPREAD * hash01(WALLET_SEED_SALT, id,
+// 0))` sparks (2..=7), the deterministic-hash idiom the water round already uses
+// for thirst spread (`round.rs`). Majors with authored holds keep them — Ilse
+// keeps exactly 1, her reluctance to spend it being her character. Wallets are
+// ordinary `spark` stacks in `World.items` with ids `w_<actor id>`; the nightly
+// Watch ledger refills buyer wallets to this seeded level.
+/// Floor of a seeded starting wallet, in sparks.
+pub const WALLET_SEED_MIN: u32 = 2;
+/// Width of the seeded-wallet spread above the floor: the hash draws an integer
+/// `0..WALLET_SEED_SPREAD`, so a wallet is
+/// `WALLET_SEED_MIN ..= WALLET_SEED_MIN + WALLET_SEED_SPREAD - 1` (2..=7).
+pub const WALLET_SEED_SPREAD: u32 = 6;
+/// The deterministic-hash salt for wallet seeding, paired with the actor id
+/// (mirrors `"water_thirst_seed"`).
+pub const WALLET_SEED_SALT: &str = "wallet";
+
 // --- `go_to` (M5): the LLM-issued travel intent
 // (`features/movement/05_the_llm_seam.md` §2). A suggestion layered on an
 // already-autonomous body: it expires, needs preempt it, and lapsing is a
