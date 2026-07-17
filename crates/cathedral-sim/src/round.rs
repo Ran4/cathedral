@@ -817,12 +817,9 @@ impl Round {
                         is_home: true,
                     });
                 }
-                world
-                    .characters
-                    .get_mut(id)
-                    .expect("keeper exists")
-                    .state
-                    .places_known = known;
+                let keeper_state = &mut world.characters.get_mut(id).expect("keeper exists").state;
+                keeper_state.places_known = known;
+                keeper_state.daily_round = legs.iter().map(leg_line).collect();
                 self.people.insert(
                     id.clone(),
                     Townsperson {
@@ -885,12 +882,10 @@ impl Round {
                 _ => (None, false),
             };
 
-            world
-                .characters
-                .get_mut(id)
-                .expect("townsperson exists")
-                .state
-                .places_known = known;
+            let townsperson_state =
+                &mut world.characters.get_mut(id).expect("townsperson exists").state;
+            townsperson_state.places_known = known;
+            townsperson_state.daily_round = legs.iter().map(leg_line).collect();
             self.people.insert(
                 id.clone(),
                 Townsperson {
@@ -2118,6 +2113,34 @@ fn route_path_to_point(nav: &NavData, id: &ActorId, from: Vec3, to: Vec3) -> Opt
         path.push(to);
     }
     if path.is_empty() { None } else { Some(path) }
+}
+
+/// One leg as its own walker knows it — a sheet `your_round` line, in the same
+/// register as the percepts ("at Dayspring, on Bellday only: prayers at The
+/// Lanthorn"). Composed once at seed; [`CharacterState::daily_round`] holds
+/// the finished lines.
+///
+/// [`CharacterState::daily_round`]: crate::character::CharacterState::daily_round
+fn leg_line(leg: &RoundLeg) -> String {
+    let doing = match (leg.doing, leg.is_home) {
+        (Arrival::Sleep, true) => "home to sleep".to_string(),
+        (Arrival::Idle, true) => "your ease at home".to_string(),
+        (Arrival::Work, _) => format!("work at {}", leg.label),
+        (Arrival::Trade, _) => format!("trade at {}", leg.label),
+        (Arrival::Sleep, false) => format!("sleep at {}", leg.label),
+        (Arrival::Pray, _) => format!("prayers at {}", leg.label),
+        (Arrival::Idle, false) => format!("your ease at {}", leg.label),
+        (Arrival::DrawWater, _) => format!("drawing water at {}", leg.label),
+        (Arrival::Stand, _) => format!("standing at {}", leg.label),
+    };
+    let days = match &leg.only_on {
+        None => String::new(),
+        Some(days) => {
+            let names: Vec<&str> = days.iter().map(|day| day.label()).collect();
+            format!(", on {} only", names.join(" and "))
+        }
+    };
+    format!("at {}{days}: {doing}", leg.from.label())
 }
 
 /// Give a mover a fresh walk with no patrol, keeping their gait phase seamless.

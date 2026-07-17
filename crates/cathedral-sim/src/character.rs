@@ -208,6 +208,12 @@ pub struct CharacterState {
     /// silently; `stop {}` clears it; arrival, expiry and a pressing need end
     /// it with a percept.
     pub intent: Option<TravelIntent>,
+    /// The actor's own knowledge of their daily round, one prose line per leg
+    /// ("at Dayspring: work at The Wickmarket"), written once by
+    /// [`crate::round::Round::seed`] and rendered as the sheet's `your_round`
+    /// section. Empty for anyone the round never enrolled — the section is
+    /// then omitted, keeping the frozen golden fixtures byte-identical.
+    pub daily_round: Vec<String>,
 }
 
 impl CharacterState {
@@ -226,6 +232,7 @@ impl CharacterState {
             needs: Needs::default(),
             places_known: BTreeSet::new(),
             intent: None,
+            daily_round: Vec::new(),
         }
     }
 }

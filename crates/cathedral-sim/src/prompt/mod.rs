@@ -75,6 +75,8 @@ pub struct PromptStrings {
     pub the_hour_label: String,
     /// Introduces `you_are`'s weekday phrase.
     pub the_day_label: String,
+    /// The parenthesis after `**your_round**`.
+    pub round_note: String,
     /// `you_are`'s walk sentence, with `%s` standing for the destination name.
     pub walking_to: String,
     /// `you_are`'s follow sentence, with `%s` standing for the person.
@@ -171,6 +173,12 @@ struct Sheet<'a> {
     lore_profile: Option<PromptLoreProfile<'a>>,
     back_story: &'a str,
     you_are: YouAre,
+    /// The actor's own daily timetable, one line per leg, as the round seeded
+    /// it ([`crate::character::CharacterState::daily_round`]) — so "where will
+    /// you be tomorrow?" is answered from the sheet, not improvised. Omitted
+    /// entirely when the round never enrolled this actor.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    your_round: Vec<&'a str>,
     /// The wayfinding whitelist (M5): the places this character can `go_to`,
     /// each an opaque handle plus the name people speak of it by. Rendered even
     /// when empty — an empty list honestly says "you know no ways".
@@ -353,6 +361,9 @@ pub fn render_prompt(
     env: &PromptEnv,
 ) -> Result<String, PromptError> {
     let sheet = build_sheet(world, llm_actor(world, actor_id)?, since, &env.strings);
+    // The your_round explainer paragraph renders only when the sheet carries a
+    // round — round-less worlds (the golden fixtures) keep their exact bytes.
+    let has_round = !sheet.your_round.is_empty();
     let sheet_md = sheet_markdown(&sheet, &env.strings);
     let emittable_sounds = world.sound_catalog.emittable_sound_ids().join(", ");
 
@@ -363,6 +374,7 @@ pub fn render_prompt(
                 sheet_md,
                 sounds_enabled => world.sounds_enabled,
                 emittable_sounds,
+                has_round,
             })
         })
         .map_err(|error| PromptError::new(format!("the turn template did not render: {error}")))
@@ -536,6 +548,7 @@ fn build_sheet<'a>(
                 z: position.z,
             },
         },
+        your_round: actor.state.daily_round.iter().map(String::as_str).collect(),
         places_you_know,
         you_hold: actor
             .holds()
@@ -627,6 +640,14 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
     sections.push(you_line(sheet, strings));
     sections.push(format!("**back_story** — {}", sheet.back_story));
     sections.push(you_are_line(&sheet.you_are, strings));
+
+    if !sheet.your_round.is_empty() {
+        sections.push(bullet_section(
+            &format!("**your_round** ({})", strings.round_note),
+            sheet.your_round.iter().map(|leg| (*leg).to_string()),
+            "",
+        ));
+    }
 
     sections.push(bullet_section(
         &format!("**places_you_know** ({})", strings.places_note),
@@ -930,6 +951,7 @@ mod tests {
             places_note: "go_to takes these place_ids".into(),
             the_hour_label: "The hour:".into(),
             the_day_label: "The day:".into(),
+            round_note: "your standing day, leg by leg; each begins when its bell rings".into(),
             walking_to: "You are on your way to %s.".into(),
             following: "You are following %s.".into(),
             illegal_activity_label: "In secret:".into(),
@@ -948,7 +970,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
         let error = PromptEnv::new("x", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
@@ -1011,6 +1033,7 @@ mod tests {
                 on_your_way: None,
                 position_m: Position { x: 0.0, y: 0.0, z: 0.0 },
             },
+            your_round: Vec::new(),
             places_you_know: Vec::new(),
             you_hold: Vec::new(),
             you_offer: Vec::new(),

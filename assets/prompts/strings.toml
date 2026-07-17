@@ -36,6 +36,8 @@ places_note = "go_to takes these place_ids"
 the_hour_label = "The hour:"
 # Introduces `you_are`'s weekday phrase.
 the_day_label = "The day:"
+# The parenthesis after `**your_round**`.
+round_note = "your standing day, leg by leg; each begins when its bell rings"
 # `you_are`'s walk sentence; `%s` is the destination name.
 walking_to = "You are on your way to %s."
 # `you_are`'s follow sentence; `%s` is the person being followed.

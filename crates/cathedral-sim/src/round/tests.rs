@@ -435,6 +435,34 @@ fn bellday_closes_the_trades_and_fills_the_nave() {
     assert_eq!(ordinary.by_place.get("The Lanthorn").copied(), None);
 }
 
+/// Seed writes each person's timetable into their own character state — the
+/// sheet's `your_round` lines — so "where will you be tomorrow?" is answered
+/// from the sheet rather than improvised.
+#[test]
+fn seed_writes_the_daily_round_onto_the_character_state() {
+    let nav = nav();
+    let lanthorn = nav.node_point(nav.place("The Lanthorn").expect("the nave is a nav place").node);
+    let mut world = base_world();
+    world.add_character(person("mason_b", lanthorn, Some("mason"), Significance::Major));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    let lines = &world.characters[&ActorId::from_raw("mason_b")].state.daily_round;
+    assert!(!lines.is_empty(), "an enrolled townsperson knows their round");
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("prayers at The Lanthorn") && line.contains("on Bellday only")),
+        "the Bellday service is a marked leg: {lines:?}"
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.starts_with("at Dayspring:") && line.contains("work at ")),
+        "the ordinary working leg reads as work: {lines:?}"
+    );
+}
+
 // --------------------------------------------------------------------------- //
 // The round rung and curfew — using a real housed, routed major
 // --------------------------------------------------------------------------- //

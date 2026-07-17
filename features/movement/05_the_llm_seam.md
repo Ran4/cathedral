@@ -194,6 +194,13 @@ only be answered by confabulation. The destination is named exactly as the arriv
 the actor's own `go_to` when the walk serves it, else the walk endpoint's nearest registered place —
 and both fields are omitted when absent, keeping the frozen fixtures byte-identical.
 
+**`your_round`** (added post-M5) — the actor's own timetable, one line per leg ("at Dayspring, on
+Bellday only: prayers at The Lanthorn"), written into `CharacterState::daily_round` by
+`Round::seed` and rendered as a sheet section, with a `{% if has_round %}` paragraph in `turn.j2`
+explaining the bell order, the week, and the "only on" override rule. This is what lets an NPC
+answer "where will you be tomorrow?" from state. Omitted (section and paragraph both) for anyone
+the round never enrolled, so the fixtures again keep their bytes.
+
 **`places_you_know`** — the wayfinding whitelist: you cannot `go_to` a place you have not been handed
 a `place_id` for. Each entry is a pair, the same shape `you_see` already uses for people.
 

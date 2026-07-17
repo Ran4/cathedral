@@ -140,6 +140,37 @@ fn the_sheet_says_where_the_current_walk_is_going() {
     assert!(line.contains("Tallage"), "was: {line}");
 }
 
+/// `your_round` renders the actor's own timetable when the round seeded one,
+/// together with the turn prompt's explainer paragraph — and neither exists
+/// in a round-less world, keeping the golden fixtures byte-identical.
+#[test]
+fn the_sheet_carries_the_daily_round_when_the_round_seeded_one() {
+    let env = prompt_env();
+    let mut world = seed_world();
+    let sven = actor("sv3n1");
+
+    let before = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(!before.contains("**your_round**"));
+    assert!(!before.contains("your_round is your standing daily routine"));
+
+    world.characters.get_mut(&sven).unwrap().state.daily_round = vec![
+        "at Dayspring: work at The Wickmarket".to_string(),
+        "at Dayspring, on Bellday only: prayers at The Lanthorn".to_string(),
+    ];
+    let after = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(
+        after.contains(
+            "**your_round** (your standing day, leg by leg; each begins when its bell rings):"
+        ),
+        "the section renders with its note"
+    );
+    assert!(after.contains("- at Dayspring, on Bellday only: prayers at The Lanthorn"));
+    assert!(
+        after.contains("your_round is your standing daily routine"),
+        "the turn prompt explains how to read the round"
+    );
+}
+
 #[test]
 fn a_moved_character_gets_a_freshly_resolved_prompt_location() {
     let env = prompt_env();
