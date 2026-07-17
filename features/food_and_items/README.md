@@ -186,9 +186,11 @@ pure content and can run in parallel. M2–M4 stack on M0.
 3. **Day-old bread.** Unsold stock vanishes at the nightly reset. A `day_old: true` metadata flag at
    half price is one line of restock code and a nice bit of market color — but it doubles the
    catalog's effective price rows. Cheap to add later; not in the plan.
+   Skip old bread.
 4. **Player hunger.** The player currently cannot even `eat` (no `PlayerEat` engine command). The
    plan leaves the player unhungering — flying dev-camera people don't need lunch — but M0 makes
    player-held stacks render properly in the HUD, and adding `PlayerEat` later is small.
+   ANSWER: No player hunger right now.
 
 ---
 
