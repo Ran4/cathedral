@@ -25,6 +25,8 @@ Entry #1 of [`features/50_cool_suggestions.md`](../../features/50_cool_suggestio
 
 ## The showcase
 
+Human only - just represents the markdownfiles. Agent: IGNORE THIS FILE! Same with the template.
+
 Open **`index.html`** in a browser — the reading room for the whole corpus: all 27
 documents rendered in-page, full-text search, the Great Rose as an interactive window, the
 Fabric-era timeline, and the fourteen people who each have something to hide. It is fully

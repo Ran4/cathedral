@@ -9,6 +9,8 @@ lore
 │   └── *.md
 ├── second_sun
 │   │── ...
+│   │── index.html <- IGNORE THIS! It's for humans devs only
+│   │── showcase_template.html <- IGNORE THIS! It's for humans devs only
 │   └── *.md
 ├── wip_lore_please_ignore_this_is_NOT_canon/ <- IGNORE THIS FOLDER!
 ├── AGENTS.md
