@@ -182,6 +182,11 @@ pub const PLACE_ARRIVE_RADIUS_M: f64 = 6.0;
 /// the 4 m exchange radius, so a `go_to` then an `offer_item` next turn just
 /// works.
 pub const PERSON_ARRIVE_RADIUS_M: f64 = 2.0;
+/// Naming a walk by its endpoint: the nearest registered place within this
+/// counts as "where the walk is going". Shared by the sheet's `you_are` walk
+/// line and the developer overlay, so the actor and the debugger read the
+/// same destination.
+pub const WALK_DESTINATION_SNAP_M: f64 = 15.0;
 
 // --- Crowds (M7): lane offsets, on-stage avoidance, the Needle's claim
 // (`features/movement/02_navigation.md` §5, `07_milestones.md` M7).

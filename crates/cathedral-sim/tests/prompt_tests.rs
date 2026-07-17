@@ -4,7 +4,8 @@
 mod prompt_support;
 
 use cathedral_sim::{
-    ActorId, Control, ItemId, LoreProfile, Vec3, apply_action,
+    ActorId, Control, IntentTarget, ItemId, LoreProfile, Movement, PlaceId, TravelIntent, Vec3,
+    apply_action,
     prompt::{render_prompt, render_prompt_and_drain},
 };
 use prompt_support::{actor, compact, md_section, prompt_env, seed_world, sheet};
@@ -47,25 +48,96 @@ fn the_sheet_carries_the_hour_only_when_the_world_has_a_clock() {
     let env = prompt_env();
     let mut world = seed_world();
 
-    // No clock (the golden fixtures' case): the hour is omitted entirely.
+    // No clock (the golden fixtures' case): the hour and the day are omitted
+    // entirely.
     let before = sheet(&world, "sv3n1", &env);
     assert!(
         before["you_are"].get("the_hour").is_none(),
         "the hour must be absent without a clock"
     );
+    assert!(
+        before["you_are"].get("the_day").is_none(),
+        "the day must be absent without a clock"
+    );
 
-    // With a clock, the office renders as a phrase between location and position.
+    // With a clock, the office renders as a phrase between location and position,
+    // and the weekday follows it — day 0 is a Bellday, and without the day a
+    // worker walked to the service cannot know why.
     world.current_time = Some(WorldClock::new(3600.0, Office::Lamplight, 0, 0.05).at(0.0));
     let after = sheet(&world, "sv3n1", &env);
     let the_hour = after["you_are"]["the_hour"].as_str().unwrap();
     assert!(the_hour.starts_with("Lamplight"), "was: {the_hour}");
     assert!(the_hour.contains("lamps are being lit"), "was: {the_hour}");
+    let the_day = after["you_are"]["the_day"].as_str().unwrap();
+    assert!(the_day.starts_with("Bellday"), "was: {the_day}");
+    assert!(the_day.contains("holy day"), "was: {the_day}");
     // Nothing else about `you_are` changed.
     assert_eq!(
         after["you_are"]["location_description"],
         before["you_are"]["location_description"]
     );
     assert_eq!(after["you_are"]["position_m"], before["you_are"]["position_m"]);
+}
+
+/// The sheet names the current walk's destination, so "where are you going?"
+/// during a round-laid walk is answered from state instead of confabulated —
+/// the Bellday bug: the feet went to the service, the mouth said "the Cloth
+/// Ward".
+#[test]
+fn the_sheet_says_where_the_current_walk_is_going() {
+    let env = prompt_env();
+    let mut world = seed_world();
+    let sven = actor("sv3n1");
+
+    // Standing (the golden fixtures' case): no walk line at all.
+    let standing = sheet(&world, "sv3n1", &env);
+    assert!(
+        standing["you_are"].get("on_your_way").is_none(),
+        "no walk line while standing"
+    );
+
+    // A walk that ends at the actor's own go_to target is named by the intent.
+    {
+        let state = &mut world.characters.get_mut(&sven).unwrap().state;
+        state.movement = Some(Movement {
+            path: vec![Vec3::new(41.0, 0.91, 117.0)],
+            speed: 1.4,
+            gait_phase: 0.0,
+            patrol: None,
+            choke_wait: 0.0,
+        });
+        state.intent = Some(TravelIntent {
+            target: IntentTarget::Place {
+                place_id: PlaceId::from_raw("pl_x9k2"),
+                name: "the Chandlery".into(),
+                point: Vec3::new(40.0, 0.0, 118.0),
+            },
+            budget_seconds: 60.0,
+            deadline: None,
+        });
+    }
+    let walking = sheet(&world, "sv3n1", &env);
+    assert_eq!(
+        walking["you_are"]["on_your_way"],
+        "You are on your way to the Chandlery."
+    );
+    let prompt = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(
+        prompt.contains("You are on your way to the Chandlery."),
+        "the markdown carries the walk line"
+    );
+
+    // A walk the round laid somewhere else is named by its own endpoint, not
+    // by the still-pending intent — the actor must never claim to be walking
+    // where their feet are not going.
+    {
+        let state = &mut world.characters.get_mut(&sven).unwrap().state;
+        state.movement.as_mut().unwrap().path = vec![Vec3::new(-306.0, 0.91, 90.0)];
+    }
+    let elsewhere = sheet(&world, "sv3n1", &env);
+    let line = elsewhere["you_are"]["on_your_way"].as_str().unwrap();
+    assert!(!line.contains("Chandlery"), "was: {line}");
+    assert!(line.contains("Tallage"), "was: {line}");
 }
 
 #[test]

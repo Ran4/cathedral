@@ -263,12 +263,14 @@ into `logs.jsonl` so a `CATHEDRAL_DRIVE` script can assert on them.
 > Evenblow instead updates the **scene-header time-of-day** every actor already receives (*"the last
 > office rung was the Waning"*). **Only *deviations* from the daily round are events.**
 
-Concretely, the sheet's `you_are` block gains one field:
+Concretely, the sheet's `you_are` block gains two fields (the weekday came later, when the Bellday
+round exposed that an actor walked to the service by the round could not know why):
 
 ```json
 "you_are": {
     "location_description": "The Wickmarket",
     "the_hour": "Lamplight — the lamps are being lit; the market is closing",
+    "the_day": "Bellday — the holy day; the trades are shut and the bells call everyone to the Lanthorn",
     "position_m": { "x": -37.75, "y": 0.91, "z": 379.3 }
 }
 ```

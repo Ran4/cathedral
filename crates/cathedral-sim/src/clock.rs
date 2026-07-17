@@ -214,6 +214,27 @@ impl Weekday {
     pub fn is_market_day(self) -> bool {
         matches!(self, Weekday::Highmarket | Weekday::Lowmarket)
     }
+
+    /// What today means to somebody living here, in the same voice as
+    /// [`Office::prompt_phrase`]. Rendered into the sheet's `you_are.the_day`,
+    /// so a day worker walking to the Bellday service knows why their feet are
+    /// pointed at the nave.
+    pub fn prompt_phrase(self) -> &'static str {
+        match self {
+            Weekday::Bellday => {
+                "the holy day; the trades are shut and the bells call everyone to the Lanthorn"
+            }
+            Weekday::Highmarket => {
+                "market day; the stalls are out at the Wickmarket and in Coswald's Yard"
+            }
+            Weekday::Lowmarket => {
+                "market day; the stalls are out at the Tallage and on Maren's Green"
+            }
+            Weekday::Second | Weekday::Fourth | Weekday::Fifth | Weekday::Seventh => {
+                "an ordinary working day"
+            }
+        }
+    }
 }
 
 /// A resolved instant. Cheap to compute, so it is computed rather than stored.

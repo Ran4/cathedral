@@ -164,6 +164,8 @@ not four times.
 "you_are": {
     "location_description": "The Wickmarket",
     "the_hour": "Lamplight — the lamps are being lit; the market is closing",
+    "the_day": "Bellday — the holy day; the trades are shut and the bells call everyone to the Lanthorn",
+    "on_your_way": "You are on your way to The Lanthorn.",
     "position_m": { "x": -37.75, "y": 0.91, "z": 379.3 }
 },
 "places_you_know": [
@@ -184,6 +186,13 @@ not four times.
 
 **`the_hour`** — the clock, as a *field*. Not a percept. §5 below explains why that one decision is
 worth thousands of tokens a day.
+
+**`the_day`** and **`on_your_way`** (added post-M5) — the weekday, and where the current walk ends.
+Both exist for the same reason: the round moves the body without consulting the model, so without
+them "where are you going?" during a round-laid walk (the Bellday service, a water errand) could
+only be answered by confabulation. The destination is named exactly as the arrival will name it —
+the actor's own `go_to` when the walk serves it, else the walk endpoint's nearest registered place —
+and both fields are omitted when absent, keeping the frozen fixtures byte-identical.
 
 **`places_you_know`** — the wayfinding whitelist: you cannot `go_to` a place you have not been handed
 a `place_id` for. Each entry is a pair, the same shape `you_see` already uses for people.

@@ -16,7 +16,7 @@
 use bevy::prelude::*;
 use cathedral_sim::{
     Character, ErrandDebug, IntentTarget, LoreProfile, RoundPhase, Significance, THIRST_MAX,
-    THIRST_PARCHED, THIRST_THIRSTY, Vec3 as SimVec3, World,
+    THIRST_PARCHED, THIRST_THIRSTY, Vec3 as SimVec3, WALK_DESTINATION_SNAP_M, World,
 };
 
 use crate::fonts::CathedralFonts;
@@ -69,8 +69,10 @@ enum MoveState {
 
 /// Radius within which a walk endpoint counts as *at* a registered place. The
 /// routed path ends at a snapped nav node rather than the place's own point,
-/// so this is deliberately wider than the arrival radii.
-const DESTINATION_SNAP_M: f64 = 15.0;
+/// so this is deliberately wider than the arrival radii. Shared with the
+/// prompt's `you_are` walk line, so the actor and this overlay always name
+/// the same destination.
+const DESTINATION_SNAP_M: f64 = WALK_DESTINATION_SNAP_M;
 
 /// The live walk, resolved against the world: where it ends by name, how much
 /// polyline is left, and the real-time ETA at the current speed.

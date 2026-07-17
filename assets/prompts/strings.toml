@@ -34,6 +34,12 @@ holding_nothing = "nothing"
 places_note = "go_to takes these place_ids"
 # Introduces `you_are`'s clock phrase.
 the_hour_label = "The hour:"
+# Introduces `you_are`'s weekday phrase.
+the_day_label = "The day:"
+# `you_are`'s walk sentence; `%s` is the destination name.
+walking_to = "You are on your way to %s."
+# `you_are`'s follow sentence; `%s` is the person being followed.
+following = "You are following %s."
 # Introduces the lore profile's `illegal_activity` on the `**you**` line.
 illegal_activity_label = "In secret:"
 # Introduces the lore profile's `home` — the baked spoken home-binding — on

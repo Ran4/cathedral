@@ -27,8 +27,8 @@ use minijinja::{AutoEscape, Environment, context};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    HEARING_RADIUS_M, ITEM_INTERACTION_RADIUS_M,
-    character::Character,
+    HEARING_RADIUS_M, ITEM_INTERACTION_RADIUS_M, PLACE_ARRIVE_RADIUS_M, WALK_DESTINATION_SNAP_M,
+    character::{Character, IntentTarget},
     error::PromptError,
     ids::{ActorId, ItemId, PlaceId},
     offer::Offer,
@@ -73,6 +73,12 @@ pub struct PromptStrings {
     pub places_note: String,
     /// Introduces `you_are`'s clock phrase.
     pub the_hour_label: String,
+    /// Introduces `you_are`'s weekday phrase.
+    pub the_day_label: String,
+    /// `you_are`'s walk sentence, with `%s` standing for the destination name.
+    pub walking_to: String,
+    /// `you_are`'s follow sentence, with `%s` standing for the person.
+    pub following: String,
     /// Introduces the lore profile's `illegal_activity` on the `**you**` line.
     pub illegal_activity_label: String,
     /// Introduces the lore profile's `home` on the `**you**` line.
@@ -121,6 +127,16 @@ impl PromptEnv {
         if !strings.accept_with.contains("%s") {
             return Err(PromptError::new(
                 "prompt strings: accept_with must contain the '%s' item-id placeholder",
+            ));
+        }
+        if !strings.walking_to.contains("%s") {
+            return Err(PromptError::new(
+                "prompt strings: walking_to must contain the '%s' destination placeholder",
+            ));
+        }
+        if !strings.following.contains("%s") {
+            return Err(PromptError::new(
+                "prompt strings: following must contain the '%s' person placeholder",
             ));
         }
 
@@ -218,6 +234,16 @@ struct YouAre {
     /// carries no clock, which keeps the frozen golden fixtures byte-identical.
     #[serde(skip_serializing_if = "Option::is_none")]
     the_hour: Option<String>,
+    /// The weekday, likewise — without it a day worker cannot know why the
+    /// round has them praying instead of working. Omitted without a clock.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    the_day: Option<String>,
+    /// Where the current walk ends, as a full sentence — the actor's own view
+    /// of what the sheet overlay calls the heading. Without it, "where are you
+    /// going?" during a round-laid walk can only be answered by confabulation.
+    /// Omitted while standing, which keeps the frozen fixtures byte-identical.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    on_your_way: Option<String>,
     position_m: Position,
 }
 
@@ -500,6 +526,10 @@ fn build_sheet<'a>(
             the_hour: world.current_time.map(|time| {
                 format!("{} — {}", time.office.label(), time.office.prompt_phrase())
             }),
+            the_day: world.current_time.map(|time| {
+                format!("{} — {}", time.weekday.label(), time.weekday.prompt_phrase())
+            }),
+            on_your_way: on_your_way(world, actor, strings),
             position_m: Position {
                 x: position.x,
                 y: position.y,
@@ -530,6 +560,46 @@ fn build_sheet<'a>(
         the_only_languages_you_know: &strings.languages,
         current_goal: actor.goal(),
     }
+}
+
+/// The sheet's sentence for where the current walk ends, or `None` while
+/// standing. The name is resolved exactly as the arrival will speak of it:
+/// the actor's own `go_to` when the walk serves it (compared by endpoint —
+/// an intent the round has not picked up yet must not mislabel the walk it
+/// is still finishing), the patrol's far end, else the nearest registered
+/// place, else the area. A destination nothing names renders no line at all
+/// — bare coordinates would read as a map reference no medieval walker has.
+fn on_your_way(world: &World, actor: &Character, strings: &PromptStrings) -> Option<String> {
+    let movement = actor.state.movement.as_ref()?;
+    // An empty path is an arrival, not a walk.
+    let end = *movement.path.last()?;
+    let planar = |target: crate::math::Vec3| f64::hypot(end.x - target.x, end.z - target.z);
+    if let Some(patrol) = &movement.patrol {
+        let name = if patrol.heading_to_b { &patrol.b } else { &patrol.a };
+        return Some(strings.walking_to.replacen("%s", name, 1));
+    }
+    if let Some(intent) = &actor.state.intent {
+        match &intent.target {
+            IntentTarget::Place { name, point, .. } if planar(*point) <= PLACE_ARRIVE_RADIUS_M => {
+                return Some(strings.walking_to.replacen("%s", name, 1));
+            }
+            IntentTarget::Person {
+                actor_id, last_seen, ..
+            } if planar(*last_seen) <= PLACE_ARRIVE_RADIUS_M => {
+                if let Some(other) = world.characters.get(actor_id) {
+                    let who = person_md(&person(actor, other, strings, None, None));
+                    return Some(strings.following.replacen("%s", &who, 1));
+                }
+            }
+            _ => {}
+        }
+    }
+    let name = world
+        .places
+        .nearest(end, WALK_DESTINATION_SNAP_M)
+        .map(|place| place.name.clone())
+        .or_else(|| world.area_map.location_description(end))?;
+    Some(strings.walking_to.replacen("%s", &name, 1))
 }
 
 /// `events or ["nothing"]` — the empty list is falsy in Python.
@@ -721,6 +791,12 @@ fn you_are_line(you_are: &YouAre, strings: &PromptStrings) -> String {
     if let Some(hour) = &you_are.the_hour {
         line.push_str(&format!(" {} {hour}.", strings.the_hour_label));
     }
+    if let Some(day) = &you_are.the_day {
+        line.push_str(&format!(" {} {day}.", strings.the_day_label));
+    }
+    if let Some(on_your_way) = &you_are.on_your_way {
+        line.push_str(&format!(" {on_your_way}"));
+    }
     line
 }
 
@@ -853,6 +929,9 @@ mod tests {
             holding_nothing: "nothing".into(),
             places_note: "go_to takes these place_ids".into(),
             the_hour_label: "The hour:".into(),
+            the_day_label: "The day:".into(),
+            walking_to: "You are on your way to %s.".into(),
+            following: "You are following %s.".into(),
             illegal_activity_label: "In secret:".into(),
             home_label: "Home:".into(),
             home_place_label: "go_to".into(),
@@ -869,7 +948,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
         let error = PromptEnv::new("x", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
@@ -928,6 +1007,8 @@ mod tests {
             you_are: YouAre {
                 location_description: String::new(),
                 the_hour: None,
+                the_day: None,
+                on_your_way: None,
                 position_m: Position { x: 0.0, y: 0.0, z: 0.0 },
             },
             places_you_know: Vec::new(),
