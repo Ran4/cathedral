@@ -407,7 +407,7 @@ mod tests {
                 );
             }
             for fixture in &plan.fixtures {
-                let angle = (-fixture.angle_deg).to_radians();
+                let angle = fixture.angle_deg.to_radians();
                 let dx = point[0] - fixture.position[0];
                 let dz = point[1] - fixture.position[1];
                 let local_x = dx * angle.cos() - dz * angle.sin();

@@ -220,6 +220,11 @@ pub const WANDER_LEASH_M: f64 = 6.0;
 /// long pause — must not spin through thousands of slices: past this many, the
 /// movement clock snaps forward and the backlog is dropped rather than walked.
 pub const MAX_MOVEMENT_CATCHUP_SLICES: usize = 64;
+/// Bounds the per-poll bell catch-up, the same situation as
+/// [`MAX_MOVEMENT_CATCHUP_SLICES`]: a huge `now` jump must not ring every
+/// office it skipped as one wall of bells — past this many crossings, only the
+/// most recent ones ring and the older backlog is dropped rather than rung.
+pub const MAX_BELL_CATCHUP_OFFICES: usize = 2;
 /// Total horizontal FOV for the sound witness test; overridable per run.
 pub const DEFAULT_VIEW_CONE_DEGREES: f64 = 135.0;
 /// An override narrower than this sees nothing at all (`server.py:449-451`).

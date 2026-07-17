@@ -42,6 +42,8 @@ round_note = "your standing day, leg by leg; each begins when its bell rings"
 walking_to = "You are on your way to %s."
 # `you_are`'s follow sentence; `%s` is the person being followed.
 following = "You are following %s."
+# Introduces the lore profile's `faction_role` on the `**you**` line.
+faction_role_label = "Faction role:"
 # Introduces the lore profile's `illegal_activity` on the `**you**` line.
 illegal_activity_label = "In secret:"
 # Introduces the lore profile's `home` — the baked spoken home-binding — on

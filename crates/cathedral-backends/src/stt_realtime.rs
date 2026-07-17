@@ -275,8 +275,16 @@ impl RealtimeSttHandle {
             if was_active {
                 state.active_key = None;
             }
-            if let Some(position) = state.pending_commits.iter().position(|entry| entry == key) {
-                state.pending_commits.remove(position);
+            // The commit frame for this key is already on the wire, so its ack
+            // is still coming: leave a tombstone (keys are `.wav` basenames, so
+            // `""` is never real) for the ack to consume, or every later
+            // utterance's `item_id` would bind one key off.
+            if let Some(slot) = state
+                .pending_commits
+                .iter_mut()
+                .find(|entry| entry.as_str() == key)
+            {
+                slot.clear();
             }
             state.items.retain(|_, item_key| item_key != key);
             was_active
@@ -477,6 +485,11 @@ impl SessionTask {
                         // No commit is outstanding: not ours.
                         return;
                     };
+                    if key.is_empty() {
+                        // `clear()` tombstoned this slot: consume the ack,
+                        // bind nothing.
+                        return;
+                    }
                     match item_id.filter(|id| !id.is_empty()) {
                         Some(item_id) => {
                             state.items.insert(item_id.to_string(), key);
@@ -541,7 +554,8 @@ impl SessionTask {
             if let Some(active) = state.active_key.take() {
                 keys.push(active);
             }
-            keys.extend(state.pending_commits.drain(..));
+            // Tombstones from `clear()` name no utterance.
+            keys.extend(state.pending_commits.drain(..).filter(|key| !key.is_empty()));
             keys.extend(state.items.values().cloned());
             state.items.clear();
             state.connected = false;
@@ -1186,6 +1200,106 @@ mod tests {
                 .sent_types()
                 .contains(&"input_audio_buffer.commit".to_string()),
             "a cleared utterance is never committed"
+        );
+    }
+
+    /// Clearing a committed (non-tail) utterance must not desync the commit-ack
+    /// FIFO: its ack consumes a tombstone, and the next ack still binds to the
+    /// right key.
+    #[test]
+    fn clearing_a_committed_utterance_keeps_later_acks_bound_to_their_own_keys() {
+        let (factory, probe) = Factory::new().build();
+        let session = session(factory, RealtimeSettings::default(), "sk");
+
+        assert!(session.handle.begin("a.wav"));
+        assert!(session.handle.commit("a.wav"));
+        assert!(session.handle.begin("b.wav"));
+        assert!(session.handle.commit("b.wav"));
+        wait_until(|| {
+            probe.socket_count() == 1
+                && probe
+                    .socket(0)
+                    .sent_types()
+                    .iter()
+                    .filter(|kind| *kind == "input_audio_buffer.commit")
+                    .count()
+                    == 2
+        });
+
+        // `a.wav` goes away (aborted / gone to batch) while its ack is still
+        // on the wire.
+        session.handle.clear("a.wav");
+
+        let socket = probe.socket(0);
+        socket.push(json!({"type": "input_audio_buffer.committed", "item_id": "item-a"}));
+        socket.push(json!({"type": "input_audio_buffer.committed", "item_id": "item-b"}));
+        socket.push(json!({
+            "type": "conversation.item.input_audio_transcription.completed",
+            "item_id": "item-b",
+            "transcript": "second utterance",
+        }));
+
+        let mut results = Vec::new();
+        wait_until(|| {
+            results.extend(session.results());
+            !results.is_empty()
+        });
+        assert_eq!(
+            results,
+            vec![RealtimeResult::Transcript {
+                key: "b.wav".to_string(),
+                text: "second utterance".to_string()
+            }],
+            "the cleared key's ack must not steal the next key"
+        );
+
+        // The cleared utterance's own transcript finds nobody waiting.
+        socket.push(json!({
+            "type": "conversation.item.input_audio_transcription.completed",
+            "item_id": "item-a",
+            "transcript": "first utterance",
+        }));
+        std::thread::sleep(Duration::from_millis(100));
+        assert!(session.results().is_empty());
+    }
+
+    /// A tombstoned slot names no utterance: a socket death after a mid-FIFO
+    /// clear fails only the keys that are still live.
+    #[test]
+    fn a_dead_socket_does_not_fail_a_cleared_commit() {
+        let (factory, probe) = Factory::new().build();
+        let session = session(factory, RealtimeSettings::default(), "sk");
+
+        assert!(session.handle.begin("a.wav"));
+        assert!(session.handle.commit("a.wav"));
+        assert!(session.handle.begin("b.wav"));
+        assert!(session.handle.commit("b.wav"));
+        wait_until(|| {
+            probe.socket_count() == 1
+                && probe
+                    .socket(0)
+                    .sent_types()
+                    .iter()
+                    .filter(|kind| *kind == "input_audio_buffer.commit")
+                    .count()
+                    == 2
+        });
+
+        session.handle.clear("a.wav");
+        probe.socket(0).kill();
+
+        let mut results = Vec::new();
+        wait_until(|| {
+            results.extend(session.results());
+            !results.is_empty()
+        });
+        assert_eq!(
+            results,
+            vec![RealtimeResult::Failure {
+                key: Some("b.wav".to_string()),
+                reason: "socket".to_string()
+            }],
+            "the tombstone must not surface as an empty-key failure"
         );
     }
 

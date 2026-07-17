@@ -25,7 +25,8 @@ use std::{
 use serde_json::{Value, json};
 
 use crate::{
-    HEARING_RADIUS_M, MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS,
+    HEARING_RADIUS_M, MAX_BELL_CATCHUP_OFFICES, MAX_MOVEMENT_CATCHUP_SLICES,
+    MOVEMENT_TICK_SECONDS,
     actions::apply_action,
     areas::AreaMap,
     attention::{
@@ -1468,8 +1469,20 @@ impl Engine {
         self.world.current_time = Some(self.clock.at(now));
 
         if self.config.ring_the_offices && self.world.sounds_enabled {
+            let mut crossed = self.clock.offices_crossed(self.last_clock_now, now);
+            // Bound the catch-up like `tick_movement` does: a huge `now` jump —
+            // a resume from a long pause, or a hitch at a high debug scale —
+            // crosses many offices at once, and ringing every skipped stroke in
+            // one poll is a wall of bells nobody can count. Keep only the most
+            // recent [`MAX_BELL_CATCHUP_OFFICES`] crossings, and drop the queued
+            // backlog with the rest — those strokes belong to offices older
+            // still than the ones being skipped.
+            if crossed.len() > MAX_BELL_CATCHUP_OFFICES {
+                crossed.drain(..crossed.len() - MAX_BELL_CATCHUP_OFFICES);
+                self.bell_strokes.clear();
+            }
             let mut queued_any = false;
-            for (instant, office) in self.clock.offices_crossed(self.last_clock_now, now) {
+            for (instant, office) in crossed {
                 for stroke_at in stroke_times(office, instant) {
                     self.bell_strokes.push_back(stroke_at);
                     queued_any = true;

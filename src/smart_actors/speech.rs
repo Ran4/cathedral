@@ -1007,6 +1007,10 @@ pub fn stop_npc_speech_for_capture(
         notify_speech_presented(handle.as_deref(), &expected.event_id);
     }
     state.ready_audio.clear();
+    for stream in state.pcm_streams.values() {
+        stream.source.finish();
+    }
+    state.pcm_streams.clear();
     let _ = resume_microphone_after_voice(&mut state, microphone.as_deref());
 }
 

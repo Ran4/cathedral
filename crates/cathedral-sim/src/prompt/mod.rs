@@ -6,11 +6,14 @@
 //! the sheet's micro-strings in `strings.toml` — while every decision (who is
 //! visible, which offers show, how far away someone is, how a section is laid
 //! out) stays here. The template receives fully-computed values and does no
-//! filtering, ordering or formatting of its own. The sheet's **section labels**
-//! (`**you_hold**`, `**since_your_last_turn**`, …) are the one exception: they
-//! mirror the old JSON keys, `turn.j2`'s prose names them, and they are
-//! structure, not prose — so they live in [`sheet_markdown`], not in
-//! `strings.toml`.
+//! filtering, ordering or formatting of its own. Two exceptions: the sheet's
+//! **section labels** (`**you_hold**`, `**since_your_last_turn**`, …) mirror
+//! the old JSON keys, `turn.j2`'s prose names them, and they are structure,
+//! not prose — so they live in [`sheet_markdown`], not in `strings.toml`. And
+//! [`you_line`]'s connective grammar — the `Family:`/`Circumstances:`/
+//! `Conditions:` sentence glue, the `father`/`mother`/`children` and `(id …)`
+//! fragments, the gender words — is inseparable from the joining logic that
+//! assembles the sentence, so it stays inline there too.
 //!
 //! The sheet reaches the model as *markdown*, not JSON — the same data at
 //! roughly half the tokens, without the quoting, bracing and repeated keys
@@ -81,6 +84,8 @@ pub struct PromptStrings {
     pub walking_to: String,
     /// `you_are`'s follow sentence, with `%s` standing for the person.
     pub following: String,
+    /// Introduces the lore profile's `faction_role` on the `**you**` line.
+    pub faction_role_label: String,
     /// Introduces the lore profile's `illegal_activity` on the `**you**` line.
     pub illegal_activity_label: String,
     /// Introduces the lore profile's `home` on the `**you**` line.
@@ -758,7 +763,7 @@ fn you_line(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
         line.push('.');
     }
     if let Some(role) = lore.faction_role {
-        line.push_str(&format!(" Faction role: {role}."));
+        line.push_str(&format!(" {} {role}.", strings.faction_role_label));
     }
     if let Some(illegal) = lore.illegal_activity {
         line.push_str(&format!(" {} {illegal}.", strings.illegal_activity_label));
@@ -954,6 +959,7 @@ mod tests {
             round_note: "your standing day, leg by leg; each begins when its bell rings".into(),
             walking_to: "You are on your way to %s.".into(),
             following: "You are following %s.".into(),
+            faction_role_label: "Faction role:".into(),
             illegal_activity_label: "In secret:".into(),
             home_label: "Home:".into(),
             home_place_label: "go_to".into(),
@@ -970,7 +976,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
         let error = PromptEnv::new("x", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
@@ -1011,7 +1017,7 @@ mod tests {
                 occupation: Some("Scribe and clerk"),
                 title: Some("Scrivener"),
                 rank: Some("journeyman"),
-                faction_role: None,
+                faction_role: Some("informant for the Watch"),
                 illegal_activity: Some("forger"),
                 district: "The Tallage",
                 home: Some("a house in the Weigh Ward, near the Tallage"),
@@ -1049,7 +1055,8 @@ mod tests {
             you_line(&sheet, &strings()),
             "**you** — Corin Copp, 26, male — Scrivener (Scribe and clerk, journeyman) \
              of The Tallage. Home: a house in the Weigh Ward, near the Tallage. \
-             In secret: forger. Family: mother Osanne Skell (id br2sk)."
+             Faction role: informant for the Watch. In secret: forger. \
+             Family: mother Osanne Skell (id br2sk)."
         );
 
         // With the registry handle the round's seed mints for the actor's own
@@ -1080,6 +1087,7 @@ mod tests {
             let lore = same_title.lore_profile.as_mut().unwrap();
             lore.title = Some("Scribe and clerk");
             lore.rank = None;
+            lore.faction_role = None;
             lore.illegal_activity = None;
             lore.mother = None;
             lore.home = None;

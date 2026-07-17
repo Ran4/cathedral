@@ -391,15 +391,45 @@ fn overlapping_office_ordinals_ring_in_due_order() {
         "the Waning's first stroke (20.0 s) is due and must not wait behind High Wick's 21.5 s stroke"
     );
 
-    // Drain the rest of the game day in one big span (21, 70]: High Wick's and
-    // the Waning's five remaining strokes plus Lamplight, the Snuffing, and day
-    // 1's Watch / Kindling / Dayspring. Every owed stroke of the day must ring,
-    // and the whole day's total is the sum of the seven ordinals.
-    let rest = count_bells(&engine.poll(70.0, Vec::new()));
+    // Drain the rest of the game day: High Wick's and the Waning's five
+    // remaining strokes plus Lamplight, the Snuffing, and day 1's Watch /
+    // Kindling / Dayspring. Each span crosses at most two offices — within the
+    // `MAX_BELL_CATCHUP_OFFICES` catch-up cap, as any per-frame poll cadence is
+    // — so every owed stroke of the day must ring, and the whole day's total is
+    // the sum of the seven ordinals.
+    let rest: usize = [40.0, 55.0, 70.0]
+        .into_iter()
+        .map(|at| count_bells(&engine.poll(at, Vec::new())))
+        .sum();
     assert_eq!(
         rest + 4,
         (1 + 2 + 3 + 4 + 5 + 6 + 7),
         "one game day rings each office's full ordinal exactly once — nothing lost, nothing doubled"
+    );
+}
+
+/// A huge `now` jump — a resume from suspend, minutes of wall clock in one
+/// span — must not ring every office it skipped as one uncountable wall of
+/// bells. Only the most recent [`MAX_BELL_CATCHUP_OFFICES`] crossings ring and
+/// the stale queued backlog is dropped: the bell path's analogue of
+/// `tick_movement`'s `MAX_MOVEMENT_CATCHUP_SLICES` snap-forward.
+#[test]
+fn a_huge_time_jump_rings_only_the_most_recent_offices() {
+    // 60 s/day opening at Dayspring (07:00), as above.
+    let clock = WorldClock::new(60.0, Office::Dayspring, 0, 0.05);
+    let mut engine = clock_only_engine(clock);
+
+    let count_bells = |messages: &[EngineMessage]| messages.iter().filter(|m| is_town_bell(m)).count();
+    assert_eq!(count_bells(&engine.poll(0.0, Vec::new())), 0);
+
+    // Three-plus game days pass in one span — 21 office crossings, 84 strokes
+    // owed without the cap. Only the two most recent crossings ring: day 3's
+    // Kindling (175 s, two strokes) and Dayspring (180 s, three), all past due
+    // by 190 s.
+    assert_eq!(
+        count_bells(&engine.poll(190.0, Vec::new())),
+        usize::from(Office::Kindling.ordinal() + Office::Dayspring.ordinal()),
+        "a resume from a long pause rings only the most recent offices' strokes"
     );
 }
 

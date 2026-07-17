@@ -246,10 +246,11 @@ impl SculptureMesh {
                 self.quad(pair[0][side], pair[1][side], pair[1][next], pair[0][next]);
             }
         }
-        for side in 1..sides - 1 {
-            self.triangle(path[0], rings[0][side], rings[0][side + 1]);
+        for side in 0..sides {
+            let next = (side + 1) % sides;
+            self.triangle(path[0], rings[0][side], rings[0][next]);
             let last = rings.len() - 1;
-            self.triangle(path[last], rings[last][side + 1], rings[last][side]);
+            self.triangle(path[last], rings[last][next], rings[last][side]);
         }
     }
 

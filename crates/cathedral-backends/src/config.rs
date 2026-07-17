@@ -453,7 +453,11 @@ impl SpeechSettings {
                     "STT_STREAM_IDLE_CLOSE_S",
                     DEFAULT_REALTIME_IDLE_CLOSE_SECONDS,
                 ),
-                max_in_flight: DEFAULT_REALTIME_MAX_IN_FLIGHT,
+                max_in_flight: environment
+                    .trimmed("STT_REALTIME_MAX_IN_FLIGHT")
+                    .and_then(|value| value.parse::<usize>().ok())
+                    .filter(|count| *count > 0)
+                    .unwrap_or(DEFAULT_REALTIME_MAX_IN_FLIGHT),
             },
             voice_overrides,
             uv_binary: options.uv_binary.clone(),
@@ -877,6 +881,7 @@ mod tests {
                 ("STT_REALTIME_DELAY", "high"),
                 ("STT_LANGUAGE", "sv"),
                 ("STT_STREAM_IDLE_CLOSE_S", "42"),
+                ("STT_REALTIME_MAX_IN_FLIGHT", "9"),
                 ("STT_STREAM_COMPLETION_GRACE_MS", "3500"),
                 ("SMART_ACTORS_TTS_BACKEND", "  CLOUD "),
                 ("TTS_VOICE_SVEN", "alloy"),
@@ -898,6 +903,7 @@ mod tests {
         assert_eq!(speech.realtime.delay, "high");
         assert_eq!(speech.realtime.language.as_deref(), Some("sv"));
         assert_eq!(speech.realtime.idle_close_seconds, 42.0);
+        assert_eq!(speech.realtime.max_in_flight, 9);
         assert_eq!(speech.stream_grace_seconds, 3.5);
         assert_eq!(speech.tts_backend, "cloud", "trimmed and lowercased");
         assert_eq!(
@@ -924,6 +930,21 @@ mod tests {
         )
         .speech;
         assert_eq!(speech.stream_grace_seconds, 2.0);
+    }
+
+    /// A commit gate of zero would never let an utterance through, so zero and
+    /// nonsense both read as "unset".
+    #[test]
+    fn the_realtime_commit_gate_ignores_zero_and_nonsense() {
+        let speech =
+            BackendsConfig::resolve(&env(&[("STT_REALTIME_MAX_IN_FLIGHT", "0")]), &options())
+                .speech;
+        assert_eq!(speech.realtime.max_in_flight, 4);
+
+        let speech =
+            BackendsConfig::resolve(&env(&[("STT_REALTIME_MAX_IN_FLIGHT", "many")]), &options())
+                .speech;
+        assert_eq!(speech.realtime.max_in_flight, 4);
     }
 
     /// `server.py:500-512` — an unavailable or nonsense voice backend is forced
