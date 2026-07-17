@@ -134,8 +134,8 @@ The demo character finally works end to end:
   it would double-print) — `travel-worn` stays, static conditions remain the right place for
   states the sim doesn't model;
 - her `memories` keep *"I am very hungry after the long road here"* — flavor, and now truthful;
-- she seeds at hunger 25 (§1), holds her 1 copper, and a herring costs exactly 1
-  ([02](02_the_copper_standard.md)) — the loaf she asked for is 2, which she cannot pay, and the
+- she seeds at hunger 25 (§1), holds her 1 spark, and a herring costs exactly 1
+  ([02](02_the_spark_standard.md)) — the loaf she asked for is 2, which she cannot pay, and the
   fish stall feeds her anyway: the purchase the character was authored for is finally solvable,
   and *only just*, which is the drama;
 - after eating: satiety 70 carries her to the Waning, and her sheet stops calling her hungry —
@@ -144,7 +144,7 @@ The demo character finally works end to end:
 ## 7. Who does not hunger
 
 - **The player.** No gauge, no `PlayerEat` (none exists today — `engine.rs` player commands stop
-  at retract). The player's copper is for participating in the market, not surviving it.
+  at retract). The player's sparks are for participating in the market, not surviving it.
   README §8.4 leaves the door open.
 - **Un-enrolled actors** (no nav, headless fixture worlds): `Needs::default()` seeds both gauges
   full, and without round enrollment nothing decays — so every frozen test world stays byte-stable

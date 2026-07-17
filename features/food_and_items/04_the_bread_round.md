@@ -76,8 +76,8 @@ At each day's Kindling bell (the `offices_crossed` hook, `clock.rs:361-386`, con
    | fish_trader | 10× `herring`, 4× `smoked_eel` |
    | cook / tavern_worker | the pot: `stew` is conjured **per serving at sale time** — the lore's never-scraped pot is the one licensed infinite inventory |
 
-2. vendor wallets reset to their float (6 coppers — change for a market morning), buyer wallets
-   refill to seed ([02](02_the_copper_standard.md) §4) — at the Watch, so the books close before
+2. vendor wallets reset to their float (6 sparks — change for a market morning), buyer wallets
+   refill to seed ([02](02_the_spark_standard.md) §4) — at the Watch, so the books close before
    the bakers rise.
 
 Stock items are real `World.items` stacks **held by the vendor** (deterministic ids per
@@ -105,7 +105,7 @@ coin counted, a loaf wrapped), then the atomic swap, all inside the sim tick:
 - price = catalog list price for the kind+metadata; the buyer's coin stack −price, the vendor's
   +price (merge rules from [01](01_items_and_stacks.md) §2.2);
 - one unit of the cheapest edible stock the buyer can afford moves vendor→buyer (famished buyers
-  take the cheapest that satisfies; a herring if a copper is all they have — Ilse's exact
+  take the cheapest that satisfies; a herring if a spark is all they have — Ilse's exact
   arithmetic);
 - then the buyer **eats it at the pitch** over `EAT_SECONDS` unless their next leg is home within
   the supper span, in which case they carry it (and rung 3's eat-what-you-hold finishes the story
@@ -114,8 +114,8 @@ coin counted, a loaf wrapped), then the atomic swap, all inside the sim tick:
 **Percepts follow the water round's discipline** (*"a clock, not an event"*, `round.rs:1474-1478`):
 
 - **self-percepts, both parties** (`remember_percept`, `character.rs:373-387`): buyer — *"You
-  bought a herring from Wyn for 1 copper."*; vendor — *"You sold a herring for 1
-  copper."* Consecutive-repeat dedup already collapses a busy morning into one line,
+  bought a herring from Wyn for 1 spark."*; vendor — *"You sold a herring for 1
+  spark."* Consecutive-repeat dedup already collapses a busy morning into one line,
   which is exactly right. The player can ask either party what they bought or sold, and they can
   answer, for zero tokens.
 - **no NPC inbox lines, no nudges.** Thirty sales an hour in a market square must not schedule a

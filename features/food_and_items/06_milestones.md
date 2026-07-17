@@ -24,7 +24,7 @@ cargo test -p cathedral-sim --test golden_prompts # regenerated fixtures byte-st
 cargo run -p cathedral-backends --bin cathedral-headless -- --fake -t 8
 ```
 
-The headless fake run's world dump shows `copper coin (c0prs) ×3`; a scripted turn offers
+The headless fake run's world dump shows `spark (c0prs) ×3`; a scripted turn offers
 `quantity: 2`, the counterpart accepts, and the dump shows 1 and 2. In-game:
 `CATHEDRAL_DRIVE='wait-online; key Tab; shot hud_stacks; quit'` — the HUD renders a stack with a
 count.
@@ -33,11 +33,11 @@ count.
 `assert_invariants` panic in a test; an unowned item still rejects the snapshot Bevy-side; quantity
 0 is unrepresentable.
 
-## M1 — The copper standard
+## M1 — The spark standard
 
-**Ships:** the lore sweep of [02_the_copper_standard.md](02_the_copper_standard.md) §3 (bell and
-lantern excised as money, spark → copper/penny, prices converted at 1 spark = 1 copper); the
-catalog's `price_coppers` column filled; wallet seeding constants decided.
+**Ships:** the lore sweep of [02_the_spark_standard.md](02_the_spark_standard.md) §3 (bell and
+lantern excised as money, bell prices converted at 12 sparks to the bell, spark prices untouched);
+the catalog's `price_sparks` column filled; wallet seeding constants decided.
 
 **How you know:**
 
@@ -46,8 +46,8 @@ grep -rin 'silver bell\|gold lantern\|twelve sparks\|sixty bells' lore/ features
 ```
 
 returns only the founding-marks history (which keeps its mark-not-a-coin framing) and this folder.
-A spot-read of `trade_and_daily_life.md` §Money is three sentences about the copper. The 2-copper
-loaf survives in every file that stated it.
+A spot-read of `trade_and_daily_life.md` §Money is three sentences about the spark. The 2-spark
+loaf survives untouched in every file that stated it.
 
 *Runs fully in parallel with M0 — content only, ideally one subagent per file group with §3's
 conversion table as the contract.*
@@ -56,7 +56,7 @@ conversion table as the contract.*
 
 **Ships:** `Needs.hunger` + constants; universal decay in the renamed `decay_needs`; satiety on
 `eat`; seeding spread (Ilse at 25); ladder rungs 3 & 7 (with `FAMISHED_PRESSURE`); the hearth
-refill at meal offices; buyer wallets ([02](02_the_copper_standard.md) §4); the computed
+refill at meal offices; buyer wallets ([02](02_the_spark_standard.md) §4); the computed
 `hungry`/`famished` condition on the sheet; Ilse's lore sheet drops static `"hungry"`. Optional:
 `TooFar` raised on over-long errands.
 
@@ -87,7 +87,7 @@ cargo run -p cathedral-backends --bin cathedral-headless -- --fake --trace-food 
 
 On a Highmarket day: `[food]` logs the Kindling restock (stock counts per vendor), a morning of
 sales at the Wickmarket with prices and dwindling stock, vendor coin stacks growing, and the Watch
-reset closing the books. Cross-check invariants: total coppers constant between resets; no stack
+reset closing the books. Cross-check invariants: total sparks constant between resets; no stack
 ever 0.
 
 In-game, on a Highmarket noon:
@@ -109,8 +109,8 @@ for the player's purse ([05_the_llm_seam.md](05_the_llm_seam.md) §7).
 **How you know — the acceptance test this whole folder exists for.** Yesterday's session
 (`logs/session_224_2026-07-17_14_46_02`), replayed against a real market:
 
-1. Ilse (famished, 1 copper) is told to try the Wickmarket;
-2. she arrives; the *sheet* — not improvisation — prices the baker's loaf at 2 coppers, which she
+1. Ilse (famished, 1 spark) is told to try the Wickmarket;
+2. she arrives; the *sheet* — not improvisation — prices the baker's loaf at 2 sparks, which she
    cannot pay, and the provisions stall's herring at 1, which she can;
 3. she offers `c0prs` ×1, the vendor accepts, offers a herring, she accepts, she **eats**;
 4. her next sheet has no hunger condition, her wallet is empty, and her goal
@@ -139,5 +139,5 @@ into this folder.
 | M0's blast radius — every layer, 13+ fixtures, `deny_unknown_fields` everywhere | land it as one PR with the regeneration; no partial states. The manifest edit is mechanical; the split/merge logic is the only genuinely subtle code — test it to death (property test: any sequence of offers/accepts/eats conserves total quantity per kind) |
 | double-print of hunger ("hungry" static + computed) | M2 removes Ilse's static string in the same change that adds the computed one; grep the other 513 sheets for `"hungry"` in `conditions` |
 | market percept flood | the discipline is already designed-in (self-percepts + player-only sounds, [04](04_the_bread_round.md) §5) — the risk is a future contributor "just adding" a bystander line per sale; the census counter makes regressions visible |
-| coin conservation bugs (coppers minted/burned by a bad merge) | the M3 headless cross-check (total coppers constant between ledgers) as a standing assertion under `--trace-food` |
+| coin conservation bugs (sparks minted/burned by a bad merge) | the M3 headless cross-check (total sparks constant between ledgers) as a standing assertion under `--trace-food` |
 | the LLM offers `quantity` on a non-stack or over-holds | ordinary action errors (`BadQuantity`), which the engine already routes back as system lines — the model self-corrects like it does for every other arg error |

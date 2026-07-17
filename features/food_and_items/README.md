@@ -64,10 +64,11 @@ a stall table, prices, and a two-line change to the prompt.** The deep-dives cov
 3 coins" is `offer_item {"item_id": "c0prs", "quantity": 3}`. Full design in
 [01_items_and_stacks.md](01_items_and_stacks.md).
 
-**(b) One coin.** The lore's spark/bell/lantern triad collapses to the **copper coin** (street name:
-a copper, a penny). The silver bell dies happily — a city whose life runs on seven *bell* offices
-never needed a coin called the bell too. Prices convert 1:1 from sparks: the loaf keeps its
-canonical 2. [02_the_copper_standard.md](02_the_copper_standard.md) has the sweep list.
+**(b) One coin.** The lore's spark/bell/lantern triad collapses to the **spark** (street names: a
+penny, a copper). The silver bell dies happily — a city whose life runs on seven *bell* offices
+never needed a coin called the bell too. Spark prices are already right; bell prices convert at 12:
+the loaf keeps its canonical 2. [02_the_spark_standard.md](02_the_spark_standard.md) has the sweep
+list.
 
 **(c) Hunger is thirst with a slower clock.** A second `f64` on `Needs`, decaying over ~10 game
 hours, refilled by `satiety` on whatever you eat, surfaced to the LLM as a **computed condition**
@@ -82,7 +83,7 @@ LLM consent verbs and the code-driven purchases share one inventory. **This is t
 and it must eventually die**: the real chain is bakers baking at the bakehouses from millers' flour,
 grain carts entering by the Wool Gate from the near countryside through Seven Lofts
 (`features/the_near_countryside__aka_add_market_stalls.md` is the other half of this feature). The
-nightly wallet reset in [02](02_the_copper_standard.md) is the same cheat from the money side —
+nightly wallet reset in [02](02_the_spark_standard.md) is the same cheat from the money side —
 both are the placeholder the supply chain replaces. [04_the_bread_round.md](04_the_bread_round.md).
 
 **(e) Code-driven purchases are silent; LLM purchases are conversational.** A ladder-driven buy is
@@ -98,7 +99,7 @@ vendors' sheets gain a `you_sell` price line so they stop inventing prices.
 
 - **The loaf costs 2.** Three canon files state it (`lore/core_lore/trade_and_daily_life.md:71`,
   `lore/second_sun/07_what_everyone_knows.md:38`, `11_glossary_and_naming.md:16`): *"A loaf, two
-  sparks."* The catalog keeps it: rye loaf, 2 coppers.
+  sparks."* The catalog keeps it verbatim: rye loaf, 2 sparks.
 - **Lawful bench-fare is bread, herring, and small ale** (`07_what_everyone_knows.md:42`) — the
   plain civic meal, and the spine of the catalog below.
 - **Dinner is at noon.** *"Peace with the impossible, and dinner at noon"*
@@ -126,9 +127,9 @@ herring or an eel.
 
 | kind | metadata | price | satiety | sold by | note |
 |---|---|---|---|---|---|
-| `copper_coin` | — | — | — | — | the only money; fungible stack |
-| `loaf` | `flour: rye\|wheat` | 2 / 4 | 150 | baker, food_provisioner | the canonical 2-copper rye loaf; wheat is fine bread |
-| `herring` | — | 1 | 70 | fish_trader, market_seller | lawful bench-fare — and what one copper buys; Sven's `fzbn9` "fish" migrates to this kind |
+| `spark` | — | — | — | — | the only money; fungible stack |
+| `loaf` | `flour: rye\|wheat` | 2 / 4 | 150 | baker, food_provisioner | the canonical 2-spark rye loaf; wheat is fine bread |
+| `herring` | — | 1 | 70 | fish_trader, market_seller | lawful bench-fare — and what one spark buys; Sven's `fzbn9` "fish" migrates to this kind |
 | `smoked_eel` | — | 3 | 100 | fish_trader | Maren's Green pride; Bertran's courting gift |
 | `stew` | — | 2 | 170 | cook, tavern_worker | tavern-only; the never-scraped pot, so it never runs out |
 
@@ -143,7 +144,7 @@ and opens a tavern-vs-well question this feature does not need to answer yet.
 Coins are conserved within a day: buyers pay, vendors accumulate. Left alone, every vendor becomes a
 dragon on a hoard and every buyer runs dry by Thursday. So the nightly ledger, at the Watch:
 
-- **buyer wallets refill to their seeded level** (2–7 coppers, hashed per actor; majors keep
+- **buyer wallets refill to their seeded level** (2–7 sparks, hashed per actor; majors keep
   authored amounts — Ilse keeps exactly 1, that is her story);
 - **vendor wallets and unsold stock reset to template** — they "spent it on flour and rent."
 
@@ -160,11 +161,11 @@ Each shippable, each with a verification recipe using the repo's existing tools.
 
 | | | Ships | How you know |
 |---|---|---|---|
-| **M0** | **Kinds & stacks** | the item catalog, `Item {kind, quantity, metadata}`, merge/split, `offer_item` quantity, seed migration, snapshot/mirror/HUD, **one fixture regeneration** | `cargo test -p cathedral-sim`; headless fake run shows `you_hold: c0prs copper coin ×3` and a 2-coin offer accepted |
-| **M1** | **The copper standard** | the lore sweep (bell/lantern excised as money), the price table live in the catalog | `grep -ri 'silver bell\|gold lantern' lore/` finds only history; a vendor's sheet quotes copper prices |
+| **M0** | **Kinds & stacks** | the item catalog, `Item {kind, quantity, metadata}`, merge/split, `offer_item` quantity, seed migration, snapshot/mirror/HUD, **one fixture regeneration** | `cargo test -p cathedral-sim`; headless fake run shows `you_hold: c0prs spark ×3` and a 2-coin offer accepted |
+| **M1** | **The spark standard** | the lore sweep (bell/lantern excised as money), the price table live in the catalog | `grep -ri 'silver bell\|gold lantern' lore/` finds only history; a vendor's sheet quotes spark prices |
 | **M2** | **Hunger** | the gauge, decay, `eat` satiety, computed conditions on the sheet, meal legs, seeded wallets | headless `--trace-food` census: hunger falls all morning, the city eats at High Wick; Ilse's sheet says famished, she eats, it stops saying it |
 | **M3** | **The bread round** *(the vertical slice)* | stalls bound to vendors, the Kindling restock, the queue, the silent purchase, self-percepts, the coin-clink | headless `--trace-food` logs dozens of sales at the Wickmarket on Highmarket; `tp` to the square at noon and watch the queue; ask a buyer what they paid |
-| **M4** | **The Ilse purchase** | `you_sell` price lines, quantity verbs in the prompt, the LLM seam polished | replay yesterday's session and it *ends in a sale*: the baker's loaf is 2 coppers, Ilse has 1, the fish stall's herring is 1 — she offers her copper, accepts the herring, eats, and her hunger line clears |
+| **M4** | **The Ilse purchase** | `you_sell` price lines, quantity verbs in the prompt, the LLM seam polished | replay yesterday's session and it *ends in a sale*: the baker's loaf is 2 sparks, Ilse has 1, the fish stall's herring is 1 — she offers her spark, accepts the herring, eats, and her hunger line clears |
 | **M5** | **The supply chain** *(deferred, sketched)* | bakehouse mornings, flour purchases, grain carts by the Wool Gate, Seven Lofts stock — replaces both nightly resets | *not in this plan's scope; see [04](04_the_bread_round.md) §6 for the sketch* |
 
 M0 is where the risk lives (every layer touches items; ~13 golden fixtures pin the bytes). M1 is
@@ -183,6 +184,9 @@ pure content and can run in parallel. M2–M4 stack on M0.
    one coin is the confusion we are deleting). But *"not worth a spark"* is a good idiom and the
    glossary is fond of it. Keep the idiom as an archaism, or sweep it to *"not worth a copper"*?
    The sweep list marks every site either way.
+   ANSWER: The coin is called the **spark**, not "copper coin" — the canonical name and the idiom
+   stay literal; *penny*/*a copper* survive as street slang. Swept through this folder; the ruling
+   lives in [02_the_spark_standard.md](02_the_spark_standard.md).
 3. **Day-old bread.** Unsold stock vanishes at the nightly reset. A `day_old: true` metadata flag at
    half price is one line of restock code and a nice bit of market color — but it doubles the
    catalog's effective price rows. Cheap to add later; not in the plan.
@@ -199,7 +203,7 @@ pure content and can run in parallel. M2–M4 stack on M0.
 | | |
 |---|---|
 | [01_items_and_stacks.md](01_items_and_stacks.md) | the item model: kinds, metadata, quantity, merge/split, every layer it touches |
-| [02_the_copper_standard.md](02_the_copper_standard.md) | one coin; the lore retcon sweep, prices, wallets, the nightly ledger |
+| [02_the_spark_standard.md](02_the_spark_standard.md) | one coin; the lore retcon sweep, prices, wallets, the nightly ledger |
 | [03_hunger.md](03_hunger.md) | the gauge, decay, satiety, rungs 3 & 7, meal legs, the computed condition |
 | [04_the_bread_round.md](04_the_bread_round.md) | stalls, vendor binding, the Kindling restock, the queue, the silent purchase — and the real supply chain it stands in for |
 | [05_the_llm_seam.md](05_the_llm_seam.md) | verb and sheet changes, `you_sell`, percept lines, fixtures, token cost |

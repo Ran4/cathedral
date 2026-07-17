@@ -2,7 +2,7 @@
 
 The brief asks for three things the item system cannot say today: *what kind of thing is this and
 what is it made of* (metadata), *how many* (quantity), and *what is it worth* (a price the catalog
-owns, [02](02_the_copper_standard.md)). This document is the data-model change and every layer it
+owns, [02](02_the_spark_standard.md)). This document is the data-model change and every layer it
 touches. It is the foundation milestone (M0) because everything else stands on it.
 
 ---
@@ -75,18 +75,18 @@ binary get it with no wiring. One row per kind:
 {
   "schema_version": 1,
   "kinds": [
-    { "kind": "copper_coin", "display": "copper coin", "visual_key": "copper_coin",
+    { "kind": "spark", "display": "spark", "visual_key": "spark",
       "stackable": true },
     { "kind": "loaf", "display": "loaf", "visual_key": "loaf",
       "stackable": true, "edible": { "satiety": 150 },
       "metadata": { "flour": ["rye", "wheat"] },
-      "price_coppers": { "": 2, "flour=wheat": 4 } },
+      "price_sparks": { "": 2, "flour=wheat": 4 } },
     { "kind": "herring", "display": "herring", "visual_key": "fish",
-      "stackable": true, "edible": { "satiety": 70 }, "price_coppers": { "": 1 } },
+      "stackable": true, "edible": { "satiety": 70 }, "price_sparks": { "": 1 } },
     { "kind": "smoked_eel", "display": "smoked eel", "visual_key": "fish",
-      "stackable": true, "edible": { "satiety": 100 }, "price_coppers": { "": 3 } },
+      "stackable": true, "edible": { "satiety": 100 }, "price_sparks": { "": 3 } },
     { "kind": "stew", "display": "bowl of stew", "visual_key": "stew",
-      "stackable": false, "edible": { "satiety": 170 }, "price_coppers": { "": 2 } },
+      "stackable": false, "edible": { "satiety": 170 }, "price_sparks": { "": 2 } },
     { "kind": "generic", "display": "thing", "visual_key": "generic", "stackable": true }
   ]
 }
@@ -97,7 +97,7 @@ Rules the loader enforces:
 - `metadata` declares the **only** keys a kind may carry, and the allowed values per key. An item
   with an undeclared key or value fails validation — this is what stops content (or a future
   supply-chain generator) from silently forking the stack space into unmergeable snowflakes.
-- `price_coppers` is keyed by a metadata selector (`""` = default, `"flour=wheat"` overrides).
+- `price_sparks` is keyed by a metadata selector (`""` = default, `"flour=wheat"` overrides).
   Prices live here and nowhere else — the ladder's silent purchases and the vendor's `you_sell`
   sheet line ([05](05_the_llm_seam.md) §3) quote the same number.
 - `generic` stays as the escape hatch for test worlds and one-off props (the manifest's anvil and
@@ -154,7 +154,7 @@ offer_item {"item_id": "c0prs"}                  # no quantity: the whole stack
 eater's hunger gauge ([03_hunger.md](03_hunger.md) §3). At 0 the stack is removed — the existing
 removal path, including the no-`retract_offer`-event offer cleanup (`actions.rs:865-878`), now
 fires only when the *last* unit goes. Eating a non-`edible` kind fails with a new `NotEdible` error
-("a copper coin is not food"). Today's `eat` allowed anything; nothing of value is lost.
+("a spark is not food"). Today's `eat` allowed anything; nothing of value is lost.
 
 ### 3.3 Unchanged
 
@@ -172,14 +172,14 @@ fixture — renders **byte-identically** to today:
 | n | line |
 |---|---|
 | 1 | `Sven held out a herring (id fzbn9) to you` |
-| 3 | `Ilse held out 3 copper coins (id c0prs) to you` |
-| 3 | `Ilse offered 3 copper coins to a stranger (id p003n)` |
-| 2 | `You accepted the 2 copper coins (id c0prs) Ilse offered` |
+| 3 | `Ilse held out 3 sparks (id c0prs) to you` |
+| 3 | `Ilse offered 3 sparks to a stranger (id p003n)` |
+| 2 | `You accepted the 2 sparks (id c0prs) Ilse offered` |
 | 1 | `Petronel ate a herring` |
 
 Pluralization is naive ("s" appended) with an optional `display_plural` in the catalog for the
 irregulars ("loaves"). `DomainEvent`/`EngineMessage::WorldEvent` gain `quantity: u32` so the HUD
-toast can say "You accept the 3 copper coins."
+toast can say "You accept the 3 sparks."
 
 ---
 
@@ -190,7 +190,7 @@ places"*), gaining a count suffix only when n > 1:
 
 ```
 **you_hold**:
-- c0prs copper coin ×7
+- c0prs spark ×7
 - bd7k2 rye loaf ×2
 - fz001 smoked eel
 ```
@@ -199,7 +199,7 @@ places"*), gaining a count suffix only when n > 1:
 
 ```
 **you_offer**:
-- c0prs copper coin ×3 — to id p003n: a stranger (you don't know their name)
+- c0prs spark ×3 — to id p003n: a stranger (you don't know their name)
 **offered_to_you**:
 - hr7k2 herring — from id p003n: Bertran Kern (accept with: accept_offered_item {"item_id": "hr7k2"})
 ```
@@ -231,7 +231,7 @@ dependency order:
 | layer | change |
 |---|---|
 | `item.rs` | new struct; `display_name(&catalog)`; the catalog loader + validation |
-| `seed.rs` | `ItemSeed {id, kind, quantity?, metadata?}` (name dropped, defaults: 1, empty); validation against the catalog; `assets/world/seed.json` rewritten (2 items: `fzbn9` "fish" → `kind: herring` — there is no generic fish kind; `c0prs` → `kind: copper_coin`) |
+| `seed.rs` | `ItemSeed {id, kind, quantity?, metadata?}` (name dropped, defaults: 1, empty); validation against the catalog; `assets/world/seed.json` rewritten (2 items: `fzbn9` "fish" → `kind: herring` — there is no generic fish kind; `c0prs` "copper coin" → `kind: spark`) |
 | `actions.rs` | `offer_item` quantity, split/merge in accept, `eat` decrement + `NotEdible`, `BadQuantity`; counted percept lines |
 | `offer.rs` | `quantity: u32` on `Offer` |
 | `world.rs` | invariants (§2.2); merge helper |
@@ -256,5 +256,5 @@ The fixture regeneration is the "most expensive small change" the movement plan 
 - **No containers, no weight, no encumbrance.** A stack is a number, not a basket.
 - **No item quality decay.** `day_old` bread is a decision for later (README §8.3).
 - **No multi-item trades.** A trade remains two offer/accept pairs; the quantity argument makes
-  "two coppers for a loaf" a *two-step* trade instead of a three-step one, which is enough
+  "two sparks for a loaf" a *two-step* trade instead of a three-step one, which is enough
   (the trust question is discussed in [05](05_the_llm_seam.md) §6).
