@@ -364,9 +364,9 @@ Do §5 first; every item below multiplies it.
   be validated against `assets/world/navigation.json` reachability like fixtures are (plan.rs test
   `distributed_population_spawns_clear_city_buildings_walls_and_fixtures` is the pattern to copy).
 
-## 8. What actually changed tonight (experiment log)
+## 8. What has already changed (experiment log)
 
-Everything below is implemented and committed on the **`more-verticality`** branch, verified with
+Everything below is implemented, verified with
 in-game screenshots via the (new) `tp` drive action, and green on the full test suite
 (195 passed). Screenshot evidence lives in `logs/session_207…214/screenshots/` (`exp1_*` … `exp6_*`,
 `gold_*`); each batch reused the same camera poses so the befores/afters line up. My runs used

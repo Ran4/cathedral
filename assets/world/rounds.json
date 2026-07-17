@@ -1,6 +1,12 @@
 {
  "schema_version": 1,
  "generated_by": "hand-authored (features/movement/04_the_round.md)",
+ "lamp_keepers": {
+  "dtbvl": ["The Wickmarket", "The Gradine"],
+  "drhcr": ["Coswald's Yard"],
+  "p004m": ["The Tallage"],
+  "p004l": ["Maren's Green"]
+ },
  "_comment": "The daily round (movement M4). `workplaces` maps an occupation to candidate nav places (the sim binds the nearest to home). `archetypes` are the office-pegged leg templates; `occupations` assigns each of the 65 trades one. `routes` overrides the ~20 authored majors by 5-char id. A leg's `at` is `home`, `workplace`, or a nav place display name / site id; `doing` is work|trade|sleep|pray|idle|draw_water|stand; `from` is the office the leg begins at; `only_on` restricts it to weekdays (market days move the crowd). `curfew_exempt` keeps night trades in the street at the Snuffing. The two market-trader archetypes split the crowd across the four market squares (lore/core_lore/trade_and_daily_life.md: Highmarket chiefly at the Wickmarket AND Coswald's Yard, Lowmarket at the Tallage AND Maren's Green): `market_trader` works the Wickmarket/Tallage pair (the weighed and chartered goods — candles, bread, cloth, salt, spice, provisions), `market_trader_green` the Coswald's Yard/Maren's Green pair (the raw provisions and open stalls — fish off the moorings, meat out of the Shambles, the general sellers). The split keeps every trade based at the Wickmarket or the Tallage on its own square's pair, so a market day always raises a square above its ordinary working crowd instead of draining it. Bellday closes the generic trades and fills the nave (04_the_round.md §5): the day_worker and market-trader templates lie in at the Kindling and pray at The Lanthorn from Dayspring through the Waning; the wharf trades keep their before-dawn work but join the nave at Dayspring (Wyn Alder's canon route). The night trades (tavern, watch, lamplighter), the clerics (already at prayer) and the anchoress are the exceptions.",
 
  "workplaces": {

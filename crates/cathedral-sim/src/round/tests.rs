@@ -84,7 +84,7 @@ fn base_world() -> World {
 
 /// One engine-style beat: walk the movers a slice, then run the round.
 fn beat(round: &mut Round, world: &mut World, nav: &NavData, clock: &WorldClock, now: f64, dt: f64) {
-    world.step_movement(dt, nav);
+    world.step_movement(dt, nav, None);
     tick(round, world, nav, clock, now, &player(), &BTreeSet::new());
 }
 
@@ -649,6 +649,9 @@ fn a_night_trade_is_not_sent_home_by_curfew() {
         Decision::Travel(_) | Decision::Stay | Decision::Wander(_) => {}
         Decision::ApproachWell => panic!("a tavern worker draws no water here"),
         Decision::TravelIntent(_) => panic!("no go_to intent was issued"),
+        Decision::WalkToLamp(_) | Decision::LightLamp(_) => {
+            panic!("a tavern worker carries no taper")
+        }
     }
     // And their active Snuffing leg is a work post (the Hungry Ox / Bellstand).
     let leg = active_leg(&round.people[&id].legs, Office::Snuffing, Weekday::Bellday)
@@ -746,7 +749,7 @@ fn curfew_preempts_a_journey_already_under_way() {
 
     // A few strides along: genuinely mid-journey, nowhere near either anchor.
     for _ in 0..10 {
-        world.step_movement(0.2, &nav);
+        world.step_movement(0.2, &nav, None);
     }
     assert!(world.characters[&id].is_walking(), "still on the way to the lodge");
     assert!(world.characters[&id].position_m().distance(lodge) > ROUND_ARRIVE_RADIUS_M);
@@ -1290,7 +1293,7 @@ fn beats_until(
     let mut now = start;
     for _ in 0..max_beats {
         now += 0.5;
-        world.step_movement(0.5, nav);
+        world.step_movement(0.5, nav, None);
         nudges.extend(tick_collect(round, world, nav, clock, now));
         if done(world) {
             return (now, nudges);
@@ -1427,7 +1430,7 @@ fn a_second_go_to_replaces_and_stop_halts_the_walk() {
     let mut now = 0.0;
     for _ in 0..20 {
         now += 0.5;
-        world.step_movement(0.5, &nav);
+        world.step_movement(0.5, &nav, None);
         tick_collect(&mut round, &mut world, &nav, &clock, now);
         if world.characters[&id].is_walking() {
             break;
@@ -1638,7 +1641,7 @@ fn a_conversation_does_not_pin_a_self_willed_errand() {
     while !world.characters[&id].is_walking() {
         now += 0.5;
         assert!(now <= resumed_by, "the interrupted errand never resumed");
-        world.step_movement(0.5, &nav);
+        world.step_movement(0.5, &nav, None);
         tick(&mut round, &mut world, &nav, &clock, now, &player(), &warm(&id));
     }
 }
@@ -1805,4 +1808,169 @@ fn errand_debug_reduces_the_phase_the_well_and_the_walk() {
     let travelling = round.errand_debug(&ana).expect("enrolled");
     assert_eq!(travelling.walk_target, Some(Vec3::new(9.0, WALK_Y, 9.0)));
     assert!(travelling.for_intent);
+}
+
+// ----------------------------------------------------------------- M7: lamps
+
+/// The four authored keeper ids and a spawn near each beat, so the test night
+/// is spent lighting rather than crossing the fortified maze (adjacent squares
+/// are 1.3–2 km apart on foot — the reason the beats exist at all).
+const KEEPERS: &[(&str, f64, f64)] = &[
+    ("dtbvl", -20.0, 356.0),  // Tobin Vell — the Wickmarket + the Gradine
+    ("drhcr", 255.0, 160.0),  // Rohese Crake — Coswald's Yard
+    ("p004m", -300.0, 86.0),  // Jos Rusk — the Tallage
+    ("p004l", -300.0, -360.0), // Ede Pell — Maren's Green
+];
+
+/// The whole lamplighter slice on the committed graph: the seed stands the
+/// posts up dark, each square on an authored keeper's beat; the dusk beats
+/// light every post but each square's Belwyn's lamp, each act remembered in
+/// the keeper's own words; and the Kindling snuffs the set at first light.
+#[test]
+fn the_lamplighters_dusk_beats_light_the_squares_and_dawn_snuffs_them() {
+    let nav = nav();
+    let mut world = base_world();
+    for &(id, x, z) in KEEPERS {
+        // Minor, so the well-keeper draft (ambients only) can never pin one
+        // of them to a curb.
+        world.add_character(person(
+            id,
+            Vec3::new(x, WALK_Y, z),
+            Some("lamplighter"),
+            Significance::Minor,
+        ));
+    }
+    let mut round = Round::new();
+    let clock = clock_at(Office::Lamplight);
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    let total = round.lamps().len();
+    assert!(
+        total >= 15,
+        "five squares should carry a healthy ring of posts, got {total}"
+    );
+    assert!(round.lamps().iter().all(|lamp| !lamp.lit), "the seed is dark");
+    assert!(
+        round.lamps().iter().all(|lamp| lamp.keeper.is_some()),
+        "every square is on an authored beat"
+    );
+    let squares: BTreeSet<String> = round.lamps().iter().map(|lamp| lamp.square.clone()).collect();
+    assert_eq!(squares.len(), 5, "all five squares carry posts");
+    let revision_dark = round.lamp_revision();
+    assert!(revision_dark >= 1, "the dark seed itself is a publishable revision");
+
+    // The dusk beats: every keeper works their own square(s), so the whole
+    // city lights well inside the night.
+    let mut now = 0.0;
+    let dt = 0.5;
+    let goal = total - squares.len(); // one Belwyn's lamp per square stays dark
+    let lit = loop {
+        beat(&mut round, &mut world, &nav, &clock, now, dt);
+        now += dt;
+        let lit = round.lamps().iter().filter(|lamp| lamp.lit).count();
+        if lit == goal || clock.at(now).office == Office::Kindling {
+            break lit;
+        }
+    };
+    assert_eq!(
+        lit, goal,
+        "every lamp but each square's Belwyn's burns after the beats (t={now:.0}s)"
+    );
+    for square in &squares {
+        let unlit: Vec<usize> = round
+            .lamps()
+            .iter()
+            .enumerate()
+            .filter(|(_, lamp)| lamp.square == *square && !lamp.lit)
+            .map(|(index, _)| index)
+            .collect();
+        assert_eq!(unlit.len(), 1, "{square} keeps exactly one dark lamp — Belwyn's");
+    }
+    assert!(round.lamp_revision() > revision_dark);
+    // Each keeper remembers the act in their own words, so the player who
+    // stops one can ask what they are doing (the M3 drawer's pattern).
+    for &(id, ..) in KEEPERS {
+        assert!(
+            world.characters[&ActorId::from_raw(id)]
+                .state
+                .recent_history
+                .iter()
+                .any(|line| line.starts_with("You light the lamp at ")),
+            "{id} remembers lighting"
+        );
+    }
+
+    // First light: the Kindling snuffs the whole set at once.
+    while clock.at(now).office != Office::Kindling {
+        now += dt;
+    }
+    beat(&mut round, &mut world, &nav, &clock, now, dt);
+    assert!(
+        round.lamps().iter().all(|lamp| !lamp.lit),
+        "the Kindling snuffs every lamp"
+    );
+}
+
+/// Delay a lamplighter with conversation and their whole quarter stays dark
+/// longer — the acceptance line of `features/50_cool_suggestions.md` #21. The
+/// lamp rung is deferrable, so a warm exchange freezes the beat exactly where
+/// it stands. Only Tobin is seeded here, so the frozen count is citywide —
+/// which also proves a square whose keeper is missing simply stays dark.
+#[test]
+fn a_conversation_holds_the_taper() {
+    let nav = nav();
+    let id = ActorId::from_raw("dtbvl");
+    let mut world = base_world();
+    world.add_character(person(
+        "dtbvl",
+        Vec3::new(-20.0, WALK_Y, 356.0),
+        Some("lamplighter"),
+        Significance::Minor,
+    ));
+    let mut round = Round::new();
+    let clock = clock_at(Office::Lamplight);
+    round.seed(&mut world, &nav, 0.0, &clock);
+    // His beat is the Wickmarket + the Gradine: 8 posts, minus one Belwyn's
+    // per square = 6 to light tonight.
+    let beat_size = round
+        .lamps()
+        .iter()
+        .filter(|lamp| lamp.keeper.as_ref() == Some(&id))
+        .count();
+    assert_eq!(beat_size, 8, "Tobin keeps the Wickmarket and the Gradine");
+
+    // Let the beat begin: at least one post alight, the night still young.
+    let mut now = 0.0;
+    let dt = 0.5;
+    while round.lamps().iter().filter(|lamp| lamp.lit).count() < 2 {
+        beat(&mut round, &mut world, &nav, &clock, now, dt);
+        now += dt;
+        assert!(now < 600.0, "the beat never began");
+    }
+    let lit_when_stopped = round.lamps().iter().filter(|lamp| lamp.lit).count();
+    assert!(lit_when_stopped < 6, "the beat is still under way");
+
+    // Two real minutes of talk: the deferrable rung waits, no lamp is lit.
+    for _ in 0..240 {
+        world.step_movement(dt, &nav, None);
+        tick(&mut round, &mut world, &nav, &clock, now, &player(), &warm(&id));
+        now += dt;
+    }
+    assert_eq!(
+        round.lamps().iter().filter(|lamp| lamp.lit).count(),
+        lit_when_stopped,
+        "a held keeper lights nothing — the quarter stays dark longer"
+    );
+
+    // The exchange lapses; the beat resumes on its own.
+    let mut resumed = false;
+    for _ in 0..480 {
+        beat(&mut round, &mut world, &nav, &clock, now, dt);
+        now += dt;
+        if round.lamps().iter().filter(|lamp| lamp.lit).count() > lit_when_stopped {
+            resumed = true;
+            break;
+        }
+    }
+    assert!(resumed, "the beat resumes once the talk goes cold");
 }

@@ -469,6 +469,7 @@ fn movement_advances_on_the_hot_channel_without_touching_the_revision() {
                 b: "there".into(),
                 heading_to_b: true,
             }),
+            choke_wait: 0.0,
         });
     }
 

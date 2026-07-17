@@ -431,7 +431,7 @@ player's reply is ever slower because a Major was reflecting, the lane is wrong.
 
 ---
 
-## M7 — Crowds and gait
+## M7 — Crowds and gait  ✅ *implemented (the crowd; the gait is still data, not pixels)*
 
 **Ships.** Lane offsets (or you get a conga line). Local avoidance on stage..
 The Needle's one-person claim. The lamplighter's dusk round. `VisibilityRange`. The shadow cascade.
@@ -440,6 +440,81 @@ The Needle's one-person claim. The lamplighter's dusk round. `VisibilityRange`. 
 
 > One dedicated smart actor **walks a dusk route** through the five squares lighting lanterns one by
 > one [...] **delay him with conversation and a whole quarter stays dark longer.**
+
+**Status — done, with one loud caveat and one honest departure.**
+
+**The caveat first: the visual gait did not ship.** `speed` and `gait_phase` ride the hot channel
+into `MovementInbox` exactly as [06](06_engineering.md) §5 specified — accumulated in the sim,
+continuous across legs — and `drive_npc_bodies` deliberately does not read them: no bob, no swing,
+no stride. Bodies still glide. The data is at hand the day someone writes the animation
+(`src/smart_actors/actors.rs` says so at the reader's eye level); "Crowds and gait" shipped the
+crowd.
+
+**Lane offsets** (`NavData::offset_route`, `crates/cathedral-sim/src/nav/mod.rs`). Every walk —
+ladder errands, `go_to` intents, patrol refills — is shifted at route-set time into a stable lane:
+keep-right of the crown by 0.4 of the usable corridor, jittered ±0.3 per actor off
+`hash01("lane", id, 0)` (`world::lane_fraction`), so opposing streams pass right shoulder to right
+shoulder and no two walkers hold the same line. The budget at each vertex is the *traversed edge's*
+half-width (not the node's widest — that overstates every alley mouth) minus the 0.35 m agent
+radius; every shifted vertex is validated against the walkable bitset (halving until it lands on
+ground), and the final vertex stays exact so curbs and doorsteps keep point-precise arrivals.
+Zero per-tick cost — the polyline is shifted once.
+
+**Local avoidance, on stage only** (`World::step_movement`, which now takes the stage centre —
+the engine passes the player's position, so "near the player" stays the one answer of
+[06](06_engineering.md) §4). Movers within the 32 m stage radius get a separation push away from
+the ≤ 6 neighbours inside a 1.2 m personal bubble, computed against start-of-tick positions
+(order-independent, deterministic), biased to the walker's *own* right on a head-on meeting so
+both streams break the same way, capped at 0.9 m/s and clamped to the walkable bitset. Off stage:
+nothing, by design — nobody can tell at 200 m, and the tests prove both halves (`world.rs`:
+`on_stage_movers_separate_where_off_stage_they_pass_through`).
+
+**The Needle's one-person claim** (`World::needle_claim`). A 14 m claim circle around the graph's
+"The Needle" node (all four edges 0.6 m half-width — the city's minimum): stepping *into* it needs
+the claim, or the holder walking the same way (followers file in behind). An opposing walker stands
+at the mouth, facing the alley, and after 18 s of waiting takes Cinder Row instead —
+`route_nodes_avoiding` re-routes around the choke node, or keeps waiting when the goal *is* the
+choke. Deadlock-free by construction: the claim releases the moment its holder stops walking or
+leaves the circle, so a conversation inside the alley blocks nobody permanently. Tested end to end
+on a diamond graph, including the timeout reroute (`a_long_wait_takes_the_long_way_round`).
+
+**The lamplighters' dusk beats — the honest departure.** Feature #21 said *one* dedicated actor
+walks all five squares; the baked street graph says no: measured at bring-up, the Gradine to
+Coswald's Yard is **1,360 m** on foot (281 m as the crow flies) and Coswald's to the Tallage
+2,037 m — a five-square circuit is ~5 km against a ~27-minute night. So the round became **beats**,
+authored in `rounds.json: lamp_keepers`, and the cast already had the people: Tobin Vell (`dtbvl`,
+whose sheet carries his father's taper-can) keeps the Wickmarket *and* the Gradine; Rohese Crake,
+Jos Rusk and Ede Pell take Coswald's Yard, the Tallage and Maren's Green. Twenty lamp posts (a ring
+of four per square, probed onto pavement from the nav graph) live in the sim (`round.rs::Lamp`);
+at the Lamplight bell each keeper walks nearest-next along their beat — the choice *committed*
+until lit, because re-running "nearest unlit" from a moving body flips between far posts and walks
+the night away (found the hard way) — lights each post (`remember_percept`, the M3 drawer's
+pattern, so you can ask), and **each square keeps one dark lamp: Belwyn's, rolled per square per
+night**, which is canon (`04_routes_and_sightlines.md`). The rung sits between the errand and the
+round and is *deferrable* — **delay any lamplighter with conversation and their whole quarter
+stays dark longer**, which is the acceptance line, now per quarter. The Kindling snuffs the set at
+once. The host mirrors it all from a new hot-channel message (`EngineMessage::Lamps`, republished
+only on change) into lantern props with emissive heads and shadow-off point lights
+(`src/smart_actors/lamps.rs`); `cathedral-headless` prints `[lamps] N/20 lit` per change.
+
+**`VisibilityRange` and the shadow cascade.** The three mesh children of every actor (body, head,
+nose — the component is per-mesh-entity, not inherited) dither-fade over 120–150 m. Bevy's light
+views respect visibility ranges, so a faded NPC also leaves the sun's shadow pass — which is the
+perf item's real goal — while the cascade keeps the 14 m/320 m tuning the graphics pass chose
+deliberately two commits ago (`its_at_least_2011_now_baby.md` §8); shortening it to 150 m would
+have regressed the raking building shadows for no additional win.
+
+**How you know:**
+
+```sh
+cargo test -p cathedral-sim            # incl. lanes/avoidance/Needle (world.rs) + lamps (round/tests.rs)
+# Watch a night: the set publishes dark, climbs lamp by lamp, and the Kindling snuffs it.
+cargo run -p cathedral-backends --bin cathedral-headless -- \
+    --fake --start-office lamplight --seconds-per-day 600 --watch-clock 1.2 | grep lamps
+# In game: set clock.start_office: "lamplight" in config.ron, stand over the Wickmarket, watch
+# Tobin light his beat — then go talk to him and watch the far corner stay dark.
+CATHEDRAL_DRIVE='wait-online; tp -20 16 428 0 -22; shot dusk_t0; sleep 90; shot dusk_t90; quit' cargo run
+```
 
 ---
 

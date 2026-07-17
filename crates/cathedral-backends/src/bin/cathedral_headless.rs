@@ -613,6 +613,12 @@ impl Runner {
                     );
                 }
             }
+            // The lamp set (M7): one line per change — the dark seed, each
+            // lighting on the dusk round, the dawn snuff.
+            EngineMessage::Lamps { lamps } => {
+                let lit = lamps.iter().filter(|lamp| lamp.lit).count();
+                println!("[lamps] {lit}/{} lit", lamps.len());
+            }
             // A keeper working a curb: one line per draw, so a queue reads as a
             // rhythm on the transcript stream.
             EngineMessage::Sound {

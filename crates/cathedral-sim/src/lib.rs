@@ -183,6 +183,30 @@ pub const PLACE_ARRIVE_RADIUS_M: f64 = 6.0;
 /// works.
 pub const PERSON_ARRIVE_RADIUS_M: f64 = 2.0;
 
+// --- Crowds (M7): lane offsets, on-stage avoidance, the Needle's claim
+// (`features/movement/02_navigation.md` §5, `07_milestones.md` M7).
+/// The keep-right centre of the lane band: a walker's stable lateral offset is
+/// this fraction of the usable corridor half-width, to their right.
+pub const LANE_KEEP_RIGHT_FRACTION: f64 = 0.4;
+/// The per-actor jitter around the keep-right centre (±), hashed off the actor
+/// id — never an RNG — so the band spreads without ever crossing the crown.
+pub const LANE_JITTER_FRACTION: f64 = 0.3;
+/// Separation steering considers a neighbour once inside this bubble.
+pub const AVOID_PERSONAL_RADIUS_M: f64 = 1.2;
+/// The strongest sideways push separation may add, in m/s — under walking
+/// speed, so avoidance bends a path and never launches anyone.
+pub const AVOID_PUSH_MPS: f64 = 0.9;
+/// At most this many neighbours contribute to one mover's separation push
+/// (`features/movement/02_navigation.md` §5: "the ≤ 6 neighbours").
+pub const AVOID_MAX_NEIGHBOURS: usize = 6;
+/// The one-person choke around the Needle's node: a claim circle, entered only
+/// with the claim (or behind its holder). Covers the crossing and the mouths of
+/// its four narrow edges.
+pub const NEEDLE_CLAIM_RADIUS_M: f64 = 14.0;
+/// Standing at an occupied choke's mouth this long sends the mover the long way
+/// round instead ("you wait, or you take Cinder Row").
+pub const NEEDLE_REROUTE_SECONDS: f64 = 18.0;
+
 /// Rung 11 — the social pull reaches a known, settled neighbour within this.
 pub const SOCIAL_PULL_RADIUS_M: f64 = 8.0;
 /// Rung 12 — an idle actor wanders no further than this from its home/post.

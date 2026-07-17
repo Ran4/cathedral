@@ -26,10 +26,7 @@
 //! pure and deterministic: every "random" choice is a hash of
 //! `(salt, actor_id, epoch)`, never an RNG (the `attention.rs` curiosity idiom).
 
-use std::{
-    collections::{BTreeMap, BTreeSet, HashMap, hash_map::DefaultHasher},
-    hash::{Hash, Hasher},
-};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use serde::Deserialize;
 
@@ -48,7 +45,7 @@ use crate::{
     nav::{NavData, WALK_Y},
     perception::identify_ids,
     places::PlaceRegistry,
-    world::{World, planar_close},
+    world::{World, hash01, lane_fraction, planar_close},
 };
 
 /// Occupations that fetch water with a **household** vessel — chiefly the
@@ -115,6 +112,23 @@ const SOURCES: &[(&str, &str)] = &[
 /// data, compiled in, not read at runtime: the sim keeps its no-IO decree.
 const ROUNDS_JSON: &str = include_str!("../../../assets/world/rounds.json");
 
+/// The five town squares whose lamps the lamplighter's dusk round lights
+/// (M7; `features/50_cool_suggestions.md` #21). The round itself visits them
+/// nearest-next from wherever he stands, so this order only seeds the list.
+const LAMP_SQUARES: &[&str] = &[
+    "The Wickmarket",
+    "Coswald's Yard",
+    "The Tallage",
+    "Maren's Green",
+    "The Gradine",
+];
+/// Posts per square, rung around the square's interior node.
+const LAMPS_PER_SQUARE: usize = 4;
+/// The ring the posts stand on, probed inward until each lands on pavement.
+const LAMP_RING_RADIUS_M: f64 = 11.0;
+/// Close enough to reach the wick with the taper.
+const LAMP_LIGHT_RADIUS_M: f64 = 2.5;
+
 /// What an actor means to do on arrival — the pathfind-then-act bridge lifted
 /// from seagame's `targetState` (`features/movement/02_navigation.md` §4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -138,6 +152,14 @@ struct RoundsDoc {
     archetypes: HashMap<String, TemplateSpec>,
     occupations: HashMap<String, String>,
     routes: HashMap<String, RouteSpec>,
+    /// The lamplighters' beats (M7): 5-char actor id → the squares whose lamps
+    /// that keeper lights at dusk. Beats, not one citywide round, because the
+    /// street graph is a fortified maze — adjacent squares are 1.3–2 km apart
+    /// on foot, and a single walker cannot cover five of them in one night. A
+    /// square no authored keeper claims (or whose keeper is missing from the
+    /// cast) simply stays dark.
+    #[serde(default)]
+    lamp_keepers: HashMap<String, Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -191,6 +213,18 @@ impl<'a> PlaceResolver<'a> {
         }
         self.site_by_key.get(name).map(|&node| self.nav.node_point(node))
     }
+
+    /// [`resolve`], but preferring the open site's interior node over the street
+    /// place — the point nearest the square's centre, which is where a lamp
+    /// ring should stand.
+    ///
+    /// [`resolve`]: PlaceResolver::resolve
+    fn resolve_centre(&self, name: &str) -> Option<Vec3> {
+        if let Some(&node) = self.site_by_key.get(name) {
+            return Some(self.nav.node_point(node));
+        }
+        self.resolve(name)
+    }
 }
 
 // --------------------------------------------------------------------------- //
@@ -216,6 +250,22 @@ pub struct WaterSource {
     serving: Option<(ActorId, f64)>,
     /// Next real-clock time the keeper works the gear while the source is busy.
     keeper_next_sound: f64,
+}
+
+/// One street lamp in a town square (M7). The sim owns the set — positions are
+/// derived from the nav graph at seed, the lit state from the lamplighters'
+/// dusk beats — and the host mirrors it into lantern props and point lights via
+/// `EngineMessage::Lamps`. Nobody lights a lamp but its keeper.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Lamp {
+    /// The square's display name, e.g. `"The Wickmarket"`.
+    pub square: String,
+    /// Where the post stands, on the square's pavement.
+    pub position: Vec3,
+    pub lit: bool,
+    /// The lamplighter whose beat this square is, or `None` for a square with
+    /// no keeper in the cast — its lamps then stay dark.
+    pub keeper: Option<ActorId>,
 }
 
 /// One leg of a resolved daily round: the office it begins at, where it puts your
@@ -365,6 +415,25 @@ pub struct Round {
     /// up with the debug time-scale), not by wall-clock.
     last_game_days: f64,
     seeded: bool,
+    /// The squares' street lamps (M7), seeded from the nav graph.
+    lamps: Vec<Lamp>,
+    /// Bumped on any change to the lamp set (including the seed), so the engine
+    /// republishes `EngineMessage::Lamps` exactly when something changed.
+    lamp_revision: u64,
+    /// The game day whose dusk round is under way (stamped at the Lamplight
+    /// bell), so each night picks its Belwyn's lamps once.
+    lamp_night_day: Option<i64>,
+    /// The post each keeper is committed to right now. Chosen nearest-first but
+    /// then **held until lit**: re-running "nearest unlit" from a moving body
+    /// flips between far posts mid-journey and walks the whole night away
+    /// (found in the M7 bring-up), so the greedy choice is made standing, once.
+    lamp_targets: BTreeMap<ActorId, usize>,
+    /// Tonight's deliberately dark lamp in each square — Belwyn's, left unlit
+    /// by rote at a different post each night, one per square
+    /// (`lore/places/04_routes_and_sightlines.md`: "Belwyn's lamp rotates
+    /// among the lamps in each square"; Tobin Vell's own sheet carries the
+    /// ritual). Keyed square name → global lamp index.
+    belwyn: BTreeMap<String, usize>,
 }
 
 impl Round {
@@ -396,6 +465,16 @@ impl Round {
     /// The number of enrolled townsfolk, for diagnostics and tests.
     pub fn enrolled(&self) -> usize {
         self.people.len()
+    }
+
+    /// The squares' street lamps (M7), for the engine's `Lamps` channel and tests.
+    pub fn lamps(&self) -> &[Lamp] {
+        &self.lamps
+    }
+
+    /// Bumped on any lamp change; the engine republishes when it moves.
+    pub fn lamp_revision(&self) -> u64 {
+        self.lamp_revision
     }
 
     /// The errand view of one enrolled townsperson, for the developer character
@@ -605,6 +684,68 @@ impl Round {
                     registry.add_home(id, world.characters[id].name(), point);
                 }
             }
+        }
+
+        // The lamps of the five squares (M7; `features/50_cool_suggestions.md`
+        // #21): a ring of posts on each square's pavement, all dark until its
+        // keeper's dusk beat. The beats are authored in `rounds.json:
+        // lamp_keepers` — one keeper per square, several squares only for
+        // Tobin's central pair — because the fortified street maze puts
+        // adjacent squares 1.3–2 km apart on foot: one walker cannot light
+        // five squares in a night, and four lamplighters are already in the
+        // cast.
+        let square_keeper: HashMap<&str, ActorId> = content
+            .as_ref()
+            .map(|(rounds, _)| {
+                let mut map = HashMap::new();
+                for (keeper, squares) in &rounds.lamp_keepers {
+                    let Some(id) = townsfolk.iter().find(|id| id.as_str() == keeper) else {
+                        diagnostics.push(format!(
+                            "[smart actors] round: lamp keeper {keeper:?} is not in the cast; their squares stay dark"
+                        ));
+                        continue;
+                    };
+                    for square in squares {
+                        map.insert(square.as_str(), id.clone());
+                    }
+                }
+                map
+            })
+            .unwrap_or_default();
+        for &name in LAMP_SQUARES {
+            match resolver.resolve_centre(name) {
+                Some(centre) => {
+                    let keeper = square_keeper.get(name).cloned();
+                    for position in lamp_ring(nav, centre) {
+                        self.lamps.push(Lamp {
+                            square: name.to_string(),
+                            position,
+                            lit: false,
+                            keeper: keeper.clone(),
+                        });
+                    }
+                }
+                None => diagnostics.push(format!(
+                    "[smart actors] round: lamp square {name:?} is missing from the graph"
+                )),
+            }
+        }
+        if !self.lamps.is_empty() {
+            // Revision 1: the first poll publishes the (dark) set, so the host
+            // can stand the posts up before dusk.
+            self.lamp_revision = 1;
+            let kept: BTreeSet<&str> = self
+                .lamps
+                .iter()
+                .filter(|lamp| lamp.keeper.is_some())
+                .map(|lamp| lamp.square.as_str())
+                .collect();
+            diagnostics.push(format!(
+                "[smart actors] round: {} lamps across {} squares, {} squares kept",
+                self.lamps.len(),
+                LAMP_SQUARES.len(),
+                kept.len(),
+            ));
         }
 
         let mut enrolled = 0usize;
@@ -910,11 +1051,116 @@ pub fn tick(
         return nudges;
     }
     decay_thirst(round, world, clock, now);
+    tick_lamps(round, clock, now);
     resolve_arrivals(round, world);
     tick_intents(round, world, nav, now, &mut nudges);
     service_sources(round, world, nav, clock, now, player_id, in_conversation);
     run_ladder(round, world, nav, clock, now, in_conversation, &mut nudges);
     nudges
+}
+
+/// The offices a lit lamp belongs to: dusk through the small hours. The
+/// Kindling snuffs the whole set at once — first light does the honest work,
+/// and nobody is on the street to watch a snuffing round at 6 a.m.
+fn lamp_window(office: Office) -> bool {
+    matches!(office, Office::Lamplight | Office::Snuffing | Office::Watch)
+}
+
+/// The lamp housekeeping (M7): stamp a fresh dusk — choosing tonight's
+/// Belwyn's lamp in each kept square, the one left dark by rote — and snuff
+/// everything at first light. The *lighting* is each keeper's own ladder rung;
+/// nothing here flips a lamp on.
+fn tick_lamps(round: &mut Round, clock: &WorldClock, now: f64) {
+    if round.lamps.is_empty() {
+        return;
+    }
+    let time = clock.at(now);
+    if !lamp_window(time.office) {
+        round.lamp_targets.clear();
+        if round.lamps.iter().any(|lamp| lamp.lit) {
+            for lamp in &mut round.lamps {
+                lamp.lit = false;
+            }
+            round.lamp_revision += 1;
+        }
+        return;
+    }
+    // A fresh dusk (the Watch after midnight continues the *previous* day's
+    // night, so only the Lamplight bell opens one; a run started mid-night
+    // stays dark until its first dusk).
+    if time.office == Office::Lamplight && round.lamp_night_day != Some(time.day) {
+        round.lamp_night_day = Some(time.day);
+        round.lamp_targets.clear();
+        round.belwyn.clear();
+        // One Belwyn's lamp per kept square, rolled off the keeper and the day.
+        let mut posts: BTreeMap<String, (ActorId, Vec<usize>)> = BTreeMap::new();
+        for (index, lamp) in round.lamps.iter().enumerate() {
+            if let Some(keeper) = &lamp.keeper {
+                posts
+                    .entry(lamp.square.clone())
+                    .or_insert_with(|| (keeper.clone(), Vec::new()))
+                    .1
+                    .push(index);
+            }
+        }
+        for (square, (keeper, indices)) in posts {
+            let roll = hash01("belwyns_lamp", &keeper, time.day as u64 ^ stable_hash(&square));
+            let pick = indices[(roll * indices.len() as f64) as usize % indices.len()];
+            round.belwyn.insert(square, pick);
+        }
+    }
+}
+
+/// A small stable hash of a square name, folded into the Belwyn roll so two
+/// squares on one keeper's beat pick independently.
+fn stable_hash(text: &str) -> u64 {
+    text.bytes().fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+    })
+}
+
+/// The nearest unlit lamp on `id`'s beat, skipping each square's Belwyn's
+/// lamp. `None` once the beat is done (or for anyone who keeps no lamps).
+fn next_unlit_lamp(round: &Round, id: &ActorId, position: Vec3) -> Option<usize> {
+    let mut best: Option<(f64, usize)> = None;
+    for (index, lamp) in round.lamps.iter().enumerate() {
+        if lamp.lit
+            || lamp.keeper.as_ref() != Some(id)
+            || round.belwyn.get(&lamp.square) == Some(&index)
+        {
+            continue;
+        }
+        let distance = position.distance(lamp.position);
+        if best.is_none_or(|(nearest, _)| distance < nearest) {
+            best = Some((distance, index));
+        }
+    }
+    best.map(|(_, index)| index)
+}
+
+/// A ring of lamp posts around a square's interior node, each probed inward
+/// until it stands on pavement (an off-pavement angle is simply skipped, and a
+/// collapsed duplicate dropped).
+fn lamp_ring(nav: &NavData, centre: Vec3) -> Vec<Vec3> {
+    let mut posts: Vec<Vec3> = Vec::with_capacity(LAMPS_PER_SQUARE);
+    for k in 0..LAMPS_PER_SQUARE {
+        let angle = (k as f64 + 0.5) / LAMPS_PER_SQUARE as f64 * std::f64::consts::TAU;
+        let (sin, cos) = angle.sin_cos();
+        for step in 0..=8 {
+            let radius = LAMP_RING_RADIUS_M - step as f64 * 1.25;
+            if radius <= 0.0 {
+                break;
+            }
+            let candidate = Vec3::new(centre.x + cos * radius, WALK_Y, centre.z + sin * radius);
+            if nav.is_walkable(candidate.x, candidate.z)
+                && !posts.iter().any(|post| planar_close(*post, candidate))
+            {
+                posts.push(candidate);
+                break;
+            }
+        }
+    }
+    posts
 }
 
 /// Stop `id`'s round errand where they stand: they have just exchanged a line
@@ -1111,7 +1357,7 @@ fn tick_intents(
         };
         if lay
             && position.distance(target) > arrive_radius
-            && let Some(path) = route_path_to_point(nav, position, target)
+            && let Some(path) = route_path_to_point(nav, &id, position, target)
         {
             set_route(world, &id, path);
             let person = round.people.get_mut(&id).expect("person exists");
@@ -1312,7 +1558,7 @@ fn service_sources(
             .map(|person| delivery_point(person, time.office, time.weekday));
         let position = world.characters.get(&drawer).map(Character::position_m);
         if let (Some(target), Some(position)) = (target, position) {
-            match route_path(nav, position, target) {
+            match route_path(nav, &drawer, position, target) {
                 Some(path) => set_route(world, &drawer, path),
                 None => {
                     world.characters.get_mut(&drawer).expect("drawer exists").state.movement = None;
@@ -1509,7 +1755,8 @@ fn run_ladder(
                 Decision::Travel(target) | Decision::TravelIntent(target) => {
                     under_way != Some(*target)
                 }
-                Decision::ApproachWell => true,
+                Decision::WalkToLamp(index) => under_way != Some(round.lamps[*index].position),
+                Decision::ApproachWell | Decision::LightLamp(_) => true,
                 Decision::Wander(_) | Decision::Stay => false,
             };
             if !diverts {
@@ -1531,6 +1778,14 @@ enum Decision {
     /// Rung 8: walk toward the `go_to` intent's target (M5) — the same walk as
     /// [`Decision::Travel`], but flagged so a `stop {}` halts exactly it.
     TravelIntent(Vec3),
+    /// The lamplighter's rung (M7), walking: to the next unlit post. Lamps
+    /// stand off the graph on the square's pavement, so this walk appends the
+    /// final off-graph stride exactly as an intent walk does — a plain
+    /// [`Decision::Travel`] would strand the taper at the nearest node.
+    WalkToLamp(usize),
+    /// The lamplighter's rung (M7): standing at an unlit post with the taper —
+    /// light it.
+    LightLamp(usize),
     /// Rungs 11 & 12: drift toward a friend, or mill about near home.
     Wander(Vec3),
     /// Stand where you are this cadence.
@@ -1618,6 +1873,37 @@ fn decide(
         return (Decision::Stay, None);
     }
 
+    // Rung 8½ — the lamplighter's dusk beat (M7; `features/50_cool_suggestions.md`
+    // #21): while unlit posts remain on this keeper's beat in the lighting
+    // window, they walk nearest-next and light them one by one. Above the
+    // round (the archetype's post can wait), below the needs — and
+    // *deferrable*, so a conversation holds them mid-beat: delay a lamplighter
+    // with talk and their whole quarter stays dark longer, which is the
+    // feature. Each square's Belwyn's lamp is skipped by rote.
+    if lamp_window(office)
+        && round.lamp_night_day.is_some()
+        // Committed post first (nearest-unlit is re-evaluated only standing at
+        // a lit one — from a moving body it flips between far posts and walks
+        // the night away), then the nearest unlit on the beat.
+        && let Some(index) = round
+            .lamp_targets
+            .get(id)
+            .copied()
+            .filter(|&index| {
+                let lamp = &round.lamps[index];
+                !lamp.lit
+                    && lamp.keeper.as_ref() == Some(id)
+                    && round.belwyn.get(&lamp.square) != Some(&index)
+            })
+            .or_else(|| next_unlit_lamp(round, id, position))
+    {
+        let lamp = &round.lamps[index];
+        if position.distance(lamp.position) <= LAMP_LIGHT_RADIUS_M {
+            return (Decision::LightLamp(index), None);
+        }
+        return (Decision::WalkToLamp(index), None);
+    }
+
     // Rung 9 — the round: be where the current leg says. Skipped at night for the
     // non-exempt (curfew already sent the housed home; the homeless linger rather
     // than march to a workshop at 2 a.m.).
@@ -1669,7 +1955,7 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
             let source = round.people[id].source.expect("a well decision has a source");
             let draw_point = round.sources[source].draw_point;
             let position = world.characters[id].position_m();
-            match route_path(nav, position, draw_point) {
+            match route_path(nav, id, position, draw_point) {
                 Some(path) => {
                     set_route(world, id, path);
                     round.people.get_mut(id).expect("person exists").phase = Phase::Approaching;
@@ -1684,7 +1970,7 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
         }
         Decision::Travel(target) => {
             let position = world.characters[id].position_m();
-            if let Some(path) = route_path(nav, position, target) {
+            if let Some(path) = route_path(nav, id, position, target) {
                 set_route(world, id, path);
                 let person = round.people.get_mut(id).expect("person exists");
                 person.phase = Phase::Travelling;
@@ -1694,7 +1980,7 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
         }
         Decision::TravelIntent(target) => {
             let position = world.characters[id].position_m();
-            if let Some(path) = route_path_to_point(nav, position, target) {
+            if let Some(path) = route_path_to_point(nav, id, position, target) {
                 set_route(world, id, path);
                 let person = round.people.get_mut(id).expect("person exists");
                 person.phase = Phase::Travelling;
@@ -1704,7 +1990,7 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
         }
         Decision::Wander(target) => {
             let position = world.characters[id].position_m();
-            if let Some(path) = route_path(nav, position, target) {
+            if let Some(path) = route_path(nav, id, position, target) {
                 set_route(world, id, path);
                 // A wander is a short errand like any other: mark it Travelling so
                 // resolve_arrivals clears the (now empty) `movement` on arrival,
@@ -1714,6 +2000,35 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
                 person.travel_target = Some(target);
                 person.travel_for_intent = false;
             }
+        }
+        Decision::WalkToLamp(index) => {
+            round.lamp_targets.insert(id.clone(), index);
+            let target = round.lamps[index].position;
+            let position = world.characters[id].position_m();
+            if let Some(path) = route_path_to_point(nav, id, position, target) {
+                set_route(world, id, path);
+                let person = round.people.get_mut(id).expect("person exists");
+                person.phase = Phase::Travelling;
+                person.travel_target = Some(target);
+                person.travel_for_intent = false;
+            }
+        }
+        Decision::LightLamp(index) => {
+            // The act, exactly as a draw at the well: the state flips, and the
+            // keeper *remembers his own act* (no sound, no nudge — M3's
+            // pattern), so the player who stops him can ask what he is doing.
+            round.lamps[index].lit = true;
+            round.lamp_revision += 1;
+            round.lamp_targets.remove(id);
+            let square = round.lamps[index].square.clone();
+            if let Some(character) = world.characters.get_mut(id) {
+                character.state.movement = None;
+                character.remember_percept(format!("You light the lamp at {square}."));
+            }
+            let person = round.people.get_mut(id).expect("person exists");
+            person.phase = Phase::Idle;
+            person.travel_target = None;
+            person.travel_for_intent = false;
         }
         Decision::Stay => {}
     }
@@ -1771,12 +2086,18 @@ fn clamp_to_leash(base: Vec3, target: Vec3, leash_m: f64) -> Vec3 {
     }
 }
 
-/// Route `from` → `to` and trim the leading node when it is where we already
-/// stand. `None` means already there or no route.
-fn route_path(nav: &NavData, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
+/// Route `from` → `to`, shifted into the walker's stable lane (M7 — the offset
+/// keeps to their right of the crown, budgeted by the traversed corridor), and
+/// trim the leading node when it is where we already stand. `None` means
+/// already there or no route.
+fn route_path(nav: &NavData, id: &ActorId, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
     let route = nav.route_between(from, to)?;
-    let mut path = route.points;
-    if path.first().is_some_and(|point| planar_close(*point, from)) {
+    let trim = route
+        .points
+        .first()
+        .is_some_and(|point| planar_close(*point, from));
+    let mut path = nav.offset_route(&route, lane_fraction(id));
+    if trim {
         path.remove(0);
     }
     if path.is_empty() { None } else { Some(path) }
@@ -1789,9 +2110,9 @@ fn route_path(nav: &NavData, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
 /// it is walkable ground; an unwalkable target keeps the node-only path and
 /// the intent's expiry ends the errand honestly. `None` still means "already
 /// there or unreachable".
-fn route_path_to_point(nav: &NavData, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
+fn route_path_to_point(nav: &NavData, id: &ActorId, from: Vec3, to: Vec3) -> Option<Vec<Vec3>> {
     let to = Vec3::new(to.x, WALK_Y, to.z);
-    let mut path = route_path(nav, from, to).unwrap_or_default();
+    let mut path = route_path(nav, id, from, to).unwrap_or_default();
     let tail_missing = !path.last().is_some_and(|point| planar_close(*point, to));
     if tail_missing && !planar_close(from, to) && nav.is_walkable(to.x, to.z) {
         path.push(to);
@@ -1814,6 +2135,7 @@ fn set_route(world: &mut World, id: &ActorId, path: Vec<Vec3>) {
         speed: WALK_SPEED_MPS,
         gait_phase,
         patrol: None,
+        choke_wait: 0.0,
     });
 }
 
@@ -1823,16 +2145,6 @@ fn decision_jitter(id: &ActorId, epoch: u64) -> f64 {
     LADDER_DECISION_MIN_SECONDS
         + (LADDER_DECISION_MAX_SECONDS - LADDER_DECISION_MIN_SECONDS)
             * hash01("round_decision", id, epoch)
-}
-
-/// A pure `[0, 1)` roll from `(salt, actor_id, epoch)` — the sim's deterministic
-/// stand-in for an RNG (`attention.rs` curiosity idiom).
-fn hash01(salt: &str, id: &ActorId, epoch: u64) -> f64 {
-    let mut hasher = DefaultHasher::new();
-    salt.hash(&mut hasher);
-    id.as_str().hash(&mut hasher);
-    epoch.hash(&mut hasher);
-    (hasher.finish() >> 11) as f64 / (1u64 << 53) as f64
 }
 
 #[cfg(test)]

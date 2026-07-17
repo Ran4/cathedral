@@ -5,11 +5,18 @@
 //! byte order, which equals Python's code-point order). Round-robin scheduling
 //! needs *insertion* order instead, so [`World::roster`] records it (D12).
 
-use std::{collections::BTreeMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, hash_map::DefaultHasher},
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
 
 use crate::{
-    DEFAULT_VIEW_CONE_DEGREES, WALK_SPEED_MPS,
+    AVOID_MAX_NEIGHBOURS, AVOID_PERSONAL_RADIUS_M, AVOID_PUSH_MPS, DEFAULT_VIEW_CONE_DEGREES,
+    LANE_JITTER_FRACTION, LANE_KEEP_RIGHT_FRACTION, NEEDLE_CLAIM_RADIUS_M, NEEDLE_REROUTE_SECONDS,
+    WALK_SPEED_MPS,
     areas::AreaMap,
+    attention::DEFAULT_STAGE_RADIUS_M,
     character::Character,
     clock::WorldTime,
     error::{SpatialUpdateError, SpatialUpdateErrorCode},
@@ -45,6 +52,21 @@ impl SpatialActorUpdate {
             facing_yaw,
         }
     }
+}
+
+/// The Needle's one-person claim (M7): the 1.2 m alley fits one walker, so the
+/// choke circle around its node is entered only by the claim's holder — or
+/// behind them, going the same way. An opposing walker stands at the mouth
+/// until the holder leaves (or takes the long way round after
+/// [`crate::NEEDLE_REROUTE_SECONDS`]). Released the moment the holder stops
+/// walking or leaves the circle, so a conversation inside the alley can never
+/// deadlock the city (`features/movement/02_navigation.md` §5).
+#[derive(Debug, Clone, PartialEq)]
+pub struct NeedleClaim {
+    pub holder: ActorId,
+    /// The holder's XZ travel direction at entry; an entrant whose direction
+    /// opposes it (negative dot) waits.
+    pub dir: Vec3,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -84,6 +106,10 @@ pub struct World {
     /// `tell_way` resolve against. Empty (the default) in a world without a
     /// nav graph.
     pub places: PlaceRegistry,
+    /// Who currently holds the Needle's one-person choke (M7), or `None` while
+    /// it stands empty. Movement state like a mover's own path: it rides the
+    /// fixed tick and never touches the public revision.
+    pub needle_claim: Option<NeedleClaim>,
     events: Vec<DomainEvent>,
 }
 
@@ -104,6 +130,7 @@ impl Default for World {
             current_time: None,
             nav: None,
             places: PlaceRegistry::default(),
+            needle_claim: None,
             events: Vec::new(),
         }
     }
@@ -289,8 +316,56 @@ impl World {
     /// snapshot, and that split is the whole point of the fixed tick
     /// (`features/movement/06_engineering.md`). O(movers), not O(cast).
     ///
+    /// `stage` is where the player stands, when the host knows: movers within
+    /// [`DEFAULT_STAGE_RADIUS_M`] of it get the M7 separation steering (local
+    /// avoidance is cosmetic, and nobody can tell at 200 m —
+    /// `features/movement/02_navigation.md` §5). `None` (a test stepping a bare
+    /// world) steers nobody.
+    ///
     /// [`touch_public_state`]: World::touch_public_state
-    pub fn step_movement(&mut self, dt: f64, nav: &NavData) -> Vec<ActorId> {
+    pub fn step_movement(&mut self, dt: f64, nav: &NavData, stage: Option<Vec3>) -> Vec<ActorId> {
+        // The Needle's choke, resolved from the graph (one map lookup a tick).
+        let needle = nav
+            .place("The Needle")
+            .map(|place| (place.node, nav.node_point(place.node)));
+
+        // Release a dead claim: the holder left the circle or stopped walking —
+        // a standing body blocks nothing the separation push cannot squeeze
+        // past, and holding the claim through a conversation would deadlock the
+        // alley's whole neighbourhood.
+        match (self.needle_claim.as_ref(), needle) {
+            (Some(claim), Some((_, needle_point))) => {
+                let holder_active = self.characters.get(&claim.holder).is_some_and(|holder| {
+                    holder.is_walking()
+                        && planar_within(holder.position_m(), needle_point, NEEDLE_CLAIM_RADIUS_M)
+                });
+                if !holder_active {
+                    self.needle_claim = None;
+                }
+            }
+            (Some(_), None) => self.needle_claim = None,
+            (None, _) => {}
+        }
+
+        // Start-of-tick positions of everyone near the stage, for the
+        // separation pass: frozen at tick start, so the push is
+        // order-independent and deterministic.
+        let neighbours: Vec<(ActorId, Vec3)> = match stage {
+            Some(centre) => self
+                .characters
+                .iter()
+                .filter(|(_, character)| {
+                    planar_within(
+                        character.position_m(),
+                        centre,
+                        DEFAULT_STAGE_RADIUS_M + AVOID_PERSONAL_RADIUS_M,
+                    )
+                })
+                .map(|(id, character)| (id.clone(), character.position_m()))
+                .collect(),
+            None => Vec::new(),
+        };
+
         let mut moved: Vec<ActorId> = Vec::new();
         for (id, character) in self.characters.iter_mut() {
             if character.state.movement.is_none() {
@@ -328,11 +403,15 @@ impl World {
                         .and_then(|place| nav.route_between(start, nav.node_point(place.node)))
                     {
                         Some(route) => {
-                            let mut points = route.points;
-                            // A route snaps `start` to the nearest node, so its
-                            // first point is usually exactly where we stand — drop
-                            // it, or the first leg is zero-length.
-                            if points.first().is_some_and(|point| planar_close(*point, start)) {
+                            // Into this walker's lane (M7), then drop the leading
+                            // point when the raw route starts exactly where we
+                            // stand — or the first leg is zero-length.
+                            let trim = route
+                                .points
+                                .first()
+                                .is_some_and(|point| planar_close(*point, start));
+                            let mut points = nav.offset_route(&route, lane_fraction(id));
+                            if trim {
                                 points.remove(0);
                             }
                             movement.path = points;
@@ -349,25 +428,152 @@ impl World {
                     let to = Vec3::new(waypoint.x - start.x, 0.0, waypoint.z - start.z);
                     let distance = to.length();
                     let step = WALK_SPEED_MPS * dt;
-                    if distance <= step {
-                        // Snap onto the waypoint and drop it; the final partial
-                        // leg's speed is its own length over the slice.
-                        new_pos = Vec3::new(waypoint.x, WALK_Y, waypoint.z);
-                        movement.path.remove(0);
-                        movement.speed = if dt > 0.0 { distance / dt } else { 0.0 };
+                    // The tentative advance: snap onto a near waypoint (dropping
+                    // it), or a full step toward it. Committed only if the
+                    // Needle's claim below does not hold us at the mouth.
+                    let (tentative, tentative_speed, pops_waypoint) = if distance <= step {
+                        (
+                            Vec3::new(waypoint.x, WALK_Y, waypoint.z),
+                            if dt > 0.0 { distance / dt } else { 0.0 },
+                            true,
+                        )
                     } else {
                         let dir = to / distance;
-                        new_pos = Vec3::new(start.x + dir.x * step, WALK_Y, start.z + dir.z * step);
-                        movement.speed = WALK_SPEED_MPS;
-                    }
+                        (
+                            Vec3::new(start.x + dir.x * step, WALK_Y, start.z + dir.z * step),
+                            WALK_SPEED_MPS,
+                            false,
+                        )
+                    };
                     if distance > 1e-9 {
                         let dir = to / distance;
                         // yaw 0 faces -Z, matching the rest of the codebase.
                         new_yaw = (-dir.x).atan2(-dir.z);
                     }
-                    movement.gait_phase += movement.speed * dt * GAIT_CADENCE;
+
+                    // The Needle's one-person claim (M7): stepping *into* the
+                    // choke circle needs the claim — or the holder walking the
+                    // same way, a follower single-file behind them. An opposing
+                    // entrant waits at the mouth, facing the alley.
+                    let mut blocked = false;
+                    if let Some((_, needle_point)) = needle
+                        && planar_within(tentative, needle_point, NEEDLE_CLAIM_RADIUS_M)
+                    {
+                        let inside_already =
+                            planar_within(start, needle_point, NEEDLE_CLAIM_RADIUS_M);
+                        let my_dir = if distance > 1e-9 { to / distance } else { Vec3::ZERO };
+                        match self.needle_claim.as_mut() {
+                            None => {
+                                self.needle_claim = Some(NeedleClaim {
+                                    holder: id.clone(),
+                                    dir: my_dir,
+                                });
+                            }
+                            Some(claim) if claim.holder == *id => claim.dir = my_dir,
+                            Some(claim) => {
+                                // Somebody inside without the claim (they were
+                                // in the circle when it changed hands) walks on;
+                                // the separation push handles the squeeze.
+                                if !inside_already && claim.dir.dot(my_dir) < 0.0 {
+                                    blocked = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if blocked {
+                        movement.speed = 0.0;
+                        movement.choke_wait += dt;
+                        if movement.choke_wait >= NEEDLE_REROUTE_SECONDS {
+                            // "You wait, or you take Cinder Row": the long way
+                            // round, never through the needle's node. No route
+                            // (the goal is *in* the choke) keeps them waiting —
+                            // the claim clears the moment its holder is through.
+                            movement.choke_wait = 0.0;
+                            if let Some((needle_node, _)) = needle
+                                && let Some(&goal) = movement.path.last()
+                                && let (Some(start_node), Some(goal_node)) = (
+                                    nav.nearest_node(start.x, start.z),
+                                    nav.nearest_node(goal.x, goal.z),
+                                )
+                                && let Some(route) = nav.route_nodes_avoiding(
+                                    start_node,
+                                    goal_node,
+                                    Some(needle_node),
+                                )
+                            {
+                                let trim = route
+                                    .points
+                                    .first()
+                                    .is_some_and(|point| planar_close(*point, start));
+                                let mut points = nav.offset_route(&route, lane_fraction(id));
+                                if trim {
+                                    points.remove(0);
+                                }
+                                // Keep the exact original destination as the
+                                // tail when it stands off the graph.
+                                if !points.last().is_some_and(|point| planar_close(*point, goal)) {
+                                    points.push(goal);
+                                }
+                                movement.path = points;
+                            }
+                        }
+                    } else {
+                        movement.choke_wait = 0.0;
+                        new_pos = tentative;
+                        movement.speed = tentative_speed;
+                        if pops_waypoint {
+                            movement.path.remove(0);
+                        }
+                        movement.gait_phase += movement.speed * dt * GAIT_CADENCE;
+                    }
                 } else {
                     movement.speed = 0.0;
+                }
+            }
+
+            // The M7 separation pass — on stage only, and only on a real step:
+            // a bounded sideways push away from the neighbours crowding this
+            // walker's personal bubble, biased to the right on a head-on meeting
+            // (each walker biases to their *own* right, so the two streams break
+            // apart instead of mirroring each other), clamped to walkable
+            // ground so no push can put a body inside a wall.
+            if new_pos != start
+                && !neighbours.is_empty()
+                && stage.is_some_and(|centre| {
+                    planar_within(new_pos, centre, DEFAULT_STAGE_RADIUS_M)
+                })
+            {
+                let mut push = Vec3::ZERO;
+                let mut counted = 0usize;
+                for (other_id, other_pos) in &neighbours {
+                    if other_id == id {
+                        continue;
+                    }
+                    let away =
+                        Vec3::new(new_pos.x - other_pos.x, 0.0, new_pos.z - other_pos.z);
+                    let d = away.length();
+                    if d < 1e-6 || d >= AVOID_PERSONAL_RADIUS_M {
+                        continue;
+                    }
+                    push += away / d * (1.0 - d / AVOID_PERSONAL_RADIUS_M);
+                    counted += 1;
+                    if counted == AVOID_MAX_NEIGHBOURS {
+                        break;
+                    }
+                }
+                let push_len = push.length();
+                if push_len > 1e-6 {
+                    if let Some(dir) = (new_pos - start).try_normalize()
+                        && push.dot(dir) < -0.7 * push_len
+                    {
+                        push += Vec3::new(-dir.z, 0.0, dir.x) * push_len;
+                    }
+                    let shove = push.clamp_length_max(AVOID_PUSH_MPS * dt);
+                    let candidate = new_pos + Vec3::new(shove.x, 0.0, shove.z);
+                    if nav.is_walkable(candidate.x, candidate.z) {
+                        new_pos = candidate;
+                    }
                 }
             }
 
@@ -492,6 +698,32 @@ pub(crate) fn planar_close(a: Vec3, b: Vec3) -> bool {
     let dx = a.x - b.x;
     let dz = a.z - b.z;
     dx * dx + dz * dz < 1e-9
+}
+
+/// Whether `a` lies within `radius` of `b` on the walk plane (XZ).
+pub(crate) fn planar_within(a: Vec3, b: Vec3, radius: f64) -> bool {
+    let dx = a.x - b.x;
+    let dz = a.z - b.z;
+    dx * dx + dz * dz <= radius * radius
+}
+
+/// A pure `[0, 1)` roll from `(salt, actor_id, epoch)` — the sim's deterministic
+/// stand-in for an RNG (`attention.rs` curiosity idiom). Shared by the round's
+/// ladder and the mover's lane assignment.
+pub(crate) fn hash01(salt: &str, id: &ActorId, epoch: u64) -> f64 {
+    let mut hasher = DefaultHasher::new();
+    salt.hash(&mut hasher);
+    id.as_str().hash(&mut hasher);
+    epoch.hash(&mut hasher);
+    (hasher.finish() >> 11) as f64 / (1u64 << 53) as f64
+}
+
+/// A walker's stable lane (M7): keep right of the crown by
+/// [`LANE_KEEP_RIGHT_FRACTION`] of the usable corridor, jittered per actor by
+/// ±[`LANE_JITTER_FRACTION`] — always positive, so nobody walks against the
+/// stream, and stable for life, so the same man holds the same line every day.
+pub(crate) fn lane_fraction(id: &ActorId) -> f64 {
+    LANE_KEEP_RIGHT_FRACTION + (hash01("lane", id, 0) - 0.5) * 2.0 * LANE_JITTER_FRACTION
 }
 
 #[cfg(test)]
@@ -721,6 +953,7 @@ mod tests {
                 b: "b".into(),
                 heading_to_b: true,
             }),
+            choke_wait: 0.0,
         });
         character
     }
@@ -740,7 +973,7 @@ mod tests {
         let (mut world, nav, id) = walker_world();
 
         let revision = world.world_revision;
-        let moved = world.step_movement(TICK, &nav);
+        let moved = world.step_movement(TICK, &nav, None);
         assert_eq!(moved, vec![id.clone()]);
         // A movement slice never touches the public revision (the hot/cold split).
         assert_eq!(world.world_revision, revision);
@@ -771,7 +1004,7 @@ mod tests {
             .path
             .is_empty()
         {
-            world.step_movement(TICK, &nav);
+            world.step_movement(TICK, &nav, None);
             slices += 1;
             assert!(slices < 500, "the mover never arrived");
         }
@@ -782,7 +1015,7 @@ mod tests {
         );
 
         // One more slice: the patrol flips and routes back toward `a`.
-        world.step_movement(TICK, &nav);
+        world.step_movement(TICK, &nav, None);
         let movement = world.characters[&id].state.movement.as_ref().unwrap();
         assert!(
             !movement.patrol.as_ref().unwrap().heading_to_b,
@@ -809,7 +1042,7 @@ mod tests {
         let mut travelled = 0.0;
         let mut previous = start;
         for _ in 0..500 {
-            world.step_movement(TICK, &nav);
+            world.step_movement(TICK, &nav, None);
             let now = world.characters[&id].position_m();
             travelled += previous.distance(now);
             previous = now;
@@ -836,10 +1069,267 @@ mod tests {
         let mut world = World::new();
         world.add_character(character("still", 7.0));
         let before = world.characters[&ActorId::from_raw("still")].position_m();
-        assert!(world.step_movement(TICK, &nav).is_empty());
+        assert!(world.step_movement(TICK, &nav, None).is_empty());
         assert_eq!(
             world.characters[&ActorId::from_raw("still")].position_m(),
             before
+        );
+    }
+
+    // ------------------------------------------------------- M7: the crowd
+
+    /// A mover with a hand-laid path (no patrol, no lane shift), for the
+    /// avoidance and Needle tests where the geometry must be exact.
+    fn mover(id: &str, from: Vec3, path: Vec<Vec3>) -> Character {
+        let mut character = character(id, 0.0);
+        character.state.position_m = from;
+        character.state.movement = Some(Movement {
+            path,
+            speed: WALK_SPEED_MPS,
+            gait_phase: 0.0,
+            patrol: None,
+            choke_wait: 0.0,
+        });
+        character
+    }
+
+    #[test]
+    fn movers_hold_distinct_right_hand_lanes() {
+        let nav = line_nav();
+        let start = nav.node_point(0);
+        let goal = nav.node_point(3);
+        let route = nav.route_between(start, goal).expect("the line routes");
+
+        let lane_a = lane_fraction(&ActorId::from_raw("walker"));
+        let lane_b = lane_fraction(&ActorId::from_raw("other"));
+        let path_a = nav.offset_route(&route, lane_a);
+        let path_b = nav.offset_route(&route, lane_b);
+
+        // Heading +x, the walker's right is +z: every shifted vertex sits in
+        // the right half of the corridor, within the usable half-width
+        // (2.0 m edge half-width minus the 0.35 m agent radius).
+        for point in &path_a[..path_a.len() - 1] {
+            assert!(point.z > 0.0, "the lane keeps right, got z={}", point.z);
+            assert!(point.z <= 2.0 - 0.35 + 1e-9, "the lane stays in the corridor");
+        }
+        // Two walkers hold different, stable lines — no conga line.
+        assert!(
+            (path_a[1].z - path_b[1].z).abs() > 1e-3,
+            "distinct actors should hold distinct lanes"
+        );
+        assert_eq!(lane_a, lane_fraction(&ActorId::from_raw("walker")));
+        // The final vertex is exact: arrival semantics stay point-precise.
+        assert_eq!(path_a.last(), route.points.last());
+    }
+
+    /// Two movers crossing on the centreline: off stage they pass through each
+    /// other (avoidance is cosmetic and costs nothing at distance); on stage
+    /// the separation push opens a gap — and both still arrive.
+    #[test]
+    fn on_stage_movers_separate_where_off_stage_they_pass_through() {
+        let crossing = || {
+            let nav = line_nav();
+            let mut world = World::new();
+            world.add_character(mover(
+                "east",
+                Vec3::new(0.0, WALK_Y, 0.0),
+                vec![Vec3::new(30.0, WALK_Y, 0.0)],
+            ));
+            world.add_character(mover(
+                "west",
+                Vec3::new(30.0, WALK_Y, 0.0),
+                vec![Vec3::new(0.0, WALK_Y, 0.0)],
+            ));
+            (world, nav, ActorId::from_raw("east"), ActorId::from_raw("west"))
+        };
+        let closest = |world: &World, a: &ActorId, b: &ActorId| {
+            world.characters[a]
+                .position_m()
+                .distance(world.characters[b].position_m())
+        };
+
+        let (mut world, nav, east, west) = crossing();
+        let mut min_off_stage = f64::INFINITY;
+        for _ in 0..600 {
+            world.step_movement(TICK, &nav, None);
+            min_off_stage = min_off_stage.min(closest(&world, &east, &west));
+        }
+        assert!(
+            min_off_stage < 0.2,
+            "unsteered movers cross on the centreline (min {min_off_stage:.2} m)"
+        );
+
+        let (mut world, nav, east, west) = crossing();
+        let stage = Some(Vec3::new(15.0, WALK_Y, 0.0));
+        let mut min_on_stage = f64::INFINITY;
+        for _ in 0..600 {
+            world.step_movement(TICK, &nav, stage);
+            min_on_stage = min_on_stage.min(closest(&world, &east, &west));
+        }
+        assert!(
+            min_on_stage > 0.45,
+            "on stage the separation push opens a gap (min {min_on_stage:.2} m)"
+        );
+        for id in [&east, &west] {
+            assert!(
+                !world.characters[id].is_walking(),
+                "steered movers still arrive"
+            );
+        }
+    }
+
+    /// A diamond around a one-person choke: `west (0,0) — needle (30,0) —
+    /// east (50,0)` on 0.6 m alley edges, with a wide detour over `(30,30)`.
+    fn needle_nav() -> NavData {
+        let w = 70usize;
+        let h = 45usize;
+        let bytes = (w * h).div_ceil(8);
+        let bitset = vec![0xFF_u8; bytes];
+        let json = format!(
+            r#"{{
+              "schema_version": 1,
+              "grid": {{"x0": -5.0, "z0": -5.0, "cell_m": 1.0, "w": {w}, "h": {h},
+                        "agent_radius_m": 0.35, "bitset_file": "x.bin",
+                        "bitset_bits": {bits}, "bitset_sha256": ""}},
+              "nodes": [[0.0, 0.0], [30.0, 0.0], [50.0, 0.0], [30.0, 30.0]],
+              "edges": [[0, 1, 0.6], [1, 2, 0.6], [0, 3, 2.0], [3, 2, 2.0]],
+              "places": [{{"name": "west", "node": 0, "kind": "place"}},
+                         {{"name": "east", "node": 2, "kind": "place"}},
+                         {{"name": "The Needle", "node": 1, "kind": "route"}}],
+              "sites": [],
+              "doors": [],
+              "reference": {{"forecourt": 0}}
+            }}"#,
+            bits = w * h
+        );
+        NavData::from_parts(&json, &bitset).expect("the diamond nav validates")
+    }
+
+    #[test]
+    fn route_nodes_avoiding_takes_the_detour() {
+        let nav = needle_nav();
+        let direct = nav.route_nodes(2, 0).expect("the alley routes");
+        assert!(direct.nodes.contains(&1), "the short way runs through the Needle");
+        let detour = nav
+            .route_nodes_avoiding(2, 0, Some(1))
+            .expect("the long way round exists");
+        assert_eq!(detour.nodes, vec![2, 3, 0]);
+        // A goal *in* the choke has no route around it.
+        assert!(nav.route_nodes_avoiding(2, 1, Some(1)).is_none());
+    }
+
+    #[test]
+    fn an_opposing_walker_waits_at_the_needles_mouth() {
+        let nav = needle_nav();
+        let mut world = World::new();
+        // Eastbound, already inside the choke circle: takes the claim.
+        world.add_character(mover(
+            "hold1",
+            Vec3::new(20.0, WALK_Y, 0.0),
+            vec![Vec3::new(30.0, WALK_Y, 0.0), Vec3::new(50.0, WALK_Y, 0.0)],
+        ));
+        // Westbound: must stand at the mouth until the holder is through.
+        world.add_character(mover(
+            "waiter",
+            Vec3::new(50.0, WALK_Y, 0.0),
+            vec![Vec3::new(30.0, WALK_Y, 0.0), Vec3::new(0.0, WALK_Y, 0.0)],
+        ));
+        let hold1 = ActorId::from_raw("hold1");
+        let waiter = ActorId::from_raw("waiter");
+
+        let mut waiter_min_x_while_held = f64::INFINITY;
+        let mut held_at_all = false;
+        for _ in 0..900 {
+            world.step_movement(TICK, &nav, None);
+            if world
+                .needle_claim
+                .as_ref()
+                .is_some_and(|claim| claim.holder == hold1)
+            {
+                held_at_all = true;
+                waiter_min_x_while_held =
+                    waiter_min_x_while_held.min(world.characters[&waiter].position_m().x);
+            }
+        }
+        assert!(held_at_all, "the eastbound walker claims the choke");
+        // The choke circle is 14 m around (30, 0): the mouth is x = 44.
+        assert!(
+            waiter_min_x_while_held > 43.5,
+            "the opposing walker stood at the mouth (min x {waiter_min_x_while_held:.2})"
+        );
+        // Both got where they were going once the alley cleared.
+        assert!(planar_close(
+            world.characters[&hold1].position_m(),
+            Vec3::new(50.0, WALK_Y, 0.0)
+        ));
+        assert!(planar_close(
+            world.characters[&waiter].position_m(),
+            Vec3::new(0.0, WALK_Y, 0.0)
+        ));
+    }
+
+    #[test]
+    fn a_long_wait_takes_the_long_way_round() {
+        let nav = needle_nav();
+        let mut world = World::new();
+        // Two eastbound walkers in file hold the choke long enough that the
+        // westbound walker's patience (NEEDLE_REROUTE_SECONDS) runs out.
+        world.add_character(mover(
+            "hold1",
+            Vec3::new(20.0, WALK_Y, 0.0),
+            vec![Vec3::new(30.0, WALK_Y, 0.0), Vec3::new(50.0, WALK_Y, 0.0)],
+        ));
+        world.add_character(mover(
+            "hold2",
+            Vec3::new(5.0, WALK_Y, 0.0),
+            vec![Vec3::new(30.0, WALK_Y, 0.0), Vec3::new(50.0, WALK_Y, 0.0)],
+        ));
+        world.add_character(mover(
+            "waiter",
+            Vec3::new(50.0, WALK_Y, 0.0),
+            vec![Vec3::new(30.0, WALK_Y, 0.0), Vec3::new(0.0, WALK_Y, 0.0)],
+        ));
+        let waiter = ActorId::from_raw("waiter");
+        let needle = Vec3::new(30.0, WALK_Y, 0.0);
+
+        // Whole-second slices, so the wait budget runs out while the second
+        // holder is still inside.
+        let mut rerouted = false;
+        for _ in 0..25 {
+            world.step_movement(1.0, &nav, None);
+            let path = &world.characters[&waiter].state.movement.as_ref().unwrap().path;
+            if path.iter().any(|point| point.z > 20.0) {
+                rerouted = true;
+                break;
+            }
+        }
+        assert!(rerouted, "the waiter gave up on the mouth and took the detour");
+
+        // The detour never re-enters the choke, and it still gets home.
+        let mut min_needle_distance = f64::INFINITY;
+        for _ in 0..80 {
+            world.step_movement(1.0, &nav, None);
+            let position = world.characters[&waiter].position_m();
+            min_needle_distance = min_needle_distance
+                .min(Vec3::new(position.x, 0.0, position.z).distance(Vec3::new(
+                    needle.x,
+                    0.0,
+                    needle.z,
+                )));
+            if !world.characters[&waiter].is_walking() {
+                break;
+            }
+        }
+        assert!(
+            min_needle_distance > NEEDLE_CLAIM_RADIUS_M,
+            "the long way round stays out of the choke (min {min_needle_distance:.1} m)"
+        );
+        assert!(
+            planar_close(
+                world.characters[&waiter].position_m(),
+                Vec3::new(0.0, WALK_Y, 0.0)
+            ),
+            "the rerouted walker still arrives"
         );
     }
 }

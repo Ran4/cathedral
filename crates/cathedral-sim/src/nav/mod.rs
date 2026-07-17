@@ -442,7 +442,25 @@ impl NavData {
 
     /// A* over the street graph between two nodes.
     pub fn route_nodes(&self, start: usize, goal: usize) -> Option<Route> {
+        self.route_nodes_avoiding(start, goal, None)
+    }
+
+    /// [`route_nodes`], never expanding through `avoid` — the "take Cinder Row
+    /// instead" route around an occupied one-person choke
+    /// (`features/movement/02_navigation.md` §5). `None` when every way there
+    /// leads through the avoided node (or the goal *is* it).
+    ///
+    /// [`route_nodes`]: NavData::route_nodes
+    pub fn route_nodes_avoiding(
+        &self,
+        start: usize,
+        goal: usize,
+        avoid: Option<usize>,
+    ) -> Option<Route> {
         if start >= self.nodes.len() || goal >= self.nodes.len() {
+            return None;
+        }
+        if avoid == Some(goal) || avoid == Some(start) {
             return None;
         }
         if start == goal {
@@ -472,6 +490,9 @@ impl NavData {
             }
             let base = g[node];
             for edge in &self.adjacency[node] {
+                if avoid == Some(edge.to) {
+                    continue;
+                }
                 let tentative = base + edge.cost;
                 if tentative < g[edge.to] {
                     g[edge.to] = tentative;
@@ -491,6 +512,92 @@ impl NavData {
         let start = self.nearest_node(from.x, from.z)?;
         let goal = self.nearest_node(to.x, to.z)?;
         self.route_nodes(start, goal)
+    }
+
+    /// The traversed edge's corridor half-width between two adjacent nodes —
+    /// tighter than [`Route::half_width_m`]'s per-node "widest corridor meeting
+    /// it", which overstates the squeeze at an alley mouth. Falls back to the
+    /// graph's 0.6 m minimum for a non-adjacent pair.
+    fn segment_half_width(&self, a: usize, b: usize) -> f64 {
+        self.adjacency[a]
+            .iter()
+            .find(|edge| edge.to == b)
+            .map_or(0.6, |edge| edge.half_width_m)
+    }
+
+    /// The route's polyline, shifted sideways into a walking lane (M7:
+    /// "lane offsets, or you get a conga line" — 02_navigation.md §5).
+    ///
+    /// `lane` is a signed fraction of the usable corridor: positive is the
+    /// walker's **right** (so two streams meeting pass right shoulder to right
+    /// shoulder), and the usable corridor at each vertex is the *traversed*
+    /// segments' half-width minus the agent radius — nothing in a 1.2 m alley,
+    /// a couple of metres on the Cut. Every shifted vertex is validated against
+    /// the walkable bitset (halving the shift until it lands on ground), so the
+    /// lane can never put a body inside a wall. The final vertex is left exact:
+    /// arrival semantics (the curb, the doorstep) stay point-precise.
+    pub fn offset_route(&self, route: &Route, lane: f64) -> Vec<Vec3> {
+        let points = &route.points;
+        let n = points.len();
+        if n < 2 || lane == 0.0 {
+            return points.clone();
+        }
+        // Per-segment corridor half-widths, from the traversed edges.
+        let seg_hw: Vec<f64> = (0..n - 1)
+            .map(|i| match (route.nodes.get(i), route.nodes.get(i + 1)) {
+                (Some(&a), Some(&b)) => self.segment_half_width(a, b),
+                _ => 0.6,
+            })
+            .collect();
+
+        let mut shifted = Vec::with_capacity(n);
+        for i in 0..n {
+            if i == n - 1 {
+                shifted.push(points[i]);
+                break;
+            }
+            // Averaged travel direction at the vertex (miter), in XZ.
+            let dir_out = planar_dir(points[i], points[i + 1]);
+            let dir = if i == 0 {
+                dir_out
+            } else {
+                match (planar_dir(points[i - 1], points[i]), dir_out) {
+                    (Some(dir_in), Some(out)) => {
+                        let sum = dir_in + out;
+                        // A U-turn's miter is degenerate; keep the outgoing leg.
+                        if sum.length() < 1e-6 { Some(out) } else { Some(sum.normalize()) }
+                    }
+                    (dir_in, out) => out.or(dir_in),
+                }
+            };
+            let Some(dir) = dir else {
+                shifted.push(points[i]);
+                continue;
+            };
+            // Right of travel: yaw 0 faces -Z, and looking down -Z with +Y up,
+            // right is +X — i.e. `dir × up`.
+            let right = Vec3::new(-dir.z, 0.0, dir.x);
+            let hw = if i == 0 {
+                seg_hw[0]
+            } else {
+                seg_hw[i - 1].min(seg_hw[i])
+            };
+            let usable = (hw - self.grid.agent_radius_m).max(0.0);
+            let mut offset = lane.clamp(-1.0, 1.0) * usable;
+            // Halve the shift until it lands on walkable ground; give up on the
+            // centreline vertex, which is on the graph and always walkable.
+            let mut point = points[i];
+            for _ in 0..3 {
+                let candidate = points[i] + right * offset;
+                if self.is_walkable(candidate.x, candidate.z) {
+                    point = candidate;
+                    break;
+                }
+                offset *= 0.5;
+            }
+            shifted.push(point);
+        }
+        shifted
     }
 
     fn route_from_nodes(&self, nodes: Vec<usize>) -> Route {
@@ -535,6 +642,14 @@ fn distance(a: [f64; 2], b: [f64; 2]) -> f64 {
     let dx = a[0] - b[0];
     let dz = a[1] - b[1];
     (dx * dx + dz * dz).sqrt()
+}
+
+/// Unit direction `from` → `to` on the walk plane, or `None` for coincident
+/// points.
+fn planar_dir(from: Vec3, to: Vec3) -> Option<Vec3> {
+    let d = Vec3::new(to.x - from.x, 0.0, to.z - from.z);
+    let length = d.length();
+    if length < 1e-9 { None } else { Some(d / length) }
 }
 
 /// Min-heap entry for Dijkstra / A* — ordered by ascending cost.

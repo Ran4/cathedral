@@ -102,6 +102,12 @@ pub struct Movement {
     /// this is what the M3 water round uses, since the behaviour ladder owns the
     /// arrival, not the mover (`features/movement/03_the_ladder.md` §4).
     pub patrol: Option<Patrol>,
+    /// Seconds spent standing at the mouth of an occupied one-person choke (M7:
+    /// the Needle's claim). 0 while moving freely; when it exceeds the reroute
+    /// budget the mover tries the long way round instead
+    /// (`features/movement/02_navigation.md` §5: "you wait, or you take Cinder
+    /// Row").
+    pub choke_wait: f64,
 }
 
 /// The dynamic drive layer — the "statuses" axis of

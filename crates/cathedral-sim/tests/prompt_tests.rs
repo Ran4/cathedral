@@ -643,6 +643,7 @@ fn you_see_people_carry_the_moving_flag() {
         speed: 1.8,
         gait_phase: 0.0,
         patrol: None,
+        choke_wait: 0.0,
     });
 
     let rendered = sheet(&world, "sv3n1", &env);

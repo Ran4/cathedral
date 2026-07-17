@@ -783,6 +783,7 @@ mod tests {
                 b: "b".into(),
                 heading_to_b: true,
             }),
+            choke_wait: 0.0,
         }
     }
 

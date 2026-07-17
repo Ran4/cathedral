@@ -7,6 +7,7 @@
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
+use bevy::camera::visibility::VisibilityRange;
 use bevy::prelude::*;
 use cathedral_sim::MOVEMENT_TICK_SECONDS;
 
@@ -252,8 +253,10 @@ pub(crate) fn reconcile_actor_views(
 /// a mover's *stale* snapshot position on every revision bump; this corrects it
 /// the same frame. Non-movers never appear in `MovementInbox`, so they are left
 /// entirely to reconcile. Children (body, head, labels) ride the root
-/// automatically. The visual gait (bob/swing off `speed`/`gait_phase`) is M7's;
-/// this only moves and turns the root.
+/// automatically. The visual gait stays **unbuilt**: `speed`/`gait_phase`
+/// arrive on every sample and are deliberately unread — M7 shipped the crowd
+/// (lanes, avoidance, the Needle, the lamps), not a bob/swing animation, and
+/// nothing renders the gait yet. This only moves and turns the root.
 pub(crate) fn drive_npc_bodies(
     mut commands: Commands,
     time: Res<Time>,
@@ -320,6 +323,18 @@ fn spawn_actor(
     actor: &super::model::ActorSnapshot,
 ) {
     let actor_id = actor.id.clone();
+    // M7: dither-fade the crowd out between 120 and 150 m
+    // (`features/performance_improvements.md` item 8). The component lives on
+    // each *mesh* child — Bevy's range check only considers entities that carry
+    // it — and it culls the light views too, so a faded NPC also leaves the sun's
+    // shadow pass (the "shadow cascade" half of the item, with the cascade's own
+    // 14/320 m tuning untouched). The fog already owns depth at that distance,
+    // and the name labels self-cull far earlier.
+    let fade = VisibilityRange {
+        start_margin: 0.0..0.0,
+        end_margin: 120.0..150.0,
+        use_aabb: false,
+    };
     commands
         .spawn((
             Name::new(format!("Smart actor: {}", actor.name_for_player)),
@@ -337,12 +352,14 @@ fn spawn_actor(
                 Mesh3d(assets.body_mesh.clone()),
                 MeshMaterial3d(assets.outfit(&actor.appearance_key)),
                 Transform::from_xyz(0.0, -0.10, 0.0),
+                fade.clone(),
             ));
             root.spawn((
                 Name::new("Actor head"),
                 Mesh3d(assets.head_mesh.clone()),
                 MeshMaterial3d(assets.skin.clone()),
                 Transform::from_xyz(0.0, 0.65, 0.0),
+                fade.clone(),
             ));
             // The capsule body is rotationally symmetric, so without a face
             // the seeded facing_yaw would be invisible — and the render is
@@ -354,6 +371,7 @@ fn spawn_actor(
                 Transform::from_xyz(0.0, 0.65, -0.29)
                     .with_rotation(Quat::from_rotation_x(-FRAC_PI_2))
                     .with_scale(Vec3::new(0.07, 0.12, 0.07)),
+                fade,
             ));
             root.spawn((
                 Name::new("Actor name anchor"),

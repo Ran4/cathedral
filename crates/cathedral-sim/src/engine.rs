@@ -392,9 +392,10 @@ pub enum EngineCommand {
     BackendStatus(StatusEvent),
 }
 
-/// One mover's pose on the hot channel: where it is, which way it faces, and the
-/// gait state M7 will animate. `f32` for the render-only scalars — the host wants
-/// them that way and no sim boundary is tested against them.
+/// One mover's pose on the hot channel: where it is, which way it faces, and
+/// the gait state. `f32` for the render-only scalars — the host wants them that
+/// way and no sim boundary is tested against them. (`speed`/`gait_phase` are
+/// carried but not yet animated: M7 shipped the crowd, not the visual gait.)
 #[derive(Debug, Clone, PartialEq)]
 pub struct ActorMotion {
     pub actor_id: ActorId,
@@ -402,6 +403,18 @@ pub struct ActorMotion {
     pub facing_yaw: f64,
     pub speed: f32,
     pub gait_phase: f32,
+}
+
+/// One street lamp, as the host sees it (M7): where the post stands and whether
+/// it burns. The full set rides `EngineMessage::Lamps` whenever anything about
+/// it changes — twenty-odd entries, so republishing whole is cheaper than a
+/// delta protocol.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LampView {
+    pub position_m: Vec3,
+    pub lit: bool,
+    /// The square the post stands in, e.g. `"The Wickmarket"`.
+    pub square: String,
 }
 
 /// Everything the engine tells the host.
@@ -444,6 +457,11 @@ pub enum EngineMessage {
     /// (`features/movement/06_engineering.md`, the hot/cold split). The host
     /// interpolates between successive samples to render smoothly.
     Movement { moved: Vec<ActorMotion> },
+    /// The squares' street lamps (M7) — the whole set, republished only when a
+    /// lamp changes (the seed counts, so the host learns the positions before
+    /// dusk). Like the clock, it never bumps `world_revision`: the host mirrors
+    /// it into lantern props and point lights and nothing else reads it.
+    Lamps { lamps: Vec<LampView> },
     Speech {
         event_id: SpeechEventId,
         speaker_id: ActorId,
@@ -590,6 +608,10 @@ pub struct Engine {
     /// Empty and inert unless the host supplied a nav graph
     /// (`features/movement/03_the_ladder.md`).
     round: Round,
+    /// The round's lamp revision as of the last `Lamps` publish, so the set is
+    /// resent exactly when something changed. 0 = never sent; the seed puts the
+    /// round at 1, so the first poll always announces the posts.
+    lamp_revision_sent: u64,
     /// Diagnostics raised at construction (the M2 mover seeding), emitted with
     /// the first poll's `Ready` because `Engine::new` has no `out` to push to.
     startup_diagnostics: Vec<String>,
@@ -741,6 +763,7 @@ impl Engine {
             // The first movement span opens at construction, mirroring the clock.
             movement_now: now,
             round,
+            lamp_revision_sent: 0,
             startup_diagnostics,
             ready_emitted: false,
         })
@@ -826,6 +849,23 @@ impl Engine {
             // delay and the floor still govern when, only selection changes.
             for actor_id in nudges {
                 self.scheduler.prioritize(&self.world, &actor_id, false, now);
+            }
+            // The lamp channel (M7): republish the set exactly when a lamp
+            // changed — the seed, a lighting, the dawn snuff.
+            if self.round.lamp_revision() != self.lamp_revision_sent {
+                self.lamp_revision_sent = self.round.lamp_revision();
+                out.push(EngineMessage::Lamps {
+                    lamps: self
+                        .round
+                        .lamps()
+                        .iter()
+                        .map(|lamp| LampView {
+                            position_m: lamp.position,
+                            lit: lamp.lit,
+                            square: lamp.square.clone(),
+                        })
+                        .collect(),
+                });
             }
         }
 
@@ -1473,11 +1513,20 @@ impl Engine {
             return;
         };
 
+        // Where the player stands, for the on-stage separation steering — the
+        // same "near the player" the attention gate uses, so there is one
+        // answer, not three (`features/movement/06_engineering.md` §4).
+        let stage = self
+            .world
+            .characters
+            .get(&self.config.player_id)
+            .map(|player| player.position_m());
+
         let mut moved_ids: BTreeSet<ActorId> = BTreeSet::new();
         let mut slices = 0usize;
         while self.movement_now + MOVEMENT_TICK_SECONDS <= now && slices < MAX_MOVEMENT_CATCHUP_SLICES
         {
-            for id in self.world.step_movement(MOVEMENT_TICK_SECONDS, &nav) {
+            for id in self.world.step_movement(MOVEMENT_TICK_SECONDS, &nav, stage) {
                 moved_ids.insert(id);
             }
             self.movement_now += MOVEMENT_TICK_SECONDS;

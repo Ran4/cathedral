@@ -18,6 +18,7 @@ mod clock;
 mod config_menu;
 mod hud;
 mod interaction;
+mod lamps;
 mod microphone;
 mod sound;
 mod speech;
@@ -372,6 +373,7 @@ impl Plugin for SmartActorsPlugin {
             .init_resource::<model::WorldMirror>()
             .init_resource::<clock::WorldClockState>()
             .init_resource::<model::MovementInbox>()
+            .init_resource::<lamps::CityLamps>()
             .insert_resource(SmartActorRuntime::starting(self.config.fake_backend))
             .init_resource::<area_debug::AreaDebugState>()
             .init_resource::<actor_sheet::InspectedActor>()
@@ -518,6 +520,9 @@ impl Plugin for SmartActorsPlugin {
                     clock::drive_sun,
                     clock::update_clock_hud,
                     clock::handle_time_scale_key,
+                    // The lamp mirror (M7): stand the posts up and flip their
+                    // glass and glow as the sim's set changes.
+                    lamps::sync_lamp_props,
                 ),
             );
         if app.is_plugin_added::<bevy::gizmos::GizmoPlugin>() {
@@ -538,6 +543,14 @@ impl Plugin for SmartActorsPlugin {
 pub struct InjectPlayerTranscript {
     pub text: String,
     pub target_id: Option<model::ActorId>,
+}
+
+/// The engine's two render-only "hot" channels, bundled so `drain_bridge_messages`
+/// stays under Bevy's 16-parameter system limit.
+#[derive(SystemParam)]
+struct HotChannels<'w> {
+    movement: ResMut<'w, model::MovementInbox>,
+    lamps: ResMut<'w, lamps::CityLamps>,
 }
 
 #[derive(SystemParam)]
@@ -567,7 +580,7 @@ fn drain_bridge_messages(
     mut spatial: ResMut<interaction::PlayerSpatialState>,
     mut presentation: BridgePresentationWriters,
     mut world_clock: ResMut<clock::WorldClockState>,
-    mut movement_inbox: ResMut<model::MovementInbox>,
+    mut hot: HotChannels,
     // Speech presentation dedupes and orders by this (speech.rs), and the
     // engine's messages no longer carry a sequence of their own. Counting them
     // here gives the same monotonic, gap-free stream the envelope did.
@@ -619,7 +632,8 @@ fn drain_bridge_messages(
                     &mut interaction,
                     &mut presentation,
                     &mut world_clock,
-                    &mut movement_inbox,
+                    &mut hot.movement,
+                    &mut hot.lamps,
                 );
                 // Do not open the default input device before the engine
                 // handshake confirms that transcription is configured.
@@ -674,6 +688,7 @@ fn process_engine_message(
     presentation: &mut BridgePresentationWriters,
     world_clock: &mut clock::WorldClockState,
     movement_inbox: &mut model::MovementInbox,
+    city_lamps: &mut lamps::CityLamps,
 ) {
     match message {
         EngineMessage::Ready {
@@ -752,6 +767,24 @@ fn process_engine_message(
                 sample.gait_phase = motion.gait_phase;
                 sample.seq = sample.seq.wrapping_add(1);
             }
+        }
+        EngineMessage::Lamps { lamps: set } => {
+            // The lamp channel (M7), like `Clock`: a render-only mirror, no
+            // snapshot, no revision. The sync system stands the posts up and
+            // flips their glow from this resource. One `logs.jsonl` line per
+            // change (the clock's pattern), so a drive script can assert on
+            // the lighting in text instead of reading a screenshot.
+            let lit = set.iter().filter(|lamp| lamp.lit).count();
+            crate::session_log::log_line("lamps", "INFO", &format!("[lamps] {lit}/{} lit", set.len()));
+            city_lamps.lamps = set
+                .into_iter()
+                .map(|lamp| lamps::LampState {
+                    position: model::vec3_from_sim(lamp.position_m),
+                    lit: lamp.lit,
+                    square: lamp.square,
+                })
+                .collect();
+            city_lamps.revision += 1;
         }
         EngineMessage::Speech {
             event_id,
