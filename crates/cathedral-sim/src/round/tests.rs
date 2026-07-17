@@ -676,6 +676,7 @@ fn a_night_trade_is_not_sent_home_by_curfew() {
     match decide_only(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
         Decision::Travel(_) | Decision::Stay | Decision::Wander(_) => {}
         Decision::ApproachWell => panic!("a tavern worker draws no water here"),
+        Decision::ApproachStall(_) => panic!("no food stall is in reach of this tavern worker"),
         Decision::TravelIntent(_) => panic!("no go_to intent was issued"),
         Decision::EatHeld(_) => panic!("a well-fed tavern worker holds no food to eat"),
         Decision::WalkToLamp(_) | Decision::LightLamp(_) => {
@@ -1017,6 +1018,7 @@ fn household_vessels_queue_ahead_of_trade_vessels() {
         curfew_exempt: false,
         source: Some(0),
         is_household: household,
+        food: None,
         phase: Phase::Idle,
         travel_target: None,
         travel_for_intent: false,
@@ -1055,6 +1057,7 @@ fn a_full_vessel_is_delivered_by_kind() {
         curfew_exempt: false,
         source: Some(0),
         is_household: household,
+        food: None,
         phase: Phase::Drawing,
         travel_target: None,
         travel_for_intent: false,
@@ -1801,6 +1804,7 @@ fn errand_debug_reduces_the_phase_the_well_and_the_walk() {
             curfew_exempt: false,
             source: Some(0),
             is_household: true,
+            food: None,
             phase: Phase::Queued,
             travel_target: None,
             travel_for_intent: false,
@@ -2159,6 +2163,379 @@ fn famished_diverts_home_only_while_the_hearth_is_serving() {
         decide(&round, &world, &nav, &merc, 0, Office::HighWick, Weekday::of_day(1));
     assert!(matches!(noon, Decision::Travel(t) if t == home), "famished at High Wick makes for the hearth, got {noon:?}");
     assert_eq!(noon_pressure, Some(FAMISHED_PRESSURE), "and injects the famished pressure");
+}
+
+// --------------------------------------------------------------------------- //
+// The food stalls (M3): binding, restock, the silent purchase, the ledger.
+// --------------------------------------------------------------------------- //
+
+/// A stall stocked with three rye loaves, a 6-spark vendor float and a 5-spark
+/// buyer queued — the fixture the purchase/restock tests share.
+fn bread_stall_world() -> (World, Round, ActorId, ActorId, ItemId) {
+    let mut world = base_world();
+    let vendor = ActorId::from_raw("baker");
+    world.add_character(person("baker", Vec3::ZERO, Some("baker"), Significance::Minor));
+    let stock_id = ItemId::from_raw("fs_baker_0_0");
+    world.add_item(Item::stack(stock_id.clone(), "loaf", 3).with_metadata("flour", "rye"));
+    world.characters.get_mut(&vendor).unwrap().state.holds.push(stock_id.clone());
+    let vendor_wallet = ItemId::from_raw("w_baker");
+    world.add_item(Item::stack(vendor_wallet.clone(), "spark", 6));
+    world.characters.get_mut(&vendor).unwrap().state.holds.push(vendor_wallet);
+
+    let buyer = ActorId::from_raw("buyer");
+    world.add_character(person("buyer", Vec3::new(2.0, WALK_Y, 0.0), None, Significance::Minor));
+    let buyer_wallet = ItemId::from_raw("w_buyer");
+    world.add_item(Item::stack(buyer_wallet.clone(), "spark", 5));
+    world.characters.get_mut(&buyer).unwrap().state.holds.push(buyer_wallet);
+    world.assert_invariants();
+
+    let mut round = Round::default();
+    round.food_trades.insert(
+        "bread".into(),
+        ResolvedTrade {
+            occupations: vec!["baker".into()],
+            stock: vec![StockSpec {
+                kind: "loaf".into(),
+                metadata: std::collections::BTreeMap::from([("flour".to_string(), "rye".to_string())]),
+                quantity: 3,
+            }],
+            per_serving: None,
+        },
+    );
+    round.stalls.push(FoodStall {
+        name: "Bread".into(),
+        site: "The Wickmarket".into(),
+        pitch: Vec3::ZERO,
+        trade: "bread".into(),
+        vendor: Some(vendor.clone()),
+        queue: vec![buyer.clone()],
+        serving: None,
+        stock_ids: vec![stock_id.clone()],
+        preferred: None,
+        open: OpenSpec { offices: vec![Office::HighWick], weekdays: None },
+        cry_next: 0.0,
+    });
+    (world, round, vendor, buyer, stock_id)
+}
+
+/// The silent purchase is an atomic swap that conserves sparks and takes exactly
+/// one unit off the board (`04` §5). The stock-left figure the trace prints is
+/// the real remaining count — the invariant behind the `[food]` sale line.
+#[test]
+fn a_purchase_is_an_atomic_swap_that_conserves_the_board() {
+    let (mut world, mut round, vendor, buyer, stock_id) = bread_stall_world();
+    let before = wallet_sparks(&world, &buyer) + wallet_sparks(&world, &vendor);
+
+    let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("the buyer affords a rye loaf");
+    assert_eq!(sale.price, 2, "the rye loaf is list price");
+    assert_eq!(sale.item_display, "rye loaf");
+    assert_eq!(sale.stock_left, 2, "one of three loaves left the board — no phantom unit");
+
+    assert_eq!(
+        wallet_sparks(&world, &buyer) + wallet_sparks(&world, &vendor),
+        before,
+        "a purchase mints and burns nothing"
+    );
+    assert_eq!(wallet_sparks(&world, &buyer), 3, "the buyer paid 2");
+    assert_eq!(wallet_sparks(&world, &vendor), 8, "the vendor took 2");
+    let loaves: u32 = world.characters[&buyer]
+        .holds()
+        .iter()
+        .filter_map(|id| world.items.get(id))
+        .filter(|item| item.kind.as_str() == "loaf")
+        .map(|item| item.quantity)
+        .sum();
+    assert_eq!(loaves, 1, "the buyer carries the loaf");
+    assert_eq!(world.items.get(&stock_id).map(|item| item.quantity), Some(2), "the vendor's stack fell by one");
+    world.assert_invariants();
+}
+
+/// A buyer who cannot pay is a graceful no-sale: nothing moves, the board is
+/// untouched, and the buyer keeps their coin.
+#[test]
+fn a_broke_buyer_is_a_no_sale() {
+    let (mut world, mut round, _vendor, buyer, stock_id) = bread_stall_world();
+    // Spend the buyer down to a single spark — a 2-spark loaf is out of reach.
+    set_wallet(&mut world, &buyer, 1);
+    assert!(try_purchase(&mut round, &mut world, 0, &buyer).is_none(), "a spark cannot buy a 2-spark loaf");
+    assert_eq!(world.items.get(&stock_id).map(|item| item.quantity), Some(3), "the board is untouched");
+    assert_eq!(wallet_sparks(&world, &buyer), 1, "the buyer keeps their coin");
+}
+
+/// The famished buyer takes the cheapest edible they can afford: a lone spark
+/// buys the herring, never the 2-spark loaf beside it (Ilse's exact arithmetic).
+#[test]
+fn a_purchase_takes_the_cheapest_affordable() {
+    let (mut world, mut round, vendor, buyer, _rye) = bread_stall_world();
+    // Add a 1-spark herring to the same board and pin the buyer to a single spark.
+    let herring = ItemId::from_raw("fs_baker_0_1");
+    world.add_item(Item::stack(herring.clone(), "herring", 4));
+    world.characters.get_mut(&vendor).unwrap().state.holds.push(herring.clone());
+    round.stalls[0].stock_ids.push(herring.clone());
+    set_wallet(&mut world, &buyer, 1);
+
+    let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("a spark buys a herring");
+    assert_eq!(sale.item_display, "herring");
+    assert_eq!(sale.price, 1);
+    assert_eq!(world.items.get(&herring).map(|item| item.quantity), Some(3), "a herring left the board");
+    assert_eq!(wallet_sparks(&world, &buyer), 0, "the buyer spent their last spark");
+}
+
+/// The pot never depletes: it conjures a fresh bowl per sale, and the stall's
+/// stock ledger stays empty.
+#[test]
+fn the_pot_conjures_a_bowl_per_serving() {
+    let (mut world, mut round, vendor, buyer, _rye) = bread_stall_world();
+    // Turn the stall into a pot: a per-serving stew, no stock stacks.
+    round.food_trades.insert(
+        "pot".into(),
+        ResolvedTrade { occupations: vec!["cook".into()], stock: Vec::new(), per_serving: Some("stew".into()) },
+    );
+    round.stalls[0].trade = "pot".into();
+    round.stalls[0].stock_ids.clear();
+    // strip the leftover loaf stack so only the pot remains
+    let stock = ItemId::from_raw("fs_baker_0_0");
+    world.items.remove(&stock);
+    world.characters.get_mut(&vendor).unwrap().state.holds.retain(|id| id != &stock);
+
+    let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("a bowl of stew");
+    assert_eq!(sale.item_display, "bowl of stew");
+    assert_eq!(sale.price, 2);
+    assert_eq!(sale.stock_left, 0, "the pot keeps no board");
+    let bowls = world.characters[&buyer]
+        .holds()
+        .iter()
+        .filter_map(|id| world.items.get(id))
+        .filter(|item| item.kind.as_str() == "stew")
+        .count();
+    assert_eq!(bowls, 1, "the buyer holds one bowl");
+}
+
+/// A famished vendor never eats their own board — the stock stays whole and only
+/// leaves by sale. Without the skip, a hungry baker's rung-3 eat-what-you-hold
+/// would silently consume a loaf nobody bought (found in the M3 bring-up).
+#[test]
+fn a_vendor_never_eats_their_own_board() {
+    let (world, mut round, vendor, _buyer, _stock) = bread_stall_world();
+    // The board is the only edible the vendor holds.
+    let held = held_edible(&round, &world, &world.characters[&vendor]);
+    assert!(held.is_none(), "the board is for selling, not eating: {held:?}");
+    // But a personal loaf (not stock) is fair game.
+    let mut world = world;
+    let personal = ItemId::from_raw("mine1");
+    world.add_item(Item::new(personal.clone(), "loaf").with_metadata("flour", "rye"));
+    world.characters.get_mut(&vendor).unwrap().state.holds.push(personal.clone());
+    // Not a stock id, so the famished vendor would eat it.
+    round.stalls[0].vendor = Some(vendor.clone());
+    assert_eq!(held_edible(&round, &world, &world.characters[&vendor]), Some(personal));
+}
+
+/// The Kindling restock conjures the template onto the vendor; the Watch ledger
+/// refills buyers to seed, floats vendors, and sweeps the board — the one beat
+/// that is allowed to change the world's spark total.
+#[test]
+fn the_restock_and_watch_ledger_close_the_books() {
+    let nav = nav();
+    let clock = clock_on(Office::Kindling, 2); // day 2 is a Highmarket
+    let mut world = base_world();
+    // A baker at the Wickmarket binds the bread stall; a passer-by is a buyer.
+    let wickmarket = nav.node_point(nav.place("The Wickmarket").expect("baked").node);
+    world.add_character(person("bakr1", wickmarket, Some("baker"), Significance::Minor));
+    world.add_character(person("pass1", wickmarket + Vec3::new(6.0, 0.0, 0.0), Some("mason"), Significance::Minor));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    // The bread stall is staffed and stocked from the seed's restock.
+    let baker = ActorId::from_raw("bakr1");
+    let bread = round.stalls().iter().find(|s| s.name.contains("bread")).expect("the bread stall exists");
+    assert_eq!(bread.vendor.as_ref(), Some(&baker), "the baker keeps the bread stall");
+    let stock: u32 = bread.stock_ids.iter().filter_map(|id| world.items.get(id)).map(|i| i.quantity).sum();
+    assert_eq!(stock, 15, "12 rye + 3 wheat conjured onto the baker");
+    assert!(world.characters[&baker].holds().iter().any(|id| id.as_str() == "fs_bakr1_2_0"), "the baker holds their own bread");
+
+    // Hand the passer-by all the coin, then close the books: they refill to seed,
+    // the vendor floats, and the board is swept.
+    let mason = ActorId::from_raw("pass1");
+    set_wallet(&mut world, &mason, 40);
+    let seed_wallet = wallet_sparks(&world, &mason);
+    round.close_books(&mut world);
+    assert_ne!(wallet_sparks(&world, &mason), 40, "the ledger reset the buyer's purse");
+    assert!(wallet_sparks(&world, &mason) < 8, "buyer refilled to the 2-7 seed band, not to 40");
+    let _ = seed_wallet;
+    assert_eq!(wallet_sparks(&world, &baker), 6, "the vendor floated to 6");
+    let swept: u32 = round.stalls().iter().flat_map(|s| s.stock_ids.iter()).filter_map(|id| world.items.get(id)).map(|i| i.quantity).sum();
+    assert_eq!(swept, 0, "the board is swept at the Watch");
+    world.assert_invariants();
+}
+
+/// End to end on the real graph: a famished passer-by at the Wickmarket seeks the
+/// bread stall, joins its queue, buys a loaf and eats it — the whole rung-3 → walk
+/// → queue → silent purchase → eat chain, with the self-percept both parties can
+/// be asked about.
+#[test]
+fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
+    let nav = nav();
+    let clock = clock_on(Office::HighWick, 2); // Highmarket noon, the market's peak
+    let mut world = base_world();
+    let wickmarket = nav.node_point(nav.place("The Wickmarket").expect("baked").node);
+    world.add_character(person("bakr2", wickmarket, Some("baker"), Significance::Minor));
+    world.add_character(person("hgry1", wickmarket + Vec3::new(8.0, 0.0, 4.0), Some("mason"), Significance::Minor));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    let baker = ActorId::from_raw("bakr2");
+    let hungry = ActorId::from_raw("hgry1");
+    assert!(
+        round.stalls().iter().any(|s| s.name.contains("bread") && s.vendor.as_ref() == Some(&baker)),
+        "the baker keeps the bread stall on a Highmarket noon"
+    );
+    // Keep the baker fed (so they simply stand their post), and starve the buyer.
+    world.characters.get_mut(&baker).unwrap().state.needs.hunger = 200.0;
+    world.characters.get_mut(&hungry).unwrap().state.needs.hunger = 8.0; // famished
+    set_wallet(&mut world, &hungry, 4); // enough for a 2-spark loaf
+    let hunger_before = world.characters[&hungry].needs().hunger;
+
+    let (_now, _nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.0, 600, |world| {
+        world.characters[&hungry]
+            .recent_history()
+            .iter()
+            .any(|line| line.starts_with("You bought a rye loaf"))
+    });
+    assert!(
+        world.characters[&hungry].recent_history().iter().any(|line| line.starts_with("You bought a rye loaf from")),
+        "the buyer remembers the purchase they can be asked about: {:?}",
+        world.characters[&hungry].recent_history()
+    );
+    assert!(
+        world.characters[&baker].recent_history().iter().any(|line| line == "You sold a rye loaf for 2 sparks."),
+        "the vendor remembers the sale: {:?}",
+        world.characters[&baker].recent_history()
+    );
+    // Eating follows at the pitch: give it a few more beats and the gauge climbs.
+    let (_now, _n) = beats_until(&mut round, &mut world, &nav, &clock, _now, 60, |world| {
+        world.characters[&hungry].needs().hunger > hunger_before + 100.0
+    });
+    assert!(
+        world.characters[&hungry].needs().hunger > hunger_before + 100.0,
+        "the loaf's satiety lifted the buyer out of famine"
+    );
+    // The eat is silent: the eater remembers their own meal (askable), but no
+    // bystander `ate a rye loaf` line floods the nearby vendor's inbox — the
+    // market's zero-token discipline (`05` §4).
+    assert!(
+        world.characters[&hungry].recent_history().iter().any(|line| line == "You ate a rye loaf."),
+        "the eater remembers their own meal: {:?}",
+        world.characters[&hungry].recent_history()
+    );
+    assert!(
+        !world.characters[&baker].inbox().iter().any(|line| line.contains("ate a rye loaf")),
+        "no bystander eat line reaches the vendor's inbox: {:?}",
+        world.characters[&baker].inbox()
+    );
+    // The sale clinked a coin — a player-only world sound, never attributed to an
+    // actor, so it nudges no NPC (`04` §5).
+    let events = world.drain_events();
+    let clink = events.iter().find(|event| event.sound_id.as_deref() == Some("coin_clink"));
+    assert!(clink.is_some(), "the purchase emits a coin_clink");
+    assert!(clink.unwrap().actor_id.is_none(), "the clink is an unattributed world sound");
+    world.assert_invariants();
+}
+
+/// A stall stack an LLM had offered and nobody accepted, swept by the Watch
+/// ledger, must not leave a dangling offer for `assert_invariants` to panic on —
+/// the crash the review caught ("one stock, two doors"). The offer is pruned with
+/// the same cleanup `eat` does, and the target is told it lapsed.
+#[test]
+fn a_swept_offered_stock_stack_prunes_its_offer() {
+    let (mut world, mut round, vendor, buyer, stock_id) = bread_stall_world();
+    // The vendor offers their whole board stack to the buyer 2 m away.
+    apply_action(&mut world, &vendor, "offer_item", &json!({"item_id": stock_id.as_str(), "target": buyer.as_str()})).unwrap();
+    assert!(world.offers.contains_key(&stock_id), "the offer is live");
+    // The Watch closes the books — the stock is swept out from under the offer.
+    round.close_books(&mut world); // asserts invariants internally; must not panic
+    assert!(!world.offers.contains_key(&stock_id), "the swept stack's offer was pruned");
+    assert!(
+        world.characters[&buyer].inbox().iter().any(|line| line.contains("withdrew the offered rye loaf")),
+        "the offer's target learns it lapsed: {:?}",
+        world.characters[&buyer].inbox()
+    );
+    world.assert_invariants();
+}
+
+/// The ladder buying the **last** unit of an offered stock stack prunes the
+/// offer as the stack leaves the world.
+#[test]
+fn buying_the_last_offered_unit_prunes_its_offer() {
+    let (mut world, mut round, vendor, buyer, stock_id) = bread_stall_world();
+    set_wallet(&mut world, &vendor, 6);
+    // One loaf left, and it is on offer to a bystander.
+    world.items.get_mut(&stock_id).unwrap().quantity = 1;
+    apply_action(&mut world, &vendor, "offer_item", &json!({"item_id": stock_id.as_str(), "target": buyer.as_str()})).unwrap();
+    // The queued buyer reaches the head and buys it.
+    let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("the last loaf sells");
+    assert_eq!(sale.stock_left, 0);
+    assert!(!world.items.contains_key(&stock_id), "the depleted stack is gone");
+    assert!(!world.offers.contains_key(&stock_id), "and so is its offer");
+    world.assert_invariants();
+}
+
+/// A queued buyer whose offered coin stack is emptied by their own purchase
+/// prunes that offer.
+#[test]
+fn spending_an_offered_coin_stack_prunes_its_offer() {
+    let (mut world, mut round, vendor, buyer, _stock) = bread_stall_world();
+    // The buyer holds exactly the price and has it out on offer to the vendor.
+    set_wallet(&mut world, &buyer, 2);
+    let coin = ItemId::from_raw("w_buyer");
+    apply_action(&mut world, &buyer, "offer_item", &json!({"item_id": coin.as_str(), "target": vendor.as_str()})).unwrap();
+    assert!(world.offers.contains_key(&coin), "the coin offer is live");
+    // Buying the 2-spark loaf empties the purse.
+    try_purchase(&mut round, &mut world, 0, &buyer).expect("the loaf is affordable");
+    assert!(!world.items.contains_key(&coin), "the emptied purse is gone");
+    assert!(!world.offers.contains_key(&coin), "and its offer was pruned");
+    world.assert_invariants();
+}
+
+/// The nightly wallet reset dropping an offered spark stack prunes the offer.
+#[test]
+fn a_wallet_reset_prunes_an_offered_spark_stack() {
+    let (mut world, _round, vendor, buyer, _stock) = bread_stall_world();
+    let coin = ItemId::from_raw("w_buyer");
+    apply_action(&mut world, &buyer, "offer_item", &json!({"item_id": coin.as_str(), "target": vendor.as_str()})).unwrap();
+    assert!(world.offers.contains_key(&coin));
+    // A reset to zero drops the stack — the offer must go with it.
+    set_wallet(&mut world, &buyer, 0);
+    assert!(!world.items.contains_key(&coin), "the wallet is gone");
+    assert!(!world.offers.contains_key(&coin), "its offer was pruned");
+    world.assert_invariants();
+}
+
+/// A fed buyer carries food home only when their round is actually taking them
+/// there (an active home leg) within the supper span — not merely because it is
+/// evening (`04` §5). Otherwise they eat at the pitch, so the loaf is not hoarded.
+#[test]
+fn carry_home_only_when_actually_heading_home() {
+    let home = Vec3::new(0.0, WALK_Y, 0.0);
+    let shop = Vec3::new(50.0, WALK_Y, 0.0);
+    let buyer = ActorId::from_raw("bYr");
+    let mut round = Round::default();
+    let legs = |office: Office| RoundLeg { from: office, at: if office == Office::Lamplight { home } else { shop }, label: if office == Office::Lamplight { "home".into() } else { "shop".into() }, doing: if office == Office::Lamplight { Arrival::Sleep } else { Arrival::Trade }, only_on: None, is_home: office == Office::Lamplight };
+    let person = Townsperson {
+        home: Some(home), base: home,
+        legs: vec![legs(Office::Waning), legs(Office::Lamplight)],
+        leash_m: DEFAULT_ROUND_LEASH_M, curfew_exempt: false, source: None, is_household: false,
+        food: None, phase: Phase::Idle, travel_target: None, travel_for_intent: false,
+        next_decision: 0.0, epoch: 0, excused: false,
+    };
+    round.people.insert(buyer.clone(), person);
+    // At the Waning the active leg is still the shop → eat at the pitch.
+    assert!(!should_carry(&round, &buyer, Office::Waning, Weekday::Second), "still at the market post: eat here");
+    // At Lamplight the active leg is home → carry it to the hearth.
+    assert!(should_carry(&round, &buyer, Office::Lamplight, Weekday::Second), "headed home for supper: carry it");
+    // At noon nobody carries.
+    assert!(!should_carry(&round, &buyer, Office::HighWick, Weekday::Second), "not the supper span");
 }
 
 /// The low-hunger memory hook is a *first-person present* declaration, not a bare

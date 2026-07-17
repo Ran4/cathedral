@@ -1010,6 +1010,14 @@ impl Engine {
         self.round.food_summary(&self.world)
     }
 
+    /// Drain the food round's `[food]` event log for `--trace-food` (M3): the
+    /// Kindling restock, each sale, the Watch ledger. Buffered by the round each
+    /// poll and drained here by the host; the game host never calls it, so the
+    /// buffer stays capped.
+    pub fn drain_food_log(&mut self) -> Vec<String> {
+        self.round.drain_food_log()
+    }
+
     /// A behavioural census of the enrolled cast for `--census-by-area`.
     pub fn round_census(&self, now: f64) -> Census {
         self.round.census(&self.world, &self.clock, now)

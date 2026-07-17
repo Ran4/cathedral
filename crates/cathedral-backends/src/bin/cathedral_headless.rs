@@ -441,6 +441,11 @@ impl Runner {
             println!("\n== tick {tick}: {actor_name} ==");
             self.apply_turn()?;
             self.print_new_transcript_lines();
+            if self.trace_food {
+                for line in self.engine.drain_food_log() {
+                    println!("[food] {line}");
+                }
+            }
             if self.trace_water {
                 println!("[water] {}", self.engine.water_summary());
             }
@@ -484,6 +489,13 @@ impl Runner {
         while self.now < end {
             self.now += step;
             self.pump(Vec::new());
+            if self.trace_food {
+                // Drain every step so the restock, the sales and the ledger print
+                // in the order they happened, not clumped at the census interval.
+                for line in self.engine.drain_food_log() {
+                    println!("[food] {line}");
+                }
+            }
             if self.trace_water && self.now >= next_water {
                 println!("[water] {}", self.engine.water_summary());
                 next_water = self.now + 3.0;

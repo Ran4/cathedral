@@ -199,6 +199,32 @@ pub const HUNGER_SEED_DECLARED_HUNGRY: f64 = 25.0;
 /// A food stall's queue is "short" below this — the [`WELL_QUEUE_SHORT`] twin,
 /// the predicate rung 7 joins on (M3 binds the stalls this reads against).
 pub const FOOD_QUEUE_SHORT: usize = 4;
+/// How long one sale takes at the pitch, in real seconds — a coin counted, a
+/// loaf wrapped ([`04_the_bread_round.md`] §5). The [`WATER_DRAW_SECONDS`] twin,
+/// a touch longer: money changes hands.
+pub const PURCHASE_SECONDS: f64 = 4.0;
+/// How long a ladder-driven meal at the pitch takes, in real seconds — the
+/// buyer stands and eats where they bought, so the act reads visually (an eater
+/// at a bench). Satiety applies at the end, on the actual eat.
+pub const EAT_SECONDS: f64 = 5.0;
+/// A buyer is "at the pitch" — arrived, ready to queue — once within this of it.
+/// The [`WELL_ARRIVE_RADIUS_M`] twin.
+pub const STALL_ARRIVE_RADIUS_M: f64 = 3.0;
+/// A bound vendor counts as *keeping* their pitch — the stall is staffed — while
+/// within this of it. Generous (a wide market floor, the vendor's own wander
+/// leash), so the seller the round delivers to the square is "at the stall"
+/// without any pin: no new movement code, the stall borrows the delivered actor.
+pub const STALL_PITCH_REACH_M: f64 = 12.0;
+/// A famished (rung 3) or hungry (rung 7) actor will detour to an open stall no
+/// farther than this — the visible economy concentrates in the squares, and a
+/// famished mason across the city keeps working (or goes to a hearth) rather
+/// than marching a kilometre for a loaf (`03_hunger.md` §3/§4).
+pub const STALL_SEEK_RADIUS_M: f64 = 60.0;
+/// How often a staffed, open stall cries its wares — a player-only `market_cry`
+/// world sound, so a square *sounds* like a market before it looks like one
+/// (`04` §5, the optional flourish). Sparse enough not to nag, like the well
+/// keeper's rhythm but slower.
+pub const MARKET_CRY_INTERVAL_SECONDS: f64 = 75.0;
 
 // --- Wallets (food & items M1/M2): starting-purse seeding
 // (`features/food_and_items/02_the_spark_standard.md` §4). M1 pins these

@@ -109,7 +109,16 @@ coin counted, a loaf wrapped), then the atomic swap, all inside the sim tick:
   arithmetic);
 - then the buyer **eats it at the pitch** over `EAT_SECONDS` unless their next leg is home within
   the supper span, in which case they carry it (and rung 3's eat-what-you-hold finishes the story
-  at the hearth). Satiety applies on the actual eat, not the buy.
+  at the hearth). Satiety applies on the actual eat, not the buy. **The ladder's auto-eat is
+  silent** (M3, as implemented): like the well draw, the eater *remembers their own meal*
+  (`remember_percept`) and the player sees the item vanish from the snapshot, but the terse
+  `X ate a herring` bystander line the `eat` *verb* delivers to neighbours' inboxes
+  ([05](05_the_llm_seam.md) §4) is **dropped** — a code-driven meal fires far too often to nudge a
+  reaction turn per bite, which would break the "thirty sales an hour never schedule a turn"
+  discipline below. A *deliberate* `eat` (an LLM or the player choosing it) keeps its bystander
+  line; only the ladder's automatic pitch/held eats are silenced (via `round.rs`'s `silent_eat`).
+  "Next leg is home" is read off the buyer's **active round leg** (`is_home`), not merely the
+  clock, so a buyer still at their market post eats in view rather than pocketing the loaf.
 
 **Percepts follow the water round's discipline** (*"a clock, not an event"*, `round.rs:1474-1478`):
 

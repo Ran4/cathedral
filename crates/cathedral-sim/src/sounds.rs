@@ -397,6 +397,8 @@ mod tests {
                 "chain_windlass",
                 "pour_trough",
                 "pail_clatter",
+                "coin_clink",
+                "market_cry",
             ]
         );
         for sound in catalog.sounds() {

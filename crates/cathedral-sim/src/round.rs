@@ -31,12 +31,14 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use serde::Deserialize;
 
 use crate::{
-    HEARING_RADIUS_M, HEARTH_REFILL_PER_GAME_SECOND, HUNGER_DECAY_PER_GAME_SECOND, HUNGER_FAMISHED,
-    HUNGER_HUNGRY, HUNGER_MAX, HUNGER_SEED_DECLARED_HUNGRY, HUNGER_SEED_FLOOR,
-    LADDER_DECISION_MAX_SECONDS, LADDER_DECISION_MIN_SECONDS, PERSON_ARRIVE_RADIUS_M,
-    PLACE_ARRIVE_RADIUS_M, SOCIAL_PULL_RADIUS_M, THIRST_MAX, THIRST_PARCHED, THIRST_THIRSTY,
-    WALK_SPEED_MPS, WALLET_SEED_MIN, WALLET_SEED_SALT, WALLET_SEED_SPREAD, WATER_DRAW_SECONDS,
-    WELL_ARRIVE_RADIUS_M, WELL_KEEPER_SOUND_INTERVAL_SECONDS, WELL_QUEUE_SHORT,
+    EAT_SECONDS, FOOD_QUEUE_SHORT, HEARING_RADIUS_M, HEARTH_REFILL_PER_GAME_SECOND,
+    HUNGER_DECAY_PER_GAME_SECOND, HUNGER_FAMISHED, HUNGER_HUNGRY, HUNGER_MAX,
+    HUNGER_SEED_DECLARED_HUNGRY, HUNGER_SEED_FLOOR, LADDER_DECISION_MAX_SECONDS,
+    LADDER_DECISION_MIN_SECONDS, PERSON_ARRIVE_RADIUS_M, PLACE_ARRIVE_RADIUS_M, PURCHASE_SECONDS,
+    SOCIAL_PULL_RADIUS_M, STALL_ARRIVE_RADIUS_M, STALL_PITCH_REACH_M, STALL_SEEK_RADIUS_M,
+    THIRST_MAX, THIRST_PARCHED, THIRST_THIRSTY, WALK_SPEED_MPS, WALLET_SEED_MIN, WALLET_SEED_SALT,
+    WALLET_SEED_SPREAD, WATER_DRAW_SECONDS, WELL_ARRIVE_RADIUS_M,
+    WELL_KEEPER_SOUND_INTERVAL_SECONDS, WELL_QUEUE_SHORT,
     character::{Character, IntentTarget, Movement},
     clock::{Office, WorldClock, Weekday},
     event::DomainEvent,
@@ -94,6 +96,11 @@ const DEFAULT_ROUND_LEASH_M: f64 = 10.0;
 /// Census: how close counts as "at your post" / "at home".
 const CENSUS_POST_RADIUS_M: f64 = 9.0;
 const CENSUS_HOME_RADIUS_M: f64 = 5.0;
+/// The `--trace-food` log is bounded here: the game host never drains it, so it
+/// caps rather than grows (the oldest lines drop). A market morning of sales
+/// coalesces on the sheet, but every line is kept in the log for the headless
+/// tracer, so this is generous.
+const FOOD_LOG_CAP: usize = 4096;
 /// A tavern's hearth reaches this far from its node (food & items M2, §4). Looser
 /// than the home hearth ([`CENSUS_HOME_RADIUS_M`]) because a tavern is a wide
 /// floor a worker mills across (the `tavern` archetype leash is 8 m), not a
@@ -119,6 +126,11 @@ const SOURCES: &[(&str, &str)] = &[
 /// exactly as `bake_navigation.py`'s output is embedded in the game host. Static
 /// data, compiled in, not read at runtime: the sim keeps its no-IO decree.
 const ROUNDS_JSON: &str = include_str!("../../../assets/world/rounds.json");
+
+/// The food-stall content (food & items M3, `04_the_bread_round.md`): the seven
+/// pitches, their trades, the Kindling restock templates and the vendor float.
+/// Embedded like [`ROUNDS_JSON`].
+const FOOD_JSON: &str = include_str!("../../../assets/world/food.json");
 
 /// The five town squares whose lamps the lamplighter's dusk round lights
 /// (M7; `features/50_cool_suggestions.md` #21). The round itself visits them
@@ -205,6 +217,88 @@ struct LegSpec {
     only_on: Option<Vec<Weekday>>,
 }
 
+// --------------------------------------------------------------------------- //
+// The food-stall content, straight off `food.json`
+// --------------------------------------------------------------------------- //
+#[derive(Debug, Deserialize)]
+struct FoodDoc {
+    /// The float a vendor's wallet resets to each morning — change for a market
+    /// day ([`04_the_bread_round.md`] §3).
+    vendor_float_sparks: u32,
+    /// Trade → its eligible occupations and the morning stock template.
+    trades: HashMap<String, TradeSpec>,
+    stalls: Vec<StallSpec>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TradeSpec {
+    /// The occupations that may keep a stall of this trade (`04` §2).
+    occupations: Vec<String>,
+    /// The template conjured onto the vendor each Kindling — empty for the pot,
+    /// whose bowl is conjured per serving instead.
+    #[serde(default)]
+    stock: Vec<StockSpec>,
+    /// The kind conjured fresh at every sale (the never-scraped pot's `stew`),
+    /// in place of a depleting stock stack.
+    #[serde(default)]
+    conjure_per_serving: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+struct StockSpec {
+    kind: String,
+    #[serde(default)]
+    metadata: BTreeMap<String, String>,
+    quantity: u32,
+}
+
+#[derive(Debug, Deserialize)]
+struct StallSpec {
+    name: String,
+    /// The square or tavern the stall belongs to, resolved against the nav graph
+    /// by display name exactly as a work leg's anchor is.
+    site: String,
+    /// A key into [`FoodDoc::trades`].
+    trade: String,
+    /// A stride off the site node so two stalls at one square do not overlap —
+    /// small enough that the vendor the round delivers to the square still
+    /// keeps the pitch ([`STALL_PITCH_REACH_M`]).
+    #[serde(default)]
+    pitch_offset: [f64; 2],
+    /// The authored keeper this stall prefers, bound ahead of nearest-by-base
+    /// when they are in the cast and routed here (`04` §2: Renna Tapster at the
+    /// Ladle, Bertran of the Ox at the Hungry Ox).
+    #[serde(default)]
+    preferred_vendor: Option<String>,
+    open: OpenSpec,
+}
+
+/// A stall's open hours: a predicate on the clock, not state (`04` §1). A stall
+/// outside these offices — or a bound vendor away from the pitch — is closed.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+struct OpenSpec {
+    /// The offices during which the stall trades.
+    offices: Vec<Office>,
+    /// The weekdays it trades, or `None` for every day (a market-square stall
+    /// trades during market hours any day, busiest on its market day).
+    #[serde(default)]
+    weekdays: Option<Vec<Weekday>>,
+}
+
+impl OpenSpec {
+    /// Whether the stall trades at this office on this weekday.
+    fn is_open(&self, office: Office, weekday: Weekday) -> bool {
+        self.offices.contains(&office)
+            && self.weekdays.as_ref().is_none_or(|days| days.contains(&weekday))
+    }
+
+    /// Whether the stall trades at all today (any office), so a vendor is only
+    /// bound to a stall whose day it is.
+    fn open_today(&self, weekday: Weekday) -> bool {
+        self.weekdays.as_ref().is_none_or(|days| days.contains(&weekday))
+    }
+}
+
 /// Resolves a leg's `at` string to a world point: a nav place display name, a
 /// nav site id or name, or the keywords `home` / `workplace` (handled by the
 /// caller). Built once per seed.
@@ -267,6 +361,73 @@ pub struct WaterSource {
     serving: Option<(ActorId, f64)>,
     /// Next real-clock time the keeper works the gear while the source is busy.
     keeper_next_sound: f64,
+}
+
+/// One food stall (food & items M3, `04_the_bread_round.md`): a trade pitched at
+/// a square or tavern, the vendor bound to it for the day, and the FIFO queue of
+/// buyers waiting to buy. The loaves-in-it twin of [`WaterSource`] — plus the one
+/// thing water never needed, stock that runs out and the confessed magic that
+/// refills it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FoodStall {
+    /// The stall's name, for the trace and the census.
+    pub name: String,
+    /// The site's nav display name — the square or tavern — for binding and the
+    /// census (`"The Wickmarket"`).
+    pub site: String,
+    /// The walkable point the queue forms at and the `coin_clink` comes from.
+    pub pitch: Vec3,
+    /// A key into [`Round::food_trades`] (`"bread"`, `"pot"`, …).
+    trade: String,
+    /// The townsperson keeping the stall today (bound each morning to the
+    /// nearest routed keeper), or `None` for a stall nobody staffs — which then
+    /// sells nothing, exactly as an unkept well draws no water.
+    pub vendor: Option<ActorId>,
+    /// Ordered turns: the front buys next. A plain FIFO — markets have no vessel
+    /// classes (`04` §4).
+    pub queue: Vec<ActorId>,
+    /// The buyer at the head and the real-clock time their purchase resolves.
+    serving: Option<(ActorId, f64)>,
+    /// The stock ids conjured onto the vendor this morning, so leftover stock is
+    /// removed cleanly at the next restock and the nightly ledger.
+    stock_ids: Vec<ItemId>,
+    /// The authored keeper bound ahead of nearest-by-base, if in the cast (`04`
+    /// §2). `None` for the market stalls, which have no authored keeper.
+    preferred: Option<ActorId>,
+    /// The open-hours predicate on the clock.
+    open: OpenSpec,
+    /// Next real-clock time this stall cries its wares while open and staffed.
+    cry_next: f64,
+}
+
+/// A trade resolved from `food.json` for the stalls to share: who may keep it,
+/// its morning stock, and the pot's per-serving conjure.
+#[derive(Debug, Clone, PartialEq)]
+struct ResolvedTrade {
+    occupations: Vec<String>,
+    stock: Vec<StockSpec>,
+    per_serving: Option<String>,
+}
+
+/// A buyer's errand at a food stall (M3), parallel to the water `source`/`Phase`
+/// machinery: a townsperson can be walking to a stall, standing in its queue, or
+/// eating at the pitch while the rest of their round waits.
+#[derive(Debug, Clone, PartialEq)]
+struct FoodErrand {
+    /// Index into [`Round::stalls`].
+    stall: usize,
+    phase: FoodPhase,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum FoodPhase {
+    /// Walking to the stall's pitch.
+    Approaching,
+    /// Standing in the queue.
+    Queued,
+    /// Standing at the pitch eating what was bought — the bought item and the
+    /// real-clock time the meal ends (satiety applies then, not at the buy).
+    Eating { item: ItemId, until: f64 },
 }
 
 /// One street lamp in a town square (M7). The sim owns the set — positions are
@@ -336,6 +497,10 @@ struct Townsperson {
     /// The water source they draw from, or `None` for the non-drawing majority.
     source: Option<usize>,
     is_household: bool,
+    /// A live errand at a food stall (M3): walking to buy, queued, or eating at
+    /// the pitch. Independent of the water `phase` — everyone can buy food, so
+    /// this is not gated on an occupation the way `source` is.
+    food: Option<FoodErrand>,
     phase: Phase,
     /// The destination of the current [`Phase::Travelling`] walk, so a mid-walk
     /// re-decision can tell a genuinely new destination from the journey already
@@ -432,6 +597,28 @@ pub struct Round {
     /// office is fed like one at home (`03_hunger.md` §4). Empty without a nav
     /// graph, so a world with no round feeds nobody and the fixtures stay inert.
     taverns: Vec<Vec3>,
+    /// The food stalls (food & items M3, `04_the_bread_round.md`): a source with
+    /// a keeper, a FIFO queue, a timed service, a need snapped full — plus stock
+    /// that runs out. Empty without a nav graph, so the frozen fixtures stay
+    /// inert exactly as the water sources do.
+    stalls: Vec<FoodStall>,
+    /// The trades the stalls share, resolved from `food.json` once at seed.
+    food_trades: BTreeMap<String, ResolvedTrade>,
+    /// The float a vendor's wallet resets to each morning.
+    vendor_float: u32,
+    /// Each enrolled townsperson's seeded wallet level in sparks, so the nightly
+    /// Watch ledger can refill a buyer to exactly what they started with — Ilse's
+    /// authored single spark included, which a recompute would overwrite with the
+    /// 2–7 spread (`02_the_spark_standard.md` §4).
+    seed_wallets: BTreeMap<ActorId, u32>,
+    /// A bounded log of the morning's restock, sales and the nightly ledger,
+    /// drained by the host for `--trace-food`. The game host never reads it, so
+    /// it is capped ([`FOOD_LOG_CAP`]) and never grows without bound.
+    food_log: Vec<String>,
+    /// Real `now` at the last office-crossing check, so the Kindling restock and
+    /// the Watch ledger each fire exactly once per crossing, no matter the debug
+    /// time-scale (`WorldClock::offices_crossed`).
+    last_office_now: f64,
     people: BTreeMap<ActorId, Townsperson>,
     /// Game-days at the last tick, so thirst decays by the game clock (and speeds
     /// up with the debug time-scale), not by wall-clock.
@@ -579,8 +766,37 @@ impl Round {
             .filter(|item| item.kind.as_str() == "spark")
             .map(|item| item.quantity)
             .sum();
+        // The stall side of the census (M3): how many stalls are staffed, how
+        // many buyers are queued or being served, and the stock still on the
+        // vendors' boards — so a market morning reads as stock dwindling and
+        // coin gathering, the twin of the water round's `queued/drawing`.
+        let time = world.current_time;
+        let staffed = self
+            .stalls
+            .iter()
+            .filter(|stall| {
+                stall.vendor.as_ref().is_some_and(|v| {
+                    world
+                        .characters
+                        .get(v)
+                        .is_some_and(|c| c.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M)
+                }) && time.is_some_and(|t| stall.open.is_open(t.office, t.weekday))
+            })
+            .count();
+        let queued: usize = self.stalls.iter().map(|stall| stall.queue.len()).sum();
+        let serving = self.stalls.iter().filter(|stall| stall.serving.is_some()).count();
+        let stock: u32 = self
+            .stalls
+            .iter()
+            .flat_map(|stall| stall.stock_ids.iter())
+            .filter_map(|id| world.items.get(id))
+            .map(|item| item.quantity)
+            .sum();
         format!(
-            "food: {total} enrolled | fed {fed}, hungry {hungry}, famished {famished} | mean {mean:.0} | {sparks} sparks held",
+            "food: {total} enrolled | fed {fed}, hungry {hungry}, famished {famished} | mean {mean:.0} | {sparks} sparks held | \
+             stalls {}/{} open, queued {queued}, serving {serving}, stock {stock}",
+            staffed,
+            self.stalls.len(),
         )
     }
 
@@ -732,6 +948,11 @@ impl Round {
                     .state
                     .holds
                     .push(wallet_id);
+                self.seed_wallets.insert(id.clone(), sparks);
+            } else {
+                // An authored purse stands; record its level so the nightly Watch
+                // ledger refills to it, not to the 2–7 spread (Ilse's one spark).
+                self.seed_wallets.insert(id.clone(), wallet_sparks(world, id));
             }
         }
 
@@ -971,6 +1192,7 @@ impl Round {
                         curfew_exempt: false,
                         source: None,
                         is_household: false,
+                        food: None,
                         phase: Phase::Idle,
                         travel_target: None,
                         travel_for_intent: false,
@@ -1037,6 +1259,7 @@ impl Round {
                     curfew_exempt,
                     source,
                     is_household,
+                    food: None,
                     phase: Phase::Idle,
                     travel_target: None,
                     travel_for_intent: false,
@@ -1059,8 +1282,515 @@ impl Round {
             registry.len(),
         ));
         world.places = registry;
+
+        // The food stalls (M3): resolve the pitches against the same nav graph,
+        // then bind today's vendors and lay in the morning's stock so the market
+        // is trading from the first tick — the seed's day may not be a market
+        // day, in which case the square stalls simply bind nobody and wait for
+        // their weekday. Runs last: it reads the enrolled `people`'s legs to bind.
+        self.last_office_now = now;
+        self.seed_food(nav, &resolver, &mut diagnostics);
+        let time = clock.at(now);
+        self.bind_vendors(world, time.weekday);
+        self.restock(world, time.day);
+        if !self.stalls.is_empty() {
+            let bound = self.stalls.iter().filter(|stall| stall.vendor.is_some()).count();
+            diagnostics.push(format!(
+                "[smart actors] round: {} food stalls, {bound} staffed on day {} ({})",
+                self.stalls.len(),
+                time.day,
+                time.weekday.label(),
+            ));
+        }
         diagnostics
     }
+}
+
+// --------------------------------------------------------------------------- //
+// The food stalls (M3): binding, the Kindling restock, the Watch ledger, the
+// FIFO queue and the silent purchase (`04_the_bread_round.md`).
+// --------------------------------------------------------------------------- //
+impl Round {
+    /// The food stalls, for the census and tests.
+    pub fn stalls(&self) -> &[FoodStall] {
+        &self.stalls
+    }
+
+    /// The current queue at a named stall, front first — for tests/tracing.
+    pub fn stall_queue(&self, name: &str) -> Option<&[ActorId]> {
+        self.stalls
+            .iter()
+            .find(|stall| stall.name == name)
+            .map(|stall| stall.queue.as_slice())
+    }
+
+    /// Drain the `--trace-food` log the round has buffered since the last poll:
+    /// the Kindling restock, each sale, the Watch ledger. The game host simply
+    /// never calls this, so the buffer stays capped and never grows.
+    pub fn drain_food_log(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.food_log)
+    }
+
+    /// Append one `[food]` line, dropping the oldest if the cap is reached (the
+    /// game host never drains it).
+    fn push_food_log(&mut self, line: String) {
+        self.food_log.push(line);
+        if self.food_log.len() > FOOD_LOG_CAP {
+            let overflow = self.food_log.len() - FOOD_LOG_CAP;
+            self.food_log.drain(..overflow);
+        }
+    }
+
+    /// Resolve the stall pitches against the nav graph (like the taverns and the
+    /// lamp squares), offset a stride off the site node so two stalls at one
+    /// square do not overlap. A stall whose site or trade does not resolve is
+    /// skipped with a diagnostic; the rest come alive.
+    fn seed_food(&mut self, nav: &NavData, resolver: &PlaceResolver, diagnostics: &mut Vec<String>) {
+        let doc: FoodDoc = match serde_json::from_str(FOOD_JSON) {
+            Ok(doc) => doc,
+            Err(error) => {
+                diagnostics.push(format!("[smart actors] round: food.json did not load: {error}"));
+                return;
+            }
+        };
+        self.vendor_float = doc.vendor_float_sparks;
+        for (name, spec) in doc.trades {
+            self.food_trades.insert(
+                name,
+                ResolvedTrade {
+                    occupations: spec.occupations,
+                    stock: spec.stock,
+                    per_serving: spec.conjure_per_serving,
+                },
+            );
+        }
+        for spec in &doc.stalls {
+            if !self.food_trades.contains_key(&spec.trade) {
+                diagnostics.push(format!(
+                    "[smart actors] round: stall {:?} names unknown trade {:?}; skipped",
+                    spec.name, spec.trade
+                ));
+                continue;
+            }
+            let Some(site) = resolver.resolve(&spec.site) else {
+                diagnostics.push(format!(
+                    "[smart actors] round: stall {:?} site {:?} is missing from the graph; skipped",
+                    spec.name, spec.site
+                ));
+                continue;
+            };
+            let offset = Vec3::new(site.x + spec.pitch_offset[0], WALK_Y, site.z + spec.pitch_offset[1]);
+            // The offset must stand on pavement, or the queue forms on stone and
+            // nobody can reach it — fall back to the site node itself.
+            let pitch = if nav.is_walkable(offset.x, offset.z) { offset } else { site };
+            self.stalls.push(FoodStall {
+                name: spec.name.clone(),
+                site: spec.site.clone(),
+                pitch,
+                trade: spec.trade.clone(),
+                vendor: None,
+                queue: Vec::new(),
+                serving: None,
+                stock_ids: Vec::new(),
+                preferred: spec.preferred_vendor.as_ref().map(|id| ActorId::from_raw(id.as_str())),
+                open: spec.open.clone(),
+                cry_next: 0.0,
+            });
+        }
+    }
+
+    /// Bind each stall open today to the nearest routed keeper — the nearest
+    /// unbound townsperson whose occupation keeps this trade and whose round
+    /// already delivers them to the stall's site (a leg labelled it). Rebinding
+    /// a stall to a new vendor releases whoever was queued at the old one.
+    fn bind_vendors(&mut self, world: &mut World, weekday: Weekday) {
+        let mut taken: BTreeSet<ActorId> = BTreeSet::new();
+        for s in 0..self.stalls.len() {
+            let new = if self.stalls[s].open.open_today(weekday) {
+                self.pick_vendor(world, s, &taken)
+            } else {
+                None
+            };
+            if let Some(vendor) = &new {
+                taken.insert(vendor.clone());
+            }
+            if new != self.stalls[s].vendor {
+                self.release_stall(world, s);
+                self.stalls[s].vendor = new;
+            }
+        }
+    }
+
+    /// The keeper for stall `s`: the authored preferred keeper first (Renna at
+    /// the Ladle, Bertran at the Ox, `04` §2), else the nearest unbound, eligible
+    /// townsperson the round routes here. `None` if the trade has no keeper routed
+    /// here today.
+    fn pick_vendor(&self, world: &World, s: usize, taken: &BTreeSet<ActorId>) -> Option<ActorId> {
+        let stall = &self.stalls[s];
+        let trade = self.food_trades.get(&stall.trade)?;
+        // Whether a townsperson may keep this stall: an unbound person whose
+        // occupation keeps the trade and whose round already delivers them to the
+        // site (a leg labelled it) — independent of the hour, so the Kindling
+        // restock can hand them their board before they have walked in.
+        let eligible = |id: &ActorId| -> bool {
+            if taken.contains(id) {
+                return false;
+            }
+            let Some(person) = self.people.get(id) else { return false };
+            let occupation = world
+                .characters
+                .get(id)
+                .and_then(|character| character.lore())
+                .and_then(|lore| lore.occupation_id.as_deref());
+            occupation.is_some_and(|occupation| trade.occupations.iter().any(|o| o == occupation))
+                && person.legs.iter().any(|leg| leg.label == stall.site)
+        };
+
+        // The authored keeper first, when they are in the cast and routed here.
+        if let Some(preferred) = &stall.preferred
+            && eligible(preferred)
+        {
+            return Some(preferred.clone());
+        }
+
+        // Else the nearest by base, deterministic tie-break by id.
+        let mut best: Option<(f64, ActorId)> = None;
+        for id in self.people.keys() {
+            if !eligible(id) {
+                continue;
+            }
+            let distance = self.people[id].base.distance(stall.pitch);
+            let better = best
+                .as_ref()
+                .is_none_or(|(best_dist, best_id)| distance < *best_dist || (distance == *best_dist && id < best_id));
+            if better {
+                best = Some((distance, id.clone()));
+            }
+        }
+        best.map(|(_, id)| id)
+    }
+
+    /// Release the buyers queued (or being served) at stall `s`: their errand is
+    /// cleared and their walk halted, handing them back to the ladder. Eaters at
+    /// the pitch have already left the queue and keep their meal.
+    fn release_stall(&mut self, world: &mut World, s: usize) {
+        let queued: Vec<ActorId> = self.stalls[s].queue.clone();
+        for id in queued {
+            if let Some(person) = self.people.get_mut(&id)
+                && person
+                    .food
+                    .as_ref()
+                    .is_some_and(|errand| errand.stall == s && !matches!(errand.phase, FoodPhase::Eating { .. }))
+            {
+                person.food = None;
+                if let Some(character) = world.characters.get_mut(&id) {
+                    character.state.movement = None;
+                }
+            }
+        }
+        self.stalls[s].queue.clear();
+        self.stalls[s].serving = None;
+    }
+
+    /// The Kindling restock (`04` §3): sweep each vendor's leftover stock and
+    /// conjure the trade's morning template onto them, with deterministic ids per
+    /// `(vendor, day, slot)`. The pot conjures nothing here — its bowl is made
+    /// per serving. Vendor wallets are *not* touched (the ledger does that, at
+    /// the Watch), so the only spark mint/burn is the nightly ledger and
+    /// purchases conserve the total in between.
+    fn restock(&mut self, world: &mut World, day: i64) {
+        if self.stalls.is_empty() {
+            return;
+        }
+        let mut lines: Vec<String> = Vec::new();
+        for s in 0..self.stalls.len() {
+            self.clear_stock(world, s);
+            let Some(vendor) = self.stalls[s].vendor.clone() else { continue };
+            let trade_key = self.stalls[s].trade.clone();
+            let trade = self.food_trades[&trade_key].clone();
+            if trade.stock.is_empty() {
+                lines.push(format!("{} ({vendor}): the pot", self.stalls[s].name));
+                continue;
+            }
+            let mut new_ids: Vec<ItemId> = Vec::new();
+            let mut counts: Vec<String> = Vec::new();
+            for (slot, spec) in trade.stock.iter().enumerate() {
+                let id = ItemId::from_raw(format!("fs_{}_{day}_{slot}", vendor.as_str()));
+                let mut item = Item::stack(id.clone(), spec.kind.as_str(), spec.quantity);
+                for (key, value) in &spec.metadata {
+                    item.metadata.insert(key.clone(), value.clone());
+                }
+                counts.push(format!("{}× {}", spec.quantity, world.item_catalog.display_plural(&item)));
+                world.add_item(item);
+                world
+                    .characters
+                    .get_mut(&vendor)
+                    .expect("bound vendor exists")
+                    .state
+                    .holds
+                    .push(id.clone());
+                new_ids.push(id);
+            }
+            self.stalls[s].stock_ids = new_ids;
+            lines.push(format!("{} ({vendor}): {}", self.stalls[s].name, counts.join(", ")));
+        }
+        world.assert_invariants();
+        self.push_food_log(format!("Kindling restock, day {day} — {}", lines.join(" | ")));
+    }
+
+    /// The Watch ledger (`02_the_spark_standard.md` §4): buyer wallets refill to
+    /// their seeded level, today's vendors reset to the float, and all unsold
+    /// stock is swept ("spent it on flour and rent"). The one confessed
+    /// non-conservative beat — between two of them, purchases move sparks around
+    /// but never mint or burn.
+    fn close_books(&mut self, world: &mut World) {
+        if self.stalls.is_empty() {
+            return;
+        }
+        let vendors: BTreeSet<ActorId> = self.stalls.iter().filter_map(|stall| stall.vendor.clone()).collect();
+        for s in 0..self.stalls.len() {
+            self.clear_stock(world, s);
+        }
+        let ids: Vec<ActorId> = self.people.keys().cloned().collect();
+        for id in &ids {
+            let target = if vendors.contains(id) {
+                self.vendor_float
+            } else {
+                self.seed_wallets.get(id).copied().unwrap_or(0)
+            };
+            set_wallet(world, id, target);
+        }
+        world.assert_invariants();
+        self.push_food_log(format!(
+            "Watch ledger — {} buyers refilled to seed, {} vendors floated to {}, stock swept",
+            ids.len().saturating_sub(vendors.len()),
+            vendors.len(),
+            self.vendor_float,
+        ));
+    }
+
+    /// Remove stall `s`'s conjured stock from the world and whoever holds it,
+    /// then forget the ids. Idempotent — a stack already sold to a buyer (a fresh
+    /// id) is untouched; only the vendor's own leftover board is swept.
+    fn clear_stock(&mut self, world: &mut World, s: usize) {
+        let leftover: Vec<ItemId> = std::mem::take(&mut self.stalls[s].stock_ids);
+        for id in leftover {
+            prune_offer_on_removal(world, &id);
+            if world.items.remove(&id).is_some() {
+                for character in world.characters.values_mut() {
+                    character.state.holds.retain(|held| held != &id);
+                }
+            }
+        }
+    }
+}
+
+/// The seed of a walker's spark holding, summed across every spark stack they
+/// hold (there is only ever one, by the merge invariant).
+fn wallet_sparks(world: &World, id: &ActorId) -> u32 {
+    world
+        .characters
+        .get(id)
+        .map(|character| character.holds())
+        .unwrap_or(&[])
+        .iter()
+        .filter_map(|item_id| world.items.get(item_id))
+        .filter(|item| item.kind.as_str() == "spark")
+        .map(|item| item.quantity)
+        .sum()
+}
+
+/// The spark stack ids `id` holds (usually one).
+fn spark_stack_ids(world: &World, id: &ActorId) -> Vec<ItemId> {
+    world
+        .characters
+        .get(id)
+        .map(|character| character.holds().to_vec())
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|item_id| world.items.get(item_id).is_some_and(|item| item.kind.as_str() == "spark"))
+        .collect()
+}
+
+/// Take `amount` sparks off `id`, removing the stack at zero. Returns whether
+/// they could pay — the whole debit is atomic (checked before any mutation).
+fn debit_sparks(world: &mut World, id: &ActorId, amount: u32) -> bool {
+    if amount == 0 {
+        return true;
+    }
+    let stacks = spark_stack_ids(world, id);
+    let total: u32 = stacks.iter().filter_map(|sid| world.items.get(sid)).map(|item| item.quantity).sum();
+    if total < amount {
+        return false;
+    }
+    let mut remaining = amount;
+    for sid in stacks {
+        if remaining == 0 {
+            break;
+        }
+        let held = world.items.get(&sid).map(|item| item.quantity).unwrap_or(0);
+        let take = held.min(remaining);
+        remaining -= take;
+        if take == held {
+            prune_offer_on_removal(world, &sid);
+            world.items.remove(&sid);
+            if let Some(character) = world.characters.get_mut(id) {
+                character.state.holds.retain(|item_id| item_id != &sid);
+            }
+        } else {
+            world.items.get_mut(&sid).expect("stack exists").quantity -= take;
+        }
+    }
+    true
+}
+
+/// Add `amount` sparks to `id`, folding into their existing purse or minting a
+/// `w_<id>` wallet if they hold none.
+fn credit_sparks(world: &mut World, id: &ActorId, amount: u32) {
+    if amount == 0 {
+        return;
+    }
+    if let Some(sid) = spark_stack_ids(world, id).first() {
+        world.items.get_mut(sid).expect("stack exists").quantity += amount;
+        return;
+    }
+    let wallet_id = ItemId::from_raw(format!("w_{}", id.as_str()));
+    if world.items.contains_key(&wallet_id) {
+        // A stray unheld wallet id: fold into it rather than dup-panic.
+        world.items.get_mut(&wallet_id).expect("present").quantity += amount;
+    } else {
+        world.items.insert(wallet_id.clone(), Item::stack(wallet_id.clone(), "spark", amount));
+    }
+    if let Some(character) = world.characters.get_mut(id)
+        && !character.holds().contains(&wallet_id)
+    {
+        character.state.holds.push(wallet_id);
+    }
+}
+
+/// Set `id`'s spark holding to exactly `amount` (the nightly ledger): collapse
+/// onto their first spark stack, drop any spare, and create a purse if they hold
+/// none and `amount > 0`.
+fn set_wallet(world: &mut World, id: &ActorId, amount: u32) {
+    let stacks = spark_stack_ids(world, id);
+    if amount == 0 {
+        for sid in stacks {
+            prune_offer_on_removal(world, &sid);
+            world.items.remove(&sid);
+            if let Some(character) = world.characters.get_mut(id) {
+                character.state.holds.retain(|item_id| item_id != &sid);
+            }
+        }
+        return;
+    }
+    if let Some(first) = stacks.first().cloned() {
+        world.items.get_mut(&first).expect("stack exists").quantity = amount;
+        for spare in stacks.into_iter().skip(1) {
+            prune_offer_on_removal(world, &spare);
+            world.items.remove(&spare);
+            if let Some(character) = world.characters.get_mut(id) {
+                character.state.holds.retain(|item_id| item_id != &spare);
+            }
+        }
+    } else {
+        credit_sparks(world, id, amount);
+    }
+}
+
+/// `"s"` unless `n == 1` — the naive pluralizer, for the sparks in a percept.
+fn spark_plural(n: u32) -> &'static str {
+    if n == 1 { "" } else { "s" }
+}
+
+/// Drop any live offer of a stack about to be **silently removed** under the
+/// ladder — a sold-out board stack, an emptied purse, a swept wallet — with the
+/// same cleanup `eat` does when its last unit goes (`actions.rs:1037`): no
+/// `retract_offer` event (the HUD learns from the snapshot), and the offer's
+/// target is told it lapsed if they are a nearby hearer. Without this a stack an
+/// LLM had offered ("one stock, two doors") is removed while `world.offers` still
+/// names it, and the next `assert_invariants` panics ("offer giver does not hold
+/// item"). Only *removal* needs this — a stack that merely **shrinks** below an
+/// offer's quantity is caught gracefully at accept time. Call BEFORE the item
+/// leaves `world.items`, so the withdrawn noun and the giver's position are still
+/// there to read.
+fn prune_offer_on_removal(world: &mut World, item_id: &ItemId) {
+    let Some(offer) = world.offers.remove(item_id) else {
+        return;
+    };
+    let Some(target_id) = offer.target_id else {
+        return; // a broadcast offer notifies nobody in particular
+    };
+    if !world.characters.contains_key(&target_id) {
+        return;
+    }
+    let within_earshot = world
+        .characters
+        .get(&offer.giver_id)
+        .map(Character::position_m)
+        .zip(world.characters.get(&target_id).map(Character::position_m))
+        .is_some_and(|(giver, target)| giver.distance(target) <= HEARING_RADIUS_M);
+    if !within_earshot {
+        return; // a distant target reads the removal off the snapshot, as `eat` does
+    }
+    let Some(noun) = world.items.get(item_id).map(|item| world.item_catalog.display_name(item)) else {
+        return;
+    };
+    let withdrawer = crate::cap_first(&identify_ids(world, &target_id, &offer.giver_id));
+    world
+        .characters
+        .get_mut(&target_id)
+        .expect("target exists")
+        .notify(format!("{withdrawer} withdrew the offered {noun} (id {item_id})"));
+}
+
+/// Eat one unit of a held food item **without** the bystander inbox lines the
+/// `eat` verb delivers to nearby NPCs — the market's zero-token discipline
+/// (`04` §5, `05_the_llm_seam.md` §4). A code-driven meal (eat-at-pitch, or a
+/// famished actor eating what they hold) fires far too often to nudge a reaction
+/// turn per bite, so it follows the well-draw pattern: the eater *remembers their
+/// own meal* (askable), the stack decrements with the same offer cleanup and
+/// satiety as the verb, and the player sees the item vanish from the snapshot — but
+/// no `X ate a herring` lands in a neighbour's inbox. A **deliberate** `eat` turn
+/// (an LLM or the player choosing it) still carries its terse bystander line
+/// through the real verb; only the ladder's auto-eat is silenced. Returns whether
+/// a unit was actually eaten (a benign miss if the item left the hand meanwhile).
+fn silent_eat(world: &mut World, eater: &ActorId, item_id: &ItemId) -> bool {
+    if !world.characters.get(eater).is_some_and(|character| character.holds().contains(item_id)) {
+        return false;
+    }
+    let Some(item) = world.items.get(item_id).cloned() else {
+        return false;
+    };
+    let Some(satiety) = world.item_catalog.satiety(&item) else {
+        return false; // not food (a race, or a bad decision) — eat nothing
+    };
+    let noun = world.item_catalog.display_name(&item);
+    if item.quantity <= 1 {
+        prune_offer_on_removal(world, item_id);
+        world.items.remove(item_id);
+        if let Some(character) = world.characters.get_mut(eater) {
+            character.state.holds.retain(|held| held != item_id);
+        }
+    } else {
+        world.items.get_mut(item_id).expect("the eater holds the stack").quantity -= 1;
+    }
+    if let Some(character) = world.characters.get_mut(eater) {
+        let hunger = &mut character.state.needs.hunger;
+        *hunger = (*hunger + f64::from(satiety)).min(HUNGER_MAX);
+        character.remember_percept(format!("You ate a {noun}."));
+    }
+    world.touch_public_state();
+    true
+}
+
+/// A resolved sale, for the trace line and the eat-or-carry decision.
+struct Sale {
+    stall_name: String,
+    item_display: String,
+    price: u32,
+    stock_left: u32,
+    bought_id: ItemId,
+    pitch: Vec3,
 }
 
 /// Build a townsperson's resolved legs from their route override (the 19 authored
@@ -1186,11 +1916,14 @@ pub fn tick(
     if !round.seeded {
         return nudges;
     }
+    tick_food_ledger(round, world, clock, now);
     decay_needs(round, world, clock, now);
     tick_lamps(round, clock, now);
     resolve_arrivals(round, world);
+    resolve_food_arrivals(round, world);
     tick_intents(round, world, nav, now, &mut nudges);
     service_sources(round, world, nav, clock, now, player_id, in_conversation);
+    service_stalls(round, world, clock, now, player_id);
     run_ladder(round, world, nav, clock, now, in_conversation, &mut nudges);
     nudges
 }
@@ -1599,6 +2332,456 @@ fn decay_needs(round: &mut Round, world: &mut World, clock: &WorldClock, now: f6
     }
 }
 
+/// The food ledger (M3): fire the Kindling restock and the Watch reset exactly
+/// once per office crossing since the last poll, no matter the debug time-scale
+/// (`WorldClock::offices_crossed`, the same span the bells ride). At the Watch
+/// the books close (wallets reset, stock swept); at the Kindling today's vendors
+/// are bound and the morning stock is conjured onto them.
+fn tick_food_ledger(round: &mut Round, world: &mut World, clock: &WorldClock, now: f64) {
+    if round.stalls.is_empty() {
+        round.last_office_now = now;
+        return;
+    }
+    let crossings = clock.offices_crossed(round.last_office_now, now);
+    round.last_office_now = now;
+    for (instant, office) in crossings {
+        let day = clock.at(instant).day;
+        match office {
+            Office::Watch => round.close_books(world),
+            Office::Kindling => {
+                round.bind_vendors(world, clock.at(instant).weekday);
+                round.restock(world, day);
+            }
+            _ => {}
+        }
+    }
+}
+
+/// A food buyer who reached the pitch joins its queue; one who stopped short
+/// abandons the errand and is handed back to the ladder. Runs after the water
+/// [`resolve_arrivals`], which has already dropped a finished round walk to Idle.
+fn resolve_food_arrivals(round: &mut Round, world: &mut World) {
+    if round.stalls.is_empty() {
+        return;
+    }
+    let ids: Vec<ActorId> = round.people.keys().cloned().collect();
+    for id in ids {
+        let Some(errand) = round.people[&id].food.clone() else {
+            continue;
+        };
+        if !matches!(errand.phase, FoodPhase::Approaching) {
+            continue;
+        }
+        let Some(character) = world.characters.get(&id) else {
+            continue;
+        };
+        if character.is_walking() {
+            continue; // still on the way
+        }
+        let pitch = round.stalls[errand.stall].pitch;
+        if character.position_m().distance(pitch) <= STALL_ARRIVE_RADIUS_M {
+            if !round.stalls[errand.stall].queue.contains(&id) {
+                round.stalls[errand.stall].queue.push(id.clone());
+            }
+            round.people.get_mut(&id).expect("person exists").food =
+                Some(FoodErrand { stall: errand.stall, phase: FoodPhase::Queued });
+            world.characters.get_mut(&id).expect("buyer exists").state.movement = None;
+        } else {
+            // Stopped short (a conversation interrupt, a re-route that failed):
+            // drop the errand and let the ladder re-decide next cadence.
+            round.people.get_mut(&id).expect("person exists").food = None;
+        }
+    }
+}
+
+/// Work each stall: close what is shut (releasing its queue), finish a completed
+/// sale, start the next, resolve the atomic purchase, run the eat-at-pitch timer,
+/// and clink a coin for the player. The market twin of [`service_sources`] — the
+/// sale is a silent, self-perceived act, and the only sound is a player-only
+/// world sound, so thirty sales an hour never schedule an LLM turn (`04` §5).
+fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now: f64, player_id: &ActorId) {
+    if round.stalls.is_empty() {
+        return;
+    }
+    let time = clock.at(now);
+
+    // Open = the hours predicate holds *and* the bound vendor is at the pitch —
+    // the seller the round delivered to the square (no pin). Computed first, so
+    // the mutable pass below is free of the world borrow.
+    let open: Vec<bool> = round
+        .stalls
+        .iter()
+        .map(|stall| {
+            stall.open.is_open(time.office, time.weekday)
+                && stall.vendor.as_ref().is_some_and(|vendor| {
+                    world
+                        .characters
+                        .get(vendor)
+                        .is_some_and(|character| character.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M)
+                })
+        })
+        .collect();
+
+    let mut finished: Vec<(usize, ActorId)> = Vec::new();
+    let mut to_release: Vec<usize> = Vec::new();
+    // (sound_id, position) player-only world sounds to emit this tick: a cry per
+    // open stall on its slow rhythm, plus a clink per sale (pushed below).
+    let mut sounds: Vec<(&'static str, Vec3)> = Vec::new();
+    for s in 0..round.stalls.len() {
+        if !open[s] {
+            if !round.stalls[s].queue.is_empty() || round.stalls[s].serving.is_some() {
+                to_release.push(s);
+            }
+            continue;
+        }
+        // Cry the wares on the slow rhythm — a square sounds like a market before
+        // it looks like one (the flourish, `04` §5).
+        if now >= round.stalls[s].cry_next {
+            round.stalls[s].cry_next = now + crate::MARKET_CRY_INTERVAL_SECONDS;
+            sounds.push(("market_cry", round.stalls[s].pitch));
+        }
+        // Finish a completed sale: the buyer leaves the head of the queue.
+        if let Some((buyer, ends_at)) = round.stalls[s].serving.clone()
+            && now >= ends_at
+        {
+            round.stalls[s].serving = None;
+            if round.stalls[s].queue.first() == Some(&buyer) {
+                round.stalls[s].queue.remove(0);
+            } else {
+                round.stalls[s].queue.retain(|id| id != &buyer);
+            }
+            finished.push((s, buyer));
+        }
+        // Start the next: the front buys.
+        if round.stalls[s].serving.is_none()
+            && let Some(front) = round.stalls[s].queue.first().cloned()
+        {
+            round.stalls[s].serving = Some((front, now + PURCHASE_SECONDS));
+        }
+    }
+    for s in to_release {
+        round.release_stall(world, s);
+    }
+
+    // Resolve each completed sale, then send the buyer to eat at the pitch or
+    // carry it home, and clink a coin the player can hear.
+    for (s, buyer) in finished {
+        match try_purchase(round, world, s, &buyer) {
+            Some(sale) => {
+                sounds.push(("coin_clink", sale.pitch));
+                let carry = should_carry(round, &buyer, time.office, time.weekday);
+                if carry {
+                    round.people.get_mut(&buyer).expect("buyer exists").food = None;
+                } else {
+                    round.people.get_mut(&buyer).expect("buyer exists").food = Some(FoodErrand {
+                        stall: s,
+                        phase: FoodPhase::Eating { item: sale.bought_id, until: now + EAT_SECONDS },
+                    });
+                }
+                if let Some(character) = world.characters.get_mut(&buyer) {
+                    character.state.movement = None;
+                }
+                world.touch_public_state();
+                world.assert_invariants();
+                round.push_food_log(format!(
+                    "sale: {buyer} bought a {} for {} spark{} at {} — {} left{}",
+                    sale.item_display,
+                    sale.price,
+                    spark_plural(sale.price),
+                    sale.stall_name,
+                    sale.stock_left,
+                    if carry { ", carried home" } else { "" },
+                ));
+            }
+            None => {
+                // Could not pay (spent it mid-queue) or nothing affordable is
+                // left: a graceful no-sale, the buyer leaves and re-evaluates.
+                round.people.get_mut(&buyer).expect("buyer exists").food = None;
+                if let Some(character) = world.characters.get_mut(&buyer) {
+                    character.state.movement = None;
+                }
+            }
+        }
+    }
+
+    // The eat-at-pitch timer: when a meal ends, apply the real `eat` (the stack
+    // decrement and the satiety), standing where they bought — satiety on the
+    // actual eat, not the buy (`04` §5).
+    let eaters: Vec<(ActorId, ItemId)> = round
+        .people
+        .iter()
+        .filter_map(|(id, person)| match &person.food {
+            Some(FoodErrand { phase: FoodPhase::Eating { item, until }, .. }) if now >= *until => {
+                Some((id.clone(), item.clone()))
+            }
+            _ => None,
+        })
+        .collect();
+    for (id, item) in eaters {
+        // The silent, self-perceived meal — no bystander inbox lines in a busy
+        // square (`04` §5). Satiety applies here, on the actual eat, not the buy.
+        silent_eat(world, &id, &item);
+        round.people.get_mut(&id).expect("eater exists").food = None;
+    }
+
+    // The player-audible market: the cry and the clink are unattributed world
+    // sounds at the pitch, heard only by the player, so they reach no NPC inbox
+    // and never nudge a reaction turn (the windlass pattern).
+    if !sounds.is_empty() && world.sounds_enabled {
+        let player_pos = world.characters.get(player_id).map(Character::position_m);
+        for (sound_id, position) in sounds {
+            let Some(sound) = world.sound_catalog.get(sound_id).cloned() else {
+                continue;
+            };
+            let recipients = match player_pos {
+                Some(pos) if pos.distance(position) <= sound.audible_distance => vec![player_id.clone()],
+                _ => Vec::new(),
+            };
+            world.emit(DomainEvent::sound(
+                sound.sound_class.clone(),
+                None, // a world sound, never attributed, never nudges
+                sound.sound_id.clone(),
+                sound.audible_distance,
+                position,
+                recipients,
+                Vec::new(),
+            ));
+        }
+    }
+}
+
+/// The atomic swap at the head of a stall's queue (`04` §5): the buyer's coin and
+/// the vendor's food move together, or not at all. Priced off the catalog, the
+/// famished buyer takes the cheapest edible stock they can afford (a herring if a
+/// spark is all they hold — Ilse's exact arithmetic). Returns `None` for a
+/// no-sale (nothing affordable, or the vendor's board is bare).
+fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId) -> Option<Sale> {
+    let vendor = round.stalls[s].vendor.clone()?;
+    let trade_key = round.stalls[s].trade.clone();
+    let trade = round.food_trades.get(&trade_key)?.clone();
+    let buyer_sparks = wallet_sparks(world, buyer);
+
+    // Choose what to sell: the pot conjures a fresh bowl; a stock stall sells the
+    // cheapest affordable edible on the board.
+    let (template, price, from_stock): (Item, u32, Option<ItemId>) = if let Some(kind) = &trade.per_serving {
+        let bowl = Item::new(ItemId::from_raw("stew_probe"), kind.as_str());
+        let price = world.item_catalog.price_sparks(&bowl)?;
+        if buyer_sparks < price {
+            return None;
+        }
+        (bowl, price, None)
+    } else {
+        let mut best: Option<(u32, ItemId, Item)> = None;
+        for stock_id in &round.stalls[s].stock_ids {
+            let Some(item) = world.items.get(stock_id) else { continue };
+            if item.quantity == 0 || !world.item_catalog.is_edible(item) {
+                continue;
+            }
+            let Some(item_price) = world.item_catalog.price_sparks(item) else { continue };
+            if item_price > buyer_sparks {
+                continue;
+            }
+            let better = best
+                .as_ref()
+                .is_none_or(|(best_price, best_id, _)| item_price < *best_price || (item_price == *best_price && stock_id < best_id));
+            if better {
+                best = Some((item_price, stock_id.clone(), item.clone()));
+            }
+        }
+        let (price, stock_id, item) = best?;
+        (item, price, Some(stock_id))
+    };
+
+    // The swap, atomic: pay first (checked affordable above, so it cannot fail),
+    // then move one unit. Sparks are conserved — the debug assert is the standing
+    // guard the risk ledger asks for.
+    let before = wallet_sparks(world, buyer) + wallet_sparks(world, &vendor);
+    if !debit_sparks(world, buyer, price) {
+        return None;
+    }
+    credit_sparks(world, &vendor, price);
+    debug_assert_eq!(
+        wallet_sparks(world, buyer) + wallet_sparks(world, &vendor),
+        before,
+        "a purchase must conserve sparks"
+    );
+    let bought_id = give_food_unit(world, &vendor, buyer, &template, from_stock.as_ref());
+
+    let stock_left: u32 = round.stalls[s]
+        .stock_ids
+        .iter()
+        .filter_map(|id| world.items.get(id))
+        .map(|item| item.quantity)
+        .sum();
+    let item_display = world.item_catalog.display_name(&world.items[&bought_id]);
+    let stall_name = round.stalls[s].name.clone();
+    let pitch = round.stalls[s].pitch;
+
+    // Self-percepts, both parties — the act is askable for zero tokens, and the
+    // consecutive-repeat dedup collapses a busy morning into one line each.
+    let vendor_name = identify_ids(world, buyer, &vendor);
+    if let Some(character) = world.characters.get_mut(buyer) {
+        character.remember_percept(format!(
+            "You bought a {item_display} from {vendor_name} for {price} spark{}.",
+            spark_plural(price)
+        ));
+    }
+    if let Some(character) = world.characters.get_mut(&vendor) {
+        character.remember_percept(format!(
+            "You sold a {item_display} for {price} spark{}.",
+            spark_plural(price)
+        ));
+    }
+
+    Some(Sale { stall_name, item_display, price, stock_left, bought_id, pitch })
+}
+
+/// Move one unit of `template` from the vendor to the buyer: decrement the stock
+/// stack (removing it at zero), then fold the unit into the buyer's same-stuff
+/// stack or mint it a fresh, deterministic id. Returns the id the buyer now holds.
+fn give_food_unit(
+    world: &mut World,
+    vendor: &ActorId,
+    buyer: &ActorId,
+    template: &Item,
+    from_stock: Option<&ItemId>,
+) -> ItemId {
+    if let Some(stock_id) = from_stock {
+        let held = world.items.get(stock_id).map(|item| item.quantity).unwrap_or(0);
+        if held <= 1 {
+            prune_offer_on_removal(world, stock_id);
+            world.items.remove(stock_id);
+            if let Some(character) = world.characters.get_mut(vendor) {
+                character.state.holds.retain(|item_id| item_id != stock_id);
+            }
+        } else {
+            world.items.get_mut(stock_id).expect("stock stack exists").quantity -= 1;
+        }
+    }
+
+    let mut unit = template.clone();
+    unit.quantity = 1;
+    let stackable = world.item_catalog.stackable(&unit);
+    let merge_target: Option<ItemId> = if stackable {
+        world.characters[buyer]
+            .holds()
+            .iter()
+            .find(|held| world.items.get(*held).is_some_and(|other| other.same_stuff_as(&unit)))
+            .cloned()
+    } else {
+        None
+    };
+    if let Some(target) = merge_target {
+        world.items.get_mut(&target).expect("buyer stack exists").quantity += 1;
+        return target;
+    }
+
+    // A fresh, deterministic id — parent is the stock stack, or a per-vendor
+    // handle for the pot's bowl; the event-sequence salt keeps runs reproducible.
+    let parent = from_stock
+        .cloned()
+        .unwrap_or_else(|| ItemId::from_raw(format!("pot_{}", vendor.as_str())));
+    let mut salt = world.event_sequence + 1;
+    let mut id = crate::world::mint_item_id(&parent, salt);
+    while world.items.contains_key(&id) {
+        salt = salt.wrapping_add(1);
+        id = crate::world::mint_item_id(&parent, salt);
+    }
+    unit.id = id.clone();
+    world.add_item(unit);
+    if let Some(character) = world.characters.get_mut(buyer) {
+        character.state.holds.push(id.clone());
+    }
+    id
+}
+
+/// Whether a fed buyer carries their food home rather than eating at the pitch:
+/// only when their round is **actually taking them home** — their active leg is a
+/// home leg — within the supper span (the Waning through Lamplight), so rung 3's
+/// eat-what-you-hold finishes the meal at the hearth (`04` §5). Otherwise they eat
+/// where they bought, in view. The active-leg test is what stops a buyer who is
+/// still at their market post from pocketing the loaf, hearth-refilling for free,
+/// and hoarding food the famished rung would never make them eat.
+fn should_carry(round: &Round, buyer: &ActorId, office: Office, weekday: Weekday) -> bool {
+    if !matches!(office, Office::Waning | Office::Lamplight) {
+        return false;
+    }
+    let Some(person) = round.people.get(buyer) else {
+        return false;
+    };
+    active_leg(&person.legs, office, weekday).is_some_and(|leg| leg.is_home)
+}
+
+/// The nearest open, staffed, affordable stall within [`STALL_SEEK_RADIUS_M`] of
+/// `position` — rung 3 (famished) and rung 7 (hungry, `short` too) join it. `None`
+/// keeps a famished worker at their post (or the hearth) rather than marching a
+/// kilometre for a loaf.
+fn nearest_open_stall(
+    round: &Round,
+    world: &World,
+    id: &ActorId,
+    position: Vec3,
+    office: Office,
+    weekday: Weekday,
+    short: bool,
+) -> Option<usize> {
+    // A bound vendor is keeping their post, not shopping: they never queue (least
+    // of all at their own stall, which would sell to themselves and double-count
+    // the board). They are fed at the hearth like the rest of the evening trade.
+    if round.stalls.iter().any(|stall| stall.vendor.as_ref() == Some(id)) {
+        return None;
+    }
+    let sparks = wallet_sparks(world, id);
+    let mut best: Option<(f64, usize)> = None;
+    for (s, stall) in round.stalls.iter().enumerate() {
+        if !stall.open.is_open(office, weekday) {
+            continue;
+        }
+        let staffed = stall.vendor.as_ref().is_some_and(|vendor| {
+            world
+                .characters
+                .get(vendor)
+                .is_some_and(|character| character.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M)
+        });
+        if !staffed {
+            continue;
+        }
+        if short && stall.queue.len() >= FOOD_QUEUE_SHORT {
+            continue;
+        }
+        let distance = position.distance(stall.pitch);
+        if distance > STALL_SEEK_RADIUS_M {
+            continue;
+        }
+        if !stall_has_affordable(round, world, stall, sparks) {
+            continue;
+        }
+        if best.as_ref().is_none_or(|(best_dist, _)| distance < *best_dist) {
+            best = Some((distance, s));
+        }
+    }
+    best.map(|(_, s)| s)
+}
+
+/// Whether the stall has something the buyer can pay for — the pot's bowl, or an
+/// edible on the board within their purse.
+fn stall_has_affordable(round: &Round, world: &World, stall: &FoodStall, sparks: u32) -> bool {
+    let Some(trade) = round.food_trades.get(&stall.trade) else {
+        return false;
+    };
+    if let Some(kind) = &trade.per_serving {
+        let bowl = Item::new(ItemId::from_raw("stew_probe"), kind.as_str());
+        return world.item_catalog.price_sparks(&bowl).is_some_and(|price| price <= sparks);
+    }
+    stall.stock_ids.iter().any(|id| {
+        world.items.get(id).is_some_and(|item| {
+            item.quantity > 0
+                && world.item_catalog.is_edible(item)
+                && world.item_catalog.price_sparks(item).is_some_and(|price| price <= sparks)
+        })
+    })
+}
+
 /// Move arrivals through the state machine: an approacher who reached the curb
 /// joins the queue; a returner or traveller who reached their anchor falls idle.
 fn resolve_arrivals(round: &mut Round, world: &mut World) {
@@ -1827,6 +3010,13 @@ fn run_ladder(
     let time = clock.at(now);
     let ids: Vec<ActorId> = round.people.keys().cloned().collect();
     for id in ids {
+        // A live food errand is committed exactly like a well errand's own phases:
+        // walking to a stall, standing in its queue, or eating at the pitch, the
+        // ladder does not re-decide them. Buying food *is* the hunger rung acting;
+        // a closing stall releases them (`service_stalls`) back to the ladder.
+        if round.people[&id].food.is_some() {
+            continue;
+        }
         let held = in_conversation.contains(&id);
         let (phase, epoch, next_decision, excused) = {
             let person = &round.people[&id];
@@ -1943,7 +3133,10 @@ fn run_ladder(
                     under_way != Some(*target)
                 }
                 Decision::WalkToLamp(index) => under_way != Some(round.lamps[*index].position),
-                Decision::EatHeld(_) | Decision::ApproachWell | Decision::LightLamp(_) => true,
+                Decision::EatHeld(_)
+                | Decision::ApproachWell
+                | Decision::ApproachStall(_)
+                | Decision::LightLamp(_) => true,
                 Decision::Wander(_) | Decision::Stay => false,
             };
             if !diverts {
@@ -1964,6 +3157,9 @@ enum Decision {
     EatHeld(ItemId),
     /// Rungs 2 & 6: set off for the assigned well.
     ApproachWell,
+    /// Rungs 3 (famished, go buy) & 7 (hungry, when convenient): set off for a
+    /// food stall's pitch to join its queue (the bread round, `04` §4/§5).
+    ApproachStall(usize),
     /// Rungs 5 & 9: walk to a round anchor (or home, at curfew).
     Travel(Vec3),
     /// Rung 8: walk toward the `go_to` intent's target (M5) — the same walk as
@@ -2049,14 +3245,20 @@ fn decide(
     // rung actually acts.
     if character.needs().hunger < HUNGER_FAMISHED {
         // Eat what you hold, standing — for anyone, the night trades included,
-        // at any hour: a famished actor with food in hand always eats it.
-        if let Some(item_id) = held_edible(world, character) {
+        // at any hour: a famished actor with food in hand always eats it (but a
+        // vendor never eats their own stall board).
+        if let Some(item_id) = held_edible(round, world, character) {
             return (Decision::EatHeld(item_id), None);
         }
-        // M3 slot: a bound food source is open → go buy it (the bread round,
-        // [04](04_the_bread_round.md)). It ranks above the hearth — an open
-        // market is the right place to feed — and drops in here when M3 lands.
-        //
+        // The market first (M3, the bread round, `04_the_bread_round.md`): a
+        // famished actor with empty hands buys at the nearest open, staffed,
+        // affordable stall within reach. It ranks above the hearth — an open
+        // market is the right place to feed — and rides the pressure percept, so
+        // an on-stage actor gets one turn to excuse itself before the body walks,
+        // exactly as parched does, and only when the rung actually diverts.
+        if let Some(stall) = nearest_open_stall(round, world, id, position, office, weekday, false) {
+            return (Decision::ApproachStall(stall), Some(FAMISHED_PRESSURE));
+        }
         // Else head home to the hearth, but *only while a meal office is
         // serving* (`03_hunger.md` §3/§4). Outside one the hearth is cold, so
         // diverting there would abandon the day's work to sit at a dead grate —
@@ -2089,13 +3291,15 @@ fn decide(
         return (Decision::ApproachWell, None);
     }
 
-    // Rung 7 — hungry: seek food when convenient — join a bound food stall's
-    // queue when it is open, its queue is short (`FOOD_QUEUE_SHORT`) and the
-    // actor can afford list price. Reserved: the stalls it queues at and the
-    // vendor binding it reads arrive in M3 (the bread round), so it has nothing
-    // to act on yet and stays quiet, like thirsty. Its place in the ladder —
-    // after thirsty (6), before the `go_to` errand (8) — is fixed here so M3
-    // only fills in the body.
+    // Rung 7 — hungry: seek food when convenient (M3, the bread round). Join the
+    // nearest open, staffed, affordable stall whose queue is short
+    // (`FOOD_QUEUE_SHORT`). Quiet, like thirsty — no pressure percept. Its place
+    // in the ladder is fixed: after thirsty (6), before the `go_to` errand (8).
+    if character.needs().hunger < HUNGER_HUNGRY
+        && let Some(stall) = nearest_open_stall(round, world, id, position, office, weekday, true)
+    {
+        return (Decision::ApproachStall(stall), None);
+    }
 
     // Rung 8 — the errand: an LLM-issued `go_to` sits between thirsty (6) and
     // the round (9) — it outranks the day's routine, never the body's needs,
@@ -2193,13 +3397,12 @@ fn decide(
 fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &ActorId, decision: Decision) {
     match decision {
         Decision::EatHeld(item_id) => {
-            // Routed through the real `eat` handler so the stack decrement,
-            // satiety and self/percepts are exactly the action's — a code-driven
-            // meal standing where they are (`04_the_bread_round.md` §5, minus the
-            // bench). `held_edible` already proved the hold, so a failure here is
-            // a benign race (the item left the hand) and is simply dropped.
-            let args = serde_json::json!({ "item_id": item_id.as_str() });
-            let _ = crate::apply_action(world, id, "eat", &args);
+            // A code-driven meal standing where they are (`04_the_bread_round.md`
+            // §5, minus the bench), through [`silent_eat`] so the stack decrement,
+            // satiety and self-percept are the verb's but no bystander inbox line
+            // nudges a neighbour — the market's zero-token discipline. `held_edible`
+            // already proved the hold, so a miss here is a benign race and dropped.
+            silent_eat(world, id, &item_id);
         }
         Decision::ApproachWell => {
             let source = round.people[id].source.expect("a well decision has a source");
@@ -2215,6 +3418,34 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
                     enqueue(round, source, id.clone());
                     round.people.get_mut(id).expect("person exists").phase = Phase::Queued;
                     world.characters.get_mut(id).expect("drawer exists").state.movement = None;
+                }
+            }
+        }
+        Decision::ApproachStall(stall) => {
+            let pitch = round.stalls[stall].pitch;
+            let position = world.characters[id].position_m();
+            // Idle + a food errand: the water phase is left standing (they draw
+            // no water) and `run_ladder` skips them while the errand lives.
+            {
+                let person = round.people.get_mut(id).expect("person exists");
+                person.phase = Phase::Idle;
+                person.travel_target = None;
+                person.travel_for_intent = false;
+            }
+            match route_path(nav, id, position, pitch) {
+                Some(path) => {
+                    set_route(world, id, path);
+                    round.people.get_mut(id).expect("person exists").food =
+                        Some(FoodErrand { stall, phase: FoodPhase::Approaching });
+                }
+                None => {
+                    // Already at the pitch: join the queue now.
+                    if !round.stalls[stall].queue.contains(id) {
+                        round.stalls[stall].queue.push(id.clone());
+                    }
+                    round.people.get_mut(id).expect("person exists").food =
+                        Some(FoodErrand { stall, phase: FoodPhase::Queued });
+                    world.characters.get_mut(id).expect("buyer exists").state.movement = None;
                 }
             }
         }
@@ -2329,17 +3560,20 @@ fn word_index(haystack: &str, word: &str) -> Option<usize> {
 /// The id of the first real food item this character holds (positive catalog
 /// satiety), or `None`. A spark is not food (its kind is un-edible); an ad-hoc
 /// test kind carries no satiety and is skipped too — the famished rung only eats
-/// what actually feeds.
-fn held_edible(world: &World, character: &Character) -> Option<ItemId> {
+/// what actually feeds. A bound vendor's **stall stock is skipped**: the board is
+/// for selling, not eating — without this a famished baker eats their own bread
+/// and the stock leaks a loaf nobody bought (found in the M3 bring-up).
+fn held_edible(round: &Round, world: &World, character: &Character) -> Option<ItemId> {
     character
         .holds()
         .iter()
         .find(|item_id| {
-            world
-                .items
-                .get(*item_id)
-                .and_then(|item| world.item_catalog.satiety(item))
-                .is_some_and(|satiety| satiety > 0)
+            !round.stalls.iter().any(|stall| stall.stock_ids.contains(item_id))
+                && world
+                    .items
+                    .get(*item_id)
+                    .and_then(|item| world.item_catalog.satiety(item))
+                    .is_some_and(|satiety| satiety > 0)
         })
         .cloned()
 }

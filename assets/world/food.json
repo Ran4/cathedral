@@ -1,0 +1,97 @@
+{
+  "_doc": "Food stalls, their trades and the magic Kindling restock (food & items M3, features/food_and_items/04_the_bread_round.md). Embedded like rounds.json/items.json (include_str!), so both hosts and the headless binary get it with no wiring. Pitches resolve against the nav graph by site name (like the taverns and lamp squares), offset a stride so two stalls at one square do not overlap; the bound vendor is whoever the daily round already delivers to that site — no new movement code. Stock is real World.items conjured onto the vendor each Kindling from the trade template; the never-scraped pot conjures a bowl per serving instead. The nightly Watch ledger resets buyer wallets to seed and vendor wallets+stock to the float/template (the confessed placeholder the supply chain, M5, replaces).",
+  "schema_version": 1,
+  "vendor_float_sparks": 6,
+  "trades": {
+    "bread": {
+      "occupations": ["baker"],
+      "stock": [
+        { "kind": "loaf", "metadata": { "flour": "rye" }, "quantity": 12 },
+        { "kind": "loaf", "metadata": { "flour": "wheat" }, "quantity": 3 }
+      ]
+    },
+    "provisions": {
+      "occupations": ["food_provisioner", "grocer_and_spicer", "market_seller"],
+      "stock": [
+        { "kind": "herring", "quantity": 6 },
+        { "kind": "loaf", "metadata": { "flour": "rye" }, "quantity": 4 }
+      ]
+    },
+    "fish": {
+      "occupations": ["fish_trader", "market_seller"],
+      "stock": [
+        { "kind": "herring", "quantity": 10 },
+        { "kind": "smoked_eel", "quantity": 4 }
+      ]
+    },
+    "pot": {
+      "occupations": ["cook", "tavern_worker"],
+      "stock": [],
+      "conjure_per_serving": "stew"
+    }
+  },
+  "stalls": [
+    {
+      "name": "The Wickmarket bread stall",
+      "site": "The Wickmarket",
+      "trade": "bread",
+      "pitch_offset": [3.5, 1.5],
+      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+    },
+    {
+      "name": "The Wickmarket provisions stall",
+      "site": "The Wickmarket",
+      "trade": "provisions",
+      "pitch_offset": [-3.5, -1.5],
+      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+    },
+    {
+      "name": "The Coswald's Yard stall",
+      "site": "Coswald's Yard",
+      "trade": "fish",
+      "pitch_offset": [0.0, 0.0],
+      "open": { "offices": ["dayspring", "high_wick", "waning"], "weekdays": ["highmarket"] }
+    },
+    {
+      "name": "The Tallage stall",
+      "site": "The Tallage",
+      "trade": "provisions",
+      "pitch_offset": [0.0, 0.0],
+      "open": { "offices": ["dayspring", "high_wick", "waning"], "weekdays": ["lowmarket"] }
+    },
+    {
+      "name": "The Maren's Green herring stall",
+      "site": "Maren's Green",
+      "trade": "fish",
+      "pitch_offset": [3.5, 1.5],
+      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+    },
+    {
+      "name": "The Maren's Green eel stall",
+      "site": "Maren's Green",
+      "trade": "fish",
+      "pitch_offset": [-3.5, -1.5],
+      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+    },
+    {
+      "name": "The Hungry Ox pot",
+      "site": "The Hungry Ox",
+      "trade": "pot",
+      "pitch_offset": [0.0, 0.0],
+      "preferred_vendor": "g5brt",
+      "open": {
+        "offices": ["kindling", "dayspring", "high_wick", "waning", "lamplight", "snuffing"]
+      }
+    },
+    {
+      "name": "The Bell and Ladle pot",
+      "site": "The Bellstand",
+      "trade": "pot",
+      "pitch_offset": [0.0, 0.0],
+      "preferred_vendor": "gr8tp",
+      "open": {
+        "offices": ["kindling", "dayspring", "high_wick", "waning", "lamplight", "snuffing"]
+      }
+    }
+  ]
+}

@@ -94,6 +94,33 @@ heard = "[You heard a pail go over on the stones, and the water run out.]"
 sfx_prompt = "A wooden pail dropped on stone paving, its iron hoop ringing as it rolls, water slopping out across the flags, close and dry, no music, no voices"
 duration_seconds = 4.0
 
+# The food market (food & items M3, features/food_and_items/04_the_bread_round.md).
+# A stall's sale is a silent, self-perceived act; the only sound is `coin_clink`,
+# emitted per sale as an unattributed WORLD sound heard only by the player (like
+# the windlass and the bell), so thirty sales an hour in a square never nudge an
+# NPC into a reaction turn. `market_cry` is the optional flourish: a bound vendor
+# calling their wares, on the same player-only mechanism. NEITHER is
+# `actor_emittable` (the world emits them, not an LLM `make_sound`), so the
+# emittable-id list the prompt renders is unchanged and the golden fixtures stay
+# byte-stable. No `seen`: the parties remember the sale themselves in prose.
+[[sounds]]
+sound_id = "coin_clink"
+sound_class = "impact"
+audible_distance = 15.0
+actor_emittable = false
+heard = "[You heard coins counted onto a market board.]"
+sfx_prompt = "A few small copper coins counted out one by one onto a wooden market stall board, a soft clink and settle, close and dry, a faint market murmur behind, no music, no voices"
+duration_seconds = 2.0
+
+[[sounds]]
+sound_id = "market_cry"
+sound_class = "body"
+audible_distance = 25.0
+actor_emittable = false
+heard = "[You heard a stallholder cry their wares across the square.]"
+sfx_prompt = "A single medieval market stallholder calling their wares across a busy square, one short wordless rhythmic cry, outdoors with a light crowd murmur behind, no music, no discernible words"
+duration_seconds = 3.0
+
 # Looping scene assets. Read only by the generator and Bevy; the sim never sees
 # these (an inbox line per fireplace crackle would be token suicide —
 # design/06 §5). The two water loops are placed on the plan's well and cistern
