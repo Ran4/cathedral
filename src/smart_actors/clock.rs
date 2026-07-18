@@ -91,9 +91,18 @@ pub fn drive_sun(
     // The vertical component is deliberately capped well below the zenith
     // (temperate-town arc, ~50° at noon): overhead light flattens every façade
     // and shrinks shadows to doormats, while a raking sun keeps streets
-    // modelled all day. The floor keeps the (near-dark) key from ever lighting
-    // the city from underneath at night.
-    let elevation = (angle.cos() * 0.42).max(-0.2);
+    // modelled all day. The square root lifts the sun quickly out of the
+    // horizon band — a linear arc left it at ~6° at 07:00, where the physical
+    // atmosphere extinguishes almost all direct light and Dayspring looked
+    // like deep dawn — without moving sunrise/sunset (06:00/18:00) or the noon
+    // cap. The floor keeps the (near-dark) key from ever lighting the city
+    // from underneath at night.
+    let arc = angle.cos();
+    let elevation = if arc >= 0.0 {
+        arc.sqrt() * 0.42
+    } else {
+        (arc * 0.42).max(-0.2)
+    };
     let direction = Vec3::new(east * 0.9, elevation, 0.35).normalize();
     *transform =
         Transform::from_translation(direction * 500.0).looking_at(Vec3::new(0.0, 0.0, 40.0), Vec3::Y);
@@ -102,7 +111,10 @@ pub fn drive_sun(
     let lit = ((clock.brightness as f32 - NIGHT_FLOOR) / (1.0 - NIGHT_FLOOR)).clamp(0.0, 1.0);
     light.illuminance = lux::RAW_SUNLIGHT * lit;
     if let Some(mut ambient) = ambient {
-        ambient.brightness = NIGHT_AMBIENT + (DAY_AMBIENT - NIGHT_AMBIENT) * lit;
+        // sqrt: the shadowed side of the city is all the player sees at dawn
+        // and dusk, so the fill recovers faster than the key — mid-ramp
+        // (07:00) sits at ~84% of the day fill instead of ~71%.
+        ambient.brightness = NIGHT_AMBIENT + (DAY_AMBIENT - NIGHT_AMBIENT) * lit.sqrt();
     }
 }
 

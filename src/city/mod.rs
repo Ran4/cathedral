@@ -7,6 +7,7 @@
 
 mod monuments;
 mod plan;
+mod smoke;
 pub mod water;
 
 use std::{
@@ -40,7 +41,8 @@ pub struct CityPlugin;
 
 impl Plugin for CityPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, build_city);
+        app.add_systems(Startup, build_city)
+            .add_systems(Update, smoke::animate_chimney_smoke);
     }
 }
 
@@ -247,13 +249,24 @@ fn build_city(
         &plan.sites,
         &plan.roads,
     );
-    let rendered_plan_buildings = build_buildings(
+    let (rendered_plan_buildings, chimney_anchors) = build_buildings(
         &mut commands,
         &mut meshes,
         &city_materials,
         &plan,
         &doors,
         &mut collision_world,
+    );
+    let smoking = smoke::build_chimney_smoke(
+        &mut commands,
+        &mut meshes,
+        &mut materials,
+        &asset_server,
+        &chimney_anchors,
+    );
+    info!(
+        "lit {smoking} of {} chimneys with drifting smoke",
+        chimney_anchors.len()
     );
     build_fixtures(
         &mut commands,
@@ -713,13 +726,14 @@ fn build_buildings(
     plan: &CityPlan,
     door_edges: &HashMap<String, usize>,
     collision_world: &mut CollisionWorld,
-) -> usize {
+) -> (usize, Vec<smoke::ChimneyAnchor>) {
     let mut walls = BTreeMap::<WallKind, MeshData>::new();
     let mut roofs = BTreeMap::<RoofKind, MeshData>::new();
     let mut windows = MeshData::default();
     let mut doors = MeshData::default();
     let mut frames = MeshData::default();
     let mut timber_frames = MeshData::default();
+    let mut chimney_anchors = Vec::new();
     let mut rendered = 0;
 
     for building in &plan.buildings {
@@ -797,6 +811,7 @@ fn build_buildings(
                     walls.entry(WallKind::Fieldstone).or_default(),
                     building,
                     ridge,
+                    &mut chimney_anchors,
                 );
             }
             roof_height
@@ -893,7 +908,7 @@ fn build_buildings(
         "Ombreval timber framing",
     );
 
-    rendered
+    (rendered, chimney_anchors)
 }
 
 /// A stable per-building colour multiplier: small value and warm/cool swings
@@ -1694,8 +1709,15 @@ fn add_building_roof(
 }
 
 /// Chimneys are what a skyline is made of. One or two fieldstone stacks per
-/// gabled building, planted on the ridge at a stable per-building spot.
-fn add_chimneys(mesh: &mut MeshData, building: &Building, ridge: [Vec3; 2]) {
+/// gabled building, planted on the ridge at a stable per-building spot. Every
+/// stack reports its flue top so `smoke::build_chimney_smoke` can light a
+/// hash-picked subset of hearths.
+fn add_chimneys(
+    mesh: &mut MeshData,
+    building: &Building,
+    ridge: [Vec3; 2],
+    anchors: &mut Vec<smoke::ChimneyAnchor>,
+) {
     if building.use_name == "bridge" {
         return;
     }
@@ -1731,6 +1753,10 @@ fn add_chimneys(mesh: &mut MeshData, building: &Building, ridge: [Vec3; 2]) {
             Vec3::new(0.48, 0.08, 0.48),
             along,
         );
+        anchors.push(smoke::ChimneyAnchor {
+            top: base + Vec3::Y * 1.5,
+            seed: stable_hash(&format!("smoke-{}-{index}", building.id)),
+        });
     }
 }
 
