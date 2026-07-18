@@ -89,6 +89,8 @@ struct CityMaterials {
     iron: Handle<StandardMaterial>,
     bronze: Handle<StandardMaterial>,
     window: Handle<StandardMaterial>,
+    /// The warm pane of a hanging lantern: lit from within, always.
+    lantern_glass: Handle<StandardMaterial>,
     cloth_ochre: Handle<StandardMaterial>,
     cloth_russet: Handle<StandardMaterial>,
     water: Handle<StandardMaterial>,
@@ -270,6 +272,16 @@ fn build_city(
         &plan,
         &mut collision_world,
     );
+    build_covered_passages(&mut commands, &mut meshes, &city_materials, &plan);
+    build_square_arcades(&mut commands, &mut meshes, &city_materials, &plan, &doors);
+    build_yard_stairs(
+        &mut commands,
+        &mut meshes,
+        &city_materials,
+        &plan,
+        &doors,
+        &mut collision_world,
+    );
     build_street_props(&mut commands, &mut meshes, &city_materials, &plan, &doors);
     build_fortifications(
         &mut commands,
@@ -431,6 +443,12 @@ fn create_materials(
             reflectance: 0.32,
             double_sided: true,
             cull_mode: None,
+            ..default()
+        }),
+        lantern_glass: materials.add(StandardMaterial {
+            base_color: Color::srgb(1.0, 0.85, 0.55),
+            emissive: LinearRgba::rgb(5.5, 2.8, 0.9),
+            perceptual_roughness: 0.3,
             ..default()
         }),
         cloth_ochre: materials.add(StandardMaterial {
@@ -663,6 +681,7 @@ fn build_buildings(
     let mut windows = MeshData::default();
     let mut doors = MeshData::default();
     let mut frames = MeshData::default();
+    let mut timber_frames = MeshData::default();
     let mut rendered = 0;
 
     for building in &plan.buildings {
@@ -685,7 +704,16 @@ fn build_buildings(
         let bands = jetty_bands(building, base_y, eave_y);
         let roof_polygon: Vec<[f32; 2]> = match &bands {
             Some(bands) => {
-                add_jettied_walls(&mut walls, &mut frames, bands, tint, base_y, &openings);
+                add_jettied_walls(
+                    &mut walls,
+                    &mut frames,
+                    &mut timber_frames,
+                    stable_hash(&building.id),
+                    bands,
+                    tint,
+                    base_y,
+                    &openings,
+                );
                 bands
                     .last()
                     .expect("jetty_bands never returns an empty stack")
@@ -695,6 +723,7 @@ fn build_buildings(
             None => {
                 add_building_walls(
                     &mut walls,
+                    &mut timber_frames,
                     building,
                     dominant_wall,
                     base_y,
@@ -711,16 +740,26 @@ fn build_buildings(
             0.0
         } else {
             let roof_kind = roof_kind(building);
+            // Half-timber gables sit over plaster now, like their storeys.
+            let gable_kind = if dominant_wall == WallKind::HalfTimber {
+                WallKind::Plaster
+            } else {
+                dominant_wall
+            };
             let roof_mesh = roofs.entry(roof_kind).or_default();
             roof_mesh.set_brush(tint);
-            let gable_mesh = walls.entry(dominant_wall).or_default();
+            let gable_mesh = walls.entry(gable_kind).or_default();
             gable_mesh.set_brush(tint);
             let (roof_height, ridge) =
                 add_building_roof(roof_mesh, gable_mesh, &roof_polygon, eave_y);
             roofs.entry(roof_kind).or_default().reset_brush();
-            walls.entry(dominant_wall).or_default().reset_brush();
+            walls.entry(gable_kind).or_default().reset_brush();
             if let Some(ridge) = ridge {
-                add_chimneys(walls.entry(WallKind::Fieldstone).or_default(), building, ridge);
+                add_chimneys(
+                    walls.entry(WallKind::Fieldstone).or_default(),
+                    building,
+                    ridge,
+                );
             }
             roof_height
         };
@@ -807,6 +846,13 @@ fn build_buildings(
         &materials.timber,
         frames,
         "Ombreval reveals, sills and lintels",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.dark_wood,
+        timber_frames,
+        "Ombreval timber framing",
     );
 
     rendered
@@ -910,8 +956,7 @@ fn plan_facade_openings(
                     continue;
                 }
                 let jitter = ((opening_hash >> 4) % 61) as f32 / 60.0 - 0.5;
-                let along = (length * (index as f32 + 1.0) / (count as f32 + 1.0)
-                    + jitter * 0.7)
+                let along = (length * (index as f32 + 1.0) / (count as f32 + 1.0) + jitter * 0.7)
                     .clamp(0.9, length - 0.9);
                 // Medieval ground floors are wall, not glass: smaller, higher
                 // openings on the street level, generous casements above.
@@ -1033,10 +1078,7 @@ fn jetty_bands(building: &Building, base_y: f32, eave_y: f32) -> Option<Vec<Stor
 
 /// Openings re-addressed onto one storey band: only the rows inside the band,
 /// with `along` corrected for the band's slid edge starts.
-fn band_openings(
-    openings: &[Vec<FacadeOpening>],
-    band: &StoreyBand,
-) -> Vec<Vec<FacadeOpening>> {
+fn band_openings(openings: &[Vec<FacadeOpening>], band: &StoreyBand) -> Vec<Vec<FacadeOpening>> {
     openings
         .iter()
         .enumerate()
@@ -1055,6 +1097,7 @@ fn band_openings(
 #[allow(clippy::too_many_arguments)]
 fn add_building_walls(
     walls: &mut BTreeMap<WallKind, MeshData>,
+    timber: &mut MeshData,
     building: &Building,
     dominant: WallKind,
     base_y: f32,
@@ -1062,6 +1105,7 @@ fn add_building_walls(
     tint: [f32; 3],
     openings: &[Vec<FacadeOpening>],
 ) {
+    let hash = stable_hash(&building.id);
     let tinted = |walls: &mut BTreeMap<WallKind, MeshData>,
                   kind: WallKind,
                   polygon: &[[f32; 2]],
@@ -1085,13 +1129,26 @@ fn add_building_walls(
                 openings,
             );
             if stone_top < eave_y {
+                // Plain plaster carries the storeys; the frame is geometry.
                 tinted(
                     walls,
-                    WallKind::HalfTimber,
+                    WallKind::Plaster,
                     &building.polygon,
                     stone_top,
                     eave_y,
                     openings,
+                );
+                add_timber_framing(
+                    timber,
+                    &building.polygon,
+                    stone_top,
+                    eave_y,
+                    base_y,
+                    openings,
+                    hash,
+                    tint,
+                    true,
+                    true,
                 );
             }
         }
@@ -1114,14 +1171,30 @@ fn add_building_walls(
                 openings,
             );
         }
-        _ => tinted(
-            walls,
-            dominant,
-            &building.polygon,
-            base_y,
-            eave_y,
-            openings,
-        ),
+        _ => {
+            // Elevated half-timber shells (the bridge upper storeys, the
+            // malt-house) frame their whole height over plaster.
+            let kind = if dominant == WallKind::HalfTimber {
+                WallKind::Plaster
+            } else {
+                dominant
+            };
+            tinted(walls, kind, &building.polygon, base_y, eave_y, openings);
+            if dominant == WallKind::HalfTimber {
+                add_timber_framing(
+                    timber,
+                    &building.polygon,
+                    base_y,
+                    eave_y,
+                    base_y,
+                    openings,
+                    hash,
+                    tint,
+                    true,
+                    true,
+                );
+            }
+        }
     }
 }
 
@@ -1132,6 +1205,8 @@ fn add_building_walls(
 fn add_jettied_walls(
     walls: &mut BTreeMap<WallKind, MeshData>,
     frames: &mut MeshData,
+    timber: &mut MeshData,
+    hash: u32,
     bands: &[StoreyBand],
     tint: [f32; 3],
     base_y: f32,
@@ -1141,7 +1216,7 @@ fn add_jettied_walls(
         let kind = if index == 0 {
             WallKind::Fieldstone
         } else {
-            WallKind::HalfTimber
+            WallKind::Plaster
         };
         let scoped = band_openings(openings, band);
         let mesh = walls.entry(kind).or_default();
@@ -1153,11 +1228,26 @@ fn add_jettied_walls(
             continue;
         }
         let below = &bands[index - 1];
-        if band.offset <= below.offset + 0.01 {
+        let stepped = band.offset > below.offset + 0.01;
+        // The frame of the storey: where the band steps out, the bressummer
+        // below stands in for the bottom rail.
+        add_timber_framing(
+            timber,
+            &band.polygon,
+            band.bottom,
+            band.top,
+            base_y,
+            &scoped,
+            hash.wrapping_add(index as u32),
+            tint,
+            !stepped,
+            index + 1 == bands.len(),
+        );
+        if !stepped {
             continue;
         }
         // Soffit: the visible underside of the cantilever, joist-dark.
-        let mesh = walls.entry(WallKind::HalfTimber).or_default();
+        let mesh = walls.entry(WallKind::Plaster).or_default();
         mesh.set_brush(tint);
         let inner = &below.polygon;
         let outer = &band.polygon;
@@ -1179,8 +1269,14 @@ fn add_jettied_walls(
                     0.5,
                 );
             }
-            mesh.indices
-                .extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
+            mesh.indices.extend_from_slice(&[
+                first,
+                first + 1,
+                first + 2,
+                first,
+                first + 2,
+                first + 3,
+            ]);
         }
         mesh.reset_brush();
 
@@ -1280,7 +1376,11 @@ fn add_extruded_walls(
         return;
     }
     let orientation = plan::signed_area(polygon).signum();
-    for (edge_index, (a, b)) in polygon.iter().zip(polygon.iter().cycle().skip(1)).enumerate() {
+    for (edge_index, (a, b)) in polygon
+        .iter()
+        .zip(polygon.iter().cycle().skip(1))
+        .enumerate()
+    {
         let a2 = Vec2::from_array(*a);
         let b2 = Vec2::from_array(*b);
         let edge = b2 - a2;
@@ -1568,7 +1668,11 @@ fn add_chimneys(mesh: &mut MeshData, building: &Building, ridge: [Vec3; 2]) {
     }
     let hash = stable_hash(&building.id);
     let along = Vec2::new(ridge_b.x - ridge_a.x, ridge_b.z - ridge_a.z) / ridge_len;
-    let count = if ridge_len > 15.0 && hash % 3 == 0 { 2 } else { 1 };
+    let count = if ridge_len > 15.0 && hash % 3 == 0 {
+        2
+    } else {
+        1
+    };
     for index in 0..count {
         let t = if count == 2 {
             0.26 + 0.48 * index as f32
@@ -1577,8 +1681,18 @@ fn add_chimneys(mesh: &mut MeshData, building: &Building, ridge: [Vec3; 2]) {
         };
         let base = ridge_a.lerp(ridge_b, t);
         // Stack sunk into the ridge, flaring into a cap slab above.
-        add_oriented_box(mesh, base + Vec3::Y * 0.25, Vec3::new(0.36, 1.0, 0.36), along);
-        add_oriented_box(mesh, base + Vec3::Y * 1.3, Vec3::new(0.48, 0.08, 0.48), along);
+        add_oriented_box(
+            mesh,
+            base + Vec3::Y * 0.25,
+            Vec3::new(0.36, 1.0, 0.36),
+            along,
+        );
+        add_oriented_box(
+            mesh,
+            base + Vec3::Y * 1.3,
+            Vec3::new(0.48, 0.08, 0.48),
+            along,
+        );
     }
 }
 
@@ -1614,6 +1728,247 @@ fn add_oriented_box(mesh: &mut MeshData, center: Vec3, half: Vec3, along: Vec2) 
             ],
         );
     }
+}
+
+/// One timber member on a wall face, in edge-local coordinates: from
+/// `(along, y)` `a` to `(along, y)` `b`, `half_width` across the member in the
+/// face plane, standing `proud` of the wall with its back buried. Front and
+/// side faces only unless `ends` — the buried back face is never emitted.
+#[allow(clippy::too_many_arguments)]
+fn add_face_member(
+    mesh: &mut MeshData,
+    origin: Vec2,
+    direction: Vec2,
+    normal2: Vec2,
+    a: Vec2,
+    b: Vec2,
+    half_width: f32,
+    proud: f32,
+    ends: bool,
+) {
+    let to_world = |p: Vec2| {
+        let flat = origin + direction * p.x;
+        Vec3::new(flat.x, p.y, flat.y)
+    };
+    let normal = Vec3::new(normal2.x, 0.0, normal2.y);
+    let axis = (to_world(b) - to_world(a)).normalize_or_zero();
+    if axis == Vec3::ZERO {
+        return;
+    }
+    let across = normal.cross(axis).normalize_or(Vec3::Y);
+    // The back sits a touch inside the wall so no seam ever opens.
+    let depth_half = (proud + 0.04) * 0.5;
+    let shift = normal * (proud - depth_half);
+    let start = to_world(a) + shift;
+    let end = to_world(b) + shift;
+    let face = |mesh: &mut MeshData, points: [Vec3; 4], face_normal: Vec3| {
+        let u = points[0].distance(points[1]) / 3.5;
+        let v = points[1].distance(points[2]) / 3.5;
+        mesh.quad(
+            points,
+            face_normal,
+            [
+                Vec2::ZERO,
+                Vec2::new(u, 0.0),
+                Vec2::new(u, v),
+                Vec2::new(0.0, v),
+            ],
+        );
+    };
+    let w = across * half_width;
+    let d = normal * depth_half;
+    face(
+        mesh,
+        [start - w + d, end - w + d, end + w + d, start + w + d],
+        normal,
+    );
+    face(
+        mesh,
+        [start - w - d, end - w - d, end - w + d, start - w + d],
+        -across,
+    );
+    face(
+        mesh,
+        [start + w + d, end + w + d, end + w - d, start + w - d],
+        across,
+    );
+    if ends {
+        face(
+            mesh,
+            [start - w - d, start - w + d, start + w + d, start + w - d],
+            -axis,
+        );
+        face(
+            mesh,
+            [end - w - d, end + w - d, end + w + d, end - w + d],
+            axis,
+        );
+    }
+}
+
+/// The structural skeleton of a half-timber storey band, drawn as real
+/// geometry instead of a painted grid: corner posts, rails on the storey
+/// lines, hash-jittered studs that step around the openings, and a diagonal
+/// brace where a corner leaves room for one.
+#[allow(clippy::too_many_arguments)]
+fn add_timber_framing(
+    timber: &mut MeshData,
+    polygon: &[[f32; 2]],
+    bottom: f32,
+    top: f32,
+    ground: f32,
+    openings: &[Vec<FacadeOpening>],
+    hash: u32,
+    tint: [f32; 3],
+    bottom_rail: bool,
+    top_rail: bool,
+) {
+    let height = top - bottom;
+    if height < 0.4 {
+        return;
+    }
+    timber.set_brush(tint);
+    let orientation = plan::signed_area(polygon).signum();
+    for (edge_index, (a, b)) in polygon
+        .iter()
+        .zip(polygon.iter().cycle().skip(1))
+        .enumerate()
+    {
+        let a2 = Vec2::from_array(*a);
+        let b2 = Vec2::from_array(*b);
+        let edge = b2 - a2;
+        let length = edge.length();
+        if length < 0.6 {
+            continue;
+        }
+        let direction = edge / length;
+        let mut normal2 = Vec2::new(edge.y, -edge.x).normalize();
+        if orientation < 0.0 {
+            normal2 = -normal2;
+        }
+        let edge_hash = hash ^ (edge_index as u32).wrapping_mul(0x9E37_79B9);
+
+        // Corner post on the shared vertex, proud of both meeting faces.
+        add_oriented_box(
+            timber,
+            Vec3::new(a2.x, (bottom + top) * 0.5, a2.y),
+            Vec3::new(0.11, height * 0.5, 0.11),
+            direction,
+        );
+
+        // The openings that actually pierce this band on this edge.
+        let cuts: Vec<&FacadeOpening> = openings
+            .get(edge_index)
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
+            .iter()
+            .filter(|opening| opening.max_y() > bottom + 0.05 && opening.min_y() < top - 0.05)
+            .collect();
+
+        // Rails: the sill beam over the masonry, one on every storey line the
+        // band crosses, and the wall plate under the eaves. The storey lines
+        // thread between the window rows by construction, so rails never cross
+        // glass.
+        let mut rail_ys = Vec::new();
+        if bottom_rail {
+            rail_ys.push(bottom + 0.09);
+        }
+        let mut line = (((bottom - ground) / BUILDING_FLOOR_HEIGHT).floor() + 1.0)
+            * BUILDING_FLOOR_HEIGHT
+            + ground;
+        while line < top - 0.45 {
+            if line > bottom + 0.45 {
+                rail_ys.push(line);
+            }
+            line += BUILDING_FLOOR_HEIGHT;
+        }
+        if top_rail {
+            rail_ys.push(top - 0.10);
+        }
+        for y in rail_ys {
+            add_face_member(
+                timber,
+                a2,
+                direction,
+                normal2,
+                Vec2::new(0.10, y),
+                Vec2::new(length - 0.10, y),
+                0.075,
+                0.13,
+                false,
+            );
+        }
+
+        if height < 1.1 {
+            continue;
+        }
+
+        // Studs: jittered 1.2–1.8 m spacing, skipped where a window interrupts.
+        let mut along = 0.85 + (edge_hash % 37) as f32 / 60.0;
+        let mut stud_index = 0u32;
+        while along < length - 0.7 {
+            let clear = cuts
+                .iter()
+                .all(|opening| (along - opening.along).abs() > opening.width * 0.5 + 0.17);
+            if clear {
+                add_face_member(
+                    timber,
+                    a2,
+                    direction,
+                    normal2,
+                    Vec2::new(along, bottom + 0.06),
+                    Vec2::new(along, top - 0.06),
+                    0.055,
+                    0.12,
+                    false,
+                );
+            }
+            let step_hash = edge_hash ^ stud_index.wrapping_mul(0x85EB_CA6B);
+            along += 1.2 + (step_hash % 61) as f32 / 100.0;
+            stud_index += 1;
+        }
+
+        // A diagonal brace off a corner post — the classic K/Z patterns, two
+        // orientations picked by hash, only where no opening blocks the run.
+        let rise = (height - 0.3).min(2.35);
+        let run = rise.mul_add(0.55, 0.35);
+        let variants = [
+            (0.16, bottom + 0.12, 0.16 + run, bottom + 0.12 + rise),
+            (
+                length - 0.16,
+                bottom + 0.12,
+                length - 0.16 - run,
+                bottom + 0.12 + rise,
+            ),
+        ];
+        let pick = (edge_hash >> 6) % 3;
+        for (variant, (x0, y0, x1, y1)) in variants.into_iter().enumerate() {
+            if pick != 2 && pick != variant as u32 {
+                continue;
+            }
+            let (lo, hi) = (x0.min(x1), x0.max(x1));
+            let clear = lo > 0.1
+                && hi < length - 0.1
+                && cuts.iter().all(|opening| {
+                    opening.along + opening.width * 0.5 + 0.15 < lo
+                        || opening.along - opening.width * 0.5 - 0.15 > hi
+                });
+            if clear {
+                add_face_member(
+                    timber,
+                    a2,
+                    direction,
+                    normal2,
+                    Vec2::new(x0, y0),
+                    Vec2::new(x1, y1),
+                    0.065,
+                    0.115,
+                    true,
+                );
+            }
+        }
+    }
+    timber.reset_brush();
 }
 
 /// How deep every opening sits behind the wall face. The reveal this exposes
@@ -1747,15 +2102,13 @@ fn add_window_module(
     // Sill: a slab proud of the wall below the opening; lintel above.
     add_oriented_box(
         frames,
-        Vec3::new(wall_point.x, center_y - height * 0.5 - 0.04, wall_point.y)
-            + normal * 0.05,
+        Vec3::new(wall_point.x, center_y - height * 0.5 - 0.04, wall_point.y) + normal * 0.05,
         Vec3::new(width * 0.5 + 0.08, 0.045, 0.09),
         direction,
     );
     add_oriented_box(
         frames,
-        Vec3::new(wall_point.x, center_y + height * 0.5 + 0.05, wall_point.y)
-            + normal * 0.03,
+        Vec3::new(wall_point.x, center_y + height * 0.5 + 0.05, wall_point.y) + normal * 0.03,
         Vec3::new(width * 0.5 + 0.06, 0.055, 0.07),
         direction,
     );
@@ -2458,11 +2811,8 @@ fn build_bellstand_belfry(
         commands,
         &meshes.pyramid,
         &materials.slate,
-        Transform::from_xyz(center.x, stage_top + 1.0 + 4.5, center.y).with_scale(Vec3::new(
-            15.5,
-            9.0,
-            17.5,
-        )),
+        Transform::from_xyz(center.x, stage_top + 1.0 + 4.5, center.y)
+            .with_scale(Vec3::new(15.5, 9.0, 17.5)),
         "Bellstand spire",
     );
     collision_world.add_box(
@@ -2622,9 +2972,11 @@ fn add_open_bell_stage(
         commands,
         &meshes.pyramid,
         &materials.slate,
-        Transform::from_xyz(center.x, base_y + stage_height + 1.9, center.y).with_scale(
-            Vec3::new(half_width * 2.0 - 0.6, 4.0, half_width * 2.0 - 0.6),
-        ),
+        Transform::from_xyz(center.x, base_y + stage_height + 1.9, center.y).with_scale(Vec3::new(
+            half_width * 2.0 - 0.6,
+            4.0,
+            half_width * 2.0 - 0.6,
+        )),
         format!("{name} tower roof"),
     );
 }
@@ -2809,6 +3161,216 @@ fn build_bridge_supports(
     }
 }
 
+/// Dress the underside of every space a road-goer crosses beneath a building —
+/// the three bridge upper storeys and the malt-house over Malt Passage — after
+/// `bellfoot_passage_001.png`: a boarded ceiling with joists, a fascia over
+/// each mouth, hanging lanterns that burn day and night, posted notices on the
+/// spine piers, and a worn stone doorstep strip at each end.
+fn build_covered_passages(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+) {
+    let mut boards = MeshData::default();
+    let mut ironwork = MeshData::default();
+    let mut glass = MeshData::default();
+    let mut notices = MeshData::default();
+    let mut steps = MeshData::default();
+
+    for building in plan
+        .buildings
+        .iter()
+        .filter(|building| building.use_name == "bridge" || building.id == "named_malt_house")
+    {
+        if building.polygon.len() != 4 {
+            continue;
+        }
+        let (base_y, _) = building_verticals(building);
+        let p: Vec<Vec2> = building
+            .polygon
+            .iter()
+            .map(|point| Vec2::from_array(*point))
+            .collect();
+        let edge_01 = p[0].distance(p[1]);
+        let edge_12 = p[1].distance(p[2]);
+        // The passage runs the long way; the mouths are the two short edges —
+        // the same reading `build_bridge_supports` stands its piers on.
+        let (ends, width) = if edge_01 >= edge_12 {
+            ([(p[0] + p[3]) * 0.5, (p[1] + p[2]) * 0.5], edge_12)
+        } else {
+            ([(p[0] + p[1]) * 0.5, (p[2] + p[3]) * 0.5], edge_01)
+        };
+        let long_dir = (ends[1] - ends[0]).normalize_or_zero();
+        let across = Vec2::new(-long_dir.y, long_dir.x);
+        let run = ends[0].distance(ends[1]);
+        let hash = stable_hash(&building.id);
+
+        // Boarded ceiling, dark as the soffits, joists slung across it.
+        let ceiling_y = base_y - 0.03;
+        let first = boards.positions.len() as u32;
+        for corner in &p {
+            boards.vertex_shaded(
+                Vec3::new(corner.x, ceiling_y, corner.y),
+                Vec3::NEG_Y,
+                Vec2::new(corner.x / 3.5, corner.y / 3.5),
+                0.45,
+            );
+        }
+        boards.indices.extend_from_slice(&[
+            first,
+            first + 1,
+            first + 2,
+            first,
+            first + 2,
+            first + 3,
+        ]);
+        let joists = ((run - 1.6) / 1.7).floor().max(1.0) as usize;
+        for index in 0..joists {
+            let t = (index as f32 + 1.0) / (joists as f32 + 1.0);
+            let center = ends[0].lerp(ends[1], t);
+            add_oriented_box(
+                &mut boards,
+                Vec3::new(center.x, ceiling_y - 0.07, center.y),
+                Vec3::new(width * 0.5 - 0.15, 0.075, 0.09),
+                across,
+            );
+        }
+
+        for (end_index, end) in ends.iter().enumerate() {
+            let inward = if end_index == 0 { long_dir } else { -long_dir };
+            // Fascia board across the head of the mouth.
+            let fascia = *end + inward * 0.12;
+            add_oriented_box(
+                &mut boards,
+                Vec3::new(fascia.x, base_y - 0.19, fascia.y),
+                Vec3::new(width * 0.5, 0.20, 0.055),
+                across,
+            );
+            // A worn stone doorstep strip where the covered dark begins.
+            add_oriented_box(
+                &mut steps,
+                Vec3::new(end.x, 0.045, end.y),
+                Vec3::new(width * 0.5 - 0.35, 0.045, 0.42),
+                across,
+            );
+
+            // Posted notices on both faces of the spine pier at this mouth.
+            let pier_half = (width - 1.0).max(1.2) * 0.5;
+            for side in [-1.0, 1.0] {
+                let face_normal = across * side;
+                let count = 1 + (hash >> (end_index as u32 * 4 + (side as i32 + 1) as u32)) % 3;
+                for notice in 0..count {
+                    let notice_hash = hash
+                        ^ (end_index as u32 * 41)
+                        ^ ((side as i32 + 2) as u32 * 97)
+                        ^ notice.wrapping_mul(0x9E37_79B9);
+                    let along = (notice as f32 - (count as f32 - 1.0) * 0.5)
+                        * (0.62 + (notice_hash % 30) as f32 / 100.0)
+                        + ((notice_hash >> 5) % 40) as f32 / 100.0
+                        - 0.2;
+                    let spot = *end
+                        + long_dir * along.clamp(-pier_half + 0.4, pier_half - 0.4)
+                        + face_normal * 0.665;
+                    add_facade_panel(
+                        &mut notices,
+                        spot,
+                        1.45 + ((notice_hash >> 7) % 50) as f32 / 100.0,
+                        long_dir,
+                        Vec3::new(face_normal.x, 0.0, face_normal.y),
+                        0.28 + (notice_hash % 18) as f32 / 100.0,
+                        0.36 + ((notice_hash >> 3) % 22) as f32 / 100.0,
+                    );
+                }
+            }
+        }
+
+        // Lanterns down the centreline, chained to the boards.
+        let lantern_count = if run > 26.0 { 3 } else { 2 };
+        for index in 0..lantern_count {
+            let t = (index as f32 + 1.0) / (lantern_count as f32 + 1.0);
+            let drift = (((hash >> (index * 5)) % 3) as f32 - 1.0) * 0.35;
+            let spot = ends[0].lerp(ends[1], t) + across * drift;
+            let head_y = base_y - 0.78;
+            add_oriented_box(
+                &mut ironwork,
+                Vec3::new(spot.x, (ceiling_y + head_y + 0.14) * 0.5, spot.y),
+                Vec3::new(0.02, (ceiling_y - head_y - 0.14) * 0.5, 0.02),
+                long_dir,
+            );
+            add_oriented_box(
+                &mut ironwork,
+                Vec3::new(spot.x, head_y + 0.13, spot.y),
+                Vec3::new(0.10, 0.025, 0.10),
+                long_dir,
+            );
+            add_oriented_box(
+                &mut ironwork,
+                Vec3::new(spot.x, head_y - 0.13, spot.y),
+                Vec3::new(0.085, 0.025, 0.085),
+                long_dir,
+            );
+            add_oriented_box(
+                &mut glass,
+                Vec3::new(spot.x, head_y, spot.y),
+                Vec3::new(0.065, 0.105, 0.065),
+                long_dir,
+            );
+            commands.spawn((
+                Name::new(format!(
+                    "Passage lantern: {}",
+                    building.name.as_deref().unwrap_or(&building.id)
+                )),
+                PointLight {
+                    color: Color::srgb(1.0, 0.62, 0.28),
+                    intensity: 20_000.0,
+                    range: 11.0,
+                    radius: 0.1,
+                    shadow_maps_enabled: false,
+                    ..default()
+                },
+                Transform::from_xyz(spot.x, head_y - 0.25, spot.y),
+            ));
+        }
+    }
+
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.dark_wood,
+        boards,
+        "Passage ceilings and boards",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.iron,
+        ironwork,
+        "Passage lantern ironwork",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.lantern_glass,
+        glass,
+        "Passage lantern panes",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.cloth_ochre,
+        notices,
+        "Passage posted notices",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.limestone,
+        steps,
+        "Passage doorsteps",
+    );
+}
+
 fn build_ropewalk(commands: &mut Commands, meshes: &CityMeshes, materials: &CityMaterials) {
     for z in (232..=288).step_by(8) {
         spawn_box_named(
@@ -2960,16 +3522,155 @@ fn build_street_galleries(
                 yaw,
                 "Street gallery roof ridge",
             );
-            add_rotated_box_collider_at(
-                collision_world,
-                base,
-                Vec3::new(span, 0.26, 2.5),
-                yaw,
-            );
+            add_rotated_box_collider_at(collision_world, base, Vec3::new(span, 0.26, 2.5), yaw);
             built += 1;
         }
     }
     info!("spanned {built} street galleries");
+}
+
+/// Ground-floor arcade strips on the buildings that front the town squares:
+/// timber posts at ~2.4 m spacing carrying a beam and a slate pentice roof,
+/// with the walkable colonnade between the posts and the façade. The posts are
+/// scenery like the street props — the baked navigation predates them, so they
+/// must not collide — and the roof rides above head height, so nothing at
+/// street level changes.
+fn build_square_arcades(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+    door_edges: &HashMap<String, usize>,
+) {
+    let squares: Vec<&Site> = plan
+        .sites
+        .iter()
+        .filter(|site| site.kind == "square")
+        .collect();
+    let mut woodwork = MeshData::default();
+    let mut hoods = MeshData::default();
+    let mut arcaded = 0;
+
+    for building in &plan.buildings {
+        let (base_y, eave_y) = building_verticals(building);
+        // Towers, gates, churches and the overhead shells keep their bare
+        // faces; the arcade belongs to the ordinary fabric around a square.
+        if base_y > 0.1
+            || eave_y < 6.0
+            || building.use_name == "bridge"
+            || building.id == "named_bellstand_tower"
+            || building.id == "named_saint_marens"
+            || building.id == "named_old_sluice"
+            || building.id.starts_with("gate_")
+            || building.id.starts_with("reserve_church_")
+        {
+            continue;
+        }
+        let tint = building_tint(building);
+        let door_edge = door_edges.get(&building.id).copied();
+        let orientation = plan::signed_area(&building.polygon).signum();
+        for (edge_index, (a, b)) in building
+            .polygon
+            .iter()
+            .zip(building.polygon.iter().cycle().skip(1))
+            .enumerate()
+        {
+            let a2 = Vec2::from_array(*a);
+            let b2 = Vec2::from_array(*b);
+            let edge = b2 - a2;
+            let length = edge.length();
+            if length < 4.5 {
+                continue;
+            }
+            let direction = edge / length;
+            let mut normal2 = Vec2::new(edge.y, -edge.x).normalize();
+            if orientation < 0.0 {
+                normal2 = -normal2;
+            }
+            // The colonnade must stand on the square itself.
+            let probe = a2 + direction * (length * 0.5) + normal2 * 1.6;
+            if !squares
+                .iter()
+                .any(|square| point_in_polygon(probe, &square.polygon))
+            {
+                continue;
+            }
+
+            woodwork.set_brush(tint);
+            hoods.set_brush(tint);
+            let door_here = door_edge == Some(edge_index);
+            let count = ((length - 1.6) / 2.4).floor().max(1.0) as usize;
+            for index in 0..count {
+                let along = length * (index as f32 + 1.0) / (count as f32 + 1.0);
+                // Never plant a post in front of the doorway.
+                if door_here && (along - length * 0.5).abs() < 1.6 {
+                    continue;
+                }
+                let foot = a2 + direction * along + normal2 * 1.35;
+                add_oriented_box(
+                    &mut woodwork,
+                    Vec3::new(foot.x, 1.62, foot.y),
+                    Vec3::new(0.09, 1.62, 0.09),
+                    direction,
+                );
+            }
+            // The beam the posts carry.
+            let beam_center = a2 + direction * (length * 0.5) + normal2 * 1.35;
+            add_oriented_box(
+                &mut woodwork,
+                Vec3::new(beam_center.x, 3.33, beam_center.y),
+                Vec3::new(length * 0.5 - 0.55, 0.09, 0.11),
+                direction,
+            );
+            woodwork.reset_brush();
+
+            // The pentice: a slate strip pitched off the façade over the walk.
+            let inner_a = a2 + direction * 0.25;
+            let inner_b = a2 + direction * (length - 0.25);
+            let outer_a = inner_a + normal2 * 1.62;
+            let outer_b = inner_b + normal2 * 1.62;
+            let slope = Vec3::new(normal2.x * 1.62, -0.45, normal2.y * 1.62);
+            let mut roof_normal = slope
+                .cross(Vec3::new(direction.x, 0.0, direction.y))
+                .normalize_or(Vec3::Y);
+            if roof_normal.y < 0.0 {
+                roof_normal = -roof_normal;
+            }
+            hoods.quad(
+                [
+                    Vec3::new(inner_a.x, 3.78, inner_a.y),
+                    Vec3::new(inner_b.x, 3.78, inner_b.y),
+                    Vec3::new(outer_b.x, 3.33, outer_b.y),
+                    Vec3::new(outer_a.x, 3.33, outer_a.y),
+                ],
+                roof_normal,
+                [
+                    Vec2::ZERO,
+                    Vec2::new(length / 7.0, 0.0),
+                    Vec2::new(length / 7.0, 0.25),
+                    Vec2::new(0.0, 0.25),
+                ],
+            );
+            hoods.reset_brush();
+            arcaded += 1;
+        }
+    }
+
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.dark_wood,
+        woodwork,
+        "Square arcade posts",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.slate,
+        hoods,
+        "Square arcade hoods",
+    );
+    info!("raised {arcaded} arcade strips on the squares");
 }
 
 /// The street-life kit: barrels, crates, sacks, firewood and hanging signs
@@ -3020,7 +3721,11 @@ fn build_street_props(
         // One or two clutter spots flanking the door, tight to the wall.
         let spots = if hash % 5 < 2 { 2 } else { 1 };
         for spot in 0..spots {
-            let side = if (spot == 0) == (hash % 2 == 0) { 1.0 } else { -1.0 };
+            let side = if (spot == 0) == (hash % 2 == 0) {
+                1.0
+            } else {
+                -1.0
+            };
             let spot_hash = hash.rotate_left(5 + spot as u32 * 7) ^ 0xA5A5_5A5A;
             let along_offset = 1.6 + (spot_hash % 90) as f32 / 100.0;
             let position2 = door + direction * side * along_offset + normal * 0.55;
@@ -3111,8 +3816,20 @@ fn build_street_props(
         }
     }
 
-    spawn_batch(commands, meshes, &materials.timber, timber, "Street props: cooperage");
-    spawn_batch(commands, meshes, &materials.iron, iron, "Street props: ironmongery");
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.timber,
+        timber,
+        "Street props: cooperage",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.iron,
+        iron,
+        "Street props: ironmongery",
+    );
     spawn_batch(
         commands,
         meshes,
@@ -3120,7 +3837,13 @@ fn build_street_props(
         dark_wood,
         "Street props: firewood and signs",
     );
-    spawn_batch(commands, meshes, &materials.cloth_ochre, ochre, "Street props: sacks");
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.cloth_ochre,
+        ochre,
+        "Street props: sacks",
+    );
     spawn_batch(
         commands,
         meshes,
@@ -3129,6 +3852,286 @@ fn build_street_props(
         "Street props: more sacks",
     );
     info!("scattered {placed} doorway prop clusters");
+}
+
+/// External timber stairs up to first-floor balconies — the left edge of
+/// `the_bellstand_001.png` — on a hash-picked tenth of the taller ordinary
+/// houses, and only where the flight provably stands in a yard: clear of every
+/// other footprint, every road, every fixture, the squares and the curtain
+/// wall. The flight itself is scenery (the baked navigation predates it, like
+/// the props); only the landing high above the walk band gets a collider, so
+/// a flying player can put down on it.
+fn build_yard_stairs(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+    door_edges: &HashMap<String, usize>,
+    collision_world: &mut CollisionWorld,
+) {
+    const RUN_ALONG: f32 = 6.4;
+    let bounds: Vec<(Vec2, Vec2)> = plan
+        .buildings
+        .iter()
+        .map(|building| {
+            let mut min = Vec2::splat(f32::INFINITY);
+            let mut max = Vec2::splat(f32::NEG_INFINITY);
+            for point in &building.polygon {
+                min = min.min(Vec2::from_array(*point));
+                max = max.max(Vec2::from_array(*point));
+            }
+            (min, max)
+        })
+        .collect();
+    let squares: Vec<&Site> = plan
+        .sites
+        .iter()
+        .filter(|site| site.kind == "square")
+        .collect();
+
+    let clear = |probe: Vec2, skip: usize| {
+        plan.buildings.iter().enumerate().all(|(index, building)| {
+            index == skip
+                || probe.x < bounds[index].0.x
+                || probe.y < bounds[index].0.y
+                || probe.x > bounds[index].1.x
+                || probe.y > bounds[index].1.y
+                || !point_in_polygon(probe, &building.polygon)
+        }) && plan.roads.iter().all(|road| {
+            let margin = road.width_m * 0.5 + 0.8;
+            road.points.windows(2).all(|pair| {
+                segment_distance_squared(
+                    probe,
+                    Vec2::from_array(pair[0]),
+                    Vec2::from_array(pair[1]),
+                ) > margin * margin
+            })
+        }) && plan.fixtures.iter().all(|fixture| {
+            let angle = fixture.angle_deg.to_radians();
+            let delta = probe - Vec2::from_array(fixture.position);
+            let local_x = delta.x * angle.cos() - delta.y * angle.sin();
+            let local_z = delta.x * angle.sin() + delta.y * angle.cos();
+            local_x.abs() > fixture.size[0] * 0.5 + 0.8
+                || local_z.abs() > fixture.size[1] * 0.5 + 0.8
+        }) && !squares
+            .iter()
+            .any(|square| point_in_polygon(probe, &square.polygon))
+            && point_in_polygon(probe, &plan.wall_polygon_xz)
+            && plan
+                .wall_polygon_xz
+                .windows(2)
+                .chain(std::iter::once(
+                    &[
+                        *plan.wall_polygon_xz.last().unwrap(),
+                        plan.wall_polygon_xz[0],
+                    ][..],
+                ))
+                .all(|pair| {
+                    segment_distance_squared(
+                        probe,
+                        Vec2::from_array(pair[0]),
+                        Vec2::from_array(pair[1]),
+                    ) > 3.2 * 3.2
+                })
+    };
+
+    let mut timber = MeshData::default();
+    let mut raised = 0;
+    for (building_index, building) in plan.buildings.iter().enumerate() {
+        let hash = stable_hash(&building.id).rotate_left(3);
+        if building.named || building.levels < 2 || !hash.is_multiple_of(10) {
+            continue;
+        }
+        let door_edge = door_edges.get(&building.id).copied();
+        let orientation = plan::signed_area(&building.polygon).signum();
+        let edge_count = building.polygon.len();
+        let mut placed_here = false;
+        for edge_offset in 0..edge_count {
+            if placed_here {
+                break;
+            }
+            let edge_index = (edge_offset + hash as usize) % edge_count;
+            if door_edge == Some(edge_index) {
+                continue;
+            }
+            let a2 = Vec2::from_array(building.polygon[edge_index]);
+            let b2 = Vec2::from_array(building.polygon[(edge_index + 1) % edge_count]);
+            let edge = b2 - a2;
+            let length = edge.length();
+            if length < RUN_ALONG + 0.6 {
+                continue;
+            }
+            let direction = edge / length;
+            let mut normal2 = Vec2::new(edge.y, -edge.x).normalize();
+            if orientation < 0.0 {
+                normal2 = -normal2;
+            }
+            let probes_clear = [0.6_f32, 2.4, 4.2, 6.2]
+                .into_iter()
+                .flat_map(|along| [0.6_f32, 1.7].map(|out| (along, out)))
+                .all(|(along, out)| clear(a2 + direction * along + normal2 * out, building_index));
+            if !probes_clear {
+                continue;
+            }
+
+            add_yard_stair(
+                &mut timber,
+                collision_world,
+                a2,
+                direction,
+                normal2,
+                building_tint(building),
+            );
+            raised += 1;
+            placed_here = true;
+        }
+    }
+
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.timber,
+        timber,
+        "Yard stairs and balconies",
+    );
+    info!("raised {raised} yard stairs");
+}
+
+/// One straight flight against a wall — stringers, treads, handrail — up to a
+/// railed landing at first-floor height, with a dark upper door behind it.
+fn add_yard_stair(
+    timber: &mut MeshData,
+    collision_world: &mut CollisionWorld,
+    a2: Vec2,
+    direction: Vec2,
+    normal2: Vec2,
+    tint: [f32; 3],
+) {
+    const LANDING_Y: f32 = 3.15;
+    let at = |along: f32, out: f32| a2 + direction * along + normal2 * out;
+    timber.set_brush(tint);
+
+    // Stringers on both flanks of the flight.
+    for out in [0.38, 1.22] {
+        add_face_member(
+            timber,
+            a2 + normal2 * out,
+            direction,
+            normal2,
+            Vec2::new(0.4, 0.12),
+            Vec2::new(4.6, LANDING_Y - 0.04),
+            0.10,
+            0.10,
+            true,
+        );
+    }
+    // Treads.
+    for step in 0..11 {
+        let along = 0.66 + step as f32 * 0.36;
+        let rise = 0.18 + step as f32 * 0.27;
+        let center = at(along, 0.8);
+        add_oriented_box(
+            timber,
+            Vec3::new(center.x, rise, center.y),
+            Vec3::new(0.19, 0.032, 0.44),
+            direction,
+        );
+    }
+    // Handrail and balusters on the open side.
+    add_face_member(
+        timber,
+        a2 + normal2 * 1.26,
+        direction,
+        normal2,
+        Vec2::new(0.4, 1.07),
+        Vec2::new(4.6, LANDING_Y + 0.91),
+        0.045,
+        0.05,
+        true,
+    );
+    for along in [1.4_f32, 2.6, 3.8] {
+        let height = 0.12 + (along - 0.4) / 4.2 * (LANDING_Y - 0.16);
+        let foot = at(along, 1.24);
+        add_oriented_box(
+            timber,
+            Vec3::new(foot.x, height + 0.48, foot.y),
+            Vec3::new(0.038, 0.48, 0.038),
+            direction,
+        );
+    }
+
+    // The landing: platform, two full-height posts, rails, and the door it
+    // serves.
+    let platform = at(5.5, 0.85);
+    add_oriented_box(
+        timber,
+        Vec3::new(platform.x, LANDING_Y, platform.y),
+        Vec3::new(0.92, 0.055, 0.72),
+        direction,
+    );
+    for along in [4.72_f32, 6.27] {
+        let foot = at(along, 1.46);
+        add_oriented_box(
+            timber,
+            Vec3::new(foot.x, 2.05, foot.y),
+            Vec3::new(0.07, 2.05, 0.07),
+            direction,
+        );
+    }
+    // Outer rail along the balcony edge, and the closed far end.
+    add_face_member(
+        timber,
+        a2 + normal2 * 1.5,
+        direction,
+        normal2,
+        Vec2::new(4.72, LANDING_Y + 0.92),
+        Vec2::new(6.27, LANDING_Y + 0.92),
+        0.045,
+        0.05,
+        true,
+    );
+    let end_origin = at(6.34, 0.0);
+    add_face_member(
+        timber,
+        end_origin,
+        normal2,
+        direction,
+        Vec2::new(0.15, LANDING_Y + 0.92),
+        Vec2::new(1.45, LANDING_Y + 0.92),
+        0.045,
+        0.05,
+        true,
+    );
+    // The dark upper door the stair exists for.
+    let door = at(5.5, 0.05);
+    timber.set_brush([tint[0] * 0.30, tint[1] * 0.28, tint[2] * 0.26]);
+    add_oriented_box(
+        timber,
+        Vec3::new(door.x, LANDING_Y + 1.08, door.y),
+        Vec3::new(0.52, 1.02, 0.05),
+        direction,
+    );
+    timber.reset_brush();
+
+    // Only the landing carries collision — it floats far above the walk band,
+    // so the baked navigation below stays honest.
+    add_rotated_box_collider_at(
+        collision_world,
+        Vec3::new(platform.x, LANDING_Y, platform.y),
+        Vec3::new(1.84, 0.11, 1.44),
+        (-direction.y).atan2(direction.x),
+    );
+}
+
+/// Squared distance from `point` to the segment `a`–`b`.
+fn segment_distance_squared(point: Vec2, a: Vec2, b: Vec2) -> f32 {
+    let edge = b - a;
+    let length_squared = edge.length_squared();
+    if length_squared <= f32::EPSILON {
+        return point.distance_squared(a);
+    }
+    let along = ((point - a).dot(edge) / length_squared).clamp(0.0, 1.0);
+    point.distance_squared(a + edge * along)
 }
 
 fn rotate2(v: Vec2, angle: f32) -> Vec2 {
@@ -3244,14 +4247,14 @@ fn add_sack(mesh: &mut MeshData, center: Vec3, radii: Vec3) {
             };
             let normal = (point(u0, v0) + point(u1, v1) - center * 2.0).normalize_or(Vec3::Y);
             mesh.quad(
-                [
-                    point(u0, v0),
-                    point(u1, v0),
-                    point(u1, v1),
-                    point(u0, v1),
-                ],
+                [point(u0, v0), point(u1, v0), point(u1, v1), point(u0, v1)],
                 normal,
-                [Vec2::ZERO, Vec2::new(0.05, 0.0), Vec2::new(0.05, 0.05), Vec2::new(0.0, 0.05)],
+                [
+                    Vec2::ZERO,
+                    Vec2::new(0.05, 0.0),
+                    Vec2::new(0.05, 0.05),
+                    Vec2::new(0.0, 0.05),
+                ],
             );
         }
     }
@@ -3839,9 +4842,15 @@ mod tests {
         let mut violations = Vec::new();
         for footprint in collision.solid_footprints_in_band(WALK_BAND_LO, WALK_BAND_HI) {
             let min_x = footprint.iter().map(|p| p.x).fold(f32::INFINITY, f32::min);
-            let max_x = footprint.iter().map(|p| p.x).fold(f32::NEG_INFINITY, f32::max);
+            let max_x = footprint
+                .iter()
+                .map(|p| p.x)
+                .fold(f32::NEG_INFINITY, f32::max);
             let min_z = footprint.iter().map(|p| p.y).fold(f32::INFINITY, f32::min);
-            let max_z = footprint.iter().map(|p| p.y).fold(f32::NEG_INFINITY, f32::max);
+            let max_z = footprint
+                .iter()
+                .map(|p| p.y)
+                .fold(f32::NEG_INFINITY, f32::max);
             let col_lo = (((min_x as f64 - grid.x0) / grid.cell_m).floor()).max(0.0) as usize;
             let col_hi = (((max_x as f64 - grid.x0) / grid.cell_m).ceil() as usize).min(grid.w - 1);
             let row_lo = (((min_z as f64 - grid.z0) / grid.cell_m).floor()).max(0.0) as usize;
@@ -3895,7 +4904,10 @@ mod tests {
                      walk band; generated by `cargo test export_collision_footprints -- --ignored`",
             "footprints": footprints,
         });
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/world/collision_footprints.json");
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/world/collision_footprints.json"
+        );
         std::fs::write(path, serde_json::to_string(&doc).unwrap()).expect("write footprints");
         println!("wrote {} footprints to {path}", footprints.len());
     }
@@ -3963,7 +4975,11 @@ mod tests {
 
             let poly = &building.polygon;
             let n = poly.len();
-            assert!(door.edge < n, "door edge index in range for {}", door.building);
+            assert!(
+                door.edge < n,
+                "door edge index in range for {}",
+                door.building
+            );
 
             let a = Vec2::from_array(poly[door.edge]);
             let b = Vec2::from_array(poly[(door.edge + 1) % n]);

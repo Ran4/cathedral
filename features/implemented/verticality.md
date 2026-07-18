@@ -34,7 +34,42 @@ inspiration images are *about*.
 the space cannot canyon. (Roads *do* pinch to 1.2 m, so the plan's horizontal fabric is right; it's
 the vertical dimension that's timid.)
 
-## What's recently been done
+## Status: implemented (2026-07-18)
+
+Everything below is in `src/city/mod.rs` on `develop`; 199 tests green, both guard rails
+(`no_walkable_cell_is_solid`, `batched_city_keeps_render_entity_count_bounded`) hold.
+
+- **Real timber frames**: `WallKind::HalfTimber` storeys (plain, jettied, and the elevated
+  bridge/malt-house shells) now render as plain plaster with a geometric skeleton batched into
+  one dark-wood mesh (`add_timber_framing`): corner posts, sill/storey/plate rails threaded
+  between the window rows, 1.2–1.8 m hash-jittered studs that skip openings, diagonal corner
+  braces (two orientations + both, by hash). Members ride 0.12–0.13 m proud with buried backs;
+  gables went to plaster with the storeys. The painted `half_timber` grid texture is no longer
+  used on buildings.
+- **Covered passages** (`build_covered_passages`): the three bridge upper storeys and the
+  malt-house get a joist-and-board ceiling, a fascia over each mouth, 2–3 always-burning hanging
+  lanterns (batched meshes + shadowless `PointLight`s, emissive `lantern_glass` material), posted
+  notices on both faces of the spine piers, and limestone doorstep strips. (The Tally Bridge's
+  ends are buried inside the bonded warehouse and toll-house — it really is an "upper passage"
+  between them — so its mouth dressing is hidden; Chain, Eel and Malt Passage read fully.)
+- **Arcades** (`build_square_arcades`): 19 strips on buildings fronting the six `square` sites —
+  posts at ~2.4 m spacing 1.35 m out (skipping doorways), a beam, and a slate pentice from the
+  façade at 3.78 m down over the walk. *Deviation from the sketch:* the posts carry a pentice
+  hood rather than the jettied upper wall, and they do **not** collide — the baked navigation
+  predates them (prop precedent), and the hood clears head height, so nav/doors/colliders are
+  untouched. The toll-house's west arcade runs *inside* the Tally passage, which is accidental
+  and great.
+- **External stairs & balconies** (`build_yard_stairs`): ~36 flights on a hash-picked tenth of
+  the 2+-storey ordinary fabric, each placed only where eight probe points clear every other
+  footprint, every road (half-width + 0.8 m), fixtures, squares, and the curtain wall. Stringers,
+  treads, handrail, balusters, railed landing, full-height posts, and a dark first-floor door.
+  *Deviation:* the flight is non-colliding scenery like the props; only the landing platform
+  (3.1 m up, above the walk band) gets a collider so a flying player can perch.
+
+Still open, tracked in `features/its_at_least_2011_now_baby.md`: plan-generator storey increase
+(a map revision), awnings/laundry, smoke, AutoExposure, volumetric fog.
+
+## What was done earlier (the more-verticality branch)
 
 - **Jetties**: convex half-timber quads of 2+ storeys (~80% of them) step out 0.34 m per storey
   (capped at two steps), with mitred per-storey footprints, dark soffit rings underneath, and
