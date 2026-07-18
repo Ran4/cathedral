@@ -406,6 +406,42 @@ not the gameplay:
   by a live shot.)*
 - **M3 Reflex.** Gaze/head-tracking (conversation, player, loud sounds); talk gesticulation
   keyed on `NpcVoice`/bubble lifetime; autonomic nod/head-shake on accept/decline events.
+  *(Shipped — L4 lives in `body.rs`: a `ReflexState` resource (speaker → talk deadline +
+  addressee, plus a bounded 8-entry recent-sound ring) fed by `track_reflex_signals` in the
+  `Present` chain right before `animate_body_pose`. As-built notes, where they diverge from
+  the text above: the talk signal keys on the `PresentSpeech` message, not `NpcVoice` —
+  `active_voice` carries no actor id — with the deadline shared verbatim with the bubbles
+  (`speech_text_seconds`, made `pub(super)`); `PresentSpeech` grew a `target_id` (the sim's
+  `say` target, previously discarded in the Speech drain arm) so the speaker's gaze knows
+  its partner. Gaze priority per actor, Tier A only (`ReflexState::gaze_point`): own
+  conversation partner while talking (the player resolves to the live camera, an NPC to
+  its live root) > listener glance at the nearest live speaker within the 20 m social
+  radius > own standing offer / stall pulse aim (the §6 "gaze follows" deferred from M2) >
+  a recent sound, idle actors only (walk_blend < 0.5), within the sound's own
+  `audible_distance` — no loudness threshold needed — held 2.2–3.6 s per (actor, sound)
+  hash, self-sounds under 1 m excluded. The head slerps at ~7/s with weight ramps
+  (~0.25–0.3 s); yaw clamps at ±70° off the root facing (= torso: no layer yaws the
+  torso), pitch ±0.5 rad, and a target beyond ~137° drops the gaze entirely rather than
+  pinning a craned neck. Talk gesticulation: forearms lift 0.43–0.85 rad and wave with
+  sides out of phase, upper arms pitch forward and drift off the ribs (silhouette
+  readability at 8 m — the first cut read only in profile and was amplified), head bob is
+  composed *over* the gaze rotation, and everything scales on an energy noise of two
+  seeded slow sines in [0.1, 1] so no two speakers gesture alike; per-arm weights
+  `1 − carry_blend` / `1 − offer_blend` keep L2-owned arms out of it. One deliberate §4
+  ordering deviation: L4 evaluates *before* the L3 one-shot, so an accept-nod or
+  decline-shake — a communicative beat — plays over the ambient tracking and its closed
+  envelope hands the head back to the gaze smoothly; the M2 wiring itself
+  (WorldEvent drain → `HandoverFeedback` → `start_gesture`) was verified complete, no gap.
+  Nothing sim-side changed; goldens untouched. Tests: talk-deadline/prune bookkeeping,
+  gaze priority chain incl. idle gating and earshot, yaw clamp + behind give-up +
+  torso-relative frame, gesticulation lift/suppression/per-speaker divergence, and an
+  app-level manual-clock test that a `PresentSpeech` turns the speaker's head+talk layers
+  on (head visibly toward the camera) and both decay past the deadline. Screenshot
+  honesty: all captures are the fake-mode Ilse exchange — the flank shot shows her head
+  turned ~70° off her torso toward a camera that teleported mid-bubble (live tracking),
+  and the bell glance is proven as a before/after pair (head in profile at rest → facing
+  the drive-injected `sound town_bell` origin with the toast in frame); one drive session
+  was discarded after desktop keyboard focus leaked into the window mid-run.)*
 - **M4 The deliberate body.** `gesture` verb: catalog, dispatch, percepts,
   `EngineMessage::Gesture`, `active_gesture`, prompt block + golden re-bless, headless
   transcript, fake-mode script, pose functions for all 8 kinds.

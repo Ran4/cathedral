@@ -736,10 +736,13 @@ const TALK_HEAD_BOB_RAD: f32 = 0.05;
 const TALK_BOB_BASE_HZ: f64 = 2.3;
 const TALK_BOB_SPAN_HZ: f64 = 1.0;
 /// Talk forearm gesticulation: both forearms lift off the rest hang and wave,
-/// sides out of phase, everything scaled by the per-id energy noise.
-const TALK_FOREARM_LIFT_RAD: f32 = 0.55;
-const TALK_FOREARM_SWING_RAD: f32 = 0.30;
-const TALK_UPPER_LIFT_RAD: f32 = 0.16;
+/// sides out of phase, everything scaled by the per-id energy noise. The
+/// upper arms pitch forward a touch and the elbows drift off the ribs so the
+/// gesture still reads in silhouette at 8 m (§1's talking target).
+const TALK_FOREARM_LIFT_RAD: f32 = 0.85;
+const TALK_FOREARM_SWING_RAD: f32 = 0.38;
+const TALK_UPPER_LIFT_RAD: f32 = 0.26;
+const TALK_UPPER_TILT_RAD: f32 = 0.12;
 const TALK_WAVE_BASE_HZ: f64 = 1.5;
 const TALK_WAVE_SPAN_HZ: f64 = 0.9;
 /// A sound glance holds for 2.2–3.6 s (per actor-and-sound hash), then decays.
@@ -1182,16 +1185,22 @@ fn apply_talk(
     let lift = TALK_FOREARM_LIFT_RAD * (0.5 + 0.5 * energy);
     let upper = TALK_UPPER_LIFT_RAD * (0.4 + 0.6 * energy);
     let arm = |upper_joint: &mut JointDelta,
-                   forearm_joint: &mut JointDelta,
-                   phase: f32,
-                   arm_weight: f32| {
+               forearm_joint: &mut JointDelta,
+               phase: f32,
+               side_sign: f32,
+               arm_weight: f32| {
         let bend = lift + TALK_FOREARM_SWING_RAD * energy * phase.sin();
         forearm_joint.blend_over(
             JointDelta::from_rotation(Quat::from_rotation_x(bend)),
             weight * arm_weight,
         );
+        // Elbows drift outward off the ribs while the upper arm pitches
+        // forward — the silhouette half of the gesture.
         upper_joint.blend_over(
-            JointDelta::from_rotation(Quat::from_rotation_x(upper)),
+            JointDelta::from_rotation(
+                Quat::from_rotation_z(side_sign * TALK_UPPER_TILT_RAD)
+                    * Quat::from_rotation_x(upper),
+            ),
             weight * arm_weight * 0.6,
         );
     };
@@ -1199,12 +1208,14 @@ fn apply_talk(
         &mut pose.left_upper_arm,
         &mut pose.left_forearm,
         wave,
+        -1.0,
         left_arm_weight,
     );
     arm(
         &mut pose.right_upper_arm,
         &mut pose.right_forearm,
         wave + 0.6 * PI,
+        1.0,
         right_arm_weight,
     );
 }
@@ -1499,6 +1510,7 @@ pub(crate) struct PoseTimer {
 /// (owned by `reconcile_actor_views` + `drive_npc_bodies`), never reads or
 /// writes the mirror, and skipping it entirely would change nothing the sim
 /// or another mind could see.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn animate_body_pose(
     time: Res<Time>,
     inbox: Res<MovementInbox>,
@@ -2335,6 +2347,298 @@ mod tests {
         assert!(state.gesture.is_some());
     }
 
+    /// M3's talk bookkeeping: the deadline follows the bubble formula
+    /// (`speech_text_seconds`), a follow-up line extends it, and pruning
+    /// drops expired speakers and stale sounds.
+    #[test]
+    fn talk_deadlines_follow_the_bubble_formula_and_prune() {
+        let mut reflex = ReflexState::default();
+        let ilse = ActorId("ilse".into());
+
+        // A short line talks for the 3 s floor.
+        reflex.note_speech(ilse.clone(), None, "Hello.", 10.0);
+        assert!(reflex.is_talking(&ilse, 12.9));
+        assert!(!reflex.is_talking(&ilse, 13.1));
+
+        // A long line caps at 10 s, and re-speaking extends the deadline.
+        reflex.note_speech(ilse.clone(), None, &"x".repeat(500), 12.0);
+        assert!(reflex.is_talking(&ilse, 21.9));
+        assert!(!reflex.is_talking(&ilse, 22.1));
+
+        // Pruning drops the expired speaker and old sounds; the ring caps.
+        reflex.note_sound(Vec3::ZERO, 50.0, 12.0);
+        reflex.prune(23.0);
+        assert!(reflex.talkers.is_empty());
+        assert!(reflex.sounds.is_empty(), "an old sound must age out");
+        for index in 0..(MAX_RECENT_SOUNDS + 3) {
+            reflex.note_sound(Vec3::splat(index as f32), 50.0, 23.0);
+        }
+        assert_eq!(reflex.sounds.len(), MAX_RECENT_SOUNDS);
+    }
+
+    /// M3's gaze priority: active conversation (own partner while talking,
+    /// else the nearest live speaker in range) > own offer recipient > a
+    /// recent loud sound in earshot > none — and the sound branch only draws
+    /// idle actors within the sound's own audible distance.
+    #[test]
+    fn gaze_priority_runs_conversation_offer_sound() {
+        let me = ActorId("me".into());
+        let partner = ActorId("partner".into());
+        let other = ActorId("other".into());
+        let partner_point = Vec3::new(5.0, 1.57, 0.0);
+        let other_point = Vec3::new(0.0, 1.57, 8.0);
+        let resolve = move |id: &ActorId| -> Option<Vec3> {
+            if id.0 == "partner" {
+                Some(partner_point)
+            } else if id.0 == "other" {
+                Some(other_point)
+            } else {
+                None
+            }
+        };
+        let offer_point = Vec3::new(-3.0, 0.91, 0.0);
+        let query = |offer: bool, idle: bool| GazeQuery {
+            position: Vec3::new(0.0, 0.91, 0.0),
+            offer_at: offer.then_some(offer_point),
+            idle,
+            seed: 0xBEEF,
+        };
+
+        let mut reflex = ReflexState::default();
+        reflex.note_sound(Vec3::new(0.0, 2.0, -30.0), 600.0, 0.0);
+        // My line runs 3 s (the floor); the town crier's long one runs 10 s.
+        reflex.note_speech(me.clone(), Some(partner.clone()), "Hello there!", 0.0);
+        reflex.note_speech(other.clone(), None, &"y".repeat(200), 0.0);
+
+        // Talking to a partner beats everything.
+        assert_eq!(
+            reflex.gaze_point(&me, &query(true, true), 1.0, &resolve),
+            Some(partner_point)
+        );
+        // Once my own line expires I listen to the live speaker nearby …
+        assert_eq!(
+            reflex.gaze_point(&me, &query(true, true), 3.5, &resolve),
+            Some(other_point)
+        );
+        // … unless every speaker is out of social range: then my own offer.
+        let mut far = ReflexState::default();
+        far.note_sound(Vec3::new(0.0, 2.0, -30.0), 600.0, 0.0);
+        far.note_speech(other.clone(), None, &"y".repeat(200), 0.0);
+        let far_resolve = |id: &ActorId| {
+            (id.0 == "other").then_some(Vec3::new(0.0, 1.57, LISTEN_RADIUS_M + 5.0))
+        };
+        let offer_gaze = far.gaze_point(&me, &query(true, true), 1.0, &far_resolve);
+        assert!(offer_gaze.is_some());
+        assert_eq!(offer_gaze.unwrap().x, offer_point.x);
+        // No offer either: the recent sound draws an idle glance …
+        assert_eq!(
+            far.gaze_point(&me, &query(false, true), 1.0, &far_resolve),
+            Some(Vec3::new(0.0, 2.0, -30.0))
+        );
+        // … but not from a committed walker, not out of the sound's earshot,
+        // and not forever.
+        assert_eq!(far.gaze_point(&me, &query(false, false), 1.0, &far_resolve), None);
+        let mut quiet = ReflexState::default();
+        quiet.note_sound(Vec3::new(0.0, 2.0, -30.0), 10.0, 0.0);
+        assert_eq!(quiet.gaze_point(&me, &query(false, true), 1.0, &resolve), None);
+        assert_eq!(far.gaze_point(&me, &query(false, true), 30.0, &far_resolve), None);
+    }
+
+    /// M3's neck limits: yaw clamps at ±70° off the torso facing, pitch stays
+    /// in its band, and a target essentially behind the actor drops the gaze
+    /// instead of pinning the head at the clamp.
+    #[test]
+    fn gaze_aim_clamps_yaw_and_gives_up_behind() {
+        let root = Transform::from_xyz(0.0, 0.91, 0.0);
+
+        // Dead ahead: no yaw, level pitch.
+        let (yaw, pitch) = gaze_aim(&root, Vec3::new(0.0, 0.91 + GAZE_EYE_OFFSET_Y, -4.0)).unwrap();
+        assert!(yaw.abs() < 1e-6 && pitch.abs() < 1e-6);
+
+        // Far off to the side: clamped to the ±70° limit, not further.
+        let (yaw, _) = gaze_aim(&root, Vec3::new(6.0, 1.5, -0.3)).unwrap();
+        assert!((yaw.abs() - GAZE_YAW_CLAMP_RAD).abs() < 1e-5, "yaw {yaw}");
+
+        // High overhead: pitch clamps.
+        let (_, pitch) = gaze_aim(&root, Vec3::new(0.0, 12.0, -2.0)).unwrap();
+        assert!((pitch - GAZE_PITCH_CLAMP_RAD).abs() < 1e-6);
+
+        // Directly behind: no gaze at all.
+        assert_eq!(gaze_aim(&root, Vec3::new(0.0, 1.5, 5.0)), None);
+
+        // The clamp is measured off the torso facing, not the world axes: a
+        // rotated root looking at the same world point aims straight ahead.
+        let turned = Transform::from_xyz(0.0, 0.91, 0.0)
+            .with_rotation(Quat::from_rotation_y(FRAC_PI_2));
+        let (yaw, _) = gaze_aim(&turned, Vec3::new(-4.0, 1.57, 0.0)).unwrap();
+        assert!(yaw.abs() < 1e-5, "relative-to-torso yaw, got {yaw}");
+    }
+
+    /// M3's talk gesticulation: forearms lift off the rest hang while
+    /// talking, an arm owned by L2 stays suppressed, the head bobs, and two
+    /// different speaker ids gesture with different energy.
+    #[test]
+    fn talk_gesticulation_lifts_forearms_and_differs_per_speaker() {
+        let mut pose = PoseDeltas::default();
+        apply_talk(&mut pose, 1.0, 1.0, 1.0, 2.0, 0xA11CE);
+        assert!(
+            pose.left_forearm.rotation.angle_between(Quat::IDENTITY) > 0.2,
+            "the left forearm must lift while talking"
+        );
+        assert!(
+            pose.right_forearm.rotation.angle_between(Quat::IDENTITY) > 0.2,
+            "the right forearm must lift while talking"
+        );
+
+        // A carried/offered arm is L2's: zero arm weight leaves it alone.
+        let mut owned = PoseDeltas::default();
+        apply_talk(&mut owned, 1.0, 0.0, 1.0, 2.0, 0xA11CE);
+        assert_eq!(owned.left_forearm, JointDelta::default());
+        assert!(owned.right_forearm.rotation.angle_between(Quat::IDENTITY) > 0.2);
+
+        // The head bobs at some point of the cycle.
+        let bobbed = (0..20).any(|step| {
+            let mut pose = PoseDeltas::default();
+            apply_talk(&mut pose, 1.0, 1.0, 1.0, step as f64 * 0.1, 0xA11CE);
+            pose.head.rotation.angle_between(Quat::IDENTITY) > 0.005
+        });
+        assert!(bobbed, "the talk head bob never moved the head");
+
+        // Two ids never share an energy curve (the id-seeded noise).
+        let differs = (0..8).any(|step| {
+            let t = step as f64 * 0.7;
+            (talk_energy(t, 0x1111_2222) - talk_energy(t, 0x3333_4444)).abs() > 1e-3
+        });
+        assert!(differs, "two speakers gesture in lockstep");
+    }
+
+    /// M3 end to end: a `PresentSpeech` for an actor turns their talk layer
+    /// and player-directed gaze on (the head visibly turns toward the
+    /// camera), and both decay after the bubble deadline expires.
+    #[test]
+    fn speech_turns_the_head_and_talk_layer_on_and_they_decay() {
+        use std::time::Duration;
+
+        use bevy::asset::AssetPlugin;
+        use bevy::time::TimeUpdateStrategy;
+
+        use crate::smart_actors::actors::reconcile_actor_views;
+        use crate::smart_actors::model::{
+            ActorControl, ActorSnapshot, Position, WorldMirror, WorldSnapshot,
+        };
+        use crate::smart_actors::sound::PlaySoundEffect;
+        use crate::smart_actors::speech::PresentSpeech;
+
+        let mut mirror = WorldMirror::default();
+        mirror
+            .replace_snapshot(WorldSnapshot {
+                world_revision: 1,
+                player_id: ActorId("player".into()),
+                actors: vec![
+                    ActorSnapshot {
+                        id: ActorId("talker".into()),
+                        name_for_player: "Talker".into(),
+                        control: ActorControl::Llm,
+                        position_m: Position::new(0.0, 0.91, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance: Default::default(),
+                        holds: vec![],
+                    },
+                    ActorSnapshot {
+                        id: ActorId("player".into()),
+                        name_for_player: "You".into(),
+                        control: ActorControl::Player,
+                        position_m: Position::new(3.0, 0.91, -3.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance: Default::default(),
+                        holds: vec![],
+                    },
+                ],
+                items: vec![],
+                offers: vec![],
+            })
+            .unwrap();
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<Image>()
+            .insert_resource(mirror)
+            .insert_resource(MovementInbox::default())
+            .init_resource::<ReflexState>()
+            .add_message::<PresentSpeech>()
+            .add_message::<PlaySoundEffect>()
+            // Deterministic clock: 0.2 s per update.
+            .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+                200,
+            )))
+            .add_systems(Startup, setup_body_assets)
+            .add_systems(
+                Update,
+                (reconcile_actor_views, track_reflex_signals, animate_body_pose).chain(),
+            );
+        // The camera front-right of the talker: the gaze yaw toward it is
+        // distinctly nonzero and inside the clamp.
+        app.world_mut().spawn((
+            PlayerCamera,
+            GlobalTransform::from(Transform::from_xyz(3.0, 1.7, -3.0)),
+        ));
+        app.update();
+
+        // The talker speaks to the player: a 3 s (floor) deadline opens.
+        app.world_mut().write_message(PresentSpeech {
+            event_seq: 1,
+            event_id: "speech-1".into(),
+            speaker_id: ActorId("talker".into()),
+            speaker_label: "Talker".into(),
+            target_id: Some(ActorId("player".into())),
+            text: "Hello!".into(),
+            speaker_position: Vec3::ZERO,
+            recipient_count: 1,
+            expect_audio: false,
+        });
+        for _ in 0..4 {
+            app.update();
+        }
+
+        let world = app.world_mut();
+        let (rig, state) = world
+            .query::<(&ActorId, &BodyRig, &BodyPoseState)>()
+            .iter(world)
+            .find(|(id, ..)| id.0 == "talker")
+            .map(|(_, rig, state)| (rig.head, (state.talk_blend, state.gaze_blend)))
+            .expect("the talker has a rig");
+        assert!(state.0 > 0.9, "talk layer must be on, blend {}", state.0);
+        assert!(state.1 > 0.9, "gaze layer must be on, blend {}", state.1);
+        let head = world.entity(rig).get::<Transform>().unwrap().rotation;
+        let face = head * Vec3::NEG_Z;
+        assert!(
+            face.x > 0.4,
+            "the head must turn toward the camera on +X, faces {face}"
+        );
+
+        // Past the deadline both layers ramp back out and the head returns.
+        for _ in 0..30 {
+            app.update();
+        }
+        let world = app.world_mut();
+        let (rig, state) = world
+            .query::<(&ActorId, &BodyRig, &BodyPoseState)>()
+            .iter(world)
+            .find(|(id, ..)| id.0 == "talker")
+            .map(|(_, rig, state)| (rig.head, (state.talk_blend, state.gaze_blend)))
+            .unwrap();
+        assert!(state.0 < 1e-3, "talk layer must decay, blend {}", state.0);
+        assert!(state.1 < 1e-3, "gaze layer must decay, blend {}", state.1);
+        let head = world.entity(rig).get::<Transform>().unwrap().rotation;
+        let face = head * Vec3::NEG_Z;
+        assert!(
+            face.x.abs() < 0.35,
+            "the head must hand control back after the deadline, faces {face}"
+        );
+    }
+
     /// §9's Tier A cut keeps only the nearest cap's worth of actors.
     #[test]
     fn tier_a_cut_caps_at_the_nearest_sixty_four() {
@@ -2401,6 +2705,7 @@ mod tests {
             .init_asset::<Image>()
             .insert_resource(mirror)
             .insert_resource(MovementInbox::default())
+            .init_resource::<ReflexState>()
             .add_systems(Startup, setup_body_assets)
             .add_systems(Update, (reconcile_actor_views, animate_body_pose).chain());
         app.world_mut().spawn((
@@ -2551,6 +2856,7 @@ mod tests {
             .init_asset::<Image>()
             .insert_resource(mirror)
             .insert_resource(MovementInbox::default())
+            .init_resource::<ReflexState>()
             .add_systems(Startup, setup_body_assets)
             .add_systems(Update, reconcile_actor_views);
         app.world_mut().spawn((
