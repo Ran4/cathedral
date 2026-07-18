@@ -62,7 +62,6 @@ struct CharacterDump {
     control: Control,
     back_story: String,
     location_description: String,
-    appearance_key: String,
     voice_key: Option<String>,
     position_m: Position,
     facing_yaw: f64,
@@ -110,7 +109,9 @@ impl WorldDump {
                 control: dump.control,
                 back_story: dump.back_story,
                 location_description: dump.location_description,
-                appearance_key: dump.appearance_key,
+                // Appearance never enters a prompt; the fixture worlds carry
+                // none and the default body renders byte-identical sheets.
+                appearance: Default::default(),
                 voice_key: dump.voice_key,
                 position_m: Vec3::new(dump.position_m.x, dump.position_m.y, dump.position_m.z),
                 facing_yaw: dump.facing_yaw,

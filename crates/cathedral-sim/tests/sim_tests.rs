@@ -36,7 +36,7 @@ fn controlled_character(actor_id: &str, name: &str, x: f64, control: Control) ->
         control,
         back_story: "test".into(),
         location_description: "test square".into(),
-        appearance_key: name.to_lowercase(),
+        appearance: Default::default(),
         voice_key: match control {
             Control::Player => None,
             Control::Llm => Some(name.to_lowercase()),
@@ -854,7 +854,7 @@ fn the_snapshot_is_public_and_monotonic() {
         "a secret memory",
         "a secret utterance",
         // The voice key is private too — it is an NPC's TTS identity, not a
-        // visual one (`appearance_key` is public and stays public).
+        // visual one (the `appearance` snapshot is public and stays public).
         "a secret voice",
     ] {
         assert!(

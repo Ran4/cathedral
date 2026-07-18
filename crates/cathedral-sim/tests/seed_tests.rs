@@ -53,12 +53,15 @@ fn the_seed_preserves_cast_inventory_control_and_positions() {
     assert_eq!(sven.position_m(), Vec3::new(-1.8, 0.91, 114.0));
     assert_eq!(sven.holds(), [ItemId::from_raw("fzbn9")]);
     assert_eq!(sven.voice_key(), Some("sven"));
-    assert_eq!(sven.appearance_key(), "sven");
+    // The demo trio keeps its established looks through the structured seam.
+    assert_eq!(sven.appearance().bespoke.as_deref(), Some("sven"));
+    assert_eq!(sven.appearance().outfit, cathedral_sim::OutfitClass::Craftsman);
     assert_eq!(*sven.knows(), BTreeSet::from([actor("cb947")]));
     assert_eq!(sven.memories(), ["I'm going to get some fish"]);
 
     let conny = &world.characters[&actor("cb947")];
     assert_eq!(conny.name(), "Conny");
+    assert_eq!(conny.appearance().bespoke.as_deref(), Some("conny"));
     assert_eq!(conny.position_m(), Vec3::new(0.0, 0.91, 112.0));
     assert!(conny.holds().is_empty());
     assert_eq!(*conny.knows(), BTreeSet::from([actor("sv3n1")]));
@@ -69,6 +72,7 @@ fn the_seed_preserves_cast_inventory_control_and_positions() {
 
     let ilse = &world.characters[&actor("k0fb1")];
     assert_eq!(ilse.name(), "Ilse");
+    assert_eq!(ilse.appearance().bespoke.as_deref(), Some("ilse"));
     assert_eq!(ilse.position_m(), Vec3::new(1.8, 0.91, 114.0));
     assert_eq!(ilse.holds(), [ItemId::from_raw("c0prs")]);
     // The pilgrim knows nobody — that is the whole point of her.

@@ -56,7 +56,7 @@ lore/
     "memories": [],
     "core_character_description": "...",
     "extended_character_description": "...",
-    "appearance_key": "generic",
+    "bespoke_appearance": null,
     "voice_key": "ilse",
     "holds": ["optional_item_id"],
     "goal": "optional initial goal"
@@ -95,9 +95,12 @@ Most don't really have any conditions.
   NPCs, and no sliding axis-aligned 100 x 100 m region may contain more than
   ten. Major canonical scenes may retain groups of up to three; household and
   workplace relationships do not imply that everyone starts in one cluster.
-* `appearance_key`, `voice_key`, `holds`, and `goal` are optional runtime overrides. Most characters omit
-  them and receive the generic body plus a deterministic voice from the existing three-voice pool. Held
-  item ids must exist in `assets/world/seed.json`.
+* `bespoke_appearance`, `voice_key`, `holds`, and `goal` are optional runtime overrides. Most characters
+  omit them and receive a deterministic voice from the existing three-voice pool plus a body *composed*
+  from the sheet facts (gender, occupation, rank, circumstances → the structured `AppearanceSnapshot` in
+  `crates/cathedral-sim/src/appearance.rs`). `bespoke_appearance` names a bespoke look on top of that
+  composition; only the original demo trio (`sven`, `conny`, `ilse`) carries one. Held item ids must
+  exist in `assets/world/seed.json`.
 
 # Occupation and circumstance model
 

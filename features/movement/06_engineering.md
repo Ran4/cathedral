@@ -32,7 +32,7 @@ The player walking already pays this. **Five hundred NPCs walking would pay it c
 - **Hot**: `(ActorId, position_m, facing_yaw)` — plus, for us, `gait_phase` and `speed` (§5). A flat
   dense array. A `memcpy`. Allocates nothing, validates nothing. Produced **at tick rate, not frame
   rate.**
-- **Cold**: names, `knows`, `appearance_key`, inventory. Rebuilt only when one of those changes, which
+- **Cold**: names, `knows`, `appearance`, inventory. Rebuilt only when one of those changes, which
   is rare and event-driven.
 
 ### Item 2 — fixed tick, interpolate in the render

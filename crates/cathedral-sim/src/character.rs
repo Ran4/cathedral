@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     GOAL_NONE, HUNGER_MAX, INBOX_MAX_ENTRIES, RECENT_HISTORY_MAX_ENTRIES, SETTLED_SPEED_MPS,
     THIRST_MAX,
+    appearance::AppearanceSnapshot,
     ids::{ActorId, ItemId, PlaceId},
     lore::{LoreProfile, Significance},
     math::Vec3,
@@ -43,7 +44,11 @@ pub struct CharacterSheet {
     pub control: Control,
     pub back_story: String,
     pub location_description: String,
-    pub appearance_key: String,
+    /// The structured body appearance (`features/npc_bodies.md` §2), composed
+    /// once at character creation ([`crate::lore`] composes it from sheet
+    /// facts; seed-file characters may author it, and fixtures default it).
+    #[serde(default)]
+    pub appearance: AppearanceSnapshot,
     /// `None` for the player by convention; never in the public snapshot.
     pub voice_key: Option<String>,
     /// Spawn position.
@@ -297,8 +302,8 @@ impl Character {
         self.sheet.control
     }
 
-    pub fn appearance_key(&self) -> &str {
-        &self.sheet.appearance_key
+    pub fn appearance(&self) -> &AppearanceSnapshot {
+        &self.sheet.appearance
     }
 
     pub fn voice_key(&self) -> Option<&str> {
@@ -500,7 +505,7 @@ mod tests {
             control,
             back_story: String::new(),
             location_description: String::new(),
-            appearance_key: String::new(),
+            appearance: AppearanceSnapshot::default(),
             voice_key: None,
             position_m: Vec3::ZERO,
             facing_yaw: 0.0,

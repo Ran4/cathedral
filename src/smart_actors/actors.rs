@@ -1,19 +1,20 @@
-//! Snapshot-driven smart-actor and offered-item presentation.
+//! Snapshot-driven smart-actor presentation.
 //!
 //! The engine owns identities, inventory, and offers.  Entities in this
-//! module are a disposable visual projection: actor roots and offered-item props
-//! are created, updated, or removed only to match the current `WorldMirror`.
+//! module are a disposable visual projection: actor roots (and their puppet
+//! bodies, labels and anchors) are created, updated, or removed only to match
+//! the current `WorldMirror`. Carried and offered item props live in
+//! `super::hands` (npc_bodies M2).
 
 use std::collections::{HashMap, HashSet};
-use std::f32::consts::{FRAC_PI_2, PI, TAU};
+use std::f32::consts::{PI, TAU};
 
-use bevy::camera::visibility::VisibilityRange;
 use bevy::prelude::*;
 use cathedral_sim::MOVEMENT_TICK_SECONDS;
 
 use crate::{controller::PlayerCamera, fonts::CathedralFonts};
 
-use super::model::{ActorControl, ActorId, ItemId, MovementInbox, WorldMirror};
+use super::model::{ActorControl, ActorId, MovementInbox, WorldMirror};
 use super::targeting::ActorTarget;
 use super::{HEARING_RADIUS_M, SmartActorRuntime};
 
@@ -24,11 +25,6 @@ const THINKING_INDICATOR_WIDTH_PX: f32 = 38.0;
 const THINKING_INDICATOR_HEAD_OFFSET_PX: f32 = 68.0;
 const THINKING_DOT_STEP_SECONDS: f32 = 0.32;
 pub(super) const SPEECH_ANCHOR_Y: f32 = 1.35;
-const OFFER_ANCHOR_Y: f32 = 2.02;
-const OFFER_FAN_SPACING_M: f32 = 0.48;
-const OFFER_BOB_AMPLITUDE_M: f32 = 0.075;
-const OFFER_BOB_RADIANS_PER_SECOND: f32 = 2.1;
-const OFFER_TURN_RADIANS_PER_SECOND: f32 = 1.15;
 
 /// Marker for an NPC root projected from the authoritative snapshot.
 #[derive(Component, Debug)]
@@ -59,10 +55,6 @@ pub struct NpcMotion {
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct SpeechAnchor(pub ActorId);
 
-/// The attachment point under which all of one giver's offer props are fanned.
-#[derive(Component, Debug, Clone, PartialEq, Eq)]
-pub struct OfferAnchor(pub ActorId);
-
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct NameAnchor(ActorId);
 
@@ -74,89 +66,7 @@ pub(crate) struct ActorNameLabel(ActorId);
 pub(crate) struct ThinkingIndicator(ActorId);
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ActorOutfit(ActorId);
-
-/// A renderer-only copy of one pending offered item.
-#[derive(Component, Debug, Clone, PartialEq)]
-pub struct OfferedItemVisual {
-    pub item_id: ItemId,
-    pub giver_id: ActorId,
-    pub visual_key: String,
-    pub created_seq: u64,
-    base_translation: Vec3,
-    phase: f32,
-}
-
-#[derive(Resource)]
-pub(crate) struct ActorVisualAssets {
-    body_mesh: Handle<Mesh>,
-    head_mesh: Handle<Mesh>,
-    fish_body_mesh: Handle<Mesh>,
-    fish_tail_mesh: Handle<Mesh>,
-    coin_mesh: Handle<Mesh>,
-    generic_item_mesh: Handle<Mesh>,
-    sven_outfit: Handle<StandardMaterial>,
-    conny_outfit: Handle<StandardMaterial>,
-    ilse_outfit: Handle<StandardMaterial>,
-    fallback_outfit: Handle<StandardMaterial>,
-    skin: Handle<StandardMaterial>,
-    fish: Handle<StandardMaterial>,
-    fish_fin: Handle<StandardMaterial>,
-    copper: Handle<StandardMaterial>,
-    generic_item: Handle<StandardMaterial>,
-}
-
-impl ActorVisualAssets {
-    fn outfit(&self, appearance_key: &str) -> Handle<StandardMaterial> {
-        match appearance_key {
-            "sven" => self.sven_outfit.clone(),
-            "conny" => self.conny_outfit.clone(),
-            "ilse" => self.ilse_outfit.clone(),
-            _ => self.fallback_outfit.clone(),
-        }
-    }
-}
-
-/// Creates the shared primitive meshes and palette used by all actor views.
-pub(crate) fn setup_actor_visual_assets(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    let matte = |color: Color| StandardMaterial {
-        base_color: color,
-        perceptual_roughness: 0.78,
-        ..default()
-    };
-
-    commands.insert_resource(ActorVisualAssets {
-        body_mesh: meshes.add(Capsule3d::new(0.40, 0.82)),
-        head_mesh: meshes.add(Sphere::new(0.27).mesh().uv(20, 12)),
-        fish_body_mesh: meshes.add(Sphere::new(1.0).mesh().uv(16, 10)),
-        fish_tail_mesh: meshes.add(Cone::new(1.0, 1.0).mesh().resolution(4)),
-        coin_mesh: meshes.add(Cylinder::new(0.20, 0.055)),
-        generic_item_mesh: meshes.add(Cuboid::new(0.30, 0.30, 0.30)),
-        sven_outfit: materials.add(matte(Color::srgb(0.19, 0.28, 0.36))),
-        conny_outfit: materials.add(matte(Color::srgb(0.16, 0.42, 0.49))),
-        ilse_outfit: materials.add(matte(Color::srgb(0.50, 0.24, 0.18))),
-        fallback_outfit: materials.add(matte(Color::srgb(0.38, 0.34, 0.43))),
-        skin: materials.add(matte(Color::srgb(0.73, 0.54, 0.39))),
-        fish: materials.add(StandardMaterial {
-            base_color: Color::srgb(0.35, 0.61, 0.64),
-            metallic: 0.12,
-            perceptual_roughness: 0.42,
-            ..default()
-        }),
-        fish_fin: materials.add(matte(Color::srgb(0.20, 0.39, 0.45))),
-        copper: materials.add(StandardMaterial {
-            base_color: Color::srgb(0.76, 0.34, 0.12),
-            metallic: 0.72,
-            perceptual_roughness: 0.30,
-            ..default()
-        }),
-        generic_item: materials.add(matte(Color::srgb(0.74, 0.66, 0.24))),
-    });
-}
+pub(crate) struct ActorOutfit(pub(super) ActorId);
 
 /// Reconciles stationary NPC roots, primitive bodies, anchors, and name labels.
 ///
@@ -166,12 +76,19 @@ pub(crate) fn setup_actor_visual_assets(
 pub(crate) fn reconcile_actor_views(
     mut commands: Commands,
     mirror: Res<WorldMirror>,
-    assets: Res<ActorVisualAssets>,
+    body_assets: Res<super::body::BodyAssets>,
     fonts: Option<Res<CathedralFonts>>,
     mut roots: Query<(Entity, &ActorId, &mut Transform), With<ActorView>>,
     mut labels: Query<(Entity, &ActorNameLabel, &mut Text)>,
     indicators: Query<(Entity, &ThinkingIndicator)>,
-    mut outfits: Query<(&ActorOutfit, &mut MeshMaterial3d<StandardMaterial>)>,
+    mut outfits: Query<
+        (&ActorOutfit, &mut MeshMaterial3d<StandardMaterial>),
+        Without<super::body::ActorFace>,
+    >,
+    mut faces: Query<
+        (&super::body::ActorFace, &mut MeshMaterial3d<StandardMaterial>),
+        Without<ActorOutfit>,
+    >,
 ) {
     let actor_snapshots: Vec<_> = mirror
         .actors()
@@ -209,7 +126,7 @@ pub(crate) fn reconcile_actor_views(
 
     for actor in actor_snapshots {
         if !existing_ids.contains(&actor.id) {
-            spawn_actor(&mut commands, &assets, name_font.clone(), actor);
+            spawn_actor(&mut commands, &body_assets, name_font.clone(), actor);
         }
     }
 
@@ -229,9 +146,20 @@ pub(crate) fn reconcile_actor_views(
         }
     }
 
+    // Appearance hot-swap: every cloth part of a body shares the actor's
+    // outfit material; the head carries its face. Meshes (headgear, build)
+    // are spawn-time — appearances never restructure after creation today.
     for (outfit, mut material) in &mut outfits {
         if let Some(actor) = desired_by_id.get(&outfit.0) {
-            let desired = assets.outfit(&actor.appearance_key);
+            let desired = body_assets.outfit_material(&actor.appearance);
+            if material.0 != desired {
+                material.0 = desired;
+            }
+        }
+    }
+    for (face, mut material) in &mut faces {
+        if let Some(actor) = desired_by_id.get(&face.0) {
+            let desired = body_assets.face_material(&actor.appearance);
             if material.0 != desired {
                 material.0 = desired;
             }
@@ -252,11 +180,11 @@ pub(crate) fn reconcile_actor_views(
 /// Runs after `reconcile_actor_views` (same `ReconcileMirror` set), which writes
 /// a mover's *stale* snapshot position on every revision bump; this corrects it
 /// the same frame. Non-movers never appear in `MovementInbox`, so they are left
-/// entirely to reconcile. Children (body, head, labels) ride the root
-/// automatically. The visual gait stays **unbuilt**: `speed`/`gait_phase`
-/// arrive on every sample and are deliberately unread — M7 shipped the crowd
-/// (lanes, avoidance, the Needle, the lamps), not a bob/swing animation, and
-/// nothing renders the gait yet. This only moves and turns the root.
+/// entirely to reconcile. Children (body parts, labels) ride the root
+/// automatically. This only moves and turns the root; `speed`/`gait_phase` are
+/// deliberately unread *here* — the walk cycle they drive lives on the part
+/// transforms, in `body::animate_body_pose` (npc_bodies M1), which keeps its
+/// own two-sample history because this component's fields are private.
 pub(crate) fn drive_npc_bodies(
     mut commands: Commands,
     time: Res<Time>,
@@ -318,24 +246,17 @@ fn lerp_angle(from: f32, to: f32, t: f32) -> f32 {
 
 fn spawn_actor(
     commands: &mut Commands,
-    assets: &ActorVisualAssets,
+    body_assets: &super::body::BodyAssets,
     name_font: FontSource,
     actor: &super::model::ActorSnapshot,
 ) {
     let actor_id = actor.id.clone();
     // M7: dither-fade the crowd out between 120 and 150 m
-    // (`features/performance_improvements.md` item 8). The component lives on
-    // each *mesh* child — Bevy's range check only considers entities that carry
-    // it — and it culls the light views too, so a faded NPC also leaves the sun's
-    // shadow pass (the "shadow cascade" half of the item, with the cascade's own
-    // 14/320 m tuning untouched). The fog already owns depth at that distance,
-    // and the name labels self-cull far earlier.
-    let fade = VisibilityRange {
-        start_margin: 0.0..0.0,
-        end_margin: 120.0..150.0,
-        use_aabb: false,
-    };
-    commands
+    // (`features/performance_improvements.md` item 8; see `body::crowd_fade`).
+    // The fog already owns depth at that distance, and the name labels
+    // self-cull far earlier.
+    let fade = super::body::crowd_fade();
+    let root = commands
         .spawn((
             Name::new(format!("Smart actor: {}", actor.name_for_player)),
             actor_id.clone(),
@@ -345,51 +266,30 @@ fn spawn_actor(
                 .with_rotation(Quat::from_rotation_y(actor.facing_yaw)),
             Visibility::default(),
         ))
-        .with_children(|root| {
-            root.spawn((
-                Name::new("Actor body"),
-                ActorOutfit(actor_id.clone()),
-                Mesh3d(assets.body_mesh.clone()),
-                MeshMaterial3d(assets.outfit(&actor.appearance_key)),
-                Transform::from_xyz(0.0, -0.10, 0.0),
-                fade.clone(),
-            ));
-            root.spawn((
-                Name::new("Actor head"),
-                Mesh3d(assets.head_mesh.clone()),
-                MeshMaterial3d(assets.skin.clone()),
-                Transform::from_xyz(0.0, 0.65, 0.0),
-                fade.clone(),
-            ));
-            // The capsule body is rotationally symmetric, so without a face
-            // the seeded facing_yaw would be invisible — and the render is
-            // how the player learns the sound witness cone.
-            root.spawn((
-                Name::new("Actor nose"),
-                Mesh3d(assets.fish_tail_mesh.clone()),
-                MeshMaterial3d(assets.skin.clone()),
-                Transform::from_xyz(0.0, 0.65, -0.29)
-                    .with_rotation(Quat::from_rotation_x(-FRAC_PI_2))
-                    .with_scale(Vec3::new(0.07, 0.12, 0.07)),
-                fade,
-            ));
-            root.spawn((
-                Name::new("Actor name anchor"),
-                NameAnchor(actor_id.clone()),
-                Transform::from_xyz(0.0, NAME_ANCHOR_Y, 0.0),
-            ));
-            root.spawn((
-                Name::new("Actor speech anchor"),
-                SpeechAnchor(actor_id.clone()),
-                Transform::from_xyz(0.0, SPEECH_ANCHOR_Y, 0.0),
-            ));
-            root.spawn((
-                Name::new("Actor offer anchor"),
-                OfferAnchor(actor_id.clone()),
-                Transform::from_xyz(0.0, OFFER_ANCHOR_Y, 0.0),
-                Visibility::default(),
-            ));
-        });
+        .id();
+    // The articulated puppet (npc_bodies M0). Its asymmetric silhouette and
+    // headgear make the seeded facing_yaw readable — the render is how the
+    // player learns the sound witness cone.
+    let rig = super::body::spawn_body(
+        commands,
+        root,
+        body_assets,
+        &actor_id,
+        &actor.appearance,
+        &fade,
+    );
+    commands.entity(root).insert(rig).with_children(|root| {
+        root.spawn((
+            Name::new("Actor name anchor"),
+            NameAnchor(actor_id.clone()),
+            Transform::from_xyz(0.0, NAME_ANCHOR_Y, 0.0),
+        ));
+        root.spawn((
+            Name::new("Actor speech anchor"),
+            SpeechAnchor(actor_id.clone()),
+            Transform::from_xyz(0.0, SPEECH_ANCHOR_Y, 0.0),
+        ));
+    });
 
     // UI text is projected from the world anchor each frame. Unlike Text2d it
     // is rendered by the existing 3D + UI feature set and always faces the eye.
@@ -568,297 +468,15 @@ fn nearest_name_anchor_ids(
         .collect()
 }
 
-#[derive(Debug, Clone)]
-struct DesiredOfferVisual {
-    item_id: ItemId,
-    giver_id: ActorId,
-    visual_key: String,
-    created_seq: u64,
-    base_translation: Vec3,
-    phase: f32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum VisualDisposition {
-    Create,
-    Keep,
-    Replace,
-}
-
-fn visual_disposition(
-    current: Option<&OfferedItemVisual>,
-    desired: &DesiredOfferVisual,
-) -> VisualDisposition {
-    match current {
-        None => VisualDisposition::Create,
-        Some(current)
-            if current.giver_id != desired.giver_id || current.visual_key != desired.visual_key =>
-        {
-            VisualDisposition::Replace
-        }
-        Some(_) => VisualDisposition::Keep,
-    }
-}
-
-/// Reconciles one visual copy for every offer in the latest snapshot.
-///
-/// No command intent calls this system directly, so accepting, declining, or
-/// retracting an offer cannot make a prop disappear before the engine confirms it.
-pub(crate) fn reconcile_offered_item_views(
-    mut commands: Commands,
-    mirror: Res<WorldMirror>,
-    assets: Res<ActorVisualAssets>,
-    anchors: Query<(Entity, &OfferAnchor)>,
-    mut visuals: Query<(Entity, &mut OfferedItemVisual)>,
-) {
-    let desired = desired_offer_visuals(&mirror);
-    let desired_ids: HashSet<_> = desired.iter().map(|offer| offer.item_id.clone()).collect();
-    let anchor_by_actor: HashMap<_, _> = anchors
-        .iter()
-        .map(|(entity, anchor)| (anchor.0.clone(), entity))
-        .collect();
-    let existing_by_item: HashMap<_, _> = visuals
-        .iter()
-        .map(|(entity, visual)| (visual.item_id.clone(), entity))
-        .collect();
-
-    for (entity, visual) in &mut visuals {
-        if !desired_ids.contains(&visual.item_id) {
-            commands.entity(entity).despawn();
-        }
-    }
-
-    for offer in desired {
-        let current_entity = existing_by_item.get(&offer.item_id).copied();
-        let disposition = current_entity
-            .and_then(|entity| visuals.get(entity).ok().map(|(_, visual)| visual))
-            .map_or(VisualDisposition::Create, |visual| {
-                visual_disposition(Some(visual), &offer)
-            });
-
-        match disposition {
-            VisualDisposition::Keep => {
-                let Some(entity) = current_entity else {
-                    continue;
-                };
-                let Ok((_, mut visual)) = visuals.get_mut(entity) else {
-                    continue;
-                };
-                visual.created_seq = offer.created_seq;
-                visual.base_translation = offer.base_translation;
-                visual.phase = offer.phase;
-            }
-            VisualDisposition::Replace => {
-                if let Some(entity) = current_entity {
-                    commands.entity(entity).despawn();
-                }
-                if let Some(anchor) = anchor_by_actor.get(&offer.giver_id).copied() {
-                    spawn_offer_visual(&mut commands, &assets, anchor, offer);
-                }
-            }
-            VisualDisposition::Create => {
-                if let Some(anchor) = anchor_by_actor.get(&offer.giver_id).copied() {
-                    spawn_offer_visual(&mut commands, &assets, anchor, offer);
-                }
-            }
-        }
-    }
-}
-
-fn desired_offer_visuals(mirror: &WorldMirror) -> Vec<DesiredOfferVisual> {
-    let mut offers: Vec<_> = mirror
-        .offers()
-        .filter_map(|offer| {
-            mirror.item(&offer.item_id).map(|item| {
-                (
-                    offer.giver_id.clone(),
-                    offer.item_id.clone(),
-                    item.visual_key.clone(),
-                    offer.created_seq,
-                )
-            })
-        })
-        .collect();
-    offers.sort_by(|left, right| {
-        left.0
-            .0
-            .cmp(&right.0.0)
-            .then_with(|| left.3.cmp(&right.3))
-            .then_with(|| left.1.0.cmp(&right.1.0))
-    });
-
-    let mut desired = Vec::with_capacity(offers.len());
-    let mut group_start = 0;
-    while group_start < offers.len() {
-        let giver = &offers[group_start].0;
-        let group_end = offers[group_start..]
-            .iter()
-            .position(|offer| offer.0 != *giver)
-            .map_or(offers.len(), |offset| group_start + offset);
-        let count = group_end - group_start;
-
-        for (index, (giver_id, item_id, visual_key, created_seq)) in
-            offers[group_start..group_end].iter().cloned().enumerate()
-        {
-            desired.push(DesiredOfferVisual {
-                phase: offer_phase(&item_id),
-                item_id,
-                giver_id,
-                visual_key,
-                created_seq,
-                base_translation: fan_translation(index, count),
-            });
-        }
-        group_start = group_end;
-    }
-
-    desired
-}
-
-fn fan_translation(index: usize, count: usize) -> Vec3 {
-    let centred_index = index as f32 - (count.saturating_sub(1) as f32 * 0.5);
-    let x = centred_index * OFFER_FAN_SPACING_M;
-    // A small backwards arc prevents neighbouring silhouettes from perfectly
-    // overlapping when the player views the fan obliquely.
-    let z = -0.035 * centred_index.abs();
-    Vec3::new(x, 0.0, z)
-}
-
-fn offer_phase(item_id: &ItemId) -> f32 {
-    let hash = item_id.0.bytes().fold(2_166_136_261_u32, |hash, byte| {
-        (hash ^ u32::from(byte)).wrapping_mul(16_777_619)
-    });
-    (hash as f32 / u32::MAX as f32) * 2.0 * PI
-}
-
-fn spawn_offer_visual(
-    commands: &mut Commands,
-    assets: &ActorVisualAssets,
-    anchor: Entity,
-    desired: DesiredOfferVisual,
-) {
-    let item_name = format!("Offered item: {}", desired.item_id.0);
-    let visual_key = desired.visual_key.clone();
-    let base_translation = desired.base_translation;
-    let phase = desired.phase;
-    let root = commands
-        .spawn((
-            Name::new(item_name),
-            OfferedItemVisual {
-                item_id: desired.item_id,
-                giver_id: desired.giver_id,
-                visual_key: desired.visual_key,
-                created_seq: desired.created_seq,
-                base_translation,
-                phase,
-            },
-            Transform::from_translation(base_translation),
-            Visibility::default(),
-            ChildOf(anchor),
-        ))
-        .id();
-
-    commands
-        .entity(root)
-        .with_children(|prop| match visual_key.as_str() {
-            "fish" => {
-                prop.spawn((
-                    Name::new("Fish body"),
-                    Mesh3d(assets.fish_body_mesh.clone()),
-                    MeshMaterial3d(assets.fish.clone()),
-                    Transform::from_scale(Vec3::new(0.30, 0.13, 0.12)),
-                ));
-                prop.spawn((
-                    Name::new("Fish tail"),
-                    Mesh3d(assets.fish_tail_mesh.clone()),
-                    MeshMaterial3d(assets.fish_fin.clone()),
-                    Transform::from_xyz(-0.31, 0.0, 0.0)
-                        .with_rotation(Quat::from_rotation_z(-FRAC_PI_2))
-                        .with_scale(Vec3::new(0.13, 0.19, 0.13)),
-                ));
-            }
-            "copper_coin" | "coin" => {
-                prop.spawn((
-                    Name::new("Coin"),
-                    Mesh3d(assets.coin_mesh.clone()),
-                    MeshMaterial3d(assets.copper.clone()),
-                    Transform::from_rotation(Quat::from_rotation_z(FRAC_PI_2)),
-                ));
-            }
-            "loaf" => {
-                // A flattened brown capsule — a loaf on the palm.
-                prop.spawn((
-                    Name::new("Loaf"),
-                    Mesh3d(assets.generic_item_mesh.clone()),
-                    MeshMaterial3d(assets.generic_item.clone()),
-                    Transform::from_scale(Vec3::new(0.34, 0.16, 0.22)),
-                ));
-            }
-            "stew" => {
-                // A squat cylinder standing in for a bowl.
-                prop.spawn((
-                    Name::new("Bowl of stew"),
-                    Mesh3d(assets.coin_mesh.clone()),
-                    MeshMaterial3d(assets.generic_item.clone()),
-                    Transform::from_scale(Vec3::new(1.6, 0.7, 1.6)),
-                ));
-            }
-            _ => {
-                prop.spawn((
-                    Name::new("Generic offered item"),
-                    Mesh3d(assets.generic_item_mesh.clone()),
-                    MeshMaterial3d(assets.generic_item.clone()),
-                    Transform::from_rotation(Quat::from_rotation_x(0.28)),
-                ));
-            }
-        });
-}
-
-/// Applies gentle deterministic bobbing and turning without changing semantics.
-pub(crate) fn animate_offered_items(
-    time: Res<Time>,
-    mut visuals: Query<(&OfferedItemVisual, &mut Transform)>,
-) {
-    let elapsed = time.elapsed_secs();
-    for (visual, mut transform) in &mut visuals {
-        let angle = elapsed * OFFER_BOB_RADIANS_PER_SECOND + visual.phase;
-        transform.translation =
-            visual.base_translation + Vec3::Y * (OFFER_BOB_AMPLITUDE_M * angle.sin());
-        transform.rotation =
-            Quat::from_rotation_y(elapsed * OFFER_TURN_RADIANS_PER_SECOND + visual.phase);
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use std::f32::consts::FRAC_PI_2;
+
     use bevy::asset::{AssetApp, AssetPlugin};
+    use bevy::camera::visibility::VisibilityRange;
 
     use super::*;
-    use crate::smart_actors::model::{
-        ActorControl, ActorSnapshot, ItemSnapshot, OfferSnapshot, Position, WorldSnapshot,
-    };
-
-    fn desired(item: &str, giver: &str, visual_key: &str) -> DesiredOfferVisual {
-        DesiredOfferVisual {
-            item_id: ItemId(item.into()),
-            giver_id: ActorId(giver.into()),
-            visual_key: visual_key.into(),
-            created_seq: 1,
-            base_translation: Vec3::ZERO,
-            phase: 0.0,
-        }
-    }
-
-    fn current(item: &str, giver: &str, visual_key: &str) -> OfferedItemVisual {
-        OfferedItemVisual {
-            item_id: ItemId(item.into()),
-            giver_id: ActorId(giver.into()),
-            visual_key: visual_key.into(),
-            created_seq: 1,
-            base_translation: Vec3::ZERO,
-            phase: 0.0,
-        }
-    }
+    use crate::smart_actors::model::{ActorControl, ActorSnapshot, Position, WorldSnapshot};
 
     #[test]
     fn lerp_angle_takes_the_short_way_round() {
@@ -871,68 +489,6 @@ mod tests {
         // The short arc at t=0.5 lands just past ±π (equivalently ∓π), never 0.
         let mid = lerp_angle(-0.9 * PI, 0.9 * PI, 0.5);
         assert!(mid.abs() > 0.99 * PI, "took the long way: {mid}");
-    }
-
-    #[test]
-    fn fan_is_centred_for_one_even_and_odd_counts() {
-        assert_eq!(fan_translation(0, 1).x, 0.0);
-
-        let two = [fan_translation(0, 2).x, fan_translation(1, 2).x];
-        assert_eq!(two[0], -two[1]);
-
-        let three = [
-            fan_translation(0, 3).x,
-            fan_translation(1, 3).x,
-            fan_translation(2, 3).x,
-        ];
-        assert_eq!(three[1], 0.0);
-        assert_eq!(three[0], -three[2]);
-        assert!(three.windows(2).all(|pair| pair[0] < pair[1]));
-    }
-
-    #[test]
-    fn snapshot_create_keep_and_replace_are_distinct() {
-        let desired = desired("coin", "ilse", "copper_coin");
-        assert_eq!(
-            visual_disposition(None, &desired),
-            VisualDisposition::Create
-        );
-        assert_eq!(
-            visual_disposition(Some(&current("coin", "ilse", "copper_coin")), &desired),
-            VisualDisposition::Keep
-        );
-        assert_eq!(
-            visual_disposition(Some(&current("coin", "sven", "copper_coin")), &desired),
-            VisualDisposition::Replace
-        );
-        assert_eq!(
-            visual_disposition(Some(&current("coin", "ilse", "generic")), &desired),
-            VisualDisposition::Replace
-        );
-    }
-
-    #[test]
-    fn target_change_does_not_replace_renderer_copy() {
-        // Target IDs intentionally do not occur in renderer records. Re-offering
-        // to a new target retains the same giver-owned visual copy.
-        let desired = desired("fish", "sven", "fish");
-        assert_eq!(
-            visual_disposition(Some(&current("fish", "sven", "fish")), &desired),
-            VisualDisposition::Keep
-        );
-    }
-
-    #[test]
-    fn snapshot_omission_is_the_only_removal_signal() {
-        let existing = [ItemId("fish".into()), ItemId("coin".into())];
-        let desired: HashSet<_> = [ItemId("coin".into())].into_iter().collect();
-        let removed: Vec<_> = existing
-            .iter()
-            .filter(|item| !desired.contains(*item))
-            .cloned()
-            .collect();
-
-        assert_eq!(removed, vec![ItemId("fish".into())]);
     }
 
     #[test]
@@ -992,77 +548,135 @@ mod tests {
         ));
     }
 
+    /// The M0 contract: every LLM actor grows one articulated puppet whose
+    /// parts are all fade-carrying shared-handle meshes, `ActorView` stays
+    /// root-only, and the whole crowd draws from a bounded material set.
     #[test]
-    fn every_offer_from_one_giver_gets_a_fanned_visual() {
+    fn puppet_rig_spawns_bounded_shared_parts() {
+        use crate::smart_actors::body::{BodyRig, BodySide, HandAnchor};
+        use cathedral_sim::{AppearanceSnapshot, Headgear, OutfitClass};
+
         let mut mirror = WorldMirror::default();
+        let actor = |id: &str, appearance: AppearanceSnapshot| ActorSnapshot {
+            id: ActorId(id.into()),
+            name_for_player: id.into(),
+            control: ActorControl::Llm,
+            position_m: Position::new(0.0, 0.91, 112.0).unwrap(),
+            facing_yaw: 0.0,
+            appearance,
+            holds: vec![],
+        };
         mirror
             .replace_snapshot(WorldSnapshot {
                 world_revision: 1,
                 player_id: ActorId("player".into()),
                 actors: vec![
+                    // Bare-headed default: 11 mesh parts.
+                    actor("plain", AppearanceSnapshot::default()),
+                    // Helmed watch: 12 parts, iron headgear.
+                    actor(
+                        "watch",
+                        AppearanceSnapshot {
+                            outfit: OutfitClass::Watch,
+                            headgear: Headgear::KettleHelm,
+                            palette_seed: 0xDEAD_BEEF,
+                            ..Default::default()
+                        },
+                    ),
+                    // Hooded cleric: 12 parts, cloth headgear.
+                    actor(
+                        "cleric",
+                        AppearanceSnapshot {
+                            outfit: OutfitClass::Cleric,
+                            headgear: Headgear::Hood,
+                            palette_seed: 7,
+                            ..Default::default()
+                        },
+                    ),
                     ActorSnapshot {
                         id: ActorId("player".into()),
                         name_for_player: "You".into(),
                         control: ActorControl::Player,
-                        position_m: Position::new(0.0, 0.0, 0.0).unwrap(),
+                        position_m: Position::new(0.0, 0.91, 95.0).unwrap(),
                         facing_yaw: 0.0,
-                        appearance_key: "player".into(),
+                        appearance: Default::default(),
                         holds: vec![],
                     },
-                    ActorSnapshot {
-                        id: ActorId("ilse".into()),
-                        name_for_player: "Ilse".into(),
-                        control: ActorControl::Llm,
-                        position_m: Position::new(1.0, 0.0, 0.0).unwrap(),
-                        facing_yaw: 0.0,
-                        appearance_key: "ilse".into(),
-                        holds: vec![ItemId("coin".into()), ItemId("fish".into())],
-                    },
                 ],
-                items: vec![
-                    ItemSnapshot {
-                        id: ItemId("coin".into()),
-                        kind: "spark".into(),
-                        name: "coin".into(),
-                        display_plural: "coins".into(),
-                        visual_key: "copper_coin".into(),
-                        quantity: 1,
-                        metadata: Default::default(),
-                    },
-                    ItemSnapshot {
-                        id: ItemId("fish".into()),
-                        kind: "herring".into(),
-                        name: "fish".into(),
-                        display_plural: "fish".into(),
-                        visual_key: "fish".into(),
-                        quantity: 1,
-                        metadata: Default::default(),
-                    },
-                ],
-                offers: vec![
-                    OfferSnapshot {
-                        item_id: ItemId("coin".into()),
-                        giver_id: ActorId("ilse".into()),
-                        target_id: Some(ActorId("player".into())),
-                        created_seq: 2,
-                    },
-                    OfferSnapshot {
-                        item_id: ItemId("fish".into()),
-                        giver_id: ActorId("ilse".into()),
-                        target_id: None,
-                        created_seq: 3,
-                    },
-                ],
+                items: vec![],
+                offers: vec![],
             })
             .unwrap();
 
-        let visuals = desired_offer_visuals(&mirror);
-        assert_eq!(visuals.len(), 2);
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<Image>()
+            .insert_resource(mirror)
+            .add_systems(Startup, super::super::body::setup_body_assets)
+            .add_systems(Update, reconcile_actor_views);
+        app.update();
+
+        let world = app.world_mut();
         assert_eq!(
-            visuals[0].base_translation.x,
-            -visuals[1].base_translation.x
+            world
+                .query_filtered::<Entity, With<ActorView>>()
+                .iter(world)
+                .count(),
+            3,
+            "ActorView stays root-only — the parts must not carry it"
         );
-        assert_ne!(visuals[0].item_id, visuals[1].item_id);
+        let rigs: Vec<_> = world
+            .query::<(&ActorId, &BodyRig)>()
+            .iter(world)
+            .map(|(id, rig)| (id.0.clone(), rig.headgear.is_some()))
+            .collect();
+        assert_eq!(rigs.len(), 3);
+        for (id, has_headgear) in &rigs {
+            assert_eq!(*has_headgear, id != "plain", "headgear mismatch for {id}");
+        }
+
+        let parts: Vec<_> = world
+            .query::<(
+                &Mesh3d,
+                &MeshMaterial3d<StandardMaterial>,
+                Option<&VisibilityRange>,
+            )>()
+            .iter(world)
+            .map(|(mesh, material, fade)| {
+                (mesh.0.clone(), material.0.clone(), fade.is_some())
+            })
+            .collect();
+        assert_eq!(parts.len(), 11 + 12 + 12, "13-part budget: 11 + headgear");
+        assert!(
+            parts.iter().all(|(_, _, fade)| *fade),
+            "every mesh part carries the VisibilityRange fade"
+        );
+        let distinct_meshes: HashSet<_> = parts.iter().map(|(mesh, _, _)| mesh.clone()).collect();
+        let distinct_materials: HashSet<_> =
+            parts.iter().map(|(_, material, _)| material.clone()).collect();
+        assert!(
+            distinct_meshes.len() <= 11,
+            "meshes are shared handles: {}",
+            distinct_meshes.len()
+        );
+        assert!(
+            (4..=9).contains(&distinct_materials.len()),
+            "bounded but varied material set: {}",
+            distinct_materials.len()
+        );
+
+        let hands: Vec<_> = world
+            .query::<&HandAnchor>()
+            .iter(world)
+            .map(|anchor| anchor.side)
+            .collect();
+        assert_eq!(hands.len(), 6);
+        assert_eq!(
+            hands.iter().filter(|side| **side == BodySide::Left).count(),
+            3
+        );
     }
 
     #[test]
@@ -1074,7 +688,7 @@ mod tests {
             control: ActorControl::Llm,
             position_m,
             facing_yaw: 0.0,
-            appearance_key: name.to_ascii_lowercase(),
+            appearance: Default::default(),
             holds: vec![],
         };
         mirror
@@ -1091,7 +705,7 @@ mod tests {
                         control: ActorControl::Player,
                         position_m: Position::new(0.0, 0.91, 95.0).unwrap(),
                         facing_yaw: 0.0,
-                        appearance_key: "player".into(),
+                        appearance: Default::default(),
                         holds: vec![],
                     },
                 ],
@@ -1104,8 +718,9 @@ mod tests {
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
             .init_asset::<Mesh>()
             .init_asset::<StandardMaterial>()
+            .init_asset::<Image>()
             .insert_resource(mirror)
-            .add_systems(Startup, setup_actor_visual_assets)
+            .add_systems(Startup, super::super::body::setup_body_assets)
             .add_systems(Update, reconcile_actor_views);
         app.update();
 

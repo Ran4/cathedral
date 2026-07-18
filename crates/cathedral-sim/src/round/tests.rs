@@ -64,7 +64,7 @@ fn person(id: &str, position: Vec3, occupation: Option<&str>, significance: Sign
         control: Control::Llm,
         back_story: String::new(),
         location_description: String::new(),
-        appearance_key: id.into(),
+        appearance: Default::default(),
         voice_key: None,
         position_m: position,
         facing_yaw: 0.0,
@@ -2547,6 +2547,37 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
     let clink = events.iter().find(|event| event.sound_id.as_deref() == Some("coin_clink"));
     assert!(clink.is_some(), "the purchase emits a coin_clink");
     assert!(clink.unwrap().actor_id.is_none(), "the clink is an unattributed world sound");
+
+    // npc_bodies M2: the purchase also emits the presentation-only `stall_sale`
+    // world event — vendor → buyer, the bought item, one unit — so the host can
+    // play the hand-over between their bodies.
+    let sale = events
+        .iter()
+        .find(|event| event.event_type == crate::event::EventType::WorldEvent && event.kind == "stall_sale")
+        .expect("the purchase emits a stall_sale world event");
+    assert_eq!(sale.actor_id.as_ref(), Some(&baker), "the vendor performs the hand-over");
+    assert_eq!(sale.target_id.as_ref(), Some(&hungry), "the buyer receives it");
+    assert!(sale.item_id.is_some(), "the sold item rides the event");
+    assert_eq!(sale.quantity, 1, "one unit per sale");
+    // The purity rule: presentation-only means NO mind hears about it. Empty
+    // recipients (inbox lines only ever come from `deliver` at an action site,
+    // and no such site exists for this kind), no witnesses, and no percept
+    // beyond the two self-percepts asserted above — every inbox in the world
+    // stays free of the sale.
+    assert!(sale.recipient_ids.is_empty(), "stall_sale reaches no mind's inbox");
+    assert!(sale.witness_ids.is_empty(), "stall_sale has no witnesses");
+    for (id, character) in &world.characters {
+        assert!(
+            character.inbox().iter().all(|line| !line.contains("bought") && !line.contains("sold")),
+            "{id} was told about a silent stall sale: {:?}",
+            character.inbox()
+        );
+        assert!(
+            character.recent_history().iter().all(|line| !line.contains("stall_sale")),
+            "{id} perceived the raw event kind: {:?}",
+            character.recent_history()
+        );
+    }
     world.assert_invariants();
 }
 

@@ -11,6 +11,7 @@
 //! represent.
 
 pub mod actions;
+pub mod appearance;
 pub mod areas;
 pub mod attention;
 pub mod character;
@@ -44,6 +45,7 @@ pub mod traits;
 pub mod world;
 
 pub use actions::{apply_action, apply_action_at};
+pub use appearance::{AppearanceSnapshot, Build, Headgear, OutfitClass, palette_seed_of};
 pub use areas::{
     Area, AreaBox, AreaMap, AreaMapError, AxisDirection, CoordinateSystem, NearestArea,
 };

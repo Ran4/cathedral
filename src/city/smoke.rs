@@ -1,11 +1,14 @@
 //! Chimney smoke: the one animated layer of the otherwise static city.
 //!
 //! `add_chimneys` reports every stack it plants on a ridge; a stable hash
-//! picks the fraction of them whose hearths are lit. Each lit stack carries a
-//! looping column of puffs — camera-facing quads that rise, drift with the
-//! prevailing wind, swell and fade — and every puff in the city is rewritten
-//! each frame into one shared mesh, so the whole skyline of plumes costs a
-//! single draw call, one entity, and nothing at all in navigation.
+//! picks the fraction of them whose hearths exist ([`hearth_heat`] decides
+//! when each of them burns against the sim clock — lit after the Kindling,
+//! covered at the Snuffing, with a scatter of bakehouses firing at the
+//! Watch). Each lit stack carries a looping column of puffs — camera-facing
+//! quads that rise, drift with the prevailing wind, swell and fade — and
+//! every puff in the city is rewritten each frame into one shared mesh, so
+//! the whole skyline of plumes costs a single draw call, one entity, and
+//! nothing at all in navigation.
 
 use bevy::{
     asset::RenderAssetUsages,
@@ -36,6 +39,10 @@ const PUFF_PEAK_ALPHA: f32 = 0.65;
 pub(super) struct ChimneyAnchor {
     pub top: Vec3,
     pub seed: u32,
+    /// Bakehouse-pattern hearth: fires at the Watch, hours before the Kindling.
+    pub early: bool,
+    /// Warehouses get a stack but never a fire; the smoking census skips them.
+    pub cold: bool,
 }
 
 /// The whole city's smoke: one entity, one mesh rebuilt per frame.
@@ -53,11 +60,65 @@ struct Plume {
     drift: Vec2,
     /// Woodsmoke runs warm-grey to blue-grey depending on the hearth.
     tint: [f32; 3],
+    /// Lights at the Watch instead of the Kindling.
+    early: bool,
 }
 
 /// A uniform draw from the higher bits of a stack's hash.
 fn unit(seed: u32, shift: u32) -> f32 {
     ((seed >> shift) % 997) as f32 / 996.0
+}
+
+/// Whether this stack's hearth follows the bakehouse pattern — fired before
+/// anyone is up. Roughly 8% of hearths, doubled where the trade wants a kiln
+/// or a copper going by the Watch.
+pub(super) fn early_hearth(seed: u32, use_name: &str) -> bool {
+    let threshold = if matches!(use_name, "workshop" | "industrial") {
+        0.16
+    } else {
+        0.08
+    };
+    unit(seed, 19) < threshold
+}
+
+/// 0.0 cold .. 1.0 full burn, for this hearth at this day fraction.
+///
+/// The day of a hearth, all in sim time (offices per
+/// `cathedral_sim::Office::start_fraction`): ordinary hearths light 0–90
+/// minutes after the Kindling (05:00) and ramp up over ~20 minutes; early
+/// hearths fire 0–45 minutes after the Watch (02:00). Everyone burns flat
+/// through the working day — banked, never dead — and covers 0–40 minutes
+/// after the Snuffing (21:00, curfew: *couvre-feu*), ramping out over ~15
+/// minutes. The night between is cold. All jitter is drawn from the stack's
+/// seed, so the schedule is deterministic per hearth forever.
+fn hearth_heat(day_fraction: f64, seed: u32, early: bool) -> f32 {
+    const SIM_MINUTE: f64 = 1.0 / (24.0 * 60.0);
+    let light_start = if early {
+        2.0 / 24.0 + f64::from(unit(seed, 2)) * 45.0 * SIM_MINUTE
+    } else {
+        5.0 / 24.0 + f64::from(unit(seed, 6)) * 90.0 * SIM_MINUTE
+    };
+    let light_end = light_start + 20.0 * SIM_MINUTE;
+    let douse_start = 21.0 / 24.0 + f64::from(unit(seed, 10)) * 40.0 * SIM_MINUTE;
+    let douse_end = douse_start + 15.0 * SIM_MINUTE;
+
+    // The light and douse windows never touch midnight (latest douse-end is
+    // 21:55, earliest light 02:00), so only the cold gap wraps — and the
+    // outside-both-ramps test below covers it on the wrapped fraction.
+    let fraction = day_fraction.rem_euclid(1.0);
+    let smooth = |t: f64| {
+        let t = t.clamp(0.0, 1.0);
+        (t * t * (3.0 - 2.0 * t)) as f32
+    };
+    if fraction < light_start || fraction >= douse_end {
+        0.0
+    } else if fraction < light_end {
+        smooth((fraction - light_start) / (light_end - light_start))
+    } else if fraction < douse_start {
+        1.0
+    } else {
+        1.0 - smooth((fraction - douse_start) / (douse_end - douse_start))
+    }
 }
 
 pub(super) fn build_chimney_smoke(
@@ -70,7 +131,7 @@ pub(super) fn build_chimney_smoke(
     let wind = Vec2::from_angle(WIND_HEADING_RAD) * WIND_SPEED_M_PER_S;
     let plumes: Vec<Plume> = anchors
         .iter()
-        .filter(|anchor| anchor.seed % SMOKE_GATE == 0)
+        .filter(|anchor| !anchor.cold && anchor.seed % SMOKE_GATE == 0)
         .map(|anchor| {
             let seed = anchor.seed;
             let cool = unit(seed, 11);
@@ -81,6 +142,7 @@ pub(super) fn build_chimney_smoke(
                 drift: Vec2::from_angle((unit(seed, 3) - 0.5) * 0.8).rotate(wind)
                     * (0.7 + 0.6 * unit(seed, 7)),
                 tint: [0.88 - 0.14 * cool, 0.86 - 0.10 * cool, 0.84 - 0.04 * cool],
+                early: anchor.early,
             }
         })
         .collect();
@@ -128,6 +190,7 @@ pub(super) fn build_chimney_smoke(
 /// billboarded toward the camera, sorted back-to-front so the blend holds.
 pub(super) fn animate_chimney_smoke(
     time: Res<Time>,
+    clock: Option<Res<crate::smart_actors::WorldClockState>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     smoke: Query<(&ChimneySmoke, &Mesh3d)>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -137,6 +200,13 @@ pub(super) fn animate_chimney_smoke(
     };
     let camera_position = camera.translation();
     let elapsed = time.elapsed_secs();
+    // The hearth schedule needs the sim clock — a read-only projection, absent
+    // in headless city tests and silent until the engine's first message. In
+    // either case every hearth burns at full, exactly the pre-clock skyline:
+    // the sky is only ever dimmed by information, never by its absence.
+    let clock = clock
+        .filter(|clock| clock.present)
+        .map(|clock| (clock.fraction, clock.scale / clock.seconds_per_day.max(1.0)));
 
     struct Puff {
         center: Vec3,
@@ -158,6 +228,21 @@ pub(super) fn animate_chimney_smoke(
             for index in 0..PUFFS_PER_PLUME {
                 let slot = index as f32 * (PUFF_LIFE_S / PUFFS_PER_PLUME as f32);
                 let age = (elapsed + plume.phase + slot).rem_euclid(PUFF_LIFE_S);
+                // Heat is sampled when the puff left the flue, not now: a
+                // doused fire doesn't delete its airborne smoke, the plume
+                // runs out bottom-up as the last puffs live out their nine
+                // seconds — and lights flue-first at the Kindling.
+                let heat = match clock {
+                    None => 1.0,
+                    Some((day_fraction, day_per_wall_second)) => hearth_heat(
+                        day_fraction - f64::from(age) * day_per_wall_second,
+                        plume.seed,
+                        plume.early,
+                    ),
+                };
+                if heat <= 0.0 {
+                    continue;
+                }
                 let f = age / PUFF_LIFE_S;
                 // Straight up out of the flue, then the wind takes it: the
                 // climb eases as the drift grows quadratically into a bend.
@@ -175,7 +260,7 @@ pub(super) fn animate_chimney_smoke(
                 puffs.push(Puff {
                     center,
                     half: diameter * 0.5,
-                    alpha: PUFF_PEAK_ALPHA * fade_in * fade_out,
+                    alpha: PUFF_PEAK_ALPHA * fade_in * fade_out * heat,
                     tint: plume.tint,
                     cell: [
                         0.5 * (cell_index & 1) as f32,
@@ -241,6 +326,65 @@ mod tests {
         app
     }
 
+    fn smoke_mesh_vertices(app: &mut App) -> usize {
+        let world = app.world_mut();
+        let (_, mesh_handle) = world
+            .query::<(&ChimneySmoke, &Mesh3d)>()
+            .single(world)
+            .expect("the city spawns exactly one smoke batch");
+        let handle = mesh_handle.0.clone();
+        world
+            .resource::<Assets<Mesh>>()
+            .get(&handle)
+            .expect("the smoke mesh asset exists")
+            .count_vertices()
+    }
+
+    /// The schedule from the feature table: cold night, lit morning, flat
+    /// working day, covered after the Snuffing — early hearths hours ahead,
+    /// everything deterministic per seed and safe across the midnight wrap.
+    #[test]
+    fn hearth_heat_follows_the_day_of_a_hearth() {
+        let minute = 1.0 / (24.0 * 60.0);
+        for seed in [0u32, 0xdead_beef, 0x1234_5678, u32::MAX] {
+            for early in [false, true] {
+                // Midnight is cold, High Wick is full burn, and past the last
+                // possible douse-end (21:55) the night is cold again.
+                assert_eq!(hearth_heat(0.0, seed, early), 0.0);
+                assert_eq!(hearth_heat(0.5, seed, early), 1.0);
+                assert_eq!(hearth_heat(22.0 / 24.0, seed, early), 0.0);
+                // Wrapping: a back-dated birth before midnight lands in the
+                // previous evening, a fraction past 1.0 in the next morning.
+                assert_eq!(
+                    hearth_heat(-0.5 / 24.0, seed, early),
+                    hearth_heat(23.5 / 24.0, seed, early)
+                );
+                assert_eq!(hearth_heat(1.5, seed, early), hearth_heat(0.5, seed, early));
+                // Determinism: the same seed draws the same schedule forever.
+                assert_eq!(
+                    hearth_heat(5.75 / 24.0, seed, early),
+                    hearth_heat(5.75 / 24.0, seed, early)
+                );
+            }
+            // At 03:30 an early hearth is already at full burn (latest light
+            // 02:45 plus the 20-minute ramp) while an ordinary one is cold.
+            assert_eq!(hearth_heat(3.5 / 24.0, seed, true), 1.0);
+            assert_eq!(hearth_heat(3.5 / 24.0, seed, false), 0.0);
+            // Through the ordinary light window (05:00 → 06:50) the ramp is
+            // monotonic, ends at full burn, and passes through the middle.
+            let samples: Vec<f32> = (0..=110)
+                .map(|m| hearth_heat(5.0 / 24.0 + m as f64 * minute, seed, false))
+                .collect();
+            assert!(samples.windows(2).all(|pair| pair[0] <= pair[1]));
+            assert_eq!(*samples.last().unwrap(), 1.0);
+            assert!(
+                samples
+                    .iter()
+                    .any(|heat| (0.0..1.0).contains(heat) && *heat > 0.0)
+            );
+        }
+    }
+
     /// The hash gate lights a stable minority of the skyline — enough plumes
     /// to read as a lived-in city, far too few to read as a fire.
     #[test]
@@ -255,6 +399,13 @@ mod tests {
         assert!(
             (150..1_200).contains(&plumes),
             "smoking-chimney subset out of range: {plumes}"
+        );
+        // A scattered minority of the census fires at the Watch — enough for
+        // a pre-dawn skyline, nowhere near enough to read as morning.
+        let early = smoke.plumes.iter().filter(|plume| plume.early).count();
+        assert!(
+            early * 100 >= plumes * 2 && early * 100 <= plumes * 30,
+            "early-hearth share out of range: {early} of {plumes}"
         );
     }
 
@@ -300,5 +451,45 @@ mod tests {
             alphas.iter().any(|alpha| *alpha > 0.05),
             "at least some puffs are visibly mid-life"
         );
+    }
+
+    /// The clock gates the skyline: full at High Wick, out at 23:00 — every
+    /// hearth covered by 21:55, and at the default pace a nine-second puff
+    /// life back-dates births by under four sim-minutes, still far past the
+    /// douse — and back to the familiar full burn when no clock has spoken.
+    #[test]
+    fn the_snuffing_empties_the_smoke_mesh() {
+        use crate::smart_actors::WorldClockState;
+
+        let mut app = built_app();
+        app.world_mut().spawn((
+            Camera3d::default(),
+            GlobalTransform::from_translation(Vec3::new(0.0, 40.0, 120.0)),
+        ));
+        app.insert_resource(WorldClockState {
+            present: true,
+            fraction: 0.5,
+            ..Default::default()
+        });
+        app.update();
+        let world = app.world_mut();
+        let smoke = world
+            .query::<&ChimneySmoke>()
+            .single(world)
+            .expect("the city spawns exactly one smoke batch");
+        let daytime_vertices = smoke.plumes.len() * PUFFS_PER_PLUME * 4;
+        assert_eq!(smoke_mesh_vertices(&mut app), daytime_vertices);
+
+        app.insert_resource(WorldClockState {
+            present: true,
+            fraction: 23.0 / 24.0,
+            ..Default::default()
+        });
+        app.update();
+        assert_eq!(smoke_mesh_vertices(&mut app), 0);
+
+        app.world_mut().remove_resource::<WorldClockState>();
+        app.update();
+        assert_eq!(smoke_mesh_vertices(&mut app), daytime_vertices);
     }
 }

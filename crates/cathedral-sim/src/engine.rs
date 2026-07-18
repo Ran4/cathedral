@@ -1790,7 +1790,7 @@ impl Engine {
     /// speech-only and stays byte-identical — but the NPC party still stops on
     /// the spot for the exchange itself.
     fn hold_for_handoff(&mut self, now: f64, event: &DomainEvent) {
-        if !matches!(event.kind.as_str(), "offer_item" | "accept_offered_item") {
+        if !is_handoff_kind(&event.kind) {
             return;
         }
         let (Some(actor_id), Some(target_id)) = (&event.actor_id, &event.target_id) else {
@@ -1884,6 +1884,14 @@ impl Engine {
     }
 }
 
+/// The world-event kinds that stop both parties like a targeted line. The
+/// round's presentation-only events (`stall_sale`) are deliberately not here:
+/// the silent stall purchase already parks the buyer itself, and priming the
+/// scheduler off it would spend LLM turns on a zero-token act (npc_bodies M2).
+fn is_handoff_kind(kind: &str) -> bool {
+    matches!(kind, "offer_item" | "accept_offered_item")
+}
+
 fn flush_world_event(event: &DomainEvent, out: &mut Vec<EngineMessage>) {
     let Some(actor_id) = event.actor_id.clone() else {
         return;
@@ -1962,5 +1970,19 @@ mod tests {
         assert!(capabilities.stt, "local STT alone makes STT available");
         assert!(!capabilities.tts);
         assert_eq!(Capabilities::default().tts_selected, TtsBackendKind::Off);
+    }
+
+    /// npc_bodies M2 purity contract: the deliberate offer verbs hold both
+    /// parties for the exchange, but the round's presentation-only `stall_sale`
+    /// must never trip the handoff (no interrupt, no NPC-exchange warmth, and —
+    /// because `flush` only nudges the scheduler for sounds — no turn either).
+    #[test]
+    fn stall_sale_is_not_a_handoff_kind() {
+        assert!(is_handoff_kind("offer_item"));
+        assert!(is_handoff_kind("accept_offered_item"));
+        assert!(!is_handoff_kind("stall_sale"));
+        assert!(!is_handoff_kind("decline_offer"));
+        assert!(!is_handoff_kind("retract_offer"));
+        assert!(!is_handoff_kind("eat"));
     }
 }

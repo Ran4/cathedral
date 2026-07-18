@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     GOAL_NONE,
+    appearance::AppearanceSnapshot,
     character::{CharacterSheet, Control},
     ids::{ActorId, ItemId},
     math::Vec3,
@@ -206,10 +207,11 @@ pub struct LoreCharacterSheet {
     pub memories: Vec<String>,
     pub core_character_description: String,
     pub extended_character_description: String,
-    /// Optional game-facing overrides. Most authored people use shared visual
-    /// and voice defaults; the original demo trio retains its established cast.
+    /// Optional game-facing overrides. Appearance is *composed* from the facts
+    /// above ([`AppearanceSnapshot::compose`]); this names a bespoke look on
+    /// top of it, and only the original demo trio carries one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub appearance_key: Option<String>,
+    pub bespoke_appearance: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub voice_key: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -334,13 +336,23 @@ impl LoreCharacterSheet {
             .voice_key
             .clone()
             .unwrap_or_else(|| default_voice_key(&self.gender, &self.id));
+        // The one place a body is composed: sheet facts in, a structured
+        // appearance out, deterministic per id (`features/npc_bodies.md` §2).
+        let appearance = AppearanceSnapshot::compose(
+            &self.id,
+            &self.gender,
+            self.occupation_id.as_deref(),
+            self.rank.as_deref(),
+            &self.circumstances,
+        )
+        .with_bespoke(self.bespoke_appearance.clone());
         CharacterSheet {
             id: self.id,
             name: self.name,
             control: Control::Llm,
             back_story: self.core_character_description.clone(),
             location_description: self.district.clone(),
-            appearance_key: self.appearance_key.unwrap_or_else(|| "generic".to_string()),
+            appearance,
             voice_key: Some(voice_key),
             position_m: Vec3::new(
                 self.spawn_location.x,
@@ -614,7 +626,13 @@ mod tests {
             ["aaaaa", "bbbbb"]
         );
         let sheets = cast.into_character_sheets();
-        assert_eq!(sheets[0].appearance_key, "generic");
+        // Appearance is composed from the sheet facts at creation: a male
+        // smith with no bespoke override dresses as a craftsman.
+        assert_eq!(
+            sheets[0].appearance,
+            AppearanceSnapshot::compose(&sheets[0].id, "m", Some("smith"), None, &[])
+        );
+        assert_eq!(sheets[0].appearance.bespoke, None);
         assert!(matches!(
             sheets[0].voice_key.as_deref(),
             Some("sven" | "conny")
@@ -628,6 +646,27 @@ mod tests {
                 .occupation_display
                 .as_deref(),
             Some("Smith")
+        );
+    }
+
+    /// The named majors' escape hatch: an authored `bespoke_appearance` rides
+    /// on top of the composed body, exactly as the production trio uses it.
+    #[test]
+    fn an_authored_bespoke_appearance_survives_composition() {
+        let source = character("aaaaa", "[]").replace(
+            r#""memories":[]"#,
+            r#""memories":[],"bespoke_appearance":"sven""#,
+        );
+        let cast =
+            LoreCast::from_json_sources(OCCUPATIONS, [("smith/aaaaa_a.json".into(), source)])
+                .unwrap();
+        let sheets = cast.into_character_sheets();
+        assert_eq!(sheets[0].appearance.bespoke.as_deref(), Some("sven"));
+        // The composed facts stay intact underneath the override.
+        assert_eq!(
+            sheets[0].appearance,
+            AppearanceSnapshot::compose(&sheets[0].id, "m", Some("smith"), None, &[])
+                .with_bespoke(Some("sven".into()))
         );
     }
 

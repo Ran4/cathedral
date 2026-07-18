@@ -10,7 +10,6 @@
       "control": "player",
       "back_story": "A human visitor exploring the cathedral city.",
       "location_description": "On the grand forecourt just outside the cathedral's west entrance",
-      "appearance_key": "player",
       "voice_key": null,
       "position_m": { "x": 0.0, "y": 0.91, "z": 95.0 },
       "facing_yaw": 0.0,

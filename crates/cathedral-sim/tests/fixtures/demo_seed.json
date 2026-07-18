@@ -10,7 +10,13 @@
       "control": "llm",
       "back_story": "Born poor, you are now a blacksmith apprentice. You live in a large citystate surrounding a large cathedral, and you work in one of the back streets.",
       "location_description": "On the grand forecourt just outside the cathedral's west entrance",
-      "appearance_key": "sven",
+      "appearance": {
+        "build": "male",
+        "outfit": "craftsman",
+        "headgear": "brim",
+        "palette_seed": 7,
+        "bespoke": "sven"
+      },
       "voice_key": "sven",
       "position_m": { "x": -1.8, "y": 0.91, "z": 114.0 },
       "facing_yaw": -0.7328151017865066,
@@ -24,7 +30,13 @@
       "control": "llm",
       "back_story": "A fisherman who sells his catch on the town square. You know most faces in the quarter, including Sven, the blacksmith's apprentice.",
       "location_description": "On the grand forecourt just outside the cathedral's west entrance",
-      "appearance_key": "conny",
+      "appearance": {
+        "build": "male",
+        "outfit": "merchant",
+        "headgear": "coif",
+        "palette_seed": 11,
+        "bespoke": "conny"
+      },
       "voice_key": "conny",
       "position_m": { "x": 0.0, "y": 0.91, "z": 112.0 },
       "facing_yaw": 0.0,
@@ -38,7 +50,13 @@
       "control": "llm",
       "back_story": "A pilgrim who arrived in the citystate this morning to see the great cathedral. You know nobody here",
       "location_description": "On the grand forecourt just outside the cathedral's west entrance",
-      "appearance_key": "ilse",
+      "appearance": {
+        "build": "female",
+        "outfit": "cleric",
+        "headgear": "hood",
+        "palette_seed": 13,
+        "bespoke": "ilse"
+      },
       "voice_key": "ilse",
       "position_m": { "x": 1.8, "y": 0.91, "z": 114.0 },
       "facing_yaw": 3.141592653589793,
@@ -52,7 +70,6 @@
       "control": "player",
       "back_story": "A human visitor exploring the cathedral city.",
       "location_description": "On the grand forecourt just outside the cathedral's west entrance",
-      "appearance_key": "player",
       "voice_key": null,
       "position_m": { "x": 0.0, "y": 0.91, "z": 95.0 },
       "facing_yaw": 0.0,

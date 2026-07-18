@@ -7,6 +7,7 @@
 //! into HUD toasts, speech bubbles and sound effects.
 
 pub mod actors;
+pub mod body;
 pub mod bridge;
 pub mod local_engine;
 pub mod model;
@@ -16,6 +17,7 @@ mod area_debug;
 mod chat;
 mod clock;
 mod config_menu;
+mod hands;
 mod hud;
 mod interaction;
 mod lamps;
@@ -35,6 +37,7 @@ use cathedral_sim::{
 use serde::{Deserialize, Serialize};
 
 pub use chat::ChatInputSet;
+pub use clock::WorldClockState;
 pub use config_menu::ConfigMenuState;
 pub use targeting::ActorFocus;
 
@@ -380,6 +383,7 @@ impl Plugin for SmartActorsPlugin {
             .init_resource::<ActorFocus>()
             .init_resource::<interaction::InteractionState>()
             .init_resource::<interaction::PlayerSpatialState>()
+            .init_resource::<body::ReflexState>()
             .init_resource::<chat::ChatInputState>()
             .insert_resource(interaction::MicrophoneInputState::with_backend(
                 self.config.initial_stt_backend(),
@@ -398,6 +402,7 @@ impl Plugin for SmartActorsPlugin {
             .add_message::<speech::StopNpcSpeech>()
             .add_message::<speech::ClearSpeechPresentation>()
             .add_message::<sound::PlaySoundEffect>()
+            .add_message::<hands::HandoverFeedback>()
             .configure_sets(
                 PostUpdate,
                 (
@@ -413,7 +418,8 @@ impl Plugin for SmartActorsPlugin {
             .add_systems(
                 Startup,
                 (
-                    actors::setup_actor_visual_assets,
+                    hands::setup_item_prop_assets,
+                    body::setup_body_assets,
                     area_debug::spawn_area_debug_ui,
                     actor_sheet::spawn_actor_sheet,
                     clock::spawn_clock_hud,
@@ -447,7 +453,11 @@ impl Plugin for SmartActorsPlugin {
                 PostUpdate,
                 (
                     actors::reconcile_actor_views,
-                    actors::reconcile_offered_item_views,
+                    // Feedback first (the giver's in-hand prop must still exist
+                    // to launch a hand-over flight from), then the hand-prop
+                    // reconcile that would retire it (npc_bodies M2).
+                    hands::apply_handover_feedback,
+                    hands::reconcile_hand_props,
                     interaction::reconcile_interaction_state,
                     // After reconcile, so it overrides the stale snapshot position
                     // reconcile writes for a mover between revisions with the live
@@ -482,7 +492,17 @@ impl Plugin for SmartActorsPlugin {
                 (
                     actors::position_actor_name_labels,
                     actors::update_thinking_indicators,
-                    actors::animate_offered_items,
+                    // Hand-over props mid-flight between two hands (M2).
+                    hands::animate_handover_flights,
+                    // The reflex bookkeeping (npc_bodies M3) feeds the pose
+                    // pipeline (M1) that runs right after it: who is talking
+                    // until when and what recently made a sound, fed from the
+                    // same presentation messages the bubbles and speakers
+                    // consume — then the cosmetic part-level animation over
+                    // the roots the ReconcileMirror set just placed; it never
+                    // touches a root transform. (Nested tuple: the flat chain
+                    // would exceed Bevy's 20-system tuple limit.)
+                    (body::track_reflex_signals, body::animate_body_pose).chain(),
                     speech::receive_speech_events,
                     speech::receive_tts_clips,
                     speech::receive_tts_pcm_chunks,
@@ -562,6 +582,7 @@ struct BridgePresentationWriters<'w> {
     stream_end: MessageWriter<'w, speech::TtsStreamFinished>,
     clear: MessageWriter<'w, speech::ClearSpeechPresentation>,
     sound_effects: MessageWriter<'w, sound::PlaySoundEffect>,
+    hands: MessageWriter<'w, hands::HandoverFeedback>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -714,7 +735,7 @@ fn process_engine_message(
             weekday,
             brightness,
             scale,
-            seconds_per_day: _,
+            seconds_per_day,
         } => {
             // Mirror the office and the debug time scale into `logs.jsonl` on
             // change, so a `CATHEDRAL_DRIVE` script can assert on the clock in
@@ -747,6 +768,7 @@ fn process_engine_message(
                 weekday,
                 brightness,
                 scale,
+                seconds_per_day,
             };
         }
         EngineMessage::Movement { moved } => {
@@ -789,7 +811,7 @@ fn process_engine_message(
         EngineMessage::Speech {
             event_id,
             speaker_id,
-            target_id: _,
+            target_id,
             text,
             speaker_position_m,
             recipient_ids,
@@ -819,6 +841,7 @@ fn process_engine_message(
                 event_id: event_id.0,
                 speaker_id: speaker_id.clone(),
                 speaker_label: speaker_name_for_player,
+                target_id: target_id.as_ref().map(model::actor_id_from_sim),
                 text,
                 speaker_position: model::vec3_from_sim(speaker_position_m),
                 recipient_count,
@@ -893,6 +916,36 @@ fn process_engine_message(
             );
             if let Some(text) = text {
                 hud.toast(text);
+            }
+            // The hand-over choreography (npc_bodies M2): the same events, as
+            // body language. `stall_sale` never reaches the toast above
+            // (`describe_world_event` is player-scoped and the silent market
+            // is NPC-only); here it plays the vendor→buyer hand-over.
+            let actor = model::actor_id_from_sim(&actor_id);
+            let target = target_id.as_ref().map(model::actor_id_from_sim);
+            let item = item_id.as_ref().map(model::item_id_from_sim);
+            match (kind.as_str(), target, item) {
+                ("accept_offered_item", Some(giver), Some(item)) => {
+                    presentation.hands.write(hands::HandoverFeedback::Accepted {
+                        giver,
+                        recipient: actor,
+                        item,
+                    });
+                }
+                ("decline_offer", Some(giver), _) => {
+                    presentation.hands.write(hands::HandoverFeedback::Declined {
+                        decliner: actor,
+                        giver,
+                    });
+                }
+                ("stall_sale", Some(buyer), Some(item)) => {
+                    presentation.hands.write(hands::HandoverFeedback::StallSale {
+                        vendor: actor,
+                        buyer,
+                        item,
+                    });
+                }
+                _ => {}
             }
         }
         EngineMessage::TranscriptionResult {
@@ -1613,7 +1666,7 @@ mod tests {
                         control: model::ActorControl::Player,
                         position_m: model::Position::new(0.0, 0.0, 0.0).unwrap(),
                         facing_yaw: 0.0,
-                        appearance_key: "player".into(),
+                        appearance: Default::default(),
                         holds: vec![],
                     },
                     model::ActorSnapshot {
@@ -1622,7 +1675,7 @@ mod tests {
                         control: model::ActorControl::Llm,
                         position_m: model::Position::new(HEARING_RADIUS_M, 0.0, 0.0).unwrap(),
                         facing_yaw: 0.0,
-                        appearance_key: "near".into(),
+                        appearance: Default::default(),
                         holds: vec![],
                     },
                     model::ActorSnapshot {
@@ -1632,7 +1685,7 @@ mod tests {
                         position_m: model::Position::new(HEARING_RADIUS_M + 0.01, 0.0, 0.0)
                             .unwrap(),
                         facing_yaw: 0.0,
-                        appearance_key: "far".into(),
+                        appearance: Default::default(),
                         holds: vec![],
                     },
                 ],
@@ -1736,7 +1789,7 @@ mod tests {
                         control: model::ActorControl::Player,
                         position_m: model::Position::new(0.0, 0.0, 0.0).unwrap(),
                         facing_yaw: 0.0,
-                        appearance_key: "player".into(),
+                        appearance: Default::default(),
                         holds: vec![],
                     },
                     model::ActorSnapshot {
@@ -1745,7 +1798,7 @@ mod tests {
                         control: model::ActorControl::Llm,
                         position_m: model::Position::new(1.0, 0.0, 0.0).unwrap(),
                         facing_yaw: 0.0,
-                        appearance_key: "ilse".into(),
+                        appearance: Default::default(),
                         holds: vec![coin.clone()],
                     },
                     model::ActorSnapshot {
@@ -1754,7 +1807,7 @@ mod tests {
                         control: model::ActorControl::Llm,
                         position_m: model::Position::new(2.0, 0.0, 0.0).unwrap(),
                         facing_yaw: 0.0,
-                        appearance_key: "frans".into(),
+                        appearance: Default::default(),
                         holds: vec![],
                     },
                 ],
@@ -1810,6 +1863,7 @@ mod tests {
         app.add_plugins((MinimalPlugins, AssetPlugin::default(), TransformPlugin))
             .init_asset::<Mesh>()
             .init_asset::<StandardMaterial>()
+            .init_asset::<Image>()
             .init_asset::<AudioSource>()
             .init_resource::<ButtonInput<KeyCode>>()
             .init_resource::<ButtonInput<MouseButton>>()
@@ -2020,13 +2074,19 @@ mod tests {
                 .actor(&model::ActorId("k0fb1".into()))
                 .is_some_and(|ilse| ilse.holds.contains(&model::ItemId("c0prs".into())))
         );
+        // npc_bodies M2: the offered coin sits in Ilse's RIGHT hand, not in
+        // an above-head fan.
         let world = app.world_mut();
-        let offered_coin_visuals = world
-            .query::<&actors::OfferedItemVisual>()
+        let offered_coin_props: Vec<_> = world
+            .query::<&hands::HeldProp>()
             .iter(world)
-            .filter(|visual| visual.item_id.0 == "c0prs")
-            .count();
-        assert_eq!(offered_coin_visuals, 1);
+            .filter(|prop| prop.item_id.0 == "c0prs")
+            .map(|prop| (prop.actor.0.clone(), prop.side))
+            .collect();
+        assert_eq!(
+            offered_coin_props,
+            vec![("k0fb1".to_string(), body::BodySide::Right)]
+        );
         assert!(
             app.world()
                 .resource::<hud::SmartActorHudState>()

@@ -1753,9 +1753,12 @@ fn add_chimneys(
             Vec3::new(0.48, 0.08, 0.48),
             along,
         );
+        let seed = stable_hash(&format!("smoke-{}-{index}", building.id));
         anchors.push(smoke::ChimneyAnchor {
             top: base + Vec3::Y * 1.5,
-            seed: stable_hash(&format!("smoke-{}-{index}", building.id)),
+            seed,
+            early: smoke::early_hearth(seed, &building.use_name),
+            cold: building.use_name == "storage",
         });
     }
 }

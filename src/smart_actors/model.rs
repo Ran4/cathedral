@@ -171,7 +171,11 @@ pub struct ActorSnapshot {
     /// actor view must rotate to exactly this.
     #[serde(default)]
     pub facing_yaw: f32,
-    pub appearance_key: String,
+    /// The sim-composed body appearance (`features/npc_bodies.md` §2). The
+    /// enums are the sim's own renderer-facing vocabulary — mirroring them
+    /// here would only be drift risk, so the type crosses as-is.
+    #[serde(default)]
+    pub appearance: cathedral_sim::AppearanceSnapshot,
     pub holds: Vec<ItemId>,
 }
 
@@ -270,7 +274,7 @@ impl From<&cathedral_sim::PublicSnapshot> for WorldSnapshot {
                     control: actor.control.into(),
                     position_m: position_from_sim(actor.position_m),
                     facing_yaw: actor.facing_yaw as f32,
-                    appearance_key: actor.appearance_key.clone(),
+                    appearance: actor.appearance.clone(),
                     holds: actor.holds.iter().map(item_id_from_sim).collect(),
                 })
                 .collect(),
@@ -556,9 +560,13 @@ impl ValidatedSnapshot {
                     owner_id: actor.id.0.clone(),
                 });
             }
-            if !valid_projection_text(&actor.appearance_key, MAX_ID_CHARS) {
+            // The structured appearance is closed enums plus a numeric seed;
+            // only the optional bespoke tag is free text worth bounding.
+            if let Some(bespoke) = &actor.appearance.bespoke
+                && !valid_projection_text(bespoke, MAX_ID_CHARS)
+            {
                 return Err(SnapshotError::InvalidText {
-                    field: "appearance key",
+                    field: "bespoke appearance",
                     owner_id: actor.id.0.clone(),
                 });
             }
@@ -753,7 +761,7 @@ mod tests {
             control,
             position_m: Position::new(1.0, 2.0, 3.0).unwrap(),
             facing_yaw: 0.0,
-            appearance_key: id.into(),
+            appearance: Default::default(),
             holds: holds.iter().map(|id| ItemId((*id).into())).collect(),
         }
     }

@@ -68,7 +68,7 @@ Split it:
 - **Hot** — `(ActorId, position_m, facing_yaw)`, and whatever else changes at movement rate. A flat, dense
   array. Copying it is a `memcpy`; it allocates nothing and validates nothing. Rebuilt whenever anyone moves,
   which will be constantly.
-- **Cold** — `name_for_player`, the knows-set, `appearance_key`, inventory, everything else. Rebuilt only when
+- **Cold** — `name_for_player`, the knows-set, `appearance`, inventory, everything else. Rebuilt only when
   one of those actually changes, which is rare and event-driven.
 
 `ValidatedSnapshot` only needs to re-validate the cold channel; the hot channel is structurally valid by

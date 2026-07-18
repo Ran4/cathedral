@@ -31,10 +31,12 @@ use crate::{
     sounds::SoundCatalog,
 };
 
-/// Walk-cadence multiplier: `gait_phase += speed * dt * GAIT_CADENCE`. A stride
-/// per ~1.3 m at the brisk pace, which M7's animation reads; it never affects
-/// where anyone ends up.
-const GAIT_CADENCE: f64 = 1.4;
+/// Walk-cadence multiplier: `gait_phase += speed * dt * GAIT_CADENCE`. One
+/// full stride cycle (two steps) per ~1.5 m, i.e. ~2.4 steps/s at the brisk
+/// 1.8 m/s — matched to the host puppet's ~±27° thigh swing so feet don't
+/// visibly skate (npc_bodies M1; the phase stays the sim's single source of
+/// stride truth). It never affects where anyone ends up.
+const GAIT_CADENCE: f64 = 0.67;
 
 /// One actor's new position (and optionally facing) in a spatial update.
 #[derive(Debug, Clone, PartialEq)]
@@ -621,7 +623,7 @@ impl World {
                     control: actor.control(),
                     position_m: actor.position_m(),
                     facing_yaw: actor.facing_yaw(),
-                    appearance_key: actor.appearance_key().to_string(),
+                    appearance: actor.appearance().clone(),
                     holds: actor.holds().to_vec(),
                 }
             })
@@ -821,7 +823,7 @@ mod tests {
             control: Control::Llm,
             back_story: "test".into(),
             location_description: "test square".into(),
-            appearance_key: id.into(),
+            appearance: Default::default(),
             voice_key: None,
             position_m: Vec3::new(x, 0.0, 0.0),
             facing_yaw: 0.0,
@@ -1008,7 +1010,7 @@ mod tests {
             control: Control::Llm,
             back_story: "test".into(),
             location_description: "the corridor".into(),
-            appearance_key: "walker".into(),
+            appearance: Default::default(),
             voice_key: None,
             position_m: start,
             facing_yaw: 0.0,

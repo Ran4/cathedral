@@ -992,7 +992,7 @@ mod tests {
             control: Control::Llm,
             back_story: "You work carefully.".into(),
             location_description: "The Gradine".into(),
-            appearance_key: "generic".into(),
+            appearance: Default::default(),
             voice_key: Some("ilse".into()),
             position_m: Vec3::ZERO,
             facing_yaw: 0.0,

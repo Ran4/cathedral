@@ -488,7 +488,7 @@ mod tests {
     fn character_json(id: &str, holds: &str) -> String {
         format!(
             r#"{{"id": "{id}", "name": "N", "control": "llm", "back_story": "b",
-                 "location_description": "l", "appearance_key": "a", "voice_key": null,
+                 "location_description": "l", "voice_key": null,
                  "position_m": {{"x": 0.0, "y": 0.91, "z": 0.0}}, "holds": {holds},
                  "knows": []}}"#
         )

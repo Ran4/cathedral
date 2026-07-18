@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    appearance::AppearanceSnapshot,
     character::Control,
     ids::{ActorId, ItemId},
     item::ItemKind,
@@ -36,7 +37,9 @@ pub struct ActorSnapshot {
     #[serde(with = "crate::math::vec3_serde")]
     pub position_m: Vec3,
     pub facing_yaw: f64,
-    pub appearance_key: String,
+    /// The sim-composed body appearance (`features/npc_bodies.md` §2): dress
+    /// class, headgear, tint seed, and the named majors' bespoke override.
+    pub appearance: AppearanceSnapshot,
     pub holds: Vec<ItemId>,
 }
 

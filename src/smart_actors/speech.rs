@@ -61,6 +61,9 @@ pub struct PresentSpeech {
     pub event_id: String,
     pub speaker_id: ActorId,
     pub speaker_label: String,
+    /// The `say` line's explicit addressee, if it had one — the conversation
+    /// partner the speaker's gaze tracks (`body.rs` L4, npc_bodies M3).
+    pub target_id: Option<ActorId>,
     pub text: String,
     pub speaker_position: Vec3,
     pub recipient_count: usize,
@@ -1050,7 +1053,9 @@ fn notify_speech_presented(handle: Option<&bridge::BridgeHandle>, event_id: &str
     });
 }
 
-fn speech_text_seconds(text: &str) -> f32 {
+/// How long a line's bubble stands — also the body's "still talking" deadline
+/// (`body.rs` L4 keys the talk gesticulation on the same clock, npc_bodies M3).
+pub(super) fn speech_text_seconds(text: &str) -> f32 {
     (2.0 + text.chars().count() as f32 / 15.0).clamp(3.0, 10.0)
 }
 
@@ -1104,6 +1109,7 @@ mod tests {
             event_id: format!("speech-{event_seq}"),
             speaker_id: ActorId(speaker_id.into()),
             speaker_label: speaker_id.into(),
+            target_id: None,
             text: text.into(),
             speaker_position: Vec3::new(event_seq as f32, 0.0, 0.0),
             recipient_count: 1,
@@ -1535,6 +1541,7 @@ mod tests {
             event_id: "speech-1".into(),
             speaker_id: ActorId("player".into()),
             speaker_label: "You".into(),
+            target_id: None,
             text: "Can anyone hear me?".into(),
             speaker_position: Vec3::ZERO,
             recipient_count: 3,

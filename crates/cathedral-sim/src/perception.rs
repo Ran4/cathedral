@@ -160,7 +160,7 @@ mod tests {
             control: Control::Llm,
             back_story: "test".into(),
             location_description: "test square".into(),
-            appearance_key: id.into(),
+            appearance: Default::default(),
             voice_key: None,
             position_m: position,
             facing_yaw,

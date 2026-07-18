@@ -50,7 +50,7 @@ fn character(
         control,
         back_story: "test".into(),
         location_description: "test square".into(),
-        appearance_key: name.to_lowercase(),
+        appearance: Default::default(),
         voice_key: match control {
             Control::Player => None,
             Control::Llm => Some(name.to_lowercase()),

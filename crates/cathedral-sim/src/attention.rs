@@ -794,7 +794,7 @@ mod tests {
             control,
             back_story: "test".into(),
             location_description: "the square".into(),
-            appearance_key: id.into(),
+            appearance: Default::default(),
             voice_key: None,
             position_m: Vec3::new(x, 0.0, 0.0),
             facing_yaw: 0.0,

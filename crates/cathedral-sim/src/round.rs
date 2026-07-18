@@ -1863,6 +1863,7 @@ struct Sale {
     item_display: String,
     price: u32,
     stock_left: u32,
+    vendor: ActorId,
     bought_id: ItemId,
     pitch: Vec3,
 }
@@ -2543,6 +2544,21 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
         match try_purchase(round, world, s, &buyer) {
             Some(sale) => {
                 sounds.push(("coin_clink", sale.pitch));
+                // Presentation-only seam (npc_bodies M2): lets the host play the
+                // vendor→buyer hand-over. Empty recipients on purpose — world
+                // events reach inboxes only through `deliver` at the action
+                // site, `flush_world_event` primes no scheduler handoff for
+                // this kind (`is_handoff_kind`), and no prompt ever mentions
+                // it: the market's zero-token discipline holds (`04` §5).
+                world.emit(DomainEvent::world_event(
+                    "stall_sale",
+                    sale.vendor.clone(),
+                    Some(buyer.clone()),
+                    Some(sale.bought_id.clone()),
+                    1,
+                    sale.pitch,
+                    Vec::new(),
+                ));
                 let carry = should_carry(round, &buyer, time.office, time.weekday);
                 if carry {
                     round.people.get_mut(&buyer).expect("buyer exists").food = None;
@@ -2707,7 +2723,7 @@ fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId)
         ));
     }
 
-    Some(Sale { stall_name, item_display, price, stock_left, bought_id, pitch })
+    Some(Sale { stall_name, item_display, price, stock_left, vendor, bought_id, pitch })
 }
 
 /// Move one unit of `template` from the vendor to the buyer: decrement the stock

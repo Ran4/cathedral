@@ -40,6 +40,10 @@ pub struct WorldClockState {
     pub weekday: Weekday,
     pub brightness: f64,
     pub scale: f64,
+    /// Real seconds per game day at 1× — with `scale`, what a wall-clock
+    /// second is worth in sim time (the chimney smoke back-dates puff births
+    /// through it).
+    pub seconds_per_day: f64,
 }
 
 impl Default for WorldClockState {
@@ -52,6 +56,7 @@ impl Default for WorldClockState {
             weekday: Weekday::Bellday,
             brightness: 1.0,
             scale: 1.0,
+            seconds_per_day: 3600.0,
         }
     }
 }
