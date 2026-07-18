@@ -66,8 +66,37 @@ Everything below is in `src/city/mod.rs` on `develop`; 199 tests green, both gua
   *Deviation:* the flight is non-colliding scenery like the props; only the landing platform
   (3.1 m up, above the walk band) gets a collider so a flying player can perch.
 
-Still open, tracked in `features/its_at_least_2011_now_baby.md`: plan-generator storey increase
-(a map revision), awnings/laundry, smoke, AutoExposure, volumetric fog.
+Still open, tracked in `features/its_at_least_2011_now_baby.md`: smoke, AutoExposure, volumetric
+fog. The plan-generator storey increase was deliberately declined (2026-07-18): the houses are
+high enough — the missing feel was the overhead-life layer below.
+
+## The overhead-life kit (2026-07-18)
+
+Five more batched-scenery passes in `src/city/mod.rs`, driven by two reference paintings (an
+inhabited two-arched bridge-house over a busy street; a courtyard with loggias, a stair, a
+hoist bucket and laundry, the cathedral above the roofline). All deterministic (stable_hash),
+all clash-probed against galleries/passages/arcades/jetties/signs/stalls, zero walk-band
+colliders, +11 Mesh3d entities city-wide:
+
+- **Laundry lines** (`build_laundry_lines`): 398 catenary ropes with 1-5 hanging cloth pieces,
+  street lines over 2-4.5 m lanes with 2+ storey flanks plus court lines between facing
+  parcels; anchors 3.6-5.2 m, cloth bottoms ≥ 1.95 m.
+- **Hoist gantries** (`build_hoist_gantries`): 133 projecting beams with brace, pulley and a
+  roped load (sack/bale/crate/pail/bare hook) — trade/storage facades, three bridge shells,
+  two street galleries; load bottoms ≥ 3.5 m over roads.
+- **Open railed balconies** (`build_open_balconies`): 32 bracket-carried decks with balusters
+  and a door, six stacked two-high, facing squares/courts/streets ≥ 5 m; only the deck slab
+  collides (perch precedent).
+- **Bridge-mouth arches** (`build_bridge_arches`): twin segmental voussoir rings + spandrels +
+  impost bands on every visible mouth of the Chain/Eel/malt-house underpasses (Tally is buried);
+  crown tucked 0.40 m under the shell base so the passage fascia stays hidden.
+- **Shopfront awnings** (`build_shopfront_awnings`): 166 sagging canvas sheets with side
+  battens over trade doors, wall edge 2.7-3.0 m, hem ≥ 2.1 m.
+
+The cloth got real material artwork: `assets/textures/ombreval_linen.png` and
+`ombreval_canvas.png`, generated with gpt-image-2 by `scripts/generate_cloth_textures.py`
+(seamless via offset-and-blend), sampled through position-anchored UV windows so no two pieces
+show the same stains.
 
 ## What was done earlier (the more-verticality branch)
 

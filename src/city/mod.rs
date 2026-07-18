@@ -93,6 +93,10 @@ struct CityMaterials {
     lantern_glass: Handle<StandardMaterial>,
     cloth_ochre: Handle<StandardMaterial>,
     cloth_russet: Handle<StandardMaterial>,
+    /// Washing on the lines: woven linen artwork, tinted per piece by vertex brush.
+    linen: Handle<StandardMaterial>,
+    /// Awning cloth: coarse patched hemp, dyed per sheet by vertex brush.
+    canvas: Handle<StandardMaterial>,
     water: Handle<StandardMaterial>,
     /// The wet lining you see when you lean over a curb.
     well_shaft: Handle<StandardMaterial>,
@@ -273,6 +277,7 @@ fn build_city(
         &mut collision_world,
     );
     build_covered_passages(&mut commands, &mut meshes, &city_materials, &plan);
+    build_bridge_arches(&mut commands, &mut meshes, &city_materials, &plan);
     build_square_arcades(&mut commands, &mut meshes, &city_materials, &plan, &doors);
     build_yard_stairs(
         &mut commands,
@@ -282,7 +287,18 @@ fn build_city(
         &doors,
         &mut collision_world,
     );
+    build_open_balconies(
+        &mut commands,
+        &mut meshes,
+        &city_materials,
+        &plan,
+        &doors,
+        &mut collision_world,
+    );
     build_street_props(&mut commands, &mut meshes, &city_materials, &plan, &doors);
+    build_shopfront_awnings(&mut commands, &mut meshes, &city_materials, &plan, &doors);
+    build_laundry_lines(&mut commands, &mut meshes, &city_materials, &plan);
+    build_hoist_gantries(&mut commands, &mut meshes, &city_materials, &plan, &doors);
     build_fortifications(
         &mut commands,
         &city_meshes,
@@ -461,6 +477,28 @@ fn create_materials(
         cloth_russet: materials.add(StandardMaterial {
             base_color: Color::srgb(0.30, 0.10, 0.07),
             perceptual_roughness: 0.92,
+            double_sided: true,
+            cull_mode: None,
+            ..default()
+        }),
+        linen: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.93, 0.92, 0.88),
+            base_color_texture: Some(load_repeating_texture(
+                asset_server,
+                "textures/ombreval_linen.png",
+            )),
+            perceptual_roughness: 0.94,
+            double_sided: true,
+            cull_mode: None,
+            ..default()
+        }),
+        canvas: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.92, 0.90, 0.86),
+            base_color_texture: Some(load_repeating_texture(
+                asset_server,
+                "textures/ombreval_canvas.png",
+            )),
+            perceptual_roughness: 0.96,
             double_sided: true,
             cull_mode: None,
             ..default()
@@ -3371,6 +3409,265 @@ fn build_covered_passages(
     );
 }
 
+/// The masonry face of every visible bridge-mouth, after reference image A:
+/// each open half of a mouth gets a segmental voussoir ring whose crown tucks
+/// just under the shell base and whose springings land on the spine pier and
+/// the abutment corner, spandrel infill up to the shell base line, and an
+/// impost band where the ring meets the pier. Face dressing only: no
+/// colliders, and nothing below the 3.2 m road clearance except the impost
+/// hugging the existing pier head.
+fn build_bridge_arches(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+) {
+    let mut limestone = MeshData::default();
+    let mut fieldstone = MeshData::default();
+
+    for (building_index, building) in plan.buildings.iter().enumerate() {
+        if !(building.use_name == "bridge" || building.id == "named_malt_house")
+            || building.polygon.len() != 4
+        {
+            continue;
+        }
+        let (base_y, _) = building_verticals(building);
+        let p: Vec<Vec2> = building
+            .polygon
+            .iter()
+            .map(|point| Vec2::from_array(*point))
+            .collect();
+        let edge_01 = p[0].distance(p[1]);
+        let edge_12 = p[1].distance(p[2]);
+        // The mouths are the two short edges — the same reading the passage
+        // dressing and the bridge piers stand on.
+        let (ends, width) = if edge_01 >= edge_12 {
+            ([(p[0] + p[3]) * 0.5, (p[1] + p[2]) * 0.5], edge_12)
+        } else {
+            ([(p[0] + p[1]) * 0.5, (p[2] + p[3]) * 0.5], edge_01)
+        };
+        let long_dir = (ends[1] - ends[0]).normalize_or_zero();
+        let across = Vec2::new(-long_dir.y, long_dir.x);
+
+        // The spine pier `build_bridge_supports` stands in every mouth: each
+        // half-mouth arch springs off its flank and the mouth corner.
+        let pier_half = 0.625;
+        let spring_y = 3.2;
+        let ring = 0.3;
+        // Intrados crown; the ring riding 0.01 + `ring` outside it tucks its
+        // extrados 0.09 under the shell base. The crown must stay below the
+        // passage fascia's underside (base_y - 0.39) so the board never pokes
+        // through the stone soffit.
+        let crown_y = base_y - 0.40;
+        let inner = pier_half - 0.01;
+        let outer = width * 0.5 - 0.05;
+        // A segmental circle needs more half-span than rise.
+        if outer - inner < 2.0 * (crown_y - spring_y) + 0.2 {
+            continue;
+        }
+
+        let mesh = if building.material == "limestone" {
+            &mut limestone
+        } else {
+            &mut fieldstone
+        };
+        mesh.set_brush(building_tint(building));
+
+        for (end_index, end) in ends.iter().enumerate() {
+            let outward = if end_index == 0 { -long_dir } else { long_dir };
+            let mut dressed = false;
+            for side in [-1.0_f32, 1.0] {
+                let u_dir = across * side;
+                // A half-mouth buried in a neighbour stays undressed: both
+                // Tally mouths, the Chain Bridge's north-west half and the
+                // Eel Bridge's south end vanish into adjoining buildings.
+                let buried = [0.05_f32, 0.25, 0.5, 0.75, 0.95].into_iter().any(|t| {
+                    let probe = *end + u_dir * (inner + (outer - inner) * t) + outward * 0.35;
+                    plan.buildings.iter().enumerate().any(|(index, other)| {
+                        index != building_index && point_in_polygon(probe, &other.polygon)
+                    })
+                });
+                if buried {
+                    continue;
+                }
+                add_mouth_arch(
+                    mesh, *end, u_dir, outward, inner, outer, spring_y, crown_y, ring, base_y,
+                );
+                dressed = true;
+            }
+            // A modest impost band wrapping the pier head at springing
+            // height; it alone may dip under 3.2 m, merged into the pier.
+            if dressed {
+                add_oriented_box(
+                    mesh,
+                    Vec3::new(end.x, spring_y - 0.09, end.y),
+                    Vec3::new(pier_half + 0.08, 0.09, 0.40),
+                    across,
+                );
+            }
+        }
+        mesh.reset_brush();
+    }
+
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.limestone,
+        limestone,
+        "Bridge mouth arches (limestone)",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.fieldstone,
+        fieldstone,
+        "Bridge mouth arches (fieldstone)",
+    );
+}
+
+/// One segmental arch dressing half a bridge-mouth, in mouth-local
+/// coordinates: `u_dir` runs from the mouth centre toward this half's outer
+/// corner, `out` faces the street. A spandrel panel hangs from the shell base
+/// with the opening cut under it, a proud voussoir ring follows the intrados,
+/// and a curved soffit closes the panel's thickness; everything stays within
+/// 0.3 m of the face plane.
+#[allow(clippy::too_many_arguments)]
+fn add_mouth_arch(
+    mesh: &mut MeshData,
+    origin: Vec2,
+    u_dir: Vec2,
+    out: Vec2,
+    inner: f32,
+    outer: f32,
+    spring_y: f32,
+    crown_y: f32,
+    ring: f32,
+    top_y: f32,
+) {
+    // The circle through both springings and the intrados crown.
+    let half_span = (outer - inner) * 0.5;
+    let rise = crown_y - spring_y;
+    let drop = (half_span * half_span - rise * rise) / (2.0 * rise);
+    let radius = drop + rise;
+    let center_u = (inner + outer) * 0.5;
+    let center_y = spring_y - drop;
+    let theta = (half_span / radius).asin();
+
+    let front = 0.12;
+    let back = -0.18;
+    let out3 = Vec3::new(out.x, 0.0, out.y);
+    let u_axis = Vec3::new(u_dir.x, 0.0, u_dir.y);
+    let point = |u: f32, y: f32, n: f32| {
+        let flat = origin + u_dir * u + out * n;
+        Vec3::new(flat.x, y, flat.y)
+    };
+    // `u_dir` flips per mouth half, so windings are fixed against the normal.
+    let quad_toward = |mesh: &mut MeshData,
+                       mut points: [Vec3; 4],
+                       mut uvs: [Vec2; 4],
+                       normal: Vec3,
+                       shade: f32| {
+        if (points[1] - points[0])
+            .cross(points[2] - points[0])
+            .dot(normal)
+            < 0.0
+        {
+            points.swap(1, 3);
+            uvs.swap(1, 3);
+        }
+        let first = mesh.positions.len() as u32;
+        for (point, uv) in points.into_iter().zip(uvs) {
+            mesh.vertex_shaded(point, normal, uv, shade);
+        }
+        mesh.indices
+            .extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
+    };
+
+    // Voussoir-sized steps; the soffit facets share their seams with the ring
+    // segments so the cut reads as one build.
+    let segments = ((2.0 * theta * radius / 0.55).round() as usize).clamp(10, 16);
+    let arc = |index: usize, r: f32| {
+        let angle = -theta + 2.0 * theta * index as f32 / segments as f32;
+        (center_u + r * angle.sin(), center_y + r * angle.cos())
+    };
+    for index in 0..segments {
+        let (u0, y0) = arc(index, radius);
+        let (u1, y1) = arc(index + 1, radius);
+        // Spandrel infill from the opening up to the shell base line.
+        for (n, normal, shade) in [(front, out3, 1.0), (back, -out3, 0.85)] {
+            quad_toward(
+                mesh,
+                [
+                    point(u0, y0, n),
+                    point(u1, y1, n),
+                    point(u1, top_y, n),
+                    point(u0, top_y, n),
+                ],
+                [
+                    Vec2::new(u0 / 3.5, y0 / 3.5),
+                    Vec2::new(u1 / 3.5, y1 / 3.5),
+                    Vec2::new(u1 / 3.5, top_y / 3.5),
+                    Vec2::new(u0 / 3.5, top_y / 3.5),
+                ],
+                normal,
+                shade,
+            );
+        }
+        // Soffit closing the panel thickness along the intrados.
+        let mid = -theta + 2.0 * theta * (index as f32 + 0.5) / segments as f32;
+        quad_toward(
+            mesh,
+            [
+                point(u0, y0, front),
+                point(u1, y1, front),
+                point(u1, y1, back),
+                point(u0, y0, back),
+            ],
+            [
+                Vec2::new(u0 / 3.5, 0.0),
+                Vec2::new(u1 / 3.5, 0.0),
+                Vec2::new(u1 / 3.5, (front - back) / 3.5),
+                Vec2::new(u0 / 3.5, (front - back) / 3.5),
+            ],
+            -(u_axis * mid.sin() + Vec3::Y * mid.cos()),
+            0.55,
+        );
+        // The voussoir band, proud of the panel, a whisker off the soffit.
+        let band = radius + 0.01 + ring * 0.5;
+        let (v0, w0) = arc(index, band);
+        let (v1, w1) = arc(index + 1, band);
+        add_face_member(
+            mesh,
+            origin,
+            u_dir,
+            out,
+            Vec2::new(v0, w0),
+            Vec2::new(v1, w1),
+            ring * 0.5,
+            front + 0.14,
+            false,
+        );
+    }
+    // The outer edge of the panel, visible where no abutment stands flush.
+    quad_toward(
+        mesh,
+        [
+            point(outer, spring_y, front),
+            point(outer, top_y, front),
+            point(outer, top_y, back),
+            point(outer, spring_y, back),
+        ],
+        [
+            Vec2::new(spring_y / 3.5, 0.0),
+            Vec2::new(top_y / 3.5, 0.0),
+            Vec2::new(top_y / 3.5, (front - back) / 3.5),
+            Vec2::new(spring_y / 3.5, (front - back) / 3.5),
+        ],
+        u_axis,
+        1.0,
+    );
+}
+
 fn build_ropewalk(commands: &mut Commands, meshes: &CityMeshes, materials: &CityMaterials) {
     for z in (232..=288).step_by(8) {
         spawn_box_named(
@@ -3854,6 +4151,284 @@ fn build_street_props(
     info!("scattered {placed} doorway prop clusters");
 }
 
+/// Sloped canvas awnings over a quarter of the trade-house doors — the
+/// street-level cloth of reference image A. Each is a sagging 3x3 vertex
+/// sheet pitched off the facade with a batten or two under its side hems,
+/// on the hemp canvas artwork with a per-awning dye brush. Two
+/// city-wide batches, no colliders and never a ground post: the outer hem
+/// rides at 2.1 m or higher, above the walk band, so the baked navigation
+/// never hears about them.
+fn build_shopfront_awnings(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+    door_edges: &HashMap<String, usize>,
+) {
+    let squares: Vec<&Site> = plan
+        .sites
+        .iter()
+        .filter(|site| site.kind == "square")
+        .collect();
+    // The overhead keep-outs the laundry lines use: the bridge shells and the
+    // malt house with swing room, plus every street-gallery candidate spot —
+    // an over-approximation (candidates whose seat probes failed never got a
+    // gallery) that only thins the awnings near those streets.
+    let shell_boxes: Vec<(Vec2, Vec2)> = plan
+        .buildings
+        .iter()
+        .filter(|building| building_verticals(building).0 > 0.1)
+        .map(|building| {
+            let mut min = Vec2::splat(f32::INFINITY);
+            let mut max = Vec2::splat(f32::NEG_INFINITY);
+            for point in &building.polygon {
+                min = min.min(Vec2::from_array(*point));
+                max = max.max(Vec2::from_array(*point));
+            }
+            (min - Vec2::splat(1.2), max + Vec2::splat(1.2))
+        })
+        .collect();
+    let gallery_spots: Vec<(Vec2, f32)> = plan
+        .roads
+        .iter()
+        .filter(|road| (2.0..=5.5).contains(&road.width_m))
+        .flat_map(|road| {
+            road.points
+                .windows(2)
+                .enumerate()
+                .filter_map(move |(segment_index, pair)| {
+                    let a = Vec2::from_array(pair[0]);
+                    let b = Vec2::from_array(pair[1]);
+                    if a.distance(b) < 12.0 {
+                        return None;
+                    }
+                    let hash = stable_hash(&format!("gallery-{}-{segment_index}", road.id));
+                    if hash % 2 != 0 {
+                        return None;
+                    }
+                    let t = 0.3 + (hash % 41) as f32 / 100.0;
+                    Some((a.lerp(b, t), road.width_m * 0.5 + 4.2))
+                })
+        })
+        .collect();
+    let overhead_blocked = |point: Vec2| {
+        shell_boxes.iter().any(|(min, max)| {
+            point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y
+        }) || gallery_spots
+            .iter()
+            .any(|(center, reach)| center.distance_squared(point) < reach * reach)
+    };
+    // Market stalls raise their own cloth to 2.5 m: no awning over a stall.
+    let fixture_near = |point: Vec2| {
+        plan.fixtures.iter().any(|fixture| {
+            let angle = fixture.angle_deg.to_radians();
+            let delta = point - Vec2::from_array(fixture.position);
+            let local_x = delta.x * angle.cos() - delta.y * angle.sin();
+            let local_z = delta.x * angle.sin() + delta.y * angle.cos();
+            local_x.abs() <= fixture.size[0] * 0.5 + 0.6
+                && local_z.abs() <= fixture.size[1] * 0.5 + 0.6
+        })
+    };
+
+    let mut canvas = MeshData::default();
+    let mut battens = MeshData::default();
+    let mut stretched = 0;
+
+    for building in &plan.buildings {
+        if building.use_name != "trade" {
+            continue;
+        }
+        let Some(&edge_index) = door_edges.get(&building.id) else {
+            continue;
+        };
+        let hash = stable_hash(&format!("awning-{}", building.id));
+        if hash % 4 != 0 {
+            continue;
+        }
+        let (base_y, eave_y) = building_verticals(building);
+        if base_y > 0.1 {
+            continue;
+        }
+        let polygon = &building.polygon;
+        let a = Vec2::from_array(polygon[edge_index]);
+        let b = Vec2::from_array(polygon[(edge_index + 1) % polygon.len()]);
+        let edge = b - a;
+        let length = edge.length();
+        // Shorter door edges never rendered their door module.
+        if length < 3.2 {
+            continue;
+        }
+        // A hanging trade sign's board swings exactly through the canvas:
+        // mirror its gate and let the sign keep those doors.
+        let sign_hash = stable_hash(&building.id).rotate_left(9);
+        if length >= 4.5 && sign_hash % 3 != 0 && sign_hash % 8 == 0 {
+            continue;
+        }
+        // A first-floor open balcony over the door drops its brackets into
+        // the same air: mirror that gate too (over-approximated — candidates
+        // whose probes failed never hung a deck).
+        if length >= 4.5
+            && building.levels >= 2
+            && stable_hash(&format!("balcony-{}-{edge_index}", building.id)) % 10 == 0
+        {
+            continue;
+        }
+        let direction = edge / length;
+        let orientation = plan::signed_area(polygon).signum();
+        let mut normal = Vec2::new(edge.y, -edge.x).normalize() * orientation;
+        // `plan` polygons wind either way; the canvas must pitch outward.
+        if point_in_polygon(a + direction * (length * 0.5) + normal * 0.5, polygon) {
+            normal = -normal;
+        }
+        let door = a + direction * (length * 0.5);
+        // Square-fronting facades carry arcade pentices over the walk.
+        if eave_y >= 6.0
+            && length >= 4.5
+            && squares
+                .iter()
+                .any(|square| point_in_polygon(door + normal * 1.6, &square.polygon))
+        {
+            continue;
+        }
+
+        let half_width = (0.9 + ((hash >> 3) % 61) as f32 / 100.0).min(length * 0.5 - 0.7);
+        let depth = 0.9 + ((hash >> 9) % 51) as f32 / 100.0;
+        // Wall edge above the 2.64 m door lintel; outer hem above the walk
+        // band top even before the pitch is counted.
+        let wall_y = 2.7 + ((hash >> 14) % 31) as f32 / 100.0;
+        let outer_y = (wall_y - 0.5 - ((hash >> 19) % 21) as f32 / 100.0).clamp(2.1, 2.4);
+        if overhead_blocked(door)
+            || overhead_blocked(door + normal * (0.16 + depth))
+            || fixture_near(door + normal * (0.16 + depth))
+        {
+            continue;
+        }
+
+        let dir3 = Vec3::new(direction.x, 0.0, direction.y);
+        let out3 = Vec3::new(normal.x, 0.0, normal.y);
+        let door3 = Vec3::new(door.x, 0.0, door.y);
+        let sag = 0.06 + ((hash >> 24) % 7) as f32 / 100.0;
+        let slope = out3 * depth + Vec3::Y * (outer_y - wall_y);
+        let mut sheet_normal = slope.cross(dir3).normalize_or(Vec3::Y);
+        if sheet_normal.y < 0.0 {
+            sheet_normal = -sheet_normal;
+        }
+        canvas.set_brush(awning_tint(hash.rotate_left(13)));
+        // Seamless tile: a door-anchored sample window keeps the repair seams
+        // from repeating identically on every awning.
+        let uv_shift = Vec2::new((door3.x * 0.31).fract(), (door3.z * 0.23).fract());
+        let first = canvas.positions.len() as u32;
+        for row in 0..3 {
+            let t = row as f32 * 0.5;
+            // The mid row bows below the pitch line: cloth, not board. The
+            // wall row starts 0.16 out, proud of the deepest framing member.
+            let y = wall_y + (outer_y - wall_y) * t - sag * 4.0 * t * (1.0 - t);
+            for column in 0..3 {
+                canvas.vertex(
+                    door3 + dir3 * ((column as f32 - 1.0) * half_width)
+                        + out3 * (0.16 + depth * t)
+                        + Vec3::Y * y,
+                    sheet_normal,
+                    Vec2::new(column as f32 * 0.5, t) + uv_shift,
+                );
+            }
+        }
+        for row in 0..2u32 {
+            for column in 0..2u32 {
+                let corner = first + row * 3 + column;
+                canvas.indices.extend_from_slice(&[
+                    corner,
+                    corner + 3,
+                    corner + 4,
+                    corner,
+                    corner + 4,
+                    corner + 1,
+                ]);
+            }
+        }
+        canvas.reset_brush();
+
+        // One or two battens under the sloping side hems, wall to hem edge.
+        let single = (hash >> 27) % 3 == 0;
+        for (spar, side) in [-1.0_f32, 1.0].into_iter().enumerate() {
+            if single && spar as u32 != (hash >> 29) % 2 {
+                continue;
+            }
+            let flank = dir3 * (side * (half_width - 0.06));
+            add_awning_batten(
+                &mut battens,
+                door3 + flank + out3 * 0.14 + Vec3::Y * (wall_y - 0.045),
+                door3 + flank + out3 * (0.16 + depth) + Vec3::Y * (outer_y - 0.045),
+                0.03,
+            );
+        }
+        stretched += 1;
+    }
+
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.canvas,
+        canvas,
+        "Shopfront awnings",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.timber,
+        battens,
+        "Shopfront awning battens",
+    );
+    info!("stretched {stretched} shopfront awnings");
+}
+
+/// Mostly undyed canvas, with the odd faded madder, dull ochre or grey-green
+/// sheet — multipliers over the hemp canvas artwork.
+fn awning_tint(hash: u32) -> [f32; 3] {
+    match hash % 8 {
+        0 | 1 => [0.62, 0.33, 0.27],
+        2 => [0.72, 0.56, 0.30],
+        3 => [0.52, 0.58, 0.50],
+        _ => {
+            let value = 0.88 + ((hash >> 16) % 13) as f32 / 100.0;
+            [value * 1.02, value, value * 0.92]
+        }
+    }
+}
+
+/// A square-sectioned spar between two points — the batten under an awning's
+/// side hem. Four long faces and no caps: the 6 cm section never shows its
+/// ends.
+fn add_awning_batten(mesh: &mut MeshData, from: Vec3, to: Vec3, half: f32) {
+    let axis = (to - from).normalize_or_zero();
+    if axis == Vec3::ZERO {
+        return;
+    }
+    let side = axis.cross(Vec3::Y).normalize_or(Vec3::X);
+    let lift = side.cross(axis).normalize_or(Vec3::Y);
+    let length = from.distance(to);
+    for (spread, face) in [(side, lift), (lift, side)] {
+        for flip in [-1.0, 1.0] {
+            let offset = face * (half * flip);
+            mesh.quad(
+                [
+                    from + offset - spread * half,
+                    to + offset - spread * half,
+                    to + offset + spread * half,
+                    from + offset + spread * half,
+                ],
+                face * flip,
+                [
+                    Vec2::ZERO,
+                    Vec2::new(length / 3.5, 0.0),
+                    Vec2::new(length / 3.5, half / 1.75),
+                    Vec2::new(0.0, half / 1.75),
+                ],
+            );
+        }
+    }
+}
+
 /// External timber stairs up to first-floor balconies — the left edge of
 /// `the_bellstand_001.png` — on a hash-picked tenth of the taller ordinary
 /// houses, and only where the flight provably stands in a yard: clear of every
@@ -4121,6 +4696,1404 @@ fn add_yard_stair(
         Vec3::new(1.84, 0.11, 1.44),
         (-direction.y).atan2(direction.x),
     );
+}
+
+/// Open railed balconies — the loggia storeys of the reference courtyard — on
+/// the facades that front a court, a square or one of the wider streets (never
+/// the narrow lanes: the jetties own those). A hash-picked tenth of the
+/// eligible facades carries one; on the 3–4 storey hosts a further minority
+/// stacks two, floor over floor. The deck hangs on angled wall brackets —
+/// never ground posts, so the street below stays exactly as the baked
+/// navigation knows it — and, like the yard-stair landing, only the deck slab
+/// collides, far above the walk band, so a flying player can perch on it.
+fn build_open_balconies(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+    door_edges: &HashMap<String, usize>,
+    collision_world: &mut CollisionWorld,
+) {
+    let bounds: Vec<(Vec2, Vec2)> = plan
+        .buildings
+        .iter()
+        .map(|building| {
+            let mut min = Vec2::splat(f32::INFINITY);
+            let mut max = Vec2::splat(f32::NEG_INFINITY);
+            for point in &building.polygon {
+                min = min.min(Vec2::from_array(*point));
+                max = max.max(Vec2::from_array(*point));
+            }
+            (min, max)
+        })
+        .collect();
+    let building_at = |point: Vec2, skip: usize| {
+        plan.buildings.iter().enumerate().any(|(index, other)| {
+            index != skip
+                && point.x >= bounds[index].0.x
+                && point.y >= bounds[index].0.y
+                && point.x <= bounds[index].1.x
+                && point.y <= bounds[index].1.y
+                && point_in_polygon(point, &other.polygon)
+        })
+    };
+    // The overhead keep-outs the laundry lines use: the bridge shells and the
+    // malt house with swing room, plus every street-gallery candidate spot.
+    let shell_boxes: Vec<(Vec2, Vec2)> = plan
+        .buildings
+        .iter()
+        .enumerate()
+        .filter(|(_, building)| building_verticals(building).0 > 0.1)
+        .map(|(index, _)| {
+            (
+                bounds[index].0 - Vec2::splat(1.2),
+                bounds[index].1 + Vec2::splat(1.2),
+            )
+        })
+        .collect();
+    let gallery_spots: Vec<(Vec2, f32)> = plan
+        .roads
+        .iter()
+        .filter(|road| (2.0..=5.5).contains(&road.width_m))
+        .flat_map(|road| {
+            road.points
+                .windows(2)
+                .enumerate()
+                .filter_map(move |(segment_index, pair)| {
+                    let a = Vec2::from_array(pair[0]);
+                    let b = Vec2::from_array(pair[1]);
+                    if a.distance(b) < 12.0 {
+                        return None;
+                    }
+                    let hash = stable_hash(&format!("gallery-{}-{segment_index}", road.id));
+                    if hash % 2 != 0 {
+                        return None;
+                    }
+                    let t = 0.3 + (hash % 41) as f32 / 100.0;
+                    Some((a.lerp(b, t), road.width_m * 0.5 + 4.2))
+                })
+        })
+        .collect();
+    let overhead_blocked = |point: Vec2| {
+        shell_boxes.iter().any(|(min, max)| {
+            point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y
+        }) || gallery_spots
+            .iter()
+            .any(|(center, reach)| center.distance_squared(point) < reach * reach)
+    };
+    let fixture_near = |point: Vec2| {
+        plan.fixtures.iter().any(|fixture| {
+            let angle = fixture.angle_deg.to_radians();
+            let delta = point - Vec2::from_array(fixture.position);
+            let local_x = delta.x * angle.cos() - delta.y * angle.sin();
+            let local_z = delta.x * angle.sin() + delta.y * angle.cos();
+            local_x.abs() <= fixture.size[0] * 0.5 + 0.6
+                && local_z.abs() <= fixture.size[1] * 0.5 + 0.6
+        })
+    };
+    // The open ground a balcony wants to overlook: the squares, the courts and
+    // the yards, or a street wide enough that the jetties leave it alone.
+    let open_sites: Vec<&Site> = plan
+        .sites
+        .iter()
+        .filter(|site| matches!(site.kind.as_str(), "square" | "court" | "yard"))
+        .collect();
+    let squares: Vec<&Site> = plan
+        .sites
+        .iter()
+        .filter(|site| site.kind == "square")
+        .collect();
+    let wide_street_at = |probe: Vec2| {
+        plan.roads.iter().any(|road| {
+            road.width_m >= 5.0
+                && road.points.windows(2).any(|pair| {
+                    segment_distance_squared(
+                        probe,
+                        Vec2::from_array(pair[0]),
+                        Vec2::from_array(pair[1]),
+                    ) < (road.width_m * 0.5).powi(2)
+                })
+        })
+    };
+
+    let mut timber = MeshData::default();
+    // Decks already hung this pass, per floor, as facade-aligned rectangles.
+    let mut placed: Vec<(u8, Vec2, Vec2, f32, f32)> = Vec::new();
+    let mut hung = 0;
+
+    for (building_index, building) in plan.buildings.iter().enumerate() {
+        let (base_y, eave_y) = building_verticals(building);
+        if building.named
+            || building.levels < 2
+            || base_y > 0.1
+            || matches!(
+                building.use_name.as_str(),
+                "bridge" | "ecclesiastical" | "fortification"
+            )
+            // The yard-stair gate: those buildings may carry the flight and
+            // its railed landing on any of their facades.
+            || stable_hash(&building.id).rotate_left(3).is_multiple_of(10)
+        {
+            continue;
+        }
+        let door_edge = door_edges.get(&building.id).copied();
+        let orientation = plan::signed_area(&building.polygon).signum();
+        let edge_count = building.polygon.len();
+        for edge_index in 0..edge_count {
+            let hash = stable_hash(&format!("balcony-{}-{edge_index}", building.id));
+            if hash % 10 != 0 {
+                continue;
+            }
+            let a2 = Vec2::from_array(building.polygon[edge_index]);
+            let b2 = Vec2::from_array(building.polygon[(edge_index + 1) % edge_count]);
+            let edge = b2 - a2;
+            let length = edge.length();
+            if length < 4.5 {
+                continue;
+            }
+            let direction = edge / length;
+            let mut normal2 = Vec2::new(edge.y, -edge.x).normalize() * orientation;
+            // `plan` polygons wind either way; the deck must hang outward.
+            if point_in_polygon(
+                a2 + direction * (length * 0.5) + normal2 * 0.5,
+                &building.polygon,
+            ) {
+                normal2 = -normal2;
+            }
+            // A door edge is welcome — the reference hangs its balconies over
+            // doorways — unless the trade-house hoist gantry may rig it, with
+            // a load swinging right through the deck's air: mirror that gate.
+            if door_edge == Some(edge_index)
+                && matches!(building.use_name.as_str(), "trade" | "storage")
+                && length >= 5.0
+                && stable_hash(&format!("gantry-{}", building.id)) % 8 == 0
+            {
+                continue;
+            }
+            let mid = a2 + direction * (length * 0.5);
+            let fronts_open_ground = open_sites.iter().any(|site| {
+                [1.2_f32, 2.4]
+                    .into_iter()
+                    .any(|out| point_in_polygon(mid + normal2 * out, &site.polygon))
+            }) || [1.5_f32, 3.0]
+                .into_iter()
+                .any(|out| wide_street_at(mid + normal2 * out));
+            if !fronts_open_ground {
+                continue;
+            }
+            // Square-fronting facades carry arcade pentices (top 3.78 m) at
+            // exactly the first storey line: those keep the upper floor only.
+            let arcade_edge = eave_y >= 6.0
+                && squares
+                    .iter()
+                    .any(|square| point_in_polygon(mid + normal2 * 1.6, &square.polygon));
+            let stacked = (3..=4).contains(&building.levels) && (hash >> 17) % 3 == 0;
+            let mut floors: Vec<u8> = Vec::new();
+            if !arcade_edge {
+                floors.push(1);
+            }
+            if building.levels >= 3 && (stacked || arcade_edge) {
+                floors.push(2);
+            }
+            if floors.is_empty() {
+                continue;
+            }
+
+            let deck_len = (2.5 + ((hash >> 7) % 31) as f32 * 0.1).min(length - 2.0);
+            let deck_out = 1.0 + ((hash >> 3) % 4) as f32 * 0.1;
+            let lo = 1.0 + deck_len * 0.5;
+            let hi = length - 1.0 - deck_len * 0.5;
+            let frac = ((hash >> 11) % 41) as f32 / 40.0;
+            // A hanging trade sign (arm out to 1.05 m at 3.35 m) would spear a
+            // deck hung right over its door: mirror the sign gate and step to
+            // one flank of a 1.4 m door zone when it fires.
+            let sign_hash = stable_hash(&building.id).rotate_left(9);
+            let centre_along = if door_edge == Some(edge_index)
+                && sign_hash % 3 != 0
+                && sign_hash % 8 == 0
+            {
+                let pick = |window_lo: f32, window_hi: f32| {
+                    (window_hi >= window_lo).then(|| window_lo + (window_hi - window_lo) * frac)
+                };
+                let left = pick(lo, length * 0.5 - 1.4 - deck_len * 0.5);
+                let right = pick(length * 0.5 + 1.4 + deck_len * 0.5, hi);
+                let choice = if (hash >> 15) % 2 == 0 {
+                    left.or(right)
+                } else {
+                    right.or(left)
+                };
+                match choice {
+                    Some(along) => along,
+                    None => continue,
+                }
+            } else {
+                lo + (hi - lo) * frac
+            };
+            let centre2 = a2 + direction * centre_along;
+
+            for &floor in &floors {
+                let deck_top = BUILDING_FLOOR_HEIGHT * floor as f32 + 0.10;
+                // A jettied facade steps out under the deck: hang it flush
+                // outside the band face at its height and let the brackets
+                // reach back to the recessed wall a storey below.
+                let face_deck = jetty_face_offset(building, deck_top);
+                let face_low = jetty_face_offset(building, deck_top - 0.95);
+                // The deck volume wants open air: clear of every other
+                // footprint, our own concave folds, the overhead shells, the
+                // gallery spots and the ground fixtures below.
+                let deck_clear = [-0.5_f32, -0.25, 0.0, 0.25, 0.5].into_iter().all(|s| {
+                    [0.4_f32, deck_out + 0.2].into_iter().all(|out| {
+                        let probe =
+                            centre2 + direction * (s * deck_len) + normal2 * (face_deck + out);
+                        !building_at(probe, building_index)
+                            && !point_in_polygon(probe, &building.polygon)
+                            && !overhead_blocked(probe)
+                            && !fixture_near(probe)
+                    })
+                });
+                // No other deck may share this air (a stacked pair is fine:
+                // its floors sit a full storey apart).
+                let deck_centre = centre2 + normal2 * (face_deck + deck_out * 0.5);
+                let occupied = [-0.5_f32, -0.25, 0.0, 0.25, 0.5].into_iter().any(|s| {
+                    let probe = deck_centre + direction * (s * deck_len);
+                    placed
+                        .iter()
+                        .any(|(other_floor, centre, dir, half_along, half_out)| {
+                            *other_floor == floor && {
+                                let local = probe - *centre;
+                                local.dot(*dir).abs() < half_along + 0.4
+                                    && local.dot(Vec2::new(-dir.y, dir.x)).abs() < half_out + 0.4
+                            }
+                        })
+                });
+                if !deck_clear || occupied {
+                    continue;
+                }
+                add_open_balcony(
+                    &mut timber,
+                    collision_world,
+                    centre2 + normal2 * face_deck,
+                    direction,
+                    normal2,
+                    deck_len,
+                    deck_out,
+                    deck_top,
+                    face_deck - face_low,
+                    building_tint(building),
+                    hash,
+                );
+                placed.push((floor, deck_centre, direction, deck_len * 0.5, deck_out * 0.5));
+                hung += 1;
+            }
+        }
+    }
+
+    spawn_batch(commands, meshes, &materials.timber, timber, "Open balconies");
+    info!("hung {hung} open balconies");
+}
+
+/// One open balcony: the bracket-carried deck slab, corner posts, a handrail
+/// with balusters round the three open sides, and the dark door it serves.
+/// `centre2` sits on the wall face at deck height; on a jettied facade the
+/// brackets reach `bracket_setback` further back to seat on the wall below.
+/// Only the slab collides — the yard-stair landing precedent — a perch far
+/// above the walk band.
+#[allow(clippy::too_many_arguments)]
+fn add_open_balcony(
+    timber: &mut MeshData,
+    collision_world: &mut CollisionWorld,
+    centre2: Vec2,
+    direction: Vec2,
+    normal2: Vec2,
+    deck_len: f32,
+    deck_out: f32,
+    deck_top: f32,
+    bracket_setback: f32,
+    tint: [f32; 3],
+    hash: u32,
+) {
+    let at = |along: f32, out: f32| centre2 + direction * along + normal2 * out;
+    let half_len = deck_len * 0.5;
+    timber.set_brush(tint);
+
+    let deck = at(0.0, deck_out * 0.5 + 0.01);
+    add_oriented_box(
+        timber,
+        Vec3::new(deck.x, deck_top - 0.05, deck.y),
+        Vec3::new(half_len, 0.05, deck_out * 0.5),
+        direction,
+    );
+    // Angled brackets out of the wall carry it; their wall feet stop at
+    // deck−0.95, well above head height.
+    let brackets = ((deck_len / 1.6).floor() as usize).clamp(2, 4);
+    for index in 0..brackets {
+        let along = (index as f32 / (brackets - 1) as f32 - 0.5) * (deck_len - 0.5);
+        add_face_member(
+            timber,
+            at(along, 0.0),
+            normal2,
+            direction,
+            Vec2::new(-bracket_setback - 0.06, deck_top - 0.95),
+            Vec2::new(deck_out - 0.16, deck_top - 0.12),
+            0.055,
+            0.06,
+            true,
+        );
+    }
+
+    // Corner posts, the rail at hand height, and the balusters beneath it.
+    let rail_y = deck_top + 0.99;
+    for side in [-1.0_f32, 1.0] {
+        let post = at(side * (half_len - 0.05), deck_out - 0.06);
+        add_oriented_box(
+            timber,
+            Vec3::new(post.x, deck_top + 0.5, post.y),
+            Vec3::new(0.045, 0.5, 0.045),
+            direction,
+        );
+    }
+    let outer = at(0.0, deck_out - 0.06);
+    add_oriented_box(
+        timber,
+        Vec3::new(outer.x, rail_y, outer.y),
+        Vec3::new(half_len, 0.032, 0.05),
+        direction,
+    );
+    let end_run = (deck_out - 0.08) * 0.5;
+    for side in [-1.0_f32, 1.0] {
+        let end = at(side * (half_len - 0.05), end_run + 0.02);
+        add_oriented_box(
+            timber,
+            Vec3::new(end.x, rail_y, end.y),
+            Vec3::new(0.045, 0.032, end_run),
+            direction,
+        );
+        let foot = at(side * (half_len - 0.05), deck_out * 0.5);
+        add_oriented_box(
+            timber,
+            Vec3::new(foot.x, deck_top + 0.48, foot.y),
+            Vec3::new(0.028, 0.48, 0.028),
+            direction,
+        );
+    }
+    let balusters = ((deck_len / 0.55).floor() as usize).max(3);
+    for index in 0..balusters {
+        let along = (index as f32 / (balusters - 1) as f32 - 0.5) * (deck_len - 0.55);
+        let foot = at(along, deck_out - 0.06);
+        add_oriented_box(
+            timber,
+            Vec3::new(foot.x, deck_top + 0.48, foot.y),
+            Vec3::new(0.028, 0.48, 0.028),
+            direction,
+        );
+    }
+
+    // The dark door the balcony exists for, slid a little off the middle.
+    let door_along = (((hash >> 21) % 21) as f32 / 20.0 - 0.5) * (deck_len - 1.6).max(0.0);
+    let door = at(door_along, 0.055);
+    timber.set_brush([tint[0] * 0.30, tint[1] * 0.28, tint[2] * 0.26]);
+    add_oriented_box(
+        timber,
+        Vec3::new(door.x, deck_top + 1.02, door.y),
+        Vec3::new(0.50, 0.98, 0.045),
+        direction,
+    );
+    timber.reset_brush();
+
+    // Only the deck slab carries collision, entirely above the walk band.
+    add_rotated_box_collider_at(
+        collision_world,
+        Vec3::new(deck.x, deck_top - 0.05, deck.y),
+        Vec3::new(deck_len, 0.10, deck_out),
+        (-direction.y).atan2(direction.x),
+    );
+}
+
+/// Washing strung high over the narrow streets and back courts: a sagging
+/// rope between two flanking parcels with a few cloth pieces pegged over it.
+/// Everything lands in two city-wide batches and nothing collides — the lines
+/// live far above the walk band, so the baked navigation never hears about
+/// them.
+fn build_laundry_lines(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+) {
+    let bounds: Vec<(Vec2, Vec2)> = plan
+        .buildings
+        .iter()
+        .map(|building| {
+            let mut min = Vec2::splat(f32::INFINITY);
+            let mut max = Vec2::splat(f32::NEG_INFINITY);
+            for point in &building.polygon {
+                min = min.min(Vec2::from_array(*point));
+                max = max.max(Vec2::from_array(*point));
+            }
+            (min, max)
+        })
+        .collect();
+    let inside = |point: Vec2, index: usize, building: &Building| {
+        point.x >= bounds[index].0.x
+            && point.y >= bounds[index].0.y
+            && point.x <= bounds[index].1.x
+            && point.y <= bounds[index].1.y
+            && point_in_polygon(point, &building.polygon)
+    };
+    // A rope wants an ordinary dwelling wall on both sides: two storeys or
+    // more, standing on the ground, never a church, tower or overhead shell.
+    let ordinary = |building: &Building| {
+        building.levels >= 2
+            && !matches!(
+                building.use_name.as_str(),
+                "bridge" | "ecclesiastical" | "fortification"
+            )
+            && building_verticals(building).0 <= 0.1
+    };
+    let flank_at = |point: Vec2| -> Option<&Building> {
+        plan.buildings
+            .iter()
+            .enumerate()
+            .find(|(index, building)| ordinary(building) && inside(point, *index, building))
+            .map(|(_, building)| building)
+    };
+    let any_building_at = |point: Vec2, skip: usize| {
+        plan.buildings
+            .iter()
+            .enumerate()
+            .any(|(index, building)| index != skip && inside(point, index, building))
+    };
+
+    // Keep-out blobs for what already hangs over the streets: the bridge
+    // houses and the malt house, plus every street-gallery candidate — the
+    // same hash formula `build_street_galleries` draws from. Candidates whose
+    // seat probes failed never got a gallery, so this over-approximates; that
+    // only thins the washing near those spots.
+    let shell_boxes: Vec<(Vec2, Vec2)> = plan
+        .buildings
+        .iter()
+        .enumerate()
+        .filter(|(_, building)| building_verticals(building).0 > 0.1)
+        .map(|(index, _)| {
+            (
+                bounds[index].0 - Vec2::splat(1.2),
+                bounds[index].1 + Vec2::splat(1.2),
+            )
+        })
+        .collect();
+    let gallery_spots: Vec<(Vec2, f32)> = plan
+        .roads
+        .iter()
+        .filter(|road| (2.0..=5.5).contains(&road.width_m))
+        .flat_map(|road| {
+            road.points
+                .windows(2)
+                .enumerate()
+                .filter_map(move |(segment_index, pair)| {
+                    let a = Vec2::from_array(pair[0]);
+                    let b = Vec2::from_array(pair[1]);
+                    if a.distance(b) < 12.0 {
+                        return None;
+                    }
+                    let hash = stable_hash(&format!("gallery-{}-{segment_index}", road.id));
+                    if hash % 2 != 0 {
+                        return None;
+                    }
+                    let t = 0.3 + (hash % 41) as f32 / 100.0;
+                    Some((a.lerp(b, t), road.width_m * 0.5 + 4.2))
+                })
+        })
+        .collect();
+    let overhead_blocked = |point: Vec2| {
+        shell_boxes.iter().any(|(min, max)| {
+            point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y
+        }) || gallery_spots
+            .iter()
+            .any(|(center, reach)| center.distance_squared(point) < reach * reach)
+    };
+    // Mirror of the `jetty_bands` gate. Rope anchors top out at 5.2 m — inside
+    // the first jettied band — so a jettied flank leans at most one step in.
+    let jetty_reach = |building: &Building| -> f32 {
+        if !building.named
+            && building.polygon.len() == 4
+            && polygon_is_convex(&building.polygon)
+            && matches!(wall_kind(&building.material), WallKind::HalfTimber)
+            && stable_hash(&building.id) % 10 < 8
+        {
+            JETTY_STEP
+        } else {
+            0.0
+        }
+    };
+
+    let squares: Vec<&Site> = plan
+        .sites
+        .iter()
+        .filter(|site| site.kind == "square")
+        .collect();
+    let near_road = |point: Vec2| {
+        plan.roads.iter().any(|road| {
+            let margin = road.width_m * 0.5 + 0.6;
+            road.points.windows(2).any(|pair| {
+                segment_distance_squared(
+                    point,
+                    Vec2::from_array(pair[0]),
+                    Vec2::from_array(pair[1]),
+                ) < margin * margin
+            })
+        })
+    };
+    let near_wall = |point: Vec2| {
+        plan.wall_polygon_xz
+            .windows(2)
+            .chain(std::iter::once(
+                &[
+                    *plan.wall_polygon_xz.last().unwrap(),
+                    plan.wall_polygon_xz[0],
+                ][..],
+            ))
+            .any(|pair| {
+                segment_distance_squared(
+                    point,
+                    Vec2::from_array(pair[0]),
+                    Vec2::from_array(pair[1]),
+                ) < 2.5 * 2.5
+            })
+    };
+    // The eaves cap the anchors; two-storey flanks already put them at 6.75 m.
+    let eave_cap = |flank_a: &Building, flank_b: &Building| {
+        (building_verticals(flank_a)
+            .1
+            .min(building_verticals(flank_b).1)
+            - 0.6)
+            .max(3.7)
+    };
+
+    let mut rope = MeshData::default();
+    let mut cloth = MeshData::default();
+    let mut strung = 0;
+
+    // Street lines: strung wall to wall over the narrow streets.
+    for road in &plan.roads {
+        if !(2.0..=4.5).contains(&road.width_m) {
+            continue;
+        }
+        for (segment_index, pair) in road.points.windows(2).enumerate() {
+            let a = Vec2::from_array(pair[0]);
+            let b = Vec2::from_array(pair[1]);
+            let length = a.distance(b);
+            if length < 7.0 {
+                continue;
+            }
+            let across = Vec2::new(-(b.y - a.y), b.x - a.x) / length;
+            let slots = (length / 2.0).floor().max(1.0) as usize;
+            for slot in 0..slots {
+                let hash = stable_hash(&format!("laundry-{}-{segment_index}-{slot}", road.id));
+                if hash % 6 != 0 {
+                    continue;
+                }
+                let t = (slot as f32 + 0.25 + (hash % 51) as f32 / 100.0) / slots as f32;
+                let center = a.lerp(b, t);
+                // Façades sit at varying setbacks; probe outward until a wall
+                // is found and bury the anchor that deep in it.
+                let seat = |side: f32| {
+                    [0.55_f32, 1.3, 2.2].into_iter().find_map(|extra| {
+                        flank_at(center + across * side * (road.width_m * 0.5 + extra))
+                            .map(|building| (extra, building))
+                    })
+                };
+                let (Some((seat_a, flank_a)), Some((seat_b, flank_b))) = (seat(1.0), seat(-1.0))
+                else {
+                    continue;
+                };
+                let half_a = road.width_m * 0.5 + seat_a;
+                let half_b = road.width_m * 0.5 + seat_b;
+                let anchor_a = center + across * half_a;
+                let anchor_b = center - across * half_b;
+                if [0.15_f32, 0.3, 0.5, 0.7, 0.85]
+                    .into_iter()
+                    .any(|t| overhead_blocked(anchor_a.lerp(anchor_b, t)))
+                {
+                    continue;
+                }
+
+                let cap = eave_cap(flank_a, flank_b);
+                let y_a = (3.6 + ((hash >> 4) % 17) as f32 * 0.1).min(cap);
+                let y_b = (y_a + ((hash >> 9) % 9) as f32 * 0.1 - 0.4).clamp(3.6, cap.min(5.2));
+                add_laundry_line(
+                    &mut rope,
+                    &mut cloth,
+                    Vec3::new(anchor_a.x, y_a, anchor_a.y),
+                    Vec3::new(anchor_b.x, y_b, anchor_b.y),
+                    (
+                        seat_a + jetty_reach(flank_a) + 0.12,
+                        half_a + half_b - seat_b - jetty_reach(flank_b) - 0.12,
+                    ),
+                    hash,
+                );
+                strung += 1;
+            }
+        }
+    }
+
+    // Court lines: pairs of taller parcels facing each other across a yard,
+    // away from any road — the washing of the back courts.
+    for (building_index, building) in plan.buildings.iter().enumerate() {
+        if !ordinary(building) {
+            continue;
+        }
+        let hash = stable_hash(&format!("courtline-{}", building.id));
+        if hash % 5 != 0 {
+            continue;
+        }
+        let orientation = plan::signed_area(&building.polygon).signum();
+        let edge_count = building.polygon.len();
+        for edge_offset in 0..edge_count {
+            let edge_index = (edge_offset + hash as usize) % edge_count;
+            let a2 = Vec2::from_array(building.polygon[edge_index]);
+            let b2 = Vec2::from_array(building.polygon[(edge_index + 1) % edge_count]);
+            let edge = b2 - a2;
+            let length = edge.length();
+            if length < 4.0 {
+                continue;
+            }
+            let direction = edge / length;
+            let mut normal2 = Vec2::new(edge.y, -edge.x).normalize();
+            if orientation < 0.0 {
+                normal2 = -normal2;
+            }
+            let origin = a2 + direction * (length * (0.35 + ((hash >> 5) % 31) as f32 / 100.0));
+            let mut facing: Option<(f32, &Building)> = None;
+            for step in 0..9 {
+                let Some(candidate) = flank_at(origin + normal2 * (2.6 + step as f32 * 0.8))
+                else {
+                    continue;
+                };
+                if candidate.id != building.id {
+                    facing = Some((2.6 + step as f32 * 0.8, candidate));
+                }
+                // Hitting our own wall means a concave court fold: abandon.
+                break;
+            }
+            // The probe steps by 0.8 m, so the facing façade lies within that
+            // much short of the hit; 3.8 keeps the true gap at 3 m or more.
+            let Some((gap, other)) = facing else { continue };
+            if gap < 3.8 {
+                continue;
+            }
+            let facade = gap - 0.8;
+            let court_clear = [0.2_f32, 0.4, 0.6, 0.8]
+                .into_iter()
+                .all(|s| !any_building_at(origin + normal2 * (facade * s), building_index))
+                && [0.25_f32, 0.5, 0.75].into_iter().all(|s| {
+                    let probe = origin + normal2 * (facade * s);
+                    !near_road(probe)
+                        && !near_wall(probe)
+                        && !squares
+                            .iter()
+                            .any(|square| point_in_polygon(probe, &square.polygon))
+                        && !overhead_blocked(probe)
+                });
+            if !court_clear {
+                continue;
+            }
+
+            let anchor_a = origin - normal2 * 0.45;
+            let anchor_b = origin + normal2 * (gap + 0.3);
+            let cap = eave_cap(building, other);
+            let y_a = (3.6 + ((hash >> 4) % 17) as f32 * 0.1).min(cap);
+            let y_b = (y_a + ((hash >> 9) % 9) as f32 * 0.1 - 0.4).clamp(3.6, cap.min(5.2));
+            add_laundry_line(
+                &mut rope,
+                &mut cloth,
+                Vec3::new(anchor_a.x, y_a, anchor_a.y),
+                Vec3::new(anchor_b.x, y_b, anchor_b.y),
+                (
+                    0.45 + jetty_reach(building) + 0.12,
+                    0.45 + facade - jetty_reach(other) - 0.12,
+                ),
+                hash,
+            );
+            strung += 1;
+            break;
+        }
+    }
+
+    spawn_batch(commands, meshes, &materials.dark_wood, rope, "Laundry ropes");
+    spawn_batch(commands, meshes, &materials.linen, cloth, "Laundry washing");
+    info!("strung {strung} laundry lines");
+}
+
+/// One strung line: the sagging rope between two buried wall anchors and the
+/// washing pegged over its open middle. `clear` is the along-span window
+/// (metres from the A anchor) the cloth may occupy — wall seats and jetty
+/// overhangs have already been subtracted by the caller.
+fn add_laundry_line(
+    rope: &mut MeshData,
+    cloth: &mut MeshData,
+    start: Vec3,
+    end: Vec3,
+    clear: (f32, f32),
+    hash: u32,
+) {
+    let flat = Vec2::new(end.x - start.x, end.z - start.z);
+    let span = flat.length();
+    if span < 1.0 {
+        return;
+    }
+    let along = flat / span;
+    let sag = 0.25 + ((hash >> 7) % 21) as f32 / 100.0;
+    let drape = |t: f32| {
+        let mut point = start.lerp(end, t);
+        point.y -= sag * 4.0 * t * (1.0 - t);
+        point
+    };
+    let segments = 8 + (hash % 5) as usize;
+    let mut previous = drape(0.0);
+    for step in 1..=segments {
+        let next = drape(step as f32 / segments as f32);
+        add_rope_ribbons(rope, previous, next, 0.016);
+        previous = next;
+    }
+
+    let corridor = clear.1 - clear.0;
+    if corridor < 0.45 {
+        return;
+    }
+    let count = (2 + (hash >> 11) % 4).min((corridor / 0.62) as u32).max(1);
+    for piece in 0..count {
+        let piece_hash = hash ^ piece.wrapping_mul(0x9E37_79B9);
+        let slot_width = corridor / count as f32;
+        let at =
+            clear.0 + slot_width * (piece as f32 + 0.28 + ((piece_hash >> 3) % 45) as f32 / 100.0);
+        let half_width = (0.25 + ((piece_hash >> 8) % 26) as f32 / 100.0)
+            .min(slot_width * 0.44)
+            .min(at - clear.0)
+            .min(clear.1 - at);
+        if half_width < 0.18 {
+            continue;
+        }
+        let top = [
+            drape((at - half_width) / span),
+            drape(at / span),
+            drape((at + half_width) / span),
+        ];
+        let drop = (0.7 + ((piece_hash >> 13) % 61) as f32 / 100.0).min(top[1].y - 1.95);
+        let lean = Vec3::new(-along.y, 0.0, along.x)
+            * (0.05 + ((piece_hash >> 6) % 11) as f32 / 150.0)
+            * if piece_hash & 1 == 0 { 1.0 } else { -1.0 };
+        cloth.set_brush(cloth_tint(piece_hash));
+        add_cloth_piece(cloth, top, drop, lean);
+    }
+    cloth.reset_brush();
+}
+
+/// Mostly undyed linen, with the odd dull madder, ochre or grey piece.
+fn cloth_tint(hash: u32) -> [f32; 3] {
+    match hash % 12 {
+        0 | 1 => [0.52, 0.27, 0.23],
+        2 => [0.61, 0.48, 0.27],
+        3 | 4 => [0.50, 0.52, 0.55],
+        _ => {
+            let value = 0.80 + ((hash >> 16) % 23) as f32 / 100.0;
+            [value * 1.02, value, value * 0.93]
+        }
+    }
+}
+
+/// One rope link as two crossed ribbons — enough to read as a dark line from
+/// every direction without a full box per link (the dark-wood material culls
+/// nothing, so single windings show both faces).
+fn add_rope_ribbons(rope: &mut MeshData, from: Vec3, to: Vec3, radius: f32) {
+    let axis = (to - from).normalize_or_zero();
+    if axis == Vec3::ZERO {
+        return;
+    }
+    let side = axis.cross(Vec3::Y).normalize_or(Vec3::X);
+    let lift = side.cross(axis).normalize_or(Vec3::Y);
+    for (spread, normal) in [(lift, side), (side, lift)] {
+        rope.quad(
+            [
+                from - spread * radius,
+                to - spread * radius,
+                to + spread * radius,
+                from + spread * radius,
+            ],
+            normal,
+            [
+                Vec2::ZERO,
+                Vec2::new(0.2, 0.0),
+                Vec2::new(0.2, 0.05),
+                Vec2::new(0.0, 0.05),
+            ],
+        );
+    }
+}
+
+/// One washed piece pegged over the rope: a 3x2 vertex strip whose top edge
+/// rides the rope's sag and whose bottom mid-point drops and leans a little,
+/// so it hangs rather than stands.
+fn add_cloth_piece(cloth: &mut MeshData, top: [Vec3; 3], drop: f32, lean: Vec3) {
+    let bottom = [
+        top[0] - Vec3::Y * drop,
+        top[1] - Vec3::Y * (drop + 0.05) + lean,
+        top[2] - Vec3::Y * drop,
+    ];
+    let normal = (top[2] - top[0]).cross(Vec3::NEG_Y).normalize_or(Vec3::Z);
+    // The linen tile repeats seamlessly, so anchoring the sample window to the
+    // piece's position gives every sheet its own stains for free.
+    let shift = Vec2::new((top[0].x * 0.37).fract(), (top[0].z * 0.29).fract());
+    let first = cloth.positions.len() as u32;
+    for (index, point) in top.iter().chain(bottom.iter()).enumerate() {
+        let uv = Vec2::new((index % 3) as f32 * 0.5, if index < 3 { 0.0 } else { 1.0 });
+        cloth.vertex(*point, normal, uv + shift);
+    }
+    cloth.indices.extend_from_slice(&[
+        first,
+        first + 1,
+        first + 4,
+        first,
+        first + 4,
+        first + 3,
+        first + 1,
+        first + 2,
+        first + 5,
+        first + 1,
+        first + 5,
+        first + 4,
+    ]);
+}
+
+/// One computed street-gallery placement — the mirror of what
+/// `build_street_galleries` builds (same hash, same seat probes), so the side
+/// gantries land on real galleries and the facade beams keep out of all of
+/// them.
+struct GallerySpan {
+    shifted: Vec2,
+    street_dir: Vec2,
+    across: Vec2,
+    span: f32,
+    road_width: f32,
+    hash: u32,
+}
+
+/// Mirror of the `jetty_bands` gate: how far a ground building's wall face at
+/// height `y` stands out from its cadastral line. Bands are one floor tall
+/// from the ground, stepping out one jetty per storey, capped after two.
+fn jetty_face_offset(building: &Building, y: f32) -> f32 {
+    if building.named
+        || building.polygon.len() != 4
+        || !polygon_is_convex(&building.polygon)
+        || !matches!(wall_kind(&building.material), WallKind::HalfTimber)
+        || building.levels < 2
+        || stable_hash(&building.id) % 10 >= 8
+    {
+        return 0.0;
+    }
+    JETTY_STEP * ((y / BUILDING_FLOOR_HEIGHT).floor() as i32).clamp(0, 2) as f32
+}
+
+/// Hoist gantries — the signature overhead-life prop of the references: a
+/// squared beam projecting high from a wall, a pulley block at the tip, and a
+/// rope with a load swinging over the street. Rigged on a hash-picked eighth
+/// of the taller trade and storage houses, on a mouth gable of each bridge
+/// shell and the malt house, and on a few street galleries. Everything is
+/// batched and nothing collides; every load bottoms out at 3.5 m or more over
+/// a road, far above the walk band.
+fn build_hoist_gantries(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+    door_edges: &HashMap<String, usize>,
+) {
+    let tall_building_at = |point: Vec2| {
+        plan.buildings.iter().any(|building| {
+            building.levels >= 2
+                && building.use_name != "bridge"
+                && point_in_polygon(point, &building.polygon)
+        })
+    };
+    let mut galleries = Vec::new();
+    for road in &plan.roads {
+        if !(2.0..=5.5).contains(&road.width_m) {
+            continue;
+        }
+        for (segment_index, pair) in road.points.windows(2).enumerate() {
+            let a = Vec2::from_array(pair[0]);
+            let b = Vec2::from_array(pair[1]);
+            let length = a.distance(b);
+            if length < 12.0 {
+                continue;
+            }
+            let hash = stable_hash(&format!("gallery-{}-{segment_index}", road.id));
+            if hash % 2 != 0 {
+                continue;
+            }
+            let t = 0.3 + (hash % 41) as f32 / 100.0;
+            let center = a.lerp(b, t);
+            let street_dir = (b - a) / length;
+            let across = Vec2::new(-street_dir.y, street_dir.x);
+            let seat_depth = |side: f32| {
+                [0.7_f32, 1.6, 2.6].into_iter().find(|extra| {
+                    tall_building_at(center + across * side * (road.width_m * 0.5 + extra))
+                })
+            };
+            let (Some(seat_a), Some(seat_b)) = (seat_depth(1.0), seat_depth(-1.0)) else {
+                continue;
+            };
+            galleries.push(GallerySpan {
+                shifted: center + across * (seat_a - seat_b) * 0.5,
+                street_dir,
+                across,
+                span: road.width_m + seat_a + seat_b + 1.6,
+                road_width: road.width_m,
+                hash,
+            });
+        }
+    }
+    let gallery_blocked = |point: Vec2| {
+        galleries.iter().any(|gallery| {
+            gallery.shifted.distance_squared(point) < (gallery.span * 0.5 + 1.0).powi(2)
+        })
+    };
+    // The overhead shells (bridges, malt house) with room for the load to
+    // swing clear of their walls.
+    let shell_boxes: Vec<(Vec2, Vec2)> = plan
+        .buildings
+        .iter()
+        .filter(|building| building_verticals(building).0 > 0.1)
+        .map(|building| {
+            let mut min = Vec2::splat(f32::INFINITY);
+            let mut max = Vec2::splat(f32::NEG_INFINITY);
+            for point in &building.polygon {
+                min = min.min(Vec2::from_array(*point));
+                max = max.max(Vec2::from_array(*point));
+            }
+            (min - Vec2::splat(1.2), max + Vec2::splat(1.2))
+        })
+        .collect();
+    let overhead_blocked = |point: Vec2| {
+        gallery_blocked(point)
+            || shell_boxes.iter().any(|(min, max)| {
+                point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y
+            })
+    };
+    let squares: Vec<&Site> = plan
+        .sites
+        .iter()
+        .filter(|site| site.kind == "square")
+        .collect();
+    let bounds: Vec<(Vec2, Vec2)> = plan
+        .buildings
+        .iter()
+        .map(|building| {
+            let mut min = Vec2::splat(f32::INFINITY);
+            let mut max = Vec2::splat(f32::NEG_INFINITY);
+            for point in &building.polygon {
+                min = min.min(Vec2::from_array(*point));
+                max = max.max(Vec2::from_array(*point));
+            }
+            (min, max)
+        })
+        .collect();
+    let building_at = |point: Vec2, skip: usize| {
+        plan.buildings.iter().enumerate().any(|(index, other)| {
+            index != skip
+                && point.x >= bounds[index].0.x
+                && point.y >= bounds[index].0.y
+                && point.x <= bounds[index].1.x
+                && point.y <= bounds[index].1.y
+                && point_in_polygon(point, &other.polygon)
+        })
+    };
+
+    let mut dark_wood = MeshData::default();
+    let mut timber = MeshData::default();
+    let mut iron = MeshData::default();
+    let mut ochre = MeshData::default();
+    let mut russet = MeshData::default();
+    let mut rigged = 0;
+
+    // (a) Street facades of the working trade and storage houses: the beam
+    // rides just under the eave — or up in the gable where the door edge is a
+    // clear short face — over the same street the door serves.
+    for (building_index, building) in plan.buildings.iter().enumerate() {
+        if !matches!(building.use_name.as_str(), "trade" | "storage") || building.levels < 2 {
+            continue;
+        }
+        let (base_y, eave_y) = building_verticals(building);
+        if base_y > 0.1 {
+            continue;
+        }
+        let hash = stable_hash(&format!("gantry-{}", building.id));
+        if hash % 8 != 0 {
+            continue;
+        }
+        let Some(&edge_index) = door_edges.get(&building.id) else {
+            continue;
+        };
+        let polygon = &building.polygon;
+        let a = Vec2::from_array(polygon[edge_index]);
+        let b = Vec2::from_array(polygon[(edge_index + 1) % polygon.len()]);
+        let edge = b - a;
+        let length = edge.length();
+        if length < 5.0 {
+            continue;
+        }
+        let direction = edge / length;
+        let orientation = plan::signed_area(polygon).signum();
+        let mut normal = Vec2::new(edge.y, -edge.x).normalize() * orientation;
+        // `plan` polygons wind either way; the beam must project outward.
+        if point_in_polygon(a + direction * (length * 0.5) + normal * 0.5, polygon) {
+            normal = -normal;
+        }
+        let along = (length * 0.5 + (((hash >> 5) % 31) as f32 / 30.0 - 0.5) * 0.3 * length)
+            .clamp(1.5, length - 1.5);
+        let anchor2 = a + direction * along;
+        // Square-fronting facades carry arcade pentices at exactly the height
+        // the load would swing through.
+        if squares
+            .iter()
+            .any(|square| point_in_polygon(anchor2 + normal * 1.6, &square.polygon))
+        {
+            continue;
+        }
+        // Window heads stop at eave−0.875 and the drooping eave overhang
+        // bottoms out near eave−0.6: the beam threads between them. A clearly
+        // short quad edge is a gable, where the beam climbs to the peak;
+        // near-square footprints stay on the safe eave line because the roof
+        // may read their long axis either way.
+        let beam_y = if polygon.len() == 4 {
+            let edge_01 = Vec2::from_array(polygon[0]).distance(Vec2::from_array(polygon[1]));
+            let edge_12 =
+                Vec2::from_array(polygon[1]).distance(Vec2::from_array(polygon[2]));
+            let gable = (edge_01 + 1.5 < edge_12 && edge_index % 2 == 0)
+                || (edge_12 + 1.5 < edge_01 && edge_index % 2 == 1);
+            if gable { eave_y + 0.45 } else { eave_y - 0.75 }
+        } else {
+            eave_y - 0.45
+        };
+        let face_offset = jetty_face_offset(building, beam_y);
+        // The beam wants open air in front: step outward until a neighbouring
+        // footprint answers, then let that neighbour's possible jetty and a
+        // swing margin eat into what the probes proved clear.
+        let clear_out = [0.6_f32, 1.05, 1.5, 1.95, 2.4, 2.85, 3.3]
+            .into_iter()
+            .take_while(|out| !building_at(anchor2 + normal * *out, building_index))
+            .last();
+        let Some(clear_out) = clear_out else {
+            continue;
+        };
+        let max_reach = clear_out - JETTY_STEP * 2.0 - 0.2 - face_offset;
+        if max_reach < 1.0 {
+            continue;
+        }
+        let reach = (1.05 + ((hash >> 9) % 56) as f32 / 100.0).min(max_reach.min(1.6));
+        let hang2 = anchor2 + normal * (face_offset + reach - 0.1);
+        if overhead_blocked(hang2) {
+            continue;
+        }
+
+        add_hoist_beam(
+            &mut dark_wood,
+            anchor2,
+            normal,
+            direction,
+            face_offset,
+            reach,
+            beam_y,
+        );
+        let bottom_y = (3.65 + ((hash >> 13) % 15) as f32 * 0.1).min(beam_y - 1.7);
+        let variant = if hash % 7 == 0 { 4 } else { (hash >> 3) % 4 };
+        add_hoist_load(
+            &mut dark_wood,
+            &mut timber,
+            &mut iron,
+            &mut ochre,
+            &mut russet,
+            hang2,
+            beam_y - 0.31,
+            bottom_y,
+            normal,
+            variant,
+            hash,
+        );
+        rigged += 1;
+    }
+
+    // (b) The bridge shells and the malt house: one beam high on a mouth
+    // gable, its load swinging over the road that runs beneath — the
+    // bridge-house hoist of reference image A.
+    for (building_index, building) in plan.buildings.iter().enumerate() {
+        if !(building.use_name == "bridge" || building.id == "named_malt_house")
+            || building.polygon.len() != 4
+        {
+            continue;
+        }
+        let (_, eave_y) = building_verticals(building);
+        let p: Vec<Vec2> = building
+            .polygon
+            .iter()
+            .map(|point| Vec2::from_array(*point))
+            .collect();
+        let edge_01 = p[0].distance(p[1]);
+        let edge_12 = p[1].distance(p[2]);
+        // The mouths are the two short edges — the same reading the passage
+        // dressing and the bridge piers stand on.
+        let (ends, width) = if edge_01 >= edge_12 {
+            ([(p[0] + p[3]) * 0.5, (p[1] + p[2]) * 0.5], edge_12)
+        } else {
+            ([(p[0] + p[1]) * 0.5, (p[2] + p[3]) * 0.5], edge_01)
+        };
+        let long_dir = (ends[1] - ends[0]).normalize_or_zero();
+        let across = Vec2::new(-long_dir.y, long_dir.x);
+        let hash = stable_hash(&format!("gantry-{}", building.id));
+        let jitter = across * ((((hash >> 4) % 21) as f32 / 20.0 - 0.5) * width * 0.24);
+        let reach = 1.25 + ((hash >> 11) % 26) as f32 / 100.0;
+        let beam_y = eave_y + 0.5;
+        for mouth in 0..2 {
+            let end_index = (hash as usize + mouth) % 2;
+            let outward = if end_index == 0 { -long_dir } else { long_dir };
+            let anchor2 = ends[end_index] + jitter;
+            let hang2 = anchor2 + outward * (reach - 0.1);
+            // A bridge mouth can butt straight into its neighbour (the Tally
+            // Bridge serves the toll house door to door): the beam needs open
+            // air, not a facade.
+            if gallery_blocked(hang2)
+                || [0.4_f32, 0.9, reach + 0.5]
+                    .into_iter()
+                    .any(|out| building_at(anchor2 + outward * out, building_index))
+            {
+                continue;
+            }
+            add_hoist_beam(&mut dark_wood, anchor2, outward, across, 0.0, reach, beam_y);
+            let bottom_y = 3.7 + ((hash >> 13) % 8) as f32 * 0.1;
+            add_hoist_load(
+                &mut dark_wood,
+                &mut timber,
+                &mut iron,
+                &mut ochre,
+                &mut russet,
+                hang2,
+                beam_y - 0.31,
+                bottom_y,
+                outward,
+                (hash >> 3) % 4,
+                hash,
+            );
+            rigged += 1;
+            break;
+        }
+    }
+
+    // (c) A few of the street galleries carry a small side gantry with a pail
+    // on the rope — the footbridge hoist of reference image B.
+    let mut side_gantries = 0;
+    for gallery in &galleries {
+        if side_gantries >= 4 || gallery.hash.rotate_left(13) % 5 != 0 {
+            continue;
+        }
+        let side = if (gallery.hash >> 3) % 2 == 0 { 1.0 } else { -1.0 };
+        let window = (gallery.road_width * 0.5 - 0.7).max(0.0);
+        let lateral = ((((gallery.hash >> 16) % 33) as f32 / 32.0 - 0.5) * 1.6)
+            .clamp(-window, window);
+        let base2 = gallery.shifted + gallery.across * lateral;
+        let out_dir = gallery.street_dir * side;
+        // Anchored in the parapet (faces 1.01–1.25 m out, top 6.53 m), the
+        // beam ducks under the slate hood (underside 6.82 m, edge 1.55 m out)
+        // and drops its rope past it.
+        let beam_y = 6.08;
+        let anchor2 = base2 + out_dir * 1.13;
+        add_hoist_beam(
+            &mut dark_wood,
+            anchor2,
+            out_dir,
+            gallery.across,
+            0.0,
+            0.95,
+            beam_y,
+        );
+        let bottom_y = 3.6 + ((gallery.hash >> 19) % 6) as f32 * 0.1;
+        add_hoist_load(
+            &mut dark_wood,
+            &mut timber,
+            &mut iron,
+            &mut ochre,
+            &mut russet,
+            anchor2 + out_dir * 0.85,
+            beam_y - 0.31,
+            bottom_y,
+            out_dir,
+            3,
+            gallery.hash,
+        );
+        side_gantries += 1;
+        rigged += 1;
+    }
+
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.dark_wood,
+        dark_wood,
+        "Hoist gantries and ropes",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.timber,
+        timber,
+        "Hoist loads: crates and pails",
+    );
+    spawn_batch(commands, meshes, &materials.iron, iron, "Hoist ironwork");
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.cloth_ochre,
+        ochre,
+        "Hoist loads: sacks and bales",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.cloth_russet,
+        russet,
+        "Hoist loads: more sacks",
+    );
+    info!("rigged {rigged} hoist gantries");
+}
+
+/// The projecting arm itself: squared timber out of the wall face at
+/// `face_offset`, a diagonal brace back down into it, and the pulley block
+/// under the tip. `normal` points out of the wall, `direction` along it.
+fn add_hoist_beam(
+    dark_wood: &mut MeshData,
+    anchor2: Vec2,
+    normal: Vec2,
+    direction: Vec2,
+    face_offset: f32,
+    reach: f32,
+    beam_y: f32,
+) {
+    let tip = face_offset + reach;
+    // The beam spans from 0.35 inside the face to the tip.
+    let center2 = anchor2 + normal * (face_offset + (reach - 0.35) * 0.5);
+    add_oriented_box(
+        dark_wood,
+        Vec3::new(center2.x, beam_y, center2.y),
+        Vec3::new((reach + 0.35) * 0.5, 0.09, 0.09),
+        normal,
+    );
+    add_face_member(
+        dark_wood,
+        anchor2,
+        normal,
+        direction,
+        Vec2::new(face_offset - 0.08, beam_y - 1.05),
+        Vec2::new(face_offset + reach * 0.55, beam_y - 0.12),
+        0.055,
+        0.06,
+        true,
+    );
+    let block = anchor2 + normal * (tip - 0.1);
+    add_oriented_box(
+        dark_wood,
+        Vec3::new(block.x, beam_y - 0.21, block.y),
+        Vec3::new(0.055, 0.10, 0.038),
+        normal,
+    );
+}
+
+/// What swings from the pulley: the rope and a load — grain sack, corded
+/// bale, crate, pail — or, for `variant` 4, nothing but a tied-off hook.
+/// `bottom_y` is the load's lowest point; callers keep it 3.5 m over a road.
+#[allow(clippy::too_many_arguments)]
+fn add_hoist_load(
+    dark_wood: &mut MeshData,
+    timber: &mut MeshData,
+    iron: &mut MeshData,
+    ochre: &mut MeshData,
+    russet: &mut MeshData,
+    drop2: Vec2,
+    rope_top: f32,
+    bottom_y: f32,
+    along: Vec2,
+    variant: u32,
+    hash: u32,
+) {
+    let rope = |dark_wood: &mut MeshData, to_y: f32| {
+        add_rope_ribbons(
+            dark_wood,
+            Vec3::new(drop2.x, rope_top, drop2.y),
+            Vec3::new(drop2.x, to_y, drop2.y),
+            0.017,
+        );
+    };
+    let center = |y: f32| Vec3::new(drop2.x, y, drop2.y);
+    match variant {
+        // A grain sack roped at the neck: an `add_sack` dome and its mirror.
+        0 => {
+            let cloth = if (hash >> 8) % 2 == 0 { ochre } else { russet };
+            rope(dark_wood, bottom_y + 0.55);
+            add_sack(cloth, center(bottom_y + 0.30), Vec3::new(0.24, 0.33, 0.21));
+            add_sack(cloth, center(bottom_y + 0.30), Vec3::new(0.24, -0.30, 0.21));
+        }
+        // A corded bale: cloth block with dark straps crossing it.
+        1 => {
+            let cloth = if (hash >> 8) % 2 == 0 { ochre } else { russet };
+            rope(dark_wood, bottom_y + 0.50);
+            add_oriented_box(cloth, center(bottom_y + 0.26), Vec3::new(0.30, 0.26, 0.27), along);
+            add_oriented_box(
+                dark_wood,
+                center(bottom_y + 0.26),
+                Vec3::new(0.315, 0.255, 0.05),
+                along,
+            );
+            add_oriented_box(
+                dark_wood,
+                center(bottom_y + 0.26),
+                Vec3::new(0.05, 0.255, 0.285),
+                along,
+            );
+        }
+        // A small crate.
+        2 => {
+            rope(dark_wood, bottom_y + 0.42);
+            add_oriented_box(timber, center(bottom_y + 0.22), Vec3::new(0.24, 0.22, 0.24), along);
+        }
+        // A pail on a rope bail.
+        3 => {
+            rope(dark_wood, bottom_y + 0.46);
+            let side = Vec3::new(-along.y, 0.0, along.x) * 0.13;
+            for flip in [-1.0, 1.0] {
+                add_rope_ribbons(
+                    dark_wood,
+                    center(bottom_y + 0.46),
+                    center(bottom_y + 0.27) + side * flip,
+                    0.014,
+                );
+            }
+            add_drum(timber, center(bottom_y + 0.15), 0.15, 0.30, true);
+            add_drum(iron, center(bottom_y + 0.25), 0.157, 0.035, false);
+        }
+        // A bare hook, rope tied off.
+        _ => {
+            rope(dark_wood, rope_top - 0.62);
+            add_oriented_box(
+                iron,
+                Vec3::new(drop2.x, rope_top - 0.68, drop2.y),
+                Vec3::new(0.022, 0.07, 0.022),
+                along,
+            );
+            add_oriented_box(
+                iron,
+                Vec3::new(drop2.x, rope_top - 0.755, drop2.y),
+                Vec3::new(0.05, 0.02, 0.02),
+                along,
+            );
+        }
+    }
 }
 
 /// Squared distance from `point` to the segment `a`–`b`.
