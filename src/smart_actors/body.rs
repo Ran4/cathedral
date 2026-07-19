@@ -53,9 +53,18 @@ const TORSO_HEIGHT: f32 = 0.52;
 const TORSO_DEPTH_RATIO: f32 = 0.62;
 /// Neck pivot (torso-local): the head nods around this, not its centre.
 const NECK_JOINT_Y: f32 = 0.47;
-/// Head-sphere centre above the neck pivot (baked into the head mesh).
+/// Head centre above the neck pivot (baked into the head mesh).
 const HEAD_CENTER_ABOVE_NECK: f32 = 0.16;
 const HEAD_RADIUS: f32 = 0.24;
+/// The head mesh and its headgear are authored at natural scale, then the head
+/// joint renders them at [`HEAD_SCALE`]. The retired capsule sized the head at
+/// its full [`HEAD_RADIUS`], which reads as an oversized ball; halving it about
+/// the neck pivot shrinks the mesh, the face and any headgear together and
+/// seats the smaller head down onto the shoulders (M6 npc_bodies follow-up).
+const HEAD_SCALE: f32 = 0.5;
+/// Raise the whole head joint (mesh, face, headgear and its nod pivot together)
+/// this far above the neck so the halved head sits a touch higher on the neck.
+const HEAD_LIFT: f32 = 0.06;
 const SHOULDER_X: f32 = 0.265;
 const SHOULDER_Y: f32 = 0.44;
 const UPPER_ARM_RADIUS: f32 = 0.062;
@@ -447,7 +456,8 @@ fn rest_pose(scales: &BuildScales) -> RestPose {
             scales.height,
             scales.shoulder / scales.hip,
         )),
-        head: Transform::from_xyz(0.0, NECK_JOINT_Y, 0.0),
+        head: Transform::from_xyz(0.0, NECK_JOINT_Y + HEAD_LIFT, 0.0)
+            .with_scale(Vec3::splat(HEAD_SCALE)),
         left_upper_arm: arm(-1.0),
         right_upper_arm: arm(1.0),
         left_forearm: forearm,
@@ -785,9 +795,9 @@ const GAZE_GIVE_UP_RAD: f32 = 2.4;
 const GAZE_BLEND_SECONDS: f32 = 0.25;
 const GAZE_TRACK_PER_S: f32 = 7.0;
 /// Aim height of eyes over the actor root — the head pivot sits ≈ 0.52 above
-/// the root and the head centre another 0.16 up; both the gazer's eye and an
-/// NPC gaze target use this one offset.
-const GAZE_EYE_OFFSET_Y: f32 = 0.66;
+/// the root and the halved head centres ≈ 0.08 up (see [`HEAD_SCALE`]); both the
+/// gazer's eye and an NPC gaze target use this one offset.
+const GAZE_EYE_OFFSET_Y: f32 = 0.60;
 /// Listeners this close to a live speaker glance at them — the social radius
 /// speech itself uses.
 const LISTEN_RADIUS_M: f32 = super::HEARING_RADIUS_M;
@@ -2423,24 +2433,31 @@ fn face_uv(direction: Vec3) -> Vec2 {
     )
 }
 
-/// A perfect sphere reads as a ball, not a head, so the crown is stretched a
-/// little taller than the head is wide and the lower head tapers toward a chin
-/// — an egg, not a globe. The taper stays below the head centre, where no
-/// headgear sits, so hats and hoods keep their authored fit.
-const HEAD_VERTICAL_STRETCH: f32 = 1.06;
-const HEAD_JAW_TAPER: f32 = 0.26;
+/// A sphere reads as a ball, not a head, so the ovoid is shaped on four axes:
+/// taller than it is wide, tapered below the cheeks to a chin, its crown rounded
+/// a touch narrower than the temples, and — the cue that sells it in profile —
+/// the face plane (−Z) flattened while the occiput (+Z) fills out behind. The
+/// width tapers all sit below the head centre, where no headgear rides, so hats
+/// and hoods keep their authored fit.
+const HEAD_VERTICAL_STRETCH: f32 = 1.18;
+const HEAD_JAW_TAPER: f32 = 0.40;
+const HEAD_CROWN_TAPER: f32 = 0.07;
+const HEAD_FACE_FLATTEN: f32 = 0.90;
+const HEAD_OCCIPUT_BULGE: f32 = 1.08;
 
 /// The head — an ovoid with the painted face planar-projected onto its front
 /// (−Z) hemisphere. Origin at the neck joint; the shape is centred
 /// [`HEAD_CENTER_ABOVE_NECK`] above it so the head pivots at the neck. Only the
-/// vertex *positions* are shaped: face UVs come from the unit `direction`, so
-/// the projection (and its orientation contract) is independent of the shape.
+/// vertex *positions* are shaped (see [`HEAD_VERTICAL_STRETCH`] &c.); face UVs
+/// come from the unit `direction`, so the projection (and its orientation
+/// contract) is independent of the shape. Normals are recomputed from the
+/// shaped geometry rather than derived analytically, so the multi-axis warp
+/// still shades smoothly.
 fn head_mesh() -> Mesh {
     const SECTORS: usize = 24;
     const STACKS: usize = 16;
 
     let mut positions = Vec::new();
-    let mut normals = Vec::new();
     let mut uvs = Vec::new();
     let mut indices = Vec::new();
 
@@ -2451,25 +2468,26 @@ fn head_mesh() -> Mesh {
             let a = sector as f32 / SECTORS as f32 * TAU;
             let direction = Vec3::new(ring_r * a.cos(), y, ring_r * a.sin());
             // Jaw taper: full width through the cranium (y ≥ 0), narrowing over
-            // the lower head (smoothstep in −y) to a chin.
+            // the lower head (smoothstep in −y) to a chin; the crown rounds off
+            // a little narrower than the temples above the centre.
             let below = (-direction.y).clamp(0.0, 1.0);
-            let taper = 1.0 - HEAD_JAW_TAPER * below * below * (3.0 - 2.0 * below);
+            let jaw = 1.0 - HEAD_JAW_TAPER * below * below * (3.0 - 2.0 * below);
+            let above = direction.y.clamp(0.0, 1.0);
+            let crown = 1.0 - HEAD_CROWN_TAPER * above * above;
+            let width = jaw * crown;
+            // Depth: the face plane (−Z) sits flatter, the occiput (+Z) fuller,
+            // so the silhouette reads as a head and not a globe.
+            let front = (-direction.z).clamp(0.0, 1.0);
+            let back = direction.z.clamp(0.0, 1.0);
+            let depth = width
+                * (1.0 - (1.0 - HEAD_FACE_FLATTEN) * front + (HEAD_OCCIPUT_BULGE - 1.0) * back);
             let shaped = Vec3::new(
-                direction.x * taper,
+                direction.x * width,
                 direction.y * HEAD_VERTICAL_STRETCH,
-                direction.z * taper,
+                direction.z * depth,
             );
             let position = shaped * HEAD_RADIUS + Vec3::Y * HEAD_CENTER_ABOVE_NECK;
             positions.push([position.x, position.y, position.z]);
-            // Rescale the normal by the inverse of each axis' stretch so the
-            // shaped surface still shades smoothly.
-            let normal = Vec3::new(
-                direction.x / taper.max(1e-3),
-                direction.y / HEAD_VERTICAL_STRETCH,
-                direction.z / taper.max(1e-3),
-            )
-            .normalize_or(Vec3::Y);
-            normals.push([normal.x, normal.y, normal.z]);
             let uv = face_uv(direction);
             uvs.push([uv.x, uv.y]);
         }
@@ -2484,7 +2502,11 @@ fn head_mesh() -> Mesh {
             indices.extend_from_slice(&[a, b, c, b, d, c]);
         }
     }
-    mesh_from_parts(positions, normals, uvs, indices)
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+        .with_inserted_indices(Indices::U32(indices))
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
+        .with_computed_smooth_normals()
 }
 
 /// A surface of revolution around +Y from a `(radius, y)` profile, with the
