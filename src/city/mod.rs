@@ -290,6 +290,13 @@ fn build_city(
         &mut collision_world,
     );
     build_covered_passages(&mut commands, &mut meshes, &city_materials, &plan);
+    build_bellfoot_passage(
+        &mut commands,
+        &mut meshes,
+        &city_meshes,
+        &city_materials,
+        &mut collision_world,
+    );
     build_bridge_arches(&mut commands, &mut meshes, &city_materials, &plan);
     build_square_arcades(&mut commands, &mut meshes, &city_materials, &plan, &doors);
     build_yard_stairs(
@@ -2618,7 +2625,6 @@ fn build_named_details(
     plan: &CityPlan,
     collision_world: &mut CollisionWorld,
 ) {
-    build_bellstand_stair(commands, meshes, materials, collision_world);
     build_bellstand_belfry(commands, meshes, materials, collision_world);
     build_saint_maren_tower(commands, meshes, materials, collision_world);
     build_parish_towers(commands, meshes, materials, plan, collision_world);
@@ -2903,45 +2909,483 @@ fn build_bellstand_belfry(
     );
 }
 
-fn build_bellstand_stair(
+/// Bellfoot Passage — the covered way at the foot of the Bellstand tower's
+/// external stair, after `bellfoot_passage_001.png`. A stone porch projects
+/// north from the tower's civic masonry into the bright Bellstand square: solid
+/// side walls, a boarded soffit slung on joists, posted notices, and lanterns
+/// that burn day and night. The great stair rides over the east flank on a low
+/// spandrel and climbs the tower face to an upper watch door; heavy oak bracing
+/// frames the mouth, and the square glows through it.
+fn build_bellfoot_passage(
     commands: &mut Commands,
-    meshes: &CityMeshes,
+    meshes: &mut Assets<Mesh>,
+    city_meshes: &CityMeshes,
     materials: &CityMaterials,
     collision_world: &mut CollisionWorld,
 ) {
-    let bottom = Vec2::new(55.0, -248.0);
-    let top = Vec2::new(64.0, -270.0);
-    let direction = (top - bottom).normalize();
-    let angle = direction.x.atan2(direction.y);
-    for step in 0..14 {
-        let t = step as f32 / 13.0;
-        let point = bottom.lerp(top, t);
-        let y = 3.15 + t * 9.8;
-        let center = Vec3::new(point.x, y, point.y);
-        spawn_rotated_box_named(
-            commands,
-            meshes,
-            &materials.limestone,
-            center,
-            Vec3::new(4.1, 0.32, 2.2),
-            angle,
-            "Bellstand external stair",
+    // --- Frame ------------------------------------------------------------
+    // The tower's north face; the porch projects from it into the square.
+    let face_z = -257.5_f32;
+    let mouth_z = -244.5_f32;
+    let x_w = 54.0_f32; // west wall centreline
+    let x_e = 59.5_f32; // east (spandrel) wall centreline
+    let wall_th = 0.7_f32;
+    let in_w = x_w + wall_th * 0.5; // interior west face
+    let in_e = x_e - wall_th * 0.5; // interior east face
+    let ceil_y = 3.15_f32; // boarded soffit underside
+    let wall_top = 3.95_f32;
+    let spandrel_top = 2.45_f32; // the east wall the stair springs from
+    let board_e = 57.7_f32; // boards stop short so the stair underside shows
+
+    // One batch per material, committed at the end.
+    let mut stone = MeshData::default();
+    let mut boards = MeshData::default();
+    let mut iron = MeshData::default();
+    let mut glass = MeshData::default();
+    let mut notices = MeshData::default();
+
+    // Axis-aligned box between two opposite corners, appended to `mesh`.
+    fn ab(mesh: &mut MeshData, x0: f32, x1: f32, y0: f32, y1: f32, z0: f32, z1: f32) {
+        add_oriented_box(
+            mesh,
+            Vec3::new((x0 + x1) * 0.5, (y0 + y1) * 0.5, (z0 + z1) * 0.5),
+            Vec3::new(
+                (x1 - x0).abs() * 0.5,
+                (y1 - y0).abs() * 0.5,
+                (z1 - z0).abs() * 0.5,
+            ),
+            Vec2::X,
         );
-        add_rotated_box_collider_at(collision_world, center, Vec3::new(4.1, 0.32, 2.2), angle);
     }
-    for side in [-1.0, 1.0] {
-        let right = Vec2::new(direction.y, -direction.x) * side * 2.05;
-        let center2 = bottom.lerp(top, 0.5) + right;
-        spawn_rotated_box_named(
+
+    // --- Worn flag floor and doorsteps -----------------------------------
+    // Kept dark and grimy so it reads as trodden flags in shade, not a fresh
+    // slab dropped on the square.
+    stone.set_brush([0.58, 0.56, 0.53]);
+    ab(&mut stone, in_w, in_e, -0.03, 0.05, face_z, mouth_z);
+    ab(
+        &mut stone,
+        in_w + 0.2,
+        in_e - 0.2,
+        0.0,
+        0.12,
+        mouth_z - 0.55,
+        mouth_z + 0.02,
+    );
+    ab(
+        &mut stone,
+        in_w + 0.3,
+        in_e - 0.3,
+        0.0,
+        0.14,
+        face_z - 0.02,
+        face_z + 0.55,
+    );
+    stone.reset_brush();
+
+    // --- Side walls -------------------------------------------------------
+    // West: full-height solid stone, carrying the posted notices.
+    stone.set_brush([0.86, 0.84, 0.80]);
+    ab(
+        &mut stone,
+        x_w - wall_th * 0.5,
+        x_w + wall_th * 0.5,
+        0.0,
+        wall_top,
+        face_z,
+        mouth_z,
+    );
+    collision_world.add_box(
+        Vec3::new(x_w - wall_th * 0.5, 0.0, face_z),
+        Vec3::new(x_w + wall_th * 0.5, wall_top, mouth_z),
+    );
+    // East: a low spandrel the stair springs from; open above so the square's
+    // light spills in beneath the rising steps.
+    ab(
+        &mut stone,
+        x_e - wall_th * 0.5,
+        x_e + wall_th * 0.5,
+        0.0,
+        spandrel_top,
+        face_z,
+        mouth_z,
+    );
+    collision_world.add_box(
+        Vec3::new(x_e - wall_th * 0.5, 0.0, face_z),
+        Vec3::new(x_e + wall_th * 0.5, spandrel_top, mouth_z),
+    );
+    stone.reset_brush();
+
+    // --- Boarded soffit over the west bay --------------------------------
+    let run = mouth_z - face_z;
+    boards.set_brush([0.42, 0.36, 0.30]);
+    ab(&mut boards, in_w, board_e, ceil_y, ceil_y + 0.09, face_z, mouth_z);
+    for i in 1..7 {
+        let z = face_z + run * (i as f32 / 7.0);
+        ab(
+            &mut boards,
+            in_w,
+            board_e + 0.06,
+            ceil_y - 0.14,
+            ceil_y - 0.01,
+            z - 0.06,
+            z + 0.06,
+        );
+    }
+    boards.reset_brush();
+    // Stone rib where the boards meet the open stair strip.
+    stone.set_brush([0.80, 0.78, 0.73]);
+    ab(
+        &mut stone,
+        board_e - 0.05,
+        board_e + 0.22,
+        ceil_y - 0.06,
+        ceil_y + 0.34,
+        face_z,
+        mouth_z,
+    );
+    stone.reset_brush();
+
+    // --- Mouth: oak posts, lintel, knee braces, stone header -------------
+    let post_half = 0.20_f32;
+    for px in [x_w, x_e] {
+        spawn_box_named(
             commands,
-            meshes,
+            city_meshes,
             &materials.timber,
-            Vec3::new(center2.x, 8.4, center2.y),
-            Vec3::new(0.22, 1.1, bottom.distance(top)),
-            angle,
-            "Bellfoot stair rail",
+            Vec3::new(px, (wall_top - 0.1) * 0.5, mouth_z),
+            Vec3::new(post_half * 2.0, wall_top - 0.1, post_half * 2.0),
+            "Bellfoot mouth post",
+        );
+        collision_world.add_box(
+            Vec3::new(px - post_half, 0.0, mouth_z - post_half),
+            Vec3::new(px + post_half, wall_top - 0.1, mouth_z + post_half),
         );
     }
+    spawn_box_named(
+        commands,
+        city_meshes,
+        &materials.timber,
+        Vec3::new((x_w + x_e) * 0.5, wall_top - 0.32, mouth_z),
+        Vec3::new(x_e - x_w + post_half * 2.0, 0.44, 0.4),
+        "Bellfoot mouth lintel",
+    );
+    // Knee braces from each post up to the lintel, in the plane of the mouth.
+    for (px, sign) in [(x_w, 1.0_f32), (x_e, -1.0)] {
+        let brace_len = 1.25_f32;
+        let dir = Vec3::new(sign * std::f32::consts::FRAC_1_SQRT_2, std::f32::consts::FRAC_1_SQRT_2, 0.0);
+        let center = Vec3::new(px + sign * 0.42, wall_top - 0.95, mouth_z) + dir * (brace_len * 0.5);
+        spawn_mesh_named(
+            commands,
+            &city_meshes.cube,
+            &materials.timber,
+            Transform::from_translation(center)
+                .with_rotation(Quat::from_rotation_arc(Vec3::X, dir))
+                .with_scale(Vec3::new(brace_len, 0.16, 0.16)),
+            "Bellfoot mouth brace",
+        );
+    }
+    // Stone header/parapet over the mouth, carried on the walls.
+    stone.set_brush([0.84, 0.82, 0.77]);
+    ab(
+        &mut stone,
+        x_w - wall_th * 0.5,
+        x_e + wall_th * 0.5,
+        wall_top - 0.15,
+        wall_top + 0.55,
+        mouth_z - 0.2,
+        mouth_z + 0.18,
+    );
+    stone.reset_brush();
+
+    // Heavy oak tie-beams span the whole passage — the reference's thick
+    // timber bracing, and what the soffit boards hang from.
+    for z in [-247.6_f32, -252.4] {
+        spawn_box_named(
+            commands,
+            city_meshes,
+            &materials.timber,
+            Vec3::new((in_w + in_e) * 0.5, ceil_y - 0.14, z),
+            Vec3::new(in_e - in_w + 0.2, 0.26, 0.3),
+            "Bellfoot tie-beam",
+        );
+    }
+
+    // --- The great external stair over the east flank --------------------
+    // A solid stone flight: filled step blocks between stone stringer parapets,
+    // climbing the tower face to the watch door. Never floating treads over a
+    // plank — the earlier build read as a hollow wooden ramp.
+    let x_stair = 59.7_f32;
+    let stair_half = 1.55_f32;
+    let foot_z = -239.0_f32;
+    let foot_y = 0.1_f32;
+    let n_steps = 42_usize;
+    let going = 0.42_f32;
+    let rise = 0.205_f32;
+    let tread_z = |i: f32| foot_z - going * i; // north edge of tread i
+    let tread_y = |i: f32| foot_y + rise * i;
+    let top_z = tread_z(n_steps as f32);
+    let top_y = tread_y(n_steps as f32);
+    let span = Vec3::new(0.0, top_y - foot_y, top_z - foot_z);
+    let mid = Vec3::new(x_stair, (foot_y + top_y) * 0.5, (foot_z + top_z) * 0.5);
+    let rake = Quat::from_rotation_arc(Vec3::NEG_Z, span.normalize());
+    let flight_len = span.length();
+
+    // Broad bottom step where the flight lands in the square.
+    stone.set_brush([0.78, 0.76, 0.72]);
+    ab(
+        &mut stone,
+        x_stair - stair_half - 0.45,
+        x_stair + stair_half + 0.45,
+        -0.12,
+        foot_y + 0.04,
+        foot_z - 0.15,
+        foot_z + 0.85,
+    );
+    // Filled steps: each block reaches well below its own tread, so the flight
+    // is a solid mass with a corbelled stone soffit — no hollow underside.
+    stone.set_brush([0.83, 0.81, 0.77]);
+    for i in 0..n_steps {
+        let zc = tread_z(i as f32);
+        let yc = tread_y(i as f32);
+        ab(
+            &mut stone,
+            x_stair - stair_half,
+            x_stair + stair_half,
+            yc - 0.66,
+            yc,
+            zc - going - 0.03,
+            zc + 0.03,
+        );
+        collision_world.add_box(
+            Vec3::new(x_stair - stair_half, yc - 0.3, zc - going - 0.03),
+            Vec3::new(x_stair + stair_half, yc, zc + 0.03),
+        );
+    }
+    stone.reset_brush();
+
+    // Solid stone stringer parapets flanking the flight — the guard, and what
+    // hides the step ends.
+    for s in [-1.0_f32, 1.0] {
+        spawn_mesh_named(
+            commands,
+            &city_meshes.cube,
+            &materials.limestone,
+            Transform::from_translation(mid + Vec3::X * s * (stair_half + 0.18) + Vec3::Y * 0.26)
+                .with_rotation(rake)
+                .with_scale(Vec3::new(0.34, 1.25, flight_len + 0.2)),
+            "Bellfoot stair stringer",
+        );
+    }
+
+    // Landing against the tower face, and its collider.
+    stone.set_brush([0.83, 0.81, 0.77]);
+    ab(
+        &mut stone,
+        x_stair - stair_half,
+        x_stair + stair_half,
+        top_y - 0.75,
+        top_y,
+        face_z,
+        top_z + 0.1,
+    );
+    stone.reset_brush();
+    collision_world.add_box(
+        Vec3::new(x_stair - stair_half, top_y - 0.3, face_z),
+        Vec3::new(x_stair + stair_half, top_y, top_z + 0.1),
+    );
+
+    // Studded oak watch door set into the tower face above the landing.
+    boards.set_brush([0.24, 0.18, 0.13]);
+    ab(
+        &mut boards,
+        x_stair - 0.62,
+        x_stair + 0.62,
+        top_y + 0.05,
+        top_y + 2.15,
+        face_z - 0.18,
+        face_z - 0.02,
+    );
+    boards.reset_brush();
+    for dz in [-0.35_f32, 0.0, 0.35] {
+        for dy in [0.5_f32, 1.1, 1.7] {
+            ab(
+                &mut iron,
+                x_stair + dz - 0.04,
+                x_stair + dz + 0.04,
+                top_y + dy - 0.04,
+                top_y + dy + 0.04,
+                face_z - 0.22,
+                face_z - 0.16,
+            );
+        }
+    }
+
+    // Rear porch door + a shallow relieving lintel, at ground under the stair.
+    boards.set_brush([0.24, 0.18, 0.13]);
+    ab(
+        &mut boards,
+        (in_w + board_e) * 0.5 - 0.6,
+        (in_w + board_e) * 0.5 + 0.6,
+        0.05,
+        2.15,
+        face_z + 0.02,
+        face_z + 0.16,
+    );
+    boards.reset_brush();
+
+    // --- Posted notices: a wall papered with unreadable bills ------------
+    // Thin proud boards, not flat decals, so they catch the lantern light on
+    // more than one face and read as posted paper.
+    notices.set_brush([1.0, 0.96, 0.86]);
+    let mut tag = 0u32;
+    for col in 0..7 {
+        for row in 0..2 {
+            tag += 1;
+            let h = stable_hash(&format!("bellfoot_west_notice_{tag}"));
+            let z = -246.3 - col as f32 * 1.12 - (h % 22) as f32 / 100.0;
+            let cy = 1.12 + row as f32 * 0.82 + ((h >> 5) % 26) as f32 / 100.0;
+            let hw = 0.17 + (h % 12) as f32 / 100.0;
+            let hh = 0.22 + ((h >> 3) % 20) as f32 / 100.0;
+            ab(&mut notices, in_w + 0.01, in_w + 0.06, cy - hh, cy + hh, z - hw, z + hw);
+        }
+    }
+    for col in 0..4 {
+        let h = stable_hash(&format!("bellfoot_east_notice_{col}"));
+        let z = -247.6 - col as f32 * 1.55;
+        let cy = 1.2 + (h % 40) as f32 / 100.0;
+        let hw = 0.19 + (h % 10) as f32 / 200.0;
+        ab(&mut notices, in_e - 0.06, in_e - 0.01, cy - 0.26, cy + 0.26, z - hw, z + hw);
+    }
+    notices.reset_brush();
+
+    // --- Lanterns that burn day and night --------------------------------
+    let porch_mid_x = (in_w + board_e) * 0.5;
+    for z in [-247.8_f32, -253.2] {
+        let head_y = ceil_y - 0.75;
+        ab(
+            &mut iron,
+            porch_mid_x - 0.02,
+            porch_mid_x + 0.02,
+            head_y + 0.13,
+            ceil_y,
+            z - 0.02,
+            z + 0.02,
+        );
+        ab(
+            &mut iron,
+            porch_mid_x - 0.1,
+            porch_mid_x + 0.1,
+            head_y + 0.11,
+            head_y + 0.16,
+            z - 0.1,
+            z + 0.1,
+        );
+        ab(
+            &mut iron,
+            porch_mid_x - 0.085,
+            porch_mid_x + 0.085,
+            head_y - 0.16,
+            head_y - 0.11,
+            z - 0.085,
+            z + 0.085,
+        );
+        glass.set_brush([1.0, 0.85, 0.55]);
+        ab(
+            &mut glass,
+            porch_mid_x - 0.07,
+            porch_mid_x + 0.07,
+            head_y - 0.11,
+            head_y + 0.11,
+            z - 0.07,
+            z + 0.07,
+        );
+        glass.reset_brush();
+        commands.spawn((
+            Name::new("Bellfoot passage lantern"),
+            PointLight {
+                color: Color::srgb(1.0, 0.62, 0.28),
+                intensity: 22_000.0,
+                range: 12.0,
+                radius: 0.1,
+                shadow_maps_enabled: false,
+                ..default()
+            },
+            Transform::from_xyz(porch_mid_x, head_y - 0.2, z),
+        ));
+    }
+    // Iron wall bracket + lantern by the mouth (the reference's hanging lamp).
+    let wl_x = in_w + 0.05;
+    let wl_z = -245.7_f32;
+    let wl_y = 2.65_f32;
+    ab(&mut iron, in_w, wl_x + 0.5, wl_y + 0.28, wl_y + 0.34, wl_z - 0.03, wl_z + 0.03);
+    ab(
+        &mut iron,
+        wl_x + 0.5,
+        wl_x + 0.56,
+        wl_y - 0.06,
+        wl_y + 0.34,
+        wl_z - 0.03,
+        wl_z + 0.03,
+    );
+    glass.set_brush([1.0, 0.85, 0.55]);
+    ab(
+        &mut glass,
+        wl_x + 0.44,
+        wl_x + 0.62,
+        wl_y - 0.06,
+        wl_y + 0.18,
+        wl_z - 0.09,
+        wl_z + 0.09,
+    );
+    glass.reset_brush();
+    commands.spawn((
+        Name::new("Bellfoot mouth lantern"),
+        PointLight {
+            color: Color::srgb(1.0, 0.62, 0.28),
+            intensity: 18_000.0,
+            range: 10.0,
+            radius: 0.1,
+            shadow_maps_enabled: false,
+            ..default()
+        },
+        Transform::from_xyz(wl_x + 0.53, wl_y + 0.06, wl_z),
+    ));
+
+    // --- A little market clutter, inhabiting the shade -------------------
+    for (bx, bz, r, hgt) in [
+        (in_w + 0.55, -251.0_f32, 0.34_f32, 0.42_f32),
+        (in_w + 0.5, -252.1, 0.30, 0.36),
+    ] {
+        spawn_cylinder(
+            commands,
+            city_meshes,
+            &materials.canvas,
+            Vec3::new(bx, hgt * 0.5, bz),
+            r,
+            hgt,
+        );
+    }
+    spawn_box_named(
+        commands,
+        city_meshes,
+        &materials.timber,
+        Vec3::new(in_w + 0.55, 0.32, -249.6),
+        Vec3::new(0.7, 0.64, 0.5),
+        "Bellfoot crate",
+    );
+
+    // --- Tower-base plinth: heavy civic masonry on the north face --------
+    stone.set_brush([0.80, 0.78, 0.73]);
+    ab(&mut stone, 52.6, 75.4, 0.0, 1.2, face_z, face_z + 0.5);
+    stone.reset_brush();
+
+    // --- Commit the batches ----------------------------------------------
+    spawn_batch(commands, meshes, &materials.limestone, stone, "Bellfoot masonry");
+    spawn_batch(commands, meshes, &materials.dark_wood, boards, "Bellfoot boards");
+    spawn_batch(commands, meshes, &materials.iron, iron, "Bellfoot ironwork");
+    spawn_batch(commands, meshes, &materials.lantern_glass, glass, "Bellfoot lantern panes");
+    spawn_batch(commands, meshes, &materials.cloth_ochre, notices, "Bellfoot notices");
 }
 
 fn build_saint_maren_tower(
