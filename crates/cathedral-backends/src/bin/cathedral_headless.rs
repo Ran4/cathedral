@@ -139,13 +139,15 @@ struct Args {
     #[arg(long, value_name = "TEXT")]
     say: Option<String>,
 
-    /// set a body carriage status on a named character after the world loads,
+    /// set a body carriage status on a character after the world loads,
     /// repeatable: `--status Ilse=drunkenness:0.8` (`features/npc_bodies.md` §8)
     ///
     /// The stand-in for the ale the sim does not model yet — nothing makes
     /// anyone drunk — so a drunk or weary carriage can be poked in for a
-    /// transcript or a `--trace-positions` walk. Kinds: drunkenness, weariness;
-    /// value is a 0..=1 float. Sits beside `--say` as a pre-run world poke.
+    /// transcript or a `--trace-positions` walk. NAME resolves by display name
+    /// first, then by actor id (`--status p006v=weariness:1`). Kinds:
+    /// drunkenness, weariness; value is a 0..=1 float. A handle matching nobody
+    /// is a stderr diagnostic, not a fault. Sits beside `--say` as a pre-run poke.
     #[arg(long, value_name = "NAME=KIND:VALUE")]
     status: Vec<String>,
 

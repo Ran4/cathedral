@@ -281,10 +281,13 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
     }
 }
 
-/// `status <name> <kind> <value>` (`features/npc_bodies.md` §8). The name may
-/// contain spaces (everything before the last two tokens), the kind is a
-/// `StatusKind` wire word (`drunkenness`, `weariness`), and the value is a
-/// `0..=1` float. Validated here so a malformed script fails before the run.
+/// `status <name-or-id> <kind> <value>` (`features/npc_bodies.md` §8). The
+/// handle may be a display name (spaces allowed — everything before the last
+/// two tokens) or the actor id the HUD shows for strangers (`id p006v`); the
+/// sim resolves name first, then id. The kind is a `StatusKind` wire word
+/// (`drunkenness`, `weariness`) and the value a `0..=1` float. Validated here
+/// so a malformed script fails before the run; a handle that matches nobody is
+/// logged by the engine (not caught here — the target list lives in the sim).
 fn parse_status(argument: &str, statement: &str) -> Result<Action, String> {
     let tokens: Vec<&str> = argument.split_whitespace().collect();
     if tokens.len() < 3 {

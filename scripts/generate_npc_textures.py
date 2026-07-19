@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["openai", "python-dotenv", "pillow"]
+# dependencies = ["openai", "python-dotenv", "pillow", "numpy", "scipy"]
 # ///
 """Generate NPC body textures for features/npc_bodies.md (M0).
 
@@ -11,9 +11,11 @@ Two families under assets/textures/npc/:
   OutfitClass (Cleric | Merchant | Craftsman | Laborer | Watch | Notable | Poor),
   same gpt-image-2 pipeline + offset-and-blend seamless post-process as
   generate_cloth_textures.py.
-* face_00.png .. face_23.png - 24 distinct painted faces on a uniform skin-tone
-  background (the head sphere shows the background everywhere but the front).
-  Generated at 1024 quality "medium", saved downscaled to 256x256, NOT run
+* face_00.png .. face_23.png - 24 distinct painted faces, each a head centred on
+  a plain skin-tone background. Generated at 1024 quality "medium", downscaled to
+  256x256, then reframed by reframe_faces.frame_head_portrait (cropped tight to
+  the head, the background faded to a shaded periphery) so the head-sphere
+  projection reads as a head instead of a small face on a pale ball. NOT run
   through the seamless pass (a face must not be rolled).
 
 Existing outputs are skipped so an interrupted run resumes; pass --force to
@@ -35,6 +37,9 @@ from io import BytesIO
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from reframe_faces import frame_head_portrait  # noqa: E402  (sibling script, shared reframing)
 
 
 def _repo_root() -> Path:
@@ -251,7 +256,10 @@ def produce_face(client, index: int) -> None:
     prompt = f"{FACE_COMMON} The subject: {FACE_VARIANTS[index]}."
     raw = generate_image(client, prompt, quality="medium", label=target.name)
     small = raw.convert("RGB").resize((FACE_SAVE_SIZE, FACE_SAVE_SIZE), Image.LANCZOS)
-    save_atomic(small, target)  # no seamless pass: faces must not be rolled
+    # Crop tight to the head and fade the beige margin to a shaded periphery, so
+    # the sphere projection reads as a head, not a mask on a pale ball. No
+    # seamless pass: faces must not be rolled.
+    save_atomic(frame_head_portrait(small), target)
     log(f"wrote {target} ({target.stat().st_size:,} bytes)")
 
 

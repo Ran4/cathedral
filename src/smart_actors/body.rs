@@ -2423,9 +2423,18 @@ fn face_uv(direction: Vec3) -> Vec2 {
     )
 }
 
-/// The head sphere with the painted face planar-projected onto its front
-/// (−Z) hemisphere. Origin at the neck joint; the sphere's centre is baked
-/// [`HEAD_CENTER_ABOVE_NECK`] above it so the head pivots at the neck.
+/// A perfect sphere reads as a ball, not a head, so the crown is stretched a
+/// little taller than the head is wide and the lower head tapers toward a chin
+/// — an egg, not a globe. The taper stays below the head centre, where no
+/// headgear sits, so hats and hoods keep their authored fit.
+const HEAD_VERTICAL_STRETCH: f32 = 1.06;
+const HEAD_JAW_TAPER: f32 = 0.26;
+
+/// The head — an ovoid with the painted face planar-projected onto its front
+/// (−Z) hemisphere. Origin at the neck joint; the shape is centred
+/// [`HEAD_CENTER_ABOVE_NECK`] above it so the head pivots at the neck. Only the
+/// vertex *positions* are shaped: face UVs come from the unit `direction`, so
+/// the projection (and its orientation contract) is independent of the shape.
 fn head_mesh() -> Mesh {
     const SECTORS: usize = 24;
     const STACKS: usize = 16;
@@ -2441,9 +2450,26 @@ fn head_mesh() -> Mesh {
         for sector in 0..=SECTORS {
             let a = sector as f32 / SECTORS as f32 * TAU;
             let direction = Vec3::new(ring_r * a.cos(), y, ring_r * a.sin());
-            let position = direction * HEAD_RADIUS + Vec3::Y * HEAD_CENTER_ABOVE_NECK;
+            // Jaw taper: full width through the cranium (y ≥ 0), narrowing over
+            // the lower head (smoothstep in −y) to a chin.
+            let below = (-direction.y).clamp(0.0, 1.0);
+            let taper = 1.0 - HEAD_JAW_TAPER * below * below * (3.0 - 2.0 * below);
+            let shaped = Vec3::new(
+                direction.x * taper,
+                direction.y * HEAD_VERTICAL_STRETCH,
+                direction.z * taper,
+            );
+            let position = shaped * HEAD_RADIUS + Vec3::Y * HEAD_CENTER_ABOVE_NECK;
             positions.push([position.x, position.y, position.z]);
-            normals.push([direction.x, direction.y, direction.z]);
+            // Rescale the normal by the inverse of each axis' stretch so the
+            // shaped surface still shades smoothly.
+            let normal = Vec3::new(
+                direction.x / taper.max(1e-3),
+                direction.y / HEAD_VERTICAL_STRETCH,
+                direction.z / taper.max(1e-3),
+            )
+            .normalize_or(Vec3::Y);
+            normals.push([normal.x, normal.y, normal.z]);
             let uv = face_uv(direction);
             uvs.push([uv.x, uv.y]);
         }

@@ -6,23 +6,34 @@ The game runs windowed 1280x720, executes the actions (~0.5 s apart),
 prints a `[drive] 3.2s key Escape` evidence line per action to stdout,
 and exits on its own — no `pkill` needed.
 
-Actions: `key <KeyCode>` (e.g. `Escape`, `KeyZ`, `F5`), `type <text>` (inject
-text into the Enter chat box as a raw keyboard message; `;` cannot appear in
-the text), `click <Name substring>` (case-insensitive match on UI `Name`),
-`shot <name>` (PNG to
-`logs/latest_session/screenshots/<name>.png`), `sleep <seconds>`, `wait-online` (until the
-actor engine is ready; 30 s timeout), `sound <sound_id>` (emit a catalog
-world sound, e.g. `sound town_bell` — the stand-in trigger for world causes
-the sim lacks), `status <name> <kind> <value>` (set a carriage body status on
-the named character so a drunk/weary walk can be eyeballed —
-e.g. `status Ilse drunkenness 0.8`; kinds are `drunkenness` and `weariness`,
-value a `0..=1` float, name may contain spaces — the stand-in for the ale the
-sim does not model yet, npc_bodies M5), `tp <x> <y> <z> [yaw_deg [pitch_deg]]` (teleport the player
-and aim the view — yaw 0 looks toward -Z, positive pitch looks up; switches
-to flying so an elevated vantage holds for a `shot`), `quit`. Without `quit` the game exits
-~2 s after the last action; a watchdog aborts after `CATHEDRAL_DRIVE_TIMEOUT`
-seconds (default 60). The `[drive]` lines are also mirrored into the
-session's `logs/latest_session/logs.jsonl` (source `"drive"`).
+Actions (each fires ~0.5 s after the previous):
+
+- `key <KeyCode>` — press a key, e.g. `key Escape`, `key KeyZ`, `key F5`.
+- `type <text>` — inject text into the Enter chat box as a raw keyboard message
+  (`;` cannot appear in the text).
+- `click <Name substring>` — case-insensitive match on a UI element's `Name`.
+- `shot <name>` — capture a PNG to `logs/latest_session/screenshots/<name>.png`.
+- `sleep <seconds>` — wait.
+- `wait-online` — block until the actor engine is ready (30 s timeout).
+- `sound <sound_id>` — emit a catalog world sound, e.g. `sound town_bell` (the
+  stand-in trigger for world causes the sim lacks).
+- `status <name-or-id> <kind> <value>` — set a carriage body status so a
+  drunk/weary walk can be eyeballed, e.g. `status Ilse drunkenness 0.8` or
+  `status p006v weariness 1`. The target is resolved by display name first (may
+  contain spaces), then by the actor id the HUD shows for strangers (`id p006v`).
+  Kinds are `drunkenness` and `weariness`; value is a `0..=1` float. A handle
+  matching nobody is logged (`logs.jsonl` source `engine`, and stderr) and
+  skipped — not a fault. The stand-in for the ale the sim does not model yet
+  (npc_bodies M5).
+- `tp <x> <y> <z> [yaw_deg [pitch_deg]]` — teleport the player and aim the view
+  (yaw 0 looks toward -Z, positive pitch looks up); switches to flying so an
+  elevated vantage holds for a `shot`.
+- `quit` — exit immediately.
+
+Without a trailing `quit` the game exits ~2 s after the last action; a watchdog
+aborts after `CATHEDRAL_DRIVE_TIMEOUT` seconds (default 60). The `[drive]` lines
+are also mirrored into the session's `logs/latest_session/logs.jsonl` (source
+`"drive"`).
 
 Example — open the settings menu, switch the STT pill, close it, exit:
 

@@ -1529,16 +1529,19 @@ impl Engine {
     fn debug_set_status(
         &mut self,
         now: f64,
-        name: &str,
+        who: &str,
         kind: StatusKind,
         value: f64,
         out: &mut Vec<EngineMessage>,
     ) {
-        if self.world.debug_set_status(name, kind, value) {
+        if self.world.debug_set_status(who, kind, value) {
             self.flush(now, out);
         } else {
+            // A poke at nobody is a logged Diagnostic (host: `logs.jsonl` source
+            // `engine` + stderr; headless: stderr), never a fault — a typo must
+            // not abort a drive script or a headless run.
             out.push(EngineMessage::Diagnostic(format!(
-                "[smart actors] invalid debug_status: there is no character named '{name}'"
+                "[smart actors] invalid debug_status: no character with the name or id '{who}'"
             )));
         }
     }

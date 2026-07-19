@@ -182,17 +182,30 @@ impl World {
     /// the `cathedral-headless --status` flag and the drive-mode `status`
     /// action both land here — so no reflex ever fabricates one; it stays a
     /// fact the sim owns. Bumps `world_revision` so the next snapshot carries
-    /// it. Returns `false` (and writes nothing) when no such character exists.
-    pub fn debug_set_status(&mut self, name: &str, kind: StatusKind, value: f64) -> bool {
+    /// it. `who` is resolved against the display **name** first
+    /// (case-insensitive), then the actor **id** — the `id p006v` the HUD shows
+    /// for strangers, also tolerating a pasted `p006v_ilse` lore stem by its id
+    /// prefix. Returns `false` (and writes nothing) when nobody matches.
+    pub fn debug_set_status(&mut self, who: &str, kind: StatusKind, value: f64) -> bool {
         let clamped = if value.is_finite() {
             value.clamp(0.0, 1.0)
         } else {
             0.0
         };
+        // Debug tooling identifies a target by name or id (the sim proper only
+        // ever resolves ids). Name wins globally, then an exact id, then the id
+        // prefix of an `<id>_<name>` stem someone may have pasted.
+        let id_stem = who.split('_').next().unwrap_or(who);
         let Some(id) = self
             .characters
             .values()
-            .find(|character| character.name().eq_ignore_ascii_case(name))
+            .find(|character| character.name().eq_ignore_ascii_case(who))
+            .or_else(|| {
+                self.characters.values().find(|character| {
+                    character.id().as_str().eq_ignore_ascii_case(who)
+                        || character.id().as_str().eq_ignore_ascii_case(id_stem)
+                })
+            })
             .map(|character| character.id().clone())
         else {
             return false;
@@ -1476,6 +1489,47 @@ mod tests {
         let revision = world.world_revision;
         assert!(!world.debug_set_status("Nobody", StatusKind::Drunkenness, 0.5));
         assert_eq!(world.world_revision, revision);
+    }
+
+    /// The debug status poke also resolves a target by actor id (what the HUD
+    /// shows for a stranger) and by an `<id>_<name>` lore stem, not just by name.
+    #[test]
+    fn debug_set_status_resolves_by_id_and_stem_too() {
+        let mut world = World::new();
+        // A display name deliberately unlike the id, so a name hit and an id hit
+        // are distinguishable.
+        world.add_character(Character::from_sheet(CharacterSheet {
+            id: ActorId::from_raw("p006v"),
+            name: "Wend Carrow".into(),
+            control: Control::Llm,
+            back_story: "test".into(),
+            location_description: "test square".into(),
+            appearance: Default::default(),
+            voice_key: None,
+            position_m: Vec3::new(0.0, 0.0, 0.0),
+            facing_yaw: 0.0,
+            holds: Vec::new(),
+            goal: "None".into(),
+            memories: Vec::new(),
+            knows: BTreeSet::new(),
+            lore: None,
+        }));
+        let id = ActorId::from_raw("p006v");
+
+        // By display name (case-insensitive, may contain spaces).
+        assert!(world.debug_set_status("wend carrow", StatusKind::Drunkenness, 0.4));
+        assert_eq!(world.characters[&id].state.statuses[&StatusKind::Drunkenness], 0.4);
+
+        // By the raw actor id the HUD shows for strangers.
+        assert!(world.debug_set_status("P006V", StatusKind::Weariness, 0.6));
+        assert_eq!(world.characters[&id].state.statuses[&StatusKind::Weariness], 0.6);
+
+        // By an `<id>_<name>` stem someone might paste from a lore path.
+        assert!(world.debug_set_status("p006v_wend", StatusKind::Drunkenness, 0.9));
+        assert_eq!(world.characters[&id].state.statuses[&StatusKind::Drunkenness], 0.9);
+
+        // Neither a name nor an id: no write.
+        assert!(!world.debug_set_status("q9zzz", StatusKind::Drunkenness, 0.5));
     }
 
     /// Statuses surface on the public snapshot, clamped and ordered by kind, and
