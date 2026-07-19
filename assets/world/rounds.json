@@ -164,8 +164,10 @@
   "lamplighter": {
    "leash_m": 20.0,
    "curfew_exempt": true,
+   "_comment": "A night trade: sleeps out the small hours and the morning after the beat, rests at home through the afternoon, lights at dusk and tends the posts through the evening. The lamp-lighting itself is the beat rung (M7), gated on the Lamplight/Snuffing/Watch window and this keeper's squares, not on these legs — so the work legs' Wickmarket/Gradine anchors only park them near Tobin's central pair once the posts are lit; the Watch sleep leg then sends them home rather than pinning them out all night (there is no tired-to-bed rung to catch it).",
    "legs": [
-    {"from": "dayspring", "at": "home", "doing": "idle"},
+    {"from": "watch", "at": "home", "doing": "sleep"},
+    {"from": "high_wick", "at": "home", "doing": "idle"},
     {"from": "lamplight", "at": "The Wickmarket", "doing": "work"},
     {"from": "snuffing", "at": "The Gradine", "doing": "work"}
    ]
