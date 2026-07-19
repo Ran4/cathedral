@@ -24,6 +24,7 @@ use bevy::reflect::enums::{DynamicEnum, DynamicVariant};
 use bevy::reflect::{TypeInfo, Typed};
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk};
 use bevy::ui::UiSystems;
+use cathedral_sim::StatusKind;
 
 use crate::controller::{PlayerController, TeleportPlayer};
 use crate::session_log;
@@ -145,6 +146,14 @@ enum Action {
     /// stand-in for world causes the sim does not model yet — nothing rings
     /// the town bell (no clock, no calendar), so drive scripts do.
     Sound(String),
+    /// Set a carriage body status (`features/npc_bodies.md` §8) on the named
+    /// character, so a drunk/weary walk can be eyeballed. The stand-in for the
+    /// ale the sim does not model yet — like `Sound`, a developer poke.
+    Status {
+        name: String,
+        kind: StatusKind,
+        value: f64,
+    },
     /// Teleport the player to a world position and aim the view. Yaw 0 looks
     /// toward -Z, positive pitch looks up; flight engages so the pose holds.
     Tp {
@@ -165,6 +174,9 @@ impl Action {
             Self::Sleep(seconds) => format!("sleep {seconds}"),
             Self::WaitOnline => "wait-online".into(),
             Self::Sound(sound_id) => format!("sound {sound_id}"),
+            Self::Status { name, kind, value } => {
+                format!("status {name} {}:{value}", kind.as_str())
+            }
             Self::Tp {
                 position,
                 yaw_degrees,
@@ -234,6 +246,7 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
                 ))
             }
         }
+        "status" => parse_status(argument, statement),
         "tp" => {
             let numbers = argument
                 .split_whitespace()
@@ -268,6 +281,30 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
     }
 }
 
+/// `status <name> <kind> <value>` (`features/npc_bodies.md` §8). The name may
+/// contain spaces (everything before the last two tokens), the kind is a
+/// `StatusKind` wire word (`drunkenness`, `weariness`), and the value is a
+/// `0..=1` float. Validated here so a malformed script fails before the run.
+fn parse_status(argument: &str, statement: &str) -> Result<Action, String> {
+    let tokens: Vec<&str> = argument.split_whitespace().collect();
+    if tokens.len() < 3 {
+        return Err(format!(
+            "`status` needs `<name> <kind> <value>`, e.g. `status Ilse drunkenness 0.8`, got `{statement}`"
+        ));
+    }
+    let value = tokens[tokens.len() - 1];
+    let kind_word = tokens[tokens.len() - 2];
+    let name = tokens[..tokens.len() - 2].join(" ");
+    let kind = StatusKind::from_wire(kind_word).ok_or_else(|| {
+        format!("unknown status kind `{kind_word}` in `{statement}` (try drunkenness, weariness)")
+    })?;
+    let value = match value.parse::<f64>() {
+        Ok(value) if value.is_finite() && (0.0..=1.0).contains(&value) => value,
+        _ => return Err(format!("status value `{value}` must be a number in 0..=1 in `{statement}`")),
+    };
+    Ok(Action::Status { name, kind, value })
+}
+
 /// Resolves a `KeyCode` variant by name (`Escape`, `KeyZ`, `F5`) through
 /// reflection, so the whole enum is accepted without a hand-written table.
 fn keycode_from_name(name: &str) -> Option<KeyCode> {
@@ -290,6 +327,11 @@ enum Directive {
     Click(String),
     Shot(String),
     Sound(String),
+    Status {
+        name: String,
+        kind: StatusKind,
+        value: f64,
+    },
     Tp {
         position: Vec3,
         yaw_degrees: f32,
@@ -393,6 +435,7 @@ impl Scheduler {
                 None
             }
             Action::Sound(sound_id) => Some(Directive::Sound(sound_id)),
+            Action::Status { name, kind, value } => Some(Directive::Status { name, kind, value }),
             Action::Tp {
                 position,
                 yaw_degrees,
@@ -555,6 +598,24 @@ fn run_drive_script(
                 )),
             }
         }
+        Some(Directive::Status { name, kind, value }) => match bridge.as_deref() {
+            // Travels the same host→engine path as `sound`: a bridge command the
+            // engine applies to the sim (`EngineCommand::DebugSetStatus`).
+            Some(bridge) => {
+                if let Err(error) = bridge.try_send(BridgeCommand::DebugStatus {
+                    name: name.clone(),
+                    kind,
+                    value,
+                }) {
+                    drive_log(&format!(
+                        "[drive] {now:.1}s warning: status not sent: {error}"
+                    ));
+                }
+            }
+            None => drive_log(&format!(
+                "[drive] {now:.1}s warning: `status` needs smart actors"
+            )),
+        },
         Some(Directive::Tp {
             position,
             yaw_degrees,
@@ -636,6 +697,30 @@ mod tests {
     fn empty_statements_are_skipped() {
         assert_eq!(parse_script(""), Ok(vec![]));
         assert_eq!(parse_script(" ; ;; quit "), Ok(vec![Action::Quit]));
+    }
+
+    #[test]
+    fn status_parses_name_kind_and_bounded_value() {
+        assert_eq!(
+            parse_script("status Ilse drunkenness 0.8"),
+            Ok(vec![Action::Status {
+                name: "Ilse".into(),
+                kind: StatusKind::Drunkenness,
+                value: 0.8,
+            }])
+        );
+        // A name may carry spaces; the last two tokens are kind and value.
+        assert_eq!(
+            parse_script("status Old Nan weariness 1"),
+            Ok(vec![Action::Status {
+                name: "Old Nan".into(),
+                kind: StatusKind::Weariness,
+                value: 1.0,
+            }])
+        );
+        assert!(parse_script("status Ilse sobriety 0.5").is_err(), "unknown kind");
+        assert!(parse_script("status Ilse drunkenness 2").is_err(), "out of range");
+        assert!(parse_script("status Ilse drunkenness").is_err(), "missing value");
     }
 
     #[test]

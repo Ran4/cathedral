@@ -605,6 +605,8 @@ mod tests {
             facing_yaw: 0.0,
             appearance: Default::default(),
             holds: holds.iter().map(|held| ItemId((*held).into())).collect(),
+            active_gesture: None,
+            statuses: Vec::new(),
         }
     }
 

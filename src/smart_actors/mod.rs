@@ -403,6 +403,7 @@ impl Plugin for SmartActorsPlugin {
             .add_message::<speech::ClearSpeechPresentation>()
             .add_message::<sound::PlaySoundEffect>()
             .add_message::<hands::HandoverFeedback>()
+            .add_message::<body::PresentGesture>()
             .configure_sets(
                 PostUpdate,
                 (
@@ -458,6 +459,10 @@ impl Plugin for SmartActorsPlugin {
                     // reconcile that would retire it (npc_bodies M2).
                     hands::apply_handover_feedback,
                     hands::reconcile_hand_props,
+                    // The deliberate body (npc_bodies M4): start one-shot poses
+                    // from gesture triggers and keep the looping-dance flag in
+                    // step with the snapshot, on the roots reconcile just placed.
+                    body::drive_gesture_pose,
                     interaction::reconcile_interaction_state,
                     // After reconcile, so it overrides the stale snapshot position
                     // reconcile writes for a mover between revisions with the live
@@ -583,6 +588,7 @@ struct BridgePresentationWriters<'w> {
     clear: MessageWriter<'w, speech::ClearSpeechPresentation>,
     sound_effects: MessageWriter<'w, sound::PlaySoundEffect>,
     hands: MessageWriter<'w, hands::HandoverFeedback>,
+    gestures: MessageWriter<'w, body::PresentGesture>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -946,6 +952,26 @@ fn process_engine_message(
                     });
                 }
                 _ => {}
+            }
+        }
+        EngineMessage::Gesture {
+            event_id: _,
+            actor_id,
+            kind,
+            target_id,
+            recipient_ids: _,
+        } => {
+            // The deliberate body (npc_bodies M4): a transient trigger the pose
+            // pipeline plays — and nothing else (no toast). The looping dance
+            // also rides the snapshot, so a late-arriving player still sees it;
+            // this fires the immediate one-shots and the dance's first frame.
+            let actor_id = model::actor_id_from_sim(&actor_id);
+            if mirror.actor(&actor_id).is_some() {
+                presentation.gestures.write(body::PresentGesture {
+                    actor_id,
+                    kind,
+                    target_id: target_id.as_ref().map(model::actor_id_from_sim),
+                });
             }
         }
         EngineMessage::TranscriptionResult {
@@ -1668,6 +1694,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                     model::ActorSnapshot {
                         id: model::ActorId("near".into()),
@@ -1677,6 +1705,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                     model::ActorSnapshot {
                         id: model::ActorId("far".into()),
@@ -1687,6 +1717,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                 ],
                 items: vec![],
@@ -1791,6 +1823,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                     model::ActorSnapshot {
                         id: giver.clone(),
@@ -1800,6 +1834,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![coin.clone()],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                     model::ActorSnapshot {
                         id: other.clone(),
@@ -1809,6 +1845,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                 ],
                 items: vec![model::ItemSnapshot {

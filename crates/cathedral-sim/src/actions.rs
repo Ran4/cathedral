@@ -14,9 +14,10 @@ use crate::{
     GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS, GOAL_MAX_CHARS, GOAL_NONE, HEARING_RADIUS_M,
     HUNGER_MAX, ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS, PLAYER_SPEECH_MAX_CHARS,
     WALK_SPEED_MPS,
-    character::{IntentTarget, TravelIntent},
+    character::{ActiveGesture, IntentTarget, TravelIntent},
     error::{ActionError, ActionErrorCode},
     event::DomainEvent,
+    gesture::{GestureKind, GestureSpec, GestureTarget},
     ids::{ActorId, ItemId, PlaceId},
     math::Vec3,
     offer::Offer,
@@ -77,7 +78,7 @@ fn dispatch(
 ) -> Result<String, ActionError> {
     // A non-string verb is impossible here (the reply parser types it), which
     // is where Python's `invalid_action` check lived.
-    match verb {
+    let result = match verb {
         "wait" => wait(world, actor_id, args),
         "say" => say(world, actor_id, args),
         "offer_item" => offer_item(world, actor_id, args),
@@ -87,6 +88,7 @@ fn dispatch(
         "eat" => eat(world, actor_id, args),
         "set_goal" => set_goal(world, actor_id, args),
         "make_sound" => make_sound(world, actor_id, args),
+        "gesture" => gesture(world, actor_id, args),
         "remember" => remember(world, actor_id, args),
         "forget" => forget(world, actor_id, args),
         "go_to" => go_to(world, actor_id, args),
@@ -97,7 +99,16 @@ fn dispatch(
             ActionErrorCode::UnknownVerb,
             format!("unknown verb: {unknown}"),
         )),
+    };
+    // "dance loops until the actor's next non-`wait` action" (`npc_bodies.md`
+    // §7): any successful non-`wait` action ends a running loop. `gesture` is
+    // excepted here because it manages its own `active_gesture` — `dance` sets
+    // it, every other kind clears it — so a re-issued `dance` is not cut short
+    // by its own success.
+    if result.is_ok() && verb != "wait" && verb != "gesture" {
+        set_active_gesture(world, actor_id, None);
     }
+    result
 }
 
 // ---------------------------------------------------------------- validators
@@ -1140,6 +1151,240 @@ fn make_sound(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
         ));
     }
     Ok(emit_sound(world, Some(actor_id), &sound, None))
+}
+
+/// A resolved `gesture` target: none, a person, or a place (its name).
+enum GestureTargetResolved {
+    None,
+    Person(ActorId),
+    Place(String),
+}
+
+/// Set (or clear) an actor's looping gesture, bumping the public revision only
+/// when it actually changes — `active_gesture` is a public snapshot field, so a
+/// no-op write must not republish the world.
+fn set_active_gesture(world: &mut World, actor_id: &ActorId, kind: Option<GestureKind>) {
+    let actor = world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world");
+    if actor.active_gesture() == kind {
+        return;
+    }
+    actor.state.active_gesture = kind.map(|kind| ActiveGesture {
+        kind,
+        deadline: None,
+    });
+    world.touch_public_state();
+}
+
+/// `gesture` — the deliberate body (`features/npc_bodies.md` §7). A
+/// communicative motion the model commands, mirroring `make_sound`'s arg shape
+/// (`{"kind": "wave", "to": "optional name"}`): witnesses within the 20 m
+/// social radius get a percept (unknown-people named), the actor remembers
+/// their own act, `dance` sets the looping `active_gesture`, and the host gets
+/// a transient `EngineMessage::Gesture` to play the pose.
+fn gesture(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["kind"], &["to"])?;
+    let kind_value = &parsed["kind"];
+    let Some(kind) = kind_value.as_str().and_then(GestureKind::from_verb) else {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownGesture,
+            format!("there is no gesture {}", py_repr(kind_value)),
+        ));
+    };
+    let spec = kind.spec();
+    let to_value = optional_arg(parsed, "to");
+
+    // Sight reuses the 20 m social radius, exactly like `say`; occlusion is
+    // ignored the same way. Resolved once, before the target check needs it.
+    let origin = world.characters[actor_id].position_m();
+    let witnesses = world.characters_within(origin, HEARING_RADIUS_M, Some(actor_id));
+    let resolved = resolve_gesture_target(world, actor_id, &witnesses, spec, to_value)?;
+
+    // The actor's own recollection first, then every witness's percept.
+    let own = render_own_gesture(world, actor_id, spec, &resolved);
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .remember_percept(own);
+    let percepts: Vec<(ActorId, String)> = witnesses
+        .iter()
+        .map(|recipient| {
+            (
+                recipient.clone(),
+                render_witness_gesture(world, recipient, actor_id, spec, &resolved),
+            )
+        })
+        .collect();
+    deliver(world, percepts, true);
+
+    // Only a looper (`dance`) sets snapshot state; every other kind ends a
+    // running loop — the same rule `dispatch` enforces for the other verbs.
+    set_active_gesture(world, actor_id, if spec.loops { Some(kind) } else { None });
+
+    // The transient host trigger, presented like speech: the player is in
+    // `recipient_ids` only when within the radius. A place-pointed gesture
+    // carries no `target_id` — the host cannot aim at a place.
+    let target_actor = match &resolved {
+        GestureTargetResolved::Person(id) => Some(id.clone()),
+        GestureTargetResolved::None | GestureTargetResolved::Place(_) => None,
+    };
+    world.emit(DomainEvent::gesture(
+        actor_id.clone(),
+        target_actor,
+        kind.as_verb(),
+        origin,
+        witnesses,
+    ));
+
+    Ok(render_transcript_gesture(world, actor_id, spec, &resolved))
+}
+
+/// Resolve the `to` argument against the catalog's target rule: no-target
+/// gestures reject a `to`, required ones demand it, and `point` accepts a known
+/// place handle first (paired with how `tell_way` resolves places) before
+/// falling back to a visible person (like `say`'s target).
+fn resolve_gesture_target(
+    world: &World,
+    actor_id: &ActorId,
+    witnesses: &[ActorId],
+    spec: &GestureSpec,
+    to_value: Option<&Value>,
+) -> Result<GestureTargetResolved, ActionError> {
+    if matches!(spec.target, GestureTarget::None) {
+        if to_value.is_some() {
+            return Err(ActionError::new(
+                ActionErrorCode::InvalidArguments,
+                format!("a {} is not aimed at anyone", spec.verb),
+            ));
+        }
+        return Ok(GestureTargetResolved::None);
+    }
+
+    let Some(value) = to_value else {
+        return match spec.target {
+            GestureTarget::OptionalPerson => Ok(GestureTargetResolved::None),
+            GestureTarget::RequiredPerson => Err(ActionError::new(
+                ActionErrorCode::InvalidArguments,
+                format!("{} needs someone to {}: pass \"to\"", spec.verb, spec.verb),
+            )),
+            GestureTarget::RequiredPersonOrPlace => Err(ActionError::new(
+                ActionErrorCode::InvalidArguments,
+                "point needs a person or a place to point to: pass \"to\"",
+            )),
+            GestureTarget::None => unreachable!("handled above"),
+        };
+    };
+
+    // `point` may aim at a place the actor holds a way to — resolved like a
+    // `tell_way` place, and only if it is on the actor's whitelist.
+    if matches!(spec.target, GestureTarget::RequiredPersonOrPlace)
+        && let Some(text) = value.as_str()
+        && let Ok(place_id) = PlaceId::new(text)
+        && world.characters[actor_id]
+            .state
+            .places_known
+            .contains(&place_id)
+        && let Some(entry) = world.places.get(&place_id)
+    {
+        return Ok(GestureTargetResolved::Place(entry.name.clone()));
+    }
+
+    // Otherwise a visible person, exactly like `say`'s explicit target.
+    let target_id = parse_actor_id(value, "to")?;
+    if !world.characters.contains_key(&target_id) {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownTarget,
+            format!("there is nobody with id {}", repr_id(target_id.as_str())),
+        ));
+    }
+    if target_id == *actor_id {
+        return Err(ActionError::new(
+            ActionErrorCode::SelfTarget,
+            "you cannot gesture at yourself",
+        ));
+    }
+    if !witnesses.contains(&target_id) {
+        return Err(ActionError::new(
+            ActionErrorCode::OutOfRange,
+            format!(
+                "{} is more than {} metres away",
+                identify_ids(world, actor_id, &target_id),
+                format_g(HEARING_RADIUS_M)
+            ),
+        ));
+    }
+    Ok(GestureTargetResolved::Person(target_id))
+}
+
+/// The actor's own second-person percept: `{B}` from the actor's perspective.
+fn render_own_gesture(
+    world: &World,
+    actor_id: &ActorId,
+    spec: &GestureSpec,
+    resolved: &GestureTargetResolved,
+) -> String {
+    match resolved {
+        GestureTargetResolved::None => spec.own_untargeted.to_string(),
+        GestureTargetResolved::Person(id) => spec
+            .own_targeted
+            .replace("{B}", &identify_ids(world, actor_id, id)),
+        GestureTargetResolved::Place(name) => spec.own_targeted.replace("{B}", name),
+    }
+}
+
+/// One witness's third-person percept: `{A}` and `{B}` from the witness's
+/// perspective, with "you" when the witness is the target — unknown people
+/// render through [`identify_ids`].
+fn render_witness_gesture(
+    world: &World,
+    recipient: &ActorId,
+    actor_id: &ActorId,
+    spec: &GestureSpec,
+    resolved: &GestureTargetResolved,
+) -> String {
+    let actor_name = cap_first(&identify_ids(world, recipient, actor_id));
+    match resolved {
+        GestureTargetResolved::None => spec.witness_untargeted.replace("{A}", &actor_name),
+        GestureTargetResolved::Person(id) => {
+            let target = if recipient == id {
+                "you".to_string()
+            } else {
+                identify_ids(world, recipient, id)
+            };
+            spec.witness_targeted
+                .replace("{A}", &actor_name)
+                .replace("{B}", &target)
+        }
+        GestureTargetResolved::Place(name) => spec
+            .witness_targeted
+            .replace("{A}", &actor_name)
+            .replace("{B}", name),
+    }
+}
+
+/// The omniscient run-transcript line: real names, no perspective (matching
+/// `make_sound`'s "{actor} …" transcript form, trailing period and all).
+fn render_transcript_gesture(
+    world: &World,
+    actor_id: &ActorId,
+    spec: &GestureSpec,
+    resolved: &GestureTargetResolved,
+) -> String {
+    let actor_name = world.characters[actor_id].name();
+    match resolved {
+        GestureTargetResolved::None => spec.witness_untargeted.replace("{A}", actor_name),
+        GestureTargetResolved::Person(id) => spec
+            .witness_targeted
+            .replace("{A}", actor_name)
+            .replace("{B}", world.characters[id].name()),
+        GestureTargetResolved::Place(name) => spec
+            .witness_targeted
+            .replace("{A}", actor_name)
+            .replace("{B}", name),
+    }
 }
 
 fn remember(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
@@ -2274,6 +2519,9 @@ mod tests {
             ActionErrorCode::InvalidArguments
         );
 
+        // `dance` is now a gesture *kind* (`gesture {"kind": "dance"}`), not a
+        // bare verb (npc_bodies M4); a bare `dance` verb is still unknown, and
+        // an unknown verb is still reported only after arg validation.
         let error = apply_action(&mut world, &giver, "dance", &json!({})).unwrap_err();
         assert_eq!(error.code, ActionErrorCode::UnknownVerb);
         assert_eq!(error.message, "unknown verb: dance");
@@ -2281,5 +2529,228 @@ mod tests {
         let error =
             apply_action(&mut world, &ActorId::from_raw("ghost"), "wait", &json!({})).unwrap_err();
         assert_eq!(error.code, ActionErrorCode::UnknownActor);
+    }
+
+    // ----------------------------------------------------------- gestures (M4)
+
+    #[test]
+    fn a_targeted_wave_reaches_the_target_the_bystander_and_the_actors_own_history() {
+        let mut world = speech_world();
+        let speaker = ActorId::from_raw("speaker");
+        // The waver knows the target by name; nobody else knows anyone, so the
+        // one test exercises both the known and the stranger renderings.
+        world
+            .characters
+            .get_mut(&speaker)
+            .unwrap()
+            .state
+            .knows
+            .insert(ActorId::from_raw("target"));
+        let revision = world.world_revision;
+
+        let line = apply_action(
+            &mut world,
+            &speaker,
+            "gesture",
+            &json!({"kind": "wave", "to": "target"}),
+        )
+        .unwrap();
+
+        assert_eq!(line, "Speaker waves at Target.");
+        // The target sees "you"; a nearby bystander sees the third person; the
+        // actor remembers their own act in the second person.
+        assert_eq!(
+            world.characters[&ActorId::from_raw("target")]
+                .inbox()
+                .last()
+                .unwrap(),
+            "A stranger (id speaker) waves at you."
+        );
+        assert_eq!(
+            world.characters[&ActorId::from_raw("bystander")]
+                .inbox()
+                .last()
+                .unwrap(),
+            "A stranger (id speaker) waves at a stranger (id target)."
+        );
+        assert_eq!(
+            world.characters[&speaker].recent_history().last().unwrap(),
+            "You wave at Target."
+        );
+        assert!(
+            world.characters[&ActorId::from_raw("distant")]
+                .inbox()
+                .is_empty()
+        );
+
+        // Transient like speech: an event with the witnesses, no public-state
+        // bump (a non-looping gesture is not snapshot state).
+        let event = world.drain_events().pop().unwrap();
+        assert_eq!(event.event_type, crate::event::EventType::Gesture);
+        assert_eq!(event.kind, "wave");
+        assert_eq!(event.target_id, Some(ActorId::from_raw("target")));
+        assert_eq!(
+            event.recipient_ids,
+            vec![ActorId::from_raw("bystander"), ActorId::from_raw("target")]
+        );
+        assert_eq!(world.world_revision, revision);
+    }
+
+    #[test]
+    fn an_untargeted_wave_reads_as_a_wave_to_everyone_nearby() {
+        let mut world = speech_world();
+        let speaker = ActorId::from_raw("speaker");
+
+        let line = apply_action(&mut world, &speaker, "gesture", &json!({"kind": "wave"})).unwrap();
+        assert_eq!(line, "Speaker waves.");
+        assert_eq!(
+            world.characters[&ActorId::from_raw("bystander")]
+                .inbox()
+                .last()
+                .unwrap(),
+            "A stranger (id speaker) waves."
+        );
+        assert_eq!(
+            world.characters[&speaker].recent_history().last().unwrap(),
+            "You wave."
+        );
+        let event = world.drain_events().pop().unwrap();
+        assert_eq!(event.target_id, None);
+    }
+
+    #[test]
+    fn an_unknown_gesture_kind_is_a_standard_action_error() {
+        let mut world = speech_world();
+        let error = apply_action(
+            &mut world,
+            &ActorId::from_raw("speaker"),
+            "gesture",
+            &json!({"kind": "boogie"}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::UnknownGesture);
+        assert!(error.message.contains("boogie"), "{}", error.message);
+    }
+
+    #[test]
+    fn required_target_gestures_demand_a_target_and_no_target_gestures_reject_one() {
+        let mut world = speech_world();
+        let speaker = ActorId::from_raw("speaker");
+
+        // beckon and point require a target.
+        for kind in ["beckon", "point"] {
+            let error = apply_action(&mut world, &speaker, "gesture", &json!({"kind": kind}))
+                .unwrap_err();
+            assert_eq!(error.code, ActionErrorCode::InvalidArguments, "{kind}");
+        }
+        // shrug and dance take none.
+        for kind in ["shrug", "dance"] {
+            let error = apply_action(
+                &mut world,
+                &speaker,
+                "gesture",
+                &json!({"kind": kind, "to": "target"}),
+            )
+            .unwrap_err();
+            assert_eq!(error.code, ActionErrorCode::InvalidArguments, "{kind}");
+        }
+    }
+
+    #[test]
+    fn a_gesture_target_must_exist_be_in_range_and_not_be_the_actor() {
+        let mut world = speech_world();
+        let speaker = ActorId::from_raw("speaker");
+        for (target, code) in [
+            ("nobody", ActionErrorCode::UnknownTarget),
+            ("speaker", ActionErrorCode::SelfTarget),
+            ("distant", ActionErrorCode::OutOfRange),
+        ] {
+            let error = apply_action(
+                &mut world,
+                &speaker,
+                "gesture",
+                &json!({"kind": "beckon", "to": target}),
+            )
+            .unwrap_err();
+            assert_eq!(error.code, code, "{target}");
+        }
+        // A failed gesture leaves the world untouched.
+        assert!(world.drain_events().is_empty());
+    }
+
+    #[test]
+    fn dance_sets_active_gesture_and_the_next_non_wait_action_ends_it() {
+        let mut world = speech_world();
+        let speaker = ActorId::from_raw("speaker");
+        let revision = world.world_revision;
+
+        let line = apply_action(&mut world, &speaker, "gesture", &json!({"kind": "dance"})).unwrap();
+        assert_eq!(line, "Speaker is dancing.");
+        assert_eq!(
+            world.characters[&speaker].active_gesture(),
+            Some(GestureKind::Dance)
+        );
+        // Setting the loop is public state — the revision bumped.
+        assert!(world.world_revision > revision);
+        let after_dance = world.world_revision;
+
+        // A `wait` does not end the loop…
+        apply_action(&mut world, &speaker, "wait", &json!({})).unwrap();
+        assert_eq!(
+            world.characters[&speaker].active_gesture(),
+            Some(GestureKind::Dance)
+        );
+        assert_eq!(world.world_revision, after_dance);
+
+        // …but the next non-`wait` action does, bumping the revision again.
+        apply_action(&mut world, &speaker, "gesture", &json!({"kind": "wave"})).unwrap();
+        assert_eq!(world.characters[&speaker].active_gesture(), None);
+        assert!(world.world_revision > after_dance);
+    }
+
+    #[test]
+    fn point_accepts_a_known_place_handle_and_names_it() {
+        let mut world = speech_world();
+        let speaker = ActorId::from_raw("speaker");
+        let place_id = world
+            .places
+            .add_home(&ActorId::from_raw("target"), "Target", Vec3::new(4.0, 0.0, 0.0));
+        world
+            .characters
+            .get_mut(&speaker)
+            .unwrap()
+            .state
+            .places_known
+            .insert(place_id.clone());
+
+        let line = apply_action(
+            &mut world,
+            &speaker,
+            "gesture",
+            &json!({"kind": "point", "to": place_id.as_str()}),
+        )
+        .unwrap();
+        assert_eq!(line, "Speaker points toward Target's house.");
+        assert_eq!(
+            world.characters[&speaker].recent_history().last().unwrap(),
+            "You point toward Target's house."
+        );
+        // A place-pointed gesture carries no person target on the event.
+        let event = world.drain_events().pop().unwrap();
+        assert_eq!(event.target_id, None);
+        assert_eq!(event.kind, "point");
+
+        // An unheld place id falls through to person resolution and misses.
+        let stray = world
+            .places
+            .add_home(&ActorId::from_raw("bystander"), "Bystander", Vec3::new(3.0, 0.0, 0.0));
+        let error = apply_action(
+            &mut world,
+            &speaker,
+            "gesture",
+            &json!({"kind": "point", "to": stray.as_str()}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::UnknownTarget);
     }
 }

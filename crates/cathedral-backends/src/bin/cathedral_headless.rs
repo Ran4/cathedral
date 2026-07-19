@@ -44,8 +44,8 @@ use cathedral_sim::{
     ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion, CuriosityConfig,
     DEFAULT_VIEW_CONE_DEGREES, Engine, EngineCommand, EngineConfig, EngineMessage, FakeCognition,
     IdleCognitionMode, NavData, NullSight, NullTranscription, NullTts, Office, PlayerKnowledge,
-    PromptEnv, RequestId, SoundCatalog, StageConfig, TtsBackendKind, Vec3, World, WorldClock,
-    WorldSeed,
+    PromptEnv, RequestId, SoundCatalog, StageConfig, StatusKind, TtsBackendKind, Vec3, World,
+    WorldClock, WorldSeed,
     engine::{
         DEFAULT_MAXIMUM_BACKOFF_SECONDS, DEFAULT_NIGHT_BRIGHTNESS, DEFAULT_SECONDS_PER_DAY,
         DEFAULT_SOUND_COOLDOWN_SECONDS, DEFAULT_STT_STREAM_GRACE_SECONDS,
@@ -129,6 +129,25 @@ struct Args {
     /// send FILE as the whole prompt and print the reply (the old `kimi.py`)
     #[arg(long, value_name = "FILE")]
     one_shot: Option<PathBuf>,
+
+    /// broadcast one player utterance from the spawn before the run starts
+    ///
+    /// The terminal has no microphone, so this is the way to poke the cast into
+    /// reacting — pairs with `--fake`, whose scripted cast waves back when asked
+    /// (`--say "please wave at me"`), so the gesture path prints its transcript
+    /// line (`Conny waves at You`) in an offline run.
+    #[arg(long, value_name = "TEXT")]
+    say: Option<String>,
+
+    /// set a body carriage status on a named character after the world loads,
+    /// repeatable: `--status Ilse=drunkenness:0.8` (`features/npc_bodies.md` §8)
+    ///
+    /// The stand-in for the ale the sim does not model yet — nothing makes
+    /// anyone drunk — so a drunk or weary carriage can be poked in for a
+    /// transcript or a `--trace-positions` walk. Kinds: drunkenness, weariness;
+    /// value is a 0..=1 float. Sits beside `--say` as a pre-run world poke.
+    #[arg(long, value_name = "NAME=KIND:VALUE")]
+    status: Vec<String>,
 
     /// real seconds per game day (24× default is one game day per real hour)
     #[arg(long, default_value_t = DEFAULT_SECONDS_PER_DAY, value_name = "SECONDS")]
@@ -223,6 +242,29 @@ fn is_water_sound(sound_id: &str) -> bool {
         sound_id,
         "draw_water" | "chain_windlass" | "pour_trough" | "pail_clatter"
     )
+}
+
+/// Parse one `--status NAME=KIND:VALUE` spec (`features/npc_bodies.md` §8). The
+/// name may contain spaces or `:` (only the last `:` splits kind from value);
+/// the kind is a `StatusKind` wire word, the value a `0..=1` float.
+fn parse_status_flag(spec: &str) -> Result<(String, StatusKind, f64), String> {
+    let (name, rest) = spec.split_once('=').ok_or_else(|| {
+        format!("--status `{spec}` must be NAME=KIND:VALUE, e.g. Ilse=drunkenness:0.8")
+    })?;
+    let (kind_word, value_word) = rest.rsplit_once(':').ok_or_else(|| {
+        format!("--status `{spec}` must be NAME=KIND:VALUE, e.g. Ilse=drunkenness:0.8")
+    })?;
+    if name.is_empty() {
+        return Err(format!("--status `{spec}` names nobody"));
+    }
+    let kind = StatusKind::from_wire(kind_word).ok_or_else(|| {
+        format!("--status `{spec}`: unknown kind `{kind_word}` (try drunkenness, weariness)")
+    })?;
+    let value = match value_word.parse::<f64>() {
+        Ok(value) if value.is_finite() && (0.0..=1.0).contains(&value) => value,
+        _ => return Err(format!("--status `{spec}`: value must be a number in 0..=1")),
+    };
+    Ok((name.to_string(), kind, value))
 }
 
 // --------------------------------------------------------------- one-shot mode
@@ -373,6 +415,24 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         census_by_area: args.census_by_area,
         trace_food: args.trace_food,
     };
+    // One player utterance before the run, so an offline cast can be poked into
+    // reacting (a wave, a reply) with no microphone in the loop.
+    if let Some(text) = args.say.clone() {
+        runner.pump(vec![EngineCommand::PlayerSay {
+            request_id: "headless-say".to_string(),
+            text,
+            position_m: player_spawn,
+            spatial_seq: 1,
+        }]);
+    }
+    // Body-carriage pokes before the run (npc_bodies M5): each `--status` sets a
+    // status on a named character through the same command path the drive-mode
+    // `status` action uses. A missing name is a `Diagnostic` on stderr, not a
+    // fault, so a typo does not abort the whole run.
+    for spec in &args.status {
+        let (name, kind, value) = parse_status_flag(spec)?;
+        runner.pump(vec![EngineCommand::DebugSetStatus { name, kind, value }]);
+    }
     if args.watch_clock > 0.0 {
         runner.watch_clock(args.watch_clock, clock.seconds_per_day())?;
     } else {
@@ -989,6 +1049,27 @@ mod tests {
         assert_eq!(cost_line(Some(0.0018)), "Run cost: 0.0018 USD");
         assert_eq!(cost_line(Some(0.005)), "Run cost: 0.01 USD");
         assert_eq!(cost_line(Some(1.239)), "Run cost: 1.24 USD");
+    }
+
+    /// `--status NAME=KIND:VALUE` (npc_bodies M5): a multi-word name, an
+    /// out-of-range value and an unknown kind are all handled at parse time.
+    #[test]
+    fn status_flag_parses_name_kind_and_bounded_value() {
+        assert_eq!(
+            parse_status_flag("Ilse=drunkenness:0.8"),
+            Ok(("Ilse".to_string(), StatusKind::Drunkenness, 0.8))
+        );
+        // A name may carry spaces; only the last `:` splits kind from value.
+        assert_eq!(
+            parse_status_flag("Old Nan=weariness:1"),
+            Ok(("Old Nan".to_string(), StatusKind::Weariness, 1.0))
+        );
+        assert!(parse_status_flag("Ilse=sobriety:0.5").is_err(), "unknown kind");
+        assert!(parse_status_flag("Ilse=drunkenness:2").is_err(), "out of range");
+        assert!(parse_status_flag("Ilse=drunkenness:-0.1").is_err(), "out of range");
+        assert!(parse_status_flag("Ilse=drunkenness").is_err(), "no value");
+        assert!(parse_status_flag("drunkenness:0.5").is_err(), "no name split");
+        assert!(parse_status_flag("=drunkenness:0.5").is_err(), "empty name");
     }
 
     #[test]

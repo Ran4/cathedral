@@ -887,3 +887,45 @@ fn a_bound_vendor_lists_you_sell_prices_off_the_catalog() {
     let see_at = after.find("**you_see**").unwrap();
     assert!(hold_at < sell_at && sell_at < see_at, "you_sell is between you_hold and you_see");
 }
+
+/// §8: a carriage status is body language the host reads off the snapshot,
+/// never something the mind reads back off its sheet. Setting one must leave
+/// both the rendered markdown and the structured sheet untouched — the reason
+/// the golden fixtures stay byte-identical.
+#[test]
+fn carriage_statuses_never_enter_the_prompt() {
+    use cathedral_sim::StatusKind;
+
+    let env = prompt_env();
+    let mut world = seed_world();
+    let sven = actor("sv3n1");
+
+    let before = render_prompt(&world, &sven, None, &env).unwrap();
+    let before_sheet = sheet(&world, "sv3n1", &env);
+
+    world
+        .characters
+        .get_mut(&sven)
+        .unwrap()
+        .state
+        .statuses
+        .insert(StatusKind::Drunkenness, 0.8);
+    world
+        .characters
+        .get_mut(&sven)
+        .unwrap()
+        .state
+        .statuses
+        .insert(StatusKind::Weariness, 0.6);
+
+    let after = render_prompt(&world, &sven, None, &env).unwrap();
+    assert_eq!(after, before, "a status changed the rendered prompt");
+    assert_eq!(
+        sheet(&world, "sv3n1", &env),
+        before_sheet,
+        "a status changed the structured sheet"
+    );
+    let lower = after.to_lowercase();
+    assert!(!lower.contains("drunkenness"), "the prompt leaked drunkenness");
+    assert!(!lower.contains("weariness"), "the prompt leaked weariness");
+}

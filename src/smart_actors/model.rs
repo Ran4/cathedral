@@ -177,6 +177,19 @@ pub struct ActorSnapshot {
     #[serde(default)]
     pub appearance: cathedral_sim::AppearanceSnapshot,
     pub holds: Vec<ItemId>,
+    /// The looping gesture the actor is holding, or `None`
+    /// (`features/npc_bodies.md` §7). Only `dance` loops; the host drives the
+    /// dance pose from this field, so a player who arrives mid-loop still sees
+    /// it. The sim enum crosses as-is for the same reason `appearance` does.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_gesture: Option<cathedral_sim::GestureKind>,
+    /// Publicly-visible carriage axes (`features/npc_bodies.md` §8): drunkenness,
+    /// weariness, each a finite `0..=1`. `body.rs` reads them to dress the walk
+    /// (sway, stoop) without moving the actor. The sim enums cross as-is like
+    /// `appearance`; skipped when empty — the universal case — so the mirror is
+    /// byte-identical to before M5 for every actor no debug hook touched.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub statuses: Vec<(cathedral_sim::StatusKind, f32)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -245,6 +258,16 @@ pub fn actor_id_from_sim(id: &cathedral_sim::ActorId) -> ActorId {
     ActorId(id.as_str().to_owned())
 }
 
+/// A carriage status value forced to a finite `0..=1` (`features/npc_bodies.md`
+/// §8). Non-finite reads as 0 — no carriage rather than an undefined pose.
+fn clamp_status(value: f32) -> f32 {
+    if value.is_finite() {
+        value.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
+}
+
 pub fn item_id_from_sim(id: &cathedral_sim::ItemId) -> ItemId {
     ItemId(id.as_str().to_owned())
 }
@@ -276,6 +299,15 @@ impl From<&cathedral_sim::PublicSnapshot> for WorldSnapshot {
                     facing_yaw: actor.facing_yaw as f32,
                     appearance: actor.appearance.clone(),
                     holds: actor.holds.iter().map(item_id_from_sim).collect(),
+                    active_gesture: actor.active_gesture,
+                    // Re-clamp on the way in: the sim already bounds these, but
+                    // the mirror is the gate for every snapshot source, so a
+                    // stray value never reaches the pose math.
+                    statuses: actor
+                        .statuses
+                        .iter()
+                        .map(|&(kind, value)| (kind, clamp_status(value)))
+                        .collect(),
                 })
                 .collect(),
             items: snapshot
@@ -320,6 +352,8 @@ pub enum SnapshotError {
     /// A stack with quantity 0 — unrepresentable; the sim removes such stacks.
     NonPositiveQuantity(ItemId),
     NonFinitePosition(ActorId),
+    /// A carriage status outside a finite `0..=1` (`features/npc_bodies.md` §8).
+    InvalidStatus(ActorId),
     UnknownHeldItem {
         actor_id: ActorId,
         item_id: ItemId,
@@ -371,6 +405,9 @@ impl fmt::Display for SnapshotError {
             }
             Self::NonFinitePosition(id) => {
                 write!(formatter, "actor {:?} has a non-finite position", id.0)
+            }
+            Self::InvalidStatus(id) => {
+                write!(formatter, "actor {:?} has a status outside 0..=1", id.0)
             }
             Self::UnknownHeldItem { actor_id, item_id } => write!(
                 formatter,
@@ -573,6 +610,16 @@ impl ValidatedSnapshot {
             if actor.holds.len() > MAX_ITEMS {
                 return Err(SnapshotError::LimitExceeded("held-item records"));
             }
+            // Carriage statuses (§8) drive the pose math, so a non-finite or
+            // out-of-range value must never reach it. The sim and the `From`
+            // clamp already; this is the gate for any other snapshot source.
+            if actor
+                .statuses
+                .iter()
+                .any(|&(_, value)| !value.is_finite() || !(0.0..=1.0).contains(&value))
+            {
+                return Err(SnapshotError::InvalidStatus(actor.id.clone()));
+            }
             if actor_indices.insert(actor.id.clone(), index).is_some() {
                 return Err(SnapshotError::DuplicateActor(actor.id.clone()));
             }
@@ -763,6 +810,8 @@ mod tests {
             facing_yaw: 0.0,
             appearance: Default::default(),
             holds: holds.iter().map(|id| ItemId((*id).into())).collect(),
+            active_gesture: None,
+            statuses: Vec::new(),
         }
     }
 

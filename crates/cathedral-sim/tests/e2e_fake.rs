@@ -16,9 +16,9 @@ mod prompt_support;
 use std::{cell::RefCell, rc::Rc};
 
 use cathedral_sim::{
-    ActorId, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand, EngineConfig,
-    EngineMessage, FakeCognition, ItemId, NullSight, NullTranscription, NullTts, PublicSnapshot,
-    RequestId, TtsBackendKind, Vec3, WorldSeed,
+    ActorId, Capabilities, Cognition, CognitionBusy, DANCE_MAX_SECONDS, Engine, EngineCommand,
+    EngineConfig, EngineMessage, FakeCognition, GestureKind, ItemId, NullSight, NullTranscription,
+    NullTts, PublicSnapshot, RequestId, TtsBackendKind, Vec3, WorldSeed, apply_action,
 };
 use prompt_support::{areas, catalog, demo_seed, prompt_env};
 
@@ -335,4 +335,95 @@ fn the_round_robin_follows_the_seed_order_and_skips_the_player() {
         !names.iter().any(|name| name == "Player"),
         "the player is never given a turn"
     );
+}
+
+/// npc_bodies M4 acceptance, end-to-end: the player asks for a wave, the round
+/// reaches a nearby NPC whose scripted reply greets and waves at the player, and
+/// the whole gesture path fires — the transient `EngineMessage::Gesture` the
+/// host plays the pose from, aimed at the player, witnessed by a bystander NPC
+/// whose mind therefore gets a percept it could answer (§3).
+#[test]
+fn asking_for_a_wave_produces_a_gesture_event_witnessed_by_a_bystander() {
+    let mut harness = Harness::new();
+    harness.pump(Vec::new());
+
+    harness.player_say("ask-wave", "Please wave at me!", 1);
+    harness.pump_until("a wave gesture", |harness| {
+        harness.messages.iter().any(|message| {
+            matches!(
+                message,
+                EngineMessage::Gesture { kind: GestureKind::Wave, target_id, .. }
+                    if target_id.as_ref().map(ActorId::as_str) == Some(PLAYER)
+            )
+        })
+    });
+
+    let (waver, recipients) = harness
+        .messages
+        .iter()
+        .rev()
+        .find_map(|message| match message {
+            EngineMessage::Gesture {
+                actor_id,
+                kind: GestureKind::Wave,
+                recipient_ids,
+                ..
+            } => Some((actor_id.clone(), recipient_ids.clone())),
+            _ => None,
+        })
+        .expect("a wave was emitted");
+    // Presented like speech: the player, as the target, is in the recipient set…
+    assert!(recipients.iter().any(|id| id.as_str() == PLAYER));
+    // …and so is at least one bystander NPC — the mind that can react to it.
+    assert!(
+        recipients
+            .iter()
+            .any(|id| id.as_str() != PLAYER && *id != waver),
+        "a bystander NPC witnessed the wave: {recipients:?}"
+    );
+}
+
+/// A looping `dance` rides the snapshot so a player who arrives mid-loop still
+/// sees it (§7), and the engine ends it after the 60 s cap even if the dancer
+/// never acts again. Driven directly on the world — the fake never dances
+/// autonomously — with the fake's staged completions deliberately never fed
+/// back, so no turn ever applies the dancer's next action to clear it early.
+#[test]
+fn a_dance_rides_the_snapshot_and_the_engine_expires_it_after_the_cap() {
+    let mut harness = Harness::new();
+    harness.pump(Vec::new());
+
+    apply_action(
+        harness.engine.world_mut(),
+        &actor_id(ILSE),
+        "gesture",
+        &serde_json::json!({"kind": "dance"}),
+    )
+    .expect("Ilse can dance");
+
+    let ilse_gesture = |harness: &Harness| {
+        harness
+            .latest_snapshot()
+            .actors
+            .iter()
+            .find(|actor| actor.id.as_str() == ILSE)
+            .expect("Ilse is in the snapshot")
+            .active_gesture
+    };
+
+    harness.poll(Vec::new());
+    assert!(
+        harness.messages.iter().any(|message| matches!(
+            message,
+            EngineMessage::Gesture { actor_id, kind: GestureKind::Dance, .. }
+                if actor_id.as_str() == ILSE
+        )),
+        "the dance emitted a transient trigger"
+    );
+    assert_eq!(ilse_gesture(&harness), Some(GestureKind::Dance));
+
+    // Past the cap, the next poll clears the loop and republishes the snapshot.
+    harness.now += DANCE_MAX_SECONDS + 1.0;
+    harness.poll(Vec::new());
+    assert_eq!(ilse_gesture(&harness), None);
 }

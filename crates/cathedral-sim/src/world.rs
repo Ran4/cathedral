@@ -17,7 +17,7 @@ use crate::{
     WALK_SPEED_MPS,
     areas::AreaMap,
     attention::DEFAULT_STAGE_RADIUS_M,
-    character::Character,
+    character::{Character, StatusKind},
     clock::WorldTime,
     error::{SpatialUpdateError, SpatialUpdateErrorCode},
     event::DomainEvent,
@@ -174,6 +174,36 @@ impl World {
     pub fn touch_public_state(&mut self) -> i64 {
         self.world_revision += 1;
         self.world_revision
+    }
+
+    /// Debug-only carriage write (`features/npc_bodies.md` §8): set `kind` to a
+    /// clamped `0..=1` `value` on the character whose display name matches
+    /// `name` (case-insensitive). The **sole** non-test writer of `statuses` —
+    /// the `cathedral-headless --status` flag and the drive-mode `status`
+    /// action both land here — so no reflex ever fabricates one; it stays a
+    /// fact the sim owns. Bumps `world_revision` so the next snapshot carries
+    /// it. Returns `false` (and writes nothing) when no such character exists.
+    pub fn debug_set_status(&mut self, name: &str, kind: StatusKind, value: f64) -> bool {
+        let clamped = if value.is_finite() {
+            value.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let Some(id) = self
+            .characters
+            .values()
+            .find(|character| character.name().eq_ignore_ascii_case(name))
+            .map(|character| character.id().clone())
+        else {
+            return false;
+        };
+        if let Some(character) = self.characters.get_mut(&id) {
+            character.state.statuses.insert(kind, clamped);
+            self.touch_public_state();
+            true
+        } else {
+            false
+        }
     }
 
     /// Characters in inclusive range of `origin`, ordered by distance then id.
@@ -625,6 +655,8 @@ impl World {
                     facing_yaw: actor.facing_yaw(),
                     appearance: actor.appearance().clone(),
                     holds: actor.holds().to_vec(),
+                    active_gesture: actor.active_gesture(),
+                    statuses: actor.statuses(),
                 }
             })
             .collect();
@@ -1412,5 +1444,78 @@ mod tests {
             ),
             "the rerouted walker still arrives"
         );
+    }
+
+    // ------------------------------------------------- §8 carriage statuses
+
+    /// The debug carriage write finds a character by display name
+    /// (case-insensitive), clamps the value, bumps the revision, and refuses a
+    /// name that matches nobody — the sole non-test writer of `statuses`.
+    #[test]
+    fn debug_set_status_writes_by_name_clamps_and_bumps_revision() {
+        let mut world = World::new();
+        world.add_character(character("ilse", 0.0)); // display name "ILSE"
+        let revision = world.world_revision;
+
+        assert!(world.debug_set_status("Ilse", StatusKind::Drunkenness, 1.4));
+        assert!(
+            world.world_revision > revision,
+            "a status write must republish the snapshot"
+        );
+        let ilse = &world.characters[&ActorId::from_raw("ilse")];
+        assert_eq!(ilse.state.statuses[&StatusKind::Drunkenness], 1.0, "clamped");
+
+        // A non-finite value reads as no carriage.
+        assert!(world.debug_set_status("ILSE", StatusKind::Weariness, f64::INFINITY));
+        assert_eq!(
+            world.characters[&ActorId::from_raw("ilse")].state.statuses[&StatusKind::Weariness],
+            0.0
+        );
+
+        // Nobody by that name: no write, no revision bump.
+        let revision = world.world_revision;
+        assert!(!world.debug_set_status("Nobody", StatusKind::Drunkenness, 0.5));
+        assert_eq!(world.world_revision, revision);
+    }
+
+    /// Statuses surface on the public snapshot, clamped and ordered by kind, and
+    /// the snapshot round-trips through serde (empty stays empty and absent).
+    #[test]
+    fn public_snapshot_exposes_statuses_and_round_trips() {
+        let mut world = World::new();
+        world.add_character(character("player", 0.0));
+        world.add_character(character("sv3n1", 1.0));
+        world.debug_set_status("SV3N1", StatusKind::Weariness, 0.5);
+        world.debug_set_status("SV3N1", StatusKind::Drunkenness, 0.75);
+
+        let snapshot = world.public_snapshot(&ActorId::from_raw("player"));
+        let sven = snapshot
+            .actors
+            .iter()
+            .find(|actor| actor.id == ActorId::from_raw("sv3n1"))
+            .expect("sven is in the snapshot");
+        // BTreeMap order: Drunkenness before Weariness.
+        assert_eq!(
+            sven.statuses,
+            vec![
+                (StatusKind::Drunkenness, 0.75),
+                (StatusKind::Weariness, 0.5)
+            ]
+        );
+        let player = snapshot
+            .actors
+            .iter()
+            .find(|actor| actor.id == ActorId::from_raw("player"))
+            .expect("the player is in the snapshot");
+        assert!(player.statuses.is_empty(), "an untouched actor carries none");
+
+        // Round-trips, and the empty case is skipped (never `"statuses":[]`).
+        let encoded = serde_json::to_string(&snapshot).unwrap();
+        assert!(
+            !encoded.contains("\"statuses\":[]"),
+            "empty statuses must be skipped: {encoded}"
+        );
+        let decoded: PublicSnapshot = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(decoded, snapshot);
     }
 }

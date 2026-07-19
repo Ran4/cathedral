@@ -3,7 +3,7 @@
 //! The static half ([`CharacterSheet`]) is what a world seed deserializes; the
 //! runtime half ([`CharacterState`]) is everything an action may mutate.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,7 @@ use crate::{
     GOAL_NONE, HUNGER_MAX, INBOX_MAX_ENTRIES, RECENT_HISTORY_MAX_ENTRIES, SETTLED_SPEED_MPS,
     THIRST_MAX,
     appearance::AppearanceSnapshot,
+    gesture::GestureKind,
     ids::{ActorId, ItemId, PlaceId},
     lore::{LoreProfile, Significance},
     math::Vec3,
@@ -116,6 +117,44 @@ pub struct Movement {
     pub choke_wait: f64,
 }
 
+/// A publicly-visible carriage axis (`features/npc_bodies.md` §8): a bodily
+/// condition the host renders as *body language* — a drunk's sway, a weary
+/// stoop — without it being a `Needs` gauge the behaviour ladder reads. Every
+/// kind crosses on [`crate::ActorSnapshot::statuses`], `snake_case` so
+/// `weariness` is the wire form the debug hooks parse. `Ord` because it keys a
+/// [`BTreeMap`], which also fixes the snapshot's `statuses` order for free.
+///
+/// Nothing in the sim *sets* a status yet except the tests and the debug hooks
+/// (the `cathedral-headless --status` flag and the drive-mode `status` action);
+/// ale and how anyone actually gets drunk is `food_and_items` M5+ material, one
+/// float write when it lands (§8).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StatusKind {
+    Drunkenness,
+    Weariness,
+}
+
+impl StatusKind {
+    /// Every kind, in the order they cross the snapshot.
+    pub const ALL: [StatusKind; 2] = [StatusKind::Drunkenness, StatusKind::Weariness];
+
+    /// The `snake_case` wire form — the string the debug hooks parse and serde
+    /// serializes to.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            StatusKind::Drunkenness => "drunkenness",
+            StatusKind::Weariness => "weariness",
+        }
+    }
+
+    /// Resolve the wire string a debug hook wrote to a kind, or `None` for an
+    /// unknown one (the caller turns that into a usage error).
+    pub fn from_wire(text: &str) -> Option<Self> {
+        StatusKind::ALL.into_iter().find(|kind| kind.as_str() == text)
+    }
+}
+
 /// The dynamic drive layer — the "statuses" axis of
 /// `features/movement/03_the_ladder.md` §2/§3: raw, sim-written need state the
 /// behaviour ladder reads inline (`needs.thirst < THIRST_PARCHED`). Small on
@@ -160,6 +199,21 @@ pub struct VendorListing {
     pub name: String,
     /// The catalog list price of one, in sparks.
     pub price_sparks: u32,
+}
+
+/// A looping gesture the actor is currently holding (`features/npc_bodies.md`
+/// §7) — today only `dance`. It surfaces on the snapshot as
+/// [`crate::ActorSnapshot::active_gesture`] so a player who walks up mid-loop
+/// still sees it; a one-shot gesture (a wave) needs no such state because it
+/// completes before anyone new arrives.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ActiveGesture {
+    pub kind: GestureKind,
+    /// The absolute sim-time expiry ([`crate::DANCE_MAX_SECONDS`] after it
+    /// started). Stamped by the engine on the first poll that sees the loop —
+    /// the action layer has no clock, exactly like a [`TravelIntent`]'s
+    /// deadline — and `None` until then.
+    pub deadline: Option<f64>,
 }
 
 /// Where a [`TravelIntent`] is headed.
@@ -253,6 +307,19 @@ pub struct CharacterState {
     /// unbinds one; empty for everyone else, which omits the section and keeps
     /// the frozen golden fixtures byte-identical.
     pub you_sell: Vec<VendorListing>,
+    /// The looping gesture the actor is holding, or `None`
+    /// (`features/npc_bodies.md` §7). Set by the `gesture` verb for `dance`,
+    /// cleared by the actor's next non-`wait` action or by the engine after
+    /// [`crate::DANCE_MAX_SECONDS`]. Never rendered on the prompt — it is body
+    /// language for the host, not something the mind reads back off its sheet.
+    pub active_gesture: Option<ActiveGesture>,
+    /// Publicly-visible carriage axes (`features/npc_bodies.md` §8): drunkenness,
+    /// weariness. Each value runs `0..=1`; the host reads them off the snapshot
+    /// and dresses the walk (sway, stoop) without touching the position the sim
+    /// computed. Never rendered on the prompt — a status is a fact about the
+    /// body, not a fact the mind reads back. Empty for everyone the debug hooks
+    /// (or, later, an ale) never touched, which keeps the snapshot byte-identical.
+    pub statuses: BTreeMap<StatusKind, f64>,
 }
 
 impl CharacterState {
@@ -273,6 +340,8 @@ impl CharacterState {
             intent: None,
             daily_round: Vec::new(),
             you_sell: Vec::new(),
+            active_gesture: None,
+            statuses: BTreeMap::new(),
         }
     }
 }
@@ -304,6 +373,25 @@ impl Character {
 
     pub fn appearance(&self) -> &AppearanceSnapshot {
         &self.sheet.appearance
+    }
+
+    /// The looping gesture the actor is currently holding, for the public
+    /// snapshot (`features/npc_bodies.md` §7).
+    pub fn active_gesture(&self) -> Option<GestureKind> {
+        self.state.active_gesture.map(|active| active.kind)
+    }
+
+    /// The publicly-visible carriage statuses for the snapshot
+    /// (`features/npc_bodies.md` §8), each bounded to a finite `0..=1` and
+    /// ordered by kind (the [`BTreeMap`] already is). Non-finite or
+    /// out-of-range values are clamped here so the boundary only ever sees
+    /// clean data — the host and its validator clamp again as a defensive gate.
+    pub fn statuses(&self) -> Vec<(StatusKind, f32)> {
+        self.state
+            .statuses
+            .iter()
+            .map(|(&kind, &value)| (kind, clamp_status(value)))
+            .collect()
     }
 
     pub fn voice_key(&self) -> Option<&str> {
@@ -485,6 +573,17 @@ fn split_repeat_count(entry: &str) -> (&str, u32) {
     }
 }
 
+/// A carriage status value, forced to a finite `0..=1` and narrowed to the f32
+/// the snapshot carries. Non-finite (a debug hook, or a future ale, writing a
+/// NaN) reads as 0 — no carriage rather than an undefined pose.
+fn clamp_status(value: f64) -> f32 {
+    if value.is_finite() {
+        value.clamp(0.0, 1.0) as f32
+    } else {
+        0.0
+    }
+}
+
 /// Drop the oldest entries so `buffer` holds at most `max`, preserving order.
 /// The shared shape of every bounded percept window in this file.
 fn cap_front(buffer: &mut Vec<String>, max: usize) {
@@ -654,5 +753,57 @@ mod tests {
         assert!(character.inbox().is_empty());
         assert!(character.pending_history().is_empty());
         assert!(character.recent_history().is_empty());
+    }
+
+    /// §8: the carriage kinds serialize to their `snake_case` wire word — the
+    /// exact string the debug hooks parse and the snapshot carries — and every
+    /// kind round-trips through it.
+    #[test]
+    fn status_kind_serializes_snake_case_and_round_trips() {
+        assert_eq!(
+            serde_json::to_string(&StatusKind::Drunkenness).unwrap(),
+            "\"drunkenness\""
+        );
+        assert_eq!(
+            serde_json::to_string(&StatusKind::Weariness).unwrap(),
+            "\"weariness\""
+        );
+        assert_eq!(StatusKind::ALL.len(), 2);
+        for kind in StatusKind::ALL {
+            assert_eq!(StatusKind::from_wire(kind.as_str()), Some(kind));
+            let json = serde_json::to_string(&kind).unwrap();
+            assert_eq!(serde_json::from_str::<StatusKind>(&json).unwrap(), kind);
+        }
+        assert_eq!(StatusKind::from_wire("sobriety"), None);
+    }
+
+    /// `statuses()` exposes the map bounded to a finite `0..=1` and ordered by
+    /// kind (the `BTreeMap` already is), so the boundary only sees clean data.
+    #[test]
+    fn statuses_are_exposed_bounded_and_ordered() {
+        let mut character = Character::from_sheet(sheet(Control::Llm));
+        assert!(character.statuses().is_empty());
+
+        // Insert out of order and out of range; `statuses()` clamps and sorts.
+        character.state.statuses.insert(StatusKind::Weariness, 1.4);
+        character.state.statuses.insert(StatusKind::Drunkenness, -0.2);
+        assert_eq!(
+            character.statuses(),
+            vec![
+                (StatusKind::Drunkenness, 0.0),
+                (StatusKind::Weariness, 1.0)
+            ]
+        );
+
+        // Non-finite reads as no carriage; a clean value passes through exactly.
+        character.state.statuses.insert(StatusKind::Weariness, f64::NAN);
+        character.state.statuses.insert(StatusKind::Drunkenness, 0.5);
+        assert_eq!(
+            character.statuses(),
+            vec![
+                (StatusKind::Drunkenness, 0.5),
+                (StatusKind::Weariness, 0.0)
+            ]
+        );
     }
 }

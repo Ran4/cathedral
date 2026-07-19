@@ -38,7 +38,7 @@ use crate::controller::PlayerCamera;
 use crate::materials::load_repeating_texture;
 
 use super::actors::{ActorOutfit, ActorView};
-use super::model::{ActorId, MovementInbox};
+use super::model::{ActorId, MovementInbox, WorldMirror};
 
 // ---------------------------------------------------------------------------
 // Proportions. All root-local metres; the root sits on the sim walk plane
@@ -680,6 +680,30 @@ const GLANCE_PERIOD_SPAN_S: f64 = 8.0;
 const GLANCE_YAW_RAD: f32 = 0.55;
 const GLANCE_PITCH_RAD: f32 = 0.06;
 
+// -- §8 carriage: drunkenness and weariness modulate L0/L1 (they are *not* a
+// new layer, §4). Everything scales by the status value, so at 0 the pose is
+// byte-identical to a sober, rested actor's; because it only reshapes the walk
+// the sim already computed, the actor's position stays exactly the sim's.
+/// Drunkenness perturbs the visual gait phase: a fast small jitter (phase
+/// noise) plus a slow larger drift (cadence irregularity), both in stride-cycle
+/// units so the legs speed up, lag and stagger. Foot placement is visual only —
+/// the root is the sim's — so this is sloppy footwork, not a moved actor.
+const DRUNK_PHASE_NOISE_CYCLES: f32 = 0.10;
+const DRUNK_PHASE_NOISE_HZ: f64 = 1.1;
+const DRUNK_CADENCE_CYCLES: f32 = 0.18;
+const DRUNK_CADENCE_HZ: f64 = 0.23;
+/// Drunkenness sways the torso side to side and holds a slowly wandering lean —
+/// two separate roll contributions, clamped together so even full drunkenness
+/// never tips the figure past a stagger.
+const DRUNK_SWAY_RAD: f32 = 0.16;
+const DRUNK_SWAY_HZ: f64 = 0.9;
+const DRUNK_LEAN_RAD: f32 = 0.14;
+const DRUNK_ROLL_MAX_RAD: f32 = 0.35;
+/// Weariness drops the arm swing toward 0.3× (1 − 0.7) and folds the torso
+/// forward into a stoop (a negative X-rotation, like the bow).
+const WEARY_ARM_DROP: f32 = 0.7;
+const WEARY_STOOP_RAD: f32 = 0.30;
+
 /// L2 activity (M2): the idle↔carry/offer arm crossfade — §4's "a layer ramps
 /// its weight in/out", so a retracted offer reads as motion, not a pop.
 const ARM_BLEND_SECONDS: f32 = 0.22;
@@ -707,6 +731,44 @@ const NOD_PITCH_RAD: f32 = 0.30;
 const SHAKE_YAW_RAD: f32 = 0.45;
 /// How far a one-shot turns the head toward its optional target.
 const GESTURE_FACE_YAW_CLAMP_RAD: f32 = 0.6;
+
+// -- L3 deliberate one-shots (M4). Upper-body only, so a walking wave works;
+// the aiming kinds (wave, beckon, point) swing the shoulder by `face_yaw`.
+/// Wave: the right arm lifts high and out, elbow bent, hand oscillating.
+const WAVE_UPPER_LIFT_RAD: f32 = 2.15;
+const WAVE_UPPER_OUT_RAD: f32 = 0.34;
+const WAVE_FOREARM_BEND_RAD: f32 = 0.75;
+const WAVE_FOREARM_SWING_RAD: f32 = 0.55;
+const WAVE_CYCLES: f32 = 3.0;
+/// Beckon: the arm held forward-up, the forearm curling in and out.
+const BECKON_UPPER_LIFT_RAD: f32 = 1.55;
+const BECKON_FOREARM_BASE_RAD: f32 = 1.15;
+const BECKON_FOREARM_CURL_RAD: f32 = 0.75;
+const BECKON_CYCLES: f32 = 2.5;
+/// Shrug: both shoulders lift and abduct, forearms turning out (palms up).
+const SHRUG_UPPER_LIFT_RAD: f32 = 0.30;
+const SHRUG_UPPER_OUT_RAD: f32 = 0.42;
+const SHRUG_FOREARM_BEND_RAD: f32 = 0.85;
+const SHRUG_FOREARM_OUT_RAD: f32 = 0.45;
+const SHRUG_HEAD_TILT_RAD: f32 = 0.14;
+/// Point: the right arm extends straight toward the target, forearm level.
+const POINT_UPPER_LIFT_RAD: f32 = 1.42;
+const POINT_FOREARM_STRAIGHTEN_RAD: f32 = -0.20;
+/// Bow: the torso folds forward at the waist, the head dropping with it.
+const BOW_TORSO_PITCH_RAD: f32 = 0.52;
+const BOW_HEAD_PITCH_RAD: f32 = 0.30;
+
+// -- L3 looping dance (M4). A per-actor phase offset keeps a crowd unsynced.
+const DANCE_BLEND_SECONDS: f32 = 0.30;
+const DANCE_HZ: f64 = 1.7;
+const DANCE_TORSO_ROLL_RAD: f32 = 0.20;
+const DANCE_TORSO_TWIST_RAD: f32 = 0.30;
+const DANCE_PELVIS_BOB_M: f32 = 0.055;
+const DANCE_PELVIS_SWAY_M: f32 = 0.03;
+const DANCE_UPPER_LIFT_RAD: f32 = 1.5;
+const DANCE_UPPER_SWING_RAD: f32 = 0.55;
+const DANCE_FOREARM_BEND_RAD: f32 = 1.15;
+const DANCE_HEAD_BOB_RAD: f32 = 0.13;
 
 // -- L4 speech & gaze (M3). Host-only reflex (§3 Tier 1): everything below
 // reads presentation messages and snapshot-derived L2 targets, and none of it
@@ -844,14 +906,22 @@ struct GaitHistory {
     seq: u64,
 }
 
-/// The one-shot gesture kinds the habit tier plays today: accept → nod,
-/// decline → head-shake (§6/§7 "autonomic gesture reuse"). M4's `gesture`
-/// verb catalog reuses this entry point — adding a kind is one enum row, one
-/// duration, and one arm in [`apply_one_shot`].
+/// The one-shot (non-looping) gesture kinds a body plays. `Nod`/`ShakeHead`
+/// are the habit tier's autonomic beats (accept → nod, decline → head-shake,
+/// §6/§7); the rest are M4's deliberate `gesture` verb (§7). The looping
+/// `dance` is not here — it rides [`BodyPoseState::dance`], driven by the
+/// snapshot rather than a fixed-length envelope. Durations match the sim
+/// catalog (`crates/cathedral-sim/src/gesture.rs`) so the pose lasts exactly as
+/// long as the sim says the act does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum OneShotGesture {
     Nod,
     ShakeHead,
+    Wave,
+    Beckon,
+    Shrug,
+    Point,
+    Bow,
 }
 
 impl OneShotGesture {
@@ -859,7 +929,28 @@ impl OneShotGesture {
         match self {
             OneShotGesture::Nod => 0.8,
             OneShotGesture::ShakeHead => 0.9,
+            OneShotGesture::Wave => 1.5,
+            OneShotGesture::Beckon => 1.5,
+            OneShotGesture::Shrug => 1.0,
+            OneShotGesture::Point => 1.2,
+            OneShotGesture::Bow => 1.8,
         }
+    }
+
+    /// Map a sim gesture kind to the pose that plays it, or `None` for the
+    /// looping `dance` (which the snapshot drives, not a one-shot).
+    pub(super) fn from_kind(kind: cathedral_sim::GestureKind) -> Option<Self> {
+        use cathedral_sim::GestureKind as K;
+        Some(match kind {
+            K::Nod => OneShotGesture::Nod,
+            K::ShakeHead => OneShotGesture::ShakeHead,
+            K::Wave => OneShotGesture::Wave,
+            K::Beckon => OneShotGesture::Beckon,
+            K::Shrug => OneShotGesture::Shrug,
+            K::Point => OneShotGesture::Point,
+            K::Bow => OneShotGesture::Bow,
+            K::Dance => return None,
+        })
     }
 }
 
@@ -903,12 +994,22 @@ pub(crate) struct BodyPoseState {
     offer_aim: (f32, f32),
     // -- L3 one-shot gesture (M2 habit tier; M4 adds the deliberate verb).
     gesture: Option<ActiveGesture>,
+    // -- L3 looping dance (M4): driven by the snapshot's `active_gesture`, not
+    // a fixed envelope, so a player who arrives mid-loop still sees it. The
+    // target is a bool ramped through `dance_blend`.
+    dance: bool,
+    dance_blend: f32,
     // -- L4 speech & gaze (M3): the talk layer's weight and the smoothed
     // head aim, kept across frames so the head slerps instead of snapping.
     talk_blend: f32,
     gaze_blend: f32,
     gaze_yaw: f32,
     gaze_pitch: f32,
+    // -- §8 carriage: the two publicly-visible statuses, mirrored from the
+    // snapshot each frame by `drive_gesture_pose` (ReconcileMirror) and read by
+    // L0/L1 (Present). Applied directly, no blend — the debug hooks step them,
+    // and a future ale would ramp its own float sim-side.
+    carriage: Carriage,
 }
 
 impl BodyPoseState {
@@ -931,10 +1032,13 @@ impl BodyPoseState {
             offer_blend: 0.0,
             offer_aim: (0.0, 0.0),
             gesture: None,
+            dance: false,
+            dance_blend: 0.0,
             talk_blend: 0.0,
             gaze_blend: 0.0,
             gaze_yaw: 0.0,
             gaze_pitch: 0.0,
+            carriage: Carriage::default(),
         }
     }
 
@@ -951,14 +1055,86 @@ impl BodyPoseState {
         self.offer_pulse = Some((at, now + STALL_PULSE_SECONDS));
     }
 
-    /// Starts a one-shot gesture, optionally turning the head toward a world
-    /// point while it plays. The clean entry point M4's catalog reuses.
+    /// Starts a one-shot gesture, optionally turning the head (and, for the
+    /// aiming kinds, the arm) toward a world point while it plays. The clean
+    /// entry point M2's habit tier and M4's `gesture` verb both use.
     pub(super) fn start_gesture(&mut self, kind: OneShotGesture, face: Option<Vec3>, now: f64) {
         self.gesture = Some(ActiveGesture {
             kind,
             started_at: now,
             face,
         });
+    }
+
+    /// The snapshot's looping-gesture state (M4): the dance runs while set and
+    /// stops when it clears, its blend ramping either way.
+    pub(super) fn set_dance(&mut self, dancing: bool) {
+        self.dance = dancing;
+    }
+
+    /// The snapshot's carriage statuses (§8), mirrored each frame. Values are
+    /// already clamped to `0..=1` at the boundary; unknown kinds are ignored
+    /// (a body can only render what it has a pose for).
+    pub(super) fn set_carriage(&mut self, statuses: &[(cathedral_sim::StatusKind, f32)]) {
+        self.carriage = Carriage::from_statuses(statuses);
+    }
+}
+
+/// The transient host-side twin of `cathedral_sim::EngineMessage::Gesture`
+/// (`features/npc_bodies.md` §7): the trigger [`drive_gesture_pose`] plays a
+/// one-shot pose from. The looping `dance` is not carried here — it rides the
+/// snapshot's `active_gesture`, so a player who arrives mid-loop still sees it.
+#[derive(Message, Debug, Clone)]
+pub struct PresentGesture {
+    pub actor_id: ActorId,
+    pub kind: cathedral_sim::GestureKind,
+    /// The person the gesture aims at, if any — the arm and head turn toward
+    /// their mirror position. `None` for an untargeted or place-pointed
+    /// gesture, which then plays straight ahead.
+    pub target_id: Option<ActorId>,
+}
+
+/// L3 gesture driver (M4), in the `ReconcileMirror` set: it starts one-shot
+/// poses from [`PresentGesture`] triggers and keeps every body's looping-dance
+/// flag in step with the snapshot's `active_gesture`. State only — the cosmetic
+/// pose itself is written by [`animate_body_pose`] in the `Present` set.
+pub(crate) fn drive_gesture_pose(
+    time: Res<Time>,
+    mirror: Res<WorldMirror>,
+    mut triggers: MessageReader<PresentGesture>,
+    mut poses: Query<(&ActorId, &mut BodyPoseState)>,
+) {
+    let now = time.elapsed_secs_f64();
+    for trigger in triggers.read() {
+        // The looping dance is driven from the snapshot below; a one-shot maps
+        // to a pose here and aims at its target's live mirror position.
+        let Some(kind) = OneShotGesture::from_kind(trigger.kind) else {
+            continue;
+        };
+        let face = trigger
+            .target_id
+            .as_ref()
+            .and_then(|id| mirror.actor(id))
+            .map(|actor| Vec3::from(actor.position_m) + Vec3::Y * GAZE_EYE_OFFSET_Y);
+        for (actor_id, mut pose) in poses.iter_mut() {
+            if actor_id == &trigger.actor_id {
+                pose.start_gesture(kind, face, now);
+                break;
+            }
+        }
+    }
+
+    // The snapshot-driven pose inputs, synced every frame: the looping-dance
+    // flag (authoritative so a late-arriving player sees the loop and it stops
+    // the frame `active_gesture` clears) and the §8 carriage statuses (so a
+    // walker with drunkenness/weariness sways and stoops). One mirror lookup
+    // per body serves both.
+    for (actor_id, mut pose) in poses.iter_mut() {
+        let actor = mirror.actor(actor_id);
+        let dancing =
+            actor.is_some_and(|actor| actor.active_gesture == Some(cathedral_sim::GestureKind::Dance));
+        pose.set_dance(dancing);
+        pose.set_carriage(actor.map(|actor| actor.statuses.as_slice()).unwrap_or(&[]));
     }
 }
 
@@ -1268,11 +1444,102 @@ fn shin_gate(cycle: f32) -> f32 {
     (cycle + SHIN_GATE_ADVANCE_RAD).cos().max(0.0)
 }
 
+/// §8 carriage: the two publicly-visible statuses that reshape the walk L0/L1
+/// already computed. Fed from [`crate::smart_actors::model::ActorSnapshot`]
+/// via [`BodyPoseState::set_carriage`]. `default` is sober and rested, and
+/// every field below is scaled by a status, so a defaulted `Carriage` leaves
+/// the pose byte-identical.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct Carriage {
+    /// `0..=1`. Staggering phase noise, lateral sway, a wandering lean.
+    drunkenness: f32,
+    /// `0..=1`. Drops the arm swing and adds a forward stoop.
+    weariness: f32,
+}
+
+impl Carriage {
+    /// Build from a snapshot's `statuses` slice; unknown kinds are ignored (a
+    /// body renders only what it has a pose for). Values are already clamped to
+    /// `0..=1` at the boundary.
+    fn from_statuses(statuses: &[(cathedral_sim::StatusKind, f32)]) -> Self {
+        use cathedral_sim::StatusKind as K;
+        let mut carriage = Carriage::default();
+        for &(kind, value) in statuses {
+            match kind {
+                K::Drunkenness => carriage.drunkenness = value,
+                K::Weariness => carriage.weariness = value,
+            }
+        }
+        carriage
+    }
+}
+
+/// Arm-swing amplitude after weariness drops it toward 0.3× at `w = 1`
+/// (`1 − WEARY_ARM_DROP·w`). Identity at `w = 0`.
+fn weary_arm_swing(base: f32, weariness: f32) -> f32 {
+    base * (1.0 - WEARY_ARM_DROP * weariness)
+}
+
+/// The drunk stagger's phase offset (stride-cycle units), added to `gait_phase`
+/// before the cycle is taken: a fast small jitter plus a slow cadence drift.
+/// Scaled by drunkenness by the caller, so this raw wobble is bounded by
+/// `DRUNK_PHASE_NOISE_CYCLES + DRUNK_CADENCE_CYCLES`.
+fn drunk_phase_wobble(now: f64, seed: u32) -> f32 {
+    use std::f64::consts::TAU as TAU64;
+    let noise = ((now * DRUNK_PHASE_NOISE_HZ + f64::from(hash01(seed, 40))) * TAU64).sin() as f32;
+    let cadence = ((now * DRUNK_CADENCE_HZ + f64::from(hash01(seed, 41))) * TAU64).sin() as f32;
+    DRUNK_PHASE_NOISE_CYCLES * noise + DRUNK_CADENCE_CYCLES * cadence
+}
+
+/// A seeded low-frequency wander in [−1, 1] — two incommensurate sines centred
+/// on zero (the `talk_energy` shape, but not biased positive). The drunk's lean
+/// holds to one side, drifts, and slowly crosses over.
+fn slow_wander(now: f64, seed: u32, salt: u32) -> f32 {
+    use std::f64::consts::TAU as TAU64;
+    let a = ((now * (0.13 + 0.08 * f64::from(hash01(seed, salt)))
+        + f64::from(hash01(seed, salt.wrapping_add(1))))
+        * TAU64)
+        .sin();
+    let b = ((now * (0.07 + 0.05 * f64::from(hash01(seed, salt.wrapping_add(2))))
+        + f64::from(hash01(seed, salt.wrapping_add(3))))
+        * TAU64)
+        .sin();
+    (0.5 * (a + b) as f32).clamp(-1.0, 1.0)
+}
+
+/// The carriage torso offset read by both L0 and L1: an extra roll (the drunk
+/// sway plus a wandering lean, clamped) and an extra pitch (the weary forward
+/// stoop, negative like the bow). Both vanish at status 0, so a defaulted
+/// `Carriage` returns `(0.0, 0.0)` and the walk/idle torso is untouched.
+fn carriage_torso(carriage: Carriage, now: f64, seed: u32) -> (f32, f32) {
+    use std::f64::consts::TAU as TAU64;
+    let d = carriage.drunkenness;
+    let sway =
+        d * DRUNK_SWAY_RAD * ((now * DRUNK_SWAY_HZ + f64::from(hash01(seed, 42))) * TAU64).sin() as f32;
+    let lean = d * DRUNK_LEAN_RAD * slow_wander(now, seed, 43);
+    let roll = (sway + lean).clamp(-DRUNK_ROLL_MAX_RAD, DRUNK_ROLL_MAX_RAD);
+    let stoop = -WEARY_STOOP_RAD * carriage.weariness;
+    (roll, stoop)
+}
+
 /// L0 locomotion (§5): legs in opposite phase, lagged knee folds, arm
 /// counter-swing, torso bob at double frequency plus lateral roll and turn
 /// lean. Positive local-X rotation swings a hanging limb toward −Z (forward).
-fn apply_locomotion(pose: &mut PoseDeltas, weight: f32, gait_phase: f32, yaw_rate: f32) {
-    let cycle = gait_phase * TAU;
+/// `carriage` (§8) is read here, not as a separate layer: drunkenness staggers
+/// the visual phase and sways/leans the torso, weariness drops the arm swing
+/// and stoops the torso — all zero at a default `Carriage`, so a sober walk is
+/// byte-identical to before M5.
+fn apply_locomotion(
+    pose: &mut PoseDeltas,
+    weight: f32,
+    gait_phase: f32,
+    yaw_rate: f32,
+    carriage: Carriage,
+    now: f64,
+    seed: u32,
+) {
+    // Drunkenness staggers the visual gait phase; sober, the offset is 0.
+    let cycle = (gait_phase + carriage.drunkenness * drunk_phase_wobble(now, seed)) * TAU;
     let swing = cycle.sin();
 
     pose.left_thigh
@@ -1287,23 +1554,27 @@ fn apply_locomotion(pose: &mut PoseDeltas, weight: f32, gait_phase: f32, yaw_rat
         JointDelta::from_rotation(Quat::from_rotation_x(-SHIN_BEND_RAD * shin_gate(cycle + PI))),
         weight,
     );
+    // Weariness drops the swing toward 0.3×; rested, the amplitude is unchanged.
+    let arm_swing = weary_arm_swing(ARM_SWING_RAD, carriage.weariness);
     pose.left_upper_arm.blend_over(
-        JointDelta::from_rotation(Quat::from_rotation_x(-ARM_SWING_RAD * swing)),
+        JointDelta::from_rotation(Quat::from_rotation_x(-arm_swing * swing)),
         weight,
     );
     pose.right_upper_arm.blend_over(
-        JointDelta::from_rotation(Quat::from_rotation_x(ARM_SWING_RAD * swing)),
+        JointDelta::from_rotation(Quat::from_rotation_x(arm_swing * swing)),
         weight,
     );
 
     // Highest as the legs pass, dipping when they spread; the roll shifts the
-    // torso over the planted foot; the lean tips it into a turn.
+    // torso over the planted foot; the lean tips it into a turn. Carriage adds
+    // the drunk sway/lean (roll) and the weary stoop (pitch) — both 0 sober.
     let bob = BOB_AMPLITUDE_M * (0.5 - swing.abs());
     let lean = (yaw_rate * TURN_LEAN_PER_YAW_RATE).clamp(-TURN_LEAN_MAX_RAD, TURN_LEAN_MAX_RAD);
-    let roll = -WALK_ROLL_RAD * cycle.cos() + lean;
+    let (carriage_roll, carriage_pitch) = carriage_torso(carriage, now, seed);
+    let roll = -WALK_ROLL_RAD * cycle.cos() + lean + carriage_roll;
     pose.torso.blend_over(
         JointDelta {
-            rotation: Quat::from_rotation_z(roll),
+            rotation: Quat::from_rotation_z(roll) * Quat::from_rotation_x(carriage_pitch),
             translation: Vec3::new(0.0, bob, 0.0),
             scale: Vec3::ONE,
         },
@@ -1323,7 +1594,9 @@ fn idle_pulse(t: f64, period: f64, phase: f64, window: (f32, f32, f32, f32)) -> 
 
 /// L1 idle life (§4): breathing, occasional weight shift, rare head glance —
 /// every period and phase drawn from the actor-id seed so crowds don't sync.
-fn apply_idle(pose: &mut PoseDeltas, weight: f32, now: f64, seed: u32) {
+/// `carriage` (§8) is read here too so a *standing* drunk still sways and a
+/// weary body still stoops; zero at a default `Carriage`.
+fn apply_idle(pose: &mut PoseDeltas, weight: f32, now: f64, seed: u32, carriage: Carriage) {
     // Breathing: a gentle chest expansion with a hint of pitch.
     let breath_period = BREATH_PERIOD_BASE_S + BREATH_PERIOD_SPAN_S * hash01(seed, 1) as f64;
     let breath = ((now / breath_period + hash01(seed, 2) as f64) * TAU as f64).sin() as f32;
@@ -1380,6 +1653,19 @@ fn apply_idle(pose: &mut PoseDeltas, weight: f32, now: f64, seed: u32) {
         ),
         weight,
     );
+
+    // Carriage (§8): a standing drunk sways and leans, a weary body stoops.
+    // Composed *over* the idle torso rather than replacing it (like the weight
+    // shift above), so breathing survives; identity at a default `Carriage`.
+    if carriage != Carriage::default() {
+        let (carriage_roll, carriage_pitch) = carriage_torso(carriage, now, seed);
+        let carriage_rot =
+            Quat::from_rotation_z(carriage_roll) * Quat::from_rotation_x(carriage_pitch);
+        pose.torso.rotation = pose
+            .torso
+            .rotation
+            .slerp(carriage_rot * pose.torso.rotation, weight);
+    }
 }
 
 /// Local-frame aim of a world point from the root transform: signed yaw off
@@ -1433,9 +1719,10 @@ fn one_shot_weight(t: f32, duration: f32) -> f32 {
         * (1.0 - smoothstep(duration - GESTURE_RAMP_OUT_S, duration, t))
 }
 
-/// L3 one-shot pose: the habit-tier nod and head-shake (M2); M4's deliberate
-/// catalog adds arm kinds here. `u` is normalized time 0..1; `face_yaw` the
-/// clamped local yaw toward the optional target.
+/// L3 one-shot pose (M2 nod/head-shake, M4's deliberate catalog). `u` is
+/// normalized time 0..1; `face_yaw` the clamped local yaw toward the optional
+/// target (the aiming kinds swing the shoulder by it). Upper-body only: legs
+/// are left to L0/L1 so a walking wave still walks.
 fn apply_one_shot(
     pose: &mut PoseDeltas,
     kind: OneShotGesture,
@@ -1443,16 +1730,167 @@ fn apply_one_shot(
     weight: f32,
     face_yaw: f32,
 ) {
-    let rotation = match kind {
+    match kind {
         // Two small forward dips — |sin| keeps every beat downward.
-        OneShotGesture::Nod => Quat::from_rotation_y(face_yaw)
-            * Quat::from_rotation_x(-NOD_PITCH_RAD * (u * TAU).sin().abs()),
+        OneShotGesture::Nod => pose.head.blend_over(
+            JointDelta::from_rotation(
+                Quat::from_rotation_y(face_yaw)
+                    * Quat::from_rotation_x(-NOD_PITCH_RAD * (u * TAU).sin().abs()),
+            ),
+            weight,
+        ),
         // One-and-a-half side-to-side sweeps around the target direction.
-        OneShotGesture::ShakeHead => {
-            Quat::from_rotation_y(face_yaw + SHAKE_YAW_RAD * (u * TAU * 1.5).sin())
+        OneShotGesture::ShakeHead => pose.head.blend_over(
+            JointDelta::from_rotation(Quat::from_rotation_y(
+                face_yaw + SHAKE_YAW_RAD * (u * TAU * 1.5).sin(),
+            )),
+            weight,
+        ),
+        // Right arm up and out, the hand waving side to side, aimed at target.
+        OneShotGesture::Wave => {
+            pose.right_upper_arm.blend_over(
+                JointDelta::from_rotation(
+                    Quat::from_rotation_y(face_yaw)
+                        * Quat::from_rotation_z(WAVE_UPPER_OUT_RAD)
+                        * Quat::from_rotation_x(WAVE_UPPER_LIFT_RAD),
+                ),
+                weight,
+            );
+            pose.right_forearm.blend_over(
+                JointDelta::from_rotation(
+                    Quat::from_rotation_x(-WAVE_FOREARM_BEND_RAD)
+                        * Quat::from_rotation_z(WAVE_FOREARM_SWING_RAD * (u * TAU * WAVE_CYCLES).sin()),
+                ),
+                weight,
+            );
         }
-    };
-    pose.head.blend_over(JointDelta::from_rotation(rotation), weight);
+        // Arm held forward-up, forearm curling in and out (come here).
+        OneShotGesture::Beckon => {
+            pose.right_upper_arm.blend_over(
+                JointDelta::from_rotation(
+                    Quat::from_rotation_y(face_yaw) * Quat::from_rotation_x(BECKON_UPPER_LIFT_RAD),
+                ),
+                weight,
+            );
+            let curl = BECKON_FOREARM_BASE_RAD
+                + BECKON_FOREARM_CURL_RAD * 0.5 * (1.0 - (u * TAU * BECKON_CYCLES).cos());
+            pose.right_forearm
+                .blend_over(JointDelta::from_rotation(Quat::from_rotation_x(-curl)), weight);
+        }
+        // Both shoulders lift and abduct, forearms turning out — a held shrug.
+        OneShotGesture::Shrug => {
+            pose.left_upper_arm.blend_over(
+                JointDelta::from_rotation(
+                    Quat::from_rotation_z(-SHRUG_UPPER_OUT_RAD)
+                        * Quat::from_rotation_x(SHRUG_UPPER_LIFT_RAD),
+                ),
+                weight,
+            );
+            pose.right_upper_arm.blend_over(
+                JointDelta::from_rotation(
+                    Quat::from_rotation_z(SHRUG_UPPER_OUT_RAD)
+                        * Quat::from_rotation_x(SHRUG_UPPER_LIFT_RAD),
+                ),
+                weight,
+            );
+            pose.left_forearm.blend_over(
+                JointDelta::from_rotation(
+                    Quat::from_rotation_x(-SHRUG_FOREARM_BEND_RAD)
+                        * Quat::from_rotation_z(-SHRUG_FOREARM_OUT_RAD),
+                ),
+                weight,
+            );
+            pose.right_forearm.blend_over(
+                JointDelta::from_rotation(
+                    Quat::from_rotation_x(-SHRUG_FOREARM_BEND_RAD)
+                        * Quat::from_rotation_z(SHRUG_FOREARM_OUT_RAD),
+                ),
+                weight,
+            );
+            pose.head.blend_over(
+                JointDelta::from_rotation(Quat::from_rotation_z(SHRUG_HEAD_TILT_RAD)),
+                weight,
+            );
+        }
+        // Right arm extended straight toward the target, held.
+        OneShotGesture::Point => {
+            pose.right_upper_arm.blend_over(
+                JointDelta::from_rotation(
+                    Quat::from_rotation_y(face_yaw) * Quat::from_rotation_x(POINT_UPPER_LIFT_RAD),
+                ),
+                weight,
+            );
+            pose.right_forearm.blend_over(
+                JointDelta::from_rotation(Quat::from_rotation_x(POINT_FOREARM_STRAIGHTEN_RAD)),
+                weight,
+            );
+            pose.head.blend_over(
+                JointDelta::from_rotation(Quat::from_rotation_y(face_yaw)),
+                weight,
+            );
+        }
+        // The torso folds forward at the waist, the head dropping with it.
+        // Model-forward is −Z, and the upright torso pivots the opposite way to
+        // a down-hanging arm, so folding forward is a negative X-rotation.
+        OneShotGesture::Bow => {
+            pose.torso.blend_over(
+                JointDelta::from_rotation(Quat::from_rotation_x(-BOW_TORSO_PITCH_RAD)),
+                weight,
+            );
+            pose.head.blend_over(
+                JointDelta::from_rotation(Quat::from_rotation_x(-BOW_HEAD_PITCH_RAD)),
+                weight,
+            );
+        }
+    }
+}
+
+/// L3 looping dance (M4): an upper-body sway — torso roll and twist, a pelvis
+/// bob and side-sway, both arms up and swinging in opposition, and a head bob —
+/// driven while the snapshot's `active_gesture` is `dance`. Legs are left to
+/// L0/L1 (foot IK is a non-goal), so a dancer standing in place still stands.
+fn apply_dance(pose: &mut PoseDeltas, weight: f32, now: f64, seed: u32) {
+    let phase = now * DANCE_HZ * std::f64::consts::TAU + f64::from(seed % 1000) * 0.0063;
+    let swing = phase.sin() as f32;
+    let bob = (phase * 2.0).sin().abs() as f32;
+    let twist = (phase * 0.5).sin() as f32;
+    let head = (phase * 2.0).cos() as f32;
+
+    pose.torso.blend_over(
+        JointDelta::from_rotation(
+            Quat::from_rotation_z(DANCE_TORSO_ROLL_RAD * swing)
+                * Quat::from_rotation_y(DANCE_TORSO_TWIST_RAD * twist),
+        ),
+        weight,
+    );
+    pose.pelvis.blend_over(
+        JointDelta {
+            translation: Vec3::new(DANCE_PELVIS_SWAY_M * swing, DANCE_PELVIS_BOB_M * bob, 0.0),
+            ..Default::default()
+        },
+        weight,
+    );
+    pose.left_upper_arm.blend_over(
+        JointDelta::from_rotation(
+            Quat::from_rotation_z(-DANCE_UPPER_SWING_RAD * swing)
+                * Quat::from_rotation_x(DANCE_UPPER_LIFT_RAD),
+        ),
+        weight,
+    );
+    pose.right_upper_arm.blend_over(
+        JointDelta::from_rotation(
+            Quat::from_rotation_z(DANCE_UPPER_SWING_RAD * swing)
+                * Quat::from_rotation_x(DANCE_UPPER_LIFT_RAD),
+        ),
+        weight,
+    );
+    let forearm = JointDelta::from_rotation(Quat::from_rotation_x(-DANCE_FOREARM_BEND_RAD));
+    pose.left_forearm.blend_over(forearm, weight);
+    pose.right_forearm.blend_over(forearm, weight);
+    pose.head.blend_over(
+        JointDelta::from_rotation(Quat::from_rotation_x(DANCE_HEAD_BOB_RAD * head)),
+        weight,
+    );
 }
 
 /// The nearest-[`TIER_A_CAP`] cut: given `(distance², key)` pairs already
@@ -1570,6 +2008,22 @@ pub(crate) fn animate_body_pose(
         };
         let previous_tier = state.tier;
         state.tier = tier;
+        // The transient upper-body layers (L2 carry/offer, L3 dance, L4
+        // talk/gaze) only ramp inside the Tier A block below. If we let their
+        // weights freeze while a body sits off-stage, an activity that ends
+        // there (speech finishes, a dance verb clears) would leave the weight
+        // stuck at 1.0 while its target has flipped to 0 — so the body would
+        // replay a spurious partial beat on the first Tier A frame back. Collapse
+        // them the moment a body leaves Tier A so it re-enters each layer from a
+        // weight consistent with its current target (a still-active layer simply
+        // ramps back in, per the "gestures/gaze ramp in and OUT" intent).
+        if tier != PoseTier::A {
+            state.carry_blend = 0.0;
+            state.offer_blend = 0.0;
+            state.talk_blend = 0.0;
+            state.gaze_blend = 0.0;
+            state.dance_blend = 0.0;
+        }
         match tier {
             PoseTier::C => {
                 // Leaving the animated tiers: settle to rest once, then stop
@@ -1654,10 +2108,18 @@ pub(crate) fn animate_body_pose(
 
         let mut pose = PoseDeltas::default();
         if locomotion_weight > 1e-3 {
-            apply_locomotion(&mut pose, locomotion_weight, gait_phase, state.yaw_rate);
+            apply_locomotion(
+                &mut pose,
+                locomotion_weight,
+                gait_phase,
+                state.yaw_rate,
+                state.carriage,
+                now,
+                state.seed,
+            );
         }
         if idle_weight > 1e-3 {
-            apply_idle(&mut pose, idle_weight, now, state.seed);
+            apply_idle(&mut pose, idle_weight, now, state.seed, state.carriage);
         }
         // L2 activity (M2) + L4 speech & gaze (M3) + L3 one-shot gestures,
         // Tier A only per §9 — at Tier B distances they fail the §1
@@ -1735,6 +2197,18 @@ pub(crate) fn animate_body_pose(
                     now,
                     state.seed,
                 );
+            }
+            // L3 looping dance (M4), driven by the snapshot's `active_gesture`
+            // rather than a fixed envelope. Applied before the one-shot so a
+            // deliberate wave — which ends the loop sim-side — reads over it
+            // during the brief blend-out.
+            state.dance_blend = move_toward(
+                state.dance_blend,
+                if state.dance { 1.0 } else { 0.0 },
+                dt / DANCE_BLEND_SECONDS,
+            );
+            if state.dance_blend > 1e-3 {
+                apply_dance(&mut pose, state.dance_blend, now, state.seed);
             }
             if let Some(gesture) = state.gesture {
                 let t = (now - gesture.started_at) as f32;
@@ -2192,7 +2666,7 @@ mod tests {
     #[test]
     fn locomotion_swings_legs_opposite_and_arms_counter() {
         let mut pose = PoseDeltas::default();
-        apply_locomotion(&mut pose, 1.0, 0.25, 0.0);
+        apply_locomotion(&mut pose, 1.0, 0.25, 0.0, Carriage::default(), 0.0, 0);
 
         let forwardness = |delta: &JointDelta| (delta.rotation * Vec3::NEG_Y).z;
         assert!(forwardness(&pose.left_thigh) < -0.3, "left thigh not forward");
@@ -2206,7 +2680,7 @@ mod tests {
         assert!(pose.torso.translation.y < -0.005);
         // Legs passing (phase 0) = the high point, and no leg swing.
         let mut passing = PoseDeltas::default();
-        apply_locomotion(&mut passing, 1.0, 0.0, 0.0);
+        apply_locomotion(&mut passing, 1.0, 0.0, 0.0, Carriage::default(), 0.0, 0);
         assert!(passing.torso.translation.y > 0.005);
         assert!(forwardness(&passing.left_thigh).abs() < 1e-3);
     }
@@ -2216,7 +2690,7 @@ mod tests {
     fn turn_lean_follows_yaw_rate_and_clamps() {
         let roll = |yaw_rate: f32| {
             let mut pose = PoseDeltas::default();
-            apply_locomotion(&mut pose, 1.0, 0.0, yaw_rate);
+            apply_locomotion(&mut pose, 1.0, 0.0, yaw_rate, Carriage::default(), 0.0, 0);
             pose.torso.rotation.to_euler(EulerRot::ZYX).0
         };
         let gentle = roll(0.5) - roll(0.0);
@@ -2235,7 +2709,7 @@ mod tests {
     fn idle_life_desyncs_across_actors_and_breathes() {
         let sample = |seed: u32, t: f64| {
             let mut pose = PoseDeltas::default();
-            apply_idle(&mut pose, 1.0, t, seed);
+            apply_idle(&mut pose, 1.0, t, seed, Carriage::default());
             pose.torso.scale.x
         };
         let times = [0.0, 0.7, 1.4, 2.1, 2.8];
@@ -2251,12 +2725,127 @@ mod tests {
         );
     }
 
+    // ------------------------------------------------ §8 carriage mapping
+
+    /// Weariness drops the arm swing toward 0.3× monotonically; rested (w = 0)
+    /// is the identity amplitude.
+    #[test]
+    fn weariness_drops_the_arm_swing() {
+        assert_eq!(weary_arm_swing(ARM_SWING_RAD, 0.0), ARM_SWING_RAD);
+        assert!((weary_arm_swing(ARM_SWING_RAD, 1.0) - 0.3 * ARM_SWING_RAD).abs() < 1e-6);
+        assert!(weary_arm_swing(ARM_SWING_RAD, 0.5) < weary_arm_swing(ARM_SWING_RAD, 0.0));
+        assert!(weary_arm_swing(ARM_SWING_RAD, 1.0) < weary_arm_swing(ARM_SWING_RAD, 0.5));
+    }
+
+    /// A default `Carriage` adds nothing (§8 "d = 0 → identity"): the torso
+    /// offset is exactly zero, and an L0 walk keeps its full arm swing with no
+    /// forward stoop — a byte-for-byte sober walk.
+    #[test]
+    fn carriage_is_identity_when_sober_and_rested() {
+        let sober = Carriage::default();
+        for &t in &[0.0, 0.5, 1.3, 4.7, 20.0] {
+            assert_eq!(carriage_torso(sober, t, 0xABCD), (0.0, 0.0));
+        }
+        let mut pose = PoseDeltas::default();
+        apply_locomotion(&mut pose, 1.0, 0.1, 0.0, sober, 3.0, 7);
+        let swing = (0.1 * TAU).sin();
+        let expected = Quat::from_rotation_x(ARM_SWING_RAD * swing);
+        assert!(pose.right_upper_arm.rotation.angle_between(expected) < 1e-6);
+        // Only the walk roll (Z) is present; no stoop (X).
+        let (_, _, pitch) = pose.torso.rotation.to_euler(EulerRot::ZYX);
+        assert!(pitch.abs() < 1e-4, "sober torso must not stoop: {pitch}");
+    }
+
+    /// Drunkenness (d = 0.8) sways the torso: the roll wanders over time yet
+    /// stays inside the clamp, the phase wobble is bounded to its two
+    /// amplitudes, and the staggered phase actually moves the legs versus sober.
+    #[test]
+    fn drunkenness_sways_within_the_clamp_and_staggers_the_phase() {
+        let drunk = Carriage {
+            drunkenness: 0.8,
+            weariness: 0.0,
+        };
+        let mut rolls = Vec::new();
+        let mut max_wobble = 0.0_f32;
+        for i in 0..400 {
+            let t = i as f64 * 0.05;
+            let (roll, pitch) = carriage_torso(drunk, t, 0x1357);
+            assert!(roll.abs() <= DRUNK_ROLL_MAX_RAD + 1e-6, "roll exceeds clamp: {roll}");
+            assert_eq!(pitch, 0.0, "no stoop without weariness");
+            rolls.push(roll);
+            max_wobble = max_wobble.max((0.8 * drunk_phase_wobble(t, 0x1357)).abs());
+        }
+        let max = rolls.iter().copied().fold(f32::MIN, f32::max);
+        let min = rolls.iter().copied().fold(f32::MAX, f32::min);
+        assert!(max > 0.03 && min < -0.03, "drunk torso barely sways: {min}..{max}");
+        assert!(
+            max_wobble <= 0.8 * (DRUNK_PHASE_NOISE_CYCLES + DRUNK_CADENCE_CYCLES) + 1e-6,
+            "phase wobble exceeds its amplitude: {max_wobble}"
+        );
+        // Across a stretch of time the staggered phase visibly displaces the
+        // legs versus a sober walk at the same gait phase (the wobble passes
+        // through zero, so it is the peak displacement that must show).
+        let mut max_leg_shift = 0.0_f32;
+        for i in 0..200 {
+            let t = i as f64 * 0.05;
+            let mut sober_pose = PoseDeltas::default();
+            let mut drunk_pose = PoseDeltas::default();
+            apply_locomotion(&mut sober_pose, 1.0, 0.3, 0.0, Carriage::default(), t, 9);
+            apply_locomotion(&mut drunk_pose, 1.0, 0.3, 0.0, drunk, t, 9);
+            max_leg_shift = max_leg_shift.max(
+                sober_pose
+                    .left_thigh
+                    .rotation
+                    .angle_between(drunk_pose.left_thigh.rotation),
+            );
+        }
+        assert!(
+            max_leg_shift > 0.05,
+            "the drunk phase stagger must move the legs: {max_leg_shift}"
+        );
+    }
+
+    /// Weariness (w = 1) folds the torso forward (a negative X-rotation, like
+    /// the bow) and touches neither the roll nor the arm phase.
+    #[test]
+    fn weariness_stoops_the_torso_forward() {
+        let weary = Carriage {
+            drunkenness: 0.0,
+            weariness: 1.0,
+        };
+        let (roll, pitch) = carriage_torso(weary, 2.0, 0x2468);
+        assert_eq!(roll, 0.0, "weariness does not sway");
+        assert!((pitch + WEARY_STOOP_RAD).abs() < 1e-6, "full weariness folds the torso");
+        let mut pose = PoseDeltas::default();
+        apply_locomotion(&mut pose, 1.0, 0.0, 0.0, weary, 2.0, 0x2468);
+        let (_, _, x) = pose.torso.rotation.to_euler(EulerRot::ZYX);
+        assert!(x < -0.1, "the weary torso pitches forward: {x}");
+    }
+
+    /// `Carriage::from_statuses` maps the snapshot slice onto the two axes and
+    /// ignores anything it has no pose for.
+    #[test]
+    fn carriage_reads_the_snapshot_statuses() {
+        use cathedral_sim::StatusKind;
+        assert_eq!(Carriage::from_statuses(&[]), Carriage::default());
+        assert_eq!(
+            Carriage::from_statuses(&[
+                (StatusKind::Drunkenness, 0.7),
+                (StatusKind::Weariness, 0.4)
+            ]),
+            Carriage {
+                drunkenness: 0.7,
+                weariness: 0.4,
+            }
+        );
+    }
+
     /// §5/§6: an arm owned by L2 at full weight loses its locomotion swing —
     /// the carry replaces the left arm outright while the right keeps swinging.
     #[test]
     fn carry_owns_the_left_arm_over_the_walk_swing() {
         let mut pose = PoseDeltas::default();
-        apply_locomotion(&mut pose, 1.0, 0.25, 0.0);
+        apply_locomotion(&mut pose, 1.0, 0.25, 0.0, Carriage::default(), 0.0, 0);
         let swinging_right = pose.right_upper_arm;
         apply_carry(&mut pose, 1.0);
 
@@ -2327,6 +2916,84 @@ mod tests {
         assert!(one_shot_weight(0.0, duration) < 1e-6);
         assert!(one_shot_weight(duration, duration) < 1e-6);
         assert!(one_shot_weight(duration * 0.5, duration) > 0.99);
+    }
+
+    /// M4's deliberate catalog: every sim kind maps to a pose (dance excepted),
+    /// the arm kinds move the upper body and leave the legs alone, point aims
+    /// by `face_yaw`, and bow folds the torso forward.
+    #[test]
+    fn the_deliberate_catalog_maps_and_poses_the_upper_body() {
+        use cathedral_sim::GestureKind as K;
+        for (kind, expected) in [
+            (K::Nod, Some(OneShotGesture::Nod)),
+            (K::ShakeHead, Some(OneShotGesture::ShakeHead)),
+            (K::Wave, Some(OneShotGesture::Wave)),
+            (K::Beckon, Some(OneShotGesture::Beckon)),
+            (K::Shrug, Some(OneShotGesture::Shrug)),
+            (K::Point, Some(OneShotGesture::Point)),
+            (K::Bow, Some(OneShotGesture::Bow)),
+            (K::Dance, None),
+        ] {
+            assert_eq!(OneShotGesture::from_kind(kind), expected, "{kind:?}");
+        }
+
+        // A wave works the right arm; the legs are untouched (upper-body only,
+        // so a walking wave still walks).
+        let mut wave = PoseDeltas::default();
+        apply_one_shot(&mut wave, OneShotGesture::Wave, 0.5, 1.0, 0.0);
+        assert!(wave.right_upper_arm.rotation.angle_between(Quat::IDENTITY) > 0.5);
+        assert_eq!(wave.left_thigh.rotation, Quat::IDENTITY);
+        assert_eq!(wave.right_thigh.rotation, Quat::IDENTITY);
+
+        // Point aims the right arm: a non-zero face_yaw swings it off centre.
+        let mut ahead = PoseDeltas::default();
+        apply_one_shot(&mut ahead, OneShotGesture::Point, 0.5, 1.0, 0.0);
+        let mut aimed = PoseDeltas::default();
+        apply_one_shot(&mut aimed, OneShotGesture::Point, 0.5, 1.0, 0.5);
+        assert!(
+            ahead
+                .right_upper_arm
+                .rotation
+                .angle_between(aimed.right_upper_arm.rotation)
+                > 0.1,
+            "point turns toward its target"
+        );
+
+        // Bow folds the torso forward (its top tilts toward model-forward, −Z);
+        // shrug lifts both shoulders.
+        let mut bow = PoseDeltas::default();
+        apply_one_shot(&mut bow, OneShotGesture::Bow, 0.5, 1.0, 0.0);
+        assert!((bow.torso.rotation * Vec3::Y).z < -0.1, "the torso folds forward");
+        let mut shrug = PoseDeltas::default();
+        apply_one_shot(&mut shrug, OneShotGesture::Shrug, 0.5, 1.0, 0.0);
+        assert!(shrug.left_upper_arm.rotation.angle_between(Quat::IDENTITY) > 0.1);
+        assert!(shrug.right_upper_arm.rotation.angle_between(Quat::IDENTITY) > 0.1);
+    }
+
+    /// The looping dance is snapshot-driven and upper-body: it sways the torso
+    /// and lifts the arms, moves over time, and never touches the legs.
+    #[test]
+    fn the_dance_sways_the_upper_body_over_time_and_leaves_the_legs() {
+        let mut early = PoseDeltas::default();
+        apply_dance(&mut early, 1.0, 0.10, 7);
+        let mut later = PoseDeltas::default();
+        apply_dance(&mut later, 1.0, 0.45, 7);
+
+        assert!(early.left_upper_arm.rotation.angle_between(Quat::IDENTITY) > 0.5);
+        assert!(early.torso.rotation.angle_between(Quat::IDENTITY) > 0.05);
+        assert_eq!(early.left_thigh.rotation, Quat::IDENTITY);
+        assert_eq!(early.right_shin.rotation, Quat::IDENTITY);
+        assert!(
+            early.torso.rotation.angle_between(later.torso.rotation) > 1e-3,
+            "the sway advances with time"
+        );
+
+        // The blend flag rides the pose state.
+        let rest = rest_pose(&build_scales(cathedral_sim::Build::Male));
+        let mut state = BodyPoseState::new(&ActorId("dancer".into()), rest);
+        assert!(!state.dance);
+        state.set_dance(true);
+        assert!(state.dance);
     }
 
     /// The M2 entry points: activity targets ramp the blends inside the pose
@@ -2543,6 +3210,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                     ActorSnapshot {
                         id: ActorId("player".into()),
@@ -2552,6 +3221,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                 ],
                 items: vec![],
@@ -2639,6 +3310,118 @@ mod tests {
         );
     }
 
+    /// M4 end to end: a snapshot carrying `active_gesture: dance` drives the
+    /// looping dance on the body (blend ramps up, stops when the snapshot
+    /// clears it), and a `PresentGesture` trigger starts a one-shot pose.
+    #[test]
+    fn a_dance_snapshot_drives_the_loop_and_a_trigger_starts_a_one_shot() {
+        use std::time::Duration;
+
+        use bevy::asset::AssetPlugin;
+        use bevy::time::TimeUpdateStrategy;
+
+        use crate::smart_actors::actors::reconcile_actor_views;
+        use crate::smart_actors::model::{
+            ActorControl, ActorSnapshot, Position, WorldMirror, WorldSnapshot,
+        };
+
+        let snapshot = |dance: Option<cathedral_sim::GestureKind>| WorldSnapshot {
+            world_revision: 1,
+            player_id: ActorId("player".into()),
+            actors: vec![
+                ActorSnapshot {
+                    id: ActorId("dancer".into()),
+                    name_for_player: "Dancer".into(),
+                    control: ActorControl::Llm,
+                    position_m: Position::new(0.0, 0.91, 0.0).unwrap(),
+                    facing_yaw: 0.0,
+                    appearance: Default::default(),
+                    holds: vec![],
+                    active_gesture: dance,
+                    statuses: Vec::new(),
+                },
+                ActorSnapshot {
+                    id: ActorId("player".into()),
+                    name_for_player: "You".into(),
+                    control: ActorControl::Player,
+                    position_m: Position::new(1.0, 0.91, -1.0).unwrap(),
+                    facing_yaw: 0.0,
+                    appearance: Default::default(),
+                    holds: vec![],
+                    active_gesture: None,
+                    statuses: Vec::new(),
+                },
+            ],
+            items: vec![],
+            offers: vec![],
+        };
+
+        let mut mirror = WorldMirror::default();
+        mirror
+            .replace_snapshot(snapshot(Some(cathedral_sim::GestureKind::Dance)))
+            .unwrap();
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<Image>()
+            .insert_resource(mirror)
+            .insert_resource(MovementInbox::default())
+            .init_resource::<ReflexState>()
+            .add_message::<PresentGesture>()
+            .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(100)))
+            .add_systems(Startup, setup_body_assets)
+            .add_systems(
+                Update,
+                (reconcile_actor_views, drive_gesture_pose, animate_body_pose).chain(),
+            );
+        app.world_mut().spawn((
+            PlayerCamera,
+            GlobalTransform::from(Transform::from_xyz(1.0, 1.7, -1.0)),
+        ));
+
+        let dancer_state = |app: &mut App| -> (bool, f32, bool) {
+            let world = app.world_mut();
+            world
+                .query::<(&ActorId, &BodyPoseState)>()
+                .iter(world)
+                .find(|(id, _)| id.0 == "dancer")
+                .map(|(_, state)| (state.dance, state.dance_blend, state.gesture.is_some()))
+                .expect("the dancer has a pose state")
+        };
+
+        // The snapshot's dance drives the loop; its blend ramps up.
+        for _ in 0..8 {
+            app.update();
+        }
+        let (dancing, blend, _) = dancer_state(&mut app);
+        assert!(dancing, "the snapshot's active_gesture drives the loop");
+        assert!(blend > 0.5, "the dance blend ramped up, {blend}");
+
+        // Clearing active_gesture stops it — the blend ramps back down.
+        app.world_mut()
+            .resource_mut::<WorldMirror>()
+            .replace_snapshot(snapshot(None))
+            .unwrap();
+        for _ in 0..8 {
+            app.update();
+        }
+        let (dancing, blend, _) = dancer_state(&mut app);
+        assert!(!dancing, "clearing the snapshot stops the dance");
+        assert!(blend < 1e-2, "the dance blend ramped down, {blend}");
+
+        // A one-shot trigger starts a pose on the same body.
+        app.world_mut().write_message(PresentGesture {
+            actor_id: ActorId("dancer".into()),
+            kind: cathedral_sim::GestureKind::Wave,
+            target_id: Some(ActorId("player".into())),
+        });
+        app.update();
+        let (_, _, gesturing) = dancer_state(&mut app);
+        assert!(gesturing, "the wave trigger started a one-shot");
+    }
+
     /// §9's Tier A cut keeps only the nearest cap's worth of actors.
     #[test]
     fn tier_a_cut_caps_at_the_nearest_sixty_four() {
@@ -2674,6 +3457,8 @@ mod tests {
             facing_yaw: 0.0,
             appearance: Default::default(),
             holds: vec![],
+            active_gesture: None,
+            statuses: Vec::new(),
         };
         let mut mirror = WorldMirror::default();
         mirror
@@ -2691,6 +3476,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                 ],
                 items: vec![],
@@ -2826,6 +3613,8 @@ mod tests {
                     facing_yaw: 0.0,
                     appearance: Default::default(),
                     holds: vec![],
+                    active_gesture: None,
+                    statuses: Vec::new(),
                 }
             })
             .collect();
@@ -2837,6 +3626,8 @@ mod tests {
             facing_yaw: 0.0,
             appearance: Default::default(),
             holds: vec![],
+            active_gesture: None,
+            statuses: Vec::new(),
         });
         let mut mirror = WorldMirror::default();
         mirror

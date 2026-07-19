@@ -28,6 +28,9 @@ pub enum ActionErrorCode {
     BroadcastCannotDecline,
     UnknownSound,
     SoundsDisabled,
+    /// `gesture` with a `kind` outside the catalog (`features/npc_bodies.md`
+    /// §7).
+    UnknownGesture,
     /// `eat` of a kind the catalog does not mark edible ("a spark is not food").
     NotEdible,
     /// `offer_item` with a `quantity` outside `1..=stack.quantity`.
@@ -63,6 +66,7 @@ impl ActionErrorCode {
             Self::BroadcastCannotDecline => "broadcast_cannot_decline",
             Self::UnknownSound => "unknown_sound",
             Self::SoundsDisabled => "sounds_disabled",
+            Self::UnknownGesture => "unknown_gesture",
             Self::NotEdible => "not_edible",
             Self::BadQuantity => "bad_quantity",
             Self::UnknownPlace => "unknown_place",
@@ -209,6 +213,7 @@ pub enum CommandErrorCode {
     BroadcastCannotDecline,
     UnknownSound,
     SoundsDisabled,
+    UnknownGesture,
     NotEdible,
     BadQuantity,
     UnknownPlace,
@@ -262,6 +267,7 @@ impl CommandErrorCode {
             Self::BroadcastCannotDecline => "broadcast_cannot_decline",
             Self::UnknownSound => "unknown_sound",
             Self::SoundsDisabled => "sounds_disabled",
+            Self::UnknownGesture => "unknown_gesture",
             Self::NotEdible => "not_edible",
             Self::BadQuantity => "bad_quantity",
             Self::UnknownPlace => "unknown_place",
@@ -310,6 +316,7 @@ impl From<ActionErrorCode> for CommandErrorCode {
             ActionErrorCode::BroadcastCannotDecline => Self::BroadcastCannotDecline,
             ActionErrorCode::UnknownSound => Self::UnknownSound,
             ActionErrorCode::SoundsDisabled => Self::SoundsDisabled,
+            ActionErrorCode::UnknownGesture => Self::UnknownGesture,
             ActionErrorCode::NotEdible => Self::NotEdible,
             ActionErrorCode::BadQuantity => Self::BadQuantity,
             ActionErrorCode::UnknownPlace => Self::UnknownPlace,

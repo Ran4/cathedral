@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     appearance::AppearanceSnapshot,
-    character::Control,
+    character::{Control, StatusKind},
+    gesture::GestureKind,
     ids::{ActorId, ItemId},
     item::ItemKind,
     math::Vec3,
@@ -41,6 +42,20 @@ pub struct ActorSnapshot {
     /// class, headgear, tint seed, and the named majors' bespoke override.
     pub appearance: AppearanceSnapshot,
     pub holds: Vec<ItemId>,
+    /// The looping gesture the actor is holding, or `None`
+    /// (`features/npc_bodies.md` §7). Only `dance` loops today; a one-shot
+    /// gesture rides `EngineMessage::Gesture` and never lands here. Present so
+    /// a player who arrives mid-loop still sees the dance. Skipped when `None`
+    /// so the common case adds nothing to the 500-actor snapshot's size.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_gesture: Option<GestureKind>,
+    /// Publicly-visible carriage axes (`features/npc_bodies.md` §8): drunkenness,
+    /// weariness, each a finite `0..=1`, ordered by kind. The host reads them to
+    /// dress the walk (sway, stoop) without touching the actor's position.
+    /// Skipped when empty — the universal case — so the 500-actor snapshot's
+    /// size (and every frozen serialization test) is unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub statuses: Vec<(StatusKind, f32)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

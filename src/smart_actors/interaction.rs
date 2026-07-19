@@ -1226,6 +1226,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                     ActorSnapshot {
                         id: ActorId("ilse".into()),
@@ -1235,6 +1237,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![ItemId("coin".into()), ItemId("fish".into())],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                 ],
                 items: vec![
@@ -1304,6 +1308,8 @@ mod tests {
                     facing_yaw: 0.0,
                     appearance: Default::default(),
                     holds: vec![ItemId("spk".into()), ItemId("one".into())],
+                    active_gesture: None,
+                    statuses: Vec::new(),
                 }],
                 items: vec![
                     ItemSnapshot {
@@ -1586,6 +1592,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![ItemId("purse".into()), ItemId("loaf".into())],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                     ActorSnapshot {
                         id: ActorId("wyn".into()),
@@ -1595,6 +1603,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                 ],
                 items: vec![

@@ -701,6 +701,9 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
             sound_id,
             position_m: to_sim(position_m),
         },
+        BridgeCommand::DebugStatus { name, kind, value } => {
+            EngineCommand::DebugSetStatus { name, kind, value }
+        }
         BridgeCommand::CycleTimeScale => EngineCommand::CycleTimeScale,
         BridgeCommand::SpeechPresented { speech_event_id } => EngineCommand::SpeechPresented {
             event_id: SpeechEventId(speech_event_id),

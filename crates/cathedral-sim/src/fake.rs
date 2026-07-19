@@ -24,13 +24,31 @@ const REPLY_OFFER_COIN: &str = concat!(
     "\n",
     r#"offer_item {"item_id": "c0prs", "target": "player"}"#,
 );
+/// The scripted `gesture` emission (`features/npc_bodies.md` §7): anyone asked
+/// to wave greets the player and waves at them, so the offline e2e, the
+/// headless runner and the live drive run all exercise the full gesture path —
+/// the percept to any bystander, the `EngineMessage::Gesture`, and the host
+/// pose — deterministically.
+const REPLY_WAVE: &str = concat!(
+    r#"say {"target": "player", "text": "Of course, hello there!"}"#,
+    "\n",
+    r#"gesture {"kind": "wave", "to": "player"}"#,
+);
+/// The scripted looping gesture: anyone asked to dance says so and starts the
+/// `dance` loop, which the snapshot then carries until they next act.
+const REPLY_DANCE: &str = concat!(
+    r#"say {"target": "player", "text": "Watch me, then!"}"#,
+    "\n",
+    r#"gesture {"kind": "dance"}"#,
+);
 
 /// The scripted reply for one rendered prompt.
 ///
 /// Rules, in order (any parse failure falls through to the no-op):
 /// 1. Ilse, asked her name → she introduces herself.
 /// 2. Ilse, asked to offer her coin → she says so and offers `c0prs`.
-/// 3. anyone else → a no-op turn.
+/// 3. anyone asked to wave → they greet the player and wave at them.
+/// 4. anyone else → a no-op turn.
 pub fn fake_reply(prompt: &str) -> String {
     let Some(name) = sheet_name(prompt) else {
         return REPLY_NOOP.to_string();
@@ -42,6 +60,12 @@ pub fn fake_reply(prompt: &str) -> String {
     }
     if name == "Ilse" && history.contains("offer") && history.contains("coin") {
         return REPLY_OFFER_COIN.to_string();
+    }
+    if history.contains("dance") {
+        return REPLY_DANCE.to_string();
+    }
+    if history.contains("wave") {
+        return REPLY_WAVE.to_string();
     }
     REPLY_NOOP.to_string()
 }
@@ -152,6 +176,19 @@ mod tests {
         let reply = fake_reply(&prompt);
         assert!(reply.contains("You may have my copper coin."), "{reply}");
         assert!(reply.contains(r#"offer_item {"item_id": "c0prs", "target": "player"}"#));
+    }
+
+    #[test]
+    fn anyone_asked_to_wave_greets_and_waves_at_the_player() {
+        let reply = fake_reply(&prompt_with("Sven", &["Player said: \"Please wave at me\""]));
+        assert!(reply.contains("hello there"), "{reply}");
+        assert!(reply.contains(r#"gesture {"kind": "wave", "to": "player"}"#), "{reply}");
+    }
+
+    #[test]
+    fn anyone_asked_to_dance_starts_the_dance_loop() {
+        let reply = fake_reply(&prompt_with("Conny", &["Player said: \"Would you dance?\""]));
+        assert!(reply.contains(r#"gesture {"kind": "dance"}"#), "{reply}");
     }
 
     #[test]

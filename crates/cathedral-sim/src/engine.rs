@@ -33,11 +33,12 @@ use crate::{
         CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS,
         StageConfig, WarmExchanges, on_stage,
     },
-    character::Control,
+    character::{Control, StatusKind},
     clock::{Office, Weekday, WorldClock, stroke_times},
     error::{CommandError, CommandErrorCode, EngineInitError},
     event::{DomainEvent, EventType},
     floor::ConversationFloor,
+    gesture::{self, GestureKind},
     ids::{ActorId, ItemId, SpeechEventId},
     math::Vec3,
     nav::NavData,
@@ -338,6 +339,16 @@ pub enum EngineCommand {
         sound_id: String,
         position_m: Vec3,
     },
+    /// Debug carriage write (`features/npc_bodies.md` §8): set a body status on
+    /// the named character to a clamped `0..=1` value. The `cathedral-headless
+    /// --status` flag and the drive-mode `status` action both arrive as this;
+    /// there is no `CommandResult` (a fire-and-forget developer poke), and a
+    /// name that matches nobody is a `Diagnostic`, not a fault.
+    DebugSetStatus {
+        name: String,
+        kind: StatusKind,
+        value: f64,
+    },
     /// Advance the debug time scale to the next of 1× / 10× / 60× (the `T` key).
     /// Fire-and-forget: the host learns the new scale from the next
     /// [`EngineMessage::Clock`], so there is no `CommandResult`.
@@ -501,6 +512,20 @@ pub enum EngineMessage {
         /// Units moved (offer/accept/eat); 1 for single-item traffic, so the HUD
         /// toast can pluralize.
         quantity: u32,
+        recipient_ids: Vec<ActorId>,
+    },
+    /// A deliberate body-language act (`features/npc_bodies.md` §7), the
+    /// transient trigger the host plays the pose from. Presented like
+    /// [`Self::Speech`]: `recipient_ids` are the witnesses within the social
+    /// radius, the player among them only when in range. `target_id` is `Some`
+    /// only for a person target (a place-pointed gesture carries none). A
+    /// looping `dance` also rides `ActorSnapshot::active_gesture`, so a player
+    /// who arrives mid-loop still sees it.
+    Gesture {
+        event_id: String,
+        actor_id: ActorId,
+        kind: GestureKind,
+        target_id: Option<ActorId>,
         recipient_ids: Vec<ActorId>,
     },
     CommandResult {
@@ -960,6 +985,10 @@ impl Engine {
         self.speech_router
             .poll(now, &mut speech_context!(self), &mut out);
 
+        // Stamp and expire looping gestures before the flush, so a loop that
+        // ran out this poll bumps the revision the flush then publishes.
+        self.expire_gestures(now);
+
         // The scheduler's turn produced domain events in this same poll; the
         // floor they acquire here gates the *next* one.
         self.flush(now, &mut out);
@@ -1170,6 +1199,10 @@ impl Engine {
                 sound_id,
                 position_m,
             } => self.debug_sound(now, &sound_id, position_m, out),
+
+            EngineCommand::DebugSetStatus { name, kind, value } => {
+                self.debug_set_status(now, &name, kind, value, out)
+            }
 
             // Continuity-preserving (see `WorldClock::with_scale`): time speeds
             // up without jumping. The next poll's `Clock` message carries the new
@@ -1488,6 +1521,28 @@ impl Engine {
         self.flush(now, out);
     }
 
+    /// Debug carriage write (`features/npc_bodies.md` §8): set a body status on
+    /// the named character. The single sim entry point the `cathedral-headless
+    /// --status` flag and the drive-mode `status` action share. It bumps the
+    /// world revision (via [`World::debug_set_status`]) so the flushed snapshot
+    /// carries the new value; a name that matches nobody is a diagnostic.
+    fn debug_set_status(
+        &mut self,
+        now: f64,
+        name: &str,
+        kind: StatusKind,
+        value: f64,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        if self.world.debug_set_status(name, kind, value) {
+            self.flush(now, out);
+        } else {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] invalid debug_status: there is no character named '{name}'"
+            )));
+        }
+    }
+
     /// Ring the offices whose bells fell in the span since the last check, and
     /// sound any strokes now due. Called once per poll, before commands, so the
     /// span tested here is stable no matter what the commands do to the scale.
@@ -1693,6 +1748,32 @@ impl Engine {
     // ------------------------------------------------------------- fan-out
 
     /// `_flush_domain_events` (`server.py:2114-2164`) + `_send_snapshot_if_changed`.
+    /// Stamp a looping gesture's 60 s deadline on its first sighting — the
+    /// action layer has no clock, exactly like a `TravelIntent`'s deadline
+    /// (`character.rs`) — and clear any that has run out. The other end of the
+    /// rule ("until the actor's next non-`wait` action") is enforced in
+    /// `actions.rs`; a loop cleared here bumps the public revision so the next
+    /// snapshot drops it and the host stops the dance.
+    fn expire_gestures(&mut self, now: f64) {
+        let mut cleared = false;
+        for character in self.world.characters.values_mut() {
+            let Some(active) = character.state.active_gesture.as_mut() else {
+                continue;
+            };
+            match active.deadline {
+                None => active.deadline = Some(now + gesture::DANCE_MAX_SECONDS),
+                Some(deadline) if now >= deadline => {
+                    character.state.active_gesture = None;
+                    cleared = true;
+                }
+                Some(_) => {}
+            }
+        }
+        if cleared {
+            self.world.touch_public_state();
+        }
+    }
+
     fn flush(&mut self, now: f64, out: &mut Vec<EngineMessage>) {
         for event in self.world.drain_events() {
             match event.event_type {
@@ -1702,6 +1783,7 @@ impl Engine {
                     self.hold_for_handoff(now, &event);
                     flush_world_event(&event, out);
                 }
+                EventType::Gesture => flush_gesture(&event, out),
             }
         }
         if self.world.world_revision > self.last_snapshot_revision {
@@ -1890,6 +1972,23 @@ impl Engine {
 /// scheduler off it would spend LLM turns on a zero-token act (npc_bodies M2).
 fn is_handoff_kind(kind: &str) -> bool {
     matches!(kind, "offer_item" | "accept_offered_item")
+}
+
+fn flush_gesture(event: &DomainEvent, out: &mut Vec<EngineMessage>) {
+    // `kind` is the gesture verb string the action wrote; an unknown one is
+    // impossible (the action validated it), so a miss is silently dropped.
+    let (Some(actor_id), Some(kind)) =
+        (event.actor_id.clone(), GestureKind::from_verb(&event.kind))
+    else {
+        return;
+    };
+    out.push(EngineMessage::Gesture {
+        event_id: event.event_id(),
+        actor_id,
+        kind,
+        target_id: event.target_id.clone(),
+        recipient_ids: event.recipient_ids.clone(),
+    });
 }
 
 fn flush_world_event(event: &DomainEvent, out: &mut Vec<EngineMessage>) {

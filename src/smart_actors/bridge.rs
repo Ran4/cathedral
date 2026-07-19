@@ -158,6 +158,14 @@ pub enum BridgeCommand {
         sound_id: String,
         position_m: Position,
     },
+    /// CATHEDRAL_DRIVE `status` action (`features/npc_bodies.md` §8): set a body
+    /// carriage status on the named character so a drunk/weary walker can be
+    /// eyeballed. A developer poke, not a modelled cause — like `DebugSound`.
+    DebugStatus {
+        name: String,
+        kind: cathedral_sim::StatusKind,
+        value: f64,
+    },
     /// Advance the debug world-clock time scale (the `T` key). Fire-and-forget:
     /// the new scale comes back on the next `EngineMessage::Clock`.
     CycleTimeScale,

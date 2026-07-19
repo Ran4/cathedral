@@ -565,6 +565,8 @@ mod tests {
             facing_yaw: 0.0,
             appearance,
             holds: vec![],
+            active_gesture: None,
+            statuses: Vec::new(),
         };
         mirror
             .replace_snapshot(WorldSnapshot {
@@ -601,6 +603,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                 ],
                 items: vec![],
@@ -690,6 +694,8 @@ mod tests {
             facing_yaw: 0.0,
             appearance: Default::default(),
             holds: vec![],
+            active_gesture: None,
+            statuses: Vec::new(),
         };
         mirror
             .replace_snapshot(WorldSnapshot {
@@ -707,6 +713,8 @@ mod tests {
                         facing_yaw: 0.0,
                         appearance: Default::default(),
                         holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
                     },
                 ],
                 items: vec![],

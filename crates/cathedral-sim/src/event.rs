@@ -15,6 +15,10 @@ pub enum EventType {
     Speech,
     WorldEvent,
     Sound,
+    /// A deliberate body-language act (`features/npc_bodies.md` §7). Like
+    /// speech it is transient — witnesses get a percept and the host gets a
+    /// trigger — and never public state.
+    Gesture,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -52,6 +56,7 @@ impl DomainEvent {
             EventType::Speech => "speech",
             EventType::Sound => "sound",
             EventType::WorldEvent => "world",
+            EventType::Gesture => "gesture",
         };
         format!("{prefix}-{}", self.sequence)
     }
@@ -119,6 +124,27 @@ impl DomainEvent {
             position_m: Some(position_m),
             recipient_ids,
             ..Self::blank(EventType::WorldEvent, kind)
+        }
+    }
+
+    /// A gesture (`features/npc_bodies.md` §7): the `kind` is the gesture verb
+    /// string (`"wave"`, `"dance"`, …); `target_id` is `Some` only for a person
+    /// target (a place-pointed gesture carries none). `recipient_ids` are the
+    /// witnesses within the social radius — the host presents it like speech,
+    /// the player included only when they are among them.
+    pub fn gesture(
+        actor_id: ActorId,
+        target_id: Option<ActorId>,
+        kind: impl Into<String>,
+        position_m: Vec3,
+        recipient_ids: Vec<ActorId>,
+    ) -> Self {
+        Self {
+            actor_id: Some(actor_id),
+            target_id,
+            position_m: Some(position_m),
+            recipient_ids,
+            ..Self::blank(EventType::Gesture, kind)
         }
     }
 

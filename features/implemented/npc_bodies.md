@@ -447,9 +447,152 @@ not the gameplay:
   transcript, fake-mode script, pose functions for all 8 kinds.
   *Done when:* in a live run, asking an NPC to wave produces a wave the player sees and a
   percept a bystander NPC reacts to.
+  *(Shipped — sim `crates/cathedral-sim/src/gesture.rs` (`GestureKind` ×8, serde
+  snake_case so `shake_head` is the wire form; a `const GESTURES` catalog of
+  `GestureSpec` rows — verb string, `GestureTarget` rule, duration, loop flag,
+  percept templates; `DANCE_MAX_SECONDS = 60`) + the `gesture` verb in
+  `actions.rs`; host in `body.rs`/`mod.rs`. As-built notes, where they diverge
+  from §7's text: **each catalog row carries four percept templates, not one** —
+  witness (3rd-person) and own (2nd-person) × targeted and untargeted — because
+  English needs distinct "waves"/"wave" wording, a "you" when the witness *is*
+  the target, and a separate self line; the sim's stranger form keeps the id it
+  always has, so a bystander reads `A stranger (id cb947) waves at you.`, not
+  the spec's shorthand `A stranger waves at you.` Witnesses are
+  `characters_within(origin, HEARING_RADIUS_M)` exactly like `say` (occlusion
+  ignored), percepts route through `perception::identify`, the self line enters
+  `recent_history`, and an unknown kind is a new `ActionErrorCode::UnknownGesture`
+  (mirrors `make_sound`'s `unknown_sound`). Target resolution: no-target kinds
+  reject a `to`, required kinds demand it, and `point` resolves a known place
+  handle first (like `tell_way`, gated on `places_known`) before falling back to
+  a visible person (like `say`); a place-pointed gesture names the place for all
+  observers and carries **no** `target_id` on the event (the host cannot aim at a
+  place). **`active_gesture`** lives as `CharacterState.active_gesture:
+  Option<ActiveGesture{kind, deadline}>` and crosses as
+  `ActorSnapshot.active_gesture: Option<GestureKind>`, `skip_serializing_if`
+  `None` in both the sim and host snapshot — without that skip the
+  `"active_gesture":null` on 500 actors tipped the public snapshot past its
+  128 KiB test cap. Only `dance` (the sole looper) sets it; it clears two ways —
+  the actor's next successful non-`wait` action, enforced in `dispatch` (the
+  `gesture` verb excepted, since it sets its own), and the engine's
+  `expire_gestures` after the 60 s cap (deadline stamped on the first poll that
+  sees the loop, exactly like a `TravelIntent`'s, since the action layer has no
+  clock). Both clears bump `world_revision`, so the snapshot drops it and the
+  host stops the dance. **`EngineMessage::Gesture`** rides a new
+  `EventType::Gesture` + `DomainEvent::gesture` + `flush_gesture` (which reparses
+  the verb string back to a `GestureKind`); it is presented like `Speech` (player
+  in `recipient_ids` only within radius). **Prompt:** one *unconditional* line
+  after `make_sound` in `turn.j2` (gestures are not gated by `sounds_enabled`,
+  so it is not wrapped in the `{% if %}`), kinds inline, one-clause hint;
+  re-blessed via the ignored regenerate test — the diff is exactly the one added
+  line in all 22 sounds-bearing fixtures, and the sounds-off fixture places it
+  right after `tell_way`. **fake.rs** keys on `wave`/`dance` in the fresh
+  percepts for *any* name (not Ilse-scoped, so whichever nearest listener the
+  reaction lane picks answers): a wave greets and waves at the player, a dance
+  says and starts the loop; the dance-unknown-verb test at `actions.rs` was
+  inverted (a bare `dance` verb is still `UnknownVerb`, but `dance` is now
+  reachable as `gesture {"kind": "dance"}`), and the headless bin gained a
+  `--say TEXT` flag (broadcast one utterance from the spawn) so an offline run
+  prints the transcript line. **Host poses:** `OneShotGesture` grew Wave / Beckon
+  / Shrug / Point / Bow beside M2's Nod / ShakeHead, durations matched to the sim
+  catalog, `from_kind` mapping `Dance → None`; `apply_one_shot` now poses arms /
+  torso / head per kind, **upper-body only** (legs untouched, so a walking wave
+  still walks), wave/beckon/point swinging the shoulder by the clamped
+  target-aim `face_yaw`, and bow folding the torso forward with a *negative*
+  X-rotation (the upright torso pivots opposite a down-hanging arm). A new
+  `apply_dance` looping envelope (torso roll+twist, pelvis bob+sway, both arms up
+  swinging in opposition, head bob, per-actor phase) is driven by
+  `BodyPoseState.dance`/`dance_blend`. **Wiring:** a `body::PresentGesture`
+  message + a `drive_gesture_pose` system in `ReconcileMirror` — it starts
+  one-shots from the triggers (aiming at the target's live mirror position) and,
+  every frame, sets each body's dance flag from the snapshot's `active_gesture`,
+  so a player who arrives mid-loop sees the dance and it stops the frame the flag
+  clears; `mod.rs`'s `Gesture` arm writes the message and nothing else (no
+  toast); `animate_body_pose` applies the dance *before* the one-shot so a wave —
+  which ends the loop sim-side — reads over the brief blend-out. Tests: sim
+  per-kind parse/dispatch/percept goldens (known + unknown observer, "you" for
+  the target), target resolution and errors, `active_gesture` set + next-action
+  clear, place-`point`; `e2e_fake` through the real `Engine` — a player "wave"
+  emits an `EngineMessage::Gesture` aimed at the player with a bystander NPC in
+  `recipient_ids`, and a `dance` rides the snapshot and is expired after the cap;
+  host unit tests for the mapping, the upper-body poses, bow-forward, and the
+  dance's sway-over-time; and an app-level test that a dance snapshot drives the
+  loop (blend up, stop on clear) while a `PresentGesture` starts a one-shot.
+  Zero new clippy warnings; goldens re-blessed once, deliberately. Screenshot
+  honesty: the wave (Conny's right arm up, Ilse and Sven behind) and the dance
+  (Conny both arms up mid-loop, then arms down once the loop ended on his next
+  turn) were captured live in fake mode; all three majors waved from one
+  broadcast because every witness within 20 m gets the percept and the scripted
+  cast all answers it, and the dawn market square is dim — the poses read, the
+  crowd is the world's real handful, not a throng.)*
 - **M5 Carriage.** Statuses seam + drunk/weary carriage mapping + debug hook.
   *Done when:* `--status`-flagged actor visibly sways on a walk in a shot sequence, with
   zero change to its path coordinates.
+  *(Shipped — sim `StatusKind` (`Drunkenness`, `Weariness`; serde snake_case,
+  `Ord` for the map key) lives in `crates/cathedral-sim/src/character.rs` next
+  to `Needs`, with `CharacterState.statuses: BTreeMap<StatusKind, f64>` (seeded
+  empty in `from_sheet`, exactly like `Needs`) and `Character::statuses() ->
+  Vec<(StatusKind, f32)>` clamping each to a finite `0..=1`. Both kinds are
+  public: they cross on `ActorSnapshot.statuses: Vec<(StatusKind, f32)>` in all
+  three places (sim `snapshot.rs`, host `model.rs` `From`, the `model.rs`
+  validator), `skip_serializing_if = "Vec::is_empty"` so the universal empty
+  case keeps the 500-actor snapshot byte-identical; the validator rejects any
+  value outside a finite `0..=1` (`SnapshotError::InvalidStatus`), while the sim
+  and the `From` clamp on the way through. As-built notes, where they diverge
+  from §8's text: **statuses persist nowhere** — `CharacterState` derives no
+  `Serialize` (only the seed `CharacterSheet` does, and statuses are runtime
+  like `Needs`), so there is no save/load to round-trip; the serialization
+  contract that *is* pinned is the `PublicSnapshot` one (a status set, exposed,
+  and round-tripped through serde, empty stays absent). **Nothing sim-side sets
+  a status** except the tests and the two debug hooks, which share one sim entry
+  point `World::debug_set_status(name, kind, value)` (case-insensitive name
+  match, clamps, bumps `world_revision`) reached through a new
+  `EngineCommand::DebugSetStatus`: the `cathedral-headless --status
+  Name=kind:value` flag (repeatable, applied after world load, beside `--say`)
+  and the drive-mode `status <name> <kind> <value>` action (parsed in
+  `src/drive.rs`, carried by a new `BridgeCommand::DebugStatus` down the exact
+  path the `sound` action's `DebugSound` uses). **Carriage is parameters on
+  L0/L1, not a layer** (§4): `body.rs` grew a private `Carriage {drunkenness,
+  weariness}` mirrored onto `BodyPoseState` each frame by `drive_gesture_pose`'s
+  snapshot loop (one mirror lookup now feeds both the dance flag and the
+  statuses, so `animate_body_pose` still never reads the mirror). Drunkenness
+  `d` staggers the *visual* gait phase (a fast jitter + a slow cadence drift, in
+  stride-cycle units), adds a lateral torso sway plus a slowly-wandering seeded
+  lean (both roll, clamped together to ±0.35 rad), all read by `apply_locomotion`
+  and — so a *standing* drunk still sways — by `apply_idle`. Weariness `w` scales
+  the arm swing to `1 − 0.7w` (→ 0.3× at `w=1`) and folds the torso forward into
+  a stoop (a negative X-rotation, like the bow). Every term is scaled by its
+  status, so a default `Carriage` is byte-for-byte identity — the existing L0/L1
+  tests, called with `Carriage::default()`, still pass unchanged. The actor's
+  path/position is untouched: carriage only reshapes the walk the sim already
+  computed, so witnesses and collisions are unaffected, and the LANE_JITTER
+  path-weave (§8) stays unimplemented. Because L0 runs in Tier B and idle life
+  only in Tier A, a *walking* drunk sways down to 120 m while a *standing* one
+  sways only inside 40 m — acceptable LOD, the far figure fails §1's readability
+  anyway. Tests: sim `StatusKind` snake_case serde round-trip, `statuses()`
+  clamp/order/exposure, `debug_set_status` by-name/clamp/revision-bump/unknown,
+  and `public_snapshot` exposure + serde round-trip; a prompt test asserting a
+  set status changes *neither* the rendered markdown nor the structured sheet
+  (statuses never enter prompts — so **goldens were NOT re-blessed**, they stay
+  M4's blessed bytes); host `--status`/drive parse tests (multi-word names,
+  bad kinds, out-of-range); and host mapping units — `d=0` identity (torso
+  offset exactly `(0,0)`, full arm swing, no stoop), `d=0.8` sway wanders yet
+  stays inside the clamp and the phase stagger moves the legs, `w` drops the arm
+  swing toward 0.3× and stoops the torso forward, `Carriage::from_statuses`
+  mapping. Zero new clippy warnings. Screenshot honesty: captured live in fake
+  mode on Ilse (a standing major in the dawn market) — a sober back view
+  (upright), then drunkenness 0.8 with the torso visibly leaning one way and, a
+  frame later, the other (the sway oscillation; her head also turns because a
+  fake-mode exchange started — that is L4 gaze, not the carriage, which only
+  rolls/pitches the torso), and an elevated rear pair showing weariness 1.0
+  fold the head forward and down over the feet versus the upright baseline. A
+  *walking* drunk was not the captured subject — market majors stand at dawn and
+  following a walker with static teleports is unreliable — but a standing drunk
+  exercises the identical `apply_idle` carriage the walk uses in `apply_locomotion`,
+  the leg-stagger is pinned by test, and Ilse's coordinates never moved between
+  frames (the §8 "zero change to its path" guarantee). **Ale, tavern serving,
+  and how anyone actually gets drunk stay food_and_items M5+ material** — when
+  they land it is one float write into `statuses` per §8, and the body already
+  knows what to do.)*
 
 M0→M1→M2 are strictly ordered; M3/M4/M5 are independent after M2 (M4 only needs M0's arms).
 

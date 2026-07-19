@@ -21,6 +21,7 @@ pub mod error;
 pub mod event;
 pub mod fake;
 pub mod floor;
+pub mod gesture;
 mod homes;
 pub mod ids;
 pub mod item;
@@ -56,7 +57,7 @@ pub use attention::{
 };
 pub use character::{
     Character, CharacterSheet, CharacterState, Control, IntentTarget, Movement, Needs, Patrol,
-    TravelIntent, VendorListing,
+    StatusKind, TravelIntent, VendorListing,
 };
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
@@ -71,6 +72,7 @@ pub use error::{
 pub use event::{DomainEvent, EventType};
 pub use fake::{FakeCognition, fake_reply};
 pub use floor::{ConversationFloor, floor_audio_failsafe_seconds, speech_reading_seconds};
+pub use gesture::{DANCE_MAX_SECONDS, GESTURES, GestureKind, GestureSpec, GestureTarget};
 pub use ids::{ActorId, InvalidId, ItemId, PlaceId, RequestId, SpeechEventId};
 pub use item::{
     DISPLAY_METADATA_KEY, Edible, InvalidKind, Item, ItemCatalog, ItemCatalogError, ItemKind,
