@@ -480,13 +480,15 @@ fn spawn_player(mut commands: Commands) {
         });
 }
 
-/// Script-driven relocation (the drive `tp` action): place the player, aim the
-/// view, and hold still in flight so elevated vantages keep for a screenshot.
+/// Relocate the player and aim the view. The drive `tp` action sets `fly: true`
+/// so an elevated vantage holds for a screenshot; the map's click-to-travel sets
+/// `fly: false` so you land walking on the ground.
 #[derive(Message, Debug, Clone, Copy)]
 pub struct TeleportPlayer {
     pub position: Vec3,
     pub yaw_degrees: f32,
     pub pitch_degrees: f32,
+    pub fly: bool,
 }
 
 fn apply_teleports(
@@ -501,7 +503,7 @@ fn apply_teleports(
         return;
     };
     let (mut controller, mut physical, mut transform) = player.into_inner();
-    controller.flying = true;
+    controller.flying = teleport.fly;
     controller.velocity = Vec3::ZERO;
     controller.yaw = teleport.yaw_degrees.to_radians();
     controller.pitch = teleport
@@ -594,7 +596,10 @@ fn mouse_look(
     }
 
     let (mut controller, mut player_transform) = player.into_inner();
-    controller.yaw -= mouse_motion.delta.x * MOUSE_SENSITIVITY;
+    // Mouse right turns the view right. (Previously negated, which inverted the
+    // horizontal look: moving the mouse right turned you left, so the minimap
+    // heading appeared to rotate the wrong way.)
+    controller.yaw += mouse_motion.delta.x * MOUSE_SENSITIVITY;
     controller.pitch = (controller.pitch - mouse_motion.delta.y * MOUSE_SENSITIVITY)
         .clamp(-PITCH_LIMIT, PITCH_LIMIT);
 

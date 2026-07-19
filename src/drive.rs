@@ -628,6 +628,8 @@ fn run_drive_script(
                 position,
                 yaw_degrees,
                 pitch_degrees,
+                // The drive `tp` holds an elevated vantage for screenshots.
+                fly: true,
             });
         }
         Some(Directive::Quit) => {

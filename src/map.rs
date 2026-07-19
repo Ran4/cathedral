@@ -36,10 +36,11 @@ use crate::nav_overlay::Navigation;
 use crate::smart_actors::{AreaDebugState, ChatInputState, ConfigMenuState};
 
 // --- The baked crop, mirrored from scripts/render_map_texture.py ------------ //
-const VX0: f32 = -600.0;
-const VX1: f32 = 725.0;
-const VY0: f32 = -610.0;
-const VY1: f32 = 830.0;
+// (The building bounding box; the script prints these when it re-bakes.)
+const VX0: f32 = -528.5;
+const VX1: f32 = 683.5;
+const VY0: f32 = -513.0;
+const VY1: f32 = 523.0;
 
 /// Image aspect (width / height), from the crop. The minimap and fullscreen
 /// frames are sized in one viewport axis and derive the other from this, so the
@@ -49,7 +50,7 @@ const MAP_ASPECT: f32 = (VX1 - VX0) / (VY1 - VY0);
 /// Minimap width as a fraction of the viewport width (~1/6).
 const MINIMAP_WIDTH_VW: f32 = 16.6;
 /// Fullscreen map height as a fraction of the viewport height.
-const FULLSCREEN_HEIGHT_VH: f32 = 92.0;
+const FULLSCREEN_HEIGHT_VH: f32 = 88.0;
 
 /// Snap a click to a named place if it lands within this many metres of one.
 const PLACE_SNAP_M: f64 = 20.0;
@@ -58,6 +59,9 @@ const NODE_SNAP_M: f64 = 8.0;
 
 const MAP_FRAME: Color = Color::srgb(0.14, 0.12, 0.09);
 const MAP_BACKDROP: Color = Color::srgba(0.0, 0.0, 0.0, 0.82);
+/// The minimap panel behind the (transparent) map, so the floating houses read
+/// against a steady dark field rather than the moving world.
+const MINIMAP_PANEL: Color = Color::srgba(0.06, 0.07, 0.10, 0.88);
 const MARKER_FILL: Color = Color::srgb(0.86, 0.18, 0.16);
 const MARKER_OUTLINE: Color = Color::srgb(0.99, 0.96, 0.88);
 const CAPTION_MUTED: Color = Color::srgb(0.62, 0.64, 0.66);
@@ -146,6 +150,7 @@ fn spawn_minimap(commands: &mut Commands, image: Handle<Image>) {
                 overflow: Overflow::clip(),
                 ..default()
             },
+            BackgroundColor(MINIMAP_PANEL),
             BorderColor::all(MAP_FRAME),
         ))
         .with_children(|frame| {
@@ -177,17 +182,15 @@ fn spawn_fullscreen_map(commands: &mut Commands, image: Handle<Image>, fonts: &C
             Visibility::Hidden,
         ))
         .with_children(|root| {
+            // No frame or panel here: the houses float directly on the dimmed
+            // backdrop.
             root.spawn((
                 Name::new("Map frame"),
                 Node {
                     width: vh(FULLSCREEN_HEIGHT_VH * MAP_ASPECT),
                     height: vh(FULLSCREEN_HEIGHT_VH),
-                    border: UiRect::all(px(3)),
-                    border_radius: BorderRadius::all(px(6)),
-                    overflow: Overflow::clip(),
                     ..default()
                 },
-                BorderColor::all(MAP_FRAME),
             ))
             .with_children(|frame| {
                 spawn_map_image(frame, image, true);
@@ -415,6 +418,8 @@ fn handle_map_teleport_click(
         position: Vec3::new(target.x as f32, target.y as f32, target.z as f32),
         yaw_degrees: player.yaw().to_degrees(),
         pitch_degrees: 0.0,
+        // Land walking on the ground — travelling the map is not flying.
+        fly: false,
     });
     map_state.fullscreen_open = false;
 }
@@ -493,7 +498,7 @@ mod tests {
     fn constants_match_the_bake_viewbox() {
         // These four define the crop in scripts/render_map_texture.py; if they
         // drift, the marker and click math silently desync from the image.
-        assert_eq!((VX0, VX1, VY0, VY1), (-600.0, 725.0, -610.0, 830.0));
+        assert_eq!((VX0, VX1, VY0, VY1), (-528.5, 683.5, -513.0, 523.0));
     }
 
     #[test]
@@ -512,13 +517,15 @@ mod tests {
         // The core safety guarantee: whatever a click resolves to, it is on the
         // baked walkable surface — never inside a building, never off the graph.
         let nav = nav();
-        // World bounds implied by the crop (see world_to_uv): z in [-VX1, -VX0],
-        // x in [-VY1, -VY0]. Sweep a grid across the whole city.
+        // World bounds implied by the crop (see world_to_uv): x in [-VY1, -VY0],
+        // z in [-VX1, -VX0]. Sweep a grid across the whole city.
+        let (x_lo, x_hi) = (-(VY1 as f64), -(VY0 as f64));
+        let (z_lo, z_hi) = (-(VX1 as f64), -(VX0 as f64));
         let mut resolved = 0;
         for i in 0..48 {
             for j in 0..48 {
-                let x = -830.0 + 1440.0 * (i as f64 / 47.0);
-                let z = -725.0 + 1325.0 * (j as f64 / 47.0);
+                let x = x_lo + (x_hi - x_lo) * (i as f64 / 47.0);
+                let z = z_lo + (z_hi - z_lo) * (j as f64 / 47.0);
                 if let Some(target) = resolve_teleport_target(&nav, x, z) {
                     resolved += 1;
                     assert!(
