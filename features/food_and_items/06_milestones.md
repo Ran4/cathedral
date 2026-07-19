@@ -132,15 +132,17 @@ four shippable sub-milestones:
 
 | | ships | the cheat it kills |
 |---|---|---|
-| **M5a** | `Presence` (off-map actors); the carrier round; the fixed carrier roster at the Wool and Stone gates; `grain` | — (millers can buy) |
+| **M5a** | `Presence` (off-map actors); the road round; the fixed merchant roster (with carters) at the Wool and Stone gates; `grain` | — (millers can buy) |
 | **M5b** | `flour`; the `Transform` verb; the Wool Gate mill | — (bakers can buy) |
 | **M5c** | the bakehouse; bakers bake what they sell | **`restock`**, for bread |
-| **M5d** | takings leaving through the gate; institutional payroll | **`close_books`** |
+| **M5d** | the return load: `cloth`, the Draper's Reach counter, merchants buying on the way out; the residual payroll | **`close_books`** |
 
-Two design commitments from that document are binding on anything downstream: **the cast is fixed
-and hand-authored — no procedural travellers** ([07](07_the_supply_chain.md) §1), and **the gate is
-the edge of the world** — nav stops at the gate nodes and this feature does not extend it
-([07](07_the_supply_chain.md) §2).
+Three design commitments from that document are binding on anything downstream: **the cast is fixed
+and hand-authored — no procedural travellers, and the arrivals are merchants with kin in the city,
+not anonymous peasants** ([07](07_the_supply_chain.md) §1); **the gate is the edge of the world** —
+nav stops at the gate nodes and this feature does not extend it ([07](07_the_supply_chain.md) §2);
+and **a merchant's cart is full in both directions** — grain in, Ombreval cloth out — which is what
+lets the economy close without printing money ([07](07_the_supply_chain.md) §7).
 
 When it starts, `features/the_near_countryside__aka_add_market_stalls.md` merges into this folder.
 
