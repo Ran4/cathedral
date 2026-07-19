@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A Day in a Citizen's Life · Ombreval</title>
+<style>
+:root{
+  --bg:#12100d; --bg2:#1a1712; --panel:#211c16; --panel2:#282118;
+  --ink:#efe6d6; --ink2:#c9bda6; --muted:#9c8f78; --line:#3a3125;
+  --accent:#e3b23c; --accent2:#d98a3d; --link:#e9c56b;
+  --shadow:0 8px 30px rgba(0,0,0,.45);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4ede0; --bg2:#efe6d5; --panel:#fbf6ec; --panel2:#f3ead9;
+    --ink:#2b2114; --ink2:#4d4132; --muted:#6f6046; --line:#ddcfb6;
+    --accent:#a8791a; --accent2:#b5641f; --link:#8a5e10;
+    --shadow:0 8px 26px rgba(90,70,30,.16);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:
+    radial-gradient(1200px 620px at 78% -8%, rgba(227,178,60,.14), transparent 60%),
+    radial-gradient(900px 500px at 8% 4%, rgba(217,138,61,.10), transparent 55%),
+    var(--bg);
+  color:var(--ink);font-family:var(--sans);line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--link)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+h1,h2,h3{font-family:var(--serif);font-weight:600;line-height:1.15;letter-spacing:.2px}
+.hero{padding:64px 0 26px;position:relative}
+.eyebrow{font-family:var(--sans);letter-spacing:.32em;text-transform:uppercase;font-size:12px;color:var(--accent);font-weight:700}
+.hero h1{font-size:clamp(30px,5.2vw,52px);margin:.28em 0 .18em}
+.hero .lede{font-size:clamp(16px,2vw,19px);color:var(--ink2);max-width:70ch}
+.hero .sub{color:var(--muted);max-width:74ch;margin-top:14px;font-size:15px}
+.statbar{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 6px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 14px;min-width:96px}
+.stat b{display:block;font-family:var(--serif);font-size:22px;color:var(--accent)}
+.stat span{font-size:12px;color:var(--muted);letter-spacing:.02em}
+
+section{padding:34px 0;border-top:1px solid var(--line)}
+section > .wrap > h2{font-size:clamp(22px,3.2vw,30px);margin:0 0 4px}
+.kicker{color:var(--accent);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:12px}
+.section-lede{color:var(--ink2);max-width:76ch;margin:10px 0 22px}
+
+/* ---- sticky control bar ---- */
+.controls{position:sticky;top:0;z-index:20;background:linear-gradient(var(--bg2),color-mix(in srgb,var(--bg2) 90%,transparent));
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);box-shadow:var(--shadow)}
+.controls .wrap{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;padding:12px 20px}
+.ctl-group{display:flex;flex-direction:column;gap:6px}
+.ctl-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.daytabs{display:flex;gap:6px;flex-wrap:wrap}
+.daytabs button{font-family:var(--sans);font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink2);cursor:pointer;transition:.15s}
+.daytabs button:hover{border-color:var(--accent)}
+.daytabs button[aria-pressed="true"]{background:var(--accent);color:#20180a;border-color:var(--accent);font-weight:700}
+.bells{display:flex;gap:3px;align-items:stretch;flex:1;min-width:280px}
+.bell{flex-grow:var(--h,3);flex-basis:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:6px 4px;cursor:pointer;text-align:center;transition:.15s;min-width:0}
+.bell:hover{border-color:var(--accent2)}
+.bell[aria-pressed="true"]{background:var(--panel2);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.bell .bl{font-size:11.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bell .bt{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bell[aria-pressed="true"] .bl{color:var(--accent)}
+.nowline{margin-top:10px;color:var(--ink2);font-size:14px}
+.nowline b{color:var(--accent);font-family:var(--serif)}
+.search{display:flex;flex-direction:column;gap:6px;margin-left:auto}
+.search input{font-family:var(--sans);font-size:13px;padding:7px 11px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);min-width:190px}
+.search input:focus{outline:none;border-color:var(--accent)}
+
+/* ---- office cards ---- */
+.office-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.ocard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.ocard.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ocard .strokes{color:var(--accent2);letter-spacing:2px;font-size:13px}
+.ocard h3{margin:.3em 0 .1em;font-size:18px}
+.ocard .time{font-family:var(--serif);color:var(--accent);font-size:15px;font-variant-numeric:tabular-nums}
+.ocard p{margin:.5em 0 0;font-size:13px;color:var(--ink2)}
+
+/* ---- legend ---- */
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.lrow{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px 13px}
+.chip{flex:none;width:60px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;letter-spacing:.03em;margin-top:2px}
+.lrow .lt b{font-size:14px}
+.lrow .lt div{font-size:12.5px;color:var(--ink2);margin-top:2px}
+
+/* ---- gantt ---- */
+.arch{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
+.arch-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline;padding:14px 16px 8px}
+.arch-head h3{font-size:19px;margin:0}
+.arch-head .tag{font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--ink2)}
+.arch-head .tag.curfew{color:#e6b45a;border-color:#6d5a2a}
+.arch-head .lead{flex-basis:100%;color:var(--ink2);font-size:13.5px;margin-top:2px}
+.arch-head .occs{flex-basis:100%;color:var(--muted);font-size:12.5px;margin-top:4px}
+.arch-head .occs b{color:var(--ink2);font-weight:600}
+.ganttwrap{overflow-x:auto;padding:0 16px 16px}
+.gantt{display:flex;gap:3px;min-width:640px}
+.gcell{flex-grow:var(--h,3);flex-basis:0;border-radius:8px;padding:8px 8px;min-height:64px;min-width:0;
+  color:var(--gink);background:var(--gfill);position:relative;transition:.15s;border:2px solid transparent}
+.gcell.sel{border-color:var(--ink);box-shadow:0 0 0 2px var(--accent)}
+.gcell .gv{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;opacity:.92}
+.gcell .gp{font-size:12px;font-weight:600;margin-top:3px;line-height:1.25;word-break:break-word}
+.gcell .gp.wp{font-style:italic;opacity:.9}
+.gtime{display:flex;gap:3px;min-width:640px;margin:0 16px 12px}
+.gtime span{flex-grow:var(--h,3);flex-basis:0;font-size:10px;color:var(--muted);text-align:left;padding-left:2px;font-variant-numeric:tabular-nums}
+.arch .notes{padding:0 16px 15px;display:flex;flex-wrap:wrap;gap:8px}
+.note{font-size:12px;color:var(--ink2);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.note b{color:var(--accent)}
+
+/* ---- occupation table ---- */
+.occtable{width:100%;border-collapse:collapse;font-size:13.5px}
+.occtable th,.occtable td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.occtable th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em;position:sticky;top:64px;background:var(--bg)}
+.occtable tr{cursor:pointer}
+.occtable tr:hover td{background:var(--panel)}
+.occtable td.arch-cell{white-space:nowrap}
+.occtable .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;color:#1c1509}
+.occtable td.wp-cell{color:var(--muted);font-size:12.5px}
+.tablewrap{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg)}
+.tablescroll{max-height:520px;overflow:auto}
+.count{color:var(--muted);font-size:12.5px;margin:8px 2px 0}
+
+/* ---- cast ---- */
+.cluster{margin-top:26px}
+.cluster h3{font-size:17px;color:var(--accent);margin:0 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.castgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.pcard{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:14px 15px;display:flex;flex-direction:column}
+.pcard .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.pcard h4{font-family:var(--serif);font-size:18px;margin:0}
+.pcard .who{font-size:12px;color:var(--muted)}
+.pcard .role{font-size:12.5px;color:var(--accent2);font-weight:600;margin-top:1px}
+.pcard .bio{font-size:12.5px;color:var(--ink2);margin:9px 0 11px}
+.pcard .badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.badge{font-size:10.5px;font-weight:700;letter-spacing:.03em;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.badge.cx{color:#e6b45a;border-color:#6d5a2a}
+.mini{display:flex;gap:2px;min-width:0}
+.mcell{flex-grow:var(--h,3);flex-basis:0;height:30px;border-radius:5px;background:var(--gfill);position:relative;min-width:0}
+.mcell.sel{outline:2px solid var(--accent);outline-offset:1px}
+.mcell:hover::after{content:attr(data-tip);position:absolute;bottom:120%;left:50%;transform:translateX(-50%);
+  background:#000;color:#fff;font-size:11px;white-space:nowrap;padding:4px 8px;border-radius:6px;z-index:5;pointer-events:none;
+  box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.pcard .legmini{font-size:9px;color:var(--muted);margin-top:4px;display:flex;gap:2px}
+.pcard .legmini span{flex-grow:var(--h,3);flex-basis:0;text-align:center;font-variant-numeric:tabular-nums}
+
+/* ---- machinery ---- */
+.mach{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.mcard{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px 16px}
+.mcard h3{font-size:16px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+.mcard h3 .dot{width:10px;height:10px;border-radius:3px;flex:none}
+.mcard p{font-size:13px;color:var(--ink2);margin:6px 0 0}
+.mcard code{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12px;color:var(--accent)}
+
+footer{padding:34px 0 60px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+footer code{background:var(--panel);border:1px solid var(--line);padding:1px 6px;border-radius:5px;color:var(--ink2)}
+.src{color:var(--muted);font-size:12px}
+.tw{max-width:78ch}
+</style>
+</head>
+<body>
+
+<header class="hero"><div class="wrap">
+  <div class="eyebrow">Ombreval · The Cathedral-City of Impossible Light</div>
+  <h1>A Typical Day in a Citizen's Life</h1>
+  <p class="lede">Everyone in Ombreval carries a <b>Round</b> — the thing they do when nothing is wrong. It is
+  pegged to the seven bells of the day, bends on market days and the holy day, and decides where a body walks,
+  where it stands, where it works and where it sleeps.</p>
+  <p class="sub">This is the movement system's default — the bottom rung ("rung 9") of a <b>deterministic priority
+  ladder that runs in plain Rust, with no model involved</b>. Getting thirsty, tired or frightened doesn't summon an
+  LLM; it just bumps a citizen to a higher rung of that same ladder (walk to a well, go home, flee). The LLM is a
+  separate, expensive layer that only spends a turn on the handful of NPCs near enough for you to see or hear — or the
+  one you actually speak to. The Round is authored by hand for the twenty people you meet, and derived from a per-trade
+  template for everyone else. Pick a bell, a day of the week, or a trade below and watch the city rearrange itself.</p>
+  <div class="statbar">
+    <div class="stat"><b>514</b><span>citizens</span></div>
+    <div class="stat"><b>30</b><span>major roles</span></div>
+    <div class="stat"><b>65</b><span>trades</span></div>
+    <div class="stat"><b>8</b><span>day-shapes</span></div>
+    <div class="stat"><b>7</b><span>bells</span></div>
+    <div class="stat"><b>20</b><span>authored rounds</span></div>
+  </div>
+</div></header>
+
+<!-- ===== sticky controls ===== -->
+<div class="controls"><div class="wrap">
+  <div class="ctl-group">
+    <div class="ctl-label">Day of the week</div>
+    <div class="daytabs" id="daytabs"></div>
+  </div>
+  <div class="ctl-group" style="flex:1;min-width:300px">
+    <div class="ctl-label">The bell now ringing — click to move through the day</div>
+    <div class="bells" id="bells"></div>
+  </div>
+  <div class="search">
+    <div class="ctl-label">Find a trade</div>
+    <input id="occsearch" type="text" placeholder="baker, glazier, watchman…" autocomplete="off">
+  </div>
+  <div class="nowline" id="nowline" style="flex-basis:100%"></div>
+</div></div>
+
+<!-- ===== the seven bells ===== -->
+<section id="bells-sec"><div class="wrap">
+  <div class="kicker">The clock</div>
+  <h2>The seven bells</h2>
+  <p class="section-lede tw">The day is cut into seven canonical <b>offices</b>, each announced by a great bell that
+  rings its ordinal number of strokes at three-second intervals — so a player anywhere in the maze can count the hour.
+  A citizen's schedule is not written in clock-time; it is written against these bells.</p>
+  <div class="office-grid" id="officeGrid"></div>
+</div></section>
+
+<!-- ===== how to read a day ===== -->
+<section id="legend-sec"><div class="wrap">
+  <div class="kicker">How to read a day</div>
+  <h2>What "doing" means on the ground</h2>
+  <p class="section-lede tw">Every leg of a Round says <i>where</i> and <i>what</i>. The "what" is one of seven verbs.
+  None of them nail a citizen to a single tile: each drifts and mills within a <b>leash</b> around the leg's anchor
+  (0&nbsp;m for the bricked-in anchoress, 24&nbsp;m for a patrolling watchman), so a crowd looks alive rather than frozen.</p>
+  <div class="legend" id="legend"></div>
+</div></section>
+
+<!-- ===== the archetypes ===== -->
+<section id="arch-sec"><div class="wrap">
+  <div class="kicker">The eight day-shapes</div>
+  <h2>The archetypes — one template per kind of life</h2>
+  <p class="section-lede tw">Ninety percent of the city is one of eight templates. Each block below is an office; its
+  colour is the verb, its width is how many real hours that office lasts. The selected bell is ringed, and the whole
+  chart re-draws when you change the day of the week — watch the trades empty into the Wickmarket on Highmarket, or
+  into the nave on Bellday.</p>
+  <div id="archList"></div>
+</div></section>
+
+<!-- ===== occupation table ===== -->
+<section id="occ-sec"><div class="wrap">
+  <div class="kicker">Every trade</div>
+  <h2>Which day does your trade live?</h2>
+  <p class="section-lede tw">All sixty-five occupations, each bound to one archetype and a set of candidate workplaces
+  (the sim binds each person to the nearest one to their home). Click a row to jump to its day-shape. Type in the
+  search box up in the bar to filter.</p>
+  <div class="tablewrap"><div class="tablescroll">
+  <table class="occtable"><thead><tr><th>Trade</th><th>Day-shape</th><th>Typically works</th></tr></thead>
+  <tbody id="occBody"></tbody></table>
+  </div></div>
+  <div class="count" id="occCount"></div>
+</div></section>
+
+<!-- ===== the named cast ===== -->
+<section id="cast-sec"><div class="wrap">
+  <div class="kicker">The twenty authored rounds</div>
+  <h2>The people you actually meet</h2>
+  <p class="section-lede tw">These rounds were transcribed by hand from the <i>dramatis personae</i> — the twenty
+  characters the player will really talk to. Each strip is a full day (hover a block for the place); change the day of
+  the week and the market-folk swing to their squares, the day-workers file into the Lanthorn on Bellday, and the night
+  trades keep the streets after curfew.</p>
+  <div id="castRoot"></div>
+</div></section>
+
+<!-- ===== the machinery ===== -->
+<section id="mach-sec"><div class="wrap">
+  <div class="kicker">The machinery underneath</div>
+  <h2>Seven things the schedule quietly does</h2>
+  <div class="mach" id="mach"></div>
+</div></section>
+
+<footer><div class="wrap tw">
+  <p><b>Where this comes from.</b> The bells and week are <code>crates/cathedral-sim/src/clock.rs</code>; the archetypes,
+  trade-to-shape map and the twenty authored routes are <code>assets/world/rounds.json</code> (schema in
+  <code>round.rs</code>); the cast is the 514 sheets under <code>lore/characters/</code>; the design story is
+  <code>features/movement/04_the_round.md</code>. Meals and water are <code>food.json</code> plus the water-drawing rules
+  in <code>round.rs</code>.</p>
+  <p class="src">Interactive reference · generated for the Ombreval project. The Round is the sim's default; anything a
+  citizen does that <i>isn't</i> on this chart is the ladder or the LLM taking the wheel.</p>
+</div></footer>
+
+<script>
+/* ---------------- DATA (transcribed from the sim) ---------------- */
+const OFFICES=[
+ {k:"watch",     l:"Watch",     t:"02:00", h:3, s:1, b:"Deep night; the streets are empty but for the watch."},
+ {k:"kindling",  l:"Kindling",  t:"05:00", h:2, s:2, b:"Before light; working people are already up, the ovens lit."},
+ {k:"dayspring", l:"Dayspring", t:"07:00", h:5, s:3, b:"Sunrise; the gates open and the west doors of the Lanthorn are unbarred."},
+ {k:"high_wick", l:"High Wick", t:"12:00", h:3, s:4, b:"Noon; the dinner hour, and the markets are at their busiest."},
+ {k:"waning",    l:"Waning",    t:"15:00", h:3, s:5, b:"Mid-afternoon; the day's work goes on."},
+ {k:"lamplight", l:"Lamplight", t:"18:00", h:3, s:6, b:"Sunset; the lamplighters walk their beats, the taverns fill."},
+ {k:"snuffing",  l:"Snuffing",  t:"21:00", h:5, s:7, b:"Curfew; the gates shut and the streets clear."},
+];
+const OK=OFFICES.map(o=>o.k);
+const OINFO=Object.fromEntries(OFFICES.map(o=>[o.k,o]));
+
+const DAYTYPES=[
+ {k:"ordinary",  l:"Ordinary", note:"an ordinary working day"},
+ {k:"highmarket",l:"Highmarket", note:"market day — stalls out at the Wickmarket and Coswald's Yard"},
+ {k:"lowmarket", l:"Lowmarket", note:"market day — stalls out at the Tallage and on Maren's Green"},
+ {k:"bellday",   l:"Bellday", note:"the holy day — the trades are shut and the bells call everyone to the Lanthorn"},
+];
+
+const VERBS={
+ work:      {fill:"#b9702e", ink:"#fff",    label:"Work",  behaviour:"At the bench, oven, scaffold, yard or moorings — plying the trade, milling within the leash."},
+ trade:     {fill:"#cf9a24", ink:"#241900", label:"Trade", behaviour:"Keeping a market stall or a counter; buyers queue at the pitch, coin changes hands."},
+ pray:      {fill:"#6f5fc4", ink:"#fff",    label:"Pray",  behaviour:"Standing the office in the nave of the Lanthorn (or, for clerics, their own chapel or press)."},
+ idle:      {fill:"#3f8a68", ink:"#fff",    label:"Idle",  behaviour:"Standing free at an anchor — dinner at home, a lull, a wait. The ladder may hand them an errand."},
+ sleep:     {fill:"#34406e", ink:"#dfe6ff", label:"Sleep", behaviour:"Home, indoors, behind a barred door through the dark hours."},
+ stand:     {fill:"#6e6e78", ink:"#fff",    label:"Stand", behaviour:"Fixed at one spot — the stationary trades, and Dame Aldith bricked into her cell."},
+ draw_water:{fill:"#2f8fb0", ink:"#fff",    label:"Water", behaviour:"An errand woven into the day: to the ward well, into the queue, draw, and carry the vessel home."},
+};
+
+/* archetypes: leash (m), curfew-exempt, legs, occupations, notes */
+const ARCH={
+ day_worker:{name:"The day-worker",leash:10,curfew:false,
+   lead:"Up before light for the first shift, home for dinner at noon, back to work, and abed at dusk. The great mass of the city's trades.",
+   notes:["Takes <b>dinner at home</b> at High Wick — the hearth feeds them, so the city's hunger collapses at noon.","On <b>Bellday</b> the trade is shut: lies in at Kindling, then prays at the Lanthorn."],
+   legs:[
+     {f:"kindling",at:"workplace",d:"work"},
+     {f:"kindling",at:"home",d:"idle",on:["bellday"]},
+     {f:"dayspring",at:"workplace",d:"work"},
+     {f:"dayspring",at:"The Lanthorn",d:"pray",on:["bellday"]},
+     {f:"high_wick",at:"home",d:"idle"},
+     {f:"waning",at:"workplace",d:"work"},
+     {f:"waning",at:"The Lanthorn",d:"pray",on:["bellday"]},
+     {f:"lamplight",at:"home",d:"sleep"},
+   ]},
+ market_trader:{name:"The market-trader (weighed goods)",leash:12,curfew:false,
+   lead:"Makes stock before dawn, then trades the day out at the stall — candles, bread, cloth, salt, spice. Stays at the pitch through noon (the market's peak) and eats at supper.",
+   notes:["On <b>Highmarket</b> the crowd swings to <b>the Wickmarket</b>.","On <b>Lowmarket</b> it swings to <b>the Tallage</b>.","No noon break — supper feeds them instead (vendors are bound to their stalls)."],
+   legs:[
+     {f:"kindling",at:"workplace",d:"work"},
+     {f:"kindling",at:"home",d:"idle",on:["bellday"]},
+     {f:"dayspring",at:"workplace",d:"trade"},
+     {f:"dayspring",at:"The Wickmarket",d:"trade",on:["highmarket"]},
+     {f:"dayspring",at:"The Tallage",d:"trade",on:["lowmarket"]},
+     {f:"dayspring",at:"The Lanthorn",d:"pray",on:["bellday"]},
+     {f:"waning",at:"workplace",d:"trade"},
+     {f:"waning",at:"The Wickmarket",d:"trade",on:["highmarket"]},
+     {f:"waning",at:"The Tallage",d:"trade",on:["lowmarket"]},
+     {f:"waning",at:"The Lanthorn",d:"pray",on:["bellday"]},
+     {f:"lamplight",at:"home",d:"sleep"},
+   ]},
+ market_trader_green:{name:"The market-trader (raw provisions)",leash:12,curfew:false,
+   lead:"The fish, meat and open-stall sellers. Same shape as the weighed-goods trader, but their market days pull them to the greener squares.",
+   notes:["On <b>Highmarket</b> the crowd swings to <b>Coswald's Yard</b>.","On <b>Lowmarket</b> it swings to <b>Maren's Green</b> — fish off the moorings, meat out of the Shambles.","Splitting the crowd across four squares keeps every market day raising a square above its ordinary working crowd."],
+   legs:[
+     {f:"kindling",at:"workplace",d:"work"},
+     {f:"kindling",at:"home",d:"idle",on:["bellday"]},
+     {f:"dayspring",at:"workplace",d:"trade"},
+     {f:"dayspring",at:"Coswald's Yard",d:"trade",on:["highmarket"]},
+     {f:"dayspring",at:"Maren's Green",d:"trade",on:["lowmarket"]},
+     {f:"dayspring",at:"The Lanthorn",d:"pray",on:["bellday"]},
+     {f:"waning",at:"workplace",d:"trade"},
+     {f:"waning",at:"Coswald's Yard",d:"trade",on:["highmarket"]},
+     {f:"waning",at:"Maren's Green",d:"trade",on:["lowmarket"]},
+     {f:"waning",at:"The Lanthorn",d:"pray",on:["bellday"]},
+     {f:"lamplight",at:"home",d:"sleep"},
+   ]},
+ cleric:{name:"The cleric",leash:10,curfew:false,
+   lead:"The clergy, the press-clerks and the scholars: at prayer or at the desk from the Kindling office straight through the working day, and home at dusk. Already at the altar, so Bellday changes nothing for them.",
+   notes:["Prayer or record-keeping <b>through the whole day</b>, no market swing.","Workplace is the Lanthorn, the Chapter house &amp; Grey Press, or Saint Maren's."],
+   legs:[
+     {f:"kindling",at:"workplace",d:"pray"},
+     {f:"dayspring",at:"workplace",d:"pray"},
+     {f:"high_wick",at:"workplace",d:"pray"},
+     {f:"waning",at:"workplace",d:"pray"},
+     {f:"lamplight",at:"home",d:"sleep"},
+   ]},
+ tavern:{name:"The tavern trade",leash:8,curfew:true,
+   lead:"Brewers, cooks, tapsters, players and the sex trade. They open when the day-folk knock off and keep the counter until the last argument goes home — so they sleep in the small hours, not the night.",
+   notes:["<b>Curfew-exempt</b>: stays in the street after the Snuffing bell.","The tavern hearth <i>feeds</i> — an actor by the Hungry Ox or the Bell &amp; Ladle at a meal office is fed as one at home.","Sleeps only Watch → Dayspring; works the long evening into the night."],
+   legs:[
+     {f:"watch",at:"home",d:"sleep"},
+     {f:"dayspring",at:"workplace",d:"work"},
+     {f:"waning",at:"workplace",d:"work"},
+     {f:"lamplight",at:"workplace",d:"work"},
+     {f:"snuffing",at:"workplace",d:"work"},
+   ]},
+ night_watch:{name:"The night watch",leash:24,curfew:true,
+   lead:"Watchmen, gaolers, the militia. They sleep the morning away, stir at noon, and take the streets from mid-afternoon through the dark — the widest leash in the city, because a patrol is meant to roam.",
+   notes:["<b>Curfew-exempt</b>; the streets are theirs after the Snuffing.","Leash <b>24&nbsp;m</b> — they patrol, not stand.","Sleeps Kindling → High&nbsp;Wick; works Waning → Watch."],
+   legs:[
+     {f:"kindling",at:"home",d:"sleep"},
+     {f:"dayspring",at:"home",d:"sleep"},
+     {f:"high_wick",at:"home",d:"idle"},
+     {f:"waning",at:"workplace",d:"work"},
+     {f:"lamplight",at:"workplace",d:"work"},
+     {f:"snuffing",at:"workplace",d:"work"},
+     {f:"watch",at:"workplace",d:"work"},
+   ]},
+ lamplighter:{name:"The lamplighter",leash:20,curfew:true,
+   lead:"A night trade: sleeps out the small hours and the morning, rests at home through the afternoon, lights the posts at dusk and tends them through the evening. A beat of assigned squares, not one city-wide round, because the fortified maze puts adjacent squares kilometres apart on foot.",
+   notes:["<b>Curfew-exempt</b>; out with the taper through the evening, then home in the small hours to sleep.","The actual lighting is a separate <b>beat rung</b> (M7) — gated on the dusk/night window and this keeper's own squares, above the round. The Wickmarket/Gradine work-anchors just park them near Tobin Vell's central pair once the posts are lit.","Beats are assigned per keeper — a square nobody claims simply stays dark."],
+   legs:[
+     {f:"watch",at:"home",d:"sleep"},
+     {f:"high_wick",at:"home",d:"idle"},
+     {f:"lamplight",at:"The Wickmarket",d:"work"},
+     {f:"snuffing",at:"The Gradine",d:"work"},
+   ]},
+ wharf:{name:"The wharf trade",leash:15,curfew:false,
+   lead:"Boatmen, cargo-hands, ropers, salt-porters. Their work is on the water before the light; they keep the before-dawn shift even on Bellday, then join the nave.",
+   notes:["Takes <b>dinner at home</b> at High Wick, like the day-worker.","On <b>Bellday</b> the before-dawn work still happens, then they pray at the Lanthorn from Dayspring."],
+   legs:[
+     {f:"kindling",at:"workplace",d:"work"},
+     {f:"dayspring",at:"workplace",d:"work"},
+     {f:"dayspring",at:"The Lanthorn",d:"pray",on:["bellday"]},
+     {f:"high_wick",at:"home",d:"idle"},
+     {f:"waning",at:"workplace",d:"work"},
+     {f:"lamplight",at:"home",d:"sleep"},
+   ]},
+ stationary:{name:"The immovable",leash:0,curfew:true,immovable:true,
+   lead:"Zero legs, zero leash. The anchoress bricked into the Ilvane wall — the degenerate case that proves the schema. The city routes itself past her squint.",
+   notes:["Never moves; always at her cell.","Leash <b>0&nbsp;m</b>."],
+   legs:[]},
+};
+
+/* occupation -> archetype, with candidate workplaces */
+const OCC={
+ candor_cleric:["cleric","The Lanthorn · Chapter house & Grey Press"],
+ church_attendant:["cleric","The Lanthorn · The Gradine"],
+ funerary_worker:["cleric","Saint Maren's churchyard & church"],
+ bell_ringer:["cleric","The Bellstand · Saint Maren's church"],
+ custody_clerk:["cleric","Chapter house & Grey Press · The Tallage"],
+ court_officer:["cleric","Chapter house & Grey Press · The Gradine"],
+ scholar:["cleric","The Lanthorn · Doctor Ferrant's house"],
+ anchoress:["stationary","The Ilvane anchorhold"],
+ mason:["day_worker","Coswald's Yard · the masons' lodge"],
+ glazier:["day_worker","Cinder Row · the glaziers' guildhall"],
+ carpenter_and_builder:["day_worker","Coswald's Yard"],
+ smith:["day_worker","Coswald's Yard"],
+ bellfounder:["day_worker","Bellfounders' Yard"],
+ chandler:["market_trader","The Wickmarket"],
+ lamplighter:["lamplighter","The Wickmarket · The Gradine"],
+ roper:["wharf","The Cut ropewalk"],
+ painter:["day_worker","Cinder Row"],
+ instrument_maker:["day_worker","Cinder Row"],
+ cloth_worker:["day_worker","The Draper's Reach · Tenterhook Lane · The Cut"],
+ draper:["market_trader","The Draper's Reach · The Tallage"],
+ leather_worker:["day_worker","Tanners' Slip · Skinners' Court"],
+ laundress:["day_worker","The Cut"],
+ scavenger:["day_worker","The Cut ropewalk"],
+ boatworker:["wharf","The Alder Moorings"],
+ fish_trader:["market_trader_green","Maren's Green · The Alder Moorings"],
+ cargo_worker:["wharf","The Alder Moorings · Gaunt Passage"],
+ freight_broker:["wharf","The Tallage · the bonded warehouse"],
+ salt_trader:["market_trader","The Tallage · Gaunt Passage"],
+ salt_worker:["wharf","Gaunt Passage"],
+ guide:["day_worker","Maren's Green · The Gradine · The Old Sluice"],
+ merchant:["market_trader","The Tallage · The Wickmarket"],
+ market_seller:["market_trader_green","The Wickmarket · The Gradine · Maren's Green"],
+ money_dealer:["day_worker","The Tallage · The Tally Bridge"],
+ scribe_and_clerk:["day_worker","The Tallage · Chapter house & Grey Press"],
+ revenue_worker:["day_worker","Tallage toll-house · The Tallage"],
+ baker:["market_trader","The Wickmarket"],
+ butcher:["market_trader_green","The Shambles · The Tallage"],
+ brewer:["tavern","The Hungry Ox"],
+ cook:["tavern","The Hungry Ox · The Bellstand"],
+ tavern_worker:["tavern","The Hungry Ox · The Bellstand"],
+ miller:["day_worker","The Wool Gate"],
+ healer:["day_worker","Doctor Ferrant's house · Maren's Green"],
+ messenger:["day_worker","The Bellstand · The Wickmarket · The Needle"],
+ watchman_and_keeper:["night_watch","The Bellstand · The Old Sluice"],
+ executioner:["day_worker","The Bellstand"],
+ farmer:["day_worker","The Wool Gate"],
+ general_labourer:["day_worker","Coswald's Yard · The Cut"],
+ pilgrim:["day_worker","The Gradine · The Lanthorn"],
+ domestic_servant:["day_worker","The Wickmarket"],
+ garment_worker:["day_worker","The Draper's Reach"],
+ shoemaker:["day_worker","Skinners' Court"],
+ cooper:["day_worker","The Cut"],
+ potter:["day_worker","Cinder Row"],
+ cartwright_and_wheelwright:["day_worker","Coswald's Yard"],
+ fine_metalworker:["day_worker","Cinder Row"],
+ animal_worker:["day_worker","The Harne Gate"],
+ sanitation_worker:["day_worker","The Cut"],
+ water_and_bath_worker:["day_worker","Chain Well"],
+ food_provisioner:["market_trader","The Wickmarket"],
+ grocer_and_spicer:["market_trader","The Tallage · The Wickmarket"],
+ entertainer:["tavern","The Hungry Ox · The Wickmarket"],
+ civic_officer:["day_worker","The Tallage"],
+ bailiff_and_gaoler:["night_watch","The Bellstand"],
+ militia_and_soldier:["night_watch","The Stone Gate · The Bellstand"],
+ sex_worker:["tavern","The Hungry Ox"],
+};
+const ARCH_LABEL={day_worker:"Day-worker",market_trader:"Market · weighed",market_trader_green:"Market · raw",
+ cleric:"Cleric",tavern:"Tavern",night_watch:"Night watch",lamplighter:"Lamplighter",wharf:"Wharf",stationary:"Immovable"};
+
+/* the 20 authored rounds */
+const ROUTES=[
+ {c:"cathedral",id:"ak3vd",name:"Havise Dorn",role:"Praelucent",age:58,g:"f",leash:10,
+  bio:"Lamp-named Serene: the dawn office in the nave, chapter-house audiences until High Wick, and the crossing at the strong hour — petitions, Fabric contracts, masons.",
+  legs:[{f:"kindling",at:"The Lanthorn",d:"pray"},{f:"dayspring",at:"The Lanthorn",d:"pray"},{f:"high_wick",at:"Chapter house and Grey Press",d:"work"},{f:"waning",at:"The Lanthorn",d:"pray"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"cathedral",id:"a9prs",name:"Segwin Rasp",role:"Provost-Custodian",age:54,g:"m",
+  bio:"Grey coat, grey office. Master of the Custody of the Eye; keeps the Grey Press from bell to bell — licensing glass, ordering the pilgrim hours, stamping badges.",
+  legs:[{f:"kindling",at:"Chapter house and Grey Press",d:"work"},{f:"dayspring",at:"Chapter house and Grey Press",d:"work"},{f:"waning",at:"The Lanthorn",d:"pray"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"cathedral",id:"amt4p",name:"Dunstan Pike",role:"Verger",age:49,g:"m",
+  bio:"Every door in the Lanthorn answers to his keys: unbars the west doors for the dawn-showing, walks rounds all day, locks at dusk — and then the Bell and Ladle.",
+  legs:[{f:"kindling",at:"The Lanthorn",d:"work"},{f:"dayspring",at:"The Lanthorn",d:"work"},{f:"waning",at:"The Lanthorn",d:"work"},{f:"lamplight",at:"The Bellstand",d:"idle"},{f:"snuffing",at:"home",d:"sleep"}]},
+ {c:"cathedral",id:"em3rl",name:"Betriss Marle",role:"Seamstress",age:38,g:"f",
+  bio:"At the west doors before they are unbarred, every morning, then sews all day on a stool near the crossing where the whole nave can see her being devout — because in F.428 she recanted.",
+  legs:[{f:"kindling",at:"The Lanthorn",d:"pray"},{f:"dayspring",at:"The Lanthorn",d:"work"},{f:"waning",at:"The Lanthorn",d:"work"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"cathedral",id:"b4hst",name:"Hamel Stott",role:"Warden of the Fabric · master mason",age:47,g:"m",
+  bio:"Up the north-tower scaffold at first light with the wind taking his hands off, and in the lodge at Coswald's Yard by the Waning, arguing rates with the Fabric.",
+  legs:[{f:"kindling",at:"Coswald's Yard",d:"work"},{f:"dayspring",at:"Coswald's Yard",d:"work"},{f:"waning",at:"The masons' lodge",d:"work"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"cathedral",id:"cj9sp",name:"Jonet Sparr",role:"Master glazier",age:44,g:"f",
+  bio:"The furnace lit before dawn, lead and glass and cut fingers all day; every repair pane for the Fabric made under a grey clerk's eye. To the Wickmarket only on market day.",
+  legs:[{f:"kindling",at:"Cinder Row",d:"work"},{f:"dayspring",at:"Cinder Row",d:"work"},{f:"high_wick",at:"The Wickmarket",d:"trade",on:["highmarket"]},{f:"waning",at:"Cinder Row",d:"work"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"cathedral",id:"dv8ll",name:"Osanne Vell",role:"Chandler",age:63,g:"f",
+  bio:"Mistress of the Vell wax-house on the Wickmarket — tallow in the vats, the Lanthorn's candle contract thirty years in her own name. Her stall goes out on Highmarket.",
+  legs:[{f:"kindling",at:"workplace",d:"work"},{f:"dayspring",at:"workplace",d:"work"},{f:"dayspring",at:"Osanne Vell's stall",d:"trade",on:["highmarket"]},{f:"waning",at:"workplace",d:"work"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"cathedral",id:"aq7ld",name:"Dame Aldith",role:"Anchoress",age:79,g:"f",leash:0,curfew:true,immovable:true,
+  bio:"Seventy-nine and walled into the north side of the Ilvane Chapel — the voice at the squint, an alms-bowl, a straw bed, the whole gossip of the city poured into her ear. Zero legs; the city routes itself past her.",
+  legs:[]},
+
+ {c:"tallage",id:"fl5cp",name:"Lise Copp",role:"Pawnbroker",age:55,g:"f",
+  bio:"Dawn to dusk behind the counter of her pawnshop facing the Tally Bridge, and the Tallage brings her everything it owns — a widow's kettle, a smith's tools before the toll falls due, old paper.",
+  legs:[{f:"kindling",at:"Lise Copp's pawnshop",d:"trade"},{f:"dayspring",at:"Lise Copp's pawnshop",d:"trade"},{f:"waning",at:"Lise Copp's pawnshop",d:"trade"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"tallage",id:"fc9rn",name:"Corin Copp",role:"Scrivener — forger by night",age:26,g:"m",curfew:true,
+  bio:"The best hand at the Tallage: bills of lading and toll receipts by day — and by candle he makes old pages, oak-gall browned over smoke, a seal aged in a flame. After dark he works at the pawnshop.",
+  legs:[{f:"kindling",at:"The Tallage",d:"work"},{f:"dayspring",at:"The Tallage",d:"work"},{f:"waning",at:"The Tallage",d:"work"},{f:"lamplight",at:"Lise Copp's pawnshop",d:"work"},{f:"snuffing",at:"home",d:"sleep"}]},
+ {c:"tallage",id:"az2sm",name:"Sible Mott",role:"Grey clerk of the Custody",age:27,g:"f",
+  bio:"Copy-work, sealed packets, and a grey coat that keeps the rain off — a clerk of the Custody of the Eye, making other men's bad handwriting legible in the Grey Press. Midday at the Tally Bridge.",
+  legs:[{f:"kindling",at:"Chapter house and Grey Press",d:"work"},{f:"dayspring",at:"Chapter house and Grey Press",d:"work"},{f:"high_wick",at:"The Tally Bridge",d:"work"},{f:"waning",at:"Chapter house and Grey Press",d:"work"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"tallage",id:"fg2sh",name:"Grigor Ashe",role:"Salt merchant",age:41,g:"m",
+  bio:"Salorge salt poled upriver, carted through the gate, weighed at Lowmarket, stored in the cellars by the Tallage — he can tell to the grain what a salt-weigh ought to come to.",
+  legs:[{f:"kindling",at:"workplace",d:"work"},{f:"dayspring",at:"workplace",d:"trade"},{f:"dayspring",at:"The Tallage",d:"trade",on:["lowmarket"]},{f:"waning",at:"Gaunt Passage",d:"work"},{f:"lamplight",at:"home",d:"sleep"}]},
+
+ {c:"green",id:"gw4ld",name:"Wyn Alder",role:"Boatwoman",age:34,g:"f",
+  bio:"On the water before the Kindling bell, poling freight and eel-traps on the Serle beyond the south wall; back in the Moorings yard by mid-morning, calling her price across Maren's Green. The nave on Bellday.",
+  legs:[{f:"kindling",at:"The Alder Moorings",d:"work"},{f:"dayspring",at:"Maren's Green",d:"trade"},{f:"dayspring",at:"The Lanthorn",d:"pray",on:["bellday"]},{f:"waning",at:"The Old Sluice",d:"work"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"green",id:"et7rd",name:"Tam Rud",role:"Journeyman fuller",age:29,g:"m",
+  bio:"Stale piss, hot lye and wet wool: the fulling stocks on the Cut from the Kindling bell, then hauling sodden cloth up to the tenter-yards below Maren's Green with his arms dead to the shoulder.",
+  legs:[{f:"kindling",at:"The Cut",d:"work"},{f:"dayspring",at:"Tenterhook Lane",d:"work"},{f:"high_wick",at:"The Draper's Reach",d:"work"},{f:"waning",at:"The Cut",d:"work"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"green",id:"cf2rr",name:"Aubin Ferrant",role:"Physician",age:52,g:"m",
+  bio:"A physician by trade and an astronomer by affliction. Sick-calls all morning — fevers, crushed wharf-hands, a birth gone wrong — from a tall narrow house off the Tallage; the herb-green after.",
+  legs:[{f:"kindling",at:"Doctor Ferrant's house",d:"idle"},{f:"dayspring",at:"Maren's Green",d:"work"},{f:"waning",at:"The Lanthorn",d:"pray"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"green",id:"cg6ud",name:"Mother Gude",role:"Herb-seller",age:66,g:"f",
+  bio:"At first light out at the south-wall herb plots cutting simples; by market at her stall by the fish-hall steps on Maren's Green, where the eel smoke gets into her hair and everything she owns. Never inside the Lanthorn since she looked.",
+  legs:[{f:"kindling",at:"Maren's Green",d:"work"},{f:"dayspring",at:"Maren's Green",d:"trade"},{f:"waning",at:"Maren's Green",d:"trade"},{f:"lamplight",at:"home",d:"sleep"}]},
+ {c:"green",id:"ax5nf",name:"Noll Fitch",role:"Sexton",age:57,g:"m",
+  bio:"Sexton of Saint Maren of the Reeds: opens the ground by morning, rings the name-knell one slow stroke a year of the life, and chalks the newest buried name on the charnel-door lintel before he goes home.",
+  legs:[{f:"kindling",at:"Saint Maren's churchyard",d:"work"},{f:"dayspring",at:"Saint Maren's churchyard",d:"work"},{f:"waning",at:"Saint Maren's churchyard",d:"work"},{f:"lamplight",at:"home",d:"sleep"}]},
+
+ {c:"bell",id:"hj6br",name:"Jos Brant",role:"Town crier",age:44,g:"m",
+  bio:"Oyez, oyez — the city hears his voice before it hears its own bells. Cries at set hours across the squares, posts edicts, and finds the Bell and Ladle by evening.",
+  legs:[{f:"kindling",at:"The Bellstand",d:"work"},{f:"dayspring",at:"The Wickmarket",d:"work"},{f:"high_wick",at:"The Tallage",d:"work"},{f:"waning",at:"Maren's Green",d:"work"},{f:"lamplight",at:"The Bellstand",d:"idle"},{f:"snuffing",at:"home",d:"sleep"}]},
+ {c:"bell",id:"gr8tp",name:"Renna Tapster",role:"Alehouse keeper",age:46,g:"f",leash:6,curfew:true,
+  bio:"The Bell and Ladle is hers: the pot on before dawn, the taps open when Jos Brant bawls his first cry across the Bellstand, and the counter under her hand until the last argument goes home in the dark.",
+  legs:[{f:"watch",at:"home",d:"sleep"},{f:"dayspring",at:"The Bellstand",d:"work"},{f:"waning",at:"The Bellstand",d:"work"},{f:"lamplight",at:"The Bellstand",d:"work"},{f:"snuffing",at:"The Bellstand",d:"work"}]},
+ {c:"bell",id:"he3nd",name:"Ede of the Needle",role:"Message-runner",age:11,g:"f",leash:20,
+  bio:"Eleven, feral, and belongs to nobody. A penny a message, two if it climbs stairs. Her round is the Needle-to-Bellstand run, the market crowds on their days, Dame Aldith's squint at dusk — and the Bell and Ladle's woodstore to sleep, where Renna pretends not to know.",
+  legs:[{f:"kindling",at:"The Needle",d:"idle"},{f:"dayspring",at:"The Bellstand",d:"work"},{f:"dayspring",at:"The Wickmarket",d:"work",on:["highmarket"]},{f:"dayspring",at:"The Tallage",d:"work",on:["lowmarket"]},{f:"high_wick",at:"The Wickmarket",d:"work"},{f:"waning",at:"The Ilvane anchorhold",d:"idle"},{f:"lamplight",at:"The Bellstand",d:"sleep"}]},
+];
+const CLUSTERS=[
+ {k:"cathedral",t:"The Cathedral & the Fabric"},
+ {k:"tallage",t:"The Tallage — coin, salt & paper"},
+ {k:"green",t:"The water, the green & the sick"},
+ {k:"bell",t:"The bell, the cry & the ale"},
+];
+
+const MACHINERY=[
+ {c:"#cf9a24",t:"Market days move the crowd",p:"Two of the seven weekdays are market days. On <b>Highmarket</b> the stalls go out at the Wickmarket and Coswald's Yard; on <b>Lowmarket</b> at the Tallage and Maren's Green. Traders split across the four squares by trade so a market day always <i>raises</i> a square above its ordinary crowd instead of draining it."},
+ {c:"#6f5fc4",t:"Bellday empties the trades into the nave",p:"The weekly holy day shuts the generic trades. Day-workers and market-folk lie in at Kindling and pray at the Lanthorn from Dayspring through the Waning. The exceptions: the wharf trades (before-dawn work, then the nave), the night trades, the clerics (already at prayer), and the anchoress."},
+ {c:"#34406e",t:"Curfew clears the streets — except the night trades",p:"At the Snuffing bell the gates shut and the streets clear. Most Rounds are abed. A handful carry <code>curfew_exempt</code> and keep the dark: the tavern trade, the night watch, the lamplighters, Corin Copp the forger, Renna the tapster, and the anchoress in her cell."},
+ {c:"#2f8fb0",t:"Water is an errand woven into the day",p:"Fetching water is the single largest occupation. <b>Domestic servants</b> draw with a household vessel and take priority in the queue; <b>cloth &amp; garment workers</b> draw with a trade vessel and queue behind them. A drawer walks to the nearest ward well, waits, draws, and carries it home — a real detour, not a teleport."},
+ {c:"#3f8a68",t:"Hunger collapses at noon",p:"The day-worker and wharf templates take <b>dinner at home at High Wick</b> — the hearth feeds those legs, so the city's hunger drops at noon exactly where the player is likely watching. Market traders skip it: they hold the stall through the peak and eat at supper. Anyone hungry can also buy from a food stall."},
+ {c:"#b9702e",t:"The leash keeps a crowd alive",p:"No verb pins a body to a tile. Each drifts within a <b>leash</b> of the leg's anchor: 0&nbsp;m for the immovable anchoress, 6–12&nbsp;m for shopkeepers and day-workers, 15&nbsp;m on the wharf, 20&nbsp;m for a lamplighter's beat, 24&nbsp;m for a roaming watch. Idle milling, not statues."},
+ {c:"#6e6e78",t:"The Round is the default — and it's all plain Rust",p:"This whole chart is the bottom rung of a <b>deterministic ladder with no LLM in it at all</b> (lifted from seagame, where \"there is no LLM\"). A need — thirst, weariness, fear — doesn't call a model; it just bumps the citizen to a higher rung of the same ladder: walk to a well, go home, flee. \"The body never blocks on the mind\" — if cognition is down, the city still gets up, walks to the well, works and sleeps, in silence. The <b>LLM is a separate layer</b>, spent only on NPCs you can see or hear (or one you speak to); for the thirty majors it may even <i>rewrite</i> its own Round overnight. The 494 lesser citizens just run their trade's template, right about 90% of the time."},
+];
+
+/* ---------------- STATE ---------------- */
+let DAY="ordinary", SEL="dayspring";
+
+/* ---------------- RESOLVER ---------------- */
+function resolve(legs, day){
+  const applies=l=>!l.on ? true : l.on.includes(day);
+  const legAt=ok=>{
+    const c=legs.filter(l=>l.f===ok && applies(l));
+    return c.find(l=>l.on && l.on.includes(day)) || c.find(l=>!l.on) || null;
+  };
+  const res={}; let cur=null;
+  for(let pass=0;pass<2;pass++){
+    for(const ok of OK){ const l=legAt(ok); if(l) cur=l; if(pass===1) res[ok]=cur; }
+  }
+  return res;
+}
+function placeLabel(at){
+  if(at==="workplace") return {txt:"workplace",wp:true};
+  if(at==="home") return {txt:"home",wp:false};
+  return {txt:at,wp:false};
+}
+
+/* ---------------- RENDER: controls ---------------- */
+const $=(s,r=document)=>r.querySelector(s);
+const el=(t,c,h)=>{const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
+
+function renderDaytabs(){
+  const box=$("#daytabs"); box.innerHTML="";
+  DAYTYPES.forEach(d=>{
+    const b=el("button",null,d.l); b.setAttribute("aria-pressed",d.k===DAY);
+    b.onclick=()=>{DAY=d.k; rerender();}; box.appendChild(b);
+  });
+}
+function renderBells(){
+  const box=$("#bells"); box.innerHTML="";
+  OFFICES.forEach(o=>{
+    const b=el("div","bell",`<div class="bl">${o.l}</div><div class="bt">${o.t}</div>`);
+    b.style.setProperty("--h",o.h); b.setAttribute("aria-pressed",o.k===SEL);
+    b.onclick=()=>{SEL=o.k; rerender();}; box.appendChild(b);
+  });
+}
+function renderNow(){
+  const o=OINFO[SEL], d=DAYTYPES.find(x=>x.k===DAY);
+  $("#nowline").innerHTML=`It is the <b>${o.l}</b> office · ${o.t} · ${o.b} &nbsp;—&nbsp; today is <b>${d.l}</b>: ${d.note}.`;
+}
+
+/* ---------------- RENDER: static sections ---------------- */
+function renderOffices(){
+  const g=$("#officeGrid");
+  OFFICES.forEach(o=>{
+    const c=el("div","ocard"+(o.k===SEL?" active":""),
+      `<div class="strokes">${"●".repeat(o.s)}<span style="opacity:.3">${"○".repeat(7-o.s)}</span></div>
+       <h3>${o.l}</h3><div class="time">${o.t} · ${o.s} stroke${o.s>1?"s":""}</div><p>${o.b}</p>`);
+    c.dataset.k=o.k; c.onclick=()=>{SEL=o.k; rerender();}; g.appendChild(c);
+  });
+}
+function renderLegend(){
+  const g=$("#legend");
+  Object.entries(VERBS).forEach(([k,v])=>{
+    const r=el("div","lrow");
+    const chip=el("div","chip",v.label); chip.style.background=v.fill; chip.style.color=v.ink;
+    r.appendChild(chip);
+    r.appendChild(el("div","lt",`<b>${v.label}</b><div>${v.behaviour}</div>`));
+    g.appendChild(r);
+  });
+}
+function gcell(leg, immovable){
+  const verb = leg ? leg.d : "stand";
+  const v=VERBS[verb];
+  const pl = leg ? placeLabel(leg.at) : {txt: immovable?"her cell":"home", wp:false};
+  const c=el("div","gcell",`<div class="gv">${v.label}</div><div class="gp${pl.wp?" wp":""}">${pl.txt}</div>`);
+  c.style.setProperty("--gfill",v.fill); c.style.setProperty("--gink",v.ink);
+  return c;
+}
+function renderArch(){
+  const root=$("#archList"); root.innerHTML="";
+  Object.entries(ARCH).forEach(([key,a])=>{
+    const wrap=el("div","arch"); wrap.id="arch-"+key;
+    const occs=Object.entries(OCC).filter(([,v])=>v[0]===key).map(([o])=>pretty(o));
+    const tags=`<span class="tag">leash ${a.leash} m</span>`+(a.curfew?`<span class="tag curfew">curfew-exempt</span>`:"");
+    const head=el("div","arch-head",
+      `<h3>${a.name}</h3>${tags}<div class="lead">${a.lead}</div>
+       <div class="occs"><b>${occs.length} trade${occs.length!==1?"s":""}:</b> ${occs.join(" · ")||"—"}</div>`);
+    wrap.appendChild(head);
+    const res=resolve(a.legs, DAY);
+    const gw=el("div","ganttwrap");
+    const g=el("div","gantt");
+    OFFICES.forEach(o=>{
+      const c=gcell(res[o.k], a.immovable); c.style.setProperty("--h",o.h);
+      if(o.k===SEL) c.classList.add("sel");
+      g.appendChild(c);
+    });
+    gw.appendChild(g); wrap.appendChild(gw);
+    const tl=el("div","gtime");
+    OFFICES.forEach(o=>{const s=el("span",null,o.t);s.style.setProperty("--h",o.h);tl.appendChild(s);});
+    wrap.appendChild(tl);
+    const notes=el("div","notes");
+    a.notes.forEach(n=>notes.appendChild(el("div","note",n)));
+    wrap.appendChild(notes);
+    root.appendChild(wrap);
+  });
+}
+function pretty(id){const s=id.replace(/_/g," ");return s.charAt(0).toUpperCase()+s.slice(1);}
+
+function verbColor(k){return VERBS[ARCH[k]&&ARCH[k].legs.length?"work":"stand"].fill;}
+const ARCH_PILL={day_worker:"#b9702e",market_trader:"#cf9a24",market_trader_green:"#d8a93a",
+ cleric:"#6f5fc4",tavern:"#c0567a",night_watch:"#34406e",lamplighter:"#e3b23c",wharf:"#2f8fb0",stationary:"#6e6e78"};
+function renderOccTable(filter=""){
+  const body=$("#occBody"); body.innerHTML=""; const f=filter.trim().toLowerCase();
+  const rows=Object.entries(OCC)
+    .map(([id,v])=>({id,name:pretty(id),arch:v[0],wp:v[1]}))
+    .filter(r=> !f || r.name.toLowerCase().includes(f) || ARCH_LABEL[r.arch].toLowerCase().includes(f))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  rows.forEach(r=>{
+    const tr=el("tr");
+    tr.appendChild(el("td",null,`<b>${r.name}</b>`));
+    const pill=`<span class="pill" style="background:${ARCH_PILL[r.arch]}">${ARCH_LABEL[r.arch]}</span>`;
+    tr.appendChild(el("td","arch-cell",pill));
+    tr.appendChild(el("td","wp-cell",r.wp));
+    tr.onclick=()=>{const t=$("#arch-"+r.arch); if(t){t.scrollIntoView({behavior:"smooth",block:"center"});
+      t.style.transition="box-shadow .3s"; t.style.boxShadow="0 0 0 2px var(--accent)";
+      setTimeout(()=>t.style.boxShadow="",1400);}};
+    body.appendChild(tr);
+  });
+  $("#occCount").textContent=`${rows.length} of ${Object.keys(OCC).length} trades shown`;
+}
+function renderCast(){
+  const root=$("#castRoot"); root.innerHTML="";
+  CLUSTERS.forEach(cl=>{
+    const sec=el("div","cluster",`<h3>${cl.t}</h3>`);
+    const grid=el("div","castgrid");
+    ROUTES.filter(r=>r.c===cl.k).forEach(r=>{
+      const card=el("div","pcard");
+      card.appendChild(el("div","top",
+        `<div><h4>${r.name}</h4><div class="role">${r.role}</div></div>
+         <div class="who">${r.g==="f"?"♀":"♂"} ${r.age} · <span style="opacity:.7">${r.id}</span></div>`));
+      const badges=el("div","badges");
+      badges.appendChild(el("span","badge",`leash ${r.leash!=null?r.leash:defaultLeashFor(r)} m`));
+      if(r.curfew) badges.appendChild(el("span","badge cx","curfew-exempt"));
+      card.appendChild(badges);
+      card.appendChild(el("div","bio",r.bio));
+      const res=resolve(r.legs, DAY);
+      const mini=el("div","mini");
+      OFFICES.forEach(o=>{
+        const leg=res[o.k]; const verb=leg?leg.d:"stand"; const v=VERBS[verb];
+        const pl=leg?placeLabel(leg.at):{txt:r.immovable?"her cell":"home"};
+        const cell=el("div","mcell"+(o.k===SEL?" sel":""));
+        cell.style.setProperty("--gfill",v.fill); cell.style.setProperty("--h",o.h);
+        cell.dataset.tip=`${o.l} ${o.t} — ${v.label}: ${pl.txt}`;
+        mini.appendChild(cell);
+      });
+      card.appendChild(mini);
+      const lm=el("div","legmini");
+      OFFICES.forEach(o=>{const s=el("span",null,o.l.split(" ")[0]);s.style.setProperty("--h",o.h);lm.appendChild(s);});
+      card.appendChild(lm);
+      grid.appendChild(card);
+    });
+    sec.appendChild(grid); root.appendChild(sec);
+  });
+}
+function defaultLeashFor(r){return 10;}  // DEFAULT_ROUND_LEASH_M in round.rs
+function renderMach(){
+  const g=$("#mach");
+  MACHINERY.forEach(m=>{
+    g.appendChild(el("div","mcard",
+      `<h3><span class="dot" style="background:${m.c}"></span>${m.t}</h3><p>${m.p}</p>`));
+  });
+}
+
+/* ---------------- rerender on state change ---------------- */
+function rerender(){
+  renderDaytabs(); renderBells(); renderNow();
+  document.querySelectorAll(".ocard").forEach(c=>c.classList.toggle("active",c.dataset.k===SEL));
+  renderArch(); renderCast();
+}
+
+/* ---------------- init ---------------- */
+renderOffices(); renderLegend(); renderOccTable(); renderMach();
+renderDaytabs(); renderBells(); renderNow(); renderArch(); renderCast();
+$("#occsearch").addEventListener("input",e=>renderOccTable(e.target.value));
+</script>
+</body>
+</html>

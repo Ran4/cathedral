@@ -36,7 +36,8 @@ use cathedral_sim::{
 };
 use serde::{Deserialize, Serialize};
 
-pub use chat::ChatInputSet;
+pub use area_debug::AreaDebugState;
+pub use chat::{ChatInputSet, ChatInputState};
 pub use clock::WorldClockState;
 pub use config_menu::ConfigMenuState;
 pub use targeting::ActorFocus;

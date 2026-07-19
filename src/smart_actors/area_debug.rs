@@ -20,15 +20,16 @@ const MAX_VISIBLE_AREAS: usize = 8;
 const MAX_VISIBLE_DISTANCE_M: f64 = 350.0;
 
 #[derive(Resource, Debug, Default)]
-pub(super) struct AreaDebugState {
+pub struct AreaDebugState {
     enabled: bool,
     visible_area_ids: BTreeSet<String>,
 }
 
 impl AreaDebugState {
     /// Whether the `B` developer layer is on. Read by the sibling
-    /// [`super::actor_sheet`] overlay, which shares this one toggle.
-    pub(super) fn is_enabled(&self) -> bool {
+    /// [`super::actor_sheet`] overlay (which shares this one toggle) and by the
+    /// map's click-to-teleport, which treats this layer as "debug mode".
+    pub fn is_enabled(&self) -> bool {
         self.enabled
     }
 

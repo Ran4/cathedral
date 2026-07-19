@@ -32,6 +32,7 @@ use bevy::{
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 
+use crate::map::MapState;
 use crate::smart_actors::ConfigMenuState;
 use crate::smart_actors::model::ActorId;
 
@@ -530,10 +531,22 @@ fn collect_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     menu: Res<ConfigMenuState>,
+    map: Res<MapState>,
     mut input: ResMut<ControllerInput>,
     mut controller: Single<&mut PlayerController>,
     mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
 ) {
+    // While the fullscreen map is open the cursor is released for clicking; the
+    // map owns the cursor, and the player holds still (movement, jump, the fly
+    // toggle, and click-to-recapture all pause). Mouse-look already stops on its
+    // own once the cursor is unlocked.
+    if map.fullscreen_open {
+        input.movement = Vec2::ZERO;
+        input.running = false;
+        input.fly_vertical = 0.0;
+        return;
+    }
+
     if keyboard.just_pressed(KeyCode::Quote) {
         controller.flying = !controller.flying;
         controller.velocity.y = 0.0;

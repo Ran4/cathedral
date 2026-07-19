@@ -3,6 +3,7 @@ mod config;
 mod controller;
 mod drive;
 mod fonts;
+mod map;
 mod materials;
 mod nav_overlay;
 mod scene;
@@ -18,6 +19,7 @@ use city::CityPlugin;
 use config::{PersistedConfig, load_config};
 use controller::ControllerPlugin;
 use fonts::CathedralFontsPlugin;
+use map::MapPlugin;
 use nav_overlay::NavDebugPlugin;
 use scene::CathedralPlugin;
 use screenshot::CathedralScreenshotPlugin;
@@ -88,6 +90,7 @@ fn main() {
             HudPlugin,
             CathedralScreenshotPlugin,
             NavDebugPlugin,
+            MapPlugin,
         ))
         .add_plugins(SmartActorsPlugin::new(smart_actors));
     if let Some(drive) = drive {
