@@ -27,6 +27,14 @@ const NIGHT_FLOOR: f32 = 0.05;
 const NIGHT_AMBIENT: f32 = 14.0;
 const DAY_AMBIENT: f32 = 110.0;
 
+/// The sun follows a real solar arc for a **temperate-summer** sky — a
+/// central-European latitude at the June solstice. The sun rises ~04:00, so the
+/// Dayspring (07:00) already opens on a high, bright morning (~30° elevation),
+/// and noon peaks ~65°. `drive_sun` turns these into the sun's elevation and
+/// azimuth each frame with the standard horizontal-coordinate transform.
+const SUN_LATITUDE_DEG: f32 = 48.0;
+const SUN_DECLINATION_DEG: f32 = 23.44;
+
 /// The game's copy of the sim clock, refreshed from
 /// [`cathedral_sim::EngineMessage::Clock`] every poll. `present` stays false
 /// until the first message, so the sun keeps its spawned pose until the engine
@@ -89,26 +97,31 @@ pub fn drive_sun(
         return;
     };
 
-    // 0.0 midnight, 0.5 noon. The sun is highest at noon and swings east→west.
+    // A real solar arc, not a fudge curve. Elevation and azimuth come from the
+    // hour angle through the standard horizontal-coordinate transform, for a
+    // temperate-summer sky (SUN_LATITUDE_DEG at SUN_DECLINATION_DEG). Because
+    // the sun rises ~04:00 in that sky, by the Dayspring (07:00) it already
+    // stands ~30° above the horizon — a bright, high morning — and it peaks
+    // ~65° at noon. The physical `bevy::light::Atmosphere` still colours the
+    // low sun at dawn and dusk for free.
     let fraction = clock.fraction as f32;
-    let angle = (fraction - 0.5) * std::f32::consts::TAU;
-    let east = angle.sin();
-    // The vertical component is deliberately capped well below the zenith
-    // (temperate-town arc, ~50° at noon): overhead light flattens every façade
-    // and shrinks shadows to doormats, while a raking sun keeps streets
-    // modelled all day. The square root lifts the sun quickly out of the
-    // horizon band — a linear arc left it at ~6° at 07:00, where the physical
-    // atmosphere extinguishes almost all direct light and Dayspring looked
-    // like deep dawn — without moving sunrise/sunset (06:00/18:00) or the noon
-    // cap. The floor keeps the (near-dark) key from ever lighting the city
-    // from underneath at night.
-    let arc = angle.cos();
-    let elevation = if arc >= 0.0 {
-        arc.sqrt() * 0.42
-    } else {
-        (arc * 0.42).max(-0.2)
-    };
-    let direction = Vec3::new(east * 0.9, elevation, 0.35).normalize();
+    let lat = SUN_LATITUDE_DEG.to_radians();
+    let decl = SUN_DECLINATION_DEG.to_radians();
+    let (sin_lat, cos_lat) = lat.sin_cos();
+    let (sin_decl, cos_decl) = decl.sin_cos();
+    // Hour angle: 0 at solar noon, −75° at 07:00. World axes: +x east, +y up,
+    // +z south (a northern-hemisphere sun stays on the south side of the sky).
+    let hour_angle = (fraction - 0.5) * std::f32::consts::TAU;
+    let (sin_h, cos_h) = hour_angle.sin_cos();
+    let up = sin_lat * sin_decl + cos_lat * cos_decl * cos_h; // = sin(elevation)
+    let east = -cos_decl * sin_h;
+    let south = (sin_lat * up - sin_decl) / cos_lat;
+    // A shallow floor keeps the key from beaming up from underground during the
+    // dusk ramp: the sun sets ~19:55 but the brightness floor lingers to the
+    // Snuffing (21:00), so let it graze the horizon rather than light from below.
+    let mut direction = Vec3::new(east, up, south);
+    direction.y = direction.y.max(-0.15);
+    let direction = direction.normalize();
     *transform =
         Transform::from_translation(direction * 500.0).looking_at(Vec3::new(0.0, 0.0, 40.0), Vec3::Y);
 
@@ -117,8 +130,8 @@ pub fn drive_sun(
     light.illuminance = lux::RAW_SUNLIGHT * lit;
     if let Some(mut ambient) = ambient {
         // sqrt: the shadowed side of the city is all the player sees at dawn
-        // and dusk, so the fill recovers faster than the key — mid-ramp
-        // (07:00) sits at ~84% of the day fill instead of ~71%.
+        // and dusk, so the fill recovers faster than the key — the mid-ramp
+        // fill sits at ~84% of the day value instead of ~71%.
         ambient.brightness = NIGHT_AMBIENT + (DAY_AMBIENT - NIGHT_AMBIENT) * lit.sqrt();
     }
 }

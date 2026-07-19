@@ -1217,7 +1217,7 @@ fn add_fog_to_new_cameras(
             // pinned every surface past ~150 m at 22% fog whether it stood 200 m
             // or 1200 m away — a flat film over the city rather than depth. At
             // 1.0 the falloff alone decides, and distance reads again.
-            color: Color::srgba(0.58, 0.68, 0.73, 1.0),
+            color: Color::srgba(0.74, 0.82, 0.88, 1.0),
             directional_light_color: Color::srgba(1.0, 0.78, 0.52, 0.32),
             directional_light_exponent: 24.0,
             // Squared falloff keeps the near lane crisp and then closes in hard.

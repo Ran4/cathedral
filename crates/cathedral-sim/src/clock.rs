@@ -416,13 +416,14 @@ impl WorldClock {
 }
 
 /// Brightness as a trapezoid pegged to the offices: dark until the Kindling
-/// (05:00), a dawn ramp to full by 08:00, full day, a dusk ramp from 17:00 down
-/// to the night floor by the Snuffing (21:00). A single float, compared against
-/// inline thresholds by every consumer — there is no time-of-day enum in the
-/// behaviour code (`features/movement/01_the_clock.md` §5).
+/// (05:00), a dawn ramp to full by 06:30 — so the Dayspring (07:00) opens on a
+/// full summer morning, not the tail of dawn — full day, a dusk ramp from 17:00
+/// down to the night floor by the Snuffing (21:00). A single float, compared
+/// against inline thresholds by every consumer — there is no time-of-day enum
+/// in the behaviour code (`features/movement/01_the_clock.md` §5).
 fn brightness_at(fraction: f64, night: f64) -> f64 {
     const DAWN_START: f64 = 5.0 / 24.0;
-    const DAWN_END: f64 = 8.0 / 24.0;
+    const DAWN_END: f64 = 6.5 / 24.0;
     const DUSK_START: f64 = 17.0 / 24.0;
     const DUSK_END: f64 = 21.0 / 24.0;
     let day = 1.0;
@@ -617,9 +618,11 @@ mod tests {
         // Midnight (fraction 0) is the floor; noon is full day.
         approx(brightness_at(0.0, 0.05), 0.05);
         approx(brightness_at(0.5, 0.05), 1.0);
-        // Dawn and dusk are partway between.
-        let dawn = brightness_at(6.5 / 24.0, 0.05);
+        // Dawn and dusk are partway between (dawn ramps 05:00 → 06:30, so 05:45
+        // is mid-ramp; by the Dayspring at 07:00 it is already full day).
+        let dawn = brightness_at(5.75 / 24.0, 0.05);
         assert!(dawn > 0.05 && dawn < 1.0, "dawn ramps: {dawn}");
+        approx(brightness_at(7.0 / 24.0, 0.05), 1.0);
         let dusk = brightness_at(19.0 / 24.0, 0.05);
         assert!(dusk > 0.05 && dusk < 1.0, "dusk ramps: {dusk}");
         // The floor is configurable.
