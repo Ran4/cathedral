@@ -11,14 +11,22 @@
 //! ## World <-> map transform (single source of truth)
 //!
 //! The baked image is the SVG viewBox sub-rectangle `[VX0, VX1] x [VY0, VY1]`
-//! under the plan's projection `screen(x, z) = (-z, -x)` (east-right, north-up).
+//! under the plan's projection `screen(x, z) = (-z, x)` (east-right, north-DOWN).
 //! These four constants **must** match `scripts/render_map_texture.py`. For a
 //! normalized point `(u, v)` in `[0, 1]^2` over the image:
 //!
 //! ```text
-//! u = (-z - VX0) / (VX1 - VX0)     v = (-x - VY0) / (VY1 - VY0)
-//! z = -(VX0 + u * (VX1 - VX0))     x = -(VY0 + v * (VY1 - VY0))
+//! u = (-z - VX0) / (VX1 - VX0)     v = (x - VY0) / (VY1 - VY0)
+//! z = -(VX0 + u * (VX1 - VX0))     x = VY0 + v * (VY1 - VY0)
 //! ```
+//!
+//! North points **down**, deliberately. The world's compass
+//! (`assets/world/areas.json`: north=+x, east=-z) is left-handed — East x North
+//! points *down* — so no projection can be north-up, east-right and unmirrored
+//! at once. The original `(-z, -x)` bought north-up *and* east-right by
+//! reflecting the city, which is why turning right swung the marker left. This
+//! projection is that plan flipped vertically: the reflection is gone while the
+//! familiar left-right layout is preserved, at the cost of north-up.
 
 use std::f32::consts::FRAC_PI_2;
 
@@ -39,8 +47,8 @@ use crate::smart_actors::{AreaDebugState, ChatInputState, ConfigMenuState};
 // (The building bounding box; the script prints these when it re-bakes.)
 const VX0: f32 = -528.5;
 const VX1: f32 = 683.5;
-const VY0: f32 = -513.0;
-const VY1: f32 = 523.0;
+const VY0: f32 = -523.0;
+const VY1: f32 = 513.0;
 
 /// Image aspect (width / height), from the crop. The minimap and fullscreen
 /// frames are sized in one viewport axis and derive the other from this, so the
@@ -68,24 +76,30 @@ const CAPTION_MUTED: Color = Color::srgb(0.62, 0.64, 0.66);
 
 /// World `(x, z)` -> normalized `(u, v)` over the baked map image.
 fn world_to_uv(x: f32, z: f32) -> Vec2 {
-    Vec2::new((-z - VX0) / (VX1 - VX0), (-x - VY0) / (VY1 - VY0))
+    Vec2::new((-z - VX0) / (VX1 - VX0), (x - VY0) / (VY1 - VY0))
 }
 
 /// Normalized `(u, v)` over the map image -> world `(x, z)`.
 fn uv_to_world(uv: Vec2) -> (f32, f32) {
     let z = -(VX0 + uv.x * (VX1 - VX0));
-    let x = -(VY0 + uv.y * (VY1 - VY0));
+    let x = VY0 + uv.y * (VY1 - VY0);
     (x, z)
 }
 
 /// Marker rotation (radians, clockwise for [`UiTransform`]) for a player yaw.
 ///
-/// The marker's arrow points up (screen `-y`) at rest. On the map, north (+x
-/// world) is up and east (-z world) is right, so the player's on-screen facing
-/// direction is `(cos yaw, sin yaw)`; rotating the up-arrow onto it is a
-/// `yaw + 90°` clockwise turn.
+/// The controller's forward is `from_rotation_y(yaw) * NEG_Z`, i.e. world
+/// `(x, z) = (-sin yaw, -cos yaw)`. The plan projects that to screen
+/// `(right, down) = (-z, x) = (cos yaw, -sin yaw)`. The arrow rests pointing up
+/// (screen `(0, -1)`), and a clockwise turn by `phi` sends it to
+/// `(sin phi, -cos phi)`; matching the two gives `phi = 90° - yaw`.
+///
+/// This follows from the projection — do not adjust it to taste. Increasing yaw
+/// turns the player left (see `controller::apply_mouse_look`); because this plan
+/// is north-down, a left turn reads counter-clockwise here, which `90° - yaw`
+/// already encodes.
 fn marker_rotation(yaw: f32) -> Rot2 {
-    Rot2::radians(yaw + FRAC_PI_2)
+    Rot2::radians(FRAC_PI_2 - yaw)
 }
 
 /// Whether the player is `fullscreen_open` on the city map.
@@ -460,6 +474,8 @@ fn resolve_teleport_target(nav: &cathedral_sim::NavData, x: f64, z: f64) -> Opti
 
 #[cfg(test)]
 mod tests {
+    use std::f32::consts::PI;
+
     use super::*;
 
     const NAV_JSON: &str = include_str!("../assets/world/navigation.json");
@@ -494,11 +510,86 @@ mod tests {
         assert!((0.0..=1.0).contains(&uv.y), "v = {}", uv.y);
     }
 
+    /// Where the player's facing lands on the map, in screen axes (x right, y
+    /// down), derived independently of `marker_rotation`.
+    ///
+    /// The controller's forward is `Quat::from_rotation_y(yaw) * NEG_Z`, i.e.
+    /// world `(x, z) = (-sin yaw, -cos yaw)`. The plan projects world to screen
+    /// as `(-z, x)`, giving `(cos yaw, -sin yaw)`.
+    fn expected_screen_heading(yaw: f32) -> Vec2 {
+        Vec2::new(yaw.cos(), -yaw.sin())
+    }
+
+    /// The map must be a true overhead view, not a reflection: the projection
+    /// `(x, z) -> (-z, x)` has to preserve orientation. Compare its Jacobian
+    /// determinant against the natural overhead view `(x, z) -> (x, z)`.
+    ///
+    /// This is the invariant the old `(-z, -x)` projection violated, which is
+    /// what made the whole minimap read mirrored.
+    #[test]
+    fn projection_is_not_a_reflection() {
+        // Columns: how (u, v) move per unit of world x and of world z.
+        let du = world_to_uv(1.0, 0.0) - world_to_uv(0.0, 0.0);
+        let dv = world_to_uv(0.0, 1.0) - world_to_uv(0.0, 0.0);
+        let det = du.x * dv.y - du.y * dv.x;
+        assert!(det > 0.0, "map projection is mirrored (det {det})");
+    }
+
+    #[test]
+    fn marker_arrow_points_where_the_player_faces() {
+        // `UiTransform::rotation` is documented as clockwise, and screen y runs
+        // down, so applying `Rot2` to screen-space components *is* the clockwise
+        // turn the UI performs. The arrow rests pointing up: screen (0, -1).
+        for &yaw in &[0.0, FRAC_PI_2, PI, -FRAC_PI_2, 0.7, -2.3] {
+            let arrow = marker_rotation(yaw) * Vec2::new(0.0, -1.0);
+            let expected = expected_screen_heading(yaw);
+            assert!(
+                (arrow - expected).length() < 1e-5,
+                "yaw {yaw}: arrow {arrow:?} != heading {expected:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn turning_right_swings_the_marker_clockwise() {
+        // The symptom that started this: turning right must not swing the
+        // marker left. Increasing yaw turns *left*, so a right turn is
+        // yaw -= 90°. Facing -Z (east) at yaw 0 points the arrow right on this
+        // east-right map; after turning right the player faces +X (north),
+        // which is *down* here. Right -> down is clockwise, as it should be.
+        let rest = marker_rotation(0.0) * Vec2::new(0.0, -1.0);
+        assert!((rest - Vec2::new(1.0, 0.0)).length() < 1e-5, "yaw 0 => {rest:?}");
+
+        let turned_right = marker_rotation(-FRAC_PI_2) * Vec2::new(0.0, -1.0);
+        assert!(
+            (turned_right - Vec2::new(0.0, 1.0)).length() < 1e-5,
+            "yaw -90 => {turned_right:?}"
+        );
+    }
+
+    #[test]
+    fn walking_forward_moves_the_marker_the_way_it_points() {
+        // Ties the position transform to the rotation transform: a step along
+        // the player's facing must move the marker along the arrow. If either
+        // the projection or the marker were flipped alone, these would diverge.
+        for &yaw in &[0.0, 0.9, -2.1, PI] {
+            let (x, z) = (10.0_f32, -40.0_f32);
+            let forward = Vec2::new(-yaw.sin(), -yaw.cos());
+            let before = world_to_uv(x, z);
+            let after = world_to_uv(x + forward.x * 5.0, z + forward.y * 5.0);
+            // uv is normalized over a non-square image; compare in pixels.
+            let aspect = Vec2::new(VX1 - VX0, VY1 - VY0);
+            let moved = ((after - before) * aspect).normalize();
+            let arrow = (marker_rotation(yaw) * Vec2::new(0.0, -1.0)).normalize();
+            assert!((moved - arrow).length() < 1e-4, "yaw {yaw}: moved {moved:?} arrow {arrow:?}");
+        }
+    }
+
     #[test]
     fn constants_match_the_bake_viewbox() {
         // These four define the crop in scripts/render_map_texture.py; if they
         // drift, the marker and click math silently desync from the image.
-        assert_eq!((VX0, VX1, VY0, VY1), (-528.5, 683.5, -513.0, 523.0));
+        assert_eq!((VX0, VX1, VY0, VY1), (-528.5, 683.5, -523.0, 513.0));
     }
 
     #[test]
@@ -517,9 +608,9 @@ mod tests {
         // The core safety guarantee: whatever a click resolves to, it is on the
         // baked walkable surface — never inside a building, never off the graph.
         let nav = nav();
-        // World bounds implied by the crop (see world_to_uv): x in [-VY1, -VY0],
+        // World bounds implied by the crop (see world_to_uv): x in [VY0, VY1],
         // z in [-VX1, -VX0]. Sweep a grid across the whole city.
-        let (x_lo, x_hi) = (-(VY1 as f64), -(VY0 as f64));
+        let (x_lo, x_hi) = (VY0 as f64, VY1 as f64);
         let (z_lo, z_hi) = (-(VX1 as f64), -(VX0 as f64));
         let mut resolved = 0;
         for i in 0..48 {

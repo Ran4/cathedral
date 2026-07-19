@@ -596,10 +596,12 @@ fn mouse_look(
     }
 
     let (mut controller, mut player_transform) = player.into_inner();
-    // Mouse right turns the view right. (Previously negated, which inverted the
-    // horizontal look: moving the mouse right turned you left, so the minimap
-    // heading appeared to rotate the wrong way.)
-    controller.yaw += mouse_motion.delta.x * MOUSE_SENSITIVITY;
+    // Mouse right turns the view right. Increasing yaw turns *left* (the
+    // controller's own right vector is `from_rotation_y(yaw) * X`, and yaw +90°
+    // swings forward from -Z onto -X, i.e. away from that right vector), so the
+    // horizontal look must be negated here. Do not "fix" this sign to make the
+    // minimap marker agree — see `map::marker_rotation`.
+    controller.yaw -= mouse_motion.delta.x * MOUSE_SENSITIVITY;
     controller.pitch = (controller.pitch - mouse_motion.delta.y * MOUSE_SENSITIVITY)
         .clamp(-PITCH_LIMIT, PITCH_LIMIT);
 

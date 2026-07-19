@@ -13,16 +13,19 @@ both the in-game minimap and the M-toggled fullscreen map (`src/map.rs`).
 
 World <-> image transform (MUST stay in sync with `src/map.rs`):
 
-    The SVG projects world (x, z) -> SVG user units by  screen(x, z) = (-z, -x)
-    (see `generate_top_down_map.py::screen`), east-right / north-up. The image is
-    the building bounding box [VX0, VX1] x [VY0, VY1] (SVG user units), so for a
-    normalized point (u, v) in [0, 1]^2 over the image:
+    The SVG projects world (x, z) -> SVG user units by  screen(x, z) = (-z, x)
+    (see `generate_top_down_map.py::screen`), east-right and orientation-
+    preserving. The image is the building bounding box [VX0, VX1] x [VY0, VY1]
+    (SVG user units), so for a normalized point (u, v) in [0, 1]^2 over the image:
 
-        u = (-z - VX0) / (VX1 - VX0)     v = (-x - VY0) / (VY1 - VY0)
-        z = -(VX0 + u * (VX1 - VX0))     x = -(VY0 + v * (VY1 - VY0))
+        u = (-z - VX0) / (VX1 - VX0)     v = (x - VY0) / (VY1 - VY0)
+        z = -(VX0 + u * (VX1 - VX0))     x = VY0 + v * (VY1 - VY0)
 
-    North (+x world) is up; east (-z world) is right. The crop is computed here
-    from the footprints and PRINTED — copy VX0/VX1/VY0/VY1 into `src/map.rs`.
+    East (-z world) is right and north (+x world) points DOWN. That is not an
+    oversight: the world's compass is left-handed (north=+x, east=-z), so a plan
+    cannot be north-up, east-right and unmirrored at once — see
+    `generate_top_down_map.py::screen`. The crop is computed here from the
+    footprints and PRINTED — copy VX0/VX1/VY0/VY1 into `src/map.rs`.
 
 Run once and commit the PNG:  ./scripts/render_map_texture.py
 """

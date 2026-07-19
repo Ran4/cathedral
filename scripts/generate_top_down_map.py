@@ -912,9 +912,26 @@ def validate_plan() -> None:
 
 
 def screen(point: Point) -> Point:
-    """Map world (x,z) to SVG (east-right, north-up)."""
+    """Map world (x,z) to SVG user units, north-up and *not* mirrored.
+
+    The world's declared compass (`assets/world/areas.json`: north=+x, east=-z,
+    up=+y) is left-handed -- East x North = -y, where a true compass gives +y.
+    So a plan cannot be north-up, east-right and non-mirrored all at once; the
+    old `(-z, -x)` bought east-right by reflecting the city, which made the map
+    a mirror of the world (walk right, marker swings left).
+
+    `(-z, x)` has Jacobian determinant +1, so the plan is a true overhead view.
+    It keeps east-right and the city's familiar left-right layout (Wickmarket to
+    the left, the Lanthorn's nave opening pointing left) -- it is the old
+    mirrored plan flipped *vertically*, and a vertical flip preserves every
+    left-right relationship while removing the reflection.
+
+    The consequence is that north (+x) points *down*. The other un-mirroring,
+    `(z, -x)`, keeps north up but reverses left and right; that was tried and
+    rejected because it moved every landmark across the plan.
+    """
     x, z = point
-    return (-z, -x)
+    return (-z, x)
 
 
 def svg_points(poly: Sequence[Point]) -> str:

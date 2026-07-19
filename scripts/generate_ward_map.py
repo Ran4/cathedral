@@ -91,7 +91,8 @@ ANCHOR_END = "</svg>"
 # World (x, z) positions of the cadastral map's own text labels — its bold
 # direct-labels and faint ward labels (mirrored from generate_top_down_map.py).
 # Bold ward names are placed to keep clear of these so the two label sets do not
-# overprint. Distances are 1:1 with screen distance (screen = (-z, -x)).
+# overprint. Distances are 1:1 with screen distance (screen = (z, -x), which is
+# a rotation, so world distances carry over unchanged).
 MAP_LABELS: list[tuple[float, float]] = [
     (0, -12), (0, 132), (-25, 355), (255, 155), (-305, 90), (-305, -365),
     (45, -255), (360, 335), (-395, 315), (155, -485), (-305, -610), (-225, -390),
