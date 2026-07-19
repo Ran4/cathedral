@@ -122,13 +122,27 @@ archive (`logs/latest_session/prompts/`) showing the baker's turn *reading price
 The three-NPC hallucinated-market failure mode of session 224 is structurally impossible for bound
 vendors.
 
-## M5 — The supply chain *(deferred; the sketch is [04](04_the_bread_round.md) §6)*
+## M5 — The supply chain *(scoped: [07_the_supply_chain.md](07_the_supply_chain.md))*
 
-Bakehouse mornings → flour as an item → millers at the Wool Gate → grain carts from the near
-countryside through Seven Lofts — each step replacing one conjuring with one purchase, until the
-Kindling restock and the Watch ledger are both dead code. Not scoped here; scoped *for* by
-everything above. When it starts, `features/the_near_countryside__aka_add_market_stalls.md` merges
-into this folder.
+Country carriers through the gates → grain as an item → millers milling flour at the Wool Gate →
+bakers baking at a bakehouse on the grain road — each step replacing one conjuring with one
+purchase, until the Kindling restock and the Watch ledger are both dead code. The sketch was
+[04](04_the_bread_round.md) §6; **[07](07_the_supply_chain.md) is the scoped version**, split into
+four shippable sub-milestones:
+
+| | ships | the cheat it kills |
+|---|---|---|
+| **M5a** | `Presence` (off-map actors); the carrier round; the fixed carrier roster at the Wool and Stone gates; `grain` | — (millers can buy) |
+| **M5b** | `flour`; the `Transform` verb; the Wool Gate mill | — (bakers can buy) |
+| **M5c** | the bakehouse; bakers bake what they sell | **`restock`**, for bread |
+| **M5d** | takings leaving through the gate; institutional payroll | **`close_books`** |
+
+Two design commitments from that document are binding on anything downstream: **the cast is fixed
+and hand-authored — no procedural travellers** ([07](07_the_supply_chain.md) §1), and **the gate is
+the edge of the world** — nav stops at the gate nodes and this feature does not extend it
+([07](07_the_supply_chain.md) §2).
+
+When it starts, `features/the_near_countryside__aka_add_market_stalls.md` merges into this folder.
 
 ---
 
