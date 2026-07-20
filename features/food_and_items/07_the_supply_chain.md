@@ -575,10 +575,20 @@ enum PurchasePurpose {
     Stock { plan_id: String },
 }
 
+enum StockSource {
+    Counter { counter_id: String },
+    CounterGroup { group_id: String },
+}
+
+struct CounterGroupSpec {
+    id: String,
+    counters: Vec<String>,         // stable counter ids, deterministic preference order
+}
+
 struct StockPlan {
     id: String,
     buyer: ActorId,
-    source_trade: String,
+    source: StockSource,
     targets: Vec<StockTarget>,
     max_spend_sparks: u32,
 }
@@ -588,6 +598,19 @@ struct StockTarget {
     desired_quantity: u32,
 }
 ```
+
+Every selling counter has a stable id. A direct `Counter` source permits purchases only from that
+counter. A `CounterGroup` is an explicitly ordered set of interchangeable counters; it permits the
+plan to use the first currently bound member in declaration order. The initial
+`arriving_grain_carts` group contains the Brede and Lantern Road grain pitches, which never bind on
+the same weekday but still have a deterministic order. Seed validation rejects a missing or
+duplicate counter id, an empty group, a counter repeated within a group, and a group referenced by
+no stock plan.
+
+The counter, not the stock plan, references the seller-side trade and its listings. A plan never
+searches every holder of a matching item and never selects a counter merely because its trade lists
+the target kind. Thus Betriss may buy grain from `arriving_grain_carts`, while Bertran can buy the
+same kind only from `betriss_grain_seven_lofts`.
 
 - `Meal` chooses one affordable edible unit. The meal ladder consumes it only after a successful
   purchase.
@@ -609,17 +632,20 @@ struct StockTarget {
   and emit `item_transfer` with the agreed terms, so haggling and gifts remain possible without
   masquerading as catalog-price sales.
 
-A `MarketErrand` is a resumable ladder intent: choose the configured source, walk there, wait for it
-to open, buy, then clear or retry. A mobile-source errand is created only after that counter actually
-binds: the leader is present, on the matching leg, inside the site radius, and in an allowed office.
+A `MarketErrand` is a resumable ladder intent: resolve the configured `StockSource` to one concrete
+counter id, walk there, wait for it to open, buy, then clear or retry. A direct counter keeps its
+identity throughout the errand. A counter-group errand records the selected member; if that mobile
+counter unbinds before purchase, the errand clears the selection and resolves the group again in its
+declared order. A mobile-source errand is created only after a permitted counter actually binds: the
+leader is present, on the matching leg, inside the site radius, and in an allowed office.
 Merely reaching a scheduled office does not spend an attempt, so an early Dayspring check cannot
 make Betriss ignore a cart that reaches Seven Lofts later that same office.
 
-There is at most one failed attempt per source, office, and unchanged **attempt fingerprint**. It is
-the pair of:
+There is at most one failed attempt per concrete counter id, office, and unchanged **attempt
+fingerprint**. It is the pair of:
 
-- a source fingerprint containing counter binding/open state and the matching uncommitted item ids
-  and quantities; and
+- a source fingerprint containing the stable counter id, binding/open state, and the matching
+  uncommitted item ids and quantities; and
 - a buyer fingerprint containing the buyer's matching held target quantities and uncommitted spark
   quantity.
 
@@ -642,29 +668,31 @@ Starting target caps and whole-visit budgets:
 
 | buyer | source | target, in declaration order | max spend per visit |
 |---|---|---|---:|
-| Betriss | an arriving cart at Seven Lofts | 10 grain | 30 |
-| Bertran | Betriss's Seven Lofts counter | 3 grain | 9 |
-| Averil | Bertran's Wool Gate counter | 4 flour | 20 |
-| Ewart *(M5d)* | Brede cart at The Draper's Reach | 4 raw wool | 32 |
-| Brede merchant *(M5d)* | Ewart's cloth counter | 1 broadcloth | 40 |
-| Lantern Road merchant *(M5d)* | Ewart's cloth counter | 1 kersey | 14 |
+| Betriss | group `arriving_grain_carts` | 10 grain | 30 |
+| Bertran | counter `betriss_grain_seven_lofts` | 3 grain | 9 |
+| Averil | counter `bertran_flour_wool_gate` | 4 flour | 20 |
+| Ewart *(M5d)* | counter `brede_wool_drapers_reach` | 4 raw wool | 32 |
+| Brede merchant *(M5d)* | counter `ewart_cloth_drapers_reach` | 1 broadcloth | 40 |
+| Lantern Road merchant *(M5d)* | counter `ewart_cloth_drapers_reach` | 1 kersey | 14 |
 
 Targets are initial tuning values. They must live in data and use exact metadata-map matching;
 food-chain targets use empty metadata.
-`stock_plans`, listing/counter specs, budgets, offices, and site radii belong in the embedded
-`assets/world/food.json`; actor, trade, and place references are validated when the round seeds.
+`stock_plans`, counter groups, listing/counter specs, budgets, offices, and site radii belong in the
+embedded `assets/world/food.json`; actor, trade, counter, group, and place references are validated
+when the round seeds.
 
 ### 7.3 Named counters and binding
 
-| counter or worksite | purpose | preferred actor | exact offices | required active leg |
-|---|---|---:|---|---|
-| arriving road cart, Seven Lofts | sells the leader's incoming grain | road-party leader | `dayspring`, `high_wick` on its weekdays | `trade` at Seven Lofts |
-| Brede road cart, The Draper's Reach *(M5d)* | sells raw wool | Brede leader | `waning` on Brede weekdays | `trade` at The Draper's Reach |
-| Betriss's grain counter, Seven Lofts | sells persistent stored grain | `p008s` | `dayspring`, `high_wick` | `trade` at Seven Lofts |
-| Bertran's mill counter, The Wool Gate | sells flour he actually milled | `e7mil` | `waning` | `work` at The Wool Gate |
-| Ansel Quern's common oven | baking worksite, not a shop | producer `davqn`; `danqn` is lore/presentation only | `watch`, `kindling` | `work` at the common oven |
-| The Wickmarket bread stall | sells Averil's loaves | `davqn` | `dayspring`, `high_wick`, `waning` | `trade` at The Wickmarket |
-| Ewart's counter, The Draper's Reach *(M5d)* | cloth sale | `e1skl` | `waning` | `work` at The Draper's Reach |
+| stable id | counter or worksite | purpose | preferred actor | exact offices | required active leg |
+|---|---|---|---:|---|---|
+| `brede_grain_seven_lofts` | Brede road cart, Seven Lofts | sells the leader's incoming grain; member of `arriving_grain_carts` | Brede leader | `dayspring`, `high_wick` on Brede weekdays | `trade` at Seven Lofts |
+| `lantern_grain_seven_lofts` | Lantern Road cart, Seven Lofts | sells the leader's incoming grain; member of `arriving_grain_carts` | Lantern Road leader | `dayspring`, `high_wick` on Lantern Road weekdays | `trade` at Seven Lofts |
+| `brede_wool_drapers_reach` | Brede road cart, The Draper's Reach *(M5d)* | sells raw wool | Brede leader | `waning` on Brede weekdays | `trade` at The Draper's Reach |
+| `betriss_grain_seven_lofts` | Betriss's grain counter, Seven Lofts | sells persistent stored grain | `p008s` | `dayspring`, `high_wick` | `trade` at Seven Lofts |
+| `bertran_flour_wool_gate` | Bertran's mill counter, The Wool Gate | sells flour he actually milled | `e7mil` | `waning` | `work` at The Wool Gate |
+| `quern_common_oven` | Ansel Quern's common oven | baking worksite, not a shop | producer `davqn`; `danqn` is lore/presentation only | `watch`, `kindling` | `work` at the common oven |
+| `averil_bread_wickmarket` | The Wickmarket bread stall | sells Averil's loaves | `davqn` | `dayspring`, `high_wick`, `waning` | `trade` at The Wickmarket |
+| `ewart_cloth_drapers_reach` | Ewart's counter, The Draper's Reach *(M5d)* | cloth sale | `e1skl` | `waning` | `work` at The Draper's Reach |
 
 Counter binding requires the preferred actor to be present, the weekday and exact office to be
 allowed, the actor to be within the configured site radius, and the actor's **current** leg to match
