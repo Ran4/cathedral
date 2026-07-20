@@ -205,7 +205,7 @@ not a failed trip. Wallet credit destinations are precomputed by the same rules 
 credit is not allowed to discover or mint an id during commit. Only after the whole plan validates
 may the transaction apply the three steps and advance the trip number. A failed preflight emits
 `boundary_exchange_failed` and leaves cargo, every member wallet, trip number, party phase,
-presence, presence epochs, and cart state unchanged.
+presence, presence epochs, and therefore the derived cart view unchanged.
 
 The boundary spec lists the commercial cargo matchers; M5 uses grain, raw wool, and cloth. These
 are business goods, so any matching quantity carried out by the leader **or a carter** is delivered
@@ -264,13 +264,17 @@ struct RoadCart {
   sim state.
 - It has no collision and is not independently targetable.
 - `load` is a sorted set, so a mixed load can show sacks, bales, and bolts at once. It is derived
-  from the leader's held grain, wool, and cloth; cargo transferred to a carter is no longer shown on
-  the cart but is still consumed at the boundary, and an empty list shows an empty cart.
+  during snapshot construction from all configured commercial cargo held by **any party member**.
+  Each matching presentation kind appears once regardless of quantity or owner. Moving cargo between
+  the leader and a carter therefore does not change the visible load; transferring it out of the
+  party or consuming it at the boundary does. An empty list shows an empty cart.
 - It appears and disappears in the same world transition as the party.
 
 Incoming cargo is created in the merchant leader's normal `holds`; ordinary transfers may later put
-it in a carter's holds. The cart is a view of the leader's stock, not a second container. This does
-require a small Bevy host change to spawn, update, and despawn the cart presentation.
+it in a carter's holds. The cart is a derived view of the party's inventories, not a second
+container and not cached authoritative state. Snapshot construction joins the party topology and
+phase in `Round` to the members' current holds in `World`; neither aggregate stores a separate cart
+load. This does require a small Bevy host change to spawn, update, and despawn the cart presentation.
 
 ---
 
@@ -286,8 +290,10 @@ pub enum Presence {
 ```
 
 All existing characters default to `InCity`. The five road-party members seed as
-`BeyondTheWalls` and retain wallets, holds, relationships, and memories while absent. Presence is
-stored in `World`, not inferred from the current round or hidden only while making a snapshot.
+`BeyondTheWalls` and retain wallets, holds, relationships, durable memories, goals, and existing
+`recent_history` while absent. Their unread inbox is city-transient and does not survive departure.
+Presence is stored in `World`, not inferred from the current round or hidden only while making a
+snapshot.
 
 Each character also owns a monotonic `presence_epoch: u64`, seeded to zero. A successful party
 entry or departure increments every affected member's epoch with checked arithmetic in the
@@ -328,8 +334,10 @@ enum PartyPhase {
 `PartyState` is the only storage for phase and trip number and lives in `Round`; the phase does not
 duplicate the number. `trip_number` means the most recently successfully staged trip, seeds at
 zero, and advances by checked addition exactly when `boundary_exchange` commits the next
-`StagedOutsideGate` state. Physical `Presence`, member epochs, transient city state, and the public
-`RoadCart` records live in `World`.
+`StagedOutsideGate` state. Physical `Presence`, member epochs, and transient city state live in
+`World`. The public `RoadCart` is derived during snapshot construction from `PartyState`, party
+topology, and the members' current inventories; there is no authoritative cart record or cached load
+in either aggregate.
 
 Every party transition—`boundary_exchange`, `enter_party`, `begin_return`,
 `mark_departure_pending`, and `leave_party`—uses the same preflight/infallible-commit transaction
@@ -340,8 +348,9 @@ Each committed transition increments the public `world_revision` change counter 
 `world_revision` means the existing monotonic snapshot revision, not a serialized schema version.
 
 All members of one party always share presence. `BeyondTheWalls` and `StagedOutsideGate` require
-every member to be absent and no cart; the other three phases require every member to be present and
-exactly one cart. Seed/config validation rejects duplicate membership or a leader outside `members`.
+every member to be absent, so the public snapshot derives no cart; the other three phases require
+every member to be present, so it derives exactly one cart. Seed/config validation rejects duplicate
+membership or a leader outside `members`.
 
 The lifecycle is binding:
 
@@ -349,10 +358,11 @@ The lifecycle is binding:
    `StagedOutsideGate`. It remains absent and invisible, and its needs remain frozen like those of
    every absent actor.
 2. At Dayspring, the gate opens and the controller's `enter_party` transaction places every member
-   at the gate, sets `Presence::InCity`, advances each member's presence epoch, creates the cart,
-   and changes the phase to `InCity` atomically. Because off-map breakfast and water are not
-   item-simulated, this traced entry also sets the members to `HUNGER_MAX` and `THIRST_MAX`. The
-   party then walks its route; office changes never teleport it between sites.
+   at the gate, sets `Presence::InCity`, advances each member's presence epoch, and changes the phase
+   to `InCity` atomically. The next snapshot consequently contains the one derived cart. Because
+   off-map breakfast and water are not item-simulated, this traced entry also sets the members to
+   `HUNGER_MAX` and `THIRST_MAX`. The party then walks its route; office changes never teleport it
+   between sites.
 3. At Lamplight, `begin_return` changes the phase to `Returning` and gives the party controller
    exclusive ownership of every member's movement. In the same transition it clears ordinary-round
    destinations, existing movement targets, food/water and market queue membership, meal and stock
@@ -368,15 +378,21 @@ The lifecycle is binding:
    an in-flight action is an accepted gameplay mutation already executing across the engine/world
    seam, such as a dispatched handoff; an outstanding provider cognition request is not an action
    and does not pin the party in the city. On the first safe engine tick, the controller's
-   `leave_party` transaction advances each member's presence epoch and removes all members and the
-   cart atomically, even if the clock has passed Snuffing.
+   `leave_party` transaction advances each member's presence epoch, sets every member to
+   `BeyondTheWalls`, and removes their remaining transient city state atomically. The members and
+   derived cart disappear from the next public snapshot, even if the clock has passed Snuffing.
 
 `Returning` and `DeparturePending` are top-priority party modes, not ordinary ladder intents.
 Departure cleanup removes any remaining transient city state. The engine clears scheduler priority,
-novelty, queued cognition, and conversation bookkeeping in the same transition. A cognition
-completion whose actor is absent **or whose stamped epoch is stale** is archived for diagnostics
-and otherwise discarded: it cannot write memory, enqueue an action, restore scheduler state, or
-affect a newly re-entered incarnation of that actor.
+novelty, queued cognition, conversation bookkeeping, and every departing member's unread inbox in
+the same transition. If a provider request already drained inbox percepts into its in-flight request
+record, departure discards that percept buffer: the engine retains only enough request identity and
+epoch information to classify a later completion. The percepts are neither requeued nor graduated
+into `recent_history`. Existing `memories`, goals, relationships, and `recent_history` remain
+untouched. A cognition completion whose actor is absent **or whose stamped epoch is stale** is
+archived for diagnostics and otherwise discarded: it cannot write memory, requeue its drained
+inbox, enqueue an action, restore scheduler state, or affect a newly re-entered incarnation of that
+actor.
 
 If a party has not departed by its next scheduled Kindling, trace `road_trip_missed`; do not run a
 second boundary exchange, advance the trip number, or stage another arrival. Its next eligible
@@ -597,6 +613,51 @@ struct StockTarget {
     matcher: ItemMatcher,          // exact kind + entire metadata map
     desired_quantity: u32,
 }
+
+struct CounterBindingKey {
+    counter_id: String,
+    seller: ActorId,
+    session: CounterSession,
+}
+
+enum CounterSession {
+    Daily { absolute_day: i64 },
+    RoadTrip { party_id: PartyId, trip_number: u64 },
+}
+
+enum MarketErrandPhase {
+    Approaching,
+    WaitingForOpen,
+    AtCounter,
+}
+
+enum MarketVisitEnd {
+    TargetsSatisfied,
+    BudgetExhausted,
+    SourceIneligible,
+    LastOfficePassed,
+    NoRoute,
+    TravelExpired,
+    ReplacedByGoTo,
+    Returning,
+    UnpricedStock,
+}
+
+struct MarketErrand {
+    plan_id: String,
+    selected: Option<CounterBindingKey>,
+    bindings_seen: Vec<CounterBindingKey>, // deduplicated, in first-selection order
+    phase: MarketErrandPhase,
+    spent_sparks: u32,
+    last_failed_fingerprint: Option<AttemptFingerprint>,
+    travel_deadline_real: Option<f64>,
+}
+
+struct ClosedMarketVisit {
+    plan_id: String,
+    bindings_seen: Vec<CounterBindingKey>,
+    end_reason: MarketVisitEnd,
+}
 ```
 
 Every selling counter has a stable id. A direct `Counter` source permits purchases only from that
@@ -641,23 +702,52 @@ leader is present, on the matching leg, inside the site radius, and in an allowe
 Merely reaching a scheduled office does not spend an attempt, so an early Dayspring check cannot
 make Betriss ignore a cart that reaches Seven Lofts later that same office.
 
+A counter binding has a stable session key. An ordinary fixed counter uses its absolute binding day;
+a road counter uses party and trip number. A market visit begins when an errand selects such a
+binding. The errand records every binding selected during that visit; `selected`, when present, must
+occur in that bounded, deduplicated list. There is at most one active market errand per buyer, and its
+`spent_sparks` is cumulative for the whole visit:
+
+- `remaining_budget = plan.max_spend_sparks - errand.spent_sparks`, with checked arithmetic;
+- a purchase preflight may plan at most that remainder, and only a committed `sale` increments
+  `spent_sparks` by its exact receipt total;
+- walking, waiting, conversation, a pressing need, curfew, and a changed attempt fingerprint never
+  reset the amount already spent; and
+- changing from one selected member of a `CounterGroup` to another during the same still-active
+  errand also preserves the amount already spent.
+
+The visit ends with a traced reason when all targets are satisfied, its budget is exhausted, the
+configured source can no longer produce an eligible binding for that visit, its last allowed office
+passes, pathfinding returns `no_route`, the route-derived travel deadline expires, an explicit
+`go_to` replaces the errand, `Returning` takes ownership of the actor, or an unchanged unpriced-stock
+content error makes success impossible for the session. A road session remains viable while that
+trip can still bind on its required leg and office, so a leader who temporarily steps outside the
+counter radius clears `selected` but does not reset or end the visit; rebinding resumes it with the
+same spent budget. When a visit ends, `Round` retains one `ClosedMarketVisit` per stock plan; its
+binding list is bounded by that source's counter count. A candidate whose full binding key occurs in
+that record cannot recreate the errand with a fresh budget. A new daily binding or a new road trip
+has a new key, starts a new visit at zero spent, and replaces the older closed record. Conversation
+and other temporary higher-priority rungs pause the existing errand while its configured source
+remains viable; they do not manufacture a new visit.
+
 There is at most one failed attempt per concrete counter id, office, and unchanged **attempt
 fingerprint**. It is the pair of:
 
-- a source fingerprint containing the stable counter id, binding/open state, and the matching
+- a source fingerprint containing the full `CounterBindingKey`, binding/open state, and the matching
   uncommitted item ids and quantities; and
 - a buyer fingerprint containing the buyer's matching held target quantities and uncommitted spark
-  quantity.
+  quantity, plus the visit's spent and remaining budget.
 
-`source_absent`, `closed`, `no_matching_stock`, `unpriced_stock`, and `insufficient_funds` are
-distinct traced results. `source_absent` means a previously bound source vanished between selection
-and the atomic purchase; a later binding change wakes the plan in the same office. Likewise,
-`no_matching_stock` may retry after a transfer or transform changes the source fingerprint, and
-`insufficient_funds` may retry after a sale, transfer, or other credit changes the buyer fingerprint.
-This lets a buyer already waiting at an open counter react to newly available stock or newly
-available money without polling every tick. An unchanged `unpriced_stock` failure records the next
-eligible office/day because embedded catalog data cannot repair itself during a run. An absent road
-cart does not make a buyer stand at Seven Lofts for days.
+`source_absent`, `closed`, `no_route`, `travel_expired`, `no_matching_stock`, `unpriced_stock`,
+`insufficient_funds`, and `budget_exhausted` are distinct traced results. `source_absent` means a
+previously bound source vanished between selection and the atomic purchase; a later binding change
+wakes the plan in the same office. Likewise, `no_matching_stock` may retry after a transfer or
+transform changes the source fingerprint, and `insufficient_funds` may retry after a sale, transfer,
+or other credit changes the buyer fingerprint. This lets a buyer already waiting at an open counter
+react to newly available stock or newly available money without attempting a purchase every tick.
+An unchanged `unpriced_stock` failure closes the visit until the next counter session because
+embedded catalog data cannot repair itself during a run. An absent road cart does not make a buyer
+stand at Seven Lofts for days.
 
 For an ordinary in-city actor, player-directed actions, conversations, explicit `go_to`, pressing
 needs, and curfew retain precedence. Stock errands run before the ordinary round and non-pressing
@@ -1144,10 +1234,12 @@ Acceptance:
 - an early check before the leader reaches the Seven Lofts counter spends no attempt; binding the
   cart later in the same office wakes Betriss and permits the grain purchase;
 - after departure, none of their actors, still-owned items, offers, targets, percepts, queue entries,
-  or cart leaks into the public world;
+  or derived cart leaks into the public world; each departing member's unread inbox is empty, while
+  their pre-existing memories, goals, relationships, and `recent_history` are unchanged;
 - a conversation delayed past Snuffing delays departure but not forever; an outstanding provider
   cognition request does not delay the first otherwise-safe tick, and its completion is rejected
-  both while the actor is absent and after the same party re-enters with a newer presence epoch;
+  both while the actor is absent and after the same party re-enters with a newer presence epoch; its
+  drained inbox percepts are neither requeued nor shown after re-entry;
 - a returning member with pressing hunger, a water/meal/market queue, a curfew destination, and a
   pending offer still walks to the gate; the competing intents are cleared, the offer expires there,
   and none can deadlock departure;
@@ -1157,13 +1249,14 @@ Acceptance:
   member's exact difference traced as `road_cash_in` or `road_cash_out`; repeated interior earnings
   cannot make any party wallet grow across successful trips;
 - commercial cargo transferred from the leader to a carter is consumed at the next boundary, while
-  unrelated personal cargo held by either actor survives;
+  unrelated personal cargo held by either actor survives; the transfer leaves the cart's derived
+  presentation load unchanged because the same party still holds the cargo;
 - after the leader transfers their whole purse to an actor with no spark stack, the next
   `road_cash_in` probes past the still-owned old wallet id, creates one new purse for the leader,
   and preserves spark conservation and single ownership;
 - a forced first-candidate manifest-id collision probes to the same stable free id on replay, while
   a forced preflight failure emits `boundary_exchange_failed` and changes no cargo, member wallet,
-  trip, phase, presence, epoch, or cart state;
+  trip, phase, presence, epoch, or derived cart view;
 - Seven Lofts stock changes by real purchases and remains unchanged through Watch;
 - whole and partial negotiated transfers of legacy-restocked stock survive the next restock sweep;
   a returned unmarked stack preserves its real quantity while newly merged restock quantity is
@@ -1262,8 +1355,10 @@ Extend `--trace-food` rather than adding a parallel tracer. Events:
   `road_cash_in` / `road_cash_out` with member id and exact amount; and
   `boundary_exchange_failed` with the preflight reason and unchanged party/trip identity;
 - `road_stage`, `road_in`, `road_return`, `road_offer_expired`, `road_out`, and `road_trip_missed`
-  with phase, all member ids and presence epochs, gate, trip number, and cart state;
-- `stock_errand` with plan/source/result, the source-and-buyer attempt fingerprint, and next retry;
+  with phase, all member ids and presence epochs, gate, trip number, and derived cart view;
+- `stock_errand` with plan, configured source, selected counter binding, bindings seen in the visit,
+  phase, spent and remaining visit budget, result, the source-and-buyer attempt fingerprint,
+  visit-end reason, and next retry;
   `sale` with purpose, buyer, seller, every source/destination receipt line, exact metadata,
   quantities, unit prices, and totals;
 - `item_transfer` for offers, gifts, and negotiated steps, including transferred item/spark
@@ -1272,7 +1367,8 @@ Extend `--trace-food` rather than adding a parallel tracer. Events:
   reserved or consumed item ids and quantities, future-output commitments, output destination ids,
   producer, production day, completion day, and work minutes; rejected inbound inventory operations
   include `output_capacity_reserved` where applicable;
-- `cart_load` when the presentation category changes;
+- `cart_load` when the party-wide inventory scan changes the derived presentation category set, with
+  the before/after sorted sets but no stored cart inventory;
 - `household_settlement` with Watch day, donor transfers, recipients' before/after spendable
   balances, and minted shortfall; plus `household_settlement_missed` with the sampled Watch day and
   last completed day.
@@ -1283,7 +1379,9 @@ Extend `--trace-food` rather than adding a parallel tracer. Events:
 - held, uncommitted, commercially listed, transform-reserved, and offered quantities for Betriss,
   Bertran, Averil, and Ewart;
 - every road party's phase, trip number, every member wallet/float, present/absent state, presence
-  epochs, and cart load;
+  epochs, and derived cart load;
+- every active market errand's plan, selected counter binding, bindings seen in the visit, phase,
+  spent/remaining budget, last failed fingerprint, and next retry;
 - active jobs with future outputs and transforms completed by logical job key and completion day;
 - resident, visitor, and all-road-party spark totals; boundary cash in/out; redistribution; payroll
   minted; residents' total/spendable balances; last Watch/completed settlement days; and unrelieved
@@ -1311,15 +1409,19 @@ explicit transitional loaf restock and non-chain wallet refill named in Sections
 - autonomous hunger cannot consume an item protected by the vendor's derived commercial-listing
   view;
 - absent actors and their owned state never appear in snapshots, percepts, targets, schedules, or
-  present-world totals; cognition can mutate an actor only when its stamped presence epoch is still
-  current, so departure/re-entry cannot revive an old request;
+  present-world totals; departure leaves their memories and existing history intact but clears unread
+  and in-flight-drained inbox material, and cognition can mutate an actor only when its stamped
+  presence epoch is still current, so departure/re-entry cannot revive an old request;
 - `Returning` exclusively owns party movement, standing offers cannot block departure, party
   state has one phase/trip-number source, every phase transition is atomic, trip numbers advance by
-  checked addition only at staging, and cart load agrees with the leader's held cargo;
+  checked addition only at staging, and the derived cart load agrees with all configured commercial
+  cargo held by all party members;
 - each Watch sample is paired with exactly one successfully committed household settlement or an
   explicit missed-settlement diagnostic, and the 4-spark floor is measured in uncommitted,
   spendable sparks; and
-- no production controller or market intent grows without its configured bound, and no successful
+- each buyer has at most one active market errand, its spent budget never decreases or exceeds its
+  plan cap, and no binding recorded by the last closed visit can reopen as a fresh visit; no
+  production controller or market intent grows without its configured bound, and no successful
   road-trip cycle carries any member's prior-trip cash balance past boundary settlement; every road
   member, including each carter, returns to a configured float there.
 
@@ -1342,19 +1444,23 @@ Add focused fixtures/tests for:
 - Bertran selling non-edible flour from transformed holds;
 - Averil selling transformed loaves;
 - an absent actor whose item, pending offer, target, percept, and queued cognition are all filtered
-  or rejected, plus a cognition request dispatched before departure whose completion remains stale
-  after the actor re-enters;
+  or rejected; departure discards both an unread inbox line and the percept buffer drained by an
+  in-flight request while preserving existing memories and `recent_history`, and that request's
+  completion remains stale after the actor re-enters;
 - fresh-Kindling and fresh-Dayspring bootstrap, coarse Kindling→Dayspring ordering, delayed
   departure, missed-trip suppression, one authoritative party-state record, checked trip-number
   overflow, and exactly one revision for each atomic stage/entry/return/pending/departure transition;
 - deterministic boundary manifest-id and zero-wallet spark-id collision probing; cargo transferred
-  to a carter and later unloaded; validation that the wallet-float map exactly covers party members;
-  and complete rollback of cargo, all member wallets, trip, phase, presence, epoch, and cart state on
-  a forced preflight failure;
+  to a carter remains visible in the same derived cart load and is later unloaded; validation that
+  the wallet-float map exactly covers party members; and complete rollback of cargo, all member
+  wallets, trip, phase, presence, epoch, and derived cart view on a forced preflight failure;
 - return-mode preemption of pressing needs, curfew, movement, every queue/errand, and gate expiry of
   a pending offer;
-- deterministic target order, visit budgets, receipt ids, rollback on validation failure, and
-  distinct stock-errand retry reasons, including a mobile counter that binds after an early check
+- deterministic target order, receipt ids, rollback on validation failure, and distinct stock-errand
+  retry/end reasons; a visit budget persists across multiple purchases, failed fingerprints,
+  conversation and need pauses, and a same-visit counter-group reselection, cannot be reset by
+  clearing and recreating the errand against the same binding, and resets only for a new daily
+  binding or road trip; the fixtures also include a mobile counter that binds after an early check
   and an insufficient-funds road leader who retries during the same office after Ewart's wool
   payment changes the buyer fingerprint;
 - a reserved input that remains owned, blocks a whole transfer, permits only the uncommitted partial
@@ -1398,6 +1504,11 @@ visible cart root with the expected sack/bale/bolt mesh children, updates its tr
 asserts despawn with the party. Both must complete as ordinary test runs; a multiweek authored-world
 CLI transcript is optional diagnosis, never pass/fail authority.
 
+The pure-sim snapshot fixture derives that `RoadCart` from party state and inventories: moving the
+only wool or cloth stack from leader to carter leaves the load unchanged, moving it to a non-party
+actor removes that category, and no cart/load record exists to update separately. The host suite
+then treats the resulting snapshot as presentation input only.
+
 M5a additionally has a required visual drive check because an ECS assertion cannot prove that the
 cart is legible in the rendered city. With a clean committed-default config (and the fake backend if
 offline), run:
@@ -1438,14 +1549,16 @@ M5a should not be described as a round-only data edit.
 | every baker or miller transforms stock, or one producer floods stock | each plan names one producer and has output targets plus daily job caps |
 | Ansel's schedule accidentally blocks the night bake | only Averil's producer/site/office eligibility is mechanical; Ansel is lore/presentation |
 | a cart arrives after an early failed purchase check or leaves Seven Lofts too soon | mobile errands wake on binding changes; carts remain through High Wick and move to The Draper's Reach at Waning |
+| a retry or temporary interruption silently resets a stock buyer's visit budget | `spent_sparks` lives on the resumable errand, every retry preserves it, and one bounded `ClosedMarketVisit` prevents recreation against any binding seen in that visit |
 | a road trader is diverted from its return or trapped by an offer | `Returning` owns movement above needs/curfew/queues, and unresolved offers expire at the gate |
 | an absent actor leaks through an owned item or offer | central presence predicate plus actor/item/offer/target tests |
-| a pre-departure cognition result arrives after the same actor re-enters | requests carry a monotonic presence epoch; absent or epoch-mismatched completions are diagnostic-only |
+| unread or in-flight-drained city percepts resurface on a later trip | departure discards both inbox forms without touching existing memories or `recent_history`; stale completions cannot requeue them |
+| a pre-departure cognition result arrives after the same actor re-enters | requests carry a monotonic presence epoch; absent or epoch-mismatched completions are diagnostic-only and cannot restore inbox state |
 | party phase and trip number drift or a non-boundary transition half-applies | one `PartyState` source plus uniform preflight/infallible commit and one-revision tests for every transition |
-| commercial cargo transferred to a carter escapes boundary delivery | boundary preflight scans every member in deterministic order and records each cargo owner |
+| commercial cargo transferred to a carter escapes boundary delivery or disappears from the cart | boundary preflight and snapshot derivation both scan every member in deterministic order; the receipt records each cargo owner |
 | cloth exists only as a return-load prop | raw wool is a boundary manifest; Ewart buys it and performs a declared transform |
 | a cloth return assumes impossible same-office production | Ewart's persistent buffer serves later carts; a cart with no matching bolt simply leaves without one |
-| carts are promised but invisible | host projection assertions cover visible mesh children and a required drive-mode session captures the loaded cart entering and following |
+| carts are promised but invisible, or a cached cart load drifts from inventory | the load is derived from all party inventories, host projection assertions cover visible mesh children, and a required drive-mode session captures the loaded cart entering and following |
 | residents or chain firms go broke while their money is offer-committed | working reserves and the 4-spark floor use spendable sparks; commitments stay untouched and only the exact residual shortfall is minted |
 | settlement is skipped while every wallet is positive, so the zero streak sees nothing | the generic Watch dispatcher compares sampled and completed days outside the handler and emits `household_settlement_missed` |
 | a zero-wallet credit reuses a purse id that was transferred away | every credit preflights a recipient-owned stack or deterministic collision-free id; boundary and settlement fixtures transfer the old purse whole |
@@ -1457,7 +1570,7 @@ M5a should not be described as a round-only data edit.
 | implementation accidentally removes haggling | only `sale` is posted-price constrained; negotiated transfer and gift regressions remain green |
 | a bad road silently changes posted prices | no multiplier exists; only schedule, manifests, and availability may change, while individual bargaining remains allowed |
 | acceptance depends on arbitrary LLM wording | authored facts are asset/prompt assertions; natural conversation is a manual smoke test |
-| persistence scope expands M5 | jobs, receipts, party state, and presence epochs are authoritative in-memory state; versioned disk persistence is explicitly future work |
+| persistence scope expands M5 | jobs, receipts, party state, presence epochs, and bounded market-visit state are authoritative in-memory state; versioned disk persistence is explicitly future work |
 | a fresh default run misses the visible arrival | M5a commits day 2/Dayspring; a host test loads the real committed config without a local override, and the drive check starts from that default |
 | a recurring transform collides with an existing five-character item id | call `mint_item_id` in the split path's deterministic probe loop and record chosen completion destinations for idempotent replay |
 | a boundary id collision or late validation failure half-applies a trip | preflight every member cargo removal, wallet destination/delta, manifest destination, and checked trip advance, then commit atomically |
