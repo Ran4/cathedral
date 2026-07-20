@@ -180,51 +180,55 @@ rounds of every resident merchant or cargo worker.
 
 ## 4. The road boundary and the visible cart
 
-### 4.1 Deterministic manifests and trip float
+### 4.1 Deterministic manifests and wallet floats
 
 At a scheduled Kindling, while a party is still `BeyondTheWalls`, its `boundary_exchange` runs in
 this logical order:
 
-1. consume all configured commercial cargo still held by the leader from the previous trip;
-2. settle the leader's wallet to the party's configured `trip_float_sparks`;
+1. consume all configured commercial cargo still held by **any party member** from the previous trip;
+2. settle every member's wallet to that actor's configured `wallet_float_sparks` value;
 3. create the next trip's fixed incoming manifest in the leader's holds.
 
 Those three steps are one atomic party-controller transaction over `Round` and `World`. Before
-mutating either aggregate, build a `PartyTransitionPlan` containing the cargo removals, wallet
-delta, every new item destination, and next trip number, and validate every matcher, quantity,
-owner, and arithmetic result. The commit half contains no fallible lookup, allocation decision, or
-arithmetic: it applies the planned `World` writes and the `Round` trip/phase writes back-to-back
+mutating either aggregate, build a `PartyTransitionPlan` containing each cargo removal and its
+owner, every member wallet delta and credit destination, every new item destination, and the next
+trip number, and validate every matcher, quantity, owner, and arithmetic result. The commit half
+contains no fallible lookup, allocation decision, or arithmetic: it applies the planned `World`
+writes and the `Round` trip/phase writes back-to-back
 during one engine poll, with no snapshot or trace emitted between them. The controller batches the
 `World` mutations under exactly one `world_revision` increment.
 
 Resolve each non-merging manifest item id in manifest-slot order from
-`party_id + trip_number + manifest_slot`, using the existing `mint_item_id` deterministic
+`party_id + next_trip_number + manifest_slot`, using the existing `mint_item_id` deterministic
 probe-until-free loop. A collision with an authored or otherwise existing item id is a normal probe,
 not a failed trip. Wallet credit destinations are precomputed by the same rules below; a cash
 credit is not allowed to discover or mint an id during commit. Only after the whole plan validates
 may the transaction apply the three steps and advance the trip number. A failed preflight emits
-`boundary_exchange_failed` and leaves cargo, wallet, trip number, party phase, presence, and cart
-state unchanged.
+`boundary_exchange_failed` and leaves cargo, every member wallet, trip number, party phase,
+presence, presence epochs, and cart state unchanged.
 
 The boundary spec lists the commercial cargo matchers; M5 uses grain, raw wool, and cloth. These
-are business goods, so any matching quantity carried out is delivered to the off-map principal
-regardless of whether it came from the manifest, an ordinary sale, or a negotiated exchange. The
-boundary never consumes unrelated personal items.
+are business goods, so any matching quantity carried out by the leader **or a carter** is delivered
+to the off-map principal regardless of whether it came from the manifest, an ordinary sale, or a
+negotiated exchange. The preflight scans members in configured member order and their items in
+item-id order. The boundary never consumes unrelated personal items.
 
-Wallet settlement represents the principal taking receipts and advancing purchasing money. A
-surplus is removed and traced as `road_cash_out`; a deficit is created and traced as
-`road_cash_in`. The starting trip float is **25 sparks per leader**. This is neither the old nightly
-wallet reset nor an attempt to model off-map accounts: it occurs only at a successful trip
-boundary, is symmetric, and is included in the coin-conservation equation.
+Wallet settlement represents the principal taking receipts and advancing purchasing and personal
+money. A surplus is removed and traced as `road_cash_out`; a deficit is created and traced as
+`road_cash_in`, in both cases with the member id. The starting floats are **25 sparks per leader**
+and **4 sparks per carter**. This is neither the old nightly wallet reset nor an attempt to model
+off-map accounts: it occurs only at a successful trip boundary, is symmetric, and is included in
+the coin-conservation equation. Seed/config validation requires `wallet_float_sparks` to contain
+exactly one nonnegative, `u32`-representable entry for every configured member and no other actor.
 
 The boundary is the declared recurring item and road-cash source/sink. Trip numbers advance only
 when a new trip is successfully staged. Every committed consume, cash adjustment, and load is
 traced after the atomic apply.
 
-The party's manifest, commercial-cargo matchers, and trip float live with its topology/schedule in
-the `road_parties` row in `assets/world/rounds.json`; they reuse the exact `StockSpec`/`ItemMatcher`
-shape validated by the food document. M5d extends those same rows rather than adding a second road
-manifest registry.
+The party's manifest, commercial-cargo matchers, and wallet-float map live with its
+topology/schedule in the `road_parties` row in `assets/world/rounds.json`; they reuse the exact
+`StockSpec`/`ItemMatcher` shape validated by the food document. M5d extends those same rows rather
+than adding a second road manifest registry.
 
 Starting manifests:
 
@@ -260,12 +264,13 @@ struct RoadCart {
   sim state.
 - It has no collision and is not independently targetable.
 - `load` is a sorted set, so a mixed load can show sacks, bales, and bolts at once. It is derived
-  from the leader's held grain, wool, and cloth; an empty list shows an empty cart.
+  from the leader's held grain, wool, and cloth; cargo transferred to a carter is no longer shown on
+  the cart but is still consumed at the boundary, and an empty list shows an empty cart.
 - It appears and disappears in the same world transition as the party.
 
-Cargo remains in the merchant leader's normal `holds`. The cart is a view of that stock, not a
-second container. This does require a small Bevy host change to spawn, update, and despawn the cart
-presentation.
+Incoming cargo is created in the merchant leader's normal `holds`; ordinary transfers may later put
+it in a carter's holds. The cart is a view of the leader's stock, not a second container. This does
+require a small Bevy host change to spawn, update, and despawn the cart presentation.
 
 ---
 
@@ -284,6 +289,13 @@ All existing characters default to `InCity`. The five road-party members seed as
 `BeyondTheWalls` and retain wallets, holds, relationships, and memories while absent. Presence is
 stored in `World`, not inferred from the current round or hidden only while making a snapshot.
 
+Each character also owns a monotonic `presence_epoch: u64`, seeded to zero. A successful party
+entry or departure increments every affected member's epoch with checked arithmetic in the
+transition preflight. Every cognition request is stamped with `(actor_id, presence_epoch)` when it
+is dispatched. A completion may mutate state only while the actor is present and the stamped epoch
+equals the actor's current epoch; the epoch check prevents a pre-departure request from becoming
+valid again after a later re-entry.
+
 Add a central `World::is_present(actor_id)` predicate and use it at every world-facing seam:
 
 - public actors, owned items, pending offers, and item references in `WorldSnapshot`;
@@ -296,24 +308,36 @@ Add a central `World::is_present(actor_id)` predicate and use it at every world-
 An absent actor cannot be found indirectly through an item or offer they own. Filtering only
 `WorldSnapshot.actors` is insufficient.
 
-The party controller owns an explicit phase per party:
+The party controller owns one explicit state record per party:
 
 ```rust
+struct PartyState {
+    phase: PartyPhase,
+    trip_number: u64,
+}
+
 enum PartyPhase {
     BeyondTheWalls,
-    StagedOutsideGate { trip_number: u64 },
+    StagedOutsideGate,
     InCity,
     Returning,
     DeparturePending,
 }
 ```
 
-The phase and trip number live in `Round`; physical `Presence` and the public `RoadCart` records
-live in `World`. `PartyController::enter_party` and `PartyController::leave_party` use the same
-preflight/infallible-commit transaction shape as `boundary_exchange`: they validate both aggregates,
-then apply the `World` and `Round` writes with no observable intermediate state. Each transition
-increments the public `world_revision` change counter once. Here `world_revision` means the existing
-monotonic snapshot revision, not a serialized schema version.
+`PartyState` is the only storage for phase and trip number and lives in `Round`; the phase does not
+duplicate the number. `trip_number` means the most recently successfully staged trip, seeds at
+zero, and advances by checked addition exactly when `boundary_exchange` commits the next
+`StagedOutsideGate` state. Physical `Presence`, member epochs, transient city state, and the public
+`RoadCart` records live in `World`.
+
+Every party transition—`boundary_exchange`, `enter_party`, `begin_return`,
+`mark_departure_pending`, and `leave_party`—uses the same preflight/infallible-commit transaction
+shape. It validates all `Round`, `World`, and engine-supplied prerequisites and arithmetic before
+applying any write, then applies the writes with no observable intermediate state. A failure leaves
+both aggregates and transient engine state unchanged and emits the transition's failure reason.
+Each committed transition increments the public `world_revision` change counter exactly once. Here
+`world_revision` means the existing monotonic snapshot revision, not a serialized schema version.
 
 All members of one party always share presence. `BeyondTheWalls` and `StagedOutsideGate` require
 every member to be absent and no cart; the other three phases require every member to be present and
@@ -325,10 +349,10 @@ The lifecycle is binding:
    `StagedOutsideGate`. It remains absent and invisible, and its needs remain frozen like those of
    every absent actor.
 2. At Dayspring, the gate opens and the controller's `enter_party` transaction places every member
-   at the gate, sets `Presence::InCity`, creates the cart, and changes the phase to `InCity`
-   atomically. Because off-map breakfast and water are not item-simulated, this traced entry also
-   sets the members to `HUNGER_MAX` and `THIRST_MAX`. The party then walks its route; office changes
-   never teleport it between sites.
+   at the gate, sets `Presence::InCity`, advances each member's presence epoch, creates the cart,
+   and changes the phase to `InCity` atomically. Because off-map breakfast and water are not
+   item-simulated, this traced entry also sets the members to `HUNGER_MAX` and `THIRST_MAX`. The
+   party then walks its route; office changes never teleport it between sites.
 3. At Lamplight, `begin_return` changes the phase to `Returning` and gives the party controller
    exclusive ownership of every member's movement. In the same transition it clears ordinary-round
    destinations, existing movement targets, food/water and market queue membership, meal and stock
@@ -340,14 +364,19 @@ The lifecycle is binding:
    traced as `road_offer_expired`; a standing offer is never part of the safe-departure predicate.
    Offers may still be made and accepted during a nearby conversation before the gate, but anything
    left unresolved expires there. Once every member is at the gate, no member is in conversation,
-   and no member has an in-flight action, the phase becomes `DeparturePending`. On the first safe
-   engine tick, the controller's `leave_party` transaction removes all members and the cart
-   atomically, even if the clock has passed Snuffing.
+   and no member has an in-flight action, the phase becomes `DeparturePending`. For this predicate,
+   an in-flight action is an accepted gameplay mutation already executing across the engine/world
+   seam, such as a dispatched handoff; an outstanding provider cognition request is not an action
+   and does not pin the party in the city. On the first safe engine tick, the controller's
+   `leave_party` transaction advances each member's presence epoch and removes all members and the
+   cart atomically, even if the clock has passed Snuffing.
 
 `Returning` and `DeparturePending` are top-priority party modes, not ordinary ladder intents.
 Departure cleanup removes any remaining transient city state. The engine clears scheduler priority,
 novelty, queued cognition, and conversation bookkeeping in the same transition. A cognition
-completion for an actor who is no longer present is discarded rather than applied.
+completion whose actor is absent **or whose stamped epoch is stale** is archived for diagnostics
+and otherwise discarded: it cannot write memory, enqueue an action, restore scheduler state, or
+affect a newly re-entered incarnation of that actor.
 
 If a party has not departed by its next scheduled Kindling, trace `road_trip_missed`; do not run a
 second boundary exchange, advance the trip number, or stage another arrival. Its next eligible
@@ -360,7 +389,7 @@ guess at engine state.
 
 This changes public-world semantics but does not imply a disk-schema version. Tests assert that the
 existing monotonic `world_revision` advances exactly once per atomic party transition and cover
-actor, owned-item, offer, target, and stale-cognition leakage.
+actor, owned-item, offer, target, and stale-cognition leakage across departure and re-entry.
 
 ---
 
@@ -383,7 +412,11 @@ the same ordinary leg shape used by rounds, but from party membership:
   "stage_at": "kindling",
   "enter_at": "dayspring",
   "return_at": "lamplight",
-  "trip_float_sparks": 25,
+  "wallet_float_sparks": {
+    "<merchant>": 25,
+    "<carter 1>": 4,
+    "<carter 2>": 4
+  },
   "commercial_cargo": [
     {"kind": "grain", "metadata": {}}
   ],
@@ -428,10 +461,11 @@ party entering. Tests construct their day and office explicitly and never inheri
 
 Followers share the leader's destination without becoming vendors or stock owners.
 
-M5 does **not** add disk save/load; the current game has no such system. Party phase, trip number,
-jobs, and reservations are ordinary authoritative sim state and survive engine polls, clock pauses,
-and cloning `World` and `Round` together in tests. If persistence is added later, its versioned save
-format must include them, but that is not an M5 acceptance requirement.
+M5 does **not** add disk save/load; the current game has no such system. Party state, presence
+epochs, jobs, reservations, and completion receipts are ordinary authoritative sim state and
+survive engine polls, clock pauses, and cloning `World` and `Round` together in tests. If
+persistence is added later, its versioned save format must include them, but that is not an M5
+acceptance requirement.
 
 ---
 
@@ -683,6 +717,7 @@ struct TransformJob {
     production_day: i64,
     start_slot: u32,
     inputs: Vec<ReservedInput>,    // item id + exact reserved quantity
+    outputs: Vec<StockSpec>,       // exact future kind/metadata/quantity commitments
     progress_work_minutes: f64,
 }
 
@@ -719,12 +754,29 @@ commitments, while retaining every other commitment. Apply the replacement atomi
 offer is invalid, the old offer and its commitments remain unchanged. This permits re-offering an
 entire already-offered stack without treating the old and replacement offers as simultaneous.
 
-Job start atomically reserves exact quantities from matching uncommitted items in item-id order.
-Every inventory operation—mechanical sale, negotiated offer, gift, eating, and another
-transform—must go through the central inventory helper. A new operation may use only uncommitted
-quantity. Accepting or retracting an offer is allowed to consume or release that offer's own
-commitment; completing a transform consumes that job's own reservations. Re-offer replacement is
-the sole owner-side provisional-release exception described above.
+Job start atomically reserves exact quantities from matching uncommitted items in item-id order and
+records the recipe's exact future outputs on the job. Every inventory operation—mechanical sale,
+negotiated offer, gift, eating, and another transform—must go through the central inventory helper.
+A new operation may use only uncommitted quantity. Accepting or retracting an offer is allowed to
+consume or release that offer's own commitment; completing a transform consumes that job's own
+reservations. Re-offer replacement is the sole owner-side provisional-release exception described
+above.
+
+Future output is also a capacity commitment. For every exact `(owner, kind, metadata)` stacking
+key, `future output quantity` is the checked sum of all matching outputs recorded by that owner's
+active jobs, and the helper maintains:
+
+```text
+held quantity + future output quantity <= u32::MAX
+```
+
+Starting a job preflights the batch against that equation. While the job is active, any gift, sale,
+offer acceptance, split transfer, boundary load, or other operation that would add matching stock to
+the producer must include the future output and fail atomically with `output_capacity_reserved` if
+the equation would overflow. Removing matching held stock remains legal. The commitment survives
+pauses and is released only when completion merges or creates the output. Consequently, output
+quantity arithmetic cannot fail after inputs have been consumed, even if matching stock arrived
+while the job was paused.
 
 No other owner action silently displaces a promise. In particular, `eat` consumes an uncommitted
 unit and leaves a still-valid partial offer unchanged; if no uncommitted unit exists it fails with
@@ -746,10 +798,15 @@ receipt names the pre-existing destination id instead.
 
 `job_id` is the full logical `(producer, transform, production_day, start_slot)` key, not a
 five-character item id. Completion resolves all output destinations, consumes inputs, inserts or
-merges outputs, and records the receipt atomically in a bounded completed-job record before removing
-the active job. A repeated completion request for that key returns the recorded receipt and creates
-nothing. Completed records retain the current and previous production day—enough for crossed-clock
-replay—and are then pruned deterministically.
+merges outputs, and records the receipt plus `completed_on_day` atomically in a bounded completed-job
+record before removing the active job. A repeated completion request for that key while its receipt
+is retained returns the recorded receipt and creates nothing. Records are retained for the current
+and previous **completion** day, based on the current absolute day, and are pruned deterministically
+at crossed day boundaries and before completion lookup; the job's possibly much older
+`production_day` never controls retention. A request after pruning finds neither an active job nor
+a receipt, returns `no_active_transform_job`, and performs no inventory mutation. Thus an
+indefinitely paused job still receives a full replay window when it eventually finishes, while old
+logical keys can never recreate output.
 
 Only the actor named by `ProductionPlan.producer` may run its transforms, and a producer may have at
 most one active job. A job starts only when all of these are true:
@@ -758,6 +815,7 @@ most one active job. A job starts only when all of these are true:
   conflicting movement/market/meal intent, and on the required `work` leg;
 - the current office is in `allowed_offices`;
 - all inputs are uncommitted;
+- the exact future output passes the capacity-commitment preflight;
 - the actor has not spent `max_jobs_per_day` start slots; and
 - held output plus active-job output plus one recipe batch is no greater than
   `desired_output_quantity`.
@@ -888,17 +946,19 @@ Starting working capital, seeded once:
 | Betriss | 30 |
 | Bertran | 24 |
 | Averil | 24 |
-| each road-party leader | 25 trip float |
-| each carter | ordinary personal seed |
+| each road-party leader | 25 wallet float |
+| each carter | 4 wallet float |
 | Ewart *(M5d)* | 48 |
 
 These are minimum initial values and explicit data, not nightly targets. For the named resident
-chain actors, the same numbers are their initial working reserves during household settlement;
-ordinary residents use their day-zero seeded wallet as their reserve unless authored otherwise.
+chain actors, the same numbers are their initial **spendable** working reserves during household
+settlement; ordinary residents use their day-zero seeded spendable wallet as their reserve unless
+authored otherwise. Here and throughout settlement, `spendable_sparks(actor)` means the quantity of
+sparks the actor holds minus every spark quantity committed to a pending offer.
 
-Road leaders have the boundary trip-float settlement from M5a onward. Their wallets may rise or
-fall inside the walls, including through haggling, but return to 25 only at the next successful
-off-map boundary exchange.
+All road-party members have boundary wallet-float settlement from M5a onward. Their wallets may rise
+or fall inside the walls, including through haggling, but return to 25 for a leader and 4 for a
+carter only at the next successful off-map boundary exchange.
 
 ### 10.2 Deterministic spark-credit destinations
 
@@ -906,8 +966,8 @@ Every code-driven spark credit is preflighted through the central inventory help
 sale credit, `road_cash_in`, redistribution, and institutional payroll. If the recipient already
 holds a spark stack, the plan names that id and validates the addition against overflow. If the
 recipient holds no spark stack, the plan resolves a fresh id from the recipient plus the caller's
-stable logical operation key—sale receipt, party/trip, or settlement day/recipient—and uses the
-normal deterministic probe-until-free loop.
+stable logical operation key—sale receipt, party/trip/member, or settlement day/recipient—and uses
+the normal deterministic probe-until-free loop.
 
 An old `w_<actor>` id is not privileged once it has left that actor's hands. If it still exists in
 the player's or another character's holds after a whole-purse transfer, it is an ordinary collision
@@ -939,25 +999,40 @@ and road-party membership forces `RoadParty` at seed validation. Do not re-infer
 occupation on every tick. Visitors keep their actual wallets but neither donate to nor receive
 from household settlement. This preserves M4's one-spark Ilse fixture.
 
-M5d deletes `close_books` and replaces it with `settle_households` at Watch:
+M5d deletes `close_books` and replaces it with `settle_households` at Watch. The generic
+crossed-office dispatcher—not `settle_households` itself—owns the once-per-absolute-day Watch sample
+and the `Round` fields `last_household_watch_day` and `last_household_settlement_day`. At each Watch
+it first checks that the previous sampled Watch, if any, has a matching completed-settlement day. A
+mismatch emits `household_settlement_missed`; the dispatcher still attempts today's settlement so
+one missed day
+does not permanently disable relief. It then stores today's Watch day and samples every resident's
+**spendable** balance: zero increments `unrelieved_zero_streak`, while a positive balance resets it.
+Because this sampling and prior-day check live outside the handler, a handler that is skipped or
+returns early is detectable even when every wallet is nonzero.
 
-1. Immediately before settlement, update each resident's `unrelieved_zero_streak`: a zero wallet
-   increments it and a positive wallet resets it. The streak means consecutive Watch samples at
-   zero **without a successful intervening settlement**, not merely repeated daily spending.
-2. Resident actors below a **4-spark household floor** become recipients. Four exceeds M5's most
-   expensive one-unit mechanical meal (the 3-spark smoked eel), so a recipient can fund at least one
-   ordinary meal and still remain above zero.
-3. Resident actors above their effective working reserve contribute only their surplus. The
-   effective reserve is at least the 4-spark household floor, so a recipient cannot also be a
-   donor.
-4. Donors and recipients are processed in actor-id order. Transfers move only the amount recipients
-   need and conserve sparks. A donor contributes only uncommitted sparks, so settlement never
-   invalidates a pending negotiated offer.
-5. If the surplus pool is insufficient, an explicit institutional wages/alms payment creates only
-   the shortfall and logs the exact minted amount.
-6. After transfers and payroll, every resident whose wallet is now positive has their
-   `unrelieved_zero_streak` reset to zero. A resident left at zero retains the increment, so a broken
-   or skipped aid reaches two on the next Watch and fails acceptance.
+After that sample, the dispatcher calls `settle_households`:
+
+1. Resident actors with fewer than **4 spendable sparks** become recipients for exactly
+   `4 - spendable_sparks(actor)`. Four exceeds M5's most expensive one-unit mechanical meal (the
+   3-spark smoked eel), so the newly available balance can fund at least one ordinary meal and still
+   remain above zero; already-committed offer money does not masquerade as meal money.
+2. A resident's effective working reserve is the greater of their configured reserve and the
+   4-spark household floor. A donor may contribute at most
+   `spendable_sparks(actor) - effective_reserve`, so pending offers remain committed and a recipient
+   cannot simultaneously be a donor.
+3. Donors and recipients are processed in actor-id order. Transfers move only what recipients need
+   and conserve sparks.
+4. If the surplus pool is insufficient, an explicit institutional wages/alms payment creates only
+   the residual shortfall and logs the exact minted amount.
+5. The complete transfer/payroll plan is preflighted, including every credit id and arithmetic
+   result, then committed atomically. `settle_households` returns a day-stamped
+   `HouseholdSettlementReceipt` only after that commit, including for a valid empty plan. Only after
+   receiving that receipt does the dispatcher set `last_household_settlement_day` to today's
+   absolute day; a skipped call, early return without a receipt, or error cannot mark completion.
+6. After a successful commit, every relieved resident has at least 4 spendable sparks and their
+   `unrelieved_zero_streak` resets to zero. On a skipped or failed settlement the Watch sample and
+   missing completion marker remain, so a resident still at zero reaches two on the next Watch and
+   the missed-settlement diagnostic fires independently of that streak.
 7. Visitors and road-party members are excluded from both redistribution and institutional payroll.
 8. No stock is reset or deleted by settlement.
 
@@ -979,9 +1054,13 @@ cannot make money disappear from the accounting view.
 Acceptance uses compact deterministic fixtures, not a multiweek full-world or accelerated-clock
 run:
 
-- a settlement fixture proves that every eligible resident below 4 sparks finishes at 4, donors
-  retain their working reserves and pending-offer commitments, visitors and road parties are
-  excluded, stock is untouched, and a successful relief resets the zero-wallet streak;
+- a settlement fixture proves that every eligible resident below 4 spendable sparks finishes with
+  4 spendable sparks, donors retain their spendable working reserves and pending-offer commitments,
+  visitors and road parties are excluded, stock is untouched, and a successful relief resets the
+  zero-wallet streak;
+- a dispatcher fixture skips and separately fails one Watch settlement with all wallets positive,
+  then proves the next Watch emits `household_settlement_missed`; a successful handler records its
+  day only after commit and produces no false positive;
 - the fixture calculates the donor pool and residual shortfall independently, then asserts that
   institutional payroll mints exactly that shortfall and no more. Payroll has no arbitrary
   percentage ceiling;
@@ -989,7 +1068,7 @@ run:
   boundary cash directions and checks the global spark equation after every operation; and
 - a compact backpressure fixture repeatedly drives market, production, and boundary controllers
   without authored-world pathfinding, asserting target-plus-active-batch limits, one job per
-  producer, one errand per buyer, and exact trip-float settlement.
+  producer, one errand per buyer, and exact per-member wallet-float settlement.
 
 The 14-day and 56-day full-world runs are not acceptance gates. A developer may still run a long
 trace when tuning manifests or routes, but normal verification must not take hours or depend on a
@@ -1010,7 +1089,7 @@ Ships:
 
 - central `Presence` semantics and all filters/cleanup in Section 5;
 - two explicit road parties and five authored character sheets;
-- deterministic boundary manifests and trip-float accounting;
+- deterministic boundary manifests and per-member wallet-float accounting;
 - the `RoadCart` snapshot and Bevy presentation;
 - `grain` and its posted-price catalog rows;
 - the Seven Lofts historical seed, Betriss's counter, and her targeted lore update;
@@ -1031,27 +1110,32 @@ Acceptance:
   atomically;
 - on Second, exactly the two-person Stone Gate party does the same;
 - on Bellday, Lowmarket, and Seventh no party arrives;
-- a fresh committed-default run starts on day 2 at Dayspring and shows the Brede party entering;
-  separate exact-Kindling and exact-Dayspring fixtures stage/enter once, never twice;
+- a host integration test loads the committed `default_config.ron` through the production config
+  loader (with no local `config.ron` override), asserts day 2/Dayspring, and shows the Brede party
+  entering; separate exact-Kindling and exact-Dayspring sim fixtures stage/enter once, never twice;
 - an early check before the leader reaches the Seven Lofts counter spends no attempt; binding the
   cart later in the same office wakes Betriss and permits the grain purchase;
 - after departure, none of their actors, still-owned items, offers, targets, percepts, queue entries,
   or cart leaks into the public world;
-- a conversation delayed past Snuffing delays departure but not forever; the party leaves on the
-  first safe tick, and a stale cognition completion cannot bring an actor or action back;
+- a conversation delayed past Snuffing delays departure but not forever; an outstanding provider
+  cognition request does not delay the first otherwise-safe tick, and its completion is rejected
+  both while the actor is absent and after the same party re-enters with a newer presence epoch;
 - a returning member with pressing hunger, a water/meal/market queue, a curfew destination, and a
   pending offer still walks to the gate; the competing intents are cleared, the offer expires there,
   and none can deadlock departure;
 - a party still present at its next scheduled Kindling logs one missed trip and receives neither a
   second manifest nor another trip number;
-- each successful boundary exchange sets the leader to 25 sparks, with the exact difference traced
-  as `road_cash_in` or `road_cash_out`;
+- each successful boundary exchange sets the leader to 25 sparks and every carter to 4, with every
+  member's exact difference traced as `road_cash_in` or `road_cash_out`; repeated interior earnings
+  cannot make any party wallet grow across successful trips;
+- commercial cargo transferred from the leader to a carter is consumed at the next boundary, while
+  unrelated personal cargo held by either actor survives;
 - after the leader transfers their whole purse to an actor with no spark stack, the next
   `road_cash_in` probes past the still-owned old wallet id, creates one new purse for the leader,
   and preserves spark conservation and single ownership;
 - a forced first-candidate manifest-id collision probes to the same stable free id on replay, while
-  a forced preflight failure emits `boundary_exchange_failed` and changes no cargo, wallet, trip,
-  phase, presence, or cart state;
+  a forced preflight failure emits `boundary_exchange_failed` and changes no cargo, member wallet,
+  trip, phase, presence, epoch, or cart state;
 - Seven Lofts stock changes by real purchases and remains unchanged through Watch;
 - whole and partial negotiated transfers of legacy-restocked stock survive the next restock sweep;
   a returned unmarked stack preserves its real quantity while newly merged restock quantity is
@@ -1079,8 +1163,13 @@ created once, every mechanical sale price comes from the catalog, and no other m
 anything. A reserved input stays owned, cannot be transferred whole, can expose only its
 uncommitted remainder, pauses away from the mill, and completes once across a clock jump. A forced
 collision on the first output-id candidate probes to a stable free id, and replaying completion
-returns the same receipt without consuming or producing twice. An asset assertion proves Bertran's
-authored context places his working mill face at the Wool Gate and its grain source at Seven Lofts.
+returns the same receipt without consuming or producing twice. A capacity regression starts a job
+whose future output exactly fills the producer's matching `u32` stack, rejects an intervening inbound
+gift with `output_capacity_reserved`, and then completes without losing inputs or overflowing the
+stack. A retention regression pauses a job across several production days, completes it, receives
+the same receipt on replay during the completion-day window, and receives a mutation-free
+`no_active_transform_job` after deterministic pruning. An asset assertion proves Bertran's authored
+context places his working mill face at the Wool Gate and its grain source at Seven Lofts.
 
 ### M5c — The Quern night bake replaces bread restock
 
@@ -1123,12 +1212,14 @@ Ships:
 Acceptance proves raw wool enters on a Brede manifest and, over later eligible work offices or days,
 replenishes existing cloth stock in Ewart's holds. On an eligible visit, the deterministic ladder
 may buy a previously produced bolt at its posted catalog price; that bolt leaves on the visible cart
-and is consumed only at the next off-map boundary exchange. There is no requirement that one cart or
-one Waning office deliver wool, wait for its transform, and carry that output away. The focused
+and is consumed only at the next off-map boundary exchange, even if it is transferred from the
+leader to a carter before departure. There is no requirement that one cart or one Waning office
+deliver wool, wait for its transform, and carry that output away. The focused
 criteria in Section 10.3 pass. A separate regression negotiates a non-catalog exchange successfully
 and proves that it emits transfers but no `sale`. The cart remains a bound Seven Lofts source
 throughout High Wick, then binds only at The Draper's Reach during Waning; it buys buffered matching
 stock if available and otherwise departs without cloth.
+
 The funds-order regression deliberately lets the Brede leader fail a 40-spark broadcloth purchase
 before Ewart buys wool; Ewart's payment changes the buyer fingerprint, wakes the stock plan during
 that same Waning, and the now-funded retry succeeds without depending on actor-id iteration order.
@@ -1139,30 +1230,36 @@ that same Waning, and the now-funded retry succeeds without depending on actor-i
 
 Extend `--trace-food` rather than adding a parallel tracer. Events:
 
-- `boundary_load` / `boundary_unload` with party, trip, item ids, kinds, and quantities, plus
-  `road_cash_in` / `road_cash_out` with exact amounts and `boundary_exchange_failed` with the
-  preflight reason and unchanged party/trip identity;
+- `boundary_load` / `boundary_unload` with party, trip, cargo owner, item ids, kinds, and quantities;
+  `road_cash_in` / `road_cash_out` with member id and exact amount; and
+  `boundary_exchange_failed` with the preflight reason and unchanged party/trip identity;
 - `road_stage`, `road_in`, `road_return`, `road_offer_expired`, `road_out`, and `road_trip_missed`
-  with phase, all member ids, gate, trip number, and cart state;
+  with phase, all member ids and presence epochs, gate, trip number, and cart state;
 - `stock_errand` with plan/source/result, the source-and-buyer attempt fingerprint, and next retry;
-  `sale` with purpose, buyer, seller, every source/destination receipt line, exact metadata, quantities, unit
-  prices, and totals;
+  `sale` with purpose, buyer, seller, every source/destination receipt line, exact metadata,
+  quantities, unit prices, and totals;
 - `item_transfer` for offers, gifts, and negotiated steps, including transferred item/spark
   quantities but no assertion that they equal a catalog price;
 - `transform_start` / `transform_pause` / `transform_finish` with spec,
-  reserved or consumed item ids and quantities, output destination ids, producer, and work minutes;
+  reserved or consumed item ids and quantities, future-output commitments, output destination ids,
+  producer, production day, completion day, and work minutes; rejected inbound inventory operations
+  include `output_capacity_reserved` where applicable;
 - `cart_load` when the presentation category changes;
-- `household_settlement` with donor transfers, recipients, and minted shortfall.
+- `household_settlement` with Watch day, donor transfers, recipients' before/after spendable
+  balances, and minted shortfall; plus `household_settlement_missed` with the sampled Watch day and
+  last completed day.
 
 `food_summary()` gains:
 
 - Seven Lofts grain quantity;
 - held, uncommitted, commercially listed, transform-reserved, and offered quantities for Betriss,
   Bertran, Averil, and Ewart;
-- every road party's phase, trip number, leader wallet, present/absent state, and cart load;
-- active jobs and transforms completed by production-day key;
+- every road party's phase, trip number, every member wallet/float, present/absent state, presence
+  epochs, and cart load;
+- active jobs with future outputs and transforms completed by logical job key and completion day;
 - resident, visitor, and all-road-party spark totals; boundary cash in/out; redistribution; payroll
-  minted; and unrelieved zero-wallet streaks.
+  minted; residents' total/spendable balances; last Watch/completed settlement days; and unrelieved
+  zero-wallet streaks.
 
 Standing invariants for the completed M5 chain follow. Earlier sub-milestones permit only the
 explicit transitional loaf restock and non-chain wallet refill named in Sections 7.1 and 10.1:
@@ -1171,7 +1268,8 @@ explicit transitional loaf restock and non-chain wallet refill named in Sections
   exchange, consumption, or a declared transform; purchases and negotiated transfers conserve
   their global quantities;
 - every item has exactly one owner, no same-stuff stackable duplicates share a holder, and total
-  transform-plus-offer commitments for an item never exceed its quantity;
+  transform-plus-offer commitments for an item never exceed its quantity; held quantity plus active
+  future output for every owner/stacking key never exceeds `u32::MAX`;
 - sparks change only through an atomic conserving transfer, logged institutional payroll, or
   logged boundary cash adjustment, and the equation in Section 10.3 always balances;
 - every code-driven spark credit resolves to a stack currently held by its recipient or to a
@@ -1179,27 +1277,35 @@ explicit transitional loaf restock and non-chain wallet refill named in Sections
 - every `sale` uses the exact catalog unit price; `item_transfer` is explicitly exempt because
   bargaining, credit, gifts, and cheats are allowed;
 - a transform cannot consume the same quantity twice, complete away from its site, run under the
-  wrong actor, exceed the producer's daily cap, or consume/transfer reserved quantity elsewhere;
+  wrong actor, exceed the producer's daily cap, consume/transfer reserved quantity elsewhere, lose
+  its output capacity while paused, or use production day as completion-receipt retention time;
 - a stall cannot sell an item its current vendor does not hold as uncommitted quantity;
 - autonomous hunger cannot consume an item protected by the vendor's derived commercial-listing
   view;
 - absent actors and their owned state never appear in snapshots, percepts, targets, schedules, or
-  present-world totals;
+  present-world totals; cognition can mutate an actor only when its stamped presence epoch is still
+  current, so departure/re-entry cannot revive an old request;
 - `Returning` exclusively owns party movement, standing offers cannot block departure, party
-  transition is atomic, trip numbers advance only at staging, and cart load agrees with the
-  leader's held cargo; and
-- no production target, market intent, or road wallet grows without a configured bound.
+  state has one phase/trip-number source, every phase transition is atomic, trip numbers advance by
+  checked addition only at staging, and cart load agrees with the leader's held cargo;
+- each Watch sample is paired with exactly one successfully committed household settlement or an
+  explicit missed-settlement diagnostic, and the 4-spark floor is measured in uncommitted,
+  spendable sparks; and
+- no production controller or market intent grows without its configured bound, and no successful
+  road-trip cycle carries any member's prior-trip cash balance past boundary settlement; every road
+  member, including each carter, returns to a configured float there.
 
 ---
 
 ## 13. Fixtures and compatibility
 
-With no presence field, actors deserialize as `InCity`. Fixture worlds with `nav: None` enroll no
-rounds or road parties. The M5a/M5b presence, market, and transform additions should therefore leave
-existing prompt fixtures byte-stable; verify them rather than regenerate them blindly. M5c is the
-deliberate exception: collapsing old loaf variants into the single metadata-free loaf requires a
-targeted migration and reviewed regeneration of fixture manifests and expected snapshots that
-actually contain those variants. Unrelated fixtures remain unchanged.
+With no presence field, actors deserialize as `InCity`; with no presence epoch, they deserialize at
+epoch zero. Fixture worlds with `nav: None` enroll no rounds or road parties. The M5a/M5b presence,
+market, and transform additions should therefore leave existing prompt fixtures byte-stable; verify
+them rather than regenerate them blindly. M5c is the deliberate exception: collapsing old loaf
+variants into the single metadata-free loaf requires a targeted migration and reviewed regeneration
+of fixture manifests and expected snapshots that actually contain those variants. Unrelated
+fixtures remain unchanged.
 
 Add focused fixtures/tests for:
 
@@ -1207,12 +1313,16 @@ Add focused fixtures/tests for:
 - Betriss at Seven Lofts with persistent grain;
 - Bertran selling non-edible flour from transformed holds;
 - Averil selling transformed loaves;
-- an absent actor whose item, pending offer, target, percept, and queued/stale cognition are all
-  filtered or rejected;
+- an absent actor whose item, pending offer, target, percept, and queued cognition are all filtered
+  or rejected, plus a cognition request dispatched before departure whose completion remains stale
+  after the actor re-enters;
 - fresh-Kindling and fresh-Dayspring bootstrap, coarse Kindling→Dayspring ordering, delayed
-  departure, missed-trip suppression, and an atomic party/cart transition;
-- deterministic boundary manifest-id and zero-wallet spark-id collision probing, plus complete
-  rollback of cargo, wallet, trip, phase, presence, and cart state on a forced preflight failure;
+  departure, missed-trip suppression, one authoritative party-state record, checked trip-number
+  overflow, and exactly one revision for each atomic stage/entry/return/pending/departure transition;
+- deterministic boundary manifest-id and zero-wallet spark-id collision probing; cargo transferred
+  to a carter and later unloaded; validation that the wallet-float map exactly covers party members;
+  and complete rollback of cargo, all member wallets, trip, phase, presence, epoch, and cart state on
+  a forced preflight failure;
 - return-mode preemption of pressing needs, curfew, movement, every queue/errand, and gate expiry of
   a pending offer;
 - deterministic target order, visit budgets, receipt ids, rollback on validation failure, and
@@ -1223,7 +1333,9 @@ Add focused fixtures/tests for:
   quantity, remains reserved across pauses and day boundaries, is consumed once on completion, and
   survives cloning `World` and `Round` together;
 - transform pause/resume at movement, conversation, site, office, and crossed-clock boundaries,
-  plus deterministic output-id collision probing and completion replay;
+  plus deterministic output-id collision probing, future-output capacity blocking an overflowing
+  inbound transfer, infallible completion at the reserved capacity, completion-day receipt retention
+  after a multi-day pause, replay within the window, and mutation-free rejection after pruning;
 - legacy-restocked whole/partial item transfers that cannot be swept from the recipient, a returned
   real stack merged with a tracked restock share, and a pending offer kept bounded across repeated
   restocks;
@@ -1233,23 +1345,44 @@ Add focused fixtures/tests for:
   non-catalog negotiated exchange, and a zero-spark gift, none logged as `sale`;
 - a hungry Averil whose closed-stall loaves are commercially protected without output-id
   registration;
-- `Resident`/`Visitor`/`RoadParty` settlement, including the 4-spark resident floor, exact residual
-  shortfall mint, collision-free credit after a zero-wallet resident's former purse moved whole,
-  streak reset after successful relief, and Ilse retaining her authored one spark;
+- `Resident`/`Visitor`/`RoadParty` settlement, including the 4-spendable-spark resident floor when
+  other sparks are offer-committed, exact residual shortfall mint, collision-free credit after a
+  zero-wallet resident's former purse moved whole, streak reset after successful relief, a
+  skipped/failed-handler missed-day diagnostic with positive wallets, and Ilse retaining her
+  authored one spark;
 - exact spark conservation through resident sales, conversational transfers, payroll, road sales,
   and boundary float settlement; and
 - repeated market, production, and boundary-controller steps in a compact fixture, proving the
-  configured stock, job, errand, and road-wallet bounds without full-world pathfinding.
+  configured stock, job, errand, and per-member road-wallet bounds without full-world pathfinding.
 
-The pure-sim focused fixture suite is the automated gate:
+The automated gates are both the pure-sim fixture suite and a host integration suite:
 
 ```sh
 cargo test -p cathedral-sim --test supply_chain_tests
+cargo test -p cathedralbevy --test supply_chain_host_tests
 ```
 
-It uses small deterministic worlds with fake/no cognition actions and asserts Sections 10 and 12
-directly rather than parsing prose. It must complete as an ordinary unit/integration-test run; a
-multiweek authored-world CLI transcript is optional diagnosis, never pass/fail authority.
+The sim suite uses small deterministic worlds with fake/no cognition actions and asserts Sections
+10 and 12 directly rather than parsing prose. The host suite loads the real committed
+`default_config.ron` through the production loader and asserts Highmarket/Dayspring entry without a
+local override. It also projects a loaded `RoadCart` snapshot through the Bevy systems, asserts one
+visible cart root with the expected sack/bale/bolt mesh children, updates its transform/load, and
+asserts despawn with the party. Both must complete as ordinary test runs; a multiweek authored-world
+CLI transcript is optional diagnosis, never pass/fail authority.
+
+M5a additionally has a required visual drive check because an ECS assertion cannot prove that the
+cart is legible in the rendered city. With a clean committed-default config (and the fake backend if
+offline), run:
+
+```sh
+CATHEDRAL_DRIVE='sleep 2; tp -35 16 530 0 -20; shot brede_cart_entry; sleep 20; shot brede_cart_route; quit' cargo run
+```
+
+Review the two archived screenshots and `logs/latest_session/logs.jsonl`: the first must visibly
+show one loaded cart, its leader, and both carters entering at the Wool Gate; the second must show
+the same single cart following the leader toward Seven Lofts, with no duplicate or orphan. Record
+the reviewed session id in the M5a handoff. This visual check and the host committed-config test are
+release criteria, not claims delegated to the pure-sim suite.
 
 `turn.j2` needs no new market prose. Grain and flour are normal held items; procurement is sim
 behavior, not a new LLM verb.
@@ -1272,18 +1405,23 @@ M5a should not be described as a round-only data edit.
 | transformed output is stranded behind stale `stock_ids` | sell inventory is derived from the active vendor's current holds |
 | removing `stock_ids` lets a vendor eat the board | autonomous hunger excludes the exact-listing commercial view, derived from vendor binding rather than item registration |
 | reserved inputs violate item ownership/stacking | reservations annotate quantities in the producer's existing stacks; no detached input item exists |
+| matching stock arrives while a paused job already owes output and makes completion overflow | the job records future output; every inbound inventory path includes it in the `u32` capacity preflight and rejects `output_capacity_reserved` |
+| a multi-day pause makes a new completion receipt look old immediately | retention uses `completed_on_day`, never the job's production day; replay-before-prune and no-op-after-prune fixtures cover both sides |
 | every baker or miller transforms stock, or one producer floods stock | each plan names one producer and has output targets plus daily job caps |
 | Ansel's schedule accidentally blocks the night bake | only Averil's producer/site/office eligibility is mechanical; Ansel is lore/presentation |
 | a cart arrives after an early failed purchase check or leaves Seven Lofts too soon | mobile errands wake on binding changes; carts remain through High Wick and move to The Draper's Reach at Waning |
 | a road trader is diverted from its return or trapped by an offer | `Returning` owns movement above needs/curfew/queues, and unresolved offers expire at the gate |
 | an absent actor leaks through an owned item or offer | central presence predicate plus actor/item/offer/target tests |
+| a pre-departure cognition result arrives after the same actor re-enters | requests carry a monotonic presence epoch; absent or epoch-mismatched completions are diagnostic-only |
+| party phase and trip number drift or a non-boundary transition half-applies | one `PartyState` source plus uniform preflight/infallible commit and one-revision tests for every transition |
+| commercial cargo transferred to a carter escapes boundary delivery | boundary preflight scans every member in deterministic order and records each cargo owner |
 | cloth exists only as a return-load prop | raw wool is a boundary manifest; Ewart buys it and performs a declared transform |
 | a cloth return assumes impossible same-office production | Ewart's persistent buffer serves later carts; a cart with no matching bolt simply leaves without one |
-| carts are promised but invisible | `RoadCart` presentation is in M5a acceptance, with host work budgeted |
-| residents or chain firms go broke | persistent working capital, conservative household redistribution, and an exact logged residual-shortfall mint tested in focused fixtures |
-| the zero-wallet test punishes a successful daily refill | the resident floor is 4 sparks and the streak resets only after positive relief; it detects skipped/failed settlement instead |
+| carts are promised but invisible | host projection assertions cover visible mesh children and a required drive-mode session captures the loaded cart entering and following |
+| residents or chain firms go broke while their money is offer-committed | working reserves and the 4-spark floor use spendable sparks; commitments stay untouched and only the exact residual shortfall is minted |
+| settlement is skipped while every wallet is positive, so the zero streak sees nothing | the generic Watch dispatcher compares sampled and completed days outside the handler and emits `household_settlement_missed` |
 | a zero-wallet credit reuses a purse id that was transferred away | every credit preflights a recipient-owned stack or deterministic collision-free id; boundary and settlement fixtures transfer the old purse whole |
-| road merchants accumulate cash forever | every successful off-map exchange logs a symmetric settlement to fixed trip float; repeated boundary-controller fixtures cover the bound |
+| road-party members accumulate cash forever | every successful off-map exchange logs symmetric settlement to the configured leader/carter floats; repeated boundary-controller fixtures cover every wallet |
 | old restock deletes real or negotiated stock | operational provenance is quantity-aware; central inventory helpers detach shares from transferred/consumed quantity, and a sweep removes only the remaining share at its original vendor |
 | a cloth buyer fails before Ewart's wool payment and never retries | the attempt fingerprint includes buyer funds, so Ewart's payment wakes a same-Waning retry independently of actor iteration order |
 | replacing an offer double-counts its already committed stack | replacement validation provisionally releases only the old offer and rolls back atomically on failure |
@@ -1291,8 +1429,8 @@ M5a should not be described as a round-only data edit.
 | implementation accidentally removes haggling | only `sale` is posted-price constrained; negotiated transfer and gift regressions remain green |
 | a bad road silently changes posted prices | no multiplier exists; only schedule, manifests, and availability may change, while individual bargaining remains allowed |
 | acceptance depends on arbitrary LLM wording | authored facts are asset/prompt assertions; natural conversation is a manual smoke test |
-| persistence scope expands M5 | jobs and party phases are authoritative in-memory state; versioned disk persistence is explicitly future work |
-| a fresh default run misses the visible arrival | M5a commits day 2/Dayspring and tests exact Kindling and Dayspring bootstrap independently of local config |
+| persistence scope expands M5 | jobs, receipts, party state, and presence epochs are authoritative in-memory state; versioned disk persistence is explicitly future work |
+| a fresh default run misses the visible arrival | M5a commits day 2/Dayspring; a host test loads the real committed config without a local override, and the drive check starts from that default |
 | a recurring transform collides with an existing five-character item id | call `mint_item_id` in the split path's deterministic probe loop and record chosen completion destinations for idempotent replay |
-| a boundary id collision or late validation failure half-applies a trip | preflight every destination and delta, probe ids deterministically, then apply cargo, cash, manifest, and trip advance atomically |
+| a boundary id collision or late validation failure half-applies a trip | preflight every member cargo removal, wallet destination/delta, manifest destination, and checked trip advance, then commit atomically |
 | embedded data is mistaken for hot reload | acceptance rebuilds after `food.json` or `items.json` changes |
