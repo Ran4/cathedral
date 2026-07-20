@@ -1,7 +1,8 @@
 # Food & items: the city eats
 
 Status: M0–M4 implemented (2026-07-18). M5 (the supply chain) is **scoped but not started** —
-see [07_the_supply_chain.md](07_the_supply_chain.md), which splits it into M5a–M5d. The specs below
+see [07_the_supply_chain.md](07_the_supply_chain.md), which centers the chain on Seven Lofts and
+splits it into M5a–M5d. The specs below
 were updated where the implementation differed (rung-3 meal-office gate, tavern-node hearths, silent
 auto-eat, template-derived `you_sell`).
 
@@ -84,8 +85,9 @@ known "most expensive small change" — regenerating the 20 golden prompt fixtur
 stall stock is created from a template — real `world.items` entries held by the vendor, so the
 LLM consent verbs and the code-driven purchases share one inventory. **This is the accepted cheat,
 and it must eventually die**: the real chain is bakers baking at the bakehouses from millers' flour,
-grain carts entering by the Wool Gate from the near countryside through Seven Lofts
-(`features/the_near_countryside__aka_add_market_stalls.md` is the other half of this feature). The
+with grain carts entering from the near countryside and grain persisting at Seven Lofts between
+deliveries. `features/the_near_countryside__aka_add_market_stalls.md` is the other half of this
+feature. The
 nightly wallet reset in [02](02_the_spark_standard.md) is the same cheat from the money side —
 both are the placeholder the supply chain replaces. [04_the_bread_round.md](04_the_bread_round.md).
 
@@ -152,8 +154,8 @@ dragon on a hoard and every buyer runs dry by Thursday. So the nightly ledger, a
 - **vendor wallets and unsold stock reset to template** — they "spent it on flour and rent."
 
 Neither side of this is real, and that is the point: the two resets are precisely the shape of the
-future supply chain (wages in, costs out), so when the chain arrives it replaces the resets rather
-than fighting them. Until then the books balance by decree.
+future supply chain (persistent stock, working capital, household transfers, bounded explicit
+payroll), so M5 replaces them rather than fighting them. Until then the books balance by decree.
 
 ---
 
@@ -169,7 +171,7 @@ Each shippable, each with a verification recipe using the repo's existing tools.
 | **M2** | **Hunger** | the gauge, decay, `eat` satiety, computed conditions on the sheet, meal legs, seeded wallets | headless `--trace-food` census: hunger falls all morning, the city eats at High Wick; Ilse's sheet says famished, she eats, it stops saying it |
 | **M3** | **The bread round** *(the vertical slice)* | stalls bound to vendors, the Kindling restock, the queue, the silent purchase, self-percepts, the coin-clink | headless `--trace-food` logs dozens of sales at the Wickmarket on Highmarket; `tp` to the square at noon and watch the queue; ask a buyer what they paid |
 | **M4** | **The Ilse purchase** | `you_sell` price lines, quantity verbs in the prompt, the LLM seam polished | replay yesterday's session and it *ends in a sale*: the baker's loaf is 2 sparks, Ilse has 1, the fish stall's herring is 1 — she offers her spark, accepts the herring, eats, and her hunger line clears |
-| **M5** | **The supply chain** *(scoped, not started)* | a fixed roster of named merchants and their carters arriving through the Wool and Stone gates; `grain`, `flour`, `cloth`; millers milling, bakers baking at a bakehouse, merchants leaving with a return load — replaces both nightly resets | four sub-milestones with their own recipes in [07_the_supply_chain.md](07_the_supply_chain.md) §8; the end state is one Highmarket morning where grain walks in a gate and comes out as Ilse's loaf, with no conjuring anywhere in the trace |
+| **M5** | **The supply chain** *(scoped, not started)* | fixed named road parties and visible carts; grain stored by Betriss Skep at Seven Lofts; Bertran Hobbe milling; Averil Quern's night bake at Ansel Quern's common oven; raw wool becoming outbound cloth; persistent wallets and bounded household settlement | four sub-milestones in [07_the_supply_chain.md](07_the_supply_chain.md) §11; a trace follows one grain batch from a Day-N delivery to a funded buyer's Day-N+1 loaf, while the unchanged M4 replay still has one-spark Ilse buy herring |
 
 M0 is where the risk lives (every layer touches items; ~13 golden fixtures pin the bytes). M1 is
 pure content and can run in parallel. M2–M4 stack on M0.
@@ -205,4 +207,4 @@ pure content and can run in parallel. M2–M4 stack on M0.
 | [04_the_bread_round.md](04_the_bread_round.md) | stalls, vendor binding, the Kindling restock, the queue, the silent purchase — and the real supply chain it stands in for |
 | [05_the_llm_seam.md](05_the_llm_seam.md) | verb and sheet changes, `you_sell`, percept lines, fixtures, token cost |
 | [06_milestones.md](06_milestones.md) | M0–M5, each with a verification recipe |
-| [07_the_supply_chain.md](07_the_supply_chain.md) | M5 scoped: gate merchants, presence, grain/flour/cloth, the transform verb, the bakehouse, the return load |
+| [07_the_supply_chain.md](07_the_supply_chain.md) | M5 scoped: Seven Lofts, fixed gate parties and carts, stock errands, named grain/flour/bread/cloth producers, the two-day trace, and household settlement |

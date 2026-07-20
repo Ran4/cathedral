@@ -124,25 +124,32 @@ vendors.
 
 ## M5 — The supply chain *(scoped: [07_the_supply_chain.md](07_the_supply_chain.md))*
 
-Country carriers through the gates → grain as an item → millers milling flour at the Wool Gate →
-bakers baking at a bakehouse on the grain road — each step replacing one conjuring with one
-purchase, until the Kindling restock and the Watch ledger are both dead code. The sketch was
-[04](04_the_bread_round.md) §6; **[07](07_the_supply_chain.md) is the scoped version**, split into
-four shippable sub-milestones:
+Fixed road parties bring deterministic manifests through the Wool and Stone gates and deliver them
+by visible cart to **Seven Lofts**. Betriss Skep holds the grain there across days; Bertran Hobbe
+buys and mills it; Averil Quern buys the flour and performs the already-authored night bake at
+Ansel Quern's common oven; a funded buyer can purchase the resulting loaf on the **next**
+Dayspring. M5d adds Brede wool, Ewart Skell's real cloth production, the return load, and bounded
+household settlement. The sketch was [04](04_the_bread_round.md) §6;
+**[07](07_the_supply_chain.md) is the corrected scoped version**, split into four shippable
+sub-milestones:
 
 | | ships | the cheat it kills |
 |---|---|---|
-| **M5a** | `Presence` (off-map actors); the road round; the fixed merchant roster (with carters) at the Wool and Stone gates; `grain` | — (millers can buy) |
-| **M5b** | `flour`; the `Transform` verb; the Wool Gate mill | — (bakers can buy) |
-| **M5c** | the bakehouse; bakers bake what they sell | **`restock`**, for bread |
-| **M5d** | the return load: `cloth`, the Draper's Reach counter, merchants buying on the way out; the residual payroll | **`close_books`** |
+| **M5a** | central `Presence`; two explicitly routed road parties; deterministic boundary manifests; visible carts; `grain`; Seven Lofts and Betriss's persistent counter; generic stock errands distinct from meals | — (Bertran can buy and hold grain) |
+| **M5b** | `flour`; timed/saveable transforms; Bertran's Seven Lofts → Wool Gate route and named counter; live held stock as sale inventory | — (Averil can buy and hold flour) |
+| **M5c** | Ansel Quern's common bakehouse; Averil's Watch-to-Kindling bake and Day-N+1 sale | **all loaf restock**, including the provisions template |
+| **M5d** | `wool` and `cloth`; Ewart's transforms; cloth on the departing cart; conservative household redistribution and bounded logged payroll | **`close_books`** |
 
-Three design commitments from that document are binding on anything downstream: **the cast is fixed
-and hand-authored — no procedural travellers, and the arrivals are merchants with kin in the city,
-not anonymous peasants** ([07](07_the_supply_chain.md) §1); **the gate is the edge of the world** —
-nav stops at the gate nodes and this feature does not extend it ([07](07_the_supply_chain.md) §2);
-and **a merchant's cart is full in both directions** — grain in, Ombreval cloth out — which is what
-lets the economy close without printing money ([07](07_the_supply_chain.md) §7).
+Four design commitments from that document are binding downstream: **the cast is fixed and
+hand-authored, and only the five explicit party members are off-map**
+([07](07_the_supply_chain.md), Sections 1–3); **the gate remains the nav boundary and arrivals
+include a visible cart** (Sections 4–6);
+**Seven Lofts is persistent storage, so the canonical grain-to-loaf trace spans Day N to Day N+1**
+(Sections 2 and 8); and **catalog prices are fixed—road trouble may change arrival or availability,
+never price** (Sections 1 and 10).
+
+M5c's end-to-end buyer is deliberately not Ilse: she owns one spark and the rye loaf costs two.
+The M4 replay remains unchanged and ends with Ilse buying the one-spark herring.
 
 When it starts, `features/the_near_countryside__aka_add_market_stalls.md` merges into this folder.
 

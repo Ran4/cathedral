@@ -1,511 +1,686 @@
-# The supply chain: merchants, grain, flour, and the death of the restock
+# The supply chain: Seven Lofts, road merchants, grain, flour, and cloth
 
-M3 shipped a market that works and confessed its magic: `Round::restock` (`round.rs:1575`) conjures
-bread into a baker's hands each Kindling, and `Round::close_books` (`round.rs:1620`) resets every
-wallet each Watch. This document kills both — not by adding a simulation of agriculture, but by
-**replacing each conjuring with one purchase**, until the last conjuring stands outside the walls
-where the playable world stops anyway.
+Status: **scoped for M5; not started.**
 
-The chain, end to end:
+M3 deliberately cheats twice: `Round::restock` creates food at Kindling and
+`Round::close_books` resets wallets at the Watch. M5 replaces the bread half of those cheats with a
+visible, buffered supply chain. It does not simulate farms, harvests, every wage, or every workshop
+outside the walls.
+
+The corrected chain takes **two days**, not one morning:
 
 ```text
-  beyond the walls        the gate                 the city
-  ────────────────        ────────                 ────────
-  Brede, the Combs  ->  Wool Gate   ->  a merchant's cart, sells grain
-  northern farms    ->  Stone Gate      |                          ^
-  Salorge, the Serle -> River Gate      |                          |
-                                        v                          |
-                          miller buys grain, mills flour, sells it  |
-                                        |                          |
-                                        v                          |
-                          baker buys flour, bakes at the bakehouse  |
-                                        |                          |
-                                        v                          |
-                          baker sells loaves at the Wickmarket      |   <- M3, unchanged
-                                        |                          |
-                                        v                          |
-                          Ilse eats                                 |   <- M4, unchanged
-                                                                    |
-                          the same cart, loaded with Ombreval cloth,
-                          pays the city on its way back out  ───────┘
+Day N
+  beyond the walls
+      │ fixed road-party manifest (the declared item source)
+      ▼
+  gate ── visible cart ──> Seven Lofts
+                              │
+                              │ Betriss Skep buys and stores grain
+                              │ Bertran Hobbe later buys grain
+                              ▼
+                         Wool Gate mill face
+                              │ grain becomes flour
+                              │ Averil Quern buys flour
+                              ▼
+                      Ansel Quern's bakehouse
+                         Watch → Kindling bake
+
+Day N+1
+  bakehouse ──> Wickmarket bread stall ──> a funded city buyer
+
+M5d adds the other direction:
+  Brede wool ──> Ewart Skell ──> Ombreval cloth ──> the same road cart leaves
 ```
 
-Every arrow inside the walls is `try_purchase` (`round.rs:2648`), the machinery M3 already built.
-The two new ideas are **the merchants who come in through the gates**, and **the fact that their
-carts are full in both directions** — which is what makes §7's economy close without printing money.
+Seven Lofts is what makes this possible. Grain is delivered to a store, not teleported through
+three trades before breakfast. Its inventory persists across the three weekdays with no scheduled
+arrival.
+
+M5 has one price rule:
+
+> **Every sale uses the catalog's fixed `price_sparks` value. M5 has no road-quality simulation. A
+> later event may delay a party or reduce what arrives; it must never modify a price.**
+
+There is no scarcity multiplier, road-quality multiplier, bargaining price, or dynamic-price hook
+in this milestone.
 
 ---
 
-## 1. The rule that shapes everything: a fixed cast
+## 1. Binding decisions
 
-The near-countryside brief asks for *"actors arriving through a gate [with] grounded destinations,
-kin, cargo, and news instead of being generic travelers from nowhere"*
-(`features/the_near_countryside__aka_add_market_stalls.md:5`). That is a design constraint, not a
-flourish:
+These decisions are requirements, not suggestions left to implementation:
 
-> **No procedural people. Ever.** The road traders are a fixed, hand-authored roster with names, kin,
-> homes-beyond-the-walls and memories, exactly like the other 514. The player must be able to learn
-> that Ansel of Brede comes in on Highmarket with rye, recognise him next week, and ask him how the
-> road was. A spawner would break that, and would break the "unknown people" rule
-> (`crates/cathedral-sim/AGENTS.md`) that makes strangers legible.
+1. **The cast is fixed.** Road parties are five hand-authored people, not procedural travellers.
+2. **Only those five people live beyond the walls.** Existing farmers, millers, merchants, and
+   cargo workers remain residents with their current homes and rounds.
+3. **The gate is the simulation boundary.** Nav still ends at the gate nodes.
+4. **Seven Lofts is the persistent grain buffer.** It is not replaced by a generic gate stall.
+5. **The chain is asynchronous.** An arriving grain batch can become bread no earlier than the next
+   Dayspring.
+6. **Stock procurement and hunger are different intents.** A baker buying flour does not eat it.
+7. **A stall sells matching items its vendor actually holds.** Transform outputs do not require a
+   second registration step.
+8. **Only named producers transform stock.** This feature does not make every miller, baker, or
+   cloth worker run the whole chain.
+9. **The road boundary is the only new recurring item source/sink.** Inside the walls, grain, flour,
+   wool, cloth, and bread appear only through a seed, purchase, or declared transform.
+10. **Prices stay fixed.** Supply trouble is represented by empty shelves and late carts.
 
-### 1.1 They are merchants, not peasants
+Fish and the tavern pot remain separate, explicitly named cheats. M5c removes all magically
+restocked loaves, including the four rye loaves currently hidden in the `provisions` template.
 
-The people who come through the gate are **businesspeople** — capital, stock, credit, a name on a
-contract, and opinions about the road. Not a ploughman with a sack. This matters mechanically as
-much as tonally: a merchant *buys as well as sells*, and §7's whole economy rests on that.
+---
 
-The `merchant` occupation is already written for exactly this — `lore_locations`: "The five
-squares", "The Tallage", "Outer wharves", "River roads", **"Lantern Road"**; `alternative_titles`
-include **"Foreign merchant"** and **"Road trader"**; the `lore_example` is *"Merchants know Ombreval
-as a toll town with honest weights, fair tolls and crowds that turn the window into custom."*
+## 2. The lore anchor: keep and deepen Seven Lofts
 
-And a **trading dynasty already exists in the cast**, fully written, currently doing nothing because
-nothing in the sim ever asked where goods come from:
+### 2.1 What is already canonical
 
-| who | id | trade | role in the chain |
-|---|---|---|---|
-| **Clemence Crake** | `fp6ck` | Wholesale merchant, the Crake counter on the Tallage, 19 years | *"Brede wool **bought** down to the last fleece, Ombreval cloth **sold out** along the river and the Lantern Road, credit given open-handed and called in to the very day."* **She is the two-way valve, already authored.** |
-| **Renn Crake** | `fr9ck` | Cargo broker — **her son** (`mother: fp6ck`) | moves what she buys. She has *"begun to look twice at his figures, because his promises have got larger and his sleep has got worse"* — a supply chain gives that a place to actually go wrong |
-| **Ewart Skell** | `e1skl` | Draper, "Cloth merchant" | the outbound cargo: Ombreval cloth |
-| **Dunstan Skell** | `fb3sk` | Money broker | the credit behind a cart |
-| **Ansel of Salorge** | `fa4sg` | Foreign merchant — came up the Serle at nineteen with salt and southern iron | the River Gate road's city end |
-| **Gile of Brede** | `fg4br` | Hired writer, from Brede | the Wool Gate road's paperwork |
+`lore/places/03_new_places_and_infrastructure.md` already gives the feature its best location:
 
-Six of the eight names in Clemence Crake's `knows` list are links in this chain. Nobody planned that
-for this feature; it fell out of the lore being written by someone thinking about how a toll town
-works.
+- Seven Lofts is a defended compound between the Wool and Stone gate routes;
+- grain is dried, sampled, turned, guarded, and released there;
+- the Chapter rents bays but does not own the entire food supply;
+- the delayed opening of the Chapter's reserve in F.183 gives stored grain political weight;
+- the place has hoists, sealed doors, grain dust, cats, fire rules, repairs, and contested memories.
 
-### 1.2 What this feature actually authors
+`assets/world/places.json` already makes **Seven Lofts** a named navigable place. M5 uses that place;
+it does not introduce “the grain warehouse” under another name.
 
-The dynasty above is **resident** — Clemence has held her counter for nineteen years and is not
-going anywhere. What does not exist yet is **the road end**: the branch of the family that works
-Brede and comes in on market mornings. That is what gets authored, and the near-countryside brief
-asked for precisely this shape:
+The cast is equally specific:
 
-> *"Families might keep one branch inside a gate and another on a holding outside, while seasonal
-> workers and sellers cross the walls every day."*
-> — `features/the_near_countryside__aka_add_market_stalls.md:4`
+| actor | id | existing lore used by M5 |
+|---|---:|---|
+| **Betriss Skep** | `p008s` | grain dealer; buys in bulk, sells by small measure, extends short credit, carries a tally stick, and is already trying to recover sacks sent to the wrong loft |
+| **Bertran Hobbe** | `e7mil` | master miller; carts his own flour and already supplies the Quern bakehouse |
+| **Ansel Quern** | `danqn` | owns and runs the quarter's common oven |
+| **Averil Quern** | `davqn` | performs the night bake: in at Watch, dough set by Kindling, first loaves at Dayspring |
+| **Ewart Skell** | `e1skl` | master draper at Draper's Reach; puts out Brede wool and takes cloth back |
+| **Clemence Crake** | `fp6ck` | resident wholesale merchant whose lore explicitly joins Brede wool to outbound Ombreval cloth |
+| **Renn Crake** | `fr9ck` | resident cargo broker and the natural city-side organizer |
 
-So: **five or six new authored characters** — three travelling merchants (one per road) plus their
-carters — each *kin or factor to someone already in the city*, so an arrival is a reunion and an
-argument rather than a stranger with a cart.
+Those are not flavor references. Betriss, Bertran, Averil, and Ewart are the preferred vendors or
+producers in data, by actor id.
 
-A merchant and their carters travel together, arrive together and leave together. This document
-calls that unit a **road party**, and calls its members **road traders** where the merchant and the
-hands behave identically (they share one round, one gate and one presence flag). Where the
-distinction matters — who owns the stock, who does the talking — it says *merchant* and *carter*.
+### 2.2 Proposed lore patch when M5 is implemented
 
-The existing outsider trades stay in the picture as the **second tier**, and the sim already routes
-all ten of them to a gate:
+Keep the Seven Lofts section and its history. Make four narrow updates alongside the milestone that
+needs them:
 
-| occupation | cast | `lore_locations` | role |
-|---|---|---|---|
-| `farmer` | 7 | "The Combs", **"Villages beyond the walls"** | small sellers who walk their own produce in on market days |
-| `miller` | 3 | **"Mills beyond the walls"**, "Grain routes" | the grain's first buyer (§6) |
-| `cargo_worker` | 16 | alt. titles include **"Carrier"**, **"Carter"** | the hands who push the merchants' carts |
+1. In `lore/places/03_new_places_and_infrastructure.md`, change “scarcity and price stories” to
+   **“scarcity, rationing, and release-order stories.”** The famine lever changes who can get grain
+   and when, not the catalog price.
+2. Deepen Betriss Skep's sheet so her household remains in Bell-and-Sluice streets but her working
+   counter and rented bay are at Seven Lofts. Preserve the tally stick, short credit, and
+   wrong-loft problem; those details are ideal for the mechanic.
+3. Materialize the bakehouse as **Ansel Quern's common oven**, rather than authoring a generic new
+   bakehouse. Averil's existing night-bake paragraph becomes the schedule.
+4. Replace Ansel's hypothetical “price climbs / loaf goes to three sparks” line with a shortage
+   consequence, for example: if Bertran's delivery fails, the bake is cut short and the quarter
+   shouts at Ansel's door. This keeps the conflict while respecting fixed catalog prices.
 
-`ecbrd` **Ansel of Brede** is a farmer named for the village at the top of the Wool Gate road.
-`p0026` **Noll Quern** and `p0027` **Corin Kett** are Wick Ward farmers; `danqn` **Ansel Quern** and
-`davqn` **Averil Quern** are two of the eight bakers. A quern is a hand-mill — the grain family was
-written before anything needed one.
+The two new road merchants should know the appropriate resident counterparties and Betriss. Their
+sheets should mention a particular family relationship, route, cargo obligation, and opinion about
+the road. No broad lore rewrite is needed.
 
-## 2. Presence: the one genuinely new concept
+A future famine feature can reserve or release a physical Seven Lofts bay. M5 only establishes the
+inventory state that feature would act on.
 
-Today every character in `world.characters` is unconditionally in the city. A road trader must be able
-to *not be here* — six carters loitering at a gate all night is worse fiction than no carters at all.
+---
+
+## 3. Fixed road parties
+
+M5 ships two parties and five new characters:
+
+| party | members | scheduled arrivals | city relationships | incoming cargo | intended return load |
+|---|---:|---|---|---|---|
+| **Brede / Wool Gate** | one minor merchant + two ambient carters | Highmarket and Fourth | merchant is kin or factor to Clemence Crake; Renn brokers the cart | rye, wheat; raw wool from M5d | broadcloth |
+| **Lantern Road / Stone Gate** | one minor merchant + one ambient carter | Second and Fifth | merchant has an authored tie to Ewart Skell or a Crake factor | rye and wheat | kersey |
+
+There is no scheduled arrival on Bellday, Lowmarket, or Seventh. That gap is deliberate; Seven
+Lofts covers it.
+
+The River Gate road, Harne Gate, Reed Postern, salt, charcoal, honey, and small farm sellers are
+future extensions. Do not enroll the existing seven farmers or three millers as off-map actors just
+because their occupation lore mentions villages or mills beyond the walls. In M5 they remain city
+residents. Do not rebake their homes.
+
+Each new character requires a normal authored sheet and stable id before M5a can ship. A
+`merchant` or `cargo_worker` occupation may describe the person, but **party membership**, not
+occupation mapping or an alternative title, gives them the road schedule. This avoids changing the
+rounds of every resident merchant or cargo worker.
+
+---
+
+## 4. The road boundary and the visible cart
+
+### 4.1 Deterministic manifests
+
+Immediately before a scheduled arrival, while the party is still `BeyondTheWalls`, a
+`boundary_exchange` does two things:
+
+1. consumes cloth and any unsold incoming cargo carried out on the previous trip;
+2. creates that trip's fixed incoming manifest in the leader's holds.
+
+This is the declared recurring item source and sink. Item ids are deterministic from
+`party_id + trip_number + manifest_slot`. The event is traced. Loading and unloading do **not**
+reset the merchant's wallet; the off-map principal's accounts are outside this simulation.
+
+Starting manifests:
+
+| party | M5a manifest | M5d addition |
+|---|---|---|
+| Brede | 3 measures rye grain, 1 measure wheat grain | 4 bundles raw wool |
+| Lantern Road | 1 measure rye grain, 2 measures wheat grain | none |
+
+The manifests are tuning inputs, not prices. If the 14-day acceptance run starves or floods the
+chain, adjust manifest quantities, storage targets, transform yields, or purchase caps.
+
+Seven Lofts receives one historical day-zero seed of **4 rye + 2 wheat measures**. It is created
+once by world seeding, never restored at Kindling or Watch. That buffer bootstraps a save whose
+first day has no road arrival and makes the compound matter immediately.
+
+### 4.2 The cart is part of M5a
+
+A road arrival without a cart does not satisfy the visible feature. M5a adds a presentation-only
+`RoadCart` record to the public snapshot:
+
+- one cart per present road party, keyed by party id;
+- follows the leader with a fixed offset;
+- has no collision and is not independently targetable;
+- uses sacks/bales when the leader holds grain or wool, bolts when the leader holds cloth, and an
+  empty load otherwise;
+- appears and disappears atomically with the party.
+
+Cargo remains in the merchant leader's normal `holds`. The cart is a view of that stock, not a
+second container. This does require a small Bevy host change to spawn, update, and despawn the cart
+presentation.
+
+---
+
+## 5. Presence is a world rule, not a snapshot trick
+
+`Presence` is persistent character state:
 
 ```rust
-/// Whether the character is inside the walls right now. `BeyondTheWalls`
-/// people keep their state — wallet, holds, memories, kin — but are not in
-/// the world the player or the other actors can perceive.
-pub enum Presence { InCity, BeyondTheWalls }
+pub enum Presence {
+    InCity,
+    BeyondTheWalls,
+}
 ```
 
-A `BeyondTheWalls` character is:
+All existing characters default to `InCity`. The five road-party members seed as
+`BeyondTheWalls` and retain wallets, holds, relationships, and memories while absent.
 
-- **omitted from `WorldSnapshot.actors`** (`snapshot.rs`) — and the Bevy host already handles this
-  for free: `actors.rs:120-131` despawns any root whose id left the projection and spawns any id
-  that arrived. No host change, no pop-in work, no new component;
-- **skipped by the attention gate** (`attention.rs`) and therefore never spends an idle LLM turn;
-- **not a percept recipient, not in `you_see`, not a valid `go_to`/`offer_item` target**;
-- **still in `world.characters`** — the wallet they left with, the grain they didn't sell, and the
-  memory of yesterday's road all persist, so the same person comes back next week having had a week.
+Add a central `World::is_present(actor_id)` predicate and use it at every world-facing seam:
 
-Presence flips in exactly two places, both on the road party's own round:
+- public actors, owned items, pending offers, and item references in `WorldSnapshot`;
+- `characters_within`, percept recipients, `you_see`, and sound/speech recipients where physical
+  presence is required;
+- action targets, gestures, `tell_way`, offers, conversations, and direct `go_to` targets;
+- attention eligibility, idle/priority scheduler lanes, and queued cognition;
+- movement, rounds, hunger/meal logic, vendor/keeper binding, queues, and census totals.
 
-- **arrival**: at their arrival office, at the gate node, `BeyondTheWalls -> InCity`;
-- **departure**: when they reach the gate node on their closing leg, `InCity -> BeyondTheWalls`.
+An absent actor cannot be found indirectly through an item or offer they own. Filtering only
+`WorldSnapshot.actors` is insufficient.
 
-Everyone else is `InCity` forever, so this is inert for the other 514. The seed sets road traders to
-`BeyondTheWalls` and the world starts with the gates empty.
+When a party departs, clear or cancel its movement targets, market queues, meal/stock intents,
+gestures, pending offers, scheduler priority, and other transient city state. Departure waits until
+every member is at the gate, no member is in a conversation, and no member has an in-flight action.
+Then all members and the cart transition atomically. Arrival is also atomic.
 
-**The gate is the edge of the world.** The nav graph stops dead at the gate nodes — 5 (Wool), 17
-(Stone), 50 (Harne), 36 (River), 51 (Reed Postern) are the extreme nodes of the graph in all four
-directions, and there is nothing walkable beyond them. Ground geometry *does* run further out
-(`GROUND_MIN/MAX_*`, `src/city/mod.rs:32-35` — 165 m north of the Wool Gate, 205 m west of the River
-Gate), so a road trader standing at a gate stands on ground, not void; the appearing/vanishing happens
-at the gate node itself, which is where a wall and a shut gate make it read correctly. Extending nav
-outside the walls is deliberately **not** part of this feature.
+The party controller is the only code allowed to move a `BeyondTheWalls` actor to a gate. Normal
+actions reject absent targets.
 
-## 3. The roster and the roads
+This changes public-world semantics, so bump the world/snapshot revision. Tests must cover both
+actor and owned-item leakage.
 
-Two gate→market pairings ship. The geography picks them: these are the two shortest gate-to-square
-runs in the city, and both are grain roads in lore.
+---
 
-Each road gets **one named merchant, one or two carters, and a city counterparty** — the person
-inside the walls they deal with, who already exists. The counterparty is what makes an arrival
-matter: the player can meet Clemence Crake at her counter on the Tallage on a quiet day and then
-watch her kinsman's cart come through the Wool Gate on Highmarket.
+## 6. Road schedules bypass occupation routing
 
-### 3.1 The Wool Gate road — Brede and the Combs → The Wickmarket (130 m)
+Do not add a `road_trader` occupation-to-archetype mapping. The current route builder selects by
+explicit actor route or occupation; an alternative title such as “Road trader” has no routing
+effect, and mapping `merchant` or `cargo_worker` would catch residents.
 
-*"The upstream road toward Brede and the Combs enters here with wool, hides, honey, and pilgrims"*
-(`lore/places/00_city_plan.md:170`). The tightest gate-to-market pairing in the city, and the bread
-chain's whole length is visible from one rooftop. **This is the road that ships first.**
-
-| who | id | status | role | comes in on |
-|---|---|---|---|---|
-| *a Crake of the Brede road* | *new* | **to author** — merchant, minor, kin to `fp6ck`; the family's road branch, resented and indispensable | sells rye + wheat grain, wool, honey; **buys cloth** | Highmarket, Fourth |
-| *two carters* | *new* | **to author** — `cargo_worker`, ambient; her hands | push the cart, stand the pitch | with her |
-| Ansel of Brede | `ecbrd` | **existing** — farmer, minor, named for the village | small seller: his own rye, on foot | Highmarket |
-| **Clemence Crake** | `fp6ck` | **existing, resident** — the counter on the Tallage | *the city counterparty*: buys the wool, sells the cloth | — |
-| **Renn Crake** | `fr9ck` | **existing, resident** — cargo broker, her son | brokers the load; his figures are the family's soft spot | — |
-
-### 3.2 The Stone Gate road — northern farms and the Lantern Road → Coswald's Yard (241 m)
-
-*"Quarry stone, lime, scaffold timber, charcoal, grain from northern farms, and the land road toward
-Ostrelle use it. Its inner road descends directly to Coswald's Yard"*
-(`lore/places/03_new_places_and_infrastructure.md:38-42`).
-
-| who | id | status | role | comes in on |
-|---|---|---|---|---|
-| *a Lantern Road merchant* | *new* | **to author** — merchant, minor; works the six-week Ostrelle road, so *arrives rarely and matters when he does* | sells wheat grain, charcoal; **buys cloth** | Second, Fifth |
-| *one carter* | *new* | **to author** — `cargo_worker`, ambient | his hand | with him |
-| Osanne Crake | `p0024` | **existing** — farmer, ambient, Wallwright Ward (the Stone Gate's own ward) | small seller | Highmarket |
-| **Ewart Skell** | `e1skl` | **existing, resident** — draper, "Cloth merchant" | *the city counterparty*: the cloth he loads for Ostrelle | — |
-
-### 3.3 The River Gate road — Salorge and the Serle → The Tallage (301 m) *(third, data-only)*
-
-The broadest working gate, *"with paired leaves, a porter wicket, toll shelter, dung ruts, and room
-for one cart to wait while another passes"* (`lore/places/00_city_plan.md`). Salt on the Salorge
-route; `fa4sg` **Ansel of Salorge** (foreign merchant, came up the Serle at nineteen with salt and
-southern iron) is the city end, and `fb3sk` **Dunstan Skell** the money behind it. Ships as a
-`food.json` + `rounds.json` edit plus one authored factor, once §4 exists.
-
-**Not shipped:** Reed Postern → Maren's Green (227 m, handbarrows from the fish wharves), Harne Gate
-→ The Bellstand (411 m, the dry road).
-
-**The weekday gating is the point.** Different merchants on different days means a market morning has
-a *cast*, Belldays are quiet, and grain supply varies — which is what makes prices and scarcity
-mean anything later. It also keeps the present-in-city headcount to 2–4 on a market day and 0–1
-otherwise.
-
-**Homes beyond the walls.** All ten outsiders currently hold city homes or `bedless` entries
-(`ecbrd` is housed at the Draper's Reach; `p0024`–`p0028` are bedless), which contradicts their own
-lore. This feature adds a `beyond_the_walls` circumstance to `scripts/bake_homes.py` and its guard
-test (`round/tests.rs:128` — the `bedless_circumstances` list), giving them a home *string* naming
-their village ("a holding above Brede, a day's cart from the Wool Gate") with no `door_node`. The
-prompt path already tolerates a doorless home (`prompt/mod.rs:236` — the bedless framing), so
-`your_home` answers "Where do you live?" correctly with no renderer change.
-
-## 4. The road round
-
-A new `road_trader` archetype in `assets/world/rounds.json` (the term is a `merchant`
-`alternative_title`, and covers the merchant and their carters alike — they travel the same legs),
-and a new `Arrival` variant. The legs are the same `LegSpec` shape as everything else
-(`round.rs:212`), resolved by `build_legs` (`round.rs:1874`) and selected by `active_leg`
-(`round.rs:1949`) — no new movement code:
+Add explicit `road_parties` data to `assets/world/rounds.json`. The party controller synthesizes
+the same ordinary leg shape used by rounds, but from party membership:
 
 ```json
-"road_trader": {
-  "leash_m": 12.0,
-  "curfew_exempt": false,
+{
+  "id": "brede_wool_gate",
+  "leader": "<authored merchant id>",
+  "members": ["<merchant>", "<carter 1>", "<carter 2>"],
+  "gate": "The Wool Gate",
+  "only_on": ["highmarket", "fourth"],
   "legs": [
-    {"from": "kindling",  "at": "gate",      "doing": "arrive"},
-    {"from": "dayspring", "at": "workplace", "doing": "trade"},
-    {"from": "waning",    "at": "gate",      "doing": "depart"}
+    {"from": "kindling",  "at": "gate",            "doing": "arrive"},
+    {"from": "dayspring", "at": "Seven Lofts",     "doing": "trade"},
+    {"from": "lamplight", "at": "gate",            "doing": "depart"}
   ]
 }
 ```
 
-- `"at": "gate"` is a third magic anchor beside `"home"` and `"workplace"`, resolved per-actor from a
-  new `gates` map in `rounds.json` (actor id → gate place name). `build_legs` learns one more arm.
-- `Arrival::Arrive` flips `Presence` to `InCity` on the tick the leg becomes active, placing the body
-  at the gate node. `Arrival::Depart` flips it to `BeyondTheWalls` **on arrival at the gate**, not on
-  the office boundary — so the walk out is watchable and a trader caught in conversation finishes it.
-- `only_on` carries the weekday roster from §3. A road party with no leg today never becomes `InCity`.
+The Stone Gate party uses the same offices and its own gate. Before M5d it remains at Seven Lofts
+until its return-to-gate leg. M5d inserts a High Wick trade leg at Draper's Reach into both party
+routes.
 
-Their prose timetable (`leg_line`, `round.rs:3763`) writes itself into `daily_round`, so a road trader
-asked about their day answers from the sheet like everyone else.
+At Kindling, the controller performs the boundary exchange and places the whole party at its gate.
+At Dayspring the leader opens the cart pitch at Seven Lofts. At Lamplight the party walks to its
+gate and departs under the safety conditions in Section 5.
 
-## 5. Stalls that sell things you cannot eat
+Followers share the leader's destination without becoming vendors or stock owners. Party presence
+and schedule state persist across save/load.
 
-Three `try_purchase` assumptions are wrong once grain exists. All three are small and all three are
-already flagged at the seam:
+---
 
-| assumption | where | fix |
-|---|---|---|
-| stock must be edible | `round.rs:2667` — filters on `is_edible` | filter on **the trade's stock kinds** instead; the trade already declares them (`TradeSpec.stock`) |
-| a bound vendor never buys | `nearest_open_stall`, `round.rs:2821` | a vendor may buy from a stall of a **different trade** — a baker at the bread pitch may still queue at the mill. Guard on `stall.trade != my_stall.trade`, not on vendorship |
-| the buyer wants the cheapest affordable | `round.rs:2667` | correct for hunger, wrong for supply. A trade gains `intent: Eat \| Stock`; `Stock` buyers take **as much as the wallet allows**, cheapest-first, up to a per-trade cap |
+## 7. Sell inventory and stock procurement
 
-Three new catalog kinds in `assets/world/items.json` (joining the six that exist):
+### 7.1 Separate listings from magical restock
 
-| kind | display | stackable | edible | metadata | price_sparks |
-|---|---|---|---|---|---|
-| `grain` | measure of rye / wheat | yes | **no** | `grain: [rye, wheat]` | `grain=rye` 3, `grain=wheat` 6 |
-| `flour` | sack of rye flour / wheat flour | yes | **no** | `grain: [rye, wheat]` | `grain=rye` 5, `grain=wheat` 9 |
-| `cloth` | bolt of kersey / broadcloth | yes | **no** | `grade: [kersey, broadcloth]` | `grade=kersey` 14, `grade=broadcloth` 40 |
-
-`cloth` is the **return load** (§7) and arrives with M5d, not M5a — but it is listed here because it
-uses the identical machinery and because its prices are what balance the books. Ombreval's export
-being expensive relative to a 2-spark loaf is the point: one bolt of broadcloth pays for a lot of
-grain, which is why a merchant bothers with the six-week Ostrelle road.
-
-Prices ladder deliberately: grain 3 → flour 5 → the 2-spark loaf that
-[02](02_the_spark_standard.md) fixed and this feature must not move. One measure of grain must
-therefore yield enough loaves to clear the miller's and baker's margins — §6 sets the yields so it
-does, and the headless conservation check in §9 is what proves it.
-
-Two new stalls in `assets/world/food.json`, using the existing `site` + `pitch_offset` +
-walkability-fallback resolution (`seed_food`, `round.rs:1348-1400`) — no new nav places:
-
-| stall | site | trade | vendor occupations | open |
-|---|---|---|---|---|
-| The Wool Gate grain pitch | The Wool Gate | `grain` | `merchant`, `farmer` (the road traders) | dayspring→waning, per merchant's weekdays |
-| The Stone Gate grain pitch | Coswald's Yard | `grain` | `merchant`, `farmer` | ditto |
-| The Wool Gate mill | The Wool Gate | `flour` | `miller` | kindling→waning |
-| The Draper's Reach cloth counter *(M5d)* | The Draper's Reach | `cloth` | `draper`, `cloth_worker` | dayspring→waning — where the return load is bought |
-
-The mill sits at the Wool Gate because that is already the millers' workplace in `rounds.json` and
-because *"Mills beyond the walls"* means the mill proper is off-map; the pitch is the mill's city
-face. Vendor binding (`bind_vendors`, `round.rs:1406`) is unchanged — it already requires that the
-candidate's round delivers them to the site, which for millers and road traders it now does.
-
-## 6. Milling and baking: the transform that replaces the conjuring
-
-`restock` conjures because nothing in the sim can turn one item into another. That is the actual
-missing verb, and it is small:
+`TradeSpec.stock` currently means both “things this trade may sell” and “things to conjure.” Split
+it:
 
 ```rust
-/// A timed, ladder-driven conversion of held inputs into held outputs at a
-/// work site. Conserves nothing by design — that is what a mill *is* — but is
-/// declared in data, so the yields are auditable and the trace can prove them.
-struct Transform {
-    at: String,              // work site, resolved like a stall pitch
-    occupations: Vec<String>,
-    consumes: Vec<StockSpec>,
-    produces: Vec<StockSpec>,
-    seconds: f64,
+struct TradeSpec {
+    listings: Vec<ItemMatcher>,
+    restock: Vec<StockSpec>,       // only explicitly unchained stock
+    conjure_per_serving: Option<ItemKind>,
 }
 ```
 
-Declared in `assets/world/food.json` alongside the trades:
+A stall's sellable inventory is a live scan of its current vendor's holds matching `listings`.
+Remove `FoodStall.stock_ids`, or keep it only as a derived cache that is invalidated on every
+transfer/transform. A transform output is sellable immediately because its producer holds it.
 
-| transform | site | who | consumes | produces | when |
-|---|---|---|---|---|---|
-| milling | The Wool Gate | `miller` | 1× `grain {rye}` | 3× `flour {rye}` | kindling→waning, whenever grain is held |
-| milling | The Wool Gate | `miller` | 1× `grain {wheat}` | 3× `flour {wheat}` | ditto |
-| baking | **the bakehouse** | `baker` | 1× `flour {rye}` | 5× `loaf {flour: rye}` | kindling, before the market leg |
-| baking | the bakehouse | `baker` | 1× `flour {wheat}` | 4× `loaf {flour: wheat}` | ditto |
+Track ids created by `restock` separately as `conjured_ids`. The next legacy restock may sweep only
+those ids; it must never delete bought, seeded, boundary-loaded, or transformed stock.
 
-Yields chosen so the ladder pays: 3 sparks of rye grain → 3 sacks worth 15 → 15 loaves worth 30.
-The miller's margin is 12 sparks a measure, the baker's 15 a sack, and the 2-spark loaf is untouched.
+At M5c:
 
-**The bakehouse.** *"Communal bakehouses cluster near grain routes and ward edges"*
-(`lore/places/03_new_places_and_infrastructure.md:254`). The Wool Gate → Wickmarket road **is** the
-grain route, so the bakehouse goes on it: a `pitch_offset` off the Wickmarket node, ~30 m up the
-gate road, with the same walkability fallback every stall pitch uses. If a prop pass wants an oven
-and a smoking flue later, `src/city/smoke.rs` already knows how to put smoke over a hearth on the
-sim clock (the graphics overhaul's chimney work).
+- `bread.listings` contains rye and wheat loaves; `bread.restock` is empty;
+- remove loaves from the `provisions` restock and listing until a provisioner distribution route is
+  designed;
+- fish still restocks herring and eel, explicitly marked as an unbuilt wharf chain;
+- tavern stew remains `conjure_per_serving`, licensed by the never-empty-pot lore.
 
-The bakers' Kindling leg changes from `{at: workplace, doing: work}` (which resolves to the
-Wickmarket) to `{at: bakehouse, doing: work}`, and their Dayspring leg still takes them to the pitch.
-**The restock becomes a walk you can watch**: at Kindling a baker buys flour, walks to the bakehouse,
-bakes, and carries loaves to the Wickmarket in time for Dayspring — which is precisely what the
-morning of a medieval city looked like, and precisely what `Round::restock` was faking.
+`food.json` is embedded with `include_str!`, so changes require a rebuild. The spec and developer
+notes must not call it runtime-tunable.
 
-At that point `restock` has nothing left to conjure for the `bread`, `grain` and `flour` trades. It
-survives only for `provisions` and `fish` (herring, eel — the wharves are a chain this feature does
-not build) and for the pot, which keeps its licensed infinity. **The dead code is deleted, not
-left**: `restock` becomes `restock_unchained_trades`, and its doc comment names the two chains still
-owed.
+### 7.2 Split buying from eating
 
-## 7. Money: what replaces the Watch ledger
+Refactor the current one-unit `try_purchase` into a generic market transaction. The transaction
+moves items and sparks atomically and returns a receipt; it does not decide why the buyer wanted the
+item.
 
-This is the hard half, and the one that must not be hand-waved. Today `close_books` is the *only*
-mint and burn in the system, which is why `debug_assert_eq!` conservation
-(`round.rs:2688-2697`) can hold everywhere else. Deleting it without a replacement makes the city's
-spark supply a closed pool that drains into whoever sells most, and by the fourth day nobody can buy
-bread.
+```rust
+enum PurchasePurpose {
+    Meal,
+    Stock { targets: Vec<StockTarget> },
+}
 
-**The merchant is the boundary, and a merchant's cart is full in both directions.** That is the
-whole model, and Clemence Crake's sheet already states it: *"Brede wool bought down to the last
-fleece, Ombreval cloth sold out along the river and the Lantern Road."* A merchant who arrives with
-grain and leaves with an empty cart and a purse of sparks is a coin sink that bankrupts the city in
-a week. A merchant who arrives with grain and leaves **with cloth** is a trade balance.
-
-```text
-   sparks OUT: the city pays the merchant for grain        (§5, the gate pitch)
-   sparks IN:  the merchant pays the city for cloth        (the return load)
-   net:        the toll, and whatever the terms were that morning
+struct StockTarget {
+    matcher: ItemMatcher,          // exact kind + required metadata
+    desired_quantity: u32,
+    max_spend_sparks: u32,
+}
 ```
 
-- **the outbound cargo is cloth**, because that is what Ombreval actually exports — the Cloth Ward,
-  Draper's Reach, the tenterhooks, the cloth halls and 12 `cloth_worker` + 3 `draper` cast all exist
-  for it and currently produce nothing. One new catalog kind (`cloth {grade}`), one buying trade
-  bound to `draper`/`cloth_worker` vendors, and the same `try_purchase` again. **The second chain
-  comes nearly free, and it is the one that pays for the first.**
-- **the merchant's `intent` is `Stock` in both directions**: they sell grain until their stock is
-  gone, then spend their takings on cloth before their departure leg. A merchant who has sold well
-  buys well — so a good grain morning becomes a good cloth afternoon, visibly, in the same square.
-- **what is left over is small enough to be honest.** The residual imbalance — the toll, the
-  merchant's actual profit, wages for people who make nothing tradeable (the Watch, the Chapter, the
-  water-carriers) — is settled by a **payroll**: `close_books` shrinks from *"every wallet resets to
-  seed"* to *"these institutions credit their own people"*. That is still a cheat, but it is a
-  bounded one, and it is the lie every real city with a mint tells.
-- **the balance is a number you watch, not a hope.** `food_summary()` gains `sparks in / out /
-  drift` per day (§9). If drift trends, the cloth prices or the payroll are wrong — both live in
-  data.
+- `Meal` chooses one affordable edible unit. The meal ladder consumes it only after a successful
+  purchase.
+- `Stock` buys the target's deficit, cheapest matching stack first, up to quantity, budget, and
+  wallet limits. It stores the result and never calls eating.
+- Matching includes metadata: rye grain cannot silently satisfy a wheat target.
+- The atomic cross-check still asserts that the buyer's debit equals the seller's credit.
+- A vendor may buy from another trade, but not from itself or its own stall.
 
-The seed wallets ([02](02_the_spark_standard.md) §4) stay as the day-zero condition. What dies is
-the nightly reset of *buyers*.
+A `MarketErrand` is a resumable ladder intent: choose the configured source, walk there, wait for it
+to open, buy, then clear or retry. Player-directed actions, conversations, and explicit `go_to`
+retain precedence; stock errands run before the ordinary work round and hunger idle behavior.
+Conversation pauses an errand rather than cancelling it.
 
-**Why this is worth the extra chain:** the alternative — four institutions printing money at the
-Watch — makes the city's economy a closed accounting trick the player can never see or affect. The
-two-way cart makes it a *place*: prices move when a road is bad, the Draper's Reach has customers
-because Ostrelle wants cloth, and the famine lever the lore already wrote (*"F.183: the Chapter
-opened its granary late"*) has something to act on. It also gives Renn Crake's larger promises and
-worse sleep somewhere to lead.
+Starting target caps:
 
-**This is deliberately last (M5d).** M5a–c can ship with `close_books` intact — the chain works fine
-with resetting wallets, it is just not yet an economy. Do not couple them.
+| buyer | source | target |
+|---|---|---|
+| Betriss | an arriving cart at Seven Lofts | store up to 8 rye and 4 wheat measures |
+| Bertran | Betriss's Seven Lofts counter | hold up to 2 rye and 1 wheat measures awaiting milling |
+| Averil | Bertran's Wool Gate counter | hold up to 3 rye and 1 wheat flour sacks awaiting the night bake |
+| Ewart *(M5d)* | Brede cart at Draper's Reach | hold up to 4 raw-wool bundles |
+| Brede merchant *(M5d)* | Ewart's cloth counter | acquire 1 broadcloth bolt for departure |
+| Lantern Road merchant *(M5d)* | Ewart's cloth counter | acquire 1 kersey bolt for departure |
 
-## 8. Milestones
+Targets are initial tuning values. They must live in data and use exact metadata.
 
-Ordered so the visible thing lands first, per the brief. Each is shippable and each leaves the game
-in a playable state.
+### 7.3 Named counters and binding
 
-### M5a — The merchants *(the visible one)*
+| counter or worksite | purpose | preferred actor | active window |
+|---|---|---:|---|
+| arriving road cart, Seven Lofts | sells the leader's incoming grain | road-party leader | Dayspring–High Wick on its weekdays |
+| Betriss's grain counter, Seven Lofts | sells persistent stored grain | `p008s` | Dayspring–High Wick |
+| Bertran's mill counter, Wool Gate | sells flour he actually milled | `e7mil` | Waning–Lamplight |
+| Ansel Quern's bakehouse | baking worksite, not a shop | producer `davqn`; keeper `danqn` | Watch–Kindling |
+| Wickmarket bread stall | sells Averil's loaves | `davqn` | Dayspring–Waning |
+| Ewart's counter, Draper's Reach *(M5d)* | raw-wool receipt, production, cloth sale | `e1skl` | High Wick–Waning |
 
-**Ships:** `Presence` + the snapshot/attention/percept filtering; the `road_trader` archetype, the
-`"gate"` anchor and `Arrival::Arrive`/`Depart`; the `beyond_the_walls` home framing + `bake_homes.py`
-change; **the five or six new authored characters of §3, each kinned to a resident** (this is
-authoring work, not code — budget it as such, and write them to the standard of the sheets they are
-kin to); the `grain` catalog kind; the two grain pitches; `try_purchase`'s three generalisations
-(§5). Millers buy grain and hold it — they cannot mill yet.
+Binding requires all of the following: the preferred actor is present, today is allowed, the
+counter is open, and the actor's **currently active** leg is `Trade` at that site. Merely having
+some matching leg elsewhere in the weekly round is not enough.
 
-**How you know:**
+Using preferred actor ids prevents output from becoming stranded on one producer while a different
+occupation-matched actor binds as vendor.
 
-```sh
-cargo run -p cathedral-backends --bin cathedral-headless -- --fake --trace-food --watch-clock 1
+---
+
+## 8. Transforms and the two-day timetable
+
+A transform is a resumable timed job, not an instant side effect of buying:
+
+```rust
+struct TransformSpec {
+    id: String,
+    site: String,
+    producer: ActorId,
+    consumes: Vec<StockSpec>,
+    produces: Vec<StockSpec>,
+    allowed_offices: Vec<Office>,
+    seconds: f64,
+}
+
+struct TransformJob {
+    spec_id: String,
+    inputs: Vec<ReservedInput>,    // item id + exact reserved quantity
+    progress_seconds: f64,
+}
+
+struct ReservedInput {
+    item_id: ItemId,
+    quantity: u32,
+}
 ```
 
-`[food]` shows the gates empty at the Watch, the Crake cart arriving at the Wool Gate at Kindling on
-a Highmarket, a grain pitch opening at Dayspring, millers queueing and buying, and the party walking
-back out at the Waning. Headcount `in city` returns to its baseline overnight. On a Bellday the
-gates stay shut and nothing changes.
+Required quantities are split into job-reserved stacks when the job starts, consumed only when it
+completes, and returned to the producer if the job is cancelled. Completion creates output in that
+same named producer's holds. Save/load preserves the job and its reserved inputs. Only the actor
+named by `producer` may run it.
 
-In-game, on a Highmarket morning:
+Catalog additions and fixed prices:
 
-```sh
-CATHEDRAL_DRIVE='wait-online; tp -35 18 470 180 -25; shot woolgate_kindling; sleep 30; shot woolgate_trade; quit' cargo run
-```
+| kind | metadata | price_sparks |
+|---|---|---:|
+| `grain` | `grain=rye` / `grain=wheat` | 3 / 6 |
+| `flour` | `grain=rye` / `grain=wheat` | 5 / 9 |
+| `wool` | — | 8 |
+| `cloth` | `grade=kersey` / `grade=broadcloth` | 14 / 40 |
 
-The first shot is an empty gate; the second has a named merchant, two carters and a queue of millers.
+Existing loaf prices remain **2 sparks for rye and 4 for wheat**.
 
-**The acceptance test is a conversation, not a counter.** Walk up and ask her where she came from,
-whose cart it is, and how the road was. The answers are on her sheet and they are Brede, the Crake
-counter, and an opinion about Renn Crake's figures. Then go find Clemence Crake on the Tallage and
-ask *her* about the cart. If both halves of that hold, the fixed-cast rule (§1) is paying for itself
-and a procedural spawner would have bought nothing.
+Recipes:
 
-### M5b — Flour
+| transform | producer and site | consumes | produces |
+|---|---|---|---|
+| rye milling | Bertran, Wool Gate mill face | 1 rye grain | 3 rye flour |
+| wheat milling | Bertran, Wool Gate mill face | 1 wheat grain | 3 wheat flour |
+| rye night bake | Averil, Ansel Quern's bakehouse | 1 rye flour | 5 rye loaves |
+| wheat night bake | Averil, Ansel Quern's bakehouse | 1 wheat flour | 4 wheat loaves |
+| kersey *(M5d)* | Ewart, Draper's Reach | 1 raw wool | 1 kersey |
+| broadcloth *(M5d)* | Ewart, Draper's Reach | 3 raw wool | 1 broadcloth |
 
-**Ships:** the `flour` kind; the `Transform` machinery and its `food.json` table; the Wool Gate mill
-stall; millers milling and selling. Bakers buy flour and hold it; `restock` still conjures their bread.
+The gross margins are internally possible at fixed prices:
 
-**How you know:** the trace shows a measure of rye becoming three sacks at the mill and the miller's
-`you_sell` quoting flour off the template. A unit test walks one measure of grain from merchant to
-miller to baker's hands, asserting item ids are minted and consumed exactly once and that no stack
-ever reaches quantity 0.
+- one rye flour sack costs Averil 5 and yields five 2-spark loaves: 5 sparks gross margin;
+- one wheat flour sack costs 9 and yields four 4-spark loaves: 7 sparks gross margin;
+- one rye grain measure costs Bertran 3 and yields three 5-spark flour sacks: 12 sparks gross margin;
+- one wheat grain measure costs 6 and yields three 9-spark sacks: 21 sparks gross margin.
 
-### M5c — The bakehouse *(the restock dies)*
+These are simplified gross margins, not claims about labor, fuel, tolls, or rent.
 
-**Ships:** the bakehouse site; the bakers' Kindling leg repointed; baking; `restock` reduced to
-`restock_unchained_trades` for `provisions`/`fish`/the pot.
+The canonical schedule is:
 
-**How you know:** grep for the bread conjuring and find nothing. The trace shows, in order on one
-Highmarket morning: merchant in → miller buys grain → miller mills → baker buys flour → baker walks
-to the bakehouse → baker bakes → baker walks to the Wickmarket → Ilse buys a loaf. **Eight steps,
-one morning, no magic.** Then the M4 acceptance test
-([06_milestones.md](06_milestones.md) §M4) is re-run unchanged and still passes — that is the proof
-the M3 shapes were right.
+| time | event |
+|---|---|
+| Day N Kindling | scheduled road party loads outside, appears at its gate, and walks in |
+| Dayspring | cart reaches Seven Lofts; Betriss buys grain into persistent storage |
+| High Wick | Bertran buys available grain from Betriss; the cart may continue to Draper's Reach in M5d |
+| Waning | Bertran mills at the Wool Gate face and opens his flour counter |
+| Lamplight | Averil buys flour; road party returns to its gate and departs |
+| Watch → Kindling | Averil works the night bake at Ansel's common oven |
+| Day N+1 Dayspring | Averil carries finished loaves to her Wickmarket stall |
 
-### M5d — The return load *(the ledger dies)*
+The one-time Seven Lofts seed lets Bertran work even on days without a delivery. There is no
+requirement that each morning's loaf use that morning's grain.
 
-**Ships:** §7 — the `cloth` kind and the Draper's Reach counter; merchants spending their takings on
-cloth before departure; takings leaving through the gate; the residual institutional payroll;
-`sparks in/out/drift` in the census; `close_books` reduced to that payroll.
+For end-to-end testing, transform trace records input and output item ids so a provenance graph can
+follow one grain batch through destroyed and newly created stacks without adding provenance keys to
+catalog metadata.
 
-**How you know:** a seven-day `--watch-clock` run where the city's total spark holding stays inside
-a stated band, no vendor goes bankrupt, and no buyer is priced out of a loaf for more than a day.
-Then the reason it works should be *visible*: on a Highmarket the same merchant sells grain at the
-Wool Gate in the morning and queues at the Draper's Reach in the afternoon, and the drapers who have
-had no customers for four milestones finally have one.
+---
 
-This is a *tuning* milestone as much as a coding one; expect to move the cloth prices and the
-payroll constants twice. Both live in data, so that costs a re-run, not a rebuild.
+## 9. Cloth is produced, not conjured
 
-## 9. Observability and invariants
+The old sketch introduced cloth only as a return load, with no source. M5d builds the minimum
+workshop side needed to make it real:
 
-`--trace-food` extends rather than forks. New `[food]` lines: `road in`/`road out` with gate, party
-and cargo both ways; `milled`/`baked` with inputs and outputs; the existing sale line unchanged.
+1. the Brede manifest brings raw wool;
+2. at Draper's Reach, Ewart buys that wool from the road merchant;
+3. Ewart runs the exact kersey or broadcloth recipe needed to restore his configured output target;
+4. the road merchant buys an existing bolt from Ewart;
+5. the bolt remains in the leader's holds and is visible on the departing cart;
+6. the next `boundary_exchange` consumes it outside the walls.
 
-`Round::food_summary()` (`round.rs:739`) gains a chain block:
+The Lantern Road party can buy kersey made from wool left by an earlier Brede trip. If its target is
+unavailable, it leaves without cloth; no fallback bolt is minted.
 
-```text
-food:  … (unchanged) …
-chain: in city 2 merchants + 3 carters | grain 14, flour 9, loaves 31, cloth 4 | milled 6, baked 20 today
-coin:  412 held | in 96, out 84 today | drift +12
-```
+Clemence and Renn remain important resident counterparties in lore and conversation, but M5 does
+not silently transfer stock through them. A later wholesale-contract feature can add that layer.
 
-Standing assertions, checked under `--trace-food` and in tests:
+---
 
-- **items are conserved except at declared transforms** — a property test over any sequence of
-  arrivals, purchases, transforms and eats: every item id is minted once and destroyed once, and the
-  only quantity changes not accounted for by a purchase or an eat are `Transform`-shaped;
-- **sparks are conserved except at the gate and the payroll** — the M3 cross-check, now with two
-  named exits;
-- `world.assert_invariants()` after every transform, as `restock` already does (`round.rs:1610`);
-- **no `BeyondTheWalls` character appears in a snapshot, a percept, or a `you_see`** — one test per
-  seam, because a leak here is invisible in the trace and obvious in the game.
+## 10. Money after the nightly reset
 
-## 10. Fixtures and blast radius
+### 10.1 Transitional M5a–c behavior
 
-Smaller than M0's. Fixture worlds pass `nav: None`, so nobody is enrolled, no round runs, and no
-road party ever arrives — the 22 existing prompts should be **byte-stable**. Verify that before
-assuming it; new `items.json` rows are inert unless a fixture holds one.
+M5a splits legacy ledger bookkeeping from chain inventory. Until M5d, the existing resident wallet
+refill may remain for non-chain actors, but it must never:
 
-Two new fixtures, both for the new sheet shapes M5 introduces:
+- reset a road trader's wallet;
+- delete Seven Lofts stock;
+- delete grain, flour, or transformed loaves;
+- reset Betriss, Bertran, or Averil to a vendor template.
 
-- `merchant_at_the_gate.txt` — a `BeyondTheWalls`-authored merchant rendered `InCity`, with the
-  village home framing and a `you_sell` of grain;
-- `miller_with_flour.txt` — `you_sell` quoting a non-edible trade, proving §5's generalisation
-  reaches the sheet.
+Starting working capital, seeded once:
 
-`turn.j2` needs **no** new prose. Grain and flour are ordinary stackable items, the mill and the
-bakehouse are ordinary places, and buying is the same `offer_item` the model already does. If a
-model needs to be told how to buy flour, §5 was implemented wrong.
+| actor | sparks |
+|---|---:|
+| Betriss | 30 |
+| Bertran | 24 |
+| Averil | 24 |
+| each road-party leader | 25 |
+| each carter | ordinary personal seed |
+| Ewart *(M5d)* | 48 |
 
-## 11. Risk ledger
+These are minimum initial values and explicit data, not nightly targets. For the named resident
+chain actors, the same numbers are their initial working reserves during household settlement;
+ordinary residents use their day-zero seeded wallet as their reserve unless authored otherwise.
+
+### 10.2 M5d household settlement
+
+M5d deletes `close_books` and replaces it with `settle_households` at Watch:
+
+1. Resident actors below a 2-spark household floor become recipients.
+2. Resident actors above their configured working reserve contribute only their surplus.
+3. Transfers are deterministic and move only the amount recipients need. They conserve sparks.
+4. If the surplus pool is insufficient, an explicit institutional wages/alms payment creates only
+   the shortfall and logs the exact minted amount.
+5. Road-party members are excluded from both resident redistribution and institutional payroll.
+6. No stock is reset or deleted by settlement.
+
+This is an aggregate representation of wages, rents, alms, and shared household pots. It is honest
+about the remaining mint instead of pretending every actor has a fully simulated employer.
+
+The census records resident supply separately from present road-party wallets, plus road-trade
+sparks entering and leaving through sales. For a deterministic 14-day fake-backend run:
+
+- resident-held sparks finish within ±10% of their day-zero total;
+- institutional payroll mints at most 2% of the initial resident supply over the run;
+- no resident is at zero at two consecutive Watches;
+- no chain vendor fails two consecutive scheduled cycles solely for lack of sparks;
+- every sale uses the exact static catalog price.
+
+If this fails, tune manifests, yields, purchase caps, working reserves, or the household floor.
+**Do not tune prices in response to road conditions or inventory.**
+
+---
+
+## 11. Milestones
+
+### M5a — The cart reaches Seven Lofts
+
+Ships:
+
+- central `Presence` semantics and all filters/cleanup in Section 5;
+- two explicit road parties and five authored character sheets;
+- deterministic boundary manifests;
+- the `RoadCart` snapshot and Bevy presentation;
+- `grain` and its fixed catalog rows;
+- the Seven Lofts historical seed, Betriss's counter, and her targeted lore update;
+- `listings` versus `restock`;
+- generic `Meal` versus `Stock` purchases and resumable stock errands;
+- direct party routing rather than occupation routing.
+
+Betriss buys incoming grain and Bertran can buy and hold it; milling does not exist yet.
+
+Acceptance:
+
+- on Highmarket, exactly the three-person Brede party and one cart appear at Wool Gate, trade at
+  Seven Lofts, return to the gate, and disappear together;
+- on Second, exactly the two-person Stone party does the same;
+- on Bellday, Lowmarket, and Seventh no party arrives;
+- after departure, none of their actors, still-owned items, offers, targets, percepts, queue entries,
+  or cart leaks into the public world;
+- Seven Lofts stock changes by real purchases and remains unchanged through Watch;
+- asking the road merchant about origin, kin, cargo, and road yields authored answers.
+
+### M5b — Grain becomes flour
+
+Ships:
+
+- `flour`;
+- reserved, timed, saveable `TransformJob`;
+- Bertran's explicit Seven Lofts → Wool Gate route;
+- the named Wool Gate mill counter;
+- live vendor-hold inventory.
+
+Acceptance follows one rye item from the road leader to Betriss to Bertran, then three flour items
+from Bertran to Averil. Input is consumed once, output is created once, the quoted sale price comes
+from the catalog, and no other miller transforms anything.
+
+### M5c — The Quern night bake replaces bread restock
+
+Ships:
+
+- Ansel Quern's common bakehouse as a named worksite;
+- Averil's Watch-to-Kindling route and baking jobs;
+- Wickmarket binding to Averil's real held loaves;
+- deletion of every loaf template from both `bread` and `provisions` restock;
+- the targeted Ansel/Averil lore alignment in Section 2.2.
+
+Acceptance follows a grain batch delivered on Day N through milling and night baking to a funded
+buyer's loaf purchase on Day N+1. Grepping the restock path finds no loaf creation.
+
+Then rerun M4 unchanged: **Ilse has one spark, cannot buy a two-spark rye loaf, buys the one-spark
+herring, and eats it.** M5 must not rewrite that acceptance story into an impossible loaf purchase.
+
+### M5d — Wool returns as cloth and the reset dies
+
+Ships:
+
+- `wool` and `cloth`;
+- Ewart's raw-wool purchase and two transforms at Draper's Reach;
+- road merchants' exact cloth stock targets;
+- departing cart load presentation;
+- boundary consumption of the return load;
+- `settle_households` and deletion of `close_books`;
+- 14-day chain and coin census.
+
+Acceptance proves raw wool enters on a Brede manifest, becomes an existing cloth item in Ewart's
+holds, is bought at its fixed catalog price, leaves on the visible cart, and is consumed only at the
+next off-map boundary exchange. The full 14-day criteria in Section 10.2 pass.
+
+---
+
+## 12. Observability and invariants
+
+Extend `--trace-food` rather than adding a parallel tracer. Events:
+
+- `boundary_load` / `boundary_unload` with party, trip, item ids, kinds, and quantities;
+- `road_in` / `road_out` with all member ids, gate, and cart state;
+- `stock_errand` and `sale` with purpose, buyer, seller, exact metadata, quantity, and sparks;
+- `transform_start` / `transform_finish` with spec, input ids, output ids, and producer;
+- `cart_load` when the presentation category changes;
+- `household_settlement` with donor transfers, recipients, and minted shortfall.
+
+`food_summary()` gains:
+
+- Seven Lofts rye/wheat quantities;
+- holdings for Betriss, Bertran, Averil, and Ewart;
+- present road parties and inbound/outbound cart load;
+- transforms completed today;
+- resident spark total, road-party spark total, gate in/out, redistribution, payroll minted, and
+  zero-wallet streaks.
+
+Standing invariants:
+
+- grain, flour, wool, cloth, and loaf quantities change only through initial seed, boundary
+  exchange, atomic purchase, consumption, or a declared transform;
+- sparks change only through atomic transfer or logged institutional payroll;
+- a transform cannot consume the same quantity twice, complete away from its site, or run under
+  the wrong actor;
+- a stall cannot sell an item its current vendor does not hold;
+- absent actors and their owned state never appear in snapshots, percepts, targets, schedules, or
+  census resident totals;
+- party transition is atomic and its cart load agrees with the leader's held cargo.
+
+---
+
+## 13. Fixtures and compatibility
+
+With no presence field, actors deserialize as `InCity`. Fixture worlds with `nav: None` enroll no
+rounds or road parties. Existing prompt fixtures should therefore remain byte-stable; verify rather
+than regenerate them blindly.
+
+Add focused fixtures/tests for:
+
+- a present road merchant with a beyond-the-walls home and grain in `you_sell`;
+- Betriss at Seven Lofts with persistent grain;
+- Bertran selling non-edible flour from transformed holds;
+- Averil selling transformed rye and wheat loaves;
+- an absent actor whose owned item and pending offer are both filtered;
+- a transform paused and restored through save/load.
+
+`turn.j2` needs no new market prose. Grain and flour are normal held items; procurement is sim
+behavior, not a new LLM verb.
+
+Expected code blast radius includes the sim world/snapshot revision, round ladder, food schema and
+seed, item catalog, save/load state, authored character assets, road-party data, and the Bevy cart
+projection. M5a should not be described as a round-only data edit.
+
+---
+
+## 14. Risks and mitigations
 
 | risk | mitigation |
 |---|---|
-| `Presence` leaks — a `BeyondTheWalls` trader is targeted, perceived, or spends an LLM turn | one test per seam (§9); the filter goes in `snapshot`/`attention`/percept-recipient construction, not at call sites, so there is one place to get right |
-| the chain starves — a day with no merchant means no grain means no bread three days later | the weekday roster guarantees ≥1 grain seller on 5 of 7 days; millers and bakers hold buffer stock across days (their `holds` persist — only stall *pitch* stock was ever swept). Watch `chain:` counts for a downward trend across a 7-day run |
-| the margins are wrong and the miller or baker goes broke | §6's yields are declared in data, not code — retune without a rebuild. M5d's tuning milestone exists for exactly this |
-| the player never sees any of it, because it happens at Kindling while they sleep | the Wool Gate → Wickmarket road is 130 m and the whole chain runs along it. This is why that pairing ships first. If it still reads as invisible, move baking later rather than adding narration |
-| a road trader despawns mid-conversation | `Depart` flips presence **on arrival at the gate**, and the conversation floor (`features/implemented/conversation_floor.md`) already holds an actor in place while talking — verify it outranks the round leg, and if not, gate the flip on "not in a conversation" |
-| deleting `restock` for bread while `provisions`/`fish` still conjure looks half-finished | it *is* half-finished, honestly and deliberately. The doc comment on `restock_unchained_trades` names the two chains still owed so the next person knows it is a queue, not an oversight |
+| Seven Lofts empties on non-arrival days | one-time persistent seed, four scheduled arrivals per week, explicit storage and buyer targets, 14-day stock census |
+| same-morning ordering becomes flaky | the canonical acceptance spans Day N to Day N+1; buffers decouple each producer |
+| resident merchants or cargo workers accidentally leave town | explicit party membership; no occupation-wide `road_trader` mapping |
+| transformed output is stranded behind stale `stock_ids` | sell inventory is derived from the active vendor's current holds |
+| every baker or miller transforms stock | each transform names one producer id |
+| a road trader disappears mid-conversation | departure waits for the whole party to be at the gate and idle, then transitions atomically |
+| an absent actor leaks through an owned item or offer | central presence predicate plus actor/item/offer/target tests |
+| cloth exists only as a return-load prop | raw wool is a boundary manifest; Ewart buys it and performs a declared transform |
+| carts are promised but invisible | `RoadCart` presentation is in M5a acceptance, with host work budgeted |
+| residents or chain firms go broke | persistent working capital, conservative household redistribution, bounded logged payroll, 14-day thresholds |
+| old restock deletes real chain stock | only ids recorded in `conjured_ids` may be swept |
+| a bad road silently changes prices | no price multiplier exists; only schedule/manifests/availability may change |
+| embedded data is mistaken for hot reload | acceptance rebuilds after `food.json` or `items.json` changes |
