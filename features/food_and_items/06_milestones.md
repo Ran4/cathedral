@@ -135,8 +135,8 @@ sub-milestones:
 
 | | ships | the cheat it kills |
 |---|---|---|
-| **M5a** | central `Presence`; two explicitly routed road parties; deterministic boundary manifests; visible carts; `grain`; Seven Lofts and Betriss's persistent counter; generic stock errands distinct from meals | — (Bertran can buy and hold grain) |
-| **M5b** | `flour`; timed/saveable transforms; Bertran's Seven Lofts → Wool Gate route and named counter; live held stock as sale inventory | — (Averil can buy and hold flour) |
+| **M5a** | central `Presence`; two explicitly routed road parties; deterministic boundary manifests; visible carts; `grain`; Seven Lofts and Betriss's persistent counter; live held stock as sale inventory; generic stock errands distinct from meals | — (Bertran can buy and hold grain) |
+| **M5b** | `flour`; timed/saveable transforms; Bertran's Seven Lofts → Wool Gate route and named counter | — (Averil can buy and hold flour) |
 | **M5c** | Ansel Quern's common bakehouse; Averil's Watch-to-Kindling bake and Day-N+1 sale | **all loaf restock**, including the provisions template |
 | **M5d** | `wool` and `cloth`; Ewart's transforms; cloth on the departing cart; conservative household redistribution and bounded logged payroll | **`close_books`** |
 
