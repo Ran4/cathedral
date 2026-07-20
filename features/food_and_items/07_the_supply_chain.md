@@ -56,6 +56,11 @@ later item/spark transfers fulfill it.
 There is no automatic scarcity multiplier, road-quality multiplier, or dynamic-price hook in this
 milestone.
 
+M5 also deliberately collapses the earlier varietal split. The mechanically modelled food chain
+is exactly **grain → flour → loaf**. Grain, flour, and loaves carry no varietal metadata, and every
+loaf has the same posted price. Varietal names may still appear in lore or conversation, but they
+do not select recipes, inventory classes, prices, or bread types.
+
 ---
 
 ## 1. Binding decisions
@@ -80,9 +85,11 @@ These decisions are requirements, not suggestions left to implementation:
    payroll and boundary cash settlement are the only new spark source/sink paths.
 10. **Posted prices stay fixed; bargaining stays possible.** Supply trouble is represented by
     empty shelves and late carts. Conversational exchanges may still settle on other terms.
+11. **The food chain has no varietal axis.** Any grain can become the single flour item, and that
+    flour can become only the single loaf item.
 
 Fish and the tavern pot remain separate, explicitly named cheats. M5c removes all magically
-restocked loaves, including the four rye loaves currently hidden in the `provisions` template.
+restocked loaves, including the four loaves currently hidden in the `provisions` template.
 
 ---
 
@@ -149,8 +156,8 @@ M5 ships two parties and five new characters:
 
 | party | members | scheduled arrivals | city relationships | incoming cargo | intended return load |
 |---|---:|---|---|---|---|
-| **Brede / Wool Gate** | one minor merchant + two ambient carters | Highmarket and Fourth | merchant is kin or factor to Clemence Crake; Renn brokers the cart | rye, wheat; raw wool from M5d | broadcloth |
-| **Lantern Road / Stone Gate** | one minor merchant + one ambient carter | Second and Fifth | merchant has an authored tie to Ewart Skell or a Crake factor | rye and wheat | kersey |
+| **Brede / Wool Gate** | one minor merchant + two ambient carters | Highmarket and Fourth | merchant is kin or factor to Clemence Crake; Renn brokers the cart | grain; raw wool from M5d | broadcloth |
+| **Lantern Road / Stone Gate** | one minor merchant + one ambient carter | Second and Fifth | merchant has an authored tie to Ewart Skell or a Crake factor | grain | kersey |
 
 There is no scheduled arrival on Bellday, Lowmarket, or Seventh. That gap is deliberate; Seven
 Lofts covers it.
@@ -202,14 +209,14 @@ Starting manifests:
 
 | party | M5a manifest | M5d addition |
 |---|---|---|
-| Brede | 3 measures rye grain, 1 measure wheat grain | 4 bundles raw wool |
-| Lantern Road | 1 measure rye grain, 2 measures wheat grain | none |
+| Brede | 4 measures grain | 4 bundles raw wool |
+| Lantern Road | 3 measures grain | none |
 
 The manifests are tuning inputs, not prices. If the acceptance run starves or floods the chain,
 adjust manifest quantities, storage/production targets, transform yields, or purchase budgets.
 
-Betriss's holds receive one historical day-zero seed of **4 rye + 2 wheat measures**, reported as
-Seven Lofts stock while she owns it. M5 does not invent an unowned place container. The seed is
+Betriss's holds receive one historical day-zero seed of **6 grain measures**, reported as Seven
+Lofts stock while she owns it. M5 does not invent an unowned place container. The seed is
 created once by world seeding, never restored at Kindling or Watch. That buffer bootstraps a world
 whose first day has no road arrival and makes the compound matter immediately.
 
@@ -298,19 +305,25 @@ The lifecycle is binding:
    off-map breakfast and water are not item-simulated, this traced entry also sets the members to
    `HUNGER_MAX` and `THIRST_MAX`. The party then walks its route; office changes never teleport it
    between sites.
-3. At Lamplight, the route changes to the gate and the phase becomes `Returning`.
-4. Once every member is at the gate, no member is in conversation, and no member has an in-flight
-   action, the phase becomes `DeparturePending`. On the first safe engine tick,
-   `World::leave_party` removes all members and the cart atomically, even if the clock has passed
-   Snuffing.
+3. At Lamplight, `begin_return` changes the phase to `Returning` and gives the party controller
+   exclusive ownership of every member's movement. In the same transition it clears ordinary-round
+   destinations, existing movement targets, food/water and market queue membership, meal and stock
+   errands, curfew destinations, and gestures. Pressing hunger, thirst, curfew, and ordinary round
+   rungs are suppressed until the party leaves; none may redirect a returning member. An active
+   conversation or already-dispatched handoff may pause the return, but creates no replacement
+   movement intent. New explicit `go_to` and queue/errand requests fail with `leaving_city`.
+4. When a member reaches the gate, all still-pending offers involving that member are retracted and
+   traced as `road_offer_expired`; a standing offer is never part of the safe-departure predicate.
+   Offers may still be made and accepted during a nearby conversation before the gate, but anything
+   left unresolved expires there. Once every member is at the gate, no member is in conversation,
+   and no member has an in-flight action, the phase becomes `DeparturePending`. On the first safe
+   engine tick, `World::leave_party` removes all members and the cart atomically, even if the clock
+   has passed Snuffing.
 
-While returning or departure-pending, a member receives no ordinary round, meal, or stock errand.
-The return-to-gate intent outranks a new explicit `go_to`, which is rejected with a leaving-city
-reason; nearby conversation and item offers remain allowed and can delay the safe departure.
-Departure cleanup cancels movement targets, market queues, meal/stock intents, gestures, pending
-offers, and other transient city state. The engine clears scheduler priority, novelty, queued
-cognition, and any conversation bookkeeping in the same transition. A cognition completion for an
-actor who is no longer present is discarded rather than applied.
+`Returning` and `DeparturePending` are top-priority party modes, not ordinary ladder intents.
+Departure cleanup removes any remaining transient city state. The engine clears scheduler priority,
+novelty, queued cognition, and conversation bookkeeping in the same transition. A cognition
+completion for an actor who is no longer present is discarded rather than applied.
 
 If a party has not departed by its next scheduled Kindling, trace `road_trip_missed`; do not run a
 second boundary exchange, advance the trip number, or stage another arrival. Its next eligible
@@ -356,8 +369,9 @@ the same ordinary leg shape used by rounds, but from party membership:
 The three phase fields are party-controller triggers; `legs` retain the existing ordinary round
 shape and valid `doing` values. The first leg is the physical walk from the entry gate. The Stone
 Gate party uses the same offices and its own gate. Before M5d it remains at Seven Lofts until its
-return-to-gate leg. M5d inserts a High Wick `trade` leg at **The Draper's Reach** into both party
-routes.
+return-to-gate leg. M5d keeps the cart at Seven Lofts through High Wick, then inserts a Waning
+`trade` leg at **The Draper's Reach** into both party routes. This preserves the full Dayspring and
+High Wick grain-sale window before the cart changes sites.
 
 Kindling stages an absent party outside the gate as described in Section 5. At Dayspring the party
 appears at the gate, walks to Seven Lofts, and only opens its cart pitch when the leader reaches the
@@ -365,11 +379,21 @@ configured counter radius. At Lamplight it walks back and departs under the safe
 Section 5.
 
 The controller processes every crossed office boundary in chronological order, so a coarse clock
-pump that crosses Kindling and Dayspring stages before it enters. The shipped game initializes on
-Highmarket at Dayspring; on a **fresh world initialized exactly at an eligible `enter_at`**, the
-controller performs that day's not-yet-run stage and entry once before the first snapshot. A fresh
-world initialized later in the day does not retroactively teleport a party in; it waits for the next
-scheduled trip.
+pump that crosses Kindling and Dayspring stages before it enters. Initial construction invokes the
+same idempotent trigger path because the engine does not ring the office it starts in:
+
+- on a fresh world initialized exactly at an eligible `stage_at`, stage that party once before the
+  first snapshot;
+- on a fresh world initialized exactly at an eligible `enter_at`, perform that day's not-yet-run
+  stage and entry once before the first snapshot; and
+- on a fresh world initialized later in the day, do not retroactively teleport a party in; wait for
+  its next scheduled trip.
+
+The trigger key is party + absolute day + phase, so bootstrap and the first ordinary pump cannot
+double-run it. M5a intentionally changes committed `default_config.ron` from day 0 (Bellday) to day
+2 (Highmarket), retaining `start_office: "dayspring"`, so a fresh installation opens with the Brede
+party entering. Tests construct their day and office explicitly and never inherit an ignored local
+`config.ron`; a user override may of course start on another day.
 
 Followers share the leader's destination without becoming vendors or stock owners.
 
@@ -400,9 +424,20 @@ matching `listings`. Remove `FoodStall.stock_ids`; if profiling later proves a c
 `World` inventory mutator, rather than callers in `Round`, must invalidate it. A transform output is
 sellable immediately because its producer holds it.
 
+Removing `stock_ids` must not make vendors automatically eat their boards. Derive a separate
+`commercially_listed(actor, item)` view from exact listings and vendor binding: it is true when the
+actor is the configured preferred vendor, or the current daily-bound vendor, for at least one trade
+that lists the item. A daily binding remains the association until the next rebind even while its
+counter is closed. The autonomous “eat held food” rung excludes the item's entire uncommitted
+quantity while that predicate is true, so Averil protects loaves baked overnight and seeks a normal
+meal instead. This is only a hunger-selection rule, not an inventory commitment: mechanical sales,
+explicit consumption, negotiated transfers, and gifts still use the ordinary uncommitted-quantity
+rules. Multiple matching listings do not multiply the protected quantity, and no transform output
+needs item-id registration.
+
 `ItemMatcher` means kind equality **and entire metadata-map equality**, not subset matching or a
-wildcard. Rye grain cannot satisfy wheat grain, kersey cannot satisfy broadcloth, and an unexpected
-extra key is a content error rather than a new invisible stock class.
+wildcard. Kersey cannot satisfy broadcloth, and grain, flour, and loaves match only with an empty
+metadata map. An unexpected extra key is a content error rather than a new invisible stock class.
 
 Track legacy stock created by `restock` in private operational state, not in catalog metadata:
 
@@ -427,7 +462,7 @@ LLM-negotiated whole-stack transfer would otherwise be deleted at the next Kindl
 
 At M5c:
 
-- `bread.listings` contains rye and wheat loaves; `bread.restock` is empty;
+- `bread.listings` contains the generic loaf matcher; `bread.restock` is empty;
 - remove loaves from the `provisions` restock and listing until a provisioner distribution route is
   designed;
 - fish still restocks herring and eel, explicitly marked as an unbuilt wharf chain;
@@ -469,7 +504,8 @@ struct StockTarget {
   spark quantity. It stores the result and never calls eating.
 - A target's held quantity includes quantities currently reserved by a transform. This prevents a
   producer from duplicating its procurement while a job is in progress.
-- Matching includes metadata: rye grain cannot silently satisfy a wheat target.
+- Matching includes the entire metadata map; generic grain, flour, and loaf targets require it to
+  be empty.
 - The complete plan is validated before mutation. Each receipt line records source item id,
   destination item id after split/merge, quantity, catalog unit price, and line total. The buyer's
   debit and seller's credit equal the receipt total; a failed validation moves neither items nor
@@ -482,31 +518,39 @@ struct StockTarget {
   masquerading as catalog-price sales.
 
 A `MarketErrand` is a resumable ladder intent: choose the configured source, walk there, wait for it
-to open, buy, then clear or retry. It is created only when the source has an eligible scheduled
-window; an absent road cart does not make a buyer stand at Seven Lofts for days. There is at most
-one failed attempt per source, office, and unchanged source-stock fingerprint (matching uncommitted
-item ids and quantities). `source_absent`, `closed`, `no_matching_stock`, `unpriced_stock`, and
-`insufficient_funds` are distinct traced results. A `no_matching_stock` errand may retry in the
-same office only after a transfer or transform changes that fingerprint—this is how a road merchant
-waiting for Ewart's active job buys its finished bolt without polling every tick. Other failures
-record the next eligible office/day and yield.
+to open, buy, then clear or retry. A mobile-source errand is created only after that counter actually
+binds: the leader is present, on the matching leg, inside the site radius, and in an allowed office.
+Merely reaching a scheduled office does not spend an attempt, so an early Dayspring check cannot
+make Betriss ignore a cart that reaches Seven Lofts later that same office.
 
-Player-directed actions, conversations, explicit `go_to`, pressing needs, and curfew retain
-precedence. Stock errands run before the ordinary round and non-pressing hunger idle behavior.
-Conversation pauses an errand rather than cancelling it.
+There is at most one failed attempt per source, office, and unchanged **source-state fingerprint**.
+That fingerprint includes counter binding/open state and the matching uncommitted item ids and
+quantities. `source_absent`, `closed`, `no_matching_stock`, `unpriced_stock`, and
+`insufficient_funds` are distinct traced results. `source_absent` means a previously bound source
+vanished between selection and the atomic purchase; a later binding change wakes the plan in the
+same office. Likewise, `no_matching_stock` may retry after a transfer or transform changes the
+fingerprint—this is how a road merchant waiting at Ewart's active job buys its finished bolt without
+polling every tick. Price/funds failures record the next eligible office/day and yield. An absent
+road cart does not make a buyer stand at Seven Lofts for days.
+
+For an ordinary in-city actor, player-directed actions, conversations, explicit `go_to`, pressing
+needs, and curfew retain precedence. Stock errands run before the ordinary round and non-pressing
+hunger idle behavior. Conversation pauses an errand rather than cancelling it. Section 5's
+`Returning`/`DeparturePending` party modes are the explicit exception and suppress these rungs.
 
 Starting target caps and whole-visit budgets:
 
 | buyer | source | target, in declaration order | max spend per visit |
 |---|---|---|---:|
-| Betriss | an arriving cart at Seven Lofts | 8 rye grain; 4 wheat grain | 30 |
-| Bertran | Betriss's Seven Lofts counter | 2 rye grain; 1 wheat grain | 12 |
-| Averil | Bertran's Wool Gate counter | 3 rye flour; 1 wheat flour | 24 |
+| Betriss | an arriving cart at Seven Lofts | 10 grain | 30 |
+| Bertran | Betriss's Seven Lofts counter | 3 grain | 9 |
+| Averil | Bertran's Wool Gate counter | 4 flour | 20 |
 | Ewart *(M5d)* | Brede cart at The Draper's Reach | 4 raw wool | 32 |
 | Brede merchant *(M5d)* | Ewart's cloth counter | 1 broadcloth | 40 |
 | Lantern Road merchant *(M5d)* | Ewart's cloth counter | 1 kersey | 14 |
 
-Targets are initial tuning values. They must live in data and use exact metadata.
+Targets are initial tuning values. They must live in data and use exact metadata-map matching;
+food-chain targets use empty metadata.
 `stock_plans`, listing/counter specs, budgets, offices, and site radii belong in the embedded
 `assets/world/food.json`; actor, trade, and place references are validated when the round seeds.
 
@@ -515,12 +559,12 @@ Targets are initial tuning values. They must live in data and use exact metadata
 | counter or worksite | purpose | preferred actor | exact offices | required active leg |
 |---|---|---:|---|---|
 | arriving road cart, Seven Lofts | sells the leader's incoming grain | road-party leader | `dayspring`, `high_wick` on its weekdays | `trade` at Seven Lofts |
-| Brede road cart, The Draper's Reach *(M5d)* | sells raw wool | Brede leader | `high_wick`, `waning` on Brede weekdays | `trade` at The Draper's Reach |
+| Brede road cart, The Draper's Reach *(M5d)* | sells raw wool | Brede leader | `waning` on Brede weekdays | `trade` at The Draper's Reach |
 | Betriss's grain counter, Seven Lofts | sells persistent stored grain | `p008s` | `dayspring`, `high_wick` | `trade` at Seven Lofts |
 | Bertran's mill counter, The Wool Gate | sells flour he actually milled | `e7mil` | `waning` | `work` at The Wool Gate |
 | Ansel Quern's common oven | baking worksite, not a shop | producer `davqn`; keeper `danqn` | `watch`, `kindling` | `work` at the common oven |
 | The Wickmarket bread stall | sells Averil's loaves | `davqn` | `dayspring`, `high_wick`, `waning` | `trade` at The Wickmarket |
-| Ewart's counter, The Draper's Reach *(M5d)* | cloth sale | `e1skl` | `high_wick`, `waning` | `work` at The Draper's Reach |
+| Ewart's counter, The Draper's Reach *(M5d)* | cloth sale | `e1skl` | `waning` | `work` at The Draper's Reach |
 
 Counter binding requires the preferred actor to be present, the weekday and exact office to be
 allowed, the actor to be within the configured site radius, and the actor's **current** leg to match
@@ -613,10 +657,18 @@ stacking rule. Cancelling a job only deletes its reservation; there is no detach
 back.” A transform receipt records all consumed item ids and quantities and each created-or-merged
 destination id and quantity.
 
-When an output does not merge, its legal item id is deterministically derived from producer id,
-transform id, production day, start slot, and output slot through the existing id-mint/hash helper;
-a collision is an invariant failure. When it merges, the receipt names the pre-existing destination
-id instead. `job_id` is derived from the same tuple and makes completion idempotent.
+When an output does not merge, its legal item id starts from producer id, transform id, production
+day, start slot, and output slot, then calls the existing `mint_item_id` in the same deterministic
+probe-until-free loop used by split-item creation. Collisions with authored items or earlier
+transform outputs are expected inputs to that loop, not invariant failures. When output merges, the
+receipt names the pre-existing destination id instead.
+
+`job_id` is the full logical `(producer, transform, production_day, start_slot)` key, not a
+five-character item id. Completion resolves all output destinations, consumes inputs, inserts or
+merges outputs, and records the receipt atomically in a bounded completed-job record before removing
+the active job. A repeated completion request for that key returns the recorded receipt and creates
+nothing. Completed records retain the current and previous production day—enough for crossed-clock
+replay—and are then pruned deterministically.
 
 Only the actor named by `ProductionPlan.producer` may run its transforms, and a producer may have at
 most one active job. A job starts only when all of these are true:
@@ -645,29 +697,28 @@ Catalog additions and posted prices (all four kinds are stackable and non-edible
 
 | kind | display / plural | visual key | metadata | `price_sparks` selectors |
 |---|---|---|---|---|
-| `grain` | grain measure / grain measures | `grain_sack` | `grain: [rye, wheat]` | `grain=rye`: 3; `grain=wheat`: 6 |
-| `flour` | sack of flour / sacks of flour | `flour_sack` | `grain: [rye, wheat]` | `grain=rye`: 5; `grain=wheat`: 9 |
+| `grain` | grain measure / grain measures | `grain_sack` | — | default: 3 |
+| `flour` | sack of flour / sacks of flour | `flour_sack` | — | default: 5 |
 | `wool` | bundle of raw wool / bundles of raw wool | `wool_bale` | — | default: 8 |
 | `cloth` | bolt of cloth / bolts of cloth | `cloth_bolt` | `grade: [kersey, broadcloth]` | `grade=kersey`: 14; `grade=broadcloth`: 40 |
 
-Do not add a default price to metadata-sensitive kinds. The supply-chain seed, manifest, stock-plan,
-and transform-spec validators require the listed metadata, so an incorrectly untyped grain, flour,
-or cloth item fails content validation rather than acquiring the wrong price. Existing loaf posted
-prices remain **2 sparks for rye and 4 for wheat**.
+Grain, flour, and loaf intentionally have no metadata and use one default posted price each. M5c
+removes the former flour-origin selector from the existing loaf catalog row and leaves its posted
+price at **2 sparks**. The supply-chain seed, manifest, stock-plan, and transform-spec validators
+reject metadata on those three kinds. Cloth remains metadata-sensitive, has no default price, and
+requires one listed `grade` value.
 
 Recipes and initial production backpressure:
 
 | data order | producer and site | consumes | produces | allowed offices | work | target |
 |---:|---|---|---|---|---:|---:|
-| 1 | Bertran, The Wool Gate mill face | 1 rye grain | 3 rye flour | `waning` | 45 min | 3 rye flour |
-| 2 | Bertran, The Wool Gate mill face | 1 wheat grain | 3 wheat flour | `waning` | 45 min | 3 wheat flour |
-| 1 | Averil, Ansel Quern's common oven | 1 rye flour | 5 rye loaves | `watch`, `kindling` | 45 min | 15 rye loaves |
-| 2 | Averil, Ansel Quern's common oven | 1 wheat flour | 4 wheat loaves | `watch`, `kindling` | 45 min | 4 wheat loaves |
+| 1 | Bertran, The Wool Gate mill face | 1 grain | 3 flour | `waning` | 45 min | 6 flour |
+| 1 | Averil, Ansel Quern's common oven | 1 flour | 5 loaves | `watch`, `kindling` | 45 min | 20 loaves |
 | 1 | Ewart, The Draper's Reach *(M5d)* | 3 raw wool | 1 broadcloth | `high_wick`, `waning` | 45 min | 1 broadcloth |
 | 2 | Ewart, The Draper's Reach *(M5d)* | 1 raw wool | 1 kersey | `high_wick`, `waning` | 45 min | 1 kersey |
 
-Here rye/wheat grain and flour use exact `grain=rye|wheat` metadata, cloth uses
-`grade=kersey|broadcloth`, and existing loaves use `flour=rye|wheat`.
+Here grain, flour, and loaf use empty metadata, while cloth uses exact
+`grade=kersey|broadcloth` metadata.
 
 The producer caps are two job starts per workday for Bertran, four per night for Averil, and two
 per workday for Ewart. Starting a job spends the slot; cancellation does not refund it. A job
@@ -675,10 +726,8 @@ started before a day boundary retains its original production-day key for the ca
 
 The gross margins are internally possible at posted prices:
 
-- one rye flour sack costs Averil 5 and yields five 2-spark loaves: 5 sparks gross margin;
-- one wheat flour sack costs 9 and yields four 4-spark loaves: 7 sparks gross margin;
-- one rye grain measure costs Bertran 3 and yields three 5-spark flour sacks: 12 sparks gross margin;
-- one wheat grain measure costs 6 and yields three 9-spark sacks: 21 sparks gross margin.
+- one flour sack costs Averil 5 and yields five 2-spark loaves: 5 sparks gross margin;
+- one grain measure costs Bertran 3 and yields three 5-spark flour sacks: 12 sparks gross margin.
 
 These are simplified gross margins, not claims about labor, fuel, tolls, or rent.
 
@@ -688,8 +737,8 @@ The canonical schedule is:
 |---|---|
 | Day N Kindling | scheduled road party exchanges cargo/cash outside and stages invisibly |
 | Dayspring | gate opens; party appears, walks to Seven Lofts, and Betriss buys grain into persistent storage |
-| High Wick | Bertran buys available grain from Betriss; in M5d the cart continues to The Draper's Reach, where Ewart buys wool and starts work |
-| Waning | Bertran mills and Averil buys available flour; in M5d Ewart finishes cloth and the road leader buys its return target |
+| High Wick | Bertran buys available grain from Betriss; the road cart remains at Seven Lofts through the office |
+| Waning | Bertran mills and Averil buys available flour; in M5d the cart reaches The Draper's Reach, Ewart buys wool and runs the 45-minute transform, and the waiting road leader buys its return target after the stock fingerprint changes |
 | Lamplight | road party returns toward its gate; Averil heads to the common oven |
 | Watch → Kindling | Averil works the night bake at Ansel's common oven |
 | Day N+1 Dayspring | Averil carries finished loaves to her Wickmarket stall |
@@ -776,19 +825,25 @@ from household settlement. This preserves M4's one-spark Ilse fixture.
 
 M5d deletes `close_books` and replaces it with `settle_households` at Watch:
 
-1. Immediately before settlement, update each resident's zero-wallet Watch streak. This sampling
-   point defines the acceptance criterion.
-2. Resident actors below a 2-spark household floor become recipients.
+1. Immediately before settlement, update each resident's `unrelieved_zero_streak`: a zero wallet
+   increments it and a positive wallet resets it. The streak means consecutive Watch samples at
+   zero **without a successful intervening settlement**, not merely repeated daily spending.
+2. Resident actors below a **4-spark household floor** become recipients. Four exceeds M5's most
+   expensive one-unit mechanical meal (the 3-spark smoked eel), so a recipient can fund at least one
+   ordinary meal and still remain above zero.
 3. Resident actors above their effective working reserve contribute only their surplus. The
-   effective reserve is at least the 2-spark household floor, so a recipient cannot also be a
+   effective reserve is at least the 4-spark household floor, so a recipient cannot also be a
    donor.
 4. Donors and recipients are processed in actor-id order. Transfers move only the amount recipients
    need and conserve sparks. A donor contributes only uncommitted sparks, so settlement never
    invalidates a pending negotiated offer.
 5. If the surplus pool is insufficient, an explicit institutional wages/alms payment creates only
    the shortfall and logs the exact minted amount.
-6. Visitors and road-party members are excluded from both redistribution and institutional payroll.
-7. No stock is reset or deleted by settlement.
+6. After transfers and payroll, every resident whose wallet is now positive has their
+   `unrelieved_zero_streak` reset to zero. A resident left at zero retains the increment, so a broken
+   or skipped aid reaches two on the next Watch and fails acceptance.
+7. Visitors and road-party members are excluded from both redistribution and institutional payroll.
+8. No stock is reset or deleted by settlement.
 
 This is an aggregate representation of wages, rents, alms, and shared household pots. It is honest
 about the remaining mint instead of pretending every actor has a fully simulated employer.
@@ -809,7 +864,8 @@ For a deterministic 14-day fake-backend, clock-only run, sampled after each Watc
 
 - resident-held sparks finish within ±10% of their day-zero total;
 - institutional payroll mints at most 2% of the initial resident supply over the run;
-- no resident's pre-settlement zero streak reaches two Watches;
+- every resident finishes each settlement with at least 4 sparks and no resident's
+  `unrelieved_zero_streak` reaches two Watches;
 - no chain vendor fails two consecutive scheduled cycles solely for lack of sparks;
 - every `sale` receipt uses the exact static catalog price; and
 - the global spark equation balances exactly.
@@ -842,7 +898,9 @@ Ships:
 - `listings` versus `restock`;
 - generic `Meal` versus `Stock` purchases and resumable stock errands;
 - transfer-safe legacy restock markers; and
-- direct party routing and Betriss's explicit route rather than occupation routing.
+- direct party routing and Betriss's explicit route rather than occupation routing;
+- exact-office bootstrap for both Kindling staging and Dayspring entry; and
+- the committed default start change to Highmarket/Dayspring.
 
 Betriss buys incoming grain and Bertran can buy and hold it; milling does not exist yet.
 
@@ -853,10 +911,17 @@ Acceptance:
   atomically;
 - on Second, exactly the two-person Stone Gate party does the same;
 - on Bellday, Lowmarket, and Seventh no party arrives;
+- a fresh committed-default run starts on day 2 at Dayspring and shows the Brede party entering;
+  separate exact-Kindling and exact-Dayspring fixtures stage/enter once, never twice;
+- an early check before the leader reaches the Seven Lofts counter spends no attempt; binding the
+  cart later in the same office wakes Betriss and permits the grain purchase;
 - after departure, none of their actors, still-owned items, offers, targets, percepts, queue entries,
   or cart leaks into the public world;
 - a conversation delayed past Snuffing delays departure but not forever; the party leaves on the
   first safe tick, and a stale cognition completion cannot bring an actor or action back;
+- a returning member with pressing hunger, a water/meal/market queue, a curfew destination, and a
+  pending offer still walks to the gate; the competing intents are cleared, the offer expires there,
+  and none can deadlock departure;
 - a party still present at its next scheduled Kindling logs one missed trip and receives neither a
   second manifest nor another trip number;
 - each successful boundary exchange sets the leader to 25 sparks, with the exact difference traced
@@ -878,13 +943,15 @@ Ships:
 - the named Wool Gate mill counter;
 - live vendor-hold inventory.
 
-In an isolated no-preexisting-flour fixture, acceptance follows receipt edges for one rye-grain
-unit from the road leader to Betriss to Bertran, then **one stack containing three rye-flour units**
+In an isolated no-preexisting-flour fixture, acceptance follows receipt edges for one grain unit
+from the road leader to Betriss to Bertran, then **one stack containing three flour units**
 from Bertran to Averil. In the full world, where merges may reuse ids, acceptance checks the same
 quantities and event chronology without claiming lot ancestry. Input is consumed once, output is
 created once, every mechanical sale price comes from the catalog, and no other miller transforms
 anything. A reserved input stays owned, cannot be transferred whole, can expose only its
-uncommitted remainder, pauses away from the mill, and completes once across a clock jump.
+uncommitted remainder, pauses away from the mill, and completes once across a clock jump. A forced
+collision on the first output-id candidate probes to a stable free id, and replaying completion
+returns the same receipt without consuming or producing twice.
 
 ### M5c — The Quern night bake replaces bread restock
 
@@ -893,15 +960,18 @@ Ships:
 - Ansel Quern's common bakehouse as a named worksite;
 - Averil's Watch-to-Kindling route and baking jobs;
 - Wickmarket binding to Averil's real held loaves;
+- collapse of the existing loaf variants into one metadata-free, 2-spark loaf catalog entry;
 - deletion of every loaf template from both `bread` and `provisions` restock;
 - the targeted Ansel/Averil lore alignment in Section 2.2.
 
 Acceptance follows the quantity/receipt chain from grain delivered on Day N through milling and
 night baking to a funded resident buyer's loaf purchase no earlier than Dayspring on Day N+1.
 Grepping the restock path finds no loaf creation, and the production targets stay bounded when no
-buyer comes.
+buyer comes. Averil's autonomous hunger never consumes her commercially listed loaves, including
+while the stall is closed overnight; she may seek and buy a separate meal, and an explicit action
+may still consume or transfer an uncommitted loaf.
 
-Then rerun M4 unchanged: **Ilse has one spark, cannot buy a two-spark rye loaf, buys the one-spark
+Then rerun M4 unchanged: **Ilse has one spark, cannot buy a two-spark loaf, buys the one-spark
 herring, and eats it.** M5 must not rewrite that acceptance story into an impossible loaf purchase.
 
 ### M5d — Wool returns as cloth and the reset dies
@@ -909,6 +979,7 @@ herring, and eats it.** M5 must not rewrite that acceptance story into an imposs
 Ships:
 
 - `wool` and `cloth`;
+- the road carts' Waning leg at The Draper's Reach, after remaining at Seven Lofts through High Wick;
 - Ewart's raw-wool purchase and two transforms at The Draper's Reach;
 - road merchants' exact cloth stock targets;
 - departing cart load presentation;
@@ -920,7 +991,9 @@ Acceptance proves raw wool enters on a Brede manifest, becomes an existing cloth
 holds, is bought by the deterministic ladder at its posted catalog price, leaves on the visible
 cart, and is consumed only at the next off-map boundary exchange. The full criteria in Section
 10.2 pass. A separate regression negotiates a non-catalog exchange successfully and proves that it
-emits transfers but no `sale`.
+emits transfers but no `sale`. The cart remains a bound Seven Lofts source throughout High Wick,
+then binds only at The Draper's Reach during Waning; Ewart's completed transform changes the
+source-state fingerprint and wakes the waiting cloth purchase within that same office.
 
 ---
 
@@ -930,10 +1003,11 @@ Extend `--trace-food` rather than adding a parallel tracer. Events:
 
 - `boundary_load` / `boundary_unload` with party, trip, item ids, kinds, and quantities, plus
   `road_cash_in` / `road_cash_out` with exact amounts;
-- `road_stage`, `road_in`, `road_return`, `road_out`, and `road_trip_missed` with phase, all member
-  ids, gate, trip number, and cart state;
-- `stock_errand` with plan/source/result and next retry; `sale` with purpose, buyer, seller, every
-  source/destination receipt line, exact metadata, quantities, unit prices, and totals;
+- `road_stage`, `road_in`, `road_return`, `road_offer_expired`, `road_out`, and `road_trip_missed`
+  with phase, all member ids, gate, trip number, and cart state;
+- `stock_errand` with plan/source/result, binding/stock fingerprint, and next retry; `sale` with
+  purpose, buyer, seller, every source/destination receipt line, exact metadata, quantities, unit
+  prices, and totals;
 - `item_transfer` for offers, gifts, and negotiated steps, including transferred item/spark
   quantities but no assertion that they equal a catalog price;
 - `transform_start` / `transform_pause` / `transform_cancel` / `transform_finish` with spec,
@@ -943,13 +1017,13 @@ Extend `--trace-food` rather than adding a parallel tracer. Events:
 
 `food_summary()` gains:
 
-- Seven Lofts rye/wheat quantities;
-- held, uncommitted, transform-reserved, and offered quantities for Betriss, Bertran, Averil, and
-  Ewart;
+- Seven Lofts grain quantity;
+- held, uncommitted, commercially listed, transform-reserved, and offered quantities for Betriss,
+  Bertran, Averil, and Ewart;
 - every road party's phase, trip number, leader wallet, present/absent state, and cart load;
 - active jobs and transforms completed by production-day key;
 - resident, visitor, and all-road-party spark totals; boundary cash in/out; redistribution; payroll
-  minted; and pre-settlement zero-wallet streaks.
+  minted; and unrelieved zero-wallet streaks.
 
 Standing invariants for the completed M5 chain follow. Earlier sub-milestones permit only the
 explicit transitional loaf restock and non-chain wallet refill named in Sections 7.1 and 10.1:
@@ -966,9 +1040,12 @@ explicit transitional loaf restock and non-chain wallet refill named in Sections
 - a transform cannot consume the same quantity twice, complete away from its site, run under the
   wrong actor, exceed the producer's daily cap, or consume/transfer reserved quantity elsewhere;
 - a stall cannot sell an item its current vendor does not hold as uncommitted quantity;
+- autonomous hunger cannot consume an item protected by the vendor's derived commercial-listing
+  view;
 - absent actors and their owned state never appear in snapshots, percepts, targets, schedules, or
   present-world totals;
-- party transition is atomic, trip numbers advance only at staging, and cart load agrees with the
+- `Returning` exclusively owns party movement, standing offers cannot block departure, party
+  transition is atomic, trip numbers advance only at staging, and cart load agrees with the
   leader's held cargo; and
 - no production target, market intent, or road wallet grows without a configured bound.
 
@@ -985,20 +1062,27 @@ Add focused fixtures/tests for:
 - a present road merchant with a beyond-the-walls home and grain in `you_sell`;
 - Betriss at Seven Lofts with persistent grain;
 - Bertran selling non-edible flour from transformed holds;
-- Averil selling transformed rye and wheat loaves;
+- Averil selling transformed loaves;
 - an absent actor whose item, pending offer, target, percept, and queued/stale cognition are all
   filtered or rejected;
-- fresh-Dayspring bootstrap, coarse Kindling→Dayspring ordering, delayed departure, missed-trip
-  suppression, and an atomic party/cart transition;
+- fresh-Kindling and fresh-Dayspring bootstrap, coarse Kindling→Dayspring ordering, delayed
+  departure, missed-trip suppression, and an atomic party/cart transition;
+- return-mode preemption of pressing needs, curfew, movement, every queue/errand, and gate expiry of
+  a pending offer;
 - deterministic target order, visit budgets, receipt ids, rollback on validation failure, and
-  distinct stock-errand retry reasons;
+  distinct stock-errand retry reasons, including a mobile counter that binds after an early check
+  and retries during the same office;
 - a reserved input that remains owned, blocks a whole transfer, permits only the uncommitted partial
   quantity, releases on cancellation, and survives cloning `World` and `Round` together;
-- transform pause/resume at movement, conversation, site, office, and crossed-clock boundaries;
+- transform pause/resume at movement, conversation, site, office, and crossed-clock boundaries,
+  plus deterministic output-id collision probing and completion replay;
 - legacy-restocked whole/partial item transfers that cannot be swept from the recipient;
 - a pending offer protected from mechanical sale/transform, a non-catalog negotiated exchange, and
   a zero-spark gift, none logged as `sale`;
-- `Resident`/`Visitor`/`RoadParty` settlement, including Ilse retaining her authored one spark; and
+- a hungry Averil whose closed-stall loaves are commercially protected without output-id
+  registration;
+- `Resident`/`Visitor`/`RoadParty` settlement, including the 4-spark resident floor, streak reset
+  after successful relief, and Ilse retaining her authored one spark; and
 - exact spark conservation through resident sales, conversational transfers, payroll, road sales,
   and boundary float settlement.
 
@@ -1026,8 +1110,9 @@ behavior, not a new LLM verb.
 
 Expected code blast radius includes sim world/snapshot state, the engine/round transition seam,
 round ladder, central inventory helpers, food schema and seed, item catalog, authored character
-assets, road-party/route/worksite data, headless acceptance fixtures, and the Bevy cart projection.
-It does not include a new persistence system. M5a should not be described as a round-only data edit.
+assets, road-party/route/worksite data, the committed default clock configuration, headless
+acceptance fixtures, and the Bevy cart projection. It does not include a new persistence system.
+M5a should not be described as a round-only data edit.
 
 ---
 
@@ -1039,13 +1124,16 @@ It does not include a new persistence system. M5a should not be described as a r
 | same-morning ordering becomes flaky | the canonical acceptance spans Day N to Day N+1; buffers decouple each producer |
 | resident merchants or cargo workers accidentally leave town | explicit party membership; no occupation-wide `road_trader` mapping |
 | transformed output is stranded behind stale `stock_ids` | sell inventory is derived from the active vendor's current holds |
+| removing `stock_ids` lets a vendor eat the board | autonomous hunger excludes the exact-listing commercial view, derived from vendor binding rather than item registration |
 | reserved inputs violate item ownership/stacking | reservations annotate quantities in the producer's existing stacks; no detached input item exists |
 | every baker or miller transforms stock, or one producer floods stock | each plan names one producer and has output targets plus daily job caps |
-| a road trader disappears mid-conversation or overlaps its next trip | explicit party phases, safe-tick departure, and missed-trip suppression |
+| a cart arrives after an early failed purchase check or leaves Seven Lofts too soon | mobile errands wake on binding changes; carts remain through High Wick and move to The Draper's Reach at Waning |
+| a road trader is diverted from its return or trapped by an offer | `Returning` owns movement above needs/curfew/queues, and unresolved offers expire at the gate |
 | an absent actor leaks through an owned item or offer | central presence predicate plus actor/item/offer/target tests |
 | cloth exists only as a return-load prop | raw wool is a boundary manifest; Ewart buys it and performs a declared transform |
 | carts are promised but invisible | `RoadCart` presentation is in M5a acceptance, with host work budgeted |
 | residents or chain firms go broke | persistent working capital, conservative household redistribution, bounded logged payroll, 14-day thresholds |
+| the zero-wallet test punishes a successful daily refill | the resident floor is 4 sparks and the streak resets only after positive relief; it detects skipped/failed settlement instead |
 | road merchants accumulate cash forever | every successful off-map exchange logs a symmetric settlement to fixed trip float; 56-day soak covers it |
 | old restock deletes real or negotiated stock | operational restock markers are cleared on whole transfer/merge and never follow a buyer's partial split |
 | stack merging makes false provenance claims | receipts record quantity edges and actual destination ids; M5 claims commodity flow, not lot ancestry |
@@ -1053,4 +1141,6 @@ It does not include a new persistence system. M5a should not be described as a r
 | a bad road silently changes posted prices | no multiplier exists; only schedule, manifests, and availability may change, while individual bargaining remains allowed |
 | acceptance depends on arbitrary LLM wording | authored facts are asset/prompt assertions; natural conversation is a manual smoke test |
 | persistence scope expands M5 | jobs and party phases are authoritative in-memory state; versioned disk persistence is explicitly future work |
+| a fresh default run misses the visible arrival | M5a commits day 2/Dayspring and tests exact Kindling and Dayspring bootstrap independently of local config |
+| a recurring transform collides with an existing five-character item id | call `mint_item_id` in the split path's deterministic probe loop and record chosen completion destinations for idempotent replay |
 | embedded data is mistaken for hot reload | acceptance rebuilds after `food.json` or `items.json` changes |
