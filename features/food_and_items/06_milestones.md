@@ -136,8 +136,8 @@ sub-milestones:
 | | ships | the cheat it kills |
 |---|---|---|
 | **M5a** | central `Presence`; two explicitly routed road parties; deterministic boundary manifests; visible carts; `grain`; Seven Lofts and Betriss's persistent counter; live held stock as sale inventory; generic stock errands distinct from meals | — (Bertran can buy and hold grain) |
-| **M5b** | `flour`; timed/saveable transforms; Bertran's Seven Lofts → Wool Gate route and named counter | — (Averil can buy and hold flour) |
-| **M5c** | Ansel Quern's common bakehouse; Averil's Watch-to-Kindling bake and Day-N+1 sale | **all loaf restock**, including the provisions template |
+| **M5b** | `flour`; timed, resumable in-memory transforms; Bertran's Seven Lofts → Wool Gate route and named counter | — (Averil can buy and hold flour) |
+| **M5c** | Ansel Quern's common bakehouse; one metadata-free 2-spark loaf; Averil's Watch-to-Kindling bake and Day-N+1 sale | **all loaf restock**, including the provisions template |
 | **M5d** | `wool` and `cloth`; Ewart's transforms; cloth on the departing cart; conservative household redistribution and bounded logged payroll | **`close_books`** |
 
 Four design commitments from that document are binding downstream: **the cast is fixed and
@@ -148,7 +148,7 @@ include a visible cart** (Sections 4–6);
 (Sections 2 and 8); and **catalog prices are fixed—road trouble may change arrival or availability,
 never price** (Sections 1 and 10).
 
-M5c's end-to-end buyer is deliberately not Ilse: she owns one spark and the rye loaf costs two.
+M5c's end-to-end buyer is deliberately not Ilse: she owns one spark and the loaf costs two.
 The M4 replay remains unchanged and ends with Ilse buying the one-spark herring.
 
 When it starts, `features/the_near_countryside__aka_add_market_stalls.md` merges into this folder.

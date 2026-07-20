@@ -140,7 +140,11 @@ If the buyer cannot pay by the time they are served (spent it in an LLM trade mi
 service resolves as a no-sale — buyer leaves the queue, rung re-evaluates; the same graceful
 degradation as a stale offer.
 
-## 6. What replaces the magic (M5, sketched, not scoped)
+## 6. What replaces the magic (historical M5 sketch)
+
+The binding scope is now [07_the_supply_chain.md](07_the_supply_chain.md). In particular, it names
+the producers and routes, and M5c deliberately collapses rye/wheat item variants into one
+metadata-free loaf while retaining those grain distinctions in lore.
 
 The brief: *"note that this needs to change. Ideally they should need to buy it from bakeries,
 bakeries buy flour from marketpeople, flour coming in from outside of the town etc."* The pieces
@@ -150,9 +154,8 @@ are already on the map:
   (`lore/places/03_new_places_and_infrastructure.md:254-257`); bakers' Kindling leg becomes "bake
   at the bakehouse", conjuring loaves *there*, carried to the pitch — the restock becomes a walk
   you can watch;
-- **flour**: a `flour {grain: rye|wheat}` kind; bakers buy from millers (`miller`, 3 cast,
-  workplace already the Wool Gate mill side) — the same silent-purchase machinery pointed at a
-  different stall;
+- **flour**: a metadata-free `flour` kind; Averil buys from Bertran at the Wool Gate mill face — the
+  same silent-purchase machinery pointed at a different counter;
 - **grain from outside**: carts through the Wool Gate to **Seven Lofts**, the defended granary
   (`~(360,335)`), on a morning schedule — the visible edge of
   `features/the_near_countryside__aka_add_market_stalls.md`, whose harvest/weather/trouble signals

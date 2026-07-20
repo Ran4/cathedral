@@ -104,7 +104,8 @@ vendors' sheets gain a `you_sell` price line so they stop inventing prices.
 
 - **The loaf costs 2.** Three canon files state it (`lore/core_lore/trade_and_daily_life.md:71`,
   `lore/second_sun/07_what_everyone_knows.md:38`, `11_glossary_and_naming.md:16`): *"A loaf, two
-  sparks."* The catalog keeps it verbatim: rye loaf, 2 sparks.
+  sparks."* Through M5b the catalog keeps it as the 2-spark rye loaf; M5c preserves that price
+  while migrating both old variants to one generic loaf.
 - **Lawful bench-fare is bread, herring, and small ale** (`07_what_everyone_knows.md:42`) — the
   plain civic meal, and the spine of the catalog below.
 - **Dinner is at noon.** *"Peace with the impossible, and dinner at noon"*
@@ -118,8 +119,9 @@ vendors' sheets gain a `you_sell` price line so they stop inventing prices.
   bottom"* (`lore/characters/tavern_worker/g5brt_bertran_of_the_ox.json`). That is a lore-blessed
   license for the one inventory that does not deplete: tavern stew.
 - **The rye is the bread grain.** The chronicle's famine is *"the rye failed twice"*; wheat is the
-  fine flour. That is the whole quality axis the brief asked for: metadata `flour: rye` is daily
-  bread, `flour: wheat` is fine bread at twice the price.
+  fine flour. Through M5b that lore is represented mechanically as `flour: rye` daily bread and
+  `flour: wheat` fine bread at twice the price. M5c deliberately retires that mechanical quality
+  axis so the production chain has one metadata-free loaf; rye and wheat remain lore distinctions.
 
 ---
 
@@ -133,7 +135,7 @@ herring or an eel.
 | kind | metadata | price | satiety | sold by | note |
 |---|---|---|---|---|---|
 | `spark` | — | — | — | — | the only money; fungible stack |
-| `loaf` | `flour: rye\|wheat` | 2 / 4 | 150 | baker, food_provisioner | the canonical 2-spark rye loaf; wheat is fine bread |
+| `loaf` | through M5b: `flour: rye\|wheat`; M5c: — | through M5b: 2 / 4; M5c: 2 | 150 | baker, food_provisioner | M5c collapses both old variants into one generic loaf |
 | `herring` | — | 1 | 70 | fish_trader, market_seller | lawful bench-fare — and what one spark buys; Sven's `fzbn9` "fish" migrates to this kind |
 | `smoked_eel` | — | 3 | 100 | fish_trader | Maren's Green pride; Bertran's courting gift |
 | `stew` | — | 2 | 170 | cook, tavern_worker | tavern-only; the never-scraped pot, so it never runs out |
