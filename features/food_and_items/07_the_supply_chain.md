@@ -74,7 +74,9 @@ These decisions are requirements, not suggestions left to implementation:
 4. **Seven Lofts is the persistent grain buffer.** It is not replaced by a generic gate stall.
 5. **The chain is asynchronous.** An arriving grain batch may finish baking overnight, but cannot
    be sold from the bread stall earlier than the next Dayspring.
-6. **Stock procurement and hunger are different intents.** A baker buying flour does not eat it.
+6. **Buying has no purpose tag.** Hunger and stock procurement are separate planners around the
+   same catalog-sale transaction. Held edible food may satisfy hunger regardless of how it was
+   acquired; flour is not eaten because it is inedible, not because of its acquisition history.
 7. **A stall sells matching items its vendor actually holds.** Transform outputs do not require a
    second registration step.
 8. **Only named producers transform stock.** This feature does not make every miller, baker, or
@@ -517,16 +519,20 @@ matching `listings`. Remove `FoodStall.stock_ids`; if profiling later proves a c
 `World` inventory mutator, rather than callers in `Round`, must invalidate it. A transform output is
 sellable immediately because its producer holds it.
 
-Removing `stock_ids` must not make vendors automatically eat their boards. Derive a separate
+Removing `stock_ids` must not make a vendor's own bread invisible to hunger. Derive a separate
 `commercially_listed(actor, item)` view from exact listings and vendor binding: it is true when the
 actor is the configured preferred vendor, or the current daily-bound vendor, for at least one trade
 that lists the item. A daily binding remains the association until the next rebind even while its
-counter is closed. The autonomous “eat held food” rung excludes the item's entire uncommitted
-quantity while that predicate is true, so Averil protects loaves baked overnight and seeks a normal
-meal instead. This is only a hunger-selection rule, not an inventory commitment: mechanical sales,
-explicit consumption, negotiated transfers, and gifts still use the ordinary uncommitted-quantity
-rules. Multiple matching listings do not multiply the protected quantity, and no transform output
-needs item-id registration.
+counter is closed.
+
+The autonomous meal planner scans **all uncommitted held edible quantity** before it creates or
+continues a market errand. It prefers a non-listed item over a commercially listed one, then uses
+stable item-id order, but listing is only a preference: if the board is the actor's only food, one
+unit may be eaten from that real stack. The remaining quantity stays immediately sellable, and the
+stock or production planner later observes the one-unit deficit normally. A listed item is not an
+inventory commitment, and nothing records whether it originally arrived through meal procurement,
+stock procurement, production, a gift, or any other transfer. Multiple matching listings do not
+change the ordering, and no transform output needs item-id registration.
 
 `ItemMatcher` means kind equality **and entire metadata-map equality**, not subset matching or a
 wildcard. Kersey cannot satisfy broadcloth, and grain, flour, and loaves match only with an empty
@@ -579,18 +585,14 @@ At M5c:
 `food.json` is embedded with `include_str!`, so changes require a rebuild. The spec and developer
 notes must not call it runtime-tunable.
 
-### 7.2 Split buying from eating
+### 7.2 One sale primitive, separate planners
 
 Refactor the current one-unit `try_purchase` into a generic market transaction. The transaction
 moves items and sparks atomically and returns a receipt; it does not decide why the buyer wanted the
-item. It is the only path that emits `sale`.
+item. It accepts the buyer, concrete counter binding, and requested item lines; it has no
+intent discriminator, meal flag, or stock-plan id. It is the only path that emits `sale`.
 
 ```rust
-enum PurchasePurpose {
-    Meal,
-    Stock { plan_id: String },
-}
-
 enum StockSource {
     Counter { counter_id: String },
     CounterGroup { group_id: String },
@@ -673,11 +675,22 @@ searches every holder of a matching item and never selects a counter merely beca
 the target kind. Thus Betriss may buy grain from `arriving_grain_carts`, while Bertran can buy the
 same kind only from `betriss_grain_seven_lofts`.
 
-- `Meal` chooses one affordable edible unit. The meal ladder consumes it only after a successful
-  purchase.
-- `Stock` considers targets in data order and buys each deficit, then matching source items in
-  `(catalog unit price, item id)` order, up to quantity, visit budget, and the buyer's uncommitted
-  spark quantity. It stores the result and never calls eating.
+- The meal planner first selects one uncommitted edible unit already held, preferring non-listed
+  food and then stable item-id order. A held unit satisfies meal acquisition and therefore prevents
+  or cancels a food-stall errand; the actor never walks away from edible inventory to buy another
+  unit. A famished actor eats it immediately. A merely hungry actor also eats it unless its active
+  next leg is home during the supper span and it is not yet within the home radius; in that case the
+  meal rung starts no errand and falls through to the homeward round leg. Once home, it eats one held
+  unit. Only an actor with no usable held edible asks a counter for one affordable unit; after a
+  successful sale, the same eat-now/carry-home rule applies.
+- This held-food check applies to both hunger rungs and immediately before a queued meal purchase
+  commits. It deliberately supersedes M3's famished-only shortcut and hard exclusion of stall stock.
+  Cancelling an already-active meal errand also removes the actor from its queue and serving slot so
+  a newly acquired or newly uncommitted held unit cannot be followed by a stale sale.
+- The stock planner considers targets in data order and buys each deficit, then matching source
+  items in `(catalog unit price, item id)` order, up to quantity, visit budget, and the buyer's
+  uncommitted spark quantity. It stores the result and never calls eating. A later hunger decision
+  may consume an edible unit from those same holds; purchase history does not protect it.
 - A target's held quantity includes quantities currently reserved by a transform. This prevents a
   producer from duplicating its procurement while a job is in progress.
 - Matching includes the entire metadata map; generic grain, flour, and loaf targets require it to
@@ -1213,7 +1226,8 @@ Ships:
 - the Seven Lofts historical seed, Betriss's counter, and her targeted lore update;
 - `listings` versus `restock`;
 - live vendor-hold inventory;
-- generic `Meal` versus `Stock` purchases and resumable stock errands;
+- one purpose-neutral catalog-sale transaction, separate meal and stock planners, and resumable
+  stock errands;
 - quantity-aware, transfer-safe legacy restock shares;
 - direct party routing and Betriss's explicit route rather than occupation routing;
 - exact-office bootstrap for both Kindling staging and Dayspring entry; and
@@ -1308,10 +1322,11 @@ Ships:
 Acceptance follows the quantity/receipt chain from grain delivered on Day N through milling and
 night baking to a funded resident buyer's loaf purchase no earlier than Dayspring on Day N+1.
 Grepping the restock path finds no loaf creation, and the production targets stay bounded when no
-buyer comes. Averil's autonomous hunger never consumes her commercially listed loaves, including
-while the stall is closed overnight; she may seek and buy a separate meal, and an explicit action
-may still consume or transfer an uncommitted loaf. Baking starts and completes identically whether
-Ansel is present, absent, delayed, or on another leg.
+buyer comes. Averil's autonomous hunger prefers any non-listed food she holds, but if her listed
+loaves are her only usable food she consumes exactly one instead of leaving to buy another meal.
+The remaining stack stays sellable and the production target observes the reduced quantity; an
+explicit action may likewise consume or transfer an uncommitted loaf. Baking starts and completes
+identically whether Ansel is present, absent, delayed, or on another leg.
 
 Then rerun M4's behavioral acceptance unchanged: **Ilse has one spark, cannot buy a two-spark loaf,
 buys the one-spark herring, and eats it.** M5 must not rewrite that acceptance story into an
@@ -1359,8 +1374,9 @@ Extend `--trace-food` rather than adding a parallel tracer. Events:
 - `stock_errand` with plan, configured source, selected counter binding, bindings seen in the visit,
   phase, spent and remaining visit budget, result, the source-and-buyer attempt fingerprint,
   visit-end reason, and next retry;
-  `sale` with purpose, buyer, seller, every source/destination receipt line, exact metadata,
-  quantities, unit prices, and totals;
+- purpose-neutral `sale` with buyer, seller, every source/destination receipt line, exact metadata,
+  quantities, unit prices, and totals; intent-specific diagnostics remain with the calling planner,
+  not the transaction or receipt;
 - `item_transfer` for offers, gifts, and negotiated steps, including transferred item/spark
   quantities but no assertion that they equal a catalog price;
 - `transform_start` / `transform_pause` / `transform_finish` with spec,
@@ -1402,12 +1418,15 @@ explicit transitional loaf restock and non-chain wallet refill named in Sections
   preflighted collision-free id; a purse transferred away is never credited through its old id;
 - every `sale` uses the exact catalog unit price; `item_transfer` is explicitly exempt because
   bargaining, credit, gifts, and cheats are allowed;
+- neither a catalog-sale request, its receipt, nor the transferred item records a meal/stock purpose;
+  both planners call the same transaction and own their subsequent behavior themselves;
 - a transform cannot consume the same quantity twice, complete away from its site, run under the
   wrong actor, exceed the producer's daily cap, consume/transfer reserved quantity elsewhere, lose
   its output capacity while paused, or use production day as completion-receipt retention time;
 - a stall cannot sell an item its current vendor does not hold as uncommitted quantity;
-- autonomous hunger cannot consume an item protected by the vendor's derived commercial-listing
-  view;
+- autonomous hunger never starts or completes a meal purchase while the actor has a usable
+  uncommitted edible unit; held-food selection prefers non-listed inventory but may consume exactly
+  one unit from a listed stack when that is the only food available;
 - absent actors and their owned state never appear in snapshots, percepts, targets, schedules, or
   present-world totals; departure leaves their memories and existing history intact but clears unread
   and in-flight-drained inbox material, and cognition can mutate an actor only when its stamped
@@ -1463,6 +1482,10 @@ Add focused fixtures/tests for:
   binding or road trip; the fixtures also include a mobile counter that binds after an early check
   and an insufficient-funds road leader who retries during the same office after Ewart's wool
   payment changes the buyer fingerprint;
+- one purpose-neutral sale entry point used by both planners: a stock planner buys a twenty-loaf
+  stack, later hunger consumes one of those held loaves without another sale or shopping trip, and
+  the stock target then observes nineteen; a non-listed edible wins over listed bread when both are
+  held, while food becoming usable during a queued or serving meal cancels that stale purchase;
 - a reserved input that remains owned, blocks a whole transfer, permits only the uncommitted partial
   quantity, remains reserved across pauses and day boundaries, is consumed once on completion, and
   survives cloning `World` and `Round` together;
@@ -1477,8 +1500,9 @@ Add focused fixtures/tests for:
   with the old commitment provisionally released, rollback to the old offer on invalid replacement,
   explicit eating that consumes only the uncommitted remainder then fails `item_committed`, a
   non-catalog negotiated exchange, and a zero-spark gift, none logged as `sale`;
-- a hungry Averil whose closed-stall loaves are commercially protected without output-id
-  registration;
+- a hungry Averil holding only commercially listed loaves who eats exactly one uncommitted unit,
+  starts no meal purchase or trip, leaves the remainder immediately sellable, and causes the normal
+  production target to observe the reduced quantity without output-id registration;
 - `Resident`/`Visitor`/`RoadParty` settlement, including the 4-spendable-spark resident floor when
   other sparks are offer-committed, exact residual shortfall mint, collision-free credit after a
   zero-wallet resident's former purse moved whole, streak reset after successful relief, a
@@ -1542,7 +1566,7 @@ M5a should not be described as a round-only data edit.
 | same-morning ordering becomes flaky | the canonical acceptance spans Day N to Day N+1; buffers decouple each producer |
 | resident merchants or cargo workers accidentally leave town | explicit party membership; no occupation-wide `road_trader` mapping |
 | transformed output is stranded behind stale `stock_ids` | sell inventory is derived from the active vendor's current holds |
-| removing `stock_ids` lets a vendor eat the board | autonomous hunger excludes the exact-listing commercial view, derived from vendor binding rather than item registration |
+| a vendor holding bread ignores it and leaves to buy dinner, or consumes the whole board | every meal decision checks held uncommitted edibles first, prefers non-listed food but permits exactly one listed unit, and lets stock/production observe the resulting deficit |
 | reserved inputs violate item ownership/stacking | reservations annotate quantities in the producer's existing stacks; no detached input item exists |
 | matching stock arrives while a paused job already owes output and makes completion overflow | the job records future output; every inbound inventory path includes it in the `u32` capacity preflight and rejects `output_capacity_reserved` |
 | a multi-day pause makes a new completion receipt look old immediately | retention uses `completed_on_day`, never the job's production day; replay-before-prune and no-op-after-prune fixtures cover both sides |
