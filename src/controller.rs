@@ -1,9 +1,10 @@
 //! A small, dependency-free first-person character controller.
 //!
-//! The cathedral only needs simple, static collision. Axis-aligned boxes cover
-//! floors and authored scene pieces; convex vertical prisms follow the city's
-//! rotated cadastral footprints. Both keep the controller deterministic and
-//! easy to test without starting Bevy's renderer.
+//! The cathedral only needs simple collision. Axis-aligned boxes cover floors
+//! and authored scene pieces; convex vertical prisms follow the city's rotated
+//! cadastral footprints; the handful of moving gate throats contribute dynamic
+//! boxes. All keep the controller deterministic and easy to test without
+//! starting Bevy's renderer.
 //!
 //! AGENT: please keep this keyboard map up to date whenever you change anything:
 //!    ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐
@@ -143,6 +144,33 @@ impl PlayerController {
     pub fn yaw(&self) -> f32 {
         self.yaw
     }
+
+    /// Horizontal world speed in metres per second.
+    ///
+    /// Presentation systems use this rather than reconstructing velocity from
+    /// interpolated render transforms (which would make cadence frame-rate
+    /// dependent).
+    pub(crate) fn horizontal_speed(&self) -> f32 {
+        Vec2::new(self.velocity.x, self.velocity.z).length()
+    }
+
+    /// Whether the fixed-step controller is resting on walkable geometry.
+    pub(crate) fn is_grounded(&self) -> bool {
+        self.grounded
+    }
+}
+
+/// An axis-aligned collider whose participation can change at runtime.
+///
+/// The cadastral collision world is intentionally immutable after Startup,
+/// but gates are physical mechanisms: their throat must stop the player only
+/// after the leaves have materially closed.  Keeping this tiny component next
+/// to the controller preserves one collision authority without making the
+/// static world's internals mutable or globally exposing `SolidBox`.
+#[derive(Component, Debug, Clone, Copy)]
+pub(crate) struct DynamicBarrier {
+    pub half_size: Vec3,
+    pub active: bool,
 }
 
 /// Static collision geometry used by the character controller.
@@ -613,7 +641,9 @@ fn fixed_player_movement(
     fixed_time: Res<Time<Fixed>>,
     input: Res<ControllerInput>,
     collision_world: Res<CollisionWorld>,
+    dynamic_barriers: Query<(&DynamicBarrier, &Transform)>,
     player: Single<(&mut PlayerController, &mut PhysicalPosition)>,
+    mut dynamic_boxes: Local<Vec<SolidBox>>,
 ) {
     let dt = fixed_time.delta_secs();
     let (mut controller, mut physical_position) = player.into_inner();
@@ -644,11 +674,23 @@ fn fixed_player_movement(
         update_walking_velocity(&mut controller, &input, dt);
     }
 
+    dynamic_boxes.clear();
+    dynamic_boxes.extend(dynamic_barriers.iter().filter_map(|(barrier, transform)| {
+        (barrier.active
+            && barrier.half_size.is_finite()
+            && barrier.half_size.cmpgt(Vec3::ZERO).all()
+            && transform.translation.is_finite())
+        .then_some(SolidBox {
+            min: transform.translation - barrier.half_size,
+            max: transform.translation + barrier.half_size,
+        })
+    }));
     let movement = move_aabb(
         physical_position.current,
         PLAYER_HALF_SIZE,
         controller.velocity * dt,
         &collision_world.boxes,
+        &dynamic_boxes,
         &collision_world.convex_prisms,
     );
     physical_position.current = movement.position;
@@ -853,11 +895,19 @@ fn move_aabb(
     half_size: Vec3,
     displacement: Vec3,
     boxes: &[SolidBox],
+    dynamic_boxes: &[SolidBox],
     prisms: &[SolidConvexPrism],
 ) -> MovementResult {
     let mut position = start;
     let mut contacts = CollisionContacts::default();
-    depenetrate(&mut position, half_size, boxes, prisms, &mut contacts);
+    depenetrate(
+        &mut position,
+        half_size,
+        boxes,
+        dynamic_boxes,
+        prisms,
+        &mut contacts,
+    );
 
     let mut remaining = displacement;
     for _ in 0..MAX_SLIDE_PLANES {
@@ -865,7 +915,7 @@ fn move_aabb(
             break;
         }
 
-        let box_hit = nearest_hit(position, half_size, remaining, boxes);
+        let box_hit = nearest_hit(position, half_size, remaining, boxes, dynamic_boxes);
         let prism_hit = nearest_prism_hit(position, half_size, remaining, prisms);
         let hit = match (box_hit, prism_hit) {
             (Some(box_hit), Some(prism_hit)) if prism_hit.time < box_hit.time - SWEEP_EPSILON => {
@@ -900,11 +950,12 @@ fn nearest_hit(
     half_size: Vec3,
     displacement: Vec3,
     boxes: &[SolidBox],
+    dynamic_boxes: &[SolidBox],
 ) -> Option<SweepHit> {
     let expansion = half_size + Vec3::splat(COLLISION_SKIN);
     let mut nearest: Option<SweepHit> = None;
 
-    for solid in boxes {
+    for solid in boxes.iter().chain(dynamic_boxes) {
         let expanded_min = solid.min - expansion;
         let expanded_max = solid.max + expansion;
         let Some(hit) = sweep_point_box(origin, displacement, expanded_min, expanded_max) else {
@@ -1093,6 +1144,7 @@ fn depenetrate(
     position: &mut Vec3,
     half_size: Vec3,
     boxes: &[SolidBox],
+    dynamic_boxes: &[SolidBox],
     prisms: &[SolidConvexPrism],
     contacts: &mut CollisionContacts,
 ) {
@@ -1101,7 +1153,7 @@ fn depenetrate(
     for _ in 0..MAX_DEPENETRATION_STEPS {
         let mut shortest_push: Option<Vec3> = None;
 
-        for solid in boxes {
+        for solid in boxes.iter().chain(dynamic_boxes) {
             let min = solid.min - expansion;
             let max = solid.max + expansion;
             if position.x <= min.x
@@ -1210,7 +1262,7 @@ mod tests {
         displacement: Vec3,
         boxes: &[SolidBox],
     ) -> MovementResult {
-        move_aabb(start, half_size, displacement, boxes, &[])
+        move_aabb(start, half_size, displacement, boxes, &[], &[])
     }
 
     fn close(actual: f32, expected: f32) {
@@ -1278,6 +1330,22 @@ mod tests {
             TEST_HALF_SIZE,
             Vec3::new(20.0, 0.0, 0.0),
             &[wall],
+        );
+
+        close(result.position.x, -0.5 - COLLISION_SKIN);
+        assert!(result.contacts.blocked_x);
+    }
+
+    #[test]
+    fn dynamic_barrier_boxes_share_the_continuous_collision_path() {
+        let gate = solid(Vec3::new(0.0, -2.0, -2.0), Vec3::new(0.4, 2.0, 2.0));
+        let result = move_aabb(
+            Vec3::new(-5.0, 0.0, 0.0),
+            TEST_HALF_SIZE,
+            Vec3::new(20.0, 0.0, 0.0),
+            &[],
+            &[gate],
+            &[],
         );
 
         close(result.position.x, -0.5 - COLLISION_SKIN);
@@ -1398,6 +1466,7 @@ mod tests {
             TEST_HALF_SIZE,
             -outward * 6.0,
             &world.boxes,
+            &[],
             &world.convex_prisms,
         );
         let expected_clearance = TEST_HALF_SIZE.x * outward.x.abs()

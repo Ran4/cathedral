@@ -10,6 +10,7 @@ mod scene;
 mod screenshot;
 mod session_log;
 mod smart_actors;
+mod soundscape;
 mod ui;
 
 use bevy::log::LogPlugin;
@@ -24,6 +25,7 @@ use nav_overlay::NavDebugPlugin;
 use scene::CathedralPlugin;
 use screenshot::CathedralScreenshotPlugin;
 use smart_actors::SmartActorsPlugin;
+use soundscape::SoundscapePlugin;
 use ui::HudPlugin;
 
 fn main() {
@@ -86,6 +88,7 @@ fn main() {
             CathedralFontsPlugin,
             ControllerPlugin,
             CathedralPlugin,
+            SoundscapePlugin,
             CityPlugin,
             HudPlugin,
             CathedralScreenshotPlugin,

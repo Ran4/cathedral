@@ -5,11 +5,16 @@
 //! sites, fixtures, storey counts, materials, and stable IDs instead of
 //! inventing a second procedural grid here.
 
+mod gates;
 mod monuments;
 mod plan;
 mod route_boards;
 mod smoke;
+mod surfaces;
+mod trade_props;
 pub mod water;
+
+pub(crate) use surfaces::CobbleRoadNetwork;
 
 use std::{
     collections::{BTreeMap, HashMap},
@@ -42,8 +47,26 @@ pub struct CityPlugin;
 
 impl Plugin for CityPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, build_city)
-            .add_systems(Update, smoke::animate_chimney_smoke);
+        app.add_message::<crate::soundscape::SoundscapeCue>()
+            .init_resource::<gates::GateRuntime>()
+            .init_resource::<trade_props::TradePropRuntime>()
+            .add_systems(Startup, build_city)
+            .add_systems(
+                Update,
+                (
+                    smoke::animate_chimney_smoke,
+                    gates::animate_gate_mechanisms
+                        .in_set(crate::soundscape::SoundscapeSet::EmitCues),
+                    water::animate_well_mechanisms
+                        .after(crate::soundscape::SoundscapeSet::ProjectActivity),
+                    (
+                        trade_props::handle_trade_cues
+                            .in_set(crate::soundscape::SoundscapeSet::IngestCues),
+                        trade_props::animate_trade_props,
+                    )
+                        .chain(),
+                ),
+            );
     }
 }
 
@@ -232,6 +255,7 @@ fn build_city(
     mut collision_world: ResMut<CollisionWorld>,
 ) {
     let plan = plan::load();
+    commands.insert_resource(CobbleRoadNetwork::from_roads(&plan.roads));
     let doors = door_edges();
     let city_meshes = create_meshes(&mut meshes);
     let city_materials = create_materials(&asset_server, &mut materials);
@@ -2590,6 +2614,7 @@ fn spawn_weighbeam(
         angle,
         "Tallage weighing beam",
     );
+    trade_props::spawn_weighbeam_rig(commands, meshes, materials, position, angle);
 }
 
 fn spawn_yard_crane(
@@ -6810,6 +6835,14 @@ fn build_fortifications(
     }
 
     build_gatehouses(commands, meshes, materials, collision_world);
+    gates::spawn_gate_mechanisms(
+        commands,
+        &meshes.cube,
+        &meshes.cylinder,
+        &materials.timber,
+        &materials.dark_wood,
+        &materials.iron,
+    );
 }
 
 fn wall_ranges_around_gates(start: Vec2, end: Vec2, openings: &[(Vec2, f32)]) -> Vec<(Vec2, Vec2)> {

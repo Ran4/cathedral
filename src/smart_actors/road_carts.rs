@@ -15,6 +15,19 @@ pub struct RoadCartView {
     load: Vec<cathedral_sim::CartLoadKind>,
 }
 
+impl RoadCartView {
+    /// The authoritative cargo categories currently represented on this cart.
+    /// Presentation layers may choose a matching wheel/load bed, but never
+    /// mutate this projection.
+    #[allow(
+        dead_code,
+        reason = "standalone road-cart integration harnesses do not include the soundscape consumer"
+    )]
+    pub(crate) fn load(&self) -> &[cathedral_sim::CartLoadKind] {
+        &self.load
+    }
+}
+
 /// Semantic marker on each cargo mesh. The cart remains presentation-only,
 /// but keeping the category on the child makes the projection inspectable and
 /// prevents its visual vocabulary drifting from the sim snapshot.

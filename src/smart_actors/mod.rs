@@ -260,6 +260,16 @@ pub struct SmartActorsPlugin {
     config: SmartActorsConfig,
 }
 
+/// Read-only signal for audio systems that should yield while dialogue is active.
+///
+/// This deliberately reflects live presentation/input state rather than the
+/// player's microphone preference: an armed but idle microphone must not keep
+/// ambience permanently ducked.
+#[derive(Resource, Default, Debug, Clone, Copy)]
+pub(crate) struct AudioActivity {
+    pub busy: bool,
+}
+
 /// Connection/capability state shared by input and presentation systems.
 #[derive(Resource, Debug, Clone)]
 pub struct SmartActorRuntime {
@@ -341,6 +351,9 @@ impl Plugin for SmartActorsPlugin {
             app.init_asset::<speech::StreamingPcmSource>();
         }
         app.init_resource::<hud::SmartActorHudState>()
+            // Soundscape systems can always read this seam, including when
+            // smart actors are disabled in config.ron.
+            .init_resource::<AudioActivity>()
             .add_systems(Startup, hud::spawn_smart_actor_hud);
 
         // The Esc settings menu exists even when smart actors are disabled;
@@ -404,6 +417,7 @@ impl Plugin for SmartActorsPlugin {
             .add_message::<speech::StopNpcSpeech>()
             .add_message::<speech::ClearSpeechPresentation>()
             .add_message::<sound::PlaySoundEffect>()
+            .add_message::<crate::soundscape::SoundscapeCue>()
             .add_message::<hands::HandoverFeedback>()
             .add_message::<body::PresentGesture>()
             .configure_sets(
@@ -517,8 +531,16 @@ impl Plugin for SmartActorsPlugin {
                     speech::receive_tts_pcm_chunks,
                     speech::receive_tts_stream_ends,
                     speech::receive_tts_failures,
-                    speech::clear_speech_presentation,
-                    speech::stop_npc_speech_for_capture,
+                    (
+                        speech::clear_speech_presentation,
+                        speech::stop_npc_speech_for_capture,
+                        // `start_ready_audio` runs in Update, while the two
+                        // systems above own voice teardown. Keeping this here
+                        // makes both edges visible before later presentation
+                        // and audio consumers.
+                        update_audio_activity,
+                    )
+                        .chain(),
                     speech::update_speech_bubbles,
                     speech::update_subtitle_hud,
                     sound::play_sound_effects,
@@ -565,6 +587,16 @@ impl Plugin for SmartActorsPlugin {
     }
 }
 
+fn update_audio_activity(
+    npc_voices: Query<(), With<speech::NpcVoice>>,
+    microphone: Res<interaction::MicrophoneInputState>,
+    chat: Res<chat::ChatInputState>,
+    mut activity: ResMut<AudioActivity>,
+) {
+    activity.busy =
+        npc_voices.iter().next().is_some() || microphone.recording_active() || chat.open;
+}
+
 /// Developer/test-only transcript injection. The engine accepts it exclusively
 /// in deterministic fake mode and still applies the normal `say` validator;
 /// production has no typed-chat path.
@@ -591,8 +623,48 @@ struct BridgePresentationWriters<'w> {
     stream_end: MessageWriter<'w, speech::TtsStreamFinished>,
     clear: MessageWriter<'w, speech::ClearSpeechPresentation>,
     sound_effects: MessageWriter<'w, sound::PlaySoundEffect>,
+    soundscape: MessageWriter<'w, crate::soundscape::SoundscapeCue>,
     hands: MessageWriter<'w, hands::HandoverFeedback>,
     gestures: MessageWriter<'w, body::PresentGesture>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct SoundscapeRoute {
+    cue: Option<crate::soundscape::SoundscapeCue>,
+    replace_standard: bool,
+}
+
+fn soundscape_route(sound_id: &str, position: Vec3) -> SoundscapeRoute {
+    use crate::soundscape::SoundscapeCue;
+
+    match sound_id {
+        "market_cry" => SoundscapeRoute {
+            cue: Some(SoundscapeCue::MarketCry { position }),
+            replace_standard: true,
+        },
+        "draw_water" | "chain_windlass" => {
+            match crate::soundscape::classify_special_well(position) {
+                Some(source) => SoundscapeRoute {
+                    cue: Some(SoundscapeCue::WellDraw { source }),
+                    replace_standard: true,
+                },
+                None => SoundscapeRoute {
+                    cue: None,
+                    replace_standard: false,
+                },
+            }
+        }
+        "coin_clink" => SoundscapeRoute {
+            cue: crate::soundscape::tallage_measurement_anchor(position)
+                .map(|position| SoundscapeCue::MarketMeasurement { position }),
+            // The balance pans supplement the coins; they do not replace them.
+            replace_standard: false,
+        },
+        _ => SoundscapeRoute {
+            cue: None,
+            replace_standard: false,
+        },
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -894,11 +966,22 @@ fn process_engine_message(
                     .iter()
                     .any(|recipient| recipient.as_str() == PLAYER_ID);
             if player_heard {
-                presentation.sound_effects.write(sound::PlaySoundEffect {
-                    sound_id,
-                    position: model::vec3_from_sim(position_m),
-                    audible_distance,
-                });
+                let position = model::vec3_from_sim(position_m);
+                // These genuine world events drive the richer environmental
+                // recordings, but remain outside `PlaySoundEffect`: that
+                // message also drives NPC gaze reflexes, and routine market /
+                // well machinery must not make every nearby body stare at it.
+                let route = soundscape_route(&sound_id, position);
+                if let Some(cue) = route.cue {
+                    presentation.soundscape.write(cue);
+                }
+                if !route.replace_standard {
+                    presentation.sound_effects.write(sound::PlaySoundEffect {
+                        sound_id,
+                        position,
+                        audible_distance,
+                    });
+                }
             }
         }
         EngineMessage::WorldEvent {
@@ -1604,6 +1687,75 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn audio_activity_tracks_live_voice_and_open_chat() {
+        let mut app = App::new();
+        app.init_resource::<AudioActivity>()
+            .init_resource::<interaction::MicrophoneInputState>()
+            .init_resource::<chat::ChatInputState>()
+            .add_systems(Update, update_audio_activity);
+
+        app.update();
+        assert!(!app.world().resource::<AudioActivity>().busy);
+
+        let voice = app.world_mut().spawn(speech::NpcVoice).id();
+        app.update();
+        assert!(app.world().resource::<AudioActivity>().busy);
+
+        app.world_mut().despawn(voice);
+        app.update();
+        assert!(!app.world().resource::<AudioActivity>().busy);
+
+        app.world_mut().resource_mut::<chat::ChatInputState>().open = true;
+        app.update();
+        assert!(app.world().resource::<AudioActivity>().busy);
+    }
+
+    #[test]
+    fn routine_world_sounds_route_without_creating_npc_reflex_stimuli() {
+        use crate::soundscape::{SoundscapeCue, SpecialWell};
+
+        let market = Vec3::new(-21.375, 0.91, 356.625);
+        assert_eq!(
+            soundscape_route("market_cry", market),
+            SoundscapeRoute {
+                cue: Some(SoundscapeCue::MarketCry { position: market }),
+                replace_standard: true,
+            }
+        );
+
+        let ford = Vec3::new(89.375, 0.91, 36.125);
+        assert_eq!(
+            soundscape_route("draw_water", ford),
+            SoundscapeRoute {
+                cue: Some(SoundscapeCue::WellDraw {
+                    source: SpecialWell::Ford,
+                }),
+                replace_standard: true,
+            }
+        );
+
+        // The Tallage balance supplements the authoritative coin sound at its
+        // exact authored beam; an ordinary market sale keeps coins alone.
+        let tallage = soundscape_route("coin_clink", Vec3::new(-304.875, 0.91, 90.125));
+        assert_eq!(
+            tallage.cue,
+            Some(SoundscapeCue::MarketMeasurement {
+                position: Vec3::new(-306.0, 1.5, 65.0),
+            })
+        );
+        assert!(!tallage.replace_standard);
+        assert_eq!(soundscape_route("coin_clink", market).cue, None);
+
+        assert_eq!(
+            soundscape_route("fart", Vec3::ZERO),
+            SoundscapeRoute {
+                cue: None,
+                replace_standard: false,
+            }
+        );
+    }
 
     #[test]
     fn settled_spatial_constants_match_the_protocol_contract() {

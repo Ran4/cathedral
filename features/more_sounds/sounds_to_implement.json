@@ -3,7 +3,7 @@
   "source_catalog": "more_sounds.json",
   "workflow": "Implement the selected sounds in the game using each generated_audio.path when present, then set implemented_in_game to true. The workbench reconciles true flags back into more_sounds.json.",
   "selected_count": 23,
-  "implemented_count": 0,
+  "implemented_count": 23,
   "generated_count": 23,
   "selected_sound_ids": [
     "snd_001_soft_shoes_on_dry_cobbles",
@@ -49,7 +49,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 0.8,
       "id": "snd_001_soft_shoes_on_dry_cobbles",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_001_soft_shoes_on_dry_cobbles",
         "filename": "snd_001_soft_shoes_on_dry_cobbles.mp3",
@@ -78,7 +78,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 1.4,
       "id": "snd_034_dusty_workshop_cough",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_034_dusty_workshop_cough",
         "filename": "snd_034_dusty_workshop_cough.mp3",
@@ -106,7 +106,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 2.2,
       "id": "snd_037_end_of_day_yawn",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_037_end_of_day_yawn",
         "filename": "snd_037_end_of_day_yawn.mp3",
@@ -134,7 +134,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 10,
       "id": "snd_042_grain_laden_cart_roll",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_042_grain_laden_cart_roll",
         "filename": "snd_042_grain_laden_cart_roll.wav",
@@ -163,7 +163,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 1.5,
       "id": "snd_046_wheel_drops_into_rut",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_046_wheel_drops_into_rut",
         "filename": "snd_046_wheel_drops_into_rut.mp3",
@@ -192,7 +192,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 1.2,
       "id": "snd_050_crate_set_down",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_050_crate_set_down",
         "filename": "snd_050_crate_set_down.mp3",
@@ -221,7 +221,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 1.3,
       "id": "snd_049_porter_sack_drop",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_049_porter_sack_drop",
         "filename": "snd_049_porter_sack_drop.mp3",
@@ -250,7 +250,7 @@
       "playback_mode": "sequence",
       "suggested_duration_seconds": 5.5,
       "id": "snd_062_stone_gate_closing",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_062_stone_gate_closing",
         "filename": "snd_062_stone_gate_closing.mp3",
@@ -279,7 +279,7 @@
       "playback_mode": "sequence",
       "suggested_duration_seconds": 3.5,
       "id": "snd_063_river_gate_bar_lift",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_063_river_gate_bar_lift",
         "filename": "snd_063_river_gate_bar_lift.mp3",
@@ -308,7 +308,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_081_wickmarket_highmarket_crowd_bed",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_081_wickmarket_highmarket_crowd_bed",
         "filename": "snd_081_wickmarket_highmarket_crowd_bed.wav",
@@ -337,7 +337,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 2,
       "id": "snd_087_balance_pans_settle",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_087_balance_pans_settle",
         "filename": "snd_087_balance_pans_settle.mp3",
@@ -366,7 +366,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 3,
       "id": "snd_097_indistinct_wares_call",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_097_indistinct_wares_call",
         "filename": "snd_097_indistinct_wares_call.mp3",
@@ -394,7 +394,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 9,
       "id": "snd_125_dough_kneading_on_board",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_125_dough_kneading_on_board",
         "filename": "snd_125_dough_kneading_on_board.wav",
@@ -422,7 +422,7 @@
       "playback_mode": "sequence",
       "suggested_duration_seconds": 2,
       "id": "snd_127_flour_sack_opened",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_127_flour_sack_opened",
         "filename": "snd_127_flour_sack_opened.mp3",
@@ -450,7 +450,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 13,
       "id": "snd_137_eel_smoke_rack_fire",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_137_eel_smoke_rack_fire",
         "filename": "snd_137_eel_smoke_rack_fire.wav",
@@ -479,7 +479,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_161_cinder_furnace_bed",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_161_cinder_furnace_bed",
         "filename": "snd_161_cinder_furnace_bed.wav",
@@ -508,7 +508,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 8,
       "id": "snd_168_cullet_sorting",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_168_cullet_sorting",
         "filename": "snd_168_cullet_sorting.wav",
@@ -536,7 +536,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 10,
       "id": "snd_181_loom_shuttle_run",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_181_loom_shuttle_run",
         "filename": "snd_181_loom_shuttle_run.wav",
@@ -564,7 +564,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 12,
       "id": "snd_201_ford_well_wooden_windlass",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_201_ford_well_wooden_windlass",
         "filename": "snd_201_ford_well_wooden_windlass.wav",
@@ -593,7 +593,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 4,
       "id": "snd_202_ford_well_deep_bucket_splash",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_202_ford_well_deep_bucket_splash",
         "filename": "snd_202_ford_well_deep_bucket_splash.mp3",
@@ -622,7 +622,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 12,
       "id": "snd_206_three_curb_triple_rope",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_206_three_curb_triple_rope",
         "filename": "snd_206_three_curb_triple_rope.wav",
@@ -651,7 +651,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 4.5,
       "id": "snd_205_chain_well_bucket_knock",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_205_chain_well_bucket_knock",
         "filename": "snd_205_chain_well_bucket_knock.mp3",
@@ -680,7 +680,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 3,
       "id": "snd_207_three_curb_crossed_buckets",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_207_three_curb_crossed_buckets",
         "filename": "snd_207_three_curb_crossed_buckets.mp3",

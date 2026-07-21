@@ -327,6 +327,14 @@ impl MicrophoneInputState {
         }
     }
 
+    /// Whether the capture worker is recording an utterance right now.
+    ///
+    /// This is intentionally narrower than `enabled`: voice activation can be
+    /// armed indefinitely without constituting dialogue audio activity.
+    pub(crate) fn recording_active(&self) -> bool {
+        self.recording.is_some()
+    }
+
     pub fn clear_on_disconnect(&mut self) {
         self.recording = None;
         self.streaming_sync = None;
@@ -1209,6 +1217,22 @@ mod tests {
 
         runtime.stt_cloud_available = false;
         assert!(!effective_streaming(&config, &state, &runtime));
+    }
+
+    #[test]
+    fn recording_activity_tracks_live_capture_not_microphone_preference() {
+        let mut state = MicrophoneInputState::default();
+        assert!(state.enabled);
+        assert!(!state.recording_active());
+
+        state.recording = Some(RecordingContext {
+            wav_basename: "utterance.wav".into(),
+            stt_backend: TranscriptionBackend::Cloud,
+        });
+        assert!(state.recording_active());
+
+        state.clear_on_disconnect();
+        assert!(!state.recording_active());
     }
 
     fn offer_mirror(giver_x: f32) -> WorldMirror {

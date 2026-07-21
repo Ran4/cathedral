@@ -59,6 +59,219 @@ enum Lift {
     Chain,
 }
 
+/// The five authored mechanisms that can be driven by an authoritative well
+/// draw. Other wells keep their static lifting gear until their simulation has
+/// a corresponding activity source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AnimatedWell {
+    Ford,
+    Chain,
+    ThreeCurb(u8),
+}
+
+impl AnimatedWell {
+    fn index(self) -> usize {
+        match self {
+            Self::Ford => 0,
+            Self::Chain => 1,
+            Self::ThreeCurb(mouth) => 2 + usize::from(mouth.min(2)),
+        }
+    }
+
+    fn phase_offset(self) -> f32 {
+        match self {
+            Self::Ford | Self::Chain => 0.0,
+            Self::ThreeCurb(0) => 0.0,
+            Self::ThreeCurb(1) => TAU / 3.0,
+            Self::ThreeCurb(_) => 2.0 * TAU / 3.0,
+        }
+    }
+
+    fn angular_speed(self) -> f32 {
+        match self {
+            Self::Ford => 1.55,
+            Self::Chain => 1.25,
+            Self::ThreeCurb(0) => 1.42,
+            Self::ThreeCurb(1) => 1.34,
+            Self::ThreeCurb(_) => 1.49,
+        }
+    }
+
+    fn lift_distance(self) -> f32 {
+        match self {
+            Self::Ford => 0.24,
+            Self::Chain => 0.19,
+            Self::ThreeCurb(_) => 0.17,
+        }
+    }
+
+    fn pause_jerk(self) -> f32 {
+        match self {
+            Self::ThreeCurb(0) => 0.22,
+            Self::ThreeCurb(1) => -0.18,
+            Self::ThreeCurb(_) => 0.14,
+            Self::Ford | Self::Chain => 0.0,
+        }
+    }
+
+    fn paused_sway(self) -> f32 {
+        match self {
+            Self::ThreeCurb(0) => -0.085,
+            Self::ThreeCurb(1) => 0.075,
+            Self::ThreeCurb(_) => -0.055,
+            Self::Ford | Self::Chain => 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MechanismPart {
+    Rotor,
+    Line,
+    Bucket,
+}
+
+/// Semantic metadata attached to the already-rendered barrel, crank, line and
+/// bucket pieces. `rest` is the exact authored transform; animation is always
+/// reconstructed from it, so floating-point drift cannot accumulate.
+#[derive(Component, Debug, Clone)]
+pub(super) struct WellMechanismPart {
+    well: AnimatedWell,
+    part: MechanismPart,
+    pivot: Vec3,
+    axis: Vec3,
+    rest: Transform,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct MechanismPhase {
+    angle: f32,
+    blend: f32,
+    paused: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct MechanismPose {
+    spin: f32,
+    lift: f32,
+    sway: f32,
+}
+
+/// Per-system animation memory. It starts a newly active mechanism at rest,
+/// advances only while the soundscape says a draw is underway, and freezes at
+/// an intentionally awkward pose during Three-Curb's crossed-bucket pause.
+#[derive(Debug, Default)]
+pub(super) struct WellAnimationState {
+    phases: [MechanismPhase; 5],
+}
+
+impl WellAnimationState {
+    fn pose(
+        &mut self,
+        well: AnimatedWell,
+        delta_seconds: f32,
+        active: bool,
+        paused: bool,
+    ) -> MechanismPose {
+        let state = &mut self.phases[well.index()];
+        if !active {
+            *state = MechanismPhase::default();
+            return MechanismPose::default();
+        }
+
+        let dt = if delta_seconds.is_finite() {
+            delta_seconds.max(0.0)
+        } else {
+            0.0
+        };
+        if paused {
+            if !state.paused {
+                // The first paused frame visibly snatches each handle a little
+                // differently; subsequent frames hold it absolutely still.
+                state.angle = (state.angle + well.pause_jerk()).rem_euclid(TAU);
+            }
+            state.paused = true;
+        } else {
+            state.paused = false;
+            state.blend = (state.blend + dt / 0.3).min(1.0);
+            state.angle = (state.angle + dt * well.angular_speed()).rem_euclid(TAU);
+        }
+
+        let phase = (state.angle + well.phase_offset() * state.blend).rem_euclid(TAU);
+        let wave = 0.5 - 0.5 * phase.cos();
+        MechanismPose {
+            spin: phase,
+            lift: well.lift_distance() * wave * state.blend,
+            sway: 0.035 * phase.sin() * state.blend + if paused { well.paused_sway() } else { 0.0 },
+        }
+    }
+}
+
+/// Project the soundscape's read-only draw activity onto the authored lifting
+/// gear. Absence of the soundscape resource is deliberately equivalent to no
+/// activity, which keeps `CityPlugin` useful in headless geometry tests.
+pub(super) fn animate_well_mechanisms(
+    time: Res<Time>,
+    activity: Option<Res<crate::soundscape::WellMechanismActivity>>,
+    mut animation: Local<WellAnimationState>,
+    mut parts: Query<(&WellMechanismPart, &mut Transform)>,
+) {
+    let dt = time.delta_secs();
+    let ford_active = activity
+        .as_deref()
+        .is_some_and(|activity| activity.ford_active());
+    let chain_active = activity
+        .as_deref()
+        .is_some_and(|activity| activity.chain_active());
+    let three_active = activity
+        .as_deref()
+        .is_some_and(|activity| activity.three_curb_active());
+    let three_paused = activity
+        .as_deref()
+        .is_some_and(|activity| activity.three_curb_conflict());
+
+    let poses = [
+        animation.pose(AnimatedWell::Ford, dt, ford_active, false),
+        animation.pose(AnimatedWell::Chain, dt, chain_active, false),
+        animation.pose(AnimatedWell::ThreeCurb(0), dt, three_active, three_paused),
+        animation.pose(AnimatedWell::ThreeCurb(1), dt, three_active, three_paused),
+        animation.pose(AnimatedWell::ThreeCurb(2), dt, three_active, three_paused),
+    ];
+
+    for (part, mut transform) in &mut parts {
+        let pose = poses[part.well.index()];
+        *transform = part.rest;
+        if pose == MechanismPose::default() {
+            continue;
+        }
+
+        let sway_axis = part.axis.cross(Vec3::Y).normalize_or(Vec3::Z);
+        match part.part {
+            MechanismPart::Rotor => {
+                let turn = Quat::from_axis_angle(part.axis, pose.spin);
+                transform.translation = part.pivot + turn * (part.rest.translation - part.pivot);
+                transform.rotation = turn * part.rest.rotation;
+            }
+            MechanismPart::Line => {
+                // Shorten from the bucket end while keeping the axle end fixed,
+                // and lean the line just enough to meet the swaying bucket.
+                let rest_bottom = part.rest.translation - Vec3::Y * (part.rest.scale.y * 0.5);
+                let bottom = rest_bottom + Vec3::Y * pose.lift + sway_axis * pose.sway;
+                let line = part.pivot - bottom;
+                let length = line.length().max(0.01);
+                transform.translation = (part.pivot + bottom) * 0.5;
+                transform.rotation = Quat::from_rotation_arc(Vec3::Y, line / length);
+                transform.scale.y = length;
+            }
+            MechanismPart::Bucket => {
+                transform.translation += Vec3::Y * pose.lift + sway_axis * pose.sway;
+                transform.rotation =
+                    Quat::from_axis_angle(part.axis, pose.sway * 0.8) * part.rest.rotation;
+            }
+        }
+    }
+}
+
 /// The curb's masonry. Three-Curb's mouths deliberately do not match: one is
 /// worn old stone, one a neat post-Rains rebuilding, the third a blunt
 /// Hammering repair made from whatever sound blocks came through the lane.
@@ -219,6 +432,7 @@ fn ford_well(
         Lift::Rope,
         0.0,
         "Ford Well",
+        Some(AnimatedWell::Ford),
     );
     roof_on_posts(
         commands,
@@ -342,6 +556,7 @@ fn bitter_well(
         Lift::Rope,
         0.0,
         "Bitter Well",
+        None,
     );
 
     // The unusually little queue shelter: two posts and a scrap of pent roof.
@@ -424,6 +639,7 @@ fn shambles_well(
         Lift::Rope,
         0.0,
         "Shambles well",
+        None,
     );
     roof_on_posts(
         commands,
@@ -493,6 +709,7 @@ fn chain_well(
         Lift::Chain,
         0.0,
         "Chain Well",
+        Some(AnimatedWell::Chain),
     );
 
     // The second iron-bound bucket waits on the curb; the keeper's clean leather
@@ -583,6 +800,7 @@ fn three_curb(
             Lift::Rope,
             bearing,
             &format!("Three-Curb: the {} court's", ordinal(court)),
+            Some(AnimatedWell::ThreeCurb(index as u8)),
         );
         // A little roof of its own, pitched to its own court and fitting none of
         // its neighbours.
@@ -653,6 +871,7 @@ fn lodge_well(
         Lift::Rope,
         FRAC_PI_2,
         "Lodge Well",
+        None,
     );
     roof_on_posts(
         commands,
@@ -1233,6 +1452,7 @@ fn windlass(
     lift: Lift,
     angle: f32,
     name: &str,
+    mechanism: Option<AnimatedWell>,
 ) {
     let broad = lift == Lift::Chain;
     let axle_y = curb_height + 1.0;
@@ -1253,7 +1473,7 @@ fn windlass(
     }
 
     // The barrel lies across the mouth, so it is a cylinder turned on its side.
-    spawn_mesh_named(
+    spawn_windlass_part(
         commands,
         &meshes.cylinder,
         if broad {
@@ -1269,26 +1489,37 @@ fn windlass(
                 if broad { 0.26 } else { 0.19 },
             )),
         format!("{name} windlass barrel"),
+        mechanism,
+        MechanismPart::Rotor,
+        base + Vec3::Y * axle_y,
+        right,
     );
 
     // The crank, and — on a chain windlass — the pawl that clicks against the
     // ratchet and gives the Weigh Ward its most recognisable noise.
     let crank = base + right * (reach + 0.28) + Vec3::Y * axle_y;
-    spawn_box_named(
+    spawn_windlass_part(
         commands,
-        meshes,
+        &meshes.cube,
         &materials.iron,
-        crank,
-        Vec3::new(0.36, 0.08, 0.08),
+        Transform::from_translation(crank).with_scale(Vec3::new(0.36, 0.08, 0.08)),
         format!("{name} windlass crank"),
+        mechanism,
+        MechanismPart::Rotor,
+        base + Vec3::Y * axle_y,
+        right,
     );
-    spawn_box_named(
+    spawn_windlass_part(
         commands,
-        meshes,
+        &meshes.cube,
         &materials.dark_wood,
-        crank + Vec3::new(0.0, -0.3, 0.0),
-        Vec3::new(0.08, 0.5, 0.08),
+        Transform::from_translation(crank + Vec3::new(0.0, -0.3, 0.0))
+            .with_scale(Vec3::new(0.08, 0.5, 0.08)),
         format!("{name} crank handle"),
+        mechanism,
+        MechanismPart::Rotor,
+        base + Vec3::Y * axle_y,
+        right,
     );
     if broad {
         spawn_box_named(
@@ -1304,28 +1535,88 @@ fn windlass(
     // The rope or chain, and the bucket it holds over the water. An iron-bound
     // bucket for a chain; a plain coopered one for a rope.
     let drop = axle_y - curb_height - 0.35;
-    spawn_cylinder(
+    spawn_windlass_part(
         commands,
-        meshes,
+        &meshes.cylinder,
         if broad {
             &materials.iron
         } else {
             &materials.timber
         },
-        base + Vec3::Y * (curb_height + 0.35 + drop * 0.5),
-        if broad { 0.05 } else { 0.035 },
-        drop,
+        Transform::from_translation(base + Vec3::Y * (curb_height + 0.35 + drop * 0.5)).with_scale(
+            Vec3::new(
+                if broad { 0.05 } else { 0.035 },
+                drop,
+                if broad { 0.05 } else { 0.035 },
+            ),
+        ),
+        format!(
+            "{name} {}",
+            if broad {
+                "drawing chain"
+            } else {
+                "drawing rope"
+            }
+        ),
+        mechanism,
+        MechanismPart::Line,
+        base + Vec3::Y * axle_y,
+        right,
     );
     let bucket = base + Vec3::Y * (curb_height + 0.12);
-    spawn_cylinder(commands, meshes, &materials.timber, bucket, 0.26, 0.42);
-    spawn_cylinder(
+    spawn_windlass_part(
         commands,
-        meshes,
-        &materials.iron,
-        bucket + Vec3::Y * 0.17,
-        0.28,
-        0.05,
+        &meshes.cylinder,
+        &materials.timber,
+        Transform::from_translation(bucket).with_scale(Vec3::new(0.26, 0.42, 0.26)),
+        format!("{name} public bucket"),
+        mechanism,
+        MechanismPart::Bucket,
+        base + Vec3::Y * axle_y,
+        right,
     );
+    spawn_windlass_part(
+        commands,
+        &meshes.cylinder,
+        &materials.iron,
+        Transform::from_translation(bucket + Vec3::Y * 0.17)
+            .with_scale(Vec3::new(0.28, 0.05, 0.28)),
+        format!("{name} public bucket iron band"),
+        mechanism,
+        MechanismPart::Bucket,
+        base + Vec3::Y * axle_y,
+        right,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn spawn_windlass_part(
+    commands: &mut Commands,
+    mesh: &Handle<Mesh>,
+    material: &Handle<StandardMaterial>,
+    transform: Transform,
+    name: String,
+    mechanism: Option<AnimatedWell>,
+    part: MechanismPart,
+    pivot: Vec3,
+    axis: Vec3,
+) {
+    let rest = transform;
+    let mut entity = commands.spawn((
+        Name::new(name),
+        Mesh3d(mesh.clone()),
+        MeshMaterial3d(material.clone()),
+        transform,
+    ));
+    if let Some(well) = mechanism {
+        entity.insert(WellMechanismPart {
+            well,
+            part,
+            pivot,
+            axis: axis.normalize_or(Vec3::X),
+            rest,
+        });
+    }
 }
 
 /// The roof over a well: four posts and a steep pitch. The posts are solid, the
@@ -1643,5 +1934,64 @@ fn ordinal(court: usize) -> &'static str {
         1 => "first",
         2 => "second",
         _ => "third",
+    }
+}
+
+#[cfg(test)]
+mod mechanism_tests {
+    use super::*;
+
+    #[test]
+    fn inactive_mechanism_returns_to_exact_rest_phase() {
+        let mut state = WellAnimationState::default();
+        assert_ne!(
+            state.pose(AnimatedWell::Ford, 0.2, true, false),
+            MechanismPose::default()
+        );
+        assert_eq!(
+            state.pose(AnimatedWell::Ford, 0.2, false, false),
+            MechanismPose::default()
+        );
+
+        let resumed = state.pose(AnimatedWell::Ford, 0.1, true, false);
+        let fresh = WellAnimationState::default().pose(AnimatedWell::Ford, 0.1, true, false);
+        assert_eq!(resumed, fresh);
+    }
+
+    #[test]
+    fn three_curb_mouths_have_deterministic_distinct_phases() {
+        let mut first = WellAnimationState::default();
+        let poses = [
+            first.pose(AnimatedWell::ThreeCurb(0), 0.2, true, false),
+            first.pose(AnimatedWell::ThreeCurb(1), 0.2, true, false),
+            first.pose(AnimatedWell::ThreeCurb(2), 0.2, true, false),
+        ];
+        assert_ne!(poses[0].spin, poses[1].spin);
+        assert_ne!(poses[1].spin, poses[2].spin);
+
+        let mut replay = WellAnimationState::default();
+        assert_eq!(
+            poses,
+            [
+                replay.pose(AnimatedWell::ThreeCurb(0), 0.2, true, false),
+                replay.pose(AnimatedWell::ThreeCurb(1), 0.2, true, false),
+                replay.pose(AnimatedWell::ThreeCurb(2), 0.2, true, false),
+            ]
+        );
+    }
+
+    #[test]
+    fn three_curb_conflict_jerks_once_then_holds() {
+        let mut state = WellAnimationState::default();
+        for _ in 0..4 {
+            let _ = state.pose(AnimatedWell::ThreeCurb(1), 0.1, true, false);
+        }
+        let moving = state.pose(AnimatedWell::ThreeCurb(1), 0.1, true, false);
+        let jerked = state.pose(AnimatedWell::ThreeCurb(1), 0.1, true, true);
+        let held = state.pose(AnimatedWell::ThreeCurb(1), 0.25, true, true);
+
+        assert_ne!(jerked.spin, moving.spin);
+        assert_eq!(jerked, held);
+        assert_ne!(held.sway, 0.0);
     }
 }
