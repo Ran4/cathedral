@@ -1,7 +1,695 @@
 {
   "schema_version": 1,
   "source_catalog": "more_sounds.json",
-  "selected_count": 0,
-  "selected_sound_ids": [],
-  "sounds": []
+  "workflow": "Implement the selected sounds in the game using each generated_audio.path when present, then set implemented_in_game to true. The workbench reconciles true flags back into more_sounds.json.",
+  "selected_count": 23,
+  "implemented_count": 0,
+  "generated_count": 23,
+  "selected_sound_ids": [
+    "snd_001_soft_shoes_on_dry_cobbles",
+    "snd_034_dusty_workshop_cough",
+    "snd_037_end_of_day_yawn",
+    "snd_042_grain_laden_cart_roll",
+    "snd_046_wheel_drops_into_rut",
+    "snd_050_crate_set_down",
+    "snd_049_porter_sack_drop",
+    "snd_062_stone_gate_closing",
+    "snd_063_river_gate_bar_lift",
+    "snd_081_wickmarket_highmarket_crowd_bed",
+    "snd_087_balance_pans_settle",
+    "snd_097_indistinct_wares_call",
+    "snd_125_dough_kneading_on_board",
+    "snd_127_flour_sack_opened",
+    "snd_137_eel_smoke_rack_fire",
+    "snd_161_cinder_furnace_bed",
+    "snd_168_cullet_sorting",
+    "snd_181_loom_shuttle_run",
+    "snd_201_ford_well_wooden_windlass",
+    "snd_202_ford_well_deep_bucket_splash",
+    "snd_206_three_curb_triple_rope",
+    "snd_205_chain_well_bucket_knock",
+    "snd_207_three_curb_crossed_buckets"
+  ],
+  "sounds": [
+    {
+      "sound_name": "Soft Shoes on Dry Cobbles",
+      "category": "Footsteps & Player Movement",
+      "description": "A muted leather-sole contact with a small double scrape from Ombreval's uneven dry street cobbles. It should feel close and physical without sounding like a modern hard-soled shoe.",
+      "tags": [
+        "player",
+        "movement",
+        "surface",
+        "footstep",
+        "stone",
+        "day",
+        "one-shot"
+      ],
+      "game_placement": "Trigger on each player foot contact while walking on the procedural cobble road ribbons; alternate feet and lightly vary pitch so ordinary travel never becomes a metronome.",
+      "generation_prompt": "One soft medieval turnshoe stepping heel-to-toe on irregular dry cobblestones, muted leather contact, tiny grit scrape, close outdoor recording. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 0.8,
+      "id": "snd_001_soft_shoes_on_dry_cobbles",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_001_soft_shoes_on_dry_cobbles",
+        "filename": "snd_001_soft_shoes_on_dry_cobbles.mp3",
+        "url": "/generated/snd_001_soft_shoes_on_dry_cobbles.mp3?v=1784656971445658940",
+        "media_type": "audio/mpeg",
+        "size_bytes": 13836,
+        "modified_ns": 1784656971445658940,
+        "path": "generated/snd_001_soft_shoes_on_dry_cobbles.mp3"
+      }
+    },
+    {
+      "sound_name": "Dusty Workshop Cough",
+      "category": "NPC Movement & Presence",
+      "description": "A short involuntary cough from lime, stone, flour, ash, or wool dust, followed by one controlled breath.",
+      "tags": [
+        "npc",
+        "actor",
+        "body",
+        "voice",
+        "work",
+        "proximity",
+        "one-shot"
+      ],
+      "game_placement": "Let workers in Coswald's Yard, mills, bakehouses, Cinder Row, and cloth shops emit it rarely; treat it as ambience unless a health system later claims it.",
+      "generation_prompt": "One restrained adult cough caused by workshop dust, two dry cough impulses and a controlled recovery breath, no spoken words. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 1.4,
+      "id": "snd_034_dusty_workshop_cough",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_034_dusty_workshop_cough",
+        "filename": "snd_034_dusty_workshop_cough.mp3",
+        "url": "/generated/snd_034_dusty_workshop_cough.mp3?v=1784657088345381512",
+        "media_type": "audio/mpeg",
+        "size_bytes": 23031,
+        "modified_ns": 1784657088345381512,
+        "path": "generated/snd_034_dusty_workshop_cough.mp3"
+      }
+    },
+    {
+      "sound_name": "End-of-Day Yawn",
+      "category": "NPC Movement & Presence",
+      "description": "A tired closed-mouth yawn, exhale, and shoulder-cloth shift aligned with Lamplight or Snuffing.",
+      "tags": [
+        "npc",
+        "actor",
+        "body",
+        "voice",
+        "dusk",
+        "one-shot"
+      ],
+      "game_placement": "Use for weary actors idling or starting the homeward leg late in the day, especially servants, watch relief, and market pack-down crews.",
+      "generation_prompt": "One tired adult suppressing a yawn, long nasal inhale, closed-mouth yawn and slow exhale, faint wool shoulder movement. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 2.2,
+      "id": "snd_037_end_of_day_yawn",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_037_end_of_day_yawn",
+        "filename": "snd_037_end_of_day_yawn.mp3",
+        "url": "/generated/snd_037_end_of_day_yawn.mp3?v=1784657122601596448",
+        "media_type": "audio/mpeg",
+        "size_bytes": 36406,
+        "modified_ns": 1784657122601596448,
+        "path": "generated/snd_037_end_of_day_yawn.mp3"
+      }
+    },
+    {
+      "sound_name": "Grain-Laden Cart Roll",
+      "category": "Carts, Loads & Street Props",
+      "description": "A heavy cart rolls steadily with muted wheel thumps, a compressed axle, and sacks shifting only on larger bumps.",
+      "tags": [
+        "freight",
+        "transport",
+        "cart",
+        "wood",
+        "stone",
+        "loop"
+      ],
+      "game_placement": "Use for road parties carrying grain or flour from Seven Lofts and gate routes, with speed-driven playback and a low pass at distance.",
+      "generation_prompt": "Heavy medieval two-wheel cart loaded with grain sacks rolling over cobbles, slow wooden wheel thumps, frame groan and subdued sack movement. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 10,
+      "id": "snd_042_grain_laden_cart_roll",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_042_grain_laden_cart_roll",
+        "filename": "snd_042_grain_laden_cart_roll.wav",
+        "url": "/generated/snd_042_grain_laden_cart_roll.wav?v=1784657151914781398",
+        "media_type": "audio/wav",
+        "size_bytes": 1764078,
+        "modified_ns": 1784657151914781398,
+        "path": "generated/snd_042_grain_laden_cart_roll.wav"
+      }
+    },
+    {
+      "sound_name": "Wheel Drops into Rut",
+      "category": "Carts, Loads & Street Props",
+      "description": "One wheel drops, the load answers with a compact jolt, and the axle rebounds without a destructive crash.",
+      "tags": [
+        "freight",
+        "transport",
+        "cart",
+        "wood",
+        "impact",
+        "stone",
+        "one-shot"
+      ],
+      "game_placement": "Fire when a cart crosses designated rut points on the Cut, Tallage, and outer approaches; choose load-specific layers where available.",
+      "generation_prompt": "One wooden cart wheel dropping into a shallow cobbled rut, hard wheel knock, axle rebound and compact cargo jolt. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 1.5,
+      "id": "snd_046_wheel_drops_into_rut",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_046_wheel_drops_into_rut",
+        "filename": "snd_046_wheel_drops_into_rut.mp3",
+        "url": "/generated/snd_046_wheel_drops_into_rut.mp3?v=1784657274356562921",
+        "media_type": "audio/mpeg",
+        "size_bytes": 24703,
+        "modified_ns": 1784657274356562921,
+        "path": "generated/snd_046_wheel_drops_into_rut.mp3"
+      }
+    },
+    {
+      "sound_name": "Crate Set Down",
+      "category": "Carts, Loads & Street Props",
+      "description": "A braced wooden crate meets stone on one edge, is corrected, and settles square.",
+      "tags": [
+        "freight",
+        "transport",
+        "cart",
+        "impact",
+        "wood",
+        "work",
+        "one-shot"
+      ],
+      "game_placement": "Use for cargo handoffs at bonded warehouses, hoists, stalls, and road-cart unloading rather than for generic invisible impacts.",
+      "generation_prompt": "Medieval nailed wooden crate lowered firmly onto stone, first edge contact, brief scrape, then flat wooden settle. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 1.2,
+      "id": "snd_050_crate_set_down",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_050_crate_set_down",
+        "filename": "snd_050_crate_set_down.mp3",
+        "url": "/generated/snd_050_crate_set_down.mp3?v=1784657297803714062",
+        "media_type": "audio/mpeg",
+        "size_bytes": 20106,
+        "modified_ns": 1784657297803714062,
+        "path": "generated/snd_050_crate_set_down.mp3"
+      }
+    },
+    {
+      "sound_name": "Porter Sack Drop",
+      "category": "Carts, Loads & Street Props",
+      "description": "A filled grain or salt sack lands flat, expels air, and settles with a soft granular shift.",
+      "tags": [
+        "freight",
+        "transport",
+        "cart",
+        "impact",
+        "cloth",
+        "work",
+        "one-shot"
+      ],
+      "game_placement": "Sync to cargo workers unloading at Seven Lofts, Tallage, wharves, warehouses, and market stalls; randomize weight within a narrow range.",
+      "generation_prompt": "One heavy coarse-cloth sack of dry grain dropped from waist height onto wooden boards, deep soft thump, air puff and grain settling. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 1.3,
+      "id": "snd_049_porter_sack_drop",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_049_porter_sack_drop",
+        "filename": "snd_049_porter_sack_drop.mp3",
+        "url": "/generated/snd_049_porter_sack_drop.mp3?v=1784657357506100820",
+        "media_type": "audio/mpeg",
+        "size_bytes": 21359,
+        "modified_ns": 1784657357506100820,
+        "path": "generated/snd_049_porter_sack_drop.mp3"
+      }
+    },
+    {
+      "sound_name": "Stone Gate Closing",
+      "category": "Gates, Watch & Fortifications",
+      "description": "The northern gate's heavy leaf closes through a resonant stone throat and meets its stop with a controlled boom.",
+      "tags": [
+        "gate",
+        "civic",
+        "wall",
+        "wood",
+        "stone",
+        "dusk",
+        "sequence"
+      ],
+      "game_placement": "Trigger at Stone Gate closure near Snuffing or emergency lockdown; propagate a muffled version into adjacent wall housing.",
+      "generation_prompt": "Massive timber city gate closing inside a high stone gatehouse, iron hinges groaning, controlled final wooden boom with stone resonance. Natural hand-timed sequence with small human variations rather than metronomic timing; no electronic effects or modern machinery.",
+      "playback_mode": "sequence",
+      "suggested_duration_seconds": 5.5,
+      "id": "snd_062_stone_gate_closing",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_062_stone_gate_closing",
+        "filename": "snd_062_stone_gate_closing.mp3",
+        "url": "/generated/snd_062_stone_gate_closing.mp3?v=1784657406268418536",
+        "media_type": "audio/mpeg",
+        "size_bytes": 88651,
+        "modified_ns": 1784657406268418536,
+        "path": "generated/snd_062_stone_gate_closing.mp3"
+      }
+    },
+    {
+      "sound_name": "River Gate Bar Lift",
+      "category": "Gates, Watch & Fortifications",
+      "description": "Several guards raise a long locking beam from wall sockets and set it onto brackets with practical effort.",
+      "tags": [
+        "gate",
+        "civic",
+        "wall",
+        "wood",
+        "mechanism",
+        "freight",
+        "sequence"
+      ],
+      "game_placement": "Use before the River Gate opens for freight and when reopening after inspection or curfew; align motion and sound to the visible bar.",
+      "generation_prompt": "Long heavy oak gate bar lifted by several people from deep stone sockets, timber rubbing masonry, strained handling and secure set-down. Natural hand-timed sequence with small human variations rather than metronomic timing; no electronic effects or modern machinery.",
+      "playback_mode": "sequence",
+      "suggested_duration_seconds": 3.5,
+      "id": "snd_063_river_gate_bar_lift",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_063_river_gate_bar_lift",
+        "filename": "snd_063_river_gate_bar_lift.mp3",
+        "url": "/generated/snd_063_river_gate_bar_lift.mp3?v=1784658727520743219",
+        "media_type": "audio/mpeg",
+        "size_bytes": 56886,
+        "modified_ns": 1784658727520743219,
+        "path": "generated/snd_063_river_gate_bar_lift.mp3"
+      }
+    },
+    {
+      "sound_name": "Wickmarket Highmarket Crowd Bed",
+      "category": "Markets & Commerce",
+      "description": "A dense but navigable market texture of chandlers, food buyers, small carts, and hot-work handling, with no repeated intelligible phrase.",
+      "tags": [
+        "market",
+        "commerce",
+        "crowd",
+        "wick",
+        "voice",
+        "day",
+        "loop"
+      ],
+      "game_placement": "Fill the Wickmarket on Highmarket between Dayspring and Waning; reduce voices near active smart-actor conversations and close with the stalls.",
+      "generation_prompt": "Busy medieval chandler market in an enclosed square, layered indistinct bargaining, small wooden stalls, wax-work handling and sparse cart movement. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 14,
+      "id": "snd_081_wickmarket_highmarket_crowd_bed",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_081_wickmarket_highmarket_crowd_bed",
+        "filename": "snd_081_wickmarket_highmarket_crowd_bed.wav",
+        "url": "/generated/snd_081_wickmarket_highmarket_crowd_bed.wav?v=1784658771318300916",
+        "media_type": "audio/wav",
+        "size_bytes": 2469678,
+        "modified_ns": 1784658771318300916,
+        "path": "generated/snd_081_wickmarket_highmarket_crowd_bed.wav"
+      }
+    },
+    {
+      "sound_name": "Balance Pans Settle",
+      "category": "Markets & Commerce",
+      "description": "Two brass pans oscillate on chains, touch lightly, and come to a delicate balance.",
+      "tags": [
+        "market",
+        "commerce",
+        "crowd",
+        "metal",
+        "weigh",
+        "mechanism",
+        "one-shot"
+      ],
+      "game_placement": "Attach to Tallage weigh-beams, merchant counters, grocers, and money dealers whenever an item is actually measured.",
+      "generation_prompt": "Medieval brass balance scales settling after a weight is added, fine chain movement, pans gently touching and oscillation fading. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 2,
+      "id": "snd_087_balance_pans_settle",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_087_balance_pans_settle",
+        "filename": "snd_087_balance_pans_settle.mp3",
+        "url": "/generated/snd_087_balance_pans_settle.mp3?v=1784658827737998956",
+        "media_type": "audio/mpeg",
+        "size_bytes": 33062,
+        "modified_ns": 1784658827737998956,
+        "path": "generated/snd_087_balance_pans_settle.mp3"
+      }
+    },
+    {
+      "sound_name": "Indistinct Wares Call",
+      "category": "Markets & Commerce",
+      "description": "A practiced stallholder projects a short rhythmic call whose cadence carries while the exact words remain deliberately indistinct.",
+      "tags": [
+        "market",
+        "commerce",
+        "crowd",
+        "voice",
+        "signal",
+        "day",
+        "one-shot"
+      ],
+      "game_placement": "Emit occasionally from active food and provision stalls within 25 metres, never so often that it competes with smart-actor speech or STT.",
+      "generation_prompt": "One medieval market seller giving a brief strong rhythmic wares call across a square, human and practical, words indistinct, light crowd behind. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 3,
+      "id": "snd_097_indistinct_wares_call",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_097_indistinct_wares_call",
+        "filename": "snd_097_indistinct_wares_call.mp3",
+        "url": "/generated/snd_097_indistinct_wares_call.mp3?v=1784658895290807695",
+        "media_type": "audio/mpeg",
+        "size_bytes": 48945,
+        "modified_ns": 1784658895290807695,
+        "path": "generated/snd_097_indistinct_wares_call.mp3"
+      }
+    },
+    {
+      "sound_name": "Dough Kneading on Board",
+      "category": "Food, Kitchens & Taverns",
+      "description": "Damp dough is folded, pressed, and turned in a slow working cycle against a flour-dusted board.",
+      "tags": [
+        "food",
+        "tavern",
+        "interior",
+        "work",
+        "wood",
+        "loop"
+      ],
+      "game_placement": "Place in bakeries, communal ovens, tavern kitchens, and early-morning household preparation near grain routes.",
+      "generation_prompt": "Baker steadily kneading heavy bread dough on a flour-dusted wooden board, fold, palm press and turn, close dry kitchen. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 9,
+      "id": "snd_125_dough_kneading_on_board",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_125_dough_kneading_on_board",
+        "filename": "snd_125_dough_kneading_on_board.wav",
+        "url": "/generated/snd_125_dough_kneading_on_board.wav?v=1784658984630837821",
+        "media_type": "audio/wav",
+        "size_bytes": 1587678,
+        "modified_ns": 1784658984630837821,
+        "path": "generated/snd_125_dough_kneading_on_board.wav"
+      }
+    },
+    {
+      "sound_name": "Flour Sack Opened",
+      "category": "Food, Kitchens & Taverns",
+      "description": "A tied sack is loosened, folded back, and flour settles with a soft dry breath into a measuring scoop.",
+      "tags": [
+        "food",
+        "tavern",
+        "interior",
+        "cloth",
+        "work",
+        "sequence"
+      ],
+      "game_placement": "Use for bakery restocking, market flour sales, kitchen prep, and Seven Lofts supply handling.",
+      "generation_prompt": "Coarse linen flour sack untied and opened, cloth folding, dry flour settling and a wooden scoop entering, no dramatic dust burst. Natural hand-timed sequence with small human variations rather than metronomic timing; no electronic effects or modern machinery.",
+      "playback_mode": "sequence",
+      "suggested_duration_seconds": 2,
+      "id": "snd_127_flour_sack_opened",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_127_flour_sack_opened",
+        "filename": "snd_127_flour_sack_opened.mp3",
+        "url": "/generated/snd_127_flour_sack_opened.mp3?v=1784659005605073875",
+        "media_type": "audio/mpeg",
+        "size_bytes": 33062,
+        "modified_ns": 1784659005605073875,
+        "path": "generated/snd_127_flour_sack_opened.mp3"
+      }
+    },
+    {
+      "sound_name": "Eel Smoke-Rack Fire",
+      "category": "Food, Kitchens & Taverns",
+      "description": "A low smoky fuel bed hisses under hanging fish while fat occasionally drips and flares very softly.",
+      "tags": [
+        "food",
+        "tavern",
+        "interior",
+        "fire",
+        "reed",
+        "loop"
+      ],
+      "game_placement": "Place at Maren's Green smoke racks and fish-working courts during active market hours, never as a roaring bonfire.",
+      "generation_prompt": "Low medieval eel-smoking rack with damp wood and peat-like fuel, restrained crackle, fish fat drip hiss and gentle outdoor draft. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 13,
+      "id": "snd_137_eel_smoke_rack_fire",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_137_eel_smoke_rack_fire",
+        "filename": "snd_137_eel_smoke_rack_fire.wav",
+        "url": "/generated/snd_137_eel_smoke_rack_fire.wav?v=1784659031390361297",
+        "media_type": "audio/wav",
+        "size_bytes": 2293278,
+        "modified_ns": 1784659031390361297,
+        "path": "generated/snd_137_eel_smoke_rack_fire.wav"
+      }
+    },
+    {
+      "sound_name": "Cinder Furnace Bed",
+      "category": "Glass, Metal & Bellfounding",
+      "description": "A glass furnace draws and breathes steadily behind screened workshop doors, with fuel settling but no magical shimmer.",
+      "tags": [
+        "work",
+        "trade",
+        "metal",
+        "glass",
+        "fire",
+        "cinder",
+        "loop"
+      ],
+      "game_placement": "Place at numbered furnace bays along Cinder Row during work hours, muted by shutters from the street and absent on Ambrellestide morning.",
+      "generation_prompt": "Medieval wood-fired glass furnace burning steadily inside a masonry workshop, deep hot draw, fuel settling and restrained fire roar. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 14,
+      "id": "snd_161_cinder_furnace_bed",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_161_cinder_furnace_bed",
+        "filename": "snd_161_cinder_furnace_bed.wav",
+        "url": "/generated/snd_161_cinder_furnace_bed.wav?v=1784659420449415406",
+        "media_type": "audio/wav",
+        "size_bytes": 2469678,
+        "modified_ns": 1784659420449415406,
+        "path": "generated/snd_161_cinder_furnace_bed.wav"
+      }
+    },
+    {
+      "sound_name": "Cullet Sorting",
+      "category": "Glass, Metal & Bellfounding",
+      "description": "Thick colored fragments are moved by hand into separate wooden bins, producing safe dull clinks rather than fresh breakage.",
+      "tags": [
+        "work",
+        "trade",
+        "metal",
+        "glass",
+        "cinder",
+        "impact",
+        "loop"
+      ],
+      "game_placement": "Place in Burnt Court, Cinder Row yards, and glass-workshop cool areas when apprentices or labourers sort waste.",
+      "generation_prompt": "Thick scraps of old medieval glass gently sorted by hand into wooden bins, varied dull colored-glass clinks, no breaking. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 8,
+      "id": "snd_168_cullet_sorting",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_168_cullet_sorting",
+        "filename": "snd_168_cullet_sorting.wav",
+        "url": "/generated/snd_168_cullet_sorting.wav?v=1784659444790655789",
+        "media_type": "audio/wav",
+        "size_bytes": 1411278,
+        "modified_ns": 1784659444790655789,
+        "path": "generated/snd_168_cullet_sorting.wav"
+      }
+    },
+    {
+      "sound_name": "Loom Shuttle Run",
+      "category": "Cloth, Leather, Wax & Rope",
+      "description": "A handloom shuttle crosses, treadles shift, and the loom frame answers in a steady domestic or workshop cadence.",
+      "tags": [
+        "work",
+        "trade",
+        "cloth",
+        "wood",
+        "mechanism",
+        "loop"
+      ],
+      "game_placement": "Place in cloth halls, home workshops, and Cloth Ward interiors during work legs; vary density so every house is not a loom.",
+      "generation_prompt": "Medieval handloom weaving wool cloth, shuttle crossing, foot treadles and wooden frame working in a steady human rhythm. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 10,
+      "id": "snd_181_loom_shuttle_run",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_181_loom_shuttle_run",
+        "filename": "snd_181_loom_shuttle_run.wav",
+        "url": "/generated/snd_181_loom_shuttle_run.wav?v=1784659497584173276",
+        "media_type": "audio/wav",
+        "size_bytes": 1764078,
+        "modified_ns": 1784659497584173276,
+        "path": "generated/snd_181_loom_shuttle_run.wav"
+      }
+    },
+    {
+      "sound_name": "Ford Well Wooden Windlass",
+      "category": "Wells, Water & Sanitation",
+      "description": "Ford's broad wooden barrel turns under hand power with rope rasp, pawl clicks, and a lively central queue behind it.",
+      "tags": [
+        "water",
+        "work",
+        "mechanism",
+        "wood",
+        "day",
+        "loop"
+      ],
+      "game_placement": "Use on the existing Ford Well fixture while its keeper or water round is drawing; phase the loop to bucket height and retain the current quieter trough bed between draws.",
+      "generation_prompt": "Large medieval wooden well windlass turning by hand at a busy central well, thick rope over barrel, wooden pawl clicks and distant indistinct queue. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 12,
+      "id": "snd_201_ford_well_wooden_windlass",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_201_ford_well_wooden_windlass",
+        "filename": "snd_201_ford_well_wooden_windlass.wav",
+        "url": "/generated/snd_201_ford_well_wooden_windlass.wav?v=1784659564817825275",
+        "media_type": "audio/wav",
+        "size_bytes": 2116878,
+        "modified_ns": 1784659564817825275,
+        "path": "generated/snd_201_ford_well_wooden_windlass.wav"
+      }
+    },
+    {
+      "sound_name": "Ford Well Deep Bucket Splash",
+      "category": "Wells, Water & Sanitation",
+      "description": "A rope-run bucket falls down a deep shaft, strikes groundwater far below, rolls, and begins to fill in echo.",
+      "tags": [
+        "water",
+        "work",
+        "mechanism",
+        "impact",
+        "stone",
+        "proximity",
+        "one-shot"
+      ],
+      "game_placement": "Trigger when the simulated Ford bucket reaches water; delay from release according to shaft depth so the player can read the mechanism.",
+      "generation_prompt": "Wooden bucket descending into a deep stone well shaft, rope fading downward, distant hollow splash, bucket rolls and fills far below. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 4,
+      "id": "snd_202_ford_well_deep_bucket_splash",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_202_ford_well_deep_bucket_splash",
+        "filename": "snd_202_ford_well_deep_bucket_splash.mp3",
+        "url": "/generated/snd_202_ford_well_deep_bucket_splash.mp3?v=1784659576763940367",
+        "media_type": "audio/mpeg",
+        "size_bytes": 65245,
+        "modified_ns": 1784659576763940367,
+        "path": "generated/snd_202_ford_well_deep_bucket_splash.mp3"
+      }
+    },
+    {
+      "sound_name": "Three-Curb Triple Rope",
+      "category": "Wells, Water & Sanitation",
+      "description": "Three rope-and-bucket rhythms overlap around one shared shaft, each curb slightly out of phase and backed by three courts' voices.",
+      "tags": [
+        "water",
+        "work",
+        "mechanism",
+        "wood",
+        "crowd",
+        "cinder",
+        "loop"
+      ],
+      "game_placement": "Place at the existing Three-Curb fixture during busy household draws; cap simultaneous foreground buckets to preserve legibility.",
+      "generation_prompt": "Three medieval well ropes working one shared shaft from separate curbs, out-of-phase wooden windlasses, rope rasp and low indistinct court voices. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 12,
+      "id": "snd_206_three_curb_triple_rope",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_206_three_curb_triple_rope",
+        "filename": "snd_206_three_curb_triple_rope.wav",
+        "url": "/generated/snd_206_three_curb_triple_rope.wav?v=1784659588619054376",
+        "media_type": "audio/wav",
+        "size_bytes": 2116878,
+        "modified_ns": 1784659588619054376,
+        "path": "generated/snd_206_three_curb_triple_rope.wav"
+      }
+    },
+    {
+      "sound_name": "Chain Well Bucket Knock",
+      "category": "Wells, Water & Sanitation",
+      "description": "The iron-bound bucket swings once into the deep shaft wall, sheds drips, and steadies beneath a taut chain.",
+      "tags": [
+        "water",
+        "work",
+        "mechanism",
+        "metal",
+        "stone",
+        "impact",
+        "one-shot"
+      ],
+      "game_placement": "Trigger at one or two authored depths during a Chain Well lift, with spatial depth below the curb rather than at player height.",
+      "generation_prompt": "Iron-bound wooden well bucket knocking once against a very deep stone shaft while rising, chain taut, hollow echo and water dripping downward. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 4.5,
+      "id": "snd_205_chain_well_bucket_knock",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_205_chain_well_bucket_knock",
+        "filename": "snd_205_chain_well_bucket_knock.mp3",
+        "url": "/generated/snd_205_chain_well_bucket_knock.mp3?v=1784659605151213017",
+        "media_type": "audio/mpeg",
+        "size_bytes": 72768,
+        "modified_ns": 1784659605151213017,
+        "path": "generated/snd_205_chain_well_bucket_knock.mp3"
+      }
+    },
+    {
+      "sound_name": "Three-Curb Crossed Buckets",
+      "category": "Wells, Water & Sanitation",
+      "description": "Two buckets collide below the three mouths, ropes jerk, and both wooden vessels knock the shaft before handlers stop.",
+      "tags": [
+        "water",
+        "work",
+        "mechanism",
+        "impact",
+        "wood",
+        "cinder",
+        "one-shot"
+      ],
+      "game_placement": "Trigger rarely when concurrent draws conflict or as a future queue fault; it should cause a visible pause and keeper reaction, not random ambience.",
+      "generation_prompt": "Two wooden well buckets colliding inside a shared stone shaft, ropes snap taut, hollow bucket knocks and handlers halt above. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 3,
+      "id": "snd_207_three_curb_crossed_buckets",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_207_three_curb_crossed_buckets",
+        "filename": "snd_207_three_curb_crossed_buckets.mp3",
+        "url": "/generated/snd_207_three_curb_crossed_buckets.mp3?v=1784659619167347205",
+        "media_type": "audio/mpeg",
+        "size_bytes": 48945,
+        "modified_ns": 1784659619167347205,
+        "path": "generated/snd_207_three_curb_crossed_buckets.mp3"
+      }
+    }
+  ]
 }
