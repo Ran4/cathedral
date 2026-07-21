@@ -20,6 +20,10 @@ use super::{HEARING_RADIUS_M, SmartActorRuntime};
 
 const NAME_ANCHOR_Y: f32 = 0.9;
 const MAX_NAME_LABEL_DISTANCE_M: f32 = 80.0;
+const FULL_STRANGER_NAME_LABEL_DISTANCE_M: f32 = 8.0;
+const MAX_STRANGER_NAME_LABEL_DISTANCE_M: f32 = 15.0;
+const NAME_LABEL_BACKGROUND_ALPHA: f32 = 0.78;
+const NAME_LABEL_SHADOW_ALPHA: f32 = 0.75;
 const MAX_VISIBLE_NAME_LABELS: usize = 20;
 const THINKING_INDICATOR_WIDTH_PX: f32 = 38.0;
 const THINKING_INDICATOR_HEAD_OFFSET_PX: f32 = 68.0;
@@ -132,8 +136,9 @@ pub(crate) fn reconcile_actor_views(
 
     for (entity, label, mut text) in &mut labels {
         if let Some(actor) = desired_by_id.get(&label.0) {
-            if text.0 != actor.name_for_player {
-                text.0.clone_from(&actor.name_for_player);
+            let nameplate_text = actor_nameplate_text(actor);
+            if text.0 != nameplate_text {
+                text.0 = nameplate_text.to_owned();
             }
         } else if !desired_ids.contains(&label.0) {
             commands.entity(entity).despawn();
@@ -251,6 +256,7 @@ fn spawn_actor(
     actor: &super::model::ActorSnapshot,
 ) {
     let actor_id = actor.id.clone();
+    let nameplate_text = actor_nameplate_text(actor);
     // M7: dither-fade the crowd out between 120 and 150 m
     // (`features/performance_improvements.md` item 8; see `body::crowd_fade`).
     // The fog already owns depth at that distance, and the name labels
@@ -294,9 +300,9 @@ fn spawn_actor(
     // UI text is projected from the world anchor each frame. Unlike Text2d it
     // is rendered by the existing 3D + UI feature set and always faces the eye.
     commands.spawn((
-        Name::new(format!("Actor name: {}", actor.name_for_player)),
+        Name::new(format!("Actor name: {nameplate_text}")),
         ActorNameLabel(actor_id.clone()),
-        Text::new(actor.name_for_player.clone()),
+        Text::new(nameplate_text),
         TextFont {
             font: name_font.clone(),
             font_size: FontSize::Px(18.0),
@@ -312,7 +318,12 @@ fn spawn_actor(
             border_radius: BorderRadius::all(Val::Px(5.0)),
             ..default()
         },
-        BackgroundColor(Color::srgba(0.025, 0.030, 0.040, 0.78)),
+        BackgroundColor(Color::srgba(
+            0.025,
+            0.030,
+            0.040,
+            NAME_LABEL_BACKGROUND_ALPHA,
+        )),
         ZIndex(4),
         Visibility::Hidden,
     ));
@@ -348,12 +359,20 @@ fn spawn_actor(
 
 /// Projects actor name anchors to screen space, producing billboarded labels.
 pub(crate) fn position_actor_name_labels(
+    mirror: Res<WorldMirror>,
     cameras: Query<(&Camera, &GlobalTransform), With<PlayerCamera>>,
     anchors: Query<(&NameAnchor, &GlobalTransform)>,
-    mut labels: Query<(&ActorNameLabel, &mut Node, &mut Visibility)>,
+    mut labels: Query<(
+        &ActorNameLabel,
+        &mut Node,
+        &mut Visibility,
+        &mut TextColor,
+        &mut BackgroundColor,
+        &mut TextShadow,
+    )>,
 ) {
     let Ok((camera, camera_transform)) = cameras.single() else {
-        for (_, _, mut visibility) in &mut labels {
+        for (_, _, mut visibility, _, _, _) in &mut labels {
             *visibility = Visibility::Hidden;
         }
         return;
@@ -362,9 +381,25 @@ pub(crate) fn position_actor_name_labels(
         .iter()
         .map(|(anchor, transform)| (anchor.0.clone(), transform.translation()))
         .collect();
-    let visible_ids = nearest_name_anchor_ids(camera_transform.translation(), &anchor_positions);
+    let visible_ids = nearest_name_anchor_ids(
+        camera_transform.translation(),
+        &anchor_positions,
+        |actor_id| {
+            mirror
+                .actor(actor_id)
+                .is_some_and(actor_is_stranger_to_player)
+        },
+    );
 
-    for (label, mut node, mut visibility) in &mut labels {
+    for (
+        label,
+        mut node,
+        mut visibility,
+        mut text_color,
+        mut background_color,
+        mut text_shadow,
+    ) in &mut labels
+    {
         if !visible_ids.contains(&label.0) {
             *visibility = Visibility::Hidden;
             continue;
@@ -381,6 +416,27 @@ pub(crate) fn position_actor_name_labels(
 
         node.left = Val::Px(viewport_position.x - 54.0);
         node.top = Val::Px(viewport_position.y - 34.0);
+        let opacity = mirror
+            .actor(&label.0)
+            .filter(|actor| actor_is_stranger_to_player(actor))
+            .map_or(1.0, |_| {
+                stranger_name_label_opacity(
+                    camera_transform.translation().distance(*world_position),
+                )
+            });
+        text_color.0 = Color::linear_rgba(1.0, 1.0, 1.0, opacity);
+        background_color.0 = Color::srgba(
+            0.025,
+            0.030,
+            0.040,
+            NAME_LABEL_BACKGROUND_ALPHA * opacity,
+        );
+        text_shadow.color = Color::linear_rgba(
+            0.0,
+            0.0,
+            0.0,
+            NAME_LABEL_SHADOW_ALPHA * opacity,
+        );
         *visibility = Visibility::Inherited;
     }
 }
@@ -446,16 +502,28 @@ fn thinking_dots(elapsed_seconds: f32) -> &'static str {
     }
 }
 
+fn stranger_name_label_opacity(distance_m: f32) -> f32 {
+    ((MAX_STRANGER_NAME_LABEL_DISTANCE_M - distance_m)
+        / (MAX_STRANGER_NAME_LABEL_DISTANCE_M - FULL_STRANGER_NAME_LABEL_DISTANCE_M))
+        .clamp(0.0, 1.0)
+}
+
 fn nearest_name_anchor_ids(
     camera_position: Vec3,
     anchor_positions: &HashMap<ActorId, Vec3>,
+    is_stranger: impl Fn(&ActorId) -> bool,
 ) -> HashSet<ActorId> {
-    let maximum_distance_squared = MAX_NAME_LABEL_DISTANCE_M * MAX_NAME_LABEL_DISTANCE_M;
     let mut nearest: Vec<_> = anchor_positions
         .iter()
         .filter_map(|(actor_id, position)| {
+            let maximum_distance = if is_stranger(actor_id) {
+                MAX_STRANGER_NAME_LABEL_DISTANCE_M
+            } else {
+                MAX_NAME_LABEL_DISTANCE_M
+            };
             let distance_squared = camera_position.distance_squared(*position);
-            (distance_squared <= maximum_distance_squared).then_some((actor_id, distance_squared))
+            (distance_squared <= maximum_distance * maximum_distance)
+                .then_some((actor_id, distance_squared))
         })
         .collect();
     nearest.sort_unstable_by(|left, right| {
@@ -466,6 +534,22 @@ fn nearest_name_anchor_ids(
         .into_iter()
         .map(|(actor_id, _)| actor_id.clone())
         .collect()
+}
+
+fn actor_is_stranger_to_player(actor: &super::model::ActorSnapshot) -> bool {
+    actor
+        .name_for_player
+        .strip_prefix("a stranger (id ")
+        .and_then(|name| name.strip_suffix(')'))
+        .is_some_and(|id| id == actor.id.0)
+}
+
+fn actor_nameplate_text(actor: &super::model::ActorSnapshot) -> &str {
+    if actor_is_stranger_to_player(actor) {
+        "A stranger"
+    } else {
+        &actor.name_for_player
+    }
 }
 
 #[cfg(test)]
@@ -499,11 +583,42 @@ mod tests {
             (ActorId("far".into()), Vec3::new(0.0, 0.0, 80.01)),
         ]);
 
-        let visible = nearest_name_anchor_ids(Vec3::ZERO, &anchors);
+        let visible = nearest_name_anchor_ids(Vec3::ZERO, &anchors, |_| false);
 
         assert!(visible.contains(&ActorId("near".into())));
         assert!(visible.contains(&ActorId("boundary".into())));
         assert!(!visible.contains(&ActorId("far".into())));
+    }
+
+    #[test]
+    fn stranger_name_labels_stop_after_fifteen_metres() {
+        let anchors = HashMap::from([
+            (ActorId("known".into()), Vec3::new(0.0, 0.0, 79.0)),
+            (ActorId("near".into()), Vec3::new(0.0, 0.0, 14.99)),
+            (ActorId("boundary".into()), Vec3::new(0.0, 0.0, 15.0)),
+            (ActorId("far".into()), Vec3::new(0.0, 0.0, 15.01)),
+        ]);
+        let strangers = HashSet::from([
+            ActorId("near".into()),
+            ActorId("boundary".into()),
+            ActorId("far".into()),
+        ]);
+
+        let visible = nearest_name_anchor_ids(Vec3::ZERO, &anchors, |id| strangers.contains(id));
+
+        assert!(visible.contains(&ActorId("known".into())));
+        assert!(visible.contains(&ActorId("near".into())));
+        assert!(visible.contains(&ActorId("boundary".into())));
+        assert!(!visible.contains(&ActorId("far".into())));
+    }
+
+    #[test]
+    fn stranger_name_labels_fade_linearly_from_fifteen_to_eight_metres() {
+        assert_eq!(stranger_name_label_opacity(7.0), 1.0);
+        assert_eq!(stranger_name_label_opacity(8.0), 1.0);
+        assert_eq!(stranger_name_label_opacity(11.5), 0.5);
+        assert_eq!(stranger_name_label_opacity(15.0), 0.0);
+        assert_eq!(stranger_name_label_opacity(16.0), 0.0);
     }
 
     #[test]
@@ -517,7 +632,7 @@ mod tests {
             })
             .collect();
 
-        let visible = nearest_name_anchor_ids(Vec3::ZERO, &anchors);
+        let visible = nearest_name_anchor_ids(Vec3::ZERO, &anchors, |_| false);
 
         assert_eq!(visible.len(), 20);
         for distance in 1..=20 {
@@ -526,6 +641,24 @@ mod tests {
         for distance in 21..=25 {
             assert!(!visible.contains(&ActorId(format!("actor-{distance:02}"))));
         }
+    }
+
+    #[test]
+    fn stranger_nameplates_hide_the_actor_id() {
+        let actor = ActorSnapshot {
+            id: ActorId("pv3k4b".into()),
+            name_for_player: "a stranger (id pv3k4b)".into(),
+            control: ActorControl::Llm,
+            position_m: Position::new(0.0, 0.91, 0.0).unwrap(),
+            facing_yaw: 0.0,
+            appearance: Default::default(),
+            holds: vec![],
+            active_gesture: None,
+            statuses: Vec::new(),
+        };
+
+        assert!(actor_is_stranger_to_player(&actor));
+        assert_eq!(actor_nameplate_text(&actor), "A stranger");
     }
 
     #[test]
