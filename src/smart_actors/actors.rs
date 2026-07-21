@@ -609,6 +609,7 @@ mod tests {
                 ],
                 items: vec![],
                 offers: vec![],
+                road_carts: vec![],
             })
             .unwrap();
 
@@ -719,6 +720,7 @@ mod tests {
                 ],
                 items: vec![],
                 offers: vec![],
+                road_carts: vec![],
             })
             .unwrap();
 

@@ -35,6 +35,12 @@ pub enum ActionErrorCode {
     NotEdible,
     /// `offer_item` with a `quantity` outside `1..=stack.quantity`.
     BadQuantity,
+    /// The requested units are promised to an offer or transform job.
+    ItemCommitted,
+    /// An inbound stack would collide with capacity promised to future output.
+    OutputCapacityReserved,
+    /// A road-party member has begun the top-priority journey back to the gate.
+    LeavingCity,
     /// `go_to` / `tell_way` named a place the actor holds no handle for.
     UnknownPlace,
     /// `go_to` could not route from where the actor stands.
@@ -69,6 +75,9 @@ impl ActionErrorCode {
             Self::UnknownGesture => "unknown_gesture",
             Self::NotEdible => "not_edible",
             Self::BadQuantity => "bad_quantity",
+            Self::ItemCommitted => "item_committed",
+            Self::OutputCapacityReserved => "output_capacity_reserved",
+            Self::LeavingCity => "leaving_city",
             Self::UnknownPlace => "unknown_place",
             Self::NoRoute => "no_route",
             Self::TooFar => "too_far",
@@ -216,6 +225,9 @@ pub enum CommandErrorCode {
     UnknownGesture,
     NotEdible,
     BadQuantity,
+    ItemCommitted,
+    OutputCapacityReserved,
+    LeavingCity,
     UnknownPlace,
     NoRoute,
     TooFar,
@@ -270,6 +282,9 @@ impl CommandErrorCode {
             Self::UnknownGesture => "unknown_gesture",
             Self::NotEdible => "not_edible",
             Self::BadQuantity => "bad_quantity",
+            Self::ItemCommitted => "item_committed",
+            Self::OutputCapacityReserved => "output_capacity_reserved",
+            Self::LeavingCity => "leaving_city",
             Self::UnknownPlace => "unknown_place",
             Self::NoRoute => "no_route",
             Self::TooFar => "too_far",
@@ -319,6 +334,9 @@ impl From<ActionErrorCode> for CommandErrorCode {
             ActionErrorCode::UnknownGesture => Self::UnknownGesture,
             ActionErrorCode::NotEdible => Self::NotEdible,
             ActionErrorCode::BadQuantity => Self::BadQuantity,
+            ActionErrorCode::ItemCommitted => Self::ItemCommitted,
+            ActionErrorCode::OutputCapacityReserved => Self::OutputCapacityReserved,
+            ActionErrorCode::LeavingCity => Self::LeavingCity,
             ActionErrorCode::UnknownPlace => Self::UnknownPlace,
             ActionErrorCode::NoRoute => Self::NoRoute,
             ActionErrorCode::TooFar => Self::TooFar,

@@ -1,9 +1,10 @@
 # Milestones
 
-Five milestones, each shippable, each verifiable with the repo's existing tools
-(`cathedral-headless`, `CATHEDRAL_DRIVE`, the golden fixtures), plus one explicitly deferred. The
+Six milestones, each shippable and verifiable with the repo's existing tools
+(`cathedral-headless`, `CATHEDRAL_DRIVE`, the golden fixtures). The
 dependency shape: **M0 is the foundation and the risk** (every layer touches items, ~13 golden
-fixtures pin the bytes); **M1 is pure content and fully parallel**; M2→M3→M4 stack on M0.
+fixtures pin the bytes); **M1 is pure content and fully parallel**; M2→M3→M4 stack on M0, and M5
+replaces the deliberate M3/M4 supply and wallet cheats.
 
 ---
 
@@ -122,7 +123,7 @@ archive (`logs/latest_session/prompts/`) showing the baker's turn *reading price
 The three-NPC hallucinated-market failure mode of session 224 is structurally impossible for bound
 vendors.
 
-## M5 — The supply chain *(scoped: [07_the_supply_chain.md](07_the_supply_chain.md))*
+## M5 — The supply chain *(implemented: [07_the_supply_chain.md](07_the_supply_chain.md))*
 
 Fixed road parties bring deterministic manifests through the Wool and Stone gates and deliver them
 by visible cart to **Seven Lofts**. Betriss Skep holds the grain there across days; Bertran Hobbe
@@ -130,7 +131,7 @@ buys and mills it; Averil Quern buys the flour and performs the already-authored
 Ansel Quern's common oven; a funded buyer can purchase the resulting loaf on the **next**
 Dayspring. M5d adds Brede wool, Ewart Skell's real cloth production, the return load, and bounded
 household settlement. The sketch was [04](04_the_bread_round.md) §6;
-**[07](07_the_supply_chain.md) is the corrected scoped version**, split into four shippable
+**[07](07_the_supply_chain.md) is the binding implemented version**, split into four shippable
 sub-milestones:
 
 | | ships | the cheat it kills |
@@ -151,7 +152,9 @@ never price** (Sections 1 and 10).
 M5c's end-to-end buyer is deliberately not Ilse: she owns one spark and the loaf costs two.
 The M4 replay remains unchanged and ends with Ilse buying the one-spark herring.
 
-When it starts, `features/the_near_countryside__aka_add_market_stalls.md` merges into this folder.
+The former near-countryside sketch is now merged as
+[08_near_countryside.md](08_near_countryside.md). M5 implements its fixed Brede/Lantern road edge;
+the wider reactive hinterland remains future work.
 
 ---
 

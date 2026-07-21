@@ -884,6 +884,19 @@ impl Engine {
             for actor_id in nudges {
                 self.scheduler.prioritize(&self.world, &actor_id, false, now);
             }
+            let departed = self.round.drain_departed();
+            if !departed.is_empty() {
+                self.scheduler.actors_departed(&departed);
+                self.novelty.forget(&departed);
+                self.npc_exchanges.forget(&departed);
+                if self
+                    .last_player_exchange
+                    .as_ref()
+                    .is_some_and(|(actor, _)| departed.contains(actor))
+                {
+                    self.last_player_exchange = None;
+                }
+            }
             // The lamp channel (M7): republish the set exactly when a lamp
             // changed — the seed, a lighting, the dawn snuff.
             if self.round.lamp_revision() != self.lamp_revision_sent {
@@ -999,7 +1012,9 @@ impl Engine {
     }
 
     pub fn snapshot(&self) -> PublicSnapshot {
-        self.world.public_snapshot(&self.config.player_id)
+        let mut snapshot = self.world.public_snapshot(&self.config.player_id);
+        snapshot.road_carts = self.round.road_carts(&self.world);
+        snapshot
     }
 
     pub fn capabilities(&self) -> Capabilities {
@@ -1044,8 +1059,8 @@ impl Engine {
         self.round.food_summary(&self.world)
     }
 
-    /// Drain the food round's `[food]` event log for `--trace-food` (M3): the
-    /// Kindling restock, each sale, the Watch ledger. Buffered by the round each
+    /// Drain the economy's `[food]` trace: legacy restock, sales, road traffic,
+    /// transforms, and household settlement. Buffered by the round each
     /// poll and drained here by the host; the game host never calls it, so the
     /// buffer stays capped.
     pub fn drain_food_log(&mut self) -> Vec<String> {
@@ -1801,7 +1816,12 @@ impl Engine {
         else {
             return;
         };
-        let Some(speaker) = self.world.characters.get(&actor_id) else {
+        let Some(speaker) = self
+            .world
+            .characters
+            .get(&actor_id)
+            .filter(|_| self.world.is_present(&actor_id))
+        else {
             return;
         };
         let speaker_is_player = speaker.control() == Control::Player;
@@ -1904,7 +1924,7 @@ impl Engine {
         let actor_id = event
             .actor_id
             .as_ref()
-            .filter(|id| self.world.characters.contains_key(*id));
+            .filter(|id| self.world.is_present(id));
 
         let player_is_actor = actor_id == Some(player_id);
         let player_is_witness = event.witness_ids.contains(player_id);
@@ -1970,7 +1990,7 @@ impl Engine {
 }
 
 /// The world-event kinds that stop both parties like a targeted line. The
-/// round's presentation-only events (`stall_sale`) are deliberately not here:
+/// round's presentation-only events (`sale`) are deliberately not here:
 /// the silent stall purchase already parks the buyer itself, and priming the
 /// scheduler off it would spend LLM turns on a zero-token act (npc_bodies M2).
 fn is_handoff_kind(kind: &str) -> bool {
@@ -2075,14 +2095,14 @@ mod tests {
     }
 
     /// npc_bodies M2 purity contract: the deliberate offer verbs hold both
-    /// parties for the exchange, but the round's presentation-only `stall_sale`
+    /// parties for the exchange, but the round's presentation-only `sale`
     /// must never trip the handoff (no interrupt, no NPC-exchange warmth, and —
     /// because `flush` only nudges the scheduler for sounds — no turn either).
     #[test]
-    fn stall_sale_is_not_a_handoff_kind() {
+    fn sale_is_not_a_handoff_kind() {
         assert!(is_handoff_kind("offer_item"));
         assert!(is_handoff_kind("accept_offered_item"));
-        assert!(!is_handoff_kind("stall_sale"));
+        assert!(!is_handoff_kind("sale"));
         assert!(!is_handoff_kind("decline_offer"));
         assert!(!is_handoff_kind("retract_offer"));
         assert!(!is_handoff_kind("eat"));

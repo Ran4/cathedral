@@ -91,6 +91,10 @@ pub struct WarmExchanges {
 }
 
 impl WarmExchanges {
+    pub fn forget(&mut self, actors: &[ActorId]) {
+        self.pairs
+            .retain(|(a, b), _| !actors.contains(a) && !actors.contains(b));
+    }
     /// Record a targeted exchange between `a` and `b` at `now`. Order-blind:
     /// who spoke and who listened is the same conversation.
     pub fn note(&mut self, a: &ActorId, b: &ActorId, now: f64) {
@@ -249,7 +253,9 @@ fn is_llm(world: &World, actor_id: &ActorId) -> bool {
     world
         .characters
         .get(actor_id)
-        .is_some_and(|character| character.control() == Control::Llm)
+        .is_some_and(|character| {
+            character.control() == Control::Llm && world.is_present(actor_id)
+        })
 }
 
 /// How long an actor remembers having thought, once they are off the stage.
@@ -301,6 +307,9 @@ struct Memory {
 }
 
 impl Novelty {
+    pub fn forget(&mut self, actors: &[ActorId]) {
+        self.last_told.retain(|actor, _| !actors.contains(actor));
+    }
     /// Refresh the stage's memories and drop whoever has been gone too long.
     ///
     /// Touching every on-stage actor each poll — rather than only those who take
@@ -336,6 +345,9 @@ impl Novelty {
     /// been told anything, so the world in front of them is entirely new. That
     /// is the one turn an arrival is worth.
     pub fn has_news(&self, world: &World, actor_id: &ActorId) -> bool {
+        if !world.is_present(actor_id) {
+            return false;
+        }
         let Some(actor) = world.characters.get(actor_id) else {
             return false;
         };
@@ -366,6 +378,9 @@ impl Novelty {
         actor_id: &ActorId,
         curiosity: &CuriosityConfig,
     ) -> bool {
+        if !world.is_present(actor_id) {
+            return false;
+        }
         let Some(actor) = world.characters.get(actor_id) else {
             return false;
         };
@@ -451,7 +466,7 @@ impl Memory {
 ///   not news to themselves.
 pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
     let mut hasher = DefaultHasher::new();
-    let Some(actor) = world.characters.get(actor_id) else {
+    let Some(actor) = world.characters.get(actor_id).filter(|_| world.is_present(actor_id)) else {
         return hasher.finish();
     };
 
@@ -477,7 +492,14 @@ pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
     // stable without a sort. An offer of an item that has left the world shows
     // in neither prompt section, so it must not show here either.
     for offer in world.offers.values() {
-        if !world.items.contains_key(&offer.item_id) {
+        if !world.items.contains_key(&offer.item_id)
+            || !world.is_present(&offer.giver_id)
+            || offer
+                .target_id
+                .as_ref()
+                .and_then(|target| world.characters.get(target))
+                .is_some_and(|target| target.state.presence != crate::Presence::InCity)
+        {
             continue;
         }
         if offer.giver_id == *actor_id {
@@ -803,6 +825,9 @@ mod tests {
             memories: Vec::new(),
             knows: BTreeSet::new(),
             lore: None,
+            presence: crate::Presence::InCity,
+            presence_epoch: 0,
+            economic_class: crate::EconomicClass::Resident,
         })
     }
 

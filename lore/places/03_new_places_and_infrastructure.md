@@ -161,7 +161,7 @@ food.
 
 The F.183 memory that the Chapter opened its granary late can attach to rented
 or reserved bays without placing every grain store inside the cathedral. Seven
-Lofts gives scarcity and price stories a physical destination.
+Lofts gives scarcity, rationing, release-order, and bargaining stories a physical destination.
 
 Hammering repairs should be legible in roof trusses, replaced shutters, and
 one rebuilt bay. F.415 destroyed both city stores and the standing late-summer

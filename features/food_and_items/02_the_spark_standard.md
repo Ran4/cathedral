@@ -124,10 +124,10 @@ spark — which is *why* every purchase demo dead-ends).
   seed with deterministic ids (`w_<actor id>`), so they are visible in `you_hold`, offerable,
   stealable-by-consent, and the LLM needs no special money concept — money is just a stack you
   hold, like the prompt already teaches.
-- **The nightly ledger, at the Watch:** buyer wallets refill to seed level; vendor wallets and
-  unsold stock reset to template. Hooked on the same `offices_crossed` beat as the restock
-  ([04](04_the_bread_round.md) §3). Both resets are the confessed placeholder for wages-in /
-  costs-out; the supply chain (M5) replaces them.
+- **Historical M2–M4 ledger, now retired by M5:** buyer wallets refilled to seed level; vendor
+  wallets and unsold stock reset to template at the Watch. M5 replaced it with persistent stock,
+  boundary wallet floats, and deterministic household settlement; this bullet remains the record
+  of the earlier milestone's behavior.
 
 ## 5. What the game says about prices
 

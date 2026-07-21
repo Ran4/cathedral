@@ -93,6 +93,9 @@ pub enum SchedulerEvent {
 #[derive(Debug, Clone, PartialEq)]
 struct InFlight {
     actor_id: ActorId,
+    /// Presence generation at submit. A reply from before departure may never
+    /// act on a later visit by the same stable actor id.
+    presence_epoch: u64,
     request_id: RequestId,
     /// Player speech selected this turn. Its completed reply may ignore a
     /// background-only conversation-floor hold, but never speech the player can
@@ -194,6 +197,32 @@ impl NpcScheduler {
         self.running = false;
     }
 
+    /// Remove departed actors from every pending lane without cancelling the
+    /// provider request. An outstanding completion is still archived, but its
+    /// prompt-drained buffers are deliberately discarded and the epoch guard
+    /// prevents it from mutating this or a later visit.
+    pub fn actors_departed(&mut self, actors: &[ActorId]) {
+        self.priority_handoffs
+            .retain(|actor| !actors.contains(actor));
+        self.player_reactions
+            .retain(|actor| !actors.contains(actor));
+        if self
+            .submitted
+            .as_ref()
+            .is_some_and(|actor| actors.contains(actor))
+        {
+            self.submitted = None;
+        }
+        if let Some(flight) = self
+            .in_flight
+            .as_mut()
+            .filter(|flight| actors.contains(&flight.actor_id))
+        {
+            flight.drained_events.clear();
+            flight.presented.clear();
+        }
+    }
+
     pub fn running(&self) -> bool {
         self.running
     }
@@ -273,7 +302,7 @@ impl NpcScheduler {
         let Some(actor) = world.characters.get(actor_id) else {
             return false;
         };
-        if actor.control() != Control::Llm {
+        if actor.control() != Control::Llm || !world.is_present(actor_id) {
             return false;
         }
         if !self.priority_handoffs.contains(actor_id) {
@@ -301,7 +330,7 @@ impl NpcScheduler {
         let Some(actor) = world.characters.get(actor_id) else {
             return false;
         };
-        if actor.control() != Control::Llm {
+        if actor.control() != Control::Llm || !world.is_present(actor_id) {
             return false;
         }
         if !self.player_reactions.contains(actor_id) {
@@ -422,7 +451,11 @@ impl NpcScheduler {
         let actor_name = known_actor
             .map(|actor| actor.name().to_string())
             .unwrap_or_else(|| flight.actor_id.to_string());
-        let is_llm = known_actor.is_some_and(|actor| actor.control() == Control::Llm);
+        let is_current_llm = known_actor.is_some_and(|actor| {
+            actor.control() == Control::Llm
+                && actor.state.presence == crate::Presence::InCity
+                && actor.state.presence_epoch == flight.presence_epoch
+        });
 
         // The archive is unconditional and first — a stale result is an exchange
         // that happened, and a failed one is exactly what you want in the log
@@ -447,7 +480,7 @@ impl NpcScheduler {
         // The request id already matched, so Python's actor-echo check is
         // subsumed — but the world can still have changed under the request, so
         // the actor-exists / still-LLM revalidation stays (scheduler.md §4.2.d).
-        if !is_llm {
+        if !is_current_llm {
             // The drained percepts die with the result. Defensible: the actor is
             // gone (or is no longer an LLM), so there is nobody left to re-read
             // them (scheduler.md risk 3).
@@ -661,9 +694,10 @@ impl NpcScheduler {
             // after construction — `order` is frozen.
             return;
         };
-        if actor.control() != Control::Llm {
+        if actor.control() != Control::Llm || !world.is_present(&actor_id) {
             return;
         }
+        let presence_epoch = actor.state.presence_epoch;
         let actor_name = actor.name().to_string();
         let output_token_budget = actor
             .lore()
@@ -709,6 +743,7 @@ impl NpcScheduler {
                 self.submitted = Some(actor_id.clone());
                 self.in_flight = Some(InFlight {
                     actor_id: actor_id.clone(),
+                    presence_epoch,
                     request_id,
                     player_reaction,
                     drained_events,
@@ -814,6 +849,10 @@ pub fn llm_turn_order(world: &World) -> Vec<ActorId> {
     world
         .roster
         .iter()
+        // Presence is deliberately checked when a slot is submitted, not when
+        // this frozen order is built. Road actors begin beyond the walls and
+        // must acquire idle turns after a later visit without reconstructing
+        // the scheduler.
         .filter(|actor_id| world.characters[*actor_id].control() == Control::Llm)
         .cloned()
         .collect()
@@ -1001,6 +1040,9 @@ mod tests {
             memories: Vec::new(),
             knows: BTreeSet::new(),
             lore: Some(lore(significance)),
+            presence: crate::Presence::InCity,
+            presence_epoch: 0,
+            economic_class: crate::EconomicClass::Resident,
         })
     }
 
@@ -1102,6 +1144,130 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["major", "minor", "ambnt", "major", "minor", "major"]
         );
+    }
+
+    #[test]
+    fn frozen_orders_keep_road_actors_who_enter_after_construction() {
+        let mut road_actor = lore_character("road", Significance::Minor);
+        road_actor.state.presence = crate::Presence::BeyondTheWalls;
+        let mut world = World::new();
+        world.add_character(road_actor);
+
+        let order = stage_turn_order(&world);
+        assert_eq!(
+            order.iter().map(ActorId::as_str).collect::<Vec<_>>(),
+            ["road", "road"]
+        );
+        let mut scheduler = NpcScheduler::new(order, 0.0, 60.0, 0.0);
+
+        // While absent, submission performs the live presence check and burns
+        // the slot. Once the same stable actor enters, the already-frozen
+        // rotation can select it normally.
+        assert!(!world.is_present(&ActorId::from_raw("road")));
+        world
+            .transition_presence(
+                &[ActorId::from_raw("road")],
+                crate::Presence::InCity,
+                &[(ActorId::from_raw("road"), Vec3::ZERO)]
+                    .into_iter()
+                    .collect(),
+            )
+            .unwrap();
+        assert_eq!(
+            scheduler.select_next_actor(IdleGate::All),
+            Some((ActorId::from_raw("road"), false))
+        );
+    }
+
+    #[test]
+    fn a_predeparture_completion_stays_stale_after_the_actor_reenters() {
+        let road = ActorId::from_raw("road");
+        let mut world = World::new();
+        world.add_character(lore_character("road", Significance::Minor));
+        {
+            let actor = world.characters.get_mut(&road).unwrap();
+            actor.state.memories.push("Old road memory".into());
+            actor.state.recent_history.push("Old road history".into());
+            actor.notify_percept("Unread city news");
+        }
+
+        let mut scheduler = NpcScheduler::new(vec![road.clone()], 0.0, 60.0, 0.0);
+        scheduler.start(0.0);
+        let env = PromptEnv::new(
+            include_str!("../../../assets/prompts/turn.j2"),
+            include_str!("../../../assets/prompts/strings.toml"),
+        )
+        .unwrap();
+        let mut cognition = BudgetCognition::default();
+        scheduler.poll(
+            0.0,
+            &mut world,
+            &mut Vec::new(),
+            &mut Vec::new(),
+            false,
+            IdleGate::All,
+            &mut cognition,
+            &env,
+        );
+        assert_eq!(scheduler.in_flight_actor_id(), Some(&road));
+        assert!(world.characters[&road].inbox().is_empty());
+
+        world
+            .transition_presence(
+                std::slice::from_ref(&road),
+                crate::Presence::BeyondTheWalls,
+                &Default::default(),
+            )
+            .unwrap();
+        scheduler.actors_departed(std::slice::from_ref(&road));
+        world
+            .transition_presence(
+                std::slice::from_ref(&road),
+                crate::Presence::InCity,
+                &[(road.clone(), Vec3::ZERO)].into_iter().collect(),
+            )
+            .unwrap();
+        assert_eq!(world.presence_epoch(&road), Some(2));
+
+        // Closing prevents a replacement turn from being submitted after the
+        // stale result is harvested; it does not suppress applying/archiving
+        // the request that was already in flight.
+        scheduler.close();
+        let mut completions = vec![Completion {
+            request_id: RequestId(0),
+            result: Ok("remember {\"memory\": \"Poison from the prior visit\"}".into()),
+            duration_seconds: 0.25,
+        }];
+        let mut transcript = Vec::new();
+        let events = scheduler.poll(
+            1.0,
+            &mut world,
+            &mut transcript,
+            &mut completions,
+            false,
+            IdleGate::All,
+            &mut cognition,
+            &env,
+        );
+
+        assert!(events.iter().any(|event| matches!(
+            event,
+            SchedulerEvent::PromptExchange {
+                actor_id,
+                answer: Some(answer),
+                ..
+            } if actor_id == &road && answer.contains("Poison")
+        )));
+        assert!(events.iter().any(|event| matches!(
+            event,
+            SchedulerEvent::Status(status)
+                if status.message.as_deref() == Some("discarded a stale LLM result")
+        )));
+        assert_eq!(world.characters[&road].memories(), ["Old road memory"]);
+        assert_eq!(world.characters[&road].recent_history(), ["Old road history"]);
+        assert!(world.characters[&road].inbox().is_empty());
+        assert!(world.characters[&road].state.pending_history.is_empty());
+        assert!(transcript.is_empty());
     }
 
     #[test]

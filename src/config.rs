@@ -5,7 +5,7 @@
 //! rewrite `config.ron` (comments in the file are not preserved; the defaults
 //! file keeps the documented reference copy).
 
-use std::fs;
+use std::{fs, path::Path};
 
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -40,13 +40,25 @@ impl Default for AppConfig {
 }
 
 pub fn load_config() -> AppConfig {
-    for path in [CONFIG_PATH, DEFAULT_CONFIG_PATH] {
+    load_config_from_paths(CONFIG_PATH, DEFAULT_CONFIG_PATH)
+}
+
+/// Load the player override first and the committed defaults second.
+///
+/// Keeping the path selection injectable lets host integration tests exercise
+/// this production parser without allowing a developer's local `config.ron`
+/// to change the result.
+pub fn load_config_from_paths(
+    config_path: impl AsRef<Path>,
+    default_config_path: impl AsRef<Path>,
+) -> AppConfig {
+    for path in [config_path.as_ref(), default_config_path.as_ref()] {
         match fs::read_to_string(path) {
             Ok(source) => match ron::from_str(&source) {
                 Ok(config) => return config,
-                Err(error) => eprintln!("Could not parse {path}: {error}."),
+                Err(error) => eprintln!("Could not parse {}: {error}.", path.display()),
             },
-            Err(error) => eprintln!("Could not read {path}: {error}."),
+            Err(error) => eprintln!("Could not read {}: {error}.", path.display()),
         }
     }
     eprintln!("Using built-in fullscreen defaults.");

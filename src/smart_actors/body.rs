@@ -730,7 +730,7 @@ const OFFER_FOREARM_STRAIGHTEN_RAD: f32 = -0.16;
 /// sim turns the whole body for larger errors, the arm only fine-aims.
 const OFFER_YAW_CLAMP_RAD: f32 = 1.1;
 const OFFER_PITCH_CLAMP_RAD: f32 = 0.5;
-/// The stall hand-over pulse (M2, `stall_sale`): no standing offer exists for
+/// The stall hand-over pulse (M2, `sale`): no standing offer exists for
 /// a silent purchase, so the vendor's arm extends on the event and retracts on
 /// its own after this long.
 const STALL_PULSE_SECONDS: f64 = 0.9;
@@ -1059,7 +1059,7 @@ impl BodyPoseState {
         self.offer_target = offer_at;
     }
 
-    /// A short vendor hand-over pulse toward `at` — the `stall_sale`
+    /// A short vendor hand-over pulse toward `at` — the `sale`
     /// choreography, where no standing offer exists to key the arm on.
     pub(super) fn pulse_offer(&mut self, at: Vec3, now: f64) {
         self.offer_pulse = Some((at, now + STALL_PULSE_SECONDS));
@@ -3275,6 +3275,7 @@ mod tests {
                 ],
                 items: vec![],
                 offers: vec![],
+                road_carts: vec![],
             })
             .unwrap();
 
@@ -3402,6 +3403,7 @@ mod tests {
             ],
             items: vec![],
             offers: vec![],
+            road_carts: vec![],
         };
 
         let mut mirror = WorldMirror::default();
@@ -3530,6 +3532,7 @@ mod tests {
                 ],
                 items: vec![],
                 offers: vec![],
+                road_carts: vec![],
             })
             .unwrap();
 
@@ -3685,6 +3688,7 @@ mod tests {
                 actors,
                 items: vec![],
                 offers: vec![],
+                road_carts: vec![],
             })
             .unwrap();
 

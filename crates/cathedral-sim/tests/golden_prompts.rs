@@ -120,6 +120,9 @@ impl WorldDump {
                 memories: dump.memories,
                 knows: dump.knows,
                 lore: dump.lore,
+                presence: cathedral_sim::Presence::InCity,
+                presence_epoch: 0,
+                economic_class: cathedral_sim::EconomicClass::Resident,
             });
             character.state.inbox = dump.inbox;
             character.state.recent_history = dump.recent_history;

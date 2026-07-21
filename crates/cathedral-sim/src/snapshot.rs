@@ -26,6 +26,9 @@ pub struct PublicSnapshot {
     pub items: Vec<ItemSnapshot>,
     /// Sorted by `(created_seq, item_id)`.
     pub offers: Vec<OfferSnapshot>,
+    /// Presentation-only carts derived from road-party topology and live cargo.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub road_carts: Vec<crate::round::RoadCart>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

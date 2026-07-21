@@ -19,6 +19,7 @@ use crate::{
     event::DomainEvent,
     gesture::{GestureKind, GestureSpec, GestureTarget},
     ids::{ActorId, ItemId, PlaceId},
+    inventory::{InventoryError, InventoryErrorCode},
     math::Vec3,
     offer::Offer,
     perception::{cap_first, emit_sound, identify_ids},
@@ -49,7 +50,7 @@ pub fn apply_action_at(
     args: &Value,
     position_override: Option<Vec3>,
 ) -> Result<String, ActionError> {
-    if !world.characters.contains_key(actor_id) {
+    if !world.is_present(actor_id) {
         return Err(ActionError::new(
             ActionErrorCode::UnknownActor,
             "acting character is not part of this world",
@@ -68,6 +69,19 @@ pub fn apply_action_at(
         .state
         .position_m = original;
     result
+}
+
+fn inventory_action_error(error: InventoryError) -> ActionError {
+    let code = match error.code {
+        InventoryErrorCode::UnknownActor => ActionErrorCode::UnknownActor,
+        InventoryErrorCode::UnknownItem => ActionErrorCode::UnknownItem,
+        InventoryErrorCode::NotOwner => ActionErrorCode::NotOwner,
+        InventoryErrorCode::BadQuantity => ActionErrorCode::BadQuantity,
+        InventoryErrorCode::ItemCommitted => ActionErrorCode::ItemCommitted,
+        InventoryErrorCode::OutputCapacityReserved => ActionErrorCode::OutputCapacityReserved,
+        _ => ActionErrorCode::InvalidAction,
+    };
+    ActionError::new(code, error.message)
 }
 
 fn dispatch(
@@ -406,7 +420,7 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
     let mut target: Option<ActorId> = None;
     if let Some(value) = target_value {
         let target_id = parse_actor_id(value, "target")?;
-        if !world.characters.contains_key(&target_id) {
+        if !world.is_present(&target_id) {
             return Err(ActionError::new(
                 ActionErrorCode::UnknownTarget,
                 format!("there is nobody with id {}", repr_id(target_id.as_str())),
@@ -530,13 +544,22 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
     // Optional quantity: an integer `1..=stack`, defaulting to the whole stack.
     // The offered portion stays in the giver's stack until accepted.
     let quantity = parse_offer_quantity(parsed, item.quantity)?;
+    let available = world.available_for_offer_replacement(&item_id);
+    if quantity > available {
+        return Err(ActionError::new(
+            ActionErrorCode::ItemCommitted,
+            format!(
+                "only {available} units are free; retract or replace an existing offer first"
+            ),
+        ));
+    }
     let held_phrase = counted_phrase(world, &item, quantity);
     let offered_noun = counted_noun(world, &item, quantity);
 
     let mut target: Option<ActorId> = None;
     if let Some(value) = optional_arg(parsed, "target") {
         let target_id = parse_actor_id(value, "target")?;
-        if !world.characters.contains_key(&target_id) {
+        if !world.is_present(&target_id) {
             return Err(ActionError::new(
                 ActionErrorCode::UnknownTarget,
                 format!("there is nobody with id {}", repr_id(target_id.as_str())),
@@ -561,7 +584,7 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
     if let Some(old) = old_offer.as_ref()
         && let Some(old_target) = old.target_id.clone()
         && Some(&old_target) != target.as_ref()
-        && world.characters.contains_key(&old_target)
+        && world.is_present(&old_target)
         && hearers.contains(&old_target)
     {
         let old_noun = counted_noun(world, &item, old.quantity);
@@ -685,7 +708,7 @@ fn accept_offered_item(
         ));
     }
     let giver_id = offer.giver_id.clone();
-    if !world.characters.contains_key(&giver_id) {
+    if !world.is_present(&giver_id) {
         return Err(repair_and_fail(
             world,
             &item_id,
@@ -731,90 +754,16 @@ fn accept_offered_item(
     let accepted_noun = counted_noun(world, &item, quantity);
     let took_phrase = counted_phrase(world, &item, quantity);
 
+    world
+        .transfer_offered_item(
+            &giver_id,
+            actor_id,
+            &item_id,
+            quantity,
+            &format!("offer_accept:{}:{}", world.event_sequence + 1, item_id),
+        )
+        .map_err(inventory_action_error)?;
     world.offers.remove(&item_id);
-
-    // Split-and-merge, atomically. Same-stuff (same kind + metadata) stacks fold
-    // together on the receiver; the receiver's id wins so every id its LLM has
-    // seen stays valid. Non-stackable kinds never merge (a bowl each).
-    let stackable = world.item_catalog.stackable(&item);
-    let merge_target: Option<ItemId> = if stackable {
-        world.characters[actor_id]
-            .holds()
-            .iter()
-            .find(|held| {
-                *held != &item_id
-                    && world.items.get(*held).is_some_and(|other| other.same_stuff_as(&item))
-            })
-            .cloned()
-    } else {
-        None
-    };
-    let whole_stack = quantity == item.quantity;
-
-    if whole_stack {
-        world
-            .characters
-            .get_mut(&giver_id)
-            .expect("checked above")
-            .state
-            .holds
-            .retain(|held| held != &item_id);
-        match &merge_target {
-            Some(target_stack) => {
-                world
-                    .items
-                    .get_mut(target_stack)
-                    .expect("receiver stack exists")
-                    .quantity += quantity;
-                world.items.remove(&item_id);
-            }
-            None => {
-                world
-                    .characters
-                    .get_mut(actor_id)
-                    .expect("the taker is in the world")
-                    .state
-                    .holds
-                    .push(item_id.clone());
-            }
-        }
-    } else {
-        world
-            .items
-            .get_mut(&item_id)
-            .expect("giver stack exists")
-            .quantity -= quantity;
-        match &merge_target {
-            Some(target_stack) => {
-                world
-                    .items
-                    .get_mut(target_stack)
-                    .expect("receiver stack exists")
-                    .quantity += quantity;
-            }
-            None => {
-                // The moved part needs a fresh, deterministic id (`§6`).
-                let salt = world.event_sequence + 1;
-                let mut new_id = crate::world::mint_item_id(&item_id, salt);
-                let mut bump = 0i64;
-                while world.items.contains_key(&new_id) {
-                    bump += 1;
-                    new_id = crate::world::mint_item_id(&item_id, salt.wrapping_add(bump));
-                }
-                let mut moved = item.clone();
-                moved.id = new_id.clone();
-                moved.quantity = quantity;
-                world.items.insert(new_id.clone(), moved);
-                world
-                    .characters
-                    .get_mut(actor_id)
-                    .expect("the taker is in the world")
-                    .state
-                    .holds
-                    .push(new_id);
-            }
-        }
-    }
 
     // The giver is guaranteed inside this radius, being at most 4 m away.
     let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
@@ -839,9 +788,21 @@ fn accept_offered_item(
         "accept_offered_item",
         actor_id,
         Some(giver_id.clone()),
-        Some(item_id),
+        Some(item_id.clone()),
         quantity,
         hearers,
+    );
+    // Presentation keeps its long-standing accept event, while economic
+    // observability gets the purpose-neutral transfer edge required to
+    // distinguish negotiated gifts/trades from catalog-price `sale`s.
+    world_event(
+        world,
+        "item_transfer",
+        &giver_id,
+        Some(actor_id.clone()),
+        Some(item_id),
+        quantity,
+        Vec::new(),
     );
     world.touch_public_state();
     world.assert_invariants();
@@ -881,7 +842,7 @@ fn decline_offer(
         ));
     };
     let giver_id = offer.giver_id;
-    if !world.characters.contains_key(&giver_id) {
+    if !world.is_present(&giver_id) {
         return Err(repair_and_fail(
             world,
             &item_id,
@@ -975,6 +936,7 @@ fn retract_offer(
     world.offers.remove(&item_id);
     let mut recipients: Vec<ActorId> = Vec::new();
     if let Some(target_id) = &offer.target_id
+        && world.is_present(target_id)
         && let Some(target) = world.characters.get(target_id)
         && world.characters[actor_id]
             .position_m()
@@ -1043,40 +1005,13 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
     let eaten_noun = counted_noun(world, &item, 1);
 
     let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
-    let last_unit = item.quantity <= 1;
 
-    if last_unit {
-        // The last unit leaves the world forever. The implicit retraction of any
-        // pending offer notifies but deliberately emits NO retract_offer event
-        // (asymmetric with re-offer displacement) — the HUD learns of the
-        // removal from the snapshot instead. It fires only now, at zero.
-        let offer = world.offers.remove(&item_id);
-        if let Some(target_id) = offer.and_then(|offer| offer.target_id)
-            && world.characters.contains_key(&target_id)
-            && hearers.contains(&target_id)
-        {
-            let line = format!(
-                "{} withdrew the offered {eaten_noun} (id {item_id})",
-                cap_first(&identify_ids(world, &target_id, actor_id))
-            );
-            deliver(world, vec![(target_id, line)], false);
-        }
-        world
-            .characters
-            .get_mut(actor_id)
-            .expect("the eater is in the world")
-            .state
-            .holds
-            .retain(|held| held != &item_id);
-        world.items.remove(&item_id);
-    } else {
-        // One unit off a stack: the rest, and any pending offer of it, remain.
-        world
-            .items
-            .get_mut(&item_id)
-            .expect("the eater still holds the stack")
-            .quantity -= 1;
-    }
+    // Eating is an ordinary owner-side inventory operation. It may consume an
+    // uncommitted unit, but it never silently cancels an offer or transform
+    // promise; the actor must explicitly retract/replace the offer first.
+    world
+        .consume_item_quantity(actor_id, &item_id, 1)
+        .map_err(inventory_action_error)?;
 
     // The gauge: satiety lifts hunger toward full, and the eater's next sheet
     // simply stops calling them hungry — the loop closes with no memory hygiene
@@ -1294,7 +1229,7 @@ fn resolve_gesture_target(
 
     // Otherwise a visible person, exactly like `say`'s explicit target.
     let target_id = parse_actor_id(value, "to")?;
-    if !world.characters.contains_key(&target_id) {
+    if !world.is_present(&target_id) {
         return Err(ActionError::new(
             ActionErrorCode::UnknownTarget,
             format!("there is nobody with id {}", repr_id(target_id.as_str())),
@@ -1472,6 +1407,12 @@ fn route_budget(
 /// arrival and lapse are percepts, and a second `go_to` replaces the first
 /// silently — the model issued both; it needs no telling.
 fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    if world.characters[actor_id].state.leaving_city {
+        return Err(ActionError::new(
+            ActionErrorCode::LeavingCity,
+            "your party is leaving the city; the road controller owns your movement",
+        ));
+    }
     let parsed = args_object(args, &[], &["place_id", "person"])?;
     let place_value = optional_arg(parsed, "place_id");
     let person_value = optional_arg(parsed, "person");
@@ -1527,7 +1468,7 @@ fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, 
         }
         (None, Some(person_value)) => {
             let target_id = parse_actor_id(person_value, "person")?;
-            if !world.characters.contains_key(&target_id) {
+            if !world.is_present(&target_id) {
                 return Err(ActionError::new(
                     ActionErrorCode::UnknownTarget,
                     format!("there is nobody with id {}", repr_id(target_id.as_str())),
@@ -1634,7 +1575,7 @@ fn tell_way(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Strin
     let target_id = parse_actor_id(&parsed["person"], "person")?;
     let place_id = parse_place_id(&parsed["place_id"])?;
 
-    if !world.characters.contains_key(&target_id) {
+    if !world.is_present(&target_id) {
         return Err(ActionError::new(
             ActionErrorCode::UnknownTarget,
             format!("there is nobody with id {}", repr_id(target_id.as_str())),
@@ -1731,6 +1672,9 @@ mod tests {
             memories: Vec::new(),
             knows: BTreeSet::new(),
             lore: None,
+            presence: crate::Presence::InCity,
+            presence_epoch: 0,
+            economic_class: crate::EconomicClass::Resident,
         })
     }
 
@@ -2184,7 +2128,7 @@ mod tests {
     }
 
     #[test]
-    fn eating_an_offered_item_retracts_it_without_emitting_a_retract_event() {
+    fn eating_an_offered_item_fails_without_displacing_the_promise() {
         let mut world = displacement_world();
         let giver = ActorId::from_raw("giver");
         let receiver = ActorId::from_raw("receiver");
@@ -2198,30 +2142,43 @@ mod tests {
         )
         .unwrap();
         world.drain_events();
+        world.characters.get_mut(&receiver).unwrap().state.inbox.clear();
 
-        let line = apply_action(&mut world, &giver, "eat", &json!({"item_id": "apple"})).unwrap();
+        let error =
+            apply_action(&mut world, &giver, "eat", &json!({"item_id": "apple"})).unwrap_err();
 
-        assert_eq!(line, "Giver eats the apple");
-        // Items are singular: the world forgets them entirely.
-        assert!(!world.items.contains_key(&apple));
-        assert!(!world.offers.contains_key(&apple));
-        assert!(world.characters[&giver].holds().is_empty());
-        // The displaced target is told in prose...
-        assert!(
-            world.characters[&receiver]
-                .inbox()
-                .iter()
-                .any(|line| line.contains("withdrew"))
-        );
-        // ...but the implicit retraction deliberately emits NO retract_offer
-        // event, unlike re-offer displacement. The HUD learns of the removal
-        // from the snapshot instead.
-        let kinds: Vec<String> = world
-            .drain_events()
-            .into_iter()
-            .map(|event| event.kind)
-            .collect();
-        assert_eq!(kinds, ["eat"]);
+        assert_eq!(error.code, ActionErrorCode::ItemCommitted);
+        assert!(world.items.contains_key(&apple));
+        assert!(world.offers.contains_key(&apple));
+        assert_eq!(world.characters[&giver].holds(), [apple]);
+        assert!(world.characters[&receiver].inbox().is_empty());
+        assert!(world.drain_events().is_empty());
+        world.assert_invariants();
+    }
+
+    #[test]
+    fn eating_uses_only_the_uncommitted_part_of_a_partially_offered_stack() {
+        let mut world = displacement_world();
+        let giver = ActorId::from_raw("giver");
+        let apple = ItemId::from_raw("apple");
+        world.items.get_mut(&apple).unwrap().quantity = 2;
+
+        apply_action(
+            &mut world,
+            &giver,
+            "offer_item",
+            &json!({"item_id": "apple", "target": "receiver", "quantity": 1}),
+        )
+        .unwrap();
+        apply_action(&mut world, &giver, "eat", &json!({"item_id": "apple"})).unwrap();
+
+        assert_eq!(world.items[&apple].quantity, 1);
+        assert_eq!(world.offers[&apple].quantity, 1);
+        let error =
+            apply_action(&mut world, &giver, "eat", &json!({"item_id": "apple"})).unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::ItemCommitted);
+        assert_eq!(world.items[&apple].quantity, 1);
+        assert_eq!(world.offers[&apple].quantity, 1);
         world.assert_invariants();
     }
 

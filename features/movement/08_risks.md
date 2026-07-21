@@ -124,7 +124,7 @@ These need a person, not a compiler.
    (the lore's post-Hammering population) showing 500 is already a big abstraction. Movement makes the
    500 *feel* like more, because the same person is in different places. It might be enough.
 
-2. **What happens at the walls?** `features/the_near_countryside__aka_add_market_stalls.md` proposes
+2. **What happens at the walls?** `features/food_and_items/08_near_countryside.md` proposes
    spawning arrivals at the gates — *"Actors arriving through a gate would have grounded destinations,
    kin, cargo, and news instead of being generic travelers from nowhere."* The five gates are already
    areas. That is a natural M8 and it makes the walls feel like the edge of the play space rather than

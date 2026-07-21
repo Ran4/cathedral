@@ -141,13 +141,11 @@ Your sheet:
 **places_you_know** (go_to takes these place_ids) — none
 
 **you_hold**:
-- ryel1 rye loaf ×12
-- whel1 wheat loaf ×3
+- loaf1 loaf ×15
 - flot1 spark ×6
 
 **you_sell** (your stall's prices):
-- rye loaf, 2 sparks
-- wheat loaf, 4 sparks
+- loaf, 2 sparks
 
 **you_see** (people within 20 metres, nearest first) — nobody
 

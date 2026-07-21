@@ -1,11 +1,14 @@
 # The supply chain: Seven Lofts, road merchants, grain, flour, and cloth
 
-Status: **scoped for M5; not started.**
+Status: **M5a–M5d implemented (2026-07-20).** The pure-sim and Bevy-host acceptance suites pass.
+The required M5a screenshot review is still pending: the implementation session ran the exact
+drive command below, but its sandbox could not connect to the available X display and winit stopped
+with `XOpenDisplayFailed` before creating a session.
 
-M3 deliberately cheats twice: `Round::restock` creates food at Kindling and
-`Round::close_books` resets wallets at the Watch. M5 replaces the bread half of those cheats with a
-visible, buffered supply chain. It does not simulate farms, harvests, every wage, or every workshop
-outside the walls.
+M3 deliberately cheated twice: `Round::restock` created food at Kindling and
+`Round::close_books` reset wallets at the Watch. M5 replaces loaf restock with a visible, buffered
+supply chain and replaces the wallet reset with household settlement. It does not simulate farms,
+harvests, every wage, or every workshop outside the walls.
 
 The corrected chain takes **two days**, not one morning:
 
@@ -127,9 +130,8 @@ producers in data, by actor id.
 
 ### 2.2 Targeted lore alignment
 
-Keep the Seven Lofts section and its history. Five narrow updates govern M5. Bertran's route sentence
-is aligned now so the authored sheet no longer contradicts this scoped contract; make or verify the
-other updates alongside the milestone that needs them:
+Keep the Seven Lofts section and its history. Five narrow updates govern M5; all are aligned in the
+implemented lore and asset fixtures:
 
 1. In `lore/places/03_new_places_and_infrastructure.md`, change “scarcity and price stories” to
    **“scarcity, rationing, release-order, and bargaining stories.”** The famine lever changes who
@@ -1546,6 +1548,13 @@ show one loaded cart, its leader, and both carters entering at the Wool Gate; th
 the same single cart following the leader toward Seven Lofts, with no duplicate or orphan. Record
 the reviewed session id in the M5a handoff. This visual check and the host committed-config test are
 release criteria, not claims delegated to the pure-sim suite.
+
+Implementation handoff (2026-07-20): `supply_chain_tests` and `supply_chain_host_tests` pass, and
+the host fixture proves the committed day-2/Dayspring entry, one loaded cart, sack/bale/bolt mesh
+projection, following transform updates, and despawn. The exact visual drive above was attempted,
+but no session id or screenshots were produced because the agent sandbox could not open
+`DISPLAY=:0` (`XOpenDisplayFailed`). Run it once from a graphical shell and append the reviewed
+session id here before release.
 
 `turn.j2` needs no new market prose. Grain and flour are normal held items; procurement is sim
 behavior, not a new LLM verb.

@@ -394,8 +394,11 @@ mod tests {
 
     #[test]
     fn items_default_to_one_and_derive_visuals_from_the_catalog() {
-        let seed = WorldSeed::from_json_str(r#"{"items": [{"id": "x1", "kind": "generic"}]}"#)
-            .unwrap();
+        let source = format!(
+            r#"{{"items": [{{"id": "x1", "kind": "generic"}}], "characters": [{}]}}"#,
+            character_json("sv3n1", r#"["x1"]"#)
+        );
+        let seed = WorldSeed::from_json_str(&source).unwrap();
         assert_eq!(seed.items[0].quantity, 1);
         let world = build_world(&seed, WorldConfig::default());
         let item = &world.items[&ItemId::from_raw("x1")];

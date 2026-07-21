@@ -169,6 +169,9 @@ mod tests {
             memories: Vec::new(),
             knows: BTreeSet::new(),
             lore: None,
+            presence: crate::Presence::InCity,
+            presence_epoch: 0,
+            economic_class: crate::EconomicClass::Resident,
         })
     }
 

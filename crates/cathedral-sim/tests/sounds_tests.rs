@@ -62,6 +62,9 @@ fn character(
         memories: Vec::new(),
         knows: knows.iter().map(|id| actor(id)).collect::<BTreeSet<_>>(),
         lore: None,
+        presence: cathedral_sim::Presence::InCity,
+        presence_epoch: 0,
+        economic_class: cathedral_sim::EconomicClass::Resident,
     })
 }
 

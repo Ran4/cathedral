@@ -48,6 +48,9 @@ fn controlled_character(actor_id: &str, name: &str, x: f64, control: Control) ->
         memories: Vec::new(),
         knows: BTreeSet::new(),
         lore: None,
+        presence: cathedral_sim::Presence::InCity,
+        presence_epoch: 0,
+        economic_class: cathedral_sim::EconomicClass::Resident,
     })
 }
 
@@ -730,28 +733,25 @@ fn a_displaced_player_gets_structured_feedback_only() {
     assert!(events[1].recipient_ids.contains(&actor("receiver")));
 }
 
-/// Test 23 (`test_sim.py:370`): eating an offered item retracts it implicitly
-/// and removes the item from the world — items are singular.
+/// The M5 commitment rule supersedes Python test 23: eating never silently
+/// retracts a promise, so an entirely offered singular item stays untouched.
 #[test]
-fn eating_retracts_and_removes_the_singular_item() {
+fn eating_an_entirely_offered_singular_item_is_rejected() {
     let mut world = offer_world();
     offer(&mut world, "apple", Some("receiver"));
 
-    apply_action(
+    let error = apply_action(
         &mut world,
         &actor("giver"),
         "eat",
         &json!({"item_id": "apple"}),
     )
-    .unwrap();
+    .unwrap_err();
 
-    assert!(!world.items.contains_key(&item("apple")));
-    assert!(!world.offers.contains_key(&item("apple")));
-    assert!(
-        !world.characters[&actor("giver")]
-            .holds()
-            .contains(&item("apple"))
-    );
+    assert_eq!(error.code, ActionErrorCode::ItemCommitted);
+    assert!(world.items.contains_key(&item("apple")));
+    assert!(world.offers.contains_key(&item("apple")));
+    assert!(world.characters[&actor("giver")].holds().contains(&item("apple")));
     world.assert_invariants();
 }
 
@@ -931,8 +931,8 @@ fn hold_stack(world: &mut World, holder: &str, id: &str, kind: &str, quantity: u
         .push(item(id));
 }
 
-fn hold_loaf(world: &mut World, holder: &str, id: &str, flour: &str) {
-    world.add_item(Item::new(item(id), "loaf").with_metadata("flour", flour));
+fn hold_cloth(world: &mut World, holder: &str, id: &str, grade: &str) {
+    world.add_item(Item::new(item(id), "cloth").with_metadata("grade", grade));
     world
         .characters
         .get_mut(&actor(holder))
@@ -1043,19 +1043,19 @@ fn a_partial_offer_folds_into_an_existing_stack_without_a_new_id() {
     world.assert_invariants();
 }
 
-/// Metadata is part of identity: a rye loaf never merges with a wheat loaf.
+/// Metadata is part of identity: broadcloth never merges with kersey.
 #[test]
 fn different_metadata_never_merges() {
     let mut world = stack_world();
-    hold_loaf(&mut world, "giver", "rye", "rye");
-    hold_loaf(&mut world, "receiver", "wheat", "wheat");
+    hold_cloth(&mut world, "giver", "broad", "broadcloth");
+    hold_cloth(&mut world, "receiver", "kersey", "kersey");
 
-    offer_n(&mut world, "giver", "rye", "receiver", None);
-    accept(&mut world, "receiver", "rye").unwrap();
+    offer_n(&mut world, "giver", "broad", "receiver", None);
+    accept(&mut world, "receiver", "broad").unwrap();
 
     let mut held = world.characters[&actor("receiver")].holds().to_vec();
     held.sort();
-    assert_eq!(held, [item("rye"), item("wheat")]);
+    assert_eq!(held, [item("broad"), item("kersey")]);
     world.assert_invariants();
 }
 
@@ -1122,8 +1122,10 @@ fn an_accept_of_more_than_remains_is_a_stale_offer() {
     hold_stack(&mut world, "giver", "hrr", "herring", 2);
 
     offer_n(&mut world, "giver", "hrr", "receiver", Some(2));
-    // The giver eats one before the receiver accepts.
-    apply_action(&mut world, &actor("giver"), "eat", &json!({"item_id": "hrr"})).unwrap();
+    // Simulate a corrupt/legacy writer shrinking the stack behind the offer.
+    // The public eat path cannot create this state now that commitments are
+    // enforced centrally, but accept still repairs stale imported state.
+    world.items.get_mut(&item("hrr")).unwrap().quantity = 1;
 
     assert_eq!(accept(&mut world, "receiver", "hrr"), Err(ActionErrorCode::StaleOffer));
     assert!(world.offers.is_empty(), "the stale offer was repaired");

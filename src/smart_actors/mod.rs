@@ -11,6 +11,7 @@ pub mod body;
 pub mod bridge;
 pub mod local_engine;
 pub mod model;
+pub mod road_carts;
 
 mod actor_sheet;
 mod area_debug;
@@ -422,6 +423,7 @@ impl Plugin for SmartActorsPlugin {
                 (
                     hands::setup_item_prop_assets,
                     body::setup_body_assets,
+                    road_carts::setup_road_cart_assets,
                     area_debug::spawn_area_debug_ui,
                     actor_sheet::spawn_actor_sheet,
                     clock::spawn_clock_hud,
@@ -469,6 +471,7 @@ impl Plugin for SmartActorsPlugin {
                     // reconcile writes for a mover between revisions with the live
                     // interpolated pose off the hot channel.
                     actors::drive_npc_bodies,
+                    road_carts::reconcile_road_carts,
                 )
                     .chain()
                     .in_set(SmartActorSet::ReconcileMirror),
@@ -925,7 +928,7 @@ fn process_engine_message(
                 hud.toast(text);
             }
             // The hand-over choreography (npc_bodies M2): the same events, as
-            // body language. `stall_sale` never reaches the toast above
+            // body language. `sale` never reaches the toast above
             // (`describe_world_event` is player-scoped and the silent market
             // is NPC-only); here it plays the vendor→buyer hand-over.
             let actor = model::actor_id_from_sim(&actor_id);
@@ -945,7 +948,7 @@ fn process_engine_message(
                         giver,
                     });
                 }
-                ("stall_sale", Some(buyer), Some(item)) => {
+                ("sale", Some(buyer), Some(item)) => {
                     presentation.hands.write(hands::HandoverFeedback::StallSale {
                         vendor: actor,
                         buyer,
@@ -1724,6 +1727,7 @@ mod tests {
                 ],
                 items: vec![],
                 offers: vec![],
+                road_carts: vec![],
             })
             .unwrap();
         let mut runtime = SmartActorRuntime::starting(false);
@@ -1860,6 +1864,7 @@ mod tests {
                     metadata: Default::default(),
                 }],
                 offers: vec![],
+                road_carts: vec![],
             })
             .unwrap();
 
@@ -2047,7 +2052,17 @@ mod tests {
         )
         .expect("the lore cast is readable")
         .len();
-        assert_eq!(actor_count, expected_cast);
+        let projected_npcs = world
+            .resource::<model::WorldMirror>()
+            .actors()
+            .filter(|actor| actor.control == model::ActorControl::Llm)
+            .count();
+        assert_eq!(actor_count, projected_npcs);
+        assert_eq!(
+            expected_cast - projected_npcs,
+            5,
+            "the five fixed road actors begin beyond the walls"
+        );
         let runtime_dir = world
             .resource::<bridge::BridgeHandle>()
             .runtime_dir()

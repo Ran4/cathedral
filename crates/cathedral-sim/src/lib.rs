@@ -25,6 +25,7 @@ pub mod gesture;
 mod homes;
 pub mod ids;
 pub mod item;
+pub mod inventory;
 pub mod lore;
 pub mod math;
 pub mod nav;
@@ -56,8 +57,8 @@ pub use attention::{
     STAGE_PARTNER_MEMORY_SECONDS, StageConfig, WarmExchanges, context_hash, curiosity_of, on_stage,
 };
 pub use character::{
-    Character, CharacterSheet, CharacterState, Control, IntentTarget, Movement, Needs, Patrol,
-    StatusKind, TravelIntent, VendorListing,
+    Character, CharacterSheet, CharacterState, Control, EconomicClass, IntentTarget, Movement,
+    Needs, Patrol, Presence, StatusKind, TravelIntent, VendorListing,
 };
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
@@ -73,10 +74,15 @@ pub use event::{DomainEvent, EventType};
 pub use fake::{FakeCognition, fake_reply};
 pub use floor::{ConversationFloor, floor_audio_failsafe_seconds, speech_reading_seconds};
 pub use gesture::{DANCE_MAX_SECONDS, GESTURES, GestureKind, GestureSpec, GestureTarget};
-pub use ids::{ActorId, InvalidId, ItemId, PlaceId, RequestId, SpeechEventId};
+pub use ids::{ActorId, InvalidId, ItemId, PartyId, PlaceId, RequestId, SpeechEventId};
 pub use item::{
     DISPLAY_METADATA_KEY, Edible, InvalidKind, Item, ItemCatalog, ItemCatalogError, ItemKind,
     ItemKindDef,
+};
+pub use inventory::{
+    CompletedTransform, InventoryError, InventoryErrorCode, ItemMatcher, LegacyRestockShare,
+    MarketRequestLine, ReservedInput, SaleReceipt, SaleReceiptLine, StockSpec, TransformJob,
+    TransformReceipt, TransformReceiptLine,
 };
 pub use lore::{
     CONTROLLED_CIRCUMSTANCES, LoreCast, LoreCharacterSheet, LoreError, LoreProfile,
@@ -89,7 +95,11 @@ pub use nav::{
 pub use offer::Offer;
 pub use perception::{cap_first, emit_sound, identify, sees};
 pub use places::{PlaceEntry, PlaceError, PlaceRegistry};
-pub use round::{Arrival, Census, ErrandDebug, Phase as RoundPhase, Round, WaterSource};
+pub use round::{
+    Arrival, CartLoadKind, Census, ClosedMarketVisit, CounterBindingKey, CounterSession,
+    ErrandDebug, HouseholdSettlementReceipt, MarketErrand, MarketErrandPhase, MarketVisitEnd,
+    PartyPhase, PartyState, Phase as RoundPhase, RoadCart, Round, WaterSource,
+};
 pub use prompt::{
     ParsedAction, PromptEnv, PromptStrings, parse_reply, parse_reply_value, py_round,
     render_prompt, render_prompt_and_drain, render_sheet_value,
@@ -238,8 +248,8 @@ pub const MARKET_CRY_INTERVAL_SECONDS: f64 = 75.0;
 // 0))` sparks (2..=7), the deterministic-hash idiom the water round already uses
 // for thirst spread (`round.rs`). Majors with authored holds keep them — Ilse
 // keeps exactly 1, her reluctance to spend it being her character. Wallets are
-// ordinary `spark` stacks in `World.items` with ids `w_<actor id>`; the nightly
-// Watch ledger refills buyer wallets to this seeded level.
+// ordinary `spark` stacks in `World.items`; M5 household settlement later
+// protects each resident's day-zero spendable amount as their working reserve.
 /// Floor of a seeded starting wallet, in sparks.
 pub const WALLET_SEED_MIN: u32 = 2;
 /// Width of the seeded-wallet spread above the floor: the hash draws an integer

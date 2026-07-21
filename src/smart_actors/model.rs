@@ -221,6 +221,14 @@ pub struct OfferSnapshot {
     pub created_seq: u64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RoadCartSnapshot {
+    pub party_id: String,
+    pub leader_id: ActorId,
+    pub load: Vec<cathedral_sim::CartLoadKind>,
+}
+
 /// Complete public semantic state, as the engine last published it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -230,6 +238,8 @@ pub struct WorldSnapshot {
     pub actors: Vec<ActorSnapshot>,
     pub items: Vec<ItemSnapshot>,
     pub offers: Vec<OfferSnapshot>,
+    #[serde(default)]
+    pub road_carts: Vec<RoadCartSnapshot>,
 }
 
 // ------------------------------------------------- the sim → renderer boundary
@@ -333,6 +343,15 @@ impl From<&cathedral_sim::PublicSnapshot> for WorldSnapshot {
                     created_seq: offer.created_seq.max(0) as u64,
                 })
                 .collect(),
+            road_carts: snapshot
+                .road_carts
+                .iter()
+                .map(|cart| RoadCartSnapshot {
+                    party_id: cart.party_id.as_str().to_owned(),
+                    leader_id: actor_id_from_sim(&cart.leader_id),
+                    load: cart.load.clone(),
+                })
+                .collect(),
         }
     }
 }
@@ -387,6 +406,9 @@ pub enum SnapshotError {
         giver_id: ActorId,
     },
     InvalidOfferSequence(ItemId),
+    InvalidRoadPartyId(String),
+    DuplicateRoadCart(String),
+    UnknownRoadCartLeader(ActorId),
 }
 
 impl fmt::Display for SnapshotError {
@@ -472,6 +494,11 @@ impl fmt::Display for SnapshotError {
             Self::InvalidOfferSequence(id) => {
                 write!(formatter, "offer for item {:?} has sequence zero", id.0)
             }
+            Self::InvalidRoadPartyId(id) => write!(formatter, "invalid road party id {id:?}"),
+            Self::DuplicateRoadCart(id) => write!(formatter, "duplicate road cart {id:?}"),
+            Self::UnknownRoadCartLeader(id) => {
+                write!(formatter, "road cart leader {:?} is not present", id.0)
+            }
         }
     }
 }
@@ -494,6 +521,7 @@ pub struct WorldMirror {
     items: Vec<ItemSnapshot>,
     item_indices: HashMap<ItemId, usize>,
     offers: Vec<OfferSnapshot>,
+    road_carts: Vec<RoadCartSnapshot>,
 }
 
 impl WorldMirror {
@@ -518,6 +546,10 @@ impl WorldMirror {
 
     pub fn offers(&self) -> impl ExactSizeIterator<Item = &OfferSnapshot> {
         self.offers.iter()
+    }
+
+    pub fn road_carts(&self) -> impl ExactSizeIterator<Item = &RoadCartSnapshot> {
+        self.road_carts.iter()
     }
 
     pub fn actor(&self, id: &ActorId) -> Option<&ActorSnapshot> {
@@ -553,6 +585,7 @@ impl WorldMirror {
         self.items = validated.snapshot.items;
         self.item_indices = validated.item_indices;
         self.offers = validated.snapshot.offers;
+        self.road_carts = validated.snapshot.road_carts;
         Ok(revision)
     }
 }
@@ -678,6 +711,18 @@ impl ValidatedSnapshot {
         let Some(player_index) = actor_indices.get(&snapshot.player_id).copied() else {
             return Err(SnapshotError::UnknownPlayer(snapshot.player_id.clone()));
         };
+        let mut cart_parties = std::collections::BTreeSet::new();
+        for cart in &snapshot.road_carts {
+            if !valid_id(&cart.party_id) {
+                return Err(SnapshotError::InvalidRoadPartyId(cart.party_id.clone()));
+            }
+            if !cart_parties.insert(cart.party_id.clone()) {
+                return Err(SnapshotError::DuplicateRoadCart(cart.party_id.clone()));
+            }
+            if !actor_indices.contains_key(&cart.leader_id) {
+                return Err(SnapshotError::UnknownRoadCartLeader(cart.leader_id.clone()));
+            }
+        }
         if snapshot.actors[player_index].control != ActorControl::Player {
             return Err(SnapshotError::PlayerHasWrongControl(
                 snapshot.player_id.clone(),
@@ -842,6 +887,7 @@ mod tests {
                 target_id: Some(ActorId("player".into())),
                 created_seq: 4,
             }],
+            road_carts: Vec::new(),
         }
     }
 

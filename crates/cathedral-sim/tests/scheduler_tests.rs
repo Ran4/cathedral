@@ -322,7 +322,7 @@ fn provider_failure_requeues_percepts_without_duplication() {
     assert_eq!(since[0], heard);
     let recent = md_section(sven_prompts[1], "recent_history").unwrap();
     assert!(
-        !recent.iter().any(|line| *line == heard),
+        !recent.contains(&heard),
         "the retried prompt must not show the percept twice: {recent:?}"
     );
 

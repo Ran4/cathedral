@@ -63,6 +63,9 @@ round already delivered.
 
 ## 3. The Kindling restock — the magic, and its confession
 
+The following records the M3–M4 behavior. M5 removed loaf restock and the wallet reset; only
+explicitly unchained fish restock and the never-scraped tavern pot remain.
+
 At each day's Kindling bell (the `offices_crossed` hook, `clock.rs:361-386`, consumed where
 `ring_offices` already runs, `engine.rs:815`):
 
@@ -85,9 +88,9 @@ Stock items are real `World.items` stacks **held by the vendor** (deterministic 
 invariant holds, `you_hold` shows the baker their own bread, and an LLM conversation can sell from
 the *same* inventory the ladder sells from. One stock, two doors.
 
-**This is the cheat the brief ordered, and it is structural, not shameful** — but it must
-eventually die, and the replacement is already sketched in §6. Everything above is written so the
-supply chain replaces *step 1* and touches nothing else.
+**This was the cheat the brief ordered, and it was structural, not shameful.** M5 retired its loaf
+and wallet portions through the binding implementation in §6 while preserving the stall, queue,
+and sale seams.
 
 ## 4. The queue
 
@@ -151,21 +154,21 @@ bakeries buy flour from marketpeople, flour coming in from outside of the town e
 are already on the map:
 
 - **bakehouses**: *"Communal bakehouses cluster near grain routes and ward edges"*
-  (`lore/places/03_new_places_and_infrastructure.md:254-257`); bakers' Kindling leg becomes "bake
-  at the bakehouse", conjuring loaves *there*, carried to the pitch — the restock becomes a walk
-  you can watch;
+  (`lore/places/03_new_places_and_infrastructure.md:254-257`); Averil's night leg now bakes at
+  Ansel Quern's common oven, and the resulting loaves are carried to the pitch;
 - **flour**: a metadata-free `flour` kind; Averil buys from Bertran at the Wool Gate mill face — the
   same silent-purchase machinery pointed at a different counter;
 - **grain from outside**: carts through the Wool Gate to **Seven Lofts**, the defended granary
   (`~(360,335)`), on a morning schedule — the visible edge of
-  `features/the_near_countryside__aka_add_market_stalls.md`, whose harvest/weather/trouble signals
-  then have a physical carrier;
-- at that point the nightly wallet resets become real wages and real costs, and the Chapter's
+  [08_near_countryside.md](08_near_countryside.md), whose wider harvest/weather/trouble signals
+  now have a physical carrier;
+- the nightly wallet reset is now household redistribution plus explicitly logged residual
+  payroll, and the Chapter's
   granary — *"F.183: the Chapter opened its granary late"* — becomes a lever somebody can pull in
   a famine questline.
 
-Each step replaces one conjuring with one purchase; none changes the stall, the queue, or the
-verbs. That is the test that the M3 shapes are right.
+Each step replaced one conjuring with one purchase; none changed the stall, the queue, or the
+verbs. That is the test the M3 shapes passed.
 
 ## 7. Bevy
 

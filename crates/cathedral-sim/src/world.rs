@@ -17,12 +17,13 @@ use crate::{
     WALK_SPEED_MPS,
     areas::AreaMap,
     attention::DEFAULT_STAGE_RADIUS_M,
-    character::{Character, StatusKind},
+    character::{Character, Presence, StatusKind},
     clock::WorldTime,
     error::{SpatialUpdateError, SpatialUpdateErrorCode},
     event::DomainEvent,
     ids::{ActorId, ItemId},
     item::{Item, ItemCatalog},
+    inventory::{CompletedTransform, LegacyRestockShare, TransformJob},
     math::Vec3,
     nav::{NavData, WALK_Y},
     offer::Offer,
@@ -87,6 +88,11 @@ pub struct World {
     pub item_catalog: Arc<ItemCatalog>,
     /// Keyed by item id: at most one live offer per item.
     pub offers: BTreeMap<ItemId, Offer>,
+    /// Operational M5 inventory state. Neither map is part of the public
+    /// snapshot; both are nevertheless authoritative and clone with the world.
+    pub(crate) legacy_restock_shares: BTreeMap<ItemId, Vec<LegacyRestockShare>>,
+    pub(crate) transform_jobs: BTreeMap<ActorId, TransformJob>,
+    pub(crate) completed_transform_jobs: BTreeMap<String, CompletedTransform>,
     /// Monotonic public-state counter.
     pub world_revision: i64,
     /// Last issued `DomainEvent` sequence.
@@ -130,6 +136,9 @@ impl Default for World {
             items: BTreeMap::new(),
             item_catalog: ItemCatalog::embedded(),
             offers: BTreeMap::new(),
+            legacy_restock_shares: BTreeMap::new(),
+            transform_jobs: BTreeMap::new(),
+            completed_transform_jobs: BTreeMap::new(),
             world_revision: 0,
             event_sequence: 0,
             spatial_sequence: -1,
@@ -174,6 +183,85 @@ impl World {
     pub fn touch_public_state(&mut self) -> i64 {
         self.world_revision += 1;
         self.world_revision
+    }
+
+    /// The one physical-presence predicate used at every world-facing seam.
+    pub fn is_present(&self, actor_id: &ActorId) -> bool {
+        self.characters
+            .get(actor_id)
+            .is_some_and(|actor| actor.state.presence == Presence::InCity)
+    }
+
+    pub fn presence_epoch(&self, actor_id: &ActorId) -> Option<u64> {
+        self.characters
+            .get(actor_id)
+            .map(|actor| actor.state.presence_epoch)
+    }
+
+    /// Atomically enter or remove a group. Epoch arithmetic is preflighted for
+    /// every member; the public revision advances exactly once for the batch.
+    /// On departure city-transient actor state is discarded, while memories,
+    /// goals, relationships and `recent_history` remain untouched.
+    pub fn transition_presence(
+        &mut self,
+        members: &[ActorId],
+        presence: Presence,
+        entry_positions: &BTreeMap<ActorId, Vec3>,
+    ) -> Result<Vec<(ActorId, u64)>, String> {
+        if members.is_empty() {
+            return Err("a presence transition needs at least one member".to_string());
+        }
+        let mut next = Vec::with_capacity(members.len());
+        let mut seen = std::collections::BTreeSet::new();
+        for member in members {
+            if !seen.insert(member) {
+                return Err(format!("duplicate party member '{member}'"));
+            }
+            let actor = self
+                .characters
+                .get(member)
+                .ok_or_else(|| format!("unknown party member '{member}'"))?;
+            if actor.state.presence == presence {
+                return Err(format!(
+                    "party member '{member}' is already {presence:?}"
+                ));
+            }
+            let epoch = actor
+                .state
+                .presence_epoch
+                .checked_add(1)
+                .ok_or_else(|| format!("presence epoch overflow for '{member}'"))?;
+            if presence == Presence::InCity && !entry_positions.contains_key(member) {
+                return Err(format!("entry position missing for '{member}'"));
+            }
+            next.push((member.clone(), epoch));
+        }
+        for (member, epoch) in &next {
+            let actor = self.characters.get_mut(member).expect("preflighted member");
+            actor.state.presence = presence;
+            actor.state.presence_epoch = *epoch;
+            if presence == Presence::InCity {
+                actor.state.position_m = entry_positions[member];
+            } else {
+                actor.state.inbox.clear();
+                actor.state.pending_history.clear();
+                actor.state.movement = None;
+                actor.state.intent = None;
+                actor.state.active_gesture = None;
+                actor.state.you_sell.clear();
+            }
+        }
+        if presence == Presence::BeyondTheWalls {
+            self.offers.retain(|_, offer| {
+                !seen.contains(&offer.giver_id)
+                    && offer
+                        .target_id
+                        .as_ref()
+                        .is_none_or(|target| !seen.contains(target))
+            });
+        }
+        self.touch_public_state();
+        Ok(next)
     }
 
     /// Debug-only carriage write (`features/npc_bodies.md` §8): set `kind` to a
@@ -239,6 +327,7 @@ impl World {
         let mut matches: Vec<(f64, &ActorId)> = self
             .characters
             .values()
+            .filter(|character| character.state.presence == Presence::InCity)
             .filter(|character| Some(character.id()) != exclude)
             .filter_map(|character| {
                 let distance_squared = origin.distance_squared(character.position_m());
@@ -315,6 +404,12 @@ impl World {
                 return Err(SpatialUpdateError::new(
                     SpatialUpdateErrorCode::UnknownActor,
                     format!("unknown actor id '{actor_id}'"),
+                ));
+            }
+            if !self.is_present(actor_id) {
+                return Err(SpatialUpdateError::new(
+                    SpatialUpdateErrorCode::UnknownActor,
+                    format!("actor id '{actor_id}' is beyond the walls"),
                 ));
             }
             if !update.position_m.is_finite() {
@@ -407,6 +502,8 @@ impl World {
                 .characters
                 .iter()
                 .filter(|(_, character)| {
+                    character.state.presence == Presence::InCity
+                        &&
                     planar_within(
                         character.position_m(),
                         centre,
@@ -420,7 +517,7 @@ impl World {
 
         let mut moved: Vec<ActorId> = Vec::new();
         for (id, character) in self.characters.iter_mut() {
-            if character.state.movement.is_none() {
+            if character.state.presence != Presence::InCity || character.state.movement.is_none() {
                 continue;
             }
             let start = character.state.position_m;
@@ -605,7 +702,7 @@ impl World {
                     let away =
                         Vec3::new(new_pos.x - other_pos.x, 0.0, new_pos.z - other_pos.z);
                     let d = away.length();
-                    if d < 1e-6 || d >= AVOID_PERSONAL_RADIUS_M {
+                    if !(1e-6..AVOID_PERSONAL_RADIUS_M).contains(&d) {
                         continue;
                     }
                     push += away / d * (1.0 - d / AVOID_PERSONAL_RADIUS_M);
@@ -645,6 +742,7 @@ impl World {
         let actors = self
             .characters
             .values()
+            .filter(|actor| actor.state.presence == Presence::InCity)
             .map(|actor| {
                 // A missing player character shows everyone's real name.
                 let known = match player {
@@ -676,6 +774,10 @@ impl World {
         let items = self
             .items
             .values()
+            .filter(|item| {
+                self.owner_of(&item.id)
+                    .is_some_and(|owner| self.is_present(owner))
+            })
             .map(|item| ItemSnapshot {
                 id: item.id.clone(),
                 kind: item.kind.clone(),
@@ -690,6 +792,13 @@ impl World {
         let mut offers: Vec<OfferSnapshot> = self
             .offers
             .values()
+            .filter(|offer| {
+                self.is_present(&offer.giver_id)
+                    && offer
+                        .target_id
+                        .as_ref()
+                        .is_none_or(|target| self.is_present(target))
+            })
             .map(|offer| OfferSnapshot {
                 item_id: offer.item_id.clone(),
                 giver_id: offer.giver_id.clone(),
@@ -708,10 +817,11 @@ impl World {
             actors,
             items,
             offers,
+            road_carts: Vec::new(),
         }
     }
 
-    /// The catalog display name of a stack, e.g. `rye loaf`.
+    /// The catalog display name of a stack, e.g. `broadcloth bolt of cloth`.
     pub fn item_display_name(&self, item: &Item) -> String {
         self.item_catalog.display_name(item)
     }
@@ -785,14 +895,101 @@ impl World {
                 "offer giver does not hold item {item_id}"
             );
             assert!(
+                self.is_present(&offer.giver_id),
+                "absent character {} has a live offer",
+                offer.giver_id
+            );
+            assert!(
                 offer.target_id.as_ref() != Some(&offer.giver_id),
                 "offer cannot target its giver"
             );
             if let Some(target_id) = &offer.target_id {
                 assert!(
-                    self.characters.contains_key(target_id),
-                    "offer targets a missing character"
+                    self.is_present(target_id),
+                    "offer targets a missing or absent character"
                 );
+            }
+            let reserved = self.transform_reserved_quantity(item_id);
+            let committed = reserved
+                .checked_add(offer.quantity)
+                .expect("offer plus transform commitment overflow");
+            assert!(
+                committed <= self.items[item_id].quantity,
+                "item {item_id} commits {committed} units but holds only {}",
+                self.items[item_id].quantity
+            );
+        }
+        for (item_id, item) in &self.items {
+            assert!(
+                owners.contains_key(item_id),
+                "item {item_id} has no owner"
+            );
+            let reserved = self.transform_reserved_quantity(item_id);
+            let offered = self.offered_quantity(item_id);
+            let committed = reserved
+                .checked_add(offered)
+                .expect("inventory commitments overflow");
+            assert!(
+                committed <= item.quantity,
+                "item {item_id} commits {committed} units but holds only {}",
+                item.quantity
+            );
+            let shares = self.legacy_restock_shares.get(item_id).map_or(&[][..], Vec::as_slice);
+            let mut previous = None;
+            let share_total = shares.iter().fold(0u32, |sum, share| {
+                assert!(share.quantity > 0, "legacy restock share on {item_id} is empty");
+                assert_eq!(
+                    owners.get(item_id).copied(),
+                    Some(&share.original_vendor),
+                    "legacy restock share on {item_id} left its original vendor"
+                );
+                let key = (&share.source_id, &share.original_vendor);
+                if let Some(old) = previous {
+                    assert!(old < key, "legacy restock shares on {item_id} are not unique and sorted");
+                }
+                previous = Some(key);
+                sum.checked_add(share.quantity)
+                    .expect("legacy restock shares overflow")
+            });
+            assert!(
+                share_total <= item.quantity,
+                "legacy restock shares on {item_id} exceed the stack"
+            );
+        }
+        for item_id in self.legacy_restock_shares.keys() {
+            assert!(
+                self.items.contains_key(item_id),
+                "legacy restock provenance points at missing item {item_id}"
+            );
+        }
+        for (producer, job) in &self.transform_jobs {
+            assert_eq!(producer, &job.producer, "transform job is keyed by the wrong producer");
+            assert!(self.characters.contains_key(producer), "transform producer is missing");
+            assert!(!job.inputs.is_empty(), "transform job has no inputs");
+            assert!(!job.outputs.is_empty(), "transform job has no outputs");
+            assert!(
+                job.progress_work_minutes.is_finite() && job.progress_work_minutes >= 0.0,
+                "transform progress must be finite and non-negative"
+            );
+            for input in &job.inputs {
+                assert!(input.quantity > 0, "transform reservation is empty");
+                assert_eq!(
+                    owners.get(&input.item_id).copied(),
+                    Some(producer),
+                    "transform input {} is not held by its producer",
+                    input.item_id
+                );
+            }
+            let mut output_keys = BTreeMap::<crate::inventory::ItemMatcher, u32>::new();
+            for output in &job.outputs {
+                assert!(output.quantity > 0, "transform output is empty");
+                let total = output_keys.entry(output.matcher()).or_default();
+                *total = total.checked_add(output.quantity).expect("transform output overflow");
+            }
+            for (matcher, future) in output_keys {
+                self.held_quantity(producer, &matcher)
+                    .checked_add(future)
+                    .expect("held stock exceeds reserved transform output capacity");
             }
         }
     }
@@ -818,7 +1015,7 @@ pub(crate) fn planar_within(a: Vec3, b: Vec3, radius: f64) -> bool {
 /// accept that created it — so headless runs stay reproducible and never
 /// collide (`01_items_and_stacks.md` §6). Rendered in the base-32 style the cast
 /// already uses.
-pub(crate) fn mint_item_id(parent: &ItemId, salt: i64) -> ItemId {
+pub fn mint_item_id(parent: &ItemId, salt: i64) -> ItemId {
     const ALPHABET: &[u8; 32] = b"0123456789abcdefghijklmnopqrstuv";
     let mut hasher = DefaultHasher::new();
     "item_split".hash(&mut hasher);
@@ -877,6 +1074,9 @@ mod tests {
             memories: Vec::new(),
             knows: BTreeSet::new(),
             lore: None,
+            presence: Presence::InCity,
+            presence_epoch: 0,
+            economic_class: crate::EconomicClass::Resident,
         })
     }
 
@@ -1064,6 +1264,9 @@ mod tests {
             memories: Vec::new(),
             knows: BTreeSet::new(),
             lore: None,
+            presence: Presence::InCity,
+            presence_epoch: 0,
+            economic_class: crate::EconomicClass::Resident,
         });
         let target = nav.node_point(nav.place("b").unwrap().node);
         let mut path = nav.route_between(start, target).unwrap().points;
@@ -1513,6 +1716,9 @@ mod tests {
             memories: Vec::new(),
             knows: BTreeSet::new(),
             lore: None,
+            presence: Presence::InCity,
+            presence_epoch: 0,
+            economic_class: crate::EconomicClass::Resident,
         }));
         let id = ActorId::from_raw("p006v");
 

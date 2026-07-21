@@ -25,6 +25,30 @@ pub enum Control {
     Player,
 }
 
+/// Whether a character physically participates in the city right now.
+///
+/// Road-party actors retain their durable state while beyond the walls, but
+/// are excluded from every spatial/public seam until the party controller
+/// admits them at a gate.  The serde default keeps all pre-M5 fixtures in the
+/// city.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Presence {
+    #[default]
+    InCity,
+    BeyondTheWalls,
+}
+
+/// Participation in the Watch household settlement.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EconomicClass {
+    #[default]
+    Resident,
+    Visitor,
+    RoadParty,
+}
+
 impl Control {
     /// Only LLM-controlled characters accumulate prose percepts: the player
     /// gets structured events instead, and is never scheduled.
@@ -75,6 +99,14 @@ pub struct CharacterSheet {
     /// test fixtures intentionally have no lore profile.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lore: Option<LoreProfile>,
+    /// Defaults preserve old seed/fixture semantics. Production road-party
+    /// membership is validated by the round and forces both fields below.
+    #[serde(default)]
+    pub presence: Presence,
+    #[serde(default)]
+    pub presence_epoch: u64,
+    #[serde(default)]
+    pub economic_class: EconomicClass,
 }
 
 /// The M2 ping-pong: an actor walks back and forth between two named nav places.
@@ -195,7 +227,7 @@ impl Default for Needs {
 /// fixtures are byte-identical (the `you_offer` skip-when-empty pattern).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VendorListing {
-    /// The catalog display name of the kind sold — `"rye loaf"`, `"herring"`.
+    /// The catalog display name of the kind sold — `"loaf"`, `"herring"`.
     pub name: String,
     /// The catalog list price of one, in sparks.
     pub price_sparks: u32,
@@ -313,6 +345,8 @@ pub struct CharacterState {
     /// [`crate::DANCE_MAX_SECONDS`]. Never rendered on the prompt — it is body
     /// language for the host, not something the mind reads back off its sheet.
     pub active_gesture: Option<ActiveGesture>,
+    /// Set while a road party owns the member's gateward movement.
+    pub leaving_city: bool,
     /// Publicly-visible carriage axes (`features/npc_bodies.md` §8): drunkenness,
     /// weariness. Each value runs `0..=1`; the host reads them off the snapshot
     /// and dresses the walk (sway, stoop) without touching the position the sim
@@ -320,6 +354,11 @@ pub struct CharacterState {
     /// body, not a fact the mind reads back. Empty for everyone the debug hooks
     /// (or, later, an ale) never touched, which keeps the snapshot byte-identical.
     pub statuses: BTreeMap<StatusKind, f64>,
+    /// Physical-world participation and its monotonic incarnation stamp.
+    pub presence: Presence,
+    pub presence_epoch: u64,
+    /// Watch-settlement participation. This is state, not a prompt fact.
+    pub economic_class: EconomicClass,
 }
 
 impl CharacterState {
@@ -341,7 +380,15 @@ impl CharacterState {
             daily_round: Vec::new(),
             you_sell: Vec::new(),
             active_gesture: None,
+            leaving_city: false,
             statuses: BTreeMap::new(),
+            presence: sheet.presence,
+            presence_epoch: sheet.presence_epoch,
+            economic_class: if sheet.control == Control::Player {
+                EconomicClass::Visitor
+            } else {
+                sheet.economic_class
+            },
         }
     }
 }
@@ -613,6 +660,9 @@ mod tests {
             memories: Vec::new(),
             knows: BTreeSet::new(),
             lore: None,
+            presence: Presence::InCity,
+            presence_epoch: 0,
+            economic_class: EconomicClass::Resident,
         }
     }
 

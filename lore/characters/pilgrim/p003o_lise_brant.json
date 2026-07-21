@@ -6,6 +6,7 @@
   "age": 2,
   "gender": "f",
   "occupation_id": "pilgrim",
+  "economic_class": "visitor",
   "title": "Pilgrim",
   "rank": null,
   "faction_role": null,

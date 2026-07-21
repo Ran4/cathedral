@@ -1,5 +1,10 @@
 # The Near Countryside
 
+Status: merged into food & items M5. The implemented slice is the fixed Brede
+and Lantern Road parties, their named people, manifests, gate schedules, carts,
+and city counterparties. The broader changing hinterland described below
+remains future expansion, not an implied explorable map.
+
 Ombreval's city-state should include a modest, named food-producing hinterland even if the playable world stops at the walls.  Market gardens near the gates, grain fields, orchards, hay meadows, sheepfolds, mills, fisheries, coppiced woods, and a few farm hamlets would explain what enters Seven Lofts and the daily markets.  Ownership could be divided among citizen households, rural tenants, the Chapter, charitable foundations, and common grazing rights, ensuring that “country” and “city” are economically entangled rather than separate worlds.  Families might keep one branch inside a gate and another on a holding outside, while seasonal workers and sellers cross the walls every day.  A small number of strong anchors would be better than an exhaustive regional map, with roads and travel times tied to the already established routes toward Brede, Harne, Salorge, and Ostrelle.
 
 For gameplay, changing carts, cargo mix, stock on shelves, gate queues, and market cries could communicate harvest, weather, or trouble beyond the playable boundary.  Missing drovers, a disputed mill toll, orchard blight, a closed road, a rural wedding, or soldiers seen near Harne could all send consequences and visitors into the city without requiring an explorable open world.  Actors arriving through a gate would have grounded destinations, kin, cargo, and news instead of being generic travelers from nowhere.  This direction would make the walls feel like the edge of the current play space rather than the edge of existence, while keeping distant problems material and politically comprehensible.

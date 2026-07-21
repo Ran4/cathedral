@@ -259,7 +259,69 @@
   "sex_worker": "tavern"
  },
 
+ "road_parties": [
+  {
+   "id": "brede_wool_gate", "leader": "rbrde",
+   "members": ["rbrde", "cbred", "dbred"], "gate": "The Wool Gate",
+   "only_on": ["highmarket", "fourth"], "stage_at": "kindling", "enter_at": "dayspring", "return_at": "lamplight",
+   "wallet_float_sparks": {"rbrde": 25, "cbred": 4, "dbred": 4},
+   "commercial_cargo": [
+    {"kind": "grain"}, {"kind": "wool"},
+    {"kind": "cloth", "metadata": {"grade": "broadcloth"}}
+   ],
+   "manifest": [
+    {"kind": "grain", "quantity": 4}, {"kind": "wool", "quantity": 4}
+   ],
+   "legs": [
+    {"from": "dayspring", "at": "Seven Lofts", "doing": "trade"},
+    {"from": "waning", "at": "The Draper's Reach", "doing": "trade"},
+    {"from": "lamplight", "at": "The Wool Gate", "doing": "stand"}
+   ]
+  },
+  {
+   "id": "lantern_stone_gate", "leader": "rlant",
+   "members": ["rlant", "clant"], "gate": "The Stone Gate",
+   "only_on": ["second", "fifth"], "stage_at": "kindling", "enter_at": "dayspring", "return_at": "lamplight",
+   "wallet_float_sparks": {"rlant": 25, "clant": 4},
+   "commercial_cargo": [
+    {"kind": "grain"}, {"kind": "cloth", "metadata": {"grade": "kersey"}}
+   ],
+   "manifest": [{"kind": "grain", "quantity": 3}],
+   "legs": [
+    {"from": "dayspring", "at": "Seven Lofts", "doing": "trade"},
+    {"from": "waning", "at": "The Draper's Reach", "doing": "trade"},
+    {"from": "lamplight", "at": "The Stone Gate", "doing": "stand"}
+   ]
+  }
+ ],
+
  "routes": {
+  "p008s": {"_who": "Betriss Skep, Seven Lofts provisioner", "legs": [
+   {"from": "kindling", "at": "home", "doing": "idle"},
+   {"from": "dayspring", "at": "Seven Lofts", "doing": "trade"},
+   {"from": "waning", "at": "home", "doing": "sleep"}
+  ]},
+  "e7mil": {"_who": "Bertran Hobbe, miller", "legs": [
+   {"from": "dayspring", "at": "Seven Lofts", "doing": "trade"},
+   {"from": "waning", "at": "The Wool Gate", "doing": "work"},
+   {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "davqn": {"_who": "Averil Quern, baker", "curfew_exempt": true, "legs": [
+   {"from": "watch", "at": "Ansel Quern's common oven", "doing": "work"},
+   {"from": "dayspring", "at": "The Wickmarket", "doing": "trade"},
+   {"from": "lamplight", "at": "Ansel Quern's common oven", "doing": "work"}
+  ]},
+  "danqn": {"_who": "Ansel Quern, common-oven keeper", "curfew_exempt": true, "legs": [
+   {"from": "watch", "at": "home", "doing": "idle"},
+   {"from": "dayspring", "at": "home", "doing": "work"},
+   {"from": "lamplight", "at": "home", "doing": "work"}
+  ]},
+  "e1skl": {"_who": "Ewart Skell, draper", "legs": [
+   {"from": "kindling", "at": "The Draper's Reach", "doing": "work"},
+   {"from": "dayspring", "at": "The Draper's Reach", "doing": "work"},
+   {"from": "waning", "at": "The Draper's Reach", "doing": "work"},
+   {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
   "ak3vd": {"_who": "Havise Dorn, Praelucent", "leash_m": 10.0, "legs": [
     {"from": "kindling", "at": "The Lanthorn", "doing": "pray"},
     {"from": "dayspring", "at": "The Lanthorn", "doing": "pray"},

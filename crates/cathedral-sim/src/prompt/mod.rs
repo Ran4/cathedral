@@ -439,6 +439,11 @@ fn llm_actor<'a>(world: &'a World, actor_id: &ActorId) -> Result<&'a Character, 
             "the human-controlled player must never receive an LLM prompt",
         ));
     }
+    if !world.is_present(actor_id) {
+        return Err(PromptError::new(format!(
+            "actor '{actor_id}' is beyond the walls"
+        )));
+    }
     Ok(actor)
 }
 
@@ -470,6 +475,15 @@ fn build_sheet<'a>(
     let mut you_offer: Vec<YouOffer<'_>> = Vec::new();
     let mut offered_to_you: Vec<OfferedToYou<'_>> = Vec::new();
     for offer in sorted_offers {
+        if !world.is_present(&offer.giver_id)
+            || offer
+                .target_id
+                .as_ref()
+                .and_then(|target| world.characters.get(target))
+                .is_some_and(|target| target.state.presence != crate::Presence::InCity)
+        {
+            continue;
+        }
         // An offer of an item that has left the world shows in neither section.
         let Some(entity) = world.items.get(&offer.item_id) else {
             continue;
@@ -911,7 +925,7 @@ fn item_md(item: &ItemRef<'_>) -> String {
     }
 }
 
-/// `rye loaf, 2 sparks` — one `you_sell` line: the kind's display name and its
+/// `loaf, 2 sparks` — one `you_sell` line: the kind's display name and its
 /// price, singular `spark` only at exactly one (matching the purchase percept's
 /// `for 1 spark`).
 fn sell_md(listing: &SellLine<'_>) -> String {

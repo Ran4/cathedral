@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     GOAL_NONE,
     appearance::AppearanceSnapshot,
-    character::{CharacterSheet, Control},
+    character::{CharacterSheet, Control, EconomicClass, Presence},
     ids::{ActorId, ItemId},
     math::Vec3,
 };
@@ -221,6 +221,14 @@ pub struct LoreCharacterSheet {
     /// Overrides the derived willingness to speak first (see [`LoreProfile`]).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub curiosity: Option<f64>,
+    /// Nonresident pilgrims and other visitors opt out of household settlement.
+    /// Road-party membership is forced by `rounds.json`, never authored here.
+    #[serde(default, skip_serializing_if = "is_resident")]
+    pub economic_class: EconomicClass,
+}
+
+fn is_resident(class: &EconomicClass) -> bool {
+    *class == EconomicClass::Resident
 }
 
 impl LoreCharacterSheet {
@@ -386,6 +394,9 @@ impl LoreCharacterSheet {
                 extended_character_description: self.extended_character_description,
                 curiosity: self.curiosity,
             }),
+            presence: Presence::InCity,
+            presence_epoch: 0,
+            economic_class: self.economic_class,
         }
     }
 }

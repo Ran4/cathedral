@@ -146,8 +146,9 @@ like `"fish"` is an error, never a fallback.
 - `decline_offer {"item_id": "<id>"}` — turn down an offer targeted at you; the
   giver keeps the item. Broadcast offers can only be ignored.
 - `retract_offer {"item_id": "<id>"}` — withdraw your own pending offer.
-- `eat {"item_id": "<id>"}` — consume a held item; it leaves the world (a pending
-  offer of it is implicitly retracted, with notification).
+- `eat {"item_id": "<id>"}` — consume one uncommitted unit of a held edible
+  stack. Offers and transform reservations remain promises: if no unit is free,
+  eating fails with `item_committed` until the offer is retracted or replaced.
 - `make_sound {"sound_id": "<id>"}` — emit a catalog sound
   (`assets/sounds/catalog.toml`); only rows with `actor_emittable = true`.
 - `go_to {"place_id": "<pl_…>"}` / `go_to {"person": "<id>"}` — set a travel
@@ -190,6 +191,9 @@ strings baked into Rust. The host reads them and passes strings to this crate:
 | `assets/prompts/turn.j2` | the turn prompt (minijinja) |
 | `assets/prompts/strings.toml` | the sheet's micro-strings |
 | `assets/sounds/catalog.toml` | the sound catalog: percepts, radii, and the `sfx_prompt` `scripts/generate_sounds.py` synthesizes each asset from |
+| `assets/world/items.json` | item kinds, metadata domains, display names, prices, and satiety |
+| `assets/world/food.json` | market listings/restock, named counters, stock plans, transforms, working capital, and historical stock |
+| `assets/world/rounds.json` | ordinary daily rounds plus fixed road-party schedules, manifests, wallet floats, and routes |
 | `assets/world/seed.json` | Shared items and the player record. |
 | `assets/world/areas.json` | named world geography: coordinate axes, stable IDs, prompt labels, and non-overlapping box unions used for containment and nearest-area descriptions |
 | `lore/characters/**/*.json` | The authored cast (some 500 NPCs; one JSON per character), significance/status metadata, relationships, memories, items and canonical spawn transforms. Sorted relative paths seed the significance-aware turn order. |

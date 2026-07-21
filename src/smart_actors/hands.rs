@@ -4,7 +4,7 @@
 //! non-currency item rides the LEFT hand anchor (the basket-carry), the oldest
 //! standing offer's item rides the RIGHT hand at the end of the extended arm
 //! (`body.rs` L2 owns that arm), and the consent dance the sim already runs —
-//! accept / decline / retract — plus the silent `stall_sale` get hand-over
+//! accept / decline / retract — plus the silent `sale` hand-over
 //! choreography: a short prop flight between hands and a habit-tier nod or
 //! head-shake. Everything here is presentation: props reconcile from the
 //! authoritative snapshot exactly like the fan did (no command intent removes
@@ -64,7 +64,7 @@ pub(crate) enum HandoverFeedback {
     /// `decline_offer`: the decliner shakes their head; the giver's arm
     /// retracts on its own as the offer leaves the snapshot.
     Declined { decliner: ActorId, giver: ActorId },
-    /// `stall_sale`: the silent purchase — vendor arm pulse, prop flight,
+    /// `sale`: the silent purchase — vendor arm pulse, prop flight,
     /// buyer nod. Same choreography, no standing offer behind it.
     StallSale {
         vendor: ActorId,
@@ -627,6 +627,7 @@ mod tests {
                 actors: all,
                 items,
                 offers,
+                road_carts: vec![],
             })
             .unwrap();
         mirror
@@ -753,6 +754,7 @@ mod tests {
                 item("fish", "herring", "fish"),
             ],
             offers,
+            road_carts: vec![],
         };
         let offer = vec![OfferSnapshot {
             item_id: ItemId("fish".into()),

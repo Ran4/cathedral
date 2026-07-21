@@ -1,14 +1,14 @@
 # Food & items: the city eats
 
-Status: M0–M4 implemented (2026-07-18). M5 (the supply chain) is **scoped but not started** —
-see [07_the_supply_chain.md](07_the_supply_chain.md), which centers the chain on Seven Lofts and
-splits it into M5a–M5d. The specs below
-were updated where the implementation differed (rung-3 meal-office gate, tavern-node hearths, silent
-auto-eat, template-derived `you_sell`).
+Status: M0–M5 implemented (2026-07-20). The deterministic sim and Bevy-host M5 acceptance suites
+are green. The required M5a screenshot review remains a release handoff: this implementation
+session attempted the exact drive command, but its sandbox could not connect to `DISPLAY=:0`
+(`XOpenDisplayFailed`). See [07_the_supply_chain.md](07_the_supply_chain.md) for the implemented
+M5a–M5d contract and the pending visual command.
 
 | | |
 |---|---|
-| **The brief** | items with metadata (flour, quality), quantities ("transfer 3 coins"), copper-only money, hunger that eating cures, food vendors, and a magic morning restock that is *explicitly a placeholder* for a real supply chain |
+| **The brief** | items with metadata and quantities, copper-only money, hunger that eating cures, food vendors, and a visible grain/flour/bread and wool/cloth supply chain |
 | **The sibling** | `features/movement/` — the clock, the ladder, the round, and the water round this design copies shamelessly |
 | **This folder** | the design the brief asked for |
 
@@ -81,15 +81,11 @@ known "most expensive small change" — regenerating the 20 golden prompt fixtur
 [01](01_items_and_stacks.md) needs the same regeneration anyway, so they land together.
 [03_hunger.md](03_hunger.md).
 
-**(d) Vendor stock is real items, conjured at the Kindling.** Each morning, every bound food vendor's
-stall stock is created from a template — real `world.items` entries held by the vendor, so the
-LLM consent verbs and the code-driven purchases share one inventory. **This is the accepted cheat,
-and it must eventually die**: the real chain is bakers baking at the bakehouses from millers' flour,
-with grain carts entering from the near countryside and grain persisting at Seven Lofts between
-deliveries. `features/the_near_countryside__aka_add_market_stalls.md` is the other half of this
-feature. The
-nightly wallet reset in [02](02_the_spark_standard.md) is the same cheat from the money side —
-both are the placeholder the supply chain replaces. [04_the_bread_round.md](04_the_bread_round.md).
+**(d) Vendor stock is real inventory.** M3 originally conjured a bound vendor's template at the
+Kindling. M5 keeps explicitly unchained fish restock and the lore-blessed tavern pot, but bread now
+comes from road grain stored at Seven Lofts, Bertran's flour, and Averil's night bake. The same
+held stacks serve LLM consent verbs and code-driven purchases. The implemented countryside edge is
+recorded in [08_near_countryside.md](08_near_countryside.md).
 
 **(e) Code-driven purchases are silent; LLM purchases are conversational.** A ladder-driven buy is
 an atomic swap (coins for food, price from the catalog) with **self-percepts only** — the buyer and
@@ -148,16 +144,13 @@ and opens a tavern-vs-well question this feature does not need to answer yet.
 
 ## 6. The coin loop, honestly
 
-Coins are conserved within a day: buyers pay, vendors accumulate. Left alone, every vendor becomes a
-dragon on a hoard and every buyer runs dry by Thursday. So the nightly ledger, at the Watch:
-
-- **buyer wallets refill to their seeded level** (2–7 sparks, hashed per actor; majors keep
-  authored amounts — Ilse keeps exactly 1, that is her story);
-- **vendor wallets and unsold stock reset to template** — they "spent it on flour and rent."
-
-Neither side of this is real, and that is the point: the two resets are precisely the shape of the
-future supply chain (persistent stock, working capital, household transfers, bounded explicit
-payroll), so M5 replaces them rather than fighting them. Until then the books balance by decree.
+M5 removed the nightly wallet reset and keeps stock persistent. At each Watch, deterministic
+household settlement first redistributes resident surplus above protected working reserves, then
+logs and mints only the residual needed to give eligible residents four spendable sparks. Visitors
+(including one-spark Ilse) and road parties are excluded. Road-party wallets instead settle
+symmetrically to their configured leader/carter floats at each successful off-map boundary. Sales
+and negotiated transfers conserve sparks; institutional payroll and traced boundary cash are the
+only declared source/sink terms.
 
 ---
 
@@ -173,7 +166,7 @@ Each shippable, each with a verification recipe using the repo's existing tools.
 | **M2** | **Hunger** | the gauge, decay, `eat` satiety, computed conditions on the sheet, meal legs, seeded wallets | headless `--trace-food` census: hunger falls all morning, the city eats at High Wick; Ilse's sheet says famished, she eats, it stops saying it |
 | **M3** | **The bread round** *(the vertical slice)* | stalls bound to vendors, the Kindling restock, the queue, the silent purchase, self-percepts, the coin-clink | headless `--trace-food` logs dozens of sales at the Wickmarket on Highmarket; `tp` to the square at noon and watch the queue; ask a buyer what they paid |
 | **M4** | **The Ilse purchase** | `you_sell` price lines, quantity verbs in the prompt, the LLM seam polished | replay yesterday's session and it *ends in a sale*: the baker's loaf is 2 sparks, Ilse has 1, the fish stall's herring is 1 — she offers her spark, accepts the herring, eats, and her hunger line clears |
-| **M5** | **The supply chain** *(scoped, not started)* | fixed named road parties and visible carts; grain stored by Betriss Skep at Seven Lofts; Bertran Hobbe milling; Averil Quern's night bake at Ansel Quern's common oven; raw wool becoming outbound cloth; persistent wallets and bounded household settlement | four sub-milestones in [07_the_supply_chain.md](07_the_supply_chain.md) §11; a trace follows one grain batch from a Day-N delivery to a funded buyer's Day-N+1 loaf, while the unchanged M4 replay still has one-spark Ilse buy herring |
+| **M5** | **The supply chain** *(implemented; visual sign-off pending)* | fixed named road parties and visible carts; grain stored by Betriss Skep at Seven Lofts; Bertran Hobbe milling; Averil Quern's night bake at Ansel Quern's common oven; raw wool becoming outbound cloth; persistent wallets and bounded household settlement | `supply_chain_tests` and `supply_chain_host_tests` pass; the exact M5a drive command still needs one graphical-session screenshot review |
 
 M0 is where the risk lives (every layer touches items; ~13 golden fixtures pin the bytes). M1 is
 pure content and can run in parallel. M2–M4 stack on M0.
@@ -204,9 +197,10 @@ pure content and can run in parallel. M2–M4 stack on M0.
 | | |
 |---|---|
 | [01_items_and_stacks.md](01_items_and_stacks.md) | the item model: kinds, metadata, quantity, merge/split, every layer it touches |
-| [02_the_spark_standard.md](02_the_spark_standard.md) | one coin; the lore retcon sweep, prices, wallets, the nightly ledger |
+| [02_the_spark_standard.md](02_the_spark_standard.md) | one coin; the lore retcon sweep, prices, wallets, and the historical pre-M5 ledger |
 | [03_hunger.md](03_hunger.md) | the gauge, decay, satiety, rungs 3 & 7, meal legs, the computed condition |
 | [04_the_bread_round.md](04_the_bread_round.md) | stalls, vendor binding, the Kindling restock, the queue, the silent purchase — and the real supply chain it stands in for |
 | [05_the_llm_seam.md](05_the_llm_seam.md) | verb and sheet changes, `you_sell`, percept lines, fixtures, token cost |
 | [06_milestones.md](06_milestones.md) | M0–M5, each with a verification recipe |
-| [07_the_supply_chain.md](07_the_supply_chain.md) | M5 scoped: Seven Lofts, fixed gate parties and carts, stock errands, named grain/flour/bread/cloth producers, the two-day trace, and household settlement |
+| [07_the_supply_chain.md](07_the_supply_chain.md) | M5 implemented: Seven Lofts, fixed gate parties and carts, stock errands, named grain/flour/bread/cloth producers, the two-day trace, and household settlement |
+| [08_near_countryside.md](08_near_countryside.md) | the merged hinterland sketch and the boundary of M5's implemented road slice |

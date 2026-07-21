@@ -59,7 +59,7 @@
             // Which office the run opens on; "dayspring" is a working morning.
             start_office: "dayspring",
             // Day 0 is a Bellday; 2 opens on a Highmarket.
-            start_day: 0,
+            start_day: 2,
             // Night's brightness floor. 0.05 is genuinely dark.
             night_brightness: 0.05,
             // Ring the town bell for the player as each office comes round.

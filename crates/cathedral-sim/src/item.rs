@@ -115,7 +115,7 @@ pub struct Item {
     /// How many. Never 0: a stack at 0 is removed from the world.
     #[serde(default = "one")]
     pub quantity: u32,
-    /// Small, catalog-declared descriptors: `{"flour": "rye"}`. Part of identity
+    /// Small, catalog-declared descriptors: `{"grade": "kersey"}`. Part of identity
     /// — stacks merge only when metadata is byte-equal.
     #[serde(default)]
     pub metadata: BTreeMap<String, String>,
@@ -196,7 +196,7 @@ pub struct ItemKindDef {
     /// prefixed in this map's (sorted) key order.
     #[serde(default)]
     pub metadata: BTreeMap<String, Vec<String>>,
-    /// Price by metadata selector (`""` = default, `"flour=wheat"` overrides).
+    /// Price by metadata selector (`""` = default, `"grade=broadcloth"` overrides).
     /// Reserved for M1's spark standard and M4's `you_sell` line.
     #[serde(default)]
     pub price_sparks: BTreeMap<String, u32>,
@@ -413,7 +413,7 @@ impl ItemCatalog {
     /// The strict gate for seed/content items: the kind must be catalog-known,
     /// then every rule of [`Self::validate_item`].
     pub fn validate_seed_item(&self, item: &Item) -> Result<(), String> {
-        if self.kinds.get(&item.kind).is_none() {
+        if !self.kinds.contains_key(&item.kind) {
             return Err(format!(
                 "item '{}' has unknown kind '{}'",
                 item.id, item.kind
@@ -462,15 +462,13 @@ mod tests {
         assert_eq!(catalog.display_name(&spark), "spark");
         assert_eq!(catalog.display_plural(&spark), "sparks");
 
-        let rye = Item::new(ItemId::from_raw("bd7k2"), "loaf").with_metadata("flour", "rye");
-        assert_eq!(catalog.display_name(&rye), "rye loaf");
-        assert_eq!(catalog.display_plural(&rye), "rye loaves");
-
-        let wheat = Item::new(ItemId::from_raw("bd7k3"), "loaf").with_metadata("flour", "wheat");
-        assert_eq!(catalog.display_name(&wheat), "wheat loaf");
-
-        let plain_loaf = Item::new(ItemId::from_raw("bd7k4"), "loaf");
+        let plain_loaf = Item::new(ItemId::from_raw("bd7k2"), "loaf");
         assert_eq!(catalog.display_name(&plain_loaf), "loaf");
+        assert_eq!(catalog.display_plural(&plain_loaf), "loaves");
+
+        let broadcloth =
+            Item::new(ItemId::from_raw("cl001"), "cloth").with_metadata("grade", "broadcloth");
+        assert_eq!(catalog.display_name(&broadcloth), "broadcloth bolt of cloth");
 
         let eel = Item::new(ItemId::from_raw("fz001"), "smoked_eel");
         assert_eq!(catalog.display_name(&eel), "smoked eel");
@@ -492,8 +490,9 @@ mod tests {
             catalog.price_sparks(&Item::new(ItemId::from_raw("h"), "herring")),
             Some(1)
         );
-        let wheat = Item::new(ItemId::from_raw("w"), "loaf").with_metadata("flour", "wheat");
-        assert_eq!(catalog.price_sparks(&wheat), Some(4));
+        let broadcloth =
+            Item::new(ItemId::from_raw("w"), "cloth").with_metadata("grade", "broadcloth");
+        assert_eq!(catalog.price_sparks(&broadcloth), Some(40));
         assert_eq!(
             catalog.price_sparks(&Item::new(ItemId::from_raw("l"), "loaf")),
             Some(2)
@@ -509,10 +508,10 @@ mod tests {
     #[test]
     fn metadata_validation_rejects_undeclared_keys_and_values() {
         let catalog = catalog();
-        let ok = Item::new(ItemId::from_raw("l"), "loaf").with_metadata("flour", "rye");
+        let ok = Item::new(ItemId::from_raw("l"), "cloth").with_metadata("grade", "kersey");
         assert!(catalog.validate_seed_item(&ok).is_ok());
 
-        let bad_value = Item::new(ItemId::from_raw("l"), "loaf").with_metadata("flour", "barley");
+        let bad_value = Item::new(ItemId::from_raw("l"), "cloth").with_metadata("grade", "linen");
         assert!(catalog.validate_seed_item(&bad_value).is_err());
 
         let bad_key = Item::new(ItemId::from_raw("l"), "loaf").with_metadata("colour", "brown");

@@ -822,10 +822,10 @@ fn the_hunger_condition_computes_and_clears_when_the_actor_eats() {
         "a famished actor's sheet computes the word after the authored condition"
     );
 
-    // Give the actor a rye loaf and eat it — satiety 150 lifts the gauge clear
+    // Give the actor a loaf and eat it — satiety 150 lifts the gauge clear
     // of both thresholds.
     let loaf = ItemId::from_raw("ld001");
-    world.add_item(Item::new(loaf.clone(), "loaf").with_metadata("flour", "rye"));
+    world.add_item(Item::new(loaf.clone(), "loaf"));
     world.characters.get_mut(&id).unwrap().state.holds.push(loaf.clone());
     apply_action(&mut world, &id, "eat", &json!({ "item_id": "ld001" })).unwrap();
 
@@ -863,8 +863,7 @@ fn a_bound_vendor_lists_you_sell_prices_off_the_catalog() {
     // sheet; the herring at one spark pins the singular unit word.
     world.characters.get_mut(&id).unwrap().state.you_sell = vec![
         VendorListing { name: "herring".into(), price_sparks: 1 },
-        VendorListing { name: "rye loaf".into(), price_sparks: 2 },
-        VendorListing { name: "wheat loaf".into(), price_sparks: 4 },
+        VendorListing { name: "loaf".into(), price_sparks: 2 },
     ];
     let after = render_prompt(&world, &id, None, &env).unwrap();
     assert!(
@@ -875,8 +874,7 @@ fn a_bound_vendor_lists_you_sell_prices_off_the_catalog() {
         md_section(&after, "you_sell"),
         Some(vec![
             "herring, 1 spark".to_string(),
-            "rye loaf, 2 sparks".to_string(),
-            "wheat loaf, 4 sparks".to_string(),
+            "loaf, 2 sparks".to_string(),
         ]),
         "prices come off the catalog, singular only at one spark"
     );

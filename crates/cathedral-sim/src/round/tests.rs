@@ -2,13 +2,13 @@
 
 use super::*;
 use crate::{
-    Office, WorldClock,
+    Office, Offer, WorldClock,
     character::{CharacterSheet, Control},
     event::EventType,
     lore::{LoreProfile, PlanningWard},
     sounds::SoundCatalog,
 };
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 const NAV_JSON: &str = include_str!("../../../../assets/world/navigation.json");
 const NAV_BIN: &[u8] = include_bytes!("../../../../assets/world/navigation.bin");
@@ -73,6 +73,9 @@ fn person(id: &str, position: Vec3, occupation: Option<&str>, significance: Sign
         memories: Vec::new(),
         knows: BTreeSet::new(),
         lore,
+        presence: crate::Presence::InCity,
+        presence_epoch: 0,
+        economic_class: crate::EconomicClass::Resident,
     })
 }
 
@@ -80,6 +83,23 @@ fn base_world() -> World {
     let mut world = World::new();
     world.sound_catalog = SoundCatalog::from_toml_str(CATALOG).expect("catalog loads");
     world
+}
+
+fn stock(kind: &str, quantity: u32) -> StockSpec {
+    StockSpec {
+        kind: kind.into(),
+        metadata: BTreeMap::new(),
+        quantity,
+    }
+}
+
+/// Test-only boundary helper. Production code never resets purses mid-round;
+/// this uses the same commitment-aware inventory primitive as road staging and
+/// settlement instead of reaching into item quantities directly.
+fn set_wallet(world: &mut World, actor: &ActorId, amount: u32) {
+    world
+        .settle_wallet_exact(actor, amount, &format!("test_wallet:{actor}:{amount}"))
+        .expect("test purse is uncommitted");
 }
 
 /// One engine-style beat: walk the movers a slice, then run the round.
@@ -119,6 +139,12 @@ fn the_round_content_parses_and_every_destination_resolves() {
     let homes: HomesDoc = serde_json::from_str(HOMES_JSON).expect("homes.json parses");
     let nav = nav();
     let resolver = PlaceResolver::new(&nav);
+    let road_members: BTreeSet<String> = rounds
+        .road_parties
+        .iter()
+        .flat_map(|party| std::iter::once(&party.leader).chain(party.members.iter()))
+        .map(ToString::to_string)
+        .collect();
 
     // `homes.json` is baked by `scripts/bake_homes.py`: every sheet under
     // `lore/characters` is bound to a residential door except the player and
@@ -150,7 +176,7 @@ fn the_round_content_parses_and_every_destination_resolves() {
                 c.iter()
                     .any(|c| bedless_circumstances.contains(&c.as_str().unwrap_or("")))
             });
-            if id == "player" {
+            if id == "player" || road_members.contains(id) {
                 continue;
             }
             if has_bed {
@@ -204,26 +230,29 @@ fn the_round_content_parses_and_every_destination_resolves() {
     assert_eq!(rounds.workplaces.len(), 65, "every occupation has a workplace list");
     assert_eq!(rounds.occupations.len(), 65, "every occupation has an archetype");
 
-    // All twenty dramatis personae `route:` lines are transcribed, joined to the
-    // right 5-char sheet ids — `04_the_round.md` §2(a): "assert that all twenty
-    // resolve — a silent mis-join would give the Praelucent a fuller's day."
+    // The original twenty dramatis personae plus the five M5 supply-chain
+    // residents carry explicit routes, joined to the right 5-char sheet ids.
     let expected_majors: BTreeSet<&str> = [
         "ak3vd", "a9prs", "b4hst", "cj9sp", "dv8ll", "fg2sh", "cf2rr", "fl5cp", "fc9rn",
         "amt4p", "hj6br", "em3rl", "he3nd", "aq7ld", "ax5nf", "gw4ld", "az2sm", "gr8tp",
         "et7rd", "cg6ud",
+        "danqn", "davqn", "e1skl", "e7mil", "p008s",
     ]
     .into_iter()
     .collect();
     let authored: BTreeSet<&str> = rounds.routes.keys().map(String::as_str).collect();
     assert_eq!(
         authored, expected_majors,
-        "exactly the twenty dramatis personae carry authored route overrides"
+        "exactly the authored principals carry route overrides"
     );
 
-    // Every non-keyword destination resolves to a nav place or site.
+    // Every non-keyword destination resolves to a nav place/site or to the
+    // one home-anchored worksite constructed by `Round::seed`.
     let check = |name: &str, whence: &str| {
         if name != "home" && name != "workplace" {
-            assert!(resolver.resolve(name).is_some(), "{whence}: `{name}` does not resolve");
+            let resolves = resolver.resolve(name).is_some()
+                || (name == "Ansel Quern's common oven" && homes.homes.contains_key("danqn"));
+            assert!(resolves, "{whence}: `{name}` does not resolve");
         }
     };
     for (occupation, places) in &rounds.workplaces {
@@ -2048,7 +2077,10 @@ fn the_round_seeds_wallets_and_hunger() {
     // The authored purse stands alone — no second same-stuff stack minted.
     let b = &world.characters[&ActorId::from_raw("wltb")];
     assert_eq!(b.holds(), [purse], "an authored purse is kept, not doubled");
-    assert!(world.items.get(&ItemId::from_raw("w_wltb")).is_none(), "no wallet for a coin-holder");
+    assert!(
+        !world.items.contains_key(&ItemId::from_raw("w_wltb")),
+        "no wallet for a coin-holder"
+    );
 
     // The declared-hungry actor seeds low, and still gets a wallet.
     let c = &world.characters[&ActorId::from_raw("wltc")];
@@ -2169,14 +2201,14 @@ fn famished_diverts_home_only_while_the_hearth_is_serving() {
 // The food stalls (M3): binding, restock, the silent purchase, the ledger.
 // --------------------------------------------------------------------------- //
 
-/// A stall stocked with three rye loaves, a 6-spark vendor float and a 5-spark
+/// A stall stocked with three generic loaves, a 6-spark vendor float and a 5-spark
 /// buyer queued — the fixture the purchase/restock tests share.
 fn bread_stall_world() -> (World, Round, ActorId, ActorId, ItemId) {
     let mut world = base_world();
     let vendor = ActorId::from_raw("baker");
     world.add_character(person("baker", Vec3::ZERO, Some("baker"), Significance::Minor));
     let stock_id = ItemId::from_raw("fs_baker_0_0");
-    world.add_item(Item::stack(stock_id.clone(), "loaf", 3).with_metadata("flour", "rye"));
+    world.add_item(Item::stack(stock_id.clone(), "loaf", 3));
     world.characters.get_mut(&vendor).unwrap().state.holds.push(stock_id.clone());
     let vendor_wallet = ItemId::from_raw("w_baker");
     world.add_item(Item::stack(vendor_wallet.clone(), "spark", 6));
@@ -2194,11 +2226,8 @@ fn bread_stall_world() -> (World, Round, ActorId, ActorId, ItemId) {
         "bread".into(),
         ResolvedTrade {
             occupations: vec!["baker".into()],
-            stock: vec![StockSpec {
-                kind: "loaf".into(),
-                metadata: std::collections::BTreeMap::from([("flour".to_string(), "rye".to_string())]),
-                quantity: 3,
-            }],
+            listings: vec![ItemMatcher::new("loaf")],
+            restock: Vec::new(),
             per_serving: None,
         },
     );
@@ -2210,7 +2239,6 @@ fn bread_stall_world() -> (World, Round, ActorId, ActorId, ItemId) {
         vendor: Some(vendor.clone()),
         queue: vec![buyer.clone()],
         serving: None,
-        stock_ids: vec![stock_id.clone()],
         preferred: None,
         open: OpenSpec { offices: vec![Office::HighWick], weekdays: None },
         cry_next: 0.0,
@@ -2224,20 +2252,20 @@ fn bread_stall_world() -> (World, Round, ActorId, ActorId, ItemId) {
 #[test]
 fn a_purchase_is_an_atomic_swap_that_conserves_the_board() {
     let (mut world, mut round, vendor, buyer, stock_id) = bread_stall_world();
-    let before = wallet_sparks(&world, &buyer) + wallet_sparks(&world, &vendor);
+    let before = world.wallet_sparks(&buyer) + world.wallet_sparks(&vendor);
 
-    let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("the buyer affords a rye loaf");
-    assert_eq!(sale.price, 2, "the rye loaf is list price");
-    assert_eq!(sale.item_display, "rye loaf");
+    let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("the buyer affords a loaf");
+    assert_eq!(sale.price, 2, "the loaf is list price");
+    assert_eq!(sale.item_display, "loaf");
     assert_eq!(sale.stock_left, 2, "one of three loaves left the board — no phantom unit");
 
     assert_eq!(
-        wallet_sparks(&world, &buyer) + wallet_sparks(&world, &vendor),
+        world.wallet_sparks(&buyer) + world.wallet_sparks(&vendor),
         before,
         "a purchase mints and burns nothing"
     );
-    assert_eq!(wallet_sparks(&world, &buyer), 3, "the buyer paid 2");
-    assert_eq!(wallet_sparks(&world, &vendor), 8, "the vendor took 2");
+    assert_eq!(world.wallet_sparks(&buyer), 3, "the buyer paid 2");
+    assert_eq!(world.wallet_sparks(&vendor), 8, "the vendor took 2");
     let loaves: u32 = world.characters[&buyer]
         .holds()
         .iter()
@@ -2259,7 +2287,7 @@ fn a_broke_buyer_is_a_no_sale() {
     set_wallet(&mut world, &buyer, 1);
     assert!(try_purchase(&mut round, &mut world, 0, &buyer).is_none(), "a spark cannot buy a 2-spark loaf");
     assert_eq!(world.items.get(&stock_id).map(|item| item.quantity), Some(3), "the board is untouched");
-    assert_eq!(wallet_sparks(&world, &buyer), 1, "the buyer keeps their coin");
+    assert_eq!(world.wallet_sparks(&buyer), 1, "the buyer keeps their coin");
 }
 
 /// The famished buyer takes the cheapest edible they can afford: a lone spark
@@ -2271,14 +2299,14 @@ fn a_purchase_takes_the_cheapest_affordable() {
     let herring = ItemId::from_raw("fs_baker_0_1");
     world.add_item(Item::stack(herring.clone(), "herring", 4));
     world.characters.get_mut(&vendor).unwrap().state.holds.push(herring.clone());
-    round.stalls[0].stock_ids.push(herring.clone());
+    round.food_trades.get_mut("bread").unwrap().listings.push(ItemMatcher::new("herring"));
     set_wallet(&mut world, &buyer, 1);
 
     let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("a spark buys a herring");
     assert_eq!(sale.item_display, "herring");
     assert_eq!(sale.price, 1);
     assert_eq!(world.items.get(&herring).map(|item| item.quantity), Some(3), "a herring left the board");
-    assert_eq!(wallet_sparks(&world, &buyer), 0, "the buyer spent their last spark");
+    assert_eq!(world.wallet_sparks(&buyer), 0, "the buyer spent their last spark");
 }
 
 /// The pot never depletes: it conjures a fresh bowl per sale, and the stall's
@@ -2289,10 +2317,14 @@ fn the_pot_conjures_a_bowl_per_serving() {
     // Turn the stall into a pot: a per-serving stew, no stock stacks.
     round.food_trades.insert(
         "pot".into(),
-        ResolvedTrade { occupations: vec!["cook".into()], stock: Vec::new(), per_serving: Some("stew".into()) },
+        ResolvedTrade {
+            occupations: vec!["cook".into()],
+            listings: vec![ItemMatcher::new("stew")],
+            restock: Vec::new(),
+            per_serving: Some("stew".into()),
+        },
     );
     round.stalls[0].trade = "pot".into();
-    round.stalls[0].stock_ids.clear();
     // strip the leftover loaf stack so only the pot remains
     let stock = ItemId::from_raw("fs_baker_0_0");
     world.items.remove(&stock);
@@ -2311,61 +2343,44 @@ fn the_pot_conjures_a_bowl_per_serving() {
     assert_eq!(bowls, 1, "the buyer holds one bowl");
 }
 
-/// A famished vendor never eats their own board — the stock stays whole and only
-/// leaves by sale. Without the skip, a hungry baker's rung-3 eat-what-you-hold
-/// would silently consume a loaf nobody bought (found in the M3 bring-up).
+/// A famished vendor prefers personal food, but may eat a live listed unit when
+/// it is their only available meal. M5 removed the parallel "board stock" list:
+/// commercial stock is ordinary, provenance-carrying inventory.
 #[test]
-fn a_vendor_never_eats_their_own_board() {
+fn a_vendor_prefers_personal_food_to_live_listed_stock() {
     let (world, mut round, vendor, _buyer, _stock) = bread_stall_world();
-    // The board is the only edible the vendor holds.
+    // The listed loaf is still real food when it is the only edible held.
     let held = held_edible(&round, &world, &world.characters[&vendor]);
-    assert!(held.is_none(), "the board is for selling, not eating: {held:?}");
-    // But a personal loaf (not stock) is fair game.
+    assert_eq!(held, Some(ItemId::from_raw("fs_baker_0_0")));
+    // A personal, unlisted meal sorts ahead of commercially listed inventory.
     let mut world = world;
     let personal = ItemId::from_raw("mine1");
-    world.add_item(Item::new(personal.clone(), "loaf").with_metadata("flour", "rye"));
+    world.add_item(Item::new(personal.clone(), "herring"));
     world.characters.get_mut(&vendor).unwrap().state.holds.push(personal.clone());
-    // Not a stock id, so the famished vendor would eat it.
     round.stalls[0].vendor = Some(vendor.clone());
     assert_eq!(held_edible(&round, &world, &world.characters[&vendor]), Some(personal));
 }
 
-/// The Kindling restock conjures the template onto the vendor; the Watch ledger
-/// refills buyers to seed, floats vendors, and sweeps the board — the one beat
-/// that is allowed to change the world's spark total.
+/// Legacy restock replaces only quantities carrying that restock provenance.
+/// Persistent supply-chain stock (the loaf here) survives Kindling, and a
+/// repeated restock does not accumulate its own herring share.
 #[test]
-fn the_restock_and_watch_ledger_close_the_books() {
-    let nav = nav();
-    let clock = clock_on(Office::Kindling, 2); // day 2 is a Highmarket
-    let mut world = base_world();
-    // A baker at the Wickmarket binds the bread stall; a passer-by is a buyer.
-    let wickmarket = nav.node_point(nav.place("The Wickmarket").expect("baked").node);
-    world.add_character(person("bakr1", wickmarket, Some("baker"), Significance::Minor));
-    world.add_character(person("pass1", wickmarket + Vec3::new(6.0, 0.0, 0.0), Some("mason"), Significance::Minor));
-    world.nav = Some(std::sync::Arc::new(nav.clone()));
-    let mut round = Round::new();
-    round.seed(&mut world, &nav, 0.0, &clock);
+fn legacy_restock_preserves_persistent_stock_and_does_not_accumulate() {
+    let (mut world, mut round, vendor, _buyer, loaf) = bread_stall_world();
+    let trade = round.food_trades.get_mut("bread").unwrap();
+    trade.listings.push(ItemMatcher::new("herring"));
+    trade.restock.push(StockSpec {
+        kind: "herring".into(),
+        metadata: BTreeMap::new(),
+        quantity: 2,
+    });
 
-    // The bread stall is staffed and stocked from the seed's restock.
-    let baker = ActorId::from_raw("bakr1");
-    let bread = round.stalls().iter().find(|s| s.name.contains("bread")).expect("the bread stall exists");
-    assert_eq!(bread.vendor.as_ref(), Some(&baker), "the baker keeps the bread stall");
-    let stock: u32 = bread.stock_ids.iter().filter_map(|id| world.items.get(id)).map(|i| i.quantity).sum();
-    assert_eq!(stock, 15, "12 rye + 3 wheat conjured onto the baker");
-    assert!(world.characters[&baker].holds().iter().any(|id| id.as_str() == "fs_bakr1_2_0"), "the baker holds their own bread");
-
-    // Hand the passer-by all the coin, then close the books: they refill to seed,
-    // the vendor floats, and the board is swept.
-    let mason = ActorId::from_raw("pass1");
-    set_wallet(&mut world, &mason, 40);
-    let seed_wallet = wallet_sparks(&world, &mason);
-    round.close_books(&mut world);
-    assert_ne!(wallet_sparks(&world, &mason), 40, "the ledger reset the buyer's purse");
-    assert!(wallet_sparks(&world, &mason) < 8, "buyer refilled to the 2-7 seed band, not to 40");
-    let _ = seed_wallet;
-    assert_eq!(wallet_sparks(&world, &baker), 6, "the vendor floated to 6");
-    let swept: u32 = round.stalls().iter().flat_map(|s| s.stock_ids.iter()).filter_map(|id| world.items.get(id)).map(|i| i.quantity).sum();
-    assert_eq!(swept, 0, "the board is swept at the Watch");
+    round.restock(&mut world, 2);
+    assert_eq!(world.items[&loaf].quantity, 3, "persistent loaves survive legacy restock");
+    assert_eq!(world.held_quantity(&vendor, &ItemMatcher::new("herring")), 2);
+    round.restock(&mut world, 3);
+    assert_eq!(world.items[&loaf].quantity, 3);
+    assert_eq!(world.held_quantity(&vendor, &ItemMatcher::new("herring")), 2);
     world.assert_invariants();
 }
 
@@ -2378,8 +2393,6 @@ fn the_restock_and_watch_ledger_close_the_books() {
 /// is still cleared in the same pass.
 #[test]
 fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
-    use std::collections::BTreeMap;
-
     let mut world = base_world();
     // Three fish traders: V nearest the low-index stall, Z its former keeper a
     // little farther, U the keeper of the high-index stall.
@@ -2392,10 +2405,11 @@ fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
         "fish".into(),
         ResolvedTrade {
             occupations: vec!["fish_trader".into()],
-            stock: vec![
-                StockSpec { kind: "herring".into(), metadata: BTreeMap::new(), quantity: 10 },
-                StockSpec { kind: "smoked_eel".into(), metadata: BTreeMap::new(), quantity: 4 },
+            listings: vec![
+                ItemMatcher::new("herring"),
+                ItemMatcher::new("smoked_eel"),
             ],
+            restock: Vec::new(),
             per_serving: None,
         },
     );
@@ -2435,7 +2449,6 @@ fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
         vendor: Some(ActorId::from_raw(vendor)),
         queue: Vec::new(),
         serving: None,
-        stock_ids: Vec::new(),
         preferred: None,
         open: OpenSpec { offices: vec![Office::HighWick], weekdays },
         cry_next: 0.0,
@@ -2477,7 +2490,7 @@ fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
 }
 
 /// End to end on the real graph: a famished passer-by at the Wickmarket seeks the
-/// bread stall, joins its queue, buys a loaf and eats it — the whole rung-3 → walk
+/// provisions stall, joins its queue, buys a herring and eats it — the whole rung-3 → walk
 /// → queue → silent purchase → eat chain, with the self-percept both parties can
 /// be asked about.
 #[test]
@@ -2486,60 +2499,60 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
     let clock = clock_on(Office::HighWick, 2); // Highmarket noon, the market's peak
     let mut world = base_world();
     let wickmarket = nav.node_point(nav.place("The Wickmarket").expect("baked").node);
-    world.add_character(person("bakr2", wickmarket, Some("baker"), Significance::Minor));
+    world.add_character(person("prov2", wickmarket, Some("food_provisioner"), Significance::Minor));
     world.add_character(person("hgry1", wickmarket + Vec3::new(8.0, 0.0, 4.0), Some("mason"), Significance::Minor));
     world.nav = Some(std::sync::Arc::new(nav.clone()));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
 
-    let baker = ActorId::from_raw("bakr2");
+    let vendor = ActorId::from_raw("prov2");
     let hungry = ActorId::from_raw("hgry1");
     assert!(
-        round.stalls().iter().any(|s| s.name.contains("bread") && s.vendor.as_ref() == Some(&baker)),
-        "the baker keeps the bread stall on a Highmarket noon"
+        round.stalls().iter().any(|s| s.name.contains("provisions") && s.vendor.as_ref() == Some(&vendor)),
+        "the provisioner keeps the provisions stall on a Highmarket noon"
     );
     // Keep the baker fed (so they simply stand their post), and starve the buyer.
-    world.characters.get_mut(&baker).unwrap().state.needs.hunger = 200.0;
+    world.characters.get_mut(&vendor).unwrap().state.needs.hunger = 200.0;
     world.characters.get_mut(&hungry).unwrap().state.needs.hunger = 8.0; // famished
-    set_wallet(&mut world, &hungry, 4); // enough for a 2-spark loaf
+    set_wallet(&mut world, &hungry, 4);
     let hunger_before = world.characters[&hungry].needs().hunger;
 
     let (_now, _nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.0, 600, |world| {
         world.characters[&hungry]
             .recent_history()
             .iter()
-            .any(|line| line.starts_with("You bought a rye loaf"))
+            .any(|line| line.starts_with("You bought a herring"))
     });
     assert!(
-        world.characters[&hungry].recent_history().iter().any(|line| line.starts_with("You bought a rye loaf from")),
+        world.characters[&hungry].recent_history().iter().any(|line| line.starts_with("You bought a herring from")),
         "the buyer remembers the purchase they can be asked about: {:?}",
         world.characters[&hungry].recent_history()
     );
     assert!(
-        world.characters[&baker].recent_history().iter().any(|line| line == "You sold a rye loaf for 2 sparks."),
+        world.characters[&vendor].recent_history().iter().any(|line| line == "You sold a herring for 1 spark."),
         "the vendor remembers the sale: {:?}",
-        world.characters[&baker].recent_history()
+        world.characters[&vendor].recent_history()
     );
     // Eating follows at the pitch: give it a few more beats and the gauge climbs.
     let (_now, _n) = beats_until(&mut round, &mut world, &nav, &clock, _now, 60, |world| {
-        world.characters[&hungry].needs().hunger > hunger_before + 100.0
+        world.characters[&hungry].needs().hunger > hunger_before + 50.0
     });
     assert!(
-        world.characters[&hungry].needs().hunger > hunger_before + 100.0,
-        "the loaf's satiety lifted the buyer out of famine"
+        world.characters[&hungry].needs().hunger > hunger_before + 50.0,
+        "the herring's satiety lifted the buyer out of famine"
     );
     // The eat is silent: the eater remembers their own meal (askable), but no
-    // bystander `ate a rye loaf` line floods the nearby vendor's inbox — the
+    // bystander `ate a herring` line floods the nearby vendor's inbox — the
     // market's zero-token discipline (`05` §4).
     assert!(
-        world.characters[&hungry].recent_history().iter().any(|line| line == "You ate a rye loaf."),
+        world.characters[&hungry].recent_history().iter().any(|line| line == "You ate a herring."),
         "the eater remembers their own meal: {:?}",
         world.characters[&hungry].recent_history()
     );
     assert!(
-        !world.characters[&baker].inbox().iter().any(|line| line.contains("ate a rye loaf")),
+        !world.characters[&vendor].inbox().iter().any(|line| line.contains("ate a herring")),
         "no bystander eat line reaches the vendor's inbox: {:?}",
-        world.characters[&baker].inbox()
+        world.characters[&vendor].inbox()
     );
     // The sale clinked a coin — a player-only world sound, never attributed to an
     // actor, so it nudges no NPC (`04` §5).
@@ -2548,14 +2561,14 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
     assert!(clink.is_some(), "the purchase emits a coin_clink");
     assert!(clink.unwrap().actor_id.is_none(), "the clink is an unattributed world sound");
 
-    // npc_bodies M2: the purchase also emits the presentation-only `stall_sale`
+    // The purchase also emits the presentation-only generic `sale`
     // world event — vendor → buyer, the bought item, one unit — so the host can
     // play the hand-over between their bodies.
     let sale = events
         .iter()
-        .find(|event| event.event_type == crate::event::EventType::WorldEvent && event.kind == "stall_sale")
-        .expect("the purchase emits a stall_sale world event");
-    assert_eq!(sale.actor_id.as_ref(), Some(&baker), "the vendor performs the hand-over");
+        .find(|event| event.event_type == crate::event::EventType::WorldEvent && event.kind == "sale")
+        .expect("the purchase emits a sale world event");
+    assert_eq!(sale.actor_id.as_ref(), Some(&vendor), "the vendor performs the hand-over");
     assert_eq!(sale.target_id.as_ref(), Some(&hungry), "the buyer receives it");
     assert!(sale.item_id.is_some(), "the sold item rides the event");
     assert_eq!(sale.quantity, 1, "one unit per sale");
@@ -2564,8 +2577,8 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
     // and no such site exists for this kind), no witnesses, and no percept
     // beyond the two self-percepts asserted above — every inbox in the world
     // stays free of the sale.
-    assert!(sale.recipient_ids.is_empty(), "stall_sale reaches no mind's inbox");
-    assert!(sale.witness_ids.is_empty(), "stall_sale has no witnesses");
+    assert!(sale.recipient_ids.is_empty(), "sale reaches no mind's inbox");
+    assert!(sale.witness_ids.is_empty(), "sale has no witnesses");
     for (id, character) in &world.characters {
         assert!(
             character.inbox().iter().all(|line| !line.contains("bought") && !line.contains("sold")),
@@ -2573,7 +2586,7 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
             character.inbox()
         );
         assert!(
-            character.recent_history().iter().all(|line| !line.contains("stall_sale")),
+            character.recent_history().iter().all(|line| !line.contains("sale")),
             "{id} perceived the raw event kind: {:?}",
             character.recent_history()
         );
@@ -2582,7 +2595,7 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
 }
 
 /// A vendor's `you_sell` price list is written the instant the round binds them
-/// to a stall — off the catalog's stock template, not the current stock
+/// to a stall — off the catalog's authored listings, not the current stock
 /// (`05_the_llm_seam.md` §3) — and swept the instant they are unbound, so the
 /// section only ever appears on a currently-bound vendor.
 #[test]
@@ -2603,11 +2616,8 @@ fn binding_a_vendor_writes_you_sell_and_unbinding_clears_it() {
     );
     assert_eq!(
         world.characters[&baker].state.you_sell,
-        vec![
-            VendorListing { name: "rye loaf".into(), price_sparks: 2 },
-            VendorListing { name: "wheat loaf".into(), price_sparks: 4 },
-        ],
-        "binding writes the catalog-priced list, keyed off the stock template"
+        vec![VendorListing { name: "loaf".into(), price_sparks: 2 }],
+        "binding writes the catalog-priced generic-loaf listing"
     );
 
     // Strip the baker from the enrolled cast and rebind: nobody is left to keep
@@ -2624,72 +2634,93 @@ fn binding_a_vendor_writes_you_sell_and_unbinding_clears_it() {
     );
 }
 
-/// A stall stack an LLM had offered and nobody accepted, swept by the Watch
-/// ledger, must not leave a dangling offer for `assert_invariants` to panic on —
-/// the crash the review caught ("one stock, two doors"). The offer is pruned with
-/// the same cleanup `eat` does, and the target is told it lapsed.
+/// Kindling no longer sweeps persistent supply-chain inventory. An offer over a
+/// persistent loaf therefore remains valid through the legacy restock pass.
 #[test]
-fn a_swept_offered_stock_stack_prunes_its_offer() {
+fn persistent_offered_stock_survives_legacy_restock() {
     let (mut world, mut round, vendor, buyer, stock_id) = bread_stall_world();
-    // The vendor offers their whole board stack to the buyer 2 m away.
-    apply_action(&mut world, &vendor, "offer_item", &json!({"item_id": stock_id.as_str(), "target": buyer.as_str()})).unwrap();
+    apply_action(
+        &mut world,
+        &vendor,
+        "offer_item",
+        &json!({"item_id": stock_id.as_str(), "quantity": 1, "target": buyer.as_str()}),
+    )
+    .unwrap();
     assert!(world.offers.contains_key(&stock_id), "the offer is live");
-    // The Watch closes the books — the stock is swept out from under the offer.
-    round.close_books(&mut world); // asserts invariants internally; must not panic
-    assert!(!world.offers.contains_key(&stock_id), "the swept stack's offer was pruned");
-    assert!(
-        world.characters[&buyer].inbox().iter().any(|line| line.contains("withdrew the offered rye loaf")),
-        "the offer's target learns it lapsed: {:?}",
-        world.characters[&buyer].inbox()
-    );
+    round.restock(&mut world, 2);
+    assert!(world.offers.contains_key(&stock_id));
+    assert_eq!(world.items[&stock_id].quantity, 3);
     world.assert_invariants();
 }
 
-/// The ladder buying the **last** unit of an offered stock stack prunes the
-/// offer as the stack leaves the world.
+/// A listed unit committed to a live offer is unavailable to a mechanical sale.
+/// Retracting releases it, after which the same sale succeeds.
 #[test]
-fn buying_the_last_offered_unit_prunes_its_offer() {
+fn buying_cannot_spend_an_offered_stock_unit() {
     let (mut world, mut round, vendor, buyer, stock_id) = bread_stall_world();
-    set_wallet(&mut world, &vendor, 6);
     // One loaf left, and it is on offer to a bystander.
     world.items.get_mut(&stock_id).unwrap().quantity = 1;
-    apply_action(&mut world, &vendor, "offer_item", &json!({"item_id": stock_id.as_str(), "target": buyer.as_str()})).unwrap();
-    // The queued buyer reaches the head and buys it.
+    apply_action(
+        &mut world,
+        &vendor,
+        "offer_item",
+        &json!({"item_id": stock_id.as_str(), "quantity": 1, "target": buyer.as_str()}),
+    )
+    .unwrap();
+    assert!(try_purchase(&mut round, &mut world, 0, &buyer).is_none());
+    assert!(world.items.contains_key(&stock_id));
+    apply_action(&mut world, &vendor, "retract_offer", &json!({"item_id": stock_id.as_str()})).unwrap();
     let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("the last loaf sells");
     assert_eq!(sale.stock_left, 0);
-    assert!(!world.items.contains_key(&stock_id), "the depleted stack is gone");
-    assert!(!world.offers.contains_key(&stock_id), "and so is its offer");
+    assert!(world.characters[&buyer].holds().contains(&stock_id), "the whole stack id moved to the buyer");
+    assert!(!world.characters[&vendor].holds().contains(&stock_id));
     world.assert_invariants();
 }
 
-/// A queued buyer whose offered coin stack is emptied by their own purchase
-/// prunes that offer.
+/// Offered sparks are committed too: a market sale may not spend them until the
+/// offer is retracted.
 #[test]
-fn spending_an_offered_coin_stack_prunes_its_offer() {
+fn spending_cannot_use_an_offered_coin_stack() {
     let (mut world, mut round, vendor, buyer, _stock) = bread_stall_world();
     // The buyer holds exactly the price and has it out on offer to the vendor.
     set_wallet(&mut world, &buyer, 2);
     let coin = ItemId::from_raw("w_buyer");
-    apply_action(&mut world, &buyer, "offer_item", &json!({"item_id": coin.as_str(), "target": vendor.as_str()})).unwrap();
+    apply_action(
+        &mut world,
+        &buyer,
+        "offer_item",
+        &json!({"item_id": coin.as_str(), "quantity": 2, "target": vendor.as_str()}),
+    )
+    .unwrap();
     assert!(world.offers.contains_key(&coin), "the coin offer is live");
-    // Buying the 2-spark loaf empties the purse.
+    assert!(try_purchase(&mut round, &mut world, 0, &buyer).is_none());
+    assert_eq!(world.items[&coin].quantity, 2);
+    apply_action(&mut world, &buyer, "retract_offer", &json!({"item_id": coin.as_str()})).unwrap();
     try_purchase(&mut round, &mut world, 0, &buyer).expect("the loaf is affordable");
     assert!(!world.items.contains_key(&coin), "the emptied purse is gone");
-    assert!(!world.offers.contains_key(&coin), "and its offer was pruned");
     world.assert_invariants();
 }
 
-/// The nightly wallet reset dropping an offered spark stack prunes the offer.
+/// Exact-boundary wallet settlement refuses to reset a committed purse. Once
+/// the offer is explicitly retracted, the same settlement succeeds.
 #[test]
-fn a_wallet_reset_prunes_an_offered_spark_stack() {
+fn wallet_settlement_refuses_an_offered_spark_stack() {
     let (mut world, _round, vendor, buyer, _stock) = bread_stall_world();
     let coin = ItemId::from_raw("w_buyer");
-    apply_action(&mut world, &buyer, "offer_item", &json!({"item_id": coin.as_str(), "target": vendor.as_str()})).unwrap();
+    apply_action(
+        &mut world,
+        &buyer,
+        "offer_item",
+        &json!({"item_id": coin.as_str(), "quantity": 5, "target": vendor.as_str()}),
+    )
+    .unwrap();
     assert!(world.offers.contains_key(&coin));
-    // A reset to zero drops the stack — the offer must go with it.
-    set_wallet(&mut world, &buyer, 0);
+    let error = world.settle_wallet_exact(&buyer, 0, "test_committed_wallet").unwrap_err();
+    assert_eq!(error.code, crate::InventoryErrorCode::ItemCommitted);
+    assert_eq!(world.items[&coin].quantity, 5);
+    apply_action(&mut world, &buyer, "retract_offer", &json!({"item_id": coin.as_str()})).unwrap();
+    world.settle_wallet_exact(&buyer, 0, "test_clear_wallet").unwrap();
     assert!(!world.items.contains_key(&coin), "the wallet is gone");
-    assert!(!world.offers.contains_key(&coin), "its offer was pruned");
     world.assert_invariants();
 }
 
@@ -2730,4 +2761,552 @@ fn the_memory_hunger_hook_is_first_person_only() {
     assert!(!memory_declares_hunger("the winter everyone went hungry"), "third-person lore does not seed famine");
     assert!(!memory_declares_hunger("hungrycrake was the fisher's nickname"), "an embedded substring is not the word");
     assert!(!memory_declares_hunger("I am weary after the long road"), "no hunger, no match");
+}
+
+// --------------------------------------------------------------------------- //
+// M5 road-boundary and settlement controller fixtures.
+// --------------------------------------------------------------------------- //
+
+fn road_party_world() -> World {
+    let mut world = base_world();
+    for (id, occupation, significance) in [
+        ("rbrde", "merchant", Significance::Minor),
+        ("cbred", "cargo_worker", Significance::Ambient),
+        ("dbred", "cargo_worker", Significance::Ambient),
+        ("rlant", "merchant", Significance::Minor),
+        ("clant", "cargo_worker", Significance::Ambient),
+    ] {
+        world.add_character(person(id, Vec3::ZERO, Some(occupation), significance));
+    }
+    world
+}
+
+#[test]
+fn exact_office_bootstrap_stages_and_enters_only_the_scheduled_party_once() {
+    let nav = nav();
+    let cases = [
+        (0, None),
+        (1, Some(("lantern_stone_gate", 2usize))),
+        (2, Some(("brede_wool_gate", 3usize))),
+        (3, Some(("brede_wool_gate", 3usize))),
+        (4, Some(("lantern_stone_gate", 2usize))),
+        (5, None),
+        (6, None),
+    ];
+    for (day, expected) in cases {
+        let mut world = road_party_world();
+        let mut round = Round::new();
+        round.seed(&mut world, &nav, 0.0, &clock_on(Office::Dayspring, day));
+
+        let visible: Vec<(PartyId, usize, u64)> = round
+            .road_parties
+            .values()
+            .filter(|party| party.state.phase == PartyPhase::InCity)
+            .map(|party| {
+                (
+                    party.id.clone(),
+                    party.members.len(),
+                    party.state.trip_number,
+                )
+            })
+            .collect();
+        match expected {
+            Some((party_id, members)) => {
+                assert_eq!(visible.len(), 1, "day {day}");
+                assert_eq!(visible[0].0.as_str(), party_id);
+                assert_eq!(visible[0].1, members);
+                assert_eq!(visible[0].2, 1);
+                assert!(round.road_parties[&visible[0].0]
+                    .members
+                    .iter()
+                    .all(|member| world.is_present(member)));
+                assert_eq!(round.road_carts(&world).len(), 1);
+                let revision = world.world_revision;
+                let visible_party = visible[0].0.clone();
+                round.trigger_road_entry(&mut world, &visible_party, day);
+                assert_eq!(world.world_revision, revision, "bootstrap cannot enter twice");
+                assert_eq!(round.party_state(&visible_party).unwrap().trip_number, 1);
+            }
+            None => {
+                assert!(visible.is_empty(), "day {day} has no scheduled arrival");
+                assert!(round.road_carts(&world).is_empty());
+            }
+        }
+        world.assert_invariants();
+    }
+
+    let mut world = road_party_world();
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_on(Office::Kindling, 2));
+    let party = PartyId::from_raw("brede_wool_gate");
+    assert_eq!(round.party_state(&party).unwrap().phase, PartyPhase::StagedOutsideGate);
+    assert_eq!(round.party_state(&party).unwrap().trip_number, 1);
+    assert!(round.road_parties[&party].members.iter().all(|member| !world.is_present(member)));
+    assert!(round.road_carts(&world).is_empty());
+    let revision = world.world_revision;
+    round.trigger_road_stage(&mut world, &party, 2);
+    assert_eq!(world.world_revision, revision, "exact-Kindling bootstrap stages once");
+    assert_eq!(round.party_state(&party).unwrap().trip_number, 1);
+}
+
+#[test]
+fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member() {
+    let nav = nav();
+    let clock = clock_on(Office::Dayspring, 2);
+    let mut world = road_party_world();
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let party_id = PartyId::from_raw("brede_wool_gate");
+    let leader = ActorId::from_raw("rbrde");
+    let carter = ActorId::from_raw("cbred");
+    let gate = round.road_parties[&party_id].gate_point;
+
+    // Cargo remains represented on the same one derived cart after moving
+    // from the leader to a carter; the cart is no second inventory container.
+    let wool = world.characters[&leader]
+        .holds()
+        .iter()
+        .find(|id| world.items[*id].kind.as_str() == "wool")
+        .cloned()
+        .expect("Brede manifest carries wool");
+    let wool_quantity = world.items[&wool].quantity;
+    let load_before = round.road_carts(&world)[0].load.clone();
+    world
+        .transfer_item_quantity(&leader, &carter, &wool, wool_quantity, "road:test:carter-wool")
+        .unwrap();
+    assert_eq!(round.road_carts(&world)[0].load, load_before);
+    assert!(world.characters[&carter].holds().contains(&wool));
+    let personal = world.add_stock(&carter, &stock("generic", 1), "road:test:personal").unwrap();
+
+    // Move the leader's whole purse away. The old id remains owned by a city
+    // actor, forcing the next boundary credit to probe a fresh deterministic id.
+    let city = ActorId::from_raw("city1");
+    world.add_character(person("city1", gate, None, Significance::Minor));
+    let old_purse = world.characters[&leader]
+        .holds()
+        .iter()
+        .find(|id| world.items[*id].kind.as_str() == "spark")
+        .cloned()
+        .unwrap();
+    let leader_cash = world.items[&old_purse].quantity;
+    world
+        .transfer_item_quantity(&leader, &city, &old_purse, leader_cash, "road:test:whole-purse")
+        .unwrap();
+
+    // Competing city state cannot own a returning member. Queue and errand
+    // records, route intent, gesture, and a pending offer all disappear.
+    round.sources[0].queue.push(carter.clone());
+    round.stalls[0].queue.push(carter.clone());
+    round.market_errands.insert(
+        leader.clone(),
+        MarketErrand {
+            plan_id: "brede_broadcloth".into(),
+            selected: None,
+            bindings_seen: Vec::new(),
+            phase: MarketErrandPhase::WaitingForOpen,
+            spent_sparks: 0,
+            last_failed_fingerprint: None,
+            travel_deadline_real: None,
+        },
+    );
+    world.characters.get_mut(&leader).unwrap().state.intent = Some(TravelIntent {
+        target: IntentTarget::Place {
+            place_id: PlaceId::from_raw("somewhere"),
+            name: "somewhere".into(),
+            point: Vec3::new(100.0, WALK_Y, 100.0),
+        },
+        budget_seconds: 100.0,
+        deadline: Some(100.0),
+    });
+    world.characters.get_mut(&leader).unwrap().state.needs.hunger = 0.0;
+    world.characters.get_mut(&city).unwrap().state.position_m = world.characters[&carter].position_m();
+    apply_action(
+        &mut world,
+        &carter,
+        "offer_item",
+        &json!({"item_id": personal.as_str(), "target": city.as_str()}),
+    )
+    .unwrap();
+    world.characters.get_mut(&carter).unwrap().state.inbox.push("Unread at the gate".into());
+    world.characters.get_mut(&carter).unwrap().state.recent_history.push("A durable road line".into());
+
+    let revision = world.world_revision;
+    round.begin_road_return(&mut world, &party_id, 2);
+    assert_eq!(
+        world.world_revision,
+        revision + 1,
+        "begin-return is one atomic public transition"
+    );
+    assert_eq!(round.party_state(&party_id).unwrap().phase, PartyPhase::Returning);
+    assert!(round.sources.iter().all(|source| !source.queue.contains(&carter)));
+    assert!(round.stalls.iter().all(|stall| !stall.queue.contains(&carter)));
+    assert!(!round.market_errands.contains_key(&leader));
+    assert_eq!(
+        round.closed_market_visits["brede_broadcloth"].end_reason,
+        MarketVisitEnd::Returning
+    );
+    for member in &round.road_parties[&party_id].members {
+        assert!(world.characters[member].state.leaving_city);
+        assert!(world.characters[member].state.intent.is_none());
+        assert!(world.characters[member].state.movement.is_none());
+    }
+
+    for member in round.road_parties[&party_id].members.clone() {
+        world.characters.get_mut(&member).unwrap().state.position_m = gate;
+    }
+    let time = clock.at(0.0);
+    let revision = world.world_revision;
+    round.tick_road_parties(&mut world, &nav, time, &BTreeSet::new());
+    assert_eq!(
+        world.world_revision,
+        revision + 1,
+        "offer expiry and departure-pending publish as one transition"
+    );
+    assert_eq!(round.party_state(&party_id).unwrap().phase, PartyPhase::DeparturePending);
+    assert!(!world.offers.contains_key(&personal));
+    let revision = world.world_revision;
+    round.tick_road_parties(&mut world, &nav, time, &BTreeSet::new());
+    assert_eq!(
+        world.world_revision,
+        revision + 1,
+        "departure is one atomic public transition"
+    );
+    assert_eq!(round.party_state(&party_id).unwrap().phase, PartyPhase::BeyondTheWalls);
+    assert!(round.road_carts(&world).is_empty());
+    assert!(world.characters[&carter].state.inbox.is_empty());
+    assert_eq!(world.characters[&carter].recent_history(), ["A durable road line"]);
+
+    round.road_parties.get_mut(&party_id).unwrap().last_trigger_day = None;
+    let revision = world.world_revision;
+    round.trigger_road_stage(&mut world, &party_id, 3);
+    assert_eq!(
+        world.world_revision,
+        revision + 1,
+        "the next boundary exchange is one atomic public transition"
+    );
+    assert_eq!(round.party_state(&party_id).unwrap().phase, PartyPhase::StagedOutsideGate);
+    assert_eq!(round.party_state(&party_id).unwrap().trip_number, 2);
+    assert!(!world.items.contains_key(&wool), "the carter's commercial wool unloaded");
+    assert!(world.characters[&carter].holds().contains(&personal), "personal cargo survives");
+    assert!(world.characters[&city].holds().contains(&old_purse));
+    assert_eq!(world.wallet_sparks(&leader), 25);
+    let new_purse = world.characters[&leader]
+        .holds()
+        .iter()
+        .find(|id| world.items[*id].kind.as_str() == "spark")
+        .unwrap();
+    assert_ne!(new_purse, &old_purse, "cash-in probes past the transferred purse id");
+    assert_eq!(world.wallet_sparks(&carter), 4);
+    world.assert_invariants();
+}
+
+#[test]
+fn boundary_failure_and_missed_trip_leave_the_trip_and_manifest_unchanged() {
+    let nav = nav();
+    let mut world = road_party_world();
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_on(Office::Kindling, 2));
+    let party_id = PartyId::from_raw("brede_wool_gate");
+    let leader = ActorId::from_raw("rbrde");
+
+    // A party that is still staged at its next trigger logs a miss and receives
+    // neither a duplicate manifest nor a fresh trip number.
+    let quantities_before: BTreeMap<ItemId, u32> = world
+        .characters[&leader]
+        .holds()
+        .iter()
+        .map(|id| (id.clone(), world.items[id].quantity))
+        .collect();
+    let revision = world.world_revision;
+    round.road_parties.get_mut(&party_id).unwrap().last_trigger_day = None;
+    round.trigger_road_stage(&mut world, &party_id, 3);
+    assert_eq!(round.party_state(&party_id).unwrap().trip_number, 1);
+    assert_eq!(world.world_revision, revision);
+    assert_eq!(
+        world.characters[&leader]
+            .holds()
+            .iter()
+            .map(|id| (id.clone(), world.items[id].quantity))
+            .collect::<BTreeMap<_, _>>(),
+        quantities_before
+    );
+    assert!(round.drain_food_log().iter().any(|line| line.contains("road_trip_missed")));
+
+    // Put the controller back beyond the wall and commit the leader's purse.
+    // Boundary preflight must roll back the earlier cargo-unload stage too.
+    round.road_parties.get_mut(&party_id).unwrap().state.phase = PartyPhase::BeyondTheWalls;
+    round.road_parties.get_mut(&party_id).unwrap().last_trigger_day = None;
+    let purse = world.characters[&leader]
+        .holds()
+        .iter()
+        .find(|id| world.items[*id].kind.as_str() == "spark")
+        .cloned()
+        .unwrap();
+    world.offers.insert(
+        purse.clone(),
+        Offer {
+            item_id: purse.clone(),
+            giver_id: leader.clone(),
+            target_id: None,
+            created_seq: 99,
+            quantity: 1,
+        },
+    );
+    let revision = world.world_revision;
+    let trip = round.party_state(&party_id).unwrap().trip_number;
+    round.trigger_road_stage(&mut world, &party_id, 3);
+    assert_eq!(round.party_state(&party_id).unwrap().phase, PartyPhase::BeyondTheWalls);
+    assert_eq!(round.party_state(&party_id).unwrap().trip_number, trip);
+    assert_eq!(world.world_revision, revision);
+    assert_eq!(
+        world.characters[&leader]
+            .holds()
+            .iter()
+            .map(|id| (id.clone(), world.items[id].quantity))
+            .collect::<BTreeMap<_, _>>(),
+        quantities_before
+    );
+    assert!(world.offers.contains_key(&purse));
+    assert!(round.drain_food_log().iter().any(|line| line.contains("boundary_exchange_failed")));
+}
+
+#[test]
+fn household_settlement_redistributes_before_minting_only_the_residual() {
+    let mut world = base_world();
+    for id in ["a0000", "b0000", "c0000"] {
+        world.add_character(person(id, Vec3::ZERO, None, Significance::Minor));
+    }
+    let donor = ActorId::from_raw("a0000");
+    let first = ActorId::from_raw("b0000");
+    let second = ActorId::from_raw("c0000");
+    world.credit_sparks(&donor, 10, "settlement:donor").unwrap();
+    world.credit_sparks(&second, 2, "settlement:second").unwrap();
+    let cargo = world.add_stock(&donor, &stock("grain", 3), "settlement:cargo").unwrap();
+    let mut round = Round::new();
+    round.household_reserves.insert(donor.clone(), 6);
+    round.household_reserves.insert(first.clone(), 0);
+    round.household_reserves.insert(second.clone(), 2);
+
+    let receipt = round.settle_households(&mut world, 12).unwrap();
+    assert_eq!(receipt.transfers.len(), 1);
+    assert_eq!(receipt.transfers[0].donor, donor);
+    assert_eq!(receipt.transfers[0].recipient, first);
+    assert_eq!(receipt.transfers[0].sparks, 4);
+    assert_eq!(receipt.institutional_payroll_sparks, 2);
+    assert_eq!(world.spendable_sparks(&ActorId::from_raw("a0000")), 6);
+    assert_eq!(world.spendable_sparks(&ActorId::from_raw("b0000")), 4);
+    assert_eq!(world.spendable_sparks(&ActorId::from_raw("c0000")), 4);
+    assert_eq!(world.items[&cargo].quantity, 3, "settlement never touches stock");
+    world.assert_invariants();
+}
+
+#[test]
+fn the_watch_dispatcher_reports_a_skipped_day_then_recovers_without_a_false_positive() {
+    let mut world = base_world();
+    world.add_character(person("a0000", Vec3::ZERO, None, Significance::Minor));
+    let resident = ActorId::from_raw("a0000");
+    world.credit_sparks(&resident, 5, "settlement:positive").unwrap();
+    let mut round = Round::new();
+
+    // Day 3 was sampled but its handler was skipped: the next Watch must say
+    // so even though no resident has a zero wallet.
+    round.last_household_watch_day = Some(3);
+    round.last_household_settlement_day = Some(2);
+    round.dispatch_household_settlement(&mut world, 4);
+    assert_eq!(round.last_household_watch_day(), Some(4));
+    assert_eq!(round.last_household_settlement_day(), Some(4));
+    let trace = round.drain_food_log();
+    assert!(trace.iter().any(|line| line.contains("household_settlement_missed: sampled day 3")));
+    assert!(trace.iter().any(|line| line.starts_with("household_settlement: day 4")));
+
+    // A completed day is paired with its sample, so the following Watch has no
+    // false missed-settlement report.
+    round.dispatch_household_settlement(&mut world, 5);
+    let trace = round.drain_food_log();
+    assert!(trace.iter().all(|line| !line.starts_with("household_settlement_missed")));
+    assert_eq!(round.last_household_settlement_day(), Some(5));
+}
+
+#[test]
+fn a_failed_watch_handler_is_left_incomplete_and_reported_next_watch() {
+    let mut world = base_world();
+    world.add_character(person("a0000", Vec3::ZERO, None, Significance::Minor));
+    let resident = ActorId::from_raw("a0000");
+    let purse = world
+        .add_stock(&resident, &stock("spark", u32::MAX), "settlement:full-purse")
+        .unwrap();
+    world.offers.insert(
+        purse.clone(),
+        Offer {
+            item_id: purse.clone(),
+            giver_id: resident.clone(),
+            target_id: None,
+            created_seq: 1,
+            quantity: u32::MAX - 1,
+        },
+    );
+    assert_eq!(world.spendable_sparks(&resident), 1);
+    let mut round = Round::new();
+    round.dispatch_household_settlement(&mut world, 7);
+
+    assert_eq!(round.last_household_watch_day(), Some(7));
+    assert_eq!(round.last_household_settlement_day(), None);
+    assert!(round
+        .drain_food_log()
+        .iter()
+        .any(|line| line.starts_with("household_settlement_failed: day 7")));
+
+    // Releasing the commitment makes the next handler valid. The dispatcher
+    // first reports the incomplete day, then records this successful one.
+    world.offers.remove(&purse);
+    round.dispatch_household_settlement(&mut world, 8);
+    let trace = round.drain_food_log();
+    assert!(trace.iter().any(|line| line.contains("household_settlement_missed: sampled day 7")));
+    assert!(trace.iter().any(|line| line.starts_with("household_settlement: day 8")));
+    assert_eq!(round.last_household_settlement_day(), Some(8));
+    world.assert_invariants();
+}
+
+fn active_production_fixture(work_minutes: u32) -> (World, Round, ActorId, WorldClock) {
+    let producer = ActorId::from_raw("m0001");
+    let mill = Vec3::new(12.0, WALK_Y, 9.0);
+    let home = Vec3::new(-5.0, WALK_Y, -3.0);
+    let mut world = base_world();
+    world.add_character(person(
+        producer.as_str(),
+        mill,
+        Some("miller"),
+        Significance::Minor,
+    ));
+    let grain = world
+        .add_stock(&producer, &stock("grain", 1), "production_fixture:grain")
+        .unwrap();
+    world
+        .start_transform_job(TransformJob {
+            job_id: "m0001:mill_flour:1:0".into(),
+            spec_id: "mill_flour".into(),
+            producer: producer.clone(),
+            production_day: 1,
+            start_slot: 0,
+            inputs: vec![ReservedInput {
+                item_id: grain,
+                quantity: 1,
+            }],
+            outputs: vec![stock("flour", 1)],
+            progress_work_minutes: 0.0,
+        })
+        .unwrap();
+
+    let mut round = Round::new();
+    round.people.insert(
+        producer.clone(),
+        Townsperson {
+            home: Some(home),
+            base: home,
+            legs: vec![
+                RoundLeg {
+                    from: Office::Waning,
+                    at: mill,
+                    label: "Test Mill".into(),
+                    doing: Arrival::Work,
+                    only_on: None,
+                    is_home: false,
+                },
+                RoundLeg {
+                    from: Office::Lamplight,
+                    at: home,
+                    label: "home".into(),
+                    doing: Arrival::Sleep,
+                    only_on: None,
+                    is_home: true,
+                },
+            ],
+            leash_m: DEFAULT_ROUND_LEASH_M,
+            curfew_exempt: false,
+            source: None,
+            is_household: false,
+            food: None,
+            phase: Phase::Idle,
+            travel_target: None,
+            travel_for_intent: false,
+            next_decision: 0.0,
+            epoch: 0,
+            excused: false,
+        },
+    );
+    round.production_plans.push(ResolvedProductionPlan {
+        producer: producer.clone(),
+        max_jobs_per_day: 2,
+        transforms: vec![ResolvedTransformSpec {
+            id: "mill_flour".into(),
+            site: "Test Mill".into(),
+            point: mill,
+            consumes: vec![stock("grain", 1)],
+            produces: vec![stock("flour", 1)],
+            allowed_offices: vec![Office::Waning],
+            work_minutes,
+            desired_output_quantity: 4,
+        }],
+    });
+    // One real second per game minute makes the expected spans legible.
+    let clock = WorldClock::new(1_440.0, Office::Waning, 1, 0.05);
+    round.production_last_game_days = clock.game_days(0.0);
+    round.production_was_eligible.insert(producer.clone(), true);
+    (world, round, producer, clock)
+}
+
+#[test]
+fn coarse_production_jump_credits_only_the_open_authored_work_span() {
+    let (mut world, mut round, producer, clock) = active_production_fixture(240);
+
+    // 15:00 in the Waning to 02:00 next day crosses four offices. Only the
+    // authored 15:00–18:00 Work leg is eligible: exactly 180 game minutes.
+    round.tick_production(&mut world, &clock, 11.0 * 60.0, &BTreeSet::new());
+
+    assert_eq!(clock.at(11.0 * 60.0).office, Office::Watch);
+    let progress = world
+        .active_transform_job(&producer)
+        .unwrap()
+        .progress_work_minutes;
+    assert!((progress - 180.0).abs() < 1e-6, "credited {progress} minutes");
+}
+
+#[test]
+fn conversation_pauses_production_without_retroactive_credit() {
+    let (mut world, mut round, producer, clock) = active_production_fixture(240);
+
+    // The first half-hour ended in conversation, so it earns nothing. Ending
+    // the conversation establishes a fresh eligible endpoint but cannot earn
+    // the preceding half-hour. Only the third interval is credited.
+    round.tick_production(&mut world, &clock, 30.0, &warm(&producer));
+    round.tick_production(&mut world, &clock, 60.0, &BTreeSet::new());
+    round.tick_production(&mut world, &clock, 90.0, &BTreeSet::new());
+
+    let progress = world
+        .active_transform_job(&producer)
+        .unwrap()
+        .progress_work_minutes;
+    assert!((progress - 30.0).abs() < 1e-6, "credited {progress} minutes");
+}
+
+#[test]
+fn production_target_counts_every_output_with_the_same_stacking_key() {
+    let (mut world, mut round, producer, clock) = active_production_fixture(45);
+    world.transform_jobs.clear();
+    let transform = &mut round.production_plans[0].transforms[0];
+    transform.produces = vec![stock("flour", 1), stock("flour", 1)];
+    transform.desired_output_quantity = 1;
+
+    round.tick_production(&mut world, &clock, 0.0, &BTreeSet::new());
+    assert!(
+        world.active_transform_job(&producer).is_none(),
+        "a two-unit batch cannot start against a one-unit target"
+    );
+
+    round.production_plans[0].transforms[0].desired_output_quantity = 2;
+    round.tick_production(&mut world, &clock, 0.0, &BTreeSet::new());
+    let job = world
+        .active_transform_job(&producer)
+        .expect("the same batch starts when the full output fits");
+    assert_eq!(job.outputs.iter().map(|output| output.quantity).sum::<u32>(), 2);
 }

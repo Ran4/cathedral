@@ -28,10 +28,11 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    EAT_SECONDS, FOOD_QUEUE_SHORT, HEARING_RADIUS_M, HEARTH_REFILL_PER_GAME_SECOND,
+    EAT_SECONDS, FOOD_QUEUE_SHORT, GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS,
+    HEARING_RADIUS_M, HEARTH_REFILL_PER_GAME_SECOND,
     HUNGER_DECAY_PER_GAME_SECOND, HUNGER_FAMISHED, HUNGER_HUNGRY, HUNGER_MAX,
     HUNGER_SEED_DECLARED_HUNGRY, HUNGER_SEED_FLOOR, LADDER_DECISION_MAX_SECONDS,
     LADDER_DECISION_MIN_SECONDS, PERSON_ARRIVE_RADIUS_M, PLACE_ARRIVE_RADIUS_M, PURCHASE_SECONDS,
@@ -39,11 +40,14 @@ use crate::{
     THIRST_MAX, THIRST_PARCHED, THIRST_THIRSTY, WALK_SPEED_MPS, WALLET_SEED_MIN, WALLET_SEED_SALT,
     WALLET_SEED_SPREAD, WATER_DRAW_SECONDS, WELL_ARRIVE_RADIUS_M,
     WELL_KEEPER_SOUND_INTERVAL_SECONDS, WELL_QUEUE_SHORT,
-    character::{Character, IntentTarget, Movement, VendorListing},
+    character::{Character, EconomicClass, IntentTarget, Movement, VendorListing},
     clock::{Office, WorldClock, Weekday},
     event::DomainEvent,
     homes::{HOMES_JSON, HomesDoc},
-    ids::{ActorId, ItemId, PlaceId},
+    ids::{ActorId, ItemId, PartyId, PlaceId},
+    inventory::{
+        ItemMatcher, MarketRequestLine, ReservedInput, SaleReceipt, StockSpec, TransformJob,
+    },
     item::Item,
     lore::Significance,
     math::Vec3,
@@ -127,8 +131,7 @@ const SOURCES: &[(&str, &str)] = &[
 /// data, compiled in, not read at runtime: the sim keeps its no-IO decree.
 const ROUNDS_JSON: &str = include_str!("../../../assets/world/rounds.json");
 
-/// The food-stall content (food & items M3, `04_the_bread_round.md`): the seven
-/// pitches, their trades, the Kindling restock templates and the vendor float.
+/// The food-stall and supply-chain content embedded from `food.json`.
 /// Embedded like [`ROUNDS_JSON`].
 const FOOD_JSON: &str = include_str!("../../../assets/world/food.json");
 
@@ -189,6 +192,8 @@ struct RoundsDoc {
     /// cast) simply stays dark.
     #[serde(default)]
     lamp_keepers: HashMap<String, Vec<String>>,
+    #[serde(default)]
+    road_parties: Vec<RoadPartySpec>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -208,7 +213,7 @@ struct RouteSpec {
     legs: Vec<LegSpec>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct LegSpec {
     from: Office,
     at: String,
@@ -217,17 +222,135 @@ struct LegSpec {
     only_on: Option<Vec<Weekday>>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RoadPartySpec {
+    id: PartyId,
+    leader: ActorId,
+    members: Vec<ActorId>,
+    gate: String,
+    only_on: Vec<Weekday>,
+    stage_at: Office,
+    enter_at: Office,
+    return_at: Office,
+    wallet_float_sparks: BTreeMap<ActorId, u32>,
+    commercial_cargo: Vec<ItemMatcher>,
+    manifest: Vec<StockSpec>,
+    legs: Vec<LegSpec>,
+}
+
 // --------------------------------------------------------------------------- //
 // The food-stall content, straight off `food.json`
 // --------------------------------------------------------------------------- //
 #[derive(Debug, Deserialize)]
 struct FoodDoc {
-    /// The float a vendor's wallet resets to each morning — change for a market
-    /// day ([`04_the_bread_round.md`] §3).
-    vendor_float_sparks: u32,
-    /// Trade → its eligible occupations and the morning stock template.
+    /// Trade → eligible occupations, live listings, and any explicitly
+    /// unchained legacy restock template.
     trades: HashMap<String, TradeSpec>,
     stalls: Vec<StallSpec>,
+    #[serde(default)]
+    counters: Vec<CounterSpec>,
+    #[serde(default)]
+    counter_groups: Vec<CounterGroupSpec>,
+    #[serde(default)]
+    stock_plans: Vec<StockPlanSpec>,
+    #[serde(default)]
+    production_plans: Vec<ProductionPlanSpec>,
+    #[serde(default)]
+    working_capital: BTreeMap<ActorId, u32>,
+    #[serde(default)]
+    historical_stock: Vec<HistoricalStockSpec>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CounterSpec {
+    id: String,
+    trade: String,
+    site: String,
+    #[serde(default)]
+    anchor_actor: Option<ActorId>,
+    #[serde(default)]
+    pitch_offset: [f64; 2],
+    preferred_actor: ActorId,
+    offices: Vec<Office>,
+    required_doing: Arrival,
+    #[serde(default)]
+    road_party: Option<PartyId>,
+    #[serde(default)]
+    worksite_only: bool,
+    site_radius_m: f64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CounterGroupSpec {
+    id: String,
+    counters: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum StockSource {
+    Counter(String),
+    CounterGroup(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StockPlanSpec {
+    id: String,
+    buyer: ActorId,
+    source: StockSource,
+    targets: Vec<StockTargetSpec>,
+    max_spend_sparks: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StockTargetSpec {
+    kind: crate::item::ItemKind,
+    #[serde(default)]
+    metadata: BTreeMap<String, String>,
+    desired_quantity: u32,
+}
+
+impl StockTargetSpec {
+    fn matcher(&self) -> ItemMatcher {
+        ItemMatcher { kind: self.kind.clone(), metadata: self.metadata.clone() }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProductionPlanSpec {
+    producer: ActorId,
+    max_jobs_per_day: u32,
+    transforms: Vec<TransformSpecDoc>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TransformSpecDoc {
+    id: String,
+    site: String,
+    #[serde(default)]
+    anchor_actor: Option<ActorId>,
+    consumes: Vec<StockSpec>,
+    produces: Vec<StockSpec>,
+    allowed_offices: Vec<Office>,
+    work_minutes: u32,
+    desired_output_quantity: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HistoricalStockSpec {
+    owner: ActorId,
+    kind: crate::item::ItemKind,
+    #[serde(default)]
+    metadata: BTreeMap<String, String>,
+    quantity: u32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -237,19 +360,13 @@ struct TradeSpec {
     /// The template conjured onto the vendor each Kindling — empty for the pot,
     /// whose bowl is conjured per serving instead.
     #[serde(default)]
-    stock: Vec<StockSpec>,
+    listings: Vec<ItemMatcher>,
+    #[serde(default)]
+    restock: Vec<StockSpec>,
     /// The kind conjured fresh at every sale (the never-scraped pot's `stew`),
     /// in place of a depleting stock stack.
     #[serde(default)]
-    conjure_per_serving: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-struct StockSpec {
-    kind: String,
-    #[serde(default)]
-    metadata: BTreeMap<String, String>,
-    quantity: u32,
+    conjure_per_serving: Option<crate::item::ItemKind>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -388,9 +505,6 @@ pub struct FoodStall {
     pub queue: Vec<ActorId>,
     /// The buyer at the head and the real-clock time their purchase resolves.
     serving: Option<(ActorId, f64)>,
-    /// The stock ids conjured onto the vendor this morning, so leftover stock is
-    /// removed cleanly at the next restock and the nightly ledger.
-    stock_ids: Vec<ItemId>,
     /// The authored keeper bound ahead of nearest-by-base, if in the cast (`04`
     /// §2). `None` for the market stalls, which have no authored keeper.
     preferred: Option<ActorId>,
@@ -400,13 +514,209 @@ pub struct FoodStall {
     cry_next: f64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CartLoadKind {
+    GrainSacks,
+    WoolBales,
+    ClothBolts,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RoadCart {
+    pub party_id: PartyId,
+    pub leader_id: ActorId,
+    pub load: Vec<CartLoadKind>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PartyPhase {
+    BeyondTheWalls,
+    StagedOutsideGate,
+    InCity,
+    Returning,
+    DeparturePending,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PartyState {
+    pub phase: PartyPhase,
+    pub trip_number: u64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct RoadParty {
+    id: PartyId,
+    leader: ActorId,
+    members: Vec<ActorId>,
+    gate: String,
+    gate_point: Vec3,
+    only_on: Vec<Weekday>,
+    stage_at: Office,
+    enter_at: Office,
+    return_at: Office,
+    wallet_floats: BTreeMap<ActorId, u32>,
+    commercial_cargo: Vec<ItemMatcher>,
+    manifest: Vec<StockSpec>,
+    legs: Vec<RoundLeg>,
+    state: PartyState,
+    last_trigger_day: Option<i64>,
+}
+
+fn road_cart_is_visible(party: &RoadParty, world: &World) -> bool {
+    matches!(
+        party.state.phase,
+        PartyPhase::InCity | PartyPhase::Returning | PartyPhase::DeparturePending
+    ) && party.members.iter().all(|member| world.is_present(member))
+}
+
+fn road_cart_load(party: &RoadParty, world: &World) -> Vec<CartLoadKind> {
+    let mut load = BTreeSet::new();
+    for member in &party.members {
+        let Some(actor) = world.characters.get(member) else {
+            continue;
+        };
+        for id in actor.holds() {
+            let Some(item) = world.items.get(id) else {
+                continue;
+            };
+            if !party
+                .commercial_cargo
+                .iter()
+                .any(|matcher| matcher.matches(item))
+            {
+                continue;
+            }
+            match item.kind.as_str() {
+                "grain" => {
+                    load.insert(CartLoadKind::GrainSacks);
+                }
+                "wool" => {
+                    load.insert(CartLoadKind::WoolBales);
+                }
+                "cloth" => {
+                    load.insert(CartLoadKind::ClothBolts);
+                }
+                _ => {}
+            }
+        }
+    }
+    load.into_iter().collect()
+}
+
+fn road_transition_trace(event: &str, party: &RoadParty, world: &World, day: i64) -> String {
+    let members = party
+        .members
+        .iter()
+        .map(|member| {
+            let actor = &world.characters[member];
+            format!(
+                "{member}:{:?}@{}",
+                actor.state.presence, actor.state.presence_epoch
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    let cart = road_cart_is_visible(party, world).then(|| road_cart_load(party, world));
+    format!(
+        "{event}: party {}, day {day}, phase {:?}, trip {}, gate {}, members [{members}], cart {cart:?}",
+        party.id, party.state.phase, party.state.trip_number, party.gate
+    )
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Counter {
+    id: String,
+    trade: String,
+    site: String,
+    pitch: Vec3,
+    seller: ActorId,
+    offices: Vec<Office>,
+    required_doing: Arrival,
+    road_party: Option<PartyId>,
+    worksite_only: bool,
+    radius_m: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CounterSession {
+    Daily { absolute_day: i64 },
+    RoadTrip { party_id: PartyId, trip_number: u64 },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CounterBindingKey {
+    pub counter_id: String,
+    pub seller: ActorId,
+    pub session: CounterSession,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MarketErrandPhase {
+    Approaching,
+    WaitingForOpen,
+    AtCounter,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MarketVisitEnd {
+    TargetsSatisfied,
+    BudgetExhausted,
+    SourceIneligible,
+    LastOfficePassed,
+    NoRoute,
+    TravelExpired,
+    ReplacedByGoTo,
+    Returning,
+    UnpricedStock,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MarketErrand {
+    pub plan_id: String,
+    pub selected: Option<CounterBindingKey>,
+    pub bindings_seen: Vec<CounterBindingKey>,
+    pub phase: MarketErrandPhase,
+    pub spent_sparks: u32,
+    pub last_failed_fingerprint: Option<String>,
+    pub travel_deadline_real: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ClosedMarketVisit {
+    pub plan_id: String,
+    pub bindings_seen: Vec<CounterBindingKey>,
+    pub end_reason: MarketVisitEnd,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct ResolvedProductionPlan {
+    producer: ActorId,
+    max_jobs_per_day: u32,
+    transforms: Vec<ResolvedTransformSpec>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct ResolvedTransformSpec {
+    id: String,
+    site: String,
+    point: Vec3,
+    consumes: Vec<StockSpec>,
+    produces: Vec<StockSpec>,
+    allowed_offices: Vec<Office>,
+    work_minutes: u32,
+    desired_output_quantity: u32,
+}
+
 /// A trade resolved from `food.json` for the stalls to share: who may keep it,
 /// its morning stock, and the pot's per-serving conjure.
 #[derive(Debug, Clone, PartialEq)]
 struct ResolvedTrade {
     occupations: Vec<String>,
-    stock: Vec<StockSpec>,
-    per_serving: Option<String>,
+    listings: Vec<ItemMatcher>,
+    restock: Vec<StockSpec>,
+    per_serving: Option<crate::item::ItemKind>,
 }
 
 /// A buyer's errand at a food stall (M3), parallel to the water `source`/`Phase`
@@ -564,6 +874,28 @@ pub struct Census {
     pub by_place: BTreeMap<String, usize>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HouseholdTransfer {
+    pub donor: ActorId,
+    pub recipient: ActorId,
+    pub sparks: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HouseholdRelief {
+    pub actor: ActorId,
+    pub before_spendable: u32,
+    pub after_spendable: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HouseholdSettlementReceipt {
+    pub day: i64,
+    pub transfers: Vec<HouseholdTransfer>,
+    pub relief: Vec<HouseholdRelief>,
+    pub institutional_payroll_sparks: u32,
+}
+
 impl Census {
     /// A one-line summary for the headless tracer.
     pub fn summary(&self) -> String {
@@ -604,19 +936,12 @@ pub struct Round {
     stalls: Vec<FoodStall>,
     /// The trades the stalls share, resolved from `food.json` once at seed.
     food_trades: BTreeMap<String, ResolvedTrade>,
-    /// The float a vendor's wallet resets to each morning.
-    vendor_float: u32,
-    /// Each enrolled townsperson's seeded wallet level in sparks, so the nightly
-    /// Watch ledger can refill a buyer to exactly what they started with — Ilse's
-    /// authored single spark included, which a recompute would overwrite with the
-    /// 2–7 spread (`02_the_spark_standard.md` §4).
-    seed_wallets: BTreeMap<ActorId, u32>,
-    /// A bounded log of the morning's restock, sales and the nightly ledger,
+    /// A bounded log of restock, sales, production, road traffic, and settlement,
     /// drained by the host for `--trace-food`. The game host never reads it, so
     /// it is capped ([`FOOD_LOG_CAP`]) and never grows without bound.
     food_log: Vec<String>,
-    /// Real `now` at the last office-crossing check, so the Kindling restock and
-    /// the Watch ledger each fire exactly once per crossing, no matter the debug
+    /// Real `now` at the last office-crossing check, so Kindling restock and
+    /// Watch settlement each fire exactly once per crossing, no matter the debug
     /// time-scale (`WorldClock::offices_crossed`).
     last_office_now: f64,
     people: BTreeMap<ActorId, Townsperson>,
@@ -643,6 +968,38 @@ pub struct Round {
     /// among the lamps in each square"; Tobin Vell's own sheet carries the
     /// ritual). Keyed square name → global lamp index.
     belwyn: BTreeMap<String, usize>,
+    /// Spendable working reserve protected from household redistribution.
+    household_reserves: BTreeMap<ActorId, u32>,
+    last_household_watch_day: Option<i64>,
+    last_household_settlement_day: Option<i64>,
+    unrelieved_zero_streak: BTreeMap<ActorId, u32>,
+    institutional_payroll_sparks: u64,
+    household_redistributed_sparks: u64,
+    road_cash_in_sparks: u64,
+    road_cash_out_sparks: u64,
+    road_parties: BTreeMap<PartyId, RoadParty>,
+    /// Last derived *presentation* loads seen by the tracer. This cache has no
+    /// simulation authority: carts are still rebuilt from party inventories on
+    /// every snapshot; it exists solely to emit before/after `cart_load` lines.
+    observed_cart_loads: BTreeMap<PartyId, Vec<CartLoadKind>>,
+    departed_this_tick: Vec<ActorId>,
+    /// Named non-geometry worksites anchored to authored doors.
+    worksites: BTreeMap<String, Vec3>,
+    counters: BTreeMap<String, Counter>,
+    counter_groups: BTreeMap<String, Vec<String>>,
+    stock_plans: Vec<StockPlanSpec>,
+    market_errands: BTreeMap<ActorId, MarketErrand>,
+    closed_market_visits: BTreeMap<String, ClosedMarketVisit>,
+    production_plans: Vec<ResolvedProductionPlan>,
+    production_starts: BTreeMap<(ActorId, i64), u32>,
+    production_last_game_days: f64,
+    /// Physical eligibility sampled on the preceding pump for each active
+    /// producer. Progress is credited only when both ends of an interval show
+    /// the actor continuously available at the worksite; the office and
+    /// authored Work-leg overlap inside that interval is integrated exactly.
+    /// Keeping those two predicates separate lets a coarse pump just after
+    /// closing retain the work completed before the bell.
+    production_was_eligible: BTreeMap<ActorId, bool>,
 }
 
 impl Round {
@@ -686,6 +1043,508 @@ impl Round {
         self.lamp_revision
     }
 
+    pub fn last_household_watch_day(&self) -> Option<i64> {
+        self.last_household_watch_day
+    }
+
+    pub fn last_household_settlement_day(&self) -> Option<i64> {
+        self.last_household_settlement_day
+    }
+
+    pub fn unrelieved_zero_streak(&self, actor: &ActorId) -> u32 {
+        self.unrelieved_zero_streak.get(actor).copied().unwrap_or(0)
+    }
+
+    pub fn party_state(&self, id: &PartyId) -> Option<&PartyState> {
+        self.road_parties.get(id).map(|party| &party.state)
+    }
+
+    pub fn road_carts(&self, world: &World) -> Vec<RoadCart> {
+        self.road_parties
+            .values()
+            .filter(|party| road_cart_is_visible(party, world))
+            .map(|party| {
+                RoadCart {
+                    party_id: party.id.clone(),
+                    leader_id: party.leader.clone(),
+                    load: road_cart_load(party, world),
+                }
+            })
+            .collect()
+    }
+
+    fn trace_cart_load_changes(&mut self, world: &World) {
+        let current = self
+            .road_carts(world)
+            .into_iter()
+            .map(|cart| (cart.party_id, cart.load))
+            .collect::<BTreeMap<_, _>>();
+        let ids = self
+            .observed_cart_loads
+            .keys()
+            .chain(current.keys())
+            .cloned()
+            .collect::<BTreeSet<_>>();
+        for id in ids {
+            let before = self
+                .observed_cart_loads
+                .get(&id)
+                .cloned()
+                .unwrap_or_default();
+            let after = current.get(&id).cloned().unwrap_or_default();
+            if before != after || self.observed_cart_loads.contains_key(&id) != current.contains_key(&id) {
+                self.push_food_log(format!(
+                    "cart_load: party {id}, before {before:?}, after {after:?}"
+                ));
+            }
+        }
+        self.observed_cart_loads = current;
+    }
+
+    pub fn drain_departed(&mut self) -> Vec<ActorId> {
+        std::mem::take(&mut self.departed_this_tick)
+    }
+
+    fn is_road_member(&self, actor: &ActorId) -> bool {
+        self.road_parties
+            .values()
+            .any(|party| party.members.contains(actor))
+    }
+
+    fn seed_road_parties(
+        &mut self,
+        world: &mut World,
+        resolver: &PlaceResolver<'_>,
+        specs: Vec<RoadPartySpec>,
+        time: crate::clock::WorldTime,
+        diagnostics: &mut Vec<String>,
+    ) {
+        let mut claimed = BTreeSet::new();
+        for spec in specs {
+            if self.road_parties.contains_key(&spec.id) {
+                diagnostics.push(format!("[smart actors] duplicate road party {}; skipped", spec.id));
+                continue;
+            }
+            let member_set: BTreeSet<ActorId> = spec.members.iter().cloned().collect();
+            if !spec.members.contains(&spec.leader)
+                || spec.members.is_empty()
+                || member_set.len() != spec.members.len()
+                || spec.members.iter().any(|member| claimed.contains(member))
+            {
+                diagnostics.push(format!(
+                    "[smart actors] road party {} has invalid or duplicate membership; skipped",
+                    spec.id
+                ));
+                continue;
+            }
+            if spec.only_on.is_empty()
+                || spec.only_on.iter().collect::<BTreeSet<_>>().len() != spec.only_on.len()
+                || !(spec.stage_at < spec.enter_at && spec.enter_at < spec.return_at)
+                || spec.commercial_cargo.is_empty()
+                || spec.manifest.is_empty()
+                || spec.legs.is_empty()
+            {
+                diagnostics.push(format!(
+                    "[smart actors] road party {} has an invalid schedule or cargo declaration; skipped",
+                    spec.id
+                ));
+                continue;
+            }
+            if spec.wallet_float_sparks.len() != spec.members.len()
+                || spec.members.iter().any(|member| !spec.wallet_float_sparks.contains_key(member))
+            {
+                diagnostics.push(format!(
+                    "[smart actors] road party {} wallet floats do not exactly match its members; skipped",
+                    spec.id
+                ));
+                continue;
+            }
+            let Some(gate_point) = resolver.resolve(&spec.gate) else {
+                diagnostics.push(format!(
+                    "[smart actors] road party {} gate {:?} is missing; skipped",
+                    spec.id, spec.gate
+                ));
+                continue;
+            };
+            if spec.members.iter().any(|member| !world.characters.contains_key(member)) {
+                diagnostics.push(format!(
+                    "[smart actors] road party {} names a missing character; skipped",
+                    spec.id
+                ));
+                continue;
+            }
+            let invalid_cargo = spec.commercial_cargo.iter().any(|matcher| {
+                let probe = matcher.to_item(ItemId::from_raw("road_matcher_probe"), 1);
+                world.item_catalog.validate_seed_item(&probe).is_err()
+            }) || spec.manifest.iter().any(|stock| {
+                let probe = stock
+                    .matcher()
+                    .to_item(ItemId::from_raw("road_manifest_probe"), stock.quantity);
+                world.item_catalog.validate_seed_item(&probe).is_err()
+            });
+            if invalid_cargo {
+                diagnostics.push(format!(
+                    "[smart actors] road party {} has invalid catalog cargo; skipped",
+                    spec.id
+                ));
+                continue;
+            }
+            let mut legs = Vec::new();
+            let mut unresolved = false;
+            for leg in spec.legs {
+                let Some(at) = resolver.resolve(&leg.at) else {
+                    diagnostics.push(format!(
+                        "[smart actors] road party {} leg site {:?} is missing; skipped",
+                        spec.id, leg.at
+                    ));
+                    unresolved = true;
+                    break;
+                };
+                legs.push(RoundLeg {
+                    from: leg.from,
+                    at,
+                    label: leg.at,
+                    doing: leg.doing,
+                    only_on: leg.only_on,
+                    is_home: false,
+                });
+            }
+            if unresolved {
+                continue;
+            }
+            claimed.extend(spec.members.iter().cloned());
+            for member in &spec.members {
+                let actor = world.characters.get_mut(member).expect("validated road member");
+                actor.state.presence = crate::Presence::BeyondTheWalls;
+                actor.state.economic_class = EconomicClass::RoadParty;
+                actor.state.leaving_city = false;
+                actor.state.movement = None;
+                actor.state.daily_round = legs.iter().map(leg_line).collect();
+            }
+            let id = spec.id.clone();
+            self.road_parties.insert(
+                id.clone(),
+                RoadParty {
+                    id,
+                    leader: spec.leader,
+                    members: spec.members,
+                    gate: spec.gate,
+                    gate_point,
+                    only_on: spec.only_on,
+                    stage_at: spec.stage_at,
+                    enter_at: spec.enter_at,
+                    return_at: spec.return_at,
+                    wallet_floats: spec.wallet_float_sparks,
+                    commercial_cargo: spec.commercial_cargo,
+                    manifest: spec.manifest,
+                    legs,
+                    state: PartyState {
+                        phase: PartyPhase::BeyondTheWalls,
+                        trip_number: 0,
+                    },
+                    last_trigger_day: None,
+                },
+            );
+        }
+
+        let ids: Vec<PartyId> = self.road_parties.keys().cloned().collect();
+        for id in ids {
+            let scheduled = self.road_parties[&id].only_on.contains(&time.weekday);
+            if !scheduled {
+                continue;
+            }
+            if time.office == self.road_parties[&id].stage_at
+                || time.office == self.road_parties[&id].enter_at
+            {
+                self.trigger_road_stage(world, &id, time.day);
+            }
+            if time.office == self.road_parties[&id].enter_at {
+                self.trigger_road_entry(world, &id, time.day);
+            }
+        }
+        diagnostics.push(format!(
+            "[smart actors] round: {} fixed road parties",
+            self.road_parties.len()
+        ));
+    }
+
+    fn trigger_road_stage(&mut self, world: &mut World, id: &PartyId, day: i64) {
+        let mut party = self.road_parties.remove(id).expect("party id came from map");
+        if party.last_trigger_day == Some(day) {
+            self.road_parties.insert(id.clone(), party);
+            return;
+        }
+        party.last_trigger_day = Some(day);
+        if party.state.phase != PartyPhase::BeyondTheWalls {
+            self.push_food_log(road_transition_trace(
+                "road_trip_missed",
+                &party,
+                world,
+                day,
+            ));
+            self.road_parties.insert(id.clone(), party);
+            return;
+        }
+        match boundary_exchange(&mut party, world) {
+            Ok(receipt) => {
+                for line in receipt.lines {
+                    self.push_food_log(line);
+                }
+                self.road_cash_in_sparks = self
+                    .road_cash_in_sparks
+                    .checked_add(receipt.cash_in_sparks)
+                    .expect("road cash-in accounting overflow");
+                self.road_cash_out_sparks = self
+                    .road_cash_out_sparks
+                    .checked_add(receipt.cash_out_sparks)
+                    .expect("road cash-out accounting overflow");
+                self.push_food_log(road_transition_trace("road_stage", &party, world, day));
+            }
+            Err(error) => self.push_food_log(format!(
+                "{}; reason {error}",
+                road_transition_trace("boundary_exchange_failed", &party, world, day)
+            )),
+        }
+        self.road_parties.insert(id.clone(), party);
+    }
+
+    fn trigger_road_entry(&mut self, world: &mut World, id: &PartyId, day: i64) {
+        let mut party = self.road_parties.remove(id).expect("party id came from map");
+        if party.state.phase != PartyPhase::StagedOutsideGate {
+            self.road_parties.insert(id.clone(), party);
+            return;
+        }
+        let positions = party
+            .members
+            .iter()
+            .enumerate()
+            .map(|(index, member)| {
+                let side = index as f64 * 0.8;
+                (member.clone(), Vec3::new(party.gate_point.x + side, WALK_Y, party.gate_point.z))
+            })
+            .collect::<BTreeMap<_, _>>();
+        match world.transition_presence(&party.members, crate::Presence::InCity, &positions) {
+            Ok(_) => {
+                for member in &party.members {
+                    let actor = world.characters.get_mut(member).expect("party member exists");
+                    actor.state.needs.hunger = HUNGER_MAX;
+                    actor.state.needs.thirst = THIRST_MAX;
+                    actor.state.leaving_city = false;
+                }
+                party.state.phase = PartyPhase::InCity;
+                self.push_food_log(road_transition_trace("road_in", &party, world, day));
+            }
+            Err(error) => self.push_food_log(format!(
+                "road_in_failed: party {}, day {day}: {error}", party.id
+            )),
+        }
+        self.road_parties.insert(id.clone(), party);
+    }
+
+    fn trigger_road_office(
+        &mut self,
+        world: &mut World,
+        office: Office,
+        time: crate::clock::WorldTime,
+    ) {
+        let ids: Vec<PartyId> = self.road_parties.keys().cloned().collect();
+        for id in ids {
+            let scheduled = self.road_parties[&id].only_on.contains(&time.weekday);
+            if office == self.road_parties[&id].stage_at && scheduled {
+                self.trigger_road_stage(world, &id, time.day);
+            }
+            if office == self.road_parties[&id].enter_at && scheduled {
+                // A coarse pump may have crossed both offices; stage is
+                // idempotent and therefore safe to ensure here as well.
+                self.trigger_road_stage(world, &id, time.day);
+                self.trigger_road_entry(world, &id, time.day);
+            }
+            if office == self.road_parties[&id].return_at {
+                self.begin_road_return(world, &id, time.day);
+            }
+        }
+    }
+
+    fn begin_road_return(&mut self, world: &mut World, id: &PartyId, day: i64) {
+        let mut party = self.road_parties.remove(id).expect("party id came from map");
+        if party.state.phase != PartyPhase::InCity {
+            self.road_parties.insert(id.clone(), party);
+            return;
+        }
+        for member in &party.members {
+            self.finish_market_errand(world, member, MarketVisitEnd::Returning);
+            for source in &mut self.sources {
+                source.queue.retain(|queued| queued != member);
+                if source.serving.as_ref().is_some_and(|(actor, _)| actor == member) {
+                    source.serving = None;
+                }
+            }
+            for stall in &mut self.stalls {
+                stall.queue.retain(|queued| queued != member);
+                if stall.serving.as_ref().is_some_and(|(actor, _)| actor == member) {
+                    stall.serving = None;
+                }
+            }
+            if let Some(person) = self.people.get_mut(member) {
+                person.food = None;
+                person.phase = Phase::Idle;
+                person.travel_target = None;
+                person.travel_for_intent = false;
+            }
+            let actor = world.characters.get_mut(member).expect("party member exists");
+            actor.state.movement = None;
+            actor.state.intent = None;
+            actor.state.active_gesture = None;
+            actor.state.leaving_city = true;
+        }
+        party.state.phase = PartyPhase::Returning;
+        world.touch_public_state();
+        self.push_food_log(road_transition_trace("road_return", &party, world, day));
+        self.road_parties.insert(id.clone(), party);
+    }
+
+    fn tick_road_parties(
+        &mut self,
+        world: &mut World,
+        nav: &NavData,
+        time: crate::clock::WorldTime,
+        in_conversation: &BTreeSet<ActorId>,
+    ) {
+        let ids: Vec<PartyId> = self.road_parties.keys().cloned().collect();
+        for id in ids {
+            let mut party = self.road_parties.remove(&id).expect("party id came from map");
+            match party.state.phase {
+                PartyPhase::InCity => {
+                    let target = active_leg(&party.legs, time.office, time.weekday).map(|leg| leg.at);
+                    if let Some(target) = target {
+                        for member in &party.members {
+                            let Some(actor) = world.characters.get(member) else { continue };
+                            if in_conversation.contains(member) {
+                                world.characters.get_mut(member).expect("member exists").state.movement = None;
+                                continue;
+                            }
+                            // Explicit `go_to` remains above the ordinary party
+                            // route while the party is trading.
+                            let target = actor.state.intent.as_ref().map_or(target, |intent| match &intent.target {
+                                IntentTarget::Place { point, .. } => *point,
+                                IntentTarget::Person { last_seen, .. } => *last_seen,
+                            });
+                            if actor.position_m().distance(target) <= ROUND_ARRIVE_RADIUS_M {
+                                world.characters.get_mut(member).expect("member exists").state.movement = None;
+                            } else if !actor.is_walking()
+                                && let Some(path) = route_path_to_point(nav, member, actor.position_m(), target)
+                            {
+                                set_route(world, member, path);
+                            }
+                        }
+                    }
+                }
+                PartyPhase::Returning => {
+                    let mut public_state_changed = false;
+                    for member in &party.members {
+                        let Some(actor) = world.characters.get(member) else { continue };
+                        if in_conversation.contains(member) {
+                            world.characters.get_mut(member).expect("member exists").state.movement = None;
+                            continue;
+                        }
+                        if actor.position_m().distance(party.gate_point) > PLACE_ARRIVE_RADIUS_M {
+                            if !actor.is_walking()
+                                && let Some(path) = route_path_to_point(
+                                    nav,
+                                    member,
+                                    actor.position_m(),
+                                    party.gate_point,
+                                )
+                            {
+                                set_route(world, member, path);
+                            }
+                        } else {
+                            world.characters.get_mut(member).expect("member exists").state.movement = None;
+                            // A promise cannot follow a traveller through the
+                            // gate. Expire offers as each member arrives, not
+                            // only after the slowest cart-mate gets there.
+                            let expiring: Vec<ItemId> = world
+                                .offers
+                                .iter()
+                                .filter(|(_, offer)| {
+                                    offer.giver_id == *member
+                                        || offer.target_id.as_ref() == Some(member)
+                                })
+                                .map(|(item, _)| item.clone())
+                                .collect();
+                            for item in expiring {
+                                world.offers.remove(&item);
+                                public_state_changed = true;
+                                self.push_food_log(format!(
+                                    "{}; member {member}, item {item}",
+                                    road_transition_trace(
+                                        "road_offer_expired",
+                                        &party,
+                                        world,
+                                        time.day,
+                                    )
+                                ));
+                            }
+                        }
+                    }
+                    let at_gate = party.members.iter().all(|member| {
+                        world.characters[member].position_m().distance(party.gate_point)
+                            <= PLACE_ARRIVE_RADIUS_M
+                    });
+                    if at_gate
+                        && party
+                            .members
+                            .iter()
+                            .all(|member| !in_conversation.contains(member))
+                    {
+                        party.state.phase = PartyPhase::DeparturePending;
+                        public_state_changed = true;
+                        self.push_food_log(road_transition_trace(
+                            "road_departure_pending",
+                            &party,
+                            world,
+                            time.day,
+                        ));
+                    }
+                    if public_state_changed {
+                        world.touch_public_state();
+                    }
+                }
+                PartyPhase::DeparturePending => {
+                    if party.members.iter().all(|member| !in_conversation.contains(member)) {
+                        let positions = BTreeMap::new();
+                        match world.transition_presence(
+                            &party.members,
+                            crate::Presence::BeyondTheWalls,
+                            &positions,
+                        ) {
+                            Ok(_) => {
+                                for member in &party.members {
+                                    let actor = world.characters.get_mut(member).expect("member exists");
+                                    actor.state.leaving_city = false;
+                                }
+                                party.state.phase = PartyPhase::BeyondTheWalls;
+                                self.departed_this_tick.extend(party.members.iter().cloned());
+                                self.push_food_log(road_transition_trace(
+                                    "road_out",
+                                    &party,
+                                    world,
+                                    time.day,
+                                ));
+                            }
+                            Err(error) => self.push_food_log(format!(
+                                "road_out_failed: party {}, trip {}: {error}",
+                                party.id, party.state.trip_number
+                            )),
+                        }
+                    }
+                }
+                PartyPhase::BeyondTheWalls | PartyPhase::StagedOutsideGate => {}
+            }
+            self.road_parties.insert(id, party);
+        }
+    }
+
     /// The errand view of one enrolled townsperson, for the developer character
     /// sheet — or `None` for anyone the round never enrolled (the player, test
     /// fixtures).
@@ -713,7 +1572,11 @@ impl Round {
         let staffed = self.sources.iter().filter(|source| source.keeper.is_some()).count();
         let queued: usize = self.sources.iter().map(|source| source.queue.len()).sum();
         let drawing = self.sources.iter().filter(|source| source.serving.is_some()).count();
-        let drawers = self.people.values().filter(|person| person.draws_water()).count();
+        let drawers = self
+            .people
+            .iter()
+            .filter(|(id, person)| person.draws_water() && world.is_present(id))
+            .count();
         let thirsty = self
             .people
             .iter()
@@ -737,13 +1600,17 @@ impl Round {
     /// dinner legs) read straight off the hungry/famished counts; the spark
     /// total holds steady, since nothing spends a wallet until M3.
     pub fn food_summary(&self, world: &World) -> String {
-        let total = self.people.len();
+        let total = self
+            .people
+            .keys()
+            .filter(|id| world.is_present(id))
+            .count();
         let mut fed = 0usize;
         let mut hungry = 0usize;
         let mut famished = 0usize;
         let mut sum = 0.0;
         for id in self.people.keys() {
-            let Some(character) = world.characters.get(id) else {
+            let Some(character) = world.characters.get(id).filter(|_| world.is_present(id)) else {
                 continue;
             };
             let hunger = character.needs().hunger;
@@ -757,15 +1624,18 @@ impl Round {
             }
         }
         let mean = if total > 0 { sum / total as f64 } else { 0.0 };
-        let sparks: u32 = self
-            .people
-            .keys()
-            .filter_map(|id| world.characters.get(id))
-            .flat_map(|character| character.holds())
-            .filter_map(|item_id| world.items.get(item_id))
-            .filter(|item| item.kind.as_str() == "spark")
-            .map(|item| item.quantity)
-            .sum();
+        let sparks_by_class = |class| -> u64 {
+            world
+                .characters
+                .values()
+                .filter(|actor| actor.state.economic_class == class)
+                .map(|actor| u64::from(world.wallet_sparks(actor.id())))
+                .sum()
+        };
+        let resident_sparks = sparks_by_class(EconomicClass::Resident);
+        let visitor_sparks = sparks_by_class(EconomicClass::Visitor);
+        let road_sparks = sparks_by_class(EconomicClass::RoadParty);
+        let sparks = resident_sparks + visitor_sparks + road_sparks;
         // The stall side of the census (M3): how many stalls are staffed, how
         // many buyers are queued or being served, and the stock still on the
         // vendors' boards — so a market morning reads as stock dwindling and
@@ -776,7 +1646,8 @@ impl Round {
             .iter()
             .filter(|stall| {
                 stall.vendor.as_ref().is_some_and(|v| {
-                    world
+                    world.is_present(v)
+                        && world
                         .characters
                         .get(v)
                         .is_some_and(|c| c.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M)
@@ -788,16 +1659,201 @@ impl Round {
         let stock: u32 = self
             .stalls
             .iter()
-            .flat_map(|stall| stall.stock_ids.iter())
-            .filter_map(|id| world.items.get(id))
-            .map(|item| item.quantity)
+            .filter_map(|stall| stall.vendor.as_ref().map(|vendor| (stall, vendor)))
+            .map(|(stall, vendor)| {
+                self.food_trades
+                    .get(&stall.trade)
+                    .map(|trade| {
+                        trade
+                            .listings
+                            .iter()
+                            .map(|matcher| world.uncommitted_held_quantity(vendor, matcher))
+                            .sum::<u32>()
+                    })
+                    .unwrap_or(0)
+            })
             .sum();
-        format!(
-            "food: {total} enrolled | fed {fed}, hungry {hungry}, famished {famished} | mean {mean:.0} | {sparks} sparks held | \
-             stalls {}/{} open, queued {queued}, serving {serving}, stock {stock}",
+        let chain_quantity = |kind: &str| -> u64 {
+            world
+                .items
+                .values()
+                .filter(|item| item.kind.as_str() == kind)
+                .map(|item| u64::from(item.quantity))
+                .sum()
+        };
+        let road_present = self
+            .road_parties
+            .values()
+            .filter(|party| party.members.iter().all(|member| world.is_present(member)))
+            .count();
+        let resident_spendable = world
+            .characters
+            .values()
+            .filter(|actor| actor.state.economic_class == EconomicClass::Resident)
+            .map(|actor| u64::from(world.spendable_sparks(actor.id())))
+            .sum::<u64>();
+        let grain = ItemMatcher::new("grain");
+        let seven_lofts_grain = world.held_quantity(&ActorId::from_raw("p008s"), &grain);
+        let chain_kinds = ["grain", "flour", "loaf", "wool", "cloth"];
+        let chain_actors = [
+            ("Betriss", ActorId::from_raw("p008s")),
+            ("Bertran", ActorId::from_raw("e7mil")),
+            ("Averil", ActorId::from_raw("davqn")),
+            ("Ewart", ActorId::from_raw("e1skl")),
+        ]
+        .into_iter()
+        .filter_map(|(name, id)| {
+            let actor = world.characters.get(&id)?;
+            let ids = actor.holds().iter().filter(|item_id| {
+                world.items.get(*item_id).is_some_and(|item| {
+                    chain_kinds.contains(&item.kind.as_str())
+                })
+            });
+            let mut held = 0u64;
+            let mut uncommitted = 0u64;
+            let mut listed = 0u64;
+            let mut reserved = 0u64;
+            let mut offered = 0u64;
+            for item_id in ids {
+                let item = &world.items[item_id];
+                held += u64::from(item.quantity);
+                uncommitted += u64::from(world.uncommitted_quantity(item_id));
+                if commercially_listed(self, world, &id, item_id) {
+                    listed += u64::from(item.quantity);
+                }
+                reserved += u64::from(world.transform_reserved_quantity(item_id));
+                offered += u64::from(world.offered_quantity(item_id));
+            }
+            Some(format!(
+                "{name}({id}) held {held}/free {uncommitted}/listed {listed}/reserved {reserved}/offered {offered}"
+            ))
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+        let parties = self
+            .road_parties
+            .values()
+            .map(|party| {
+                let members = party
+                    .members
+                    .iter()
+                    .map(|member| {
+                        let actor = &world.characters[member];
+                        format!(
+                            "{member}:wallet {}/float {}/{:?}@{}",
+                            world.wallet_sparks(member),
+                            party.wallet_floats[member],
+                            actor.state.presence,
+                            actor.state.presence_epoch,
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let cart = road_cart_is_visible(party, world)
+                    .then(|| road_cart_load(party, world));
+                format!(
+                    "{} phase {:?}/trip {}/members [{}]/cart {:?}",
+                    party.id, party.state.phase, party.state.trip_number, members, cart
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        let errands = self
+            .market_errands
+            .iter()
+            .map(|(buyer, errand)| {
+                let plan = self
+                    .stock_plans
+                    .iter()
+                    .find(|plan| plan.id == errand.plan_id);
+                let (source, remaining) = plan.map_or_else(
+                    || ("<missing>".to_string(), 0),
+                    |plan| {
+                        (
+                            format!("{:?}", plan.source),
+                            plan.max_spend_sparks.saturating_sub(errand.spent_sparks),
+                        )
+                    },
+                );
+                format!(
+                    "{} buyer {buyer}/source {source}/selected {:?}/seen {:?}/phase {:?}/spent {}/remaining {remaining}/fingerprint {:?}/next {}",
+                    errand.plan_id,
+                    errand.selected,
+                    errand.bindings_seen,
+                    errand.phase,
+                    errand.spent_sparks,
+                    errand.last_failed_fingerprint,
+                    if errand.last_failed_fingerprint.is_some() {
+                        "fingerprint_change"
+                    } else {
+                        "next_tick"
+                    },
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        let jobs = world
+            .transform_jobs()
+            .map(|job| {
+                format!(
+                    "{} producer {}/spec {}/day {}/progress {:.3}/reserved [{}]/future [{}]",
+                    job.job_id,
+                    job.producer,
+                    job.spec_id,
+                    job.production_day,
+                    job.progress_work_minutes,
+                    reserved_inputs_trace(&job.inputs),
+                    stock_specs_trace(&job.outputs),
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        let completed = world
+            .completed_transforms()
+            .map(|completed| {
+                format!(
+                    "{}@{} consumed [{}] produced [{}]",
+                    completed.receipt.job_id,
+                    completed.completed_on_day,
+                    transform_receipt_lines_trace(&completed.receipt.consumed),
+                    transform_receipt_lines_trace(&completed.receipt.produced),
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        let streaks = self
+            .unrelieved_zero_streak
+            .iter()
+            .filter(|(_, streak)| **streak > 0)
+            .map(|(actor, streak)| format!("{actor}:{streak}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        let mut summary = format!(
+            "food: {total} present enrolled | fed {fed}, hungry {hungry}, famished {famished} | mean {mean:.0} | \
+             sparks {sparks} (resident total {resident_sparks}/spendable {resident_spendable}, visitor {visitor_sparks}, road {road_sparks}; cash_in {}, cash_out {}, redistributed {}, payroll {}) | \
+             stalls {}/{} open, queued {queued}, serving {serving}, stock {stock} | \
+             chain grain {}, flour {}, loaf {}, wool {}, cloth {}; Seven Lofts grain {seven_lofts_grain} | errands {}, jobs {} | road {road_present}/{} present",
+            self.road_cash_in_sparks,
+            self.road_cash_out_sparks,
+            self.household_redistributed_sparks,
+            self.institutional_payroll_sparks,
             staffed,
             self.stalls.len(),
-        )
+            chain_quantity("grain"),
+            chain_quantity("flour"),
+            chain_quantity("loaf"),
+            chain_quantity("wool"),
+            chain_quantity("cloth"),
+            self.market_errands.len(),
+            world.transform_jobs().count(),
+            self.road_parties.len(),
+        );
+        summary.push_str(&format!(
+            " | chain actors [{chain_actors}] | parties [{parties}] | market errands [{errands}] | active jobs [{jobs}] | completed jobs [{completed}] | settlement watch {:?}/completed {:?}/zero_streaks [{streaks}]",
+            self.last_household_watch_day,
+            self.last_household_settlement_day,
+        ));
+        summary
     }
 
     /// A behavioural census of the enrolled cast at the current instant: how many
@@ -807,11 +1863,15 @@ impl Round {
     pub fn census(&self, world: &World, clock: &WorldClock, now: f64) -> Census {
         let time = clock.at(now);
         let mut census = Census {
-            total: self.people.len(),
+            total: self
+                .people
+                .keys()
+                .filter(|id| world.is_present(id))
+                .count(),
             ..Census::default()
         };
         for (id, person) in &self.people {
-            let Some(character) = world.characters.get(id) else {
+            let Some(character) = world.characters.get(id).filter(|_| world.is_present(id)) else {
                 continue;
             };
             let position = character.position_m();
@@ -856,6 +1916,24 @@ impl Round {
         self.seeded = true;
         self.last_game_days = clock.game_days(now);
 
+        // Road membership is authoritative before the ordinary round selects
+        // keepers or seeds needs: off-map actors must not be enrolled merely
+        // because their authored occupation resembles a resident trade.
+        let early_rounds = serde_json::from_str::<RoundsDoc>(ROUNDS_JSON);
+        let early_resolver = PlaceResolver::new(nav);
+        match early_rounds {
+            Ok(doc) => self.seed_road_parties(
+                world,
+                &early_resolver,
+                doc.road_parties,
+                clock.at(now),
+                &mut diagnostics,
+            ),
+            Err(error) => diagnostics.push(format!(
+                "[smart actors] round: road parties did not load: {error}"
+            )),
+        }
+
         // Resolve the water sources present in this nav graph.
         for &(name, sound) in SOURCES {
             match nav.place(name) {
@@ -883,6 +1961,7 @@ impl Round {
                     .characters
                     .get(*id)
                     .is_some_and(|character| character.control().is_llm())
+                    && !self.is_road_member(id)
             })
             .cloned()
             .collect();
@@ -948,11 +2027,6 @@ impl Round {
                     .state
                     .holds
                     .push(wallet_id);
-                self.seed_wallets.insert(id.clone(), sparks);
-            } else {
-                // An authored purse stands; record its level so the nightly Watch
-                // ledger refills to it, not to the 2–7 spread (Ilse's one spark).
-                self.seed_wallets.insert(id.clone(), wallet_sparks(world, id));
             }
         }
 
@@ -1009,6 +2083,14 @@ impl Round {
             }
         };
         let resolver = PlaceResolver::new(nav);
+        if let Some((_, homes)) = &content
+            && let Some(oven) = homes.homes.get("danqn")
+        {
+            self.worksites.insert(
+                "Ansel Quern's common oven".to_string(),
+                Vec3::new(oven.point[0], WALK_Y, oven.point[1]),
+            );
+        }
 
         // The taverns' hearths (food & items M2, §4): the evening trade eats
         // where it works, so an actor at a tavern during a meal office is fed
@@ -1207,7 +2289,17 @@ impl Round {
 
             let (legs, leash_m, curfew_exempt) = content
                 .as_ref()
-                .map(|(rounds, _)| build_legs(rounds, &resolver, id, occupation.as_deref(), home, base))
+                .map(|(rounds, _)| {
+                    build_legs(
+                        rounds,
+                        &resolver,
+                        &self.worksites,
+                        id,
+                        occupation.as_deref(),
+                        home,
+                        base,
+                    )
+                })
                 .unwrap_or((Vec::new(), DEFAULT_ROUND_LEASH_M, false));
 
             // The day's own stations — the workplace and every named leg — are
@@ -1289,7 +2381,7 @@ impl Round {
         // day, in which case the square stalls simply bind nobody and wait for
         // their weekday. Runs last: it reads the enrolled `people`'s legs to bind.
         self.last_office_now = now;
-        self.seed_food(nav, &resolver, &mut diagnostics);
+        self.seed_food(world, nav, &resolver, &mut diagnostics);
         let time = clock.at(now);
         self.bind_vendors(world, time.weekday);
         self.restock(world, time.day);
@@ -1307,8 +2399,8 @@ impl Round {
 }
 
 // --------------------------------------------------------------------------- //
-// The food stalls (M3): binding, the Kindling restock, the Watch ledger, the
-// FIFO queue and the silent purchase (`04_the_bread_round.md`).
+// Food stalls and supply-chain counters: binding, retained legacy restock,
+// household settlement, FIFO meals, and purpose-neutral sales.
 // --------------------------------------------------------------------------- //
 impl Round {
     /// The food stalls, for the census and tests.
@@ -1325,7 +2417,7 @@ impl Round {
     }
 
     /// Drain the `--trace-food` log the round has buffered since the last poll:
-    /// the Kindling restock, each sale, the Watch ledger. The game host simply
+    /// restock, sales, production, road transitions, and settlement. The game host
     /// never calls this, so the buffer stays capped and never grows.
     pub fn drain_food_log(&mut self) -> Vec<String> {
         std::mem::take(&mut self.food_log)
@@ -1345,7 +2437,13 @@ impl Round {
     /// lamp squares), offset a stride off the site node so two stalls at one
     /// square do not overlap. A stall whose site or trade does not resolve is
     /// skipped with a diagnostic; the rest come alive.
-    fn seed_food(&mut self, nav: &NavData, resolver: &PlaceResolver, diagnostics: &mut Vec<String>) {
+    fn seed_food(
+        &mut self,
+        world: &mut World,
+        nav: &NavData,
+        resolver: &PlaceResolver,
+        diagnostics: &mut Vec<String>,
+    ) {
         let doc: FoodDoc = match serde_json::from_str(FOOD_JSON) {
             Ok(doc) => doc,
             Err(error) => {
@@ -1353,13 +2451,42 @@ impl Round {
                 return;
             }
         };
-        self.vendor_float = doc.vendor_float_sparks;
         for (name, spec) in doc.trades {
+            let listings_unique = spec.listings.iter().collect::<BTreeSet<_>>().len()
+                == spec.listings.len();
+            let valid_listings = spec.listings.iter().all(|matcher| {
+                let probe = matcher.to_item(ItemId::from_raw("listing_probe"), 1);
+                world.item_catalog.validate_seed_item(&probe).is_ok()
+            });
+            let valid_restock = spec.restock.iter().all(|stock| {
+                let probe = stock
+                    .matcher()
+                    .to_item(ItemId::from_raw("restock_probe"), stock.quantity);
+                world.item_catalog.validate_seed_item(&probe).is_ok()
+                    && spec.listings.contains(&stock.matcher())
+            });
+            let valid_serving = spec.conjure_per_serving.as_ref().is_none_or(|kind| {
+                let probe = Item::new(ItemId::from_raw("serving_probe"), kind.clone());
+                world.item_catalog.validate_seed_item(&probe).is_ok()
+                    && world.item_catalog.price_sparks(&probe).is_some()
+            });
+            if name.trim().is_empty()
+                || !listings_unique
+                || !valid_listings
+                || !valid_restock
+                || !valid_serving
+            {
+                diagnostics.push(format!(
+                    "[smart actors] round: trade {name:?} has invalid catalog/listing content; skipped"
+                ));
+                continue;
+            }
             self.food_trades.insert(
                 name,
                 ResolvedTrade {
                     occupations: spec.occupations,
-                    stock: spec.stock,
+                    listings: spec.listings,
+                    restock: spec.restock,
                     per_serving: spec.conjure_per_serving,
                 },
             );
@@ -1391,12 +2518,263 @@ impl Round {
                 vendor: None,
                 queue: Vec::new(),
                 serving: None,
-                stock_ids: Vec::new(),
                 preferred: spec.preferred_vendor.as_ref().map(|id| ActorId::from_raw(id.as_str())),
                 open: spec.open.clone(),
                 cry_next: 0.0,
             });
         }
+
+        let resolve_site = |site: &str, anchor: Option<&ActorId>| -> Option<Vec3> {
+            resolver
+                .resolve(site)
+                .or_else(|| self.worksites.get(site).copied())
+                .or_else(|| anchor.and_then(|actor| world.places.home_of(actor).map(|place| place.point)))
+        };
+        for spec in doc.counters {
+            if self.counters.contains_key(&spec.id)
+                || !self.food_trades.contains_key(&spec.trade)
+                || !world.characters.contains_key(&spec.preferred_actor)
+                || spec.id.trim().is_empty()
+                || spec.offices.is_empty()
+                || spec.offices.iter().collect::<BTreeSet<_>>().len() != spec.offices.len()
+                || !spec.site_radius_m.is_finite()
+                || spec.site_radius_m <= 0.0
+                || spec
+                    .anchor_actor
+                    .as_ref()
+                    .is_some_and(|actor| !world.characters.contains_key(actor))
+            {
+                diagnostics.push(format!(
+                    "[smart actors] supply counter {:?} has duplicate/missing references; skipped",
+                    spec.id
+                ));
+                continue;
+            }
+            if let Some(party_id) = &spec.road_party {
+                let valid = self.road_parties.get(party_id).is_some_and(|party| {
+                    party.members.contains(&spec.preferred_actor)
+                });
+                if !valid {
+                    diagnostics.push(format!(
+                        "[smart actors] supply counter {:?} names an invalid road party/seller; skipped",
+                        spec.id
+                    ));
+                    continue;
+                }
+            }
+            let Some(site) = resolve_site(&spec.site, spec.anchor_actor.as_ref()) else {
+                diagnostics.push(format!(
+                    "[smart actors] supply counter {:?} site {:?} is missing; skipped",
+                    spec.id, spec.site
+                ));
+                continue;
+            };
+            let offset = Vec3::new(site.x + spec.pitch_offset[0], WALK_Y, site.z + spec.pitch_offset[1]);
+            let pitch = if nav.is_walkable(offset.x, offset.z) { offset } else { site };
+            self.counters.insert(spec.id.clone(), Counter {
+                id: spec.id,
+                trade: spec.trade,
+                site: spec.site,
+                pitch,
+                seller: spec.preferred_actor,
+                offices: spec.offices,
+                required_doing: spec.required_doing,
+                road_party: spec.road_party,
+                worksite_only: spec.worksite_only,
+                radius_m: spec.site_radius_m,
+            });
+        }
+        let referenced_groups: BTreeSet<String> = doc
+            .stock_plans
+            .iter()
+            .filter_map(|plan| match &plan.source {
+                StockSource::CounterGroup(group) => Some(group.clone()),
+                StockSource::Counter(_) => None,
+            })
+            .collect();
+        for group in doc.counter_groups {
+            if self.counter_groups.contains_key(&group.id)
+                || !referenced_groups.contains(&group.id)
+                || group.counters.is_empty()
+                || group.counters.iter().collect::<BTreeSet<_>>().len() != group.counters.len()
+                || group.counters.iter().any(|id| !self.counters.contains_key(id))
+            {
+                diagnostics.push(format!("[smart actors] invalid counter group {:?}; skipped", group.id));
+                continue;
+            }
+            self.counter_groups.insert(group.id, group.counters);
+        }
+        let mut plan_ids = BTreeSet::new();
+        for plan in doc.stock_plans {
+            let source_counters: Option<Vec<&Counter>> = match &plan.source {
+                StockSource::Counter(counter) => {
+                    self.counters.get(counter).map(|counter| vec![counter])
+                }
+                StockSource::CounterGroup(group) => self.counter_groups.get(group).map(|ids| {
+                    ids.iter().filter_map(|id| self.counters.get(id)).collect()
+                }),
+            };
+            let valid_targets = source_counters.as_ref().is_some_and(|counters| {
+                !counters.is_empty()
+                    && !plan.targets.is_empty()
+                    && plan.targets.iter().all(|target| {
+                        target.desired_quantity > 0
+                            && counters.iter().all(|counter| {
+                                self.food_trades[&counter.trade]
+                                    .listings
+                                    .contains(&target.matcher())
+                            })
+                    })
+            });
+            if plan.id.trim().is_empty()
+                || !plan_ids.insert(plan.id.clone())
+                || !world.characters.contains_key(&plan.buyer)
+                || plan.max_spend_sparks == 0
+                || !valid_targets
+                || source_counters
+                    .as_ref()
+                    .is_some_and(|counters| counters.iter().any(|counter| counter.seller == plan.buyer))
+            {
+                diagnostics.push(format!(
+                    "[smart actors] stock plan {:?} has invalid actor/source/targets; skipped",
+                    plan.id
+                ));
+                continue;
+            }
+            self.stock_plans.push(plan);
+        }
+
+        let mut production_producers = BTreeSet::new();
+        for plan in doc.production_plans {
+            if !world.characters.contains_key(&plan.producer)
+                || plan.max_jobs_per_day == 0
+                || !production_producers.insert(plan.producer.clone())
+            {
+                diagnostics.push(format!(
+                    "[smart actors] production producer {} is missing, duplicated, or has a zero cap",
+                    plan.producer
+                ));
+                continue;
+            }
+            let mut transforms = Vec::new();
+            let mut transform_ids = BTreeSet::new();
+            for transform in plan.transforms {
+                let valid_recipe = !transform.id.trim().is_empty()
+                    && transform_ids.insert(transform.id.clone())
+                    && !transform.consumes.is_empty()
+                    && !transform.produces.is_empty()
+                    && !transform.allowed_offices.is_empty()
+                    && transform
+                        .allowed_offices
+                        .iter()
+                        .collect::<BTreeSet<_>>()
+                        .len()
+                        == transform.allowed_offices.len()
+                    && transform.work_minutes > 0
+                    && transform.desired_output_quantity > 0
+                    && transform.consumes.iter().chain(&transform.produces).all(|stock| {
+                        let probe = stock
+                            .matcher()
+                            .to_item(ItemId::from_raw("transform_spec_probe"), stock.quantity);
+                        world.item_catalog.validate_seed_item(&probe).is_ok()
+                    });
+                if !valid_recipe {
+                    diagnostics.push(format!(
+                        "[smart actors] transform {:?} has invalid recipe content; skipped",
+                        transform.id
+                    ));
+                    continue;
+                }
+                let Some(point) = resolve_site(&transform.site, transform.anchor_actor.as_ref()) else {
+                    diagnostics.push(format!(
+                        "[smart actors] transform {:?} site {:?} is missing; skipped",
+                        transform.id, transform.site
+                    ));
+                    continue;
+                };
+                let has_recurring_work_leg = Weekday::ALL.iter().copied().any(|weekday| {
+                    transform.allowed_offices.iter().copied().any(|office| {
+                        self.actor_on_leg_at(
+                            &plan.producer,
+                            office,
+                            weekday,
+                            &transform.site,
+                            Arrival::Work,
+                        )
+                    })
+                });
+                if !has_recurring_work_leg {
+                    diagnostics.push(format!(
+                        "[smart actors] transform {:?} has no recurring Work leg at {:?}; skipped",
+                        transform.id, transform.site
+                    ));
+                    continue;
+                }
+                transforms.push(ResolvedTransformSpec {
+                    id: transform.id,
+                    site: transform.site,
+                    point,
+                    consumes: transform.consumes,
+                    produces: transform.produces,
+                    allowed_offices: transform.allowed_offices,
+                    work_minutes: transform.work_minutes,
+                    desired_output_quantity: transform.desired_output_quantity,
+                });
+            }
+            if !transforms.is_empty() {
+                self.production_plans.push(ResolvedProductionPlan {
+                    producer: plan.producer,
+                    max_jobs_per_day: plan.max_jobs_per_day,
+                    transforms,
+                });
+            }
+        }
+
+        // Ordinary residents protect their day-zero spendable purse; named
+        // chain firms receive their explicit one-time working capital instead.
+        for (id, actor) in &world.characters {
+            if actor.state.economic_class == EconomicClass::Resident {
+                self.household_reserves.insert(id.clone(), world.spendable_sparks(id));
+            }
+        }
+        let mut seeded_inventory = false;
+        for (id, minimum) in doc.working_capital {
+            if !world.characters.contains_key(&id) {
+                diagnostics.push(format!("[smart actors] working-capital actor {id} is missing"));
+                continue;
+            }
+            let current = world.spendable_sparks(&id);
+            if current < minimum {
+                if let Err(error) = world.credit_sparks(
+                    &id,
+                    minimum - current,
+                    &format!("working_capital:{id}"),
+                ) {
+                    diagnostics.push(format!("[smart actors] working capital for {id} failed: {error}"));
+                } else {
+                    seeded_inventory = true;
+                }
+            }
+            self.household_reserves.insert(id, minimum);
+        }
+        for seed in doc.historical_stock {
+            let stock = StockSpec {
+                kind: seed.kind,
+                metadata: seed.metadata,
+                quantity: seed.quantity,
+            };
+            match world.add_stock(&seed.owner, &stock, &format!("historical_stock:{}", seed.owner)) {
+                Ok(_) => seeded_inventory = true,
+                Err(error) => diagnostics.push(format!(
+                    "[smart actors] historical stock for {} failed: {error}", seed.owner
+                )),
+            }
+        }
+        if seeded_inventory {
+            world.touch_public_state();
+        }
+        self.production_last_game_days = self.last_game_days;
+        self.trace_cart_load_changes(world);
     }
 
     /// Bind each stall open today to the nearest routed keeper — the nearest
@@ -1433,10 +2811,10 @@ impl Round {
 
         // Phase 2: apply the bindings — release the buyers at any stall whose
         // vendor changed, then install the new vendor.
-        for s in 0..self.stalls.len() {
-            if chosen[s] != self.stalls[s].vendor {
+        for (s, new_vendor) in chosen.iter().enumerate() {
+            if *new_vendor != self.stalls[s].vendor {
                 self.release_stall(world, s);
-                self.stalls[s].vendor = chosen[s].clone();
+                self.stalls[s].vendor = new_vendor.clone();
             }
         }
 
@@ -1481,14 +2859,14 @@ impl Round {
             })
         };
         let mut listings: Vec<VendorListing> = trade
-            .stock
+            .listings
             .iter()
-            .filter_map(|spec| probe(&spec.kind, &spec.metadata))
+            .filter_map(|spec| probe(spec.kind.as_str(), &spec.metadata))
             .collect();
         // The never-scraped pot sells a bowl it conjures per serving; it belongs
         // on the sheet exactly like a stock kind so the cook quotes the list too.
         if let Some(kind) = &trade.per_serving
-            && let Some(listing) = probe(kind, &BTreeMap::new())
+            && let Some(listing) = probe(kind.as_str(), &BTreeMap::new())
         {
             listings.push(listing);
         }
@@ -1507,7 +2885,7 @@ impl Round {
         // site (a leg labelled it) — independent of the hour, so the Kindling
         // restock can hand them their board before they have walked in.
         let eligible = |id: &ActorId| -> bool {
-            if taken.contains(id) {
+            if taken.contains(id) || !world.is_present(id) {
                 return false;
             }
             let Some(person) = self.people.get(id) else { return false };
@@ -1566,209 +2944,1269 @@ impl Round {
         self.stalls[s].serving = None;
     }
 
-    /// The Kindling restock (`04` §3): sweep each vendor's leftover stock and
-    /// conjure the trade's morning template onto them, with deterministic ids per
-    /// `(vendor, day, slot)`. The pot conjures nothing here — its bowl is made
-    /// per serving. Vendor wallets are *not* touched (the ledger does that, at
-    /// the Watch), so the only spark mint/burn is the nightly ledger and
-    /// purchases conserve the total in between.
+    /// The retained legacy Kindling restock: sweep only quantity shares created
+    /// by the same explicitly unchained source, then add its template. Real
+    /// returned stock and every chained kind persist. The pot still materializes
+    /// its licensed serving at purchase time; no wallet changes here.
     fn restock(&mut self, world: &mut World, day: i64) {
         if self.stalls.is_empty() {
             return;
         }
         let mut lines: Vec<String> = Vec::new();
+        let mut changed = false;
         for s in 0..self.stalls.len() {
-            self.clear_stock(world, s);
+            let source_id = format!("legacy_stall:{}", self.stalls[s].name);
+            match world.sweep_legacy_restock(&source_id) {
+                Ok(swept) => changed |= swept > 0,
+                Err(error) => {
+                    self.push_food_log(format!("restock invariant failure at {}: {error}", self.stalls[s].name));
+                    continue;
+                }
+            }
             let Some(vendor) = self.stalls[s].vendor.clone() else { continue };
             let trade_key = self.stalls[s].trade.clone();
             let trade = self.food_trades[&trade_key].clone();
-            if trade.stock.is_empty() {
-                lines.push(format!("{} ({vendor}): the pot", self.stalls[s].name));
+            if trade.restock.is_empty() {
+                let state = if trade.per_serving.is_some() {
+                    "the pot"
+                } else {
+                    "persistent stock only"
+                };
+                lines.push(format!("{} ({vendor}): {state}", self.stalls[s].name));
                 continue;
             }
-            let mut new_ids: Vec<ItemId> = Vec::new();
             let mut counts: Vec<String> = Vec::new();
-            for (slot, spec) in trade.stock.iter().enumerate() {
-                let id = ItemId::from_raw(format!("fs_{}_{day}_{slot}", vendor.as_str()));
-                let mut item = Item::stack(id.clone(), spec.kind.as_str(), spec.quantity);
-                for (key, value) in &spec.metadata {
-                    item.metadata.insert(key.clone(), value.clone());
+            for (slot, spec) in trade.restock.iter().enumerate() {
+                let probe = spec.matcher().to_item(ItemId::from_raw("restock_probe"), spec.quantity);
+                counts.push(format!("{}× {}", spec.quantity, world.item_catalog.display_plural(&probe)));
+                if let Err(error) = world.add_legacy_restock(
+                    &vendor,
+                    &source_id,
+                    spec,
+                    &format!("legacy:{day}:{}:{slot}", self.stalls[s].name),
+                ) {
+                    self.push_food_log(format!("restock failed at {}: {error}", self.stalls[s].name));
+                } else {
+                    changed = true;
                 }
-                counts.push(format!("{}× {}", spec.quantity, world.item_catalog.display_plural(&item)));
-                world.add_item(item);
-                world
-                    .characters
-                    .get_mut(&vendor)
-                    .expect("bound vendor exists")
-                    .state
-                    .holds
-                    .push(id.clone());
-                new_ids.push(id);
             }
-            self.stalls[s].stock_ids = new_ids;
             lines.push(format!("{} ({vendor}): {}", self.stalls[s].name, counts.join(", ")));
+        }
+        if changed {
+            world.touch_public_state();
         }
         world.assert_invariants();
         self.push_food_log(format!("Kindling restock, day {day} — {}", lines.join(" | ")));
     }
 
-    /// The Watch ledger (`02_the_spark_standard.md` §4): buyer wallets refill to
-    /// their seeded level, today's vendors reset to the float, and all unsold
-    /// stock is swept ("spent it on flour and rent"). The one confessed
-    /// non-conservative beat — between two of them, purchases move sparks around
-    /// but never mint or burn.
-    fn close_books(&mut self, world: &mut World) {
-        if self.stalls.is_empty() {
+    /// Watch owns the sample and completion stamps, so a missing or failed
+    /// handler remains observable on the following day.
+    fn dispatch_household_settlement(&mut self, world: &mut World, day: i64) {
+        if self.last_household_watch_day == Some(day) {
             return;
         }
-        let vendors: BTreeSet<ActorId> = self.stalls.iter().filter_map(|stall| stall.vendor.clone()).collect();
-        for s in 0..self.stalls.len() {
-            self.clear_stock(world, s);
+        if let Some(previous) = self.last_household_watch_day
+            && self.last_household_settlement_day != Some(previous)
+        {
+            self.push_food_log(format!(
+                "household_settlement_missed: sampled day {previous}, last completed {:?}",
+                self.last_household_settlement_day
+            ));
         }
-        let ids: Vec<ActorId> = self.people.keys().cloned().collect();
-        for id in &ids {
-            let target = if vendors.contains(id) {
-                self.vendor_float
+        self.last_household_watch_day = Some(day);
+
+        let residents: Vec<ActorId> = world
+            .characters
+            .iter()
+            .filter(|(_, actor)| actor.state.economic_class == EconomicClass::Resident)
+            .map(|(id, _)| id.clone())
+            .collect();
+        for id in &residents {
+            let streak = self.unrelieved_zero_streak.entry(id.clone()).or_default();
+            if world.spendable_sparks(id) == 0 {
+                *streak = streak.saturating_add(1);
             } else {
-                self.seed_wallets.get(id).copied().unwrap_or(0)
-            };
-            set_wallet(world, id, target);
+                *streak = 0;
+            }
         }
-        world.assert_invariants();
-        self.push_food_log(format!(
-            "Watch ledger — {} buyers refilled to seed, {} vendors floated to {}, stock swept",
-            ids.len().saturating_sub(vendors.len()),
-            vendors.len(),
-            self.vendor_float,
-        ));
+
+        match self.settle_households(world, day) {
+            Ok(receipt) => {
+                self.last_household_settlement_day = Some(day);
+                self.institutional_payroll_sparks = self
+                    .institutional_payroll_sparks
+                    .checked_add(u64::from(receipt.institutional_payroll_sparks))
+                    .expect("institutional payroll accounting overflow");
+                let redistributed = receipt
+                    .transfers
+                    .iter()
+                    .try_fold(0u64, |sum, transfer| {
+                        sum.checked_add(u64::from(transfer.sparks))
+                    })
+                    .expect("household redistribution receipt overflow");
+                self.household_redistributed_sparks = self
+                    .household_redistributed_sparks
+                    .checked_add(redistributed)
+                    .expect("household redistribution accounting overflow");
+                for relieved in &receipt.relief {
+                    if relieved.after_spendable >= 4 {
+                        self.unrelieved_zero_streak.insert(relieved.actor.clone(), 0);
+                    }
+                }
+                let transfers = receipt
+                    .transfers
+                    .iter()
+                    .map(|line| format!("{}->{}:{}", line.donor, line.recipient, line.sparks))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let relief = receipt
+                    .relief
+                    .iter()
+                    .map(|line| {
+                        format!(
+                            "{}:{}->{}",
+                            line.actor, line.before_spendable, line.after_spendable
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join(",");
+                self.push_food_log(format!(
+                    "household_settlement: day {}, transfers [{transfers}], recipients [{relief}], redistributed {redistributed}, payroll_minted {}",
+                    receipt.day, receipt.institutional_payroll_sparks
+                ));
+            }
+            Err(error) => self.push_food_log(format!(
+                "household_settlement_failed: day {day}: {error}"
+            )),
+        }
     }
 
-    /// Remove stall `s`'s conjured stock from the world and whoever holds it,
-    /// then forget the ids. Idempotent — a stack already sold to a buyer (a fresh
-    /// id) is untouched; only the vendor's own leftover board is swept.
-    fn clear_stock(&mut self, world: &mut World, s: usize) {
-        let leftover: Vec<ItemId> = std::mem::take(&mut self.stalls[s].stock_ids);
-        for id in leftover {
-            prune_offer_on_removal(world, &id);
-            if world.items.remove(&id).is_some() {
-                for character in world.characters.values_mut() {
-                    character.state.holds.retain(|held| held != &id);
+    /// Deterministic resident-only redistribution followed by only the exact
+    /// residual wages/alms mint. Applying it to a cloned world gives the whole
+    /// multi-purse plan atomic rollback semantics.
+    pub fn settle_households(
+        &self,
+        world: &mut World,
+        day: i64,
+    ) -> Result<HouseholdSettlementReceipt, crate::InventoryError> {
+        let residents: Vec<ActorId> = world
+            .characters
+            .iter()
+            .filter(|(_, actor)| actor.state.economic_class == EconomicClass::Resident)
+            .map(|(id, _)| id.clone())
+            .collect();
+        let before: BTreeMap<ActorId, u32> = residents
+            .iter()
+            .map(|id| (id.clone(), world.spendable_sparks(id)))
+            .collect();
+        let mut needs: Vec<(ActorId, u32)> = before
+            .iter()
+            .filter(|(_, sparks)| **sparks < 4)
+            .map(|(id, sparks)| (id.clone(), 4 - *sparks))
+            .collect();
+        let mut donors: Vec<(ActorId, u32)> = before
+            .iter()
+            .filter_map(|(id, sparks)| {
+                let reserve = self
+                    .household_reserves
+                    .get(id)
+                    .copied()
+                    .unwrap_or(*sparks)
+                    .max(4);
+                (*sparks > reserve).then(|| (id.clone(), *sparks - reserve))
+            })
+            .collect();
+        needs.sort_by(|left, right| left.0.cmp(&right.0));
+        donors.sort_by(|left, right| left.0.cmp(&right.0));
+
+        let mut staged = world.clone();
+        let mut transfers = Vec::new();
+        let mut donor_index = 0usize;
+        for (recipient, need) in &mut needs {
+            while *need > 0 && donor_index < donors.len() {
+                let (donor, available) = &mut donors[donor_index];
+                if *available == 0 {
+                    donor_index += 1;
+                    continue;
+                }
+                let amount = (*need).min(*available);
+                staged.debit_sparks(donor, amount)?;
+                staged.credit_sparks(
+                    recipient,
+                    amount,
+                    &format!("settlement:{day}:{donor}:{recipient}"),
+                )?;
+                transfers.push(HouseholdTransfer {
+                    donor: donor.clone(),
+                    recipient: recipient.clone(),
+                    sparks: amount,
+                });
+                *need -= amount;
+                *available -= amount;
+            }
+        }
+        let payroll = needs
+            .iter()
+            .try_fold(0u32, |sum, (_, need)| sum.checked_add(*need))
+            .ok_or_else(|| {
+                crate::InventoryError::new(
+                    crate::InventoryErrorCode::ArithmeticOverflow,
+                    "household payroll total overflow",
+                )
+            })?;
+        for (recipient, need) in &needs {
+            if *need > 0 {
+                staged.credit_sparks(
+                    recipient,
+                    *need,
+                    &format!("settlement:{day}:payroll:{recipient}"),
+                )?;
+            }
+        }
+        let relief = before
+            .iter()
+            .filter(|(_, amount)| **amount < 4)
+            .map(|(actor, amount)| HouseholdRelief {
+                actor: actor.clone(),
+                before_spendable: *amount,
+                after_spendable: staged.spendable_sparks(actor),
+            })
+            .collect::<Vec<_>>();
+        if !transfers.is_empty() || payroll > 0 {
+            staged.touch_public_state();
+        }
+        *world = staged;
+        Ok(HouseholdSettlementReceipt {
+            day,
+            transfers,
+            relief,
+            institutional_payroll_sparks: payroll,
+        })
+    }
+
+    fn actor_on_leg(
+        &self,
+        actor: &ActorId,
+        time: crate::clock::WorldTime,
+        site: &str,
+        doing: Arrival,
+    ) -> bool {
+        self.actor_on_leg_at(actor, time.office, time.weekday, site, doing)
+    }
+
+    fn actor_on_leg_at(
+        &self,
+        actor: &ActorId,
+        office: Office,
+        weekday: Weekday,
+        site: &str,
+        doing: Arrival,
+    ) -> bool {
+        if let Some(person) = self.people.get(actor) {
+            return active_leg(&person.legs, office, weekday)
+                .is_some_and(|leg| leg.label == site && leg.doing == doing);
+        }
+        self.road_parties.values().any(|party| {
+            party.members.contains(actor)
+                && party.state.phase == PartyPhase::InCity
+                && active_leg(&party.legs, office, weekday)
+                    .is_some_and(|leg| leg.label == site && leg.doing == doing)
+        })
+    }
+
+    fn counter_binding(
+        &self,
+        world: &World,
+        counter_id: &str,
+        time: crate::clock::WorldTime,
+    ) -> Option<CounterBindingKey> {
+        let counter = self.counters.get(counter_id)?;
+        if counter.worksite_only
+            || !counter.offices.contains(&time.office)
+            || !world.is_present(&counter.seller)
+            || world.characters[&counter.seller].position_m().distance(counter.pitch) > counter.radius_m
+            || !self.actor_on_leg(&counter.seller, time, &counter.site, counter.required_doing)
+        {
+            return None;
+        }
+        let session = if let Some(party_id) = &counter.road_party {
+            let party = self.road_parties.get(party_id)?;
+            if !party.members.contains(&counter.seller) || party.state.phase != PartyPhase::InCity {
+                return None;
+            }
+            CounterSession::RoadTrip {
+                party_id: party_id.clone(),
+                trip_number: party.state.trip_number,
+            }
+        } else {
+            CounterSession::Daily { absolute_day: time.day }
+        };
+        Some(CounterBindingKey {
+            counter_id: counter.id.clone(),
+            seller: counter.seller.clone(),
+            session,
+        })
+    }
+
+    fn source_binding(
+        &self,
+        world: &World,
+        source: &StockSource,
+        time: crate::clock::WorldTime,
+    ) -> Option<CounterBindingKey> {
+        match source {
+            StockSource::Counter(id) => self.counter_binding(world, id, time),
+            StockSource::CounterGroup(id) => self
+                .counter_groups
+                .get(id)?
+                .iter()
+                .find_map(|counter| self.counter_binding(world, counter, time)),
+        }
+    }
+
+    fn binding_still_viable(
+        &self,
+        binding: &CounterBindingKey,
+        time: crate::clock::WorldTime,
+    ) -> bool {
+        let Some(counter) = self.counters.get(&binding.counter_id) else {
+            return false;
+        };
+        if counter.seller != binding.seller
+            || !counter.offices.iter().any(|office| *office >= time.office)
+        {
+            return false;
+        }
+        match &binding.session {
+            CounterSession::Daily { absolute_day } => *absolute_day == time.day,
+            CounterSession::RoadTrip {
+                party_id,
+                trip_number,
+            } => self.road_parties.get(party_id).is_some_and(|party| {
+                party.state.trip_number == *trip_number
+                    && party.state.phase == PartyPhase::InCity
+                    && party.members.contains(&binding.seller)
+            }),
+        }
+    }
+
+    fn expired_binding_reason(
+        &self,
+        binding: &CounterBindingKey,
+        time: crate::clock::WorldTime,
+    ) -> MarketVisitEnd {
+        let office_passed = self
+            .counters
+            .get(&binding.counter_id)
+            .is_some_and(|counter| {
+                !counter.offices.iter().any(|office| *office >= time.office)
+                    || matches!(
+                        binding.session,
+                        CounterSession::Daily { absolute_day } if absolute_day < time.day
+                    )
+            });
+        if office_passed {
+            MarketVisitEnd::LastOfficePassed
+        } else {
+            MarketVisitEnd::SourceIneligible
+        }
+    }
+
+    fn market_attempt_fingerprint(
+        &self,
+        world: &World,
+        plan: &StockPlanSpec,
+        binding: &CounterBindingKey,
+        office: Office,
+        spent: u32,
+        remaining_budget: u32,
+    ) -> String {
+        let counter = &self.counters[&binding.counter_id];
+        let trade = &self.food_trades[&counter.trade];
+        let mut source = Vec::new();
+        for item_id in world.characters[&binding.seller].holds() {
+            let Some(item) = world.items.get(item_id) else { continue };
+            if trade.listings.iter().any(|matcher| matcher.matches(item)) {
+                source.push(format!("{item_id}:{}", world.uncommitted_quantity(item_id)));
+            }
+        }
+        source.sort();
+        let buyer = plan
+            .targets
+            .iter()
+            .map(|target| {
+                format!(
+                    "{}:{:?}:{}",
+                    target.kind,
+                    target.metadata,
+                    world.held_quantity(&plan.buyer, &target.matcher())
+                )
+            })
+            .collect::<Vec<_>>();
+        format!(
+            "{:?}|{office:?}|src={}|buyer={}|funds={}|spent={spent}|remaining={remaining_budget}",
+            binding,
+            source.join(","),
+            buyer.join(","),
+            world.spendable_sparks(&plan.buyer),
+        )
+    }
+
+    fn stock_plan_satisfied(&self, world: &World, plan: &StockPlanSpec) -> bool {
+        plan.targets.iter().all(|target| {
+            world.held_quantity(&plan.buyer, &target.matcher()) >= target.desired_quantity
+        })
+    }
+
+    fn stock_errand_trace(
+        &self,
+        plan: &StockPlanSpec,
+        errand: &MarketErrand,
+        result: &str,
+        end_reason: Option<MarketVisitEnd>,
+    ) -> String {
+        let remaining = plan
+            .max_spend_sparks
+            .saturating_sub(errand.spent_sparks);
+        let next_retry = if end_reason.is_some() {
+            "none"
+        } else if errand.last_failed_fingerprint.is_some() {
+            "fingerprint_change"
+        } else {
+            "next_tick"
+        };
+        format!(
+            "stock_errand: plan {}, buyer {}, source {:?}, selected {:?}, bindings_seen {:?}, phase {:?}, spent {}, remaining {}, result {result}, fingerprint {:?}, visit_end {:?}, next_retry {next_retry}",
+            plan.id,
+            plan.buyer,
+            plan.source,
+            errand.selected,
+            errand.bindings_seen,
+            errand.phase,
+            errand.spent_sparks,
+            remaining,
+            errand.last_failed_fingerprint,
+            end_reason,
+        )
+    }
+
+    fn finish_market_errand(
+        &mut self,
+        world: &mut World,
+        buyer: &ActorId,
+        reason: MarketVisitEnd,
+    ) {
+        let Some(errand) = self.market_errands.remove(buyer) else { return };
+        let trace = self
+            .stock_plans
+            .iter()
+            .find(|plan| plan.id == errand.plan_id)
+            .map(|plan| self.stock_errand_trace(plan, &errand, "visit_ended", Some(reason)));
+        self.closed_market_visits.insert(
+            errand.plan_id.clone(),
+            ClosedMarketVisit {
+                plan_id: errand.plan_id.clone(),
+                bindings_seen: errand.bindings_seen.clone(),
+                end_reason: reason,
+            },
+        );
+        let counter_pitch = errand
+            .selected
+            .as_ref()
+            .and_then(|binding| self.counters.get(&binding.counter_id))
+            .map(|counter| counter.pitch);
+        let was_stock_walk = self.people.get(buyer).map_or(
+            errand.phase == MarketErrandPhase::Approaching,
+            |person| {
+                person.phase == Phase::Travelling
+                    && !person.travel_for_intent
+                    && counter_pitch.is_some_and(|pitch| person.travel_target == Some(pitch))
+            },
+        );
+        if was_stock_walk
+            && let Some(person) = self.people.get_mut(buyer)
+        {
+            person.phase = Phase::Idle;
+            person.travel_target = None;
+        }
+        if was_stock_walk
+            && let Some(actor) = world.characters.get_mut(buyer)
+        {
+            actor.state.movement = None;
+        }
+        if let Some(trace) = trace {
+            self.push_food_log(trace);
+        }
+    }
+
+    fn tick_stock_plans(
+        &mut self,
+        world: &mut World,
+        nav: &NavData,
+        time: crate::clock::WorldTime,
+        now: f64,
+        in_conversation: &BTreeSet<ActorId>,
+    ) {
+        let plans = self.stock_plans.clone();
+        for plan in plans {
+            if !world.is_present(&plan.buyer) {
+                self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::SourceIneligible);
+                continue;
+            }
+            if world.characters[&plan.buyer].state.leaving_city {
+                self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::Returning);
+                continue;
+            }
+            if in_conversation.contains(&plan.buyer) {
+                continue;
+            }
+            if self.stock_plan_satisfied(world, &plan) {
+                self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::TargetsSatisfied);
+                continue;
+            }
+            // A player/model-authored route supersedes the mechanical errand.
+            if world.characters[&plan.buyer].state.intent.is_some() {
+                self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::ReplacedByGoTo);
+                continue;
+            }
+            if let Some(person) = self.people.get(&plan.buyer) {
+                let committed_need = person.food.is_some()
+                    || matches!(
+                        person.phase,
+                        Phase::Approaching | Phase::Queued | Phase::Drawing | Phase::Returning
+                    );
+                let pressing = decide(
+                    self,
+                    world,
+                    nav,
+                    &plan.buyer,
+                    person.epoch,
+                    time.office,
+                    time.weekday,
+                )
+                .1
+                .is_some();
+                if committed_need || pressing {
+                    continue;
+                }
+            }
+            if self.market_errands.get(&plan.buyer).is_some_and(|errand| errand.plan_id != plan.id) {
+                continue;
+            }
+            let binding = self.source_binding(world, &plan.source, time);
+            if !self.market_errands.contains_key(&plan.buyer) {
+                let Some(binding) = binding.clone() else { continue };
+                if self.closed_market_visits.get(&plan.id).is_some_and(|closed| {
+                    closed.bindings_seen.contains(&binding)
+                }) {
+                    continue;
+                }
+                self.market_errands.insert(plan.buyer.clone(), MarketErrand {
+                    plan_id: plan.id.clone(),
+                    selected: Some(binding.clone()),
+                    bindings_seen: vec![binding],
+                    phase: MarketErrandPhase::Approaching,
+                    spent_sparks: 0,
+                    last_failed_fingerprint: None,
+                    travel_deadline_real: None,
+                });
+                let trace = self.stock_errand_trace(
+                    &plan,
+                    &self.market_errands[&plan.buyer],
+                    "visit_started",
+                    None,
+                );
+                self.push_food_log(trace);
+            }
+            let prior_binding = self
+                .market_errands
+                .get(&plan.buyer)
+                .and_then(|errand| errand.selected.as_ref().or(errand.bindings_seen.last()))
+                .cloned();
+            if let Some(prior) = &prior_binding
+                && binding.as_ref() != Some(prior)
+                && !self.binding_still_viable(prior, time)
+            {
+                // An explicitly interchangeable group may switch from a cart
+                // that just unbound to another concrete binding without
+                // manufacturing a fresh visit or budget. With no replacement,
+                // the old session ends normally and is remembered closed.
+                let can_reselect_group = matches!(&plan.source, StockSource::CounterGroup(_))
+                    && binding.is_some();
+                if !can_reselect_group {
+                    let reason = self.expired_binding_reason(prior, time);
+                    self.finish_market_errand(world, &plan.buyer, reason);
+                    continue;
+                }
+            }
+            let mut selection_changed = false;
+            {
+                let Some(errand) = self.market_errands.get_mut(&plan.buyer) else { continue };
+                if binding != errand.selected {
+                    selection_changed = true;
+                    errand.selected = binding.clone();
+                    errand.travel_deadline_real = None;
+                    if let Some(binding) = &binding
+                        && !errand.bindings_seen.contains(binding)
+                    {
+                        errand.bindings_seen.push(binding.clone());
+                    }
+                }
+            }
+            if selection_changed {
+                world
+                    .characters
+                    .get_mut(&plan.buyer)
+                    .expect("stock buyer exists")
+                    .state
+                    .movement = None;
+                if let Some(person) = self.people.get_mut(&plan.buyer) {
+                    person.phase = Phase::Idle;
+                    person.travel_target = None;
+                }
+                if binding.is_some() {
+                    let trace = self.stock_errand_trace(
+                        &plan,
+                        &self.market_errands[&plan.buyer],
+                        "binding_changed",
+                        None,
+                    );
+                    self.push_food_log(trace);
+                }
+            }
+            let Some(binding) = binding else {
+                let phase_changed = {
+                    let errand = self
+                        .market_errands
+                        .get_mut(&plan.buyer)
+                        .expect("errand exists");
+                    let changed = errand.phase != MarketErrandPhase::WaitingForOpen;
+                    errand.phase = MarketErrandPhase::WaitingForOpen;
+                    changed
+                };
+                if selection_changed || phase_changed {
+                    let result = prior_binding
+                        .as_ref()
+                        .and_then(|prior| self.counters.get(&prior.counter_id))
+                        .map_or("source_absent", |counter| {
+                            if counter.offices.contains(&time.office) {
+                                "source_absent"
+                            } else {
+                                "closed"
+                            }
+                        });
+                    let trace = self.stock_errand_trace(
+                        &plan,
+                        &self.market_errands[&plan.buyer],
+                        result,
+                        None,
+                    );
+                    self.push_food_log(trace);
+                }
+                continue;
+            };
+            let counter = self.counters[&binding.counter_id].clone();
+            let position = world.characters[&plan.buyer].position_m();
+            if position.distance(counter.pitch) > counter.radius_m {
+                let deadline = {
+                    let errand = self.market_errands.get_mut(&plan.buyer).expect("errand exists");
+                    errand.phase = MarketErrandPhase::Approaching;
+                    errand.travel_deadline_real
+                };
+                if deadline.is_some_and(|deadline| now >= deadline) {
+                    self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::TravelExpired);
+                    continue;
+                }
+                if !world.characters[&plan.buyer].is_walking() {
+                    let Some(path) = route_path_to_point(nav, &plan.buyer, position, counter.pitch) else {
+                        self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::NoRoute);
+                        continue;
+                    };
+                    let metres = path.windows(2).map(|pair| pair[0].distance(pair[1])).sum::<f64>();
+                    self.market_errands
+                        .get_mut(&plan.buyer)
+                        .expect("errand exists")
+                        .travel_deadline_real
+                        .get_or_insert(
+                            now + (GO_TO_BUDGET_FACTOR * metres / WALK_SPEED_MPS)
+                                .max(GO_TO_MIN_BUDGET_SECONDS),
+                        );
+                    set_route(world, &plan.buyer, path);
+                    if let Some(person) = self.people.get_mut(&plan.buyer) {
+                        person.phase = Phase::Travelling;
+                        person.travel_target = Some(counter.pitch);
+                    }
+                }
+                continue;
+            }
+            world.characters.get_mut(&plan.buyer).expect("buyer exists").state.movement = None;
+            self.market_errands
+                .get_mut(&plan.buyer)
+                .expect("errand exists")
+                .phase = MarketErrandPhase::AtCounter;
+            let spent_before = self.market_errands[&plan.buyer].spent_sparks;
+            let remaining_budget = plan
+                .max_spend_sparks
+                .checked_sub(spent_before)
+                .expect("a market visit never spends beyond its validated cap");
+            if remaining_budget == 0 {
+                self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::BudgetExhausted);
+                continue;
+            }
+            let Some(trade) = self.food_trades.get(&counter.trade) else { continue };
+            let requested: Vec<MarketRequestLine> = plan
+                .targets
+                .iter()
+                .filter_map(|target| {
+                    let matcher = target.matcher();
+                    if !trade.listings.contains(&matcher) {
+                        return None;
+                    }
+                    let held = world.held_quantity(&plan.buyer, &matcher);
+                    (held < target.desired_quantity).then_some(MarketRequestLine {
+                        matcher,
+                        quantity: target.desired_quantity - held,
+                    })
+                })
+                .collect();
+            if requested.is_empty() {
+                self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::TargetsSatisfied);
+                continue;
+            }
+            let fingerprint = self.market_attempt_fingerprint(
+                world,
+                &plan,
+                &binding,
+                time.office,
+                spent_before,
+                remaining_budget,
+            );
+            if self.market_errands[&plan.buyer]
+                .last_failed_fingerprint
+                .as_ref()
+                == Some(&fingerprint)
+            {
+                continue;
+            }
+            let operation = format!(
+                "stock:{}:{}:{}:{}",
+                plan.id, time.day, binding.counter_id, spent_before
+            );
+            match world.market_sale(
+                &plan.buyer,
+                &binding.seller,
+                &requested,
+                remaining_budget,
+                &operation,
+            ) {
+                Ok(receipt) => {
+                    let new_spent = {
+                        let errand = self.market_errands.get_mut(&plan.buyer).expect("errand exists");
+                        errand.spent_sparks = spent_before
+                            .checked_add(receipt.total_sparks)
+                            .expect("sale cannot exceed the checked visit budget");
+                        errand.last_failed_fingerprint = None;
+                        errand.spent_sparks
+                    };
+                    self.push_food_log(sale_receipt_trace(
+                        &receipt,
+                        &binding.counter_id,
+                    ));
+                    let trace = self.stock_errand_trace(
+                        &plan,
+                        &self.market_errands[&plan.buyer],
+                        "sale_committed",
+                        None,
+                    );
+                    self.push_food_log(trace);
+                    if self.stock_plan_satisfied(world, &plan) {
+                        self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::TargetsSatisfied);
+                    } else if new_spent >= plan.max_spend_sparks {
+                        self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::BudgetExhausted);
+                    }
+                }
+                Err(error) => {
+                    let should_log = self
+                        .market_errands
+                        .get(&plan.buyer)
+                        .is_some_and(|errand| errand.last_failed_fingerprint.as_ref() != Some(&fingerprint));
+                    if should_log {
+                        self.market_errands
+                            .get_mut(&plan.buyer)
+                            .expect("errand exists")
+                            .last_failed_fingerprint = Some(fingerprint);
+                        let trace = self.stock_errand_trace(
+                            &plan,
+                            &self.market_errands[&plan.buyer],
+                            error.code.as_str(),
+                            None,
+                        );
+                        self.push_food_log(trace);
+                    }
+                    if error.code == crate::InventoryErrorCode::UnpricedStock {
+                        self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::UnpricedStock);
+                    } else if error.code == crate::InventoryErrorCode::BudgetExhausted {
+                        self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::BudgetExhausted);
+                    }
                 }
             }
         }
     }
+
+    fn production_dynamically_eligible(
+        &self,
+        world: &World,
+        plan: &ResolvedProductionPlan,
+        transform: &ResolvedTransformSpec,
+        in_conversation: &BTreeSet<ActorId>,
+    ) -> bool {
+        world.is_present(&plan.producer)
+            && !world.characters[&plan.producer].is_walking()
+            && world.characters[&plan.producer].position_m().distance(transform.point)
+                <= ROUND_ARRIVE_RADIUS_M
+            && !in_conversation.contains(&plan.producer)
+            && !self.market_errands.contains_key(&plan.producer)
+            && self
+                .people
+                .get(&plan.producer)
+                .is_none_or(|person| person.food.is_none())
+            && world.characters[&plan.producer].state.intent.is_none()
+    }
+
+    fn production_start_eligible(
+        &self,
+        world: &World,
+        plan: &ResolvedProductionPlan,
+        transform: &ResolvedTransformSpec,
+        time: crate::clock::WorldTime,
+        in_conversation: &BTreeSet<ActorId>,
+    ) -> bool {
+        self.production_dynamically_eligible(world, plan, transform, in_conversation)
+            && transform.allowed_offices.contains(&time.office)
+            && self.actor_on_leg(&plan.producer, time, &transform.site, Arrival::Work)
+    }
+
+    /// Exact game minutes in `(from, to]` for which this transform's office is
+    /// open and the producer's authored round says Work at this site. Civil
+    /// midnight is a boundary too: the Snuffing spans it, but a weekday-only
+    /// leg changes day there.
+    fn production_overlap_minutes(
+        &self,
+        plan: &ResolvedProductionPlan,
+        transform: &ResolvedTransformSpec,
+        from: f64,
+        to: f64,
+    ) -> f64 {
+        if !from.is_finite() || !to.is_finite() || to <= from {
+            return 0.0;
+        }
+        let first_day = from.floor() as i64;
+        let last_day = to.floor() as i64;
+        let mut overlap_days = 0.0;
+        for day in first_day..=last_day {
+            let weekday = Weekday::of_day(day);
+            let mut start_fraction = 0.0;
+            let mut office = Office::Snuffing;
+            for next_office in Office::ALL {
+                let end_fraction = next_office.start_fraction();
+                if transform.allowed_offices.contains(&office)
+                    && self.actor_on_leg_at(
+                        &plan.producer,
+                        office,
+                        weekday,
+                        &transform.site,
+                        Arrival::Work,
+                    )
+                {
+                    let start = day as f64 + start_fraction;
+                    let end = day as f64 + end_fraction;
+                    overlap_days += (to.min(end) - from.max(start)).max(0.0);
+                }
+                start_fraction = end_fraction;
+                office = next_office;
+            }
+            if transform.allowed_offices.contains(&office)
+                && self.actor_on_leg_at(
+                    &plan.producer,
+                    office,
+                    weekday,
+                    &transform.site,
+                    Arrival::Work,
+                )
+            {
+                let start = day as f64 + start_fraction;
+                let end = day as f64 + 1.0;
+                overlap_days += (to.min(end) - from.max(start)).max(0.0);
+            }
+        }
+        overlap_days * 24.0 * 60.0
+    }
+
+    fn tick_production(
+        &mut self,
+        world: &mut World,
+        clock: &WorldClock,
+        now: f64,
+        in_conversation: &BTreeSet<ActorId>,
+    ) {
+        let current_days = clock.game_days(now);
+        let previous_days = self.production_last_game_days;
+        self.production_last_game_days = current_days;
+        let time = clock.at(now);
+        let plans = self.production_plans.clone();
+        for plan in plans {
+            let was_eligible = self
+                .production_was_eligible
+                .get(&plan.producer)
+                .copied()
+                .unwrap_or(false);
+            if let Some(job) = world.active_transform_job(&plan.producer).cloned()
+                && let Some(transform) = plan.transforms.iter().find(|spec| spec.id == job.spec_id)
+            {
+                let eligible_now = self.production_dynamically_eligible(
+                    world,
+                    &plan,
+                    transform,
+                    in_conversation,
+                );
+                if eligible_now && was_eligible {
+                    let minutes = self.production_overlap_minutes(
+                        &plan,
+                        transform,
+                        previous_days,
+                        current_days,
+                    );
+                    if minutes > 0.0
+                        && let Some(active) = world.active_transform_job_mut(&plan.producer)
+                    {
+                        active.progress_work_minutes += minutes;
+                    }
+                } else if !eligible_now && was_eligible {
+                    self.push_food_log(format!(
+                        "transform_pause: producer {}, spec {}, job {}, production_day {}, reserved [{}], future_outputs [{}], progress {:.3}/{:.3} work_minutes",
+                        plan.producer,
+                        transform.id,
+                        job.job_id,
+                        job.production_day,
+                        reserved_inputs_trace(&job.inputs),
+                        stock_specs_trace(&job.outputs),
+                        job.progress_work_minutes,
+                        transform.work_minutes,
+                    ));
+                }
+                if eligible_now
+                    && world
+                        .active_transform_job(&plan.producer)
+                        .is_some_and(|active| {
+                            active.progress_work_minutes >= f64::from(transform.work_minutes)
+                        })
+                {
+                    let completed_work_minutes = world
+                        .active_transform_job(&plan.producer)
+                        .map(|active| active.progress_work_minutes)
+                        .unwrap_or(job.progress_work_minutes);
+                    match world.complete_transform_job_by_id(
+                        &plan.producer,
+                        &job.job_id,
+                        time.day,
+                    ) {
+                        Ok(receipt) => {
+                            world.touch_public_state();
+                            self.push_food_log(format!(
+                                "transform_finish: producer {}, spec {}, job {}, production_day {}, completion_day {}, work_minutes {:.3}/{}, consumed [{}], produced [{}]",
+                                plan.producer,
+                                transform.id,
+                                receipt.job_id,
+                                job.production_day,
+                                receipt.completed_on_day,
+                                completed_work_minutes,
+                                transform.work_minutes,
+                                transform_receipt_lines_trace(&receipt.consumed),
+                                transform_receipt_lines_trace(&receipt.produced),
+                            ));
+                        }
+                        Err(error) => self.push_food_log(format!(
+                            "transform_finish_failed: producer {}, spec {}: {error}",
+                            plan.producer, transform.id
+                        )),
+                    }
+                }
+            }
+            if world.active_transform_job(&plan.producer).is_some() {
+                let eligible_at_end = world
+                    .active_transform_job(&plan.producer)
+                    .and_then(|job| plan.transforms.iter().find(|spec| spec.id == job.spec_id))
+                    .is_some_and(|transform| {
+                        self.production_dynamically_eligible(
+                            world,
+                            &plan,
+                            transform,
+                            in_conversation,
+                        )
+                    });
+                self.production_was_eligible
+                    .insert(plan.producer.clone(), eligible_at_end);
+                continue;
+            }
+            let starts = self
+                .production_starts
+                .get(&(plan.producer.clone(), time.day))
+                .copied()
+                .unwrap_or(0);
+            if starts >= plan.max_jobs_per_day {
+                self.production_was_eligible
+                    .insert(plan.producer.clone(), false);
+                continue;
+            }
+            for transform in &plan.transforms {
+                if !self.production_start_eligible(
+                    world,
+                    &plan,
+                    transform,
+                    time,
+                    in_conversation,
+                ) {
+                    continue;
+                }
+                let mut batch_outputs = BTreeMap::<ItemMatcher, u32>::new();
+                let batch_is_valid = transform.produces.iter().all(|output| {
+                    let quantity = batch_outputs.entry(output.matcher()).or_default();
+                    if let Some(total) = quantity.checked_add(output.quantity) {
+                        *quantity = total;
+                        true
+                    } else {
+                        false
+                    }
+                });
+                let output_fits_target = batch_is_valid
+                    && batch_outputs.iter().all(|(matcher, batch_quantity)| {
+                        world
+                            .held_quantity(&plan.producer, matcher)
+                            .checked_add(
+                                world.future_output_quantity(&plan.producer, matcher),
+                            )
+                            .and_then(|quantity| quantity.checked_add(*batch_quantity))
+                            .is_some_and(|quantity| {
+                                quantity <= transform.desired_output_quantity
+                            })
+                    });
+                if !output_fits_target {
+                    continue;
+                }
+                let mut reserved = Vec::new();
+                let mut complete = true;
+                for input in &transform.consumes {
+                    let matcher = input.matcher();
+                    let mut remaining = input.quantity;
+                    let mut ids = world.characters[&plan.producer].holds().to_vec();
+                    ids.sort();
+                    for id in ids {
+                        if remaining == 0 { break; }
+                        if !world.items.get(&id).is_some_and(|item| matcher.matches(item)) {
+                            continue;
+                        }
+                        let take = remaining.min(world.uncommitted_quantity(&id));
+                        if take > 0 {
+                            reserved.push(ReservedInput { item_id: id, quantity: take });
+                            remaining -= take;
+                        }
+                    }
+                    if remaining > 0 {
+                        complete = false;
+                        break;
+                    }
+                }
+                if !complete {
+                    continue;
+                }
+                let start_slot = starts;
+                let job_id = format!(
+                    "{}:{}:{}:{}",
+                    plan.producer, transform.id, time.day, start_slot
+                );
+                let job = TransformJob {
+                    job_id: job_id.clone(),
+                    spec_id: transform.id.clone(),
+                    producer: plan.producer.clone(),
+                    production_day: time.day,
+                    start_slot,
+                    inputs: reserved,
+                    outputs: transform.produces.clone(),
+                    progress_work_minutes: 0.0,
+                };
+                let reserved_trace = reserved_inputs_trace(&job.inputs);
+                let outputs_trace = stock_specs_trace(&job.outputs);
+                match world.start_transform_job(job) {
+                    Ok(()) => {
+                        self.production_starts
+                            .insert((plan.producer.clone(), time.day), starts + 1);
+                        world.touch_public_state();
+                        self.push_food_log(format!(
+                            "transform_start: producer {}, spec {}, job {job_id}, production_day {}, start_slot {start_slot}, reserved [{reserved_trace}], future_outputs [{outputs_trace}], work_minutes {}",
+                            plan.producer, transform.id, time.day, transform.work_minutes
+                        ));
+                    }
+                    Err(error) => self.push_food_log(format!(
+                        "transform_start_failed: producer {}, spec {}: {error}",
+                        plan.producer, transform.id
+                    )),
+                }
+                break;
+            }
+            let eligible_at_end = world
+                .active_transform_job(&plan.producer)
+                .and_then(|job| plan.transforms.iter().find(|spec| spec.id == job.spec_id))
+                .is_some_and(|transform| {
+                    self.production_dynamically_eligible(
+                        world,
+                        &plan,
+                        transform,
+                        in_conversation,
+                    )
+                });
+            self.production_was_eligible
+                .insert(plan.producer.clone(), eligible_at_end);
+        }
+        self.production_starts
+            .retain(|(_, day), _| *day >= time.day.saturating_sub(1));
+        world.prune_completed_transforms(time.day);
+    }
+
 }
 
-/// The seed of a walker's spark holding, summed across every spark stack they
-/// hold (there is only ever one, by the merge invariant).
-fn wallet_sparks(world: &World, id: &ActorId) -> u32 {
-    world
-        .characters
-        .get(id)
-        .map(|character| character.holds())
-        .unwrap_or(&[])
+fn sale_receipt_trace(receipt: &SaleReceipt, counter: &str) -> String {
+    let lines = receipt
+        .lines
         .iter()
-        .filter_map(|item_id| world.items.get(item_id))
-        .filter(|item| item.kind.as_str() == "spark")
-        .map(|item| item.quantity)
-        .sum()
+        .map(|line| {
+            format!(
+                "{}->{} {}{:?} qty {} unit {} total {}",
+                line.source_item_id,
+                line.destination_item_id,
+                line.matcher.kind,
+                line.matcher.metadata,
+                line.quantity,
+                line.unit_price_sparks,
+                line.line_total_sparks,
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("; ");
+    format!(
+        "sale: operation {}, counter {counter}, buyer {}, seller {}, lines [{lines}], total {}",
+        receipt.operation_key, receipt.buyer, receipt.seller, receipt.total_sparks
+    )
 }
 
-/// The spark stack ids `id` holds (usually one).
-fn spark_stack_ids(world: &World, id: &ActorId) -> Vec<ItemId> {
-    world
-        .characters
-        .get(id)
-        .map(|character| character.holds().to_vec())
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|item_id| world.items.get(item_id).is_some_and(|item| item.kind.as_str() == "spark"))
-        .collect()
+fn stock_specs_trace(specs: &[StockSpec]) -> String {
+    specs
+        .iter()
+        .map(|stock| format!("{}{:?}:{}", stock.kind, stock.metadata, stock.quantity))
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
-/// Take `amount` sparks off `id`, removing the stack at zero. Returns whether
-/// they could pay — the whole debit is atomic (checked before any mutation).
-fn debit_sparks(world: &mut World, id: &ActorId, amount: u32) -> bool {
-    if amount == 0 {
-        return true;
-    }
-    let stacks = spark_stack_ids(world, id);
-    let total: u32 = stacks.iter().filter_map(|sid| world.items.get(sid)).map(|item| item.quantity).sum();
-    if total < amount {
-        return false;
-    }
-    let mut remaining = amount;
-    for sid in stacks {
-        if remaining == 0 {
-            break;
-        }
-        let held = world.items.get(&sid).map(|item| item.quantity).unwrap_or(0);
-        let take = held.min(remaining);
-        remaining -= take;
-        if take == held {
-            prune_offer_on_removal(world, &sid);
-            world.items.remove(&sid);
-            if let Some(character) = world.characters.get_mut(id) {
-                character.state.holds.retain(|item_id| item_id != &sid);
+fn reserved_inputs_trace(inputs: &[ReservedInput]) -> String {
+    inputs
+        .iter()
+        .map(|input| format!("{}:{}", input.item_id, input.quantity))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn transform_receipt_lines_trace(
+    lines: &[crate::inventory::TransformReceiptLine],
+) -> String {
+    lines
+        .iter()
+        .map(|line| format!("{}:{}", line.item_id, line.quantity))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+struct BoundaryExchangeReceipt {
+    lines: Vec<String>,
+    cash_in_sparks: u64,
+    cash_out_sparks: u64,
+}
+
+fn boundary_exchange(
+    party: &mut RoadParty,
+    world: &mut World,
+) -> Result<BoundaryExchangeReceipt, crate::InventoryError> {
+    let next_trip = party.state.trip_number.checked_add(1).ok_or_else(|| {
+        crate::InventoryError::new(
+            crate::InventoryErrorCode::ArithmeticOverflow,
+            "road trip number overflow",
+        )
+    })?;
+    let mut staged = world.clone();
+    let mut lines = Vec::new();
+    let mut cash_in_sparks = 0u64;
+    let mut cash_out_sparks = 0u64;
+
+    // Member order and item-id order make the off-map delivery deterministic.
+    for member in &party.members {
+        let mut ids = staged.characters[member].holds().to_vec();
+        ids.sort();
+        for item_id in ids {
+            let Some(item) = staged.items.get(&item_id).cloned() else { continue };
+            if !party.commercial_cargo.iter().any(|matcher| matcher.matches(&item)) {
+                continue;
             }
-        } else {
-            world.items.get_mut(&sid).expect("stack exists").quantity -= take;
+            staged.consume_item_quantity(member, &item_id, item.quantity)?;
+            lines.push(format!(
+                "boundary_unload: party {}, trip {next_trip}, owner {member}, item {item_id}, kind {}, quantity {}",
+                party.id, item.kind, item.quantity
+            ));
         }
     }
-    true
-}
-
-/// Add `amount` sparks to `id`, folding into their existing purse or minting a
-/// `w_<id>` wallet if they hold none.
-fn credit_sparks(world: &mut World, id: &ActorId, amount: u32) {
-    if amount == 0 {
-        return;
-    }
-    if let Some(sid) = spark_stack_ids(world, id).first() {
-        world.items.get_mut(sid).expect("stack exists").quantity += amount;
-        return;
-    }
-    let wallet_id = ItemId::from_raw(format!("w_{}", id.as_str()));
-    if world.items.contains_key(&wallet_id) {
-        // A stray unheld wallet id: fold into it rather than dup-panic.
-        world.items.get_mut(&wallet_id).expect("present").quantity += amount;
-    } else {
-        world.items.insert(wallet_id.clone(), Item::stack(wallet_id.clone(), "spark", amount));
-    }
-    if let Some(character) = world.characters.get_mut(id)
-        && !character.holds().contains(&wallet_id)
-    {
-        character.state.holds.push(wallet_id);
-    }
-}
-
-/// Set `id`'s spark holding to exactly `amount` (the nightly ledger): collapse
-/// onto their first spark stack, drop any spare, and create a purse if they hold
-/// none and `amount > 0`.
-fn set_wallet(world: &mut World, id: &ActorId, amount: u32) {
-    let stacks = spark_stack_ids(world, id);
-    if amount == 0 {
-        for sid in stacks {
-            prune_offer_on_removal(world, &sid);
-            world.items.remove(&sid);
-            if let Some(character) = world.characters.get_mut(id) {
-                character.state.holds.retain(|item_id| item_id != &sid);
-            }
+    for member in &party.members {
+        let target = party.wallet_floats[member];
+        let (cash_in, cash_out) = staged.settle_wallet_exact(
+            member,
+            target,
+            &format!("road:{}:{next_trip}:wallet:{member}", party.id),
+        )?;
+        if cash_in > 0 {
+            lines.push(format!(
+                "road_cash_in: party {}, trip {next_trip}, member {member}, amount {cash_in}"
+                , party.id
+            ));
+            cash_in_sparks = cash_in_sparks
+                .checked_add(u64::from(cash_in))
+                .expect("per-trip cash-in total fits u64");
         }
-        return;
-    }
-    if let Some(first) = stacks.first().cloned() {
-        world.items.get_mut(&first).expect("stack exists").quantity = amount;
-        for spare in stacks.into_iter().skip(1) {
-            prune_offer_on_removal(world, &spare);
-            world.items.remove(&spare);
-            if let Some(character) = world.characters.get_mut(id) {
-                character.state.holds.retain(|item_id| item_id != &spare);
-            }
+        if cash_out > 0 {
+            lines.push(format!(
+                "road_cash_out: party {}, trip {next_trip}, member {member}, amount {cash_out}"
+                , party.id
+            ));
+            cash_out_sparks = cash_out_sparks
+                .checked_add(u64::from(cash_out))
+                .expect("per-trip cash-out total fits u64");
         }
-    } else {
-        credit_sparks(world, id, amount);
     }
+    for (slot, stock) in party.manifest.iter().enumerate() {
+        let item_id = staged.add_stock(
+            &party.leader,
+            stock,
+            &format!("road:{}:{next_trip}:manifest:{slot}", party.id),
+        )?;
+        lines.push(format!(
+            "boundary_load: party {}, trip {next_trip}, owner {}, item {item_id}, kind {}, quantity {}",
+            party.id, party.leader, stock.kind, stock.quantity
+        ));
+    }
+    staged.touch_public_state();
+    *world = staged;
+    party.state.trip_number = next_trip;
+    party.state.phase = PartyPhase::StagedOutsideGate;
+    Ok(BoundaryExchangeReceipt {
+        lines,
+        cash_in_sparks,
+        cash_out_sparks,
+    })
 }
 
 /// `"s"` unless `n == 1` — the naive pluralizer, for the sparks in a percept.
@@ -1776,54 +4214,13 @@ fn spark_plural(n: u32) -> &'static str {
     if n == 1 { "" } else { "s" }
 }
 
-/// Drop any live offer of a stack about to be **silently removed** under the
-/// ladder — a sold-out board stack, an emptied purse, a swept wallet — with the
-/// same cleanup `eat` does when its last unit goes (`actions.rs:1037`): no
-/// `retract_offer` event (the HUD learns from the snapshot), and the offer's
-/// target is told it lapsed if they are a nearby hearer. Without this a stack an
-/// LLM had offered ("one stock, two doors") is removed while `world.offers` still
-/// names it, and the next `assert_invariants` panics ("offer giver does not hold
-/// item"). Only *removal* needs this — a stack that merely **shrinks** below an
-/// offer's quantity is caught gracefully at accept time. Call BEFORE the item
-/// leaves `world.items`, so the withdrawn noun and the giver's position are still
-/// there to read.
-fn prune_offer_on_removal(world: &mut World, item_id: &ItemId) {
-    let Some(offer) = world.offers.remove(item_id) else {
-        return;
-    };
-    let Some(target_id) = offer.target_id else {
-        return; // a broadcast offer notifies nobody in particular
-    };
-    if !world.characters.contains_key(&target_id) {
-        return;
-    }
-    let within_earshot = world
-        .characters
-        .get(&offer.giver_id)
-        .map(Character::position_m)
-        .zip(world.characters.get(&target_id).map(Character::position_m))
-        .is_some_and(|(giver, target)| giver.distance(target) <= HEARING_RADIUS_M);
-    if !within_earshot {
-        return; // a distant target reads the removal off the snapshot, as `eat` does
-    }
-    let Some(noun) = world.items.get(item_id).map(|item| world.item_catalog.display_name(item)) else {
-        return;
-    };
-    let withdrawer = crate::cap_first(&identify_ids(world, &target_id, &offer.giver_id));
-    world
-        .characters
-        .get_mut(&target_id)
-        .expect("target exists")
-        .notify(format!("{withdrawer} withdrew the offered {noun} (id {item_id})"));
-}
-
 /// Eat one unit of a held food item **without** the bystander inbox lines the
 /// `eat` verb delivers to nearby NPCs — the market's zero-token discipline
 /// (`04` §5, `05_the_llm_seam.md` §4). A code-driven meal (eat-at-pitch, or a
 /// famished actor eating what they hold) fires far too often to nudge a reaction
 /// turn per bite, so it follows the well-draw pattern: the eater *remembers their
-/// own meal* (askable), the stack decrements with the same offer cleanup and
-/// satiety as the verb, and the player sees the item vanish from the snapshot — but
+/// own meal* (askable), the stack decrements with the same commitment-aware
+/// rule and satiety as the verb, and the player sees the item vanish from the snapshot — but
 /// no `X ate a herring` lands in a neighbour's inbox. A **deliberate** `eat` turn
 /// (an LLM or the player choosing it) still carries its terse bystander line
 /// through the real verb; only the ladder's auto-eat is silenced. Returns whether
@@ -1839,14 +4236,8 @@ fn silent_eat(world: &mut World, eater: &ActorId, item_id: &ItemId) -> bool {
         return false; // not food (a race, or a bad decision) — eat nothing
     };
     let noun = world.item_catalog.display_name(&item);
-    if item.quantity <= 1 {
-        prune_offer_on_removal(world, item_id);
-        world.items.remove(item_id);
-        if let Some(character) = world.characters.get_mut(eater) {
-            character.state.holds.retain(|held| held != item_id);
-        }
-    } else {
-        world.items.get_mut(item_id).expect("the eater holds the stack").quantity -= 1;
+    if world.consume_item_quantity(eater, item_id, 1).is_err() {
+        return false;
     }
     if let Some(character) = world.characters.get_mut(eater) {
         let hunger = &mut character.state.needs.hunger;
@@ -1863,9 +4254,9 @@ struct Sale {
     item_display: String,
     price: u32,
     stock_left: u32,
-    vendor: ActorId,
     bought_id: ItemId,
     pitch: Vec3,
+    receipt: SaleReceipt,
 }
 
 /// Build a townsperson's resolved legs from their route override (the 19 authored
@@ -1874,6 +4265,7 @@ struct Sale {
 fn build_legs(
     rounds: &RoundsDoc,
     resolver: &PlaceResolver,
+    worksites: &BTreeMap<String, Vec3>,
     id: &ActorId,
     occupation: Option<&str>,
     home: Option<Vec3>,
@@ -1924,7 +4316,7 @@ fn build_legs(
                 (Some(point), Some(label)) => (point, label.clone(), false),
                 _ => continue, // no workplace resolved for this trade
             },
-            name => match resolver.resolve(name) {
+            name => match resolver.resolve(name).or_else(|| worksites.get(name).copied()) {
                 Some(point) => (point, name.to_string(), false),
                 None => continue, // a place not in this graph
             },
@@ -1991,7 +4383,8 @@ pub fn tick(
     if !round.seeded {
         return nudges;
     }
-    tick_food_ledger(round, world, clock, now);
+    tick_food_economy(round, world, clock, now);
+    round.tick_road_parties(world, nav, clock.at(now), in_conversation);
     decay_needs(round, world, clock, now);
     tick_lamps(round, clock, now);
     resolve_arrivals(round, world);
@@ -1999,7 +4392,12 @@ pub fn tick(
     tick_intents(round, world, nav, now, &mut nudges);
     service_sources(round, world, nav, clock, now, player_id, in_conversation);
     service_stalls(round, world, clock, now, player_id);
+    round.tick_stock_plans(world, nav, clock.at(now), now, in_conversation);
+    // Credit the interval that just elapsed before the office ladder can send
+    // a worker away at the new bell.
+    round.tick_production(world, clock, now, in_conversation);
     run_ladder(round, world, nav, clock, now, in_conversation, &mut nudges);
+    round.trace_cart_load_changes(world);
     nudges
 }
 
@@ -2155,6 +4553,9 @@ fn tick_intents(
 ) {
     let ids: Vec<ActorId> = round.people.keys().cloned().collect();
     for id in ids {
+        if !world.is_present(&id) {
+            continue;
+        }
         let Some(character) = world.characters.get(&id) else {
             continue;
         };
@@ -2200,7 +4601,12 @@ fn tick_intents(
                 actor_id: target_id,
                 last_seen,
                 visible,
-            } => match world.characters.get(target_id).map(Character::position_m) {
+            } => match world
+                .characters
+                .get(target_id)
+                .filter(|_| world.is_present(target_id))
+                .map(Character::position_m)
+            {
                 // Characters are never removed; fail soft if one ever is.
                 None => ending = Some("Your errand has lapsed.".to_string()),
                 Some(target_position) => {
@@ -2368,6 +4774,9 @@ fn decay_needs(round: &mut Round, world: &mut World, clock: &WorldClock, now: f6
     // office (the round's `home`/`sleep` legs then become supper).
     let meal_office = is_meal_office(clock.at(now).office);
     for (id, person) in &round.people {
+        if !world.is_present(id) {
+            continue;
+        }
         let Some(character) = world.characters.get_mut(id) else {
             continue;
         };
@@ -2407,24 +4816,20 @@ fn decay_needs(round: &mut Round, world: &mut World, clock: &WorldClock, now: f6
     }
 }
 
-/// The food ledger (M3): fire the Kindling restock and the Watch reset exactly
+/// Dispatch the retained Kindling restock and M5 household settlement exactly
 /// once per office crossing since the last poll, no matter the debug time-scale
-/// (`WorldClock::offices_crossed`, the same span the bells ride). At the Watch
-/// the books close (wallets reset, stock swept); at the Kindling today's vendors
-/// are bound and the morning stock is conjured onto them.
-fn tick_food_ledger(round: &mut Round, world: &mut World, clock: &WorldClock, now: f64) {
-    if round.stalls.is_empty() {
-        round.last_office_now = now;
-        return;
-    }
+/// (`WorldClock::offices_crossed`, the same span the bells ride).
+fn tick_food_economy(round: &mut Round, world: &mut World, clock: &WorldClock, now: f64) {
     let crossings = clock.offices_crossed(round.last_office_now, now);
     round.last_office_now = now;
     for (instant, office) in crossings {
-        let day = clock.at(instant).day;
+        let time = clock.at(instant);
+        let day = time.day;
+        round.trigger_road_office(world, office, time);
         match office {
-            Office::Watch => round.close_books(world),
-            Office::Kindling => {
-                round.bind_vendors(world, clock.at(instant).weekday);
+            Office::Watch => round.dispatch_household_settlement(world, day),
+            Office::Kindling if !round.stalls.is_empty() => {
+                round.bind_vendors(world, time.weekday);
                 round.restock(world, day);
             }
             _ => {}
@@ -2441,6 +4846,9 @@ fn resolve_food_arrivals(round: &mut Round, world: &mut World) {
     }
     let ids: Vec<ActorId> = round.people.keys().cloned().collect();
     for id in ids {
+        if !world.is_present(&id) {
+            continue;
+        }
         let Some(errand) = round.people[&id].food.clone() else {
             continue;
         };
@@ -2480,6 +4888,47 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
     }
     let time = clock.at(now);
 
+    // Inventory can change while a buyer is walking or queued (a gift, a
+    // transform completion, a released offer). A usable held meal satisfies
+    // acquisition immediately, so cancel the stale queue slot before it can
+    // commit a second purchase. Famished/hungry actors eat now unless their
+    // active supper leg is still carrying them home.
+    let cancelled: Vec<(ActorId, ItemId)> = round
+        .people
+        .iter()
+        .filter_map(|(id, person)| {
+            matches!(
+                person.food.as_ref().map(|errand| &errand.phase),
+                Some(FoodPhase::Approaching | FoodPhase::Queued)
+            )
+            .then(|| {
+                world
+                    .characters
+                    .get(id)
+                    .and_then(|actor| held_edible(round, world, actor))
+                    .map(|item| (id.clone(), item))
+            })
+            .flatten()
+        })
+        .collect();
+    for (buyer, item) in cancelled {
+        for stall in &mut round.stalls {
+            stall.queue.retain(|queued| queued != &buyer);
+            if stall.serving.as_ref().is_some_and(|(served, _)| served == &buyer) {
+                stall.serving = None;
+            }
+        }
+        round.people.get_mut(&buyer).expect("buyer is enrolled").food = None;
+        if world
+            .characters
+            .get(&buyer)
+            .is_some_and(|actor| actor.needs().hunger < HUNGER_HUNGRY)
+            && !held_meal_waits_for_home(round, world, &buyer, time.office, time.weekday)
+        {
+            silent_eat(world, &buyer, &item);
+        }
+    }
+
     // Open = the hours predicate holds *and* the bound vendor is at the pitch —
     // the seller the round delivered to the square (no pin). Computed first, so
     // the mutable pass below is free of the world borrow.
@@ -2489,7 +4938,8 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
         .map(|stall| {
             stall.open.is_open(time.office, time.weekday)
                 && stall.vendor.as_ref().is_some_and(|vendor| {
-                    world
+                    world.is_present(vendor)
+                        && world
                         .characters
                         .get(vendor)
                         .is_some_and(|character| character.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M)
@@ -2502,8 +4952,16 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
     // (sound_id, position) player-only world sounds to emit this tick: a cry per
     // open stall on its slow rhythm, plus a clink per sale (pushed below).
     let mut sounds: Vec<(&'static str, Vec3)> = Vec::new();
-    for s in 0..round.stalls.len() {
-        if !open[s] {
+    for (s, is_open) in open.iter().copied().enumerate() {
+        round.stalls[s].queue.retain(|actor| world.is_present(actor));
+        if round.stalls[s]
+            .serving
+            .as_ref()
+            .is_some_and(|(actor, _)| !world.is_present(actor))
+        {
+            round.stalls[s].serving = None;
+        }
+        if !is_open {
             if !round.stalls[s].queue.is_empty() || round.stalls[s].serving.is_some() {
                 to_release.push(s);
             }
@@ -2544,21 +5002,9 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
         match try_purchase(round, world, s, &buyer) {
             Some(sale) => {
                 sounds.push(("coin_clink", sale.pitch));
-                // Presentation-only seam (npc_bodies M2): lets the host play the
-                // vendor→buyer hand-over. Empty recipients on purpose — world
-                // events reach inboxes only through `deliver` at the action
-                // site, `flush_world_event` primes no scheduler handoff for
-                // this kind (`is_handoff_kind`), and no prompt ever mentions
-                // it: the market's zero-token discipline holds (`04` §5).
-                world.emit(DomainEvent::world_event(
-                    "stall_sale",
-                    sale.vendor.clone(),
-                    Some(buyer.clone()),
-                    Some(sale.bought_id.clone()),
-                    1,
-                    sale.pitch,
-                    Vec::new(),
-                ));
+                // `World::market_sale` emitted the one purpose-neutral `sale`
+                // event used for the presentation-only hand-over. It has no
+                // recipients, so the market's zero-token discipline holds.
                 let carry = should_carry(round, &buyer, time.office, time.weekday);
                 if carry {
                     round.people.get_mut(&buyer).expect("buyer exists").food = None;
@@ -2571,16 +5017,18 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
                 if let Some(character) = world.characters.get_mut(&buyer) {
                     character.state.movement = None;
                 }
-                world.touch_public_state();
                 world.assert_invariants();
                 round.push_food_log(format!(
-                    "sale: {buyer} bought a {} for {} spark{} at {} — {} left{}",
+                    "{}; stall {}, item {}, posted_price {}, stock_left {}, disposition {}",
+                    sale_receipt_trace(
+                        &sale.receipt,
+                        &format!("stall:{}", sale.stall_name)
+                    ),
+                    sale.stall_name,
                     sale.item_display,
                     sale.price,
-                    spark_plural(sale.price),
-                    sale.stall_name,
                     sale.stock_left,
-                    if carry { ", carried home" } else { "" },
+                    if carry { "carried_home" } else { "eat_at_pitch" },
                 ));
             }
             None => {
@@ -2649,22 +5097,26 @@ fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId)
     let vendor = round.stalls[s].vendor.clone()?;
     let trade_key = round.stalls[s].trade.clone();
     let trade = round.food_trades.get(&trade_key)?.clone();
-    let buyer_sparks = wallet_sparks(world, buyer);
+    let buyer_sparks = world.spendable_sparks(buyer);
 
-    // Choose what to sell: the pot conjures a fresh bowl; a stock stall sells the
-    // cheapest affordable edible on the board.
-    let (template, price, from_stock): (Item, u32, Option<ItemId>) = if let Some(kind) = &trade.per_serving {
+    // Choose what to sell: the pot materialises a fresh bowl inside the same
+    // staged transaction; every stocked counter scans the vendor's live,
+    // uncommitted holds rather than a stale side list.
+    let (matcher, price, conjure): (ItemMatcher, u32, bool) = if let Some(kind) = &trade.per_serving {
         let bowl = Item::new(ItemId::from_raw("stew_probe"), kind.as_str());
         let price = world.item_catalog.price_sparks(&bowl)?;
         if buyer_sparks < price {
             return None;
         }
-        (bowl, price, None)
+        (ItemMatcher::new(kind.clone()), price, true)
     } else {
         let mut best: Option<(u32, ItemId, Item)> = None;
-        for stock_id in &round.stalls[s].stock_ids {
+        for stock_id in world.characters.get(&vendor)?.holds() {
             let Some(item) = world.items.get(stock_id) else { continue };
-            if item.quantity == 0 || !world.item_catalog.is_edible(item) {
+            if world.uncommitted_quantity(stock_id) == 0
+                || !world.item_catalog.is_edible(item)
+                || !trade.listings.iter().any(|matcher| matcher.matches(item))
+            {
                 continue;
             }
             let Some(item_price) = world.item_catalog.price_sparks(item) else { continue };
@@ -2678,30 +5130,48 @@ fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId)
                 best = Some((item_price, stock_id.clone(), item.clone()));
             }
         }
-        let (price, stock_id, item) = best?;
-        (item, price, Some(stock_id))
+        let (price, _stock_id, item) = best?;
+        let matcher = ItemMatcher {
+            kind: item.kind.clone(),
+            metadata: item.metadata.clone(),
+        };
+        (matcher, price, false)
     };
 
-    // The swap, atomic: pay first (checked affordable above, so it cannot fail),
-    // then move one unit. Sparks are conserved — the debug assert is the standing
-    // guard the risk ledger asks for.
-    let before = wallet_sparks(world, buyer) + wallet_sparks(world, &vendor);
-    if !debit_sparks(world, buyer, price) {
-        return None;
+    let operation = format!("meal:{}:{}:{}", round.stalls[s].name, buyer, world.event_sequence + 1);
+    let mut staged = world.clone();
+    if conjure {
+        staged
+            .add_stock(
+                &vendor,
+                &StockSpec {
+                    kind: matcher.kind.clone(),
+                    metadata: matcher.metadata.clone(),
+                    quantity: 1,
+                },
+                &format!("{operation}:pot"),
+            )
+            .ok()?;
     }
-    credit_sparks(world, &vendor, price);
-    debug_assert_eq!(
-        wallet_sparks(world, buyer) + wallet_sparks(world, &vendor),
-        before,
-        "a purchase must conserve sparks"
-    );
-    let bought_id = give_food_unit(world, &vendor, buyer, &template, from_stock.as_ref());
+    let receipt = staged
+        .market_sale(
+            buyer,
+            &vendor,
+            &[MarketRequestLine {
+                matcher: matcher.clone(),
+                quantity: 1,
+            }],
+            price,
+            &operation,
+        )
+        .ok()?;
+    let bought_id = receipt.lines.first()?.destination_item_id.clone();
+    *world = staged;
 
-    let stock_left: u32 = round.stalls[s]
-        .stock_ids
+    let stock_left: u32 = trade
+        .listings
         .iter()
-        .filter_map(|id| world.items.get(id))
-        .map(|item| item.quantity)
+        .map(|listed| world.uncommitted_held_quantity(&vendor, listed))
         .sum();
     let item_display = world.item_catalog.display_name(&world.items[&bought_id]);
     let stall_name = round.stalls[s].name.clone();
@@ -2723,66 +5193,15 @@ fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId)
         ));
     }
 
-    Some(Sale { stall_name, item_display, price, stock_left, vendor, bought_id, pitch })
-}
-
-/// Move one unit of `template` from the vendor to the buyer: decrement the stock
-/// stack (removing it at zero), then fold the unit into the buyer's same-stuff
-/// stack or mint it a fresh, deterministic id. Returns the id the buyer now holds.
-fn give_food_unit(
-    world: &mut World,
-    vendor: &ActorId,
-    buyer: &ActorId,
-    template: &Item,
-    from_stock: Option<&ItemId>,
-) -> ItemId {
-    if let Some(stock_id) = from_stock {
-        let held = world.items.get(stock_id).map(|item| item.quantity).unwrap_or(0);
-        if held <= 1 {
-            prune_offer_on_removal(world, stock_id);
-            world.items.remove(stock_id);
-            if let Some(character) = world.characters.get_mut(vendor) {
-                character.state.holds.retain(|item_id| item_id != stock_id);
-            }
-        } else {
-            world.items.get_mut(stock_id).expect("stock stack exists").quantity -= 1;
-        }
-    }
-
-    let mut unit = template.clone();
-    unit.quantity = 1;
-    let stackable = world.item_catalog.stackable(&unit);
-    let merge_target: Option<ItemId> = if stackable {
-        world.characters[buyer]
-            .holds()
-            .iter()
-            .find(|held| world.items.get(*held).is_some_and(|other| other.same_stuff_as(&unit)))
-            .cloned()
-    } else {
-        None
-    };
-    if let Some(target) = merge_target {
-        world.items.get_mut(&target).expect("buyer stack exists").quantity += 1;
-        return target;
-    }
-
-    // A fresh, deterministic id — parent is the stock stack, or a per-vendor
-    // handle for the pot's bowl; the event-sequence salt keeps runs reproducible.
-    let parent = from_stock
-        .cloned()
-        .unwrap_or_else(|| ItemId::from_raw(format!("pot_{}", vendor.as_str())));
-    let mut salt = world.event_sequence + 1;
-    let mut id = crate::world::mint_item_id(&parent, salt);
-    while world.items.contains_key(&id) {
-        salt = salt.wrapping_add(1);
-        id = crate::world::mint_item_id(&parent, salt);
-    }
-    unit.id = id.clone();
-    world.add_item(unit);
-    if let Some(character) = world.characters.get_mut(buyer) {
-        character.state.holds.push(id.clone());
-    }
-    id
+    Some(Sale {
+        stall_name,
+        item_display,
+        price,
+        stock_left,
+        bought_id,
+        pitch,
+        receipt,
+    })
 }
 
 /// Whether a fed buyer carries their food home rather than eating at the pitch:
@@ -2821,14 +5240,15 @@ fn nearest_open_stall(
     if round.stalls.iter().any(|stall| stall.vendor.as_ref() == Some(id)) {
         return None;
     }
-    let sparks = wallet_sparks(world, id);
+    let sparks = world.spendable_sparks(id);
     let mut best: Option<(f64, usize)> = None;
     for (s, stall) in round.stalls.iter().enumerate() {
         if !stall.open.is_open(office, weekday) {
             continue;
         }
         let staffed = stall.vendor.as_ref().is_some_and(|vendor| {
-            world
+            world.is_present(vendor)
+                && world
                 .characters
                 .get(vendor)
                 .is_some_and(|character| character.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M)
@@ -2863,9 +5283,11 @@ fn stall_has_affordable(round: &Round, world: &World, stall: &FoodStall, sparks:
         let bowl = Item::new(ItemId::from_raw("stew_probe"), kind.as_str());
         return world.item_catalog.price_sparks(&bowl).is_some_and(|price| price <= sparks);
     }
-    stall.stock_ids.iter().any(|id| {
+    let Some(vendor) = &stall.vendor else { return false };
+    world.characters[vendor].holds().iter().any(|id| {
         world.items.get(id).is_some_and(|item| {
-            item.quantity > 0
+            world.uncommitted_quantity(id) > 0
+                && trade.listings.iter().any(|matcher| matcher.matches(item))
                 && world.item_catalog.is_edible(item)
                 && world.item_catalog.price_sparks(item).is_some_and(|price| price <= sparks)
         })
@@ -2877,6 +5299,9 @@ fn stall_has_affordable(round: &Round, world: &World, stall: &FoodStall, sparks:
 fn resolve_arrivals(round: &mut Round, world: &mut World) {
     let ids: Vec<ActorId> = round.people.keys().cloned().collect();
     for id in ids {
+        if !world.is_present(&id) {
+            continue;
+        }
         let (phase, source_idx) = {
             let person = &round.people[&id];
             (person.phase, person.source)
@@ -2950,6 +5375,14 @@ fn service_sources(
     let mut emissions: Vec<(&'static str, Vec3)> = Vec::new();
 
     for source in &mut round.sources {
+        source.queue.retain(|actor| world.is_present(actor));
+        if source
+            .serving
+            .as_ref()
+            .is_some_and(|(actor, _)| !world.is_present(actor))
+        {
+            source.serving = None;
+        }
         if let Some((drawer, ends_at)) = source.serving.clone()
             && now >= ends_at
         {
@@ -3100,6 +5533,9 @@ fn run_ladder(
     let time = clock.at(now);
     let ids: Vec<ActorId> = round.people.keys().cloned().collect();
     for id in ids {
+        if !world.is_present(&id) {
+            continue;
+        }
         // A live food errand is committed exactly like a well errand's own phases:
         // walking to a stall, standing in its queue, or eating at the pitch, the
         // ladder does not re-decide them. Buying food *is* the hunger rung acting;
@@ -3136,6 +5572,14 @@ fn run_ladder(
 
         let (decision, pressure) =
             decide(round, world, nav, &id, epoch, time.office, time.weekday);
+
+        // A live stock visit is the resumable rung immediately above the
+        // ordinary round and convenient hunger. It keeps its route through
+        // conversation and ordinary re-decisions; only a pressing rung below
+        // is allowed to divert the body, without resetting the visit budget.
+        if round.market_errands.contains_key(&id) && pressure.is_none() {
+            continue;
+        }
 
         // A pressing rung preempts a live `go_to` errand, and the lapse is a
         // percept: silent abandonment would leave the mind believing it is
@@ -3336,7 +5780,8 @@ fn decide(
     if character.needs().hunger < HUNGER_FAMISHED {
         // Eat what you hold, standing — for anyone, the night trades included,
         // at any hour: a famished actor with food in hand always eats it (but a
-        // vendor never eats their own stall board).
+        // commercially listed food is only a last preference, not protected
+        // from its hungry owner).
         if let Some(item_id) = held_edible(round, world, character) {
             return (Decision::EatHeld(item_id), None);
         }
@@ -3381,14 +5826,22 @@ fn decide(
         return (Decision::ApproachWell, None);
     }
 
-    // Rung 7 — hungry: seek food when convenient (M3, the bread round). Join the
+    // Rung 7 — hungry: use real held food before seeking another unit. During
+    // the supper span a person whose active leg is home carries it there; once
+    // home (or at any other post) they eat it immediately. Otherwise join the
     // nearest open, staffed, affordable stall whose queue is short
     // (`FOOD_QUEUE_SHORT`). Quiet, like thirsty — no pressure percept. Its place
     // in the ladder is fixed: after thirsty (6), before the `go_to` errand (8).
-    if character.needs().hunger < HUNGER_HUNGRY
-        && let Some(stall) = nearest_open_stall(round, world, id, position, office, weekday, true)
-    {
-        return (Decision::ApproachStall(stall), None);
+    if character.needs().hunger < HUNGER_HUNGRY {
+        if let Some(item_id) = held_edible(round, world, character) {
+            if !held_meal_waits_for_home(round, world, id, office, weekday) {
+                return (Decision::EatHeld(item_id), None);
+            }
+        } else if let Some(stall) =
+            nearest_open_stall(round, world, id, position, office, weekday, true)
+        {
+            return (Decision::ApproachStall(stall), None);
+        }
     }
 
     // Rung 8 — the errand: an LLM-issued `go_to` sits between thirsty (6) and
@@ -3650,22 +6103,59 @@ fn word_index(haystack: &str, word: &str) -> Option<usize> {
 /// The id of the first real food item this character holds (positive catalog
 /// satiety), or `None`. A spark is not food (its kind is un-edible); an ad-hoc
 /// test kind carries no satiety and is skipped too — the famished rung only eats
-/// what actually feeds. A bound vendor's **stall stock is skipped**: the board is
-/// for selling, not eating — without this a famished baker eats their own bread
-/// and the stock leaks a loaf nobody bought (found in the M3 bring-up).
+/// what actually feeds. Personal food sorts before commercially listed stock,
+/// but a board unit is still edible when it is the only uncommitted meal.
 fn held_edible(round: &Round, world: &World, character: &Character) -> Option<ItemId> {
-    character
+    let mut edible: Vec<ItemId> = character
         .holds()
         .iter()
-        .find(|item_id| {
-            !round.stalls.iter().any(|stall| stall.stock_ids.contains(item_id))
-                && world
-                    .items
-                    .get(*item_id)
+        .filter(|item_id| {
+            world.uncommitted_quantity(item_id) > 0
+                && world.items.get(*item_id)
                     .and_then(|item| world.item_catalog.satiety(item))
                     .is_some_and(|satiety| satiety > 0)
         })
         .cloned()
+        .collect();
+    edible.sort_by_key(|item_id| {
+        (commercially_listed(round, world, character.id(), item_id), item_id.clone())
+    });
+    edible.into_iter().next()
+}
+
+fn commercially_listed(round: &Round, world: &World, owner: &ActorId, item_id: &ItemId) -> bool {
+    let Some(item) = world.items.get(item_id) else { return false };
+    let stall_stock = round.stalls.iter().any(|stall| {
+        (stall.vendor.as_ref() == Some(owner) || stall.preferred.as_ref() == Some(owner))
+            && round.food_trades.get(&stall.trade).is_some_and(|trade| {
+                trade.listings.iter().any(|matcher| matcher.matches(item))
+            })
+    });
+    stall_stock
+        || round.counters.values().any(|counter| {
+            &counter.seller == owner
+                && round.food_trades.get(&counter.trade).is_some_and(|trade| {
+                    trade.listings.iter().any(|matcher| matcher.matches(item))
+                })
+        })
+}
+
+fn held_meal_waits_for_home(
+    round: &Round,
+    world: &World,
+    actor: &ActorId,
+    office: Office,
+    weekday: Weekday,
+) -> bool {
+    if !should_carry(round, actor, office, weekday) {
+        return false;
+    }
+    let Some(person) = round.people.get(actor) else { return false };
+    let Some(home) = person.home else { return false };
+    world
+        .characters
+        .get(actor)
+        .is_some_and(|character| character.position_m().distance(home) > HOME_ARRIVE_RADIUS_M)
 }
 
 /// The nearest LLM neighbour within the social radius that this actor knows by

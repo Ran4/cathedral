@@ -1275,6 +1275,7 @@ mod tests {
                         created_seq: 5,
                     },
                 ],
+                road_carts: vec![],
             })
             .unwrap();
         mirror
@@ -1332,6 +1333,7 @@ mod tests {
                     },
                 ],
                 offers: vec![],
+                road_carts: vec![],
             })
             .unwrap();
         let holds = [ItemId("spk".into()), ItemId("one".into())];
@@ -1620,14 +1622,15 @@ mod tests {
                     ItemSnapshot {
                         id: ItemId("loaf".into()),
                         kind: "loaf".into(),
-                        name: "rye loaf".into(),
-                        display_plural: "rye loaves".into(),
+                        name: "loaf".into(),
+                        display_plural: "loaves".into(),
                         visual_key: "loaf".into(),
                         quantity: 1,
                         metadata: Default::default(),
                     },
                 ],
                 offers: vec![],
+                road_carts: vec![],
             })
             .unwrap();
 

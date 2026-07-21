@@ -365,15 +365,31 @@ mod tests {
             &root.join("lore"),
         )
         .expect("the shipped population loads");
+        let rounds: serde_json::Value = serde_json::from_str(include_str!(
+            "../../assets/world/rounds.json"
+        ))
+        .expect("the shipped rounds parse");
+        let road_members: BTreeSet<String> = rounds["road_parties"]
+            .as_array()
+            .expect("road_parties is an array")
+            .iter()
+            .flat_map(|party| {
+                party["members"]
+                    .as_array()
+                    .expect("party members is an array")
+            })
+            .map(|member| member.as_str().expect("road member id is text").to_owned())
+            .collect();
+        assert_eq!(road_members.len(), 5, "M5 has exactly five off-map actors");
         let plan = load();
         let distributed: Vec<_> = seed
             .characters
             .iter()
             .filter(|character| {
-                character
-                    .lore
-                    .as_ref()
-                    .is_some_and(|lore| lore.significance != cathedral_sim::Significance::Major)
+                !road_members.contains(character.id.as_str())
+                    && character.lore.as_ref().is_some_and(|lore| {
+                        lore.significance != cathedral_sim::Significance::Major
+                    })
             })
             .collect();
         let non_major = cathedral_backends::world_data::character_sources(&root.join("lore"))
@@ -383,6 +399,9 @@ mod tests {
                 let sheet: serde_json::Value = serde_json::from_str(source)
                     .unwrap_or_else(|error| panic!("character file {path} does not parse: {error}"));
                 sheet["significance"] != "major"
+                    && sheet["id"]
+                        .as_str()
+                        .is_some_and(|id| !road_members.contains(id))
             })
             .count();
         assert_eq!(distributed.len(), non_major);
