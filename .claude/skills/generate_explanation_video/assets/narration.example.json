@@ -1,0 +1,17 @@
+[
+  {
+    "id": "s01_title",
+    "title": "Example Title",
+    "text": "This is the opening scene. Write narration the way it should be spoken aloud: full sentences, natural rhythm, and no markdown, code punctuation, or bullet fragments. The measured length of this clip decides how long the matching visual stays on screen."
+  },
+  {
+    "id": "s02_flow",
+    "title": "A pipeline in three steps",
+    "text": "Use a scene like this to show a flow. Three boxes appear left to right, an arrow draws between each pair as the narration reaches it, and a token travels down the chain. Keep each step to one idea, and let the diagram build in step with the words."
+  },
+  {
+    "id": "s03_code",
+    "title": "A data shape",
+    "text": "For anything structural, put the real type or function on screen as monospaced code and talk over it. Highlight the one field that matters rather than reading the whole block. Code you can point at is far clearer than code you narrate line by line."
+  }
+]

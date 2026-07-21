@@ -1,0 +1,181 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Explanation Video</title>
+<style>
+  :root {
+    --ink:        #14120f;
+    --ink-2:      #1c1915;
+    --panel:      #201c17;
+    --panel-2:    #262119;
+    --line:       #3d352a;
+    --line-2:     #55493a;
+    --text:       #efe6d3;
+    --text-2:     #ab9f89;
+    --text-3:     #7d735f;
+    --gold:       #d9a441;
+    --gold-dim:   #8a6a2c;
+    --grain:      #cfa52a;
+    --flour:      #e6dcc2;
+    --loaf:       #b8763a;
+    --wool:       #bdb6a5;
+    --kersey:     #6e8395;
+    --broad:      #8465ac;
+    --spark:      #f2c451;
+    --bad:        #c4594a;
+    --good:       #83a95e;
+    --info:       #5f93a8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1920px; height: 1080px; overflow: hidden;
+    background: var(--ink);
+    font-family: "DejaVu Sans", sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+  /* ambient background: vignette + a faint warm glow toward the top */
+  #bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(1400px 900px at 50% -10%, rgba(217,164,65,.075), transparent 65%),
+      radial-gradient(1100px 800px at 50% 115%, rgba(95,147,168,.045), transparent 70%),
+      var(--ink);
+  }
+  #vignette {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(1500px 1000px at 50% 50%, transparent 55%, rgba(0,0,0,.55));
+  }
+
+  /* ---------- chrome ---------- */
+  #chrome-top {
+    position: absolute; top: 46px; left: 92px; right: 92px;
+    display: flex; align-items: baseline; gap: 20px;
+  }
+  #sc-num {
+    font-family: "DejaVu Sans Mono", monospace; font-size: 15px;
+    letter-spacing: .22em; color: var(--gold-dim);
+  }
+  #sc-title {
+    font-family: "DejaVu Serif", serif; font-size: 25px;
+    color: var(--text-2); letter-spacing: .015em;
+  }
+  #chrome-rule {
+    position: absolute; top: 90px; left: 92px; right: 92px; height: 1px;
+    background: linear-gradient(90deg, var(--line-2), var(--line) 45%, transparent);
+  }
+  #chrome-foot {
+    position: absolute; bottom: 44px; left: 92px; right: 92px;
+    display: flex; align-items: center; gap: 22px;
+  }
+  #foot-label {
+    font-family: "DejaVu Sans Mono", monospace; font-size: 13px;
+    color: var(--text-3); letter-spacing: .16em; white-space: nowrap;
+  }
+  #prog-track { flex: 1; height: 2px; background: var(--line); position: relative; }
+  #prog-fill  { position: absolute; inset: 0 auto 0 0; background: var(--gold); }
+
+  /* ---------- scenes ---------- */
+  .scene {
+    position: absolute; inset: 0;
+    display: none;
+    padding: 132px 92px 104px;
+  }
+  .scene.on { display: block; }
+
+  /* ---------- shared type ---------- */
+  .h1 {
+    font-family: "DejaVu Serif", serif; font-size: 66px; line-height: 1.08;
+    letter-spacing: -.015em;
+  }
+  .h2 {
+    font-family: "DejaVu Serif", serif; font-size: 40px; line-height: 1.16;
+  }
+  .lede { font-size: 25px; line-height: 1.5; color: var(--text-2); max-width: 1080px; }
+  .mono { font-family: "DejaVu Sans Mono", monospace; }
+  .dim  { color: var(--text-2); }
+  .dim3 { color: var(--text-3); }
+  .gold { color: var(--gold); }
+
+  /* ---------- panels / cards ---------- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .card {
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 24px 26px;
+  }
+  .card-title {
+    font-family: "DejaVu Serif", serif; font-size: 24px; margin-bottom: 10px;
+  }
+  .card-body { font-size: 18px; line-height: 1.5; color: var(--text-2); }
+
+  .chip {
+    display: inline-block;
+    font-family: "DejaVu Sans Mono", monospace; font-size: 15px;
+    padding: 5px 11px; border-radius: 3px;
+    border: 1px solid var(--line-2); color: var(--text-2);
+    background: rgba(0,0,0,.25);
+  }
+
+  .kbd {
+    font-family: "DejaVu Sans Mono", monospace;
+    color: var(--gold); background: rgba(217,164,65,.10);
+    border: 1px solid rgba(217,164,65,.28);
+    padding: 2px 7px; border-radius: 3px;
+  }
+
+  /* code blocks */
+  .code {
+    font-family: "DejaVu Sans Mono", monospace;
+    font-size: 19px; line-height: 1.62;
+    background: #171410; border: 1px solid var(--line);
+    border-radius: 4px; padding: 22px 26px;
+    white-space: pre; color: #c8bfa9;
+  }
+  .code .kw  { color: #b08cc9; }
+  .code .ty  { color: #6fa3bb; }
+  .code .fl  { color: #d9c07a; }
+  .code .cm  { color: #6b6252; font-style: italic; }
+  .code .st  { color: #93b06d; }
+  .code .del { color: var(--bad); text-decoration: line-through; opacity: .55; }
+  .code .add { color: var(--good); }
+
+  svg { overflow: visible; }
+  .no-sel { user-select: none; }
+</style>
+
+<div id="stage" class="no-sel">
+  <div id="bg"></div>
+  <div id="scenes"></div>
+  <div id="vignette"></div>
+
+  <div id="chrome-top">
+    <div id="sc-num">00 / 20</div>
+    <div id="sc-title">—</div>
+  </div>
+  <div id="chrome-rule"></div>
+
+  <div id="chrome-foot">
+    <!-- EDIT: left brand label and right source-file label -->
+    <div id="foot-label">THE CATHEDRAL-CITY &nbsp;·&nbsp; SUBSYSTEM</div>
+    <div id="prog-track"><div id="prog-fill"></div></div>
+    <div id="foot-label" style="opacity:.7">source_document.md</div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<!-- Load every scenes file you split content across (scenes.js, scenes2.js, ...) -->
+<script src="scenes.js"></script>
+<script>
+  // TIMINGS is injected by the renderer before any renderAt() call.
+  window.__ready = true;
+</script>
