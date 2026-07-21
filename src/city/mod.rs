@@ -7,6 +7,7 @@
 
 mod monuments;
 mod plan;
+mod route_boards;
 mod smoke;
 pub mod water;
 
@@ -325,6 +326,14 @@ fn build_city(
         &city_materials,
         &plan,
         &mut collision_world,
+    );
+    route_boards::spawn_route_boards(
+        &mut commands,
+        &asset_server,
+        &mut meshes,
+        &mut materials,
+        &city_meshes.cube,
+        &city_materials.dark_wood,
     );
     build_approach_monuments(
         &mut commands,
@@ -7484,6 +7493,28 @@ mod tests {
         assert_eq!(place_markers.len(), 69);
         assert!(place_markers.contains(&1));
         assert!(place_markers.contains(&69));
+
+        let route_boards = world
+            .query::<&route_boards::RoadSupplyRouteBoard>()
+            .iter(world)
+            .map(|board| board.location)
+            .collect::<BTreeSet<_>>();
+        assert_eq!(
+            route_boards,
+            BTreeSet::from([
+                "Seven Lofts",
+                "The Draper's Reach",
+                "The Stone Gate",
+                "The Wool Gate",
+            ])
+        );
+        assert_eq!(
+            world
+                .query::<&route_boards::RoadSupplyRouteMapFace>()
+                .iter(world)
+                .count(),
+            4
+        );
         assert!(world.resource::<CollisionWorld>().len() > 3_000);
     }
 
