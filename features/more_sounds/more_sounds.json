@@ -4879,7 +4879,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 12,
       "id": "snd_241_north_tower_ravens",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Gradine Pigeon Flush",
@@ -4919,7 +4919,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 10,
       "id": "snd_243_sparrows_under_the_eaves",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Swallows over a Court",
@@ -4939,7 +4939,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 10,
       "id": "snd_244_swallows_over_a_court",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "River Gulls at the Outer Wharf",
@@ -4958,7 +4958,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 12,
       "id": "snd_245_river_gulls_at_the_outer_wharf",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Market Dog Warning Bark",
@@ -4978,7 +4978,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 2,
       "id": "snd_246_market_dog_warning_bark",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Sparr Furnace Yard Dogs",
@@ -4998,7 +4998,7 @@
       "playback_mode": "sequence",
       "suggested_duration_seconds": 3.5,
       "id": "snd_247_sparr_furnace_yard_dogs",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Alley Cat on Slate",
@@ -5018,7 +5018,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 1.8,
       "id": "snd_248_alley_cat_on_slate",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Rats behind Cellar Boards",
@@ -5195,7 +5195,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 3,
       "id": "snd_257_geese_at_a_gate_pond_rut",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Bees at the Honey Stall",
@@ -5234,7 +5234,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 7,
       "id": "snd_259_flies_at_eel_smoke_and_offal",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Winter Wolves Beyond the Wall",
@@ -5405,7 +5405,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 5,
       "id": "snd_268_lightning_over_the_lanthorn",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "High-Summer Insect Air",
@@ -5657,7 +5657,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 15,
       "id": "snd_281_lanthorn_nave_air",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Distant Aisle Footsteps",
@@ -5875,7 +5875,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 12,
       "id": "snd_292_congregation_prayer_murmur",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Wooden Bench Kneel",

@@ -2,9 +2,9 @@
   "schema_version": 1,
   "source_catalog": "more_sounds.json",
   "workflow": "Implement the selected sounds in the game using each generated_audio.path when present, then set implemented_in_game to true. The workbench reconciles true flags back into more_sounds.json.",
-  "selected_count": 23,
-  "implemented_count": 23,
-  "generated_count": 23,
+  "selected_count": 53,
+  "implemented_count": 35,
+  "generated_count": 51,
   "selected_sound_ids": [
     "snd_001_soft_shoes_on_dry_cobbles",
     "snd_034_dusty_workshop_cough",
@@ -28,7 +28,37 @@
     "snd_202_ford_well_deep_bucket_splash",
     "snd_206_three_curb_triple_rope",
     "snd_205_chain_well_bucket_knock",
-    "snd_207_three_curb_crossed_buckets"
+    "snd_207_three_curb_crossed_buckets",
+    "snd_243_sparrows_under_the_eaves",
+    "snd_241_north_tower_ravens",
+    "snd_244_swallows_over_a_court",
+    "snd_245_river_gulls_at_the_outer_wharf",
+    "snd_246_market_dog_warning_bark",
+    "snd_247_sparr_furnace_yard_dogs",
+    "snd_248_alley_cat_on_slate",
+    "snd_259_flies_at_eel_smoke_and_offal",
+    "snd_257_geese_at_a_gate_pond_rut",
+    "snd_258_bees_at_the_honey_stall",
+    "snd_256_hens_in_a_domestic_yard",
+    "snd_268_lightning_over_the_lanthorn",
+    "snd_281_lanthorn_nave_air",
+    "snd_292_congregation_prayer_murmur",
+    "snd_307_smallvoice_single_stroke",
+    "snd_308_scold_single_stroke",
+    "snd_329_tenterhook_lane_workday",
+    "snd_324_tallage_weighing_hour",
+    "snd_323_coswalds_yard_before_the_hammers",
+    "snd_322_wickmarket_at_lamplight",
+    "snd_321_gradine_ordinary_day_texture",
+    "snd_325_marens_green_before_dayspring",
+    "snd_328_drapers_reach_in_rain",
+    "snd_330_cinder_row_behind_shutters",
+    "snd_332_dry_cut_freight_corridor",
+    "snd_333_gaunt_passage_by_day",
+    "snd_337_hungry_ox_doorway_spill",
+    "snd_338_old_sluice_in_daylight",
+    "snd_339_skinners_court_work_and_home",
+    "snd_340_seven_lofts_grain_interior"
   ],
   "sounds": [
     {
@@ -689,6 +719,837 @@
         "size_bytes": 48945,
         "modified_ns": 1784659619167347205,
         "path": "generated/snd_207_three_curb_crossed_buckets.mp3"
+      }
+    },
+    {
+      "sound_name": "Sparrows under the Eaves",
+      "category": "Animals & Urban Nature",
+      "description": "Tiny birds chatter from nearly touching eaves and make brief flights between jettied facades.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "voice",
+        "architecture",
+        "day",
+        "loop"
+      ],
+      "game_placement": "Scatter sparse emitters through residential lanes and courts in daylight, reducing them near furnaces, markets, and heavy rain.",
+      "generation_prompt": "Small flock of house sparrows chattering under close medieval timber eaves, brief wing flutters between buildings, intimate urban lane. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 10,
+      "id": "snd_243_sparrows_under_the_eaves",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_243_sparrows_under_the_eaves",
+        "filename": "snd_243_sparrows_under_the_eaves.wav",
+        "url": "/generated/snd_243_sparrows_under_the_eaves.wav?v=1784719757688678144",
+        "media_type": "audio/wav",
+        "size_bytes": 1764078,
+        "modified_ns": 1784719757688678144,
+        "path": "generated/snd_243_sparrows_under_the_eaves.wav"
+      }
+    },
+    {
+      "sound_name": "North-Tower Ravens",
+      "category": "Animals & Urban Nature",
+      "description": "Ravens trade rough calls, wingbeats, and scaffold-foot clicks high on the unfinished Lanthorn tower.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "cathedral",
+        "voice",
+        "loop"
+      ],
+      "game_placement": "Attach to the canonical north-tower nests by day, with height and wind attenuation; scatter briefly during nearby bell or scaffold work.",
+      "generation_prompt": "Several ravens nesting high in a medieval cathedral scaffold, rough natural calls, wingbeats and claws clicking on old timber. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 12,
+      "id": "snd_241_north_tower_ravens",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_241_north_tower_ravens",
+        "filename": "snd_241_north_tower_ravens.wav",
+        "url": "/generated/snd_241_north_tower_ravens.wav?v=1784719784852757609",
+        "media_type": "audio/wav",
+        "size_bytes": 2116878,
+        "modified_ns": 1784719784852757609,
+        "path": "generated/snd_241_north_tower_ravens.wav"
+      }
+    },
+    {
+      "sound_name": "Swallows over a Court",
+      "category": "Animals & Urban Nature",
+      "description": "Fast aerial calls and occasional close wing passes animate an open summer court without a ground flock.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "voice",
+        "domestic",
+        "day",
+        "loop"
+      ],
+      "game_placement": "Use seasonally above larger domestic courts, Burnt Court, and water yards during daylight; remove in winter.",
+      "generation_prompt": "Several swallows circling above a small medieval courtyard in summer, sharp natural flight calls and occasional close wing rush. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 10,
+      "id": "snd_244_swallows_over_a_court",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_244_swallows_over_a_court",
+        "filename": "snd_244_swallows_over_a_court.wav",
+        "url": "/generated/snd_244_swallows_over_a_court.wav?v=1784719803966817233",
+        "media_type": "audio/wav",
+        "size_bytes": 1764078,
+        "modified_ns": 1784719803966817233,
+        "path": "generated/snd_244_swallows_over_a_court.wav"
+      }
+    },
+    {
+      "sound_name": "River Gulls at the Outer Wharf",
+      "category": "Animals & Urban Nature",
+      "description": "A few freshwater and travelling gulls call around fish unloading, present but far less dense than a sea harbour.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "river",
+        "voice",
+        "loop"
+      ],
+      "game_placement": "Place only at the Serle wharves and fish landing, activity following catches; do not leak gulls into the dry Cut.",
+      "generation_prompt": "A few gulls around a busy inland freshwater wharf, scattered natural calls and wingbeats, restrained density, no ocean surf. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 12,
+      "id": "snd_245_river_gulls_at_the_outer_wharf",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_245_river_gulls_at_the_outer_wharf",
+        "filename": "snd_245_river_gulls_at_the_outer_wharf.wav",
+        "url": "/generated/snd_245_river_gulls_at_the_outer_wharf.wav?v=1784719824015882914",
+        "media_type": "audio/wav",
+        "size_bytes": 2116878,
+        "modified_ns": 1784719824015882914,
+        "path": "generated/snd_245_river_gulls_at_the_outer_wharf.wav"
+      }
+    },
+    {
+      "sound_name": "Market Dog Warning Bark",
+      "category": "Animals & Urban Nature",
+      "description": "A medium yard dog gives two alert barks at a cart or stranger and then stops, trained by constant street traffic.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "market",
+        "voice",
+        "proximity",
+        "one-shot"
+      ],
+      "game_placement": "Emit from visible or plausibly enclosed dogs at stalls, yards, and gates; rate-limit strongly so markets do not become kennels.",
+      "generation_prompt": "One medium medieval town dog giving two alert warning barks at close outdoor distance, then quiet, natural not aggressive frenzy. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 2,
+      "id": "snd_246_market_dog_warning_bark",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_246_market_dog_warning_bark",
+        "filename": "snd_246_market_dog_warning_bark.mp3",
+        "url": "/generated/snd_246_market_dog_warning_bark.mp3?v=1784719835169920808",
+        "media_type": "audio/mpeg",
+        "size_bytes": 33062,
+        "modified_ns": 1784719835169920808,
+        "path": "generated/snd_246_market_dog_warning_bark.mp3"
+      }
+    },
+    {
+      "sound_name": "Sparr Furnace Yard Dogs",
+      "category": "Animals & Urban Nature",
+      "description": "Two real yard dogs answer a wall disturbance with overlapping barks and a short chain or collar movement.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "cinder",
+        "voice",
+        "proximity",
+        "sequence"
+      ],
+      "game_placement": "Place specifically at the Sparr first-furnace yard, reflecting the family's ordinary anti-thief dogs; trigger on unauthorized night approach.",
+      "generation_prompt": "Two practical yard dogs barking loudly from inside a medieval glassworks courtyard after a wall disturbance, overlapping voices, faint collar chain. Natural hand-timed sequence with small human variations rather than metronomic timing; no electronic effects or modern machinery.",
+      "playback_mode": "sequence",
+      "suggested_duration_seconds": 3.5,
+      "id": "snd_247_sparr_furnace_yard_dogs",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_247_sparr_furnace_yard_dogs",
+        "filename": "snd_247_sparr_furnace_yard_dogs.mp3",
+        "url": "/generated/snd_247_sparr_furnace_yard_dogs.mp3?v=1784720987867567703",
+        "media_type": "audio/mpeg",
+        "size_bytes": 56886,
+        "modified_ns": 1784720987867567703,
+        "path": "generated/snd_247_sparr_furnace_yard_dogs.mp3"
+      }
+    },
+    {
+      "sound_name": "Alley Cat on Slate",
+      "category": "Animals & Urban Nature",
+      "description": "A cat lands lightly on roof slate, pads twice, and gives a short territorial complaint from above.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "architecture",
+        "night",
+        "movement",
+        "one-shot"
+      ],
+      "game_placement": "Emit from roof edges, galleries, fish lanes, and quiet courts, especially at dusk or night; keep the cat unseen often but not supernatural.",
+      "generation_prompt": "Domestic cat landing lightly on old slate roof, two quick paw steps, slate ticks and one short natural territorial yowl. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 1.8,
+      "id": "snd_248_alley_cat_on_slate",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_248_alley_cat_on_slate",
+        "filename": "snd_248_alley_cat_on_slate.mp3",
+        "url": "/generated/snd_248_alley_cat_on_slate.mp3?v=1784721005912692214",
+        "media_type": "audio/mpeg",
+        "size_bytes": 29301,
+        "modified_ns": 1784721005912692214,
+        "path": "generated/snd_248_alley_cat_on_slate.mp3"
+      }
+    },
+    {
+      "sound_name": "Flies at Eel Smoke and Offal",
+      "category": "Animals & Urban Nature",
+      "description": "A restrained near-field fly presence gathers around fish waste or butcher work, never smeared across the whole district.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "food",
+        "market",
+        "proximity",
+        "loop"
+      ],
+      "game_placement": "Place in tiny proximity zones at Maren's Green smoke racks, Shambles waste, and tannery residue during warm weather.",
+      "generation_prompt": "A few flies buzzing close around medieval fish offcuts and smoke rack waste in warm weather, sparse irritating near-field movement. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 7,
+      "id": "snd_259_flies_at_eel_smoke_and_offal",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_259_flies_at_eel_smoke_and_offal",
+        "filename": "snd_259_flies_at_eel_smoke_and_offal.wav",
+        "url": "/generated/snd_259_flies_at_eel_smoke_and_offal.wav?v=1784730792682163908",
+        "media_type": "audio/wav",
+        "size_bytes": 1234878,
+        "modified_ns": 1784730792682163908,
+        "path": "generated/snd_259_flies_at_eel_smoke_and_offal.wav"
+      }
+    },
+    {
+      "sound_name": "Geese at a Gate Pond-Rut",
+      "category": "Animals & Urban Nature",
+      "description": "Two geese object loudly beside a rain-filled rut, with webbed-foot splashes and a wing flap.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "gate",
+        "water",
+        "voice",
+        "one-shot"
+      ],
+      "game_placement": "Emit seasonally near outer gate verges and farm traffic, outside the dense central streets; never imply a permanent decorative pond.",
+      "generation_prompt": "Two domestic geese honking beside a shallow muddy roadside rut outside a medieval city gate, small splashes and wing flap. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 3,
+      "id": "snd_257_geese_at_a_gate_pond_rut",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_257_geese_at_a_gate_pond_rut",
+        "filename": "snd_257_geese_at_a_gate_pond_rut.mp3",
+        "url": "/generated/snd_257_geese_at_a_gate_pond_rut.mp3?v=1784730802437246372",
+        "media_type": "audio/mpeg",
+        "size_bytes": 48945,
+        "modified_ns": 1784730802437246372,
+        "path": "generated/snd_257_geese_at_a_gate_pond_rut.mp3"
+      }
+    },
+    {
+      "sound_name": "Bees at the Honey Stall",
+      "category": "Animals & Urban Nature",
+      "description": "A small natural cloud of bees works around exposed comb and honey pots, close enough to notice only beside the stall.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "wick",
+        "market",
+        "loop"
+      ],
+      "game_placement": "Attach to Wickmarket honey sellers in warm weather, reduced when pots are covered and absent in cold seasons.",
+      "generation_prompt": "Several honeybees around fresh comb and open honey pots at a medieval market stall, close gentle buzzing, outdoor crowd very distant. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 8,
+      "id": "snd_258_bees_at_the_honey_stall",
+      "implemented_in_game": false
+    },
+    {
+      "sound_name": "Hens in a Domestic Yard",
+      "category": "Animals & Urban Nature",
+      "description": "Hens scratch packed earth, cluck softly, and scatter grain around a close court.",
+      "tags": [
+        "animal",
+        "nature",
+        "exterior",
+        "domestic",
+        "voice",
+        "loop"
+      ],
+      "game_placement": "Use sparingly in occupied residential courts, gate-edge holdings, and food yards during daylight, not on the swept Gradine.",
+      "generation_prompt": "Small group of hens scratching dry packed earth in a medieval domestic yard, soft clucks, feet in grit and brief wing flap. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 9,
+      "id": "snd_256_hens_in_a_domestic_yard",
+      "implemented_in_game": false
+    },
+    {
+      "sound_name": "Lightning over the Lanthorn",
+      "category": "Weather, Fire & Seasons",
+      "description": "A close atmospheric crack branches overhead and rolls through the city; it belongs to the storm, never to the Rose or its silent disc.",
+      "tags": [
+        "weather",
+        "exterior",
+        "nature",
+        "cathedral",
+        "impact",
+        "one-shot"
+      ],
+      "game_placement": "Trigger after a visible lightning flash using distance delay; permit cathedral and street reflections but no sound keyed to the Second Sun's unchanged pane.",
+      "generation_prompt": "Close natural cloud-to-cloud lightning crack above a huge stone cathedral, sharp branching report followed by realistic city and sky thunder decay. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 5,
+      "id": "snd_268_lightning_over_the_lanthorn",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_268_lightning_over_the_lanthorn",
+        "filename": "snd_268_lightning_over_the_lanthorn.mp3",
+        "url": "/generated/snd_268_lightning_over_the_lanthorn.mp3?v=1784730857066708157",
+        "media_type": "audio/mpeg",
+        "size_bytes": 81128,
+        "modified_ns": 1784730857066708157,
+        "path": "generated/snd_268_lightning_over_the_lanthorn.mp3"
+      }
+    },
+    {
+      "sound_name": "Lanthorn Nave Air",
+      "category": "Lanthorn & Religious Life",
+      "description": "The vast church holds a nearly silent bed of distant air, minute wood movement, and a long sense of volume without any mystical drone.",
+      "tags": [
+        "cathedral",
+        "religious",
+        "interior",
+        "architecture",
+        "loop",
+        "proximity"
+      ],
+      "game_placement": "Make this the baseline inside `lanthorn_interior`, zone-shaped across nave, aisles, crossing, transept, and quire; the Second Sun contributes nothing.",
+      "generation_prompt": "Enormous medieval Gothic cathedral nave at a quiet hour, subtle natural air, minute distant wood movement and realistic vast room tone, absolutely no drone or supernatural hum. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 15,
+      "id": "snd_281_lanthorn_nave_air",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_281_lanthorn_nave_air",
+        "filename": "snd_281_lanthorn_nave_air.wav",
+        "url": "/generated/snd_281_lanthorn_nave_air.wav?v=1784730936791381943",
+        "media_type": "audio/wav",
+        "size_bytes": 2646078,
+        "modified_ns": 1784730936791381943,
+        "path": "generated/snd_281_lanthorn_nave_air.wav"
+      }
+    },
+    {
+      "sound_name": "Congregation Prayer Murmur",
+      "category": "Lanthorn & Religious Life",
+      "description": "Many low private prayers merge into an unintelligible soft field punctuated by cloth and knees shifting.",
+      "tags": [
+        "cathedral",
+        "religious",
+        "interior",
+        "voice",
+        "crowd",
+        "loop"
+      ],
+      "game_placement": "Fill occupied services, pilgrim hours, and crisis shelter in the Lanthorn and Saint Maren's; duck strongly beneath named speech and chant.",
+      "generation_prompt": "Medieval congregation praying quietly in a large stone church, many low indistinct voices, wool clothing and subtle kneeling movement. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 12,
+      "id": "snd_292_congregation_prayer_murmur",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_292_congregation_prayer_murmur",
+        "filename": "snd_292_congregation_prayer_murmur.wav",
+        "url": "/generated/snd_292_congregation_prayer_murmur.wav?v=1784731004310952525",
+        "media_type": "audio/wav",
+        "size_bytes": 2116878,
+        "modified_ns": 1784731004310952525,
+        "path": "generated/snd_292_congregation_prayer_murmur.wav"
+      }
+    },
+    {
+      "sound_name": "Smallvoice Single Stroke",
+      "category": "Bells, Signals, Cries & Songs",
+      "description": "Maren Smallvoice is a small clear passing-bell whose restrained tone remains countable across the Reed Ward.",
+      "tags": [
+        "signal",
+        "voice",
+        "spatial",
+        "bell",
+        "reed",
+        "metal",
+        "one-shot"
+      ],
+      "game_placement": "Place at Saint Maren's tower and reuse one stroke for every name-knell count, with three-second humanized intervals and a completion percept containing the count.",
+      "generation_prompt": "One small clear medieval bronze passing-bell stroke, restrained clean clapper attack, lucid countable tone and natural parish-tower decay. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 5,
+      "id": "snd_307_smallvoice_single_stroke",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_307_smallvoice_single_stroke",
+        "filename": "snd_307_smallvoice_single_stroke.mp3",
+        "url": "/generated/snd_307_smallvoice_single_stroke.mp3?v=1784736884662458812",
+        "media_type": "audio/mpeg",
+        "size_bytes": 81128,
+        "modified_ns": 1784736884662458812,
+        "path": "generated/snd_307_smallvoice_single_stroke.mp3"
+      }
+    },
+    {
+      "sound_name": "Scold Single Stroke",
+      "category": "Bells, Signals, Cries & Songs",
+      "description": "The Bellstand's unhallowed watch-bell has a cracked, secular, unlovely voice that commands attention without sounding broken beyond use.",
+      "tags": [
+        "signal",
+        "voice",
+        "spatial",
+        "bell",
+        "civic",
+        "metal",
+        "one-shot"
+      ],
+      "game_placement": "Place at `bellstand_tower` and assemble curfew and summons patterns from the one stroke; keep it dominant in the east and below the Lanthorn ring in scale.",
+      "generation_prompt": "One old secular medieval watch bell struck in an open timber belfry, cracked rough bronze voice, forceful clapper and medium-long outdoor decay. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 5.5,
+      "id": "snd_308_scold_single_stroke",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_308_scold_single_stroke",
+        "filename": "snd_308_scold_single_stroke.mp3",
+        "url": "/generated/snd_308_scold_single_stroke.mp3?v=1784736894609560907",
+        "media_type": "audio/mpeg",
+        "size_bytes": 88651,
+        "modified_ns": 1784736894609560907,
+        "path": "generated/snd_308_scold_single_stroke.mp3"
+      }
+    },
+    {
+      "sound_name": "Tenterhook Lane Workday",
+      "category": "Named-Place Soundscapes",
+      "description": "Wet wool, frames, hooks, mallets, carried tubs, and open-air labour make a broad working lane without any invented canal.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "cloth",
+        "water",
+        "day"
+      ],
+      "game_placement": "Fill `tenterhook_lane` during cloth work, resolving nearby fulling, stretching, and cistern activity into individual sources.",
+      "generation_prompt": "Open medieval cloth-working lane, wet wool stretched on timber frames, hand mallets, tenter hooks, carried tubs and workers, no flowing canal. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 14,
+      "id": "snd_329_tenterhook_lane_workday",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_329_tenterhook_lane_workday",
+        "filename": "snd_329_tenterhook_lane_workday.wav",
+        "url": "/generated/snd_329_tenterhook_lane_workday.wav?v=1784737024527864657",
+        "media_type": "audio/wav",
+        "size_bytes": 2469678,
+        "modified_ns": 1784737024527864657,
+        "path": "generated/snd_329_tenterhook_lane_workday.wav"
+      }
+    },
+    {
+      "sound_name": "Tallage Weighing Hour",
+      "category": "Named-Place Soundscapes",
+      "description": "Beams creak, standards touch, carts wait, clerks mark boards, and every object seems briefly suspended for valuation.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "weigh",
+        "freight",
+        "market"
+      ],
+      "game_placement": "Use in `tallage` during freight and Lowmarket, centered on the weigh-beams while through carts remain audible along the Cut middle.",
+      "generation_prompt": "Medieval customs square during weighing, huge wooden balance beam creaks, sacks, waiting carts, board-writing clerks and low careful voices. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 15,
+      "id": "snd_324_tallage_weighing_hour",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_324_tallage_weighing_hour",
+        "filename": "snd_324_tallage_weighing_hour.wav",
+        "url": "/generated/snd_324_tallage_weighing_hour.wav?v=1784736971782341612",
+        "media_type": "audio/wav",
+        "size_bytes": 2646078,
+        "modified_ns": 1784736971782341612,
+        "path": "generated/snd_324_tallage_weighing_hour.wav"
+      }
+    },
+    {
+      "sound_name": "Coswald's Yard Before the Hammers",
+      "category": "Named-Place Soundscapes",
+      "description": "Before full work, apprentices uncover benches, shift templates, test ropes, and move long timbers through cool northern air.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "wood",
+        "stone",
+        "day"
+      ],
+      "game_placement": "Play in `coswalds_yard` from Kindling to the first main work state, then crossfade into the denser builders' ambience.",
+      "generation_prompt": "Large medieval builders' yard preparing at early dawn, timber racks, stone templates, ropes and benches uncovered, sparse footsteps, no sustained hammering yet. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 13,
+      "id": "snd_323_coswalds_yard_before_the_hammers",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_323_coswalds_yard_before_the_hammers",
+        "filename": "snd_323_coswalds_yard_before_the_hammers.wav",
+        "url": "/generated/snd_323_coswalds_yard_before_the_hammers.wav?v=1784736971107334866",
+        "media_type": "audio/wav",
+        "size_bytes": 2293278,
+        "modified_ns": 1784736971107334866,
+        "path": "generated/snd_323_coswalds_yard_before_the_hammers.wav"
+      }
+    },
+    {
+      "sound_name": "Wickmarket at Lamplight",
+      "category": "Named-Place Soundscapes",
+      "description": "Stalls contract, shutters rise, wax gear packs away, and public lamps come on one by one as trade gives way to nearby households.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "wick",
+        "dusk",
+        "market"
+      ],
+      "game_placement": "Transition the `wickmarket` ambience from active market to this close-down bed between Waning and Lamplight, leaving one rotating Belwyn lamp dark.",
+      "generation_prompt": "Medieval chandler square closing at sunset, stall boards stacking, canvas, wax tools, shutters and sparse lingering voices as street lamps are lit. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 14,
+      "id": "snd_322_wickmarket_at_lamplight",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_322_wickmarket_at_lamplight",
+        "filename": "snd_322_wickmarket_at_lamplight.wav",
+        "url": "/generated/snd_322_wickmarket_at_lamplight.wav?v=1784736961479238486",
+        "media_type": "audio/wav",
+        "size_bytes": 2469678,
+        "modified_ns": 1784736961479238486,
+        "path": "generated/snd_322_wickmarket_at_lamplight.wav"
+      }
+    },
+    {
+      "sound_name": "Gradine Ordinary-Day Texture",
+      "category": "Named-Place Soundscapes",
+      "description": "Petitioners, vergers, licensed badge sellers, wax drips, and an early maintenance cart animate the ceremonial steps without turning them into a sixth market.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "cathedral",
+        "crowd",
+        "day"
+      ],
+      "game_placement": "Fill `gradine` outside feast events from Dayspring to Waning, with the west doors and statue courts remaining separate spatial contributors.",
+      "generation_prompt": "Ordinary day on broad cathedral forecourt steps in a medieval city, petitioners and pilgrims murmuring, vergers organizing, badge stall and one distant maintenance cart. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 15,
+      "id": "snd_321_gradine_ordinary_day_texture",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_321_gradine_ordinary_day_texture",
+        "filename": "snd_321_gradine_ordinary_day_texture.wav",
+        "url": "/generated/snd_321_gradine_ordinary_day_texture.wav?v=1784736969293316729",
+        "media_type": "audio/wav",
+        "size_bytes": 2646078,
+        "modified_ns": 1784736969293316729,
+        "path": "generated/snd_321_gradine_ordinary_day_texture.wav"
+      }
+    },
+    {
+      "sound_name": "Maren's Green Before Dayspring",
+      "category": "Named-Place Soundscapes",
+      "description": "Fish handbarrows arrive, smoke racks wake, Saint Maren's porch stirs, and the absent river is represented only by wet cargo and labour.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "reed",
+        "food",
+        "day"
+      ],
+      "game_placement": "Fill `marens_green` during early fish arrival, with no water bed; transition to the livelier fish market after Dayspring.",
+      "generation_prompt": "Medieval dry fish-market square before sunrise, wet handbarrows arriving, wicker baskets, low smoke-rack fire and parish door movement, absolutely no river. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 14,
+      "id": "snd_325_marens_green_before_dayspring",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_325_marens_green_before_dayspring",
+        "filename": "snd_325_marens_green_before_dayspring.wav",
+        "url": "/generated/snd_325_marens_green_before_dayspring.wav?v=1784737082454430317",
+        "media_type": "audio/wav",
+        "size_bytes": 2469678,
+        "modified_ns": 1784737082454430317,
+        "path": "generated/snd_325_marens_green_before_dayspring.wav"
+      }
+    },
+    {
+      "sound_name": "Draper's Reach in Rain",
+      "category": "Named-Place Soundscapes",
+      "description": "Rain drums on alternating covered bays while cloth, porters, counting rooms, and two open courts change the acoustic perspective along the gallery.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "cloth",
+        "weather",
+        "market"
+      ],
+      "game_placement": "Use throughout `drapers_reach` during rain, crossfading covered and open nodes rather than treating the whole route as a tunnel.",
+      "generation_prompt": "Long medieval cloth-hall gallery during rain, roof patter in covered bays, open-court rain, wool bolts, porters and low trade voices changing along the route. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 14,
+      "id": "snd_328_drapers_reach_in_rain",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_328_drapers_reach_in_rain",
+        "filename": "snd_328_drapers_reach_in_rain.wav",
+        "url": "/generated/snd_328_drapers_reach_in_rain.wav?v=1784737010085722234",
+        "media_type": "audio/wav",
+        "size_bytes": 2469678,
+        "modified_ns": 1784737010085722234,
+        "path": "generated/snd_328_drapers_reach_in_rain.wav"
+      }
+    },
+    {
+      "sound_name": "Cinder Row behind Shutters",
+      "category": "Named-Place Soundscapes",
+      "description": "Furnace draw and metalwork leak through screened bays while cooler front benches score, lead, wrap, and pack panes along the street.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "cinder",
+        "glass",
+        "fire"
+      ],
+      "game_placement": "Make this the daytime bed in `cinder_row`, with each numbered furnace a muffled source and Ambrellestide cold morning a deliberate contrast.",
+      "generation_prompt": "Medieval glassmakers' street at work behind stout shutters, muffled furnaces, pane scoring, lead tools, handcarts and wrapped glass, no magical tones. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 14,
+      "id": "snd_330_cinder_row_behind_shutters",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_330_cinder_row_behind_shutters",
+        "filename": "snd_330_cinder_row_behind_shutters.wav",
+        "url": "/generated/snd_330_cinder_row_behind_shutters.wav?v=1784737105992657770",
+        "media_type": "audio/wav",
+        "size_bytes": 2469678,
+        "modified_ns": 1784737105992657770,
+        "path": "generated/snd_330_cinder_row_behind_shutters.wav"
+      }
+    },
+    {
+      "sound_name": "Dry Cut Freight Corridor",
+      "category": "Named-Place Soundscapes",
+      "description": "Long sightlines produce layered approaching and receding carts, porters, hoists, ropewalk work, and dust across the old river bed.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "freight",
+        "cart",
+        "stone"
+      ],
+      "game_placement": "Use along `the_cut` during working hours with directional distance; explicitly exclude current, canal, dripping cavern, or other water ambience.",
+      "generation_prompt": "Long straight dry medieval trade street built over a former river channel, carts and porters at varied distances, hoists and road dust, absolutely no water. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 15,
+      "id": "snd_332_dry_cut_freight_corridor",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_332_dry_cut_freight_corridor",
+        "filename": "snd_332_dry_cut_freight_corridor.wav",
+        "url": "/generated/snd_332_dry_cut_freight_corridor.wav?v=1784737164189214702",
+        "media_type": "audio/wav",
+        "size_bytes": 2646078,
+        "modified_ns": 1784737164189214702,
+        "path": "generated/snd_332_dry_cut_freight_corridor.wav"
+      }
+    },
+    {
+      "sound_name": "Gaunt Passage by Day",
+      "category": "Named-Place Soundscapes",
+      "description": "Salt work, bent approaches, low vault reflections, and occasional hurried passers make the passage useful before folklore empties it at night.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "weigh",
+        "architecture",
+        "footstep"
+      ],
+      "game_placement": "Fill `gaunt_passage` during normal work hours, preserving real 20-metre acoustic leakage at the grate and both public bends.",
+      "generation_prompt": "Dark covered medieval salt-quarter passage by day, distant sacks and porters, occasional close footsteps, dry low stone vault and two bent entrances. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 12,
+      "id": "snd_333_gaunt_passage_by_day",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_333_gaunt_passage_by_day",
+        "filename": "snd_333_gaunt_passage_by_day.wav",
+        "url": "/generated/snd_333_gaunt_passage_by_day.wav?v=1784737196487520698",
+        "media_type": "audio/wav",
+        "size_bytes": 2116878,
+        "modified_ns": 1784737196487520698,
+        "path": "generated/snd_333_gaunt_passage_by_day.wav"
+      }
+    },
+    {
+      "sound_name": "Hungry Ox Doorway Spill",
+      "category": "Named-Place Soundscapes",
+      "description": "Hearth, pots, low boatmen's talk, wet cloaks, and rough song fragments leak into the lane without turning every night into a chorus.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "reed",
+        "tavern",
+        "voice"
+      ],
+      "game_placement": "Attach to the Hungry Ox entrance while occupied from Lamplight onward; opening the door increases high frequencies and intelligible actor speech remains separate.",
+      "generation_prompt": "Exterior of a crowded practical medieval boatmen's tavern at evening, muffled low voices, bowls, hearth and wet cloaks through a wooden doorway. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 13,
+      "id": "snd_337_hungry_ox_doorway_spill",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_337_hungry_ox_doorway_spill",
+        "filename": "snd_337_hungry_ox_doorway_spill.wav",
+        "url": "/generated/snd_337_hungry_ox_doorway_spill.wav?v=1784736979656420208",
+        "media_type": "audio/wav",
+        "size_bytes": 2293278,
+        "modified_ns": 1784736979656420208,
+        "path": "generated/snd_337_hungry_ox_doorway_spill.wav"
+      }
+    },
+    {
+      "sound_name": "Old Sluice in Daylight",
+      "category": "Named-Place Soundscapes",
+      "description": "Dry heavy arches, foot traffic toward Harne Gate, houses against filled ground, and keeper work insist that this is infrastructure after water.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "reed",
+        "architecture",
+        "day"
+      ],
+      "game_placement": "Fill `old_sluice` during the day with wind and ordinary city activity, never an underground river, magical resonance, or constant dripping.",
+      "generation_prompt": "Massive dry medieval sluice arches incorporated into city streets and houses, light wind, footsteps and keeper work, emphatically no flowing water. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 12,
+      "id": "snd_338_old_sluice_in_daylight",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_338_old_sluice_in_daylight",
+        "filename": "snd_338_old_sluice_in_daylight.wav",
+        "url": "/generated/snd_338_old_sluice_in_daylight.wav?v=1784736977313396840",
+        "media_type": "audio/wav",
+        "size_bytes": 2116878,
+        "modified_ns": 1784736977313396840,
+        "path": "generated/snd_338_old_sluice_in_daylight.wav"
+      }
+    },
+    {
+      "sound_name": "Skinners' Court Work and Home",
+      "category": "Named-Place Soundscapes",
+      "description": "Scraping benches, bundled pelts, lye ash, washing, drains, cooking, children, and gallery footsteps form a dense mixed court.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "leather",
+        "domestic",
+        "work"
+      ],
+      "game_placement": "Use in `skinners_court` by day, with Gradine feast noise entering faintly while the alleged rose-beam leaves no audible or visual proof.",
+      "generation_prompt": "Hidden medieval skinners' court at work and home, hide scraping, washing, cookspace, children and timber gallery footsteps, distant cathedral forecourt. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 14,
+      "id": "snd_339_skinners_court_work_and_home",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_339_skinners_court_work_and_home",
+        "filename": "snd_339_skinners_court_work_and_home.wav",
+        "url": "/generated/snd_339_skinners_court_work_and_home.wav?v=1784736978630409977",
+        "media_type": "audio/wav",
+        "size_bytes": 2469678,
+        "modified_ns": 1784736978630409977,
+        "path": "generated/snd_339_skinners_court_work_and_home.wav"
+      }
+    },
+    {
+      "sound_name": "Seven Lofts Grain Interior",
+      "category": "Named-Place Soundscapes",
+      "description": "Sack movement, grain trickle, timber floors, rats kept mostly at bay, and careful workers fill a large fire-conscious store.",
+      "tags": [
+        "spatial",
+        "exterior",
+        "loop",
+        "food",
+        "freight",
+        "interior"
+      ],
+      "game_placement": "Place in current exterior proximity and future `seven_lofts` interiors during stock movement, becoming busier before Wet Alms or shortages.",
+      "generation_prompt": "Large medieval grain warehouse interior, heavy sacks moved on timber, small grain trickles, careful footsteps and deep wooden building creaks. Seamless stable loop with no obvious start, ending, or large foreground event; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "loop",
+      "suggested_duration_seconds": 13,
+      "id": "snd_340_seven_lofts_grain_interior",
+      "implemented_in_game": false,
+      "generated_audio": {
+        "sound_id": "snd_340_seven_lofts_grain_interior",
+        "filename": "snd_340_seven_lofts_grain_interior.wav",
+        "url": "/generated/snd_340_seven_lofts_grain_interior.wav?v=1784737239577925781",
+        "media_type": "audio/wav",
+        "size_bytes": 2293278,
+        "modified_ns": 1784737239577925781,
+        "path": "generated/snd_340_seven_lofts_grain_interior.wav"
       }
     }
   ]

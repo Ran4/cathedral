@@ -19,7 +19,7 @@ use bevy::{
     },
     prelude::*,
 };
-use cathedral_sim::{CartLoadKind, Office, Weekday};
+use cathedral_sim::{BELL_STROKE_INTERVAL_SECONDS, CartLoadKind, Office, Weekday};
 
 use crate::{
     city::CobbleRoadNetwork,
@@ -48,6 +48,17 @@ const CROSSED_BUCKET_DELAY_SECONDS: f64 = 1.15;
 const CROSSED_BUCKET_DURATION_SECONDS: f64 = 3.031;
 const CUE_COOLDOWN_PRUNE_INTERVAL_SECONDS: f64 = 60.0;
 const CUE_COOLDOWN_RETENTION_SECONDS: f64 = 120.0;
+/// Exact decoded duration of `assets/sounds/town_bell.mp3`, rounded up.
+const TOWN_BELL_CLIP_SECONDS: f64 = 9.04;
+const MARKET_DOG_GLOBAL_COOLDOWN_SECONDS: f64 = 150.0;
+const SPARR_DOG_COOLDOWN_SECONDS: f64 = 240.0;
+const GEESE_GLOBAL_COOLDOWN_SECONDS: f64 = 210.0;
+const CAT_MIN_INTERVAL_SECONDS: f64 = 135.0;
+const CAT_INTERVAL_JITTER_SECONDS: f64 = 165.0;
+const SPEED_OF_SOUND_MPS: f32 = 343.0;
+const LIGHTNING_FLASH_SECONDS: f64 = 0.24;
+const LIGHTNING_MIN_INTERVAL_SECONDS: f64 = 210.0;
+const LIGHTNING_INTERVAL_JITTER_SECONDS: f64 = 240.0;
 
 const WICKMARKET: Vec3 = Vec3::new(-25.0, 1.3, 355.0);
 const TALLAGE_WEIGHBEAM: Vec3 = Vec3::new(-306.0, 1.5, 65.0);
@@ -62,6 +73,42 @@ const RIVER_GATE: Vec3 = Vec3::new(-505.0, 4.0, -135.0);
 const FORD_WELL: Vec3 = Vec3::new(88.0, 1.0, 35.0);
 const THREE_CURB: Vec3 = Vec3::new(-131.0, 0.8, 166.0);
 const CHAIN_WELL: Vec3 = Vec3::new(-197.0, -2.5, 73.0);
+// The city plan's compass is north +x, east -z. This is the north half of
+// the west front, high enough that 3D attenuation carries the calls down from
+// the canonical unfinished tower rather than making them sound street-level.
+const NORTH_TOWER_NESTS: Vec3 = Vec3::new(34.0, 46.0, 75.0);
+// The fish landing sits at the eastern end of the built outer-wharf strip,
+// close to the Reed Postern but almost 300 m from the dry Cut.
+const OUTER_FISH_WHARF: Vec3 = Vec3::new(-594.0, 13.0, -404.0);
+const SPARR_FURNACE_YARD: Vec3 = Vec3::new(-115.0, 2.0, 250.0);
+const LANTHORN_LIGHTNING_ORIGIN: Vec3 = Vec3::new(0.0, 140.0, -23.0);
+const SAINT_MARENS_CHURCH: Vec3 = Vec3::new(-235.0, 3.0, -392.0);
+
+const MARKET_DOG_ANCHORS: [Vec3; 6] = [
+    Vec3::new(-62.0, 1.3, 355.0),
+    Vec3::new(-318.0, 1.3, 90.0),
+    Vec3::new(292.0, 1.3, 185.0),
+    Vec3::new(-316.0, 1.3, -365.0),
+    STONE_GATE_HOUSING,
+    RIVER_GATE,
+];
+
+const CAT_ROOF_ANCHORS: [Vec3; 5] = [
+    Vec3::new(-370.0, 10.5, -445.0), // Eelback Alley / fish lanes
+    Vec3::new(-172.0, 11.5, 232.0),  // Burnt Court
+    Vec3::new(153.0, 11.0, -13.0),   // Crookneck Lane
+    Vec3::new(37.0, 11.0, 429.0),    // Slate Cistern back lanes
+    Vec3::new(-231.0, 10.5, 25.0),   // Gaunt Passage roofs
+];
+
+// These sit beyond the four principal gatehouses, where a farm flock can use
+// a wet cart rut without suggesting a permanent ornamental pond in the city.
+const GATE_GEESE_ANCHORS: [Vec3; 4] = [
+    Vec3::new(-35.0, 0.7, 530.0),
+    Vec3::new(520.0, 0.7, 135.0),
+    Vec3::new(15.0, 0.7, -680.0),
+    Vec3::new(-525.0, 0.7, -135.0),
+];
 
 /// The integration boundary for genuine, externally observed activity.
 ///
@@ -213,7 +260,9 @@ impl Plugin for SoundscapePlugin {
             .init_resource::<WellSoundState>()
             .init_resource::<WellMechanismActivity>()
             .init_resource::<WorkSoundState>()
-            .init_resource::<ClockSoundState>();
+            .init_resource::<ClockSoundState>()
+            .init_resource::<UrbanNatureState>()
+            .init_resource::<SummerStormState>();
 
         app.configure_sets(
             Update,
@@ -239,6 +288,9 @@ impl Plugin for SoundscapePlugin {
                     schedule_clock_sounds,
                     schedule_player_footsteps,
                     schedule_npc_body_sounds,
+                    schedule_summer_storm,
+                    update_lightning_flashes,
+                    schedule_urban_nature_sounds,
                     spawn_due_sounds,
                     update_virtualized_loops,
                     update_playing_one_shots,
@@ -292,9 +344,21 @@ enum SoundscapeSound {
     ThreeCurbRopes,
     ChainWellKnock,
     CrossedBuckets,
+    NorthTowerRavens,
+    SparrowsUnderEaves,
+    SwallowsOverCourt,
+    RiverWharfGulls,
+    MarketDogBark,
+    SparrYardDogs,
+    AlleyCat,
+    FliesAtWaste,
+    GateGeese,
+    LightningOverLanthorn,
+    LanthornNaveAir,
+    CongregationPrayer,
 }
 
-const ALL_SOUNDS: [SoundscapeSound; 23] = [
+const ALL_SOUNDS: [SoundscapeSound; 35] = [
     SoundscapeSound::CobbleFootstep,
     SoundscapeSound::WorkshopCough,
     SoundscapeSound::EveningYawn,
@@ -318,9 +382,21 @@ const ALL_SOUNDS: [SoundscapeSound; 23] = [
     SoundscapeSound::ThreeCurbRopes,
     SoundscapeSound::ChainWellKnock,
     SoundscapeSound::CrossedBuckets,
+    SoundscapeSound::NorthTowerRavens,
+    SoundscapeSound::SparrowsUnderEaves,
+    SoundscapeSound::SwallowsOverCourt,
+    SoundscapeSound::RiverWharfGulls,
+    SoundscapeSound::MarketDogBark,
+    SoundscapeSound::SparrYardDogs,
+    SoundscapeSound::AlleyCat,
+    SoundscapeSound::FliesAtWaste,
+    SoundscapeSound::GateGeese,
+    SoundscapeSound::LightningOverLanthorn,
+    SoundscapeSound::LanthornNaveAir,
+    SoundscapeSound::CongregationPrayer,
 ];
 
-const SOUND_DESCRIPTORS: [SoundDescriptor; 23] = [
+const SOUND_DESCRIPTORS: [SoundDescriptor; 35] = [
     descriptor(
         SoundscapeSound::CobbleFootstep,
         "snd_001_soft_shoes_on_dry_cobbles.mp3",
@@ -504,6 +580,102 @@ const SOUND_DESCRIPTORS: [SoundDescriptor; 23] = [
         0.20,
         52.0,
         0.45,
+    ),
+    descriptor(
+        SoundscapeSound::NorthTowerRavens,
+        "snd_241_north_tower_ravens.wav",
+        ClipMode::Loop,
+        0.24,
+        125.0,
+        0.20,
+    ),
+    descriptor(
+        SoundscapeSound::SparrowsUnderEaves,
+        "snd_243_sparrows_under_the_eaves.wav",
+        ClipMode::Loop,
+        0.13,
+        44.0,
+        0.18,
+    ),
+    descriptor(
+        SoundscapeSound::SwallowsOverCourt,
+        "snd_244_swallows_over_a_court.wav",
+        ClipMode::Loop,
+        0.18,
+        68.0,
+        0.18,
+    ),
+    descriptor(
+        SoundscapeSound::RiverWharfGulls,
+        "snd_245_river_gulls_at_the_outer_wharf.wav",
+        ClipMode::Loop,
+        0.22,
+        110.0,
+        0.24,
+    ),
+    descriptor(
+        SoundscapeSound::MarketDogBark,
+        "snd_246_market_dog_warning_bark.mp3",
+        ClipMode::OneShot,
+        0.44,
+        48.0,
+        0.16,
+    ),
+    descriptor(
+        SoundscapeSound::SparrYardDogs,
+        "snd_247_sparr_furnace_yard_dogs.mp3",
+        ClipMode::Sequence,
+        0.46,
+        62.0,
+        0.16,
+    ),
+    descriptor(
+        SoundscapeSound::AlleyCat,
+        "snd_248_alley_cat_on_slate.mp3",
+        ClipMode::OneShot,
+        0.36,
+        42.0,
+        0.15,
+    ),
+    descriptor(
+        SoundscapeSound::FliesAtWaste,
+        "snd_259_flies_at_eel_smoke_and_offal.wav",
+        ClipMode::Loop,
+        0.12,
+        14.0,
+        0.08,
+    ),
+    descriptor(
+        SoundscapeSound::GateGeese,
+        "snd_257_geese_at_a_gate_pond_rut.mp3",
+        ClipMode::OneShot,
+        0.36,
+        55.0,
+        0.14,
+    ),
+    descriptor(
+        SoundscapeSound::LightningOverLanthorn,
+        "snd_268_lightning_over_the_lanthorn.mp3",
+        ClipMode::OneShot,
+        0.78,
+        1_400.0,
+        0.52,
+    ),
+    descriptor(
+        SoundscapeSound::LanthornNaveAir,
+        "snd_281_lanthorn_nave_air.wav",
+        ClipMode::Loop,
+        0.34,
+        58.0,
+        0.30,
+    ),
+    descriptor(
+        SoundscapeSound::CongregationPrayer,
+        "snd_292_congregation_prayer_murmur.wav",
+        ClipMode::Loop,
+        0.26,
+        58.0,
+        0.04,
     ),
 ];
 
@@ -1118,6 +1290,319 @@ fn dusty_worker_outfit(outfit: cathedral_sim::OutfitClass) -> bool {
     )
 }
 
+/// A deliberately sparse warm-season storm. The fixed world has no general
+/// weather simulation, so this owns the whole causal chain: a deterministic
+/// storm window, a visible flash, the propagation delay, and only then thunder.
+#[derive(Resource, Default)]
+struct SummerStormState {
+    active: bool,
+    day: Option<i64>,
+    next_flash_at: Option<f64>,
+    sequence: u64,
+}
+
+#[derive(Component)]
+struct LightningFlash {
+    started_at: f64,
+}
+
+fn summer_storm_window(clock: Option<&WorldClockState>) -> bool {
+    clock.filter(|clock| clock.present).is_some_and(|clock| {
+        // The eleven-day cadence walks across the seven weekdays rather than
+        // making bad weather a suspiciously regular market-day ritual.
+        clock.day.rem_euclid(11) == 0 && matches!(clock.office, Office::Waning | Office::Lamplight)
+    })
+}
+
+fn storm_real_time_compression(clock: &WorldClockState) -> f64 {
+    // Debug time acceleration shortens the six-hour storm window too. A square
+    // root keeps the flashes sparse while ensuring 60x still gets one before
+    // the clock has run past Lamplight.
+    clock.scale.max(1.0).sqrt().min(8.0)
+}
+
+fn lightning_sound_delay(listener: Vec3) -> f64 {
+    f64::from(listener.distance(LANTHORN_LIGHTNING_ORIGIN) / SPEED_OF_SOUND_MPS)
+}
+
+fn lightning_flash_intensity(elapsed: f64) -> f32 {
+    match elapsed {
+        t if t < 0.045 => 320_000_000.0,
+        t if t < 0.085 => 24_000_000.0,
+        t if t < 0.135 => 150_000_000.0,
+        t if t < LIGHTNING_FLASH_SECONDS => {
+            let fade = ((LIGHTNING_FLASH_SECONDS - t) / (LIGHTNING_FLASH_SECONDS - 0.135)) as f32;
+            70_000_000.0 * fade.clamp(0.0, 1.0)
+        }
+        _ => 0.0,
+    }
+}
+
+fn schedule_summer_storm(
+    mut commands: Commands,
+    time: Res<Time>,
+    clock: Option<Res<WorldClockState>>,
+    player: Query<&Transform, With<PlayerController>>,
+    mut state: ResMut<SummerStormState>,
+    mut scheduled: ResMut<ScheduledSounds>,
+) {
+    let active = summer_storm_window(clock.as_deref());
+    state.active = active;
+    if !active {
+        state.day = None;
+        state.next_flash_at = None;
+        return;
+    }
+    let Ok(player) = player.single() else { return };
+    let clock = clock
+        .as_deref()
+        .expect("a storm window requires a projected clock");
+    let now = time.elapsed_secs_f64();
+    if state.day != Some(clock.day) {
+        state.day = Some(clock.day);
+        let first_delay = (22.0 + unit(stable_hash(&format!("storm-first:{}", clock.day))) * 48.0)
+            / storm_real_time_compression(clock);
+        state.next_flash_at = Some(now + first_delay);
+    }
+    let Some(due) = state.next_flash_at else {
+        return;
+    };
+    if now < due {
+        return;
+    }
+
+    commands.spawn((
+        Name::new("Summer storm lightning flash over the Lanthorn"),
+        LightningFlash { started_at: now },
+        PointLight {
+            color: Color::srgb(0.76, 0.86, 1.0),
+            intensity: lightning_flash_intensity(0.0),
+            range: 1_300.0,
+            radius: 18.0,
+            shadow_maps_enabled: false,
+            ..default()
+        },
+        Transform::from_translation(LANTHORN_LIGHTNING_ORIGIN),
+    ));
+    scheduled.push(
+        now + lightning_sound_delay(player.translation),
+        SoundscapeSound::LightningOverLanthorn,
+        LANTHORN_LIGHTNING_ORIGIN,
+    );
+
+    state.sequence = state.sequence.wrapping_add(1);
+    let interval = LIGHTNING_MIN_INTERVAL_SECONDS
+        + unit(stable_hash(&format!(
+            "storm-next:{}:{}",
+            clock.day, state.sequence
+        ))) * LIGHTNING_INTERVAL_JITTER_SECONDS;
+    state.next_flash_at = Some(now + interval / storm_real_time_compression(clock));
+}
+
+fn update_lightning_flashes(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut flashes: Query<(Entity, &LightningFlash, &mut PointLight)>,
+) {
+    let now = time.elapsed_secs_f64();
+    for (entity, flash, mut light) in &mut flashes {
+        let elapsed = now - flash.started_at;
+        if elapsed >= LIGHTNING_FLASH_SECONDS {
+            commands.entity(entity).despawn();
+        } else {
+            light.intensity = lightning_flash_intensity(elapsed.max(0.0));
+        }
+    }
+}
+
+#[derive(Resource, Default)]
+struct UrbanNatureState {
+    approaches: HashMap<u64, bool>,
+    next_market_dog_at: f64,
+    next_sparr_dogs_at: f64,
+    next_geese_at: f64,
+    next_cat_at: Option<f64>,
+    event_sequence: u64,
+    observed_office: Option<(i64, Office)>,
+    ravens_silent_until: f64,
+}
+
+impl UrbanNatureState {
+    fn observe_office_bell(&mut self, now: f64, clock: Option<&WorldClockState>) {
+        let Some(clock) = clock.filter(|clock| clock.present) else {
+            self.observed_office = None;
+            return;
+        };
+        let current = (clock.day, clock.office);
+        if self
+            .observed_office
+            .is_some_and(|previous| previous != current)
+        {
+            self.ravens_silent_until = now + office_bell_span_seconds(clock.office);
+        }
+        self.observed_office = Some(current);
+    }
+
+    fn next_sequence(&mut self) -> u64 {
+        self.event_sequence = self.event_sequence.wrapping_add(1);
+        self.event_sequence
+    }
+}
+
+fn office_bell_span_seconds(office: Office) -> f64 {
+    f64::from(office.ordinal().saturating_sub(1)) * BELL_STROKE_INTERVAL_SECONDS
+        + TOWN_BELL_CLIP_SECONDS
+}
+
+fn daylight_animals_active(clock: Option<&WorldClockState>) -> bool {
+    clock
+        .filter(|clock| clock.present)
+        .is_none_or(|clock| clock.brightness > 0.22)
+}
+
+fn market_dogs_active(clock: Option<&WorldClockState>) -> bool {
+    clock.filter(|clock| clock.present).is_none_or(|clock| {
+        matches!(
+            clock.office,
+            Office::Kindling | Office::Dayspring | Office::HighWick | Office::Waning
+        )
+    })
+}
+
+fn dusk_or_night(clock: Option<&WorldClockState>) -> bool {
+    clock.filter(|clock| clock.present).is_some_and(|clock| {
+        matches!(
+            clock.office,
+            Office::Lamplight | Office::Snuffing | Office::Watch
+        )
+    })
+}
+
+fn proximity_entered(
+    approaches: &mut HashMap<u64, bool>,
+    key: u64,
+    listener: Vec3,
+    source: Vec3,
+    enter_radius_m: f32,
+    leave_radius_m: f32,
+) -> bool {
+    debug_assert!(leave_radius_m > enter_radius_m);
+    let was_inside = approaches.get(&key).copied().unwrap_or(false);
+    let radius = if was_inside {
+        leave_radius_m
+    } else {
+        enter_radius_m
+    };
+    let inside = listener.distance_squared(source) <= radius.powi(2);
+    approaches.insert(key, inside);
+    inside && !was_inside
+}
+
+fn schedule_urban_nature_sounds(
+    time: Res<Time>,
+    clock: Option<Res<WorldClockState>>,
+    player: Query<&Transform, With<PlayerController>>,
+    storm: Res<SummerStormState>,
+    mut state: ResMut<UrbanNatureState>,
+    mut scheduled: ResMut<ScheduledSounds>,
+) {
+    let now = time.elapsed_secs_f64();
+    state.observe_office_bell(now, clock.as_deref());
+    let Ok(player) = player.single() else { return };
+    let listener = player.translation;
+
+    for (index, source) in MARKET_DOG_ANCHORS.into_iter().enumerate() {
+        let entered = proximity_entered(
+            &mut state.approaches,
+            10_000 + index as u64,
+            listener,
+            source,
+            27.0,
+            42.0,
+        );
+        if entered && market_dogs_active(clock.as_deref()) && now >= state.next_market_dog_at {
+            let sequence = state.next_sequence();
+            let gain =
+                0.92 + unit(stable_hash(&format!("market-dog-gain:{sequence}"))) as f32 * 0.12;
+            let speed =
+                0.975 + unit(stable_hash(&format!("market-dog-speed:{sequence}"))) as f32 * 0.05;
+            scheduled.push_shaped(now, SoundscapeSound::MarketDogBark, source, gain, speed);
+            state.next_market_dog_at = now + MARKET_DOG_GLOBAL_COOLDOWN_SECONDS;
+        }
+    }
+
+    let entered_sparr_yard = proximity_entered(
+        &mut state.approaches,
+        11_000,
+        listener,
+        SPARR_FURNACE_YARD,
+        36.0,
+        52.0,
+    );
+    if entered_sparr_yard && dusk_or_night(clock.as_deref()) && now >= state.next_sparr_dogs_at {
+        scheduled.push(now, SoundscapeSound::SparrYardDogs, SPARR_FURNACE_YARD);
+        state.next_sparr_dogs_at = now + SPARR_DOG_COOLDOWN_SECONDS;
+    }
+
+    for (index, source) in GATE_GEESE_ANCHORS.into_iter().enumerate() {
+        let entered = proximity_entered(
+            &mut state.approaches,
+            12_000 + index as u64,
+            listener,
+            source,
+            34.0,
+            52.0,
+        );
+        if entered
+            && daylight_animals_active(clock.as_deref())
+            && !storm.active
+            && now >= state.next_geese_at
+        {
+            let sequence = state.next_sequence();
+            let gain = 0.94 + unit(stable_hash(&format!("geese-gain:{sequence}"))) as f32 * 0.12;
+            let speed = 0.975 + unit(stable_hash(&format!("geese-speed:{sequence}"))) as f32 * 0.05;
+            scheduled.push_shaped(now, SoundscapeSound::GateGeese, source, gain, speed);
+            state.next_geese_at = now + GEESE_GLOBAL_COOLDOWN_SECONDS;
+        }
+    }
+
+    if !dusk_or_night(clock.as_deref()) {
+        // A fresh delay each evening prevents a cat event that expired during
+        // the day from firing on the exact Lamplight boundary.
+        state.next_cat_at = None;
+        return;
+    }
+
+    let day = clock
+        .as_deref()
+        .filter(|clock| clock.present)
+        .map_or(0, |clock| clock.day);
+    let due = *state
+        .next_cat_at
+        .get_or_insert_with(|| now + 18.0 + unit(stable_hash(&format!("cat-first:{day}"))) * 42.0);
+    if now < due {
+        return;
+    }
+    let nearest_roof = CAT_ROOF_ANCHORS
+        .into_iter()
+        .filter(|source| listener.distance_squared(*source) <= 40.0_f32.powi(2))
+        .min_by(|a, b| {
+            listener
+                .distance_squared(*a)
+                .total_cmp(&listener.distance_squared(*b))
+        });
+    let Some(source) = nearest_roof else { return };
+    let sequence = state.next_sequence();
+    let gain = 0.94 + unit(stable_hash(&format!("cat-gain:{day}:{sequence}"))) as f32 * 0.12;
+    let speed = 0.97 + unit(stable_hash(&format!("cat-speed:{day}:{sequence}"))) as f32 * 0.06;
+    scheduled.push_shaped(now, SoundscapeSound::AlleyCat, source, gain, speed);
+    state.next_cat_at = Some(
+        now + CAT_MIN_INTERVAL_SECONDS
+            + unit(stable_hash(&format!("cat-next:{day}:{sequence}")))
+                * CAT_INTERVAL_JITTER_SECONDS,
+    );
+}
+
 const AUTHORED_RUTS: [Vec2; 5] = [
     Vec2::new(0.0, 202.0),
     Vec2::new(-304.0, 90.0),
@@ -1299,6 +1784,8 @@ enum EmitterSchedule {
     MarenLowmarket,
     LoomWork,
     WorkingDay,
+    DaylightAnimals,
+    WarmDayWaste,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1310,7 +1797,7 @@ struct StaticEmitter {
     priority: u8,
 }
 
-const STATIC_EMITTERS: [StaticEmitter; 12] = [
+const STATIC_EMITTERS: [StaticEmitter; 25] = [
     StaticEmitter {
         key: 1,
         sound: SoundscapeSound::WickmarketCrowd,
@@ -1395,6 +1882,103 @@ const STATIC_EMITTERS: [StaticEmitter; 12] = [
         schedule: EmitterSchedule::LoomWork,
         priority: 62,
     },
+    StaticEmitter {
+        key: 20,
+        sound: SoundscapeSound::NorthTowerRavens,
+        position: NORTH_TOWER_NESTS,
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 68,
+    },
+    // House-door coordinates in quiet residential lanes, lifted to their
+    // eaves. None is within the playback radius of a market or furnace bed.
+    StaticEmitter {
+        key: 21,
+        sound: SoundscapeSound::SparrowsUnderEaves,
+        position: Vec3::new(153.0, 8.5, -13.0),
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 28,
+    },
+    StaticEmitter {
+        key: 22,
+        sound: SoundscapeSound::SparrowsUnderEaves,
+        position: Vec3::new(37.0, 8.5, 429.0),
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 28,
+    },
+    StaticEmitter {
+        key: 23,
+        sound: SoundscapeSound::SparrowsUnderEaves,
+        position: Vec3::new(274.0, 9.5, -298.0),
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 28,
+    },
+    StaticEmitter {
+        key: 24,
+        sound: SoundscapeSound::SparrowsUnderEaves,
+        position: Vec3::new(-273.0, 8.0, -26.0),
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 28,
+    },
+    StaticEmitter {
+        key: 25,
+        sound: SoundscapeSound::SparrowsUnderEaves,
+        position: Vec3::new(-387.0, 7.5, -247.0),
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 28,
+    },
+    // The fixed world is a temperate-summer city (see smart_actors/clock.rs),
+    // so these are the seasonal court sources rather than year-round birds.
+    StaticEmitter {
+        key: 26,
+        sound: SoundscapeSound::SwallowsOverCourt,
+        position: Vec3::new(-172.0, 17.2, 232.0),
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 36,
+    },
+    StaticEmitter {
+        key: 27,
+        sound: SoundscapeSound::SwallowsOverCourt,
+        position: Vec3::new(94.0, 17.0, 223.0),
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 36,
+    },
+    StaticEmitter {
+        key: 28,
+        sound: SoundscapeSound::SwallowsOverCourt,
+        position: Vec3::new(55.0, 17.0, -300.0),
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 36,
+    },
+    StaticEmitter {
+        key: 29,
+        sound: SoundscapeSound::RiverWharfGulls,
+        position: OUTER_FISH_WHARF,
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 48,
+    },
+    // The city's fixed season is warm. These intentionally tiny sources mark
+    // material waste piles, not three broad district ambience beds.
+    StaticEmitter {
+        key: 30,
+        sound: SoundscapeSound::FliesAtWaste,
+        position: Vec3::new(-306.0, 0.7, -365.0),
+        schedule: EmitterSchedule::WarmDayWaste,
+        priority: 18,
+    },
+    StaticEmitter {
+        key: 31,
+        sound: SoundscapeSound::FliesAtWaste,
+        position: Vec3::new(-395.0, 0.7, 315.0),
+        schedule: EmitterSchedule::WarmDayWaste,
+        priority: 18,
+    },
+    StaticEmitter {
+        key: 32,
+        sound: SoundscapeSound::FliesAtWaste,
+        position: Vec3::new(-391.0, 0.7, -345.0),
+        schedule: EmitterSchedule::WarmDayWaste,
+        priority: 18,
+    },
 ];
 
 fn schedule_is_active(schedule: EmitterSchedule, clock: Option<&WorldClockState>) -> bool {
@@ -1434,6 +2018,23 @@ fn schedule_is_active(schedule: EmitterSchedule, clock: Option<&WorldClockState>
                     Office::Kindling | Office::Dayspring | Office::HighWick | Office::Waning
                 )
         }
+        EmitterSchedule::DaylightAnimals => daylight_animals_active(Some(clock)),
+        EmitterSchedule::WarmDayWaste => clock.brightness > 0.30,
+    }
+}
+
+fn static_emitter_speed(emitter: StaticEmitter) -> f32 {
+    match emitter.sound {
+        // Closely spaced copies of one reviewed loop must not phase-lock into a
+        // single conspicuous recording. The variance is fixed per nest/court.
+        SoundscapeSound::SparrowsUnderEaves
+        | SoundscapeSound::SwallowsOverCourt
+        | SoundscapeSound::FliesAtWaste => {
+            let seed =
+                stable_hash("animal-loop-speed") ^ emitter.key.wrapping_mul(0x9e37_79b9_7f4a_7c15);
+            0.985 + unit(seed) as f32 * 0.03
+        }
+        _ => 1.0,
     }
 }
 
@@ -1456,6 +2057,54 @@ fn sound_for_work_kind(kind: WorkActivityKind) -> SoundscapeSound {
         WorkActivityKind::CulletSorting => SoundscapeSound::CulletSorting,
         WorkActivityKind::Weaving => SoundscapeSound::Loom,
     }
+}
+
+fn inside_box(position: Vec3, min: Vec3, max: Vec3) -> bool {
+    position.cmpge(min).all() && position.cmple(max).all()
+}
+
+/// Mirrors the three canonical `lanthorn_interior` boxes in
+/// `assets/world/areas.json`. Keeping the loop at the listener while it is in
+/// one of these volumes makes the room tone fill the building without leaking
+/// from a point source through the west doors or transept walls.
+fn inside_lanthorn_interior(position: Vec3) -> bool {
+    inside_box(
+        position,
+        Vec3::new(-44.0, 0.0, -104.0),
+        Vec3::new(44.0, 83.0, 81.0),
+    ) || inside_box(
+        position,
+        Vec3::new(-67.0, 0.0, -39.0),
+        Vec3::new(-44.0, 83.0, -7.0),
+    ) || inside_box(
+        position,
+        Vec3::new(44.0, 0.0, -39.0),
+        Vec3::new(67.0, 83.0, -7.0),
+    )
+}
+
+fn inside_saint_maren_congregation_area(position: Vec3) -> bool {
+    // The parish church itself is not an explorable interior yet. A narrow
+    // eight-metre apron admits people gathered at its doors and churchyard
+    // edge without counting the whole fish quarter as a congregation.
+    inside_box(
+        position,
+        Vec3::new(-258.0, -1.0, -418.0),
+        Vec3::new(-212.0, 18.0, -366.0),
+    )
+}
+
+fn congregation_murmur_active(occupants: usize, clock: Option<&WorldClockState>) -> bool {
+    // A large group is authoritative even after dark (for example a future
+    // crisis shelter). Smaller groups need an ordinary service/pilgrim hour.
+    occupants >= 8
+        || (occupants >= 4
+            && clock.filter(|clock| clock.present).is_some_and(|clock| {
+                matches!(
+                    clock.office,
+                    Office::Dayspring | Office::HighWick | Office::Waning
+                )
+            }))
 }
 
 #[derive(Debug, Clone)]
@@ -1487,10 +2136,13 @@ fn update_virtualized_loops(
     activity: Option<Res<AudioActivity>>,
     assets: Res<SoundscapeAssets>,
     player: Query<&Transform, With<PlayerController>>,
+    actors: Query<&GlobalTransform, With<ActorView>>,
     cart_views: Query<(&RoadCartView, &GlobalTransform)>,
     carts: Res<CartSoundState>,
     wells: Res<WellSoundState>,
     work: Res<WorkSoundState>,
+    nature: Res<UrbanNatureState>,
+    storm: Res<SummerStormState>,
     mut playing: Query<
         (
             Entity,
@@ -1511,7 +2163,21 @@ fn update_virtualized_loops(
     for emitter in STATIC_EMITTERS {
         let overridden =
             work_kind_for_sound(emitter.sound).is_some_and(|kind| work.0.contains_key(&kind));
-        if !overridden && schedule_is_active(emitter.schedule, clock.as_deref()) {
+        let ravens_scattered =
+            emitter.sound == SoundscapeSound::NorthTowerRavens && now < nature.ravens_silent_until;
+        let storm_shy_animal = storm.active
+            && matches!(
+                emitter.sound,
+                SoundscapeSound::NorthTowerRavens
+                    | SoundscapeSound::SparrowsUnderEaves
+                    | SoundscapeSound::SwallowsOverCourt
+                    | SoundscapeSound::RiverWharfGulls
+            );
+        if !overridden
+            && !ravens_scattered
+            && !storm_shy_animal
+            && schedule_is_active(emitter.schedule, clock.as_deref())
+        {
             let descriptor = emitter.sound.descriptor();
             demands.push(LoopDemand {
                 key: emitter.key,
@@ -1519,7 +2185,7 @@ fn update_virtualized_loops(
                 position: emitter.position,
                 gain: descriptor.gain,
                 radius_m: descriptor.radius_m,
-                speed: 1.0,
+                speed: static_emitter_speed(emitter),
                 priority: emitter.priority,
             });
         }
@@ -1562,6 +2228,55 @@ fn update_virtualized_loops(
             speed: 1.0,
             priority: 92,
         });
+    }
+
+    let (lanthorn_occupants, saint_maren_occupants) =
+        actors
+            .iter()
+            .fold((0_usize, 0_usize), |(lanthorn, maren), transform| {
+                let position = transform.translation();
+                (
+                    lanthorn + usize::from(inside_lanthorn_interior(position)),
+                    maren + usize::from(inside_saint_maren_congregation_area(position)),
+                )
+            });
+    if let Some(listener) = player_position {
+        if inside_lanthorn_interior(listener) {
+            let descriptor = SoundscapeSound::LanthornNaveAir.descriptor();
+            demands.push(LoopDemand {
+                key: 4_000,
+                sound: SoundscapeSound::LanthornNaveAir,
+                position: listener,
+                gain: descriptor.gain,
+                radius_m: descriptor.radius_m,
+                speed: 1.0,
+                priority: 97,
+            });
+            if congregation_murmur_active(lanthorn_occupants, clock.as_deref()) {
+                let descriptor = SoundscapeSound::CongregationPrayer.descriptor();
+                demands.push(LoopDemand {
+                    key: 4_001,
+                    sound: SoundscapeSound::CongregationPrayer,
+                    position: listener,
+                    gain: descriptor.gain,
+                    radius_m: descriptor.radius_m,
+                    speed: 1.0,
+                    priority: 99,
+                });
+            }
+        }
+        if congregation_murmur_active(saint_maren_occupants, clock.as_deref()) {
+            let descriptor = SoundscapeSound::CongregationPrayer.descriptor();
+            demands.push(LoopDemand {
+                key: 4_002,
+                sound: SoundscapeSound::CongregationPrayer,
+                position: SAINT_MARENS_CHURCH,
+                gain: descriptor.gain * 0.82,
+                radius_m: descriptor.radius_m,
+                speed: 0.992,
+                priority: 94,
+            });
+        }
     }
     for (view, transform) in &cart_views {
         let Some(cart) = carts.0.get(&view.party_id) else {
@@ -1696,7 +2411,10 @@ fn select_loop_demands(
 
 fn loop_cap(sound: SoundscapeSound) -> usize {
     match sound {
-        SoundscapeSound::EelSmokeFire | SoundscapeSound::Loom | SoundscapeSound::GrainCart => 2,
+        SoundscapeSound::EelSmokeFire
+        | SoundscapeSound::Loom
+        | SoundscapeSound::GrainCart
+        | SoundscapeSound::SparrowsUnderEaves => 2,
         _ => 1,
     }
 }
@@ -1763,8 +2481,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn all_twenty_three_routes_have_unique_assets_and_the_right_container() {
-        assert_eq!(ALL_SOUNDS.len(), 23);
+    fn all_thirty_five_routes_have_unique_assets_and_the_right_container() {
+        assert_eq!(ALL_SOUNDS.len(), 35);
         let mut files = HashSet::new();
         for (index, sound) in ALL_SOUNDS.into_iter().enumerate() {
             let descriptor = sound.descriptor();
@@ -1789,7 +2507,7 @@ mod tests {
 
     #[test]
     fn every_descriptor_points_at_a_nonempty_reviewed_asset() {
-        let assets: [&[u8]; 23] = [
+        let assets: [&[u8]; 35] = [
             include_bytes!("../assets/sounds/soundscape/snd_001_soft_shoes_on_dry_cobbles.mp3"),
             include_bytes!("../assets/sounds/soundscape/snd_034_dusty_workshop_cough.mp3"),
             include_bytes!("../assets/sounds/soundscape/snd_037_end_of_day_yawn.mp3"),
@@ -1815,6 +2533,20 @@ mod tests {
             include_bytes!("../assets/sounds/soundscape/snd_206_three_curb_triple_rope.wav"),
             include_bytes!("../assets/sounds/soundscape/snd_205_chain_well_bucket_knock.mp3"),
             include_bytes!("../assets/sounds/soundscape/snd_207_three_curb_crossed_buckets.mp3"),
+            include_bytes!("../assets/sounds/soundscape/snd_241_north_tower_ravens.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_243_sparrows_under_the_eaves.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_244_swallows_over_a_court.wav"),
+            include_bytes!(
+                "../assets/sounds/soundscape/snd_245_river_gulls_at_the_outer_wharf.wav"
+            ),
+            include_bytes!("../assets/sounds/soundscape/snd_246_market_dog_warning_bark.mp3"),
+            include_bytes!("../assets/sounds/soundscape/snd_247_sparr_furnace_yard_dogs.mp3"),
+            include_bytes!("../assets/sounds/soundscape/snd_248_alley_cat_on_slate.mp3"),
+            include_bytes!("../assets/sounds/soundscape/snd_259_flies_at_eel_smoke_and_offal.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_257_geese_at_a_gate_pond_rut.mp3"),
+            include_bytes!("../assets/sounds/soundscape/snd_268_lightning_over_the_lanthorn.mp3"),
+            include_bytes!("../assets/sounds/soundscape/snd_281_lanthorn_nave_air.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_292_congregation_prayer_murmur.wav"),
         ];
         for (sound, bytes) in ALL_SOUNDS.into_iter().zip(assets) {
             assert!(
@@ -1826,7 +2558,7 @@ mod tests {
     }
 
     #[test]
-    fn implementation_manifest_contains_the_twenty_three_runtime_routes() {
+    fn implementation_manifest_contains_the_thirty_five_runtime_routes() {
         let manifest: serde_json::Value = serde_json::from_str(include_str!(
             "../features/more_sounds/sounds_to_implement.json"
         ))
@@ -1845,6 +2577,7 @@ mod tests {
         let sounds = manifest["sounds"]
             .as_array()
             .expect("manifest sounds is an array");
+        assert_eq!(manifest["implemented_count"], 35);
         let manifested_ids: HashSet<_> = sounds
             .iter()
             .filter_map(|sound| {
@@ -1939,6 +2672,190 @@ mod tests {
             .collect();
         assert_eq!(furnaces.len(), 1);
         assert_eq!(furnaces[0].position, CINDER_ROW);
+    }
+
+    #[test]
+    fn urban_nature_schedules_and_locations_follow_the_city_clock_and_map() {
+        let daylight = clock(Office::HighWick, Weekday::Second);
+        let mut night = clock(Office::Watch, Weekday::Second);
+        night.brightness = 0.05;
+        assert!(schedule_is_active(
+            EmitterSchedule::DaylightAnimals,
+            Some(&daylight)
+        ));
+        assert!(!schedule_is_active(
+            EmitterSchedule::DaylightAnimals,
+            Some(&night)
+        ));
+        assert!(schedule_is_active(
+            EmitterSchedule::WarmDayWaste,
+            Some(&daylight)
+        ));
+        assert!(!schedule_is_active(
+            EmitterSchedule::WarmDayWaste,
+            Some(&night)
+        ));
+        assert!(dusk_or_night(Some(&night)));
+        assert!(!dusk_or_night(Some(&daylight)));
+        assert!(!dusk_or_night(None));
+
+        assert!(NORTH_TOWER_NESTS.y > 40.0);
+        assert!(OUTER_FISH_WHARF.x < -580.0);
+        assert!(OUTER_FISH_WHARF.xz().distance(TALLAGE_SQUARE) > 250.0);
+        assert_eq!(
+            STATIC_EMITTERS
+                .iter()
+                .filter(|emitter| emitter.sound == SoundscapeSound::SparrowsUnderEaves)
+                .count(),
+            5
+        );
+        assert_eq!(
+            STATIC_EMITTERS
+                .iter()
+                .filter(|emitter| emitter.sound == SoundscapeSound::SwallowsOverCourt)
+                .count(),
+            3
+        );
+        let fly_sources: Vec<_> = STATIC_EMITTERS
+            .iter()
+            .filter(|emitter| emitter.sound == SoundscapeSound::FliesAtWaste)
+            .collect();
+        assert_eq!(fly_sources.len(), 3);
+        assert!(fly_sources.iter().all(|emitter| {
+            emitter.sound.descriptor().radius_m <= 14.0
+                && emitter.schedule == EmitterSchedule::WarmDayWaste
+        }));
+        assert_eq!(GATE_GEESE_ANCHORS.len(), 4);
+        assert!(
+            GATE_GEESE_ANCHORS
+                .iter()
+                .all(|source| source.xz().length() > 500.0)
+        );
+    }
+
+    #[test]
+    fn church_beds_are_zone_shaped_and_require_a_congregation() {
+        assert!(inside_lanthorn_interior(Vec3::new(0.0, 1.0, 20.0)));
+        assert!(inside_lanthorn_interior(Vec3::new(-60.0, 1.0, -23.0)));
+        assert!(!inside_lanthorn_interior(Vec3::new(60.0, 1.0, 20.0)));
+        assert!(!inside_lanthorn_interior(Vec3::new(0.0, 84.0, -23.0)));
+        assert!(inside_saint_maren_congregation_area(SAINT_MARENS_CHURCH));
+        assert!(!inside_saint_maren_congregation_area(Vec3::ZERO));
+
+        let pilgrim_hour = clock(Office::HighWick, Weekday::Second);
+        let night = clock(Office::Watch, Weekday::Second);
+        assert!(!congregation_murmur_active(3, Some(&pilgrim_hour)));
+        assert!(congregation_murmur_active(4, Some(&pilgrim_hour)));
+        assert!(!congregation_murmur_active(4, Some(&night)));
+        assert!(congregation_murmur_active(8, Some(&night)));
+    }
+
+    #[test]
+    fn lightning_has_a_visible_flash_before_distance_delayed_thunder() {
+        let mut storm = clock(Office::Waning, Weekday::Bellday);
+        storm.day = 0;
+        assert!(summer_storm_window(Some(&storm)));
+        storm.office = Office::HighWick;
+        assert!(!summer_storm_window(Some(&storm)));
+        storm.office = Office::Waning;
+        storm.day = 1;
+        assert!(!summer_storm_window(Some(&storm)));
+        storm.scale = 60.0;
+        assert_eq!(storm_real_time_compression(&storm), 60.0_f64.sqrt());
+
+        assert_eq!(lightning_sound_delay(LANTHORN_LIGHTNING_ORIGIN), 0.0);
+        assert!(lightning_sound_delay(Vec3::ZERO) > 0.4);
+        assert!(lightning_flash_intensity(0.0) > lightning_flash_intensity(0.06));
+        assert!(lightning_flash_intensity(0.10) > lightning_flash_intensity(0.06));
+        assert_eq!(lightning_flash_intensity(LIGHTNING_FLASH_SECONDS), 0.0);
+    }
+
+    #[test]
+    fn storm_system_spawns_the_flash_and_queues_thunder_in_that_order() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(clock(Office::Waning, Weekday::Bellday))
+            .insert_resource(SummerStormState {
+                active: true,
+                day: Some(0),
+                next_flash_at: Some(0.0),
+                ..default()
+            })
+            .insert_resource(ScheduledSounds::default())
+            .add_systems(Update, schedule_summer_storm);
+        app.world_mut().spawn((
+            PlayerController::default(),
+            Transform::from_translation(Vec3::ZERO),
+        ));
+
+        app.update();
+
+        let flash_count = {
+            let world = app.world_mut();
+            let mut flashes = world.query_filtered::<Entity, With<LightningFlash>>();
+            flashes.iter(world).count()
+        };
+        assert_eq!(flash_count, 1);
+        let queued = &app.world().resource::<ScheduledSounds>().0;
+        assert_eq!(queued.len(), 1);
+        assert_eq!(queued[0].sound, SoundscapeSound::LightningOverLanthorn);
+        assert!(queued[0].at > 0.0, "sound waits for propagation");
+        assert!(
+            app.world()
+                .resource::<SummerStormState>()
+                .next_flash_at
+                .is_some_and(|next| next > 0.0)
+        );
+    }
+
+    #[test]
+    fn animal_approaches_rearm_with_hysteresis_and_ravens_clear_the_bells() {
+        let mut approaches = HashMap::new();
+        assert!(proximity_entered(
+            &mut approaches,
+            1,
+            Vec3::X * 26.0,
+            Vec3::ZERO,
+            27.0,
+            42.0
+        ));
+        assert!(!proximity_entered(
+            &mut approaches,
+            1,
+            Vec3::X * 35.0,
+            Vec3::ZERO,
+            27.0,
+            42.0
+        ));
+        assert!(!proximity_entered(
+            &mut approaches,
+            1,
+            Vec3::X * 43.0,
+            Vec3::ZERO,
+            27.0,
+            42.0
+        ));
+        assert!(proximity_entered(
+            &mut approaches,
+            1,
+            Vec3::X * 26.0,
+            Vec3::ZERO,
+            27.0,
+            42.0
+        ));
+
+        let expected = 6.0 * BELL_STROKE_INTERVAL_SECONDS + TOWN_BELL_CLIP_SECONDS;
+        assert_eq!(office_bell_span_seconds(Office::Snuffing), expected);
+        let mut nature = UrbanNatureState::default();
+        let waning = clock(Office::Waning, Weekday::Second);
+        let snuffing = clock(Office::Snuffing, Weekday::Second);
+        nature.observe_office_bell(10.0, Some(&waning));
+        assert_eq!(
+            nature.ravens_silent_until, 0.0,
+            "initial projection is not a bell"
+        );
+        nature.observe_office_bell(20.0, Some(&snuffing));
+        assert_eq!(nature.ravens_silent_until, 20.0 + expected);
     }
 
     #[test]
@@ -2172,6 +3089,8 @@ mod tests {
         assert!(app.world().contains_resource::<ScheduledSounds>());
         assert!(app.world().contains_resource::<WellSoundState>());
         assert!(app.world().contains_resource::<WellMechanismActivity>());
+        assert!(app.world().contains_resource::<UrbanNatureState>());
+        assert!(app.world().contains_resource::<SummerStormState>());
         assert!(!app.world().contains_resource::<SoundscapeAssets>());
     }
 
