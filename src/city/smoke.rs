@@ -5,7 +5,7 @@
 //! when each of them burns against the sim clock — lit after the Kindling,
 //! covered at the Snuffing, with a scatter of bakehouses firing at the
 //! Watch). Each lit stack carries a looping column of puffs — camera-facing
-//! quads that rise, drift with the prevailing wind, swell and fade — and
+//! quads that rise, drift with the authoritative weather wind, swell and fade — and
 //! every puff in the city is rewritten each frame into one shared mesh, so
 //! the whole skyline of plumes costs a single draw call, one entity, and
 //! nothing at all in navigation.
@@ -26,9 +26,9 @@ const PUFFS_PER_PLUME: usize = 6;
 const PUFF_LIFE_S: f32 = 9.0;
 /// How fast a fresh puff climbs; ageing puffs ease off as the wind takes over.
 const RISE_M_PER_S: f32 = 1.0;
-/// The prevailing wind over the roofs, before per-plume jitter.
-const WIND_HEADING_RAD: f32 = 2.3;
-const WIND_SPEED_M_PER_S: f32 = 0.55;
+/// Clear fallback for isolated city tests that do not install the weather
+/// projection. The game always supplies `SmoothedWeather`.
+const FALLBACK_WIND: Vec2 = Vec2::new(0.8, -0.2);
 /// A puff swells from flue-width to a loose cloud as it dissolves.
 const PUFF_START_DIAMETER_M: f32 = 0.7;
 const PUFF_END_DIAMETER_M: f32 = 3.4;
@@ -56,8 +56,9 @@ struct Plume {
     seed: u32,
     /// Offset into the puff loop, so plumes never breathe in unison.
     phase: f32,
-    /// Ground-plane drift in metres per second: wind plus per-flue jitter.
-    drift: Vec2,
+    /// Stable local eddy applied around the shared weather vector.
+    wind_angle_jitter: f32,
+    wind_speed_factor: f32,
     /// Woodsmoke runs warm-grey to blue-grey depending on the hearth.
     tint: [f32; 3],
     /// Lights at the Watch instead of the Kindling.
@@ -128,7 +129,6 @@ pub(super) fn build_chimney_smoke(
     asset_server: &AssetServer,
     anchors: &[ChimneyAnchor],
 ) -> usize {
-    let wind = Vec2::from_angle(WIND_HEADING_RAD) * WIND_SPEED_M_PER_S;
     let plumes: Vec<Plume> = anchors
         .iter()
         .filter(|anchor| !anchor.cold && anchor.seed % SMOKE_GATE == 0)
@@ -139,8 +139,8 @@ pub(super) fn build_chimney_smoke(
                 top: anchor.top,
                 seed,
                 phase: unit(seed, 15) * PUFF_LIFE_S,
-                drift: Vec2::from_angle((unit(seed, 3) - 0.5) * 0.8).rotate(wind)
-                    * (0.7 + 0.6 * unit(seed, 7)),
+                wind_angle_jitter: (unit(seed, 3) - 0.5) * 0.34,
+                wind_speed_factor: 0.72 + 0.56 * unit(seed, 7),
                 tint: [0.88 - 0.14 * cool, 0.86 - 0.10 * cool, 0.84 - 0.04 * cool],
                 early: anchor.early,
             }
@@ -191,6 +191,7 @@ pub(super) fn build_chimney_smoke(
 pub(super) fn animate_chimney_smoke(
     time: Res<Time>,
     clock: Option<Res<crate::smart_actors::WorldClockState>>,
+    weather: Option<Res<crate::weather::SmoothedWeather>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     smoke: Query<(&ChimneySmoke, &Mesh3d)>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -200,6 +201,11 @@ pub(super) fn animate_chimney_smoke(
     };
     let camera_position = camera.translation();
     let elapsed = time.elapsed_secs();
+    let (weather_wind, weather_gust, precipitation) = weather
+        .as_deref()
+        .map_or((FALLBACK_WIND, 0.0, 0.0), |weather| {
+            (weather.wind, weather.gust, weather.precipitation)
+        });
     // The hearth schedule needs the sim clock — a read-only projection, absent
     // in headless city tests and silent until the engine's first message. In
     // either case every hearth burns at full, exactly the pre-clock skyline:
@@ -224,7 +230,8 @@ pub(super) fn animate_chimney_smoke(
 
         let mut puffs = Vec::with_capacity(smoke.plumes.len() * PUFFS_PER_PLUME);
         for plume in &smoke.plumes {
-            let across = plume.drift.perp().normalize_or_zero();
+            let drift = plume_drift(weather_wind, weather_gust, elapsed, plume);
+            let across = drift.perp().normalize_or_zero();
             for index in 0..PUFFS_PER_PLUME {
                 let slot = index as f32 * (PUFF_LIFE_S / PUFFS_PER_PLUME as f32);
                 let age = (elapsed + plume.phase + slot).rem_euclid(PUFF_LIFE_S);
@@ -247,20 +254,30 @@ pub(super) fn animate_chimney_smoke(
                 // Straight up out of the flue, then the wind takes it: the
                 // climb eases as the drift grows quadratically into a bend.
                 let rise = RISE_M_PER_S * age * (1.0 - 0.22 * f);
-                let bend = plume.drift * (age * f);
+                let bend = drift * (age * f);
                 let sway = across
-                    * ((elapsed * 0.7 + plume.phase * 3.1 + index as f32 * 1.9).sin() * 0.35 * f);
+                    * ((elapsed * (0.7 + weather_gust * 1.4)
+                        + plume.phase * 3.1
+                        + index as f32 * 1.9)
+                        .sin()
+                        * (0.35 + weather_gust * 0.42)
+                        * f);
                 let center =
                     plume.top + Vec3::Y * rise + Vec3::new(bend.x + sway.x, 0.0, bend.y + sway.y);
                 let fade_in = (f / 0.12).min(1.0);
                 let fade_out = (1.0 - f) * (1.0 - f).sqrt();
-                let diameter = PUFF_START_DIAMETER_M
-                    + (PUFF_END_DIAMETER_M - PUFF_START_DIAMETER_M) * f.powf(0.7);
+                let diameter = (PUFF_START_DIAMETER_M
+                    + (PUFF_END_DIAMETER_M - PUFF_START_DIAMETER_M) * f.powf(0.7))
+                    * (1.0 + weather_gust * 0.32 * f);
                 let cell_index = (plume.seed >> (2 * index as u32)) & 3;
                 puffs.push(Puff {
                     center,
                     half: diameter * 0.5,
-                    alpha: PUFF_PEAK_ALPHA * fade_in * fade_out * heat,
+                    alpha: PUFF_PEAK_ALPHA
+                        * fade_in
+                        * fade_out
+                        * heat
+                        * (1.0 - precipitation * 0.28),
                     tint: plume.tint,
                     cell: [
                         0.5 * (cell_index & 1) as f32,
@@ -304,6 +321,18 @@ pub(super) fn animate_chimney_smoke(
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
         mesh.insert_indices(Indices::U32(indices));
     }
+}
+
+/// Shared wind direction with a small, stable flue eddy and a common gust
+/// pulse. The dot product against `weather_wind` remains positive, which is the
+/// invariant rain, clouds and smoke rely on to move in the same direction.
+fn plume_drift(weather_wind: Vec2, gust: f32, elapsed: f32, plume: &Plume) -> Vec2 {
+    let base =
+        Vec2::from_angle(plume.wind_angle_jitter).rotate(weather_wind) * plume.wind_speed_factor;
+    let pulse = 1.0
+        + gust
+            * (0.25 + 0.35 * (elapsed * 0.83 + plume.phase + plume.seed as f32 * 0.000_013).sin());
+    base * pulse.max(0.55)
 }
 
 #[cfg(test)]
@@ -407,6 +436,21 @@ mod tests {
             early * 100 >= plumes * 2 && early * 100 <= plumes * 30,
             "early-hearth share out of range: {early} of {plumes}"
         );
+    }
+
+    #[test]
+    fn local_eddies_never_reverse_the_authoritative_wind() {
+        let mut app = built_app();
+        let world = app.world_mut();
+        let smoke = world
+            .query::<&ChimneySmoke>()
+            .single(world)
+            .expect("the city spawns smoke");
+        let wind = Vec2::new(5.0, -2.5);
+        for plume in smoke.plumes.iter().take(256) {
+            let drift = plume_drift(wind, 1.0, 37.0, plume);
+            assert!(drift.dot(wind) > 0.0, "{drift:?} reversed {wind:?}");
+        }
     }
 
     /// With a camera present the animator fills the one shared mesh with a

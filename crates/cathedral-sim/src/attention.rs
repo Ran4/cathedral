@@ -253,9 +253,7 @@ fn is_llm(world: &World, actor_id: &ActorId) -> bool {
     world
         .characters
         .get(actor_id)
-        .is_some_and(|character| {
-            character.control() == Control::Llm && world.is_present(actor_id)
-        })
+        .is_some_and(|character| character.control() == Control::Llm && world.is_present(actor_id))
 }
 
 /// How long an actor remembers having thought, once they are off the stage.
@@ -466,7 +464,11 @@ impl Memory {
 ///   not news to themselves.
 pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
     let mut hasher = DefaultHasher::new();
-    let Some(actor) = world.characters.get(actor_id).filter(|_| world.is_present(actor_id)) else {
+    let Some(actor) = world
+        .characters
+        .get(actor_id)
+        .filter(|_| world.is_present(actor_id))
+    else {
         return hasher.finish();
     };
 
@@ -523,6 +525,14 @@ pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
                 offer.giver_id.as_str().hash(&mut hasher);
             }
         }
+    }
+
+    // Continuous cloud, wind and wetness interpolate every poll and are never
+    // news. A named transition is; so is this actor crossing beneath cover,
+    // because those are the only weather facts their prompt actually changes.
+    if let Some(weather) = world.current_weather {
+        weather.semantic_revision.hash(&mut hasher);
+        world.is_sheltered(actor.position_m()).hash(&mut hasher);
     }
 
     hasher.finish()
@@ -974,6 +984,39 @@ mod tests {
             .position_m = Vec3::new(17.0, 0.0, 0.0);
 
         assert_eq!(context_hash(&world, &near), before);
+    }
+
+    #[test]
+    fn only_semantic_weather_and_actor_shelter_are_news() {
+        let mut world = world();
+        let near = ActorId::from_raw("near");
+        let mut weather = crate::WeatherSample::CLEAR;
+        weather.semantic_revision = 11;
+        world.current_weather = Some(weather);
+        let baseline = context_hash(&world, &near);
+
+        // Renderer-facing interpolation is deliberately invisible to novelty.
+        weather.cloud_cover = 0.71;
+        weather.wind_xz_mps = [4.0, -2.0];
+        weather.surface_wetness = 0.53;
+        world.current_weather = Some(weather);
+        assert_eq!(context_hash(&world, &near), baseline);
+
+        weather.semantic_revision = 12;
+        world.current_weather = Some(weather);
+        assert_ne!(context_hash(&world, &near), baseline);
+
+        // Restore the named condition, then put this actor alone beneath an
+        // authored roof: their final prompt clause changes once.
+        weather.semantic_revision = 11;
+        world.current_weather = Some(weather);
+        world.shelters = std::sync::Arc::new(
+            crate::ShelterMap::from_json_str(
+                r#"{"schema_version":1,"shelters":[{"id":"porch","label":"the porch","polygon_xz":[[4.0,-1.0],[6.0,-1.0],[6.0,1.0],[4.0,1.0]],"route_node":0,"cover":"stone"}]}"#,
+            )
+            .expect("test shelter parses"),
+        );
+        assert_ne!(context_hash(&world, &near), baseline);
     }
 
     /// …and the other half of the same rule: a *body* arriving or leaving is.

@@ -79,6 +79,38 @@ fn the_sheet_carries_the_hour_only_when_the_world_has_a_clock() {
     assert_eq!(after["you_are"]["position_m"], before["you_are"]["position_m"]);
 }
 
+#[test]
+fn the_sheet_carries_weather_only_with_clock_and_weather_context() {
+    use cathedral_sim::{Office, PrecipitationKind, WeatherKind, WeatherSample, WorldClock};
+
+    let env = prompt_env();
+    let mut world = seed_world();
+    let mut rain = WeatherSample::CLEAR;
+    rain.kind = WeatherKind::Rain;
+    rain.precipitation_kind = PrecipitationKind::Rain;
+    rain.precipitation = 0.58;
+    rain.surface_wetness = 0.72;
+    world.current_weather = Some(rain);
+
+    let without_clock = sheet(&world, "sv3n1", &env);
+    assert!(
+        without_clock["you_are"].get("weather").is_none(),
+        "weather is omitted from timeless fixture worlds"
+    );
+
+    world.current_time = Some(WorldClock::new(3600.0, Office::HighWick, 0, 0.05).at(0.0));
+    let with_context = sheet(&world, "sv3n1", &env);
+    let phrase = with_context["you_are"]["weather"].as_str().unwrap();
+    assert!(phrase.contains("steady rain"), "was: {phrase}");
+    assert!(phrase.contains("streets are wet"), "was: {phrase}");
+    assert!(phrase.contains("exposed"), "was: {phrase}");
+    assert!(!phrase.contains("0.58"), "numeric internals stay out of prompts");
+
+    world.current_weather = None;
+    let without_weather = sheet(&world, "sv3n1", &env);
+    assert!(without_weather["you_are"].get("weather").is_none());
+}
+
 /// The sheet names the current walk's destination, so "where are you going?"
 /// during a round-laid walk is answered from state instead of confabulated —
 /// the Bellday bug: the feet went to the service, the mouth said "the Cloth

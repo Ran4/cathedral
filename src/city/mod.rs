@@ -30,6 +30,7 @@ use bevy::{
 use crate::{
     controller::CollisionWorld,
     materials::{FLOOR_TEXTURE_SPAN_METERS, load_repeating_texture},
+    weather::{WeatherReactiveMaterials, WetResponse},
 };
 
 use monuments::build_approach_monuments;
@@ -259,6 +260,21 @@ fn build_city(
     let doors = door_edges();
     let city_meshes = create_meshes(&mut meshes);
     let city_materials = create_materials(&asset_server, &mut materials);
+    commands.insert_resource(WeatherReactiveMaterials::capture(
+        &materials,
+        [
+            (city_materials.ground.clone(), WetResponse::GROUND),
+            (city_materials.cobbles.clone(), WetResponse::GROUND),
+            (city_materials.paving.clone(), WetResponse::PAVING),
+            (city_materials.dry_cut.clone(), WetResponse::GROUND),
+            (city_materials.yard.clone(), WetResponse::GROUND),
+            (city_materials.terracotta.clone(), WetResponse::ROOF),
+            (city_materials.slate.clone(), WetResponse::ROOF),
+            (city_materials.thatch.clone(), WetResponse::TIMBER),
+            (city_materials.timber.clone(), WetResponse::TIMBER),
+            (city_materials.canvas.clone(), WetResponse::CANVAS),
+        ],
+    ));
 
     build_ground_context(
         &mut commands,
@@ -3053,7 +3069,15 @@ fn build_bellfoot_passage(
     // --- Boarded soffit over the west bay --------------------------------
     let run = mouth_z - face_z;
     boards.set_brush([0.42, 0.36, 0.30]);
-    ab(&mut boards, in_w, board_e, ceil_y, ceil_y + 0.09, face_z, mouth_z);
+    ab(
+        &mut boards,
+        in_w,
+        board_e,
+        ceil_y,
+        ceil_y + 0.09,
+        face_z,
+        mouth_z,
+    );
     for i in 1..7 {
         let z = face_z + run * (i as f32 / 7.0);
         ab(
@@ -3107,8 +3131,13 @@ fn build_bellfoot_passage(
     // Knee braces from each post up to the lintel, in the plane of the mouth.
     for (px, sign) in [(x_w, 1.0_f32), (x_e, -1.0)] {
         let brace_len = 1.25_f32;
-        let dir = Vec3::new(sign * std::f32::consts::FRAC_1_SQRT_2, std::f32::consts::FRAC_1_SQRT_2, 0.0);
-        let center = Vec3::new(px + sign * 0.42, wall_top - 0.95, mouth_z) + dir * (brace_len * 0.5);
+        let dir = Vec3::new(
+            sign * std::f32::consts::FRAC_1_SQRT_2,
+            std::f32::consts::FRAC_1_SQRT_2,
+            0.0,
+        );
+        let center =
+            Vec3::new(px + sign * 0.42, wall_top - 0.95, mouth_z) + dir * (brace_len * 0.5);
         spawn_mesh_named(
             commands,
             &city_meshes.cube,
@@ -3281,7 +3310,15 @@ fn build_bellfoot_passage(
             let cy = 1.12 + row as f32 * 0.82 + ((h >> 5) % 26) as f32 / 100.0;
             let hw = 0.17 + (h % 12) as f32 / 100.0;
             let hh = 0.22 + ((h >> 3) % 20) as f32 / 100.0;
-            ab(&mut notices, in_w + 0.01, in_w + 0.06, cy - hh, cy + hh, z - hw, z + hw);
+            ab(
+                &mut notices,
+                in_w + 0.01,
+                in_w + 0.06,
+                cy - hh,
+                cy + hh,
+                z - hw,
+                z + hw,
+            );
         }
     }
     for col in 0..4 {
@@ -3289,7 +3326,15 @@ fn build_bellfoot_passage(
         let z = -247.6 - col as f32 * 1.55;
         let cy = 1.2 + (h % 40) as f32 / 100.0;
         let hw = 0.19 + (h % 10) as f32 / 200.0;
-        ab(&mut notices, in_e - 0.06, in_e - 0.01, cy - 0.26, cy + 0.26, z - hw, z + hw);
+        ab(
+            &mut notices,
+            in_e - 0.06,
+            in_e - 0.01,
+            cy - 0.26,
+            cy + 0.26,
+            z - hw,
+            z + hw,
+        );
     }
     notices.reset_brush();
 
@@ -3352,7 +3397,15 @@ fn build_bellfoot_passage(
     let wl_x = in_w + 0.05;
     let wl_z = -245.7_f32;
     let wl_y = 2.65_f32;
-    ab(&mut iron, in_w, wl_x + 0.5, wl_y + 0.28, wl_y + 0.34, wl_z - 0.03, wl_z + 0.03);
+    ab(
+        &mut iron,
+        in_w,
+        wl_x + 0.5,
+        wl_y + 0.28,
+        wl_y + 0.34,
+        wl_z - 0.03,
+        wl_z + 0.03,
+    );
     ab(
         &mut iron,
         wl_x + 0.5,
@@ -3415,11 +3468,35 @@ fn build_bellfoot_passage(
     stone.reset_brush();
 
     // --- Commit the batches ----------------------------------------------
-    spawn_batch(commands, meshes, &materials.limestone, stone, "Bellfoot masonry");
-    spawn_batch(commands, meshes, &materials.dark_wood, boards, "Bellfoot boards");
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.limestone,
+        stone,
+        "Bellfoot masonry",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.dark_wood,
+        boards,
+        "Bellfoot boards",
+    );
     spawn_batch(commands, meshes, &materials.iron, iron, "Bellfoot ironwork");
-    spawn_batch(commands, meshes, &materials.lantern_glass, glass, "Bellfoot lantern panes");
-    spawn_batch(commands, meshes, &materials.cloth_ochre, notices, "Bellfoot notices");
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.lantern_glass,
+        glass,
+        "Bellfoot lantern panes",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.cloth_ochre,
+        notices,
+        "Bellfoot notices",
+    );
 }
 
 fn build_saint_maren_tower(
@@ -4832,7 +4909,8 @@ fn build_shopfront_awnings(
             let y = wall_y + (outer_y - wall_y) * t - sag * 4.0 * t * (1.0 - t);
             for column in 0..3 {
                 canvas.vertex(
-                    door3 + dir3 * ((column as f32 - 1.0) * half_width)
+                    door3
+                        + dir3 * ((column as f32 - 1.0) * half_width)
                         + out3 * (0.16 + depth * t)
                         + Vec3::Y * y,
                     sheet_normal,
@@ -5415,27 +5493,25 @@ fn build_open_balconies(
             // deck hung right over its door: mirror the sign gate and step to
             // one flank of a 1.4 m door zone when it fires.
             let sign_hash = stable_hash(&building.id).rotate_left(9);
-            let centre_along = if door_edge == Some(edge_index)
-                && sign_hash % 3 != 0
-                && sign_hash % 8 == 0
-            {
-                let pick = |window_lo: f32, window_hi: f32| {
-                    (window_hi >= window_lo).then(|| window_lo + (window_hi - window_lo) * frac)
-                };
-                let left = pick(lo, length * 0.5 - 1.4 - deck_len * 0.5);
-                let right = pick(length * 0.5 + 1.4 + deck_len * 0.5, hi);
-                let choice = if (hash >> 15) % 2 == 0 {
-                    left.or(right)
+            let centre_along =
+                if door_edge == Some(edge_index) && sign_hash % 3 != 0 && sign_hash % 8 == 0 {
+                    let pick = |window_lo: f32, window_hi: f32| {
+                        (window_hi >= window_lo).then(|| window_lo + (window_hi - window_lo) * frac)
+                    };
+                    let left = pick(lo, length * 0.5 - 1.4 - deck_len * 0.5);
+                    let right = pick(length * 0.5 + 1.4 + deck_len * 0.5, hi);
+                    let choice = if (hash >> 15) % 2 == 0 {
+                        left.or(right)
+                    } else {
+                        right.or(left)
+                    };
+                    match choice {
+                        Some(along) => along,
+                        None => continue,
+                    }
                 } else {
-                    right.or(left)
+                    lo + (hi - lo) * frac
                 };
-                match choice {
-                    Some(along) => along,
-                    None => continue,
-                }
-            } else {
-                lo + (hi - lo) * frac
-            };
             let centre2 = a2 + direction * centre_along;
 
             for &floor in &floors {
@@ -5489,13 +5565,25 @@ fn build_open_balconies(
                     building_tint(building),
                     hash,
                 );
-                placed.push((floor, deck_centre, direction, deck_len * 0.5, deck_out * 0.5));
+                placed.push((
+                    floor,
+                    deck_centre,
+                    direction,
+                    deck_len * 0.5,
+                    deck_out * 0.5,
+                ));
                 hung += 1;
             }
         }
     }
 
-    spawn_batch(commands, meshes, &materials.timber, timber, "Open balconies");
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.timber,
+        timber,
+        "Open balconies",
+    );
     info!("hung {hung} open balconies");
 }
 
@@ -5872,8 +5960,7 @@ fn build_laundry_lines(
             let origin = a2 + direction * (length * (0.35 + ((hash >> 5) % 31) as f32 / 100.0));
             let mut facing: Option<(f32, &Building)> = None;
             for step in 0..9 {
-                let Some(candidate) = flank_at(origin + normal2 * (2.6 + step as f32 * 0.8))
-                else {
+                let Some(candidate) = flank_at(origin + normal2 * (2.6 + step as f32 * 0.8)) else {
                     continue;
                 };
                 if candidate.id != building.id {
@@ -5926,7 +6013,13 @@ fn build_laundry_lines(
         }
     }
 
-    spawn_batch(commands, meshes, &materials.dark_wood, rope, "Laundry ropes");
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.dark_wood,
+        rope,
+        "Laundry ropes",
+    );
     spawn_batch(commands, meshes, &materials.linen, cloth, "Laundry washing");
     info!("strung {strung} laundry lines");
 }
@@ -6273,8 +6366,7 @@ fn build_hoist_gantries(
         // may read their long axis either way.
         let beam_y = if polygon.len() == 4 {
             let edge_01 = Vec2::from_array(polygon[0]).distance(Vec2::from_array(polygon[1]));
-            let edge_12 =
-                Vec2::from_array(polygon[1]).distance(Vec2::from_array(polygon[2]));
+            let edge_12 = Vec2::from_array(polygon[1]).distance(Vec2::from_array(polygon[2]));
             let gable = (edge_01 + 1.5 < edge_12 && edge_index % 2 == 0)
                 || (edge_12 + 1.5 < edge_01 && edge_index % 2 == 1);
             if gable { eave_y + 0.45 } else { eave_y - 0.75 }
@@ -6401,10 +6493,14 @@ fn build_hoist_gantries(
         if side_gantries >= 4 || gallery.hash.rotate_left(13) % 5 != 0 {
             continue;
         }
-        let side = if (gallery.hash >> 3) % 2 == 0 { 1.0 } else { -1.0 };
+        let side = if (gallery.hash >> 3) % 2 == 0 {
+            1.0
+        } else {
+            -1.0
+        };
         let window = (gallery.road_width * 0.5 - 0.7).max(0.0);
-        let lateral = ((((gallery.hash >> 16) % 33) as f32 / 32.0 - 0.5) * 1.6)
-            .clamp(-window, window);
+        let lateral =
+            ((((gallery.hash >> 16) % 33) as f32 / 32.0 - 0.5) * 1.6).clamp(-window, window);
         let base2 = gallery.shifted + gallery.across * lateral;
         let out_dir = gallery.street_dir * side;
         // Anchored in the parapet (faces 1.01–1.25 m out, top 6.53 m), the
@@ -6550,7 +6646,12 @@ fn add_hoist_load(
         1 => {
             let cloth = if (hash >> 8) % 2 == 0 { ochre } else { russet };
             rope(dark_wood, bottom_y + 0.50);
-            add_oriented_box(cloth, center(bottom_y + 0.26), Vec3::new(0.30, 0.26, 0.27), along);
+            add_oriented_box(
+                cloth,
+                center(bottom_y + 0.26),
+                Vec3::new(0.30, 0.26, 0.27),
+                along,
+            );
             add_oriented_box(
                 dark_wood,
                 center(bottom_y + 0.26),
@@ -6567,7 +6668,12 @@ fn add_hoist_load(
         // A small crate.
         2 => {
             rope(dark_wood, bottom_y + 0.42);
-            add_oriented_box(timber, center(bottom_y + 0.22), Vec3::new(0.24, 0.22, 0.24), along);
+            add_oriented_box(
+                timber,
+                center(bottom_y + 0.22),
+                Vec3::new(0.24, 0.22, 0.24),
+                along,
+            );
         }
         // A pail on a rope bail.
         3 => {

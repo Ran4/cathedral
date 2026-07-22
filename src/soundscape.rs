@@ -10,16 +10,19 @@
 //! decoders, their gains fade rather than switch, and an active conversation or
 //! microphone capture ducks them through the shared `AudioActivity` projection.
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use bevy::{
     audio::{
-        AudioPlayer, AudioPlugin, AudioSinkPlayback, AudioSource, PlaybackSettings,
+        AudioPlayer, AudioPlugin, AudioSink, AudioSinkPlayback, AudioSource, PlaybackSettings,
         SpatialAudioSink, SpatialScale, Volume,
     },
     prelude::*,
 };
-use cathedral_sim::{BELL_STROKE_INTERVAL_SECONDS, CartLoadKind, Office, Weekday};
+use cathedral_sim::{BELL_STROKE_INTERVAL_SECONDS, CartLoadKind, Office, WeatherKind, Weekday};
 
 use crate::{
     city::CobbleRoadNetwork,
@@ -30,6 +33,7 @@ use crate::{
         model::{ActorId, MovementInbox, WorldMirror},
         road_carts::RoadCartView,
     },
+    weather::{CoverMaterial, PrecipitationOcclusionMap, WeatherLightning, WorldWeatherState},
 };
 
 const SOUND_ROOT: &str = "sounds/soundscape";
@@ -56,9 +60,7 @@ const GEESE_GLOBAL_COOLDOWN_SECONDS: f64 = 210.0;
 const CAT_MIN_INTERVAL_SECONDS: f64 = 135.0;
 const CAT_INTERVAL_JITTER_SECONDS: f64 = 165.0;
 const SPEED_OF_SOUND_MPS: f32 = 343.0;
-const LIGHTNING_FLASH_SECONDS: f64 = 0.24;
-const LIGHTNING_MIN_INTERVAL_SECONDS: f64 = 210.0;
-const LIGHTNING_INTERVAL_JITTER_SECONDS: f64 = 240.0;
+const WEATHER_AUDIO_SAMPLE_RATE: u32 = 22_050;
 
 const WICKMARKET: Vec3 = Vec3::new(-25.0, 1.3, 355.0);
 const TALLAGE_WEIGHBEAM: Vec3 = Vec3::new(-306.0, 1.5, 65.0);
@@ -81,7 +83,6 @@ const NORTH_TOWER_NESTS: Vec3 = Vec3::new(34.0, 46.0, 75.0);
 // close to the Reed Postern but almost 300 m from the dry Cut.
 const OUTER_FISH_WHARF: Vec3 = Vec3::new(-594.0, 13.0, -404.0);
 const SPARR_FURNACE_YARD: Vec3 = Vec3::new(-115.0, 2.0, 250.0);
-const LANTHORN_LIGHTNING_ORIGIN: Vec3 = Vec3::new(0.0, 140.0, -23.0);
 const SAINT_MARENS_CHURCH: Vec3 = Vec3::new(-235.0, 3.0, -392.0);
 
 const MARKET_DOG_ANCHORS: [Vec3; 6] = [
@@ -262,7 +263,10 @@ impl Plugin for SoundscapePlugin {
             .init_resource::<WorkSoundState>()
             .init_resource::<ClockSoundState>()
             .init_resource::<UrbanNatureState>()
-            .init_resource::<SummerStormState>();
+            .init_resource::<WeatherAudioState>()
+            .init_resource::<WorldWeatherState>()
+            .init_resource::<PrecipitationOcclusionMap>()
+            .add_message::<WeatherLightning>();
 
         app.configure_sets(
             Update,
@@ -288,8 +292,8 @@ impl Plugin for SoundscapePlugin {
                     schedule_clock_sounds,
                     schedule_player_footsteps,
                     schedule_npc_body_sounds,
-                    schedule_summer_storm,
-                    update_lightning_flashes,
+                    schedule_weather_thunder,
+                    update_weather_audio,
                     schedule_urban_nature_sounds,
                     spawn_due_sounds,
                     update_virtualized_loops,
@@ -718,12 +722,211 @@ impl SoundscapeAssets {
     }
 }
 
-fn load_soundscape_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(u8)]
+enum WeatherStem {
+    LightExterior,
+    HeavyExterior,
+    HardRoof,
+    SoftRoof,
+    StormWind,
+    Runoff,
+    MuffledExterior,
+}
+
+impl WeatherStem {
+    const ALL: [Self; 7] = [
+        Self::LightExterior,
+        Self::HeavyExterior,
+        Self::HardRoof,
+        Self::SoftRoof,
+        Self::StormWind,
+        Self::Runoff,
+        Self::MuffledExterior,
+    ];
+}
+
+#[derive(Resource)]
+struct WeatherAudioAssets {
+    stems: [Handle<AudioSource>; 7],
+    wet_step: Handle<AudioSource>,
+    puddle_splash: Handle<AudioSource>,
+}
+
+impl WeatherAudioAssets {
+    fn stem(&self, stem: WeatherStem) -> Handle<AudioSource> {
+        self.stems[stem as usize].clone()
+    }
+}
+
+#[derive(Component)]
+struct PlayingWeatherLoop {
+    stem: WeatherStem,
+    current_gain: f32,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct WeatherMix {
+    gains: [f32; 7],
+    sheltered: bool,
+}
+
+#[derive(Resource, Debug, Clone, Copy, Default, PartialEq)]
+struct WeatherAudioState {
+    mix: WeatherMix,
+}
+
+fn load_soundscape_assets(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut audio_sources: ResMut<Assets<AudioSource>>,
+) {
     let handles = ALL_SOUNDS
         .into_iter()
         .map(|sound| (sound, asset_server.load(sound.asset_path())))
         .collect();
     commands.insert_resource(SoundscapeAssets(handles));
+
+    // Weather beds are original deterministic procedural recordings. Keeping
+    // the generated PCM in shared assets gives rodio normal loop/duck controls
+    // without shipping seven near-identical megabyte binaries or synthesizing
+    // anything on the audio thread.
+    let stems = WeatherStem::ALL.map(|stem| {
+        audio_sources.add(AudioSource {
+            bytes: Arc::from(weather_wav(WeatherClip::Stem(stem))),
+        })
+    });
+    let weather_assets = WeatherAudioAssets {
+        stems,
+        wet_step: audio_sources.add(AudioSource {
+            bytes: Arc::from(weather_wav(WeatherClip::WetStep)),
+        }),
+        puddle_splash: audio_sources.add(AudioSource {
+            bytes: Arc::from(weather_wav(WeatherClip::PuddleSplash)),
+        }),
+    };
+    for stem in WeatherStem::ALL {
+        commands.spawn((
+            Name::new(format!("Weather audio: {stem:?}")),
+            PlayingWeatherLoop {
+                stem,
+                current_gain: 0.0,
+            },
+            AudioPlayer::new(weather_assets.stem(stem)),
+            PlaybackSettings::LOOP.with_volume(Volume::Linear(0.0)),
+        ));
+    }
+    commands.insert_resource(weather_assets);
+}
+
+#[derive(Debug, Clone, Copy)]
+enum WeatherClip {
+    Stem(WeatherStem),
+    WetStep,
+    PuddleSplash,
+}
+
+/// Build a mono 16-bit PCM WAV. The inexpensive filters and impact envelopes
+/// are evaluated once at startup; all runtime weather work is gain crossfade.
+fn weather_wav(clip: WeatherClip) -> Vec<u8> {
+    let looped = matches!(clip, WeatherClip::Stem(_));
+    let seconds = if looped { 4.0 } else { 0.62 };
+    let sample_count = (WEATHER_AUDIO_SAMPLE_RATE as f32 * seconds) as usize;
+    let mut seed = 0x789a_bcde_0123_4567_u64
+        ^ match clip {
+            WeatherClip::Stem(stem) => u64::from(stem as u8) * 0x9e37_79b9,
+            WeatherClip::WetStep => 0x51e7_0001,
+            WeatherClip::PuddleSplash => 0x5a1a_0002,
+        };
+    let mut slow = 0.0_f32;
+    let mut medium = 0.0_f32;
+    let mut impact = 0.0_f32;
+    let mut samples = Vec::with_capacity(sample_count);
+    for index in 0..sample_count {
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        let white = (((seed >> 40) as u32) as f32 / 16_777_215.0) * 2.0 - 1.0;
+        medium += (white - medium) * 0.16;
+        slow += (white - slow) * 0.008;
+        if seed & 0x7ff == 0 {
+            impact = 1.0;
+        }
+        impact *= 0.91;
+        let t = index as f32 / WEATHER_AUDIO_SAMPLE_RATE as f32;
+        let sample = match clip {
+            WeatherClip::Stem(WeatherStem::LightExterior) => {
+                medium * 0.13 + impact * (white * 0.34 + 0.15)
+            }
+            WeatherClip::Stem(WeatherStem::HeavyExterior) => {
+                white * 0.18 + medium * 0.48 + slow * 0.18 + impact * 0.13
+            }
+            WeatherClip::Stem(WeatherStem::HardRoof) => {
+                medium * 0.12 + impact * (0.54 + (t * std::f32::consts::TAU * 780.0).sin() * 0.28)
+            }
+            WeatherClip::Stem(WeatherStem::SoftRoof) => medium * 0.30 + slow * 0.28 + impact * 0.12,
+            WeatherClip::Stem(WeatherStem::StormWind) => {
+                slow * 1.55 + medium * 0.18 + (t * std::f32::consts::TAU * 0.23).sin() * 0.08
+            }
+            WeatherClip::Stem(WeatherStem::Runoff) => {
+                medium * 0.34
+                    + white * 0.07
+                    + (t * std::f32::consts::TAU * 7.0).sin() * 0.045
+                    + impact * 0.09
+            }
+            WeatherClip::Stem(WeatherStem::MuffledExterior) => slow * 0.72 + medium * 0.16,
+            WeatherClip::WetStep => {
+                let envelope = (-t * 10.5).exp();
+                envelope
+                    * (medium * 0.62
+                        + (t * std::f32::consts::TAU * 92.0).sin() * 0.34
+                        + slow * 0.25)
+            }
+            WeatherClip::PuddleSplash => {
+                let envelope = (-t * 7.5).exp();
+                envelope
+                    * (white * 0.24
+                        + medium * 0.66
+                        + (t * std::f32::consts::TAU * 44.0).sin() * 0.18)
+            }
+        };
+        samples.push(sample);
+    }
+    let peak = samples.iter().copied().map(f32::abs).fold(0.001, f32::max);
+    let scale = 0.78 / peak.max(0.78);
+    for sample in &mut samples {
+        *sample *= scale;
+    }
+    if looped && samples.len() >= 3 {
+        let first = samples[0];
+        let penultimate = samples[1];
+        let len = samples.len();
+        samples[len - 2] = penultimate;
+        samples[len - 1] = first;
+    }
+    pcm16_wav(&samples, WEATHER_AUDIO_SAMPLE_RATE)
+}
+
+fn pcm16_wav(samples: &[f32], sample_rate: u32) -> Vec<u8> {
+    let data_len = samples.len() as u32 * 2;
+    let mut bytes = Vec::with_capacity(44 + data_len as usize);
+    bytes.extend_from_slice(b"RIFF");
+    bytes.extend_from_slice(&(36 + data_len).to_le_bytes());
+    bytes.extend_from_slice(b"WAVEfmt ");
+    bytes.extend_from_slice(&16_u32.to_le_bytes());
+    bytes.extend_from_slice(&1_u16.to_le_bytes());
+    bytes.extend_from_slice(&1_u16.to_le_bytes());
+    bytes.extend_from_slice(&sample_rate.to_le_bytes());
+    bytes.extend_from_slice(&(sample_rate * 2).to_le_bytes());
+    bytes.extend_from_slice(&2_u16.to_le_bytes());
+    bytes.extend_from_slice(&16_u16.to_le_bytes());
+    bytes.extend_from_slice(b"data");
+    bytes.extend_from_slice(&data_len.to_le_bytes());
+    for sample in samples {
+        let encoded = (sample.clamp(-1.0, 1.0) * i16::MAX as f32).round() as i16;
+        bytes.extend_from_slice(&encoded.to_le_bytes());
+    }
+    bytes
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1045,9 +1248,18 @@ struct FootstepTracker {
     last_step_at: f64,
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "Bevy system parameters are independent ECS access declarations"
+)]
 fn schedule_player_footsteps(
+    mut commands: Commands,
     time: Res<Time>,
     cobbles: Option<Res<CobbleRoadNetwork>>,
+    weather: Option<Res<WorldWeatherState>>,
+    cover: Option<Res<PrecipitationOcclusionMap>>,
+    weather_assets: Option<Res<WeatherAudioAssets>>,
+    activity: Option<Res<AudioActivity>>,
     player: Query<(&Transform, &PlayerController)>,
     mut tracker: ResMut<FootstepTracker>,
     mut scheduled: ResMut<ScheduledSounds>,
@@ -1091,14 +1303,86 @@ fn schedule_player_footsteps(
         let gain_jitter =
             0.96 + unit(stable_hash(&format!("step-gain:{}", tracker.sequence))) as f32 * 0.08;
         let source = Vec3::new(position.x, 0.08, position.z);
+        let exposed = cover
+            .as_deref()
+            .is_none_or(|cover| !cover.is_sheltered(position));
+        let wetness = weather
+            .as_deref()
+            .map_or(0.0, |weather| weather.current.surface_wetness as f32);
+        let wet_mix = if exposed {
+            ((wetness - 0.16) / 0.64).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
         scheduled.push_shaped(
             now,
             SoundscapeSound::CobbleFootstep,
             source,
-            gain_jitter,
+            gain_jitter * (1.0 - wet_mix * 0.42),
             foot_pitch + jitter,
         );
+        if wet_mix > 0.0
+            && let Some(assets) = weather_assets.as_deref()
+        {
+            let busy = activity.as_deref().is_some_and(|activity| activity.busy);
+            spawn_weather_footstep(
+                &mut commands,
+                now,
+                source,
+                assets.wet_step.clone(),
+                0.20 + wet_mix * 0.34,
+                if busy { 0.34 } else { 1.0 },
+                foot_pitch + jitter * 0.5,
+                "wet cobble contact",
+            );
+            let standing_water = weather
+                .as_deref()
+                .map_or(0.0, |weather| weather.current.standing_water as f32);
+            let splash_roll =
+                unit(stable_hash(&format!("step-splash:{}", tracker.sequence))) as f32;
+            if standing_water > 0.08 && splash_roll < standing_water * 0.55 {
+                spawn_weather_footstep(
+                    &mut commands,
+                    now,
+                    source,
+                    assets.puddle_splash.clone(),
+                    0.12 + standing_water * 0.24,
+                    if busy { 0.30 } else { 1.0 },
+                    0.94 + jitter,
+                    "shallow puddle splash",
+                );
+            }
+        }
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn spawn_weather_footstep(
+    commands: &mut Commands,
+    now: f64,
+    position: Vec3,
+    source: Handle<AudioSource>,
+    gain: f32,
+    initial_scale: f32,
+    speed: f32,
+    label: &'static str,
+) {
+    commands.spawn((
+        Name::new(format!("Weather sound: {label}")),
+        PlayingSoundscapeOneShot {
+            spawned_at: now,
+            base_gain: gain,
+            busy_gain: 0.32,
+            current_gain: gain * initial_scale,
+        },
+        AudioPlayer::new(source),
+        PlaybackSettings::DESPAWN
+            .with_volume(Volume::Linear(gain * initial_scale))
+            .with_speed(speed)
+            .with_spatial(true)
+            .with_spatial_scale(spatial_scale(9.0)),
+        Transform::from_translation(position),
+    ));
 }
 
 fn step_spacing(speed_mps: f32) -> f32 {
@@ -1290,129 +1574,136 @@ fn dusty_worker_outfit(outfit: cathedral_sim::OutfitClass) -> bool {
     )
 }
 
-/// A deliberately sparse warm-season storm. The fixed world has no general
-/// weather simulation, so this owns the whole causal chain: a deterministic
-/// storm window, a visible flash, the propagation delay, and only then thunder.
-#[derive(Resource, Default)]
-struct SummerStormState {
-    active: bool,
-    day: Option<i64>,
-    next_flash_at: Option<f64>,
-    sequence: u64,
+fn lightning_sound_delay(listener: Vec3, origin: Vec3) -> f64 {
+    f64::from(listener.distance(origin) / SPEED_OF_SOUND_MPS)
 }
 
-#[derive(Component)]
-struct LightningFlash {
-    started_at: f64,
-}
-
-fn summer_storm_window(clock: Option<&WorldClockState>) -> bool {
-    clock.filter(|clock| clock.present).is_some_and(|clock| {
-        // The eleven-day cadence walks across the seven weekdays rather than
-        // making bad weather a suspiciously regular market-day ritual.
-        clock.day.rem_euclid(11) == 0 && matches!(clock.office, Office::Waning | Office::Lamplight)
-    })
-}
-
-fn storm_real_time_compression(clock: &WorldClockState) -> f64 {
-    // Debug time acceleration shortens the six-hour storm window too. A square
-    // root keeps the flashes sparse while ensuring 60x still gets one before
-    // the clock has run past Lamplight.
-    clock.scale.max(1.0).sqrt().min(8.0)
-}
-
-fn lightning_sound_delay(listener: Vec3) -> f64 {
-    f64::from(listener.distance(LANTHORN_LIGHTNING_ORIGIN) / SPEED_OF_SOUND_MPS)
-}
-
-fn lightning_flash_intensity(elapsed: f64) -> f32 {
-    match elapsed {
-        t if t < 0.045 => 320_000_000.0,
-        t if t < 0.085 => 24_000_000.0,
-        t if t < 0.135 => 150_000_000.0,
-        t if t < LIGHTNING_FLASH_SECONDS => {
-            let fade = ((LIGHTNING_FLASH_SECONDS - t) / (LIGHTNING_FLASH_SECONDS - 0.135)) as f32;
-            70_000_000.0 * fade.clamp(0.0, 1.0)
-        }
-        _ => 0.0,
-    }
-}
-
-fn schedule_summer_storm(
-    mut commands: Commands,
+/// Consume the sim's crossed strike exactly once for audio. The weather
+/// renderer has its own reader and flashes in the message frame; this schedules
+/// thunder in real seconds, so clock acceleration never cheats propagation.
+fn schedule_weather_thunder(
     time: Res<Time>,
-    clock: Option<Res<WorldClockState>>,
+    mut strikes: MessageReader<WeatherLightning>,
     player: Query<&Transform, With<PlayerController>>,
-    mut state: ResMut<SummerStormState>,
     mut scheduled: ResMut<ScheduledSounds>,
 ) {
-    let active = summer_storm_window(clock.as_deref());
-    state.active = active;
-    if !active {
-        state.day = None;
-        state.next_flash_at = None;
-        return;
-    }
     let Ok(player) = player.single() else { return };
-    let clock = clock
-        .as_deref()
-        .expect("a storm window requires a projected clock");
     let now = time.elapsed_secs_f64();
-    if state.day != Some(clock.day) {
-        state.day = Some(clock.day);
-        let first_delay = (22.0 + unit(stable_hash(&format!("storm-first:{}", clock.day))) * 48.0)
-            / storm_real_time_compression(clock);
-        state.next_flash_at = Some(now + first_delay);
+    for strike in strikes.read() {
+        let origin = Vec3::new(
+            strike.0.origin_m[0] as f32,
+            strike.0.origin_m[1] as f32,
+            strike.0.origin_m[2] as f32,
+        );
+        scheduled.push(
+            now + lightning_sound_delay(player.translation, origin),
+            SoundscapeSound::LightningOverLanthorn,
+            origin,
+        );
     }
-    let Some(due) = state.next_flash_at else {
-        return;
-    };
-    if now < due {
-        return;
-    }
-
-    commands.spawn((
-        Name::new("Summer storm lightning flash over the Lanthorn"),
-        LightningFlash { started_at: now },
-        PointLight {
-            color: Color::srgb(0.76, 0.86, 1.0),
-            intensity: lightning_flash_intensity(0.0),
-            range: 1_300.0,
-            radius: 18.0,
-            shadow_maps_enabled: false,
-            ..default()
-        },
-        Transform::from_translation(LANTHORN_LIGHTNING_ORIGIN),
-    ));
-    scheduled.push(
-        now + lightning_sound_delay(player.translation),
-        SoundscapeSound::LightningOverLanthorn,
-        LANTHORN_LIGHTNING_ORIGIN,
-    );
-
-    state.sequence = state.sequence.wrapping_add(1);
-    let interval = LIGHTNING_MIN_INTERVAL_SECONDS
-        + unit(stable_hash(&format!(
-            "storm-next:{}:{}",
-            clock.day, state.sequence
-        ))) * LIGHTNING_INTERVAL_JITTER_SECONDS;
-    state.next_flash_at = Some(now + interval / storm_real_time_compression(clock));
 }
 
-fn update_lightning_flashes(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut flashes: Query<(Entity, &LightningFlash, &mut PointLight)>,
-) {
-    let now = time.elapsed_secs_f64();
-    for (entity, flash, mut light) in &mut flashes {
-        let elapsed = now - flash.started_at;
-        if elapsed >= LIGHTNING_FLASH_SECONDS {
-            commands.entity(entity).despawn();
+fn weather_mix(
+    sample: cathedral_sim::WeatherSample,
+    material: CoverMaterial,
+    sheltered: bool,
+    deep_in_lanthorn: bool,
+) -> WeatherMix {
+    let rain = sample.precipitation as f32;
+    let heavy = ((rain - 0.28) / 0.72).clamp(0.0, 1.0);
+    let wet = sample.surface_wetness as f32;
+    let mut gains = [0.0; 7];
+    if deep_in_lanthorn {
+        gains[WeatherStem::MuffledExterior as usize] = rain * 0.26;
+        gains[WeatherStem::HardRoof as usize] = rain * (0.10 + heavy * 0.12);
+    } else if sheltered {
+        gains[WeatherStem::MuffledExterior as usize] = rain * (0.34 + heavy * 0.15);
+        match material {
+            CoverMaterial::Slate
+            | CoverMaterial::Tile
+            | CoverMaterial::Stone
+            | CoverMaterial::Glass => {
+                gains[WeatherStem::HardRoof as usize] = rain * (0.35 + heavy * 0.55);
+            }
+            CoverMaterial::Thatch | CoverMaterial::Canvas | CoverMaterial::Timber => {
+                gains[WeatherStem::SoftRoof as usize] = rain * (0.32 + heavy * 0.48);
+            }
+            CoverMaterial::Open => {}
+        }
+    } else {
+        gains[WeatherStem::LightExterior as usize] = rain * (1.0 - heavy * 0.76) * 0.72;
+        gains[WeatherStem::HeavyExterior as usize] = heavy * (0.28 + rain * 0.72);
+    }
+    let wind_speed = (sample.wind_xz_mps[0].hypot(sample.wind_xz_mps[1]) as f32 - 2.0) / 8.0;
+    gains[WeatherStem::StormWind as usize] =
+        (wind_speed.max(0.0) + sample.gust as f32 * 0.42 + sample.thunder as f32 * 0.68)
+            .clamp(0.0, 1.0)
+            * if deep_in_lanthorn { 0.18 } else { 0.48 };
+    gains[WeatherStem::Runoff as usize] = ((wet - 0.34) / 0.66).clamp(0.0, 1.0)
+        * (0.12 + rain * 0.68)
+        * if deep_in_lanthorn {
+            0.12
+        } else if sheltered {
+            0.52
         } else {
-            light.intensity = lightning_flash_intensity(elapsed.max(0.0));
+            0.30
+        };
+    WeatherMix { gains, sheltered }
+}
+
+fn update_weather_audio(
+    time: Res<Time>,
+    weather: Res<WorldWeatherState>,
+    cover: Res<PrecipitationOcclusionMap>,
+    activity: Option<Res<AudioActivity>>,
+    player: Query<&Transform, With<PlayerController>>,
+    mut state: ResMut<WeatherAudioState>,
+    mut loops: Query<(&mut PlayingWeatherLoop, Option<&mut AudioSink>)>,
+) {
+    let mix = player
+        .single()
+        .ok()
+        .map_or_else(WeatherMix::default, |player| {
+            let position = player.translation;
+            let cover_sample = cover.sample(position.x, position.z);
+            let sheltered =
+                cover_sample.sheltered_listener && position.y < cover_sample.impact_y - 0.15;
+            weather_mix(
+                weather.current,
+                cover_sample.material,
+                sheltered,
+                inside_lanthorn_interior(position),
+            )
+        });
+    state.mix = mix;
+    let busy_scale = if activity.as_deref().is_some_and(|activity| activity.busy) {
+        0.24
+    } else {
+        1.0
+    };
+    let dt = time.delta_secs();
+    for (mut playing, sink) in &mut loops {
+        let target = mix.gains[playing.stem as usize] * busy_scale;
+        playing.current_gain = smooth_gain(
+            playing.current_gain,
+            target,
+            dt,
+            target < playing.current_gain,
+        );
+        if let Some(mut sink) = sink {
+            sink.set_volume(Volume::Linear(playing.current_gain));
         }
     }
+}
+
+fn wildlife_suppressed(weather: Option<&WorldWeatherState>) -> bool {
+    weather.is_some_and(|weather| {
+        weather.current.precipitation >= 0.62
+            || matches!(
+                weather.current.kind,
+                WeatherKind::Downpour | WeatherKind::Thunderstorm
+            )
+    })
 }
 
 #[derive(Resource, Default)]
@@ -1502,7 +1793,7 @@ fn schedule_urban_nature_sounds(
     time: Res<Time>,
     clock: Option<Res<WorldClockState>>,
     player: Query<&Transform, With<PlayerController>>,
-    storm: Res<SummerStormState>,
+    weather: Option<Res<WorldWeatherState>>,
     mut state: ResMut<UrbanNatureState>,
     mut scheduled: ResMut<ScheduledSounds>,
 ) {
@@ -1555,7 +1846,7 @@ fn schedule_urban_nature_sounds(
         );
         if entered
             && daylight_animals_active(clock.as_deref())
-            && !storm.active
+            && !wildlife_suppressed(weather.as_deref())
             && now >= state.next_geese_at
         {
             let sequence = state.next_sequence();
@@ -2142,7 +2433,7 @@ fn update_virtualized_loops(
     wells: Res<WellSoundState>,
     work: Res<WorkSoundState>,
     nature: Res<UrbanNatureState>,
-    storm: Res<SummerStormState>,
+    weather: Option<Res<WorldWeatherState>>,
     mut playing: Query<
         (
             Entity,
@@ -2159,23 +2450,42 @@ fn update_virtualized_loops(
     let player_position = player.single().ok().map(|transform| transform.translation);
     let existing_keys: HashSet<u64> = playing.iter().map(|(_, state, _, _)| state.key).collect();
     let mut demands = Vec::new();
+    let wickmarket_population = actors
+        .iter()
+        .filter(|transform| {
+            transform
+                .translation()
+                .xz()
+                .distance_squared(WICKMARKET.xz())
+                < 58.0_f32.powi(2)
+        })
+        .take(3)
+        .count();
 
     for emitter in STATIC_EMITTERS {
         let overridden =
             work_kind_for_sound(emitter.sound).is_some_and(|kind| work.0.contains_key(&kind));
         let ravens_scattered =
             emitter.sound == SoundscapeSound::NorthTowerRavens && now < nature.ravens_silent_until;
-        let storm_shy_animal = storm.active
+        let storm_shy_animal = wildlife_suppressed(weather.as_deref())
             && matches!(
                 emitter.sound,
                 SoundscapeSound::NorthTowerRavens
                     | SoundscapeSound::SparrowsUnderEaves
                     | SoundscapeSound::SwallowsOverCourt
                     | SoundscapeSound::RiverWharfGulls
+                    | SoundscapeSound::FliesAtWaste
             );
+        // Severe weather removes the broad exposed-market bed only when the
+        // projected crowd has actually dispersed. Covered pitches can remain
+        // staffed, so weather alone is not a second authority for attendance.
+        let weather_closed_market = wildlife_suppressed(weather.as_deref())
+            && emitter.sound == SoundscapeSound::WickmarketCrowd
+            && wickmarket_population < 3;
         if !overridden
             && !ravens_scattered
             && !storm_shy_animal
+            && !weather_closed_market
             && schedule_is_active(emitter.schedule, clock.as_deref())
         {
             let descriptor = emitter.sound.descriptor();
@@ -2751,61 +3061,79 @@ mod tests {
     }
 
     #[test]
-    fn lightning_has_a_visible_flash_before_distance_delayed_thunder() {
-        let mut storm = clock(Office::Waning, Weekday::Bellday);
-        storm.day = 0;
-        assert!(summer_storm_window(Some(&storm)));
-        storm.office = Office::HighWick;
-        assert!(!summer_storm_window(Some(&storm)));
-        storm.office = Office::Waning;
-        storm.day = 1;
-        assert!(!summer_storm_window(Some(&storm)));
-        storm.scale = 60.0;
-        assert_eq!(storm_real_time_compression(&storm), 60.0_f64.sqrt());
-
-        assert_eq!(lightning_sound_delay(LANTHORN_LIGHTNING_ORIGIN), 0.0);
-        assert!(lightning_sound_delay(Vec3::ZERO) > 0.4);
-        assert!(lightning_flash_intensity(0.0) > lightning_flash_intensity(0.06));
-        assert!(lightning_flash_intensity(0.10) > lightning_flash_intensity(0.06));
-        assert_eq!(lightning_flash_intensity(LIGHTNING_FLASH_SECONDS), 0.0);
+    fn lightning_delay_is_physical_real_time() {
+        let origin = Vec3::new(0.0, 140.0, -23.0);
+        assert_eq!(lightning_sound_delay(origin, origin), 0.0);
+        assert!(lightning_sound_delay(Vec3::ZERO, origin) > 0.4);
     }
 
     #[test]
-    fn storm_system_spawns_the_flash_and_queues_thunder_in_that_order() {
+    fn crossed_lightning_message_queues_one_delayed_thunder() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .insert_resource(clock(Office::Waning, Weekday::Bellday))
-            .insert_resource(SummerStormState {
-                active: true,
-                day: Some(0),
-                next_flash_at: Some(0.0),
-                ..default()
-            })
+            .add_message::<WeatherLightning>()
             .insert_resource(ScheduledSounds::default())
-            .add_systems(Update, schedule_summer_storm);
+            .add_systems(Update, schedule_weather_thunder);
         app.world_mut().spawn((
             PlayerController::default(),
             Transform::from_translation(Vec3::ZERO),
         ));
+        app.world_mut()
+            .write_message(WeatherLightning(cathedral_sim::LightningStrike {
+                id: 7,
+                game_instant_days: 1.5,
+                origin_m: [0.0, 140.0, -23.0],
+                strength: 0.9,
+            }));
 
         app.update();
 
-        let flash_count = {
-            let world = app.world_mut();
-            let mut flashes = world.query_filtered::<Entity, With<LightningFlash>>();
-            flashes.iter(world).count()
-        };
-        assert_eq!(flash_count, 1);
         let queued = &app.world().resource::<ScheduledSounds>().0;
         assert_eq!(queued.len(), 1);
         assert_eq!(queued[0].sound, SoundscapeSound::LightningOverLanthorn);
         assert!(queued[0].at > 0.0, "sound waits for propagation");
+        app.update();
+        assert_eq!(app.world().resource::<ScheduledSounds>().0.len(), 1);
+    }
+
+    #[test]
+    fn shelter_crossfades_exterior_rain_to_the_matching_roof() {
+        let mut sample = cathedral_sim::WeatherSample::CLEAR;
+        sample.kind = WeatherKind::Rain;
+        sample.precipitation = 0.62;
+        sample.surface_wetness = 0.7;
+        let outside = weather_mix(sample, CoverMaterial::Open, false, false);
+        let slate = weather_mix(sample, CoverMaterial::Slate, true, false);
+        let canvas = weather_mix(sample, CoverMaterial::Canvas, true, false);
+        let nave = weather_mix(sample, CoverMaterial::Slate, true, true);
+        assert!(outside.gains[WeatherStem::HeavyExterior as usize] > 0.0);
+        assert_eq!(outside.gains[WeatherStem::HardRoof as usize], 0.0);
+        assert!(slate.gains[WeatherStem::HardRoof as usize] > 0.0);
+        assert_eq!(slate.gains[WeatherStem::HeavyExterior as usize], 0.0);
+        assert!(canvas.gains[WeatherStem::SoftRoof as usize] > 0.0);
         assert!(
-            app.world()
-                .resource::<SummerStormState>()
-                .next_flash_at
-                .is_some_and(|next| next > 0.0)
+            nave.gains[WeatherStem::MuffledExterior as usize]
+                < slate.gains[WeatherStem::MuffledExterior as usize]
         );
+    }
+
+    #[test]
+    fn generated_weather_clips_are_valid_bounded_pcm_wavs() {
+        for clip in WeatherStem::ALL
+            .map(WeatherClip::Stem)
+            .into_iter()
+            .chain([WeatherClip::WetStep, WeatherClip::PuddleSplash])
+        {
+            let bytes = weather_wav(clip);
+            assert_eq!(&bytes[0..4], b"RIFF");
+            assert_eq!(&bytes[8..12], b"WAVE");
+            assert_eq!(u16::from_le_bytes([bytes[22], bytes[23]]), 1);
+            assert_eq!(
+                u32::from_le_bytes(bytes[24..28].try_into().unwrap()),
+                WEATHER_AUDIO_SAMPLE_RATE
+            );
+            assert!(bytes.len() > 20_000);
+        }
     }
 
     #[test]
@@ -3090,7 +3418,8 @@ mod tests {
         assert!(app.world().contains_resource::<WellSoundState>());
         assert!(app.world().contains_resource::<WellMechanismActivity>());
         assert!(app.world().contains_resource::<UrbanNatureState>());
-        assert!(app.world().contains_resource::<SummerStormState>());
+        assert!(app.world().contains_resource::<WeatherAudioState>());
+        assert!(app.world().contains_resource::<WorldWeatherState>());
         assert!(!app.world().contains_resource::<SoundscapeAssets>());
     }
 

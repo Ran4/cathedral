@@ -12,6 +12,7 @@ mod session_log;
 mod smart_actors;
 mod soundscape;
 mod ui;
+mod weather;
 
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
@@ -27,6 +28,7 @@ use screenshot::CathedralScreenshotPlugin;
 use smart_actors::SmartActorsPlugin;
 use soundscape::SoundscapePlugin;
 use ui::HudPlugin;
+use weather::WeatherPlugin;
 
 fn main() {
     // The session directory must exist before anything logs, screenshots, or
@@ -41,6 +43,7 @@ fn main() {
     }));
     let config = load_config();
     let smart_actors = config.smart_actors.clone();
+    let weather = config.weather.clone();
     let persisted = PersistedConfig(config.clone());
     let drive = drive::DrivePlugin::from_env();
     // Drive scripts always run windowed and small: fast, WM-friendly, and
@@ -94,8 +97,9 @@ fn main() {
             CathedralScreenshotPlugin,
             NavDebugPlugin,
             MapPlugin,
+            WeatherPlugin::new(weather.clone()),
         ))
-        .add_plugins(SmartActorsPlugin::new(smart_actors));
+        .add_plugins(SmartActorsPlugin::with_weather(smart_actors, weather));
     if let Some(drive) = drive {
         app.add_plugins(drive);
     }

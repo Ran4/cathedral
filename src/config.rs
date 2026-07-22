@@ -23,7 +23,37 @@ pub struct AppConfig {
     pub width: u32,
     pub height: u32,
     pub resizable: bool,
+    /// Weather is top-level because its host-side presentation controls sit
+    /// beside the authoritative simulation settings.
+    pub weather: WeatherSettings,
     pub smart_actors: SmartActorsConfig,
+}
+
+#[derive(Resource, Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct WeatherSettings {
+    pub enabled: bool,
+    pub seed: u64,
+    /// `timeline`, or any canonical/alias weather kind.
+    pub mode: String,
+    /// Episode frequency only; representative forced intensity is unchanged.
+    pub frequency: f64,
+    /// `low`, `medium`, or `high`. It changes presentation capacity only.
+    pub quality: String,
+    pub volumetric_fog: bool,
+}
+
+impl Default for WeatherSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            seed: 437,
+            mode: "timeline".into(),
+            frequency: 1.0,
+            quality: "high".into(),
+            volumetric_fog: true,
+        }
+    }
 }
 
 impl Default for AppConfig {
@@ -34,6 +64,7 @@ impl Default for AppConfig {
             width: 1600,
             height: 900,
             resizable: true,
+            weather: WeatherSettings::default(),
             smart_actors: SmartActorsConfig::default(),
         }
     }
@@ -103,6 +134,7 @@ mod tests {
         assert_eq!(config.width, 1280);
         assert_eq!(config.height, 720);
         assert_eq!(config.title, AppConfig::default().title);
+        assert_eq!(config.weather.seed, 437);
         assert!(!config.smart_actors.pause_microphone_during_npc_voice);
         assert!(!config.smart_actors.stt_streaming);
         assert_eq!(config.smart_actors.stt_trailing_silence_ms, 700);
@@ -127,5 +159,6 @@ mod tests {
         assert_eq!(restored.width, config.width);
         assert_eq!(restored.smart_actors.tts_backend, "cloud");
         assert_eq!(restored.smart_actors.stt_backend, "local");
+        assert_eq!(restored.weather.mode, "timeline");
     }
 }

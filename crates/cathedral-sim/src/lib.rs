@@ -24,8 +24,8 @@ pub mod floor;
 pub mod gesture;
 mod homes;
 pub mod ids;
-pub mod item;
 pub mod inventory;
+pub mod item;
 pub mod lore;
 pub mod math;
 pub mod nav;
@@ -33,10 +33,10 @@ pub mod offer;
 pub mod perception;
 pub mod places;
 pub mod prompt;
-pub mod round;
 /// CPython text semantics (`str.strip`, `float.__repr__`, `repr`) — internal,
 /// but shared by the action validators, the reply parser and the scheduler.
 mod pyfmt;
+pub mod round;
 pub mod scheduler;
 pub mod seed;
 pub mod snapshot;
@@ -44,6 +44,7 @@ pub mod sounds;
 pub mod speech_router;
 pub mod status;
 pub mod traits;
+pub mod weather;
 pub mod world;
 
 pub use actions::{apply_action, apply_action_at};
@@ -63,9 +64,7 @@ pub use character::{
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
 };
-pub use engine::{
-    ActorMotion, Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage,
-};
+pub use engine::{ActorMotion, Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage};
 pub use error::{
     ActionError, ActionErrorCode, CommandError, CommandErrorCode, EngineInitError, PromptError,
     SpatialUpdateError, SpatialUpdateErrorCode,
@@ -75,14 +74,14 @@ pub use fake::{FakeCognition, fake_reply};
 pub use floor::{ConversationFloor, floor_audio_failsafe_seconds, speech_reading_seconds};
 pub use gesture::{DANCE_MAX_SECONDS, GESTURES, GestureKind, GestureSpec, GestureTarget};
 pub use ids::{ActorId, InvalidId, ItemId, PartyId, PlaceId, RequestId, SpeechEventId};
-pub use item::{
-    DISPLAY_METADATA_KEY, Edible, InvalidKind, Item, ItemCatalog, ItemCatalogError, ItemKind,
-    ItemKindDef,
-};
 pub use inventory::{
     CompletedTransform, InventoryError, InventoryErrorCode, ItemMatcher, LegacyRestockShare,
     MarketRequestLine, ReservedInput, SaleReceipt, SaleReceiptLine, StockSpec, TransformJob,
     TransformReceipt, TransformReceiptLine,
+};
+pub use item::{
+    DISPLAY_METADATA_KEY, Edible, InvalidKind, Item, ItemCatalog, ItemCatalogError, ItemKind,
+    ItemKindDef,
 };
 pub use lore::{
     CONTROLLED_CIRCUMSTANCES, LoreCast, LoreCharacterSheet, LoreError, LoreProfile,
@@ -95,14 +94,14 @@ pub use nav::{
 pub use offer::Offer;
 pub use perception::{cap_first, emit_sound, identify, sees};
 pub use places::{PlaceEntry, PlaceError, PlaceRegistry};
+pub use prompt::{
+    ParsedAction, PromptEnv, PromptStrings, parse_reply, parse_reply_value, py_round,
+    render_prompt, render_prompt_and_drain, render_sheet_value,
+};
 pub use round::{
     Arrival, CartLoadKind, Census, ClosedMarketVisit, CounterBindingKey, CounterSession,
     ErrandDebug, HouseholdSettlementReceipt, MarketErrand, MarketErrandPhase, MarketVisitEnd,
     PartyPhase, PartyState, Phase as RoundPhase, RoadCart, Round, WaterSource,
-};
-pub use prompt::{
-    ParsedAction, PromptEnv, PromptStrings, parse_reply, parse_reply_value, py_round,
-    render_prompt, render_prompt_and_drain, render_sheet_value,
 };
 pub use scheduler::{
     NpcScheduler, SchedulerEvent, background_turn_order, llm_turn_order, stage_turn_order,
@@ -117,6 +116,11 @@ pub use traits::{
     PovFrame, RealtimeResult, Sight, SpeechError, SttBackendKind, SttSubmitError, Transcription,
     TranscriptionJobId, TranscriptionOutcome, Tts, TtsBackendKind, TtsOutcome, TtsRequest,
     TtsSubmitError,
+};
+pub use weather::{
+    LightningStrike, PrecipitationKind, Shelter, ShelterAccess, ShelterCover, ShelterError,
+    ShelterMap, WeatherClimate, WeatherConfig, WeatherKind, WeatherMode, WeatherSample,
+    WeatherTimeline,
 };
 pub use world::{SpatialActorUpdate, World};
 

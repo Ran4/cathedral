@@ -31,17 +31,16 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    EAT_SECONDS, FOOD_QUEUE_SHORT, GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS,
-    HEARING_RADIUS_M, HEARTH_REFILL_PER_GAME_SECOND,
-    HUNGER_DECAY_PER_GAME_SECOND, HUNGER_FAMISHED, HUNGER_HUNGRY, HUNGER_MAX,
-    HUNGER_SEED_DECLARED_HUNGRY, HUNGER_SEED_FLOOR, LADDER_DECISION_MAX_SECONDS,
+    EAT_SECONDS, FOOD_QUEUE_SHORT, GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS, HEARING_RADIUS_M,
+    HEARTH_REFILL_PER_GAME_SECOND, HUNGER_DECAY_PER_GAME_SECOND, HUNGER_FAMISHED, HUNGER_HUNGRY,
+    HUNGER_MAX, HUNGER_SEED_DECLARED_HUNGRY, HUNGER_SEED_FLOOR, LADDER_DECISION_MAX_SECONDS,
     LADDER_DECISION_MIN_SECONDS, PERSON_ARRIVE_RADIUS_M, PLACE_ARRIVE_RADIUS_M, PURCHASE_SECONDS,
     SOCIAL_PULL_RADIUS_M, STALL_ARRIVE_RADIUS_M, STALL_PITCH_REACH_M, STALL_SEEK_RADIUS_M,
     THIRST_MAX, THIRST_PARCHED, THIRST_THIRSTY, WALK_SPEED_MPS, WALLET_SEED_MIN, WALLET_SEED_SALT,
     WALLET_SEED_SPREAD, WATER_DRAW_SECONDS, WELL_ARRIVE_RADIUS_M,
     WELL_KEEPER_SOUND_INTERVAL_SECONDS, WELL_QUEUE_SHORT,
     character::{Character, EconomicClass, IntentTarget, Movement, VendorListing},
-    clock::{Office, WorldClock, Weekday},
+    clock::{Office, Weekday, WorldClock},
     event::DomainEvent,
     homes::{HOMES_JSON, HomesDoc},
     ids::{ActorId, ItemId, PartyId, PlaceId},
@@ -54,6 +53,7 @@ use crate::{
     nav::{NavData, WALK_Y},
     perception::identify_ids,
     places::PlaceRegistry,
+    weather::{LightningStrike, ShelterAccess, WeatherKind, WeatherSample},
     world::{World, hash01, lane_fraction, planar_close},
 };
 
@@ -160,6 +160,18 @@ const LAMPS_PER_SQUARE: usize = 4;
 const LAMP_RING_RADIUS_M: f64 = 11.0;
 /// Close enough to reach the wick with the taper.
 const LAMP_LIGHT_RADIUS_M: f64 = 2.5;
+/// A shelter farther away than this is not a credible reaction to a shower.
+/// Route length, rather than straight-line distance, keeps the choice honest in
+/// the walled city's doglegs.
+const SHELTER_SEEK_RADIUS_M: f64 = 130.0;
+const SHELTER_RELEASE_MINUTES: f64 = 10.0;
+const SHELTER_RELEASE_SPREAD_MINUTES: f64 = 10.0;
+/// A cloud-to-ground origin this close in XZ is near enough to make an exposed
+/// person flinch. The bodily pause is real-time like the flash, rather than
+/// stretching into minutes when the debug clock is accelerated.
+const LIGHTNING_REFLEX_RADIUS_M: f64 = 180.0;
+const LIGHTNING_REFLEX_MIN_SECONDS: f64 = 2.5;
+const LIGHTNING_REFLEX_SPREAD_SECONDS: f64 = 1.5;
 
 /// What an actor means to do on arrival — the pathfind-then-act bridge lifted
 /// from seagame's `targetState` (`features/movement/02_navigation.md` §4).
@@ -317,7 +329,10 @@ struct StockTargetSpec {
 
 impl StockTargetSpec {
     fn matcher(&self) -> ItemMatcher {
-        ItemMatcher { kind: self.kind.clone(), metadata: self.metadata.clone() }
+        ItemMatcher {
+            kind: self.kind.clone(),
+            metadata: self.metadata.clone(),
+        }
     }
 }
 
@@ -406,13 +421,18 @@ impl OpenSpec {
     /// Whether the stall trades at this office on this weekday.
     fn is_open(&self, office: Office, weekday: Weekday) -> bool {
         self.offices.contains(&office)
-            && self.weekdays.as_ref().is_none_or(|days| days.contains(&weekday))
+            && self
+                .weekdays
+                .as_ref()
+                .is_none_or(|days| days.contains(&weekday))
     }
 
     /// Whether the stall trades at all today (any office), so a vendor is only
     /// bound to a stall whose day it is.
     fn open_today(&self, weekday: Weekday) -> bool {
-        self.weekdays.as_ref().is_none_or(|days| days.contains(&weekday))
+        self.weekdays
+            .as_ref()
+            .is_none_or(|days| days.contains(&weekday))
     }
 }
 
@@ -439,7 +459,9 @@ impl<'a> PlaceResolver<'a> {
         if let Some(place) = self.nav.place(name) {
             return Some(self.nav.node_point(place.node));
         }
-        self.site_by_key.get(name).map(|&node| self.nav.node_point(node))
+        self.site_by_key
+            .get(name)
+            .map(|&node| self.nav.node_point(node))
     }
 
     /// [`resolve`], but preferring the open site's interior node over the street
@@ -833,6 +855,20 @@ struct Townsperson {
     excused: bool,
 }
 
+/// A deterministic, resumable shelter errand.  It lives beside the ordinary
+/// round instead of in an actor's LLM intent: taking cover is body policy, not
+/// a provider decision.  `below_since_days` implements the 10--20 game-minute
+/// release hysteresis, so a wavering front cannot make a crowd seesaw at every
+/// sample.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct WeatherShelterIntent {
+    shelter: usize,
+    target: Vec3,
+    release_threshold: f64,
+    below_since_days: Option<f64>,
+    release_after_days: f64,
+}
+
 impl Townsperson {
     /// A drawer bound to a water source (M3 rungs 2 & 6 apply).
     fn draws_water(&self) -> bool {
@@ -945,6 +981,13 @@ pub struct Round {
     /// time-scale (`WorldClock::offices_crossed`).
     last_office_now: f64,
     people: BTreeMap<ActorId, Townsperson>,
+    /// Active deterministic weather diversions.  Kept at round level so the
+    /// authored townsperson seed format and LLM-facing intent model stay clean.
+    weather_shelter_intents: BTreeMap<ActorId, WeatherShelterIntent>,
+    /// Real-time deadline for the short, deterministic flinch caused by a
+    /// nearby strike. This remains a mechanical reaction: it never enters an
+    /// inbox or spends a cognition turn.
+    lightning_reflex_until: BTreeMap<ActorId, f64>,
     /// Game-days at the last tick, so thirst decays by the game clock (and speeds
     /// up with the debug time-scale), not by wall-clock.
     last_game_days: f64,
@@ -1033,6 +1076,51 @@ impl Round {
         self.people.len()
     }
 
+    /// The social shelter currently claimed by an actor, for headless
+    /// diagnostics and pure tests.  This exposes the stable data ID, never the
+    /// private implementation of the ladder intent.
+    pub fn weather_shelter<'a>(&self, world: &'a World, actor: &ActorId) -> Option<&'a str> {
+        let intent = self.weather_shelter_intents.get(actor)?;
+        world
+            .shelters
+            .shelters()
+            .get(intent.shelter)
+            .map(|shelter| shelter.id.as_str())
+    }
+
+    /// Wake the ordinary ladder for exposed actors near a lightning origin.
+    /// Atomic phases and conversation holds are still enforced by
+    /// [`run_ladder`]; setting `next_decision` merely lets a free walker react
+    /// on the same engine pump instead of waiting for its normal cadence.
+    pub fn note_lightning(&mut self, world: &World, strike: &LightningStrike, now: f64) {
+        let radius_squared = LIGHTNING_REFLEX_RADIUS_M * LIGHTNING_REFLEX_RADIUS_M;
+        for (id, person) in &mut self.people {
+            let Some(character) = world.characters.get(id) else {
+                continue;
+            };
+            let position = character.position_m();
+            let at_home = person
+                .home
+                .is_some_and(|home| position.distance(home) <= HOME_ARRIVE_RADIUS_M);
+            let dx = position.x - strike.origin_m[0];
+            let dz = position.z - strike.origin_m[2];
+            if !world.is_present(id)
+                || at_home
+                || world.shelters.is_sheltered(position)
+                || dx * dx + dz * dz > radius_squared
+            {
+                continue;
+            }
+            let duration = LIGHTNING_REFLEX_MIN_SECONDS
+                + hash01("lightning_reflex", id, strike.id) * LIGHTNING_REFLEX_SPREAD_SECONDS;
+            self.lightning_reflex_until
+                .entry(id.clone())
+                .and_modify(|until| *until = until.max(now + duration))
+                .or_insert(now + duration);
+            person.next_decision = person.next_decision.min(now);
+        }
+    }
+
     /// The squares' street lamps (M7), for the engine's `Lamps` channel and tests.
     pub fn lamps(&self) -> &[Lamp] {
         &self.lamps
@@ -1063,12 +1151,10 @@ impl Round {
         self.road_parties
             .values()
             .filter(|party| road_cart_is_visible(party, world))
-            .map(|party| {
-                RoadCart {
-                    party_id: party.id.clone(),
-                    leader_id: party.leader.clone(),
-                    load: road_cart_load(party, world),
-                }
+            .map(|party| RoadCart {
+                party_id: party.id.clone(),
+                leader_id: party.leader.clone(),
+                load: road_cart_load(party, world),
             })
             .collect()
     }
@@ -1092,7 +1178,9 @@ impl Round {
                 .cloned()
                 .unwrap_or_default();
             let after = current.get(&id).cloned().unwrap_or_default();
-            if before != after || self.observed_cart_loads.contains_key(&id) != current.contains_key(&id) {
+            if before != after
+                || self.observed_cart_loads.contains_key(&id) != current.contains_key(&id)
+            {
                 self.push_food_log(format!(
                     "cart_load: party {id}, before {before:?}, after {after:?}"
                 ));
@@ -1122,7 +1210,10 @@ impl Round {
         let mut claimed = BTreeSet::new();
         for spec in specs {
             if self.road_parties.contains_key(&spec.id) {
-                diagnostics.push(format!("[smart actors] duplicate road party {}; skipped", spec.id));
+                diagnostics.push(format!(
+                    "[smart actors] duplicate road party {}; skipped",
+                    spec.id
+                ));
                 continue;
             }
             let member_set: BTreeSet<ActorId> = spec.members.iter().cloned().collect();
@@ -1151,7 +1242,10 @@ impl Round {
                 continue;
             }
             if spec.wallet_float_sparks.len() != spec.members.len()
-                || spec.members.iter().any(|member| !spec.wallet_float_sparks.contains_key(member))
+                || spec
+                    .members
+                    .iter()
+                    .any(|member| !spec.wallet_float_sparks.contains_key(member))
             {
                 diagnostics.push(format!(
                     "[smart actors] road party {} wallet floats do not exactly match its members; skipped",
@@ -1166,7 +1260,11 @@ impl Round {
                 ));
                 continue;
             };
-            if spec.members.iter().any(|member| !world.characters.contains_key(member)) {
+            if spec
+                .members
+                .iter()
+                .any(|member| !world.characters.contains_key(member))
+            {
                 diagnostics.push(format!(
                     "[smart actors] road party {} names a missing character; skipped",
                     spec.id
@@ -1214,7 +1312,10 @@ impl Round {
             }
             claimed.extend(spec.members.iter().cloned());
             for member in &spec.members {
-                let actor = world.characters.get_mut(member).expect("validated road member");
+                let actor = world
+                    .characters
+                    .get_mut(member)
+                    .expect("validated road member");
                 actor.state.presence = crate::Presence::BeyondTheWalls;
                 actor.state.economic_class = EconomicClass::RoadParty;
                 actor.state.leaving_city = false;
@@ -1269,7 +1370,10 @@ impl Round {
     }
 
     fn trigger_road_stage(&mut self, world: &mut World, id: &PartyId, day: i64) {
-        let mut party = self.road_parties.remove(id).expect("party id came from map");
+        let mut party = self
+            .road_parties
+            .remove(id)
+            .expect("party id came from map");
         if party.last_trigger_day == Some(day) {
             self.road_parties.insert(id.clone(), party);
             return;
@@ -1309,7 +1413,10 @@ impl Round {
     }
 
     fn trigger_road_entry(&mut self, world: &mut World, id: &PartyId, day: i64) {
-        let mut party = self.road_parties.remove(id).expect("party id came from map");
+        let mut party = self
+            .road_parties
+            .remove(id)
+            .expect("party id came from map");
         if party.state.phase != PartyPhase::StagedOutsideGate {
             self.road_parties.insert(id.clone(), party);
             return;
@@ -1320,13 +1427,19 @@ impl Round {
             .enumerate()
             .map(|(index, member)| {
                 let side = index as f64 * 0.8;
-                (member.clone(), Vec3::new(party.gate_point.x + side, WALK_Y, party.gate_point.z))
+                (
+                    member.clone(),
+                    Vec3::new(party.gate_point.x + side, WALK_Y, party.gate_point.z),
+                )
             })
             .collect::<BTreeMap<_, _>>();
         match world.transition_presence(&party.members, crate::Presence::InCity, &positions) {
             Ok(_) => {
                 for member in &party.members {
-                    let actor = world.characters.get_mut(member).expect("party member exists");
+                    let actor = world
+                        .characters
+                        .get_mut(member)
+                        .expect("party member exists");
                     actor.state.needs.hunger = HUNGER_MAX;
                     actor.state.needs.thirst = THIRST_MAX;
                     actor.state.leaving_city = false;
@@ -1335,7 +1448,8 @@ impl Round {
                 self.push_food_log(road_transition_trace("road_in", &party, world, day));
             }
             Err(error) => self.push_food_log(format!(
-                "road_in_failed: party {}, day {day}: {error}", party.id
+                "road_in_failed: party {}, day {day}: {error}",
+                party.id
             )),
         }
         self.road_parties.insert(id.clone(), party);
@@ -1366,7 +1480,10 @@ impl Round {
     }
 
     fn begin_road_return(&mut self, world: &mut World, id: &PartyId, day: i64) {
-        let mut party = self.road_parties.remove(id).expect("party id came from map");
+        let mut party = self
+            .road_parties
+            .remove(id)
+            .expect("party id came from map");
         if party.state.phase != PartyPhase::InCity {
             self.road_parties.insert(id.clone(), party);
             return;
@@ -1375,13 +1492,21 @@ impl Round {
             self.finish_market_errand(world, member, MarketVisitEnd::Returning);
             for source in &mut self.sources {
                 source.queue.retain(|queued| queued != member);
-                if source.serving.as_ref().is_some_and(|(actor, _)| actor == member) {
+                if source
+                    .serving
+                    .as_ref()
+                    .is_some_and(|(actor, _)| actor == member)
+                {
                     source.serving = None;
                 }
             }
             for stall in &mut self.stalls {
                 stall.queue.retain(|queued| queued != member);
-                if stall.serving.as_ref().is_some_and(|(actor, _)| actor == member) {
+                if stall
+                    .serving
+                    .as_ref()
+                    .is_some_and(|(actor, _)| actor == member)
+                {
                     stall.serving = None;
                 }
             }
@@ -1391,7 +1516,10 @@ impl Round {
                 person.travel_target = None;
                 person.travel_for_intent = false;
             }
-            let actor = world.characters.get_mut(member).expect("party member exists");
+            let actor = world
+                .characters
+                .get_mut(member)
+                .expect("party member exists");
             actor.state.movement = None;
             actor.state.intent = None;
             actor.state.active_gesture = None;
@@ -1412,27 +1540,49 @@ impl Round {
     ) {
         let ids: Vec<PartyId> = self.road_parties.keys().cloned().collect();
         for id in ids {
-            let mut party = self.road_parties.remove(&id).expect("party id came from map");
+            let mut party = self
+                .road_parties
+                .remove(&id)
+                .expect("party id came from map");
             match party.state.phase {
                 PartyPhase::InCity => {
-                    let target = active_leg(&party.legs, time.office, time.weekday).map(|leg| leg.at);
+                    let target =
+                        active_leg(&party.legs, time.office, time.weekday).map(|leg| leg.at);
                     if let Some(target) = target {
                         for member in &party.members {
-                            let Some(actor) = world.characters.get(member) else { continue };
+                            let Some(actor) = world.characters.get(member) else {
+                                continue;
+                            };
                             if in_conversation.contains(member) {
-                                world.characters.get_mut(member).expect("member exists").state.movement = None;
+                                world
+                                    .characters
+                                    .get_mut(member)
+                                    .expect("member exists")
+                                    .state
+                                    .movement = None;
                                 continue;
                             }
                             // Explicit `go_to` remains above the ordinary party
                             // route while the party is trading.
-                            let target = actor.state.intent.as_ref().map_or(target, |intent| match &intent.target {
-                                IntentTarget::Place { point, .. } => *point,
-                                IntentTarget::Person { last_seen, .. } => *last_seen,
-                            });
+                            let target =
+                                actor
+                                    .state
+                                    .intent
+                                    .as_ref()
+                                    .map_or(target, |intent| match &intent.target {
+                                        IntentTarget::Place { point, .. } => *point,
+                                        IntentTarget::Person { last_seen, .. } => *last_seen,
+                                    });
                             if actor.position_m().distance(target) <= ROUND_ARRIVE_RADIUS_M {
-                                world.characters.get_mut(member).expect("member exists").state.movement = None;
+                                world
+                                    .characters
+                                    .get_mut(member)
+                                    .expect("member exists")
+                                    .state
+                                    .movement = None;
                             } else if !actor.is_walking()
-                                && let Some(path) = route_path_to_point(nav, member, actor.position_m(), target)
+                                && let Some(path) =
+                                    route_path_to_point(nav, member, actor.position_m(), target)
                             {
                                 set_route(world, member, path);
                             }
@@ -1442,9 +1592,16 @@ impl Round {
                 PartyPhase::Returning => {
                     let mut public_state_changed = false;
                     for member in &party.members {
-                        let Some(actor) = world.characters.get(member) else { continue };
+                        let Some(actor) = world.characters.get(member) else {
+                            continue;
+                        };
                         if in_conversation.contains(member) {
-                            world.characters.get_mut(member).expect("member exists").state.movement = None;
+                            world
+                                .characters
+                                .get_mut(member)
+                                .expect("member exists")
+                                .state
+                                .movement = None;
                             continue;
                         }
                         if actor.position_m().distance(party.gate_point) > PLACE_ARRIVE_RADIUS_M {
@@ -1459,7 +1616,12 @@ impl Round {
                                 set_route(world, member, path);
                             }
                         } else {
-                            world.characters.get_mut(member).expect("member exists").state.movement = None;
+                            world
+                                .characters
+                                .get_mut(member)
+                                .expect("member exists")
+                                .state
+                                .movement = None;
                             // A promise cannot follow a traveller through the
                             // gate. Expire offers as each member arrives, not
                             // only after the slowest cart-mate gets there.
@@ -1488,7 +1650,9 @@ impl Round {
                         }
                     }
                     let at_gate = party.members.iter().all(|member| {
-                        world.characters[member].position_m().distance(party.gate_point)
+                        world.characters[member]
+                            .position_m()
+                            .distance(party.gate_point)
                             <= PLACE_ARRIVE_RADIUS_M
                     });
                     if at_gate
@@ -1511,7 +1675,11 @@ impl Round {
                     }
                 }
                 PartyPhase::DeparturePending => {
-                    if party.members.iter().all(|member| !in_conversation.contains(member)) {
+                    if party
+                        .members
+                        .iter()
+                        .all(|member| !in_conversation.contains(member))
+                    {
                         let positions = BTreeMap::new();
                         match world.transition_presence(
                             &party.members,
@@ -1520,16 +1688,15 @@ impl Round {
                         ) {
                             Ok(_) => {
                                 for member in &party.members {
-                                    let actor = world.characters.get_mut(member).expect("member exists");
+                                    let actor =
+                                        world.characters.get_mut(member).expect("member exists");
                                     actor.state.leaving_city = false;
                                 }
                                 party.state.phase = PartyPhase::BeyondTheWalls;
-                                self.departed_this_tick.extend(party.members.iter().cloned());
+                                self.departed_this_tick
+                                    .extend(party.members.iter().cloned());
                                 self.push_food_log(road_transition_trace(
-                                    "road_out",
-                                    &party,
-                                    world,
-                                    time.day,
+                                    "road_out", &party, world, time.day,
                                 ));
                             }
                             Err(error) => self.push_food_log(format!(
@@ -1560,7 +1727,9 @@ impl Round {
             phase: person.phase,
             well: source.map(|source| source.name.clone()),
             ahead_in_queue: (person.phase == Phase::Queued)
-                .then(|| source.and_then(|source| source.queue.iter().position(|queued| queued == id)))
+                .then(|| {
+                    source.and_then(|source| source.queue.iter().position(|queued| queued == id))
+                })
                 .flatten(),
             walk_target,
             for_intent: person.phase == Phase::Travelling && person.travel_for_intent,
@@ -1569,9 +1738,17 @@ impl Round {
 
     /// A one-line census of the water round for `--trace-water`.
     pub fn water_summary(&self, world: &World) -> String {
-        let staffed = self.sources.iter().filter(|source| source.keeper.is_some()).count();
+        let staffed = self
+            .sources
+            .iter()
+            .filter(|source| source.keeper.is_some())
+            .count();
         let queued: usize = self.sources.iter().map(|source| source.queue.len()).sum();
-        let drawing = self.sources.iter().filter(|source| source.serving.is_some()).count();
+        let drawing = self
+            .sources
+            .iter()
+            .filter(|source| source.serving.is_some())
+            .count();
         let drawers = self
             .people
             .iter()
@@ -1600,11 +1777,7 @@ impl Round {
     /// dinner legs) read straight off the hungry/famished counts; the spark
     /// total holds steady, since nothing spends a wallet until M3.
     pub fn food_summary(&self, world: &World) -> String {
-        let total = self
-            .people
-            .keys()
-            .filter(|id| world.is_present(id))
-            .count();
+        let total = self.people.keys().filter(|id| world.is_present(id)).count();
         let mut fed = 0usize;
         let mut hungry = 0usize;
         let mut famished = 0usize;
@@ -1647,15 +1820,20 @@ impl Round {
             .filter(|stall| {
                 stall.vendor.as_ref().is_some_and(|v| {
                     world.is_present(v)
-                        && world
-                        .characters
-                        .get(v)
-                        .is_some_and(|c| c.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M)
-                }) && time.is_some_and(|t| stall.open.is_open(t.office, t.weekday))
+                        && world.characters.get(v).is_some_and(|c| {
+                            c.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M
+                        })
+                }) && time.is_some_and(|t| {
+                    stall.open.is_open(t.office, t.weekday) && stall_weather_open(world, stall)
+                })
             })
             .count();
         let queued: usize = self.stalls.iter().map(|stall| stall.queue.len()).sum();
-        let serving = self.stalls.iter().filter(|stall| stall.serving.is_some()).count();
+        let serving = self
+            .stalls
+            .iter()
+            .filter(|stall| stall.serving.is_some())
+            .count();
         let stock: u32 = self
             .stalls
             .iter()
@@ -1749,8 +1927,7 @@ impl Round {
                     })
                     .collect::<Vec<_>>()
                     .join(",");
-                let cart = road_cart_is_visible(party, world)
-                    .then(|| road_cart_load(party, world));
+                let cart = road_cart_is_visible(party, world).then(|| road_cart_load(party, world));
                 format!(
                     "{} phase {:?}/trip {}/members [{}]/cart {:?}",
                     party.id, party.state.phase, party.state.trip_number, members, cart
@@ -1863,11 +2040,7 @@ impl Round {
     pub fn census(&self, world: &World, clock: &WorldClock, now: f64) -> Census {
         let time = clock.at(now);
         let mut census = Census {
-            total: self
-                .people
-                .keys()
-                .filter(|id| world.is_present(id))
-                .count(),
+            total: self.people.keys().filter(|id| world.is_present(id)).count(),
             ..Census::default()
         };
         for (id, person) in &self.people {
@@ -1908,7 +2081,13 @@ impl Round {
     /// M3 did, then signs up every LLM townsperson with a home, a workplace and a
     /// resolved daily round. Returns one human line per thing that did not
     /// resolve, so the caller can log and carry on — it never panics.
-    pub fn seed(&mut self, world: &mut World, nav: &NavData, now: f64, clock: &WorldClock) -> Vec<String> {
+    pub fn seed(
+        &mut self,
+        world: &mut World,
+        nav: &NavData,
+        now: f64,
+        clock: &WorldClock,
+    ) -> Vec<String> {
         let mut diagnostics = Vec::new();
         if self.seeded {
             return diagnostics;
@@ -1987,7 +2166,10 @@ impl Round {
             let declares_hungry = character
                 .lore()
                 .is_some_and(|lore| lore.conditions.iter().any(|c| c == "hungry"))
-                || character.memories().iter().any(|memory| memory_declares_hunger(memory));
+                || character
+                    .memories()
+                    .iter()
+                    .any(|memory| memory_declares_hunger(memory));
             let hunger = if declares_hungry {
                 // Hungry now, famished within the hour — Ilse's story made
                 // mechanical, and a reliable famished demo for M4.
@@ -2016,8 +2198,8 @@ impl Round {
                     .is_some_and(|item| item.kind.as_str() == "spark")
             });
             if !holds_spark {
-                let sparks =
-                    WALLET_SEED_MIN + (WALLET_SEED_SPREAD as f64 * hash01(WALLET_SEED_SALT, id, 0)) as u32;
+                let sparks = WALLET_SEED_MIN
+                    + (WALLET_SEED_SPREAD as f64 * hash01(WALLET_SEED_SALT, id, 0)) as u32;
                 let wallet_id = ItemId::from_raw(format!("w_{}", id.as_str()));
                 world.add_item(Item::stack(wallet_id.clone(), "spark", sparks));
                 world
@@ -2056,7 +2238,12 @@ impl Round {
                 .map(|(_, id)| id.clone());
             if let Some(keeper) = keeper {
                 keepers.insert(keeper.clone(), index);
-                world.characters.get_mut(&keeper).expect("keeper exists").state.position_m = draw_point;
+                world
+                    .characters
+                    .get_mut(&keeper)
+                    .expect("keeper exists")
+                    .state
+                    .position_m = draw_point;
                 self.sources[index].keeper = Some(keeper);
             }
         }
@@ -2074,10 +2261,14 @@ impl Round {
             (Ok(rounds), Ok(homes)) => Some((rounds, homes)),
             (rounds, homes) => {
                 if let Err(error) = rounds {
-                    diagnostics.push(format!("[smart actors] round: rounds.json did not load: {error}"));
+                    diagnostics.push(format!(
+                        "[smart actors] round: rounds.json did not load: {error}"
+                    ));
                 }
                 if let Err(error) = homes {
-                    diagnostics.push(format!("[smart actors] round: homes.json did not load: {error}"));
+                    diagnostics.push(format!(
+                        "[smart actors] round: homes.json did not load: {error}"
+                    ));
                 }
                 None
             }
@@ -2220,7 +2411,11 @@ impl Round {
             let mut known: BTreeSet<PlaceId> =
                 registry.coarse().map(|entry| entry.id.clone()).collect();
             if let Some(ward) = character.lore().map(|lore| lore.planning_ward) {
-                known.extend(registry.ward_places(ward.as_str()).map(|entry| entry.id.clone()));
+                known.extend(
+                    registry
+                        .ward_places(ward.as_str())
+                        .map(|entry| entry.id.clone()),
+                );
             }
             if let Some(entry) = registry.home_of(id) {
                 known.insert(entry.id.clone());
@@ -2330,15 +2525,24 @@ impl Round {
                         })
                         .expect("staffed is non-empty");
                     let thirst = THIRST_MAX * hash01("water_thirst_seed", id, 0);
-                    world.characters.get_mut(id).expect("drawer exists").state.needs.thirst = thirst;
+                    world
+                        .characters
+                        .get_mut(id)
+                        .expect("drawer exists")
+                        .state
+                        .needs
+                        .thirst = thirst;
                     drawers += 1;
                     (Some(nearest), is_household)
                 }
                 _ => (None, false),
             };
 
-            let townsperson_state =
-                &mut world.characters.get_mut(id).expect("townsperson exists").state;
+            let townsperson_state = &mut world
+                .characters
+                .get_mut(id)
+                .expect("townsperson exists")
+                .state;
             townsperson_state.places_known = known;
             townsperson_state.daily_round = legs.iter().map(leg_line).collect();
             self.people.insert(
@@ -2386,7 +2590,11 @@ impl Round {
         self.bind_vendors(world, time.weekday);
         self.restock(world, time.day);
         if !self.stalls.is_empty() {
-            let bound = self.stalls.iter().filter(|stall| stall.vendor.is_some()).count();
+            let bound = self
+                .stalls
+                .iter()
+                .filter(|stall| stall.vendor.is_some())
+                .count();
             diagnostics.push(format!(
                 "[smart actors] round: {} food stalls, {bound} staffed on day {} ({})",
                 self.stalls.len(),
@@ -2447,13 +2655,15 @@ impl Round {
         let doc: FoodDoc = match serde_json::from_str(FOOD_JSON) {
             Ok(doc) => doc,
             Err(error) => {
-                diagnostics.push(format!("[smart actors] round: food.json did not load: {error}"));
+                diagnostics.push(format!(
+                    "[smart actors] round: food.json did not load: {error}"
+                ));
                 return;
             }
         };
         for (name, spec) in doc.trades {
-            let listings_unique = spec.listings.iter().collect::<BTreeSet<_>>().len()
-                == spec.listings.len();
+            let listings_unique =
+                spec.listings.iter().collect::<BTreeSet<_>>().len() == spec.listings.len();
             let valid_listings = spec.listings.iter().all(|matcher| {
                 let probe = matcher.to_item(ItemId::from_raw("listing_probe"), 1);
                 world.item_catalog.validate_seed_item(&probe).is_ok()
@@ -2506,10 +2716,18 @@ impl Round {
                 ));
                 continue;
             };
-            let offset = Vec3::new(site.x + spec.pitch_offset[0], WALK_Y, site.z + spec.pitch_offset[1]);
+            let offset = Vec3::new(
+                site.x + spec.pitch_offset[0],
+                WALK_Y,
+                site.z + spec.pitch_offset[1],
+            );
             // The offset must stand on pavement, or the queue forms on stone and
             // nobody can reach it — fall back to the site node itself.
-            let pitch = if nav.is_walkable(offset.x, offset.z) { offset } else { site };
+            let pitch = if nav.is_walkable(offset.x, offset.z) {
+                offset
+            } else {
+                site
+            };
             self.stalls.push(FoodStall {
                 name: spec.name.clone(),
                 site: spec.site.clone(),
@@ -2518,7 +2736,10 @@ impl Round {
                 vendor: None,
                 queue: Vec::new(),
                 serving: None,
-                preferred: spec.preferred_vendor.as_ref().map(|id| ActorId::from_raw(id.as_str())),
+                preferred: spec
+                    .preferred_vendor
+                    .as_ref()
+                    .map(|id| ActorId::from_raw(id.as_str())),
                 open: spec.open.clone(),
                 cry_next: 0.0,
             });
@@ -2528,7 +2749,9 @@ impl Round {
             resolver
                 .resolve(site)
                 .or_else(|| self.worksites.get(site).copied())
-                .or_else(|| anchor.and_then(|actor| world.places.home_of(actor).map(|place| place.point)))
+                .or_else(|| {
+                    anchor.and_then(|actor| world.places.home_of(actor).map(|place| place.point))
+                })
         };
         for spec in doc.counters {
             if self.counters.contains_key(&spec.id)
@@ -2551,9 +2774,10 @@ impl Round {
                 continue;
             }
             if let Some(party_id) = &spec.road_party {
-                let valid = self.road_parties.get(party_id).is_some_and(|party| {
-                    party.members.contains(&spec.preferred_actor)
-                });
+                let valid = self
+                    .road_parties
+                    .get(party_id)
+                    .is_some_and(|party| party.members.contains(&spec.preferred_actor));
                 if !valid {
                     diagnostics.push(format!(
                         "[smart actors] supply counter {:?} names an invalid road party/seller; skipped",
@@ -2569,20 +2793,31 @@ impl Round {
                 ));
                 continue;
             };
-            let offset = Vec3::new(site.x + spec.pitch_offset[0], WALK_Y, site.z + spec.pitch_offset[1]);
-            let pitch = if nav.is_walkable(offset.x, offset.z) { offset } else { site };
-            self.counters.insert(spec.id.clone(), Counter {
-                id: spec.id,
-                trade: spec.trade,
-                site: spec.site,
-                pitch,
-                seller: spec.preferred_actor,
-                offices: spec.offices,
-                required_doing: spec.required_doing,
-                road_party: spec.road_party,
-                worksite_only: spec.worksite_only,
-                radius_m: spec.site_radius_m,
-            });
+            let offset = Vec3::new(
+                site.x + spec.pitch_offset[0],
+                WALK_Y,
+                site.z + spec.pitch_offset[1],
+            );
+            let pitch = if nav.is_walkable(offset.x, offset.z) {
+                offset
+            } else {
+                site
+            };
+            self.counters.insert(
+                spec.id.clone(),
+                Counter {
+                    id: spec.id,
+                    trade: spec.trade,
+                    site: spec.site,
+                    pitch,
+                    seller: spec.preferred_actor,
+                    offices: spec.offices,
+                    required_doing: spec.required_doing,
+                    road_party: spec.road_party,
+                    worksite_only: spec.worksite_only,
+                    radius_m: spec.site_radius_m,
+                },
+            );
         }
         let referenced_groups: BTreeSet<String> = doc
             .stock_plans
@@ -2597,9 +2832,15 @@ impl Round {
                 || !referenced_groups.contains(&group.id)
                 || group.counters.is_empty()
                 || group.counters.iter().collect::<BTreeSet<_>>().len() != group.counters.len()
-                || group.counters.iter().any(|id| !self.counters.contains_key(id))
+                || group
+                    .counters
+                    .iter()
+                    .any(|id| !self.counters.contains_key(id))
             {
-                diagnostics.push(format!("[smart actors] invalid counter group {:?}; skipped", group.id));
+                diagnostics.push(format!(
+                    "[smart actors] invalid counter group {:?}; skipped",
+                    group.id
+                ));
                 continue;
             }
             self.counter_groups.insert(group.id, group.counters);
@@ -2610,9 +2851,10 @@ impl Round {
                 StockSource::Counter(counter) => {
                     self.counters.get(counter).map(|counter| vec![counter])
                 }
-                StockSource::CounterGroup(group) => self.counter_groups.get(group).map(|ids| {
-                    ids.iter().filter_map(|id| self.counters.get(id)).collect()
-                }),
+                StockSource::CounterGroup(group) => self
+                    .counter_groups
+                    .get(group)
+                    .map(|ids| ids.iter().filter_map(|id| self.counters.get(id)).collect()),
             };
             let valid_targets = source_counters.as_ref().is_some_and(|counters| {
                 !counters.is_empty()
@@ -2631,9 +2873,9 @@ impl Round {
                 || !world.characters.contains_key(&plan.buyer)
                 || plan.max_spend_sparks == 0
                 || !valid_targets
-                || source_counters
-                    .as_ref()
-                    .is_some_and(|counters| counters.iter().any(|counter| counter.seller == plan.buyer))
+                || source_counters.as_ref().is_some_and(|counters| {
+                    counters.iter().any(|counter| counter.seller == plan.buyer)
+                })
             {
                 diagnostics.push(format!(
                     "[smart actors] stock plan {:?} has invalid actor/source/targets; skipped",
@@ -2672,12 +2914,16 @@ impl Round {
                         == transform.allowed_offices.len()
                     && transform.work_minutes > 0
                     && transform.desired_output_quantity > 0
-                    && transform.consumes.iter().chain(&transform.produces).all(|stock| {
-                        let probe = stock
-                            .matcher()
-                            .to_item(ItemId::from_raw("transform_spec_probe"), stock.quantity);
-                        world.item_catalog.validate_seed_item(&probe).is_ok()
-                    });
+                    && transform
+                        .consumes
+                        .iter()
+                        .chain(&transform.produces)
+                        .all(|stock| {
+                            let probe = stock
+                                .matcher()
+                                .to_item(ItemId::from_raw("transform_spec_probe"), stock.quantity);
+                            world.item_catalog.validate_seed_item(&probe).is_ok()
+                        });
                 if !valid_recipe {
                     diagnostics.push(format!(
                         "[smart actors] transform {:?} has invalid recipe content; skipped",
@@ -2685,7 +2931,8 @@ impl Round {
                     ));
                     continue;
                 }
-                let Some(point) = resolve_site(&transform.site, transform.anchor_actor.as_ref()) else {
+                let Some(point) = resolve_site(&transform.site, transform.anchor_actor.as_ref())
+                else {
                     diagnostics.push(format!(
                         "[smart actors] transform {:?} site {:?} is missing; skipped",
                         transform.id, transform.site
@@ -2734,23 +2981,26 @@ impl Round {
         // chain firms receive their explicit one-time working capital instead.
         for (id, actor) in &world.characters {
             if actor.state.economic_class == EconomicClass::Resident {
-                self.household_reserves.insert(id.clone(), world.spendable_sparks(id));
+                self.household_reserves
+                    .insert(id.clone(), world.spendable_sparks(id));
             }
         }
         let mut seeded_inventory = false;
         for (id, minimum) in doc.working_capital {
             if !world.characters.contains_key(&id) {
-                diagnostics.push(format!("[smart actors] working-capital actor {id} is missing"));
+                diagnostics.push(format!(
+                    "[smart actors] working-capital actor {id} is missing"
+                ));
                 continue;
             }
             let current = world.spendable_sparks(&id);
             if current < minimum {
-                if let Err(error) = world.credit_sparks(
-                    &id,
-                    minimum - current,
-                    &format!("working_capital:{id}"),
-                ) {
-                    diagnostics.push(format!("[smart actors] working capital for {id} failed: {error}"));
+                if let Err(error) =
+                    world.credit_sparks(&id, minimum - current, &format!("working_capital:{id}"))
+                {
+                    diagnostics.push(format!(
+                        "[smart actors] working capital for {id} failed: {error}"
+                    ));
                 } else {
                     seeded_inventory = true;
                 }
@@ -2763,10 +3013,15 @@ impl Round {
                 metadata: seed.metadata,
                 quantity: seed.quantity,
             };
-            match world.add_stock(&seed.owner, &stock, &format!("historical_stock:{}", seed.owner)) {
+            match world.add_stock(
+                &seed.owner,
+                &stock,
+                &format!("historical_stock:{}", seed.owner),
+            ) {
                 Ok(_) => seeded_inventory = true,
                 Err(error) => diagnostics.push(format!(
-                    "[smart actors] historical stock for {} failed: {error}", seed.owner
+                    "[smart actors] historical stock for {} failed: {error}",
+                    seed.owner
                 )),
             }
         }
@@ -2793,8 +3048,11 @@ impl Round {
 
         // Phase 1: pick every stall's new vendor (respecting `taken`) before
         // mutating any stall, and remember who kept each stall going in.
-        let previous: Vec<Option<ActorId>> =
-            self.stalls.iter().map(|stall| stall.vendor.clone()).collect();
+        let previous: Vec<Option<ActorId>> = self
+            .stalls
+            .iter()
+            .map(|stall| stall.vendor.clone())
+            .collect();
         let mut taken: BTreeSet<ActorId> = BTreeSet::new();
         let mut chosen: Vec<Option<ActorId>> = Vec::with_capacity(self.stalls.len());
         for s in 0..self.stalls.len() {
@@ -2823,8 +3081,11 @@ impl Round {
         // the whole set has settled, so a reassigned vendor is never wiped by the
         // stall they left. Priced off the catalog's trade template, not current
         // stock, so a sold-out baker still knows what they charge.
-        let current: BTreeSet<ActorId> =
-            self.stalls.iter().filter_map(|stall| stall.vendor.clone()).collect();
+        let current: BTreeSet<ActorId> = self
+            .stalls
+            .iter()
+            .filter_map(|stall| stall.vendor.clone())
+            .collect();
         for old in previous.into_iter().flatten() {
             if !current.contains(&old)
                 && let Some(character) = world.characters.get_mut(&old)
@@ -2853,10 +3114,13 @@ impl Round {
         let probe = |kind: &str, metadata: &BTreeMap<String, String>| -> Option<VendorListing> {
             let mut item = Item::new(ItemId::from_raw("sell_probe"), kind);
             item.metadata = metadata.clone();
-            world.item_catalog.price_sparks(&item).map(|price_sparks| VendorListing {
-                name: world.item_catalog.display_name(&item),
-                price_sparks,
-            })
+            world
+                .item_catalog
+                .price_sparks(&item)
+                .map(|price_sparks| VendorListing {
+                    name: world.item_catalog.display_name(&item),
+                    price_sparks,
+                })
         };
         let mut listings: Vec<VendorListing> = trade
             .listings
@@ -2888,7 +3152,9 @@ impl Round {
             if taken.contains(id) || !world.is_present(id) {
                 return false;
             }
-            let Some(person) = self.people.get(id) else { return false };
+            let Some(person) = self.people.get(id) else {
+                return false;
+            };
             let occupation = world
                 .characters
                 .get(id)
@@ -2912,9 +3178,9 @@ impl Round {
                 continue;
             }
             let distance = self.people[id].base.distance(stall.pitch);
-            let better = best
-                .as_ref()
-                .is_none_or(|(best_dist, best_id)| distance < *best_dist || (distance == *best_dist && id < best_id));
+            let better = best.as_ref().is_none_or(|(best_dist, best_id)| {
+                distance < *best_dist || (distance == *best_dist && id < best_id)
+            });
             if better {
                 best = Some((distance, id.clone()));
             }
@@ -2929,10 +3195,9 @@ impl Round {
         let queued: Vec<ActorId> = self.stalls[s].queue.clone();
         for id in queued {
             if let Some(person) = self.people.get_mut(&id)
-                && person
-                    .food
-                    .as_ref()
-                    .is_some_and(|errand| errand.stall == s && !matches!(errand.phase, FoodPhase::Eating { .. }))
+                && person.food.as_ref().is_some_and(|errand| {
+                    errand.stall == s && !matches!(errand.phase, FoodPhase::Eating { .. })
+                })
             {
                 person.food = None;
                 if let Some(character) = world.characters.get_mut(&id) {
@@ -2959,11 +3224,16 @@ impl Round {
             match world.sweep_legacy_restock(&source_id) {
                 Ok(swept) => changed |= swept > 0,
                 Err(error) => {
-                    self.push_food_log(format!("restock invariant failure at {}: {error}", self.stalls[s].name));
+                    self.push_food_log(format!(
+                        "restock invariant failure at {}: {error}",
+                        self.stalls[s].name
+                    ));
                     continue;
                 }
             }
-            let Some(vendor) = self.stalls[s].vendor.clone() else { continue };
+            let Some(vendor) = self.stalls[s].vendor.clone() else {
+                continue;
+            };
             let trade_key = self.stalls[s].trade.clone();
             let trade = self.food_trades[&trade_key].clone();
             if trade.restock.is_empty() {
@@ -2977,26 +3247,42 @@ impl Round {
             }
             let mut counts: Vec<String> = Vec::new();
             for (slot, spec) in trade.restock.iter().enumerate() {
-                let probe = spec.matcher().to_item(ItemId::from_raw("restock_probe"), spec.quantity);
-                counts.push(format!("{}× {}", spec.quantity, world.item_catalog.display_plural(&probe)));
+                let probe = spec
+                    .matcher()
+                    .to_item(ItemId::from_raw("restock_probe"), spec.quantity);
+                counts.push(format!(
+                    "{}× {}",
+                    spec.quantity,
+                    world.item_catalog.display_plural(&probe)
+                ));
                 if let Err(error) = world.add_legacy_restock(
                     &vendor,
                     &source_id,
                     spec,
                     &format!("legacy:{day}:{}:{slot}", self.stalls[s].name),
                 ) {
-                    self.push_food_log(format!("restock failed at {}: {error}", self.stalls[s].name));
+                    self.push_food_log(format!(
+                        "restock failed at {}: {error}",
+                        self.stalls[s].name
+                    ));
                 } else {
                     changed = true;
                 }
             }
-            lines.push(format!("{} ({vendor}): {}", self.stalls[s].name, counts.join(", ")));
+            lines.push(format!(
+                "{} ({vendor}): {}",
+                self.stalls[s].name,
+                counts.join(", ")
+            ));
         }
         if changed {
             world.touch_public_state();
         }
         world.assert_invariants();
-        self.push_food_log(format!("Kindling restock, day {day} — {}", lines.join(" | ")));
+        self.push_food_log(format!(
+            "Kindling restock, day {day} — {}",
+            lines.join(" | ")
+        ));
     }
 
     /// Watch owns the sample and completion stamps, so a missing or failed
@@ -3050,7 +3336,8 @@ impl Round {
                     .expect("household redistribution accounting overflow");
                 for relieved in &receipt.relief {
                     if relieved.after_spendable >= 4 {
-                        self.unrelieved_zero_streak.insert(relieved.actor.clone(), 0);
+                        self.unrelieved_zero_streak
+                            .insert(relieved.actor.clone(), 0);
                     }
                 }
                 let transfers = receipt
@@ -3075,9 +3362,9 @@ impl Round {
                     receipt.day, receipt.institutional_payroll_sparks
                 ));
             }
-            Err(error) => self.push_food_log(format!(
-                "household_settlement_failed: day {day}: {error}"
-            )),
+            Err(error) => {
+                self.push_food_log(format!("household_settlement_failed: day {day}: {error}"))
+            }
         }
     }
 
@@ -3224,7 +3511,10 @@ impl Round {
         if counter.worksite_only
             || !counter.offices.contains(&time.office)
             || !world.is_present(&counter.seller)
-            || world.characters[&counter.seller].position_m().distance(counter.pitch) > counter.radius_m
+            || world.characters[&counter.seller]
+                .position_m()
+                .distance(counter.pitch)
+                > counter.radius_m
             || !self.actor_on_leg(&counter.seller, time, &counter.site, counter.required_doing)
         {
             return None;
@@ -3239,7 +3529,9 @@ impl Round {
                 trip_number: party.state.trip_number,
             }
         } else {
-            CounterSession::Daily { absolute_day: time.day }
+            CounterSession::Daily {
+                absolute_day: time.day,
+            }
         };
         Some(CounterBindingKey {
             counter_id: counter.id.clone(),
@@ -3325,7 +3617,9 @@ impl Round {
         let trade = &self.food_trades[&counter.trade];
         let mut source = Vec::new();
         for item_id in world.characters[&binding.seller].holds() {
-            let Some(item) = world.items.get(item_id) else { continue };
+            let Some(item) = world.items.get(item_id) else {
+                continue;
+            };
             if trade.listings.iter().any(|matcher| matcher.matches(item)) {
                 source.push(format!("{item_id}:{}", world.uncommitted_quantity(item_id)));
             }
@@ -3365,9 +3659,7 @@ impl Round {
         result: &str,
         end_reason: Option<MarketVisitEnd>,
     ) -> String {
-        let remaining = plan
-            .max_spend_sparks
-            .saturating_sub(errand.spent_sparks);
+        let remaining = plan.max_spend_sparks.saturating_sub(errand.spent_sparks);
         let next_retry = if end_reason.is_some() {
             "none"
         } else if errand.last_failed_fingerprint.is_some() {
@@ -3390,13 +3682,10 @@ impl Round {
         )
     }
 
-    fn finish_market_errand(
-        &mut self,
-        world: &mut World,
-        buyer: &ActorId,
-        reason: MarketVisitEnd,
-    ) {
-        let Some(errand) = self.market_errands.remove(buyer) else { return };
+    fn finish_market_errand(&mut self, world: &mut World, buyer: &ActorId, reason: MarketVisitEnd) {
+        let Some(errand) = self.market_errands.remove(buyer) else {
+            return;
+        };
         let trace = self
             .stock_plans
             .iter()
@@ -3423,15 +3712,11 @@ impl Round {
                     && counter_pitch.is_some_and(|pitch| person.travel_target == Some(pitch))
             },
         );
-        if was_stock_walk
-            && let Some(person) = self.people.get_mut(buyer)
-        {
+        if was_stock_walk && let Some(person) = self.people.get_mut(buyer) {
             person.phase = Phase::Idle;
             person.travel_target = None;
         }
-        if was_stock_walk
-            && let Some(actor) = world.characters.get_mut(buyer)
-        {
+        if was_stock_walk && let Some(actor) = world.characters.get_mut(buyer) {
             actor.state.movement = None;
         }
         if let Some(trace) = trace {
@@ -3486,30 +3771,45 @@ impl Round {
                 )
                 .1
                 .is_some();
-                if committed_need || pressing {
+                let lightning_reflex = self
+                    .lightning_reflex_until
+                    .get(&plan.buyer)
+                    .is_some_and(|until| now < *until);
+                if committed_need || pressing || lightning_reflex {
                     continue;
                 }
             }
-            if self.market_errands.get(&plan.buyer).is_some_and(|errand| errand.plan_id != plan.id) {
+            if self
+                .market_errands
+                .get(&plan.buyer)
+                .is_some_and(|errand| errand.plan_id != plan.id)
+            {
                 continue;
             }
             let binding = self.source_binding(world, &plan.source, time);
             if !self.market_errands.contains_key(&plan.buyer) {
-                let Some(binding) = binding.clone() else { continue };
-                if self.closed_market_visits.get(&plan.id).is_some_and(|closed| {
-                    closed.bindings_seen.contains(&binding)
-                }) {
+                let Some(binding) = binding.clone() else {
+                    continue;
+                };
+                if self
+                    .closed_market_visits
+                    .get(&plan.id)
+                    .is_some_and(|closed| closed.bindings_seen.contains(&binding))
+                {
                     continue;
                 }
-                self.market_errands.insert(plan.buyer.clone(), MarketErrand {
-                    plan_id: plan.id.clone(),
-                    selected: Some(binding.clone()),
-                    bindings_seen: vec![binding],
-                    phase: MarketErrandPhase::Approaching,
-                    spent_sparks: 0,
-                    last_failed_fingerprint: None,
-                    travel_deadline_real: None,
-                });
+                self.market_errands.insert(
+                    plan.buyer.clone(),
+                    MarketErrand {
+                        plan_id: plan.id.clone(),
+                        selected: Some(binding.clone()),
+                        bindings_seen: vec![binding],
+                        phase: MarketErrandPhase::Approaching,
+                        spent_sparks: 0,
+                        last_failed_fingerprint: None,
+                        travel_deadline_real: None,
+                    },
+                );
                 let trace = self.stock_errand_trace(
                     &plan,
                     &self.market_errands[&plan.buyer],
@@ -3531,8 +3831,8 @@ impl Round {
                 // that just unbound to another concrete binding without
                 // manufacturing a fresh visit or budget. With no replacement,
                 // the old session ends normally and is remembered closed.
-                let can_reselect_group = matches!(&plan.source, StockSource::CounterGroup(_))
-                    && binding.is_some();
+                let can_reselect_group =
+                    matches!(&plan.source, StockSource::CounterGroup(_)) && binding.is_some();
                 if !can_reselect_group {
                     let reason = self.expired_binding_reason(prior, time);
                     self.finish_market_errand(world, &plan.buyer, reason);
@@ -3541,7 +3841,9 @@ impl Round {
             }
             let mut selection_changed = false;
             {
-                let Some(errand) = self.market_errands.get_mut(&plan.buyer) else { continue };
+                let Some(errand) = self.market_errands.get_mut(&plan.buyer) else {
+                    continue;
+                };
                 if binding != errand.selected {
                     selection_changed = true;
                     errand.selected = binding.clone();
@@ -3609,7 +3911,10 @@ impl Round {
             let position = world.characters[&plan.buyer].position_m();
             if position.distance(counter.pitch) > counter.radius_m {
                 let deadline = {
-                    let errand = self.market_errands.get_mut(&plan.buyer).expect("errand exists");
+                    let errand = self
+                        .market_errands
+                        .get_mut(&plan.buyer)
+                        .expect("errand exists");
                     errand.phase = MarketErrandPhase::Approaching;
                     errand.travel_deadline_real
                 };
@@ -3618,11 +3923,15 @@ impl Round {
                     continue;
                 }
                 if !world.characters[&plan.buyer].is_walking() {
-                    let Some(path) = route_path_to_point(nav, &plan.buyer, position, counter.pitch) else {
+                    let Some(path) = route_path_to_point(nav, &plan.buyer, position, counter.pitch)
+                    else {
                         self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::NoRoute);
                         continue;
                     };
-                    let metres = path.windows(2).map(|pair| pair[0].distance(pair[1])).sum::<f64>();
+                    let metres = path
+                        .windows(2)
+                        .map(|pair| pair[0].distance(pair[1]))
+                        .sum::<f64>();
                     self.market_errands
                         .get_mut(&plan.buyer)
                         .expect("errand exists")
@@ -3639,7 +3948,12 @@ impl Round {
                 }
                 continue;
             }
-            world.characters.get_mut(&plan.buyer).expect("buyer exists").state.movement = None;
+            world
+                .characters
+                .get_mut(&plan.buyer)
+                .expect("buyer exists")
+                .state
+                .movement = None;
             self.market_errands
                 .get_mut(&plan.buyer)
                 .expect("errand exists")
@@ -3653,7 +3967,9 @@ impl Round {
                 self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::BudgetExhausted);
                 continue;
             }
-            let Some(trade) = self.food_trades.get(&counter.trade) else { continue };
+            let Some(trade) = self.food_trades.get(&counter.trade) else {
+                continue;
+            };
             let requested: Vec<MarketRequestLine> = plan
                 .targets
                 .iter()
@@ -3701,17 +4017,17 @@ impl Round {
             ) {
                 Ok(receipt) => {
                     let new_spent = {
-                        let errand = self.market_errands.get_mut(&plan.buyer).expect("errand exists");
+                        let errand = self
+                            .market_errands
+                            .get_mut(&plan.buyer)
+                            .expect("errand exists");
                         errand.spent_sparks = spent_before
                             .checked_add(receipt.total_sparks)
                             .expect("sale cannot exceed the checked visit budget");
                         errand.last_failed_fingerprint = None;
                         errand.spent_sparks
                     };
-                    self.push_food_log(sale_receipt_trace(
-                        &receipt,
-                        &binding.counter_id,
-                    ));
+                    self.push_food_log(sale_receipt_trace(&receipt, &binding.counter_id));
                     let trace = self.stock_errand_trace(
                         &plan,
                         &self.market_errands[&plan.buyer],
@@ -3720,16 +4036,23 @@ impl Round {
                     );
                     self.push_food_log(trace);
                     if self.stock_plan_satisfied(world, &plan) {
-                        self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::TargetsSatisfied);
+                        self.finish_market_errand(
+                            world,
+                            &plan.buyer,
+                            MarketVisitEnd::TargetsSatisfied,
+                        );
                     } else if new_spent >= plan.max_spend_sparks {
-                        self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::BudgetExhausted);
+                        self.finish_market_errand(
+                            world,
+                            &plan.buyer,
+                            MarketVisitEnd::BudgetExhausted,
+                        );
                     }
                 }
                 Err(error) => {
-                    let should_log = self
-                        .market_errands
-                        .get(&plan.buyer)
-                        .is_some_and(|errand| errand.last_failed_fingerprint.as_ref() != Some(&fingerprint));
+                    let should_log = self.market_errands.get(&plan.buyer).is_some_and(|errand| {
+                        errand.last_failed_fingerprint.as_ref() != Some(&fingerprint)
+                    });
                     if should_log {
                         self.market_errands
                             .get_mut(&plan.buyer)
@@ -3744,9 +4067,17 @@ impl Round {
                         self.push_food_log(trace);
                     }
                     if error.code == crate::InventoryErrorCode::UnpricedStock {
-                        self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::UnpricedStock);
+                        self.finish_market_errand(
+                            world,
+                            &plan.buyer,
+                            MarketVisitEnd::UnpricedStock,
+                        );
                     } else if error.code == crate::InventoryErrorCode::BudgetExhausted {
-                        self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::BudgetExhausted);
+                        self.finish_market_errand(
+                            world,
+                            &plan.buyer,
+                            MarketVisitEnd::BudgetExhausted,
+                        );
                     }
                 }
             }
@@ -3762,7 +4093,9 @@ impl Round {
     ) -> bool {
         world.is_present(&plan.producer)
             && !world.characters[&plan.producer].is_walking()
-            && world.characters[&plan.producer].position_m().distance(transform.point)
+            && world.characters[&plan.producer]
+                .position_m()
+                .distance(transform.point)
                 <= ROUND_ARRIVE_RADIUS_M
             && !in_conversation.contains(&plan.producer)
             && !self.market_errands.contains_key(&plan.producer)
@@ -3863,12 +4196,8 @@ impl Round {
             if let Some(job) = world.active_transform_job(&plan.producer).cloned()
                 && let Some(transform) = plan.transforms.iter().find(|spec| spec.id == job.spec_id)
             {
-                let eligible_now = self.production_dynamically_eligible(
-                    world,
-                    &plan,
-                    transform,
-                    in_conversation,
-                );
+                let eligible_now =
+                    self.production_dynamically_eligible(world, &plan, transform, in_conversation);
                 if eligible_now && was_eligible {
                     let minutes = self.production_overlap_minutes(
                         &plan,
@@ -3905,11 +4234,8 @@ impl Round {
                         .active_transform_job(&plan.producer)
                         .map(|active| active.progress_work_minutes)
                         .unwrap_or(job.progress_work_minutes);
-                    match world.complete_transform_job_by_id(
-                        &plan.producer,
-                        &job.job_id,
-                        time.day,
-                    ) {
+                    match world.complete_transform_job_by_id(&plan.producer, &job.job_id, time.day)
+                    {
                         Ok(receipt) => {
                             world.touch_public_state();
                             self.push_food_log(format!(
@@ -3959,13 +4285,7 @@ impl Round {
                 continue;
             }
             for transform in &plan.transforms {
-                if !self.production_start_eligible(
-                    world,
-                    &plan,
-                    transform,
-                    time,
-                    in_conversation,
-                ) {
+                if !self.production_start_eligible(world, &plan, transform, time, in_conversation) {
                     continue;
                 }
                 let mut batch_outputs = BTreeMap::<ItemMatcher, u32>::new();
@@ -3982,13 +4302,9 @@ impl Round {
                     && batch_outputs.iter().all(|(matcher, batch_quantity)| {
                         world
                             .held_quantity(&plan.producer, matcher)
-                            .checked_add(
-                                world.future_output_quantity(&plan.producer, matcher),
-                            )
+                            .checked_add(world.future_output_quantity(&plan.producer, matcher))
                             .and_then(|quantity| quantity.checked_add(*batch_quantity))
-                            .is_some_and(|quantity| {
-                                quantity <= transform.desired_output_quantity
-                            })
+                            .is_some_and(|quantity| quantity <= transform.desired_output_quantity)
                     });
                 if !output_fits_target {
                     continue;
@@ -4001,13 +4317,22 @@ impl Round {
                     let mut ids = world.characters[&plan.producer].holds().to_vec();
                     ids.sort();
                     for id in ids {
-                        if remaining == 0 { break; }
-                        if !world.items.get(&id).is_some_and(|item| matcher.matches(item)) {
+                        if remaining == 0 {
+                            break;
+                        }
+                        if !world
+                            .items
+                            .get(&id)
+                            .is_some_and(|item| matcher.matches(item))
+                        {
                             continue;
                         }
                         let take = remaining.min(world.uncommitted_quantity(&id));
                         if take > 0 {
-                            reserved.push(ReservedInput { item_id: id, quantity: take });
+                            reserved.push(ReservedInput {
+                                item_id: id,
+                                quantity: take,
+                            });
                             remaining -= take;
                         }
                     }
@@ -4057,12 +4382,7 @@ impl Round {
                 .active_transform_job(&plan.producer)
                 .and_then(|job| plan.transforms.iter().find(|spec| spec.id == job.spec_id))
                 .is_some_and(|transform| {
-                    self.production_dynamically_eligible(
-                        world,
-                        &plan,
-                        transform,
-                        in_conversation,
-                    )
+                    self.production_dynamically_eligible(world, &plan, transform, in_conversation)
                 });
             self.production_was_eligible
                 .insert(plan.producer.clone(), eligible_at_end);
@@ -4071,7 +4391,6 @@ impl Round {
             .retain(|(_, day), _| *day >= time.day.saturating_sub(1));
         world.prune_completed_transforms(time.day);
     }
-
 }
 
 fn sale_receipt_trace(receipt: &SaleReceipt, counter: &str) -> String {
@@ -4114,9 +4433,7 @@ fn reserved_inputs_trace(inputs: &[ReservedInput]) -> String {
         .join(",")
 }
 
-fn transform_receipt_lines_trace(
-    lines: &[crate::inventory::TransformReceiptLine],
-) -> String {
+fn transform_receipt_lines_trace(lines: &[crate::inventory::TransformReceiptLine]) -> String {
     lines
         .iter()
         .map(|line| format!("{}:{}", line.item_id, line.quantity))
@@ -4150,8 +4467,14 @@ fn boundary_exchange(
         let mut ids = staged.characters[member].holds().to_vec();
         ids.sort();
         for item_id in ids {
-            let Some(item) = staged.items.get(&item_id).cloned() else { continue };
-            if !party.commercial_cargo.iter().any(|matcher| matcher.matches(&item)) {
+            let Some(item) = staged.items.get(&item_id).cloned() else {
+                continue;
+            };
+            if !party
+                .commercial_cargo
+                .iter()
+                .any(|matcher| matcher.matches(&item))
+            {
                 continue;
             }
             staged.consume_item_quantity(member, &item_id, item.quantity)?;
@@ -4170,8 +4493,8 @@ fn boundary_exchange(
         )?;
         if cash_in > 0 {
             lines.push(format!(
-                "road_cash_in: party {}, trip {next_trip}, member {member}, amount {cash_in}"
-                , party.id
+                "road_cash_in: party {}, trip {next_trip}, member {member}, amount {cash_in}",
+                party.id
             ));
             cash_in_sparks = cash_in_sparks
                 .checked_add(u64::from(cash_in))
@@ -4179,8 +4502,8 @@ fn boundary_exchange(
         }
         if cash_out > 0 {
             lines.push(format!(
-                "road_cash_out: party {}, trip {next_trip}, member {member}, amount {cash_out}"
-                , party.id
+                "road_cash_out: party {}, trip {next_trip}, member {member}, amount {cash_out}",
+                party.id
             ));
             cash_out_sparks = cash_out_sparks
                 .checked_add(u64::from(cash_out))
@@ -4226,7 +4549,11 @@ fn spark_plural(n: u32) -> &'static str {
 /// through the real verb; only the ladder's auto-eat is silenced. Returns whether
 /// a unit was actually eaten (a benign miss if the item left the hand meanwhile).
 fn silent_eat(world: &mut World, eater: &ActorId, item_id: &ItemId) -> bool {
-    if !world.characters.get(eater).is_some_and(|character| character.holds().contains(item_id)) {
+    if !world
+        .characters
+        .get(eater)
+        .is_some_and(|character| character.holds().contains(item_id))
+    {
         return false;
     }
     let Some(item) = world.items.get(item_id).cloned() else {
@@ -4316,7 +4643,10 @@ fn build_legs(
                 (Some(point), Some(label)) => (point, label.clone(), false),
                 _ => continue, // no workplace resolved for this trade
             },
-            name => match resolver.resolve(name).or_else(|| worksites.get(name).copied()) {
+            name => match resolver
+                .resolve(name)
+                .or_else(|| worksites.get(name).copied())
+            {
                 Some(point) => (point, name.to_string(), false),
                 None => continue, // a place not in this graph
             },
@@ -4339,7 +4669,11 @@ fn build_legs(
 /// one wins on its day and is filtered out otherwise. If nothing has begun yet
 /// (deep night before the first leg), the day's tail leg carries over.
 fn active_leg(legs: &[RoundLeg], office: Office, weekday: Weekday) -> Option<&RoundLeg> {
-    let eligible = |leg: &&RoundLeg| leg.only_on.as_ref().is_none_or(|days| days.contains(&weekday));
+    let eligible = |leg: &&RoundLeg| {
+        leg.only_on
+            .as_ref()
+            .is_none_or(|days| days.contains(&weekday))
+    };
     let pick = |filter: &dyn Fn(&&RoundLeg) -> bool| -> Option<&RoundLeg> {
         let mut best: Option<&RoundLeg> = None;
         for leg in legs.iter().filter(|leg| filter(leg)) {
@@ -4383,12 +4717,14 @@ pub fn tick(
     if !round.seeded {
         return nudges;
     }
+    round.lightning_reflex_until.retain(|_, until| now < *until);
     tick_food_economy(round, world, clock, now);
     round.tick_road_parties(world, nav, clock.at(now), in_conversation);
     decay_needs(round, world, clock, now);
     tick_lamps(round, clock, now);
     resolve_arrivals(round, world);
     resolve_food_arrivals(round, world);
+    update_weather_shelter_intents(round, world, clock.game_days(now), now);
     tick_intents(round, world, nav, now, &mut nudges);
     service_sources(round, world, nav, clock, now, player_id, in_conversation);
     service_stalls(round, world, clock, now, player_id);
@@ -4399,6 +4735,51 @@ pub fn tick(
     run_ladder(round, world, nav, clock, now, in_conversation, &mut nudges);
     round.trace_cart_load_changes(world);
     nudges
+}
+
+/// Advance only the *release* side of shelter behavior.  Acquisition remains a
+/// ladder decision, but hysteresis must run every poll (including while an
+/// actor is between decision cadences) in game time so debug acceleration and
+/// coarse headless polling give the same answer.
+fn update_weather_shelter_intents(round: &mut Round, world: &mut World, game_days: f64, now: f64) {
+    let precipitation = world
+        .current_weather
+        .unwrap_or(WeatherSample::CLEAR)
+        .precipitation;
+    let mut release = Vec::new();
+    for (id, intent) in &mut round.weather_shelter_intents {
+        if !world.is_present(id) {
+            release.push(id.clone());
+            continue;
+        }
+        if precipitation + f64::EPSILON < intent.release_threshold {
+            let below_since = intent.below_since_days.get_or_insert(game_days);
+            if game_days - *below_since >= intent.release_after_days {
+                release.push(id.clone());
+            }
+        } else {
+            intent.below_since_days = None;
+        }
+    }
+    for id in release {
+        let Some(intent) = round.weather_shelter_intents.remove(&id) else {
+            continue;
+        };
+        let was_weather_walk = round.people.get(&id).is_some_and(|person| {
+            person.phase == Phase::Travelling && person.travel_target == Some(intent.target)
+        });
+        if was_weather_walk {
+            if let Some(character) = world.characters.get_mut(&id) {
+                character.state.movement = None;
+            }
+            if let Some(person) = round.people.get_mut(&id) {
+                person.phase = Phase::Idle;
+                person.travel_target = None;
+                person.travel_for_intent = false;
+                person.next_decision = person.next_decision.min(now);
+            }
+        }
+    }
 }
 
 /// The offices a lit lamp belongs to: dusk through the small hours. The
@@ -4446,7 +4827,11 @@ fn tick_lamps(round: &mut Round, clock: &WorldClock, now: f64) {
             }
         }
         for (square, (keeper, indices)) in posts {
-            let roll = hash01("belwyns_lamp", &keeper, time.day as u64 ^ stable_hash(&square));
+            let roll = hash01(
+                "belwyns_lamp",
+                &keeper,
+                time.day as u64 ^ stable_hash(&square),
+            );
             let pick = indices[(roll * indices.len() as f64) as usize % indices.len()];
             round.belwyn.insert(square, pick);
         }
@@ -4647,7 +5032,8 @@ fn tick_intents(
                     format!("Your errand to {name} lapsed before you arrived.")
                 }
                 IntentTarget::Person {
-                    actor_id: target_id, ..
+                    actor_id: target_id,
+                    ..
                 } => format!(
                     "You never caught up with {}; the errand has lapsed.",
                     identify_ids(world, &id, target_id)
@@ -4690,10 +5076,7 @@ fn tick_intents(
             IntentTarget::Place { point, .. } => (*point, PLACE_ARRIVE_RADIUS_M),
             IntentTarget::Person { last_seen, .. } => (*last_seen, PERSON_ARRIVE_RADIUS_M),
         };
-        let tracking = matches!(
-            &intent.target,
-            IntentTarget::Person { visible: true, .. }
-        );
+        let tracking = matches!(&intent.target, IntentTarget::Person { visible: true, .. });
         let person = &round.people[&id];
         let lay = match person.phase {
             Phase::Idle => fresh || tracking,
@@ -4751,7 +5134,10 @@ fn end_intent(
 /// (`03_hunger.md` §4): dinner at High Wick, and the supper span from the Waning
 /// through Lamplight.
 fn is_meal_office(office: Office) -> bool {
-    matches!(office, Office::HighWick | Office::Waning | Office::Lamplight)
+    matches!(
+        office,
+        Office::HighWick | Office::Waning | Office::Lamplight
+    )
 }
 
 /// The needs fall by the game clock, so they keep pace with the sun and the
@@ -4866,9 +5252,16 @@ fn resolve_food_arrivals(round: &mut Round, world: &mut World) {
             if !round.stalls[errand.stall].queue.contains(&id) {
                 round.stalls[errand.stall].queue.push(id.clone());
             }
-            round.people.get_mut(&id).expect("person exists").food =
-                Some(FoodErrand { stall: errand.stall, phase: FoodPhase::Queued });
-            world.characters.get_mut(&id).expect("buyer exists").state.movement = None;
+            round.people.get_mut(&id).expect("person exists").food = Some(FoodErrand {
+                stall: errand.stall,
+                phase: FoodPhase::Queued,
+            });
+            world
+                .characters
+                .get_mut(&id)
+                .expect("buyer exists")
+                .state
+                .movement = None;
         } else {
             // Stopped short (a conversation interrupt, a re-route that failed):
             // drop the errand and let the ladder re-decide next cadence.
@@ -4882,7 +5275,13 @@ fn resolve_food_arrivals(round: &mut Round, world: &mut World) {
 /// and clink a coin for the player. The market twin of [`service_sources`] — the
 /// sale is a silent, self-perceived act, and the only sound is a player-only
 /// world sound, so thirty sales an hour never schedule an LLM turn (`04` §5).
-fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now: f64, player_id: &ActorId) {
+fn service_stalls(
+    round: &mut Round,
+    world: &mut World,
+    clock: &WorldClock,
+    now: f64,
+    player_id: &ActorId,
+) {
     if round.stalls.is_empty() {
         return;
     }
@@ -4914,11 +5313,19 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
     for (buyer, item) in cancelled {
         for stall in &mut round.stalls {
             stall.queue.retain(|queued| queued != &buyer);
-            if stall.serving.as_ref().is_some_and(|(served, _)| served == &buyer) {
+            if stall
+                .serving
+                .as_ref()
+                .is_some_and(|(served, _)| served == &buyer)
+            {
                 stall.serving = None;
             }
         }
-        round.people.get_mut(&buyer).expect("buyer is enrolled").food = None;
+        round
+            .people
+            .get_mut(&buyer)
+            .expect("buyer is enrolled")
+            .food = None;
         if world
             .characters
             .get(&buyer)
@@ -4932,18 +5339,19 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
     // Open = the hours predicate holds *and* the bound vendor is at the pitch —
     // the seller the round delivered to the square (no pin). Computed first, so
     // the mutable pass below is free of the world borrow.
-    let open: Vec<bool> = round
+    let availability: Vec<(bool, bool)> = round
         .stalls
         .iter()
         .map(|stall| {
-            stall.open.is_open(time.office, time.weekday)
+            let ordinary_open = stall.open.is_open(time.office, time.weekday)
                 && stall.vendor.as_ref().is_some_and(|vendor| {
                     world.is_present(vendor)
-                        && world
-                        .characters
-                        .get(vendor)
-                        .is_some_and(|character| character.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M)
-                })
+                        && world.characters.get(vendor).is_some_and(|character| {
+                            character.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M
+                        })
+                });
+            let weather_open = stall_weather_open(world, stall);
+            (ordinary_open && weather_open, !weather_open)
         })
         .collect();
 
@@ -4952,8 +5360,10 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
     // (sound_id, position) player-only world sounds to emit this tick: a cry per
     // open stall on its slow rhythm, plus a clink per sale (pushed below).
     let mut sounds: Vec<(&'static str, Vec3)> = Vec::new();
-    for (s, is_open) in open.iter().copied().enumerate() {
-        round.stalls[s].queue.retain(|actor| world.is_present(actor));
+    for (s, (is_open, weather_paused)) in availability.iter().copied().enumerate() {
+        round.stalls[s]
+            .queue
+            .retain(|actor| world.is_present(actor));
         if round.stalls[s]
             .serving
             .as_ref()
@@ -4962,6 +5372,20 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
             round.stalls[s].serving = None;
         }
         if !is_open {
+            // A sale whose timer already started is an atomic handoff. If
+            // weather closes the bare board mid-count, finish that one hurried
+            // exchange instead of deleting it; only the waiting queue is sent
+            // away. Ordinary office/vendor closure retains its old behavior.
+            if weather_paused
+                && let Some((buyer, _)) = round.stalls[s].serving.take()
+            {
+                if round.stalls[s].queue.first() == Some(&buyer) {
+                    round.stalls[s].queue.remove(0);
+                } else {
+                    round.stalls[s].queue.retain(|id| id != &buyer);
+                }
+                finished.push((s, buyer));
+            }
             if !round.stalls[s].queue.is_empty() || round.stalls[s].serving.is_some() {
                 to_release.push(s);
             }
@@ -5011,7 +5435,10 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
                 } else {
                     round.people.get_mut(&buyer).expect("buyer exists").food = Some(FoodErrand {
                         stall: s,
-                        phase: FoodPhase::Eating { item: sale.bought_id, until: now + EAT_SECONDS },
+                        phase: FoodPhase::Eating {
+                            item: sale.bought_id,
+                            until: now + EAT_SECONDS,
+                        },
                     });
                 }
                 if let Some(character) = world.characters.get_mut(&buyer) {
@@ -5020,15 +5447,16 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
                 world.assert_invariants();
                 round.push_food_log(format!(
                     "{}; stall {}, item {}, posted_price {}, stock_left {}, disposition {}",
-                    sale_receipt_trace(
-                        &sale.receipt,
-                        &format!("stall:{}", sale.stall_name)
-                    ),
+                    sale_receipt_trace(&sale.receipt, &format!("stall:{}", sale.stall_name)),
                     sale.stall_name,
                     sale.item_display,
                     sale.price,
                     sale.stock_left,
-                    if carry { "carried_home" } else { "eat_at_pitch" },
+                    if carry {
+                        "carried_home"
+                    } else {
+                        "eat_at_pitch"
+                    },
                 ));
             }
             None => {
@@ -5049,9 +5477,10 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
         .people
         .iter()
         .filter_map(|(id, person)| match &person.food {
-            Some(FoodErrand { phase: FoodPhase::Eating { item, until }, .. }) if now >= *until => {
-                Some((id.clone(), item.clone()))
-            }
+            Some(FoodErrand {
+                phase: FoodPhase::Eating { item, until },
+                ..
+            }) if now >= *until => Some((id.clone(), item.clone())),
             _ => None,
         })
         .collect();
@@ -5072,7 +5501,9 @@ fn service_stalls(round: &mut Round, world: &mut World, clock: &WorldClock, now:
                 continue;
             };
             let recipients = match player_pos {
-                Some(pos) if pos.distance(position) <= sound.audible_distance => vec![player_id.clone()],
+                Some(pos) if pos.distance(position) <= sound.audible_distance => {
+                    vec![player_id.clone()]
+                }
                 _ => Vec::new(),
             };
             world.emit(DomainEvent::sound(
@@ -5102,7 +5533,8 @@ fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId)
     // Choose what to sell: the pot materialises a fresh bowl inside the same
     // staged transaction; every stocked counter scans the vendor's live,
     // uncommitted holds rather than a stale side list.
-    let (matcher, price, conjure): (ItemMatcher, u32, bool) = if let Some(kind) = &trade.per_serving {
+    let (matcher, price, conjure): (ItemMatcher, u32, bool) = if let Some(kind) = &trade.per_serving
+    {
         let bowl = Item::new(ItemId::from_raw("stew_probe"), kind.as_str());
         let price = world.item_catalog.price_sparks(&bowl)?;
         if buyer_sparks < price {
@@ -5112,20 +5544,24 @@ fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId)
     } else {
         let mut best: Option<(u32, ItemId, Item)> = None;
         for stock_id in world.characters.get(&vendor)?.holds() {
-            let Some(item) = world.items.get(stock_id) else { continue };
+            let Some(item) = world.items.get(stock_id) else {
+                continue;
+            };
             if world.uncommitted_quantity(stock_id) == 0
                 || !world.item_catalog.is_edible(item)
                 || !trade.listings.iter().any(|matcher| matcher.matches(item))
             {
                 continue;
             }
-            let Some(item_price) = world.item_catalog.price_sparks(item) else { continue };
+            let Some(item_price) = world.item_catalog.price_sparks(item) else {
+                continue;
+            };
             if item_price > buyer_sparks {
                 continue;
             }
-            let better = best
-                .as_ref()
-                .is_none_or(|(best_price, best_id, _)| item_price < *best_price || (item_price == *best_price && stock_id < best_id));
+            let better = best.as_ref().is_none_or(|(best_price, best_id, _)| {
+                item_price < *best_price || (item_price == *best_price && stock_id < best_id)
+            });
             if better {
                 best = Some((item_price, stock_id.clone(), item.clone()));
             }
@@ -5138,7 +5574,12 @@ fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId)
         (matcher, price, false)
     };
 
-    let operation = format!("meal:{}:{}:{}", round.stalls[s].name, buyer, world.event_sequence + 1);
+    let operation = format!(
+        "meal:{}:{}:{}",
+        round.stalls[s].name,
+        buyer,
+        world.event_sequence + 1
+    );
     let mut staged = world.clone();
     if conjure {
         staged
@@ -5221,6 +5662,20 @@ fn should_carry(round: &Round, buyer: &ActorId, office: Office, weekday: Weekday
     active_leg(&person.legs, office, weekday).is_some_and(|leg| leg.is_home)
 }
 
+/// Severe rain pauses only an *exposed* pitch.  A canvas/slate market shelter
+/// in the shared social-cover data keeps trading; a bare board releases its
+/// queue but retains every stock item and binding, so it resumes normally once
+/// the authoritative sample clears.
+fn stall_weather_open(world: &World, stall: &FoodStall) -> bool {
+    let severe = world.current_weather.is_some_and(|weather| {
+        matches!(
+            weather.kind,
+            WeatherKind::Downpour | WeatherKind::Thunderstorm
+        )
+    });
+    !severe || world.shelters.is_sheltered(stall.pitch)
+}
+
 /// The nearest open, staffed, affordable stall within [`STALL_SEEK_RADIUS_M`] of
 /// `position` — rung 3 (famished) and rung 7 (hungry, `short` too) join it. `None`
 /// keeps a famished worker at their post (or the hearth) rather than marching a
@@ -5237,21 +5692,24 @@ fn nearest_open_stall(
     // A bound vendor is keeping their post, not shopping: they never queue (least
     // of all at their own stall, which would sell to themselves and double-count
     // the board). They are fed at the hearth like the rest of the evening trade.
-    if round.stalls.iter().any(|stall| stall.vendor.as_ref() == Some(id)) {
+    if round
+        .stalls
+        .iter()
+        .any(|stall| stall.vendor.as_ref() == Some(id))
+    {
         return None;
     }
     let sparks = world.spendable_sparks(id);
     let mut best: Option<(f64, usize)> = None;
     for (s, stall) in round.stalls.iter().enumerate() {
-        if !stall.open.is_open(office, weekday) {
+        if !stall.open.is_open(office, weekday) || !stall_weather_open(world, stall) {
             continue;
         }
         let staffed = stall.vendor.as_ref().is_some_and(|vendor| {
             world.is_present(vendor)
-                && world
-                .characters
-                .get(vendor)
-                .is_some_and(|character| character.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M)
+                && world.characters.get(vendor).is_some_and(|character| {
+                    character.position_m().distance(stall.pitch) <= STALL_PITCH_REACH_M
+                })
         });
         if !staffed {
             continue;
@@ -5266,7 +5724,10 @@ fn nearest_open_stall(
         if !stall_has_affordable(round, world, stall, sparks) {
             continue;
         }
-        if best.as_ref().is_none_or(|(best_dist, _)| distance < *best_dist) {
+        if best
+            .as_ref()
+            .is_none_or(|(best_dist, _)| distance < *best_dist)
+        {
             best = Some((distance, s));
         }
     }
@@ -5281,15 +5742,23 @@ fn stall_has_affordable(round: &Round, world: &World, stall: &FoodStall, sparks:
     };
     if let Some(kind) = &trade.per_serving {
         let bowl = Item::new(ItemId::from_raw("stew_probe"), kind.as_str());
-        return world.item_catalog.price_sparks(&bowl).is_some_and(|price| price <= sparks);
+        return world
+            .item_catalog
+            .price_sparks(&bowl)
+            .is_some_and(|price| price <= sparks);
     }
-    let Some(vendor) = &stall.vendor else { return false };
+    let Some(vendor) = &stall.vendor else {
+        return false;
+    };
     world.characters[vendor].holds().iter().any(|id| {
         world.items.get(id).is_some_and(|item| {
             world.uncommitted_quantity(id) > 0
                 && trade.listings.iter().any(|matcher| matcher.matches(item))
                 && world.item_catalog.is_edible(item)
-                && world.item_catalog.price_sparks(item).is_some_and(|price| price <= sparks)
+                && world
+                    .item_catalog
+                    .price_sparks(item)
+                    .is_some_and(|price| price <= sparks)
         })
     })
 }
@@ -5322,14 +5791,24 @@ fn resolve_arrivals(round: &mut Round, world: &mut World) {
                 if at_curb {
                     enqueue(round, source_idx, id.clone());
                     round.people.get_mut(&id).expect("person exists").phase = Phase::Queued;
-                    world.characters.get_mut(&id).expect("drawer exists").state.movement = None;
+                    world
+                        .characters
+                        .get_mut(&id)
+                        .expect("drawer exists")
+                        .state
+                        .movement = None;
                 } else {
                     round.people.get_mut(&id).expect("person exists").phase = Phase::Idle;
                 }
             }
             Phase::Returning | Phase::Travelling => {
                 round.people.get_mut(&id).expect("person exists").phase = Phase::Idle;
-                world.characters.get_mut(&id).expect("mover exists").state.movement = None;
+                world
+                    .characters
+                    .get_mut(&id)
+                    .expect("mover exists")
+                    .state
+                    .movement = None;
             }
             _ => {}
         }
@@ -5344,7 +5823,12 @@ fn enqueue(round: &mut Round, source_idx: usize, actor: ActorId) {
         let insert_at = round.sources[source_idx]
             .queue
             .iter()
-            .position(|id| !round.people.get(id).is_some_and(|person| person.is_household))
+            .position(|id| {
+                !round
+                    .people
+                    .get(id)
+                    .is_some_and(|person| person.is_household)
+            })
             .unwrap_or(round.sources[source_idx].queue.len());
         round.sources[source_idx].queue.insert(insert_at, actor);
     } else {
@@ -5431,7 +5915,12 @@ fn service_sources(
         // Mid-exchange (with the player or a neighbour): stand at the curb
         // instead of walking off; the ladder takes over once it goes cold.
         if in_conversation.contains(&drawer) {
-            world.characters.get_mut(&drawer).expect("drawer exists").state.movement = None;
+            world
+                .characters
+                .get_mut(&drawer)
+                .expect("drawer exists")
+                .state
+                .movement = None;
             round.people.get_mut(&drawer).expect("person exists").phase = Phase::Idle;
             continue;
         }
@@ -5448,7 +5937,12 @@ fn service_sources(
             match route_path(nav, &drawer, position, target) {
                 Some(path) => set_route(world, &drawer, path),
                 None => {
-                    world.characters.get_mut(&drawer).expect("drawer exists").state.movement = None;
+                    world
+                        .characters
+                        .get_mut(&drawer)
+                        .expect("drawer exists")
+                        .state
+                        .movement = None;
                 }
             }
         }
@@ -5467,7 +5961,9 @@ fn service_sources(
             continue;
         };
         let recipients = match player_pos {
-            Some(pos) if pos.distance(position) <= sound.audible_distance => vec![player_id.clone()],
+            Some(pos) if pos.distance(position) <= sound.audible_distance => {
+                vec![player_id.clone()]
+            }
             _ => Vec::new(),
         };
         world.emit(DomainEvent::sound(
@@ -5546,7 +6042,12 @@ fn run_ladder(
         let held = in_conversation.contains(&id);
         let (phase, epoch, next_decision, excused) = {
             let person = &round.people[&id];
-            (person.phase, person.epoch, person.next_decision, person.excused)
+            (
+                person.phase,
+                person.epoch,
+                person.next_decision,
+                person.excused,
+            )
         };
         // The exchange has lapsed: the next pressing rung under a *new* hold is
         // owed a fresh excuse-yourself turn.
@@ -5570,8 +6071,7 @@ fn run_ladder(
             _ => continue,
         }
 
-        let (decision, pressure) =
-            decide(round, world, nav, &id, epoch, time.office, time.weekday);
+        let (decision, pressure) = decide(round, world, nav, &id, epoch, time.office, time.weekday);
 
         // A live stock visit is the resumable rung immediately above the
         // ordinary round and convenient hunger. It keeps its route through
@@ -5607,7 +6107,8 @@ fn run_ladder(
                 match &intent.target {
                     IntentTarget::Place { name, .. } => name.clone(),
                     IntentTarget::Person {
-                        actor_id: target_id, ..
+                        actor_id: target_id,
+                        ..
                     } => identify_ids(world, &id, target_id),
                 }
             };
@@ -5635,7 +6136,8 @@ fn run_ladder(
         }
         // Urgency beats chat — but gets one turn's grace: inject the pressure
         // as a percept, and only the *next* pressing decision moves the body.
-        if held && !excused
+        if held
+            && !excused
             && let Some(pressure) = pressure
         {
             {
@@ -5666,11 +6168,13 @@ fn run_ladder(
                 Decision::Travel(target) | Decision::TravelIntent(target) => {
                     under_way != Some(*target)
                 }
+                Decision::SeekShelter(intent) => under_way != Some(intent.target),
                 Decision::WalkToLamp(index) => under_way != Some(round.lamps[*index].position),
                 Decision::EatHeld(_)
                 | Decision::ApproachWell
                 | Decision::ApproachStall(_)
-                | Decision::LightLamp(_) => true,
+                | Decision::LightLamp(_)
+                | Decision::WeatherPause => true,
                 Decision::Wander(_) | Decision::Stay => false,
             };
             if !diverts {
@@ -5699,6 +6203,12 @@ enum Decision {
     /// Rung 8: walk toward the `go_to` intent's target (M5) — the same walk as
     /// [`Decision::Travel`], but flagged so a `stop {}` halts exactly it.
     TravelIntent(Vec3),
+    /// Weather reaction: claim a reachable social shelter and walk to its
+    /// stable spread point.  This is deliberately not an LLM intent.
+    SeekShelter(WeatherShelterIntent),
+    /// A short involuntary stop after nearby lightning. It is below immediate
+    /// bodily needs but above chosen errands and routine work.
+    WeatherPause,
     /// The lamplighter's rung (M7), walking: to the next unlit post. Lamps
     /// stand off the graph on the square's pavement, so this walk appends the
     /// final off-graph stride exactly as an intent walk does — a plain
@@ -5717,12 +6227,181 @@ enum Decision {
 /// conversation hold — the nudge through the existing self-correction seam
 /// (`features/movement/05_the_llm_seam.md`) that buys the LLM one turn to
 /// excuse itself before the body walks.
-const CURFEW_PRESSURE: &str =
-    "system: night is falling and the watch clears the streets — you need to be home; excuse yourself.";
+const CURFEW_PRESSURE: &str = "system: night is falling and the watch clears the streets — you need to be home; excuse yourself.";
 const PARCHED_PRESSURE: &str =
     "system: your thirst is pressing — excuse yourself and get to the well.";
 const FAMISHED_PRESSURE: &str =
     "system: you are famished; your feet are taking you to food — excuse yourself.";
+
+/// Minimum rain intensity this actor waits out once they have taken cover.
+/// The threshold is chosen from semantic severity and occupation, while the
+/// drizzle choice itself is a stable actor/revision roll.  Essential outdoor
+/// trades continue through ordinary weather; nonessential townsfolk react at
+/// steady rain and above.
+fn weather_shelter_threshold(
+    character: &Character,
+    id: &ActorId,
+    weather: Option<WeatherSample>,
+) -> Option<f64> {
+    let weather = weather?;
+    let occupation = character
+        .lore()
+        .and_then(|lore| lore.occupation_id.as_deref());
+    let essential = occupation.is_some_and(|occupation| {
+        matches!(
+            occupation,
+            "watchman_and_keeper"
+                | "lamplighter"
+                | "healer"
+                | "bell_ringer"
+                | "cargo_worker"
+                | "boatworker"
+                | "messenger"
+                | "domestic_servant"
+                | "water_and_bath_worker"
+                | "sanitation_worker"
+        )
+    });
+    match weather.kind {
+        WeatherKind::Drizzle if !essential => {
+            let genteel = occupation.is_some_and(|occupation| {
+                matches!(
+                    occupation,
+                    "candor_cleric"
+                        | "civic_officer"
+                        | "court_officer"
+                        | "custody_clerk"
+                        | "fine_metalworker"
+                        | "freight_broker"
+                        | "merchant"
+                        | "money_dealer"
+                        | "scholar"
+                        | "scribe_and_clerk"
+                )
+            });
+            (weather.precipitation >= 0.08
+                && (genteel
+                    || hash01("weather_drizzle_shelter", id, weather.semantic_revision) < 0.18))
+                .then_some(0.08)
+        }
+        WeatherKind::Rain if !essential && weather.precipitation >= 0.22 => Some(0.22),
+        WeatherKind::Downpour | WeatherKind::Thunderstorm
+            if !essential && weather.precipitation >= 0.22 =>
+        {
+            Some(0.22)
+        }
+        _ => None,
+    }
+}
+
+/// Pick a public, open, reachable shelter without overfilling it.  Route
+/// distance is the primary score; a small stable actor/shelter salt breaks
+/// equal-distance ties and spreads a crowd between adjacent awnings.
+fn choose_weather_shelter(
+    round: &Round,
+    world: &World,
+    nav: &NavData,
+    id: &ActorId,
+    position: Vec3,
+    office: Office,
+    release_threshold: f64,
+) -> Option<WeatherShelterIntent> {
+    let mut best: Option<(f64, WeatherShelterIntent)> = None;
+    for (index, shelter) in world.shelters.shelters().iter().enumerate() {
+        if shelter.access != ShelterAccess::Public
+            || !shelter.is_open(office)
+            || shelter.route_node >= nav.node_count()
+        {
+            continue;
+        }
+        let occupants_here = world
+            .characters
+            .iter()
+            .filter(|(actor_id, actor)| {
+                world.is_present(actor_id) && shelter.contains(actor.position_m())
+            })
+            .count();
+        let occupants_en_route = round
+            .weather_shelter_intents
+            .iter()
+            .filter(|(actor_id, intent)| {
+                intent.shelter == index
+                    && world.characters.get(*actor_id).is_none_or(|actor| {
+                        !shelter.contains(actor.position_m())
+                    })
+            })
+            .count();
+        if occupants_here + occupants_en_route >= shelter.capacity {
+            continue;
+        }
+        let Some(route) = nav.route_between(position, nav.node_point(shelter.route_node)) else {
+            continue;
+        };
+        if route.length_m > SHELTER_SEEK_RADIUS_M {
+            continue;
+        }
+        let Some(target) = shelter_spread_target(nav, shelter, id, index) else {
+            continue;
+        };
+        let score = route.length_m + hash01("weather_shelter_choice", id, index as u64) * 2.0;
+        let intent = WeatherShelterIntent {
+            shelter: index,
+            target,
+            release_threshold,
+            below_since_days: None,
+            release_after_days: (SHELTER_RELEASE_MINUTES
+                + hash01("weather_shelter_release", id, index as u64)
+                    * SHELTER_RELEASE_SPREAD_MINUTES)
+                / (24.0 * 60.0),
+        };
+        if best
+            .as_ref()
+            .is_none_or(|(best_score, _)| score < *best_score)
+        {
+            best = Some((score, intent));
+        }
+    }
+    best.map(|(_, intent)| intent)
+}
+
+/// A walkable actor-specific point inside the authored covered polygon.  The
+/// route node establishes graph reachability; this final stride is what keeps
+/// five people from visibly sharing that one node.
+fn shelter_spread_target(
+    nav: &NavData,
+    shelter: &crate::weather::Shelter,
+    id: &ActorId,
+    shelter_index: usize,
+) -> Option<Vec3> {
+    let count = shelter.polygon_xz.len() as f64;
+    let centre = shelter.polygon_xz.iter().fold([0.0, 0.0], |sum, point| {
+        [sum[0] + point[0], sum[1] + point[1]]
+    });
+    let centre = Vec3::new(centre[0] / count, WALK_Y, centre[1] / count);
+    let base_angle =
+        hash01("weather_shelter_angle", id, shelter_index as u64) * std::f64::consts::TAU;
+    let base_radius = shelter.spread_radius_m
+        * (0.25 + 0.75 * hash01("weather_shelter_radius", id, shelter_index as u64));
+    for attempt in 0..12 {
+        let angle = base_angle + attempt as f64 * std::f64::consts::TAU / 12.0;
+        // Tighten toward the centre after a full half-turn, making even narrow
+        // passage polygons find a valid point without abandoning stable spread.
+        let radius = base_radius * (1.0 - attempt as f64 / 14.0);
+        let candidate = Vec3::new(
+            centre.x + angle.cos() * radius,
+            WALK_Y,
+            centre.z + angle.sin() * radius,
+        );
+        if shelter.contains(candidate) && nav.is_walkable(candidate.x, candidate.z) {
+            return Some(candidate);
+        }
+    }
+    if shelter.contains(centre) && nav.is_walkable(centre.x, centre.z) {
+        return Some(centre);
+    }
+    let node = nav.node_point(shelter.route_node);
+    (shelter.contains(node) && nav.is_walkable(node.x, node.z)).then_some(node)
+}
 
 /// The ladder pass for one idle person: the decision, plus — when it came off a
 /// *pressing* rung (curfew, parched) that outranks a conversation hold — the
@@ -5752,7 +6431,8 @@ fn decide(
     // homeless have nowhere to go and fall through — the parched rung below still
     // works for them, and the rest linger in the street, which is exactly the
     // person the watch stops (`04_the_round.md` §6).
-    if night && !person.curfew_exempt
+    if night
+        && !person.curfew_exempt
         && let Some(home) = person.home
     {
         return if position.distance(home) <= HOME_ARRIVE_RADIUS_M {
@@ -5791,7 +6471,8 @@ fn decide(
         // market is the right place to feed — and rides the pressure percept, so
         // an on-stage actor gets one turn to excuse itself before the body walks,
         // exactly as parched does, and only when the rung actually diverts.
-        if let Some(stall) = nearest_open_stall(round, world, id, position, office, weekday, false) {
+        if let Some(stall) = nearest_open_stall(round, world, id, position, office, weekday, false)
+        {
             return (Decision::ApproachStall(stall), Some(FAMISHED_PRESSURE));
         }
         // Else head home to the hearth, but *only while a meal office is
@@ -5844,6 +6525,14 @@ fn decide(
         }
     }
 
+    // Nearby thunderstorm lightning: a short mechanical flinch, not an LLM
+    // decision. It sits below urgent needs but above errands and the daily
+    // round. The conversation hold and atomic-phase skips in `run_ladder`
+    // remain authoritative, so nobody walks out mid-sentence or mid-handoff.
+    if round.lightning_reflex_until.contains_key(id) {
+        return (Decision::WeatherPause, None);
+    }
+
     // Rung 8 — the errand: an LLM-issued `go_to` sits between thirsty (6) and
     // the round (9) — it outranks the day's routine, never the body's needs,
     // and curfew preempting it is deliberate (05_the_llm_seam.md §2). Arrival,
@@ -5892,6 +6581,38 @@ fn decide(
         return (Decision::WalkToLamp(index), None);
     }
 
+    // Weather shelter — below needs, an explicit `go_to`, and the
+    // lamplighter's essential dusk act, but above the ordinary work/idle round.
+    // `run_ladder`'s conversation hold treats it as deferrable, and its early
+    // phase skips keep well draws, purchases, meals and other atomic work
+    // committed until they complete.
+    if let Some(intent) = round.weather_shelter_intents.get(id).copied() {
+        let sheltered = world
+            .shelters
+            .shelters()
+            .get(intent.shelter)
+            .is_some_and(|shelter| shelter.contains(position));
+        return if sheltered {
+            (Decision::Stay, None)
+        } else {
+            (Decision::SeekShelter(intent), None)
+        };
+    }
+    if person
+        .home
+        .is_some_and(|home| position.distance(home) <= HOME_ARRIVE_RADIUS_M)
+    {
+        // A resident already at home needs neither a visible doorway pile nor
+        // a cognition turn to remain dry.
+    } else if !world.shelters.is_sheltered(position)
+        && let Some(release_threshold) =
+            weather_shelter_threshold(character, id, world.current_weather)
+        && let Some(intent) =
+            choose_weather_shelter(round, world, nav, id, position, office, release_threshold)
+    {
+        return (Decision::SeekShelter(intent), None);
+    }
+
     // Rung 9 — the round: be where the current leg says. Skipped at night for the
     // non-exempt (curfew already sent the housed home; the homeless linger rather
     // than march to a workshop at 2 a.m.).
@@ -5901,7 +6622,11 @@ fn decide(
         active_leg(&person.legs, office, weekday)
     };
     if let Some(leg) = leg {
-        let radius = if leg.is_home { HOME_ARRIVE_RADIUS_M } else { ROUND_ARRIVE_RADIUS_M };
+        let radius = if leg.is_home {
+            HOME_ARRIVE_RADIUS_M
+        } else {
+            ROUND_ARRIVE_RADIUS_M
+        };
         if position.distance(leg.at) > radius {
             return (Decision::Travel(leg.at), None);
         }
@@ -5937,7 +6662,13 @@ fn decide(
 }
 
 /// Carry out a decision: set the walk and the phase, or stand.
-fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &ActorId, decision: Decision) {
+fn apply_decision(
+    round: &mut Round,
+    world: &mut World,
+    nav: &NavData,
+    id: &ActorId,
+    decision: Decision,
+) {
     match decision {
         Decision::EatHeld(item_id) => {
             // A code-driven meal standing where they are (`04_the_bread_round.md`
@@ -5948,7 +6679,9 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
             silent_eat(world, id, &item_id);
         }
         Decision::ApproachWell => {
-            let source = round.people[id].source.expect("a well decision has a source");
+            let source = round.people[id]
+                .source
+                .expect("a well decision has a source");
             let draw_point = round.sources[source].draw_point;
             let position = world.characters[id].position_m();
             match route_path(nav, id, position, draw_point) {
@@ -5960,7 +6693,12 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
                     // Already at the curb: join the queue now.
                     enqueue(round, source, id.clone());
                     round.people.get_mut(id).expect("person exists").phase = Phase::Queued;
-                    world.characters.get_mut(id).expect("drawer exists").state.movement = None;
+                    world
+                        .characters
+                        .get_mut(id)
+                        .expect("drawer exists")
+                        .state
+                        .movement = None;
                 }
             }
         }
@@ -5978,17 +6716,26 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
             match route_path(nav, id, position, pitch) {
                 Some(path) => {
                     set_route(world, id, path);
-                    round.people.get_mut(id).expect("person exists").food =
-                        Some(FoodErrand { stall, phase: FoodPhase::Approaching });
+                    round.people.get_mut(id).expect("person exists").food = Some(FoodErrand {
+                        stall,
+                        phase: FoodPhase::Approaching,
+                    });
                 }
                 None => {
                     // Already at the pitch: join the queue now.
                     if !round.stalls[stall].queue.contains(id) {
                         round.stalls[stall].queue.push(id.clone());
                     }
-                    round.people.get_mut(id).expect("person exists").food =
-                        Some(FoodErrand { stall, phase: FoodPhase::Queued });
-                    world.characters.get_mut(id).expect("buyer exists").state.movement = None;
+                    round.people.get_mut(id).expect("person exists").food = Some(FoodErrand {
+                        stall,
+                        phase: FoodPhase::Queued,
+                    });
+                    world
+                        .characters
+                        .get_mut(id)
+                        .expect("buyer exists")
+                        .state
+                        .movement = None;
                 }
             }
         }
@@ -6010,6 +6757,28 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
                 person.phase = Phase::Travelling;
                 person.travel_target = Some(target);
                 person.travel_for_intent = true;
+            }
+        }
+        Decision::SeekShelter(intent) => {
+            round.weather_shelter_intents.insert(id.clone(), intent);
+            let position = world.characters[id].position_m();
+            if let Some(path) = route_path_to_point(nav, id, position, intent.target) {
+                set_route(world, id, path);
+                let person = round.people.get_mut(id).expect("person exists");
+                person.phase = Phase::Travelling;
+                person.travel_target = Some(intent.target);
+                person.travel_for_intent = false;
+            } else {
+                // Selection already established reachability. `None` therefore
+                // means the actor is at its spread point (or within the same
+                // snapped node); standing is the correct completion.
+                if let Some(character) = world.characters.get_mut(id) {
+                    character.state.movement = None;
+                }
+                let person = round.people.get_mut(id).expect("person exists");
+                person.phase = Phase::Idle;
+                person.travel_target = None;
+                person.travel_for_intent = false;
             }
         }
         Decision::Wander(target) => {
@@ -6054,6 +6823,15 @@ fn apply_decision(round: &mut Round, world: &mut World, nav: &NavData, id: &Acto
             person.travel_target = None;
             person.travel_for_intent = false;
         }
+        Decision::WeatherPause => {
+            if let Some(character) = world.characters.get_mut(id) {
+                character.state.movement = None;
+            }
+            let person = round.people.get_mut(id).expect("person exists");
+            person.phase = Phase::Idle;
+            person.travel_target = None;
+            person.travel_for_intent = false;
+        }
         Decision::Stay => {}
     }
 }
@@ -6077,7 +6855,9 @@ fn memory_declares_hunger(memory: &str) -> bool {
         return false;
     };
     // A first-person present-tense subject somewhere before it.
-    ["i am", "i'm", "i feel"].iter().any(|lead| lower[..hungry_at].contains(lead))
+    ["i am", "i'm", "i feel"]
+        .iter()
+        .any(|lead| lower[..hungry_at].contains(lead))
 }
 
 /// The byte index of the first standalone-word occurrence of `word` in `haystack`
@@ -6111,32 +6891,41 @@ fn held_edible(round: &Round, world: &World, character: &Character) -> Option<It
         .iter()
         .filter(|item_id| {
             world.uncommitted_quantity(item_id) > 0
-                && world.items.get(*item_id)
+                && world
+                    .items
+                    .get(*item_id)
                     .and_then(|item| world.item_catalog.satiety(item))
                     .is_some_and(|satiety| satiety > 0)
         })
         .cloned()
         .collect();
     edible.sort_by_key(|item_id| {
-        (commercially_listed(round, world, character.id(), item_id), item_id.clone())
+        (
+            commercially_listed(round, world, character.id(), item_id),
+            item_id.clone(),
+        )
     });
     edible.into_iter().next()
 }
 
 fn commercially_listed(round: &Round, world: &World, owner: &ActorId, item_id: &ItemId) -> bool {
-    let Some(item) = world.items.get(item_id) else { return false };
+    let Some(item) = world.items.get(item_id) else {
+        return false;
+    };
     let stall_stock = round.stalls.iter().any(|stall| {
         (stall.vendor.as_ref() == Some(owner) || stall.preferred.as_ref() == Some(owner))
-            && round.food_trades.get(&stall.trade).is_some_and(|trade| {
-                trade.listings.iter().any(|matcher| matcher.matches(item))
-            })
+            && round
+                .food_trades
+                .get(&stall.trade)
+                .is_some_and(|trade| trade.listings.iter().any(|matcher| matcher.matches(item)))
     });
     stall_stock
         || round.counters.values().any(|counter| {
             &counter.seller == owner
-                && round.food_trades.get(&counter.trade).is_some_and(|trade| {
-                    trade.listings.iter().any(|matcher| matcher.matches(item))
-                })
+                && round
+                    .food_trades
+                    .get(&counter.trade)
+                    .is_some_and(|trade| trade.listings.iter().any(|matcher| matcher.matches(item)))
         })
 }
 
@@ -6150,8 +6939,12 @@ fn held_meal_waits_for_home(
     if !should_carry(round, actor, office, weekday) {
         return false;
     }
-    let Some(person) = round.people.get(actor) else { return false };
-    let Some(home) = person.home else { return false };
+    let Some(person) = round.people.get(actor) else {
+        return false;
+    };
+    let Some(home) = person.home else {
+        return false;
+    };
     world
         .characters
         .get(actor)
@@ -6164,7 +6957,9 @@ fn nearest_known_settled(world: &World, id: &ActorId, position: Vec3) -> Option<
     let me = world.characters.get(id)?;
     for neighbour_id in world.characters_within(position, SOCIAL_PULL_RADIUS_M, Some(id)) {
         let neighbour = &world.characters[&neighbour_id];
-        if neighbour.control().is_llm() && neighbour.is_settled() && me.knows().contains(&neighbour_id)
+        if neighbour.control().is_llm()
+            && neighbour.is_settled()
+            && me.knows().contains(&neighbour_id)
         {
             return Some(neighbour.position_m());
         }
@@ -6186,11 +6981,26 @@ fn drift_target(base: Vec3, position: Vec3, friend: Vec3, leash_m: f64) -> Vec3 
 
 /// A deterministic walkable point within `leash_m` of base, or `None` if a few
 /// hashed tries all land on stone.
-fn wander_target(nav: &NavData, id: &ActorId, epoch: u64, base: Vec3, leash_m: f64) -> Option<Vec3> {
+fn wander_target(
+    nav: &NavData,
+    id: &ActorId,
+    epoch: u64,
+    base: Vec3,
+    leash_m: f64,
+) -> Option<Vec3> {
     for attempt in 0..4 {
-        let angle = hash01("round_wander_angle", id, epoch ^ (attempt as u64)) * std::f64::consts::TAU;
-        let radius = hash01("round_wander_radius", id, epoch.wrapping_add(attempt as u64)) * leash_m;
-        let target = Vec3::new(base.x + angle.cos() * radius, WALK_Y, base.z + angle.sin() * radius);
+        let angle =
+            hash01("round_wander_angle", id, epoch ^ (attempt as u64)) * std::f64::consts::TAU;
+        let radius = hash01(
+            "round_wander_radius",
+            id,
+            epoch.wrapping_add(attempt as u64),
+        ) * leash_m;
+        let target = Vec3::new(
+            base.x + angle.cos() * radius,
+            WALK_Y,
+            base.z + angle.sin() * radius,
+        );
         if nav.is_walkable(target.x, target.z) {
             return Some(target);
         }

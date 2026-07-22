@@ -25,8 +25,7 @@ use std::{
 use serde_json::{Value, json};
 
 use crate::{
-    HEARING_RADIUS_M, MAX_BELL_CATCHUP_OFFICES, MAX_MOVEMENT_CATCHUP_SLICES,
-    MOVEMENT_TICK_SECONDS,
+    HEARING_RADIUS_M, MAX_BELL_CATCHUP_OFFICES, MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS,
     actions::apply_action,
     areas::AreaMap,
     attention::{
@@ -54,6 +53,9 @@ use crate::{
     traits::{
         Cognition, Completion, Sight, SttBackendKind, Transcription, TranscriptionOutcome, Tts,
         TtsBackendKind, TtsOutcome,
+    },
+    weather::{
+        LightningStrike, ShelterMap, WeatherConfig, WeatherKind, WeatherSample, WeatherTimeline,
     },
     world::{SpatialActorUpdate, World},
 };
@@ -251,6 +253,11 @@ pub struct EngineConfig {
     /// Whether crossing an office rings the town bell for the player. On by
     /// default; the bell is a *sound*, never a percept, so it costs no tokens.
     pub ring_the_offices: bool,
+    /// Pure deterministic weather authority. Presentation-only quality knobs
+    /// never enter the sim config.
+    pub weather: WeatherConfig,
+    /// Named, navigable social shelter destinations loaded by the host.
+    pub shelters: Arc<ShelterMap>,
     /// The baked walkable surface and street graph, when the host has one to
     /// give. `None` — the default — means nobody walks: every existing caller
     /// builds config as `EngineConfig { .., ..default() }`, so the whole test
@@ -285,6 +292,14 @@ impl Default for EngineConfig {
                 DEFAULT_NIGHT_BRIGHTNESS,
             ),
             ring_the_offices: true,
+            // Library embedders and frozen fixtures get the documented stable
+            // clear fallback. Shipped hosts pass their explicit (enabled)
+            // weather settings instead of inheriting this compatibility default.
+            weather: WeatherConfig {
+                enabled: false,
+                ..WeatherConfig::default()
+            },
+            shelters: Arc::new(ShelterMap::default()),
             nav: None,
         }
     }
@@ -353,6 +368,12 @@ pub enum EngineCommand {
     /// Fire-and-forget: the host learns the new scale from the next
     /// [`EngineMessage::Clock`], so there is no `CommandResult`.
     CycleTimeScale,
+    /// Developer forcing through the authoritative sim path.
+    SetWeatherOverride {
+        kind: WeatherKind,
+        intensity: Option<f64>,
+    },
+    ClearWeatherOverride,
     DebugPlayerSay {
         request_id: String,
         text: String,
@@ -466,6 +487,11 @@ pub enum EngineMessage {
         /// Real seconds per game day, before `scale`.
         seconds_per_day: f64,
     },
+    /// The current authoritative weather sample. This is a hot scalar message:
+    /// it is deliberately independent of the public actor snapshot revision.
+    Weather(WeatherSample),
+    /// A deterministic transient crossed on the game-time weather timeline.
+    Lightning(LightningStrike),
     /// The NPCs that moved this poll, on the HOT channel — republished only when
     /// at least one mover actually changed pose. Like [`EngineMessage::Clock`] it
     /// is cheap by design and must **never** bump `world_revision` or re-trigger
@@ -473,12 +499,16 @@ pub enum EngineMessage {
     /// the cold public snapshot would republish the whole world 20 times a second
     /// (`features/movement/06_engineering.md`, the hot/cold split). The host
     /// interpolates between successive samples to render smoothly.
-    Movement { moved: Vec<ActorMotion> },
+    Movement {
+        moved: Vec<ActorMotion>,
+    },
     /// The squares' street lamps (M7) — the whole set, republished only when a
     /// lamp changes (the seed counts, so the host learns the positions before
     /// dusk). Like the clock, it never bumps `world_revision`: the host mirrors
     /// it into lantern props and point lights and nothing else reads it.
-    Lamps { lamps: Vec<LampView> },
+    Lamps {
+        lamps: Vec<LampView>,
+    },
     Speech {
         event_id: SpeechEventId,
         speaker_id: ActorId,
@@ -625,6 +655,9 @@ pub struct Engine {
     /// The live world clock. Initialized from `config.clock`; the debug time
     /// scale (the `T` key) mutates this copy, never the config's.
     clock: WorldClock,
+    weather: WeatherTimeline,
+    last_weather_days: f64,
+    last_weather_sample: WeatherSample,
     /// The `now` at which the offices were last checked for a bell, so a span —
     /// never an instant — is tested and no office can be missed or double-rung.
     last_clock_now: f64,
@@ -706,6 +739,11 @@ impl Engine {
         // The street graph is world context (like the area map): `go_to` prices
         // and validates its route against it at intent time (M5).
         world.nav = config.nav.clone();
+        world.shelters = config.shelters.clone();
+        let weather = WeatherTimeline::new(config.weather);
+        let last_weather_days = config.clock.game_days(now);
+        let last_weather_sample = weather.sample(last_weather_days);
+        world.current_weather = Some(last_weather_sample);
 
         // The daily round (M4, subsuming M3's water and M2's hard-coded pacer):
         // homes, workplaces, the ladder, the queues — and, since M5, the
@@ -789,6 +827,9 @@ impl Engine {
             npc_exchanges: WarmExchanges::default(),
             novelty: Novelty::default(),
             clock,
+            weather,
+            last_weather_days,
+            last_weather_sample,
             // The construction `now`: the first poll's span opens here, so the
             // office the run *starts* in is never rung, only entered.
             last_clock_now: now,
@@ -847,6 +888,7 @@ impl Engine {
         // itself is published at the end of the poll, where it reflects that
         // command.
         self.ring_offices(now, &mut out);
+        self.update_weather(now, true, &mut out);
 
         // Step the movers on the fixed slice before this poll's stage is
         // computed, so `context_hash` and `characters_within` see where everyone
@@ -882,7 +924,8 @@ impl Engine {
             // silently (05_the_llm_seam.md §3). Not immediate: the inter-turn
             // delay and the floor still govern when, only selection changes.
             for actor_id in nudges {
-                self.scheduler.prioritize(&self.world, &actor_id, false, now);
+                self.scheduler
+                    .prioritize(&self.world, &actor_id, false, now);
             }
             let departed = self.round.drain_departed();
             if !departed.is_empty() {
@@ -1230,6 +1273,17 @@ impl Engine {
                 )));
             }
 
+            EngineCommand::SetWeatherOverride { kind, intensity } => {
+                let game_days = self.clock.game_days(now);
+                self.weather.set_override(kind, intensity, game_days);
+                self.update_weather(now, false, out);
+            }
+
+            EngineCommand::ClearWeatherOverride => {
+                self.weather.clear_override();
+                self.update_weather(now, false, out);
+            }
+
             // Fire-and-forget, and idempotent by contract (D26): duplicates and
             // ids whose failsafe already expired are legitimately unknown.
             EngineCommand::SpeechPresented { event_id } => self.floor.release(now, &event_id),
@@ -1459,7 +1513,11 @@ impl Engine {
         spatial_seq: i64,
         out: &mut Vec<EngineMessage>,
     ) {
-        let result = self.apply_player_action("say", &json!({"text": text}), Some((spatial_seq, position_m)));
+        let result = self.apply_player_action(
+            "say",
+            &json!({"text": text}),
+            Some((spatial_seq, position_m)),
+        );
         if result.is_ok() {
             let player_id = self.config.player_id.clone();
             let utterance_position = self.world.characters[&player_id].position_m();
@@ -1618,6 +1676,45 @@ impl Engine {
         }
     }
 
+    /// Sample one weather answer before deterministic behaviour runs. The
+    /// scalar is hot; only semantic transitions are logged, and neither path
+    /// touches `world_revision` or actor inboxes.
+    fn update_weather(
+        &mut self,
+        now: f64,
+        include_crossed_lightning: bool,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        let game_days = self.clock.game_days(now);
+        if include_crossed_lightning {
+            let strikes = self
+                .weather
+                .lightning_crossed(self.last_weather_days, game_days);
+            for strike in &strikes {
+                self.round.note_lightning(&self.world, strike, now);
+            }
+            out.extend(strikes.into_iter().map(EngineMessage::Lightning));
+        }
+        let sample = self.weather.sample(game_days);
+        if sample.semantic_revision != self.last_weather_sample.semantic_revision {
+            let time = self.clock.at(now);
+            let (hour, minute) = time.hour_minute();
+            out.push(EngineMessage::Diagnostic(format!(
+                "[weather] day {} {hour:02}:{minute:02} {} -> {}, wind {:.1} m/s {}, visibility {:.0} m",
+                time.day,
+                self.last_weather_sample.kind,
+                sample.kind,
+                sample.wind_speed_mps(),
+                sample.wind_from_label(),
+                sample.visibility_m,
+            )));
+        }
+        self.world.current_weather = Some(sample);
+        self.last_weather_sample = sample;
+        self.last_weather_days = game_days;
+        out.push(EngineMessage::Weather(sample));
+    }
+
     /// Advance every mover by whole [`MOVEMENT_TICK_SECONDS`] slices up to `now`,
     /// then publish the ones that moved on the hot channel. A no-op with no nav.
     ///
@@ -1640,7 +1737,8 @@ impl Engine {
 
         let mut moved_ids: BTreeSet<ActorId> = BTreeSet::new();
         let mut slices = 0usize;
-        while self.movement_now + MOVEMENT_TICK_SECONDS <= now && slices < MAX_MOVEMENT_CATCHUP_SLICES
+        while self.movement_now + MOVEMENT_TICK_SECONDS <= now
+            && slices < MAX_MOVEMENT_CATCHUP_SLICES
         {
             for id in self.world.step_movement(MOVEMENT_TICK_SECONDS, &nav, stage) {
                 moved_ids.insert(id);
@@ -1668,7 +1766,8 @@ impl Engine {
                         .state
                         .movement
                         .as_ref()
-                        .map_or(0.0, |movement| movement.gait_phase) as f32,
+                        .map_or(0.0, |movement| movement.gait_phase)
+                        as f32,
                     actor_id,
                 }
             })

@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::{
-    Office, Offer, WorldClock,
+    Offer, Office, WorldClock,
     character::{CharacterSheet, Control},
     event::EventType,
     lore::{LoreProfile, PlanningWard},
@@ -35,7 +35,12 @@ fn player() -> ActorId {
 }
 
 /// A character at `position` with an optional occupation and significance.
-fn person(id: &str, position: Vec3, occupation: Option<&str>, significance: Significance) -> Character {
+fn person(
+    id: &str,
+    position: Vec3,
+    occupation: Option<&str>,
+    significance: Significance,
+) -> Character {
     let lore = occupation.map(|occupation_id| LoreProfile {
         significance,
         planning_ward: PlanningWard::Fabric,
@@ -103,7 +108,14 @@ fn set_wallet(world: &mut World, actor: &ActorId, amount: u32) {
 }
 
 /// One engine-style beat: walk the movers a slice, then run the round.
-fn beat(round: &mut Round, world: &mut World, nav: &NavData, clock: &WorldClock, now: f64, dt: f64) {
+fn beat(
+    round: &mut Round,
+    world: &mut World,
+    nav: &NavData,
+    clock: &WorldClock,
+    now: f64,
+    dt: f64,
+) {
     world.step_movement(dt, nav, None);
     tick(round, world, nav, clock, now, &player(), &BTreeSet::new());
 }
@@ -151,7 +163,12 @@ fn the_round_content_parses_and_every_destination_resolves() {
     // anyone whose circumstances say they have no such bed (the bake script's
     // skip set). Deriving the expected ids from the lore instead of pinning a
     // count makes a stale bake fail here with the ids that drifted.
-    let bedless_circumstances = ["pauper", "unhoused", "insecure_lodging", "enclosed_religious"];
+    let bedless_circumstances = [
+        "pauper",
+        "unhoused",
+        "insecure_lodging",
+        "enclosed_religious",
+    ];
     let characters_dir =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../lore/characters");
     let mut expected_housed = BTreeSet::new();
@@ -224,18 +241,27 @@ fn the_round_content_parses_and_every_destination_resolves() {
         );
     }
     assert!(
-        homes.bedless["aq7ld"].place_description.contains("anchorhold cell"),
+        homes.bedless["aq7ld"]
+            .place_description
+            .contains("anchorhold cell"),
         "the anchoress is bedless but not homeless: her framing is the cell"
     );
-    assert_eq!(rounds.workplaces.len(), 65, "every occupation has a workplace list");
-    assert_eq!(rounds.occupations.len(), 65, "every occupation has an archetype");
+    assert_eq!(
+        rounds.workplaces.len(),
+        65,
+        "every occupation has a workplace list"
+    );
+    assert_eq!(
+        rounds.occupations.len(),
+        65,
+        "every occupation has an archetype"
+    );
 
     // The original twenty dramatis personae plus the five M5 supply-chain
     // residents carry explicit routes, joined to the right 5-char sheet ids.
     let expected_majors: BTreeSet<&str> = [
-        "ak3vd", "a9prs", "b4hst", "cj9sp", "dv8ll", "fg2sh", "cf2rr", "fl5cp", "fc9rn",
-        "amt4p", "hj6br", "em3rl", "he3nd", "aq7ld", "ax5nf", "gw4ld", "az2sm", "gr8tp",
-        "et7rd", "cg6ud",
+        "ak3vd", "a9prs", "b4hst", "cj9sp", "dv8ll", "fg2sh", "cf2rr", "fl5cp", "fc9rn", "amt4p",
+        "hj6br", "em3rl", "he3nd", "aq7ld", "ax5nf", "gw4ld", "az2sm", "gr8tp", "et7rd", "cg6ud",
         "danqn", "davqn", "e1skl", "e7mil", "p008s",
     ]
     .into_iter()
@@ -295,11 +321,31 @@ fn active_leg_advances_with_the_office_and_carries_over_at_night() {
         leg(Office::Lamplight, "home", None),
     ];
     // The office selects the last-begun leg.
-    assert_eq!(active_leg(&legs, Office::Kindling, Weekday::Bellday).unwrap().label, "oven");
-    assert_eq!(active_leg(&legs, Office::HighWick, Weekday::Bellday).unwrap().label, "shop");
-    assert_eq!(active_leg(&legs, Office::Snuffing, Weekday::Bellday).unwrap().label, "home");
+    assert_eq!(
+        active_leg(&legs, Office::Kindling, Weekday::Bellday)
+            .unwrap()
+            .label,
+        "oven"
+    );
+    assert_eq!(
+        active_leg(&legs, Office::HighWick, Weekday::Bellday)
+            .unwrap()
+            .label,
+        "shop"
+    );
+    assert_eq!(
+        active_leg(&legs, Office::Snuffing, Weekday::Bellday)
+            .unwrap()
+            .label,
+        "home"
+    );
     // Deep night before the first leg carries over the day's tail (home).
-    assert_eq!(active_leg(&legs, Office::Watch, Weekday::Bellday).unwrap().label, "home");
+    assert_eq!(
+        active_leg(&legs, Office::Watch, Weekday::Bellday)
+            .unwrap()
+            .label,
+        "home"
+    );
 }
 
 #[test]
@@ -310,12 +356,16 @@ fn a_market_day_leg_wins_only_on_its_day() {
         leg(Office::Dayspring, "square", Some(vec![Weekday::Highmarket])),
     ];
     assert_eq!(
-        active_leg(&legs, Office::Dayspring, Weekday::Highmarket).unwrap().label,
+        active_leg(&legs, Office::Dayspring, Weekday::Highmarket)
+            .unwrap()
+            .label,
         "square",
         "on the market day the crowd moves to the square"
     );
     assert_eq!(
-        active_leg(&legs, Office::Dayspring, Weekday::Fourth).unwrap().label,
+        active_leg(&legs, Office::Dayspring, Weekday::Fourth)
+            .unwrap()
+            .label,
         "workshop",
         "on an ordinary day the market leg is filtered out"
     );
@@ -337,16 +387,30 @@ fn market_day_legs_split_the_traders_across_the_four_squares() {
     // (`market_trader_green`) — Majors, so neither is drafted as a well keeper.
     // Spawned beside their own trade grounds, so the workplace binding (nearest
     // candidate to base) picks the Reach and the Moorings, not a market square.
-    world.add_character(person("draper_a", Vec3::new(120.0, WALK_Y, 260.0), Some("draper"), Significance::Major));
-    world.add_character(person("fish_a", Vec3::new(-366.0, WALK_Y, -406.0), Some("fish_trader"), Significance::Major));
+    world.add_character(person(
+        "draper_a",
+        Vec3::new(120.0, WALK_Y, 260.0),
+        Some("draper"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "fish_a",
+        Vec3::new(-366.0, WALK_Y, -406.0),
+        Some("fish_trader"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
 
     let leg_label = |id: &str, weekday: Weekday| {
-        active_leg(&round.people[&ActorId::from_raw(id)].legs, Office::HighWick, weekday)
-            .expect("a trader has a daytime leg")
-            .label
-            .clone()
+        active_leg(
+            &round.people[&ActorId::from_raw(id)].legs,
+            Office::HighWick,
+            weekday,
+        )
+        .expect("a trader has a daytime leg")
+        .label
+        .clone()
     };
     // The Wickmarket/Tallage pair.
     assert_eq!(leg_label("draper_a", Weekday::Highmarket), "The Wickmarket");
@@ -357,7 +421,12 @@ fn market_day_legs_split_the_traders_across_the_four_squares() {
     // On an ordinary day both keep their own workplace, not a market square.
     for id in ["draper_a", "fish_a"] {
         let ordinary = leg_label(id, Weekday::Fourth);
-        for square in ["The Wickmarket", "The Tallage", "Coswald's Yard", "Maren's Green"] {
+        for square in [
+            "The Wickmarket",
+            "The Tallage",
+            "Coswald's Yard",
+            "Maren's Green",
+        ] {
             assert_ne!(ordinary, square, "{id} works their own post on a Fourth");
         }
     }
@@ -370,7 +439,13 @@ fn market_day_legs_split_the_traders_across_the_four_squares() {
 #[test]
 fn each_market_day_raises_its_squares_above_the_ordinary_baseline() {
     let nav = nav();
-    let square = |name: &str| nav.node_point(nav.place(name).expect("a market square is a nav place").node);
+    let square = |name: &str| {
+        nav.node_point(
+            nav.place(name)
+                .expect("a market square is a nav place")
+                .node,
+        )
+    };
     let wickmarket = square("The Wickmarket");
     let tallage = square("The Tallage");
     let coswalds = square("Coswald's Yard");
@@ -379,10 +454,30 @@ fn each_market_day_raises_its_squares_above_the_ordinary_baseline() {
     let mut world = base_world();
     // Occupations chosen so nobody's *workplace* is the square they stand in —
     // the ordinary-day baseline for all four squares is then exactly zero.
-    world.add_character(person("draper_hm", wickmarket, Some("draper"), Significance::Major));
-    world.add_character(person("baker_lm", tallage, Some("baker"), Significance::Major));
-    world.add_character(person("fish_hm", coswalds, Some("fish_trader"), Significance::Major));
-    world.add_character(person("butcher_lm", marens, Some("butcher"), Significance::Major));
+    world.add_character(person(
+        "draper_hm",
+        wickmarket,
+        Some("draper"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "baker_lm",
+        tallage,
+        Some("baker"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "fish_hm",
+        coswalds,
+        Some("fish_trader"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "butcher_lm",
+        marens,
+        Some("butcher"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
 
@@ -400,9 +495,17 @@ fn each_market_day_raises_its_squares_above_the_ordinary_baseline() {
     // Day 3, a Fourth: nobody's leg points at a square — the baseline.
     assert_eq!(occupancy(&round, 3), [0, 0, 0, 0], "ordinary-day baseline");
     // Day 2, Highmarket: BOTH of its squares rise above the baseline.
-    assert_eq!(occupancy(&round, 2), [1, 0, 1, 0], "Highmarket fills the Wickmarket AND Coswald's Yard");
+    assert_eq!(
+        occupancy(&round, 2),
+        [1, 0, 1, 0],
+        "Highmarket fills the Wickmarket AND Coswald's Yard"
+    );
     // Day 5, Lowmarket: BOTH of its squares rise above the baseline.
-    assert_eq!(occupancy(&round, 5), [0, 1, 0, 1], "Lowmarket fills the Tallage AND Maren's Green");
+    assert_eq!(
+        occupancy(&round, 5),
+        [0, 1, 0, 1],
+        "Lowmarket fills the Tallage AND Maren's Green"
+    );
 }
 
 /// Bellday closes the trades and fills the nave (`04_the_round.md` §5): the
@@ -414,51 +517,100 @@ fn each_market_day_raises_its_squares_above_the_ordinary_baseline() {
 #[test]
 fn bellday_closes_the_trades_and_fills_the_nave() {
     let nav = nav();
-    let lanthorn = nav.node_point(nav.place("The Lanthorn").expect("the nave is a nav place").node);
+    let lanthorn = nav.node_point(
+        nav.place("The Lanthorn")
+            .expect("the nave is a nav place")
+            .node,
+    );
     let mut world = base_world();
     // `a2gpk` is a real homes.json id, so the housed Kindling lie-in resolves.
-    world.add_character(person("a2gpk", lanthorn, Some("baker"), Significance::Major));
-    world.add_character(person("mason_b", lanthorn, Some("mason"), Significance::Major));
-    world.add_character(person("boat_b", Vec3::new(0.0, WALK_Y, 95.0), Some("boatworker"), Significance::Major));
-    world.add_character(person("tap_b", Vec3::new(0.0, WALK_Y, 95.0), Some("tavern_worker"), Significance::Major));
+    world.add_character(person(
+        "a2gpk",
+        lanthorn,
+        Some("baker"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "mason_b",
+        lanthorn,
+        Some("mason"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "boat_b",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("boatworker"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "tap_b",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("tavern_worker"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
 
     let leg = |id: &str, office: Office| {
-        active_leg(&round.people[&ActorId::from_raw(id)].legs, office, Weekday::Bellday)
-            .expect("a Bellday leg is active")
-            .clone()
+        active_leg(
+            &round.people[&ActorId::from_raw(id)].legs,
+            office,
+            Weekday::Bellday,
+        )
+        .expect("a Bellday leg is active")
+        .clone()
     };
     // The housed trader does not open the workshop before light: home, idle.
     let lie_in = leg("a2gpk", Office::Kindling);
-    assert!(lie_in.is_home, "on Bellday the workshop stays shut at the Kindling");
+    assert!(
+        lie_in.is_home,
+        "on Bellday the workshop stays shut at the Kindling"
+    );
     assert_eq!(lie_in.doing, Arrival::Idle);
     // From Dayspring through the Waning, trader and day worker fill the nave.
     for office in [Office::Dayspring, Office::HighWick, Office::Waning] {
         for id in ["a2gpk", "mason_b"] {
             let leg = leg(id, office);
-            assert_eq!(leg.label, "The Lanthorn", "{id} prays in the nave at {office:?}");
+            assert_eq!(
+                leg.label, "The Lanthorn",
+                "{id} prays in the nave at {office:?}"
+            );
             assert_eq!(leg.doing, Arrival::Pray);
         }
     }
     // The wharf works before dawn as ever, then joins the nave at Dayspring.
     assert_ne!(leg("boat_b", Office::Kindling).label, "The Lanthorn");
-    assert!(!leg("boat_b", Office::Kindling).is_home, "the moorings open before light even on Bellday");
+    assert!(
+        !leg("boat_b", Office::Kindling).is_home,
+        "the moorings open before light even on Bellday"
+    );
     assert_eq!(leg("boat_b", Office::Dayspring).label, "The Lanthorn");
     // A night trade keeps its counter: no Bellday leg drags the tavern to the nave.
     assert_ne!(leg("tap_b", Office::Dayspring).label, "The Lanthorn");
     // And on an ordinary day the same trader is at their own post, not the nave.
     assert_ne!(
-        active_leg(&round.people[&ActorId::from_raw("a2gpk")].legs, Office::Dayspring, Weekday::Second)
-            .expect("an ordinary Dayspring post")
-            .label,
+        active_leg(
+            &round.people[&ActorId::from_raw("a2gpk")].legs,
+            Office::Dayspring,
+            Weekday::Second
+        )
+        .expect("an ordinary Dayspring post")
+        .label,
         "The Lanthorn"
     );
 
     // Census: the two standing in the nave count there on Bellday (day 0)...
     let bellday = round.census(&world, &clock_on(Office::HighWick, 0), 0.0);
-    assert_eq!(bellday.by_place.get("The Lanthorn").copied(), Some(2), "the nave fills on Bellday");
-    assert_eq!(bellday.by_place.get("The Wickmarket").copied(), None, "the generic workshop stays closed");
+    assert_eq!(
+        bellday.by_place.get("The Lanthorn").copied(),
+        Some(2),
+        "the nave fills on Bellday"
+    );
+    assert_eq!(
+        bellday.by_place.get("The Wickmarket").copied(),
+        None,
+        "the generic workshop stays closed"
+    );
     // ...and on an ordinary day the same spot censuses as nobody's post.
     let ordinary = round.census(&world, &clock_on(Office::HighWick, 1), 0.0);
     assert_eq!(ordinary.by_place.get("The Lanthorn").copied(), None);
@@ -470,18 +622,32 @@ fn bellday_closes_the_trades_and_fills_the_nave() {
 #[test]
 fn seed_writes_the_daily_round_onto_the_character_state() {
     let nav = nav();
-    let lanthorn = nav.node_point(nav.place("The Lanthorn").expect("the nave is a nav place").node);
+    let lanthorn = nav.node_point(
+        nav.place("The Lanthorn")
+            .expect("the nave is a nav place")
+            .node,
+    );
     let mut world = base_world();
-    world.add_character(person("mason_b", lanthorn, Some("mason"), Significance::Major));
+    world.add_character(person(
+        "mason_b",
+        lanthorn,
+        Some("mason"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
 
-    let lines = &world.characters[&ActorId::from_raw("mason_b")].state.daily_round;
-    assert!(!lines.is_empty(), "an enrolled townsperson knows their round");
+    let lines = &world.characters[&ActorId::from_raw("mason_b")]
+        .state
+        .daily_round;
     assert!(
-        lines
-            .iter()
-            .any(|line| line.contains("prayers at The Lanthorn") && line.contains("on Bellday only")),
+        !lines.is_empty(),
+        "an enrolled townsperson knows their round"
+    );
+    assert!(
+        lines.iter().any(
+            |line| line.contains("prayers at The Lanthorn") && line.contains("on Bellday only")
+        ),
         "the Bellday service is a marked leg: {lines:?}"
     );
     assert!(
@@ -504,7 +670,12 @@ fn seed_hamel() -> (Round, World, NavData, ActorId) {
     let id = ActorId::from_raw("b4hst");
     let mut world = base_world();
     // The forecourt — away from Coswald's Yard and away from his home.
-    world.add_character(person("b4hst", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
     (round, world, nav, id)
@@ -528,15 +699,22 @@ fn a_housed_major_is_enrolled_with_a_home_and_an_authored_route() {
 #[test]
 fn the_round_rung_walks_a_worker_to_their_post() {
     let (round, world, nav, id) = seed_hamel();
-    let coswalds = round
-        .people[&id]
+    let coswalds = round.people[&id]
         .legs
         .iter()
         .find(|leg| leg.from == Office::Kindling)
         .expect("Kindling leg")
         .at;
     // At the working morning, away from his post, the round rung sends him there.
-    match decide_only(&round, &world, &nav, &id, 0, Office::Kindling, Weekday::Bellday) {
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &id,
+        0,
+        Office::Kindling,
+        Weekday::Bellday,
+    ) {
         Decision::Travel(target) => assert!(
             target.distance(coswalds) < 1.0,
             "he sets off for Coswald's Yard, not {target:?}"
@@ -554,20 +732,41 @@ fn a_conversation_with_the_player_pins_the_round() {
     let clock = clock_at(Office::Kindling);
     let id = ActorId::from_raw("b4hst");
     let mut world = base_world();
-    world.add_character(person("b4hst", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
 
     // In conversation: his cadence comes due and he stays put.
     let due = round.people[&id].next_decision + 1.0;
-    tick(&mut round, &mut world, &nav, &clock, due, &player(), &warm(&id));
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        due,
+        &player(),
+        &warm(&id),
+    );
     assert!(
         !world.characters[&id].is_walking(),
         "nobody sets off for their post mid-conversation"
     );
 
     // The exchange goes cold: the same cadence now sends him to his post.
-    tick(&mut round, &mut world, &nav, &clock, due, &player(), &BTreeSet::new());
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        due,
+        &player(),
+        &BTreeSet::new(),
+    );
     assert!(
         world.characters[&id].is_walking(),
         "the round resumes once the conversation lapses"
@@ -576,7 +775,10 @@ fn a_conversation_with_the_player_pins_the_round() {
 
     // Addressed mid-stride: he stops on the spot and is the ladder's again.
     interrupt_for_conversation(&mut round, &mut world, &id);
-    assert!(!world.characters[&id].is_walking(), "a walker stops to talk");
+    assert!(
+        !world.characters[&id].is_walking(),
+        "a walker stops to talk"
+    );
     assert_eq!(round.people[&id].phase, Phase::Idle);
 }
 
@@ -592,22 +794,49 @@ fn a_warm_npc_exchange_holds_both_parties_until_it_lapses() {
     let mut world = base_world();
     // Two masons at the forecourt, away from Coswald's Yard — Majors, so
     // neither is drafted as a well keeper. Both owe the round rung a walk.
-    world.add_character(person("mason_a", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
-    world.add_character(person("mason_b", Vec3::new(1.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    world.add_character(person(
+        "mason_a",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "mason_b",
+        Vec3::new(1.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
 
     let hold: BTreeSet<ActorId> = BTreeSet::from([a.clone(), b.clone()]);
-    let due = round.people[&a].next_decision.max(round.people[&b].next_decision) + 1.0;
+    let due = round.people[&a]
+        .next_decision
+        .max(round.people[&b].next_decision)
+        + 1.0;
 
     // Both cadences come due mid-exchange: neither sets off.
     tick(&mut round, &mut world, &nav, &clock, due, &player(), &hold);
-    assert!(!world.characters[&a].is_walking(), "the speaker's errand waits too");
+    assert!(
+        !world.characters[&a].is_walking(),
+        "the speaker's errand waits too"
+    );
     assert!(!world.characters[&b].is_walking(), "and the listener's");
 
     // The exchange goes cold: the same cadences send both to their post.
-    tick(&mut round, &mut world, &nav, &clock, due, &player(), &BTreeSet::new());
-    assert!(world.characters[&a].is_walking(), "the round resumes for one");
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        due,
+        &player(),
+        &BTreeSet::new(),
+    );
+    assert!(
+        world.characters[&a].is_walking(),
+        "the round resumes for one"
+    );
     assert!(world.characters[&b].is_walking(), "and for the other");
 }
 
@@ -621,7 +850,12 @@ fn curfew_breaks_a_warm_hold_after_one_excuse_turn() {
     let clock = clock_at(Office::Snuffing);
     let id = ActorId::from_raw("b4hst");
     let mut world = base_world();
-    world.add_character(person("b4hst", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
     let hold = warm(&id);
@@ -630,7 +864,10 @@ fn curfew_breaks_a_warm_hold_after_one_excuse_turn() {
     // the pressure is injected on the self-correction channel instead.
     let due = round.people[&id].next_decision + 1.0;
     tick(&mut round, &mut world, &nav, &clock, due, &player(), &hold);
-    assert!(!world.characters[&id].is_walking(), "the excuse turn comes before the walk");
+    assert!(
+        !world.characters[&id].is_walking(),
+        "the excuse turn comes before the walk"
+    );
     assert!(
         world.characters[&id]
             .inbox()
@@ -641,18 +878,43 @@ fn curfew_breaks_a_warm_hold_after_one_excuse_turn() {
 
     // The next cadence releases the hold regardless of what was said.
     let again = round.people[&id].next_decision + 1.0;
-    tick(&mut round, &mut world, &nav, &clock, again, &player(), &hold);
-    assert!(world.characters[&id].is_walking(), "urgency beats chat after the one excuse turn");
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        again,
+        &player(),
+        &hold,
+    );
+    assert!(
+        world.characters[&id].is_walking(),
+        "urgency beats chat after the one excuse turn"
+    );
     assert_eq!(round.people[&id].phase, Phase::Travelling);
 
     // A parting line must not stop the released walker on the doorstep of night.
     interrupt_for_conversation(&mut round, &mut world, &id);
-    assert!(world.characters[&id].is_walking(), "the excused walker keeps going");
+    assert!(
+        world.characters[&id].is_walking(),
+        "the excused walker keeps going"
+    );
     assert_eq!(round.people[&id].phase, Phase::Travelling);
 
     // Once the exchange lapses, the excuse is handed back for the next one.
-    tick(&mut round, &mut world, &nav, &clock, again, &player(), &BTreeSet::new());
-    assert!(!round.people[&id].excused, "a lapsed hold resets the excuse");
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        again,
+        &player(),
+        &BTreeSet::new(),
+    );
+    assert!(
+        !round.people[&id].excused,
+        "a lapsed hold resets the excuse"
+    );
 }
 
 /// Only curfew (5) and parched (2) press hard enough to break a conversation
@@ -661,19 +923,46 @@ fn curfew_breaks_a_warm_hold_after_one_excuse_turn() {
 fn only_the_pressing_rungs_carry_a_pressure_line() {
     let (round, mut world, nav, servant) = seed_parched_servant();
     // Parched at the Kindling: pressing.
-    let (decision, pressure) =
-        decide(&round, &world, &nav, &servant, 0, Office::Kindling, Weekday::Bellday);
+    let (decision, pressure) = decide(
+        &round,
+        &world,
+        &nav,
+        &servant,
+        0,
+        Office::Kindling,
+        Weekday::Bellday,
+    );
     assert!(matches!(decision, Decision::ApproachWell));
     assert_eq!(pressure, Some(PARCHED_PRESSURE));
     // Housed at the Snuffing: pressing.
-    let (decision, pressure) =
-        decide(&round, &world, &nav, &servant, 0, Office::Snuffing, Weekday::Bellday);
+    let (decision, pressure) = decide(
+        &round,
+        &world,
+        &nav,
+        &servant,
+        0,
+        Office::Snuffing,
+        Weekday::Bellday,
+    );
     assert!(matches!(decision, Decision::Travel(_)));
     assert_eq!(pressure, Some(CURFEW_PRESSURE));
     // Merely thirsty: the well can wait out the conversation.
-    world.characters.get_mut(&servant).unwrap().state.needs.thirst = THIRST_PARCHED + 1.0;
-    let (decision, pressure) =
-        decide(&round, &world, &nav, &servant, 0, Office::Kindling, Weekday::Bellday);
+    world
+        .characters
+        .get_mut(&servant)
+        .unwrap()
+        .state
+        .needs
+        .thirst = THIRST_PARCHED + 1.0;
+    let (decision, pressure) = decide(
+        &round,
+        &world,
+        &nav,
+        &servant,
+        0,
+        Office::Kindling,
+        Weekday::Bellday,
+    );
     assert!(matches!(decision, Decision::ApproachWell));
     assert_eq!(pressure, None, "rung 6 defers to a conversation");
 }
@@ -682,7 +971,15 @@ fn only_the_pressing_rungs_carry_a_pressure_line() {
 fn curfew_sends_the_housed_home_at_the_snuffing() {
     let (round, world, nav, id) = seed_hamel();
     let home = round.people[&id].home.expect("housed");
-    match decide_only(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &id,
+        0,
+        Office::Snuffing,
+        Weekday::Bellday,
+    ) {
         Decision::Travel(target) => assert!(
             target.distance(home) < 1.0,
             "at the Snuffing he goes home, not to {target:?}"
@@ -697,16 +994,34 @@ fn a_night_trade_is_not_sent_home_by_curfew() {
     let nav = nav();
     let id = ActorId::from_raw("tapster_x");
     let mut world = base_world();
-    world.add_character(person("tapster_x", Vec3::new(0.0, WALK_Y, 95.0), Some("tavern_worker"), Significance::Major));
+    world.add_character(person(
+        "tapster_x",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("tavern_worker"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
-    assert!(round.people[&id].curfew_exempt, "the tavern archetype is curfew-exempt");
+    assert!(
+        round.people[&id].curfew_exempt,
+        "the tavern archetype is curfew-exempt"
+    );
     // At the Snuffing the tavern's Snuffing leg is active — they work, not sleep.
-    match decide_only(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &id,
+        0,
+        Office::Snuffing,
+        Weekday::Bellday,
+    ) {
         Decision::Travel(_) | Decision::Stay | Decision::Wander(_) => {}
         Decision::ApproachWell => panic!("a tavern worker draws no water here"),
         Decision::ApproachStall(_) => panic!("no food stall is in reach of this tavern worker"),
         Decision::TravelIntent(_) => panic!("no go_to intent was issued"),
+        Decision::SeekShelter(_) => panic!("clear weather creates no shelter intent"),
+        Decision::WeatherPause => panic!("no lightning was observed"),
         Decision::EatHeld(_) => panic!("a well-fed tavern worker holds no food to eat"),
         Decision::WalkToLamp(_) | Decision::LightLamp(_) => {
             panic!("a tavern worker carries no taper")
@@ -726,16 +1041,41 @@ fn the_anchoress_is_never_marched_home_at_curfew() {
     let nav = nav();
     let id = ActorId::from_raw("aq7ld");
     let mut world = base_world();
-    world.add_character(person("aq7ld", Vec3::new(0.0, WALK_Y, 95.0), Some("anchoress"), Significance::Major));
+    world.add_character(person(
+        "aq7ld",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("anchoress"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
     let person = round.people.get(&id).expect("the anchoress is enrolled");
-    assert!(person.curfew_exempt, "her route override keeps curfew_exempt");
-    assert!(person.home.is_none(), "the anchorhold is a cell, not a homes.json house");
-    assert!(person.legs.is_empty(), "her Round has zero legs (`04_the_round.md` §1)");
-    assert!(person.source.is_none(), "she is no water drawer; thirst never moves her");
+    assert!(
+        person.curfew_exempt,
+        "her route override keeps curfew_exempt"
+    );
+    assert!(
+        person.home.is_none(),
+        "the anchorhold is a cell, not a homes.json house"
+    );
+    assert!(
+        person.legs.is_empty(),
+        "her Round has zero legs (`04_the_round.md` §1)"
+    );
+    assert!(
+        person.source.is_none(),
+        "she is no water drawer; thirst never moves her"
+    );
     // At the Snuffing the ladder leaves her exactly where she stands.
-    match decide_only(&round, &world, &nav, &id, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &id,
+        0,
+        Office::Snuffing,
+        Weekday::Bellday,
+    ) {
         Decision::Stay => {}
         other => panic!("the anchoress stands at curfew, got {other:?}"),
     }
@@ -754,7 +1094,12 @@ fn the_anchoress_never_moves_through_a_full_day() {
     // Her authored spawn (lore/characters/anchoress/aq7ld_aldith.json): the squint.
     let spawn = Vec3::new(194.5, WALK_Y, -92.0);
     let mut world = base_world();
-    world.add_character(person("aq7ld", spawn, Some("anchoress"), Significance::Major));
+    world.add_character(person(
+        "aq7ld",
+        spawn,
+        Some("anchoress"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
 
@@ -772,7 +1117,11 @@ fn the_anchoress_never_moves_through_a_full_day() {
             clock.at(now).office
         );
     }
-    assert_eq!(round.people[&id].phase, Phase::Idle, "she never even sets off");
+    assert_eq!(
+        round.people[&id].phase,
+        Phase::Idle,
+        "she never even sets off"
+    );
 }
 
 /// Curfew preempts a journey already under way: Hamel sets off for the masons'
@@ -789,7 +1138,12 @@ fn curfew_preempts_a_journey_already_under_way() {
     let clock = clock_at(Office::Waning);
     let id = ActorId::from_raw("b4hst");
     let mut world = base_world();
-    world.add_character(person("b4hst", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
     let home = round.people[&id].home.expect("housed");
@@ -802,15 +1156,30 @@ fn curfew_preempts_a_journey_already_under_way() {
 
     // His cadence comes due while it is still the Waning: he sets off for the lodge.
     let mut now = round.people[&id].next_decision + 0.1;
-    tick(&mut round, &mut world, &nav, &clock, now, &player(), &BTreeSet::new());
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        now,
+        &player(),
+        &BTreeSet::new(),
+    );
     assert_eq!(round.people[&id].phase, Phase::Travelling);
-    assert_eq!(round.people[&id].travel_target, Some(lodge), "he is bound for the lodge");
+    assert_eq!(
+        round.people[&id].travel_target,
+        Some(lodge),
+        "he is bound for the lodge"
+    );
 
     // A few strides along: genuinely mid-journey, nowhere near either anchor.
     for _ in 0..10 {
         world.step_movement(0.2, &nav, None);
     }
-    assert!(world.characters[&id].is_walking(), "still on the way to the lodge");
+    assert!(
+        world.characters[&id].is_walking(),
+        "still on the way to the lodge"
+    );
     assert!(world.characters[&id].position_m().distance(lodge) > ROUND_ARRIVE_RADIUS_M);
 
     // The Snuffing has rung. Within one decision cadence the traveller must
@@ -829,9 +1198,15 @@ fn curfew_preempts_a_journey_already_under_way() {
             "he must not finish the obsolete lodge journey before turning home"
         );
     }
-    assert!(diverted, "the traveller turned home at curfew instead of finishing the lodge leg");
+    assert!(
+        diverted,
+        "the traveller turned home at curfew instead of finishing the lodge leg"
+    );
     assert_eq!(round.people[&id].phase, Phase::Travelling);
-    assert!(world.characters[&id].is_walking(), "he walks home rather than standing in the street");
+    assert!(
+        world.characters[&id].is_walking(),
+        "he walks home rather than standing in the street"
+    );
 }
 
 /// Seed a housed, well-bound servant (a real `homes.json` id) plus a keeper at
@@ -844,7 +1219,12 @@ fn seed_parched_servant() -> (Round, World, NavData, ActorId) {
     world.add_character(person("keeper", curb, Some("mason"), Significance::Ambient));
     // A housed servant (a real homes.json id) who is also a water drawer.
     let servant = ActorId::from_raw("a2gpk");
-    world.add_character(person("a2gpk", Vec3::new(89.0, WALK_Y, 36.0), Some("domestic_servant"), Significance::Major));
+    world.add_character(person(
+        "a2gpk",
+        Vec3::new(89.0, WALK_Y, 36.0),
+        Some("domestic_servant"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
 
@@ -852,7 +1232,13 @@ fn seed_parched_servant() -> (Round, World, NavData, ActorId) {
     assert!(person.home.is_some(), "a2gpk is housed");
     assert!(person.source.is_some(), "and bound to a staffed well");
 
-    world.characters.get_mut(&servant).unwrap().state.needs.thirst = 0.0;
+    world
+        .characters
+        .get_mut(&servant)
+        .unwrap()
+        .state
+        .needs
+        .thirst = 0.0;
     (round, world, nav, servant)
 }
 
@@ -864,7 +1250,15 @@ fn a_parched_housed_drawer_is_still_sent_home_at_curfew() {
     let (round, world, nav, servant) = seed_parched_servant();
     let home = round.people[&servant].home.expect("housed");
     // Deep in curfew, home wins over the well; at the door, they stay in.
-    match decide_only(&round, &world, &nav, &servant, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &servant,
+        0,
+        Office::Snuffing,
+        Weekday::Bellday,
+    ) {
         Decision::Travel(target) => assert!(
             target.distance(home) < 1.0,
             "at the Snuffing a parched drawer heads home, not to {target:?}"
@@ -873,7 +1267,15 @@ fn a_parched_housed_drawer_is_still_sent_home_at_curfew() {
         other => panic!("expected Travel home, got {other:?}"),
     }
     // And deeper still, at the Watch, the same.
-    match decide_only(&round, &world, &nav, &servant, 0, Office::Watch, Weekday::Bellday) {
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &servant,
+        0,
+        Office::Watch,
+        Weekday::Bellday,
+    ) {
         Decision::Travel(_) => {}
         other => panic!("the Watch is still curfew; expected Travel home, got {other:?}"),
     }
@@ -884,7 +1286,15 @@ fn a_parched_housed_drawer_is_still_sent_home_at_curfew() {
 #[test]
 fn a_parched_drawer_heads_for_the_well_once_curfew_lifts() {
     let (round, world, nav, servant) = seed_parched_servant();
-    match decide_only(&round, &world, &nav, &servant, 0, Office::Kindling, Weekday::Bellday) {
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &servant,
+        0,
+        Office::Kindling,
+        Weekday::Bellday,
+    ) {
         Decision::ApproachWell => {}
         other => panic!("at the Kindling the parched drawer goes to the well, got {other:?}"),
     }
@@ -914,8 +1324,22 @@ fn a_parched_homeless_drawer_still_draws_at_night() {
     assert!(person.home.is_none(), "servant_x has no baked home");
     assert!(person.source.is_some(), "but is bound to a staffed well");
 
-    world.characters.get_mut(&servant).unwrap().state.needs.thirst = 0.0;
-    match decide_only(&round, &world, &nav, &servant, 0, Office::Snuffing, Weekday::Bellday) {
+    world
+        .characters
+        .get_mut(&servant)
+        .unwrap()
+        .state
+        .needs
+        .thirst = 0.0;
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &servant,
+        0,
+        Office::Snuffing,
+        Weekday::Bellday,
+    ) {
         Decision::ApproachWell => {}
         other => panic!("a homeless parched drawer still draws at night, got {other:?}"),
     }
@@ -931,20 +1355,31 @@ fn the_census_counts_workers_at_their_post() {
     // An ordinary working morning (day 1) — on Bellday the workshops are shut.
     let clock = clock_on(Office::Kindling, 1);
     // Where a mason's day begins — resolve the workplace the way seed does.
-    let coswalds = nav.place("Coswald's Yard").expect("Coswald's Yard is a nav place").node;
+    let coswalds = nav
+        .place("Coswald's Yard")
+        .expect("Coswald's Yard is a nav place")
+        .node;
     let post = nav.node_point(coswalds);
 
     let mut world = base_world();
     for n in 0..3 {
         // Majors, so they are enrolled rather than pinned as well-keepers.
-        world.add_character(person(&format!("mason{n}"), post, Some("mason"), Significance::Major));
+        world.add_character(person(
+            &format!("mason{n}"),
+            post,
+            Some("mason"),
+            Significance::Major,
+        ));
     }
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
 
     let census = round.census(&world, &clock, 0.0);
     assert_eq!(census.total, 3);
-    assert_eq!(census.at_post, 3, "all three stand at their post at the Kindling");
+    assert_eq!(
+        census.at_post, 3,
+        "all three stand at their post at the Kindling"
+    );
     assert_eq!(census.by_place.get("Coswald's Yard").copied(), Some(3));
     assert_eq!(census.walking, 0);
 }
@@ -959,25 +1394,48 @@ fn the_census_counts_workers_at_their_post() {
 fn a_parched_servant_walks_to_the_well_draws_and_goes_home() {
     let nav = nav();
     let clock = clock_at(Office::Dayspring);
-    let ford = nav.place("Ford Well").expect("Ford Well is a nav place").node;
+    let ford = nav
+        .place("Ford Well")
+        .expect("Ford Well is a nav place")
+        .node;
     let curb = nav.node_point(ford);
-    let hop = nav.adjacency()[ford].first().expect("the well node has a neighbour").to;
+    let hop = nav.adjacency()[ford]
+        .first()
+        .expect("the well node has a neighbour")
+        .to;
     let home = nav.node_point(hop);
 
     let mut world = base_world();
     world.add_character(person("keeper", curb, Some("mason"), Significance::Ambient));
-    world.add_character(person("servant", home, Some(HOUSEHOLD_OCCUPATIONS[0]), Significance::Ambient));
+    world.add_character(person(
+        "servant",
+        home,
+        Some(HOUSEHOLD_OCCUPATIONS[0]),
+        Significance::Ambient,
+    ));
 
     let mut round = Round::new();
     let diagnostics = round.seed(&mut world, &nav, 0.0, &clock);
     assert!(
-        round.sources().iter().any(|source| source.name == "Ford Well" && source.keeper.is_some()),
+        round
+            .sources()
+            .iter()
+            .any(|source| source.name == "Ford Well" && source.keeper.is_some()),
         "Ford Well was staffed: {diagnostics:?}"
     );
-    assert_eq!(world.characters[&ActorId::from_raw("keeper")].position_m(), curb);
+    assert_eq!(
+        world.characters[&ActorId::from_raw("keeper")].position_m(),
+        curb
+    );
 
     let servant = ActorId::from_raw("servant");
-    world.characters.get_mut(&servant).unwrap().state.needs.thirst = 0.0;
+    world
+        .characters
+        .get_mut(&servant)
+        .unwrap()
+        .state
+        .needs
+        .thirst = 0.0;
 
     let dt = 0.2;
     let mut now = 0.0;
@@ -991,16 +1449,28 @@ fn a_parched_servant_walks_to_the_well_draws_and_goes_home() {
         now += dt;
         beat(&mut round, &mut world, &nav, &clock, now, dt);
         for event in world.drain_events() {
-            if event.event_type == EventType::Sound && event.sound_id.as_deref() == Some("draw_water") {
+            if event.event_type == EventType::Sound
+                && event.sound_id.as_deref() == Some("draw_water")
+            {
                 windlass_events += 1;
-                assert!(event.actor_id.is_none(), "the windlass is a world sound, never attributed");
-                assert!(event.witness_ids.is_empty(), "a world sound has no witnesses to nudge");
+                assert!(
+                    event.actor_id.is_none(),
+                    "the windlass is a world sound, never attributed"
+                );
+                assert!(
+                    event.witness_ids.is_empty(),
+                    "a world sound has no witnesses to nudge"
+                );
             }
         }
         if round.is_drawing_at("Ford Well") {
             drew = true;
         }
-        if world.characters[&servant].recent_history().iter().any(|line| line.contains("drew water")) {
+        if world.characters[&servant]
+            .recent_history()
+            .iter()
+            .any(|line| line.contains("drew water"))
+        {
             remembered = true;
         }
         if drew && world.characters[&servant].needs().thirst >= THIRST_MAX - 1.0 {
@@ -1009,9 +1479,7 @@ fn a_parched_servant_walks_to_the_well_draws_and_goes_home() {
         // Home again: back within a stride of where they started, after drawing.
         // (The daily-round rung may set off again afterwards; reaching home is
         // what proves the water errand walked them back.)
-        if drew_at_max
-            && world.characters[&servant].position_m().distance(home) < 2.0
-            && now > 5.0
+        if drew_at_max && world.characters[&servant].position_m().distance(home) < 2.0 && now > 5.0
         {
             went_home = true;
             break;
@@ -1019,8 +1487,14 @@ fn a_parched_servant_walks_to_the_well_draws_and_goes_home() {
     }
 
     assert!(drew, "the servant reached the front of the queue and drew");
-    assert!(windlass_events > 0, "the well's windlass was emitted as a world sound");
-    assert!(remembered, "the drawer remembers drawing, so they can be asked about it");
+    assert!(
+        windlass_events > 0,
+        "the well's windlass was emitted as a world sound"
+    );
+    assert!(
+        remembered,
+        "the drawer remembers drawing, so they can be asked about it"
+    );
     assert!(drew_at_max, "the draw refilled the servant's thirst");
     assert!(went_home, "the servant walked home again after drawing");
 }
@@ -1055,8 +1529,15 @@ fn household_vessels_queue_ahead_of_trade_vessels() {
         epoch: 0,
         excused: false,
     };
-    for (id, household) in [("trade_a", false), ("house_a", true), ("trade_b", false), ("house_b", true)] {
-        round.people.insert(ActorId::from_raw(id), townsperson(household));
+    for (id, household) in [
+        ("trade_a", false),
+        ("house_a", true),
+        ("trade_b", false),
+        ("house_b", true),
+    ] {
+        round
+            .people
+            .insert(ActorId::from_raw(id), townsperson(household));
         enqueue(&mut round, 0, ActorId::from_raw(id));
     }
     let order: Vec<&str> = round.sources[0].queue.iter().map(ActorId::as_str).collect();
@@ -1095,11 +1576,20 @@ fn a_full_vessel_is_delivered_by_kind() {
         excused: false,
     };
     // Household: water for the home, even while the round leg says the shop.
-    assert_eq!(delivery_point(&drawer(true), Office::Dayspring, Weekday::Bellday), home);
+    assert_eq!(
+        delivery_point(&drawer(true), Office::Dayspring, Weekday::Bellday),
+        home
+    );
     // Trade: water for the workshop the current leg names.
-    assert_eq!(delivery_point(&drawer(false), Office::Dayspring, Weekday::Bellday), shop);
+    assert_eq!(
+        delivery_point(&drawer(false), Office::Dayspring, Weekday::Bellday),
+        shop
+    );
     // At night the non-exempt carry it home; the curfew rung agrees on arrival.
-    assert_eq!(delivery_point(&drawer(false), Office::Snuffing, Weekday::Bellday), home);
+    assert_eq!(
+        delivery_point(&drawer(false), Office::Snuffing, Weekday::Bellday),
+        home
+    );
 }
 
 /// A trade-vessel drawer carries the water back to their workshop, not home:
@@ -1128,7 +1618,10 @@ fn a_trade_drawer_returns_to_their_workshop_not_home() {
 
     let (home, workshop) = {
         let person = round.people.get(&fuller).expect("enrolled");
-        assert!(!person.is_household, "a cloth worker draws with a trade vessel");
+        assert!(
+            !person.is_household,
+            "a cloth worker draws with a trade vessel"
+        );
         assert!(person.source.is_some(), "and is bound to the staffed well");
         let home = person.home.expect("a2gpk is housed");
         let workshop = active_leg(&person.legs, Office::Dayspring, Weekday::Second)
@@ -1141,7 +1634,13 @@ fn a_trade_drawer_returns_to_their_workshop_not_home() {
         "home and workshop must be distinct places for this test to mean anything"
     );
 
-    world.characters.get_mut(&fuller).unwrap().state.needs.thirst = 0.0;
+    world
+        .characters
+        .get_mut(&fuller)
+        .unwrap()
+        .state
+        .needs
+        .thirst = 0.0;
 
     let dt = 0.2;
     let mut now = 0.0;
@@ -1177,7 +1676,12 @@ fn thirst_decays_by_the_game_clock() {
     let clock = clock_at(Office::Dayspring);
     let ford = nav.place("Ford Well").unwrap().node;
     let mut world = base_world();
-    world.add_character(person("keeper", nav.node_point(ford), Some("mason"), Significance::Ambient));
+    world.add_character(person(
+        "keeper",
+        nav.node_point(ford),
+        Some("mason"),
+        Significance::Ambient,
+    ));
     world.add_character(person(
         "servant",
         nav.node_point(nav.adjacency()[ford][0].to),
@@ -1188,13 +1692,30 @@ fn thirst_decays_by_the_game_clock() {
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
     let servant = ActorId::from_raw("servant");
-    world.characters.get_mut(&servant).unwrap().state.needs.thirst = THIRST_MAX;
+    world
+        .characters
+        .get_mut(&servant)
+        .unwrap()
+        .state
+        .needs
+        .thirst = THIRST_MAX;
 
     let one_game_hour = 3600.0 / 24.0;
-    tick(&mut round, &mut world, &nav, &clock, one_game_hour, &player(), &BTreeSet::new());
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        one_game_hour,
+        &player(),
+        &BTreeSet::new(),
+    );
     let expected = THIRST_MAX - 3600.0 * crate::THIRST_DECAY_PER_GAME_SECOND;
     let thirst = world.characters[&servant].needs().thirst;
-    assert!((thirst - expected).abs() < 1.0, "thirst {thirst} decayed to ~{expected} over one game hour");
+    assert!(
+        (thirst - expected).abs() < 1.0,
+        "thirst {thirst} decayed to ~{expected} over one game hour"
+    );
 }
 
 /// A well keeper is enrolled like anyone else, with the well as their one post:
@@ -1208,16 +1729,30 @@ fn a_keeper_is_enrolled_and_holds_their_curb_by_day() {
     let curb = nav.node_point(ford);
     let mut world = base_world();
     // A lone ambient at the curb becomes Ford Well's keeper.
-    world.add_character(person("stranger", curb, Some("mason"), Significance::Ambient));
+    world.add_character(person(
+        "stranger",
+        curb,
+        Some("mason"),
+        Significance::Ambient,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
     let keeper = ActorId::from_raw("stranger");
     assert!(
-        round.sources().iter().any(|source| source.keeper.as_ref() == Some(&keeper)),
+        round
+            .sources()
+            .iter()
+            .any(|source| source.keeper.as_ref() == Some(&keeper)),
         "the ambient at the curb keeps the well"
     );
-    let person = round.people.get(&keeper).expect("the keeper is enrolled in the round");
-    assert!(person.source.is_none(), "a keeper works the curb, never queues at it");
+    let person = round
+        .people
+        .get(&keeper)
+        .expect("the keeper is enrolled in the round");
+    assert!(
+        person.source.is_none(),
+        "a keeper works the curb, never queues at it"
+    );
     let leg = active_leg(&person.legs, Office::Dayspring, Weekday::Bellday)
         .expect("the keeper's day is their well");
     assert_eq!(leg.label, "Ford Well");
@@ -1250,14 +1785,28 @@ fn a_housed_keeper_goes_home_at_curfew_and_returns_to_the_well_by_day() {
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
 
     assert!(
-        round.sources().iter().any(|source| source.keeper.as_ref() == Some(&keeper)),
+        round
+            .sources()
+            .iter()
+            .any(|source| source.keeper.as_ref() == Some(&keeper)),
         "the ambient at the curb keeps the well"
     );
     let home = round.people[&keeper].home.expect("a2gpk is housed");
-    assert!(!round.people[&keeper].curfew_exempt, "keeping a well is not a night trade");
+    assert!(
+        !round.people[&keeper].curfew_exempt,
+        "keeping a well is not a night trade"
+    );
 
     // At the Snuffing the curfew rung sends the keeper home.
-    match decide_only(&round, &world, &nav, &keeper, 0, Office::Snuffing, Weekday::Bellday) {
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &keeper,
+        0,
+        Office::Snuffing,
+        Weekday::Bellday,
+    ) {
         Decision::Travel(target) => assert!(
             target.distance(home) < 1.0,
             "at the Snuffing the keeper heads home, not to {target:?}"
@@ -1267,7 +1816,15 @@ fn a_housed_keeper_goes_home_at_curfew_and_returns_to_the_well_by_day() {
 
     // Morning: from their own doorstep, the round rung walks them back to the curb.
     world.characters.get_mut(&keeper).unwrap().state.position_m = home;
-    match decide_only(&round, &world, &nav, &keeper, 0, Office::Kindling, Weekday::Bellday) {
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &keeper,
+        0,
+        Office::Kindling,
+        Weekday::Bellday,
+    ) {
         Decision::Travel(target) => assert!(
             target.distance(curb) < 1.0,
             "at the Kindling the keeper returns to the well, not to {target:?}"
@@ -1287,23 +1844,55 @@ fn the_whole_cast_is_enrolled_including_keepers_and_the_old_pacer() {
     let ford = nav.place("Ford Well").unwrap().node;
     let curb = nav.node_point(ford);
     let mut world = base_world();
-    world.add_character(person("stranger", curb, Some("mason"), Significance::Ambient));
-    world.add_character(person("p0012", Vec3::new(42.5, WALK_Y, 142.5), Some("market_seller"), Significance::Minor));
-    world.add_character(person("mason_a", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    world.add_character(person(
+        "stranger",
+        curb,
+        Some("mason"),
+        Significance::Ambient,
+    ));
+    world.add_character(person(
+        "p0012",
+        Vec3::new(42.5, WALK_Y, 142.5),
+        Some("market_seller"),
+        Significance::Minor,
+    ));
+    world.add_character(person(
+        "mason_a",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
 
-    assert_eq!(round.enrolled(), 3, "keeper, pacer and worker are all enrolled");
-    assert_eq!(round.census(&world, &clock, 0.0).total, 3, "and the census counts all three");
+    assert_eq!(
+        round.enrolled(),
+        3,
+        "keeper, pacer and worker are all enrolled"
+    );
+    assert_eq!(
+        round.census(&world, &clock, 0.0).total,
+        3,
+        "and the census counts all three"
+    );
 
     // The pacer follows the ordinary market-trader round, not a scripted ping-pong.
     let pacer = ActorId::from_raw("p0012");
     assert!(
-        world.characters[&pacer].state.movement.as_ref().is_none_or(|movement| movement.patrol.is_none()),
+        world.characters[&pacer]
+            .state
+            .movement
+            .as_ref()
+            .is_none_or(|movement| movement.patrol.is_none()),
         "no permanent patrol is scripted onto p0012"
     );
     assert!(
-        active_leg(&round.people[&pacer].legs, Office::Dayspring, Weekday::Second).is_some(),
+        active_leg(
+            &round.people[&pacer].legs,
+            Office::Dayspring,
+            Weekday::Second
+        )
+        .is_some(),
         "p0012 has an ordinary working day"
     );
 }
@@ -1312,8 +1901,14 @@ fn the_whole_cast_is_enrolled_including_keepers_and_the_old_pacer() {
 #[test]
 fn the_decision_hash_is_stable() {
     let id = ActorId::from_raw("servant");
-    assert_eq!(hash01("round_decision", &id, 3), hash01("round_decision", &id, 3));
-    assert_ne!(hash01("round_decision", &id, 3), hash01("round_decision", &id, 4));
+    assert_eq!(
+        hash01("round_decision", &id, 3),
+        hash01("round_decision", &id, 3)
+    );
+    assert_ne!(
+        hash01("round_decision", &id, 3),
+        hash01("round_decision", &id, 4)
+    );
     for epoch in 0..64 {
         let jitter = decision_jitter(&id, epoch);
         assert!((LADDER_DECISION_MIN_SECONDS..=LADDER_DECISION_MAX_SECONDS).contains(&jitter));
@@ -1371,8 +1966,18 @@ fn seeding_hands_out_the_wayfinding_whitelist() {
     let nav = nav();
     let mut world = base_world();
     // a2gpk is housed by the real bake; the friend knows them.
-    world.add_character(person("a2gpk", Vec3::new(0.0, WALK_Y, 95.0), Some("domestic_servant"), Significance::Minor));
-    let mut friend = person("frnd1", Vec3::new(2.0, WALK_Y, 95.0), Some("mason"), Significance::Minor);
+    world.add_character(person(
+        "a2gpk",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("domestic_servant"),
+        Significance::Minor,
+    ));
+    let mut friend = person(
+        "frnd1",
+        Vec3::new(2.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Minor,
+    );
     friend.state.knows.insert(ActorId::from_raw("a2gpk"));
     world.add_character(friend);
     world.nav = Some(std::sync::Arc::new(nav.clone()));
@@ -1380,8 +1985,15 @@ fn seeding_hands_out_the_wayfinding_whitelist() {
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
 
     assert!(!world.places.is_empty(), "the registry reached the world");
-    let coarse: Vec<&str> = world.places.coarse().map(|entry| entry.name.as_str()).collect();
-    assert!(coarse.contains(&"The Gradine") && coarse.contains(&"Reed Ward"), "{coarse:?}");
+    let coarse: Vec<&str> = world
+        .places
+        .coarse()
+        .map(|entry| entry.name.as_str())
+        .collect();
+    assert!(
+        coarse.contains(&"The Gradine") && coarse.contains(&"Reed Ward"),
+        "{coarse:?}"
+    );
 
     let servant = &world.characters[&ActorId::from_raw("a2gpk")];
     for entry in world.places.coarse() {
@@ -1391,13 +2003,22 @@ fn seeding_hands_out_the_wayfinding_whitelist() {
             entry.name
         );
     }
-    let home = world.places.home_of(&ActorId::from_raw("a2gpk")).expect("a2gpk is housed");
+    let home = world
+        .places
+        .home_of(&ActorId::from_raw("a2gpk"))
+        .expect("a2gpk is housed");
     assert_eq!(home.name, "A2GPK's house");
-    assert!(servant.state.places_known.contains(&home.id), "you know your own house");
+    assert!(
+        servant.state.places_known.contains(&home.id),
+        "you know your own house"
+    );
     // The Fabric-ward test lore puts both in Fabric Ward: its places are theirs.
     let ford_well = world.places.named("Ford Well").expect("Ford Well is baked");
     assert_eq!(ford_well.ward.as_deref(), Some("fabric"));
-    assert!(servant.state.places_known.contains(&ford_well.id), "own-ward places are known");
+    assert!(
+        servant.state.places_known.contains(&ford_well.id),
+        "own-ward places are known"
+    );
 
     let friend = &world.characters[&ActorId::from_raw("frnd1")];
     assert!(
@@ -1406,7 +2027,10 @@ fn seeding_hands_out_the_wayfinding_whitelist() {
     );
     assert!(
         !servant.state.places_known.contains(
-            &world.places.home_of(&ActorId::from_raw("frnd1")).map(|entry| entry.id.clone())
+            &world
+                .places
+                .home_of(&ActorId::from_raw("frnd1"))
+                .map(|entry| entry.id.clone())
                 .unwrap_or_else(|| PlaceId::from_raw("pl_none"))
         ),
         "the servant does not know the stranger's door"
@@ -1429,10 +2053,19 @@ fn go_to_walks_there_and_arrival_is_a_percept_and_a_nudge() {
     round.seed(&mut world, &nav, 0.0, &clock);
 
     let target = world.places.named("The Gradine").expect("baked").id.clone();
-    let line = apply_action(&mut world, &id, "go_to", &json!({"place_id": target.as_str()})).unwrap();
+    let line = apply_action(
+        &mut world,
+        &id,
+        "go_to",
+        &json!({"place_id": target.as_str()}),
+    )
+    .unwrap();
     assert_eq!(line, "WALKR sets off for The Gradine");
     assert!(
-        world.characters[&id].recent_history().iter().any(|line| line == "You set off for The Gradine."),
+        world.characters[&id]
+            .recent_history()
+            .iter()
+            .any(|line| line == "You set off for The Gradine."),
         "the walker remembers their own errand"
     );
 
@@ -1455,11 +2088,18 @@ fn go_to_walks_there_and_arrival_is_a_percept_and_a_nudge() {
         walker.position_m()
     );
     assert!(
-        walker.inbox().iter().any(|line| line == "You have arrived at The Gradine."),
+        walker
+            .inbox()
+            .iter()
+            .any(|line| line == "You have arrived at The Gradine."),
         "arrival is a percept: {:?}",
         walker.inbox()
     );
-    assert_eq!(nudges, std::slice::from_ref(&id), "arrival granted exactly one priority nudge");
+    assert_eq!(
+        nudges,
+        std::slice::from_ref(&id),
+        "arrival granted exactly one priority nudge"
+    );
 }
 
 /// A second `go_to` replaces the first silently, and `stop {}` abandons the
@@ -1478,10 +2118,25 @@ fn a_second_go_to_replaces_and_stop_halts_the_walk() {
 
     let gradine = world.places.named("The Gradine").unwrap().id.clone();
     let lanthorn = world.places.named("The Lanthorn").unwrap().id.clone();
-    apply_action(&mut world, &id, "go_to", &json!({"place_id": gradine.as_str()})).unwrap();
-    apply_action(&mut world, &id, "go_to", &json!({"place_id": lanthorn.as_str()})).unwrap();
+    apply_action(
+        &mut world,
+        &id,
+        "go_to",
+        &json!({"place_id": gradine.as_str()}),
+    )
+    .unwrap();
+    apply_action(
+        &mut world,
+        &id,
+        "go_to",
+        &json!({"place_id": lanthorn.as_str()}),
+    )
+    .unwrap();
     match &world.characters[&id].state.intent {
-        Some(TravelIntent { target: IntentTarget::Place { place_id, .. }, .. }) => {
+        Some(TravelIntent {
+            target: IntentTarget::Place { place_id, .. },
+            ..
+        }) => {
             assert_eq!(place_id, &lanthorn, "the second go_to replaced the first")
         }
         other => panic!("expected a place intent, got {other:?}"),
@@ -1497,13 +2152,19 @@ fn a_second_go_to_replaces_and_stop_halts_the_walk() {
             break;
         }
     }
-    assert!(world.characters[&id].is_walking(), "the errand walk is under way");
+    assert!(
+        world.characters[&id].is_walking(),
+        "the errand walk is under way"
+    );
     let inbox_before = world.characters[&id].inbox().len();
     apply_action(&mut world, &id, "stop", &json!({})).unwrap();
     now += 0.5;
     tick_collect(&mut round, &mut world, &nav, &clock, now);
     assert!(world.characters[&id].state.intent.is_none());
-    assert!(!world.characters[&id].is_walking(), "stop halted the intent walk");
+    assert!(
+        !world.characters[&id].is_walking(),
+        "stop halted the intent walk"
+    );
     assert_eq!(
         world.characters[&id].inbox().len(),
         inbox_before,
@@ -1526,9 +2187,23 @@ fn an_expired_intent_lapses_with_a_percept_and_a_nudge() {
     round.seed(&mut world, &nav, 0.0, &clock);
 
     let tallage = world.places.named("The Tallage").unwrap().id.clone();
-    apply_action(&mut world, &id, "go_to", &json!({"place_id": tallage.as_str()})).unwrap();
+    apply_action(
+        &mut world,
+        &id,
+        "go_to",
+        &json!({"place_id": tallage.as_str()}),
+    )
+    .unwrap();
     // Shrink the budget so the errand cannot possibly finish.
-    world.characters.get_mut(&id).unwrap().state.intent.as_mut().unwrap().budget_seconds = 2.0;
+    world
+        .characters
+        .get_mut(&id)
+        .unwrap()
+        .state
+        .intent
+        .as_mut()
+        .unwrap()
+        .budget_seconds = 2.0;
 
     let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.0, 40, |world| {
         world.characters[&id].state.intent.is_none()
@@ -1541,8 +2216,15 @@ fn an_expired_intent_lapses_with_a_percept_and_a_nudge() {
         "lapse is a percept: {:?}",
         world.characters[&id].inbox()
     );
-    assert_eq!(nudges, std::slice::from_ref(&id), "the lapse granted the nudge");
-    assert!(!world.characters[&id].is_walking(), "the lapsed walk was halted");
+    assert_eq!(
+        nudges,
+        std::slice::from_ref(&id),
+        "the lapse granted the nudge"
+    );
+    assert!(
+        !world.characters[&id].is_walking(),
+        "the lapsed walk was halted"
+    );
 }
 
 /// Curfew — a pressing rung — preempts a live errand, and the preemption names
@@ -1553,14 +2235,25 @@ fn curfew_preempts_an_errand_with_a_cause_percept() {
     let id = ActorId::from_raw("a2gpk"); // housed by the real bake
     let start = nav.node_point(nav.place("Seraph statue").expect("baked").node);
     let mut world = base_world();
-    world.add_character(person("a2gpk", start, Some("domestic_servant"), Significance::Minor));
+    world.add_character(person(
+        "a2gpk",
+        start,
+        Some("domestic_servant"),
+        Significance::Minor,
+    ));
     world.nav = Some(std::sync::Arc::new(nav.clone()));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
     assert!(round.people[&id].home.is_some(), "the bake houses a2gpk");
 
     let tallage = world.places.named("The Tallage").unwrap().id.clone();
-    apply_action(&mut world, &id, "go_to", &json!({"place_id": tallage.as_str()})).unwrap();
+    apply_action(
+        &mut world,
+        &id,
+        "go_to",
+        &json!({"place_id": tallage.as_str()}),
+    )
+    .unwrap();
 
     // The same wall clock, but read at the Snuffing: the curfew rung fires.
     let night = clock_at(Office::Snuffing);
@@ -1575,7 +2268,10 @@ fn curfew_preempts_an_errand_with_a_cause_percept() {
         "the preemption says why: {:?}",
         world.characters[&id].inbox()
     );
-    assert!(nudges.contains(&id), "the preempted errand still granted its nudge");
+    assert!(
+        nudges.contains(&id),
+        "the preempted errand still granted its nudge"
+    );
 }
 
 /// `go_to {"person"}`: the follow tracks a visible target to conversation
@@ -1592,7 +2288,10 @@ fn a_followed_person_is_caught_at_conversation_distance() {
     // where a real townsperson (who only ever walks the graph) stands.
     let up_the_street = nav.node_point(nav.adjacency()[gradine_node][0].to);
     let target_at = start + (up_the_street - start).normalize() * 12.0;
-    assert!(nav.is_walkable(target_at.x, target_at.z), "the street midline is walkable");
+    assert!(
+        nav.is_walkable(target_at.x, target_at.z),
+        "the street midline is walkable"
+    );
     let mut world = base_world();
     world.add_character(person("follw", start, None, Significance::Major));
     world.add_character(person("targt", target_at, None, Significance::Major));
@@ -1607,7 +2306,10 @@ fn a_followed_person_is_caught_at_conversation_distance() {
     let gap = world.characters[&follower]
         .position_m()
         .distance(world.characters[&target].position_m());
-    assert!(gap <= PERSON_ARRIVE_RADIUS_M + 0.5, "closed to conversation distance, gap {gap}");
+    assert!(
+        gap <= PERSON_ARRIVE_RADIUS_M + 0.5,
+        "closed to conversation distance, gap {gap}"
+    );
     assert!(
         world.characters[&follower]
             .inbox()
@@ -1639,20 +2341,22 @@ fn losing_sight_degrades_the_follow_to_the_last_seen_spot() {
     apply_action(&mut world, &follower, "go_to", &json!({"person": "targt"})).unwrap();
     // One tick to stamp the follow, then the target vanishes across the city.
     tick_collect(&mut round, &mut world, &nav, &clock, 0.5);
-    world.characters.get_mut(&target).unwrap().state.position_m = Vec3::new(start.x + 300.0, WALK_Y, start.z);
+    world.characters.get_mut(&target).unwrap().state.position_m =
+        Vec3::new(start.x + 300.0, WALK_Y, start.z);
 
     let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.5, 200, |world| {
         world.characters[&follower].state.intent.is_none()
     });
     let inbox = world.characters[&follower].inbox();
     assert!(
-        inbox.iter().any(|line| line == "You have lost sight of a stranger (id targt)."),
+        inbox
+            .iter()
+            .any(|line| line == "You have lost sight of a stranger (id targt)."),
         "{inbox:?}"
     );
     assert!(
-        inbox
-            .iter()
-            .any(|line| line == "You reach the spot where you last saw a stranger (id targt), but they are gone."),
+        inbox.iter().any(|line| line
+            == "You reach the spot where you last saw a stranger (id targt), but they are gone."),
         "{inbox:?}"
     );
     // The follower ended near where the target was last seen, not where they went.
@@ -1680,12 +2384,26 @@ fn a_conversation_does_not_pin_a_self_willed_errand() {
     round.seed(&mut world, &nav, 0.0, &clock);
 
     let gradine = world.places.named("The Gradine").unwrap().id.clone();
-    apply_action(&mut world, &id, "go_to", &json!({"place_id": gradine.as_str()})).unwrap();
+    apply_action(
+        &mut world,
+        &id,
+        "go_to",
+        &json!({"place_id": gradine.as_str()}),
+    )
+    .unwrap();
 
     // Held in a warm exchange the whole time: a fresh errand walks on the very
     // first tick — never the exchange's 30 s memory, not even a cadence beat.
     let mut now = 0.1;
-    tick(&mut round, &mut world, &nav, &clock, now, &player(), &warm(&id));
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        now,
+        &player(),
+        &warm(&id),
+    );
     assert!(
         world.characters[&id].is_walking(),
         "the errand set off immediately despite the warm exchange"
@@ -1694,8 +2412,14 @@ fn a_conversation_does_not_pin_a_self_willed_errand() {
 
     // A fresh addressed line stops them mid-stride to answer...
     interrupt_for_conversation(&mut round, &mut world, &id);
-    assert!(!world.characters[&id].is_walking(), "they stop for the answer");
-    assert!(world.characters[&id].state.intent.is_some(), "without dropping the errand");
+    assert!(
+        !world.characters[&id].is_walking(),
+        "they stop for the answer"
+    );
+    assert!(
+        world.characters[&id].state.intent.is_some(),
+        "without dropping the errand"
+    );
 
     // ...and, still mid-conversation, the walk resumes on the next cadence.
     let resumed_by = now + LADDER_DECISION_MAX_SECONDS + 1.0;
@@ -1703,7 +2427,15 @@ fn a_conversation_does_not_pin_a_self_willed_errand() {
         now += 0.5;
         assert!(now <= resumed_by, "the interrupted errand never resumed");
         world.step_movement(0.5, &nav, None);
-        tick(&mut round, &mut world, &nav, &clock, now, &player(), &warm(&id));
+        tick(
+            &mut round,
+            &mut world,
+            &nav,
+            &clock,
+            now,
+            &player(),
+            &warm(&id),
+        );
     }
 }
 
@@ -1720,20 +2452,44 @@ fn tell_way_transfers_the_handle_and_go_to_accepts_it() {
     // The mason knows the masons' lodge (a Wallwright place); the fabric-ward
     // asker does not.
     let mut teller_character = person("tellr", start, None, Significance::Major);
-    teller_character.sheet.lore = person("x", Vec3::ZERO, Some("mason"), Significance::Major).sheet.lore.clone();
+    teller_character.sheet.lore = person("x", Vec3::ZERO, Some("mason"), Significance::Major)
+        .sheet
+        .lore
+        .clone();
     teller_character.sheet.lore.as_mut().unwrap().planning_ward = PlanningWard::Wallwright;
     world.add_character(teller_character);
-    world.add_character(person("askr1", Vec3::new(start.x + 3.0, WALK_Y, start.z), None, Significance::Major));
+    world.add_character(person(
+        "askr1",
+        Vec3::new(start.x + 3.0, WALK_Y, start.z),
+        None,
+        Significance::Major,
+    ));
     world.nav = Some(std::sync::Arc::new(nav.clone()));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
 
-    let lodge = world.places.named("The masons' lodge").expect("baked").id.clone();
-    assert!(world.characters[&teller].state.places_known.contains(&lodge));
+    let lodge = world
+        .places
+        .named("The masons' lodge")
+        .expect("baked")
+        .id
+        .clone();
+    assert!(
+        world.characters[&teller]
+            .state
+            .places_known
+            .contains(&lodge)
+    );
     assert!(!world.characters[&asker].state.places_known.contains(&lodge));
 
     // The asker cannot walk there yet: the id is not theirs to use.
-    let error = apply_action(&mut world, &asker, "go_to", &json!({"place_id": lodge.as_str()})).unwrap_err();
+    let error = apply_action(
+        &mut world,
+        &asker,
+        "go_to",
+        &json!({"place_id": lodge.as_str()}),
+    )
+    .unwrap_err();
     assert_eq!(error.code, ActionErrorCode::UnknownPlace);
 
     // The teller shares the way; the asker gets one inbox line and the handle.
@@ -1762,7 +2518,13 @@ fn tell_way_transfers_the_handle_and_go_to_accepts_it() {
     );
 
     // And now the errand is legal.
-    apply_action(&mut world, &asker, "go_to", &json!({"place_id": lodge.as_str()})).unwrap();
+    apply_action(
+        &mut world,
+        &asker,
+        "go_to",
+        &json!({"place_id": lodge.as_str()}),
+    )
+    .unwrap();
     assert!(world.characters[&asker].state.intent.is_some());
 }
 
@@ -1776,15 +2538,26 @@ fn go_to_and_tell_way_validation_walls() {
     let start = nav.node_point(nav.place("The Gradine").expect("baked").node);
     let mut world = base_world();
     world.add_character(person("walkr", start, None, Significance::Major));
-    world.add_character(person("farbd", Vec3::new(start.x + 50.0, WALK_Y, start.z), None, Significance::Major));
+    world.add_character(person(
+        "farbd",
+        Vec3::new(start.x + 50.0, WALK_Y, start.z),
+        None,
+        Significance::Major,
+    ));
     world.nav = Some(std::sync::Arc::new(nav.clone()));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
 
     for (args, code) in [
         (json!({}), ActionErrorCode::InvalidArguments),
-        (json!({"place_id": "pl_x", "person": "farbd"}), ActionErrorCode::InvalidArguments),
-        (json!({"place_id": "pl_no_such"}), ActionErrorCode::UnknownPlace),
+        (
+            json!({"place_id": "pl_x", "person": "farbd"}),
+            ActionErrorCode::InvalidArguments,
+        ),
+        (
+            json!({"place_id": "pl_no_such"}),
+            ActionErrorCode::UnknownPlace,
+        ),
         (json!({"person": "ghost"}), ActionErrorCode::UnknownTarget),
         (json!({"person": "walkr"}), ActionErrorCode::SelfTarget),
         // 50 m away: out of you_see, so not a legal follow target.
@@ -1793,15 +2566,27 @@ fn go_to_and_tell_way_validation_walls() {
         let error = apply_action(&mut world, &id, "go_to", &args).unwrap_err();
         assert_eq!(error.code, code, "go_to {args}");
     }
-    assert!(world.characters[&id].state.intent.is_none(), "no failed go_to left an intent");
+    assert!(
+        world.characters[&id].state.intent.is_none(),
+        "no failed go_to left an intent"
+    );
 
     let gradine = world.places.named("The Gradine").unwrap().id.clone();
     for (args, code) in [
         // The teller holds the id, but the target is beyond earshot.
-        (json!({"person": "farbd", "place_id": gradine.as_str()}), ActionErrorCode::OutOfRange),
+        (
+            json!({"person": "farbd", "place_id": gradine.as_str()}),
+            ActionErrorCode::OutOfRange,
+        ),
         // A handle the teller does not hold cannot be shared.
-        (json!({"person": "farbd", "place_id": "pl_no_such"}), ActionErrorCode::UnknownPlace),
-        (json!({"person": "walkr", "place_id": gradine.as_str()}), ActionErrorCode::SelfTarget),
+        (
+            json!({"person": "farbd", "place_id": "pl_no_such"}),
+            ActionErrorCode::UnknownPlace,
+        ),
+        (
+            json!({"person": "walkr", "place_id": gradine.as_str()}),
+            ActionErrorCode::SelfTarget,
+        ),
     ] {
         let error = apply_action(&mut world, &id, "tell_way", &args).unwrap_err();
         assert_eq!(error.code, code, "tell_way {args}");
@@ -1878,9 +2663,9 @@ fn errand_debug_reduces_the_phase_the_well_and_the_walk() {
 /// is spent lighting rather than crossing the fortified maze (adjacent squares
 /// are 1.3–2 km apart on foot — the reason the beats exist at all).
 const KEEPERS: &[(&str, f64, f64)] = &[
-    ("dtbvl", -20.0, 356.0),  // Tobin Vell — the Wickmarket + the Gradine
-    ("drhcr", 255.0, 160.0),  // Rohese Crake — Coswald's Yard
-    ("p004m", -300.0, 86.0),  // Jos Rusk — the Tallage
+    ("dtbvl", -20.0, 356.0),   // Tobin Vell — the Wickmarket + the Gradine
+    ("drhcr", 255.0, 160.0),   // Rohese Crake — Coswald's Yard
+    ("p004m", -300.0, 86.0),   // Jos Rusk — the Tallage
     ("p004l", -300.0, -360.0), // Ede Pell — Maren's Green
 ];
 
@@ -1911,15 +2696,25 @@ fn the_lamplighters_dusk_beats_light_the_squares_and_dawn_snuffs_them() {
         total >= 15,
         "five squares should carry a healthy ring of posts, got {total}"
     );
-    assert!(round.lamps().iter().all(|lamp| !lamp.lit), "the seed is dark");
+    assert!(
+        round.lamps().iter().all(|lamp| !lamp.lit),
+        "the seed is dark"
+    );
     assert!(
         round.lamps().iter().all(|lamp| lamp.keeper.is_some()),
         "every square is on an authored beat"
     );
-    let squares: BTreeSet<String> = round.lamps().iter().map(|lamp| lamp.square.clone()).collect();
+    let squares: BTreeSet<String> = round
+        .lamps()
+        .iter()
+        .map(|lamp| lamp.square.clone())
+        .collect();
     assert_eq!(squares.len(), 5, "all five squares carry posts");
     let revision_dark = round.lamp_revision();
-    assert!(revision_dark >= 1, "the dark seed itself is a publishable revision");
+    assert!(
+        revision_dark >= 1,
+        "the dark seed itself is a publishable revision"
+    );
 
     // The dusk beats: every keeper works their own square(s), so the whole
     // city lights well inside the night.
@@ -1946,7 +2741,11 @@ fn the_lamplighters_dusk_beats_light_the_squares_and_dawn_snuffs_them() {
             .filter(|(_, lamp)| lamp.square == *square && !lamp.lit)
             .map(|(index, _)| index)
             .collect();
-        assert_eq!(unlit.len(), 1, "{square} keeps exactly one dark lamp — Belwyn's");
+        assert_eq!(
+            unlit.len(),
+            1,
+            "{square} keeps exactly one dark lamp — Belwyn's"
+        );
     }
     assert!(round.lamp_revision() > revision_dark);
     // Each keeper remembers the act in their own words, so the player who
@@ -2015,7 +2814,15 @@ fn a_conversation_holds_the_taper() {
     // Two real minutes of talk: the deferrable rung waits, no lamp is lit.
     for _ in 0..240 {
         world.step_movement(dt, &nav, None);
-        tick(&mut round, &mut world, &nav, &clock, now, &player(), &warm(&id));
+        tick(
+            &mut round,
+            &mut world,
+            &nav,
+            &clock,
+            now,
+            &player(),
+            &warm(&id),
+        );
         now += dt;
     }
     assert_eq!(
@@ -2048,19 +2855,37 @@ fn the_round_seeds_wallets_and_hunger() {
     let mut world = base_world();
 
     // A plain enrolled townsperson: no authored coin, no hunger memory.
-    world.add_character(person("wlta", Vec3::new(0.0, WALK_Y, 95.0), Some("mason"), Significance::Major));
+    world.add_character(person(
+        "wlta",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
 
     // One who already holds a spark keeps exactly it — no wallet minted.
     let purse = ItemId::from_raw("purse");
     world.add_item(Item::stack(purse.clone(), "spark", 1));
-    let mut holder = person("wltb", Vec3::new(1.0, WALK_Y, 95.0), Some("mason"), Significance::Major);
+    let mut holder = person(
+        "wltb",
+        Vec3::new(1.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    );
     holder.state.holds.push(purse.clone());
     world.add_character(holder);
 
     // One whose memory declares hunger seeds low (the Ilse hook: her static
     // `hungry` condition is dropped, the memory carries the low seed).
-    let mut hungry = person("wltc", Vec3::new(2.0, WALK_Y, 95.0), Some("mason"), Significance::Major);
-    hungry.state.memories.push("I am very hungry after the long road here".to_string());
+    let mut hungry = person(
+        "wltc",
+        Vec3::new(2.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    );
+    hungry
+        .state
+        .memories
+        .push("I am very hungry after the long road here".to_string());
     world.add_character(hungry);
 
     let mut round = Round::new();
@@ -2069,10 +2894,19 @@ fn the_round_seeds_wallets_and_hunger() {
     // A fresh spark wallet, in 2..=7, held and present in the world.
     let a = &world.characters[&ActorId::from_raw("wlta")];
     let wallet = ItemId::from_raw("w_wlta");
-    assert!(a.holds().contains(&wallet), "a coinless townsperson is given a wallet");
+    assert!(
+        a.holds().contains(&wallet),
+        "a coinless townsperson is given a wallet"
+    );
     let sparks = world.items[&wallet].quantity;
-    assert!((2..=7).contains(&sparks), "the seeded wallet is 2..=7, got {sparks}");
-    assert!(a.needs().hunger >= HUNGER_SEED_FLOOR, "hunger seeds no lower than the floor");
+    assert!(
+        (2..=7).contains(&sparks),
+        "the seeded wallet is 2..=7, got {sparks}"
+    );
+    assert!(
+        a.needs().hunger >= HUNGER_SEED_FLOOR,
+        "hunger seeds no lower than the floor"
+    );
 
     // The authored purse stands alone — no second same-stuff stack minted.
     let b = &world.characters[&ActorId::from_raw("wltb")];
@@ -2084,8 +2918,15 @@ fn the_round_seeds_wallets_and_hunger() {
 
     // The declared-hungry actor seeds low, and still gets a wallet.
     let c = &world.characters[&ActorId::from_raw("wltc")];
-    assert_eq!(c.needs().hunger, HUNGER_SEED_DECLARED_HUNGRY, "a hunger memory seeds low");
-    assert!(c.holds().contains(&ItemId::from_raw("w_wltc")), "the hungry still carry a purse");
+    assert_eq!(
+        c.needs().hunger,
+        HUNGER_SEED_DECLARED_HUNGRY,
+        "a hunger memory seeds low"
+    );
+    assert!(
+        c.holds().contains(&ItemId::from_raw("w_wltc")),
+        "the hungry still carry a purse"
+    );
 }
 
 /// The tavern hearth (food & items M2, `03_hunger.md` §4): a tavern trade
@@ -2110,7 +2951,10 @@ fn the_tavern_hearth_feeds_its_trade_only_at_a_meal_office() {
         round.seed(&mut world, &nav, 0.0, &clock_at(office));
         assert!(!round.taverns.is_empty(), "the committed graph has taverns");
         let brew = ActorId::from_raw("brew");
-        assert!(round.people[&brew].home.is_none(), "the test worker has no house — only the tavern can feed them");
+        assert!(
+            round.people[&brew].home.is_none(),
+            "the test worker has no house — only the tavern can feed them"
+        );
         let tavern = round.taverns[0];
         {
             let state = &mut world.characters.get_mut(&brew).expect("enrolled").state;
@@ -2144,13 +2988,27 @@ fn the_anchoress_is_fed_in_her_cell() {
     let nav = nav();
     let spawn = Vec3::new(194.5, WALK_Y, -92.0); // her authored squint
     let mut world = base_world();
-    world.add_character(person("aq7ld", spawn, Some("anchoress"), Significance::Major));
+    world.add_character(person(
+        "aq7ld",
+        spawn,
+        Some("anchoress"),
+        Significance::Major,
+    ));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::HighWick));
     let id = ActorId::from_raw("aq7ld");
-    assert!(round.people[&id].legs.is_empty(), "the anchoress has zero legs");
+    assert!(
+        round.people[&id].legs.is_empty(),
+        "the anchoress has zero legs"
+    );
     assert!(round.people[&id].home.is_none(), "and no homes.json house");
-    world.characters.get_mut(&id).expect("enrolled").state.needs.hunger = HUNGER_FAMISHED / 2.0;
+    world
+        .characters
+        .get_mut(&id)
+        .expect("enrolled")
+        .state
+        .needs
+        .hunger = HUNGER_FAMISHED / 2.0;
     decay_needs(&mut round, &mut world, &clock_at(Office::HighWick), 40.0);
     assert!(
         world.characters[&id].needs().hunger > HUNGER_FAMISHED,
@@ -2179,22 +3037,59 @@ fn famished_diverts_home_only_while_the_hearth_is_serving() {
     // Housed (a hearth to make for) and famished, standing well away from it.
     let home = Vec3::new(0.0, WALK_Y, 0.0);
     round.people.get_mut(&merc).expect("enrolled").home = Some(home);
-    assert!(!round.people[&merc].curfew_exempt, "a market trader keeps no night post");
-    world.characters.get_mut(&merc).expect("enrolled").state.needs.hunger = HUNGER_FAMISHED / 3.0;
+    assert!(
+        !round.people[&merc].curfew_exempt,
+        "a market trader keeps no night post"
+    );
+    world
+        .characters
+        .get_mut(&merc)
+        .expect("enrolled")
+        .state
+        .needs
+        .hunger = HUNGER_FAMISHED / 3.0;
 
     // Dawn (Dayspring, no meal office): the hearth is cold — hunger does not march
     // them home; they keep to the round, and no famished pressure is injected.
-    let (dawn, dawn_pressure) =
-        decide(&round, &world, &nav, &merc, 0, Office::Dayspring, Weekday::of_day(1));
-    assert_ne!(dawn_pressure, Some(FAMISHED_PRESSURE), "a cold hearth does not march the famished home at dawn");
-    assert!(!matches!(dawn, Decision::Travel(t) if t == home), "the famished worker is not sent home at dawn");
+    let (dawn, dawn_pressure) = decide(
+        &round,
+        &world,
+        &nav,
+        &merc,
+        0,
+        Office::Dayspring,
+        Weekday::of_day(1),
+    );
+    assert_ne!(
+        dawn_pressure,
+        Some(FAMISHED_PRESSURE),
+        "a cold hearth does not march the famished home at dawn"
+    );
+    assert!(
+        !matches!(dawn, Decision::Travel(t) if t == home),
+        "the famished worker is not sent home at dawn"
+    );
 
     // High Wick (a meal office): the hearth is warm — now hunger sends them home,
     // with the excuse-yourself pressure.
-    let (noon, noon_pressure) =
-        decide(&round, &world, &nav, &merc, 0, Office::HighWick, Weekday::of_day(1));
-    assert!(matches!(noon, Decision::Travel(t) if t == home), "famished at High Wick makes for the hearth, got {noon:?}");
-    assert_eq!(noon_pressure, Some(FAMISHED_PRESSURE), "and injects the famished pressure");
+    let (noon, noon_pressure) = decide(
+        &round,
+        &world,
+        &nav,
+        &merc,
+        0,
+        Office::HighWick,
+        Weekday::of_day(1),
+    );
+    assert!(
+        matches!(noon, Decision::Travel(t) if t == home),
+        "famished at High Wick makes for the hearth, got {noon:?}"
+    );
+    assert_eq!(
+        noon_pressure,
+        Some(FAMISHED_PRESSURE),
+        "and injects the famished pressure"
+    );
 }
 
 // --------------------------------------------------------------------------- //
@@ -2206,19 +3101,47 @@ fn famished_diverts_home_only_while_the_hearth_is_serving() {
 fn bread_stall_world() -> (World, Round, ActorId, ActorId, ItemId) {
     let mut world = base_world();
     let vendor = ActorId::from_raw("baker");
-    world.add_character(person("baker", Vec3::ZERO, Some("baker"), Significance::Minor));
+    world.add_character(person(
+        "baker",
+        Vec3::ZERO,
+        Some("baker"),
+        Significance::Minor,
+    ));
     let stock_id = ItemId::from_raw("fs_baker_0_0");
     world.add_item(Item::stack(stock_id.clone(), "loaf", 3));
-    world.characters.get_mut(&vendor).unwrap().state.holds.push(stock_id.clone());
+    world
+        .characters
+        .get_mut(&vendor)
+        .unwrap()
+        .state
+        .holds
+        .push(stock_id.clone());
     let vendor_wallet = ItemId::from_raw("w_baker");
     world.add_item(Item::stack(vendor_wallet.clone(), "spark", 6));
-    world.characters.get_mut(&vendor).unwrap().state.holds.push(vendor_wallet);
+    world
+        .characters
+        .get_mut(&vendor)
+        .unwrap()
+        .state
+        .holds
+        .push(vendor_wallet);
 
     let buyer = ActorId::from_raw("buyer");
-    world.add_character(person("buyer", Vec3::new(2.0, WALK_Y, 0.0), None, Significance::Minor));
+    world.add_character(person(
+        "buyer",
+        Vec3::new(2.0, WALK_Y, 0.0),
+        None,
+        Significance::Minor,
+    ));
     let buyer_wallet = ItemId::from_raw("w_buyer");
     world.add_item(Item::stack(buyer_wallet.clone(), "spark", 5));
-    world.characters.get_mut(&buyer).unwrap().state.holds.push(buyer_wallet);
+    world
+        .characters
+        .get_mut(&buyer)
+        .unwrap()
+        .state
+        .holds
+        .push(buyer_wallet);
     world.assert_invariants();
 
     let mut round = Round::default();
@@ -2240,7 +3163,10 @@ fn bread_stall_world() -> (World, Round, ActorId, ActorId, ItemId) {
         queue: vec![buyer.clone()],
         serving: None,
         preferred: None,
-        open: OpenSpec { offices: vec![Office::HighWick], weekdays: None },
+        open: OpenSpec {
+            offices: vec![Office::HighWick],
+            weekdays: None,
+        },
         cry_next: 0.0,
     });
     (world, round, vendor, buyer, stock_id)
@@ -2257,7 +3183,10 @@ fn a_purchase_is_an_atomic_swap_that_conserves_the_board() {
     let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("the buyer affords a loaf");
     assert_eq!(sale.price, 2, "the loaf is list price");
     assert_eq!(sale.item_display, "loaf");
-    assert_eq!(sale.stock_left, 2, "one of three loaves left the board — no phantom unit");
+    assert_eq!(
+        sale.stock_left, 2,
+        "one of three loaves left the board — no phantom unit"
+    );
 
     assert_eq!(
         world.wallet_sparks(&buyer) + world.wallet_sparks(&vendor),
@@ -2274,7 +3203,11 @@ fn a_purchase_is_an_atomic_swap_that_conserves_the_board() {
         .map(|item| item.quantity)
         .sum();
     assert_eq!(loaves, 1, "the buyer carries the loaf");
-    assert_eq!(world.items.get(&stock_id).map(|item| item.quantity), Some(2), "the vendor's stack fell by one");
+    assert_eq!(
+        world.items.get(&stock_id).map(|item| item.quantity),
+        Some(2),
+        "the vendor's stack fell by one"
+    );
     world.assert_invariants();
 }
 
@@ -2285,8 +3218,15 @@ fn a_broke_buyer_is_a_no_sale() {
     let (mut world, mut round, _vendor, buyer, stock_id) = bread_stall_world();
     // Spend the buyer down to a single spark — a 2-spark loaf is out of reach.
     set_wallet(&mut world, &buyer, 1);
-    assert!(try_purchase(&mut round, &mut world, 0, &buyer).is_none(), "a spark cannot buy a 2-spark loaf");
-    assert_eq!(world.items.get(&stock_id).map(|item| item.quantity), Some(3), "the board is untouched");
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_none(),
+        "a spark cannot buy a 2-spark loaf"
+    );
+    assert_eq!(
+        world.items.get(&stock_id).map(|item| item.quantity),
+        Some(3),
+        "the board is untouched"
+    );
     assert_eq!(world.wallet_sparks(&buyer), 1, "the buyer keeps their coin");
 }
 
@@ -2298,15 +3238,34 @@ fn a_purchase_takes_the_cheapest_affordable() {
     // Add a 1-spark herring to the same board and pin the buyer to a single spark.
     let herring = ItemId::from_raw("fs_baker_0_1");
     world.add_item(Item::stack(herring.clone(), "herring", 4));
-    world.characters.get_mut(&vendor).unwrap().state.holds.push(herring.clone());
-    round.food_trades.get_mut("bread").unwrap().listings.push(ItemMatcher::new("herring"));
+    world
+        .characters
+        .get_mut(&vendor)
+        .unwrap()
+        .state
+        .holds
+        .push(herring.clone());
+    round
+        .food_trades
+        .get_mut("bread")
+        .unwrap()
+        .listings
+        .push(ItemMatcher::new("herring"));
     set_wallet(&mut world, &buyer, 1);
 
     let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("a spark buys a herring");
     assert_eq!(sale.item_display, "herring");
     assert_eq!(sale.price, 1);
-    assert_eq!(world.items.get(&herring).map(|item| item.quantity), Some(3), "a herring left the board");
-    assert_eq!(world.wallet_sparks(&buyer), 0, "the buyer spent their last spark");
+    assert_eq!(
+        world.items.get(&herring).map(|item| item.quantity),
+        Some(3),
+        "a herring left the board"
+    );
+    assert_eq!(
+        world.wallet_sparks(&buyer),
+        0,
+        "the buyer spent their last spark"
+    );
 }
 
 /// The pot never depletes: it conjures a fresh bowl per sale, and the stall's
@@ -2328,7 +3287,13 @@ fn the_pot_conjures_a_bowl_per_serving() {
     // strip the leftover loaf stack so only the pot remains
     let stock = ItemId::from_raw("fs_baker_0_0");
     world.items.remove(&stock);
-    world.characters.get_mut(&vendor).unwrap().state.holds.retain(|id| id != &stock);
+    world
+        .characters
+        .get_mut(&vendor)
+        .unwrap()
+        .state
+        .holds
+        .retain(|id| id != &stock);
 
     let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("a bowl of stew");
     assert_eq!(sale.item_display, "bowl of stew");
@@ -2356,9 +3321,18 @@ fn a_vendor_prefers_personal_food_to_live_listed_stock() {
     let mut world = world;
     let personal = ItemId::from_raw("mine1");
     world.add_item(Item::new(personal.clone(), "herring"));
-    world.characters.get_mut(&vendor).unwrap().state.holds.push(personal.clone());
+    world
+        .characters
+        .get_mut(&vendor)
+        .unwrap()
+        .state
+        .holds
+        .push(personal.clone());
     round.stalls[0].vendor = Some(vendor.clone());
-    assert_eq!(held_edible(&round, &world, &world.characters[&vendor]), Some(personal));
+    assert_eq!(
+        held_edible(&round, &world, &world.characters[&vendor]),
+        Some(personal)
+    );
 }
 
 /// Legacy restock replaces only quantities carrying that restock provenance.
@@ -2376,11 +3350,20 @@ fn legacy_restock_preserves_persistent_stock_and_does_not_accumulate() {
     });
 
     round.restock(&mut world, 2);
-    assert_eq!(world.items[&loaf].quantity, 3, "persistent loaves survive legacy restock");
-    assert_eq!(world.held_quantity(&vendor, &ItemMatcher::new("herring")), 2);
+    assert_eq!(
+        world.items[&loaf].quantity, 3,
+        "persistent loaves survive legacy restock"
+    );
+    assert_eq!(
+        world.held_quantity(&vendor, &ItemMatcher::new("herring")),
+        2
+    );
     round.restock(&mut world, 3);
     assert_eq!(world.items[&loaf].quantity, 3);
-    assert_eq!(world.held_quantity(&vendor, &ItemMatcher::new("herring")), 2);
+    assert_eq!(
+        world.held_quantity(&vendor, &ItemMatcher::new("herring")),
+        2
+    );
     world.assert_invariants();
 }
 
@@ -2396,19 +3379,31 @@ fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
     let mut world = base_world();
     // Three fish traders: V nearest the low-index stall, Z its former keeper a
     // little farther, U the keeper of the high-index stall.
-    world.add_character(person("v0000", Vec3::new(1.0, WALK_Y, 0.0), Some("fish_trader"), Significance::Minor));
-    world.add_character(person("z0000", Vec3::new(5.0, WALK_Y, 0.0), Some("fish_trader"), Significance::Minor));
-    world.add_character(person("u0000", Vec3::new(99.0, WALK_Y, 100.0), Some("fish_trader"), Significance::Minor));
+    world.add_character(person(
+        "v0000",
+        Vec3::new(1.0, WALK_Y, 0.0),
+        Some("fish_trader"),
+        Significance::Minor,
+    ));
+    world.add_character(person(
+        "z0000",
+        Vec3::new(5.0, WALK_Y, 0.0),
+        Some("fish_trader"),
+        Significance::Minor,
+    ));
+    world.add_character(person(
+        "u0000",
+        Vec3::new(99.0, WALK_Y, 100.0),
+        Some("fish_trader"),
+        Significance::Minor,
+    ));
 
     let mut round = Round::default();
     round.food_trades.insert(
         "fish".into(),
         ResolvedTrade {
             occupations: vec!["fish_trader".into()],
-            listings: vec![
-                ItemMatcher::new("herring"),
-                ItemMatcher::new("smoked_eel"),
-            ],
+            listings: vec![ItemMatcher::new("herring"), ItemMatcher::new("smoked_eel")],
             restock: Vec::new(),
             per_serving: None,
         },
@@ -2422,7 +3417,10 @@ fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
             Townsperson {
                 home: None,
                 base,
-                legs: sites.iter().map(|site| leg(Office::HighWick, site, None)).collect(),
+                legs: sites
+                    .iter()
+                    .map(|site| leg(Office::HighWick, site, None))
+                    .collect(),
                 leash_m: 2.0,
                 curfew_exempt: false,
                 source: None,
@@ -2437,7 +3435,11 @@ fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
             },
         );
     };
-    enrol("v0000", Vec3::new(1.0, WALK_Y, 0.0), &["SITE_LOW", "SITE_HIGH"]);
+    enrol(
+        "v0000",
+        Vec3::new(1.0, WALK_Y, 0.0),
+        &["SITE_LOW", "SITE_HIGH"],
+    );
     enrol("z0000", Vec3::new(5.0, WALK_Y, 0.0), &["SITE_LOW"]);
     enrol("u0000", Vec3::new(99.0, WALK_Y, 100.0), &["SITE_HIGH"]);
 
@@ -2450,41 +3452,79 @@ fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
         queue: Vec::new(),
         serving: None,
         preferred: None,
-        open: OpenSpec { offices: vec![Office::HighWick], weekdays },
+        open: OpenSpec {
+            offices: vec![Office::HighWick],
+            weekdays,
+        },
         cry_next: 0.0,
     };
     // idx 0 (low): Highmarket-only, former keeper Z. idx 1 (high): every day,
     // former keeper V — the vendor about to move down onto idx 0.
-    round.stalls.push(stall("SITE_LOW", Vec3::new(0.0, WALK_Y, 0.0), Some(vec![Weekday::Highmarket]), "z0000"));
-    round.stalls.push(stall("SITE_HIGH", Vec3::new(100.0, WALK_Y, 100.0), None, "v0000"));
+    round.stalls.push(stall(
+        "SITE_LOW",
+        Vec3::new(0.0, WALK_Y, 0.0),
+        Some(vec![Weekday::Highmarket]),
+        "z0000",
+    ));
+    round.stalls.push(stall(
+        "SITE_HIGH",
+        Vec3::new(100.0, WALK_Y, 100.0),
+        None,
+        "v0000",
+    ));
 
     // The price lists the previous pass left on the two former vendors.
     for id in ["v0000", "z0000"] {
-        world.characters.get_mut(&ActorId::from_raw(id)).unwrap().state.you_sell =
-            vec![VendorListing { name: "herring".into(), price_sparks: 1 }];
+        world
+            .characters
+            .get_mut(&ActorId::from_raw(id))
+            .unwrap()
+            .state
+            .you_sell = vec![VendorListing {
+            name: "herring".into(),
+            price_sparks: 1,
+        }];
     }
 
     round.bind_vendors(&mut world, Weekday::Highmarket);
 
     // V moved idx1 → idx0; U took idx1; Z is bumped from idx0.
-    assert_eq!(round.stalls[0].vendor.as_ref(), Some(&ActorId::from_raw("v0000")));
-    assert_eq!(round.stalls[1].vendor.as_ref(), Some(&ActorId::from_raw("u0000")));
+    assert_eq!(
+        round.stalls[0].vendor.as_ref(),
+        Some(&ActorId::from_raw("v0000"))
+    );
+    assert_eq!(
+        round.stalls[1].vendor.as_ref(),
+        Some(&ActorId::from_raw("u0000"))
+    );
     // The bug: V's you_sell is wiped by idx1's clear of its stale previous vendor.
     assert!(
-        !world.characters[&ActorId::from_raw("v0000")].state.you_sell.is_empty(),
+        !world.characters[&ActorId::from_raw("v0000")]
+            .state
+            .you_sell
+            .is_empty(),
         "the reassigned vendor keeps its price list across the same pass"
     );
     // The genuinely-unbound former vendor is cleared in the same pass.
     assert!(
-        world.characters[&ActorId::from_raw("z0000")].state.you_sell.is_empty(),
+        world.characters[&ActorId::from_raw("z0000")]
+            .state
+            .you_sell
+            .is_empty(),
         "the bumped former vendor's price list is cleared"
     );
     // The new keeper of idx1 gets the fish list off the catalog.
     assert_eq!(
         world.characters[&ActorId::from_raw("u0000")].state.you_sell,
         vec![
-            VendorListing { name: "herring".into(), price_sparks: 1 },
-            VendorListing { name: "smoked eel".into(), price_sparks: 3 },
+            VendorListing {
+                name: "herring".into(),
+                price_sparks: 1
+            },
+            VendorListing {
+                name: "smoked eel".into(),
+                price_sparks: 3
+            },
         ]
     );
 }
@@ -2499,8 +3539,18 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
     let clock = clock_on(Office::HighWick, 2); // Highmarket noon, the market's peak
     let mut world = base_world();
     let wickmarket = nav.node_point(nav.place("The Wickmarket").expect("baked").node);
-    world.add_character(person("prov2", wickmarket, Some("food_provisioner"), Significance::Minor));
-    world.add_character(person("hgry1", wickmarket + Vec3::new(8.0, 0.0, 4.0), Some("mason"), Significance::Minor));
+    world.add_character(person(
+        "prov2",
+        wickmarket,
+        Some("food_provisioner"),
+        Significance::Minor,
+    ));
+    world.add_character(person(
+        "hgry1",
+        wickmarket + Vec3::new(8.0, 0.0, 4.0),
+        Some("mason"),
+        Significance::Minor,
+    ));
     world.nav = Some(std::sync::Arc::new(nav.clone()));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
@@ -2508,12 +3558,27 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
     let vendor = ActorId::from_raw("prov2");
     let hungry = ActorId::from_raw("hgry1");
     assert!(
-        round.stalls().iter().any(|s| s.name.contains("provisions") && s.vendor.as_ref() == Some(&vendor)),
+        round
+            .stalls()
+            .iter()
+            .any(|s| s.name.contains("provisions") && s.vendor.as_ref() == Some(&vendor)),
         "the provisioner keeps the provisions stall on a Highmarket noon"
     );
     // Keep the baker fed (so they simply stand their post), and starve the buyer.
-    world.characters.get_mut(&vendor).unwrap().state.needs.hunger = 200.0;
-    world.characters.get_mut(&hungry).unwrap().state.needs.hunger = 8.0; // famished
+    world
+        .characters
+        .get_mut(&vendor)
+        .unwrap()
+        .state
+        .needs
+        .hunger = 200.0;
+    world
+        .characters
+        .get_mut(&hungry)
+        .unwrap()
+        .state
+        .needs
+        .hunger = 8.0; // famished
     set_wallet(&mut world, &hungry, 4);
     let hunger_before = world.characters[&hungry].needs().hunger;
 
@@ -2524,12 +3589,18 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
             .any(|line| line.starts_with("You bought a herring"))
     });
     assert!(
-        world.characters[&hungry].recent_history().iter().any(|line| line.starts_with("You bought a herring from")),
+        world.characters[&hungry]
+            .recent_history()
+            .iter()
+            .any(|line| line.starts_with("You bought a herring from")),
         "the buyer remembers the purchase they can be asked about: {:?}",
         world.characters[&hungry].recent_history()
     );
     assert!(
-        world.characters[&vendor].recent_history().iter().any(|line| line == "You sold a herring for 1 spark."),
+        world.characters[&vendor]
+            .recent_history()
+            .iter()
+            .any(|line| line == "You sold a herring for 1 spark."),
         "the vendor remembers the sale: {:?}",
         world.characters[&vendor].recent_history()
     );
@@ -2545,31 +3616,52 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
     // bystander `ate a herring` line floods the nearby vendor's inbox — the
     // market's zero-token discipline (`05` §4).
     assert!(
-        world.characters[&hungry].recent_history().iter().any(|line| line == "You ate a herring."),
+        world.characters[&hungry]
+            .recent_history()
+            .iter()
+            .any(|line| line == "You ate a herring."),
         "the eater remembers their own meal: {:?}",
         world.characters[&hungry].recent_history()
     );
     assert!(
-        !world.characters[&vendor].inbox().iter().any(|line| line.contains("ate a herring")),
+        !world.characters[&vendor]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("ate a herring")),
         "no bystander eat line reaches the vendor's inbox: {:?}",
         world.characters[&vendor].inbox()
     );
     // The sale clinked a coin — a player-only world sound, never attributed to an
     // actor, so it nudges no NPC (`04` §5).
     let events = world.drain_events();
-    let clink = events.iter().find(|event| event.sound_id.as_deref() == Some("coin_clink"));
+    let clink = events
+        .iter()
+        .find(|event| event.sound_id.as_deref() == Some("coin_clink"));
     assert!(clink.is_some(), "the purchase emits a coin_clink");
-    assert!(clink.unwrap().actor_id.is_none(), "the clink is an unattributed world sound");
+    assert!(
+        clink.unwrap().actor_id.is_none(),
+        "the clink is an unattributed world sound"
+    );
 
     // The purchase also emits the presentation-only generic `sale`
     // world event — vendor → buyer, the bought item, one unit — so the host can
     // play the hand-over between their bodies.
     let sale = events
         .iter()
-        .find(|event| event.event_type == crate::event::EventType::WorldEvent && event.kind == "sale")
+        .find(|event| {
+            event.event_type == crate::event::EventType::WorldEvent && event.kind == "sale"
+        })
         .expect("the purchase emits a sale world event");
-    assert_eq!(sale.actor_id.as_ref(), Some(&vendor), "the vendor performs the hand-over");
-    assert_eq!(sale.target_id.as_ref(), Some(&hungry), "the buyer receives it");
+    assert_eq!(
+        sale.actor_id.as_ref(),
+        Some(&vendor),
+        "the vendor performs the hand-over"
+    );
+    assert_eq!(
+        sale.target_id.as_ref(),
+        Some(&hungry),
+        "the buyer receives it"
+    );
     assert!(sale.item_id.is_some(), "the sold item rides the event");
     assert_eq!(sale.quantity, 1, "one unit per sale");
     // The purity rule: presentation-only means NO mind hears about it. Empty
@@ -2577,16 +3669,25 @@ fn a_famished_passerby_buys_and_eats_at_the_wickmarket() {
     // and no such site exists for this kind), no witnesses, and no percept
     // beyond the two self-percepts asserted above — every inbox in the world
     // stays free of the sale.
-    assert!(sale.recipient_ids.is_empty(), "sale reaches no mind's inbox");
+    assert!(
+        sale.recipient_ids.is_empty(),
+        "sale reaches no mind's inbox"
+    );
     assert!(sale.witness_ids.is_empty(), "sale has no witnesses");
     for (id, character) in &world.characters {
         assert!(
-            character.inbox().iter().all(|line| !line.contains("bought") && !line.contains("sold")),
+            character
+                .inbox()
+                .iter()
+                .all(|line| !line.contains("bought") && !line.contains("sold")),
             "{id} was told about a silent stall sale: {:?}",
             character.inbox()
         );
         assert!(
-            character.recent_history().iter().all(|line| !line.contains("sale")),
+            character
+                .recent_history()
+                .iter()
+                .all(|line| !line.contains("sale")),
             "{id} perceived the raw event kind: {:?}",
             character.recent_history()
         );
@@ -2604,19 +3705,30 @@ fn binding_a_vendor_writes_you_sell_and_unbinding_clears_it() {
     let clock = clock_on(Office::HighWick, 2); // Highmarket noon, the market's peak
     let mut world = base_world();
     let wickmarket = nav.node_point(nav.place("The Wickmarket").expect("baked").node);
-    world.add_character(person("bakr3", wickmarket, Some("baker"), Significance::Minor));
+    world.add_character(person(
+        "bakr3",
+        wickmarket,
+        Some("baker"),
+        Significance::Minor,
+    ));
     world.nav = Some(std::sync::Arc::new(nav.clone()));
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock);
 
     let baker = ActorId::from_raw("bakr3");
     assert!(
-        round.stalls().iter().any(|s| s.name.contains("bread") && s.vendor.as_ref() == Some(&baker)),
+        round
+            .stalls()
+            .iter()
+            .any(|s| s.name.contains("bread") && s.vendor.as_ref() == Some(&baker)),
         "the baker keeps the bread stall"
     );
     assert_eq!(
         world.characters[&baker].state.you_sell,
-        vec![VendorListing { name: "loaf".into(), price_sparks: 2 }],
+        vec![VendorListing {
+            name: "loaf".into(),
+            price_sparks: 2
+        }],
         "binding writes the catalog-priced generic-loaf listing"
     );
 
@@ -2625,7 +3737,13 @@ fn binding_a_vendor_writes_you_sell_and_unbinding_clears_it() {
     round.people.remove(&baker);
     round.bind_vendors(&mut world, clock.at(0.0).weekday);
     assert!(
-        round.stalls().iter().find(|s| s.name.contains("bread")).unwrap().vendor.is_none(),
+        round
+            .stalls()
+            .iter()
+            .find(|s| s.name.contains("bread"))
+            .unwrap()
+            .vendor
+            .is_none(),
         "the bread stall unbinds with no eligible keeper"
     );
     assert!(
@@ -2669,10 +3787,19 @@ fn buying_cannot_spend_an_offered_stock_unit() {
     .unwrap();
     assert!(try_purchase(&mut round, &mut world, 0, &buyer).is_none());
     assert!(world.items.contains_key(&stock_id));
-    apply_action(&mut world, &vendor, "retract_offer", &json!({"item_id": stock_id.as_str()})).unwrap();
+    apply_action(
+        &mut world,
+        &vendor,
+        "retract_offer",
+        &json!({"item_id": stock_id.as_str()}),
+    )
+    .unwrap();
     let sale = try_purchase(&mut round, &mut world, 0, &buyer).expect("the last loaf sells");
     assert_eq!(sale.stock_left, 0);
-    assert!(world.characters[&buyer].holds().contains(&stock_id), "the whole stack id moved to the buyer");
+    assert!(
+        world.characters[&buyer].holds().contains(&stock_id),
+        "the whole stack id moved to the buyer"
+    );
     assert!(!world.characters[&vendor].holds().contains(&stock_id));
     world.assert_invariants();
 }
@@ -2695,9 +3822,18 @@ fn spending_cannot_use_an_offered_coin_stack() {
     assert!(world.offers.contains_key(&coin), "the coin offer is live");
     assert!(try_purchase(&mut round, &mut world, 0, &buyer).is_none());
     assert_eq!(world.items[&coin].quantity, 2);
-    apply_action(&mut world, &buyer, "retract_offer", &json!({"item_id": coin.as_str()})).unwrap();
+    apply_action(
+        &mut world,
+        &buyer,
+        "retract_offer",
+        &json!({"item_id": coin.as_str()}),
+    )
+    .unwrap();
     try_purchase(&mut round, &mut world, 0, &buyer).expect("the loaf is affordable");
-    assert!(!world.items.contains_key(&coin), "the emptied purse is gone");
+    assert!(
+        !world.items.contains_key(&coin),
+        "the emptied purse is gone"
+    );
     world.assert_invariants();
 }
 
@@ -2715,11 +3851,21 @@ fn wallet_settlement_refuses_an_offered_spark_stack() {
     )
     .unwrap();
     assert!(world.offers.contains_key(&coin));
-    let error = world.settle_wallet_exact(&buyer, 0, "test_committed_wallet").unwrap_err();
+    let error = world
+        .settle_wallet_exact(&buyer, 0, "test_committed_wallet")
+        .unwrap_err();
     assert_eq!(error.code, crate::InventoryErrorCode::ItemCommitted);
     assert_eq!(world.items[&coin].quantity, 5);
-    apply_action(&mut world, &buyer, "retract_offer", &json!({"item_id": coin.as_str()})).unwrap();
-    world.settle_wallet_exact(&buyer, 0, "test_clear_wallet").unwrap();
+    apply_action(
+        &mut world,
+        &buyer,
+        "retract_offer",
+        &json!({"item_id": coin.as_str()}),
+    )
+    .unwrap();
+    world
+        .settle_wallet_exact(&buyer, 0, "test_clear_wallet")
+        .unwrap();
     assert!(!world.items.contains_key(&coin), "the wallet is gone");
     world.assert_invariants();
 }
@@ -2733,21 +3879,58 @@ fn carry_home_only_when_actually_heading_home() {
     let shop = Vec3::new(50.0, WALK_Y, 0.0);
     let buyer = ActorId::from_raw("bYr");
     let mut round = Round::default();
-    let legs = |office: Office| RoundLeg { from: office, at: if office == Office::Lamplight { home } else { shop }, label: if office == Office::Lamplight { "home".into() } else { "shop".into() }, doing: if office == Office::Lamplight { Arrival::Sleep } else { Arrival::Trade }, only_on: None, is_home: office == Office::Lamplight };
+    let legs = |office: Office| RoundLeg {
+        from: office,
+        at: if office == Office::Lamplight {
+            home
+        } else {
+            shop
+        },
+        label: if office == Office::Lamplight {
+            "home".into()
+        } else {
+            "shop".into()
+        },
+        doing: if office == Office::Lamplight {
+            Arrival::Sleep
+        } else {
+            Arrival::Trade
+        },
+        only_on: None,
+        is_home: office == Office::Lamplight,
+    };
     let person = Townsperson {
-        home: Some(home), base: home,
+        home: Some(home),
+        base: home,
         legs: vec![legs(Office::Waning), legs(Office::Lamplight)],
-        leash_m: DEFAULT_ROUND_LEASH_M, curfew_exempt: false, source: None, is_household: false,
-        food: None, phase: Phase::Idle, travel_target: None, travel_for_intent: false,
-        next_decision: 0.0, epoch: 0, excused: false,
+        leash_m: DEFAULT_ROUND_LEASH_M,
+        curfew_exempt: false,
+        source: None,
+        is_household: false,
+        food: None,
+        phase: Phase::Idle,
+        travel_target: None,
+        travel_for_intent: false,
+        next_decision: 0.0,
+        epoch: 0,
+        excused: false,
     };
     round.people.insert(buyer.clone(), person);
     // At the Waning the active leg is still the shop → eat at the pitch.
-    assert!(!should_carry(&round, &buyer, Office::Waning, Weekday::Second), "still at the market post: eat here");
+    assert!(
+        !should_carry(&round, &buyer, Office::Waning, Weekday::Second),
+        "still at the market post: eat here"
+    );
     // At Lamplight the active leg is home → carry it to the hearth.
-    assert!(should_carry(&round, &buyer, Office::Lamplight, Weekday::Second), "headed home for supper: carry it");
+    assert!(
+        should_carry(&round, &buyer, Office::Lamplight, Weekday::Second),
+        "headed home for supper: carry it"
+    );
     // At noon nobody carries.
-    assert!(!should_carry(&round, &buyer, Office::HighWick, Weekday::Second), "not the supper span");
+    assert!(
+        !should_carry(&round, &buyer, Office::HighWick, Weekday::Second),
+        "not the supper span"
+    );
 }
 
 /// The low-hunger memory hook is a *first-person present* declaration, not a bare
@@ -2756,11 +3939,26 @@ fn carry_home_only_when_actually_heading_home() {
 /// not — the silent-famine risk the review flagged.
 #[test]
 fn the_memory_hunger_hook_is_first_person_only() {
-    assert!(memory_declares_hunger("I am very hungry after the long road here"), "Ilse still matches");
-    assert!(memory_declares_hunger("I feel hungry."), "a plain first-person declaration matches");
-    assert!(!memory_declares_hunger("the winter everyone went hungry"), "third-person lore does not seed famine");
-    assert!(!memory_declares_hunger("hungrycrake was the fisher's nickname"), "an embedded substring is not the word");
-    assert!(!memory_declares_hunger("I am weary after the long road"), "no hunger, no match");
+    assert!(
+        memory_declares_hunger("I am very hungry after the long road here"),
+        "Ilse still matches"
+    );
+    assert!(
+        memory_declares_hunger("I feel hungry."),
+        "a plain first-person declaration matches"
+    );
+    assert!(
+        !memory_declares_hunger("the winter everyone went hungry"),
+        "third-person lore does not seed famine"
+    );
+    assert!(
+        !memory_declares_hunger("hungrycrake was the fisher's nickname"),
+        "an embedded substring is not the word"
+    );
+    assert!(
+        !memory_declares_hunger("I am weary after the long road"),
+        "no hunger, no match"
+    );
 }
 
 // --------------------------------------------------------------------------- //
@@ -2816,15 +4014,20 @@ fn exact_office_bootstrap_stages_and_enters_only_the_scheduled_party_once() {
                 assert_eq!(visible[0].0.as_str(), party_id);
                 assert_eq!(visible[0].1, members);
                 assert_eq!(visible[0].2, 1);
-                assert!(round.road_parties[&visible[0].0]
-                    .members
-                    .iter()
-                    .all(|member| world.is_present(member)));
+                assert!(
+                    round.road_parties[&visible[0].0]
+                        .members
+                        .iter()
+                        .all(|member| world.is_present(member))
+                );
                 assert_eq!(round.road_carts(&world).len(), 1);
                 let revision = world.world_revision;
                 let visible_party = visible[0].0.clone();
                 round.trigger_road_entry(&mut world, &visible_party, day);
-                assert_eq!(world.world_revision, revision, "bootstrap cannot enter twice");
+                assert_eq!(
+                    world.world_revision, revision,
+                    "bootstrap cannot enter twice"
+                );
                 assert_eq!(round.party_state(&visible_party).unwrap().trip_number, 1);
             }
             None => {
@@ -2839,13 +4042,24 @@ fn exact_office_bootstrap_stages_and_enters_only_the_scheduled_party_once() {
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_on(Office::Kindling, 2));
     let party = PartyId::from_raw("brede_wool_gate");
-    assert_eq!(round.party_state(&party).unwrap().phase, PartyPhase::StagedOutsideGate);
+    assert_eq!(
+        round.party_state(&party).unwrap().phase,
+        PartyPhase::StagedOutsideGate
+    );
     assert_eq!(round.party_state(&party).unwrap().trip_number, 1);
-    assert!(round.road_parties[&party].members.iter().all(|member| !world.is_present(member)));
+    assert!(
+        round.road_parties[&party]
+            .members
+            .iter()
+            .all(|member| !world.is_present(member))
+    );
     assert!(round.road_carts(&world).is_empty());
     let revision = world.world_revision;
     round.trigger_road_stage(&mut world, &party, 2);
-    assert_eq!(world.world_revision, revision, "exact-Kindling bootstrap stages once");
+    assert_eq!(
+        world.world_revision, revision,
+        "exact-Kindling bootstrap stages once"
+    );
     assert_eq!(round.party_state(&party).unwrap().trip_number, 1);
 }
 
@@ -2872,11 +4086,19 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
     let wool_quantity = world.items[&wool].quantity;
     let load_before = round.road_carts(&world)[0].load.clone();
     world
-        .transfer_item_quantity(&leader, &carter, &wool, wool_quantity, "road:test:carter-wool")
+        .transfer_item_quantity(
+            &leader,
+            &carter,
+            &wool,
+            wool_quantity,
+            "road:test:carter-wool",
+        )
         .unwrap();
     assert_eq!(round.road_carts(&world)[0].load, load_before);
     assert!(world.characters[&carter].holds().contains(&wool));
-    let personal = world.add_stock(&carter, &stock("generic", 1), "road:test:personal").unwrap();
+    let personal = world
+        .add_stock(&carter, &stock("generic", 1), "road:test:personal")
+        .unwrap();
 
     // Move the leader's whole purse away. The old id remains owned by a city
     // actor, forcing the next boundary credit to probe a fresh deterministic id.
@@ -2890,7 +4112,13 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         .unwrap();
     let leader_cash = world.items[&old_purse].quantity;
     world
-        .transfer_item_quantity(&leader, &city, &old_purse, leader_cash, "road:test:whole-purse")
+        .transfer_item_quantity(
+            &leader,
+            &city,
+            &old_purse,
+            leader_cash,
+            "road:test:whole-purse",
+        )
         .unwrap();
 
     // Competing city state cannot own a returning member. Queue and errand
@@ -2918,8 +4146,15 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         budget_seconds: 100.0,
         deadline: Some(100.0),
     });
-    world.characters.get_mut(&leader).unwrap().state.needs.hunger = 0.0;
-    world.characters.get_mut(&city).unwrap().state.position_m = world.characters[&carter].position_m();
+    world
+        .characters
+        .get_mut(&leader)
+        .unwrap()
+        .state
+        .needs
+        .hunger = 0.0;
+    world.characters.get_mut(&city).unwrap().state.position_m =
+        world.characters[&carter].position_m();
     apply_action(
         &mut world,
         &carter,
@@ -2927,8 +4162,20 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         &json!({"item_id": personal.as_str(), "target": city.as_str()}),
     )
     .unwrap();
-    world.characters.get_mut(&carter).unwrap().state.inbox.push("Unread at the gate".into());
-    world.characters.get_mut(&carter).unwrap().state.recent_history.push("A durable road line".into());
+    world
+        .characters
+        .get_mut(&carter)
+        .unwrap()
+        .state
+        .inbox
+        .push("Unread at the gate".into());
+    world
+        .characters
+        .get_mut(&carter)
+        .unwrap()
+        .state
+        .recent_history
+        .push("A durable road line".into());
 
     let revision = world.world_revision;
     round.begin_road_return(&mut world, &party_id, 2);
@@ -2937,9 +4184,22 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         revision + 1,
         "begin-return is one atomic public transition"
     );
-    assert_eq!(round.party_state(&party_id).unwrap().phase, PartyPhase::Returning);
-    assert!(round.sources.iter().all(|source| !source.queue.contains(&carter)));
-    assert!(round.stalls.iter().all(|stall| !stall.queue.contains(&carter)));
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::Returning
+    );
+    assert!(
+        round
+            .sources
+            .iter()
+            .all(|source| !source.queue.contains(&carter))
+    );
+    assert!(
+        round
+            .stalls
+            .iter()
+            .all(|stall| !stall.queue.contains(&carter))
+    );
     assert!(!round.market_errands.contains_key(&leader));
     assert_eq!(
         round.closed_market_visits["brede_broadcloth"].end_reason,
@@ -2962,7 +4222,10 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         revision + 1,
         "offer expiry and departure-pending publish as one transition"
     );
-    assert_eq!(round.party_state(&party_id).unwrap().phase, PartyPhase::DeparturePending);
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::DeparturePending
+    );
     assert!(!world.offers.contains_key(&personal));
     let revision = world.world_revision;
     round.tick_road_parties(&mut world, &nav, time, &BTreeSet::new());
@@ -2971,12 +4234,22 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         revision + 1,
         "departure is one atomic public transition"
     );
-    assert_eq!(round.party_state(&party_id).unwrap().phase, PartyPhase::BeyondTheWalls);
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::BeyondTheWalls
+    );
     assert!(round.road_carts(&world).is_empty());
     assert!(world.characters[&carter].state.inbox.is_empty());
-    assert_eq!(world.characters[&carter].recent_history(), ["A durable road line"]);
+    assert_eq!(
+        world.characters[&carter].recent_history(),
+        ["A durable road line"]
+    );
 
-    round.road_parties.get_mut(&party_id).unwrap().last_trigger_day = None;
+    round
+        .road_parties
+        .get_mut(&party_id)
+        .unwrap()
+        .last_trigger_day = None;
     let revision = world.world_revision;
     round.trigger_road_stage(&mut world, &party_id, 3);
     assert_eq!(
@@ -2984,10 +4257,19 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         revision + 1,
         "the next boundary exchange is one atomic public transition"
     );
-    assert_eq!(round.party_state(&party_id).unwrap().phase, PartyPhase::StagedOutsideGate);
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::StagedOutsideGate
+    );
     assert_eq!(round.party_state(&party_id).unwrap().trip_number, 2);
-    assert!(!world.items.contains_key(&wool), "the carter's commercial wool unloaded");
-    assert!(world.characters[&carter].holds().contains(&personal), "personal cargo survives");
+    assert!(
+        !world.items.contains_key(&wool),
+        "the carter's commercial wool unloaded"
+    );
+    assert!(
+        world.characters[&carter].holds().contains(&personal),
+        "personal cargo survives"
+    );
     assert!(world.characters[&city].holds().contains(&old_purse));
     assert_eq!(world.wallet_sparks(&leader), 25);
     let new_purse = world.characters[&leader]
@@ -2995,7 +4277,10 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         .iter()
         .find(|id| world.items[*id].kind.as_str() == "spark")
         .unwrap();
-    assert_ne!(new_purse, &old_purse, "cash-in probes past the transferred purse id");
+    assert_ne!(
+        new_purse, &old_purse,
+        "cash-in probes past the transferred purse id"
+    );
     assert_eq!(world.wallet_sparks(&carter), 4);
     world.assert_invariants();
 }
@@ -3011,14 +4296,17 @@ fn boundary_failure_and_missed_trip_leave_the_trip_and_manifest_unchanged() {
 
     // A party that is still staged at its next trigger logs a miss and receives
     // neither a duplicate manifest nor a fresh trip number.
-    let quantities_before: BTreeMap<ItemId, u32> = world
-        .characters[&leader]
+    let quantities_before: BTreeMap<ItemId, u32> = world.characters[&leader]
         .holds()
         .iter()
         .map(|id| (id.clone(), world.items[id].quantity))
         .collect();
     let revision = world.world_revision;
-    round.road_parties.get_mut(&party_id).unwrap().last_trigger_day = None;
+    round
+        .road_parties
+        .get_mut(&party_id)
+        .unwrap()
+        .last_trigger_day = None;
     round.trigger_road_stage(&mut world, &party_id, 3);
     assert_eq!(round.party_state(&party_id).unwrap().trip_number, 1);
     assert_eq!(world.world_revision, revision);
@@ -3030,12 +4318,21 @@ fn boundary_failure_and_missed_trip_leave_the_trip_and_manifest_unchanged() {
             .collect::<BTreeMap<_, _>>(),
         quantities_before
     );
-    assert!(round.drain_food_log().iter().any(|line| line.contains("road_trip_missed")));
+    assert!(
+        round
+            .drain_food_log()
+            .iter()
+            .any(|line| line.contains("road_trip_missed"))
+    );
 
     // Put the controller back beyond the wall and commit the leader's purse.
     // Boundary preflight must roll back the earlier cargo-unload stage too.
     round.road_parties.get_mut(&party_id).unwrap().state.phase = PartyPhase::BeyondTheWalls;
-    round.road_parties.get_mut(&party_id).unwrap().last_trigger_day = None;
+    round
+        .road_parties
+        .get_mut(&party_id)
+        .unwrap()
+        .last_trigger_day = None;
     let purse = world.characters[&leader]
         .holds()
         .iter()
@@ -3055,7 +4352,10 @@ fn boundary_failure_and_missed_trip_leave_the_trip_and_manifest_unchanged() {
     let revision = world.world_revision;
     let trip = round.party_state(&party_id).unwrap().trip_number;
     round.trigger_road_stage(&mut world, &party_id, 3);
-    assert_eq!(round.party_state(&party_id).unwrap().phase, PartyPhase::BeyondTheWalls);
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::BeyondTheWalls
+    );
     assert_eq!(round.party_state(&party_id).unwrap().trip_number, trip);
     assert_eq!(world.world_revision, revision);
     assert_eq!(
@@ -3067,7 +4367,12 @@ fn boundary_failure_and_missed_trip_leave_the_trip_and_manifest_unchanged() {
         quantities_before
     );
     assert!(world.offers.contains_key(&purse));
-    assert!(round.drain_food_log().iter().any(|line| line.contains("boundary_exchange_failed")));
+    assert!(
+        round
+            .drain_food_log()
+            .iter()
+            .any(|line| line.contains("boundary_exchange_failed"))
+    );
 }
 
 #[test]
@@ -3080,8 +4385,12 @@ fn household_settlement_redistributes_before_minting_only_the_residual() {
     let first = ActorId::from_raw("b0000");
     let second = ActorId::from_raw("c0000");
     world.credit_sparks(&donor, 10, "settlement:donor").unwrap();
-    world.credit_sparks(&second, 2, "settlement:second").unwrap();
-    let cargo = world.add_stock(&donor, &stock("grain", 3), "settlement:cargo").unwrap();
+    world
+        .credit_sparks(&second, 2, "settlement:second")
+        .unwrap();
+    let cargo = world
+        .add_stock(&donor, &stock("grain", 3), "settlement:cargo")
+        .unwrap();
     let mut round = Round::new();
     round.household_reserves.insert(donor.clone(), 6);
     round.household_reserves.insert(first.clone(), 0);
@@ -3096,7 +4405,10 @@ fn household_settlement_redistributes_before_minting_only_the_residual() {
     assert_eq!(world.spendable_sparks(&ActorId::from_raw("a0000")), 6);
     assert_eq!(world.spendable_sparks(&ActorId::from_raw("b0000")), 4);
     assert_eq!(world.spendable_sparks(&ActorId::from_raw("c0000")), 4);
-    assert_eq!(world.items[&cargo].quantity, 3, "settlement never touches stock");
+    assert_eq!(
+        world.items[&cargo].quantity, 3,
+        "settlement never touches stock"
+    );
     world.assert_invariants();
 }
 
@@ -3105,7 +4417,9 @@ fn the_watch_dispatcher_reports_a_skipped_day_then_recovers_without_a_false_posi
     let mut world = base_world();
     world.add_character(person("a0000", Vec3::ZERO, None, Significance::Minor));
     let resident = ActorId::from_raw("a0000");
-    world.credit_sparks(&resident, 5, "settlement:positive").unwrap();
+    world
+        .credit_sparks(&resident, 5, "settlement:positive")
+        .unwrap();
     let mut round = Round::new();
 
     // Day 3 was sampled but its handler was skipped: the next Watch must say
@@ -3116,14 +4430,26 @@ fn the_watch_dispatcher_reports_a_skipped_day_then_recovers_without_a_false_posi
     assert_eq!(round.last_household_watch_day(), Some(4));
     assert_eq!(round.last_household_settlement_day(), Some(4));
     let trace = round.drain_food_log();
-    assert!(trace.iter().any(|line| line.contains("household_settlement_missed: sampled day 3")));
-    assert!(trace.iter().any(|line| line.starts_with("household_settlement: day 4")));
+    assert!(
+        trace
+            .iter()
+            .any(|line| line.contains("household_settlement_missed: sampled day 3"))
+    );
+    assert!(
+        trace
+            .iter()
+            .any(|line| line.starts_with("household_settlement: day 4"))
+    );
 
     // A completed day is paired with its sample, so the following Watch has no
     // false missed-settlement report.
     round.dispatch_household_settlement(&mut world, 5);
     let trace = round.drain_food_log();
-    assert!(trace.iter().all(|line| !line.starts_with("household_settlement_missed")));
+    assert!(
+        trace
+            .iter()
+            .all(|line| !line.starts_with("household_settlement_missed"))
+    );
     assert_eq!(round.last_household_settlement_day(), Some(5));
 }
 
@@ -3133,7 +4459,11 @@ fn a_failed_watch_handler_is_left_incomplete_and_reported_next_watch() {
     world.add_character(person("a0000", Vec3::ZERO, None, Significance::Minor));
     let resident = ActorId::from_raw("a0000");
     let purse = world
-        .add_stock(&resident, &stock("spark", u32::MAX), "settlement:full-purse")
+        .add_stock(
+            &resident,
+            &stock("spark", u32::MAX),
+            "settlement:full-purse",
+        )
         .unwrap();
     world.offers.insert(
         purse.clone(),
@@ -3151,18 +4481,28 @@ fn a_failed_watch_handler_is_left_incomplete_and_reported_next_watch() {
 
     assert_eq!(round.last_household_watch_day(), Some(7));
     assert_eq!(round.last_household_settlement_day(), None);
-    assert!(round
-        .drain_food_log()
-        .iter()
-        .any(|line| line.starts_with("household_settlement_failed: day 7")));
+    assert!(
+        round
+            .drain_food_log()
+            .iter()
+            .any(|line| line.starts_with("household_settlement_failed: day 7"))
+    );
 
     // Releasing the commitment makes the next handler valid. The dispatcher
     // first reports the incomplete day, then records this successful one.
     world.offers.remove(&purse);
     round.dispatch_household_settlement(&mut world, 8);
     let trace = round.drain_food_log();
-    assert!(trace.iter().any(|line| line.contains("household_settlement_missed: sampled day 7")));
-    assert!(trace.iter().any(|line| line.starts_with("household_settlement: day 8")));
+    assert!(
+        trace
+            .iter()
+            .any(|line| line.contains("household_settlement_missed: sampled day 7"))
+    );
+    assert!(
+        trace
+            .iter()
+            .any(|line| line.starts_with("household_settlement: day 8"))
+    );
     assert_eq!(round.last_household_settlement_day(), Some(8));
     world.assert_invariants();
 }
@@ -3268,7 +4608,10 @@ fn coarse_production_jump_credits_only_the_open_authored_work_span() {
         .active_transform_job(&producer)
         .unwrap()
         .progress_work_minutes;
-    assert!((progress - 180.0).abs() < 1e-6, "credited {progress} minutes");
+    assert!(
+        (progress - 180.0).abs() < 1e-6,
+        "credited {progress} minutes"
+    );
 }
 
 #[test]
@@ -3286,7 +4629,10 @@ fn conversation_pauses_production_without_retroactive_credit() {
         .active_transform_job(&producer)
         .unwrap()
         .progress_work_minutes;
-    assert!((progress - 30.0).abs() < 1e-6, "credited {progress} minutes");
+    assert!(
+        (progress - 30.0).abs() < 1e-6,
+        "credited {progress} minutes"
+    );
 }
 
 #[test]
@@ -3308,5 +4654,327 @@ fn production_target_counts_every_output_with_the_same_stacking_key() {
     let job = world
         .active_transform_job(&producer)
         .expect("the same batch starts when the full output fits");
-    assert_eq!(job.outputs.iter().map(|output| output.quantity).sum::<u32>(), 2);
+    assert_eq!(
+        job.outputs
+            .iter()
+            .map(|output| output.quantity)
+            .sum::<u32>(),
+        2
+    );
+}
+
+// --------------------------------------------------------------------------- //
+// Weather shelter and exposed-market policy.
+// --------------------------------------------------------------------------- //
+
+fn weather_person(position: Vec3) -> Townsperson {
+    Townsperson {
+        home: None,
+        base: position,
+        legs: Vec::new(),
+        leash_m: DEFAULT_ROUND_LEASH_M,
+        curfew_exempt: false,
+        source: None,
+        is_household: false,
+        food: None,
+        phase: Phase::Idle,
+        travel_target: None,
+        travel_for_intent: false,
+        next_decision: 0.0,
+        epoch: 0,
+        excused: false,
+    }
+}
+
+fn test_weather(kind: WeatherKind, precipitation: f64) -> WeatherSample {
+    WeatherSample {
+        kind,
+        cloud_cover: if matches!(kind, WeatherKind::Thunderstorm) {
+            1.0
+        } else {
+            0.85
+        },
+        precipitation_kind: if precipitation > 0.0 {
+            crate::PrecipitationKind::Rain
+        } else {
+            crate::PrecipitationKind::None
+        },
+        precipitation,
+        wind_xz_mps: [3.0, -1.0],
+        gust: 0.4,
+        fog: 0.0,
+        visibility_m: 120.0,
+        surface_wetness: precipitation,
+        standing_water: (precipitation - 0.5).max(0.0),
+        thunder: matches!(kind, WeatherKind::Thunderstorm) as u8 as f64,
+        semantic_revision: 41,
+    }
+}
+
+#[test]
+fn exposed_actor_uses_reachable_shelter_after_conversation_and_atomic_work() {
+    let nav = nav();
+    // Node 42 is north-east of Bellfoot Passage and has a graph route through
+    // the passage nodes. It is deliberately outside every authored polygon.
+    let start = nav.node_point(42);
+    let actor = ActorId::from_raw("rainy");
+    let mut world = base_world();
+    world.add_character(person("rainy", start, Some("baker"), Significance::Minor));
+    world.shelters = std::sync::Arc::new(
+        crate::ShelterMap::from_json_str(include_str!("../../../../assets/world/shelters.json"))
+            .expect("committed shelter data loads"),
+    );
+    world.current_weather = Some(test_weather(WeatherKind::Downpour, 0.88));
+    assert!(!world.shelters.is_sheltered(start));
+
+    let mut round = Round::default();
+    round.people.insert(actor.clone(), weather_person(start));
+    let clock = clock_at(Office::Dayspring);
+    let mut nudges = Vec::new();
+
+    // A live exchange retains precedence; it neither starts nor loses a
+    // hidden weather intent.
+    run_ladder(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        0.0,
+        &warm(&actor),
+        &mut nudges,
+    );
+    assert!(round.weather_shelter(&world, &actor).is_none());
+
+    // An atomic well draw is equally committed.
+    round.people.get_mut(&actor).unwrap().phase = Phase::Drawing;
+    run_ladder(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        0.0,
+        &BTreeSet::new(),
+        &mut nudges,
+    );
+    assert!(round.weather_shelter(&world, &actor).is_none());
+
+    // Once free, the same deterministic ladder claims the nearest public
+    // shelter and lays a real route ending at a stable point inside its
+    // covered polygon.
+    round.people.get_mut(&actor).unwrap().phase = Phase::Idle;
+    run_ladder(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        0.0,
+        &BTreeSet::new(),
+        &mut nudges,
+    );
+    assert_eq!(
+        round.weather_shelter(&world, &actor),
+        Some("bellstand_hearth")
+    );
+    let intent = round.weather_shelter_intents[&actor];
+    assert!(world.shelters.shelters()[intent.shelter].contains(intent.target));
+    assert!(
+        world.characters[&actor].is_walking(),
+        "the actor takes a routed walk"
+    );
+
+    // Clearing does not empty the shelter immediately. Nine game minutes is
+    // below every actor's grace; twenty-one is above every 10--20 minute roll.
+    world.current_weather = Some(test_weather(WeatherKind::Clear, 0.0));
+    update_weather_shelter_intents(&mut round, &mut world, 0.0, 0.0);
+    update_weather_shelter_intents(&mut round, &mut world, 9.0 / 1_440.0, 9.0);
+    assert!(round.weather_shelter(&world, &actor).is_some());
+    update_weather_shelter_intents(&mut round, &mut world, 21.0 / 1_440.0, 21.0);
+    assert!(round.weather_shelter(&world, &actor).is_none());
+}
+
+#[test]
+fn every_committed_shelter_has_a_valid_route_node_and_walkable_spread_point() {
+    let nav = nav();
+    let shelters =
+        crate::ShelterMap::from_json_str(include_str!("../../../../assets/world/shelters.json"))
+            .expect("committed shelter data loads");
+    let actor = ActorId::from_raw("probe");
+    for (index, shelter) in shelters.shelters().iter().enumerate() {
+        assert!(
+            shelter.route_node < nav.node_count(),
+            "{} route node",
+            shelter.id
+        );
+        let target = shelter_spread_target(&nav, shelter, &actor, index)
+            .unwrap_or_else(|| panic!("{} has no walkable spread point", shelter.id));
+        assert!(shelter.contains(target), "{} target {target:?}", shelter.id);
+        assert!(
+            nav.is_walkable(target.x, target.z),
+            "{} target is not walkable",
+            shelter.id
+        );
+    }
+}
+
+#[test]
+fn every_food_pitch_uses_the_shared_shelter_map() {
+    let nav = nav();
+    let mut world = base_world();
+    world.shelters = std::sync::Arc::new(
+        crate::ShelterMap::from_json_str(include_str!("../../../../assets/world/shelters.json"))
+            .expect("committed shelter data loads"),
+    );
+    let mut round = Round::default();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::HighWick));
+
+    assert_eq!(
+        round.stalls.len(),
+        8,
+        "the committed food document still has eight stalls"
+    );
+    for stall in &round.stalls {
+        assert!(
+            world.shelters.is_sheltered(stall.pitch),
+            "{} pitch {:?} should lie under its authored awning or hearth roof",
+            stall.name,
+            stall.pitch,
+        );
+    }
+}
+
+#[test]
+fn nearby_lightning_causes_a_short_reflex_without_breaking_conversation() {
+    let nav = nav();
+    let start = nav.node_point(42);
+    let destination = nav.node_point(41);
+    let actor = ActorId::from_raw("flash");
+    let mut world = base_world();
+    world.add_character(person("flash", start, Some("mason"), Significance::Minor));
+    world.shelters = std::sync::Arc::new(
+        crate::ShelterMap::from_json_str(include_str!("../../../../assets/world/shelters.json"))
+            .expect("committed shelter data loads"),
+    );
+    world.current_weather = Some(test_weather(WeatherKind::Thunderstorm, 0.9));
+    assert!(!world.shelters.is_sheltered(start));
+
+    let mut round = Round::default();
+    let mut townsman = weather_person(start);
+    townsman.phase = Phase::Travelling;
+    townsman.travel_target = Some(destination);
+    round.people.insert(actor.clone(), townsman);
+    set_route(&mut world, &actor, vec![destination]);
+    let strike = crate::LightningStrike {
+        id: 901,
+        game_instant_days: 0.0,
+        origin_m: [start.x, 520.0, start.z],
+        strength: 0.8,
+    };
+    round.note_lightning(&world, &strike, 10.0);
+
+    let clock = clock_at(Office::HighWick);
+    let mut nudges = Vec::new();
+    run_ladder(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        10.0,
+        &warm(&actor),
+        &mut nudges,
+    );
+    assert!(
+        world.characters[&actor].is_walking(),
+        "a reflex does not break an active exchange"
+    );
+
+    run_ladder(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        10.0,
+        &BTreeSet::new(),
+        &mut nudges,
+    );
+    assert!(
+        !world.characters[&actor].is_walking(),
+        "the free exposed walker stops for the flash"
+    );
+    assert_eq!(round.people[&actor].phase, Phase::Idle);
+
+    round
+        .lightning_reflex_until
+        .retain(|_, until| 14.1 < *until);
+    assert!(
+        !matches!(
+            decide(
+                &round,
+                &world,
+                &nav,
+                &actor,
+                0,
+                Office::HighWick,
+                Weekday::Bellday,
+            )
+            .0,
+            Decision::WeatherPause
+        ),
+        "the reflex expires within four real seconds"
+    );
+}
+
+#[test]
+fn exposed_stall_pauses_and_resumes_without_changing_stock() {
+    let (mut world, mut round, _vendor, buyer, stock_id) = bread_stall_world();
+    let pitch = round.stalls[0].pitch;
+    round.people.insert(buyer.clone(), weather_person(pitch));
+    round.people.get_mut(&buyer).unwrap().food = Some(FoodErrand {
+        stall: 0,
+        phase: FoodPhase::Queued,
+    });
+    let clock = clock_at(Office::HighWick);
+
+    world.current_weather = Some(test_weather(WeatherKind::Thunderstorm, 0.9));
+    assert!(!stall_weather_open(&world, &round.stalls[0]));
+    service_stalls(&mut round, &mut world, &clock, 0.0, &player());
+    assert!(
+        round.stalls[0].queue.is_empty(),
+        "a bare pitch releases its queue"
+    );
+    assert_eq!(
+        world.items[&stock_id].quantity, 3,
+        "closing consumes no board stock"
+    );
+
+    world.current_weather = Some(test_weather(WeatherKind::Clear, 0.0));
+    round.stalls[0].queue.push(buyer.clone());
+    round.people.get_mut(&buyer).unwrap().food = Some(FoodErrand {
+        stall: 0,
+        phase: FoodPhase::Queued,
+    });
+    service_stalls(&mut round, &mut world, &clock, 0.0, &player());
+    assert!(
+        round.stalls[0].serving.is_some(),
+        "the same stall resumes service"
+    );
+    assert_eq!(
+        world.items[&stock_id].quantity, 3,
+        "starting service does not duplicate stock"
+    );
+    world.current_weather = Some(test_weather(WeatherKind::Thunderstorm, 0.9));
+    service_stalls(&mut round, &mut world, &clock, 0.5, &player());
+    assert_eq!(
+        world.items[&stock_id].quantity, 2,
+        "the one atomic sale finishes as the exposed stall closes"
+    );
+
+    // The shared data, not a second market-only list, makes a covered pitch
+    // stay open in the same storm.
+    world.shelters = std::sync::Arc::new(
+        crate::ShelterMap::from_json_str(include_str!("../../../../assets/world/shelters.json"))
+            .expect("committed shelter data loads"),
+    );
+    world.current_weather = Some(test_weather(WeatherKind::Thunderstorm, 0.9));
+    assert!(world.shelters.is_sheltered(Vec3::ZERO));
+    assert!(stall_weather_open(&world, &round.stalls[0]));
 }

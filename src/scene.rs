@@ -18,6 +18,7 @@ use bevy::{
 use crate::{
     controller::CollisionWorld,
     materials::{FLOOR_TEXTURE_SPAN_METERS, load_repeating_texture},
+    weather::WeatherRoseWindow,
 };
 
 pub struct CathedralPlugin;
@@ -90,6 +91,7 @@ fn build_cathedral(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut collision_world: ResMut<CollisionWorld>,
+    weather_rose: Option<ResMut<WeatherRoseWindow>>,
 ) {
     // Modest flat fill: the atmosphere environment map carries most sky light,
     // and SSAO needs crevices it can actually darken — a strong constant term
@@ -102,6 +104,12 @@ fn build_cathedral(
 
     let mesh = create_meshes(&mut meshes);
     let material = create_materials(&asset_server, &mut materials);
+    if let Some(mut weather_rose) = weather_rose {
+        weather_rose.handle = Some(material.rose.clone());
+        weather_rose.baseline_emissive = materials
+            .get(&material.rose)
+            .map_or(LinearRgba::BLACK, |rose| rose.emissive);
+    }
 
     build_floor(&mut commands, &mesh, &material, &mut collision_world);
     build_outer_shell(&mut commands, &mesh, &material, &mut collision_world);

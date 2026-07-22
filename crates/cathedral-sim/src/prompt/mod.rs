@@ -266,6 +266,11 @@ struct YouAre {
     /// round has them praying instead of working. Omitted without a clock.
     #[serde(skip_serializing_if = "Option::is_none")]
     the_day: Option<String>,
+    /// Actor-readable weather, including whether this particular body is under
+    /// cover. Kept beside the clock instead of in history so current weather
+    /// cannot evict dialogue.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    weather: Option<String>,
     /// Where the current walk ends, as a full sentence — the actor's own view
     /// of what the sheet overlay calls the heading. Without it, "where are you
     /// going?" during a round-laid walk can only be answered by confabulation.
@@ -465,7 +470,13 @@ fn build_sheet<'a>(
                 .position_m()
                 .distance_squared(other.position_m())
                 .sqrt();
-            person(actor, other, strings, Some(distance), Some(!other.is_settled()))
+            person(
+                actor,
+                other,
+                strings,
+                Some(distance),
+                Some(!other.is_settled()),
+            )
         })
         .collect();
 
@@ -593,11 +604,20 @@ fn build_sheet<'a>(
         back_story: actor.back_story(),
         you_are: YouAre {
             location_description,
-            the_hour: world.current_time.map(|time| {
-                format!("{} — {}", time.office.label(), time.office.prompt_phrase())
-            }),
+            the_hour: world
+                .current_time
+                .map(|time| format!("{} — {}", time.office.label(), time.office.prompt_phrase())),
             the_day: world.current_time.map(|time| {
-                format!("{} — {}", time.weekday.label(), time.weekday.prompt_phrase())
+                format!(
+                    "{} — {}",
+                    time.weekday.label(),
+                    time.weekday.prompt_phrase()
+                )
+            }),
+            weather: world.current_time.and_then(|_| {
+                world
+                    .current_weather
+                    .map(|weather| weather.prompt_phrase(world.shelters.label_at(position)))
             }),
             on_your_way: on_your_way(world, actor, strings),
             position_m: Position {
@@ -656,7 +676,11 @@ fn on_your_way(world: &World, actor: &Character, strings: &PromptStrings) -> Opt
     let end = *movement.path.last()?;
     let planar = |target: crate::math::Vec3| f64::hypot(end.x - target.x, end.z - target.z);
     if let Some(patrol) = &movement.patrol {
-        let name = if patrol.heading_to_b { &patrol.b } else { &patrol.a };
+        let name = if patrol.heading_to_b {
+            &patrol.b
+        } else {
+            &patrol.a
+        };
         return Some(strings.walking_to.replacen("%s", name, 1));
     }
     if let Some(intent) = &actor.state.intent {
@@ -665,7 +689,9 @@ fn on_your_way(world: &World, actor: &Character, strings: &PromptStrings) -> Opt
                 return Some(strings.walking_to.replacen("%s", name, 1));
             }
             IntentTarget::Person {
-                actor_id, last_seen, ..
+                actor_id,
+                last_seen,
+                ..
             } if planar(*last_seen) <= PLACE_ARRIVE_RADIUS_M => {
                 if let Some(other) = world.characters.get(actor_id) {
                     let who = person_md(&person(actor, other, strings, None, None));
@@ -860,7 +886,10 @@ fn you_line(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
         line.push_str(&format!(" Family: {}.", family.join("; ")));
     }
     if !lore.circumstances.is_empty() {
-        line.push_str(&format!(" Circumstances: {}.", lore.circumstances.join(", ")));
+        line.push_str(&format!(
+            " Circumstances: {}.",
+            lore.circumstances.join(", ")
+        ));
     }
     if !lore.conditions.is_empty() {
         line.push_str(&format!(" Conditions: {}.", lore.conditions.join(", ")));
@@ -908,6 +937,9 @@ fn you_are_line(you_are: &YouAre, strings: &PromptStrings) -> String {
     if let Some(day) = &you_are.the_day {
         line.push_str(&format!(" {} {day}.", strings.the_day_label));
     }
+    if let Some(weather) = &you_are.weather {
+        line.push_str(&format!(" {weather}."));
+    }
     if let Some(on_your_way) = &you_are.on_your_way {
         line.push_str(&format!(" {on_your_way}"));
     }
@@ -929,7 +961,11 @@ fn item_md(item: &ItemRef<'_>) -> String {
 /// price, singular `spark` only at exactly one (matching the purchase percept's
 /// `for 1 spark`).
 fn sell_md(listing: &SellLine<'_>) -> String {
-    let unit = if listing.price_sparks == 1 { "spark" } else { "sparks" };
+    let unit = if listing.price_sparks == 1 {
+        "spark"
+    } else {
+        "sparks"
+    };
     format!("{}, {} {unit}", listing.name, listing.price_sparks)
 }
 
@@ -953,11 +989,7 @@ fn person_bullet(person: &Person<'_>) -> String {
 
 /// `<header>:` over `- ` bullets — or `<header> — <empty_word>` inline when
 /// there are no entries.
-fn bullet_section(
-    header: &str,
-    entries: impl Iterator<Item = String>,
-    empty_word: &str,
-) -> String {
+fn bullet_section(header: &str, entries: impl Iterator<Item = String>, empty_word: &str) -> String {
     let mut section = header.to_string();
     let mut any = false;
     for entry in entries {
@@ -977,7 +1009,11 @@ fn history_section(header: &str, lines: &[&str], sentinel: &str) -> String {
     if lines.len() == 1 && lines[0] == sentinel {
         return format!("{header} — {sentinel}");
     }
-    bullet_section(header, lines.iter().map(|line| (*line).to_string()), sentinel)
+    bullet_section(
+        header,
+        lines.iter().map(|line| (*line).to_string()),
+        sentinel,
+    )
 }
 
 /// CPython's `round(value, digits)`: correctly-rounded decimal, ties to even.
@@ -1087,7 +1123,11 @@ mod tests {
     #[test]
     fn bullet_sections_render_bullets_or_the_inline_empty_word() {
         assert_eq!(
-            bullet_section("**you_hold**", ["a b", "c d"].iter().map(|s| (*s).to_string()), "nothing"),
+            bullet_section(
+                "**you_hold**",
+                ["a b", "c d"].iter().map(|s| (*s).to_string()),
+                "nothing"
+            ),
             "**you_hold**:\n- a b\n- c d"
         );
         assert_eq!(
@@ -1139,8 +1179,13 @@ mod tests {
                 location_description: String::new(),
                 the_hour: None,
                 the_day: None,
+                weather: None,
                 on_your_way: None,
-                position_m: Position { x: 0.0, y: 0.0, z: 0.0 },
+                position_m: Position {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
             },
             your_round: Vec::new(),
             places_you_know: Vec::new(),
@@ -1148,7 +1193,10 @@ mod tests {
             you_sell: Vec::new(),
             you_offer: Vec::new(),
             offered_to_you: Vec::new(),
-            you_see: YouSee { description: "", people: Vec::new() },
+            you_see: YouSee {
+                description: "",
+                people: Vec::new(),
+            },
             since_your_last_turn: Vec::new(),
             recent_history: Vec::new(),
             stored_memories: &[],
@@ -1167,9 +1215,10 @@ mod tests {
         // door, the same sentence carries its go_to hint.
         let mut with_handle = sheet;
         with_handle.lore_profile.as_mut().unwrap().home_place_id = Some(&home_place);
-        assert!(you_line(&with_handle, &strings()).contains(
-            "Home: a house in the Weigh Ward, near the Tallage (go_to pl_x9k2)."
-        ));
+        assert!(
+            you_line(&with_handle, &strings())
+                .contains("Home: a house in the Weigh Ward, near the Tallage (go_to pl_x9k2).")
+        );
 
         // The bedless framing is just another home string — the bake wrote the
         // words, the line renders whatever it says. No door, no handle.
@@ -1202,7 +1251,10 @@ mod tests {
         );
 
         // No lore at all: the name stands alone.
-        let plain = Sheet { lore_profile: None, ..same_title };
+        let plain = Sheet {
+            lore_profile: None,
+            ..same_title
+        };
         assert_eq!(you_line(&plain, &strings()), "**you** — Corin Copp");
     }
 

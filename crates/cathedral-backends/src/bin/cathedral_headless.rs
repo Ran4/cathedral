@@ -44,8 +44,8 @@ use cathedral_sim::{
     ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion, CuriosityConfig,
     DEFAULT_VIEW_CONE_DEGREES, Engine, EngineCommand, EngineConfig, EngineMessage, FakeCognition,
     IdleCognitionMode, NavData, NullSight, NullTranscription, NullTts, Office, PlayerKnowledge,
-    PromptEnv, RequestId, SoundCatalog, StageConfig, StatusKind, TtsBackendKind, Vec3, World,
-    WorldClock, WorldSeed,
+    PromptEnv, RequestId, ShelterMap, SoundCatalog, StageConfig, StatusKind, TtsBackendKind, Vec3,
+    WeatherConfig, WeatherMode, World, WorldClock, WorldSeed,
     engine::{
         DEFAULT_MAXIMUM_BACKOFF_SECONDS, DEFAULT_NIGHT_BRIGHTNESS, DEFAULT_SECONDS_PER_DAY,
         DEFAULT_SOUND_COOLDOWN_SECONDS, DEFAULT_STT_STREAM_GRACE_SECONDS,
@@ -163,6 +163,10 @@ struct Args {
     #[arg(long, default_value_t = 0, value_name = "DAY")]
     start_day: i64,
 
+    /// force a weather kind, or use `timeline` (clear|broken|overcast|fog|drizzle|rain|downpour|storm)
+    #[arg(long, default_value = "timeline", value_name = "KIND")]
+    weather: String,
+
     /// instead of taking turns, watch the clock advance this many game days,
     /// printing each office as its bell rings
     #[arg(long, default_value_t = 0.0, value_name = "DAYS")]
@@ -264,7 +268,11 @@ fn parse_status_flag(spec: &str) -> Result<(String, StatusKind, f64), String> {
     })?;
     let value = match value_word.parse::<f64>() {
         Ok(value) if value.is_finite() && (0.0..=1.0).contains(&value) => value,
-        _ => return Err(format!("--status `{spec}`: value must be a number in 0..=1")),
+        _ => {
+            return Err(format!(
+                "--status `{spec}`: value must be a number in 0..=1"
+            ));
+        }
     };
     Ok((name.to_string(), kind, value))
 }
@@ -352,6 +360,12 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         args.start_day,
         DEFAULT_NIGHT_BRIGHTNESS,
     );
+    let weather_mode = WeatherMode::from_config_name(&args.weather).ok_or_else(|| {
+        format!(
+            "unknown --weather `{}` (try timeline, clear, broken, overcast, fog, drizzle, rain, downpour, storm)",
+            args.weather
+        )
+    })?;
     let engine = Engine::new(
         EngineConfig {
             player_id: ActorId::from_raw(PLAYER_ID),
@@ -385,6 +399,11 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             },
             clock,
             ring_the_offices: true,
+            weather: WeatherConfig {
+                mode: weather_mode,
+                ..WeatherConfig::default()
+            },
+            shelters: assets.shelters.clone(),
             // Movement and the daily round only exist when a nav graph is present.
             nav: assets.nav.clone(),
         },
@@ -684,7 +703,10 @@ impl Runner {
                 let first = self.last_office.is_none();
                 self.last_office = Some(office);
                 let minutes = (day_fraction * 24.0 * 60.0).round() as i64;
-                let (hour, minute) = (minutes.div_euclid(60).rem_euclid(24), minutes.rem_euclid(60));
+                let (hour, minute) = (
+                    minutes.div_euclid(60).rem_euclid(24),
+                    minutes.rem_euclid(60),
+                );
                 let event = if first {
                     format!("clock opens at {}", office.label())
                 } else {
@@ -720,7 +742,9 @@ impl Runner {
                 recipient_ids,
                 ..
             } if self.trace_water && is_water_sound(&sound_id) => {
-                let keeper = actor_id.map(|id| id.to_string()).unwrap_or_else(|| "?".to_string());
+                let keeper = actor_id
+                    .map(|id| id.to_string())
+                    .unwrap_or_else(|| "?".to_string());
                 println!(
                     "[water] {keeper} :: {sound_id} at x={:.1} z={:.1} ({} heard)",
                     position_m.x,
@@ -777,6 +801,13 @@ impl Runner {
     fn print_final_state(&self) {
         println!("\n== final state ==");
         let world: &World = self.engine.world();
+        if let Some(weather) = world.current_weather {
+            println!(
+                "{} (wetness: {})",
+                weather.prompt_phrase(None),
+                weather.wetness_band()
+            );
+        }
         for actor_id in llm_turn_order(world) {
             let actor = &world.characters[&actor_id];
             // `knows` is a BTreeSet, so it is already `sorted(c.knows)`; a
@@ -898,6 +929,7 @@ struct Assets {
     /// The street graph, when both baked files are present under `--assets`.
     /// Missing files are a warning, not an error: the run simply has no movers.
     nav: Option<Arc<NavData>>,
+    shelters: Arc<ShelterMap>,
 }
 
 impl Assets {
@@ -920,12 +952,17 @@ impl Assets {
         let prompts = PromptEnv::new(&read("prompts/turn.j2")?, &read("prompts/strings.toml")?)
             .map_err(|error| format!("invalid prompt assets: {error}"))?;
         let nav = load_nav(directory);
+        let shelters = Arc::new(
+            ShelterMap::from_json_str(&read("world/shelters.json")?)
+                .map_err(|error| format!("invalid world shelters: {error}"))?,
+        );
         Ok(Self {
             seed,
             areas,
             catalog,
             prompts,
             nav,
+            shelters,
         })
     }
 
@@ -1066,11 +1103,23 @@ mod tests {
             parse_status_flag("Old Nan=weariness:1"),
             Ok(("Old Nan".to_string(), StatusKind::Weariness, 1.0))
         );
-        assert!(parse_status_flag("Ilse=sobriety:0.5").is_err(), "unknown kind");
-        assert!(parse_status_flag("Ilse=drunkenness:2").is_err(), "out of range");
-        assert!(parse_status_flag("Ilse=drunkenness:-0.1").is_err(), "out of range");
+        assert!(
+            parse_status_flag("Ilse=sobriety:0.5").is_err(),
+            "unknown kind"
+        );
+        assert!(
+            parse_status_flag("Ilse=drunkenness:2").is_err(),
+            "out of range"
+        );
+        assert!(
+            parse_status_flag("Ilse=drunkenness:-0.1").is_err(),
+            "out of range"
+        );
         assert!(parse_status_flag("Ilse=drunkenness").is_err(), "no value");
-        assert!(parse_status_flag("drunkenness:0.5").is_err(), "no name split");
+        assert!(
+            parse_status_flag("drunkenness:0.5").is_err(),
+            "no name split"
+        );
         assert!(parse_status_flag("=drunkenness:0.5").is_err(), "empty name");
     }
 
@@ -1095,7 +1144,6 @@ mod tests {
         assert_eq!(py_repr("it's \"quoted\""), "'it\\'s \"quoted\"'");
         assert_eq!(py_repr("a\nb\\c"), "'a\\nb\\\\c'");
     }
-
 
     #[test]
     fn the_shipped_assets_load() {

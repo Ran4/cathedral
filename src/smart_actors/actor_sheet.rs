@@ -118,6 +118,9 @@ pub(super) struct CharacterDebug {
     goal: String,
     thirst: f64,
     hunger: f64,
+    /// The same actor-perspective prose used by the prompt, plus the coarse
+    /// authoritative wetness band for developer diagnosis.
+    weather: Option<String>,
     movement: MoveState,
     /// The current walk's destination and ETA; `None` while standing.
     heading: Option<Heading>,
@@ -191,6 +194,13 @@ impl CharacterDebug {
             goal: character.goal().to_string(),
             thirst: character.needs().thirst,
             hunger: character.needs().hunger,
+            weather: world.current_weather.map(|weather| {
+                format!(
+                    "{} · wetness: {}",
+                    weather.prompt_phrase(world.shelters.label_at(character.position_m())),
+                    weather.wetness_band(),
+                )
+            }),
             movement,
             heading,
             well_activity: well_activity(errand),
@@ -466,6 +476,10 @@ fn format_body(sheet: &CharacterDebug) -> String {
 
     let _ = write!(out, "\n\nGOAL\n  {}", sheet.goal);
 
+    if let Some(weather) = &sheet.weather {
+        let _ = write!(out, "\n\nWEATHER\n  {weather}");
+    }
+
     // Each status is a labelled value with its own fill bar on the next line, so
     // the level reads at a glance.
     let _ = write!(
@@ -692,6 +706,7 @@ mod tests {
             goal: "Fetch water from the well".into(),
             thirst: 40.0,
             hunger: 120.0,
+            weather: Some("weather: steady rain; the streets are wet · wetness: wet".into()),
             movement: MoveState::Walking {
                 speed: 1.2,
                 waypoints: 3,
@@ -791,6 +806,7 @@ mod tests {
             "MAJOR · LLM · cb947",
             "@ The Gradine",
             "GOAL\n  Fetch water from the well",
+            "WEATHER\n  weather: steady rain; the streets are wet · wetness: wet",
             "STATUSES",
             "Thirst  40/255 · THIRSTY", // 40 is between PARCHED (38) and THIRSTY (178)
             "░", // the gauge bar is present

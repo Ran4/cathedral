@@ -7,6 +7,19 @@
     width: 1920,
     height: 1080,
     resizable: true,
+    // One sim-owned summer weather schedule. Presentation quality never changes
+    // the schedule, actor decisions, thunder timing, or authoritative wetness.
+    weather: (
+        enabled: true,
+        seed: 437,
+        // timeline, clear, broken, overcast, fog, drizzle, rain, downpour, storm
+        mode: "timeline",
+        // Episode frequency, not intensity. 0.0 is a stable clear comparison.
+        frequency: 1.0,
+        // low, medium, high
+        quality: "high",
+        volumetric_fog: true,
+    ),
     smart_actors: (
         enabled: true,
         fake_backend: false,

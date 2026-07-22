@@ -44,8 +44,9 @@ use cathedral_backends::{
 use cathedral_sim::{
     ActorId as SimActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Engine, EngineCommand,
     EngineConfig, EngineMessage, FakeCognition, ItemId as SimItemId, NavData, NullSight, Office,
-    PromptEnv, RequestId, SoundCatalog, SpatialActorUpdate, SpeechEventId, SttBackendKind,
-    Transcription, Tts, TtsBackendKind, Vec3 as SimVec3, WorldClock, WorldSeed,
+    PromptEnv, RequestId, ShelterMap, SoundCatalog, SpatialActorUpdate, SpeechEventId,
+    SttBackendKind, Transcription, Tts, TtsBackendKind, Vec3 as SimVec3,
+    WeatherConfig as SimWeatherConfig, WeatherMode, WorldClock, WorldSeed,
 };
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
@@ -57,6 +58,7 @@ use super::{
     },
     model::Position,
 };
+use crate::config::WeatherSettings;
 
 /// The asset half of the sim's authored data. Assets and lore ship with the
 /// repository, not the player's save, so both resolve against the crate root
@@ -71,6 +73,7 @@ fn assets_dir() -> PathBuf {
 /// (`city/mod.rs`): one geometry, three consumers (features/movement/02_navigation.md).
 const NAV_JSON: &str = include_str!("../../assets/world/navigation.json");
 const NAV_BIN: &[u8] = include_bytes!("../../assets/world/navigation.bin");
+const SHELTERS_JSON: &str = include_str!("../../assets/world/shelters.json");
 
 /// Owns the backends, and through them the session's private audio directory.
 /// Dropping it stops the speech workers and removes the directory with
@@ -176,7 +179,10 @@ impl LocalEngine {
 /// Nothing here can fail loudly: a missing asset, an unusable temp directory or
 /// a seed without a player all become a [`BridgeEvent::Disconnected`], which the
 /// HUD already knows how to render as an offline cast.
-pub fn spawn(config: &SmartActorsConfig) -> (BridgeHandle, BridgeInbox, EngineGuard, LocalEngine) {
+pub fn spawn(
+    config: &SmartActorsConfig,
+    weather: &WeatherSettings,
+) -> (BridgeHandle, BridgeInbox, EngineGuard, LocalEngine) {
     let (commands_tx, commands_rx) = bounded(COMMAND_QUEUE_CAPACITY);
     // Unbounded, unlike the sidecar's 256-slot event queue: producer and
     // consumer are now the same schedule, one system apart. A bounded queue
@@ -200,7 +206,7 @@ pub fn spawn(config: &SmartActorsConfig) -> (BridgeHandle, BridgeInbox, EngineGu
     };
     let mut guard = EngineGuard { _backends: None };
 
-    match build(config, session) {
+    match build(config, weather, session) {
         Ok((seed, backends, fake_cognition, prompt_log)) => {
             engine.completions = Some(backends.events().clone());
             engine.seed = Some(seed);
@@ -240,7 +246,11 @@ type Built = (
 /// voice, and nothing else — cognition, the local Canary worker and the local
 /// Pocket voice each stand or fall on their own. `fake_backend` replaces every
 /// provider with an offline stand-in and therefore reports everything available.
-fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Built, String> {
+fn build(
+    config: &SmartActorsConfig,
+    weather: &WeatherSettings,
+    session: Option<SessionDir>,
+) -> Result<Built, String> {
     let assets = assets_dir();
     let lore = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("lore");
     let read = |relative: &str| -> Result<String, String> {
@@ -294,6 +304,23 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
             None
         }
     };
+    let shelters = Arc::new(
+        ShelterMap::from_json_str(SHELTERS_JSON)
+            .map_err(|error| format!("invalid world shelters: {error}"))?,
+    );
+    let weather_mode = WeatherMode::from_config_name(&weather.mode).unwrap_or_else(|| {
+        warn!(
+            "unknown weather.mode `{}` in config.ron; using timeline",
+            weather.mode
+        );
+        WeatherMode::Timeline
+    });
+    let weather_frequency = if weather.frequency.is_finite() {
+        weather.frequency.max(0.0)
+    } else {
+        warn!("non-finite weather.frequency in config.ron; using 1.0");
+        1.0
+    };
 
     let engine_config = EngineConfig {
         player_id: SimActorId::from_raw(PLAYER_ID),
@@ -331,6 +358,13 @@ fn build(config: &SmartActorsConfig, session: Option<SessionDir>) -> Result<Buil
             config.clock.night_brightness,
         ),
         ring_the_offices: config.clock.ring_the_offices,
+        weather: SimWeatherConfig {
+            enabled: weather.enabled,
+            seed: weather.seed,
+            mode: weather_mode,
+            frequency: weather_frequency,
+        },
+        shelters,
         nav,
         ..EngineConfig::default()
     };
@@ -705,6 +739,10 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
             EngineCommand::DebugSetStatus { name, kind, value }
         }
         BridgeCommand::CycleTimeScale => EngineCommand::CycleTimeScale,
+        BridgeCommand::SetWeatherOverride { kind, intensity } => {
+            EngineCommand::SetWeatherOverride { kind, intensity }
+        }
+        BridgeCommand::ClearWeatherOverride => EngineCommand::ClearWeatherOverride,
         BridgeCommand::SpeechPresented { speech_event_id } => EngineCommand::SpeechPresented {
             event_id: SpeechEventId(speech_event_id),
         },
@@ -819,7 +857,7 @@ mod tests {
 
     impl Harness {
         fn new() -> Self {
-            let (handle, inbox, guard, engine) = spawn(&fake_config());
+            let (handle, inbox, guard, engine) = spawn(&fake_config(), &WeatherSettings::default());
             Self {
                 handle,
                 inbox,
@@ -1017,7 +1055,8 @@ mod tests {
     /// running, offline.
     #[test]
     fn a_failed_start_disconnects_instead_of_crashing_the_game() {
-        let (handle, inbox, _guard, mut engine) = spawn(&fake_config());
+        let (handle, inbox, _guard, mut engine) =
+            spawn(&fake_config(), &WeatherSettings::default());
         assert!(matches!(
             inbox.try_recv(),
             Some(BridgeEvent::ProcessStarted)
@@ -1089,7 +1128,7 @@ mod tests {
     /// the guard owns it: dropping the guard must take the recordings with it.
     #[test]
     fn the_handle_names_a_private_directory_the_guard_owns() {
-        let (handle, _inbox, guard, _engine) = spawn(&fake_config());
+        let (handle, _inbox, guard, _engine) = spawn(&fake_config(), &WeatherSettings::default());
         let directory = handle.runtime_dir().to_path_buf();
         assert!(directory.is_dir());
         assert!(
@@ -1201,7 +1240,7 @@ mod tests {
     #[test]
     fn fake_mode_reports_every_capability_and_selects_the_configured_voice() {
         let (seed, _backends, fake, _log) =
-            build(&fake_config(), None).expect("the shipped assets");
+            build(&fake_config(), &WeatherSettings::default(), None).expect("the shipped assets");
         assert!(fake.is_some());
         assert!(seed.capabilities.llm);
         assert!(
@@ -1228,7 +1267,7 @@ mod tests {
     #[test]
     fn the_game_gates_idle_cognition_on_the_players_neighborhood_and_on_news() {
         let (seed, _backends, _fake, _log) =
-            build(&fake_config(), None).expect("the shipped assets");
+            build(&fake_config(), &WeatherSettings::default(), None).expect("the shipped assets");
         assert_eq!(seed.config.idle_mode, IdleCognitionMode::Stage);
         assert_eq!(seed.config.stage.radius_m, DEFAULT_STAGE_RADIUS_M);
         assert_eq!(seed.config.stage.max_actors, DEFAULT_STAGE_MAX_ACTORS);
@@ -1245,7 +1284,8 @@ mod tests {
             },
             ..fake_config()
         };
-        let (seed, _backends, _fake, _log) = build(&ungated, None).expect("the shipped assets");
+        let (seed, _backends, _fake, _log) =
+            build(&ungated, &WeatherSettings::default(), None).expect("the shipped assets");
         assert_eq!(seed.config.idle_mode, IdleCognitionMode::All);
         assert!(!seed.config.idle_requires_news);
     }
@@ -1260,7 +1300,8 @@ mod tests {
         let path = session.path().to_path_buf();
 
         let (seed, backends, _fake, _log) =
-            build(&fake_config(), Some(session)).expect("the shipped assets");
+            build(&fake_config(), &WeatherSettings::default(), Some(session))
+                .expect("the shipped assets");
         assert_eq!(seed.config.runtime_dir, path);
         assert_eq!(backends.runtime_dir(), Some(path.as_path()));
 

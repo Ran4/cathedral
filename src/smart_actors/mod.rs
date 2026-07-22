@@ -37,6 +37,11 @@ use cathedral_sim::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    config::WeatherSettings,
+    weather::{WeatherLightning, WorldWeatherState},
+};
+
 pub use area_debug::AreaDebugState;
 pub use chat::{ChatInputSet, ChatInputState};
 pub use clock::WorldClockState;
@@ -258,6 +263,7 @@ enum SmartActorSet {
 
 pub struct SmartActorsPlugin {
     config: SmartActorsConfig,
+    weather: WeatherSettings,
 }
 
 /// Read-only signal for audio systems that should yield while dialogue is active.
@@ -335,14 +341,28 @@ impl SmartActorRuntime {
 }
 
 impl SmartActorsPlugin {
+    #[allow(
+        dead_code,
+        reason = "kept for isolated host tests and embedders using clear weather"
+    )]
     pub fn new(config: SmartActorsConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            weather: WeatherSettings::default(),
+        }
+    }
+
+    pub fn with_weather(config: SmartActorsConfig, weather: WeatherSettings) -> Self {
+        Self { config, weather }
     }
 }
 
 impl Plugin for SmartActorsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(self.config.clone());
+        app.insert_resource(self.weather.clone())
+            .init_resource::<WorldWeatherState>()
+            .add_message::<WeatherLightning>();
         if app.is_plugin_added::<bevy::audio::AudioPlugin>() {
             app.add_audio_source::<speech::StreamingPcmSource>();
         } else {
@@ -382,7 +402,7 @@ impl Plugin for SmartActorsPlugin {
             return;
         }
 
-        let (handle, inbox, worker, engine) = local_engine::spawn(&self.config);
+        let (handle, inbox, worker, engine) = local_engine::spawn(&self.config, &self.weather);
         app.insert_non_send(engine);
 
         app.insert_resource(handle)
@@ -568,7 +588,6 @@ impl Plugin for SmartActorsPlugin {
                 // current, and cycle the debug time scale on the `T` key. They
                 // read `WorldClockState`, refreshed each frame in the drain.
                 (
-                    clock::drive_sun,
                     clock::update_clock_hud,
                     clock::handle_time_scale_key,
                     // The lamp mirror (M7): stand the posts up and flip their
@@ -612,6 +631,9 @@ pub struct InjectPlayerTranscript {
 struct HotChannels<'w> {
     movement: ResMut<'w, model::MovementInbox>,
     lamps: ResMut<'w, lamps::CityLamps>,
+    weather: ResMut<'w, WorldWeatherState>,
+    lightning: MessageWriter<'w, WeatherLightning>,
+    time: Res<'w, Time>,
 }
 
 #[derive(SystemParam)]
@@ -737,6 +759,9 @@ fn drain_bridge_messages(
                     &mut world_clock,
                     &mut hot.movement,
                     &mut hot.lamps,
+                    &mut hot.weather,
+                    &mut hot.lightning,
+                    hot.time.elapsed_secs_f64(),
                 );
                 // Do not open the default input device before the engine
                 // handshake confirms that transcription is configured.
@@ -792,6 +817,9 @@ fn process_engine_message(
     world_clock: &mut clock::WorldClockState,
     movement_inbox: &mut model::MovementInbox,
     city_lamps: &mut lamps::CityLamps,
+    weather: &mut WorldWeatherState,
+    lightning: &mut MessageWriter<WeatherLightning>,
+    received_at_seconds: f64,
 ) {
     match message {
         EngineMessage::Ready {
@@ -827,7 +855,10 @@ fn process_engine_message(
             let scale_changed = (world_clock.scale - scale).abs() > 0.5;
             if office_changed || scale_changed {
                 let minutes = (day_fraction * 24.0 * 60.0).round() as i64;
-                let (hour, minute) = (minutes.div_euclid(60).rem_euclid(24), minutes.rem_euclid(60));
+                let (hour, minute) = (
+                    minutes.div_euclid(60).rem_euclid(24),
+                    minutes.rem_euclid(60),
+                );
                 crate::session_log::log_line(
                     "clock",
                     "INFO",
@@ -852,6 +883,12 @@ fn process_engine_message(
                 scale,
                 seconds_per_day,
             };
+        }
+        EngineMessage::Weather(sample) => {
+            weather.receive(sample, received_at_seconds);
+        }
+        EngineMessage::Lightning(strike) => {
+            lightning.write(WeatherLightning(strike));
         }
         EngineMessage::Movement { moved } => {
             // The hot channel, like `Clock`: mover poses arrive every 20 Hz tick
@@ -879,7 +916,11 @@ fn process_engine_message(
             // change (the clock's pattern), so a drive script can assert on
             // the lighting in text instead of reading a screenshot.
             let lit = set.iter().filter(|lamp| lamp.lit).count();
-            crate::session_log::log_line("lamps", "INFO", &format!("[lamps] {lit}/{} lit", set.len()));
+            crate::session_log::log_line(
+                "lamps",
+                "INFO",
+                &format!("[lamps] {lit}/{} lit", set.len()),
+            );
             city_lamps.lamps = set
                 .into_iter()
                 .map(|lamp| lamps::LampState {
@@ -1032,11 +1073,13 @@ fn process_engine_message(
                     });
                 }
                 ("sale", Some(buyer), Some(item)) => {
-                    presentation.hands.write(hands::HandoverFeedback::StallSale {
-                        vendor: actor,
-                        buyer,
-                        item,
-                    });
+                    presentation
+                        .hands
+                        .write(hands::HandoverFeedback::StallSale {
+                            vendor: actor,
+                            buyer,
+                            item,
+                        });
                 }
                 _ => {}
             }

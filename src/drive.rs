@@ -19,12 +19,12 @@ use std::time::Duration;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::input::{ButtonState, InputSystems};
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 use bevy::reflect::enums::{DynamicEnum, DynamicVariant};
 use bevy::reflect::{TypeInfo, Typed};
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk};
 use bevy::ui::UiSystems;
-use cathedral_sim::StatusKind;
+use bevy::window::PrimaryWindow;
+use cathedral_sim::{StatusKind, WeatherKind};
 
 use crate::controller::{PlayerController, TeleportPlayer};
 use crate::session_log;
@@ -154,6 +154,11 @@ enum Action {
         kind: StatusKind,
         value: f64,
     },
+    /// Force the sim-owned weather authority, or clear back to its timeline.
+    Weather {
+        kind: Option<WeatherKind>,
+        intensity: Option<f64>,
+    },
     /// Teleport the player to a world position and aim the view. Yaw 0 looks
     /// toward -Z, positive pitch looks up; flight engages so the pose holds.
     Tp {
@@ -177,6 +182,14 @@ impl Action {
             Self::Status { name, kind, value } => {
                 format!("status {name} {}:{value}", kind.as_str())
             }
+            Self::Weather { kind: None, .. } => "weather timeline".into(),
+            Self::Weather {
+                kind: Some(kind),
+                intensity,
+            } => intensity.map_or_else(
+                || format!("weather {kind}"),
+                |intensity| format!("weather {kind} {intensity}"),
+            ),
             Self::Tp {
                 position,
                 yaw_degrees,
@@ -247,6 +260,7 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
             }
         }
         "status" => parse_status(argument, statement),
+        "weather" => parse_weather(argument, statement),
         "tp" => {
             let numbers = argument
                 .split_whitespace()
@@ -303,9 +317,56 @@ fn parse_status(argument: &str, statement: &str) -> Result<Action, String> {
     })?;
     let value = match value.parse::<f64>() {
         Ok(value) if value.is_finite() && (0.0..=1.0).contains(&value) => value,
-        _ => return Err(format!("status value `{value}` must be a number in 0..=1 in `{statement}`")),
+        _ => {
+            return Err(format!(
+                "status value `{value}` must be a number in 0..=1 in `{statement}`"
+            ));
+        }
     };
     Ok(Action::Status { name, kind, value })
+}
+
+fn parse_weather(argument: &str, statement: &str) -> Result<Action, String> {
+    let mut tokens = argument.split_whitespace();
+    let Some(kind_name) = tokens.next() else {
+        return Err(format!(
+            "`weather` needs a kind or `timeline`, e.g. `weather rain 0.5`, got `{statement}`"
+        ));
+    };
+    if kind_name.eq_ignore_ascii_case("timeline") {
+        if tokens.next().is_some() {
+            return Err(format!(
+                "`weather timeline` takes no intensity in `{statement}`"
+            ));
+        }
+        return Ok(Action::Weather {
+            kind: None,
+            intensity: None,
+        });
+    }
+    let kind = WeatherKind::from_config_name(kind_name).ok_or_else(|| {
+        format!(
+            "unknown weather kind `{kind_name}` in `{statement}` (try clear, broken, overcast, fog, drizzle, rain, downpour, storm)"
+        )
+    })?;
+    let intensity = match tokens.next() {
+        None => None,
+        Some(raw) => match raw.parse::<f64>() {
+            Ok(value) if value.is_finite() && (0.0..=1.0).contains(&value) => Some(value),
+            _ => {
+                return Err(format!(
+                    "weather intensity `{raw}` must be in 0..=1 in `{statement}`"
+                ));
+            }
+        },
+    };
+    if tokens.next().is_some() {
+        return Err(format!("too many arguments in `{statement}`"));
+    }
+    Ok(Action::Weather {
+        kind: Some(kind),
+        intensity,
+    })
 }
 
 /// Resolves a `KeyCode` variant by name (`Escape`, `KeyZ`, `F5`) through
@@ -334,6 +395,10 @@ enum Directive {
         name: String,
         kind: StatusKind,
         value: f64,
+    },
+    Weather {
+        kind: Option<WeatherKind>,
+        intensity: Option<f64>,
     },
     Tp {
         position: Vec3,
@@ -439,6 +504,7 @@ impl Scheduler {
             }
             Action::Sound(sound_id) => Some(Directive::Sound(sound_id)),
             Action::Status { name, kind, value } => Some(Directive::Status { name, kind, value }),
+            Action::Weather { kind, intensity } => Some(Directive::Weather { kind, intensity }),
             Action::Tp {
                 position,
                 yaw_degrees,
@@ -619,6 +685,21 @@ fn run_drive_script(
                 "[drive] {now:.1}s warning: `status` needs smart actors"
             )),
         },
+        Some(Directive::Weather { kind, intensity }) => match bridge.as_deref() {
+            Some(bridge) => {
+                let command = kind.map_or(BridgeCommand::ClearWeatherOverride, |kind| {
+                    BridgeCommand::SetWeatherOverride { kind, intensity }
+                });
+                if let Err(error) = bridge.try_send(command) {
+                    drive_log(&format!(
+                        "[drive] {now:.1}s warning: weather override not sent: {error}"
+                    ));
+                }
+            }
+            None => drive_log(&format!(
+                "[drive] {now:.1}s warning: `weather` needs the actor engine"
+            )),
+        },
         Some(Directive::Tp {
             position,
             yaw_degrees,
@@ -723,9 +804,42 @@ mod tests {
                 value: 1.0,
             }])
         );
-        assert!(parse_script("status Ilse sobriety 0.5").is_err(), "unknown kind");
-        assert!(parse_script("status Ilse drunkenness 2").is_err(), "out of range");
-        assert!(parse_script("status Ilse drunkenness").is_err(), "missing value");
+        assert!(
+            parse_script("status Ilse sobriety 0.5").is_err(),
+            "unknown kind"
+        );
+        assert!(
+            parse_script("status Ilse drunkenness 2").is_err(),
+            "out of range"
+        );
+        assert!(
+            parse_script("status Ilse drunkenness").is_err(),
+            "missing value"
+        );
+    }
+
+    #[test]
+    fn weather_parses_forced_kinds_intensity_and_timeline() {
+        assert_eq!(
+            parse_script("weather rain 0.5; weather storm; weather timeline"),
+            Ok(vec![
+                Action::Weather {
+                    kind: Some(WeatherKind::Rain),
+                    intensity: Some(0.5),
+                },
+                Action::Weather {
+                    kind: Some(WeatherKind::Thunderstorm),
+                    intensity: None,
+                },
+                Action::Weather {
+                    kind: None,
+                    intensity: None,
+                },
+            ])
+        );
+        assert!(parse_script("weather sleet").is_err());
+        assert!(parse_script("weather rain 2").is_err());
+        assert!(parse_script("weather timeline 0.5").is_err());
     }
 
     #[test]

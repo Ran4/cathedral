@@ -22,14 +22,15 @@ use crate::{
     error::{SpatialUpdateError, SpatialUpdateErrorCode},
     event::DomainEvent,
     ids::{ActorId, ItemId},
-    item::{Item, ItemCatalog},
     inventory::{CompletedTransform, LegacyRestockShare, TransformJob},
+    item::{Item, ItemCatalog},
     math::Vec3,
     nav::{NavData, WALK_Y},
     offer::Offer,
     places::PlaceRegistry,
     snapshot::{ActorSnapshot, ItemSnapshot, OfferSnapshot, PublicSnapshot},
     sounds::SoundCatalog,
+    weather::{Shelter, ShelterMap, WeatherSample},
 };
 
 /// Walk-cadence multiplier: `gait_phase += speed * dt * GAIT_CADENCE`. One
@@ -110,6 +111,13 @@ pub struct World {
     /// until a clock-bearing host sets it — so a prompt rendered without one (the
     /// frozen golden fixtures) simply omits the hour.
     pub current_time: Option<WorldTime>,
+    /// Authoritative hot weather context. Like `current_time`, this is sampled
+    /// by the engine before each deterministic round and never changes the
+    /// cold public snapshot revision.
+    pub current_weather: Option<WeatherSample>,
+    /// Data-owned social shelter destinations. Presentation has a denser cover
+    /// map, while this map names only places an actor can credibly occupy.
+    pub shelters: Arc<ShelterMap>,
     /// The street graph, when the host carries one — host-provided context like
     /// `area_map`, set by the engine at construction. `go_to` validates and
     /// prices its route against it at intent time; `None` (the default) makes
@@ -146,6 +154,8 @@ impl Default for World {
             view_cone_degrees: DEFAULT_VIEW_CONE_DEGREES,
             sound_catalog: SoundCatalog::empty(),
             current_time: None,
+            current_weather: None,
+            shelters: Arc::new(ShelterMap::default()),
             nav: None,
             places: PlaceRegistry::default(),
             needle_claim: None,
@@ -157,6 +167,14 @@ impl Default for World {
 impl World {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn shelter_at(&self, position: Vec3) -> Option<&Shelter> {
+        self.shelters.at(position)
+    }
+
+    pub fn is_sheltered(&self, position: Vec3) -> bool {
+        self.shelters.is_sheltered(position)
     }
 
     /// Seed-time only: a duplicate id is a programmer error, not an
@@ -222,9 +240,7 @@ impl World {
                 .get(member)
                 .ok_or_else(|| format!("unknown party member '{member}'"))?;
             if actor.state.presence == presence {
-                return Err(format!(
-                    "party member '{member}' is already {presence:?}"
-                ));
+                return Err(format!("party member '{member}' is already {presence:?}"));
             }
             let epoch = actor
                 .state
@@ -503,12 +519,11 @@ impl World {
                 .iter()
                 .filter(|(_, character)| {
                     character.state.presence == Presence::InCity
-                        &&
-                    planar_within(
-                        character.position_m(),
-                        centre,
-                        DEFAULT_STAGE_RADIUS_M + AVOID_PERSONAL_RADIUS_M,
-                    )
+                        && planar_within(
+                            character.position_m(),
+                            centre,
+                            DEFAULT_STAGE_RADIUS_M + AVOID_PERSONAL_RADIUS_M,
+                        )
                 })
                 .map(|(id, character)| (id.clone(), character.position_m()))
                 .collect(),
@@ -610,7 +625,11 @@ impl World {
                     {
                         let inside_already =
                             planar_within(start, needle_point, NEEDLE_CLAIM_RADIUS_M);
-                        let my_dir = if distance > 1e-9 { to / distance } else { Vec3::ZERO };
+                        let my_dir = if distance > 1e-9 {
+                            to / distance
+                        } else {
+                            Vec3::ZERO
+                        };
                         match self.needle_claim.as_mut() {
                             None => {
                                 self.needle_claim = Some(NeedleClaim {
@@ -661,7 +680,10 @@ impl World {
                                 }
                                 // Keep the exact original destination as the
                                 // tail when it stands off the graph.
-                                if !points.last().is_some_and(|point| planar_close(*point, goal)) {
+                                if !points
+                                    .last()
+                                    .is_some_and(|point| planar_close(*point, goal))
+                                {
                                     points.push(goal);
                                 }
                                 movement.path = points;
@@ -689,9 +711,8 @@ impl World {
             // ground so no push can put a body inside a wall.
             if new_pos != start
                 && !neighbours.is_empty()
-                && stage.is_some_and(|centre| {
-                    planar_within(new_pos, centre, DEFAULT_STAGE_RADIUS_M)
-                })
+                && stage
+                    .is_some_and(|centre| planar_within(new_pos, centre, DEFAULT_STAGE_RADIUS_M))
             {
                 let mut push = Vec3::ZERO;
                 let mut counted = 0usize;
@@ -699,8 +720,7 @@ impl World {
                     if other_id == id {
                         continue;
                     }
-                    let away =
-                        Vec3::new(new_pos.x - other_pos.x, 0.0, new_pos.z - other_pos.z);
+                    let away = Vec3::new(new_pos.x - other_pos.x, 0.0, new_pos.z - other_pos.z);
                     let d = away.length();
                     if !(1e-6..AVOID_PERSONAL_RADIUS_M).contains(&d) {
                         continue;
@@ -873,7 +893,8 @@ impl World {
                 // legitimately appear twice.
                 if self.item_catalog.stackable(item) {
                     for (other_id, other_meta) in &seen_stuff {
-                        if self.items[*other_id].kind == item.kind && *other_meta == &item.metadata {
+                        if self.items[*other_id].kind == item.kind && *other_meta == &item.metadata
+                        {
                             panic!(
                                 "actor {} holds two same-stuff stacks {other_id} and {item_id} \
                                  that should have merged",
@@ -920,10 +941,7 @@ impl World {
             );
         }
         for (item_id, item) in &self.items {
-            assert!(
-                owners.contains_key(item_id),
-                "item {item_id} has no owner"
-            );
+            assert!(owners.contains_key(item_id), "item {item_id} has no owner");
             let reserved = self.transform_reserved_quantity(item_id);
             let offered = self.offered_quantity(item_id);
             let committed = reserved
@@ -934,10 +952,16 @@ impl World {
                 "item {item_id} commits {committed} units but holds only {}",
                 item.quantity
             );
-            let shares = self.legacy_restock_shares.get(item_id).map_or(&[][..], Vec::as_slice);
+            let shares = self
+                .legacy_restock_shares
+                .get(item_id)
+                .map_or(&[][..], Vec::as_slice);
             let mut previous = None;
             let share_total = shares.iter().fold(0u32, |sum, share| {
-                assert!(share.quantity > 0, "legacy restock share on {item_id} is empty");
+                assert!(
+                    share.quantity > 0,
+                    "legacy restock share on {item_id} is empty"
+                );
                 assert_eq!(
                     owners.get(item_id).copied(),
                     Some(&share.original_vendor),
@@ -945,7 +969,10 @@ impl World {
                 );
                 let key = (&share.source_id, &share.original_vendor);
                 if let Some(old) = previous {
-                    assert!(old < key, "legacy restock shares on {item_id} are not unique and sorted");
+                    assert!(
+                        old < key,
+                        "legacy restock shares on {item_id} are not unique and sorted"
+                    );
                 }
                 previous = Some(key);
                 sum.checked_add(share.quantity)
@@ -963,8 +990,14 @@ impl World {
             );
         }
         for (producer, job) in &self.transform_jobs {
-            assert_eq!(producer, &job.producer, "transform job is keyed by the wrong producer");
-            assert!(self.characters.contains_key(producer), "transform producer is missing");
+            assert_eq!(
+                producer, &job.producer,
+                "transform job is keyed by the wrong producer"
+            );
+            assert!(
+                self.characters.contains_key(producer),
+                "transform producer is missing"
+            );
             assert!(!job.inputs.is_empty(), "transform job has no inputs");
             assert!(!job.outputs.is_empty(), "transform job has no outputs");
             assert!(
@@ -984,7 +1017,9 @@ impl World {
             for output in &job.outputs {
                 assert!(output.quantity > 0, "transform output is empty");
                 let total = output_keys.entry(output.matcher()).or_default();
-                *total = total.checked_add(output.quantity).expect("transform output overflow");
+                *total = total
+                    .checked_add(output.quantity)
+                    .expect("transform output overflow");
             }
             for (matcher, future) in output_keys {
                 self.held_quantity(producer, &matcher)
@@ -1350,7 +1385,10 @@ mod tests {
             !movement.patrol.as_ref().unwrap().heading_to_b,
             "the patrol reversed on arrival"
         );
-        assert!(!movement.path.is_empty(), "a fresh route back to `a` was laid");
+        assert!(
+            !movement.path.is_empty(),
+            "a fresh route back to `a` was laid"
+        );
         assert!(
             world.characters[&id].position_m().x < goal.x,
             "the mover is now walking back the way it came"
@@ -1439,7 +1477,10 @@ mod tests {
         // (2.0 m edge half-width minus the 0.35 m agent radius).
         for point in &path_a[..path_a.len() - 1] {
             assert!(point.z > 0.0, "the lane keeps right, got z={}", point.z);
-            assert!(point.z <= 2.0 - 0.35 + 1e-9, "the lane stays in the corridor");
+            assert!(
+                point.z <= 2.0 - 0.35 + 1e-9,
+                "the lane stays in the corridor"
+            );
         }
         // Two walkers hold different, stable lines — no conga line.
         assert!(
@@ -1469,7 +1510,12 @@ mod tests {
                 Vec3::new(30.0, WALK_Y, 0.0),
                 vec![Vec3::new(0.0, WALK_Y, 0.0)],
             ));
-            (world, nav, ActorId::from_raw("east"), ActorId::from_raw("west"))
+            (
+                world,
+                nav,
+                ActorId::from_raw("east"),
+                ActorId::from_raw("west"),
+            )
         };
         let closest = |world: &World, a: &ActorId, b: &ActorId| {
             world.characters[a]
@@ -1538,7 +1584,10 @@ mod tests {
     fn route_nodes_avoiding_takes_the_detour() {
         let nav = needle_nav();
         let direct = nav.route_nodes(2, 0).expect("the alley routes");
-        assert!(direct.nodes.contains(&1), "the short way runs through the Needle");
+        assert!(
+            direct.nodes.contains(&1),
+            "the short way runs through the Needle"
+        );
         let detour = nav
             .route_nodes_avoiding(2, 0, Some(1))
             .expect("the long way round exists");
@@ -1626,25 +1675,30 @@ mod tests {
         let mut rerouted = false;
         for _ in 0..25 {
             world.step_movement(1.0, &nav, None);
-            let path = &world.characters[&waiter].state.movement.as_ref().unwrap().path;
+            let path = &world.characters[&waiter]
+                .state
+                .movement
+                .as_ref()
+                .unwrap()
+                .path;
             if path.iter().any(|point| point.z > 20.0) {
                 rerouted = true;
                 break;
             }
         }
-        assert!(rerouted, "the waiter gave up on the mouth and took the detour");
+        assert!(
+            rerouted,
+            "the waiter gave up on the mouth and took the detour"
+        );
 
         // The detour never re-enters the choke, and it still gets home.
         let mut min_needle_distance = f64::INFINITY;
         for _ in 0..80 {
             world.step_movement(1.0, &nav, None);
             let position = world.characters[&waiter].position_m();
-            min_needle_distance = min_needle_distance
-                .min(Vec3::new(position.x, 0.0, position.z).distance(Vec3::new(
-                    needle.x,
-                    0.0,
-                    needle.z,
-                )));
+            min_needle_distance = min_needle_distance.min(
+                Vec3::new(position.x, 0.0, position.z).distance(Vec3::new(needle.x, 0.0, needle.z)),
+            );
             if !world.characters[&waiter].is_walking() {
                 break;
             }
@@ -1679,7 +1733,11 @@ mod tests {
             "a status write must republish the snapshot"
         );
         let ilse = &world.characters[&ActorId::from_raw("ilse")];
-        assert_eq!(ilse.state.statuses[&StatusKind::Drunkenness], 1.0, "clamped");
+        assert_eq!(
+            ilse.state.statuses[&StatusKind::Drunkenness],
+            1.0,
+            "clamped"
+        );
 
         // A non-finite value reads as no carriage.
         assert!(world.debug_set_status("ILSE", StatusKind::Weariness, f64::INFINITY));
@@ -1724,15 +1782,24 @@ mod tests {
 
         // By display name (case-insensitive, may contain spaces).
         assert!(world.debug_set_status("wend carrow", StatusKind::Drunkenness, 0.4));
-        assert_eq!(world.characters[&id].state.statuses[&StatusKind::Drunkenness], 0.4);
+        assert_eq!(
+            world.characters[&id].state.statuses[&StatusKind::Drunkenness],
+            0.4
+        );
 
         // By the raw actor id the HUD shows for strangers.
         assert!(world.debug_set_status("P006V", StatusKind::Weariness, 0.6));
-        assert_eq!(world.characters[&id].state.statuses[&StatusKind::Weariness], 0.6);
+        assert_eq!(
+            world.characters[&id].state.statuses[&StatusKind::Weariness],
+            0.6
+        );
 
         // By an `<id>_<name>` stem someone might paste from a lore path.
         assert!(world.debug_set_status("p006v_wend", StatusKind::Drunkenness, 0.9));
-        assert_eq!(world.characters[&id].state.statuses[&StatusKind::Drunkenness], 0.9);
+        assert_eq!(
+            world.characters[&id].state.statuses[&StatusKind::Drunkenness],
+            0.9
+        );
 
         // Neither a name nor an id: no write.
         assert!(!world.debug_set_status("q9zzz", StatusKind::Drunkenness, 0.5));
@@ -1767,7 +1834,10 @@ mod tests {
             .iter()
             .find(|actor| actor.id == ActorId::from_raw("player"))
             .expect("the player is in the snapshot");
-        assert!(player.statuses.is_empty(), "an untouched actor carries none");
+        assert!(
+            player.statuses.is_empty(),
+            "an untouched actor carries none"
+        );
 
         // Round-trips, and the empty case is skipped (never `"statuses":[]`).
         let encoded = serde_json::to_string(&snapshot).unwrap();

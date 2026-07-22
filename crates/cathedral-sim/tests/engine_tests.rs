@@ -17,11 +17,11 @@ use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use cathedral_sim::{
     ActorId, Capabilities, Cognition, CognitionBusy, Completion, Engine, EngineCommand,
-    EngineConfig, EngineInitError, EngineMessage, FakeCognition, HEARING_RADIUS_M, ItemId, Movement,
-    NavData, NullSight, NullTranscription, Office, Patrol, PublicSnapshot, SpeechError,
+    EngineConfig, EngineInitError, EngineMessage, FakeCognition, HEARING_RADIUS_M, ItemId,
+    Movement, NavData, NullSight, NullTranscription, Office, Patrol, PublicSnapshot, SpeechError,
     SpeechEventId, SpeechRouter, SttBackendKind, Subsystem, Tts, TtsBackendKind, TtsOutcome,
-    TtsRequest, TtsSubmitError, Vec3, WALK_SPEED_MPS, WALK_Y, WorldClock, WorldSeed, apply_action,
-    ids::RequestId, speech_reading_seconds,
+    TtsRequest, TtsSubmitError, Vec3, WALK_SPEED_MPS, WALK_Y, WeatherKind, WorldClock, WorldSeed,
+    apply_action, ids::RequestId, speech_reading_seconds,
 };
 use prompt_support::{areas, catalog, prompt_env};
 use serde_json::json;
@@ -306,8 +306,15 @@ fn the_offices_ring_for_the_player_only_and_publish_the_clock() {
     // Past noon: High Wick rings once, and its recipient is the player alone.
     let noon = engine.poll(13.0, Vec::new());
     assert_eq!(clock_office(&noon), Some(Office::HighWick));
-    let bells: Vec<&EngineMessage> = noon.iter().filter(|message| is_town_bell(message)).collect();
-    assert_eq!(bells.len(), 1, "one stroke of High Wick's four is due by 13 s");
+    let bells: Vec<&EngineMessage> = noon
+        .iter()
+        .filter(|message| is_town_bell(message))
+        .collect();
+    assert_eq!(
+        bells.len(),
+        1,
+        "one stroke of High Wick's four is due by 13 s"
+    );
     match bells[0] {
         EngineMessage::Sound {
             recipient_ids,
@@ -323,7 +330,10 @@ fn the_offices_ring_for_the_player_only_and_publish_the_clock() {
             );
             assert!(witness_ids.is_empty());
             assert!(actor_id.is_none(), "a world sound is never attributed");
-            assert!(text_for_player.is_none(), "the HUD readout carries the hour, not a toast");
+            assert!(
+                text_for_player.is_none(),
+                "the HUD readout carries the hour, not a toast"
+            );
         }
         other => panic!("expected a bell, got {other:?}"),
     }
@@ -335,6 +345,68 @@ fn the_offices_ring_for_the_player_only_and_publish_the_clock() {
         _ => None,
     });
     assert_eq!(scale, Some(10.0));
+}
+
+#[test]
+fn weather_override_uses_only_the_hot_channel_and_touches_no_inbox() {
+    let mut harness = Builder::default().build();
+    let opening = harness.ready();
+    assert!(
+        opening
+            .iter()
+            .any(|message| matches!(message, EngineMessage::Weather(_)))
+    );
+    let revision = harness.engine.world().world_revision;
+    let inbox_lengths: Vec<_> = harness
+        .engine
+        .world()
+        .characters
+        .iter()
+        .map(|(id, actor)| (id.clone(), actor.inbox().len()))
+        .collect();
+
+    let messages = harness.send(EngineCommand::SetWeatherOverride {
+        kind: WeatherKind::Rain,
+        intensity: Some(0.56),
+    });
+    let rain = messages.iter().rev().find_map(|message| match message {
+        EngineMessage::Weather(sample) => Some(*sample),
+        _ => None,
+    });
+    assert_eq!(rain.map(|sample| sample.kind), Some(WeatherKind::Rain));
+    assert_eq!(
+        harness
+            .engine
+            .world()
+            .current_weather
+            .map(|sample| sample.kind),
+        Some(WeatherKind::Rain)
+    );
+    assert_eq!(harness.engine.world().world_revision, revision);
+    assert!(
+        !messages
+            .iter()
+            .any(|message| matches!(message, EngineMessage::Snapshot(_)))
+    );
+    for (id, length) in inbox_lengths {
+        assert_eq!(
+            harness.engine.world().characters[&id].inbox().len(),
+            length,
+            "{id}"
+        );
+    }
+
+    // Scalar sampling stays hot on later polls too; no semantic transition is
+    // required for the renderer to keep receiving smooth values.
+    let later = harness.poll();
+    assert_eq!(
+        later
+            .iter()
+            .filter(|message| matches!(message, EngineMessage::Weather(_)))
+            .count(),
+        1
+    );
+    assert_eq!(harness.engine.world().world_revision, revision);
 }
 
 /// A clock-only engine (no cognition moves the world), opened on `clock` at the
@@ -377,7 +449,8 @@ fn overlapping_office_ordinals_ring_in_due_order() {
     let clock = WorldClock::new(60.0, Office::Dayspring, 0, 0.05);
     let mut engine = clock_only_engine(clock);
 
-    let count_bells = |messages: &[EngineMessage]| messages.iter().filter(|m| is_town_bell(m)).count();
+    let count_bells =
+        |messages: &[EngineMessage]| messages.iter().filter(|m| is_town_bell(m)).count();
 
     // Enter Dayspring; nothing rings yet.
     assert_eq!(count_bells(&engine.poll(0.0, Vec::new())), 0);
@@ -419,7 +492,8 @@ fn a_huge_time_jump_rings_only_the_most_recent_offices() {
     let clock = WorldClock::new(60.0, Office::Dayspring, 0, 0.05);
     let mut engine = clock_only_engine(clock);
 
-    let count_bells = |messages: &[EngineMessage]| messages.iter().filter(|m| is_town_bell(m)).count();
+    let count_bells =
+        |messages: &[EngineMessage]| messages.iter().filter(|m| is_town_bell(m)).count();
     assert_eq!(count_bells(&engine.poll(0.0, Vec::new())), 0);
 
     // Three-plus game days pass in one span — 21 office crossings, 84 strokes
@@ -530,7 +604,10 @@ fn movement_advances_on_the_hot_channel_without_touching_the_revision() {
     );
     // Every slice is an exact 0.09 m, so the total is a whole multiple of it.
     let slices = advance / (WALK_SPEED_MPS * 0.05);
-    assert!((slices - slices.round()).abs() < 1e-6, "a whole number of slices");
+    assert!(
+        (slices - slices.round()).abs() < 1e-6,
+        "a whole number of slices"
+    );
     assert_eq!(moved[0].speed, WALK_SPEED_MPS as f32);
 
     // The world itself agrees, and it did so without a snapshot or a revision bump.
@@ -687,8 +764,14 @@ fn an_npc_to_npc_line_stops_the_walker_and_a_broadcast_does_not() {
     while now < spoke_at + 29.0 {
         now += 1.0;
         engine.poll(now, Vec::new());
-        assert!(!engine.world().characters[&sven].is_walking(), "held while warm");
-        assert!(!engine.world().characters[&ilse].is_walking(), "the speaker too");
+        assert!(
+            !engine.world().characters[&sven].is_walking(),
+            "held while warm"
+        );
+        assert!(
+            !engine.world().characters[&ilse].is_walking(),
+            "the speaker too"
+        );
     }
 
     // The lapse: silence hands the errand back on its own.
@@ -697,7 +780,10 @@ fn an_npc_to_npc_line_stops_the_walker_and_a_broadcast_does_not() {
         && !engine.world().characters[&ilse].is_walking()
     {
         now += 1.0;
-        assert!(now < deadline, "no errand resumed after the exchange lapsed");
+        assert!(
+            now < deadline,
+            "no errand resumed after the exchange lapsed"
+        );
         engine.poll(now, Vec::new());
     }
 }
@@ -727,8 +813,14 @@ fn an_item_handoff_holds_giver_and_receiver_standing() {
     while now < 29.5 {
         now += 1.0;
         engine.poll(now, Vec::new());
-        assert!(!engine.world().characters[&sven].is_walking(), "the giver stands");
-        assert!(!engine.world().characters[&ilse].is_walking(), "the receiver stands");
+        assert!(
+            !engine.world().characters[&sven].is_walking(),
+            "the giver stands"
+        );
+        assert!(
+            !engine.world().characters[&ilse].is_walking(),
+            "the receiver stands"
+        );
     }
 
     // The accept re-warms the exchange; only its lapse frees them.
@@ -746,7 +838,10 @@ fn an_item_handoff_holds_giver_and_receiver_standing() {
         && !engine.world().characters[&ilse].is_walking()
     {
         now += 1.0;
-        assert!(now < deadline, "no errand resumed after the handoff went cold");
+        assert!(
+            now < deadline,
+            "no errand resumed after the handoff went cold"
+        );
         engine.poll(now, Vec::new());
     }
     assert!(
