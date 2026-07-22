@@ -5175,7 +5175,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 9,
       "id": "snd_256_hens_in_a_domestic_yard",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Geese at a Gate Pond-Rut",
@@ -5214,7 +5214,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 8,
       "id": "snd_258_bees_at_the_honey_stall",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Flies at Eel Smoke and Offal",
@@ -6174,7 +6174,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 5,
       "id": "snd_307_smallvoice_single_stroke",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Scold Single Stroke",
@@ -6194,7 +6194,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 5.5,
       "id": "snd_308_scold_single_stroke",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Seven Offices Ordinal Pattern",
@@ -6448,7 +6448,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 15,
       "id": "snd_321_gradine_ordinary_day_texture",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Wickmarket at Lamplight",
@@ -6467,7 +6467,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_322_wickmarket_at_lamplight",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Coswald's Yard Before the Hammers",
@@ -6486,7 +6486,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 13,
       "id": "snd_323_coswalds_yard_before_the_hammers",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Tallage Weighing Hour",
@@ -6505,7 +6505,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 15,
       "id": "snd_324_tallage_weighing_hour",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Maren's Green Before Dayspring",
@@ -6524,7 +6524,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_325_marens_green_before_dayspring",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Bellstand Between Proclamations",
@@ -6581,7 +6581,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_328_drapers_reach_in_rain",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Tenterhook Lane Workday",
@@ -6600,7 +6600,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_329_tenterhook_lane_workday",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Cinder Row behind Shutters",
@@ -6619,7 +6619,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_330_cinder_row_behind_shutters",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Burnt Court Working Domesticity",
@@ -6657,7 +6657,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 15,
       "id": "snd_332_dry_cut_freight_corridor",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Gaunt Passage by Day",
@@ -6676,7 +6676,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 12,
       "id": "snd_333_gaunt_passage_by_day",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Beneath the Tally Bridge",
@@ -6752,7 +6752,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 13,
       "id": "snd_337_hungry_ox_doorway_spill",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Old Sluice in Daylight",
@@ -6771,7 +6771,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 12,
       "id": "snd_338_old_sluice_in_daylight",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Skinners' Court Work and Home",
@@ -6790,7 +6790,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_339_skinners_court_work_and_home",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Seven Lofts Grain Interior",
@@ -6809,7 +6809,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 13,
       "id": "snd_340_seven_lofts_grain_interior",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Colm's Night at the Dry Grate",

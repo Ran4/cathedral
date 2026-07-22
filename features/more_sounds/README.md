@@ -23,6 +23,11 @@ The single-sound adapter reuses the provider functions in
 the real environment, the repository `.env`, or `prompt_playgound/.env`, in
 that order.
 
+All 53 shortlisted sounds are now in the game; the two implementation passes are
+written up in `../implemented/named_place_soundscapes.md` (the second one) and
+routed from `src/soundscape.rs`. Shortlist anything further here and the same
+workflow applies.
+
 Each sound in `more_sounds.json` has an `implemented_in_game` boolean. The
 shortlist mirrors that flag and records `generated_audio.path` when a draft
 exists. A future implementation pass should use the selected entries, place

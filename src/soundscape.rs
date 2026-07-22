@@ -9,6 +9,18 @@
 //! Long-running sources are virtualized.  Only the nearest useful emitters own
 //! decoders, their gains fade rather than switch, and an active conversation or
 //! microphone capture ducks them through the shared `AudioActivity` projection.
+//!
+//! There are three ways a loop earns a decoder.  A [`StaticEmitter`] is a point
+//! in the city on a clock schedule.  An [`AreaBed`] is a named place out of
+//! `assets/world/areas.json`, and follows the part of that place nearest the
+//! listener, so one bed can be a kilometre of corridor or a twelve-metre
+//! passage.  The rest are raised by live state: work, wells, carts, and the
+//! church interiors.  One-shots come from [`SoundscapeCue`] and the clock.
+//!
+//! The two civic bells are the exception to "texture": their stroke *counts*
+//! mean something a player is expected to read by ear, so patterns are
+//! assembled from one reviewed stroke rather than baked
+//! (`lore/second_sun/design/06` §1) and are never pitch-shifted.
 
 use std::{
     collections::{HashMap, HashSet},
@@ -37,7 +49,11 @@ use crate::{
 };
 
 const SOUND_ROOT: &str = "sounds/soundscape";
-const MAX_LIVE_LOOPS: usize = 8;
+/// Concurrent decoders the virtualizer will own. Raised from eight with the
+/// named-place beds: a bed is the identity of wherever you are standing, and it
+/// must never win its slot by evicting the market, loom or furnace detail that
+/// the place is made of.
+const MAX_LIVE_LOOPS: usize = 10;
 const LOOP_ACTIVATION_HYSTERESIS: f32 = 1.15;
 const STALLED_AUDIO_TIMEOUT_SECONDS: f64 = 20.0;
 const SPATIAL_FULL_VOLUME_FRACTION: f32 = 1.0 / 8.0;
@@ -59,6 +75,9 @@ const SPARR_DOG_COOLDOWN_SECONDS: f64 = 240.0;
 const GEESE_GLOBAL_COOLDOWN_SECONDS: f64 = 210.0;
 const CAT_MIN_INTERVAL_SECONDS: f64 = 135.0;
 const CAT_INTERVAL_JITTER_SECONDS: f64 = 165.0;
+/// The minutes between Evenblow's seventh office and the Scold's curfew — the
+/// city's dusk grace, in the same real seconds the office strokes use.
+const DUSK_GRACE_SECONDS: f64 = 8.0;
 const SPEED_OF_SOUND_MPS: f32 = 343.0;
 const WEATHER_AUDIO_SAMPLE_RATE: u32 = 22_050;
 
@@ -84,6 +103,28 @@ const NORTH_TOWER_NESTS: Vec3 = Vec3::new(34.0, 46.0, 75.0);
 const OUTER_FISH_WHARF: Vec3 = Vec3::new(-594.0, 13.0, -404.0);
 const SPARR_FURNACE_YARD: Vec3 = Vec3::new(-115.0, 2.0, 250.0);
 const SAINT_MARENS_CHURCH: Vec3 = Vec3::new(-235.0, 3.0, -392.0);
+/// Maren Smallvoice hangs in Saint Maren's own small tower, lifted to the
+/// louvres so the knell carries over the Reed Ward roofs rather than out of a
+/// doorway at street level (`saint_marens_church` in `areas.json`).
+const SMALLVOICE_TOWER: Vec3 = Vec3::new(-235.0, 17.0, -392.0);
+/// The Scold hangs in the Bellstand's watch-bell tower — the civic bell, east
+/// of the Lanthorn (`bellstand_tower`, whose box rises to y = 30).
+const SCOLD_TOWER: Vec3 = Vec3::new(64.0, 24.0, -270.0);
+/// Clemence Skep's honey pitch: the north-row Wickmarket stall beside her
+/// husband's family wax stand (`lore/families/family_vell.md` — the wax-house
+/// married the honey-seller), one stall east of Osanne Vell's.
+const HONEY_STALL: Vec3 = Vec3::new(16.9, 1.3, 359.4);
+
+// Occupied courts and gate-edge holdings that keep a few birds: quiet lanes in
+// five different wards, each well clear of a market bed and of the swept
+// Gradine. Taken from real door points in `assets/world/homes.json`.
+const HEN_YARD_ANCHORS: [Vec3; 5] = [
+    Vec3::new(-9.4, 1.0, -147.6),   // Fabric Ward, off Bellfoot Passage
+    Vec3::new(-2.4, 1.0, 451.9),    // Wick Ward, a Wool Gate holding
+    Vec3::new(220.4, 1.0, 64.9),    // Wallwright Ward, a Malt Passage food yard
+    Vec3::new(-294.1, 1.0, -272.6), // Reed Ward, by Reed Cistern
+    Vec3::new(401.9, 1.0, 212.4),   // Cloth Ward, a Stone Gate holding
+];
 
 const MARKET_DOG_ANCHORS: [Vec3; 6] = [
     Vec3::new(-62.0, 1.3, 355.0),
@@ -145,6 +186,119 @@ pub(crate) enum SoundscapeCue {
     },
     StoneGateClosing,
     RiverGateBarLift,
+    /// Ring one of the two civic bells. Patterns are data, never recordings
+    /// (`lore/second_sun/design/06` §1): the sequence is assembled here from a
+    /// single reviewed stroke, so a knell's count is a number in the caller's
+    /// transaction and can never disagree with what the player hears.
+    CivicBell(BellPattern),
+}
+
+/// An assembled bronze sequence. Each variant carries its own meaning; the
+/// stroke count, interval and source come from [`BellPattern::plan`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum BellPattern {
+    /// The Scold's legal Snuffing, following Evenblow's seventh office.
+    ScoldCurfew,
+    /// The Scold gathering the Bellstand; a proclamation or crying follows.
+    ScoldSummons,
+    /// Maren Smallvoice: one slow stroke per year of the life.
+    NameKnell { years: u16 },
+}
+
+/// The most strokes any one pattern may queue. A knell counts a human life, so
+/// the cap is generous, but it is a cap: no caller can schedule an unbounded
+/// tail of one-shots into [`ScheduledSounds`].
+const MAX_BELL_STROKES: u16 = 120;
+
+#[derive(Debug, Clone, Copy)]
+struct BellPlan {
+    sound: SoundscapeSound,
+    position: Vec3,
+    strokes: u16,
+    interval_seconds: f64,
+    /// The word that goes in the evidence line, so drive scripts can assert a
+    /// count from `logs.jsonl` without a HUD.
+    label: &'static str,
+}
+
+impl BellPattern {
+    /// The oldest life a name-knell will count out. Callers validate against
+    /// this so a bad age fails where it is written, not silently at the rope.
+    pub(crate) const MAX_KNELL_YEARS: u16 = MAX_BELL_STROKES;
+
+    fn plan(self) -> BellPlan {
+        match self {
+            // Nine strokes: longer than any office ring can be (the Snuffing,
+            // the greatest, is seven), so a counted curfew can never be
+            // mistaken for a counted hour.
+            Self::ScoldCurfew => BellPlan {
+                sound: SoundscapeSound::ScoldStroke,
+                position: SCOLD_TOWER,
+                strokes: 9,
+                interval_seconds: BELL_STROKE_INTERVAL_SECONDS,
+                label: "scold curfew",
+            },
+            // Fast and short — an urgency the offices never have, and far too
+            // quick to be counted as an hour.
+            Self::ScoldSummons => BellPlan {
+                sound: SoundscapeSound::ScoldStroke,
+                position: SCOLD_TOWER,
+                strokes: 5,
+                interval_seconds: 1.15,
+                label: "scold summons",
+            },
+            Self::NameKnell { years } => BellPlan {
+                sound: SoundscapeSound::SmallvoiceStroke,
+                position: SMALLVOICE_TOWER,
+                strokes: years.clamp(1, MAX_BELL_STROKES),
+                interval_seconds: BELL_STROKE_INTERVAL_SECONDS,
+                label: "smallvoice knell",
+            },
+        }
+    }
+}
+
+/// Queue one assembled peal.
+///
+/// Every stroke is the same reviewed recording, displaced by 20–40 ms of seeded
+/// jitter so the bronze sounds pulled by hands rather than fired by a sequencer
+/// (`design/06` §1). The jitter never touches playback *speed*: retuning a bell
+/// the player is expected to count would be a worse lie than a metronome.
+fn schedule_bell_pattern(
+    pattern: BellPattern,
+    first_stroke_at: f64,
+    seed_prefix: &str,
+    scheduled: &mut ScheduledSounds,
+) -> BellPlan {
+    let plan = pattern.plan();
+    for stroke in 0..plan.strokes {
+        let seed = stable_hash(&format!("{seed_prefix}:{}:{stroke}", plan.label));
+        let magnitude = 0.020 + unit(seed) * 0.020;
+        let jitter = if seed & 1 == 0 { magnitude } else { -magnitude };
+        let at = first_stroke_at + f64::from(stroke) * plan.interval_seconds + jitter;
+        // Bronze pulled by a rope is not struck identically twice; a narrow
+        // gain range keeps the count honest while removing the copy-paste.
+        let gain = 0.94 + unit(seed.rotate_left(23)) as f32 * 0.12;
+        scheduled.push_shaped(
+            at.max(first_stroke_at),
+            plan.sound,
+            plan.position,
+            gain,
+            1.0,
+        );
+    }
+    plan
+}
+
+/// Leave the evidence a drive script asserts on: one line per peal, carrying
+/// the count, in `logs/latest_session/logs.jsonl` under source `drive`.
+fn log_bell_peal(plan: &BellPlan, context: &str) {
+    let message = format!(
+        "[bell] {}: {} strokes at {:.2}s{context}",
+        plan.label, plan.strokes, plan.interval_seconds
+    );
+    info!("{message}");
+    crate::session_log::log_line("drive", "INFO", &message);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -262,6 +416,7 @@ impl Plugin for SoundscapePlugin {
             .init_resource::<WellMechanismActivity>()
             .init_resource::<WorkSoundState>()
             .init_resource::<ClockSoundState>()
+            .init_resource::<CivicBellState>()
             .init_resource::<UrbanNatureState>()
             .init_resource::<WeatherAudioState>()
             .init_resource::<WorldWeatherState>()
@@ -290,6 +445,7 @@ impl Plugin for SoundscapePlugin {
                     ingest_soundscape_cues.in_set(SoundscapeSet::IngestCues),
                     project_well_mechanism_activity.in_set(SoundscapeSet::ProjectActivity),
                     schedule_clock_sounds,
+                    schedule_curfew_bell,
                     schedule_player_footsteps,
                     schedule_npc_body_sounds,
                     schedule_weather_thunder,
@@ -360,9 +516,27 @@ enum SoundscapeSound {
     LightningOverLanthorn,
     LanthornNaveAir,
     CongregationPrayer,
+    HensInYard,
+    BeesAtHoneyStall,
+    SmallvoiceStroke,
+    ScoldStroke,
+    GradineOrdinaryDay,
+    WickmarketAtLamplight,
+    CoswaldsYardEarly,
+    TallageWeighingHour,
+    MarensGreenBeforeDayspring,
+    DrapersReachInRain,
+    TenterhookLaneWorkday,
+    CinderRowBehindShutters,
+    CutFreightCorridor,
+    GauntPassageByDay,
+    HungryOxDoorway,
+    OldSluiceInDaylight,
+    SkinnersCourtLife,
+    SevenLoftsGrain,
 }
 
-const ALL_SOUNDS: [SoundscapeSound; 35] = [
+const ALL_SOUNDS: [SoundscapeSound; 53] = [
     SoundscapeSound::CobbleFootstep,
     SoundscapeSound::WorkshopCough,
     SoundscapeSound::EveningYawn,
@@ -398,9 +572,27 @@ const ALL_SOUNDS: [SoundscapeSound; 35] = [
     SoundscapeSound::LightningOverLanthorn,
     SoundscapeSound::LanthornNaveAir,
     SoundscapeSound::CongregationPrayer,
+    SoundscapeSound::HensInYard,
+    SoundscapeSound::BeesAtHoneyStall,
+    SoundscapeSound::SmallvoiceStroke,
+    SoundscapeSound::ScoldStroke,
+    SoundscapeSound::GradineOrdinaryDay,
+    SoundscapeSound::WickmarketAtLamplight,
+    SoundscapeSound::CoswaldsYardEarly,
+    SoundscapeSound::TallageWeighingHour,
+    SoundscapeSound::MarensGreenBeforeDayspring,
+    SoundscapeSound::DrapersReachInRain,
+    SoundscapeSound::TenterhookLaneWorkday,
+    SoundscapeSound::CinderRowBehindShutters,
+    SoundscapeSound::CutFreightCorridor,
+    SoundscapeSound::GauntPassageByDay,
+    SoundscapeSound::HungryOxDoorway,
+    SoundscapeSound::OldSluiceInDaylight,
+    SoundscapeSound::SkinnersCourtLife,
+    SoundscapeSound::SevenLoftsGrain,
 ];
 
-const SOUND_DESCRIPTORS: [SoundDescriptor; 35] = [
+const SOUND_DESCRIPTORS: [SoundDescriptor; 53] = [
     descriptor(
         SoundscapeSound::CobbleFootstep,
         "snd_001_soft_shoes_on_dry_cobbles.mp3",
@@ -681,6 +873,157 @@ const SOUND_DESCRIPTORS: [SoundDescriptor; 35] = [
         58.0,
         0.04,
     ),
+    descriptor(
+        SoundscapeSound::HensInYard,
+        "snd_256_hens_in_a_domestic_yard.wav",
+        ClipMode::Loop,
+        0.15,
+        26.0,
+        0.12,
+    ),
+    descriptor(
+        SoundscapeSound::BeesAtHoneyStall,
+        "snd_258_bees_at_the_honey_stall.wav",
+        ClipMode::Loop,
+        0.13,
+        12.0,
+        0.06,
+    ),
+    // The two civic bells. Their radii are the canonical ones from
+    // `lore/second_sun/design/06` §2 — the knell carries 300 m across the Reed
+    // Ward, the Scold 500 m over the eastern city — and both stay below the
+    // Lanthorn's 1 400 m storm voice in scale, as that document requires.
+    descriptor(
+        SoundscapeSound::SmallvoiceStroke,
+        "snd_307_smallvoice_single_stroke.mp3",
+        ClipMode::OneShot,
+        0.60,
+        300.0,
+        0.45,
+    ),
+    descriptor(
+        SoundscapeSound::ScoldStroke,
+        "snd_308_scold_single_stroke.mp3",
+        ClipMode::OneShot,
+        0.68,
+        500.0,
+        0.45,
+    ),
+    // The named-place beds. Each radius is the sound's own carry; how far
+    // outside its area the bed can be *demanded* at all is the separate
+    // `spill_m` in `AREA_BEDS`, and is always the smaller of the two.
+    descriptor(
+        SoundscapeSound::GradineOrdinaryDay,
+        "snd_321_gradine_ordinary_day_texture.wav",
+        ClipMode::Loop,
+        0.20,
+        62.0,
+        0.10,
+    ),
+    descriptor(
+        SoundscapeSound::WickmarketAtLamplight,
+        "snd_322_wickmarket_at_lamplight.wav",
+        ClipMode::Loop,
+        0.20,
+        72.0,
+        0.10,
+    ),
+    descriptor(
+        SoundscapeSound::CoswaldsYardEarly,
+        "snd_323_coswalds_yard_before_the_hammers.wav",
+        ClipMode::Loop,
+        0.22,
+        66.0,
+        0.14,
+    ),
+    descriptor(
+        SoundscapeSound::TallageWeighingHour,
+        "snd_324_tallage_weighing_hour.wav",
+        ClipMode::Loop,
+        0.22,
+        70.0,
+        0.12,
+    ),
+    descriptor(
+        SoundscapeSound::MarensGreenBeforeDayspring,
+        "snd_325_marens_green_before_dayspring.wav",
+        ClipMode::Loop,
+        0.22,
+        60.0,
+        0.12,
+    ),
+    descriptor(
+        SoundscapeSound::DrapersReachInRain,
+        "snd_328_drapers_reach_in_rain.wav",
+        ClipMode::Loop,
+        0.26,
+        40.0,
+        0.14,
+    ),
+    descriptor(
+        SoundscapeSound::TenterhookLaneWorkday,
+        "snd_329_tenterhook_lane_workday.wav",
+        ClipMode::Loop,
+        0.24,
+        42.0,
+        0.14,
+    ),
+    descriptor(
+        SoundscapeSound::CinderRowBehindShutters,
+        "snd_330_cinder_row_behind_shutters.wav",
+        ClipMode::Loop,
+        0.22,
+        44.0,
+        0.14,
+    ),
+    descriptor(
+        SoundscapeSound::CutFreightCorridor,
+        "snd_332_dry_cut_freight_corridor.wav",
+        ClipMode::Loop,
+        0.20,
+        56.0,
+        0.14,
+    ),
+    descriptor(
+        SoundscapeSound::GauntPassageByDay,
+        "snd_333_gaunt_passage_by_day.wav",
+        ClipMode::Loop,
+        0.24,
+        30.0,
+        0.14,
+    ),
+    descriptor(
+        SoundscapeSound::HungryOxDoorway,
+        "snd_337_hungry_ox_doorway_spill.wav",
+        ClipMode::Loop,
+        0.30,
+        30.0,
+        0.06,
+    ),
+    descriptor(
+        SoundscapeSound::OldSluiceInDaylight,
+        "snd_338_old_sluice_in_daylight.wav",
+        ClipMode::Loop,
+        0.20,
+        46.0,
+        0.14,
+    ),
+    descriptor(
+        SoundscapeSound::SkinnersCourtLife,
+        "snd_339_skinners_court_work_and_home.wav",
+        ClipMode::Loop,
+        0.22,
+        42.0,
+        0.12,
+    ),
+    descriptor(
+        SoundscapeSound::SevenLoftsGrain,
+        "snd_340_seven_lofts_grain_interior.wav",
+        ClipMode::Loop,
+        0.22,
+        68.0,
+        0.14,
+    ),
 ];
 
 const fn descriptor(
@@ -786,6 +1129,7 @@ fn load_soundscape_assets(
         .map(|sound| (sound, asset_server.load(sound.asset_path())))
         .collect();
     commands.insert_resource(SoundscapeAssets(handles));
+    commands.insert_resource(AreaBedGeometry::from_shipped_map());
 
     // Weather beds are original deterministic procedural recordings. Keeping
     // the generated PCM in shared assets gives rodio normal loop/duck controls
@@ -1136,8 +1480,62 @@ fn ingest_soundscape_cues(
                     scheduled.push(now, SoundscapeSound::RiverGateBarLift, RIVER_GATE);
                 }
             }
+            SoundscapeCue::CivicBell(pattern) => {
+                let plan = pattern.plan();
+                // One peal per bell at a time: a second summons on top of a
+                // ringing one would make the strokes uncountable, which is the
+                // one thing these bells may never be.
+                let key = stable_hash(&format!("civic-bell:{}", plan.sound as u8));
+                let occupies =
+                    f64::from(plan.strokes.saturating_sub(1)) * plan.interval_seconds + 1.0;
+                if cooldowns.allow(key, now, occupies) {
+                    let plan = schedule_bell_pattern(
+                        pattern,
+                        now,
+                        &format!("cue:{:.0}", now * 10.0),
+                        &mut scheduled,
+                    );
+                    log_bell_peal(&plan, "");
+                }
+            }
         }
     }
+}
+
+/// The Scold's curfew: the *legal* Snuffing, rung from the Bellstand after
+/// Evenblow's seventh office has finished at the Lanthorn. The office is
+/// prayer, the Scold is law, and the gap between them is the city's dusk grace
+/// (`lore/second_sun/design/06` §3).
+fn schedule_curfew_bell(
+    time: Res<Time>,
+    clock: Option<Res<WorldClockState>>,
+    mut state: ResMut<CivicBellState>,
+    mut scheduled: ResMut<ScheduledSounds>,
+) {
+    let now = time.elapsed_secs_f64();
+    let Some(clock) = clock.filter(|clock| clock.present) else {
+        state.observed_office = None;
+        return;
+    };
+    let previous = state.observed_office.replace(clock.office);
+    // The first projection after startup is not a bell being rung, and neither
+    // is midnight arriving partway through the Snuffing: only the edge *into*
+    // the seventh office is.
+    if previous.is_none_or(|previous| previous == clock.office) {
+        return;
+    }
+    if clock.office != Office::Snuffing || state.curfew_day == Some(clock.day) {
+        return;
+    }
+    state.curfew_day = Some(clock.day);
+    // Wait out the Lanthorn's seven strokes, then the grace, then the law.
+    let plan = schedule_bell_pattern(
+        BellPattern::ScoldCurfew,
+        now + office_bell_span_seconds(Office::Snuffing) + DUSK_GRACE_SECONDS,
+        &format!("curfew:{}", clock.day),
+        &mut scheduled,
+    );
+    log_bell_peal(&plan, &format!(", day {}", clock.day));
 }
 
 fn begin_well_draw(
@@ -1211,6 +1609,18 @@ fn begin_well_draw(
 #[derive(Resource, Default)]
 struct ClockSoundState {
     flour_day: Option<i64>,
+}
+
+/// Which day's curfew has already been rung, and the office the edge detector
+/// compares against.
+///
+/// The office alone, never `(day, office)`: the Snuffing runs 21:00 to 02:00,
+/// so the day number changes *inside* it, and a day-keyed edge would ring the
+/// city's curfew a second time at midnight.
+#[derive(Resource, Default)]
+struct CivicBellState {
+    observed_office: Option<Office>,
+    curfew_day: Option<i64>,
 }
 
 fn schedule_clock_sounds(
@@ -2077,6 +2487,8 @@ enum EmitterSchedule {
     WorkingDay,
     DaylightAnimals,
     WarmDayWaste,
+    /// Bees only work the comb while the honey pitch is open and the day warm.
+    HoneyStallDay,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -2088,7 +2500,7 @@ struct StaticEmitter {
     priority: u8,
 }
 
-const STATIC_EMITTERS: [StaticEmitter; 25] = [
+const STATIC_EMITTERS: [StaticEmitter; 31] = [
     StaticEmitter {
         key: 1,
         sound: SoundscapeSound::WickmarketCrowd,
@@ -2270,6 +2682,50 @@ const STATIC_EMITTERS: [StaticEmitter; 25] = [
         schedule: EmitterSchedule::WarmDayWaste,
         priority: 18,
     },
+    // One honey pitch, not a beekeeping quarter: a 12 m source that only the
+    // people at that stall ever hear.
+    StaticEmitter {
+        key: 33,
+        sound: SoundscapeSound::BeesAtHoneyStall,
+        position: HONEY_STALL,
+        schedule: EmitterSchedule::HoneyStallDay,
+        priority: 20,
+    },
+    StaticEmitter {
+        key: 34,
+        sound: SoundscapeSound::HensInYard,
+        position: HEN_YARD_ANCHORS[0],
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 30,
+    },
+    StaticEmitter {
+        key: 35,
+        sound: SoundscapeSound::HensInYard,
+        position: HEN_YARD_ANCHORS[1],
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 30,
+    },
+    StaticEmitter {
+        key: 36,
+        sound: SoundscapeSound::HensInYard,
+        position: HEN_YARD_ANCHORS[2],
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 30,
+    },
+    StaticEmitter {
+        key: 37,
+        sound: SoundscapeSound::HensInYard,
+        position: HEN_YARD_ANCHORS[3],
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 30,
+    },
+    StaticEmitter {
+        key: 38,
+        sound: SoundscapeSound::HensInYard,
+        position: HEN_YARD_ANCHORS[4],
+        schedule: EmitterSchedule::DaylightAnimals,
+        priority: 30,
+    },
 ];
 
 fn schedule_is_active(schedule: EmitterSchedule, clock: Option<&WorldClockState>) -> bool {
@@ -2311,6 +2767,14 @@ fn schedule_is_active(schedule: EmitterSchedule, clock: Option<&WorldClockState>
         }
         EmitterSchedule::DaylightAnimals => daylight_animals_active(Some(clock)),
         EmitterSchedule::WarmDayWaste => clock.brightness > 0.30,
+        EmitterSchedule::HoneyStallDay => {
+            clock.weekday != Weekday::Bellday
+                && clock.brightness > 0.30
+                && matches!(
+                    clock.office,
+                    Office::Dayspring | Office::HighWick | Office::Waning
+                )
+        }
     }
 }
 
@@ -2320,13 +2784,492 @@ fn static_emitter_speed(emitter: StaticEmitter) -> f32 {
         // single conspicuous recording. The variance is fixed per nest/court.
         SoundscapeSound::SparrowsUnderEaves
         | SoundscapeSound::SwallowsOverCourt
-        | SoundscapeSound::FliesAtWaste => {
+        | SoundscapeSound::FliesAtWaste
+        | SoundscapeSound::HensInYard => {
             let seed =
                 stable_hash("animal-loop-speed") ^ emitter.key.wrapping_mul(0x9e37_79b9_7f4a_7c15);
             0.985 + unit(seed) as f32 * 0.03
         }
         _ => 1.0,
     }
+}
+
+/// Weather shaping applied to a static emitter's authored gain.
+///
+/// Rain is not a switch for every source: covering the honey pots quiets the
+/// bees long before the shower is heavy enough for [`wildlife_suppressed`] to
+/// send them in altogether.
+fn static_emitter_weather_gain(emitter: StaticEmitter, weather: Option<&WorldWeatherState>) -> f32 {
+    let rain = weather.map_or(0.0, |weather| weather.current.precipitation as f32);
+    match emitter.sound {
+        SoundscapeSound::BeesAtHoneyStall => (1.0 - rain * 1.6).clamp(0.0, 1.0),
+        _ => 1.0,
+    }
+}
+
+/// Rain at or above this fraction is what the Draper's Reach bed is *about*:
+/// below it the gallery simply sounds like a working cloth market.
+const AREA_BED_RAIN_THRESHOLD: f64 = 0.14;
+/// What a static point source drops to while the listener stands inside a bed
+/// that explicitly describes it as heard through a screen or shutter.
+const MUFFLED_BEHIND_BED_GAIN: f32 = 0.45;
+/// How far outside a place somebody may stand and still be *at* it. The round's
+/// widest leash is 24 m, but a place bed only cares about the people working
+/// the place itself, so this is one ordinary tavern leash.
+const AREA_BED_OCCUPANCY_MARGIN_M: f32 = 9.0;
+
+/// When a named place sounds like itself.
+///
+/// Each variant is one authored place's working hours, not a generic clock
+/// window: the Wickmarket closes down while the Tallage is still weighing, and
+/// Maren's Green is loudest before the office that opens everyone else's day.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AreaBedSchedule {
+    /// Petitioners and vergers on the ceremonial steps — every day but the
+    /// feast day, which the steps belong to for other reasons.
+    GradineOrdinaryDay,
+    /// The close-down bed. It takes over from the Highmarket crowd at
+    /// Lamplight, and owns the Waning on the days that crowd never gathers.
+    WickmarketCloseDown,
+    /// Apprentices uncovering benches before the hammers start.
+    CoswaldsFirstLight,
+    /// Freight and the weigh-beams.
+    TallageWeighing,
+    /// Fish handbarrows arriving in the dark, before Dayspring opens the market.
+    MarensGreenFishArrival,
+    /// Weather-shaped, not clock-shaped: the gallery in rain, at any hour.
+    DrapersReachRain,
+    /// Fulling, stretching and cistern work along the lane.
+    TenterhookClothWork,
+    /// The glass street with its furnaces behind screened bays.
+    CinderRowDay,
+    /// Carts and porters along the old river bed.
+    CutFreight,
+    /// The passage while it is still a useful shortcut — folklore empties it
+    /// after dark, and this bed leaves with the light.
+    GauntPassageWork,
+    /// Spill from an occupied tavern doorway, from Lamplight onward.
+    HungryOxEvening,
+    /// Dry arches and ordinary foot traffic, in daylight.
+    OldSluiceDay,
+    /// A court that is a workshop and a home at once, by day.
+    SkinnersCourtDay,
+    /// Stock moving through the grain lofts on a working day.
+    SevenLoftsStock,
+}
+
+impl AreaBedSchedule {
+    /// Whether this bed's activity depends on how many people are in the place.
+    /// Only the tavern does: an empty room spills nothing.
+    const fn needs_occupancy(self) -> bool {
+        matches!(self, Self::HungryOxEvening)
+    }
+}
+
+/// One reviewed loop bound to a named area in `assets/world/areas.json`.
+///
+/// Binding to the shipped area rather than a hand-copied coordinate is the
+/// point: the emitter follows the nearest part of the real place, so a bed can
+/// belong to a 1 km corridor (`the_cut`) or a 12 m passage (`gaunt_passage`)
+/// without either becoming a point source shouting from its centroid.
+#[derive(Debug, Clone, Copy)]
+struct AreaBed {
+    key: u64,
+    area_id: &'static str,
+    sound: SoundscapeSound,
+    schedule: AreaBedSchedule,
+    priority: u8,
+    /// How far outside the area's own boxes the bed may still be demanded.
+    /// Always below the sound's descriptor radius, so the radius governs
+    /// attenuation and this governs belonging.
+    spill_m: f32,
+    /// Open to the sky, so a downpour genuinely thins the people in it.
+    open_air: bool,
+    /// Point sources this bed puts behind a screen while the listener stands
+    /// inside its area.
+    muffles: &'static [SoundscapeSound],
+}
+
+const AREA_BEDS: [AreaBed; 14] = [
+    AreaBed {
+        key: 5_001,
+        area_id: "gradine",
+        sound: SoundscapeSound::GradineOrdinaryDay,
+        schedule: AreaBedSchedule::GradineOrdinaryDay,
+        priority: 82,
+        spill_m: 26.0,
+        open_air: true,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_002,
+        area_id: "wickmarket",
+        sound: SoundscapeSound::WickmarketAtLamplight,
+        schedule: AreaBedSchedule::WickmarketCloseDown,
+        priority: 95,
+        spill_m: 30.0,
+        open_air: true,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_003,
+        area_id: "coswalds_yard",
+        sound: SoundscapeSound::CoswaldsYardEarly,
+        schedule: AreaBedSchedule::CoswaldsFirstLight,
+        priority: 80,
+        spill_m: 30.0,
+        open_air: true,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_004,
+        area_id: "tallage",
+        sound: SoundscapeSound::TallageWeighingHour,
+        schedule: AreaBedSchedule::TallageWeighing,
+        priority: 82,
+        spill_m: 40.0,
+        open_air: true,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_005,
+        area_id: "marens_green",
+        sound: SoundscapeSound::MarensGreenBeforeDayspring,
+        schedule: AreaBedSchedule::MarensGreenFishArrival,
+        priority: 82,
+        spill_m: 40.0,
+        open_air: true,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_006,
+        area_id: "drapers_reach",
+        sound: SoundscapeSound::DrapersReachInRain,
+        schedule: AreaBedSchedule::DrapersReachRain,
+        priority: 84,
+        spill_m: 20.0,
+        // The Reach alternates covered bays with two open courts; the bed is
+        // the rain on that gallery, so rain must not also thin it.
+        open_air: false,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_007,
+        area_id: "tenterhook_lane",
+        sound: SoundscapeSound::TenterhookLaneWorkday,
+        schedule: AreaBedSchedule::TenterhookClothWork,
+        priority: 80,
+        spill_m: 22.0,
+        open_air: true,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_008,
+        area_id: "cinder_row",
+        sound: SoundscapeSound::CinderRowBehindShutters,
+        schedule: AreaBedSchedule::CinderRowDay,
+        priority: 82,
+        spill_m: 22.0,
+        open_air: true,
+        // "each numbered furnace a muffled source": standing in the street, the
+        // glass-house draw is behind a screened bay, not in the open with you.
+        muffles: &[SoundscapeSound::CinderFurnace],
+    },
+    AreaBed {
+        key: 5_009,
+        area_id: "the_cut",
+        sound: SoundscapeSound::CutFreightCorridor,
+        schedule: AreaBedSchedule::CutFreight,
+        priority: 78,
+        spill_m: 26.0,
+        open_air: true,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_010,
+        area_id: "gaunt_passage",
+        sound: SoundscapeSound::GauntPassageByDay,
+        schedule: AreaBedSchedule::GauntPassageWork,
+        priority: 84,
+        // The canonical 20 m of leakage at the grate and both public bends.
+        spill_m: 20.0,
+        open_air: false,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_011,
+        area_id: "hungry_ox",
+        sound: SoundscapeSound::HungryOxDoorway,
+        schedule: AreaBedSchedule::HungryOxEvening,
+        priority: 84,
+        // Canon gives the Ox 30 m of spill; the door is the source, not the room.
+        spill_m: 22.0,
+        open_air: false,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_012,
+        area_id: "old_sluice",
+        sound: SoundscapeSound::OldSluiceInDaylight,
+        schedule: AreaBedSchedule::OldSluiceDay,
+        priority: 78,
+        spill_m: 26.0,
+        open_air: true,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_013,
+        area_id: "skinners_court",
+        sound: SoundscapeSound::SkinnersCourtLife,
+        schedule: AreaBedSchedule::SkinnersCourtDay,
+        priority: 80,
+        spill_m: 24.0,
+        open_air: true,
+        muffles: &[],
+    },
+    AreaBed {
+        key: 5_014,
+        area_id: "seven_lofts",
+        sound: SoundscapeSound::SevenLoftsGrain,
+        schedule: AreaBedSchedule::SevenLoftsStock,
+        priority: 78,
+        spill_m: 30.0,
+        // Granary floors under a roof: the store does not empty because it rains.
+        open_air: false,
+        muffles: &[],
+    },
+];
+
+fn area_bed_for_key(key: u64) -> Option<AreaBed> {
+    AREA_BEDS.into_iter().find(|bed| bed.key == key)
+}
+
+/// The shipped place map, embedded so audio geography cannot drift from the
+/// simulation's. The same file the sim parses at startup.
+const AREA_MAP_SOURCE: &str = include_str!("../assets/world/areas.json");
+
+/// One area box in render-side f32, ready for per-frame distance work.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct BedBox {
+    min: Vec3,
+    max: Vec3,
+}
+
+impl BedBox {
+    /// The point of this box nearest `position` — `position` itself when it is
+    /// inside, which is exactly the behaviour a room tone wants: the bed stops
+    /// having a direction the moment you are in the place.
+    fn nearest_point(self, position: Vec3) -> Vec3 {
+        position.clamp(self.min, self.max)
+    }
+
+    fn contains(self, position: Vec3) -> bool {
+        inside_box(position, self.min, self.max)
+    }
+}
+
+/// The box unions of every area an [`AreaBed`] names, resolved once at startup.
+#[derive(Resource, Debug, Default)]
+struct AreaBedGeometry(HashMap<&'static str, Vec<BedBox>>);
+
+impl AreaBedGeometry {
+    /// Resolve the beds' areas out of the shipped map. An area that has been
+    /// renamed or removed loses its bed and logs it — the tests are the guard
+    /// against that happening silently, not a startup panic.
+    fn from_shipped_map() -> Self {
+        let map = match cathedral_sim::AreaMap::from_json_str(AREA_MAP_SOURCE) {
+            Ok(map) => map,
+            Err(error) => {
+                error!("soundscape: shipped area map did not parse ({error}); place beds are off");
+                return Self::default();
+            }
+        };
+        let mut boxes = HashMap::new();
+        for bed in AREA_BEDS {
+            if boxes.contains_key(bed.area_id) {
+                continue;
+            }
+            let Some(area) = map.areas.iter().find(|area| area.id == bed.area_id) else {
+                warn!(
+                    "soundscape: no area `{}` in the shipped map; its bed will not play",
+                    bed.area_id
+                );
+                continue;
+            };
+            boxes.insert(
+                bed.area_id,
+                area.boxes
+                    .iter()
+                    .map(|bounds| BedBox {
+                        min: Vec3::new(
+                            bounds.min_m.x as f32,
+                            bounds.min_m.y as f32,
+                            bounds.min_m.z as f32,
+                        ),
+                        max: Vec3::new(
+                            bounds.max_m.x as f32,
+                            bounds.max_m.y as f32,
+                            bounds.max_m.z as f32,
+                        ),
+                    })
+                    .collect::<Vec<_>>(),
+            );
+        }
+        Self(boxes)
+    }
+
+    /// The point of the named area nearest `position`, with its distance.
+    fn anchor(&self, area_id: &str, position: Vec3) -> Option<(Vec3, f32)> {
+        self.0
+            .get(area_id)?
+            .iter()
+            .map(|bounds| {
+                let point = bounds.nearest_point(position);
+                (point, point.distance(position))
+            })
+            .min_by(|(_, left), (_, right)| left.total_cmp(right))
+    }
+
+    fn contains(&self, area_id: &str, position: Vec3) -> bool {
+        self.0
+            .get(area_id)
+            .is_some_and(|boxes| boxes.iter().any(|bounds| bounds.contains(position)))
+    }
+
+    /// Whether somebody standing here counts as being *at* the place.
+    ///
+    /// Deliberately looser than [`Self::contains`]: the round parks a worker on
+    /// their workplace's nav node and lets them drift within their leash, and
+    /// the Hungry Ox's node sits about a metre inside its own box. A strict
+    /// containment test would report the tavern empty all evening while five
+    /// people worked it.
+    fn occupied_by(&self, area_id: &str, position: Vec3) -> bool {
+        self.anchor(area_id, position)
+            .is_some_and(|(_, distance_m)| distance_m <= AREA_BED_OCCUPANCY_MARGIN_M)
+    }
+}
+
+fn area_bed_is_active(
+    schedule: AreaBedSchedule,
+    clock: Option<&WorldClockState>,
+    weather: Option<&WorldWeatherState>,
+    occupants: usize,
+) -> bool {
+    let raining =
+        weather.is_some_and(|weather| weather.current.precipitation >= AREA_BED_RAIN_THRESHOLD);
+    if schedule == AreaBedSchedule::DrapersReachRain {
+        // The one bed the clock has no opinion about.
+        return raining;
+    }
+    let Some(clock) = clock.filter(|clock| clock.present) else {
+        // Without a clock, keep the beds that are simply "this place, working"
+        // and drop the ones that mean a specific hour of a specific day.
+        return matches!(
+            schedule,
+            AreaBedSchedule::GradineOrdinaryDay
+                | AreaBedSchedule::TallageWeighing
+                | AreaBedSchedule::TenterhookClothWork
+                | AreaBedSchedule::CinderRowDay
+                | AreaBedSchedule::CutFreight
+                | AreaBedSchedule::GauntPassageWork
+                | AreaBedSchedule::OldSluiceDay
+                | AreaBedSchedule::SkinnersCourtDay
+                | AreaBedSchedule::SevenLoftsStock
+        );
+    };
+    let workday = clock.weekday != Weekday::Bellday;
+    let open_hours = matches!(
+        clock.office,
+        Office::Dayspring | Office::HighWick | Office::Waning
+    );
+    match schedule {
+        // The feast day belongs to the Gradine for other reasons; this is the
+        // texture of an *ordinary* day on the steps.
+        AreaBedSchedule::GradineOrdinaryDay => workday && open_hours,
+        AreaBedSchedule::WickmarketCloseDown => {
+            clock.office == Office::Lamplight
+                || (clock.office == Office::Waning && clock.weekday != Weekday::Highmarket)
+        }
+        AreaBedSchedule::CoswaldsFirstLight => {
+            workday && matches!(clock.office, Office::Kindling | Office::Dayspring)
+        }
+        AreaBedSchedule::TallageWeighing => workday && open_hours,
+        AreaBedSchedule::MarensGreenFishArrival => {
+            (workday && clock.office == Office::Kindling)
+                || (clock.weekday == Weekday::Lowmarket && clock.office == Office::Watch)
+        }
+        // Handled above; the clock never gates it.
+        AreaBedSchedule::DrapersReachRain => raining,
+        AreaBedSchedule::TenterhookClothWork => workday && open_hours,
+        AreaBedSchedule::CinderRowDay | AreaBedSchedule::CutFreight => {
+            workday
+                && matches!(
+                    clock.office,
+                    Office::Kindling | Office::Dayspring | Office::HighWick | Office::Waning
+                )
+        }
+        AreaBedSchedule::GauntPassageWork => workday && open_hours,
+        AreaBedSchedule::HungryOxEvening => {
+            occupants > 0
+                && matches!(
+                    clock.office,
+                    Office::Lamplight | Office::Snuffing | Office::Watch
+                )
+        }
+        AreaBedSchedule::OldSluiceDay | AreaBedSchedule::SkinnersCourtDay => {
+            clock.brightness > 0.22
+        }
+        AreaBedSchedule::SevenLoftsStock => {
+            workday
+                && matches!(
+                    clock.office,
+                    Office::Kindling | Office::Dayspring | Office::HighWick | Office::Waning
+                )
+        }
+    }
+}
+
+/// The multiplier on a bed's authored gain: which day it is, how full the room
+/// is, and whether the weather has emptied an open pitch.
+fn area_bed_gain_scale(
+    bed: AreaBed,
+    clock: Option<&WorldClockState>,
+    weather: Option<&WorldWeatherState>,
+    occupants: usize,
+) -> f32 {
+    let weekday = clock
+        .filter(|clock| clock.present)
+        .map(|clock| clock.weekday);
+    let rain = weather.map_or(0.0, |weather| weather.current.precipitation as f32);
+    let mut scale = match bed.schedule {
+        // The Tallage and Maren's Green are the Lowmarket's two squares.
+        AreaBedSchedule::TallageWeighing | AreaBedSchedule::MarensGreenFishArrival => {
+            if weekday == Some(Weekday::Lowmarket) {
+                1.18
+            } else {
+                1.0
+            }
+        }
+        // The lofts fill before a market day and empty after it.
+        AreaBedSchedule::SevenLoftsStock => {
+            if matches!(weekday, Some(Weekday::Highmarket | Weekday::Lowmarket)) {
+                1.15
+            } else {
+                1.0
+            }
+        }
+        // Rain is the subject of this bed, not an attenuator of it.
+        AreaBedSchedule::DrapersReachRain => (0.42 + rain * 0.86).clamp(0.0, 1.25),
+        // A couple of boatmen at their pots is not a full room.
+        AreaBedSchedule::HungryOxEvening => (0.52 + occupants as f32 * 0.16).min(1.15),
+        _ => 1.0,
+    };
+    if bed.open_air {
+        // A downpour thins the people in an open pitch; it does not silence the
+        // place, and the weather stems carry the rain itself.
+        scale *= 1.0 - ((rain - 0.28) / 0.72).clamp(0.0, 1.0) * 0.45;
+    }
+    scale
 }
 
 fn work_kind_for_sound(sound: SoundscapeSound) -> Option<WorkActivityKind> {
@@ -2426,6 +3369,7 @@ fn update_virtualized_loops(
     clock: Option<Res<WorldClockState>>,
     activity: Option<Res<AudioActivity>>,
     assets: Res<SoundscapeAssets>,
+    beds: Option<Res<AreaBedGeometry>>,
     player: Query<&Transform, With<PlayerController>>,
     actors: Query<&GlobalTransform, With<ActorView>>,
     cart_views: Query<(&RoadCartView, &GlobalTransform)>,
@@ -2462,6 +3406,57 @@ fn update_virtualized_loops(
         .take(3)
         .count();
 
+    // The named-place beds come first: they decide which point sources the
+    // listener is currently hearing through a screen rather than in the open.
+    let mut muffled_by_bed: HashSet<SoundscapeSound> = HashSet::new();
+    if let (Some(beds), Some(listener)) = (beds.as_deref(), player_position) {
+        for bed in AREA_BEDS {
+            let Some((anchor, distance_m)) = beds.anchor(bed.area_id, listener) else {
+                continue;
+            };
+            let reach = bed.spill_m
+                * if existing_keys.contains(&bed.key) {
+                    LOOP_ACTIVATION_HYSTERESIS
+                } else {
+                    1.0
+                };
+            if distance_m > reach {
+                continue;
+            }
+            let occupants = if bed.schedule.needs_occupancy() {
+                actors
+                    .iter()
+                    .filter(|transform| beds.occupied_by(bed.area_id, transform.translation()))
+                    .take(8)
+                    .count()
+            } else {
+                0
+            };
+            if !area_bed_is_active(
+                bed.schedule,
+                clock.as_deref(),
+                weather.as_deref(),
+                occupants,
+            ) {
+                continue;
+            }
+            if beds.contains(bed.area_id, listener) {
+                muffled_by_bed.extend(bed.muffles.iter().copied());
+            }
+            let descriptor = bed.sound.descriptor();
+            demands.push(LoopDemand {
+                key: bed.key,
+                sound: bed.sound,
+                position: anchor,
+                gain: descriptor.gain
+                    * area_bed_gain_scale(bed, clock.as_deref(), weather.as_deref(), occupants),
+                radius_m: descriptor.radius_m,
+                speed: 1.0,
+                priority: bed.priority,
+            });
+        }
+    }
+
     for emitter in STATIC_EMITTERS {
         let overridden =
             work_kind_for_sound(emitter.sound).is_some_and(|kind| work.0.contains_key(&kind));
@@ -2475,6 +3470,8 @@ fn update_virtualized_loops(
                     | SoundscapeSound::SwallowsOverCourt
                     | SoundscapeSound::RiverWharfGulls
                     | SoundscapeSound::FliesAtWaste
+                    | SoundscapeSound::HensInYard
+                    | SoundscapeSound::BeesAtHoneyStall
             );
         // Severe weather removes the broad exposed-market bed only when the
         // projected crowd has actually dispersed. Covered pitches can remain
@@ -2489,11 +3486,18 @@ fn update_virtualized_loops(
             && schedule_is_active(emitter.schedule, clock.as_deref())
         {
             let descriptor = emitter.sound.descriptor();
+            let muffled = if muffled_by_bed.contains(&emitter.sound) {
+                MUFFLED_BEHIND_BED_GAIN
+            } else {
+                1.0
+            };
             demands.push(LoopDemand {
                 key: emitter.key,
                 sound: emitter.sound,
                 position: emitter.position,
-                gain: descriptor.gain,
+                gain: descriptor.gain
+                    * muffled
+                    * static_emitter_weather_gain(emitter, weather.as_deref()),
                 radius_m: descriptor.radius_m,
                 speed: static_emitter_speed(emitter),
                 priority: emitter.priority,
@@ -2637,6 +3641,9 @@ fn update_virtualized_loops(
         if (!has_sink && now - state.spawned_at > STALLED_AUDIO_TIMEOUT_SECONDS)
             || (target <= 0.0 && state.current_gain <= 0.001 && now - state.spawned_at > 0.25)
         {
+            if let Some(bed) = area_bed_for_key(state.key) {
+                info!("[soundscape] bed out: {}", bed.area_id);
+            }
             commands.entity(entity).despawn();
         }
     }
@@ -2644,6 +3651,15 @@ fn update_virtualized_loops(
     for demand in selected.drain(..) {
         if represented.contains(&demand.key) {
             continue;
+        }
+        // A named-place bed is the identity of somewhere the player can stand,
+        // so its comings and goings are worth a line: it is the only way a
+        // drive script (or a bug report) can tell which place it was hearing.
+        if let Some(bed) = area_bed_for_key(demand.key) {
+            info!(
+                "[soundscape] bed in: {} ({:.2} gain)",
+                bed.area_id, demand.gain
+            );
         }
         let descriptor = demand.sound.descriptor();
         commands.spawn((
@@ -2791,8 +3807,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn all_thirty_five_routes_have_unique_assets_and_the_right_container() {
-        assert_eq!(ALL_SOUNDS.len(), 35);
+    fn every_route_has_a_unique_asset_and_the_right_container() {
+        assert_eq!(ALL_SOUNDS.len(), 53);
         let mut files = HashSet::new();
         for (index, sound) in ALL_SOUNDS.into_iter().enumerate() {
             let descriptor = sound.descriptor();
@@ -2817,7 +3833,7 @@ mod tests {
 
     #[test]
     fn every_descriptor_points_at_a_nonempty_reviewed_asset() {
-        let assets: [&[u8]; 35] = [
+        let assets: [&[u8]; 53] = [
             include_bytes!("../assets/sounds/soundscape/snd_001_soft_shoes_on_dry_cobbles.mp3"),
             include_bytes!("../assets/sounds/soundscape/snd_034_dusty_workshop_cough.mp3"),
             include_bytes!("../assets/sounds/soundscape/snd_037_end_of_day_yawn.mp3"),
@@ -2857,6 +3873,26 @@ mod tests {
             include_bytes!("../assets/sounds/soundscape/snd_268_lightning_over_the_lanthorn.mp3"),
             include_bytes!("../assets/sounds/soundscape/snd_281_lanthorn_nave_air.wav"),
             include_bytes!("../assets/sounds/soundscape/snd_292_congregation_prayer_murmur.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_256_hens_in_a_domestic_yard.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_258_bees_at_the_honey_stall.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_307_smallvoice_single_stroke.mp3"),
+            include_bytes!("../assets/sounds/soundscape/snd_308_scold_single_stroke.mp3"),
+            include_bytes!("../assets/sounds/soundscape/snd_321_gradine_ordinary_day_texture.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_322_wickmarket_at_lamplight.wav"),
+            include_bytes!(
+                "../assets/sounds/soundscape/snd_323_coswalds_yard_before_the_hammers.wav"
+            ),
+            include_bytes!("../assets/sounds/soundscape/snd_324_tallage_weighing_hour.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_325_marens_green_before_dayspring.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_328_drapers_reach_in_rain.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_329_tenterhook_lane_workday.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_330_cinder_row_behind_shutters.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_332_dry_cut_freight_corridor.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_333_gaunt_passage_by_day.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_337_hungry_ox_doorway_spill.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_338_old_sluice_in_daylight.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_339_skinners_court_work_and_home.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_340_seven_lofts_grain_interior.wav"),
         ];
         for (sound, bytes) in ALL_SOUNDS.into_iter().zip(assets) {
             assert!(
@@ -2868,7 +3904,7 @@ mod tests {
     }
 
     #[test]
-    fn implementation_manifest_contains_the_thirty_five_runtime_routes() {
+    fn implementation_manifest_contains_every_runtime_route() {
         let manifest: serde_json::Value = serde_json::from_str(include_str!(
             "../features/more_sounds/sounds_to_implement.json"
         ))
@@ -2887,7 +3923,7 @@ mod tests {
         let sounds = manifest["sounds"]
             .as_array()
             .expect("manifest sounds is an array");
-        assert_eq!(manifest["implemented_count"], 35);
+        assert_eq!(manifest["implemented_count"], 53);
         let manifested_ids: HashSet<_> = sounds
             .iter()
             .filter_map(|sound| {
@@ -3044,6 +4080,331 @@ mod tests {
     }
 
     #[test]
+    fn hens_and_bees_are_small_sources_in_the_places_that_keep_them() {
+        let geometry = AreaBedGeometry::from_shipped_map();
+        let map = cathedral_sim::AreaMap::from_json_str(AREA_MAP_SOURCE).expect("area map");
+
+        // One honey pitch on the Wickmarket, audible only at the stall.
+        assert!(geometry.contains("wickmarket", HONEY_STALL));
+        assert!(SoundscapeSound::BeesAtHoneyStall.descriptor().radius_m <= 14.0);
+
+        let hens: Vec<_> = STATIC_EMITTERS
+            .iter()
+            .filter(|emitter| emitter.sound == SoundscapeSound::HensInYard)
+            .collect();
+        assert_eq!(hens.len(), HEN_YARD_ANCHORS.len());
+        for anchor in HEN_YARD_ANCHORS {
+            // Not on the swept ceremonial steps, and not stacked on a market bed.
+            assert!(!geometry.contains("gradine", anchor), "{anchor} is Gradine");
+            let position = cathedral_sim::math::Vec3::new(
+                f64::from(anchor.x),
+                f64::from(anchor.y),
+                f64::from(anchor.z),
+            );
+            let market = map
+                .containing_area(position)
+                .is_some_and(|area| matches!(area.id.as_str(), "wickmarket" | "tallage"));
+            assert!(!market, "{anchor} is inside a market square");
+            assert!(
+                anchor.xz().distance(WICKMARKET.xz()) > 60.0,
+                "{anchor} is inside the Wickmarket crowd bed"
+            );
+        }
+        // Five separate wards, so no two yards can ever be heard at once.
+        for (index, left) in HEN_YARD_ANCHORS.iter().enumerate() {
+            for right in &HEN_YARD_ANCHORS[index + 1..] {
+                assert!(left.distance(*right) > 100.0, "{left} and {right} overlap");
+            }
+        }
+
+        // Covering the pots quiets the bees long before a storm sends them in.
+        let mut drizzle = WorldWeatherState::default();
+        drizzle.current.precipitation = 0.25;
+        let bees = *STATIC_EMITTERS
+            .iter()
+            .find(|emitter| emitter.sound == SoundscapeSound::BeesAtHoneyStall)
+            .expect("the honey pitch is emitted");
+        assert_eq!(static_emitter_weather_gain(bees, None), 1.0);
+        assert!(static_emitter_weather_gain(bees, Some(&drizzle)) < 0.65);
+        assert!(
+            !wildlife_suppressed(Some(&drizzle)),
+            "drizzle is not a storm"
+        );
+        assert!(schedule_is_active(
+            EmitterSchedule::HoneyStallDay,
+            Some(&clock(Office::HighWick, Weekday::Second))
+        ));
+        assert!(!schedule_is_active(
+            EmitterSchedule::HoneyStallDay,
+            Some(&clock(Office::HighWick, Weekday::Bellday))
+        ));
+        assert!(!schedule_is_active(
+            EmitterSchedule::HoneyStallDay,
+            Some(&clock(Office::Lamplight, Weekday::Second))
+        ));
+    }
+
+    #[test]
+    fn every_named_place_bed_binds_to_a_shipped_area_within_its_own_carry() {
+        let geometry = AreaBedGeometry::from_shipped_map();
+        let mut keys = HashSet::new();
+        let mut sounds = HashSet::new();
+        let static_keys: HashSet<u64> = STATIC_EMITTERS.iter().map(|emitter| emitter.key).collect();
+        for bed in AREA_BEDS {
+            assert!(
+                geometry.0.contains_key(bed.area_id),
+                "`{}` is not an area in the shipped map",
+                bed.area_id
+            );
+            assert!(keys.insert(bed.key), "duplicate bed key {}", bed.key);
+            assert!(
+                !static_keys.contains(&bed.key),
+                "bed {} collides with a static emitter",
+                bed.key
+            );
+            assert!(
+                sounds.insert(bed.sound),
+                "two beds share {:?}",
+                bed.sound.descriptor().file
+            );
+            let descriptor = bed.sound.descriptor();
+            assert_eq!(descriptor.mode, ClipMode::Loop);
+            // Belonging is always tighter than carry, so the loop selector's own
+            // radius check can never reject a bed the spill test admitted.
+            assert!(
+                bed.spill_m < descriptor.radius_m,
+                "{} spills further than it carries",
+                bed.area_id
+            );
+            assert!(bed.spill_m >= 16.0);
+        }
+        // The muffle relation may only name sounds that actually have emitters.
+        for bed in AREA_BEDS {
+            for muffled in bed.muffles {
+                assert!(
+                    STATIC_EMITTERS
+                        .iter()
+                        .any(|emitter| emitter.sound == *muffled),
+                    "{} muffles a sound nothing emits",
+                    bed.area_id
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_bed_follows_the_nearest_part_of_its_place_and_stops_having_a_direction_inside() {
+        let geometry = AreaBedGeometry::from_shipped_map();
+
+        // The Cut is five boxes over a kilometre: a listener at its southern end
+        // must hear the corridor beside them, not a point source at its middle.
+        let south = Vec3::new(-305.0, 1.0, -500.0);
+        let (anchor, distance) = geometry.anchor("the_cut", south).expect("the Cut resolves");
+        assert_eq!(distance, 0.0, "inside the corridor");
+        assert_eq!(anchor, south, "the bed has no direction from inside");
+
+        let north = Vec3::new(-305.0, 1.0, 400.0);
+        let (_, inside_north) = geometry.anchor("the_cut", north).expect("the Cut resolves");
+        assert_eq!(inside_north, 0.0, "the same bed, 900 m up the corridor");
+
+        // Approaching from the side lands on the nearest wall of the nearest box.
+        let beside = Vec3::new(-285.0, 1.0, 200.0);
+        let (anchor, distance) = geometry
+            .anchor("the_cut", beside)
+            .expect("the Cut resolves");
+        assert!((distance - 12.0).abs() < 0.01, "{distance}");
+        assert_eq!(anchor.x, -297.0);
+        assert_eq!(anchor.z, beside.z, "the anchor tracks along the corridor");
+
+        // Height counts: flying over Gaunt Passage is not standing in it.
+        let (_, overhead) = geometry
+            .anchor("gaunt_passage", Vec3::new(-228.0, 60.0, 26.0))
+            .expect("the passage resolves");
+        assert!(overhead > 40.0, "{overhead}");
+
+        assert!(geometry.contains("hungry_ox", Vec3::new(-330.0, 1.0, -455.0)));
+        assert!(!geometry.contains("hungry_ox", Vec3::new(-330.0, 1.0, -400.0)));
+        assert!(geometry.anchor("no_such_place", Vec3::ZERO).is_none());
+
+        // The round parks a tavern worker on the Ox's own nav node — which sits
+        // about a metre inside the box — and lets them drift up to their eight
+        // metre leash. Strict containment reported the tavern empty all evening.
+        let ox_workplace_node = Vec3::new(-324.375, 1.0, -441.125);
+        assert!(geometry.contains("hungry_ox", ox_workplace_node));
+        let leash_north = ox_workplace_node + Vec3::Z * 8.0;
+        assert!(
+            !geometry.contains("hungry_ox", leash_north),
+            "over the edge"
+        );
+        assert!(
+            geometry.occupied_by("hungry_ox", leash_north),
+            "a worker at the end of their leash is still working the Ox"
+        );
+        assert!(!geometry.occupied_by("hungry_ox", Vec3::new(-330.0, 1.0, -420.0)));
+    }
+
+    #[test]
+    fn place_beds_hand_over_to_each_other_instead_of_playing_at_once() {
+        for weekday in Weekday::ALL {
+            for office in Office::ALL {
+                let clock = clock(office, weekday);
+                // The Wickmarket is one square: the crowd or the close-down bed,
+                // never both stacked on the same stalls.
+                let crowd = schedule_is_active(EmitterSchedule::WickmarketHighmarket, Some(&clock));
+                let closing =
+                    area_bed_is_active(AreaBedSchedule::WickmarketCloseDown, Some(&clock), None, 0);
+                assert!(!(crowd && closing), "{weekday:?} {office:?}");
+
+                // Maren's Green wakes before Dayspring and hands over to the
+                // Lowmarket fish market that owns the same ground after it.
+                let arrival = area_bed_is_active(
+                    AreaBedSchedule::MarensGreenFishArrival,
+                    Some(&clock),
+                    None,
+                    0,
+                );
+                let market = schedule_is_active(EmitterSchedule::MarenLowmarket, Some(&clock));
+                assert!(!(arrival && market), "{weekday:?} {office:?}");
+            }
+        }
+
+        let dawn = clock(Office::Kindling, Weekday::Second);
+        assert!(area_bed_is_active(
+            AreaBedSchedule::MarensGreenFishArrival,
+            Some(&dawn),
+            None,
+            0
+        ));
+        assert!(area_bed_is_active(
+            AreaBedSchedule::CoswaldsFirstLight,
+            Some(&dawn),
+            None,
+            0
+        ));
+        assert!(!area_bed_is_active(
+            AreaBedSchedule::GradineOrdinaryDay,
+            Some(&clock(Office::HighWick, Weekday::Bellday)),
+            None,
+            0
+        ));
+        assert!(area_bed_is_active(
+            AreaBedSchedule::GradineOrdinaryDay,
+            Some(&clock(Office::HighWick, Weekday::Second)),
+            None,
+            0
+        ));
+
+        // Folklore empties Gaunt Passage after dark; so does its bed.
+        assert!(!area_bed_is_active(
+            AreaBedSchedule::GauntPassageWork,
+            Some(&clock(Office::Watch, Weekday::Second)),
+            None,
+            0
+        ));
+
+        // An empty tavern spills nothing, however late it is.
+        let evening = clock(Office::Lamplight, Weekday::Second);
+        assert!(!area_bed_is_active(
+            AreaBedSchedule::HungryOxEvening,
+            Some(&evening),
+            None,
+            0
+        ));
+        assert!(area_bed_is_active(
+            AreaBedSchedule::HungryOxEvening,
+            Some(&evening),
+            None,
+            2
+        ));
+        assert!(!area_bed_is_active(
+            AreaBedSchedule::HungryOxEvening,
+            Some(&clock(Office::HighWick, Weekday::Second)),
+            None,
+            6
+        ));
+
+        // Only the tavern asks about people at all.
+        for schedule in [
+            AreaBedSchedule::GradineOrdinaryDay,
+            AreaBedSchedule::CutFreight,
+            AreaBedSchedule::SevenLoftsStock,
+        ] {
+            assert!(!schedule.needs_occupancy());
+        }
+        assert!(AreaBedSchedule::HungryOxEvening.needs_occupancy());
+    }
+
+    #[test]
+    fn the_drapers_reach_bed_is_weather_shaped_and_the_open_pitches_thin_in_rain() {
+        let mut rain = WorldWeatherState::default();
+        rain.current.kind = WeatherKind::Rain;
+        rain.current.precipitation = 0.55;
+        let noon = clock(Office::HighWick, Weekday::Second);
+        let night = clock(Office::Watch, Weekday::Second);
+
+        // The gallery in rain is the subject, so the clock has no vote at all.
+        assert!(area_bed_is_active(
+            AreaBedSchedule::DrapersReachRain,
+            Some(&noon),
+            Some(&rain),
+            0
+        ));
+        assert!(area_bed_is_active(
+            AreaBedSchedule::DrapersReachRain,
+            Some(&night),
+            Some(&rain),
+            0
+        ));
+        assert!(!area_bed_is_active(
+            AreaBedSchedule::DrapersReachRain,
+            Some(&noon),
+            None,
+            0
+        ));
+
+        let reach = AREA_BEDS
+            .into_iter()
+            .find(|bed| bed.schedule == AreaBedSchedule::DrapersReachRain)
+            .expect("the Reach has a bed");
+        let cut = AREA_BEDS
+            .into_iter()
+            .find(|bed| bed.schedule == AreaBedSchedule::CutFreight)
+            .expect("the Cut has a bed");
+        assert!(
+            area_bed_gain_scale(reach, Some(&noon), Some(&rain), 0)
+                > area_bed_gain_scale(reach, Some(&noon), None, 0),
+            "harder rain must make the gallery louder, not quieter"
+        );
+        assert!(
+            area_bed_gain_scale(cut, Some(&noon), Some(&rain), 0) < 0.9,
+            "an open corridor loses its people in a downpour"
+        );
+
+        // Market days fill the squares that trade on them.
+        let tallage = AREA_BEDS
+            .into_iter()
+            .find(|bed| bed.schedule == AreaBedSchedule::TallageWeighing)
+            .expect("the Tallage has a bed");
+        assert!(
+            area_bed_gain_scale(
+                tallage,
+                Some(&clock(Office::HighWick, Weekday::Lowmarket)),
+                None,
+                0
+            ) > area_bed_gain_scale(tallage, Some(&noon), None, 0)
+        );
+
+        // A full room spills more than two boatmen, and never without bound.
+        let ox = AREA_BEDS
+            .into_iter()
+            .find(|bed| bed.schedule == AreaBedSchedule::HungryOxEvening)
+            .expect("the Ox has a bed");
+        let quiet = area_bed_gain_scale(ox, Some(&noon), None, 1);
+        let full = area_bed_gain_scale(ox, Some(&noon), None, 8);
+        assert!(quiet < full && full <= 1.15, "{quiet} {full}");
+    }
+
+    #[test]
     fn church_beds_are_zone_shaped_and_require_a_congregation() {
         assert!(inside_lanthorn_interior(Vec3::new(0.0, 1.0, 20.0)));
         assert!(inside_lanthorn_interior(Vec3::new(-60.0, 1.0, -23.0)));
@@ -3058,6 +4419,211 @@ mod tests {
         assert!(congregation_murmur_active(4, Some(&pilgrim_hour)));
         assert!(!congregation_murmur_active(4, Some(&night)));
         assert!(congregation_murmur_active(8, Some(&night)));
+    }
+
+    #[test]
+    fn the_two_civic_bells_stay_countable_and_hang_in_their_own_towers() {
+        let map = cathedral_sim::AreaMap::from_json_str(AREA_MAP_SOURCE).expect("area map");
+        let area_of = |position: Vec3| {
+            map.containing_area(cathedral_sim::math::Vec3::new(
+                f64::from(position.x),
+                f64::from(position.y),
+                f64::from(position.z),
+            ))
+            .map(|area| area.id.clone())
+        };
+        assert_eq!(area_of(SCOLD_TOWER).as_deref(), Some("bellstand_tower"));
+        assert_eq!(
+            area_of(SMALLVOICE_TOWER).as_deref(),
+            Some("saint_marens_church")
+        );
+        // Both hang above the street rather than sounding out of a doorway.
+        const { assert!(SCOLD_TOWER.y > 18.0 && SMALLVOICE_TOWER.y > 10.0) };
+
+        let curfew = BellPattern::ScoldCurfew.plan();
+        let summons = BellPattern::ScoldSummons.plan();
+        let knell = BellPattern::NameKnell { years: 17 }.plan();
+
+        // A counted curfew can never be misread as a counted hour: the greatest
+        // office rings seven, and the Scold's law rings more than any of them.
+        let longest_office = Office::ALL
+            .into_iter()
+            .map(Office::ordinal)
+            .max()
+            .expect("seven offices");
+        assert!(curfew.strokes > u16::from(longest_office));
+        assert_eq!(curfew.interval_seconds, BELL_STROKE_INTERVAL_SECONDS);
+        // The summons is too quick to be counted as an hour at all.
+        assert!(summons.interval_seconds < BELL_STROKE_INTERVAL_SECONDS * 0.5);
+        assert_eq!(knell.strokes, 17, "the count is the age, unrounded");
+        assert_eq!(knell.interval_seconds, BELL_STROKE_INTERVAL_SECONDS);
+
+        // The Scold is the eastern city's bell; the knell is the Reed Ward's.
+        assert!(summons.sound.descriptor().radius_m > knell.sound.descriptor().radius_m);
+        // Both stay below the Lanthorn's own storm voice in scale.
+        assert!(
+            summons.sound.descriptor().radius_m
+                < SoundscapeSound::LightningOverLanthorn.descriptor().radius_m
+        );
+
+        // A count can be absurd in a caller; it is never absurd at the rope.
+        assert_eq!(BellPattern::NameKnell { years: 0 }.plan().strokes, 1);
+        assert_eq!(
+            BellPattern::NameKnell { years: 9_000 }.plan().strokes,
+            MAX_BELL_STROKES
+        );
+        assert_eq!(BellPattern::MAX_KNELL_YEARS, MAX_BELL_STROKES);
+    }
+
+    #[test]
+    fn an_assembled_peal_is_jittered_by_hand_but_never_retuned() {
+        let mut scheduled = ScheduledSounds::default();
+        let plan = schedule_bell_pattern(
+            BellPattern::NameKnell { years: 17 },
+            100.0,
+            "test",
+            &mut scheduled,
+        );
+        assert_eq!(plan.strokes, 17);
+        assert_eq!(scheduled.0.len(), 17);
+
+        let mut times: Vec<f64> = scheduled.0.iter().map(|sound| sound.at).collect();
+        times.sort_by(f64::total_cmp);
+        for (stroke, at) in times.iter().enumerate() {
+            let ideal = 100.0 + stroke as f64 * BELL_STROKE_INTERVAL_SECONDS;
+            let offset = (at - ideal).abs();
+            assert!(
+                (0.020..=0.040).contains(&offset),
+                "stroke {stroke} moved {offset}s — hands, not a sequencer, and not a shuffle"
+            );
+        }
+        for sound in &scheduled.0 {
+            assert_eq!(
+                sound.speed, 1.0,
+                "a bell the player must count may never be retuned"
+            );
+            assert!((0.94..=1.06).contains(&sound.gain_scale));
+            assert_eq!(sound.sound, SoundscapeSound::SmallvoiceStroke);
+            assert_eq!(sound.position, SMALLVOICE_TOWER);
+            assert!(
+                sound.at >= 100.0,
+                "no stroke lands before the rope is pulled"
+            );
+        }
+
+        // The same peal is the same peal: `fake_backend` runs must not drift.
+        let mut again = ScheduledSounds::default();
+        schedule_bell_pattern(
+            BellPattern::NameKnell { years: 17 },
+            100.0,
+            "test",
+            &mut again,
+        );
+        let replay: Vec<f64> = again.0.iter().map(|sound| sound.at).collect();
+        let first: Vec<f64> = scheduled.0.iter().map(|sound| sound.at).collect();
+        assert_eq!(first, replay);
+    }
+
+    #[test]
+    fn the_scold_rings_curfew_once_a_day_and_only_after_the_seventh_office() {
+        fn curfew_app() -> App {
+            let mut app = App::new();
+            app.add_plugins(MinimalPlugins)
+                .init_resource::<ScheduledSounds>()
+                .init_resource::<CivicBellState>()
+                .insert_resource(clock(Office::Waning, Weekday::Second))
+                .add_systems(Update, schedule_curfew_bell);
+            app
+        }
+        fn strokes(app: &App) -> usize {
+            app.world()
+                .resource::<ScheduledSounds>()
+                .0
+                .iter()
+                .filter(|sound| sound.sound == SoundscapeSound::ScoldStroke)
+                .count()
+        }
+
+        let mut app = curfew_app();
+        // The first projection after startup is a reading, not a ringing.
+        app.update();
+        *app.world_mut().resource_mut::<WorldClockState>() =
+            clock(Office::Snuffing, Weekday::Second);
+        app.update();
+        let expected = usize::from(BellPattern::ScoldCurfew.plan().strokes);
+        assert_eq!(strokes(&app), expected, "the law follows the office");
+        app.update();
+        assert_eq!(strokes(&app), expected, "and only once that evening");
+
+        // Midnight arrives *inside* the Snuffing (21:00–02:00), so the day
+        // number changes while the office does not. That is not a second
+        // curfew, and keying the edge on the day would have made it one.
+        let mut past_midnight = clock(Office::Snuffing, Weekday::Highmarket);
+        past_midnight.day = 3;
+        *app.world_mut().resource_mut::<WorldClockState>() = past_midnight;
+        app.update();
+        assert_eq!(strokes(&app), expected, "midnight is not a bell");
+
+        // The next day's Snuffing is a new curfew.
+        let mut tomorrow = clock(Office::Watch, Weekday::Highmarket);
+        tomorrow.day = 1;
+        *app.world_mut().resource_mut::<WorldClockState>() = tomorrow;
+        app.update();
+        let mut tomorrow_night = clock(Office::Snuffing, Weekday::Highmarket);
+        tomorrow_night.day = 1;
+        *app.world_mut().resource_mut::<WorldClockState>() = tomorrow_night;
+        app.update();
+        assert_eq!(strokes(&app), expected * 2);
+
+        // Starting the game already inside the Snuffing rings nothing: the
+        // player did not miss a bell, there was no bell.
+        let mut fresh = curfew_app();
+        *fresh.world_mut().resource_mut::<WorldClockState>() =
+            clock(Office::Snuffing, Weekday::Second);
+        fresh.update();
+        fresh.update();
+        assert_eq!(strokes(&fresh), 0);
+    }
+
+    #[test]
+    fn a_bell_cue_queues_one_peal_and_refuses_to_overlap_itself() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<SoundscapeCue>()
+            .init_resource::<ScheduledSounds>()
+            .init_resource::<CueCooldowns>()
+            .init_resource::<WellSoundState>()
+            .init_resource::<WorkSoundState>()
+            .add_systems(Update, ingest_soundscape_cues);
+        let expected = usize::from(BellPattern::ScoldSummons.plan().strokes);
+
+        app.world_mut()
+            .write_message(SoundscapeCue::CivicBell(BellPattern::ScoldSummons));
+        app.world_mut()
+            .write_message(SoundscapeCue::CivicBell(BellPattern::ScoldSummons));
+        app.update();
+
+        let queued = &app.world().resource::<ScheduledSounds>().0;
+        assert_eq!(
+            queued.len(),
+            expected,
+            "a second summons on a ringing one would make the strokes uncountable"
+        );
+
+        // The other bell is a different rope and is not blocked by the Scold.
+        app.world_mut()
+            .write_message(SoundscapeCue::CivicBell(BellPattern::NameKnell {
+                years: 3,
+            }));
+        app.update();
+        let queued = &app.world().resource::<ScheduledSounds>().0;
+        assert_eq!(
+            queued
+                .iter()
+                .filter(|sound| sound.sound == SoundscapeSound::SmallvoiceStroke)
+                .count(),
+            3
+        );
     }
 
     #[test]

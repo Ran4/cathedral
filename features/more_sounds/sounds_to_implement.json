@@ -3,8 +3,8 @@
   "source_catalog": "more_sounds.json",
   "workflow": "Implement the selected sounds in the game using each generated_audio.path when present, then set implemented_in_game to true. The workbench reconciles true flags back into more_sounds.json.",
   "selected_count": 53,
-  "implemented_count": 35,
-  "generated_count": 51,
+  "implemented_count": 53,
+  "generated_count": 53,
   "selected_sound_ids": [
     "snd_001_soft_shoes_on_dry_cobbles",
     "snd_034_dusty_workshop_cough",
@@ -997,7 +997,16 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 8,
       "id": "snd_258_bees_at_the_honey_stall",
-      "implemented_in_game": false
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_258_bees_at_the_honey_stall",
+        "filename": "snd_258_bees_at_the_honey_stall.wav",
+        "url": "/generated/snd_258_bees_at_the_honey_stall.wav?v=1784753225831013789",
+        "media_type": "audio/wav",
+        "size_bytes": 1411278,
+        "modified_ns": 1784753225831013789,
+        "path": "generated/snd_258_bees_at_the_honey_stall.wav"
+      }
     },
     {
       "sound_name": "Hens in a Domestic Yard",
@@ -1016,7 +1025,16 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 9,
       "id": "snd_256_hens_in_a_domestic_yard",
-      "implemented_in_game": false
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_256_hens_in_a_domestic_yard",
+        "filename": "snd_256_hens_in_a_domestic_yard.wav",
+        "url": "/generated/snd_256_hens_in_a_domestic_yard.wav?v=1784753239099117318",
+        "media_type": "audio/wav",
+        "size_bytes": 1587678,
+        "modified_ns": 1784753239099117318,
+        "path": "generated/snd_256_hens_in_a_domestic_yard.wav"
+      }
     },
     {
       "sound_name": "Lightning over the Lanthorn",
@@ -1120,7 +1138,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 5,
       "id": "snd_307_smallvoice_single_stroke",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_307_smallvoice_single_stroke",
         "filename": "snd_307_smallvoice_single_stroke.mp3",
@@ -1149,7 +1167,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 5.5,
       "id": "snd_308_scold_single_stroke",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_308_scold_single_stroke",
         "filename": "snd_308_scold_single_stroke.mp3",
@@ -1177,7 +1195,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_329_tenterhook_lane_workday",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_329_tenterhook_lane_workday",
         "filename": "snd_329_tenterhook_lane_workday.wav",
@@ -1205,7 +1223,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 15,
       "id": "snd_324_tallage_weighing_hour",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_324_tallage_weighing_hour",
         "filename": "snd_324_tallage_weighing_hour.wav",
@@ -1233,7 +1251,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 13,
       "id": "snd_323_coswalds_yard_before_the_hammers",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_323_coswalds_yard_before_the_hammers",
         "filename": "snd_323_coswalds_yard_before_the_hammers.wav",
@@ -1261,7 +1279,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_322_wickmarket_at_lamplight",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_322_wickmarket_at_lamplight",
         "filename": "snd_322_wickmarket_at_lamplight.wav",
@@ -1289,7 +1307,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 15,
       "id": "snd_321_gradine_ordinary_day_texture",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_321_gradine_ordinary_day_texture",
         "filename": "snd_321_gradine_ordinary_day_texture.wav",
@@ -1317,7 +1335,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_325_marens_green_before_dayspring",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_325_marens_green_before_dayspring",
         "filename": "snd_325_marens_green_before_dayspring.wav",
@@ -1345,7 +1363,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_328_drapers_reach_in_rain",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_328_drapers_reach_in_rain",
         "filename": "snd_328_drapers_reach_in_rain.wav",
@@ -1373,7 +1391,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_330_cinder_row_behind_shutters",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_330_cinder_row_behind_shutters",
         "filename": "snd_330_cinder_row_behind_shutters.wav",
@@ -1401,7 +1419,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 15,
       "id": "snd_332_dry_cut_freight_corridor",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_332_dry_cut_freight_corridor",
         "filename": "snd_332_dry_cut_freight_corridor.wav",
@@ -1429,7 +1447,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 12,
       "id": "snd_333_gaunt_passage_by_day",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_333_gaunt_passage_by_day",
         "filename": "snd_333_gaunt_passage_by_day.wav",
@@ -1457,7 +1475,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 13,
       "id": "snd_337_hungry_ox_doorway_spill",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_337_hungry_ox_doorway_spill",
         "filename": "snd_337_hungry_ox_doorway_spill.wav",
@@ -1485,7 +1503,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 12,
       "id": "snd_338_old_sluice_in_daylight",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_338_old_sluice_in_daylight",
         "filename": "snd_338_old_sluice_in_daylight.wav",
@@ -1513,7 +1531,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 14,
       "id": "snd_339_skinners_court_work_and_home",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_339_skinners_court_work_and_home",
         "filename": "snd_339_skinners_court_work_and_home.wav",
@@ -1541,7 +1559,7 @@
       "playback_mode": "loop",
       "suggested_duration_seconds": 13,
       "id": "snd_340_seven_lofts_grain_interior",
-      "implemented_in_game": false,
+      "implemented_in_game": true,
       "generated_audio": {
         "sound_id": "snd_340_seven_lofts_grain_interior",
         "filename": "snd_340_seven_lofts_grain_interior.wav",

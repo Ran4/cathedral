@@ -31,6 +31,7 @@ use crate::session_log;
 use crate::smart_actors::SmartActorRuntime;
 use crate::smart_actors::bridge::{BridgeCommand, BridgeHandle};
 use crate::smart_actors::model::Position;
+use crate::soundscape::{BellPattern, SoundscapeCue};
 
 pub const DRIVE_ENV: &str = "CATHEDRAL_DRIVE";
 pub const SHOT_ENV: &str = "CATHEDRAL_SHOT";
@@ -146,6 +147,11 @@ enum Action {
     /// stand-in for world causes the sim does not model yet — nothing rings
     /// the town bell (no clock, no calendar), so drive scripts do.
     Sound(String),
+    /// Ring one of the two civic bells from its own tower. The stand-in for
+    /// the funeral and proclamation transactions the sim does not model yet:
+    /// the Scold's curfew has a real clock trigger, but its summons and Maren
+    /// Smallvoice's name-knell wait on events nothing yet raises.
+    Bell(BellPattern),
     /// Set a carriage body status (`features/npc_bodies.md` §8) on the named
     /// character, so a drunk/weary walk can be eyeballed. The stand-in for the
     /// ale the sim does not model yet — like `Sound`, a developer poke.
@@ -179,6 +185,9 @@ impl Action {
             Self::Sleep(seconds) => format!("sleep {seconds}"),
             Self::WaitOnline => "wait-online".into(),
             Self::Sound(sound_id) => format!("sound {sound_id}"),
+            Self::Bell(BellPattern::ScoldCurfew) => "bell curfew".into(),
+            Self::Bell(BellPattern::ScoldSummons) => "bell summons".into(),
+            Self::Bell(BellPattern::NameKnell { years }) => format!("bell knell {years}"),
             Self::Status { name, kind, value } => {
                 format!("status {name} {}:{value}", kind.as_str())
             }
@@ -259,6 +268,7 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
                 ))
             }
         }
+        "bell" => parse_bell(argument, statement),
         "status" => parse_status(argument, statement),
         "weather" => parse_weather(argument, statement),
         "tp" => {
@@ -293,6 +303,37 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
         "wait-online" | "quit" => Err(format!("`{verb}` takes no argument, got `{statement}`")),
         _ => Err(format!("unknown action `{verb}` in `{statement}`")),
     }
+}
+
+/// `bell curfew` / `bell summons` / `bell knell <years>`. The knell's count is
+/// the dead's age, so it is required and validated here: an unparseable or
+/// absurd count must fail before the run rather than ring a lie.
+fn parse_bell(argument: &str, statement: &str) -> Result<Action, String> {
+    let mut tokens = argument.split_whitespace();
+    let pattern = match (tokens.next(), tokens.next()) {
+        (Some("curfew"), None) => BellPattern::ScoldCurfew,
+        (Some("summons"), None) => BellPattern::ScoldSummons,
+        (Some("knell"), Some(years)) => match years.parse::<u16>() {
+            Ok(years) if (1..=BellPattern::MAX_KNELL_YEARS).contains(&years) => {
+                BellPattern::NameKnell { years }
+            }
+            _ => {
+                return Err(format!(
+                    "`bell knell` needs an age in 1..={} in `{statement}`",
+                    BellPattern::MAX_KNELL_YEARS
+                ));
+            }
+        },
+        _ => {
+            return Err(format!(
+                "`bell` needs `curfew`, `summons`, or `knell <years>`, got `{statement}`"
+            ));
+        }
+    };
+    if tokens.next().is_some() {
+        return Err(format!("too many arguments in `{statement}`"));
+    }
+    Ok(Action::Bell(pattern))
 }
 
 /// `status <name-or-id> <kind> <value>` (`features/npc_bodies.md` §8). The
@@ -391,6 +432,7 @@ enum Directive {
     Click(String),
     Shot(String),
     Sound(String),
+    Bell(BellPattern),
     Status {
         name: String,
         kind: StatusKind,
@@ -503,6 +545,7 @@ impl Scheduler {
                 None
             }
             Action::Sound(sound_id) => Some(Directive::Sound(sound_id)),
+            Action::Bell(pattern) => Some(Directive::Bell(pattern)),
             Action::Status { name, kind, value } => Some(Directive::Status { name, kind, value }),
             Action::Weather { kind, intensity } => Some(Directive::Weather { kind, intensity }),
             Action::Tp {
@@ -562,6 +605,7 @@ fn run_drive_script(
     players: Query<&GlobalTransform, With<PlayerController>>,
     mut interactions: Query<(&Name, &mut Interaction)>,
     mut teleports: MessageWriter<TeleportPlayer>,
+    mut cues: MessageWriter<SoundscapeCue>,
     mut exit: MessageWriter<AppExit>,
 ) {
     if let Some(key) = state.pressed_key.take() {
@@ -666,6 +710,12 @@ fn run_drive_script(
                     "[drive] {now:.1}s warning: `sound` needs smart actors and a player"
                 )),
             }
+        }
+        Some(Directive::Bell(pattern)) => {
+            // A civic bell is render-side texture with a diegetic meaning, not
+            // a catalog event: it goes straight to the soundscape's own cue
+            // stream and never reaches an actor inbox.
+            cues.write(SoundscapeCue::CivicBell(pattern));
         }
         Some(Directive::Status { name, kind, value }) => match bridge.as_deref() {
             // Travels the same host→engine path as `sound`: a bridge command the
@@ -777,6 +827,30 @@ mod tests {
         assert!(parse_script("tp 1 2").is_err());
         assert!(parse_script("tp 1 2 3 4 5 6").is_err());
         assert!(parse_script("tp here").is_err());
+    }
+
+    #[test]
+    fn bell_parses_both_ropes_and_validates_the_count() {
+        assert_eq!(
+            parse_script("bell curfew; bell summons; bell knell 17"),
+            Ok(vec![
+                Action::Bell(BellPattern::ScoldCurfew),
+                Action::Bell(BellPattern::ScoldSummons),
+                Action::Bell(BellPattern::NameKnell { years: 17 }),
+            ])
+        );
+        assert_eq!(
+            parse_script("bell knell 17").map(|actions| actions[0].describe()),
+            Ok("bell knell 17".into())
+        );
+        // The knell's count is a life; it may not be missing, zero or absurd.
+        assert!(parse_script("bell knell").is_err());
+        assert!(parse_script("bell knell 0").is_err());
+        assert!(parse_script("bell knell 900").is_err());
+        assert!(parse_script("bell knell twelve").is_err());
+        assert!(parse_script("bell curfew 3").is_err());
+        assert!(parse_script("bell gravemouth").is_err());
+        assert!(parse_script("bell").is_err());
     }
 
     #[test]
