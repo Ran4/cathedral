@@ -11,7 +11,10 @@
     // the schedule, actor decisions, thunder timing, or authoritative wetness.
     weather: (
         enabled: true,
-        seed: 437,
+        // seed 7553 is clear for 02m40s then: Dp 09:20–16:25; Cl 27:30–30:40; St 33:10–42:45; Rn 46:33–51:08; Cl 57:30–60:00
+        // assumption: Starts Day 2 at 07:00.
+        // where Dp downpour, St storm, Rn rain, Dz drizzle, Fg fog, Cl clear
+        seed: 7553,
         // timeline, clear, broken, overcast, fog, drizzle, rain, downpour, storm
         mode: "timeline",
         // Episode frequency, not intensity. 0.0 is a stable clear comparison.
