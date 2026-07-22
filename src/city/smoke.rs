@@ -10,13 +10,9 @@
 //! the whole skyline of plumes costs a single draw call, one entity, and
 //! nothing at all in navigation.
 
-use bevy::{
-    asset::RenderAssetUsages,
-    camera::visibility::NoFrustumCulling,
-    light::NotShadowCaster,
-    mesh::{Indices, PrimitiveTopology},
-    prelude::*,
-};
+use bevy::{camera::visibility::NoFrustumCulling, light::NotShadowCaster, prelude::*};
+
+use crate::mesh_batch::{idle_batch_mesh, write_batch_mesh};
 
 /// One stack in this many smokes; the rest are cold hearths.
 const SMOKE_GATE: u32 = 4;
@@ -151,21 +147,12 @@ pub(super) fn build_chimney_smoke(
     }
     let count = plumes.len();
 
-    // The mesh starts empty but with every attribute present, so it is valid
-    // to draw even on a frame with no camera to billboard toward.
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::default(),
-    );
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, Vec::<[f32; 3]>::new());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, Vec::<[f32; 3]>::new());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, Vec::<[f32; 2]>::new());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, Vec::<[f32; 4]>::new());
-    mesh.insert_indices(Indices::U32(Vec::new()));
-
     commands.spawn((
         Name::new("Chimney smoke"),
-        Mesh3d(meshes.add(mesh)),
+        // The batch starts on the idle triangle: every attribute the live
+        // layout has, and something to draw even on a frame with no camera to
+        // billboard toward.
+        Mesh3d(meshes.add(idle_batch_mesh())),
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::WHITE,
             base_color_texture: Some(asset_server.load("textures/ombreval_smoke.png")),
@@ -224,10 +211,6 @@ pub(super) fn animate_chimney_smoke(
     }
 
     for (smoke, mesh_handle) in &smoke {
-        let Some(mut mesh) = meshes.get_mut(&mesh_handle.0) else {
-            continue;
-        };
-
         let mut puffs = Vec::with_capacity(smoke.plumes.len() * PUFFS_PER_PLUME);
         for plume in &smoke.plumes {
             let drift = plume_drift(weather_wind, weather_gust, elapsed, plume);
@@ -315,11 +298,17 @@ pub(super) fn animate_chimney_smoke(
             }
             indices.extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
         }
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-        mesh.insert_indices(Indices::U32(indices));
+        // Past the Snuffing the whole city is cold and this frame has no
+        // quads at all; the batch parks on its idle triangle until dawn.
+        write_batch_mesh(
+            &mut meshes,
+            &mesh_handle.0,
+            positions,
+            normals,
+            uvs,
+            colors,
+            indices,
+        );
     }
 }
 
@@ -340,7 +329,7 @@ mod tests {
     use bevy::asset::AssetPlugin;
 
     use super::*;
-    use crate::controller::CollisionWorld;
+    use crate::{controller::CollisionWorld, mesh_batch::IDLE_BATCH_VERTICES};
 
     fn built_app() -> App {
         let mut app = App::new();
@@ -530,7 +519,9 @@ mod tests {
             ..Default::default()
         });
         app.update();
-        assert_eq!(smoke_mesh_vertices(&mut app), 0);
+        // Not zero: a doused city parks the batch on the idle triangle, which
+        // the mesh allocator can actually allocate (see `crate::mesh_batch`).
+        assert_eq!(smoke_mesh_vertices(&mut app), IDLE_BATCH_VERTICES);
 
         app.world_mut().remove_resource::<WorldClockState>();
         app.update();

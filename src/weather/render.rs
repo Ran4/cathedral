@@ -14,7 +14,12 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 
-use crate::{controller::PlayerCamera, scene::Sun, smart_actors::WorldClockState};
+use crate::{
+    controller::PlayerCamera,
+    mesh_batch::{batch_mesh, idle_batch_mesh, write_batch_mesh},
+    scene::Sun,
+    smart_actors::WorldClockState,
+};
 
 use super::{
     PrecipitationOcclusionMap, SmoothedWeather, WeatherLightning, WeatherQuality,
@@ -94,8 +99,8 @@ pub(super) fn setup_weather_rendering(
         WeatherQuality::High => (2_200, 7),
     };
 
-    let rain = meshes.add(empty_weather_mesh());
-    let impacts = meshes.add(empty_weather_mesh());
+    let rain = meshes.add(idle_batch_mesh());
+    let impacts = meshes.add(idle_batch_mesh());
     let rain_material = materials.add(StandardMaterial {
         base_color: Color::srgba(0.70, 0.82, 0.92, 0.78),
         emissive: LinearRgba::rgb(0.025, 0.035, 0.045),
@@ -173,7 +178,7 @@ pub(super) fn setup_weather_rendering(
     ));
 
     let (puddle_mesh, puddle_centers) = if quality == WeatherQuality::Low {
-        (empty_weather_mesh(), Vec::new())
+        (idle_batch_mesh(), Vec::new())
     } else {
         puddle_mesh(&cover)
     };
@@ -433,19 +438,6 @@ fn tile_value_noise(x: f32, y: f32, cells: u32, seed: u64) -> f32 {
     let low = at(x0, y0) + (at(x0 + 1, y0) - at(x0, y0)) * sx;
     let high = at(x0, y0 + 1) + (at(x0 + 1, y0 + 1) - at(x0, y0 + 1)) * sx;
     low + (high - low) * sy
-}
-
-fn empty_weather_mesh() -> Mesh {
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::default(),
-    );
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, Vec::<[f32; 3]>::new());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, Vec::<[f32; 3]>::new());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, Vec::<[f32; 2]>::new());
-    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, Vec::<[f32; 4]>::new());
-    mesh.insert_indices(Indices::U32(Vec::new()));
-    mesh
 }
 
 #[allow(
@@ -794,7 +786,7 @@ pub(super) fn animate_precipitation(
         &mut splash_colors,
         &mut splash_indices,
     );
-    write_mesh(
+    write_batch_mesh(
         &mut meshes,
         &state.rain,
         positions,
@@ -803,7 +795,7 @@ pub(super) fn animate_precipitation(
         colors,
         indices,
     );
-    write_mesh(
+    write_batch_mesh(
         &mut meshes,
         &state.impacts,
         splash_positions,
@@ -961,25 +953,6 @@ fn push_quad(
     indices.extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
 }
 
-fn write_mesh(
-    meshes: &mut Assets<Mesh>,
-    handle: &Handle<Mesh>,
-    positions: Vec<[f32; 3]>,
-    normals: Vec<[f32; 3]>,
-    uvs: Vec<[f32; 2]>,
-    colors: Vec<[f32; 4]>,
-    indices: Vec<u32>,
-) {
-    let Some(mut mesh) = meshes.get_mut(handle) else {
-        return;
-    };
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-    mesh.insert_indices(Indices::U32(indices));
-}
-
 fn puddle_mesh(cover: &PrecipitationOcclusionMap) -> (Mesh, Vec<Vec3>) {
     let nav = cathedral_sim::NavData::from_parts(
         include_str!("../../assets/world/navigation.json"),
@@ -1031,13 +1004,10 @@ fn puddle_mesh(cover: &PrecipitationOcclusionMap) -> (Mesh, Vec<Vec3>) {
         }
         z += 13.0;
     }
-    let mut mesh = empty_weather_mesh();
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-    mesh.insert_indices(Indices::U32(indices));
-    (mesh, centers)
+    (
+        batch_mesh(positions, normals, uvs, colors, indices),
+        centers,
+    )
 }
 
 fn puddle_candidate(sample: super::cover::CoverSample, hash: u64) -> bool {

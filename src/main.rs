@@ -5,6 +5,7 @@ mod drive;
 mod fonts;
 mod map;
 mod materials;
+mod mesh_batch;
 mod nav_overlay;
 mod scene;
 mod screenshot;
