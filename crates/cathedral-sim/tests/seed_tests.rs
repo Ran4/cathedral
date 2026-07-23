@@ -243,6 +243,9 @@ fn the_snapshot_is_public_and_monotonic() {
         );
     }
 
+    // A player move rides the hot channel: applied to live state, but it does
+    // not bump the public revision — the host owns the player's own transform
+    // (`World::update_positions`).
     let before = snapshot.world_revision;
     world
         .update_positions(
@@ -254,7 +257,27 @@ fn the_snapshot_is_public_and_monotonic() {
             )],
         )
         .unwrap();
-    assert!(world.public_snapshot(&player).world_revision > before);
+    assert_eq!(
+        world.public_snapshot(&player).world_revision,
+        before,
+        "a player move stays off the cold channel"
+    );
+
+    // A non-player move is a public change, and the revision is monotonic in it.
+    world
+        .update_positions(
+            1,
+            &[cathedral_sim::SpatialActorUpdate::new(
+                actor("sv3n1"),
+                Vec3::new(1.0, 0.91, 50.0),
+                None,
+            )],
+        )
+        .unwrap();
+    assert!(
+        world.public_snapshot(&player).world_revision > before,
+        "a non-player move bumps the revision"
+    );
 }
 
 /// The player knows all three NPCs by name; the NPCs are strangers to each

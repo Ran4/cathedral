@@ -104,17 +104,24 @@ pub fn update_clock_hud(
         return;
     };
     if !clock.present {
-        text.0.clear();
+        if !text.0.is_empty() {
+            text.0.clear();
+        }
         return;
     }
     let (hour, minute) = clock.hour_minute();
     let scale = clock.scale.round() as i64;
-    text.0 = format!(
+    let readout = format!(
         "{}   {hour:02}:{minute:02}   ·   Day {} {}   ·   {scale}×",
         clock.office.label(),
         clock.day,
         clock.weekday.label(),
     );
+    // The readout changes about once per game-minute; an unguarded write
+    // would re-shape the glyphs every frame.
+    if text.0 != readout {
+        text.0 = readout;
+    }
 }
 
 /// The `T` key cycles the debug time scale (1× / 10× / 60×). The sim owns the

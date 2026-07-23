@@ -96,8 +96,16 @@ pub fn update_actor_focus(
     let direction = *camera.forward();
     let wall_distance = collision_world.nearest_ray_hit(origin, direction, ACTOR_FOCUS_RADIUS_M);
 
+    // Focus can only land within ACTOR_FOCUS_RADIUS_M of the player's body;
+    // pre-cull the whole-cast query on a cheap squared distance (with a small
+    // margin for actor extents) so the sort below handles a handful of
+    // records, not all ~510.
+    let cull_radius = ACTOR_FOCUS_RADIUS_M + 2.0;
     let mut actor_records: Vec<_> = actors
         .iter()
+        .filter(|(_, _, _, transform)| {
+            transform.translation().distance_squared(body_origin) <= cull_radius * cull_radius
+        })
         .map(|(entity, actor_id, target, transform)| {
             let (center, half_extents) = world_aabb(*target, transform);
             (

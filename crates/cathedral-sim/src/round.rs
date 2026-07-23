@@ -1043,6 +1043,11 @@ pub struct Round {
     /// Keeping those two predicates separate lets a coarse pump just after
     /// closing retain the work completed before the bell.
     production_was_eligible: BTreeMap<ActorId, bool>,
+    /// A reused scratch buffer for [`run_ladder`]'s per-tick cast snapshot: the
+    /// ids must be cloned out to iterate while the body mutates `people`, but
+    /// the `Vec` itself need not be reallocated every 20 Hz tick. Always drained
+    /// empty between ticks, so it never affects `Clone`/`PartialEq`.
+    ladder_scratch: Vec<ActorId>,
 }
 
 impl Round {
@@ -6027,8 +6032,15 @@ fn run_ladder(
     nudges: &mut Vec<ActorId>,
 ) {
     let time = clock.at(now);
-    let ids: Vec<ActorId> = round.people.keys().cloned().collect();
-    for id in ids {
+    // Reuse the scratch allocation across ticks: iterating the cast while the
+    // body mutates `round.people`/`world` needs the ids cloned into a buffer,
+    // but the buffer's own allocation is reused (drained empty and restored),
+    // not remade each 20 Hz tick. `mem::take` decouples it from `round` so the
+    // body borrows `round` freely.
+    let mut ids = std::mem::take(&mut round.ladder_scratch);
+    ids.clear();
+    ids.extend(round.people.keys().cloned());
+    for id in ids.drain(..) {
         if !world.is_present(&id) {
             continue;
         }
@@ -6184,6 +6196,8 @@ fn run_ladder(
 
         apply_decision(round, world, nav, &id, decision);
     }
+    // `drain(..)` left it empty; hand the allocation back for the next tick.
+    round.ladder_scratch = ids;
 }
 
 /// The outcome of one idle person's ladder pass.

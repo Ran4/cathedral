@@ -33,6 +33,10 @@ const SUN_LATITUDE_DEG: f32 = 48.0;
 const SUN_DECLINATION_DEG: f32 = 23.44;
 const LIGHTNING_FLASH_SECONDS: f64 = 0.24;
 const CLOUD_TILE_M: f32 = 190.0;
+/// The volumetric fog/light passes are forced on (at near-zero density) for
+/// this long after startup so their pipelines compile inside the load window
+/// instead of at the first mid-play fog onset.
+const VOLUMETRIC_WARMUP_SECONDS: f32 = 5.0;
 
 #[derive(Component)]
 pub(super) struct RainBatch;
@@ -492,7 +496,15 @@ pub(super) fn compose_environment(
             .looking_at(Vec3::new(0.0, 0.0, 40.0), Vec3::Y);
         light.illuminance = lux::RAW_SUNLIGHT * lit * cloud_sun.max(0.025);
         light.color = Color::srgb(1.0 - 0.18 * cloud, 1.0 - 0.12 * cloud, 1.0 - 0.03 * cloud);
-        let wants_volumetric = settings.volumetric_fog && weather.fog > 0.025;
+        // Same warm-up + hysteresis as the camera's VolumetricFog below: the
+        // sunbeam pipeline variant compiles on first use too.
+        let wants_volumetric = settings.volumetric_fog
+            && (time.elapsed_secs() < VOLUMETRIC_WARMUP_SECONDS
+                || if volumetric {
+                    weather.fog > 0.015
+                } else {
+                    weather.fog > 0.03
+                });
         if wants_volumetric != volumetric {
             if wants_volumetric {
                 commands.entity(sun_entity).insert(VolumetricLight);
@@ -541,9 +553,22 @@ pub(super) fn compose_environment(
         if let Some(mut environment) = environment {
             environment.intensity = (0.65 * (1.0 - cloud * 0.60)).max(0.18);
         }
+        // Warm-up: the first insertion of VolumetricFog in a session compiles
+        // its pipelines — a classic one-time hitch that used to land at the
+        // first mid-play fog onset. Forcing the pass on (at near-zero density)
+        // during the opening seconds moves the compile into the load window.
+        // Hysteresis afterwards: on past 0.02, off below 0.008, so the
+        // threshold never flickers the component (and its pipeline state) on
+        // and off frame to frame.
+        let warming = time.elapsed_secs() < VOLUMETRIC_WARMUP_SECONDS;
         let wants_volumetric = settings.volumetric_fog
             && WeatherQuality::from_name(&settings.quality) != WeatherQuality::Low
-            && local_fog > 0.012;
+            && (warming
+                || if has_volumetric {
+                    local_fog > 0.008
+                } else {
+                    local_fog > 0.02
+                });
         if wants_volumetric != has_volumetric {
             if wants_volumetric {
                 commands.entity(entity).insert(VolumetricFog {
@@ -564,6 +589,19 @@ pub(super) fn compose_environment(
         // through its density so the nave stays readable while exterior fog is
         // still visible through the doors.
         for (layer, mut volume, mut visibility_component) in &mut fog_layers {
+            let next_visibility = if wants_volumetric {
+                Visibility::Inherited
+            } else {
+                Visibility::Hidden
+            };
+            if *visibility_component != next_visibility {
+                *visibility_component = next_visibility;
+            }
+            // A hidden volume needs no density animation; skipping the write
+            // keeps the FogVolume unchanged for the render world.
+            if next_visibility == Visibility::Hidden {
+                continue;
+            }
             volume.density_factor = local_fog * layer.strength * 0.075;
             let drift = weather.wind * time.elapsed_secs() * 0.000_45;
             volume.density_texture_offset = Vec3::new(
@@ -571,11 +609,6 @@ pub(super) fn compose_environment(
                 (time.elapsed_secs() * 0.002).rem_euclid(1.0),
                 drift.y.rem_euclid(1.0),
             );
-            *visibility_component = if local_fog > 0.012 && wants_volumetric {
-                Visibility::Inherited
-            } else {
-                Visibility::Hidden
-            };
         }
     }
 }
@@ -627,11 +660,19 @@ pub(super) fn animate_clouds(
     let Ok(camera) = camera.single() else { return };
     for (layer, mut transform, material_handle, mut visibility) in &mut layers {
         let cover = weather.cloud_cover;
-        *visibility = if cover > 0.015 {
+        let next_visibility = if cover > 0.015 {
             Visibility::Inherited
         } else {
             Visibility::Hidden
         };
+        if *visibility != next_visibility {
+            *visibility = next_visibility;
+        }
+        // A hidden sheet needs no drift and, crucially, no material touch: a
+        // `get_mut` on the shared material re-prepares it every frame.
+        if next_visibility == Visibility::Hidden {
+            continue;
+        }
         // Both layers travel downwind; their unequal speeds shear the field
         // without making one cloud deck visibly contradict rain and smoke.
         let drift = cloud_drift(weather.wind, weather.gust, time.elapsed_secs(), layer.depth);
@@ -639,13 +680,29 @@ pub(super) fn animate_clouds(
             camera.translation().x + drift.x.rem_euclid(CLOUD_TILE_M) - CLOUD_TILE_M * 0.5;
         transform.translation.z =
             camera.translation().z + drift.y.rem_euclid(CLOUD_TILE_M) - CLOUD_TILE_M * 0.5;
-        if let Some(mut material) = materials.get_mut(&material_handle.0) {
-            let darkness = weather.thunder.max(weather.precipitation * 0.65);
-            let shade = 0.68 - darkness * 0.34 + layer.depth * 0.08;
-            let alpha =
-                (cover * (0.24 + cover * 0.48) * (1.0 - layer.depth * 0.18)).clamp(0.0, 0.78);
-            material.base_color = Color::srgba(shade, shade + 0.025, shade + 0.045, alpha);
-        }
+        let darkness = weather.thunder.max(weather.precipitation * 0.65);
+        let shade = 0.68 - darkness * 0.34 + layer.depth * 0.08;
+        let alpha = (cover * (0.24 + cover * 0.48) * (1.0 - layer.depth * 0.18)).clamp(0.0, 0.78);
+        set_base_color_if_changed(
+            &mut materials,
+            &material_handle.0,
+            Color::srgba(shade, shade + 0.025, shade + 0.045, alpha),
+        );
+    }
+}
+
+/// Writes a material's base color only when it actually differs:
+/// `Assets::get_mut` marks the asset Modified even for an identical value,
+/// which re-prepares the material and re-bins everything drawn with it.
+fn set_base_color_if_changed(
+    materials: &mut Assets<StandardMaterial>,
+    handle: &Handle<StandardMaterial>,
+    color: Color,
+) {
+    if materials.get(handle).is_some_and(|m| m.base_color != color)
+        && let Some(mut material) = materials.get_mut(handle)
+    {
+        material.base_color = color;
     }
 }
 
@@ -1045,22 +1102,31 @@ pub(super) fn update_weather_materials(
     mut puddles: Query<&mut Visibility, With<PuddleBatch>>,
 ) {
     let Some(state) = state else { return };
-    if let Some(mut material) = materials.get_mut(&state.puddle_material) {
-        material.base_color = Color::srgba(0.10, 0.17, 0.20, weather.standing_water * 0.72);
-    }
+    set_base_color_if_changed(
+        &mut materials,
+        &state.puddle_material,
+        Color::srgba(0.10, 0.17, 0.20, weather.standing_water * 0.72),
+    );
     for mut visibility in &mut puddles {
-        *visibility = if state.quality != WeatherQuality::Low && weather.standing_water > 0.015 {
+        let next = if state.quality != WeatherQuality::Low && weather.standing_water > 0.015 {
             Visibility::Inherited
         } else {
             Visibility::Hidden
         };
+        if *visibility != next {
+            *visibility = next;
+        }
     }
-    if let Some(mut material) = materials.get_mut(&state.rain_material) {
-        material.base_color = Color::srgba(0.70, 0.82, 0.92, 0.64 + weather.precipitation * 0.22);
-    }
-    if let Some(mut material) = materials.get_mut(&state.impact_material) {
-        material.base_color = Color::srgba(0.67, 0.78, 0.86, 0.28 + weather.precipitation * 0.30);
-    }
+    set_base_color_if_changed(
+        &mut materials,
+        &state.rain_material,
+        Color::srgba(0.70, 0.82, 0.92, 0.64 + weather.precipitation * 0.22),
+    );
+    set_base_color_if_changed(
+        &mut materials,
+        &state.impact_material,
+        Color::srgba(0.67, 0.78, 0.86, 0.28 + weather.precipitation * 0.30),
+    );
     // Touch cloud handles here so asset loss is diagnosed by absence rather
     // than a stale resource; color itself is updated by `animate_clouds`.
     let _ = &state.cloud_materials;
@@ -1088,6 +1154,10 @@ pub(super) fn present_lightning(
             PointLight {
                 color: Color::srgb(0.72, 0.84, 1.0),
                 intensity: lightning_flash_intensity(0.0, strike.0.strength as f32),
+                // Strike origins sit at y ∈ [360, 680] m, so the range must
+                // reach the ground from sky height with slant to spare — a
+                // tighter radius silently stopped most flashes lighting the
+                // city at all. It costs every cluster for only 0.24 s.
                 range: 1_400.0,
                 radius: 24.0,
                 shadow_maps_enabled: false,
@@ -1138,10 +1208,15 @@ pub(super) fn update_lightning_flashes(
             }
         }
     }
-    if let Some(handle) = &rose.handle
-        && let Some(mut material) = materials.get_mut(handle)
-    {
-        material.emissive = rose.baseline_emissive * (1.0 + rose_boost);
+    if let Some(handle) = &rose.handle {
+        let target = rose.baseline_emissive * (1.0 + rose_boost);
+        // Outside storms rose_boost is 0.0 every frame; leave the shared
+        // cathedral material untouched unless the flash actually moves it.
+        if materials.get(handle).is_some_and(|m| m.emissive != target)
+            && let Some(mut material) = materials.get_mut(handle)
+        {
+            material.emissive = target;
+        }
     }
 }
 

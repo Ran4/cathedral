@@ -94,6 +94,12 @@ pub(crate) fn reconcile_actor_views(
         Without<ActorOutfit>,
     >,
 ) {
+    // Snapshots replace the mirror at most ~10×/s (revision bumps); between
+    // them nothing below can produce a different result, and running anyway
+    // costs two N-entry maps plus a whole-cast Transform pass per frame.
+    if !mirror.is_changed() {
+        return;
+    }
     let actor_snapshots: Vec<_> = mirror
         .actors()
         .filter(|actor| actor.control == ActorControl::Llm)
@@ -115,12 +121,21 @@ pub(crate) fn reconcile_actor_views(
     for (entity, actor_id, mut transform) in &mut roots {
         if let Some(actor) = desired_by_id.get(actor_id) {
             existing_ids.insert(actor_id.clone());
-            transform.translation = actor.position_m.into();
+            let translation: Vec3 = actor.position_m.into();
             // The render is the only place the player can read the sound
             // witness rule from: if the sim thinks an NPC faces away and the
             // body faces the player, the rule is unlearnable.
-            transform.rotation = Quat::from_rotation_y(actor.facing_yaw);
-            transform.scale = Vec3::ONE;
+            let rotation = Quat::from_rotation_y(actor.facing_yaw);
+            // Compare before writing: a `Mut` deref flags the root changed and
+            // re-propagates the whole puppet subtree even for identical values.
+            if transform.translation != translation
+                || transform.rotation != rotation
+                || transform.scale != Vec3::ONE
+            {
+                transform.translation = translation;
+                transform.rotation = rotation;
+                transform.scale = Vec3::ONE;
+            }
         } else {
             // This path is reached only because the authoritative projection no
             // longer contains the actor.
@@ -229,9 +244,16 @@ pub(crate) fn drive_npc_bodies(
                     motion.seq = sample.seq;
                 }
                 let t = ((now - motion.t0) / MOVEMENT_TICK_SECONDS).clamp(0.0, 1.0) as f32;
-                transform.translation = motion.previous.lerp(motion.current, t);
-                transform.rotation =
-                    Quat::from_rotation_y(lerp_angle(motion.prev_yaw, motion.cur_yaw, t));
+                let translation = motion.previous.lerp(motion.current, t);
+                let rotation = Quat::from_rotation_y(lerp_angle(motion.prev_yaw, motion.cur_yaw, t));
+                // An arrived walker keeps its stale sample forever (the sim
+                // sends no "stopped" tick); once t clamps to 1.0 the values
+                // repeat every frame, so writing them again would keep the
+                // whole subtree permanently dirty.
+                if transform.translation != translation || transform.rotation != rotation {
+                    transform.translation = translation;
+                    transform.rotation = rotation;
+                }
             }
         }
     }
@@ -373,23 +395,40 @@ pub(crate) fn position_actor_name_labels(
 ) {
     let Ok((camera, camera_transform)) = cameras.single() else {
         for (_, _, mut visibility, _, _, _) in &mut labels {
-            *visibility = Visibility::Hidden;
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
+            }
         }
         return;
     };
-    let anchor_positions: HashMap<_, _> = anchors
+    // One pass, no per-actor allocation: only anchors inside the widest label
+    // radius (a couple dozen in a crowd) are collected and sorted. Same
+    // policy as `nearest_name_anchor_ids`, which the tests pin.
+    let camera_position = camera_transform.translation();
+    let mut nearest: Vec<(&ActorId, Vec3, bool, f32)> = Vec::new();
+    for (anchor, transform) in &anchors {
+        let stranger = mirror
+            .actor(&anchor.0)
+            .is_some_and(actor_is_stranger_to_player);
+        let maximum_distance = if stranger {
+            MAX_STRANGER_NAME_LABEL_DISTANCE_M
+        } else {
+            MAX_NAME_LABEL_DISTANCE_M
+        };
+        let position = transform.translation();
+        let distance_squared = camera_position.distance_squared(position);
+        if distance_squared <= maximum_distance * maximum_distance {
+            nearest.push((&anchor.0, position, stranger, distance_squared));
+        }
+    }
+    nearest.sort_unstable_by(|left, right| {
+        left.3.total_cmp(&right.3).then_with(|| left.0.cmp(right.0))
+    });
+    nearest.truncate(MAX_VISIBLE_NAME_LABELS);
+    let visible: HashMap<&ActorId, (Vec3, bool)> = nearest
         .iter()
-        .map(|(anchor, transform)| (anchor.0.clone(), transform.translation()))
+        .map(|(actor_id, position, stranger, _)| (*actor_id, (*position, *stranger)))
         .collect();
-    let visible_ids = nearest_name_anchor_ids(
-        camera_transform.translation(),
-        &anchor_positions,
-        |actor_id| {
-            mirror
-                .actor(actor_id)
-                .is_some_and(actor_is_stranger_to_player)
-        },
-    );
 
     for (
         label,
@@ -400,44 +439,54 @@ pub(crate) fn position_actor_name_labels(
         mut text_shadow,
     ) in &mut labels
     {
-        if !visible_ids.contains(&label.0) {
-            *visibility = Visibility::Hidden;
-            continue;
-        }
-        let Some(world_position) = anchor_positions.get(&label.0) else {
-            *visibility = Visibility::Hidden;
+        // Every write below is compare-guarded: ~500 resident labels are
+        // hidden on any given frame, and re-flagging their UI components
+        // would keep taffy busy for nothing.
+        let Some((world_position, stranger)) = visible.get(&label.0).copied() else {
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
+            }
             continue;
         };
-        let Ok(viewport_position) = camera.world_to_viewport(camera_transform, *world_position)
+        let Ok(viewport_position) = camera.world_to_viewport(camera_transform, world_position)
         else {
-            *visibility = Visibility::Hidden;
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
+            }
             continue;
         };
 
-        node.left = Val::Px(viewport_position.x - 54.0);
-        node.top = Val::Px(viewport_position.y - 34.0);
-        let opacity = mirror
-            .actor(&label.0)
-            .filter(|actor| actor_is_stranger_to_player(actor))
-            .map_or(1.0, |_| {
-                stranger_name_label_opacity(
-                    camera_transform.translation().distance(*world_position),
-                )
-            });
-        text_color.0 = Color::linear_rgba(1.0, 1.0, 1.0, opacity);
-        background_color.0 = Color::srgba(
+        let left = Val::Px(viewport_position.x - 54.0);
+        let top = Val::Px(viewport_position.y - 34.0);
+        if node.left != left || node.top != top {
+            node.left = left;
+            node.top = top;
+        }
+        let opacity = if stranger {
+            stranger_name_label_opacity(camera_position.distance(world_position))
+        } else {
+            1.0
+        };
+        let color = Color::linear_rgba(1.0, 1.0, 1.0, opacity);
+        if text_color.0 != color {
+            text_color.0 = color;
+        }
+        let background = Color::srgba(
             0.025,
             0.030,
             0.040,
             NAME_LABEL_BACKGROUND_ALPHA * opacity,
         );
-        text_shadow.color = Color::linear_rgba(
-            0.0,
-            0.0,
-            0.0,
-            NAME_LABEL_SHADOW_ALPHA * opacity,
-        );
-        *visibility = Visibility::Inherited;
+        if background_color.0 != background {
+            background_color.0 = background;
+        }
+        let shadow = Color::linear_rgba(0.0, 0.0, 0.0, NAME_LABEL_SHADOW_ALPHA * opacity);
+        if text_shadow.color != shadow {
+            text_shadow.color = shadow;
+        }
+        if *visibility != Visibility::Inherited {
+            *visibility = Visibility::Inherited;
+        }
     }
 }
 
@@ -451,42 +500,57 @@ pub(crate) fn update_thinking_indicators(
 ) {
     let Ok((camera, camera_transform)) = cameras.single() else {
         for (_, _, _, mut visibility) in &mut indicators {
-            *visibility = Visibility::Hidden;
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
+            }
         }
         return;
     };
-    let anchor_positions: HashMap<_, _> = anchors
-        .iter()
-        .map(|(anchor, transform)| (anchor.0.clone(), transform.translation()))
-        .collect();
     let active_actor = runtime.thinking_actor();
+    // At most one actor thinks at a time; only its anchor is worth resolving
+    // (an N-entry map here cloned every actor id every frame).
+    let active_position = active_actor.and_then(|actor_id| {
+        anchors
+            .iter()
+            .find(|(anchor, _)| &anchor.0 == actor_id)
+            .map(|(_, transform)| transform.translation())
+    });
     let dots = thinking_dots(time.elapsed_secs());
 
     for (indicator, mut text, mut node, mut visibility) in &mut indicators {
-        if active_actor != Some(&indicator.0) {
-            *visibility = Visibility::Hidden;
+        let shown = active_actor == Some(&indicator.0)
+            && active_position.is_some_and(|world_position| {
+                thinking_indicator_in_range(camera_transform.translation(), world_position)
+            });
+        if !shown {
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
+            }
             continue;
         }
-        let Some(world_position) = anchor_positions.get(&indicator.0) else {
-            *visibility = Visibility::Hidden;
+        let Some(world_position) = active_position else {
             continue;
         };
-        if !thinking_indicator_in_range(camera_transform.translation(), *world_position) {
-            *visibility = Visibility::Hidden;
-            continue;
-        }
-        let Ok(viewport_position) = camera.world_to_viewport(camera_transform, *world_position)
+        let Ok(viewport_position) = camera.world_to_viewport(camera_transform, world_position)
         else {
-            *visibility = Visibility::Hidden;
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
+            }
             continue;
         };
 
         if text.0 != dots {
             text.0 = dots.into();
         }
-        node.left = Val::Px(viewport_position.x - THINKING_INDICATOR_WIDTH_PX * 0.5);
-        node.top = Val::Px(viewport_position.y - THINKING_INDICATOR_HEAD_OFFSET_PX);
-        *visibility = Visibility::Inherited;
+        let left = Val::Px(viewport_position.x - THINKING_INDICATOR_WIDTH_PX * 0.5);
+        let top = Val::Px(viewport_position.y - THINKING_INDICATOR_HEAD_OFFSET_PX);
+        if node.left != left || node.top != top {
+            node.left = left;
+            node.top = top;
+        }
+        if *visibility != Visibility::Inherited {
+            *visibility = Visibility::Inherited;
+        }
     }
 }
 
@@ -508,6 +572,11 @@ fn stranger_name_label_opacity(distance_m: f32) -> f32 {
         .clamp(0.0, 1.0)
 }
 
+/// Test-only twin of the selection pass inlined in
+/// `position_actor_name_labels` (which avoids the per-actor id clones this
+/// map-based form needs): the tests pin the policy — per-actor radius, sort
+/// by (distance, id), cap at `MAX_VISIBLE_NAME_LABELS`.
+#[cfg(test)]
 fn nearest_name_anchor_ids(
     camera_position: Vec3,
     anchor_positions: &HashMap<ActorId, Vec3>,
@@ -896,6 +965,13 @@ mod tests {
             assert_eq!(count, 3, "the player must not get a duplicate actor body");
         }
 
+        // The projection is change-gated (2026-07 perf work): between
+        // snapshots nothing re-runs it — that is what stops the whole cast
+        // being re-flagged every frame — so authority reasserts on the next
+        // mirror write, the same trigger a live snapshot arrival produces.
+        app.world_mut()
+            .resource_mut::<super::super::model::WorldMirror>()
+            .set_changed();
         app.update();
         let world = app.world_mut();
         let mut actors = world.query_filtered::<(&ActorId, &Transform), With<ActorView>>();

@@ -9,6 +9,10 @@ and exits on its own — no `pkill` needed.
 Actions (each fires ~0.5 s after the previous):
 
 - `key <KeyCode>` — press a key, e.g. `key Escape`, `key KeyZ`, `key F5`.
+- `hold <KeyCode> <seconds>` — hold a key down, e.g. `hold KeyW 20` walks
+  forward for 20 s; the next action fires after release. Caveat: a window
+  focus loss mid-hold releases all keys (Bevy clears `ButtonInput` on
+  `KeyboardFocusLost`), so don't click other windows during a scripted hold.
 - `type <text>` — inject text into the Enter chat box as a raw keyboard message
   (`;` cannot appear in the text).
 - `click <Name substring>` — case-insensitive match on a UI element's `Name`.
@@ -64,6 +68,11 @@ the daily curfew without waiting out a real hour.
 
 `CATHEDRAL_SHOT=<name> cargo run` is shorthand for a single
 `sleep 2; shot <name>; quit`. For runs without network/API keys set
-`smart_actors.fake_backend: true` in config.ron. NOTE: drive scripts exercise
+`smart_actors.fake_backend: true` in config.ron — or export
+`CATHEDRAL_FAKE_BACKEND=1`, which forces it without editing the file.
+Other perf/dev env levers: `CATHEDRAL_PERF=1` (frame-time recording +
+vsync off; see `features/performance_improvements/findings.md`),
+`CATHEDRAL_DRIVE_RES=1920x1080` (drive window resolution),
+`CATHEDRAL_NO_ACTORS=1` / `CATHEDRAL_NO_WEATHER=1` (ablation). NOTE: drive scripts exercise
 the real handlers, so e.g. clicking a backend pill persists to config.ron —
 back it up first if that matters.

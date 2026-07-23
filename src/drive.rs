@@ -101,6 +101,7 @@ impl Plugin for DrivePlugin {
             scheduler: Scheduler::new(self.actions.clone()),
             shot_saved: None,
             pressed_key: None,
+            held_key: None,
         })
         .add_systems(
             PreUpdate,
@@ -136,6 +137,10 @@ fn spawn_watchdog(timeout: Duration) {
 #[derive(Debug, Clone, PartialEq)]
 enum Action {
     Key(KeyCode),
+    /// Hold a key down for a duration (e.g. `hold KeyW 20` walks forward for
+    /// 20 s). The scheduler waits out the hold like a `sleep`, so the next
+    /// action fires after release.
+    Hold { key: KeyCode, seconds: f64 },
     /// Inject text as a raw `KeyboardInput` message, the stream the chat box
     /// reads. `;` cannot appear in the text — it separates script actions.
     Type(String),
@@ -179,6 +184,7 @@ impl Action {
     fn describe(&self) -> String {
         match self {
             Self::Key(key) => format!("key {key:?}"),
+            Self::Hold { key, seconds } => format!("hold {key:?} {seconds}"),
             Self::Type(text) => format!("type {text}"),
             Self::Click(name) => format!("click {name}"),
             Self::Shot(name) => format!("shot {name}"),
@@ -235,6 +241,19 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
             let key = keycode_from_name(argument)
                 .ok_or_else(|| format!("unknown key code `{argument}` in `{statement}`"))?;
             Ok(Action::Key(key))
+        }
+        "hold" => {
+            let (key_name, duration) = argument
+                .split_once(char::is_whitespace)
+                .ok_or_else(|| format!("`hold` needs a key and seconds in `{statement}`"))?;
+            let key = keycode_from_name(key_name.trim())
+                .ok_or_else(|| format!("unknown key code `{key_name}` in `{statement}`"))?;
+            match duration.trim().parse::<f64>() {
+                Ok(seconds) if seconds.is_finite() && seconds > 0.0 => {
+                    Ok(Action::Hold { key, seconds })
+                }
+                _ => Err(format!("bad hold duration `{duration}` in `{statement}`")),
+            }
         }
         "click" if !argument.is_empty() => Ok(Action::Click(argument.into())),
         "click" => Err("`click` needs a name substring, e.g. `click Continue`".into()),
@@ -428,6 +447,7 @@ fn keycode_from_name(name: &str) -> Option<KeyCode> {
 #[derive(Debug, Clone, PartialEq)]
 enum Directive {
     PressKey(KeyCode),
+    Hold { key: KeyCode, until: f64 },
     Type(String),
     Click(String),
     Shot(String),
@@ -530,6 +550,13 @@ impl Scheduler {
         self.push_log(now, &action.describe());
         match action {
             Action::Key(key) => Some(Directive::PressKey(key)),
+            Action::Hold { key, seconds } => {
+                self.next_at = now + seconds;
+                Some(Directive::Hold {
+                    key,
+                    until: now + seconds,
+                })
+            }
             Action::Type(text) => Some(Directive::Type(text)),
             Action::Click(name) => Some(Directive::Click(name)),
             Action::Shot(name) => {
@@ -590,6 +617,9 @@ struct DriveState {
     /// Key injected last frame, released on the next so handlers see a full
     /// press/release cycle.
     pressed_key: Option<KeyCode>,
+    /// A `hold` in progress: no device backs the key, so `ButtonInput` keeps
+    /// it pressed on its own until this releases it at the deadline.
+    held_key: Option<(KeyCode, f64)>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -613,6 +643,19 @@ fn run_drive_script(
     }
 
     let now = time.elapsed_secs_f64();
+    if let Some((key, until)) = state.held_key {
+        if now >= until {
+            keys.release(key);
+            state.held_key = None;
+        } else {
+            // Re-assert every frame: a window focus loss makes Bevy
+            // release_all() the keyboard, which would silently end the hold
+            // while the evidence log still claims a full walk. `press` only
+            // sets `just_pressed` on the released→pressed transition, so
+            // re-asserting an already-held key is free.
+            keys.press(key);
+        }
+    }
     let online = runtime.map(|runtime| runtime.interactions_enabled());
     let shot_saved = state
         .shot_saved
@@ -632,6 +675,10 @@ fn run_drive_script(
         Some(Directive::PressKey(key)) => {
             keys.press(key);
             state.pressed_key = Some(key);
+        }
+        Some(Directive::Hold { key, until }) => {
+            keys.press(key);
+            state.held_key = Some((key, until));
         }
         Some(Directive::Type(text)) => match windows.single() {
             // One raw keyboard message carrying the whole string: the chat box

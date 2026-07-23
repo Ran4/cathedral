@@ -89,7 +89,12 @@ pub(super) fn update_wet_materials(
     let changed = registry
         .last_wetness
         .is_none_or(|last| (last - wetness).abs() >= 1.0 / 255.0);
-    if !changed && time.elapsed_secs_f64() < registry.next_update_at {
+    // Touch the shared city materials only when wetness truly moved, and at
+    // most 10×/s: every `get_mut` marks the material Modified, which
+    // re-prepares it and re-bins every batched mesh bound to it. (An earlier
+    // `&&` here made the steady state fall through every 100 ms forever — the
+    // single largest stutter source the 2026-07 profiling night found.)
+    if !changed || time.elapsed_secs_f64() < registry.next_update_at {
         return;
     }
     registry.last_wetness = Some(wetness);

@@ -7,6 +7,7 @@ mod map;
 mod materials;
 mod mesh_batch;
 mod nav_overlay;
+mod perf;
 mod scene;
 mod screenshot;
 mod session_log;
@@ -42,7 +43,20 @@ fn main() {
         eprintln!("[smart actors/{source}] {line}");
         session_log::log_line(source, "INFO", line);
     }));
-    let config = load_config();
+    let mut config = load_config();
+    // Perf/CI runs force the deterministic offline engine without editing the
+    // player's config.ron.
+    if std::env::var_os("CATHEDRAL_FAKE_BACKEND").is_some() {
+        config.smart_actors.fake_backend = true;
+    }
+    // Ablation levers for perf attribution runs: kill a whole subsystem
+    // without touching config.ron.
+    if std::env::var_os("CATHEDRAL_NO_ACTORS").is_some() {
+        config.smart_actors.enabled = false;
+    }
+    if std::env::var_os("CATHEDRAL_NO_WEATHER").is_some() {
+        config.weather.enabled = false;
+    }
     let smart_actors = config.smart_actors.clone();
     let weather = config.weather.clone();
     let persisted = PersistedConfig(config.clone());
@@ -50,7 +64,16 @@ fn main() {
     // Drive scripts always run windowed and small: fast, WM-friendly, and
     // independent of whatever config.ron says.
     let (resolution, mode) = if drive.is_some() {
-        (WindowResolution::new(1280, 720), WindowMode::Windowed)
+        // CATHEDRAL_DRIVE_RES=1920x1080 measures at play resolution; the
+        // default stays small and WM-friendly.
+        let resolution = std::env::var("CATHEDRAL_DRIVE_RES")
+            .ok()
+            .and_then(|value| {
+                let (w, h) = value.split_once(['x', 'X'])?;
+                Some(WindowResolution::new(w.parse().ok()?, h.parse().ok()?))
+            })
+            .unwrap_or_else(|| WindowResolution::new(1280, 720));
+        (resolution, WindowMode::Windowed)
     } else {
         (
             WindowResolution::new(config.width, config.height),
@@ -99,6 +122,7 @@ fn main() {
             NavDebugPlugin,
             MapPlugin,
             WeatherPlugin::new(weather.clone()),
+            perf::PerfPlugin,
         ))
         .add_plugins(SmartActorsPlugin::with_weather(smart_actors, weather));
     if let Some(drive) = drive {

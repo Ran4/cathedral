@@ -343,11 +343,19 @@ pub(super) fn animate_gate_mechanisms(
             GateKind::Stone => runtime.stone_leaves.value,
             GateKind::River => runtime.river_leaves.value,
         };
-        transform.rotation = Quat::from_rotation_y(leaf.open_yaw * openness);
+        let rotation = Quat::from_rotation_y(leaf.open_yaw * openness);
+        // Settled gates would otherwise re-flag their ~20-plank subtrees for
+        // transform propagation every frame of the day.
+        if transform.rotation != rotation {
+            transform.rotation = rotation;
+        }
     }
     for mut transform in &mut bars {
-        transform.translation.y = RIVER_BAR_LOCKED_Y
+        let y = RIVER_BAR_LOCKED_Y
             + (RIVER_BAR_RAISED_Y - RIVER_BAR_LOCKED_Y) * runtime.river_bar.value;
+        if transform.translation.y != y {
+            transform.translation.y = y;
+        }
     }
     for (marker, mut barrier) in &mut barriers {
         let openness = match marker.0 {

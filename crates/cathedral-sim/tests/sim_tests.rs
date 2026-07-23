@@ -863,6 +863,8 @@ fn the_snapshot_is_public_and_monotonic() {
         );
     }
 
+    // A player move rides the hot channel: applied, but it does not bump the
+    // public revision — the host owns the player's transform.
     let before = snapshot.world_revision;
     world
         .update_positions(
@@ -874,8 +876,27 @@ fn the_snapshot_is_public_and_monotonic() {
             )],
         )
         .unwrap();
+    assert_eq!(
+        world.public_snapshot(&actor("player")).world_revision,
+        before,
+        "a player move stays off the cold channel"
+    );
 
-    assert!(world.public_snapshot(&actor("player")).world_revision > before);
+    // A non-player move is a public change, and the revision is monotonic in it.
+    world
+        .update_positions(
+            2,
+            &[SpatialActorUpdate::new(
+                actor("sv3n1"),
+                Vec3::new(9.0, 2.0, 3.0),
+                None,
+            )],
+        )
+        .unwrap();
+    assert!(
+        world.public_snapshot(&actor("player")).world_revision > before,
+        "a non-player move bumps the revision"
+    );
 }
 
 /// The event id prefixes the game keys speech dedupe and sound playback on

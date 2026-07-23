@@ -419,8 +419,43 @@ const PLAYER_ID: &str = "player";
 /// First in `SmartActorSet::DrainBridge`, so a command written in frame N's
 /// `CollectInput` is polled — and its events drained by `drain_bridge_messages`
 /// — in frame N+1, exactly the latency the sidecar had.
-pub fn pump_local_engine(time: Res<Time>, mut engine: NonSendMut<LocalEngine>) {
+pub fn pump_local_engine(
+    time: Res<Time>,
+    mut engine: NonSendMut<LocalEngine>,
+    mut timer: Local<PumpTimer>,
+) {
+    let started = std::time::Instant::now();
     engine.pump(time.elapsed_secs_f64());
+    // The whole sim runs inside this call on the main thread; the same rolling
+    // report the pose system keeps, so a slow poll is attributable from
+    // `logs.jsonl` instead of a profiler.
+    let elapsed_us = started.elapsed().as_secs_f64() * 1e6;
+    timer.accum_us += elapsed_us;
+    timer.max_us = timer.max_us.max(elapsed_us);
+    timer.frames += 1;
+    let now = time.elapsed_secs_f64();
+    if now - timer.window_start >= 5.0 {
+        if timer.window_start > 0.0 {
+            info!(
+                "[engine pump] avg {:.0} us, max {:.0} us over {} frames",
+                timer.accum_us / f64::from(timer.frames.max(1)),
+                timer.max_us,
+                timer.frames,
+            );
+        }
+        *timer = PumpTimer {
+            window_start: now,
+            ..default()
+        };
+    }
+}
+
+#[derive(Default)]
+pub struct PumpTimer {
+    window_start: f64,
+    accum_us: f64,
+    max_us: f64,
+    frames: u32,
 }
 
 impl LocalEngine {

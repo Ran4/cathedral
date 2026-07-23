@@ -6,9 +6,10 @@
 //! covered at the Snuffing, with a scatter of bakehouses firing at the
 //! Watch). Each lit stack carries a looping column of puffs — camera-facing
 //! quads that rise, drift with the authoritative weather wind, swell and fade — and
-//! every puff in the city is rewritten each frame into one shared mesh, so
-//! the whole skyline of plumes costs a single draw call, one entity, and
-//! nothing at all in navigation.
+//! every lit puff within [`SMOKE_VISIBLE_RANGE_M`] of the camera is rewritten
+//! each frame into one shared mesh, so the visible plumes cost a single draw
+//! call, one entity, and nothing at all in navigation (the distance fog owns
+//! everything farther out).
 
 use bevy::{camera::visibility::NoFrustumCulling, light::NotShadowCaster, prelude::*};
 
@@ -29,6 +30,13 @@ const FALLBACK_WIND: Vec2 = Vec2::new(0.8, -0.2);
 const PUFF_START_DIAMETER_M: f32 = 0.7;
 const PUFF_END_DIAMETER_M: f32 = 3.4;
 const PUFF_PEAK_ALPHA: f32 = 0.65;
+/// Plumes past this range are skipped entirely: the distance fog (visibility
+/// ~300 m) has long since swallowed a 3 m puff, and at street level this cuts
+/// the sorted, blended, re-uploaded batch from ~600 plumes to the ~100 that
+/// could be seen. Alpha fades from `SMOKE_FADE_START_M` so the cutoff never
+/// pops.
+const SMOKE_VISIBLE_RANGE_M: f32 = 450.0;
+const SMOKE_FADE_START_M: f32 = 340.0;
 
 /// Where a chimney flue tops out, reported by `add_chimneys` for every stack
 /// whether or not it ends up smoking, plus the stack's stable hash.
@@ -213,6 +221,17 @@ pub(super) fn animate_chimney_smoke(
     for (smoke, mesh_handle) in &smoke {
         let mut puffs = Vec::with_capacity(smoke.plumes.len() * PUFFS_PER_PLUME);
         for plume in &smoke.plumes {
+            // The distance fog is opaque well before SMOKE_VISIBLE_RANGE_M;
+            // a plume past it contributes a couple of invisible pixels for
+            // six sorted, blended quads. Fade alpha out toward the cutoff so
+            // the boundary never pops.
+            let plume_distance_sq = plume.top.distance_squared(camera_position);
+            if plume_distance_sq > SMOKE_VISIBLE_RANGE_M * SMOKE_VISIBLE_RANGE_M {
+                continue;
+            }
+            let range_fade = ((SMOKE_VISIBLE_RANGE_M - plume_distance_sq.sqrt())
+                / (SMOKE_VISIBLE_RANGE_M - SMOKE_FADE_START_M))
+                .clamp(0.0, 1.0);
             let drift = plume_drift(weather_wind, weather_gust, elapsed, plume);
             let across = drift.perp().normalize_or_zero();
             for index in 0..PUFFS_PER_PLUME {
@@ -260,6 +279,7 @@ pub(super) fn animate_chimney_smoke(
                         * fade_in
                         * fade_out
                         * heat
+                        * range_fade
                         * (1.0 - precipitation * 0.28),
                     tint: plume.tint,
                     cell: [
@@ -342,6 +362,19 @@ mod tests {
             .add_systems(Update, animate_chimney_smoke);
         app.update();
         app
+    }
+
+    /// The production cull's twin: plumes whose flue top is inside
+    /// [`SMOKE_VISIBLE_RANGE_M`] of the camera make quads, the rest are the
+    /// fog's problem.
+    fn visible_plumes(smoke: &ChimneySmoke, camera: Vec3) -> usize {
+        smoke
+            .plumes
+            .iter()
+            .filter(|plume| {
+                plume.top.distance_squared(camera) <= SMOKE_VISIBLE_RANGE_M * SMOKE_VISIBLE_RANGE_M
+            })
+            .count()
     }
 
     fn smoke_mesh_vertices(app: &mut App) -> usize {
@@ -460,7 +493,16 @@ mod tests {
             .query::<(&ChimneySmoke, &Mesh3d)>()
             .single(world)
             .expect("the city spawns exactly one smoke batch");
-        let expected_vertices = smoke.plumes.len() * PUFFS_PER_PLUME * 4;
+        // Only plumes inside the visible range make quads; the fog owns the
+        // rest (2026-07 perf work). The camera stands mid-city so the cull
+        // must both keep a real skyline and actually drop the far half.
+        let visible = visible_plumes(smoke, Vec3::new(0.0, 40.0, 120.0));
+        assert!(visible > 0, "a mid-city camera sees smoke");
+        assert!(
+            visible < smoke.plumes.len(),
+            "the far side of the city must be culled"
+        );
+        let expected_vertices = visible * PUFFS_PER_PLUME * 4;
         let handle = mesh_handle.0.clone();
         let mesh = world
             .resource::<Assets<Mesh>>()
@@ -510,7 +552,8 @@ mod tests {
             .query::<&ChimneySmoke>()
             .single(world)
             .expect("the city spawns exactly one smoke batch");
-        let daytime_vertices = smoke.plumes.len() * PUFFS_PER_PLUME * 4;
+        let daytime_vertices =
+            visible_plumes(smoke, Vec3::new(0.0, 40.0, 120.0)) * PUFFS_PER_PLUME * 4;
         assert_eq!(smoke_mesh_vertices(&mut app), daytime_vertices);
 
         app.insert_resource(WorldClockState {

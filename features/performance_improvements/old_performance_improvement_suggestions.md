@@ -1,6 +1,15 @@
 # Performance: 1500 actors, and they walk
 
-Status: proposed. No code written yet.
+Status: superseded — see `findings.md` (2026-07-23), the measured overnight
+session. Scorecard against this document: items 1, 2 and 8 had already
+landed before that night; 9 and the spirit of 5/10 landed during it (as
+change-detection gating and per-view culling rather than the exact shapes
+proposed here); 4 (the shared spatial grid), 3 (flatten the hierarchy) and
+5 (pool the UI nodes) remain the standing plan for 1500. The night's biggest
+wins — the wet-material invalidation bug, the city-wide batch AABBs, the
+interior shadow views — were things this document never suspected.
+
+Status then: proposed. No code written yet.
 
 ## Goal
 

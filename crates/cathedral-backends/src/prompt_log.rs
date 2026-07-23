@@ -12,11 +12,72 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::OnceLock,
+    thread,
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use cathedral_sim::{SchedulerEvent, py_round};
 use serde::Serialize;
+
+/// The archive's filesystem work rides one shared writer thread: `record` is
+/// called from the engine pump on the game's main thread, and a slow disk or a
+/// dirty-page flush must never lengthen a frame. The channel's FIFO preserves
+/// the filename contract's ordering; failures still print, from the writer.
+enum WriteJob {
+    Pair {
+        directory: PathBuf,
+        base: String,
+        json: String,
+        markdown: String,
+    },
+    /// Replies when every job queued before it has been written.
+    Flush(crossbeam_channel::Sender<()>),
+}
+
+fn writer() -> &'static crossbeam_channel::Sender<WriteJob> {
+    static WRITER: OnceLock<crossbeam_channel::Sender<WriteJob>> = OnceLock::new();
+    WRITER.get_or_init(|| {
+        let (sender, receiver) = crossbeam_channel::unbounded::<WriteJob>();
+        thread::Builder::new()
+            .name("cathedral-prompt-log".into())
+            .spawn(move || {
+                for job in receiver {
+                    match job {
+                        WriteJob::Pair {
+                            directory,
+                            base,
+                            json,
+                            markdown,
+                        } => {
+                            if let Err(error) = write_pair_files(&directory, &base, json, markdown)
+                            {
+                                eprintln!("[smart actors] prompt log write failed: {error}");
+                            }
+                        }
+                        WriteJob::Flush(done) => {
+                            let _ = done.send(());
+                        }
+                    }
+                }
+            })
+            .expect("the prompt-log writer thread spawns");
+        // `Drop` covers a normal teardown, but the drive watchdog exits via
+        // `std::process::exit` (no destructors); atexit still runs there, so
+        // the archive stays complete for everything short of a hard abort.
+        unsafe {
+            libc::atexit(flush_at_exit);
+        }
+        sender
+    })
+}
+
+extern "C" fn flush_at_exit() {
+    let (done, wait) = crossbeam_channel::bounded(1);
+    if writer().send(WriteJob::Flush(done)).is_ok() {
+        let _ = wait.recv_timeout(std::time::Duration::from_secs(5));
+    }
+}
 
 /// One archived exchange — successes and failures alike (`scheduler.py:205-213`).
 #[derive(Debug, Clone, PartialEq)]
@@ -100,6 +161,16 @@ impl std::fmt::Debug for PromptLog {
     }
 }
 
+impl Drop for PromptLog {
+    fn drop(&mut self) {
+        // The archive is a contract with outside tooling: whatever was queued
+        // must be on disk before the log's owner (and then the process) ends.
+        if self.directory.is_some() {
+            self.flush();
+        }
+    }
+}
+
 impl PromptLog {
     /// `model` is the prompt log's `meta.model`: the provider's model name, or
     /// `"fake"` / `"injected"` (`server.py:534-543`).
@@ -160,8 +231,37 @@ impl PromptLog {
             error: exchange.error.as_deref(),
         };
 
-        if let Err(error) = write_pair(&directory, &base, exchange, meta) {
-            eprintln!("[smart actors] prompt log write failed: {error}");
+        let markdown = markdown(exchange, &meta);
+        let record = Record {
+            prompt: &exchange.prompt,
+            answer: exchange.answer.as_deref(),
+            meta,
+        };
+        // `ensure_ascii=False, indent=2` + a trailing newline: raw UTF-8, like
+        // the markdown character sheet inside the prompt itself.
+        let mut json = match serde_json::to_string_pretty(&record) {
+            Ok(json) => json,
+            Err(error) => {
+                eprintln!("[smart actors] prompt log write failed: {error}");
+                return;
+            }
+        };
+        json.push('\n');
+        let _ = writer().send(WriteJob::Pair {
+            directory,
+            base,
+            json,
+            markdown,
+        });
+    }
+
+    /// Blocks until every exchange recorded so far is on disk. The archive is
+    /// a filesystem contract read by outside tooling; call this before the
+    /// process ends (`Drop` does) or before a test inspects the directory.
+    pub fn flush(&self) {
+        let (done, wait) = crossbeam_channel::bounded(1);
+        if writer().send(WriteJob::Flush(done)).is_ok() {
+            let _ = wait.recv();
         }
     }
 
@@ -174,26 +274,13 @@ impl PromptLog {
     }
 }
 
-fn write_pair(
+fn write_pair_files(
     directory: &Path,
     base: &str,
-    exchange: &PromptExchange,
-    meta: Meta<'_>,
+    json: String,
+    markdown: String,
 ) -> std::io::Result<()> {
     fs::create_dir_all(directory)?;
-
-    let markdown = markdown(exchange, &meta);
-
-    // `ensure_ascii=False, indent=2` + a trailing newline: raw UTF-8, like the
-    // markdown character sheet inside the prompt itself.
-    let record = Record {
-        prompt: &exchange.prompt,
-        answer: exchange.answer.as_deref(),
-        meta,
-    };
-    let mut json = serde_json::to_string_pretty(&record)
-        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
-    json.push('\n');
     fs::write(directory.join(format!("{base}.json")), json)?;
     fs::write(directory.join(format!("{base}.md")), markdown)?;
     Ok(())
@@ -413,9 +500,11 @@ mod tests {
         /// `PromptLogTests.record` with its default arguments.
         fn record(&mut self) {
             self.log.record(&exchange());
+            self.log.flush();
         }
 
         fn names(&self, extension: &str) -> Vec<String> {
+            self.log.flush();
             let mut names: Vec<String> = fs::read_dir(&self.directory)
                 .expect("archive directory")
                 .flatten()
@@ -427,6 +516,7 @@ mod tests {
         }
 
         fn read(&self, name: &str) -> String {
+            self.log.flush();
             fs::read_to_string(self.directory.join(name)).expect("archived file")
         }
     }
@@ -491,6 +581,7 @@ mod tests {
             prompt: "Ilse sa: \"Hej då\"".to_string(),
             ..exchange()
         });
+        fixture.log.flush();
 
         let raw = fixture.read("2026-07-13_09_52_30__00__k0fb1__Ilse_prompt.json");
         let keys: Vec<&str> = raw
@@ -545,6 +636,7 @@ mod tests {
             error: Some("TimeoutError('provider')".to_string()),
             ..exchange()
         });
+        fixture.log.flush();
 
         let base = "2026-07-13_09_52_30__00__k0fb1__Ilse_prompt";
         let markdown = fixture.read(&format!("{base}.md"));
@@ -572,6 +664,7 @@ mod tests {
             actor_name: "Olof Skötkonung".to_string(),
             ..exchange()
         });
+        fixture.log.flush();
 
         assert_eq!(
             fixture.names(".md"),
@@ -624,6 +717,7 @@ mod tests {
             duration_seconds: 2.0,
             ..exchange()
         });
+        fixture.log.flush();
         let markdown = fixture.read("2026-07-13_09_52_30__00__k0fb1__Ilse_prompt.md");
         assert!(
             markdown.contains("- duration_seconds: 2.0"),
@@ -678,6 +772,7 @@ mod tests {
             prompt: "Ilse sa: \"Hej då\"".to_string(),
             ..exchange()
         });
+        fixture.log.flush();
 
         assert_eq!(
             fixture.read("2026-07-13_09_52_30__00__k0fb1__Ilse_prompt.json"),

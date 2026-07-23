@@ -697,29 +697,26 @@ pub fn update_smart_actor_hud(
         2.0 - state.voice_loader_phase
     };
     for (mut node, mut color) in &mut loader {
-        match selected_state {
+        let (left, width, next_color) = match selected_state {
             VoiceModelUiState::Checking
             | VoiceModelUiState::Loading
-            | VoiceModelUiState::Transcribing => {
-                node.left = percent(travel * 72.0);
-                node.width = percent(28);
-                color.0 = DEGRADED;
-            }
-            VoiceModelUiState::Ready => {
-                node.left = percent(0);
-                node.width = percent(100);
-                color.0 = ONLINE;
-            }
-            VoiceModelUiState::NotLoaded => {
-                node.left = percent(0);
-                node.width = percent(18);
-                color.0 = MUTED;
-            }
+            | VoiceModelUiState::Transcribing => (percent(travel * 72.0), percent(28), DEGRADED),
+            VoiceModelUiState::Ready => (percent(0), percent(100), ONLINE),
+            VoiceModelUiState::NotLoaded => (percent(0), percent(18), MUTED),
             VoiceModelUiState::Failed | VoiceModelUiState::Unavailable => {
-                node.left = percent(0);
-                node.width = percent(100);
-                color.0 = OFFLINE;
+                (percent(0), percent(100), OFFLINE)
             }
+        };
+        // Steady states repeat the same values; writing them anyway would
+        // dirty UI layout every frame.
+        if node.left != left {
+            node.left = left;
+        }
+        if node.width != width {
+            node.width = width;
+        }
+        if color.0 != next_color {
+            color.0 = next_color;
         }
     }
     let toast_text = state
@@ -746,41 +743,58 @@ pub fn update_smart_actor_hud(
     ) in &mut views
     {
         if connection.is_some() {
-            text.0 = state.connection.label().into();
-            if let Some(color) = color.as_deref_mut() {
-                color.0 = state.connection.color();
+            let label = state.connection.label();
+            if text.0 != label {
+                text.0 = label.into();
+            }
+            if let Some(color) = color.as_mut() {
+                let next = state.connection.color();
+                if color.0 != next {
+                    color.0 = next;
+                }
             }
         } else if detail.is_some() {
-            text.0 = state.connection_detail.clone();
-        } else if inventory.is_some() {
-            set_optional_text(&state.inventory, &mut text, node.as_deref_mut());
-        } else if offer.is_some() {
-            set_optional_text(&state.offer_card, &mut text, node.as_deref_mut());
-        } else if hint.is_some() {
-            set_optional_text(&state.focus_hint, &mut text, node.as_deref_mut());
-        } else if player_transcript.is_some() {
-            set_optional_text(player_transcript_text, &mut text, node.as_deref_mut());
-        } else if voice_panel.is_some() {
-            if let Some(color) = color.as_deref_mut() {
-                color.0 = selected_state.color();
+            if text.0 != state.connection_detail {
+                text.0 = state.connection_detail.clone();
             }
-            set_optional_text(&voice_panel_text, &mut text, node.as_deref_mut());
+        } else if inventory.is_some() {
+            set_optional_text(&state.inventory, &mut text, node.as_mut());
+        } else if offer.is_some() {
+            set_optional_text(&state.offer_card, &mut text, node.as_mut());
+        } else if hint.is_some() {
+            set_optional_text(&state.focus_hint, &mut text, node.as_mut());
+        } else if player_transcript.is_some() {
+            set_optional_text(player_transcript_text, &mut text, node.as_mut());
+        } else if voice_panel.is_some() {
+            if let Some(color) = color.as_mut() {
+                let next = selected_state.color();
+                if color.0 != next {
+                    color.0 = next;
+                }
+            }
+            set_optional_text(&voice_panel_text, &mut text, node.as_mut());
         } else if toast.is_some() {
-            set_optional_text(toast_text, &mut text, node.as_deref_mut());
+            set_optional_text(toast_text, &mut text, node.as_mut());
         }
     }
 }
 
-fn set_optional_text(value: &str, text: &mut Text, node: Option<&mut Node>) {
+/// Takes the `Mut` wrappers themselves: coercing to `&mut Text`/`&mut Node`
+/// at the call site would already flag both components changed every frame,
+/// making the compares below pointless.
+fn set_optional_text(value: &str, text: &mut Mut<Text>, node: Option<&mut Mut<Node>>) {
     if text.0 != value {
         text.0 = value.into();
     }
     if let Some(node) = node {
-        node.display = if value.is_empty() {
+        let display = if value.is_empty() {
             Display::None
         } else {
             Display::Flex
         };
+        if node.display != display {
+            node.display = display;
+        }
     }
 }
 

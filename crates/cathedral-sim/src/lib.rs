@@ -318,9 +318,13 @@ pub const SOCIAL_PULL_RADIUS_M: f64 = 8.0;
 /// Rung 12 — an idle actor wanders no further than this from its home/post.
 pub const WANDER_LEASH_M: f64 = 6.0;
 /// Bounds the per-poll movement catch-up. A huge `now` jump — a resume from a
-/// long pause — must not spin through thousands of slices: past this many, the
-/// movement clock snaps forward and the backlog is dropped rather than walked.
-pub const MAX_MOVEMENT_CATCHUP_SLICES: usize = 64;
+/// long pause, or a frame hitch — must not spin through hundreds of slices in
+/// one poll and amplify the very stall it is recovering from: past this many,
+/// the movement clock snaps forward to `now` and the owed backlog is dropped
+/// rather than walked. Eight slices is 0.4 s of catch-up — far more than a
+/// 60 Hz frame ever accrues, so it bites only a real stall, where a mover
+/// skipping a step is invisible.
+pub const MAX_MOVEMENT_CATCHUP_SLICES: usize = 8;
 /// Bounds the per-poll bell catch-up, the same situation as
 /// [`MAX_MOVEMENT_CATCHUP_SLICES`]: a huge `now` jump must not ring every
 /// office it skipped as one wall of bells — past this many crossings, only the

@@ -80,6 +80,7 @@ pub fn init() {
     {
         Ok(file) => {
             let _ = WRITER.set(Mutex::new(BufWriter::new(file)));
+            spawn_flusher();
         }
         Err(error) => eprintln!("[session] could not open logs.jsonl: {error}"),
     }
@@ -139,10 +140,52 @@ fn write_record(
     let Ok(mut writer) = writer.lock() else {
         return;
     };
-    // One flushed line per record, so an abort or crash loses nothing.
+    // Buffered on the emitting thread; a background ticker (plus an atexit
+    // hook) flushes within FLUSH_INTERVAL. Failures still flush per line so
+    // an abort right after an ERROR loses nothing, and the rare-but-load-
+    // bearing sources — drive evidence, the session marker — keep the old
+    // line-durability contract (a parsed logs.jsonl is complete on its own).
+    // Only the chatty INFO streams (game, engine, speech workers) stop paying
+    // one write+flush syscall pair per line on the main thread.
     if serde_json::to_writer(&mut *writer, &Value::Object(record)).is_ok() {
         let _ = writer.write_all(b"\n");
+        if level != "INFO" || source == "drive" || source == "session" {
+            let _ = writer.flush();
+        }
+    }
+}
+
+/// Flush cadence for buffered INFO lines. Short enough that tailing
+/// `logs.jsonl` still feels live; long enough that logging bursts cost the
+/// main thread no syscalls.
+const FLUSH_INTERVAL: std::time::Duration = std::time::Duration::from_millis(250);
+
+fn flush_now() {
+    if let Some(writer) = WRITER.get()
+        && let Ok(mut writer) = writer.lock()
+    {
         let _ = writer.flush();
+    }
+}
+
+extern "C" fn flush_at_exit() {
+    flush_now();
+}
+
+fn spawn_flusher() {
+    let _ = std::thread::Builder::new()
+        .name("cathedral-log-flush".into())
+        .spawn(|| {
+            loop {
+                std::thread::sleep(FLUSH_INTERVAL);
+                flush_now();
+            }
+        });
+    // A normal `main` return and `std::process::exit` both run atexit
+    // handlers; only a hard abort can now lose more than the last interval of
+    // INFO lines (levels above INFO still flush inline).
+    unsafe {
+        libc::atexit(flush_at_exit);
     }
 }
 

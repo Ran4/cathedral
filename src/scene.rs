@@ -16,7 +16,7 @@ use bevy::{
 };
 
 use crate::{
-    controller::CollisionWorld,
+    controller::{CollisionWorld, PlayerCamera},
     materials::{FLOOR_TEXTURE_SPAN_METERS, load_repeating_texture},
     weather::WeatherRoseWindow,
 };
@@ -32,7 +32,49 @@ pub struct Sun;
 impl Plugin for CathedralPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, (build_cathedral, build_daylight_atmosphere))
-            .add_systems(Update, add_fog_to_new_cameras);
+            .add_systems(Update, (add_fog_to_new_cameras, gate_interior_shadow_lights));
+    }
+}
+
+/// Interior shadow caster, gated by player distance.
+///
+/// Every shadow-casting light renders its shadow views each frame no matter
+/// how far away it is (the camera has no far plane, so the light volume is
+/// always "in frustum"): the cathedral's 2 spot + 3 point casters cost 20
+/// auxiliary render-graph views ≈ 5 ms of render-thread CPU per frame, paid
+/// even at the far end of the city. Shadows only read when the interior is
+/// on screen, so switch them off beyond a per-light distance (small
+/// hysteresis so the boundary never flickers).
+#[derive(Component)]
+struct InteriorShadowLight {
+    enable_within_m: f32,
+}
+
+fn gate_interior_shadow_lights(
+    cameras: Query<&GlobalTransform, With<PlayerCamera>>,
+    mut spots: Query<(&InteriorShadowLight, &GlobalTransform, &mut SpotLight)>,
+    mut points: Query<(&InteriorShadowLight, &GlobalTransform, &mut PointLight)>,
+) {
+    let Ok(camera) = cameras.single() else { return };
+    let camera_position = camera.translation();
+    let gate = |gate: &InteriorShadowLight,
+                    transform: &GlobalTransform,
+                    enabled: bool|
+     -> Option<bool> {
+        let distance = transform.translation().distance(camera_position);
+        let threshold = gate.enable_within_m + if enabled { 15.0 } else { 0.0 };
+        let next = distance < threshold;
+        (next != enabled).then_some(next)
+    };
+    for (light_gate, transform, mut light) in &mut spots {
+        if let Some(next) = gate(light_gate, transform, light.shadow_maps_enabled) {
+            light.shadow_maps_enabled = next;
+        }
+    }
+    for (light_gate, transform, mut light) in &mut points {
+        if let Some(next) = gate(light_gate, transform, light.shadow_maps_enabled) {
+            light.shadow_maps_enabled = next;
+        }
     }
 }
 
@@ -1147,6 +1189,9 @@ fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &Ca
             shadow_maps_enabled: true,
             ..default()
         },
+        InteriorShadowLight {
+            enable_within_m: 210.0,
+        },
         Transform::from_xyz(-2.0, 60.0, -21.0).looking_at(Vec3::new(2.0, 0.0, -25.0), Vec3::Z),
     ));
     commands.spawn((
@@ -1159,6 +1204,9 @@ fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &Ca
             outer_angle: 0.72,
             shadow_maps_enabled: true,
             ..default()
+        },
+        InteriorShadowLight {
+            enable_within_m: 185.0,
         },
         Transform::from_xyz(0.0, 18.0, -70.0).looking_at(Vec3::new(0.0, 2.0, -82.0), Vec3::Y),
     ));
@@ -1180,7 +1228,7 @@ fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &Ca
             &material.candle,
             Transform::from_xyz(0.0, 17.3, z).with_scale(Vec3::splat(0.24)),
         );
-        commands.spawn((
+        let mut chandelier = commands.spawn((
             PointLight {
                 color: Color::srgb(1.0, 0.56, 0.24),
                 intensity: 55_000.0,
@@ -1191,6 +1239,14 @@ fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &Ca
             },
             Transform::from_xyz(0.0, 17.2, z),
         ));
+        if index % 2 == 0 {
+            // The nave's own sightline is ~152 m (west door to apse), so the
+            // gate must sit beyond it: shadows may only switch where the
+            // interior cannot be on screen.
+            chandelier.insert(InteriorShadowLight {
+                enable_within_m: 175.0,
+            });
+        }
     }
 
     for side in [-1.0, 1.0] {

@@ -381,11 +381,20 @@ fn update_map_markers(
     let uv = world_to_uv(transform.translation.x, transform.translation.z);
     let rotation = marker_rotation(controller.yaw());
 
+    let left = percent(uv.x * 100.0);
+    let top = percent(uv.y * 100.0);
+    let translation = Val2::percent(-50.0, -50.0);
     for (mut node, mut ui_transform) in &mut markers {
-        node.left = percent(uv.x * 100.0);
-        node.top = percent(uv.y * 100.0);
-        ui_transform.rotation = rotation;
-        ui_transform.translation = Val2::percent(-50.0, -50.0);
+        // A stationary player repeats the same values; writing them anyway
+        // would dirty UI layout for both maps every frame.
+        if node.left != left || node.top != top {
+            node.left = left;
+            node.top = top;
+        }
+        if ui_transform.rotation != rotation || ui_transform.translation != translation {
+            ui_transform.rotation = rotation;
+            ui_transform.translation = translation;
+        }
     }
 }
 

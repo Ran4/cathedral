@@ -12,9 +12,11 @@
 //! domain events), then the speech router, then the event fan-out (which
 //! acquires the floor that gates the *next* poll's scheduler), then the
 //! snapshot. Player commands that mutate the world flush their own events and
-//! snapshot inline, *before* their `CommandResult` — a position update can
-//! succeed while the action it came with fails, and that revision bump has to
-//! reach the game either way (`server.py:1013-1025`).
+//! snapshot inline, *before* their `CommandResult`, so a side effect that landed
+//! reaches the game even when the action it came with fails
+//! (`server.py:1013-1025`). A player *position* update is the exception: it
+//! rides the hot channel and no longer bumps the revision at all
+//! ([`World::update_positions`]), so it neither needs nor triggers that flush.
 
 use std::{
     collections::{BTreeSet, VecDeque},
@@ -675,6 +677,14 @@ pub struct Engine {
     /// Empty and inert unless the host supplied a nav graph
     /// (`features/movement/03_the_ladder.md`).
     round: Round,
+    /// The `now` at or after which the deterministic round may tick again. The
+    /// ladder and its services are a 20 Hz behaviour, not a per-frame one
+    /// ([`MOVEMENT_TICK_SECONDS`]): running its ~13 whole-cast passes on every
+    /// render frame is pure waste at 60 Hz. The dt/office math inside
+    /// [`round::tick`] spans real elapsed time (`round.last_game_days`,
+    /// `round.last_office_now`), so a coarser cadence changes when it runs, never
+    /// how much time it accounts for.
+    next_round_tick_at: f64,
     /// The round's lamp revision as of the last `Lamps` publish, so the set is
     /// resent exactly when something changed. 0 = never sent; the seed puts the
     /// round at 1, so the first poll always announces the posts.
@@ -838,6 +848,9 @@ impl Engine {
             // The first movement span opens at construction, mirroring the clock.
             movement_now: now,
             round,
+            // The first poll's `now` is >= this, so the round ticks on the first
+            // poll exactly as it did every poll before the gate.
+            next_round_tick_at: now,
             lamp_revision_sent: 0,
             startup_diagnostics,
             ready_emitted: false,
@@ -901,7 +914,16 @@ impl Engine {
         // `tick_movement` walks and buffers any well sounds into `world.events`,
         // which `flush` fans out below — so, like the mover pipeline, it needs a
         // nav graph and is otherwise inert.
-        if let Some(nav) = self.config.nav.clone() {
+        //
+        // Gated to at most one tick per movement slice (20 Hz): a 60 Hz host
+        // would otherwise pay the round's ~13 whole-cast passes three times per
+        // slice for nothing. The real elapsed span is preserved — `round::tick`
+        // reads game-days and office crossings off its own stored anchors — so a
+        // skipped poll costs no simulated time, only a re-evaluation.
+        if now >= self.next_round_tick_at
+            && let Some(nav) = self.config.nav.clone()
+        {
+            self.next_round_tick_at = now + MOVEMENT_TICK_SECONDS;
             // Everyone in a warm exchange (each pair warm for the same 30 s the
             // stage reserves the player's partner a seat) keeps their round on
             // hold: no new errand walks them away mid-exchange.

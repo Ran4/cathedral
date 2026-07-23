@@ -23,6 +23,7 @@ use std::{
 
 use bevy::{
     asset::RenderAssetUsages,
+    camera::visibility::VisibilityRange,
     mesh::{Indices, PrimitiveTopology},
     prelude::*,
 };
@@ -7275,6 +7276,59 @@ fn stable_hash(text: &str) -> u32 {
     })
 }
 
+/// Tile edge for the static city batches. One mesh per material previously
+/// spanned the whole 1.2×1.0 km map, so its AABB defeated every culling pass:
+/// the full city was vertex-processed in the main view, in all four sun
+/// cascades, and in every local shadow view, every frame (measured at ~6.8 M
+/// vertex invocations per pass on the 2026-07 profiling night). Splitting each
+/// batch into ground tiles keeps the shared material (draws still batch) while
+/// giving the culling passes AABBs small enough to actually reject.
+const BATCH_TILE_M: f32 = 128.0;
+
+/// Distance fade for the small-detail batches, by batch name. The distance
+/// fog is fully opaque past ~300 m, so geometry that only reads at close
+/// range can stop being drawn well before that without a visible pop. The
+/// margins are generous because a 128 m tile's AABB center can sit ~90 m
+/// behind its nearest corner.
+fn detail_fade_range(name: &str) -> Option<VisibilityRange> {
+    const FINE: [&str; 12] = [
+        "Street props",
+        "Laundry",
+        "strung ",
+        "Hoist",
+        "Shopfront awning",
+        "Open balconies",
+        "Yard stairs",
+        "Passage posted notices",
+        "Passage lantern",
+        "Bellfoot notices",
+        "Bellfoot lantern",
+        "Square arcade posts",
+    ];
+    const MEDIUM: [&str; 4] = [
+        "Ombreval doors and shutters",
+        "Ombreval reveals, sills and lintels",
+        "Ombreval timber framing",
+        "Ombreval windows",
+    ];
+    let fade = |start: f32, end: f32| VisibilityRange {
+        start_margin: 0.0..0.0,
+        end_margin: start..end,
+        use_aabb: true,
+    };
+    // `use_aabb` gauges against the AABB *center*, so a 128 m tile's nearest
+    // corner sits up to ~90 m inside the printed band — these numbers are
+    // chosen so the worst-case corner still fades where the fog has already
+    // taken most of the contrast.
+    if FINE.iter().any(|prefix| name.starts_with(prefix)) {
+        return Some(fade(330.0, 390.0));
+    }
+    if MEDIUM.iter().any(|prefix| name.starts_with(prefix)) {
+        return Some(fade(430.0, 490.0));
+    }
+    None
+}
+
 fn spawn_batch(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
@@ -7285,12 +7339,54 @@ fn spawn_batch(
     if data.is_empty() {
         return;
     }
-    commands.spawn((
-        Name::new(name.into()),
-        Mesh3d(meshes.add(data.into_mesh())),
-        MeshMaterial3d(material.clone()),
-        Transform::default(),
-    ));
+    let name = name.into();
+    let fade = detail_fade_range(&name);
+    for (tile_x, tile_z, tile) in split_batch_into_tiles(data, BATCH_TILE_M) {
+        let mut entity = commands.spawn((
+            Name::new(format!("{name} [{tile_x},{tile_z}]")),
+            Mesh3d(meshes.add(tile.into_mesh())),
+            MeshMaterial3d(material.clone()),
+            Transform::default(),
+        ));
+        if let Some(fade) = fade.clone() {
+            entity.insert(fade);
+        }
+    }
+}
+
+/// Buckets a batch's triangles into ground tiles by centroid. Vertices are
+/// re-indexed per tile; the builder never shares vertices between triangles,
+/// so this duplicates nothing in practice.
+fn split_batch_into_tiles(data: MeshData, tile_m: f32) -> Vec<(i32, i32, MeshData)> {
+    let mut tiles: BTreeMap<(i32, i32), (MeshData, HashMap<u32, u32>)> = BTreeMap::new();
+    for triangle in data.indices.chunks_exact(3) {
+        let centroid = triangle
+            .iter()
+            .map(|&index| Vec3::from_array(data.positions[index as usize]))
+            .sum::<Vec3>()
+            / 3.0;
+        let key = (
+            (centroid.x / tile_m).floor() as i32,
+            (centroid.z / tile_m).floor() as i32,
+        );
+        let (tile, remap) = tiles.entry(key).or_default();
+        for &index in triangle {
+            let mapped = *remap.entry(index).or_insert_with(|| {
+                let next = tile.positions.len() as u32;
+                let source = index as usize;
+                tile.positions.push(data.positions[source]);
+                tile.normals.push(data.normals[source]);
+                tile.uvs.push(data.uvs[source]);
+                tile.colors.push(data.colors[source]);
+                next
+            });
+            tile.indices.push(mapped);
+        }
+    }
+    tiles
+        .into_iter()
+        .map(|((tile_x, tile_z), (tile, _))| (tile_x, tile_z, tile))
+        .collect()
 }
 
 fn spawn_box_named(
@@ -7737,9 +7833,13 @@ mod tests {
             .iter(world)
             .count();
         assert!(count > 150, "expected authored details, got {count}");
+        // Each material batch is split into ~128 m ground tiles so culling
+        // works (2026-07 perf work): ~2,600 tiles today. The ceiling guards
+        // against regressing to per-feature entities (tens of thousands), not
+        // against tiles.
         assert!(
-            count < 1_500,
-            "cadastral geometry should stay batched, got {count}"
+            count < 4_000,
+            "cadastral geometry should stay batched into tiles, got {count}"
         );
     }
 

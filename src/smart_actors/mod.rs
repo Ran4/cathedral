@@ -628,12 +628,13 @@ pub struct InjectPlayerTranscript {
 /// The engine's two render-only "hot" channels, bundled so `drain_bridge_messages`
 /// stays under Bevy's 16-parameter system limit.
 #[derive(SystemParam)]
-struct HotChannels<'w> {
+struct HotChannels<'w, 's> {
     movement: ResMut<'w, model::MovementInbox>,
     lamps: ResMut<'w, lamps::CityLamps>,
     weather: ResMut<'w, WorldWeatherState>,
     lightning: MessageWriter<'w, WeatherLightning>,
     time: Res<'w, Time>,
+    drain_timer: Local<'s, DrainTimer>,
 }
 
 #[derive(SystemParam)]
@@ -711,11 +712,30 @@ fn drain_bridge_messages(
     // here gives the same monotonic, gap-free stream the envelope did.
     mut message_seq: Local<u64>,
 ) {
+    let drain_started = std::time::Instant::now();
     // Resource insertions/removals are deferred. Track what this drain pass
     // has queued so several buffered engine messages cannot spawn several
     // microphone workers before commands are applied.
     let mut microphone_present = microphone.is_some();
+    // Drain everything first: after a long frame the channel can hold several
+    // polls' worth of messages, and a full Snapshot is a whole-world
+    // replacement — validating each one costs an O(cast) rebuild. Only
+    // *strictly consecutive* snapshots coalesce (keep the last of the run): a
+    // message between two snapshots — a speech line, a gesture — may
+    // reference actors the earlier snapshot introduced, so it must be
+    // processed against that snapshot's mirror, not a newer one.
+    let mut events = Vec::new();
     while let Some(event) = inbox.try_recv() {
+        events.push(event);
+    }
+    let is_snapshot: Vec<bool> = events
+        .iter()
+        .map(|event| {
+            matches!(event, bridge::BridgeEvent::Message(message)
+                if matches!(**message, EngineMessage::Snapshot(_)))
+        })
+        .collect();
+    for (event_index, event) in events.into_iter().enumerate() {
         match event {
             bridge::BridgeEvent::ProcessStarted => {
                 runtime.connected = true;
@@ -748,6 +768,9 @@ fn drain_bridge_messages(
                     continue;
                 }
                 *message_seq += 1;
+                if is_snapshot[event_index] && is_snapshot.get(event_index + 1) == Some(&true) {
+                    continue;
+                }
                 process_engine_message(
                     *message,
                     *message_seq,
@@ -797,6 +820,37 @@ fn drain_bridge_messages(
             }
         }
     }
+
+    // Rolling attribution (the pose system's pattern): the mirror rebuild on
+    // snapshot arrival is the O(cast) cost this drain can hide.
+    let elapsed_us = drain_started.elapsed().as_secs_f64() * 1e6;
+    let now = hot.time.elapsed_secs_f64();
+    let drain_timer = &mut *hot.drain_timer;
+    drain_timer.accum_us += elapsed_us;
+    drain_timer.max_us = drain_timer.max_us.max(elapsed_us);
+    drain_timer.frames += 1;
+    if now - drain_timer.window_start >= 5.0 {
+        if drain_timer.window_start > 0.0 {
+            info!(
+                "[bridge drain] avg {:.0} us, max {:.0} us over {} frames",
+                drain_timer.accum_us / f64::from(drain_timer.frames.max(1)),
+                drain_timer.max_us,
+                drain_timer.frames,
+            );
+        }
+        *drain_timer = DrainTimer {
+            window_start: now,
+            ..Default::default()
+        };
+    }
+}
+
+#[derive(Default)]
+struct DrainTimer {
+    window_start: f64,
+    accum_us: f64,
+    max_us: f64,
+    frames: u32,
 }
 
 /// One authoritative message, typed.
@@ -809,7 +863,11 @@ fn drain_bridge_messages(
 fn process_engine_message(
     message: EngineMessage,
     message_seq: u64,
-    mirror: &mut model::WorldMirror,
+    // The `ResMut` wrapper, not `&mut WorldMirror`: coercing at the call site
+    // would DerefMut-flag the mirror on EVERY message (Clock and Weather
+    // arrive every frame), making every downstream `mirror.is_changed()` gate
+    // permanently hot. Only an accepted snapshot below may flag it.
+    mirror: &mut ResMut<model::WorldMirror>,
     runtime: &mut SmartActorRuntime,
     hud: &mut hud::SmartActorHudState,
     interaction: &mut interaction::InteractionState,
@@ -831,12 +889,12 @@ fn process_engine_message(
             // unrenderable — a sim bug, not a lost message, and there is no
             // resync left to ask for. The handshake simply never completes and
             // the HUD keeps saying so.
-            if accept_snapshot(mirror, runtime, hud, &snapshot) {
+            if accept_snapshot(&mut **mirror, runtime, hud, &snapshot) {
                 apply_ready_capabilities(runtime, hud, capabilities);
             }
         }
         EngineMessage::Snapshot(snapshot) => {
-            accept_snapshot(mirror, runtime, hud, &snapshot);
+            accept_snapshot(&mut **mirror, runtime, hud, &snapshot);
         }
         EngineMessage::Clock {
             day,
@@ -1046,7 +1104,7 @@ fn process_engine_message(
                     .iter()
                     .map(model::actor_id_from_sim)
                     .collect::<Vec<_>>(),
-                mirror,
+                &**mirror,
             );
             if let Some(text) = text {
                 hud.toast(text);

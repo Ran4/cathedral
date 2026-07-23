@@ -297,8 +297,16 @@ pub(crate) fn reconcile_hand_props(
     anchors: Query<(Entity, &HandAnchor)>,
     props: Query<(Entity, &HeldProp)>,
     flights: Query<&HandoverFlight>,
+    mut removed_flights: RemovedComponents<HandoverFlight>,
     mut poses: Query<(&ActorId, &mut BodyPoseState)>,
 ) {
+    // Hand contents only change with a snapshot or around a handover flight
+    // (its 0.3 s of existence, plus the landing frame where the flight
+    // component disappears). Every other frame this reconcile would rebuild
+    // three N-entry maps and re-flag every pose just to conclude nothing moved.
+    if !mirror.is_changed() && flights.is_empty() && removed_flights.read().next().is_none() {
+        return;
+    }
     // While a hand-over prop is still flying, the receiving hand stays empty —
     // reconcile would otherwise double the item for the flight's 0.3 s.
     let in_flight: HashSet<(ActorId, ItemId)> = flights

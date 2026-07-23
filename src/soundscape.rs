@@ -1400,7 +1400,9 @@ fn project_well_mechanism_activity(
     wells: Res<WellSoundState>,
     mut activity: ResMut<WellMechanismActivity>,
 ) {
-    *activity = wells.activity_at(time.elapsed_secs_f64());
+    // set_if_neq: an unconditional write would mark the resource changed
+    // every frame and defeat downstream change detection.
+    activity.set_if_neq(wells.activity_at(time.elapsed_secs_f64()));
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1831,6 +1833,9 @@ struct NpcTimer {
 struct NpcSoundState {
     actors: HashMap<String, NpcTimer>,
     next_global_at: f64,
+    /// Body sounds trigger on 45 s+ timers; scanning the whole cast (with a
+    /// String clone per actor) every frame bought nothing. 4 Hz is plenty.
+    next_scan_at: f64,
 }
 
 const DUSTY_WORK_ZONES: [(Vec2, f32); 4] = [
@@ -1853,6 +1858,10 @@ fn schedule_npc_body_sounds(
 ) {
     let Ok(player) = player.single() else { return };
     let now = time.elapsed_secs_f64();
+    if now < state.next_scan_at {
+        return;
+    }
+    state.next_scan_at = now + 0.25;
     let day = clock
         .as_deref()
         .filter(|clock| clock.present)
@@ -3362,6 +3371,19 @@ struct PlayingSoundscapeLoop {
     speed: f32,
 }
 
+/// Slow-moving crowd counts, refreshed at 2 Hz: which places hold how many
+/// people changes over seconds of walking, and each count is a full pass over
+/// the cast. Bed occupancy is computed lazily, at most once per bed per
+/// refresh window.
+#[derive(Default)]
+struct OccupancyCache {
+    next_refresh_at: f64,
+    wickmarket_population: usize,
+    lanthorn_occupants: usize,
+    saint_maren_occupants: usize,
+    bed_occupants: HashMap<u64, usize>,
+}
+
 #[allow(clippy::too_many_arguments)]
 fn update_virtualized_loops(
     mut commands: Commands,
@@ -3372,6 +3394,7 @@ fn update_virtualized_loops(
     beds: Option<Res<AreaBedGeometry>>,
     player: Query<&Transform, With<PlayerController>>,
     actors: Query<&GlobalTransform, With<ActorView>>,
+    mut occupancy: Local<OccupancyCache>,
     cart_views: Query<(&RoadCartView, &GlobalTransform)>,
     carts: Res<CartSoundState>,
     wells: Res<WellSoundState>,
@@ -3394,17 +3417,32 @@ fn update_virtualized_loops(
     let player_position = player.single().ok().map(|transform| transform.translation);
     let existing_keys: HashSet<u64> = playing.iter().map(|(_, state, _, _)| state.key).collect();
     let mut demands = Vec::new();
-    let wickmarket_population = actors
-        .iter()
-        .filter(|transform| {
-            transform
-                .translation()
-                .xz()
-                .distance_squared(WICKMARKET.xz())
-                < 58.0_f32.powi(2)
-        })
-        .take(3)
-        .count();
+    if now >= occupancy.next_refresh_at {
+        occupancy.next_refresh_at = now + 0.5;
+        occupancy.bed_occupants.clear();
+        occupancy.wickmarket_population = actors
+            .iter()
+            .filter(|transform| {
+                transform
+                    .translation()
+                    .xz()
+                    .distance_squared(WICKMARKET.xz())
+                    < 58.0_f32.powi(2)
+            })
+            .take(3)
+            .count();
+        (occupancy.lanthorn_occupants, occupancy.saint_maren_occupants) =
+            actors
+                .iter()
+                .fold((0_usize, 0_usize), |(lanthorn, maren), transform| {
+                    let position = transform.translation();
+                    (
+                        lanthorn + usize::from(inside_lanthorn_interior(position)),
+                        maren + usize::from(inside_saint_maren_congregation_area(position)),
+                    )
+                });
+    }
+    let wickmarket_population = occupancy.wickmarket_population;
 
     // The named-place beds come first: they decide which point sources the
     // listener is currently hearing through a screen rather than in the open.
@@ -3424,11 +3462,13 @@ fn update_virtualized_loops(
                 continue;
             }
             let occupants = if bed.schedule.needs_occupancy() {
-                actors
-                    .iter()
-                    .filter(|transform| beds.occupied_by(bed.area_id, transform.translation()))
-                    .take(8)
-                    .count()
+                *occupancy.bed_occupants.entry(bed.key).or_insert_with(|| {
+                    actors
+                        .iter()
+                        .filter(|transform| beds.occupied_by(bed.area_id, transform.translation()))
+                        .take(8)
+                        .count()
+                })
             } else {
                 0
             };
@@ -3544,16 +3584,10 @@ fn update_virtualized_loops(
         });
     }
 
-    let (lanthorn_occupants, saint_maren_occupants) =
-        actors
-            .iter()
-            .fold((0_usize, 0_usize), |(lanthorn, maren), transform| {
-                let position = transform.translation();
-                (
-                    lanthorn + usize::from(inside_lanthorn_interior(position)),
-                    maren + usize::from(inside_saint_maren_congregation_area(position)),
-                )
-            });
+    let (lanthorn_occupants, saint_maren_occupants) = (
+        occupancy.lanthorn_occupants,
+        occupancy.saint_maren_occupants,
+    );
     if let Some(listener) = player_position {
         if inside_lanthorn_interior(listener) {
             let descriptor = SoundscapeSound::LanthornNaveAir.descriptor();

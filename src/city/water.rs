@@ -240,10 +240,15 @@ pub(super) fn animate_well_mechanisms(
 
     for (part, mut transform) in &mut parts {
         let pose = poses[part.well.index()];
-        *transform = part.rest;
         if pose == MechanismPose::default() {
+            // An idle mechanism sits at rest; rewriting rest every frame
+            // would keep every part (and its subtree) change-flagged forever.
+            if *transform != part.rest {
+                *transform = part.rest;
+            }
             continue;
         }
+        *transform = part.rest;
 
         let sway_axis = part.axis.cross(Vec3::Y).normalize_or(Vec3::Z);
         match part.part {

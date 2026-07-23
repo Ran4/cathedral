@@ -17,7 +17,7 @@ use crate::{
     WALK_SPEED_MPS,
     areas::AreaMap,
     attention::DEFAULT_STAGE_RADIUS_M,
-    character::{Character, Presence, StatusKind},
+    character::{Character, Control, Presence, StatusKind},
     clock::WorldTime,
     error::{SpatialUpdateError, SpatialUpdateErrorCode},
     event::DomainEvent,
@@ -379,8 +379,11 @@ impl World {
     /// Equal sequences are accepted only as an idempotent repeat; an equal
     /// sequence with different coordinates is rejected like an older one.
     /// Facing changes apply silently and never bump the public revision (the
-    /// next snapshot always reads current facing). Returns whether any position
-    /// changed.
+    /// next snapshot always reads current facing). A **player** position change
+    /// is applied but also does not bump the revision — the host owns the
+    /// player's transform and the cold snapshot would only echo it back — so a
+    /// public republish is owed only when a *non-player* actor is moved here.
+    /// Returns whether any position changed (of any actor).
     pub fn update_positions(
         &mut self,
         spatial_sequence: i64,
@@ -443,6 +446,17 @@ impl World {
         let changed = updates
             .iter()
             .any(|update| self.characters[&update.actor_id].position_m() != update.position_m);
+        // A player-only move must not republish the cold snapshot. The host owns
+        // the player's own transform, so bumping the revision — and rebuilding
+        // the whole `PublicSnapshot`, every actor and item — at the 10 Hz the
+        // game sends spatial updates while walking is pure waste. NPC positions
+        // ride the hot Movement channel (`step_movement` never touches the cold
+        // state); a non-player move here is a teleport or a test for which the
+        // snapshot is the only channel, so it still bumps.
+        let non_player_changed = updates.iter().any(|update| {
+            self.characters[&update.actor_id].control() != Control::Player
+                && self.characters[&update.actor_id].position_m() != update.position_m
+        });
 
         if spatial_sequence == self.spatial_sequence {
             if changed {
@@ -466,7 +480,7 @@ impl World {
             }
         }
         self.spatial_sequence = spatial_sequence;
-        if changed {
+        if non_player_changed {
             self.touch_public_state();
         }
         Ok(changed)
@@ -1192,6 +1206,56 @@ mod tests {
         assert!(!changed);
         assert_eq!(world.world_revision, revision);
         assert_eq!(world.characters[&actor].facing_yaw(), 1.0);
+    }
+
+    #[test]
+    fn a_player_move_stays_off_the_cold_channel_but_an_npc_move_bumps_it() {
+        let mut world = World::new();
+        let mut player = character("plyr1", 0.0);
+        player.sheet.control = Control::Player;
+        world.add_character(player);
+        world.add_character(character("np001", 5.0));
+        let player_id = ActorId::from_raw("plyr1");
+        let npc_id = ActorId::from_raw("np001");
+
+        // The player walking is applied to live state but never republishes the
+        // cold snapshot: the host owns the player's transform.
+        let revision = world.world_revision;
+        let changed = world
+            .update_positions(
+                1,
+                &[SpatialActorUpdate::new(
+                    player_id.clone(),
+                    Vec3::new(1.0, 0.0, 0.0),
+                    None,
+                )],
+            )
+            .unwrap();
+        assert!(changed, "the position was applied");
+        assert_eq!(world.characters[&player_id].position_m(), Vec3::new(1.0, 0.0, 0.0));
+        assert_eq!(
+            world.world_revision, revision,
+            "a player-only move must not bump the public revision"
+        );
+
+        // Moving a non-player actor is a teleport the snapshot is the only
+        // channel for, so it still bumps.
+        let changed = world
+            .update_positions(
+                2,
+                &[SpatialActorUpdate::new(
+                    npc_id.clone(),
+                    Vec3::new(7.0, 0.0, 0.0),
+                    None,
+                )],
+            )
+            .unwrap();
+        assert!(changed);
+        assert_eq!(
+            world.world_revision,
+            revision + 1,
+            "a non-player move still republishes the cold snapshot"
+        );
     }
 
     #[test]

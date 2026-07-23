@@ -1134,11 +1134,16 @@ pub(crate) fn drive_gesture_pose(
         }
     }
 
-    // The snapshot-driven pose inputs, synced every frame: the looping-dance
-    // flag (authoritative so a late-arriving player sees the loop and it stops
-    // the frame `active_gesture` clears) and the §8 carriage statuses (so a
-    // walker with drunkenness/weariness sways and stoops). One mirror lookup
-    // per body serves both.
+    // The snapshot-driven pose inputs, synced when a snapshot actually
+    // arrives: the looping-dance flag (authoritative so a late-arriving
+    // player sees the loop and it stops the frame `active_gesture` clears)
+    // and the §8 carriage statuses (so a walker with drunkenness/weariness
+    // sways and stoops). One mirror lookup per body serves both. Between
+    // snapshots the mirror cannot answer differently, so skip the whole-cast
+    // pass (and its per-body change flags) on unchanged frames.
+    if !mirror.is_changed() {
+        return;
+    }
     for (actor_id, mut pose) in poses.iter_mut() {
         let actor = mirror.actor(actor_id);
         let dancing =

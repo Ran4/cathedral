@@ -582,46 +582,126 @@ fn movement_advances_on_the_hot_channel_without_touching_the_revision() {
     assert!(matches!(ready[0], EngineMessage::Ready { .. }));
     let revision_before = engine.world().world_revision;
 
-    // One second later: whole 0.05 s slices of 0.09 m each, ~1.8 m due +x. The
-    // exact count is 19 or 20 depending on where 0.05's f64 rounding lands on the
-    // boundary — the leftover carries in `movement_now`, so the average holds at
-    // 1.8 m/s and any single sample is within one slice of the ideal.
-    let messages = engine.poll(1.0, Vec::new());
+    // Advance a full second in 0.2 s polls — four 0.05 s slices each, well under
+    // `MAX_MOVEMENT_CATCHUP_SLICES`, so nothing is dropped and the whole second's
+    // ~1.8 m due +x accrues. Each poll rides the hot channel: a `Movement`
+    // message, never a `Snapshot`, and never a revision bump.
+    let mut last_advance = 0.0;
+    let mut now = 0.0;
+    for _ in 0..5 {
+        now += 0.2;
+        let messages = engine.poll(now, Vec::new());
+        let moved = messages
+            .iter()
+            .find_map(|message| match message {
+                EngineMessage::Movement { moved } => Some(moved),
+                _ => None,
+            })
+            .expect("a Movement message was published");
+        assert_eq!(moved.len(), 1);
+        assert_eq!(moved[0].actor_id, mover);
+        assert_eq!(moved[0].speed, WALK_SPEED_MPS as f32);
+        last_advance = moved[0].position_m.x;
+        assert!(
+            !messages
+                .iter()
+                .any(|message| matches!(message, EngineMessage::Snapshot(_))),
+            "movement must not re-trigger the snapshot chain"
+        );
+        assert_eq!(
+            engine.world().world_revision,
+            revision_before,
+            "a movement-only poll must not touch the public revision"
+        );
+    }
 
-    let moved = messages
-        .iter()
-        .find_map(|message| match message {
-            EngineMessage::Movement { moved } => Some(moved),
-            _ => None,
-        })
-        .expect("a Movement message was published");
-    assert_eq!(moved.len(), 1);
-    assert_eq!(moved[0].actor_id, mover);
-    let advance = moved[0].position_m.x;
+    // A whole second at 1.8 m/s: ~1.8 m (within one slice's f64 boundary), and a
+    // whole number of 0.09 m slices.
     assert!(
-        (advance - 1.8).abs() <= WALK_SPEED_MPS * 0.05 + 1e-9,
-        "advanced ~1.8 m/s (got {advance})"
+        (last_advance - 1.8).abs() <= WALK_SPEED_MPS * 0.05 + 1e-9,
+        "advanced ~1.8 m/s (got {last_advance})"
     );
-    // Every slice is an exact 0.09 m, so the total is a whole multiple of it.
-    let slices = advance / (WALK_SPEED_MPS * 0.05);
+    let slices = last_advance / (WALK_SPEED_MPS * 0.05);
     assert!(
         (slices - slices.round()).abs() < 1e-6,
         "a whole number of slices"
     );
-    assert_eq!(moved[0].speed, WALK_SPEED_MPS as f32);
+    assert_eq!(engine.world().characters[&mover].position_m().x, last_advance);
+}
 
-    // The world itself agrees, and it did so without a snapshot or a revision bump.
-    assert_eq!(engine.world().characters[&mover].position_m().x, advance);
-    assert_eq!(
-        engine.world().world_revision,
-        revision_before,
-        "a movement-only poll must not touch the public revision"
-    );
+/// A long stall — a suspend, or a frame that took seconds — must not amplify
+/// into a burst of hundreds of movement slices in one poll. Past
+/// `MAX_MOVEMENT_CATCHUP_SLICES` the movement clock snaps forward to `now` and
+/// the owed backlog is dropped, so the *next* ordinary poll advances only its
+/// own span rather than replaying the whole stall.
+#[test]
+fn a_long_gap_poll_caps_the_catch_up_and_snaps_the_clock_forward() {
+    use cathedral_sim::{MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS};
+
+    let mut engine = Engine::new(
+        EngineConfig {
+            nav: Some(real_nav()),
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player");
+
+    let mover = ActorId::from_raw("cb947");
+    {
+        let character = engine
+            .world_mut()
+            .characters
+            .get_mut(&mover)
+            .expect("cb947 is in the demo seed");
+        character.state.position_m = Vec3::new(0.0, WALK_Y, 0.0);
+        character.state.movement = Some(Movement {
+            path: vec![Vec3::new(1000.0, WALK_Y, 0.0)],
+            speed: WALK_SPEED_MPS,
+            gait_phase: 0.0,
+            patrol: Some(Patrol {
+                a: "here".into(),
+                b: "there".into(),
+                heading_to_b: true,
+            }),
+            choke_wait: 0.0,
+        });
+    }
+
+    engine.poll(0.0, Vec::new()); // drain Ready; movement clock at 0
+    let slice = WALK_SPEED_MPS * MOVEMENT_TICK_SECONDS;
+
+    // A hundred-second jump: 2000 slices owed, but only the cap is walked and the
+    // clock snaps to `now`. The mover advances exactly the cap, not the ~180 m an
+    // uncapped catch-up would have run.
+    let first = engine.poll(100.0, Vec::new());
+    let x1 = movement_of(&first).expect("the mover moved")[0].position_m.x;
+    let slices1 = x1 / slice;
     assert!(
-        !messages
-            .iter()
-            .any(|message| matches!(message, EngineMessage::Snapshot(_))),
-        "movement must not re-trigger the snapshot chain"
+        (slices1 - MAX_MOVEMENT_CATCHUP_SLICES as f64).abs() < 1e-6,
+        "exactly the cap of {MAX_MOVEMENT_CATCHUP_SLICES} slices ran (got {slices1})"
+    );
+
+    // The proof of the snap: an ordinary 0.2 s poll now advances only its own
+    // four slices. Had the backlog been deferred instead of dropped, the clock
+    // would still trail by ~100 s and this poll would hit the cap again.
+    let second = engine.poll(100.2, Vec::new());
+    let x2 = movement_of(&second).expect("the mover moved")[0].position_m.x;
+    let delta_slices = (x2 - x1) / slice;
+    assert!(
+        (2.5..5.5).contains(&delta_slices),
+        "the next poll advanced its own ~4-slice span, not another capped burst (got {delta_slices})"
     );
 }
 
@@ -873,6 +953,13 @@ fn command_results(messages: &[EngineMessage]) -> Vec<&EngineMessage> {
         .collect()
 }
 
+fn movement_of(messages: &[EngineMessage]) -> Option<&Vec<cathedral_sim::ActorMotion>> {
+    messages.iter().find_map(|message| match message {
+        EngineMessage::Movement { moved } => Some(moved),
+        _ => None,
+    })
+}
+
 fn snapshot_of(messages: &[EngineMessage]) -> Option<&PublicSnapshot> {
     messages.iter().find_map(|message| match message {
         EngineMessage::Snapshot(snapshot) => Some(snapshot),
@@ -1013,11 +1100,17 @@ fn a_world_without_a_player_is_not_a_world_the_engine_will_run() {
     assert_eq!(error, EngineInitError::MissingPlayer(player()));
 }
 
-/// 9. `test_spatial_updates_are_atomic_monotonic_and_snapshotted`
+/// Python-parity test `test_spatial_updates_are_atomic_monotonic_and_snapshotted`,
+/// updated for the hot/cold split: a **player** spatial update is applied to
+/// live state but deliberately stays off the cold channel — no revision bump,
+/// no `Snapshot` — because the host owns the player's own transform and
+/// republishing the whole world at the 10 Hz the game sends walking updates is
+/// pure waste. Atomicity and monotonicity are unchanged.
 #[test]
-fn spatial_updates_are_monotonic_and_snapshotted() {
+fn player_spatial_updates_are_monotonic_and_stay_off_the_cold_channel() {
     let mut harness = Builder::default().build();
     harness.ready();
+    let revision = harness.engine.world().world_revision;
 
     let moved = Vec3::new(4.0, 0.91, 100.0);
     let messages = harness.send(EngineCommand::SpatialUpdate {
@@ -1028,10 +1121,20 @@ fn spatial_updates_are_monotonic_and_snapshotted() {
             None,
         )],
     });
-    let snapshot = snapshot_of(&messages).expect("a position change bumps the revision");
-    let after = snapshot.actors.iter().find(|a| a.id == player()).unwrap();
-    assert_eq!(after.position_m, moved);
-    let revision = snapshot.world_revision;
+    assert!(
+        snapshot_of(&messages).is_none(),
+        "a player move must not republish the cold snapshot"
+    );
+    assert_eq!(
+        harness.engine.world().characters[&player()].position_m(),
+        moved,
+        "the move is still applied to live state"
+    );
+    assert_eq!(
+        harness.engine.world().world_revision,
+        revision,
+        "a player move must not bump the public revision"
+    );
 
     // A stale (smaller) sequence is refused and moves nobody.
     let messages = harness.send(EngineCommand::SpatialUpdate {
@@ -1052,7 +1155,7 @@ fn spatial_updates_are_monotonic_and_snapshotted() {
         harness.engine.world().characters[&player()].position_m(),
         moved
     );
-    assert_eq!(harness.engine.snapshot().world_revision, revision);
+    assert_eq!(harness.engine.world().world_revision, revision);
 }
 
 /// 10. `test_unknown_actor_and_nonfinite_position_are_rejected`
@@ -1161,13 +1264,17 @@ fn a_failed_player_action_returns_its_code_and_moves_nothing() {
     assert!(harness.engine.world().offers.is_empty());
 }
 
-/// §6.2 step 4: the position update that came with a *failing* action may well
-/// have succeeded, and its revision bump has to reach the game — so the events
-/// and the snapshot go out BEFORE the failure result.
+/// §6.2 step 4, updated for the hot/cold split: the position update that came
+/// with a *failing* action still sticks (the walk is applied to live state) and
+/// the failure result is still delivered — but a player-only move now rides the
+/// hot channel, so it emits no cold `Snapshot` and bumps no revision. (The
+/// flush-before-result ordering the original test witnessed via that snapshot is
+/// unchanged in code; a player move simply no longer produces one to order.)
 #[test]
-fn a_failed_action_still_ships_the_position_it_moved_the_player_to() {
+fn a_failed_action_still_applies_the_position_it_moved_the_player_to() {
     let mut harness = Builder::default().build();
     harness.ready();
+    let revision = harness.engine.world().world_revision;
 
     let walked = Vec3::new(1.0, 0.91, 110.0);
     let messages = harness.send(EngineCommand::PlayerAccept {
@@ -1178,15 +1285,12 @@ fn a_failed_action_still_ships_the_position_it_moved_the_player_to() {
         spatial_seq: 1,
     });
 
-    let snapshot_at = messages
-        .iter()
-        .position(|m| matches!(m, EngineMessage::Snapshot(_)))
-        .expect("the move bumped the revision");
-    let result_at = messages
-        .iter()
-        .position(|m| matches!(m, EngineMessage::CommandResult { .. }))
-        .expect("the accept failed");
-    assert!(snapshot_at < result_at, "{messages:#?}");
+    // A player-only move stays off the cold channel: no snapshot, no revision bump.
+    assert!(
+        snapshot_of(&messages).is_none(),
+        "a player move does not republish the cold snapshot"
+    );
+    assert_eq!(harness.engine.world().world_revision, revision);
 
     let (success, code, _) = result(&messages);
     assert!(!success);
