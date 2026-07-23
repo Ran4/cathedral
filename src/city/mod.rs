@@ -24,13 +24,18 @@ use std::{
 use bevy::{
     asset::RenderAssetUsages,
     camera::visibility::VisibilityRange,
+    light::NotShadowCaster,
     mesh::{Indices, PrimitiveTopology},
+    pbr::ExtendedMaterial,
     prelude::*,
 };
 
 use crate::{
     controller::CollisionWorld,
-    materials::{FLOOR_TEXTURE_SPAN_METERS, load_repeating_texture},
+    materials::{
+        FLOOR_TEXTURE_SPAN_METERS, WindowGlassExtension, WindowGlassMaterial,
+        load_repeating_texture,
+    },
     weather::{WeatherReactiveMaterials, WetResponse},
 };
 
@@ -49,7 +54,8 @@ pub struct CityPlugin;
 
 impl Plugin for CityPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<crate::soundscape::SoundscapeCue>()
+        app.add_plugins(MaterialPlugin::<WindowGlassMaterial>::default())
+            .add_message::<crate::soundscape::SoundscapeCue>()
             .init_resource::<gates::GateRuntime>()
             .init_resource::<trade_props::TradePropRuntime>()
             .add_systems(Startup, build_city)
@@ -116,7 +122,9 @@ struct CityMaterials {
     dark_wood: Handle<StandardMaterial>,
     iron: Handle<StandardMaterial>,
     bronze: Handle<StandardMaterial>,
-    window: Handle<StandardMaterial>,
+    window: Handle<WindowGlassMaterial>,
+    /// What a near-clear pane shows: the dark room shell behind the glass.
+    window_room: Handle<StandardMaterial>,
     /// The warm pane of a hanging lantern: lit from within, always.
     lantern_glass: Handle<StandardMaterial>,
     cloth_ochre: Handle<StandardMaterial>,
@@ -254,13 +262,14 @@ fn build_city(
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut glass_materials: ResMut<Assets<WindowGlassMaterial>>,
     mut collision_world: ResMut<CollisionWorld>,
 ) {
     let plan = plan::load();
     commands.insert_resource(CobbleRoadNetwork::from_roads(&plan.roads));
     let doors = door_edges();
     let city_meshes = create_meshes(&mut meshes);
-    let city_materials = create_materials(&asset_server, &mut materials);
+    let city_materials = create_materials(&asset_server, &mut materials, &mut glass_materials);
     commands.insert_resource(WeatherReactiveMaterials::capture(
         &materials,
         [
@@ -408,6 +417,7 @@ fn create_meshes(meshes: &mut Assets<Mesh>) -> CityMeshes {
 fn create_materials(
     asset_server: &AssetServer,
     materials: &mut Assets<StandardMaterial>,
+    glass_materials: &mut Assets<WindowGlassMaterial>,
 ) -> CityMaterials {
     let textured = |materials: &mut Assets<StandardMaterial>,
                     path: &'static str,
@@ -520,13 +530,35 @@ fn create_materials(
             perceptual_roughness: 0.46,
             ..default()
         }),
-        window: materials.add(StandardMaterial {
-            base_color: Color::srgb(0.035, 0.045, 0.052),
-            emissive: LinearRgba::rgb(0.012, 0.014, 0.014),
-            // Rough enough that the environment map reads as a dull sheen, not
-            // a sky-mirror: leaded quarrel glass, and most panes sit in shade.
-            perceptual_roughness: 0.55,
-            reflectance: 0.32,
+        window: glass_materials.add(ExtendedMaterial {
+            base: StandardMaterial {
+                // A cool quarrel tint with enough reflectance that the
+                // atmosphere environment map lands on the panes as a sky sheen
+                // instead of leaving black holes; still rough enough not to
+                // become a flat sky-mirror. Alpha rides the distance fade in
+                // `window_glass.wgsl`: see-through up close, opaque at range —
+                // past the fade nothing behind a pane is ever on screen.
+                base_color: Color::srgb(0.08, 0.10, 0.115),
+                emissive: LinearRgba::rgb(0.018, 0.021, 0.024),
+                perceptual_roughness: 0.28,
+                reflectance: 0.62,
+                alpha_mode: AlphaMode::Blend,
+                double_sided: true,
+                cull_mode: None,
+                ..default()
+            },
+            // Clearest within 7 m at alpha 0.3, fully opaque again past 22 m.
+            extension: WindowGlassExtension {
+                fade: Vec4::new(7.0, 22.0, 0.30, 0.0),
+            },
+        }),
+        window_room: materials.add(StandardMaterial {
+            // Unlit rooms behind the panes: soot-dark plaster with a whisper
+            // of warm emissive so a room reads as a dim chamber rather than a
+            // void even where no ambient light reaches it.
+            base_color: Color::srgb(0.055, 0.048, 0.040),
+            emissive: LinearRgba::rgb(0.0045, 0.0032, 0.0020),
+            perceptual_roughness: 0.97,
             double_sided: true,
             cull_mode: None,
             ..default()
@@ -787,6 +819,7 @@ fn build_buildings(
     let mut walls = BTreeMap::<WallKind, MeshData>::new();
     let mut roofs = BTreeMap::<RoofKind, MeshData>::new();
     let mut windows = MeshData::default();
+    let mut rooms = MeshData::default();
     let mut doors = MeshData::default();
     let mut frames = MeshData::default();
     let mut timber_frames = MeshData::default();
@@ -879,6 +912,7 @@ fn build_buildings(
                     let scoped = band_openings(&openings, band);
                     add_facade_openings_on(
                         &mut windows,
+                        &mut rooms,
                         &mut doors,
                         &mut frames,
                         &band.polygon,
@@ -888,6 +922,7 @@ fn build_buildings(
             }
             None => add_facade_openings_on(
                 &mut windows,
+                &mut rooms,
                 &mut doors,
                 &mut frames,
                 &building.polygon,
@@ -942,6 +977,13 @@ fn build_buildings(
         &materials.window,
         windows,
         "Ombreval windows",
+    );
+    spawn_batch(
+        commands,
+        meshes,
+        &materials.window_room,
+        rooms,
+        "Ombreval window rooms",
     );
     spawn_batch(
         commands,
@@ -2105,6 +2147,7 @@ const OPENING_DEPTH: f32 = 0.15;
 /// actually used (a jettied storey's ring, or the cadastral polygon).
 fn add_facade_openings_on(
     windows: &mut MeshData,
+    rooms: &mut MeshData,
     doors: &mut MeshData,
     frames: &mut MeshData,
     polygon: &[[f32; 2]],
@@ -2137,6 +2180,7 @@ fn add_facade_openings_on(
             match opening.kind {
                 OpeningKind::Window { shutters } => add_window_module(
                     windows,
+                    rooms,
                     doors,
                     frames,
                     wall_point,
@@ -2166,6 +2210,7 @@ fn add_facade_openings_on(
 #[allow(clippy::too_many_arguments)]
 fn add_window_module(
     windows: &mut MeshData,
+    rooms: &mut MeshData,
     doors: &mut MeshData,
     frames: &mut MeshData,
     wall_point: Vec2,
@@ -2178,6 +2223,7 @@ fn add_window_module(
     shutters_allowed: bool,
 ) {
     let normal = Vec3::new(normal2.x, 0.0, normal2.y);
+    add_window_room(rooms, wall_point, center_y, direction, normal2, width, height, hash);
     // The glass slightly overlaps the hole so no slit into the hollow shell
     // survives at the reveal borders.
     let glass_center = wall_point - normal2 * OPENING_DEPTH;
@@ -2255,6 +2301,89 @@ fn add_window_module(
             );
         }
     }
+}
+
+/// How deep the room shell behind every pane extends into the building.
+/// Shallow enough to stay inside any plausible parcel; two facing windows'
+/// rooms may interpenetrate mid-building, which nothing can ever see.
+const ROOM_DEPTH: f32 = 1.5;
+
+/// The chamber a near-clear pane reveals: back wall, floor, ceiling and
+/// cheeks in soot-dark plaster, sized past the opening so an angled look
+/// still lands on interior surface. The shells have nothing else renderable
+/// inside (their walls are single-sided), so this box bounds everything the
+/// distance-faded glass can show.
+#[allow(clippy::too_many_arguments)]
+fn add_window_room(
+    rooms: &mut MeshData,
+    wall_point: Vec2,
+    center_y: f32,
+    direction: Vec2,
+    normal2: Vec2,
+    width: f32,
+    height: f32,
+    hash: u32,
+) {
+    let along = Vec3::new(direction.x, 0.0, direction.y);
+    let inward = -Vec3::new(normal2.x, 0.0, normal2.y);
+    let anchor = Vec3::new(wall_point.x, 0.0, wall_point.y);
+    let near = anchor + inward * (OPENING_DEPTH + 0.02);
+    let far = anchor + inward * ROOM_DEPTH;
+    let half = width * 0.5 + 0.45;
+    let floor_y = center_y - height * 0.5 - 0.75;
+    let ceil_y = center_y + height * 0.5 + 0.45;
+    // A stable warm shade per room, so a terrace of panes doesn't read as one
+    // repeated cell; always darker than any daylit surface outside.
+    let shade = 0.72 + ((hash >> 9) % 33) as f32 / 100.0;
+    rooms.set_brush([shade, shade * 0.93, shade * 0.82]);
+    let corner = |base: Vec3, side: f32, y: f32| Vec3::new(base.x, y, base.z) + along * side;
+    let uvs = [Vec2::ZERO, Vec2::X, Vec2::ONE, Vec2::Y];
+    // Back wall, facing the pane.
+    rooms.quad(
+        [
+            corner(far, -half, floor_y),
+            corner(far, half, floor_y),
+            corner(far, half, ceil_y),
+            corner(far, -half, ceil_y),
+        ],
+        -inward,
+        uvs,
+    );
+    // Floor and ceiling.
+    rooms.quad(
+        [
+            corner(near, -half, floor_y),
+            corner(near, half, floor_y),
+            corner(far, half, floor_y),
+            corner(far, -half, floor_y),
+        ],
+        Vec3::Y,
+        uvs,
+    );
+    rooms.quad(
+        [
+            corner(near, -half, ceil_y),
+            corner(near, half, ceil_y),
+            corner(far, half, ceil_y),
+            corner(far, -half, ceil_y),
+        ],
+        Vec3::NEG_Y,
+        uvs,
+    );
+    // Cheeks.
+    for side in [-1.0_f32, 1.0] {
+        rooms.quad(
+            [
+                corner(near, side * half, floor_y),
+                corner(far, side * half, floor_y),
+                corner(far, side * half, ceil_y),
+                corner(near, side * half, ceil_y),
+            ],
+            along * -side,
+            uvs,
+        );
+    }
+    rooms.reset_brush();
 }
 
 /// The door: leaf recessed behind the face, reveal returns, a proud lintel and
@@ -7320,6 +7449,13 @@ fn detail_fade_range(name: &str) -> Option<VisibilityRange> {
     // corner sits up to ~90 m inside the printed band — these numbers are
     // chosen so the worst-case corner still fades where the fog has already
     // taken most of the contrast.
+    if name.starts_with("Ombreval window rooms") {
+        // Only the near-fade glass (opaque past ~22 m) can reveal a room, so
+        // these tiles drop far earlier than any other batch: 22 m of pane
+        // fade plus the ~91 m worst case from a window in one tile corner to
+        // the tile-center anchor the fades gauge against.
+        return Some(fade(120.0, 150.0));
+    }
     if FINE.iter().any(|prefix| name.starts_with(prefix)) {
         return Some(fade(330.0, 390.0));
     }
@@ -7329,10 +7465,10 @@ fn detail_fade_range(name: &str) -> Option<VisibilityRange> {
     None
 }
 
-fn spawn_batch(
+fn spawn_batch<M: Material>(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
-    material: &Handle<StandardMaterial>,
+    material: &Handle<M>,
     data: MeshData,
     name: impl Into<String>,
 ) {
@@ -7341,15 +7477,36 @@ fn spawn_batch(
     }
     let name = name.into();
     let fade = detail_fade_range(&name);
-    for (tile_x, tile_z, tile) in split_batch_into_tiles(data, BATCH_TILE_M) {
+    // The room shells sit inside the building shells: no shadow view can see
+    // them, so keep their vertices out of every shadow cascade.
+    let no_shadow = name.starts_with("Ombreval window rooms");
+    for (tile_x, tile_z, mut tile) in split_batch_into_tiles(data, BATCH_TILE_M) {
+        // Anchor each tile entity at its tile center. The GPU cross-fade for
+        // `VisibilityRange` gauges camera distance against the ENTITY
+        // TRANSLATION (mesh.wgsl passes `world_from_local[3]`), not the AABB:
+        // a batch parked at the origin fades by the camera's distance to the
+        // world origin, which dithered whole batches out at the city's edges
+        // and made every band tighter than ~|camera| invisible everywhere.
+        let center = Vec3::new(
+            (tile_x as f32 + 0.5) * BATCH_TILE_M,
+            0.0,
+            (tile_z as f32 + 0.5) * BATCH_TILE_M,
+        );
+        for position in &mut tile.positions {
+            position[0] -= center.x;
+            position[2] -= center.z;
+        }
         let mut entity = commands.spawn((
             Name::new(format!("{name} [{tile_x},{tile_z}]")),
             Mesh3d(meshes.add(tile.into_mesh())),
             MeshMaterial3d(material.clone()),
-            Transform::default(),
+            Transform::from_translation(center),
         ));
         if let Some(fade) = fade.clone() {
             entity.insert(fade);
+        }
+        if no_shadow {
+            entity.insert(NotShadowCaster);
         }
     }
 }
@@ -7389,10 +7546,10 @@ fn split_batch_into_tiles(data: MeshData, tile_m: f32) -> Vec<(i32, i32, MeshDat
         .collect()
 }
 
-fn spawn_box_named(
+fn spawn_box_named<M: Material>(
     commands: &mut Commands,
     meshes: &CityMeshes,
-    material: &Handle<StandardMaterial>,
+    material: &Handle<M>,
     center: Vec3,
     size: Vec3,
     name: impl Into<String>,
@@ -7443,10 +7600,10 @@ fn spawn_cylinder(
     );
 }
 
-fn spawn_mesh_named(
+fn spawn_mesh_named<M: Material>(
     commands: &mut Commands,
     mesh: &Handle<Mesh>,
-    material: &Handle<StandardMaterial>,
+    material: &Handle<M>,
     transform: Transform,
     name: impl Into<String>,
 ) {
