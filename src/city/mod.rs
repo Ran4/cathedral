@@ -547,18 +547,24 @@ fn create_materials(
                 cull_mode: None,
                 ..default()
             },
-            // Clearest within 7 m at alpha 0.3, fully opaque again past 22 m.
+            // Clearest within 12 m at alpha 0.06, fully opaque again past
+            // 22 m. Point-blank the pane must nearly vanish: at 0.3 — and
+            // still at 0.12 — the residual sky sheen veiled the room behind
+            // it and near windows kept reading as blank dark glass.
             extension: WindowGlassExtension {
-                fade: Vec4::new(7.0, 22.0, 0.30, 0.0),
+                fade: Vec4::new(12.0, 22.0, 0.06, 0.0),
             },
         }),
         window_room: materials.add(StandardMaterial {
-            // Unlit rooms behind the panes: soot-dark plaster with a whisper
-            // of warm emissive so a room reads as a dim chamber rather than a
-            // void even where no ambient light reaches it.
-            base_color: Color::srgb(0.055, 0.048, 0.040),
-            emissive: LinearRgba::rgb(0.0045, 0.0032, 0.0020),
-            perceptual_roughness: 0.97,
+            // Rooms behind the panes are UNLIT: the atmosphere environment
+            // light has no occlusion, so a lit interior surface facing the
+            // horizon renders as bright as the open street — scene lighting
+            // cannot keep a shell interior dark. The chamber look is baked
+            // into the vertex colors instead (`add_window_room`). Bright
+            // enough to read instantly from the street in any daylight —
+            // tuned darker twice and the rooms vanished into the panes.
+            base_color: Color::srgb(0.36, 0.29, 0.21),
+            unlit: true,
             double_sided: true,
             cull_mode: None,
             ..default()
@@ -2338,8 +2344,20 @@ fn add_window_room(
     rooms.set_brush([shade, shade * 0.93, shade * 0.82]);
     let corner = |base: Vec3, side: f32, y: f32| Vec3::new(base.x, y, base.z) + along * side;
     let uvs = [Vec2::ZERO, Vec2::X, Vec2::ONE, Vec2::Y];
+    // The material is unlit, so the chamber's light is painted here: the back
+    // wall catches the window light, the floor a little less, the cheeks fall
+    // off, and the ceiling sits in the dark — a hand-shaded room interior.
+    let mut shaded_quad = |points: [Vec3; 4], normal: Vec3, surface_shade: f32| {
+        let first = rooms.positions.len() as u32;
+        for (point, uv) in points.into_iter().zip(uvs) {
+            rooms.vertex_shaded(point, normal, uv, surface_shade);
+        }
+        rooms
+            .indices
+            .extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
+    };
     // Back wall, facing the pane.
-    rooms.quad(
+    shaded_quad(
         [
             corner(far, -half, floor_y),
             corner(far, half, floor_y),
@@ -2347,10 +2365,10 @@ fn add_window_room(
             corner(far, -half, ceil_y),
         ],
         -inward,
-        uvs,
+        1.0,
     );
     // Floor and ceiling.
-    rooms.quad(
+    shaded_quad(
         [
             corner(near, -half, floor_y),
             corner(near, half, floor_y),
@@ -2358,9 +2376,9 @@ fn add_window_room(
             corner(far, -half, floor_y),
         ],
         Vec3::Y,
-        uvs,
+        0.78,
     );
-    rooms.quad(
+    shaded_quad(
         [
             corner(near, -half, ceil_y),
             corner(near, half, ceil_y),
@@ -2368,11 +2386,11 @@ fn add_window_room(
             corner(far, -half, ceil_y),
         ],
         Vec3::NEG_Y,
-        uvs,
+        0.35,
     );
     // Cheeks.
     for side in [-1.0_f32, 1.0] {
-        rooms.quad(
+        shaded_quad(
             [
                 corner(near, side * half, floor_y),
                 corner(far, side * half, floor_y),
@@ -2380,7 +2398,7 @@ fn add_window_room(
                 corner(near, side * half, ceil_y),
             ],
             along * -side,
-            uvs,
+            0.58,
         );
     }
     rooms.reset_brush();
