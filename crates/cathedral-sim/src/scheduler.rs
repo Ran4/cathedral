@@ -1302,6 +1302,29 @@ mod tests {
         );
     }
 
+    /// Law-and-order M0: the offerer's wake-up after a silent player accept.
+    /// The engine hands them the ordinary priority slot, and that lane is
+    /// deliberately ungated by proximity — an offerer who watched the player
+    /// sprint out of the stage must still get the turn that reads the
+    /// acceptance percept, or the theft never registers.
+    #[test]
+    fn a_priority_handoff_outranks_an_empty_stage() {
+        let mut world = World::new();
+        world.add_character(lore_character("offrr", Significance::Ambient));
+        let mut scheduler = NpcScheduler::new(stage_turn_order(&world), 0.0, 60.0, 0.0);
+
+        // The player accepted in silence and left: no speech, no reaction lane,
+        // and the stage they left behind is empty.
+        assert!(scheduler.prioritize(&world, &ActorId::from_raw("offrr"), false, 0.0));
+        let empty = BTreeSet::new();
+        assert_eq!(
+            scheduler.select_next_actor(IdleGate::Stage(&empty)),
+            Some((ActorId::from_raw("offrr"), false))
+        );
+        // Once answered, the empty stage buys nothing again.
+        assert_eq!(scheduler.select_next_actor(IdleGate::Stage(&empty)), None);
+    }
+
     #[test]
     fn a_composing_player_suppresses_every_lane_but_his_own() {
         let mut world = World::new();

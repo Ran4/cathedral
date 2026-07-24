@@ -258,11 +258,14 @@ fn the_round_content_parses_and_every_destination_resolves() {
     );
 
     // The original twenty dramatis personae plus the five M5 supply-chain
-    // residents carry explicit routes, joined to the right 5-char sheet ids.
+    // residents carry explicit routes, joined to the right 5-char sheet ids —
+    // and, since law_and_order.md M2, the staffed law: three sergeant beats,
+    // the notary's counter, and the five gate keepers.
     let expected_majors: BTreeSet<&str> = [
         "ak3vd", "a9prs", "b4hst", "cj9sp", "dv8ll", "fg2sh", "cf2rr", "fl5cp", "fc9rn", "amt4p",
         "hj6br", "em3rl", "he3nd", "aq7ld", "ax5nf", "gw4ld", "az2sm", "gr8tp", "et7rd", "cg6ud",
-        "danqn", "davqn", "e1skl", "e7mil", "p008s",
+        "danqn", "davqn", "e1skl", "e7mil", "p008s", "p009x", "p009z", "p00a3", "fo6gl", "hrnsk",
+        "p00a7", "p00a8", "p00ad", "p00ah",
     ]
     .into_iter()
     .collect();
@@ -721,6 +724,66 @@ fn the_round_rung_walks_a_worker_to_their_post() {
         ),
         other => panic!("expected Travel to the yard, got {other:?}"),
     }
+}
+
+/// law_and_order.md M2 — the staffed law. A bench sergeant walks an authored
+/// beat through the squares, a gate keeper stands his gate from Dayspring,
+/// Odo Trask keeps the toll-house counter instead of praying across town, and
+/// the routeless rest of the watch anchors on the watch-bell tower itself.
+/// Together with the other two beats and four gates this is the "~8 reporting
+/// points instead of one cross-town pilgrimage" the feature asks for.
+#[test]
+fn the_law_cast_is_stationed_where_people_are() {
+    let nav = nav();
+    let mut world = base_world();
+    for (id, occupation) in [
+        ("p009x", "bailiff_and_gaoler"),  // Havise Ashe, bench sergeant
+        ("hrnsk", "watchman_and_keeper"), // Renn Skell, gate guard
+        ("fo6gl", "court_officer"),       // Odo Trask, notary
+        ("p009w", "bailiff_and_gaoler"),  // Ede Clove, stone keeper — routeless
+    ] {
+        world.add_character(person(
+            id,
+            Vec3::new(0.0, WALK_Y, 95.0),
+            Some(occupation),
+            Significance::Minor,
+        ));
+    }
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    // The sergeant's beat moves with the offices — market at first light, the
+    // Gradine at noon — and keeps the exemption a night cry needs.
+    let ashe = &round.people[&ActorId::from_raw("p009x")];
+    let leg_at = |person: &Townsperson, office: Office| {
+        person
+            .legs
+            .iter()
+            .find(|leg| leg.from == office && leg.only_on.is_none())
+            .unwrap_or_else(|| panic!("no ordinary leg at {office:?}"))
+            .clone()
+    };
+    assert_eq!(leg_at(ashe, Office::Dayspring).label, "The Wickmarket");
+    assert_eq!(leg_at(ashe, Office::HighWick).label, "The Gradine");
+    assert!(ashe.curfew_exempt, "the bench answers night cries");
+
+    // The gate keeper *stands* his gate — the road parties' posted verb.
+    let skell = &round.people[&ActorId::from_raw("hrnsk")];
+    let gate = leg_at(skell, Office::Dayspring);
+    assert_eq!(gate.label, "The Harne Gate");
+    assert_eq!(gate.doing, Arrival::Stand);
+
+    // The notary's counter is the toll-house, not the cleric archetype's
+    // chapter house.
+    let odo = &round.people[&ActorId::from_raw("fo6gl")];
+    assert_eq!(leg_at(odo, Office::Dayspring).label, "Tallage toll-house");
+
+    // A bailiff with no route of his own now anchors on the tower.
+    let clove = &round.people[&ActorId::from_raw("p009w")];
+    assert_eq!(
+        leg_at(clove, Office::Waning).label,
+        "Bellstand watch-bell tower"
+    );
 }
 
 /// An exchange with the player holds the round: the partner neither sets off

@@ -12,6 +12,9 @@ cathedral_meta.json
 # Local settings; committed defaults live in default_config.ron
 /config.ron
 
+features/more_sounds/generated
+
+
 # Editor/OS
 .DS_Store
 *.swp

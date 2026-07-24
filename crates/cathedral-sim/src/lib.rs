@@ -29,6 +29,7 @@ pub mod item;
 pub mod lore;
 pub mod math;
 pub mod nav;
+pub mod notices;
 pub mod offer;
 pub mod perception;
 pub mod places;
@@ -91,6 +92,7 @@ pub use math::{Vec3, vec3, vec3_from_json, vec3_to_json};
 pub use nav::{
     Door, Edge, NavData, NavError, NavGrid, Place, Route, Site, WALK_Y, door_edges_from_json,
 };
+pub use notices::{LAW_OCCUPATIONS, NOTICE_LIFE_GAME_DAYS, Notices, WardNotice};
 pub use offer::Offer;
 pub use perception::{cap_first, emit_sound, identify, sees};
 pub use places::{PlaceEntry, PlaceError, PlaceRegistry};

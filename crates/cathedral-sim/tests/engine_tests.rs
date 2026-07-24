@@ -1238,6 +1238,90 @@ fn accepting_an_offer_transfers_the_item_exactly_once() {
     assert_eq!(harness.engine.world().characters[&player()].holds(), [coin]);
 }
 
+/// Law-and-order M0: a *silent* accept must wake the offerer. The acceptance
+/// percept lands in their inbox on apply, but no speech means no reaction lane
+/// — and under the stage gate an offerer left off stage would never think
+/// again to read it (session 472: Cobb's stolen spark only registered because
+/// the player happened to say "thanks"). The accept command itself now hands
+/// the offerer the ordinary priority slot, which is ungated by proximity.
+#[test]
+fn a_silent_player_accept_hands_the_offerer_the_priority_slot() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    let ilse = ActorId::from_raw("k0fb1");
+    harness.npc(
+        "k0fb1",
+        "offer_item",
+        json!({"item_id": "c0prs", "target": "player"}),
+    );
+    assert_eq!(harness.engine.scheduler().priority_actor_id(), None);
+
+    // No speech before, during or after: the accept is the only signal.
+    let messages = harness.send(EngineCommand::PlayerAccept {
+        request_id: "accept-1".into(),
+        item_id: ItemId::from_raw("c0prs"),
+        position_m: PLAYER_SPAWN,
+        spatial_seq: 1,
+    });
+    let (success, code, _) = result(&messages);
+    assert!(success, "{code:?}");
+    assert_eq!(
+        harness.engine.scheduler().priority_actor_id(),
+        Some(&ilse),
+        "the offerer is owed the turn that reads the acceptance"
+    );
+}
+
+/// The decline half of the same wake-up: turning an offer down is as much an
+/// answer as taking it, and the offerer reacts either way.
+#[test]
+fn a_silent_player_decline_hands_the_offerer_the_priority_slot() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    let ilse = ActorId::from_raw("k0fb1");
+    harness.npc(
+        "k0fb1",
+        "offer_item",
+        json!({"item_id": "c0prs", "target": "player"}),
+    );
+
+    let messages = harness.send(EngineCommand::PlayerDecline {
+        request_id: "decline-1".into(),
+        item_id: ItemId::from_raw("c0prs"),
+        position_m: PLAYER_SPAWN,
+        spatial_seq: 1,
+    });
+    let (success, code, _) = result(&messages);
+    assert!(success, "{code:?}");
+    assert_eq!(
+        harness.engine.scheduler().priority_actor_id(),
+        Some(&ilse)
+    );
+    // The giver keeps the item; only the wake-up changed.
+    assert_eq!(
+        harness.engine.world().characters[&ilse].holds(),
+        [ItemId::from_raw("c0prs")]
+    );
+}
+
+/// A *failed* accept wakes nobody: there is nothing for the offerer to read.
+#[test]
+fn a_failed_accept_hands_out_no_priority_slot() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+
+    let messages = harness.send(EngineCommand::PlayerAccept {
+        request_id: "accept-1".into(),
+        // Nobody has offered the player anything.
+        item_id: ItemId::from_raw("c0prs"),
+        position_m: PLAYER_SPAWN,
+        spatial_seq: 1,
+    });
+    let (success, _, _) = result(&messages);
+    assert!(!success);
+    assert_eq!(harness.engine.scheduler().priority_actor_id(), None);
+}
+
 /// 14. `test_failed_player_action_returns_code_without_mutation`
 #[test]
 fn a_failed_player_action_returns_its_code_and_moves_nothing() {

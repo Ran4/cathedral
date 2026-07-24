@@ -108,6 +108,7 @@ fn dispatch(
         "go_to" => go_to(world, actor_id, args),
         "stop" => stop(world, actor_id, args),
         "tell_way" => tell_way(world, actor_id, args),
+        "raise_notice" => raise_notice(world, actor_id, args),
         // Checked last, after every verb has had its chance to match.
         unknown => Err(ActionError::new(
             ActionErrorCode::UnknownVerb,
@@ -804,6 +805,18 @@ fn accept_offered_item(
         quantity,
         Vec::new(),
     );
+    // law_and_order.md M3: restitution settles the ward's word. The accused
+    // handing the taking back to the wronged — or paying any law officer —
+    // clears every live notice naming them, and the carriers hear it die.
+    for notice in crate::notices::settle_on_transfer(world, &giver_id, actor_id) {
+        let settled_line = format!("the ward's word is settled, restitution made: {}", notice.line());
+        let carriers = crate::notices::carrier_ids(world, notice.id, &giver_id);
+        let lines = carriers
+            .into_iter()
+            .map(|carrier| (carrier, settled_line.clone()))
+            .collect();
+        deliver(world, lines, true);
+    }
     world.touch_public_state();
     world.assert_invariants();
     Ok(format!(
@@ -1653,6 +1666,101 @@ fn tell_way(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Strin
         "{} tells {} the way to {place_name}",
         world.characters[actor_id].name(),
         world.characters[&target_id].name()
+    ))
+}
+
+/// `raise_notice` (`law_and_order.md` M3): a law-cast actor puts a wrong on
+/// the ward's tongues. The prose (`about`/`deed`/`where`) is what carriers
+/// hear and repeat — descriptions and places, never ids — while the optional
+/// `accused`/`wronged` ids are the private linkage that lets restitution
+/// through `accept_offered_item` settle the word instead of waiting out the
+/// decay clock.
+fn raise_notice(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["about", "deed"], &["where", "accused", "wronged"])?;
+    if !crate::notices::is_law(&world.characters[actor_id]) {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidAction,
+            "only those who serve the city's law raise ward notices - report the wrong aloud to a sergeant, a gate keeper, or the Tallage instead",
+        ));
+    }
+    let about = parse_text(&parsed["about"], "about", PLAYER_SPEECH_MAX_CHARS)?;
+    let deed = parse_text(&parsed["deed"], "deed", PLAYER_SPEECH_MAX_CHARS)?;
+    let place = optional_arg(parsed, "where")
+        .map(|value| parse_text(value, "where", PLAYER_SPEECH_MAX_CHARS))
+        .transpose()?;
+    let parse_person = |key: &str| -> Result<Option<ActorId>, ActionError> {
+        let Some(value) = optional_arg(parsed, key) else {
+            return Ok(None);
+        };
+        let person = parse_actor_id(value, key)?;
+        if !world.characters.contains_key(&person) {
+            return Err(ActionError::new(
+                ActionErrorCode::UnknownTarget,
+                format!("there is nobody with id {}", repr_id(person.as_str())),
+            ));
+        }
+        Ok(Some(person))
+    };
+    let accused = parse_person("accused")?;
+    let wronged = parse_person("wronged")?;
+    if accused.as_ref() == Some(actor_id) {
+        return Err(ActionError::new(
+            ActionErrorCode::SelfTarget,
+            "you cannot raise the ward against yourself",
+        ));
+    }
+
+    // Stamped from the host-set clock, like the sheet's `the_day`; a clock-less
+    // world raises an undated notice that never decays (hermetic tests).
+    let since = world
+        .current_time
+        .map(|time| format!("{}'s {}", time.weekday.label(), time.office.label()));
+    let raised_game_days = world.current_time.map(|time| time.day as f64 + time.fraction);
+    let notice_id = world.notices.raise(
+        about,
+        deed,
+        place,
+        since,
+        raised_game_days,
+        actor_id.clone(),
+        accused.clone(),
+        wronged,
+    );
+    let line = world
+        .notices
+        .live()
+        .iter()
+        .find(|notice| notice.id == notice_id)
+        .expect("just raised")
+        .line();
+
+    // The word travels now, not on proximity: the law cast always, citizens
+    // diluted through the deterministic carry roll. The percept (not a bare
+    // notify) is load-bearing — a non-empty inbox is what admits the idle
+    // turn that lets a carrier speak of it.
+    let carriers = crate::notices::carrier_ids(world, notice_id, actor_id);
+    let lines = carriers
+        .iter()
+        .map(|carrier| (carrier.clone(), format!("word in the ward: {line}")))
+        .collect();
+    deliver(world, lines, true);
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the raiser is in the world")
+        .remember_percept(format!("You put the word in the ward: {line}"));
+    world_event(
+        world,
+        "raise_notice",
+        actor_id,
+        accused,
+        None,
+        1,
+        carriers,
+    );
+    Ok(format!(
+        "{} puts the word in the ward: {line}",
+        world.characters[actor_id].name()
     ))
 }
 
@@ -2758,5 +2866,245 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(error.code, ActionErrorCode::UnknownTarget);
+    }
+
+    // ------------------------------------------------- ward notices (M3)
+
+    /// `character` with a lore profile: an occupation and an authored
+    /// curiosity. `Some(0.0)` never carries gossip, `Some(1.0)` always does —
+    /// the authored number is clamped but otherwise the last word, which is
+    /// what makes the carry roll assertable.
+    fn lored(id: &str, name: &str, x: f64, occupation: &str, curiosity: Option<f64>) -> Character {
+        let mut person = character(id, name, x);
+        person.sheet.lore = Some(crate::lore::LoreProfile {
+            significance: crate::Significance::Ambient,
+            planning_ward: crate::lore::PlanningWard::Fabric,
+            age: 30,
+            gender: "m".into(),
+            occupation_id: Some(occupation.into()),
+            occupation_display: None,
+            title: None,
+            rank: None,
+            faction_role: None,
+            illegal_activity: None,
+            district: "Fabric".into(),
+            father: None,
+            mother: None,
+            children: Vec::new(),
+            circumstances: Vec::new(),
+            conditions: Vec::new(),
+            home: None,
+            core_character_description: String::new(),
+            extended_character_description: String::new(),
+            curiosity,
+        });
+        person
+    }
+
+    /// A sergeant, a second officer, a talkative and a taciturn citizen, a
+    /// thief holding the taking, and the wronged boy.
+    fn ward_world() -> World {
+        let mut world = World::new();
+        world.add_character(lored("srgnt", "Sergeant", 0.0, "bailiff_and_gaoler", Some(0.0)));
+        world.add_character(lored("gatek", "Gatekeeper", 5.0, "watchman_and_keeper", Some(0.0)));
+        world.add_character(lored("gossp", "Gossip", 5.0, "baker", Some(1.0)));
+        world.add_character(lored("quiet", "Quiet", 5.0, "baker", Some(0.0)));
+        let mut thief = lored("thief", "Thief", 2.0, "carter", Some(0.0));
+        thief.state.holds.push(ItemId::from_raw("spark"));
+        world.add_character(thief);
+        world.add_character(lored("wrngd", "Wronged", 3.0, "tenter_boy", Some(0.0)));
+        world.add_item(Item::new(ItemId::from_raw("spark"), "spark"));
+        world
+    }
+
+    fn raise_args() -> Value {
+        json!({
+            "about": "an outland stranger in a grey hood",
+            "deed": "took a boy's spark and gave no badge",
+            "where": "the tenter-frames",
+            "accused": "thief",
+            "wronged": "wrngd",
+        })
+    }
+
+    #[test]
+    fn raise_notice_is_law_only_and_the_word_reaches_carriers() {
+        let mut world = ward_world();
+
+        // A baker has no standing to raise the ward.
+        let error = apply_action(
+            &mut world,
+            &ActorId::from_raw("gossp"),
+            "raise_notice",
+            &raise_args(),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::InvalidAction);
+
+        let line = apply_action(
+            &mut world,
+            &ActorId::from_raw("srgnt"),
+            "raise_notice",
+            &raise_args(),
+        )
+        .unwrap();
+        assert!(line.contains("Sergeant puts the word in the ward"), "{line}");
+        assert_eq!(world.notices.live().len(), 1);
+        let notice = &world.notices.live()[0];
+        assert_eq!(
+            notice.line(),
+            "an outland stranger in a grey hood — took a boy's spark and gave no badge, at the tenter-frames"
+        );
+
+        // The law always carries the word — distance is no object — and the
+        // talkative carry it too; the taciturn are spared. The raiser keeps it
+        // in their own history, not their inbox.
+        let heard = |id: &str| {
+            world.characters[&ActorId::from_raw(id)]
+                .inbox()
+                .iter()
+                .any(|line| line.starts_with("word in the ward: "))
+        };
+        assert!(heard("gatek"));
+        assert!(heard("gossp"));
+        assert!(!heard("quiet"));
+        assert!(!heard("srgnt"));
+        assert!(
+            world.characters[&ActorId::from_raw("srgnt")]
+                .recent_history()
+                .last()
+                .unwrap()
+                .starts_with("You put the word in the ward"),
+        );
+
+        let event = world.drain_events().pop().unwrap();
+        assert_eq!(event.kind, "raise_notice");
+        assert_eq!(event.target_id, Some(ActorId::from_raw("thief")));
+    }
+
+    #[test]
+    fn raise_notice_validates_its_people() {
+        let mut world = ward_world();
+        let sergeant = ActorId::from_raw("srgnt");
+
+        let error = apply_action(
+            &mut world,
+            &sergeant,
+            "raise_notice",
+            &json!({"about": "a man", "deed": "a wrong", "accused": "nobody"}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::UnknownTarget);
+
+        let error = apply_action(
+            &mut world,
+            &sergeant,
+            "raise_notice",
+            &json!({"about": "a man", "deed": "a wrong", "accused": "srgnt"}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::SelfTarget);
+        assert!(world.notices.is_empty());
+    }
+
+    #[test]
+    fn restitution_to_the_wronged_settles_the_word() {
+        let mut world = ward_world();
+        apply_action(
+            &mut world,
+            &ActorId::from_raw("srgnt"),
+            "raise_notice",
+            &raise_args(),
+        )
+        .unwrap();
+
+        // The accused hands the taking back; the wronged accepts.
+        apply_action(
+            &mut world,
+            &ActorId::from_raw("thief"),
+            "offer_item",
+            &json!({"item_id": "spark", "target": "wrngd"}),
+        )
+        .unwrap();
+        apply_action(
+            &mut world,
+            &ActorId::from_raw("wrngd"),
+            "accept_offered_item",
+            &json!({"item_id": "spark"}),
+        )
+        .unwrap();
+
+        assert!(world.notices.is_empty(), "restitution clears the notice");
+        assert!(
+            world.characters[&ActorId::from_raw("gatek")]
+                .inbox()
+                .iter()
+                .any(|line| line.starts_with("the ward's word is settled")),
+            "the carriers hear the word die"
+        );
+    }
+
+    #[test]
+    fn a_fine_paid_to_any_law_officer_settles_but_a_bystander_gift_does_not() {
+        let mut world = ward_world();
+        let raise = |world: &mut World| {
+            apply_action(
+                world,
+                &ActorId::from_raw("srgnt"),
+                "raise_notice",
+                &raise_args(),
+            )
+            .unwrap();
+        };
+        raise(&mut world);
+
+        // Handing the spark to a mere bystander answers nothing.
+        apply_action(
+            &mut world,
+            &ActorId::from_raw("thief"),
+            "offer_item",
+            &json!({"item_id": "spark", "target": "gossp"}),
+        )
+        .unwrap();
+        apply_action(
+            &mut world,
+            &ActorId::from_raw("gossp"),
+            "accept_offered_item",
+            &json!({"item_id": "spark"}),
+        )
+        .unwrap();
+        assert_eq!(world.notices.live().len(), 1, "a bystander gift settles nothing");
+
+        // Paying the gate keeper — any law officer — settles it.
+        let spark = ItemId::from_raw("spark");
+        world
+            .characters
+            .get_mut(&ActorId::from_raw("gossp"))
+            .unwrap()
+            .state
+            .holds
+            .retain(|id| id != &spark);
+        world
+            .characters
+            .get_mut(&ActorId::from_raw("thief"))
+            .unwrap()
+            .state
+            .holds
+            .push(spark.clone());
+        apply_action(
+            &mut world,
+            &ActorId::from_raw("thief"),
+            "offer_item",
+            &json!({"item_id": "spark", "target": "gatek"}),
+        )
+        .unwrap();
+        apply_action(
+            &mut world,
+            &ActorId::from_raw("gatek"),
+            "accept_offered_item",
+            &json!({"item_id": "spark"}),
+        )
+        .unwrap();
+        assert!(world.notices.is_empty(), "a fine to the law settles the word");
     }
 }

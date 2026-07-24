@@ -132,6 +132,12 @@ pub struct World {
     /// it stands empty. Movement state like a mover's own path: it rides the
     /// fixed tick and never touches the public revision.
     pub needle_claim: Option<NeedleClaim>,
+    /// The ward's live notices (`law_and_order.md` M3). Rendered on carriers'
+    /// sheets and settled by `accept_offered_item`, so world state — but,
+    /// like `current_time`, never part of the public snapshot and never a
+    /// `world_revision` bump: the player is meant to feel the city cooling,
+    /// not read a wanted list.
+    pub notices: crate::notices::Notices,
     events: Vec<DomainEvent>,
 }
 
@@ -159,6 +165,7 @@ impl Default for World {
             nav: None,
             places: PlaceRegistry::default(),
             needle_claim: None,
+            notices: crate::notices::Notices::default(),
             events: Vec::new(),
         }
     }

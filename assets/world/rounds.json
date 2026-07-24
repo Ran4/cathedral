@@ -72,7 +72,7 @@
   "grocer_and_spicer": ["The Tallage", "The Wickmarket"],
   "entertainer": ["The Hungry Ox", "The Wickmarket"],
   "civic_officer": ["The Tallage"],
-  "bailiff_and_gaoler": ["The Bellstand"],
+  "bailiff_and_gaoler": ["Bellstand watch-bell tower"],
   "militia_and_soldier": ["The Stone Gate", "The Bellstand"],
   "sex_worker": ["The Hungry Ox"]
  },
@@ -451,6 +451,62 @@
     {"from": "dayspring", "at": "Maren's Green", "doing": "trade"},
     {"from": "waning", "at": "Maren's Green", "doing": "trade"},
     {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "p009x": {"_who": "Havise Ashe, bench sergeant (law_and_order.md M2 — the west beat: law presence where people are; her waning leg holds the evening market through Lamplight, and the exemption lets a night cry pull her out)", "leash_m": 16.0, "curfew_exempt": true, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "dayspring", "at": "The Wickmarket", "doing": "work"},
+    {"from": "high_wick", "at": "The Gradine", "doing": "work"},
+    {"from": "waning", "at": "The Wickmarket", "doing": "work"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "p009z": {"_who": "Jos Fitch, bench sergeant (law_and_order.md M2 — the east beat: the Gradine at first light, then Coswald's Yard till curfew)", "leash_m": 16.0, "curfew_exempt": true, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "dayspring", "at": "The Gradine", "doing": "work"},
+    {"from": "high_wick", "at": "Coswald's Yard", "doing": "work"},
+    {"from": "waning", "at": "Coswald's Yard", "doing": "work"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "p00a3": {"_who": "Segwin Mott, bench sergeant (law_and_order.md M2 — the south beat: Maren's Green morning and evening, the Tallage at midday where the recorded complaints land)", "leash_m": 16.0, "curfew_exempt": true, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "dayspring", "at": "Maren's Green", "doing": "work"},
+    {"from": "high_wick", "at": "The Tallage", "doing": "work"},
+    {"from": "waning", "at": "Maren's Green", "doing": "work"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "fo6gl": {"_who": "Odo Trask, notary (law_and_order.md M2 — the fee book opens at the toll-house counter: any sergeant can hear a wrong, only the Tallage records one; his cleric archetype otherwise prayed him across town)", "leash_m": 6.0, "legs": [
+    {"from": "kindling", "at": "Tallage toll-house", "doing": "work"},
+    {"from": "kindling", "at": "home", "doing": "idle", "only_on": ["bellday"]},
+    {"from": "dayspring", "at": "Tallage toll-house", "doing": "work"},
+    {"from": "dayspring", "at": "The Lanthorn", "doing": "pray", "only_on": ["bellday"]},
+    {"from": "high_wick", "at": "home", "doing": "idle"},
+    {"from": "waning", "at": "Tallage toll-house", "doing": "work"},
+    {"from": "waning", "at": "The Lanthorn", "doing": "pray", "only_on": ["bellday"]},
+    {"from": "lamplight", "at": "home", "doing": "sleep"}
+  ]},
+  "hrnsk": {"_who": "Renn Skell, gate guard (law_and_order.md M2 — the east gate on his father's roll, Dayspring to the Snuffing, exactly as his sheet has it; a gate keeper can take a report)", "leash_m": 8.0, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "dayspring", "at": "The Harne Gate", "doing": "stand"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "p00a7": {"_who": "Renn Brant, wall guard (law_and_order.md M2 — posted off the wall to keep the Stone Gate, where the road parties and the late carts come through)", "leash_m": 8.0, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "dayspring", "at": "The Stone Gate", "doing": "stand"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "p00a8": {"_who": "Colm Vell, wall guard (law_and_order.md M2 — posted off the wall to keep the Wool Gate; speaks slowly and tests every claim, which is the whole job)", "leash_m": 8.0, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "dayspring", "at": "The Wool Gate", "doing": "stand"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "p00ad": {"_who": "Colm Bram, wall guard (law_and_order.md M2 — posted off the wall to keep the River Gate)", "leash_m": 8.0, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "dayspring", "at": "The River Gate", "doing": "stand"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "p00ah": {"_who": "Hamel Fenn, wall guard (law_and_order.md M2 — posted off the wall to keep the Reed Postern)", "leash_m": 8.0, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "dayspring", "at": "The Reed Postern", "doing": "stand"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
   ]}
  }
 }

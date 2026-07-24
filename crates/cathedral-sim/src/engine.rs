@@ -43,6 +43,7 @@ use crate::{
     ids::{ActorId, ItemId, SpeechEventId},
     math::Vec3,
     nav::NavData,
+    notices,
     perception::{cap_first, emit_sound, identify},
     prompt::PromptEnv,
     round::{self, Census, Round},
@@ -909,6 +910,14 @@ impl Engine {
         // snapshot the scheduler block emits.
         self.tick_movement(now, &mut out);
 
+        // The ward's word (law_and_order.md M3): drop notices whose life has
+        // run out, then serve the face-to-face percept to any law-cast carrier
+        // now within hearing of an accused. Both are no-ops while no notice is
+        // live, which is almost always; the decay clock lives here because the
+        // sim itself is clock-free.
+        self.world.notices.expire(self.clock.game_days(now));
+        notices::confront(&mut self.world);
+
         // Drive the water round on the same beat: decay thirst, run the ladder,
         // work the queues at the wells. It sets the routes the *next*
         // `tick_movement` walks and buffers any well sounds into `world.events`,
@@ -1215,12 +1224,13 @@ impl Engine {
                 item_id,
                 position_m,
                 spatial_seq,
-            } => self.player_action(
+            } => self.player_offer_reply(
                 now,
                 &request_id,
                 "accept_offered_item",
-                json!({"item_id": item_id.as_str()}),
-                Some((spatial_seq, position_m)),
+                &item_id,
+                position_m,
+                spatial_seq,
                 out,
             ),
 
@@ -1229,12 +1239,13 @@ impl Engine {
                 item_id,
                 position_m,
                 spatial_seq,
-            } => self.player_action(
+            } => self.player_offer_reply(
                 now,
                 &request_id,
                 "decline_offer",
-                json!({"item_id": item_id.as_str()}),
-                Some((spatial_seq, position_m)),
+                &item_id,
+                position_m,
+                spatial_seq,
                 out,
             ),
 
@@ -1483,6 +1494,46 @@ impl Engine {
                 out.push(command_failure(request_id, error.code, &error.message));
             }
         }
+    }
+
+    /// The player answering an offer (`accept_offered_item` / `decline_offer`),
+    /// plus the offerer's wake-up. The apply puts the percept in the offerer's
+    /// inbox, but the plain `player_action` path schedules nobody: a silent
+    /// accept-and-walk under the stage gate leaves the offerer off stage
+    /// carrying an unread acceptance, and they never think again until the
+    /// player wanders back (law_and_order.md, problem 3). So the offerer gets
+    /// the same priority handoff an addressed `say` and a `go_to` arrival grant
+    /// — the lane is deliberately ungated by proximity. Not immediate: the
+    /// inter-turn delay and the floor still govern when, only selection changes.
+    #[allow(clippy::too_many_arguments)]
+    fn player_offer_reply(
+        &mut self,
+        now: f64,
+        request_id: &str,
+        verb: &str,
+        item_id: &ItemId,
+        position_m: Vec3,
+        spatial_seq: i64,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        // Resolved before the apply: a successful accept removes the offer.
+        let offerer_id = self
+            .world
+            .offers
+            .get(item_id)
+            .map(|offer| offer.giver_id.clone());
+        let result = self.apply_player_action(
+            verb,
+            &json!({"item_id": item_id.as_str()}),
+            Some((spatial_seq, position_m)),
+        );
+        if result.is_ok()
+            && let Some(offerer_id) = &offerer_id
+        {
+            self.scheduler
+                .prioritize(&self.world, offerer_id, false, now);
+        }
+        self.finish_player_action(now, request_id, result, out);
     }
 
     /// `_handle_debug_player_say` (`server.py:1027-1064`) — fake mode only, full

@@ -82,6 +82,8 @@ pub struct PromptStrings {
     pub the_day_label: String,
     /// The parenthesis after `**your_round**`.
     pub round_note: String,
+    /// The parenthesis after `**word_in_the_ward**` — the ward's live notices.
+    pub notices_note: String,
     /// `you_are`'s walk sentence, with `%s` standing for the destination name.
     pub walking_to: String,
     /// `you_are`'s follow sentence, with `%s` standing for the person.
@@ -205,6 +207,13 @@ struct Sheet<'a> {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     offered_to_you: Vec<OfferedToYou<'a>>,
     you_see: YouSee<'a>,
+    /// The ward's live notices this actor carries (`law_and_order.md` M3) —
+    /// what the ward is saying right now, newest first, capped at
+    /// [`crate::notices::NOTICES_SHEET_MAX`]. A standing truth, so it sits with
+    /// the world sections above the time axis; omitted entirely for the
+    /// (usual) carrier-less case, which keeps the frozen fixtures stable.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    word_in_the_ward: Vec<String>,
     since_your_last_turn: Vec<&'a str>,
     recent_history: Vec<&'a str>,
     stored_memories: &'a [String],
@@ -398,10 +407,16 @@ pub fn render_prompt(
     since: Option<&[String]>,
     env: &PromptEnv,
 ) -> Result<String, PromptError> {
-    let sheet = build_sheet(world, llm_actor(world, actor_id)?, since, &env.strings);
+    let actor = llm_actor(world, actor_id)?;
+    let sheet = build_sheet(world, actor, since, &env.strings);
     // The your_round explainer paragraph renders only when the sheet carries a
     // round — round-less worlds (the golden fixtures) keep their exact bytes.
     let has_round = !sheet.your_round.is_empty();
+    // Likewise the ward-notice explainer tracks its section, and the
+    // `raise_notice` verb (with its law paragraph) is listed only for the law
+    // cast (`law_and_order.md` M3) — every other sheet keeps its exact bytes.
+    let has_notices = !sheet.word_in_the_ward.is_empty();
+    let has_law_verbs = crate::notices::is_law(actor);
     let sheet_md = sheet_markdown(&sheet, &env.strings);
     let emittable_sounds = world.sound_catalog.emittable_sound_ids().join(", ");
 
@@ -413,6 +428,8 @@ pub fn render_prompt(
                 sounds_enabled => world.sounds_enabled,
                 emittable_sounds,
                 has_round,
+                has_notices,
+                has_law_verbs,
             })
         })
         .map_err(|error| PromptError::new(format!("the turn template did not render: {error}")))
@@ -655,6 +672,15 @@ fn build_sheet<'a>(
             description: &strings.you_see_description,
             people,
         },
+        word_in_the_ward: world
+            .notices
+            .live()
+            .iter()
+            .rev()
+            .filter(|notice| crate::notices::carries(world, actor.id(), notice.id))
+            .take(crate::notices::NOTICES_SHEET_MAX)
+            .map(|notice| notice.line())
+            .collect(),
         since_your_last_turn,
         recent_history,
         stored_memories: actor.memories(),
@@ -800,6 +826,16 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
         sheet.you_see.people.iter().map(person_bullet),
         &strings.nobody,
     ));
+
+    // The ward's word — omitted entirely for the carrier-less majority, like
+    // `you_sell`, so the section never appears on an untouched sheet.
+    if !sheet.word_in_the_ward.is_empty() {
+        sections.push(bullet_section(
+            &format!("**word_in_the_ward** ({})", strings.notices_note),
+            sheet.word_in_the_ward.iter().cloned(),
+            "",
+        ));
+    }
 
     sections.push(history_section(
         "**since_your_last_turn**",
@@ -1096,6 +1132,7 @@ mod tests {
             the_hour_label: "The hour:".into(),
             the_day_label: "The day:".into(),
             round_note: "your standing day, leg by leg; each begins when its bell rings".into(),
+            notices_note: "what the ward is saying; hearsay and descriptions, not proof".into(),
             walking_to: "You are on your way to %s.".into(),
             following: "You are following %s.".into(),
             faction_role_label: "Faction role:".into(),
@@ -1115,7 +1152,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
         let error = PromptEnv::new("x", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
@@ -1197,6 +1234,7 @@ mod tests {
                 description: "",
                 people: Vec::new(),
             },
+            word_in_the_ward: Vec::new(),
             since_your_last_turn: Vec::new(),
             recent_history: Vec::new(),
             stored_memories: &[],

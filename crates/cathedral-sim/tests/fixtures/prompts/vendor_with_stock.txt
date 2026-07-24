@@ -15,7 +15,10 @@ remember {"memory": "I bought the fish from Sven for one copper"}), or
 future-you will not know it happened and will try to do it again. Record
 half-done deals the same way: if you took payment but have not yet handed over
 the goods — or paid and not yet received — remember that open obligation, and
-forget it once settled. Write
+forget it once settled. An accepted offer is not yet a paid one: someone taking
+the goods you held out has NOT paid you until the price is really in you_hold
+(or you watched it change hands) — until then, record the open debt, never a
+completed sale. Write
 memories in first person ("I ..."). Also re-read stored_memories every turn and
 forget each one that is now false or finished (an item you no longer hold, a
 debt now settled, a plan already carried out) — when you record an outcome,

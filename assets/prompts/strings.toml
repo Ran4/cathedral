@@ -40,6 +40,8 @@ the_hour_label = "The hour:"
 the_day_label = "The day:"
 # The parenthesis after `**your_round**`.
 round_note = "your standing day, leg by leg; each begins when its bell rings"
+# The parenthesis after `**word_in_the_ward**` — the ward's live notices.
+notices_note = "what the ward is saying; hearsay and descriptions, not proof"
 # `you_are`'s walk sentence; `%s` is the destination name.
 walking_to = "You are on your way to %s."
 # `you_are`'s follow sentence; `%s` is the person being followed.

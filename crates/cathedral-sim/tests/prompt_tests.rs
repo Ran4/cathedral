@@ -203,6 +203,79 @@ fn the_sheet_carries_the_daily_round_when_the_round_seeded_one() {
     );
 }
 
+/// law_and_order.md M3: the ward's word reaches a carrier's sheet with its
+/// explainer, and the `raise_notice` verb (with the law paragraph) is listed
+/// only for the law cast — every other sheet keeps its exact bytes, which is
+/// what keeps the golden fixtures frozen.
+#[test]
+fn the_sheet_carries_the_wards_word_and_only_the_law_gets_the_verb() {
+    use cathedral_sim::{PlanningWard, Significance};
+
+    let env = prompt_env();
+    let mut world = seed_world();
+    let sven = actor("sv3n1");
+
+    let before = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(!before.contains("**word_in_the_ward**"));
+    assert!(!before.contains("raise_notice"));
+
+    world.notices.raise(
+        "an outland stranger in a grey hood".into(),
+        "took a boy's spark".into(),
+        Some("the tenter-frames".into()),
+        Some("Highmarket's Dayspring".into()),
+        None,
+        actor("k0fb1"),
+        None,
+        None,
+    );
+    // Sven has no lore, so the carry roll is certain (`CURIOSITY_WITHOUT_LORE`)
+    // — but he is no law officer, so the verb stays off his sheet.
+    let after = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(
+        after.contains(
+            "**word_in_the_ward** (what the ward is saying; hearsay and descriptions, not proof):"
+        ),
+        "the section renders with its note"
+    );
+    assert!(after.contains(
+        "- an outland stranger in a grey hood — took a boy's spark, at the tenter-frames; \
+         the word since Highmarket's Dayspring"
+    ));
+    assert!(
+        after.contains("word_in_the_ward is what the ward is saying"),
+        "the turn prompt explains how to weigh the word"
+    );
+    assert!(!after.contains("raise_notice"), "the verb is the law's alone");
+
+    // A law occupation brings the verb and its paragraph.
+    world.characters.get_mut(&sven).unwrap().sheet.lore = Some(LoreProfile {
+        significance: Significance::Minor,
+        planning_ward: PlanningWard::Fabric,
+        age: 40,
+        gender: "m".into(),
+        occupation_id: Some("bailiff_and_gaoler".into()),
+        occupation_display: Some("Court sergeant and gaoler".into()),
+        title: Some("Bench sergeant".into()),
+        rank: None,
+        faction_role: None,
+        illegal_activity: None,
+        district: "Bell-and-Sluice streets".into(),
+        father: None,
+        mother: None,
+        children: Vec::new(),
+        circumstances: Vec::new(),
+        conditions: Vec::new(),
+        home: None,
+        core_character_description: String::new(),
+        extended_character_description: String::new(),
+        curiosity: None,
+    });
+    let law = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(law.contains("raise_notice {\"about\""), "the verb line is listed");
+    assert!(law.contains("You serve the city's law"), "and explained");
+}
+
 #[test]
 fn a_moved_character_gets_a_freshly_resolved_prompt_location() {
     let env = prompt_env();
