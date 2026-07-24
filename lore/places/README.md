@@ -98,15 +98,15 @@ schematic in the spatial index:
 - [`ombreval_top_down_map.svg`](ombreval_top_down_map.svg) is the full-resolution
   vector map. It includes the wall circuit, towers, gates, 49 planned routes,
   working grounds and courts, the Serle and outer wharves, every building
-  footprint, direct labels for principal sites, and a numbered index of all 59
+  footprint, direct labels for principal sites, and a numbered index of all 69
   named places. Every building polygon has an inspectable stable ID and
   metadata for use, material, district, and storey count.
 - [`ombreval_top_down_map_preview.png`](ombreval_top_down_map_preview.png) is a
   3600 × 2880 quick-look render. Use the HTML or SVG when individual roofs or
   index text need to be read.
 - [`ombreval_buildings.json`](ombreval_buildings.json) is the machine-readable
-  inventory behind the drawing. The current revision contains 1,030 individual
-  building footprints: 965 ordinary urban-fabric buildings and 65 named,
+  inventory behind the drawing. The current revision contains 1,108 individual
+  building footprints: 1,043 ordinary urban-fabric buildings and 65 named,
   reserved, gate, bridge, church, civic, or complex-building footprints.
 - [`scripts/generate_top_down_map.py`](../../scripts/generate_top_down_map.py)
   contains the deterministic geometry and layout rules. It validates IDs,
@@ -137,10 +137,9 @@ character, and the binding relationships listed below.
   overlay in, so the two maps stay in exact registration.
 - The regions are the cadastral generator's own `district_for()` partition
   (first-match-wins, non-overlapping), **not** the overlapping ward bounding
-  boxes tabulated in [`00_city_plan.md`](00_city_plan.md). By that partition the
-  Bell-and-Sluice wards are ~33% of the enclosure; the boxes give a smaller ~21%.
-  (Those shares predate the 2026-07 0.7× plan shrink and may have drifted
-  slightly; regenerate to re-check.) Regenerate with
+  boxes tabulated in [`00_city_plan.md`](00_city_plan.md). In the current
+  post-resize map, that partition puts the Bell-and-Sluice wards at 32.7% of the
+  enclosure; the scaled authoring boxes give a smaller 21.4%. Regenerate with
   `uv run scripts/generate_ward_map.py`.
 
 ## Source ledger

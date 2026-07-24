@@ -21,8 +21,8 @@ Serle into its present bed beyond the south wall. The river left, and left
 everything behind: the warehouses, the hoists, the water stairs, the counting
 rooms, the rope racks, the tavern, the church, the churchyard, the guild custom,
 the songs, and the families. The boat quarter is still the boat quarter. It is
-simply a boat quarter that a man must walk out of, through a gate, and half a
-mile down a cart road, before he can touch a boat.
+simply a boat quarter that a man must walk out of, through a gate, and down a
+cart road before he can touch a boat.
 
 Everything in this document follows from that one fact: **the water is outside
 and the household is inside, and the wall runs between them.** The Reed Ward is
@@ -455,7 +455,7 @@ fastest way to mark an NPC as Reed Ward in one line of dialogue.
   lost it. Said as consolation, and as a threat.
 - **"One shadow to your road." / "And one light over it."** The city's blessing at
   doors and moorings. Boat-families say it at the Moorings gate every morning of
-  the year to people walking out to a river that is half a mile away.
+  the year to people walking out through the wall to reach the river.
 - **"The Water Knows One"** is sung at the Hungry Ox and spills thirty metres into
   the lane, and it is sung louder when a grey coat passes.
 

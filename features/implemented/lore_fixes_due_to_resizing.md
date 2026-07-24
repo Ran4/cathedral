@@ -1,6 +1,6 @@
 # Lore fixes due to the 0.7× city resize
 
-Status: backlog. Audited 2026-07-24 against the shipped post-resize plan.
+Status: implemented 2026-07-24 against the shipped post-resize plan.
 
 ## Scope and baseline
 
@@ -17,38 +17,30 @@ ordinary positions moved by 0.7×, with explicit core/cluster overrides, while
 building sizes and street widths generally did not shrink.
 
 The main canon, cadastral maps, most coordinates, square extents, character
-spawn positions, and cross-city walking estimates were updated. The remaining
-problems are below.
+spawn positions, and cross-city walking estimates were already updated. The
+issues found by this audit and their completed corrections are below.
 
-## 1. The old city dimensions survive in paces
+## 1. The old city dimensions survived in paces
 
-Two current sources still describe Ombreval as twelve hundred by a thousand
+Two current sources described Ombreval as twelve hundred by a thousand
 paces:
 
 - `lore/core_lore/setting_and_geography.md:47-48`
 - `lore/second_sun/10_gazetteer_of_the_second_sun.md:10`
 
-That wording predates the resize. It originally sat beside the old 1.2 km by
-1.0 km metric dimensions, so it was plainly the diegetic rendering of the old
-footprint. Only the metric half of the first passage was changed.
+That wording predated the resize and originally sat beside the old 1.2 km by
+1.0 km metric dimensions. Both sources now use eight hundred and forty by
+seven hundred paces, matching the new 840 m by 700 m headline without inventing
+a special short local pace.
 
-Choose and document one fix, then keep both sources identical:
+## 2. Reed Ward's repeated "half a mile" was no longer spatially possible
 
-- update the pace counts to describe the new footprint; or
-- explicitly define an Ombreval pace as about 0.7 m if the old counts are meant
-  to survive.
-
-The first option is less surprising because no current measures document
-defines such a short local pace.
-
-## 2. Reed Ward's repeated "half a mile" is no longer spatially possible
-
-Resize-sensitive half-mile claims remain in:
+Resize-sensitive half-mile claims remained in:
 
 - `lore/the_dry_boatmen.md:24-25,458`
 - `lore/families/family_alder.md:26,236,499,627,855`
 
-They cover two different relationships and both need rewording:
+They covered two different relationships:
 
 1. The Alder table versus Ewart speaking at the Hungry Ox. The current Alder
    Moorings and Hungry Ox anchors are only about **54.5 m** apart and the
@@ -60,31 +52,30 @@ They cover two different relationships and both need rewording:
    and yard approaches added on either end. The real route should be measured,
    but it is nowhere near an 805 m half-mile.
 
-Keep the emotional and economic point—the wall and dry carry separate home
-from water—without preserving the obsolete number.
+The family conflict now uses "across the Green" and the dry-carry passages use
+the wall, gate, and cart road as their landmarks. This preserves the emotional
+and economic point—the wall and dry carry separate home from water—without the
+obsolete number.
 
 Do **not** mechanically replace every mile fraction in the corpus. In
 `lore/families/family_rud.md:866`, the Lanthorn and Saint Maren's are called a
 quarter-mile apart. The current spatial index gives Gradine to Maren's Green as
 about 390 m by street, almost exactly a quarter-mile, so that line still works.
 
-## 3. Two route endpoints in the spatial index missed authored overrides
+## 3. Two route endpoints in the spatial index had missed authored overrides
 
-`lore/places/01_spatial_index.md` mostly follows the transformed JSON, but two
-points in its principal-route table are still legacy values:
+`lore/places/01_spatial_index.md` mostly followed the transformed JSON, but two
+points in its principal-route table were legacy values:
 
-- At line 184, Stone/Fabric Way ends at `(72,80)`; the generated `fabric_way`
-  ends at **`(74,91)`**.
-- At line 186, Bell Way starts at `(78,-112)`; the generated `bell_way` starts
-  at **`(72,-108)`**.
+- Stone/Fabric Way now ends at **`(74,91)`**, matching `fabric_way`.
+- Bell Way now starts at **`(72,-108)`**, matching `bell_way`.
 
-Use `lore/places/ombreval_buildings.json` (or the resolved entries in
-`lore/places/shrink_transform.json`) as authority and compare the complete
-polylines when fixing these rows.
+The complete table rows were compared with
+`lore/places/ombreval_buildings.json`, not only the changed endpoints.
 
-## 4. The places README reports stale generated inventory
+## 4. The places README reported stale generated inventory
 
-`lore/places/README.md` disagrees with its own current generated JSON/SVG:
+`lore/places/README.md` disagreed with its own current generated JSON/SVG:
 
 - lines 101-102 say **59** named places; the JSON contains **69**;
 - lines 108-110 say **1,030** total buildings and **965** ordinary urban-fabric
@@ -92,20 +83,21 @@ polylines when fixing these rows.
 - the current JSON and both generated SVG maps report **1,108** total,
   **1,043** ordinary urban-fabric, and **65** named/reserved buildings.
 
-Update the prose from `ombreval_buildings.json.statistics` after the final map
-generation. Do not hand-edit generated JSON or SVG output.
+The prose now reports the generated statistics: **69** named places, **1,108**
+total buildings, **1,043** ordinary urban-fabric buildings, and **65**
+named/reserved buildings. Generated JSON and SVG output were not hand-edited.
 
-## 5. The ward-share caveat describes a regeneration that already happened
+## 5. The ward-share caveat described a regeneration that already happened
 
-`lore/places/README.md:139-144` says the ward shares predate the shrink and may
-have drifted. The current post-resize ward map has already recomputed the real
+`lore/places/README.md:139-144` said the ward shares predated the shrink and may
+have drifted. The current post-resize ward map had already recomputed the real
 `district_for()` partition as **32.7%** Bell-and-Sluice. The current scaled
 authoring box is 117,453 m² against a 548,242.6 m² wall polygon, or about
 **21.42%**, so the rounded `~33%` and `~21%` claims remain correct.
 
-Replace the uncertainty note with post-resize figures/provenance, or simply
-remove it. Regeneration is still the right verification command, but it is no
-longer pending work.
+The README now gives the post-resize figures directly: **32.7%** for the
+generated partition and **21.4%** for the scaled authoring boxes. It retains
+the ward-map regeneration command as the verification path.
 
 ## Already correct; preserve these decisions
 
@@ -125,15 +117,15 @@ longer pending work.
 - Historical records under `features/implemented/` intentionally retain
   pre-shrink coordinates per `features/AGENTS.md`.
 
-## Acceptance criteria
+## Verification
 
-- Canonical prose has one unambiguous current city footprint, in metric and any
+- [x] Canonical prose has one unambiguous current city footprint, in metric and any
   diegetic units.
-- The Reed/Alder distance language agrees with current routes while preserving
+- [x] The Reed/Alder distance language agrees with current routes while preserving
   the dry-carry grievance.
-- The two principal-route rows exactly match the generated road polylines.
-- The places README inventory matches `ombreval_buildings.json.statistics` and
+- [x] The two principal-route rows exactly match the generated road polylines.
+- [x] The places README inventory matches `ombreval_buildings.json.statistics` and
   its ward-share text describes the post-resize map.
-- A final search for `1.2 km`, `1.0 km`, twelve-hundred/thousand pace city
+- [x] A final search for `1.2 km`, `1.0 km`, twelve-hundred/thousand pace city
   dimensions, and location-specific half-mile claims produces no canonical
   resize leaks (excluding the explicitly ignored material above).

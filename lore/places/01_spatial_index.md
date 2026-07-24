@@ -181,9 +181,9 @@ provides a material reason otherwise.
 | Route | Authoring points `(x, z)` | Clear width and traffic |
 |---|---|---|
 | West gate approach | `(-24.5,357) -> (-17.5,294) -> (-17.5,248.5) -> (-7,199.5) -> (0,178) -> (0,157)` | `6..8 m`, narrowing to final processional funnel |
-| Stone/Fabric Way | `(346.5,94.5) -> (252,101.5) -> (223.5,108.5) -> (168,72) -> (80.5,66.5) -> (72,80)` | `6..7 m`, heavy building carts to service lane |
+| Stone/Fabric Way | `(346.5,94.5) -> (252,101.5) -> (223.5,108.5) -> (168,72) -> (80.5,66.5) -> (74,91)` | `6..7 m`, heavy building carts to service lane |
 | River Cartway | `(-353.5,-94.5) -> (-290.5,-91) -> (-213.5,-87.5)` | `7..9 m`, no steps; splits onto Cut |
-| Bell Way | `(78,-112) -> (84,-118) -> (49,-143.5) -> (25.8,-174)` | `4.5..6 m`, two reveals and Bellfoot entrance |
+| Bell Way | `(72,-108) -> (84,-118) -> (49,-143.5) -> (25.8,-174)` | `4.5..6 m`, two reveals and Bellfoot entrance |
 | Harne Gate road | `(25.8,-174) -> (56,-252) -> (24.5,-353.5) -> (10.5,-465.5)` | `5.5..7 m`, road traffic and Bellfounders spur |
 | Reed route | `(-318.5,-374.5) -> (-287,-339.5) -> (-280.5,-318.6) -> (-225.5,-273.6)` | `3..4 m`, foot and handcart traffic |
 

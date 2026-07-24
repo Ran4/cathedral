@@ -23,7 +23,7 @@ answer in a ward of answers, cash-poor and land-rich and coming quietly apart
 over whether to sell the yard. All of that is true and none of it is the thing
 to get right. The thing to get right is that **the argument the ward thinks the
 Alders are having, the Alders have never once had.** Nobody has said the true
-sentence at that table. Ewart says his only in drink, half a mile from the
+sentence at that table. Ewart says his only in drink, across the Green from the
 table, and unsays it by never taking it back. Wyn has never answered him aloud,
 and the family has agreed that her silence is a yes. Tobin has told the one
 thing he wants to a fifteen-year-old girl and to no one who shares his name.
@@ -233,7 +233,7 @@ the Moorings standing over his own head if Wyn would just once say *you have a
 point, brother, and I am afraid of it too*. She never will, because to say it is
 to open the question, and so the two of them are locked — she in the silence
 that means yes, he in the yes he can only shout where she is not — and neither
-can reach the other across a distance of half a mile and one sentence.
+can reach the other across the Green and one unsaid sentence.
 
 He carries a second thing the family does not name, and it is in his blood: his
 mother was a **Hawser**, one of the fallen rope-poor, dead young. Ewart is
@@ -496,7 +496,7 @@ River Cartway and across to the Green, and the second lift into a dry warehouse
 and carters. The Alders kept the water end of the work. They kept **only** the
 water end of the work. Ewart can carry a load three days down a river and hand
 it over having earned the smallest slice of what it costs to move it the last
-half-mile it no longer travels by water.
+reach it no longer travels by water.
 
 He keeps the figures in his head and recites them in drink; Wyn keeps them in
 the book and does not. A page of her reckoning, the kind of thing a writer can
@@ -624,10 +624,10 @@ them, and the newest is **Corin Alder's**, hung there in the winter after F.415
 could. **To sell the Moorings is to take down the poles.** It is not property
 that changes hands when an Alder signs to a Tallage broker; it is the lintel the
 fathers hang from. Ewart, who wants to sell, knows this better than anyone,
-which is why he can only say it drunk and half a mile away: he is proposing, out
-loud, to unhang his own father, and he is ashamed of it by morning, and he never
-takes it back, because the ledger is on his side and the lintel is on everyone
-else's and both are right.
+which is why he can only say it drunk at the Ox, across the Green: he is
+proposing, out loud, to unhang his own father, and he is ashamed of it by
+morning, and he never takes it back, because the ledger is on his side and the
+lintel is on everyone else's and both are right.
 
 Nobody discusses the order in which the remaining poles will be hung. Wyn will
 one day take Ewart's pole back at the churchyard gate and hang it over the door;
@@ -852,17 +852,17 @@ single convergence at *living* water, and it lands differently on each of them.
 Wyn, who is at the water every dawn, answers the blessing at a real mooring with
 the old words — *one shadow to your road*, *and one light over it* — the same
 words she says at the dry Moorings gate every morning of her life to people
-walking out to a river half a mile off; on Vhairestide they are said, once, at a
-mooring that has a boat under it, and it is the only morning they are not a
-habit. Ewart is already outside the wall and does not have to walk out to reach
-the water; for him the day is the ward coming to where he lives, which he finds
-he minds. And Rohese, who has spent sixty-one years within three streets of a
-dry arch, is carried or coaxed out the postern for the one look at the Serle she
-takes all year, and stands at the edge of it saying nothing, and this is the
-morning someone always weeps and it is never who you expect. The scattered
-family is briefly a family, at the water, with the year turning; then everyone
-walks back in through the postern, Maren's Slip takes its last turn, and the
-river goes out of sight for another twelvemonth.
+walking out through the wall to reach the river; on Vhairestide they are said,
+once, at a mooring that has a boat under it, and it is the only morning they are
+not a habit. Ewart is already outside the wall and does not have to walk out to
+reach the water; for him the day is the ward coming to where he lives, which
+he finds he minds. And Rohese, who has spent sixty-one years within three
+streets of a dry arch, is carried or coaxed out the postern for the one look at
+the Serle she takes all year, and stands at the edge of it saying nothing, and
+this is the morning someone always weeps and it is never who you expect. The
+scattered family is briefly a family, at the water, with the year turning; then
+everyone walks back in through the postern, Maren's Slip takes its last turn,
+and the river goes out of sight for another twelvemonth.
 
 ### Marenstide, the eel fair — Tobin's week, and the roll of the drowned
 
