@@ -357,6 +357,7 @@ mod tests {
             .init_asset::<Mesh>()
             .init_asset::<Image>()
             .init_asset::<StandardMaterial>()
+            .init_asset::<crate::materials::WindowGlassMaterial>()
             .init_resource::<CollisionWorld>()
             .add_systems(Startup, super::super::build_city)
             .add_systems(Update, animate_chimney_smoke);

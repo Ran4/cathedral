@@ -4714,9 +4714,10 @@ fn test_weather(kind: WeatherKind, precipitation: f64) -> WeatherSample {
 #[test]
 fn exposed_actor_uses_reachable_shelter_after_conversation_and_atomic_work() {
     let nav = nav();
-    // Node 42 is north-east of Bellfoot Passage and has a graph route through
-    // the passage nodes. It is deliberately outside every authored polygon.
-    let start = nav.node_point(42);
+    // Node 35 is a street node north-east of Bellfoot Passage (post-shrink
+    // graph) with a route through the passage nodes. It is deliberately
+    // outside every authored polygon and clear of door eaves.
+    let start = nav.node_point(35);
     let actor = ActorId::from_raw("rainy");
     let mut world = base_world();
     world.add_character(person("rainy", start, Some("baker"), Significance::Minor));
@@ -4845,8 +4846,10 @@ fn every_food_pitch_uses_the_shared_shelter_map() {
 #[test]
 fn nearby_lightning_causes_a_short_reflex_without_breaking_conversation() {
     let nav = nav();
-    let start = nav.node_point(42);
-    let destination = nav.node_point(41);
+    // Street nodes near the Bellfoot corner (post-shrink graph); the start is
+    // outside every shelter polygon and clear of door eaves.
+    let start = nav.node_point(35);
+    let destination = nav.node_point(34);
     let actor = ActorId::from_raw("flash");
     let mut world = base_world();
     world.add_character(person("flash", start, Some("mason"), Significance::Minor));

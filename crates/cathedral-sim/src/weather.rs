@@ -857,9 +857,9 @@ impl WeatherTimeline {
                 id: hash,
                 game_instant_days: instant,
                 origin_m: [
-                    lerp(-520.0, 520.0, unit(mix64(hash ^ 0x74))),
+                    lerp(-364.0, 364.0, unit(mix64(hash ^ 0x74))),
                     lerp(360.0, 680.0, unit(mix64(hash ^ 0x75))),
-                    lerp(-560.0, 560.0, unit(mix64(hash ^ 0x76))),
+                    lerp(-392.0, 392.0, unit(mix64(hash ^ 0x76))),
                 ],
                 strength: lerp(0.62, 1.0, unit(mix64(hash ^ 0x77))),
             });
@@ -880,8 +880,8 @@ impl WeatherTimeline {
                 break;
             }
             let hash = mix64(episode.id ^ sequence.wrapping_mul(0x9e37_79b9) ^ 0x62);
-            let x = lerp(-520.0, 520.0, unit(mix64(hash ^ 0x63)));
-            let z = lerp(-560.0, 560.0, unit(mix64(hash ^ 0x64)));
+            let x = lerp(-364.0, 364.0, unit(mix64(hash ^ 0x63)));
+            let z = lerp(-392.0, 392.0, unit(mix64(hash ^ 0x64)));
             strikes.push(LightningStrike {
                 id: hash,
                 game_instant_days: instant,

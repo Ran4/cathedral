@@ -19,9 +19,9 @@
   "mother": "p004v",
   "children": [],
   "spawn_location": {
-    "x": 462.5,
+    "x": 323.75,
     "y": 0.91,
-    "z": 422.5,
+    "z": 295.75,
     "facing": 2.4364
   },
   "circumstances": [],

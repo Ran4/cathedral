@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# RETIRED FROM RE-RUNNING (2026-07). Every coordinate in this script — the
+# WARD_BOUNDS rectangles, planning_ward_for_position's first-match boxes, the
+# existing_ward Cut split, and the spawn-placement grid it seeds — predates
+# the 2026-07 0.7x city shrink (lore/places/shrink_transform.json). The cast
+# is authored and fixed at 519 sheets (this script's 30-fixed/470-movable
+# assertions are already stale), so it is kept only as the history of how the
+# 500-person cast was built. Do NOT re-run it without first re-deriving its
+# ward tables and spawn logic against lore/places/shrink_transform.json and
+# the regenerated lore/places/ombreval_buildings.json.
 """Build the authored 500-person cast from the preserved original 103.
 
 Run with:

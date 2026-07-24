@@ -56,15 +56,25 @@ DISTRICT_TO_WARD = {
 # The authored approximate ward bounds (00_city_plan.md "Wards" table), as
 # (x0, x1, z0, z1). They overlap — the classifier below breaks ties by
 # distance to the bound's centre.
+#
+# 2026-07 0.7x city shrink (lore/places/shrink_transform.json): these are the
+# pre-shrink rectangles scaled uniformly by 0.7 about the origin — they are
+# open-ground district envelopes, not building-anchored geometry. Two known
+# named-building ward drifts under the scaled boxes (review-verified, both
+# consciously accepted):
+#   - named_cloth_hall_6 (the hand-authored Draper's Reach re-layout) now
+#     lands in the wallwright rectangle instead of cloth;
+#   - reserve_church_north_east falls inside NO scaled rectangle and takes
+#     the nearest-mapped-building fallback below.
 WARD_BOUNDS = {
-    "fabric": (-110, 180, -160, 235),
-    "wick": (-170, 130, 235, 500),
-    "cloth": (80, 275, 190, 390),
-    "wallwright": (175, 485, 40, 260),
-    "cinder": (-270, 20, 115, 315),
-    "weigh": (-435, -175, -40, 235),
-    "reed": (-455, -160, -500, -235),
-    "bell_and_sluice": (-180, 330, -620, -150),
+    "fabric": (-77.0, 126.0, -112.0, 164.5),
+    "wick": (-119.0, 91.0, 164.5, 350.0),
+    "cloth": (56.0, 192.5, 133.0, 273.0),
+    "wallwright": (122.5, 339.5, 28.0, 182.0),
+    "cinder": (-189.0, 14.0, 80.5, 220.5),
+    "weigh": (-304.5, -122.5, -28.0, 164.5),
+    "reed": (-318.5, -112.0, -350.0, -164.5),
+    "bell_and_sluice": (-126.0, 231.0, -434.0, -105.0),
 }
 
 # Prompt-facing ward names — how people speak of them (00_city_plan.md's table).

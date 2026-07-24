@@ -220,11 +220,14 @@ mod tests {
     fn authoritative_plan_loads_with_every_inventory_entry() {
         let plan = load();
 
-        assert_eq!(plan.buildings.len(), 2_566);
+        // 0.7x city-shrink revision: fewer ordinary houses in the smaller
+        // enclosure and reduced market-stall counts. Named/road/place/site
+        // inventories are preserved.
+        assert_eq!(plan.buildings.len(), 1_108);
         assert_eq!(plan.statistics.named_or_reserved_buildings, 65);
-        assert_eq!(plan.statistics.unnamed_urban_fabric_buildings, 2_501);
+        assert_eq!(plan.statistics.unnamed_urban_fabric_buildings, 1_043);
         assert_eq!(plan.roads.len(), 49);
-        assert_eq!(plan.fixtures.len(), 91);
+        assert_eq!(plan.fixtures.len(), 72);
         assert_eq!(plan.named_place_index.len(), 69);
         assert_eq!(plan.sites.len(), 23);
     }

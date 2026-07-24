@@ -5,7 +5,7 @@ The scene is assembled entirely in Rust with Bevy 0.19 and uses original generat
 cathedral limestone, weathered city plaster, half-timber infill, dark fieldstone, terracotta and slate roofs,
 and the rose window.
 
-The cathedral opens into a roughly 1.2 × 1.0 km fortified medieval city. Most streets pinch and change width
+The cathedral opens into a roughly 840 × 700 m fortified medieval city. Most streets pinch and change width
 between independently offset façades; each block contains a 4.6 m route that doglegs twice, lateral alleys,
 projecting upper floors, covered passages, small courts, and frequent overhead bridges. Those dense quarters
 open selectively into five town squares, markets, a canal and bridges, secondary churches and towers, and the

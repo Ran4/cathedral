@@ -1,0 +1,6128 @@
+{
+  "schema_version": 1,
+  "generated_by": "scripts/generate_top_down_map.py",
+  "note": "Resolved 0.7x city-shrink mapping. Downstream phases (areas.json, characters, Rust constants, docs) MUST read answers here instead of re-deriving membership. Legacy coordinates are the pre-shrink design layout; new coordinates are the shipped shrunk layout.",
+  "S": 0.7,
+  "coswald_shift": [
+    45.0,
+    0.0
+  ],
+  "core": {
+    "site_ids": [
+      "dawn_court",
+      "gradine",
+      "lanthorn_precinct",
+      "seraph_court",
+      "skinners_court"
+    ],
+    "named_ids": [
+      "named_chapter_house",
+      "named_lanthorn"
+    ],
+    "fixture_ids": [
+      "dawn_bearer",
+      "ford_well",
+      "seraph"
+    ],
+    "bboxes": [
+      [
+        -81.0,
+        81.0,
+        -118.0,
+        95.0
+      ],
+      [
+        -47.0,
+        47.0,
+        97.0,
+        216.0
+      ],
+      [
+        52.0,
+        92.0,
+        170.0,
+        210.0
+      ],
+      [
+        -92.0,
+        -52.0,
+        170.0,
+        210.0
+      ],
+      [
+        81.1,
+        134.9,
+        96.8,
+        147.2
+      ]
+    ]
+  },
+  "clusters": {
+    "tallage_bridge": {
+      "anchor": [
+        -305.0,
+        105.0
+      ],
+      "delta": [
+        91.5,
+        -31.5
+      ],
+      "members": [
+        "named_bonded_warehouse",
+        "named_tally_bridge",
+        "named_toll_house"
+      ],
+      "region_bbox": [
+        -378.0,
+        -239.5,
+        67.5,
+        142.5
+      ]
+    },
+    "gaunt": {
+      "anchor": [
+        -244.0,
+        33.0
+      ],
+      "delta": [
+        73.2,
+        -9.9
+      ],
+      "members": [
+        "chain_well",
+        "gaunt_yard",
+        "named_copp_shop",
+        "named_ferrant_house",
+        "named_gaunt_house",
+        "named_gaunt_salt_1"
+      ],
+      "region_bbox": [
+        -282.196,
+        -158.591,
+        -36.553,
+        89.0
+      ]
+    },
+    "maren": {
+      "anchor": [
+        -315.0,
+        -388.0
+      ],
+      "delta": [
+        94.5,
+        116.4
+      ],
+      "members": [
+        "alder_moorings",
+        "named_brine_cellar",
+        "named_charnel_house",
+        "named_eel_bridge",
+        "named_hungry_ox",
+        "named_moorings_1",
+        "named_moorings_2",
+        "named_moorings_3",
+        "named_moorings_4",
+        "named_saint_marens",
+        "reed_cistern",
+        "saint_marens_yard",
+        "tanners_yard"
+      ],
+      "region_bbox": [
+        -452.314,
+        -189.0,
+        -481.818,
+        -282.687
+      ]
+    },
+    "shambles": {
+      "anchor": [
+        -336.0,
+        318.0
+      ],
+      "delta": [
+        100.8,
+        -95.4
+      ],
+      "members": [
+        "named_shambles_1",
+        "named_shambles_2",
+        "named_shambles_3",
+        "named_shambles_4",
+        "named_shambles_5",
+        "named_shambles_6",
+        "named_shambles_7",
+        "shambles",
+        "shambles_well"
+      ],
+      "region_bbox": [
+        -455.298,
+        -317.251,
+        263.237,
+        381.871
+      ]
+    },
+    "seven_lofts": {
+      "anchor": [
+        360.0,
+        335.0
+      ],
+      "delta": [
+        -108.0,
+        -100.5
+      ],
+      "members": [
+        "named_seven_lofts_1",
+        "named_seven_lofts_2",
+        "named_seven_lofts_3",
+        "named_seven_lofts_4",
+        "named_seven_lofts_5",
+        "named_seven_lofts_6",
+        "named_seven_lofts_7",
+        "seven_lofts",
+        "seven_lofts_tanks"
+      ],
+      "region_bbox": [
+        286.296,
+        430.626,
+        263.67,
+        405.835
+      ]
+    },
+    "bellfounders": {
+      "anchor": [
+        155.0,
+        -485.0
+      ],
+      "delta": [
+        -46.5,
+        145.5
+      ],
+      "members": [
+        "bellfounders",
+        "named_bellfounders_1",
+        "named_bellfounders_2",
+        "named_bellfounders_3",
+        "named_bellfounders_4",
+        "named_bellfounders_5"
+      ],
+      "region_bbox": [
+        94.453,
+        210.272,
+        -541.826,
+        -436.223
+      ]
+    },
+    "bellstand_tower": {
+      "anchor": [
+        64.0,
+        -270.0
+      ],
+      "delta": [
+        -19.2,
+        81.0
+      ],
+      "members": [
+        "bellstand_platform",
+        "colm_stone",
+        "named_bellstand_tower",
+        "step_cistern"
+      ],
+      "region_bbox": [
+        17.5,
+        87.0,
+        -315.5,
+        -232.0
+      ]
+    },
+    "ilvane": {
+      "anchor": [
+        175.0,
+        -92.0
+      ],
+      "delta": [
+        -52.5,
+        27.6
+      ],
+      "members": [
+        "ilvane_plot",
+        "named_anchorhold",
+        "named_ilvane_chapel"
+      ],
+      "region_bbox": [
+        140.449,
+        210.329,
+        -135.232,
+        -48.768
+      ]
+    },
+    "old_sluice": {
+      "anchor": [
+        -305.0,
+        -610.0
+      ],
+      "delta": [
+        91.5,
+        183.0
+      ],
+      "members": [
+        "named_old_sluice"
+      ],
+      "region_bbox": [
+        -342.0,
+        -268.0,
+        -643.0,
+        -577.0
+      ]
+    },
+    "chain_bridge": {
+      "anchor": [
+        -305.0,
+        425.0
+      ],
+      "delta": [
+        91.5,
+        -127.5
+      ],
+      "members": [
+        "named_chain_bridge"
+      ],
+      "region_bbox": [
+        -339.0,
+        -271.0,
+        407.0,
+        443.0
+      ]
+    },
+    "gate_wool": {
+      "anchor": [
+        -35.0,
+        510.0
+      ],
+      "delta": [
+        10.5,
+        -153.0
+      ],
+      "members": [
+        "gate_wool_1",
+        "gate_wool_2"
+      ],
+      "region_bbox": [
+        -76.0,
+        6.0,
+        485.5,
+        534.5
+      ]
+    },
+    "gate_stone": {
+      "anchor": [
+        495.0,
+        135.0
+      ],
+      "delta": [
+        -148.5,
+        -40.5
+      ],
+      "members": [
+        "gate_stone_1",
+        "gate_stone_2"
+      ],
+      "region_bbox": [
+        471.0,
+        519.0,
+        89.0,
+        181.0
+      ]
+    },
+    "gate_harne": {
+      "anchor": [
+        15.0,
+        -665.0
+      ],
+      "delta": [
+        -4.5,
+        199.5
+      ],
+      "members": [
+        "gate_harne_1",
+        "gate_harne_2"
+      ],
+      "region_bbox": [
+        -26.0,
+        56.0,
+        -689.5,
+        -640.5
+      ]
+    },
+    "gate_river": {
+      "anchor": [
+        -505.0,
+        -135.0
+      ],
+      "delta": [
+        151.5,
+        40.5
+      ],
+      "members": [
+        "gate_river_1",
+        "gate_river_2"
+      ],
+      "region_bbox": [
+        -529.0,
+        -481.0,
+        -188.5,
+        -81.5
+      ]
+    },
+    "gate_reed": {
+      "anchor": [
+        -455.0,
+        -535.0
+      ],
+      "delta": [
+        136.5,
+        160.5
+      ],
+      "members": [
+        "gate_reed_1"
+      ],
+      "region_bbox": [
+        -478.388,
+        -431.612,
+        -560.129,
+        -509.871
+      ]
+    },
+    "parish_west": {
+      "anchor": [
+        105.0,
+        430.0
+      ],
+      "delta": [
+        -31.5,
+        -129.0
+      ],
+      "members": [
+        "reserve_church_west",
+        "west_parish"
+      ],
+      "region_bbox": [
+        67.515,
+        142.485,
+        387.784,
+        472.216
+      ]
+    },
+    "parish_north_east": {
+      "anchor": [
+        330.0,
+        -300.0
+      ],
+      "delta": [
+        -99.0,
+        90.0
+      ],
+      "members": [
+        "north_east_parish",
+        "reserve_church_north_east"
+      ],
+      "region_bbox": [
+        290.48,
+        369.52,
+        -344.065,
+        -255.935
+      ]
+    },
+    "parish_west_cut": {
+      "anchor": [
+        -220.0,
+        395.0
+      ],
+      "delta": [
+        66.0,
+        -118.5
+      ],
+      "members": [
+        "reserve_church_west_cut",
+        "west_cut_parish"
+      ],
+      "region_bbox": [
+        -257.964,
+        -182.036,
+        352.396,
+        437.604
+      ]
+    },
+    "parish_river": {
+      "anchor": [
+        -424.0,
+        -35.0
+      ],
+      "delta": [
+        127.2,
+        10.5
+      ],
+      "members": [
+        "reserve_church_river",
+        "river_parish"
+      ],
+      "region_bbox": [
+        -458.536,
+        -381.464,
+        -78.267,
+        8.267
+      ]
+    }
+  },
+  "cluster_precedence": [
+    "gate_wool",
+    "gate_stone",
+    "gate_harne",
+    "gate_river",
+    "gate_reed",
+    "bellstand_tower",
+    "ilvane",
+    "old_sluice",
+    "chain_bridge",
+    "tallage_bridge",
+    "gaunt",
+    "bellfounders",
+    "seven_lofts",
+    "parish_west",
+    "parish_north_east",
+    "parish_west_cut",
+    "parish_river",
+    "maren",
+    "shambles"
+  ],
+  "entity_nudges": {
+    "named_brine_cellar": [
+      5.0,
+      0.0
+    ],
+    "named_moorings_1": [
+      2.0,
+      0.0
+    ],
+    "named_hungry_ox": [
+      -2.0,
+      0.0
+    ]
+  },
+  "burnt_court_nudge": [
+    -3.0,
+    4.0
+  ],
+  "road_point_overrides": {
+    "cinder_row": {
+      "0": [
+        -48.0,
+        204.0
+      ],
+      "3": [
+        -74.6,
+        80.0
+      ]
+    },
+    "bell_way": {
+      "0": [
+        72.0,
+        -108.0
+      ],
+      "1": [
+        84.0,
+        -118.0
+      ]
+    },
+    "crookneck": {
+      "1": [
+        100.0,
+        -14.0
+      ],
+      "2": [
+        90.0,
+        -70.0
+      ]
+    },
+    "west_approach": {
+      "4": [
+        0.0,
+        178.0
+      ]
+    },
+    "fabric_south_cross": {
+      "0": [
+        -7.0,
+        199.5
+      ],
+      "3": [
+        74.0,
+        91.0
+      ]
+    },
+    "river_east_lane": {
+      "2": [
+        -300.0,
+        -236.0
+      ]
+    },
+    "fabric_way": {
+      "3": [
+        168.0,
+        72.0
+      ],
+      "5": [
+        74.0,
+        91.0
+      ]
+    },
+    "north_cross_1": {
+      "2": [
+        205.0,
+        258.0
+      ],
+      "3": [
+        158.0,
+        236.0
+      ]
+    },
+    "cinder_west_cross": {
+      "1": [
+        -104.0,
+        203.0
+      ]
+    },
+    "west_cut_link": {
+      "4": [
+        -256.0,
+        268.0
+      ]
+    },
+    "tanners_slip": {
+      "2": [
+        -303.0,
+        -266.0
+      ]
+    }
+  },
+  "road_forced_identity": {
+    "cinder_row": [
+      4
+    ],
+    "tallage_to_gradine": [
+      4
+    ]
+  },
+  "road_forced_class": {
+    "fabric_way": {
+      "2": "coswald"
+    },
+    "crookneck": {
+      "0": "coswald"
+    },
+    "north_cross_2": {
+      "3": "coswald"
+    }
+  },
+  "road_forced_cluster_whole": {
+    "eelback": "maren",
+    "tanners_slip": "maren"
+  },
+  "road_forced_cluster_point": {
+    "reed_route": {
+      "2": "maren",
+      "3": "maren"
+    }
+  },
+  "road_override_points": {
+    "north_service": [
+      [
+        74.0,
+        91.0
+      ],
+      [
+        76.0,
+        55.0
+      ],
+      [
+        74.0,
+        0.0
+      ],
+      [
+        88.0,
+        -48.0
+      ],
+      [
+        90.0,
+        -70.0
+      ],
+      [
+        72.0,
+        -108.0
+      ]
+    ],
+    "south_service": [
+      [
+        -74.0,
+        91.0
+      ],
+      [
+        -76.0,
+        55.0
+      ],
+      [
+        -74.0,
+        5.0
+      ],
+      [
+        -76.0,
+        -70.0
+      ],
+      [
+        -72.0,
+        -108.0
+      ]
+    ],
+    "apse_lane": [
+      [
+        -72.0,
+        -108.0
+      ],
+      [
+        0.0,
+        -118.0
+      ],
+      [
+        72.0,
+        -108.0
+      ]
+    ],
+    "drapers_reach": [
+      [
+        22.0,
+        241.0
+      ],
+      [
+        58.0,
+        232.0
+      ],
+      [
+        102.0,
+        212.0
+      ],
+      [
+        140.0,
+        192.0
+      ],
+      [
+        170.0,
+        174.0
+      ]
+    ],
+    "tenterhook": [
+      [
+        152.0,
+        172.0
+      ],
+      [
+        135.0,
+        188.0
+      ],
+      [
+        114.0,
+        204.0
+      ]
+    ],
+    "wick_north": [
+      [
+        -14.0,
+        272.0
+      ],
+      [
+        45.0,
+        278.0
+      ],
+      [
+        100.0,
+        266.0
+      ],
+      [
+        140.0,
+        246.0
+      ],
+      [
+        175.0,
+        214.0
+      ]
+    ],
+    "west_residential_1": [
+      [
+        101.5,
+        336.0
+      ],
+      [
+        103.5,
+        281.0
+      ],
+      [
+        100.0,
+        258.0
+      ]
+    ],
+    "west_residential_2": [
+      [
+        192.5,
+        329.0
+      ],
+      [
+        188.0,
+        285.0
+      ],
+      [
+        193.0,
+        258.0
+      ]
+    ],
+    "river_west_lane": [
+      [
+        -322.0,
+        182.0
+      ],
+      [
+        -300.0,
+        98.0
+      ],
+      [
+        -301.0,
+        14.0
+      ],
+      [
+        -332.5,
+        -56.0
+      ]
+    ],
+    "south_inner_wall": [
+      [
+        -311.5,
+        -413.0
+      ],
+      [
+        -329.0,
+        -294.0
+      ],
+      [
+        -336.0,
+        -154.0
+      ],
+      [
+        -336.0,
+        -10.0
+      ],
+      [
+        -270.0,
+        176.0
+      ],
+      [
+        -224.0,
+        188.0
+      ],
+      [
+        -224.0,
+        212.0
+      ],
+      [
+        -242.0,
+        258.0
+      ],
+      [
+        -272.0,
+        295.0
+      ]
+    ]
+  },
+  "override_rect": {
+    "named_cloth_hall_1": [
+      37.0,
+      256.0,
+      24.0,
+      15.0,
+      -34.0
+    ],
+    "named_cloth_hall_2": [
+      66.0,
+      246.0,
+      27.0,
+      16.0,
+      -38.0
+    ],
+    "named_cloth_hall_3": [
+      96.0,
+      234.0,
+      28.0,
+      16.0,
+      -41.0
+    ],
+    "named_cloth_hall_4": [
+      126.0,
+      220.0,
+      29.0,
+      16.0,
+      -42.0
+    ],
+    "named_cloth_hall_5": [
+      154.0,
+      204.0,
+      27.0,
+      16.0,
+      -39.0
+    ],
+    "named_cloth_hall_6": [
+      176.0,
+      186.0,
+      23.0,
+      15.0,
+      -34.0
+    ],
+    "named_masons_lodge": [
+      156.0,
+      150.0,
+      42.0,
+      31.0,
+      -2.0
+    ],
+    "named_malt_house": [
+      150.0,
+      104.0,
+      27.0,
+      45.0,
+      5.0
+    ],
+    "named_glaziers_guild": [
+      -104.0,
+      232.0,
+      26.0,
+      37.0,
+      -6.0
+    ],
+    "named_sparr_workshop": [
+      -112.0,
+      270.0,
+      18.0,
+      31.0,
+      -7.0
+    ]
+  },
+  "override_fixture": {
+    "tenter_cistern": [
+      135.0,
+      188.0
+    ],
+    "lodge_well": [
+      172.0,
+      120.0
+    ],
+    "slate_cistern": [
+      8.0,
+      258.0
+    ]
+  },
+  "override_mark": {
+    "37": [
+      100.0,
+      214.0
+    ],
+    "38": [
+      124.5,
+      196.0
+    ],
+    "42": [
+      -104.0,
+      232.0
+    ],
+    "43": [
+      156.0,
+      150.0
+    ],
+    "44": [
+      170.0,
+      118.0
+    ],
+    "60": [
+      8.0,
+      258.0
+    ],
+    "61": [
+      135.0,
+      188.0
+    ],
+    "62": [
+      172.0,
+      120.0
+    ]
+  },
+  "mark_class": {
+    "1": "core",
+    "2": "core",
+    "3": "core",
+    "4": "core",
+    "5": "core",
+    "6": "core",
+    "7": "core",
+    "8": "core",
+    "9": "scale",
+    "10": "coswald",
+    "11": "scale",
+    "12": "scale",
+    "13": "scale",
+    "14": "scale",
+    "15": "chain_bridge",
+    "16": "tallage_bridge",
+    "17": "old_sluice",
+    "18": "scale",
+    "19": "shambles",
+    "20": "tallage_bridge",
+    "21": "tallage_bridge",
+    "22": "gaunt",
+    "23": "gaunt",
+    "24": "gaunt",
+    "25": "gaunt",
+    "26": "gaunt",
+    "27": "maren",
+    "28": "maren",
+    "29": "maren",
+    "30": "maren",
+    "31": "maren",
+    "32": "maren",
+    "33": "maren",
+    "34": "maren",
+    "35": "scale",
+    "36": "maren",
+    "37": "override",
+    "38": "override",
+    "39": "scale",
+    "40": "scale",
+    "41": "burnt",
+    "42": "override",
+    "43": "override",
+    "44": "override",
+    "45": "scale",
+    "46": "scale",
+    "47": "ilvane",
+    "48": "ilvane",
+    "49": "bellstand_tower",
+    "50": "bellstand_tower",
+    "51": "bellstand_tower",
+    "52": "bellfounders",
+    "53": "gate_wool",
+    "54": "gate_stone",
+    "55": "gate_harne",
+    "56": "gate_river",
+    "57": "gate_reed",
+    "58": "seven_lofts",
+    "59": "scale",
+    "60": "override",
+    "61": "override",
+    "62": "override",
+    "63": "scale",
+    "64": "gaunt",
+    "65": "maren",
+    "66": "bellstand_tower",
+    "67": "scale",
+    "68": "shambles",
+    "69": "seven_lofts"
+  },
+  "actor_cluster": {
+    "Bertran of the Ox": "maren"
+  },
+  "actor_cluster_note": "Region-capture applies to character spawns too, but ~52 sheets have >15 m capture-vs-scale divergence (audit list in review_sim.json); Bertran of the Ox spawns 35 m outside the maren region yet keeps the Hungry Ox tavern, so he is pinned to maren. Cobb (cloth_worker) is NOT captured by the dropped cloth region and scales. B2 must snap every spawn to the nearest walkable cell after applying T.",
+  "resolved": {
+    "named_buildings": {
+      "named_lanthorn": {
+        "old_centroid": [
+          0.0,
+          -19.167
+        ],
+        "new_centroid": [
+          0.0,
+          -19.167
+        ],
+        "class": "core"
+      },
+      "named_chapter_house": {
+        "old_centroid": [
+          70.0,
+          -69.0
+        ],
+        "new_centroid": [
+          70.0,
+          -69.0
+        ],
+        "class": "core"
+      },
+      "named_masons_lodge": {
+        "old_centroid": [
+          207.0,
+          151.0
+        ],
+        "new_centroid": [
+          156.0,
+          150.0
+        ],
+        "class": "override"
+      },
+      "named_malt_house": {
+        "old_centroid": [
+          234.0,
+          111.0
+        ],
+        "new_centroid": [
+          150.0,
+          104.0
+        ],
+        "class": "override"
+      },
+      "named_glaziers_guild": {
+        "old_centroid": [
+          -141.0,
+          237.0
+        ],
+        "new_centroid": [
+          -104.0,
+          232.0
+        ],
+        "class": "override"
+      },
+      "named_sparr_workshop": {
+        "old_centroid": [
+          -115.0,
+          250.0
+        ],
+        "new_centroid": [
+          -112.0,
+          270.0
+        ],
+        "class": "override"
+      },
+      "named_cloth_hall_1": {
+        "old_centroid": [
+          48.0,
+          334.0
+        ],
+        "new_centroid": [
+          37.0,
+          256.0
+        ],
+        "class": "override"
+      },
+      "named_cloth_hall_2": {
+        "old_centroid": [
+          78.0,
+          306.0
+        ],
+        "new_centroid": [
+          66.0,
+          246.0
+        ],
+        "class": "override"
+      },
+      "named_cloth_hall_3": {
+        "old_centroid": [
+          111.0,
+          278.0
+        ],
+        "new_centroid": [
+          96.0,
+          234.0
+        ],
+        "class": "override"
+      },
+      "named_cloth_hall_4": {
+        "old_centroid": [
+          143.0,
+          247.0
+        ],
+        "new_centroid": [
+          126.0,
+          220.0
+        ],
+        "class": "override"
+      },
+      "named_cloth_hall_5": {
+        "old_centroid": [
+          175.0,
+          218.0
+        ],
+        "new_centroid": [
+          154.0,
+          204.0
+        ],
+        "class": "override"
+      },
+      "named_cloth_hall_6": {
+        "old_centroid": [
+          204.0,
+          194.0
+        ],
+        "new_centroid": [
+          176.0,
+          186.0
+        ],
+        "class": "override"
+      },
+      "named_toll_house": {
+        "old_centroid": [
+          -268.0,
+          105.0
+        ],
+        "new_centroid": [
+          -176.5,
+          73.5
+        ],
+        "class": "tallage_bridge"
+      },
+      "named_bonded_warehouse": {
+        "old_centroid": [
+          -345.0,
+          105.0
+        ],
+        "new_centroid": [
+          -253.5,
+          73.5
+        ],
+        "class": "tallage_bridge"
+      },
+      "named_copp_shop": {
+        "old_centroid": [
+          -262.0,
+          43.0
+        ],
+        "new_centroid": [
+          -188.8,
+          33.1
+        ],
+        "class": "gaunt"
+      },
+      "named_ferrant_house": {
+        "old_centroid": [
+          -242.0,
+          20.0
+        ],
+        "new_centroid": [
+          -168.8,
+          10.1
+        ],
+        "class": "gaunt"
+      },
+      "named_gaunt_house": {
+        "old_centroid": [
+          -226.5,
+          19.0
+        ],
+        "new_centroid": [
+          -153.3,
+          9.1
+        ],
+        "class": "gaunt"
+      },
+      "named_gaunt_salt_1": {
+        "old_centroid": [
+          -220.0,
+          58.0
+        ],
+        "new_centroid": [
+          -146.8,
+          48.1
+        ],
+        "class": "gaunt"
+      },
+      "named_saint_marens": {
+        "old_centroid": [
+          -235.5,
+          -383.833
+        ],
+        "new_centroid": [
+          -141.0,
+          -267.433
+        ],
+        "class": "maren"
+      },
+      "named_charnel_house": {
+        "old_centroid": [
+          -278.0,
+          -365.0
+        ],
+        "new_centroid": [
+          -183.5,
+          -248.6
+        ],
+        "class": "maren"
+      },
+      "named_moorings_1": {
+        "old_centroid": [
+          -392.0,
+          -407.0
+        ],
+        "new_centroid": [
+          -295.5,
+          -290.6
+        ],
+        "class": "maren"
+      },
+      "named_moorings_2": {
+        "old_centroid": [
+          -343.0,
+          -430.0
+        ],
+        "new_centroid": [
+          -248.5,
+          -313.6
+        ],
+        "class": "maren"
+      },
+      "named_moorings_3": {
+        "old_centroid": [
+          -342.0,
+          -388.0
+        ],
+        "new_centroid": [
+          -247.5,
+          -271.6
+        ],
+        "class": "maren"
+      },
+      "named_moorings_4": {
+        "old_centroid": [
+          -370.0,
+          -371.5
+        ],
+        "new_centroid": [
+          -275.5,
+          -255.1
+        ],
+        "class": "maren"
+      },
+      "named_hungry_ox": {
+        "old_centroid": [
+          -330.0,
+          -455.0
+        ],
+        "new_centroid": [
+          -237.5,
+          -338.6
+        ],
+        "class": "maren"
+      },
+      "named_brine_cellar": {
+        "old_centroid": [
+          -415.0,
+          -405.0
+        ],
+        "new_centroid": [
+          -315.5,
+          -288.6
+        ],
+        "class": "maren"
+      },
+      "named_ilvane_chapel": {
+        "old_centroid": [
+          175.0,
+          -92.0
+        ],
+        "new_centroid": [
+          122.5,
+          -64.4
+        ],
+        "class": "ilvane"
+      },
+      "named_anchorhold": {
+        "old_centroid": [
+          194.0,
+          -92.0
+        ],
+        "new_centroid": [
+          141.5,
+          -64.4
+        ],
+        "class": "ilvane"
+      },
+      "named_bellstand_tower": {
+        "old_centroid": [
+          64.0,
+          -270.0
+        ],
+        "new_centroid": [
+          44.8,
+          -189.0
+        ],
+        "class": "bellstand_tower"
+      },
+      "named_seven_lofts_1": {
+        "old_centroid": [
+          392.0,
+          358.0
+        ],
+        "new_centroid": [
+          284.0,
+          257.5
+        ],
+        "class": "seven_lofts"
+      },
+      "named_seven_lofts_2": {
+        "old_centroid": [
+          366.0,
+          370.0
+        ],
+        "new_centroid": [
+          258.0,
+          269.5
+        ],
+        "class": "seven_lofts"
+      },
+      "named_seven_lofts_3": {
+        "old_centroid": [
+          338.0,
+          372.0
+        ],
+        "new_centroid": [
+          230.0,
+          271.5
+        ],
+        "class": "seven_lofts"
+      },
+      "named_seven_lofts_4": {
+        "old_centroid": [
+          320.0,
+          338.0
+        ],
+        "new_centroid": [
+          212.0,
+          237.5
+        ],
+        "class": "seven_lofts"
+      },
+      "named_seven_lofts_5": {
+        "old_centroid": [
+          332.0,
+          306.0
+        ],
+        "new_centroid": [
+          224.0,
+          205.5
+        ],
+        "class": "seven_lofts"
+      },
+      "named_seven_lofts_6": {
+        "old_centroid": [
+          362.0,
+          299.0
+        ],
+        "new_centroid": [
+          254.0,
+          198.5
+        ],
+        "class": "seven_lofts"
+      },
+      "named_seven_lofts_7": {
+        "old_centroid": [
+          395.0,
+          310.0
+        ],
+        "new_centroid": [
+          287.0,
+          209.5
+        ],
+        "class": "seven_lofts"
+      },
+      "named_shambles_1": {
+        "old_centroid": [
+          -427.0,
+          339.0
+        ],
+        "new_centroid": [
+          -326.2,
+          243.6
+        ],
+        "class": "shambles"
+      },
+      "named_shambles_2": {
+        "old_centroid": [
+          -405.0,
+          348.0
+        ],
+        "new_centroid": [
+          -304.2,
+          252.6
+        ],
+        "class": "shambles"
+      },
+      "named_shambles_3": {
+        "old_centroid": [
+          -378.0,
+          348.0
+        ],
+        "new_centroid": [
+          -277.2,
+          252.6
+        ],
+        "class": "shambles"
+      },
+      "named_shambles_4": {
+        "old_centroid": [
+          -356.0,
+          329.0
+        ],
+        "new_centroid": [
+          -255.2,
+          233.6
+        ],
+        "class": "shambles"
+      },
+      "named_shambles_5": {
+        "old_centroid": [
+          -350.0,
+          294.0
+        ],
+        "new_centroid": [
+          -249.2,
+          198.6
+        ],
+        "class": "shambles"
+      },
+      "named_shambles_6": {
+        "old_centroid": [
+          -395.0,
+          284.0
+        ],
+        "new_centroid": [
+          -294.2,
+          188.6
+        ],
+        "class": "shambles"
+      },
+      "named_shambles_7": {
+        "old_centroid": [
+          -428.0,
+          293.0
+        ],
+        "new_centroid": [
+          -327.2,
+          197.6
+        ],
+        "class": "shambles"
+      },
+      "named_bellfounders_1": {
+        "old_centroid": [
+          181.0,
+          -501.0
+        ],
+        "new_centroid": [
+          134.5,
+          -355.5
+        ],
+        "class": "bellfounders"
+      },
+      "named_bellfounders_2": {
+        "old_centroid": [
+          151.0,
+          -510.0
+        ],
+        "new_centroid": [
+          104.5,
+          -364.5
+        ],
+        "class": "bellfounders"
+      },
+      "named_bellfounders_3": {
+        "old_centroid": [
+          123.0,
+          -499.0
+        ],
+        "new_centroid": [
+          76.5,
+          -353.5
+        ],
+        "class": "bellfounders"
+      },
+      "named_bellfounders_4": {
+        "old_centroid": [
+          126.0,
+          -463.0
+        ],
+        "new_centroid": [
+          79.5,
+          -317.5
+        ],
+        "class": "bellfounders"
+      },
+      "named_bellfounders_5": {
+        "old_centroid": [
+          169.0,
+          -458.0
+        ],
+        "new_centroid": [
+          122.5,
+          -312.5
+        ],
+        "class": "bellfounders"
+      },
+      "named_old_sluice": {
+        "old_centroid": [
+          -305.0,
+          -610.0
+        ],
+        "new_centroid": [
+          -213.5,
+          -427.0
+        ],
+        "class": "old_sluice"
+      },
+      "named_chain_bridge": {
+        "old_centroid": [
+          -305.0,
+          425.0
+        ],
+        "new_centroid": [
+          -213.5,
+          297.5
+        ],
+        "class": "chain_bridge"
+      },
+      "named_tally_bridge": {
+        "old_centroid": [
+          -305.0,
+          105.0
+        ],
+        "new_centroid": [
+          -213.5,
+          73.5
+        ],
+        "class": "tallage_bridge"
+      },
+      "named_eel_bridge": {
+        "old_centroid": [
+          -343.0,
+          -374.0
+        ],
+        "new_centroid": [
+          -248.5,
+          -257.6
+        ],
+        "class": "maren"
+      },
+      "reserve_church_west": {
+        "old_centroid": [
+          105.0,
+          430.0
+        ],
+        "new_centroid": [
+          73.5,
+          301.0
+        ],
+        "class": "parish_west"
+      },
+      "reserve_church_north_east": {
+        "old_centroid": [
+          330.0,
+          -300.0
+        ],
+        "new_centroid": [
+          231.0,
+          -210.0
+        ],
+        "class": "parish_north_east"
+      },
+      "reserve_church_west_cut": {
+        "old_centroid": [
+          -220.0,
+          395.0
+        ],
+        "new_centroid": [
+          -154.0,
+          276.5
+        ],
+        "class": "parish_west_cut"
+      },
+      "reserve_church_river": {
+        "old_centroid": [
+          -420.0,
+          -35.0
+        ],
+        "new_centroid": [
+          -292.8,
+          -24.5
+        ],
+        "class": "parish_river"
+      },
+      "gate_wool_1": {
+        "old_centroid": [
+          -17.0,
+          510.0
+        ],
+        "new_centroid": [
+          -6.5,
+          357.0
+        ],
+        "class": "gate_wool"
+      },
+      "gate_wool_2": {
+        "old_centroid": [
+          -53.0,
+          510.0
+        ],
+        "new_centroid": [
+          -42.5,
+          357.0
+        ],
+        "class": "gate_wool"
+      },
+      "gate_stone_1": {
+        "old_centroid": [
+          495.0,
+          112.0
+        ],
+        "new_centroid": [
+          346.5,
+          71.5
+        ],
+        "class": "gate_stone"
+      },
+      "gate_stone_2": {
+        "old_centroid": [
+          495.0,
+          158.0
+        ],
+        "new_centroid": [
+          346.5,
+          117.5
+        ],
+        "class": "gate_stone"
+      },
+      "gate_harne_1": {
+        "old_centroid": [
+          33.0,
+          -665.0
+        ],
+        "new_centroid": [
+          28.5,
+          -465.5
+        ],
+        "class": "gate_harne"
+      },
+      "gate_harne_2": {
+        "old_centroid": [
+          -3.0,
+          -665.0
+        ],
+        "new_centroid": [
+          -7.5,
+          -465.5
+        ],
+        "class": "gate_harne"
+      },
+      "gate_river_1": {
+        "old_centroid": [
+          -505.0,
+          -164.0
+        ],
+        "new_centroid": [
+          -353.5,
+          -123.5
+        ],
+        "class": "gate_river"
+      },
+      "gate_river_2": {
+        "old_centroid": [
+          -505.0,
+          -106.0
+        ],
+        "new_centroid": [
+          -353.5,
+          -65.5
+        ],
+        "class": "gate_river"
+      },
+      "gate_reed_1": {
+        "old_centroid": [
+          -455.0,
+          -535.0
+        ],
+        "new_centroid": [
+          -318.5,
+          -374.5
+        ],
+        "class": "gate_reed"
+      }
+    },
+    "sites": {
+      "lanthorn_precinct": {
+        "old_centroid": [
+          0.0,
+          -12.0
+        ],
+        "new_centroid": [
+          0.0,
+          -16.333
+        ],
+        "class": "override_polygon"
+      },
+      "gradine": {
+        "old_centroid": [
+          0.0,
+          131.0
+        ],
+        "new_centroid": [
+          0.0,
+          131.0
+        ],
+        "class": "core"
+      },
+      "dawn_court": {
+        "old_centroid": [
+          -72.0,
+          190.0
+        ],
+        "new_centroid": [
+          -72.0,
+          190.0
+        ],
+        "class": "override_polygon"
+      },
+      "seraph_court": {
+        "old_centroid": [
+          72.0,
+          190.0
+        ],
+        "new_centroid": [
+          72.0,
+          190.0
+        ],
+        "class": "override_polygon"
+      },
+      "skinners_court": {
+        "old_centroid": [
+          108.0,
+          122.0
+        ],
+        "new_centroid": [
+          108.0,
+          122.0
+        ],
+        "class": "core"
+      },
+      "wickmarket": {
+        "old_centroid": [
+          -21.667,
+          352.833
+        ],
+        "new_centroid": [
+          -15.167,
+          246.983
+        ],
+        "class": "scale"
+      },
+      "coswalds_yard": {
+        "old_centroid": [
+          253.833,
+          159.667
+        ],
+        "new_centroid": [
+          222.683,
+          111.767
+        ],
+        "class": "coswald"
+      },
+      "tallage": {
+        "old_centroid": [
+          -306.333,
+          89.5
+        ],
+        "new_centroid": [
+          -214.433,
+          62.65
+        ],
+        "class": "scale"
+      },
+      "marens_green": {
+        "old_centroid": [
+          -307.167,
+          -368.333
+        ],
+        "new_centroid": [
+          -215.017,
+          -257.833
+        ],
+        "class": "scale"
+      },
+      "bellstand": {
+        "old_centroid": [
+          44.333,
+          -258.5
+        ],
+        "new_centroid": [
+          31.033,
+          -180.95
+        ],
+        "class": "scale"
+      },
+      "burnt_court": {
+        "old_centroid": [
+          -172.0,
+          232.0
+        ],
+        "new_centroid": [
+          -123.4,
+          166.4
+        ],
+        "class": "burnt"
+      },
+      "gaunt_yard": {
+        "old_centroid": [
+          -195.0,
+          -2.0
+        ],
+        "new_centroid": [
+          -121.8,
+          -11.9
+        ],
+        "class": "gaunt"
+      },
+      "saint_marens_yard": {
+        "old_centroid": [
+          -267.0,
+          -360.0
+        ],
+        "new_centroid": [
+          -172.5,
+          -243.6
+        ],
+        "class": "maren"
+      },
+      "alder_moorings": {
+        "old_centroid": [
+          -367.0,
+          -407.0
+        ],
+        "new_centroid": [
+          -272.5,
+          -290.6
+        ],
+        "class": "scale_centroid:maren"
+      },
+      "tanners_yard": {
+        "old_centroid": [
+          -400.0,
+          -360.0
+        ],
+        "new_centroid": [
+          -305.5,
+          -243.6
+        ],
+        "class": "scale_centroid:maren"
+      },
+      "ilvane_plot": {
+        "old_centroid": [
+          175.0,
+          -92.0
+        ],
+        "new_centroid": [
+          122.5,
+          -64.4
+        ],
+        "class": "ilvane"
+      },
+      "seven_lofts": {
+        "old_centroid": [
+          360.0,
+          335.0
+        ],
+        "new_centroid": [
+          252.0,
+          234.5
+        ],
+        "class": "seven_lofts"
+      },
+      "shambles": {
+        "old_centroid": [
+          -395.0,
+          315.0
+        ],
+        "new_centroid": [
+          -294.2,
+          219.6
+        ],
+        "class": "scale_centroid:shambles"
+      },
+      "bellfounders": {
+        "old_centroid": [
+          155.0,
+          -485.0
+        ],
+        "new_centroid": [
+          108.5,
+          -339.5
+        ],
+        "class": "bellfounders"
+      },
+      "west_parish": {
+        "old_centroid": [
+          105.0,
+          430.0
+        ],
+        "new_centroid": [
+          73.5,
+          301.0
+        ],
+        "class": "parish_west"
+      },
+      "north_east_parish": {
+        "old_centroid": [
+          330.0,
+          -300.0
+        ],
+        "new_centroid": [
+          231.0,
+          -210.0
+        ],
+        "class": "parish_north_east"
+      },
+      "west_cut_parish": {
+        "old_centroid": [
+          -220.0,
+          395.0
+        ],
+        "new_centroid": [
+          -154.0,
+          276.5
+        ],
+        "class": "parish_west_cut"
+      },
+      "river_parish": {
+        "old_centroid": [
+          -420.0,
+          -35.0
+        ],
+        "new_centroid": [
+          -292.8,
+          -24.5
+        ],
+        "class": "parish_river"
+      }
+    },
+    "fixtures": {
+      "dawn_bearer": {
+        "old": [
+          -72,
+          190
+        ],
+        "new": [
+          -72,
+          190
+        ],
+        "class": "core"
+      },
+      "seraph": {
+        "old": [
+          72,
+          190
+        ],
+        "new": [
+          72,
+          190
+        ],
+        "class": "core"
+      },
+      "ford_well": {
+        "old": [
+          88,
+          35
+        ],
+        "new": [
+          88,
+          35
+        ],
+        "class": "core"
+      },
+      "colm_stone": {
+        "old": [
+          52,
+          -258
+        ],
+        "new": [
+          32.8,
+          -177.0
+        ],
+        "class": "bellstand_tower"
+      },
+      "bellstand_platform": {
+        "old": [
+          36,
+          -248
+        ],
+        "new": [
+          16.8,
+          -167.0
+        ],
+        "class": "bellstand_tower"
+      },
+      "tallage_weighbeam": {
+        "old": [
+          -306,
+          65
+        ],
+        "new": [
+          -214.2,
+          45.5
+        ],
+        "class": "scale"
+      },
+      "tallage_stone": {
+        "old": [
+          -290,
+          74
+        ],
+        "new": [
+          -203.0,
+          51.8
+        ],
+        "class": "scale"
+      },
+      "coswald_tracing": {
+        "old": [
+          258,
+          168
+        ],
+        "new": [
+          225.6,
+          117.6
+        ],
+        "class": "coswald"
+      },
+      "coswald_crane": {
+        "old": [
+          285,
+          142
+        ],
+        "new": [
+          244.5,
+          99.4
+        ],
+        "class": "coswald"
+      },
+      "slate_cistern": {
+        "old": [
+          51,
+          372
+        ],
+        "new": [
+          8.0,
+          258.0
+        ],
+        "class": "override"
+      },
+      "tenter_cistern": {
+        "old": [
+          94,
+          223
+        ],
+        "new": [
+          135.0,
+          188.0
+        ],
+        "class": "override"
+      },
+      "lodge_well": {
+        "old": [
+          239,
+          143
+        ],
+        "new": [
+          172.0,
+          120.0
+        ],
+        "class": "override"
+      },
+      "three_curb": {
+        "old": [
+          -131,
+          166
+        ],
+        "new": [
+          -91.7,
+          116.2
+        ],
+        "class": "scale"
+      },
+      "chain_well": {
+        "old": [
+          -197,
+          73
+        ],
+        "new": [
+          -123.8,
+          63.1
+        ],
+        "class": "gaunt"
+      },
+      "reed_cistern": {
+        "old": [
+          -291,
+          -345
+        ],
+        "new": [
+          -196.5,
+          -228.6
+        ],
+        "class": "maren"
+      },
+      "step_cistern": {
+        "old": [
+          55,
+          -300
+        ],
+        "new": [
+          35.8,
+          -219.0
+        ],
+        "class": "bellstand_tower"
+      },
+      "bitter_well": {
+        "old": [
+          101,
+          -401
+        ],
+        "new": [
+          70.7,
+          -280.7
+        ],
+        "class": "scale"
+      },
+      "shambles_well": {
+        "old": [
+          -340,
+          315
+        ],
+        "new": [
+          -239.2,
+          219.6
+        ],
+        "class": "shambles"
+      },
+      "seven_lofts_tanks": {
+        "old": [
+          385,
+          388
+        ],
+        "new": [
+          277.0,
+          287.5
+        ],
+        "class": "seven_lofts"
+      }
+    },
+    "marks": {
+      "1": {
+        "name": "The Lanthorn",
+        "old": [
+          0,
+          -12
+        ],
+        "new": [
+          0,
+          -12
+        ],
+        "class": "core"
+      },
+      "2": {
+        "name": "The Great Rose and eye",
+        "old": [
+          0,
+          81
+        ],
+        "new": [
+          0,
+          81
+        ],
+        "class": "core"
+      },
+      "3": {
+        "name": "The Gradine",
+        "old": [
+          0,
+          131
+        ],
+        "new": [
+          0,
+          131
+        ],
+        "class": "core"
+      },
+      "4": {
+        "name": "Dawn Bearer statue",
+        "old": [
+          -72,
+          190
+        ],
+        "new": [
+          -72,
+          190
+        ],
+        "class": "core"
+      },
+      "5": {
+        "name": "Seraph statue",
+        "old": [
+          72,
+          190
+        ],
+        "new": [
+          72,
+          190
+        ],
+        "class": "core"
+      },
+      "6": {
+        "name": "Skinners' Court",
+        "old": [
+          108,
+          122
+        ],
+        "new": [
+          108,
+          122
+        ],
+        "class": "core"
+      },
+      "7": {
+        "name": "Ford Well",
+        "old": [
+          88,
+          35
+        ],
+        "new": [
+          88,
+          35
+        ],
+        "class": "core"
+      },
+      "8": {
+        "name": "Chapter house and Grey Press",
+        "old": [
+          70,
+          -69
+        ],
+        "new": [
+          70,
+          -69
+        ],
+        "class": "core"
+      },
+      "9": {
+        "name": "The Wickmarket",
+        "old": [
+          -25,
+          355
+        ],
+        "new": [
+          -17.5,
+          248.5
+        ],
+        "class": "scale"
+      },
+      "10": {
+        "name": "Coswald's Yard",
+        "old": [
+          255,
+          155
+        ],
+        "new": [
+          223.5,
+          108.5
+        ],
+        "class": "coswald"
+      },
+      "11": {
+        "name": "The Tallage",
+        "old": [
+          -305,
+          90
+        ],
+        "new": [
+          -213.5,
+          63.0
+        ],
+        "class": "scale"
+      },
+      "12": {
+        "name": "Maren's Green",
+        "old": [
+          -305,
+          -365
+        ],
+        "new": [
+          -213.5,
+          -255.5
+        ],
+        "class": "scale"
+      },
+      "13": {
+        "name": "The Bellstand",
+        "old": [
+          45,
+          -255
+        ],
+        "new": [
+          31.5,
+          -178.5
+        ],
+        "class": "scale"
+      },
+      "14": {
+        "name": "The Cut",
+        "old": [
+          -305,
+          -90
+        ],
+        "new": [
+          -213.5,
+          -63.0
+        ],
+        "class": "scale"
+      },
+      "15": {
+        "name": "The Chain Bridge",
+        "old": [
+          -305,
+          425
+        ],
+        "new": [
+          -213.5,
+          297.5
+        ],
+        "class": "chain_bridge"
+      },
+      "16": {
+        "name": "The Tally Bridge",
+        "old": [
+          -305,
+          105
+        ],
+        "new": [
+          -213.5,
+          73.5
+        ],
+        "class": "tallage_bridge"
+      },
+      "17": {
+        "name": "The Old Sluice",
+        "old": [
+          -305,
+          -610
+        ],
+        "new": [
+          -213.5,
+          -427.0
+        ],
+        "class": "old_sluice"
+      },
+      "18": {
+        "name": "The Cut ropewalk",
+        "old": [
+          -260,
+          260
+        ],
+        "new": [
+          -182.0,
+          182.0
+        ],
+        "class": "scale"
+      },
+      "19": {
+        "name": "The Shambles",
+        "old": [
+          -395,
+          315
+        ],
+        "new": [
+          -294.2,
+          219.6
+        ],
+        "class": "shambles"
+      },
+      "20": {
+        "name": "Tallage toll-house",
+        "old": [
+          -268,
+          105
+        ],
+        "new": [
+          -176.5,
+          73.5
+        ],
+        "class": "tallage_bridge"
+      },
+      "21": {
+        "name": "Bonded warehouse",
+        "old": [
+          -345,
+          105
+        ],
+        "new": [
+          -253.5,
+          73.5
+        ],
+        "class": "tallage_bridge"
+      },
+      "22": {
+        "name": "Lise Copp's pawnshop",
+        "old": [
+          -262,
+          43
+        ],
+        "new": [
+          -188.8,
+          33.1
+        ],
+        "class": "gaunt"
+      },
+      "23": {
+        "name": "Doctor Ferrant's house",
+        "old": [
+          -242,
+          20
+        ],
+        "new": [
+          -168.8,
+          10.1
+        ],
+        "class": "gaunt"
+      },
+      "24": {
+        "name": "The old Gaunt house",
+        "old": [
+          -218,
+          18
+        ],
+        "new": [
+          -144.8,
+          8.1
+        ],
+        "class": "gaunt"
+      },
+      "25": {
+        "name": "Gaunt Passage",
+        "old": [
+          -228,
+          25
+        ],
+        "new": [
+          -154.8,
+          15.1
+        ],
+        "class": "gaunt"
+      },
+      "26": {
+        "name": "Bonded weighing yard",
+        "old": [
+          -195,
+          -2
+        ],
+        "new": [
+          -121.8,
+          -11.9
+        ],
+        "class": "gaunt"
+      },
+      "27": {
+        "name": "Saint Maren's church",
+        "old": [
+          -235,
+          -382
+        ],
+        "new": [
+          -140.5,
+          -265.6
+        ],
+        "class": "maren"
+      },
+      "28": {
+        "name": "Saint Maren's churchyard",
+        "old": [
+          -267,
+          -360
+        ],
+        "new": [
+          -172.5,
+          -243.6
+        ],
+        "class": "maren"
+      },
+      "29": {
+        "name": "The charnel door and crypt",
+        "old": [
+          -276,
+          -365
+        ],
+        "new": [
+          -181.5,
+          -248.6
+        ],
+        "class": "maren"
+      },
+      "30": {
+        "name": "The Alder Moorings",
+        "old": [
+          -367,
+          -407
+        ],
+        "new": [
+          -272.5,
+          -290.6
+        ],
+        "class": "maren"
+      },
+      "31": {
+        "name": "The Eel Bridge",
+        "old": [
+          -343,
+          -374
+        ],
+        "new": [
+          -248.5,
+          -257.6
+        ],
+        "class": "maren"
+      },
+      "32": {
+        "name": "The Hungry Ox",
+        "old": [
+          -330,
+          -447
+        ],
+        "new": [
+          -235.5,
+          -330.6
+        ],
+        "class": "maren"
+      },
+      "33": {
+        "name": "Tanners' Slip",
+        "old": [
+          -390,
+          -345
+        ],
+        "new": [
+          -295.5,
+          -228.6
+        ],
+        "class": "maren"
+      },
+      "34": {
+        "name": "Eelback Alley",
+        "old": [
+          -370,
+          -445
+        ],
+        "new": [
+          -275.5,
+          -328.6
+        ],
+        "class": "maren"
+      },
+      "35": {
+        "name": "Maren's Slip",
+        "old": [
+          -410,
+          -485
+        ],
+        "new": [
+          -287.0,
+          -339.5
+        ],
+        "class": "scale"
+      },
+      "36": {
+        "name": "Empty brine-rotted cellar",
+        "old": [
+          -415,
+          -405
+        ],
+        "new": [
+          -320.5,
+          -288.6
+        ],
+        "class": "maren"
+      },
+      "37": {
+        "name": "The Draper's Reach",
+        "old": [
+          120,
+          260
+        ],
+        "new": [
+          100.0,
+          214.0
+        ],
+        "class": "override"
+      },
+      "38": {
+        "name": "Tenterhook Lane",
+        "old": [
+          30,
+          195
+        ],
+        "new": [
+          124.5,
+          196.0
+        ],
+        "class": "override"
+      },
+      "39": {
+        "name": "The Needle",
+        "old": [
+          -162,
+          230
+        ],
+        "new": [
+          -113.4,
+          161.0
+        ],
+        "class": "scale"
+      },
+      "40": {
+        "name": "Cinder Row",
+        "old": [
+          -130,
+          205
+        ],
+        "new": [
+          -91.0,
+          143.5
+        ],
+        "class": "scale"
+      },
+      "41": {
+        "name": "Burnt Court",
+        "old": [
+          -172,
+          232
+        ],
+        "new": [
+          -123.4,
+          166.4
+        ],
+        "class": "burnt"
+      },
+      "42": {
+        "name": "The glaziers' guildhall",
+        "old": [
+          -141,
+          237
+        ],
+        "new": [
+          -104.0,
+          232.0
+        ],
+        "class": "override"
+      },
+      "43": {
+        "name": "The masons' lodge",
+        "old": [
+          207,
+          151
+        ],
+        "new": [
+          156.0,
+          150.0
+        ],
+        "class": "override"
+      },
+      "44": {
+        "name": "Malt Passage",
+        "old": [
+          232,
+          112
+        ],
+        "new": [
+          170.0,
+          118.0
+        ],
+        "class": "override"
+      },
+      "45": {
+        "name": "Crookneck Lane",
+        "old": [
+          165,
+          -15
+        ],
+        "new": [
+          115.5,
+          -10.5
+        ],
+        "class": "scale"
+      },
+      "46": {
+        "name": "Osanne Vell's stall",
+        "old": [
+          18,
+          350
+        ],
+        "new": [
+          12.6,
+          245.0
+        ],
+        "class": "scale"
+      },
+      "47": {
+        "name": "The Ilvane Chapel",
+        "old": [
+          175,
+          -92
+        ],
+        "new": [
+          122.5,
+          -64.4
+        ],
+        "class": "ilvane"
+      },
+      "48": {
+        "name": "The Ilvane anchorhold",
+        "old": [
+          194,
+          -92
+        ],
+        "new": [
+          141.5,
+          -64.4
+        ],
+        "class": "ilvane"
+      },
+      "49": {
+        "name": "Bellfoot Passage",
+        "old": [
+          55,
+          -248
+        ],
+        "new": [
+          35.8,
+          -167.0
+        ],
+        "class": "bellstand_tower"
+      },
+      "50": {
+        "name": "Bellstand watch-bell tower",
+        "old": [
+          64,
+          -270
+        ],
+        "new": [
+          44.8,
+          -189.0
+        ],
+        "class": "bellstand_tower"
+      },
+      "51": {
+        "name": "Colm's stone",
+        "old": [
+          52,
+          -258
+        ],
+        "new": [
+          32.8,
+          -177.0
+        ],
+        "class": "bellstand_tower"
+      },
+      "52": {
+        "name": "Bellfounders' Yard",
+        "old": [
+          155,
+          -485
+        ],
+        "new": [
+          108.5,
+          -339.5
+        ],
+        "class": "bellfounders"
+      },
+      "53": {
+        "name": "The Wool Gate",
+        "old": [
+          -35,
+          510
+        ],
+        "new": [
+          -24.5,
+          357.0
+        ],
+        "class": "gate_wool"
+      },
+      "54": {
+        "name": "The Stone Gate",
+        "old": [
+          495,
+          135
+        ],
+        "new": [
+          346.5,
+          94.5
+        ],
+        "class": "gate_stone"
+      },
+      "55": {
+        "name": "The Harne Gate",
+        "old": [
+          15,
+          -665
+        ],
+        "new": [
+          10.5,
+          -465.5
+        ],
+        "class": "gate_harne"
+      },
+      "56": {
+        "name": "The River Gate",
+        "old": [
+          -505,
+          -135
+        ],
+        "new": [
+          -353.5,
+          -94.5
+        ],
+        "class": "gate_river"
+      },
+      "57": {
+        "name": "The Reed Postern",
+        "old": [
+          -455,
+          -535
+        ],
+        "new": [
+          -318.5,
+          -374.5
+        ],
+        "class": "gate_reed"
+      },
+      "58": {
+        "name": "Seven Lofts",
+        "old": [
+          360,
+          335
+        ],
+        "new": [
+          252.0,
+          234.5
+        ],
+        "class": "seven_lofts"
+      },
+      "59": {
+        "name": "Outer Serle wharves",
+        "old": [
+          -570,
+          -165
+        ],
+        "new": [
+          -399.0,
+          -115.5
+        ],
+        "class": "scale"
+      },
+      "60": {
+        "name": "Slate Cistern",
+        "old": [
+          51,
+          372
+        ],
+        "new": [
+          8.0,
+          258.0
+        ],
+        "class": "override"
+      },
+      "61": {
+        "name": "Tenter Cistern",
+        "old": [
+          94,
+          223
+        ],
+        "new": [
+          135.0,
+          188.0
+        ],
+        "class": "override"
+      },
+      "62": {
+        "name": "Lodge Well",
+        "old": [
+          239,
+          143
+        ],
+        "new": [
+          172.0,
+          120.0
+        ],
+        "class": "override"
+      },
+      "63": {
+        "name": "Three-Curb",
+        "old": [
+          -131,
+          166
+        ],
+        "new": [
+          -91.7,
+          116.2
+        ],
+        "class": "scale"
+      },
+      "64": {
+        "name": "Chain Well",
+        "old": [
+          -197,
+          73
+        ],
+        "new": [
+          -123.8,
+          63.1
+        ],
+        "class": "gaunt"
+      },
+      "65": {
+        "name": "Reed Cistern",
+        "old": [
+          -291,
+          -345
+        ],
+        "new": [
+          -196.5,
+          -228.6
+        ],
+        "class": "maren"
+      },
+      "66": {
+        "name": "Step Cistern",
+        "old": [
+          55,
+          -300
+        ],
+        "new": [
+          35.8,
+          -219.0
+        ],
+        "class": "bellstand_tower"
+      },
+      "67": {
+        "name": "Bitter Well",
+        "old": [
+          101,
+          -401
+        ],
+        "new": [
+          70.7,
+          -280.7
+        ],
+        "class": "scale"
+      },
+      "68": {
+        "name": "The Shambles well",
+        "old": [
+          -340,
+          315
+        ],
+        "new": [
+          -239.2,
+          219.6
+        ],
+        "class": "shambles"
+      },
+      "69": {
+        "name": "Seven Lofts fire tanks",
+        "old": [
+          385,
+          388
+        ],
+        "new": [
+          277.0,
+          287.5
+        ],
+        "class": "seven_lofts"
+      }
+    },
+    "roads": {
+      "cut": [
+        {
+          "index": 0,
+          "old": [
+            -305,
+            465
+          ],
+          "new": [
+            -213.5,
+            325.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -305,
+            -605
+          ],
+          "new": [
+            -213.5,
+            -422.0
+          ],
+          "class": "old_sluice"
+        }
+      ],
+      "west_approach": [
+        {
+          "index": 0,
+          "old": [
+            -35,
+            510
+          ],
+          "new": [
+            -24.5,
+            357.0
+          ],
+          "class": "gate_wool"
+        },
+        {
+          "index": 1,
+          "old": [
+            -25,
+            420
+          ],
+          "new": [
+            -17.5,
+            294.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -25,
+            355
+          ],
+          "new": [
+            -17.5,
+            248.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -10,
+            285
+          ],
+          "new": [
+            -7.0,
+            199.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 4,
+          "old": [
+            0,
+            225
+          ],
+          "new": [
+            0.0,
+            178.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 5,
+          "old": [
+            0,
+            157
+          ],
+          "new": [
+            0,
+            157
+          ],
+          "class": "core"
+        }
+      ],
+      "fabric_way": [
+        {
+          "index": 0,
+          "old": [
+            495,
+            135
+          ],
+          "new": [
+            346.5,
+            94.5
+          ],
+          "class": "gate_stone"
+        },
+        {
+          "index": 1,
+          "old": [
+            360,
+            145
+          ],
+          "new": [
+            252.0,
+            101.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            255,
+            155
+          ],
+          "new": [
+            223.5,
+            108.5
+          ],
+          "class": "coswald"
+        },
+        {
+          "index": 3,
+          "old": [
+            180,
+            120
+          ],
+          "new": [
+            168.0,
+            72.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 4,
+          "old": [
+            115,
+            95
+          ],
+          "new": [
+            80.5,
+            66.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 5,
+          "old": [
+            72,
+            80
+          ],
+          "new": [
+            74.0,
+            91.0
+          ],
+          "class": "override"
+        }
+      ],
+      "river_cartway": [
+        {
+          "index": 0,
+          "old": [
+            -505,
+            -135
+          ],
+          "new": [
+            -353.5,
+            -94.5
+          ],
+          "class": "gate_river"
+        },
+        {
+          "index": 1,
+          "old": [
+            -415,
+            -130
+          ],
+          "new": [
+            -290.5,
+            -91.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -305,
+            -125
+          ],
+          "new": [
+            -213.5,
+            -87.5
+          ],
+          "class": "scale"
+        }
+      ],
+      "bell_way": [
+        {
+          "index": 0,
+          "old": [
+            78,
+            -112
+          ],
+          "new": [
+            72.0,
+            -108.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            105,
+            -165
+          ],
+          "new": [
+            84.0,
+            -118.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            70,
+            -205
+          ],
+          "new": [
+            49.0,
+            -143.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            45,
+            -255
+          ],
+          "new": [
+            25.8,
+            -174.0
+          ],
+          "class": "bellstand_tower"
+        }
+      ],
+      "harne_road": [
+        {
+          "index": 0,
+          "old": [
+            45,
+            -255
+          ],
+          "new": [
+            25.8,
+            -174.0
+          ],
+          "class": "bellstand_tower"
+        },
+        {
+          "index": 1,
+          "old": [
+            80,
+            -360
+          ],
+          "new": [
+            56.0,
+            -252.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            35,
+            -505
+          ],
+          "new": [
+            24.5,
+            -353.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            15,
+            -665
+          ],
+          "new": [
+            10.5,
+            -465.5
+          ],
+          "class": "gate_harne"
+        }
+      ],
+      "reed_route": [
+        {
+          "index": 0,
+          "old": [
+            -455,
+            -535
+          ],
+          "new": [
+            -318.5,
+            -374.5
+          ],
+          "class": "gate_reed"
+        },
+        {
+          "index": 1,
+          "old": [
+            -410,
+            -485
+          ],
+          "new": [
+            -287.0,
+            -339.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -375,
+            -435
+          ],
+          "new": [
+            -280.5,
+            -318.6
+          ],
+          "class": "maren"
+        },
+        {
+          "index": 3,
+          "old": [
+            -320,
+            -390
+          ],
+          "new": [
+            -225.5,
+            -273.6
+          ],
+          "class": "maren"
+        }
+      ],
+      "drapers_reach": [
+        {
+          "index": 0,
+          "old": [
+            35,
+            320
+          ],
+          "new": [
+            22.0,
+            241.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            100,
+            270
+          ],
+          "new": [
+            58.0,
+            232.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            175,
+            215
+          ],
+          "new": [
+            102.0,
+            212.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 3,
+          "old": [
+            210,
+            185
+          ],
+          "new": [
+            140.0,
+            192.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 4,
+          "old": null,
+          "new": [
+            170.0,
+            174.0
+          ],
+          "class": "override"
+        }
+      ],
+      "tenterhook": [
+        {
+          "index": 0,
+          "old": [
+            95,
+            220
+          ],
+          "new": [
+            152.0,
+            172.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            30,
+            195
+          ],
+          "new": [
+            135.0,
+            188.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            -35,
+            185
+          ],
+          "new": [
+            114.0,
+            204.0
+          ],
+          "class": "override"
+        }
+      ],
+      "needle": [
+        {
+          "index": 0,
+          "old": [
+            -75,
+            310
+          ],
+          "new": [
+            -52.5,
+            217.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -130,
+            270
+          ],
+          "new": [
+            -91.0,
+            189.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -162,
+            230
+          ],
+          "new": [
+            -113.4,
+            161.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -225,
+            160
+          ],
+          "new": [
+            -157.5,
+            112.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 4,
+          "old": [
+            -270,
+            120
+          ],
+          "new": [
+            -178.5,
+            88.5
+          ],
+          "class": "tallage_bridge"
+        }
+      ],
+      "cinder_row": [
+        {
+          "index": 0,
+          "old": [
+            -80,
+            285
+          ],
+          "new": [
+            -48.0,
+            204.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            -125,
+            240
+          ],
+          "new": [
+            -87.5,
+            168.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -135,
+            165
+          ],
+          "new": [
+            -94.5,
+            115.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -105,
+            115
+          ],
+          "new": [
+            -74.6,
+            80.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 4,
+          "old": [
+            -52,
+            122
+          ],
+          "new": [
+            -52,
+            122
+          ],
+          "class": "core"
+        }
+      ],
+      "crookneck": [
+        {
+          "index": 0,
+          "old": [
+            205,
+            60
+          ],
+          "new": [
+            188.5,
+            42.0
+          ],
+          "class": "coswald"
+        },
+        {
+          "index": 1,
+          "old": [
+            165,
+            -15
+          ],
+          "new": [
+            100.0,
+            -14.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            105,
+            -85
+          ],
+          "new": [
+            90.0,
+            -70.0
+          ],
+          "class": "override"
+        }
+      ],
+      "tanners_slip": [
+        {
+          "index": 0,
+          "old": [
+            -340,
+            -300
+          ],
+          "new": [
+            -245.5,
+            -183.6
+          ],
+          "class": "maren"
+        },
+        {
+          "index": 1,
+          "old": [
+            -390,
+            -330
+          ],
+          "new": [
+            -295.5,
+            -213.6
+          ],
+          "class": "maren"
+        },
+        {
+          "index": 2,
+          "old": [
+            -405,
+            -390
+          ],
+          "new": [
+            -303.0,
+            -266.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 3,
+          "old": [
+            -380,
+            -425
+          ],
+          "new": [
+            -285.5,
+            -308.6
+          ],
+          "class": "maren"
+        }
+      ],
+      "eelback": [
+        {
+          "index": 0,
+          "old": [
+            -350,
+            -410
+          ],
+          "new": [
+            -255.5,
+            -293.6
+          ],
+          "class": "maren"
+        },
+        {
+          "index": 1,
+          "old": [
+            -370,
+            -445
+          ],
+          "new": [
+            -275.5,
+            -328.6
+          ],
+          "class": "maren"
+        },
+        {
+          "index": 2,
+          "old": [
+            -345,
+            -482
+          ],
+          "new": [
+            -250.5,
+            -365.6
+          ],
+          "class": "maren"
+        }
+      ],
+      "tallage_to_gradine": [
+        {
+          "index": 0,
+          "old": [
+            -270,
+            120
+          ],
+          "new": [
+            -178.5,
+            88.5
+          ],
+          "class": "tallage_bridge"
+        },
+        {
+          "index": 1,
+          "old": [
+            -220,
+            135
+          ],
+          "new": [
+            -154.0,
+            94.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -160,
+            140
+          ],
+          "new": [
+            -112.0,
+            98.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -100,
+            150
+          ],
+          "new": [
+            -70.0,
+            105.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 4,
+          "old": [
+            -52,
+            155
+          ],
+          "new": [
+            -52,
+            155
+          ],
+          "class": "core"
+        }
+      ],
+      "east_cut_to_bell": [
+        {
+          "index": 0,
+          "old": [
+            -305,
+            -220
+          ],
+          "new": [
+            -213.5,
+            -154.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -220,
+            -215
+          ],
+          "new": [
+            -154.0,
+            -150.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -140,
+            -205
+          ],
+          "new": [
+            -98.0,
+            -143.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -60,
+            -230
+          ],
+          "new": [
+            -42.0,
+            -161.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 4,
+          "old": [
+            5,
+            -255
+          ],
+          "new": [
+            3.5,
+            -178.5
+          ],
+          "class": "scale"
+        }
+      ],
+      "maren_to_bell": [
+        {
+          "index": 0,
+          "old": [
+            -250,
+            -365
+          ],
+          "new": [
+            -155.5,
+            -248.6
+          ],
+          "class": "maren"
+        },
+        {
+          "index": 1,
+          "old": [
+            -165,
+            -340
+          ],
+          "new": [
+            -115.5,
+            -238.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -80,
+            -320
+          ],
+          "new": [
+            -56.0,
+            -224.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            5,
+            -275
+          ],
+          "new": [
+            3.5,
+            -192.5
+          ],
+          "class": "scale"
+        }
+      ],
+      "north_service": [
+        {
+          "index": 0,
+          "old": [
+            78,
+            95
+          ],
+          "new": [
+            74.0,
+            91.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            88,
+            60
+          ],
+          "new": [
+            76.0,
+            55.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            83,
+            5
+          ],
+          "new": [
+            74.0,
+            0.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 3,
+          "old": [
+            90,
+            -70
+          ],
+          "new": [
+            88.0,
+            -48.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 4,
+          "old": [
+            78,
+            -112
+          ],
+          "new": [
+            90.0,
+            -70.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 5,
+          "old": null,
+          "new": [
+            72.0,
+            -108.0
+          ],
+          "class": "override"
+        }
+      ],
+      "south_service": [
+        {
+          "index": 0,
+          "old": [
+            -78,
+            95
+          ],
+          "new": [
+            -74.0,
+            91.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            -88,
+            55
+          ],
+          "new": [
+            -76.0,
+            55.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            -83,
+            0
+          ],
+          "new": [
+            -74.0,
+            5.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 3,
+          "old": [
+            -90,
+            -70
+          ],
+          "new": [
+            -76.0,
+            -70.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 4,
+          "old": [
+            -78,
+            -112
+          ],
+          "new": [
+            -72.0,
+            -108.0
+          ],
+          "class": "override"
+        }
+      ],
+      "apse_lane": [
+        {
+          "index": 0,
+          "old": [
+            -78,
+            -112
+          ],
+          "new": [
+            -72.0,
+            -108.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            0,
+            -130
+          ],
+          "new": [
+            0.0,
+            -118.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            78,
+            -112
+          ],
+          "new": [
+            72.0,
+            -108.0
+          ],
+          "class": "override"
+        }
+      ],
+      "wick_north": [
+        {
+          "index": 0,
+          "old": [
+            -20,
+            390
+          ],
+          "new": [
+            -14.0,
+            272.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            55,
+            375
+          ],
+          "new": [
+            45.0,
+            278.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            125,
+            335
+          ],
+          "new": [
+            100.0,
+            266.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 3,
+          "old": [
+            190,
+            270
+          ],
+          "new": [
+            140.0,
+            246.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 4,
+          "old": [
+            230,
+            205
+          ],
+          "new": [
+            175.0,
+            214.0
+          ],
+          "class": "override"
+        }
+      ],
+      "loft_lane": [
+        {
+          "index": 0,
+          "old": [
+            -35,
+            450
+          ],
+          "new": [
+            -24.5,
+            315.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            80,
+            445
+          ],
+          "new": [
+            48.5,
+            316.0
+          ],
+          "class": "parish_west"
+        },
+        {
+          "index": 2,
+          "old": [
+            200,
+            420
+          ],
+          "new": [
+            140.0,
+            294.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            360,
+            335
+          ],
+          "new": [
+            252.0,
+            234.5
+          ],
+          "class": "seven_lofts"
+        },
+        {
+          "index": 4,
+          "old": [
+            450,
+            205
+          ],
+          "new": [
+            315.0,
+            143.5
+          ],
+          "class": "scale"
+        }
+      ],
+      "stone_west_spur": [
+        {
+          "index": 0,
+          "old": [
+            465,
+            175
+          ],
+          "new": [
+            325.5,
+            122.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            400,
+            245
+          ],
+          "new": [
+            280.0,
+            171.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            360,
+            335
+          ],
+          "new": [
+            252.0,
+            234.5
+          ],
+          "class": "seven_lofts"
+        },
+        {
+          "index": 3,
+          "old": [
+            300,
+            405
+          ],
+          "new": [
+            192.0,
+            304.5
+          ],
+          "class": "seven_lofts"
+        },
+        {
+          "index": 4,
+          "old": [
+            220,
+            455
+          ],
+          "new": [
+            154.0,
+            318.5
+          ],
+          "class": "scale"
+        }
+      ],
+      "north_east_arc": [
+        {
+          "index": 0,
+          "old": [
+            440,
+            20
+          ],
+          "new": [
+            308.0,
+            14.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            365,
+            5
+          ],
+          "new": [
+            255.5,
+            3.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            300,
+            -30
+          ],
+          "new": [
+            210.0,
+            -21.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            245,
+            -82
+          ],
+          "new": [
+            171.5,
+            -57.4
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 4,
+          "old": [
+            205,
+            -150
+          ],
+          "new": [
+            143.5,
+            -105.0
+          ],
+          "class": "scale"
+        }
+      ],
+      "east_wall_road": [
+        {
+          "index": 0,
+          "old": [
+            420,
+            -150
+          ],
+          "new": [
+            294.0,
+            -105.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            360,
+            -225
+          ],
+          "new": [
+            252.0,
+            -157.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            330,
+            -300
+          ],
+          "new": [
+            231.0,
+            -210.0
+          ],
+          "class": "parish_north_east"
+        },
+        {
+          "index": 3,
+          "old": [
+            350,
+            -430
+          ],
+          "new": [
+            245.0,
+            -301.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 4,
+          "old": [
+            410,
+            -560
+          ],
+          "new": [
+            287.0,
+            -392.0
+          ],
+          "class": "scale"
+        }
+      ],
+      "bellfounder_spur": [
+        {
+          "index": 0,
+          "old": [
+            80,
+            -360
+          ],
+          "new": [
+            56.0,
+            -252.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            155,
+            -485
+          ],
+          "new": [
+            108.5,
+            -339.5
+          ],
+          "class": "bellfounders"
+        },
+        {
+          "index": 2,
+          "old": [
+            260,
+            -555
+          ],
+          "new": [
+            182.0,
+            -388.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            385,
+            -590
+          ],
+          "new": [
+            269.5,
+            -413.0
+          ],
+          "class": "scale"
+        }
+      ],
+      "west_cut_link": [
+        {
+          "index": 0,
+          "old": [
+            -25,
+            420
+          ],
+          "new": [
+            -17.5,
+            294.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -120,
+            425
+          ],
+          "new": [
+            -84.0,
+            297.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -220,
+            410
+          ],
+          "new": [
+            -154.0,
+            291.5
+          ],
+          "class": "parish_west_cut"
+        },
+        {
+          "index": 3,
+          "old": [
+            -305,
+            390
+          ],
+          "new": [
+            -213.5,
+            273.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 4,
+          "old": [
+            -405,
+            390
+          ],
+          "new": [
+            -256.0,
+            268.0
+          ],
+          "class": "override"
+        }
+      ],
+      "shambles_lane": [
+        {
+          "index": 0,
+          "old": [
+            -210,
+            330
+          ],
+          "new": [
+            -147.0,
+            231.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -305,
+            320
+          ],
+          "new": [
+            -213.5,
+            224.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -395,
+            315
+          ],
+          "new": [
+            -294.2,
+            219.6
+          ],
+          "class": "shambles"
+        },
+        {
+          "index": 3,
+          "old": [
+            -450,
+            300
+          ],
+          "new": [
+            -349.2,
+            204.6
+          ],
+          "class": "shambles"
+        }
+      ],
+      "river_west_lane": [
+        {
+          "index": 0,
+          "old": [
+            -455,
+            375
+          ],
+          "new": [
+            -322.0,
+            182.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            -430,
+            260
+          ],
+          "new": [
+            -300.0,
+            98.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            -420,
+            140
+          ],
+          "new": [
+            -301.0,
+            14.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 3,
+          "old": [
+            -430,
+            20
+          ],
+          "new": [
+            -332.5,
+            -56.0
+          ],
+          "class": "override"
+        }
+      ],
+      "river_east_lane": [
+        {
+          "index": 0,
+          "old": [
+            -470,
+            -180
+          ],
+          "new": [
+            -329.0,
+            -126.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -430,
+            -270
+          ],
+          "new": [
+            -301.0,
+            -189.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -390,
+            -345
+          ],
+          "new": [
+            -300.0,
+            -236.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 3,
+          "old": [
+            -410,
+            -485
+          ],
+          "new": [
+            -287.0,
+            -339.5
+          ],
+          "class": "scale"
+        }
+      ],
+      "west_residential_1": [
+        {
+          "index": 0,
+          "old": [
+            145,
+            480
+          ],
+          "new": [
+            101.5,
+            336.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            135,
+            410
+          ],
+          "new": [
+            103.5,
+            281.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            150,
+            345
+          ],
+          "new": [
+            100.0,
+            258.0
+          ],
+          "class": "override"
+        }
+      ],
+      "west_residential_2": [
+        {
+          "index": 0,
+          "old": [
+            275,
+            470
+          ],
+          "new": [
+            192.5,
+            329.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            260,
+            390
+          ],
+          "new": [
+            188.0,
+            285.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            265,
+            310
+          ],
+          "new": [
+            193.0,
+            258.0
+          ],
+          "class": "override"
+        }
+      ],
+      "north_cross_1": [
+        {
+          "index": 0,
+          "old": [
+            440,
+            400
+          ],
+          "new": [
+            308.0,
+            280.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            360,
+            360
+          ],
+          "new": [
+            252.0,
+            259.5
+          ],
+          "class": "seven_lofts"
+        },
+        {
+          "index": 2,
+          "old": [
+            280,
+            330
+          ],
+          "new": [
+            205.0,
+            258.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 3,
+          "old": [
+            210,
+            300
+          ],
+          "new": [
+            158.0,
+            236.0
+          ],
+          "class": "override"
+        }
+      ],
+      "north_cross_2": [
+        {
+          "index": 0,
+          "old": [
+            450,
+            80
+          ],
+          "new": [
+            315.0,
+            56.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            365,
+            105
+          ],
+          "new": [
+            255.5,
+            73.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            315,
+            80
+          ],
+          "new": [
+            220.5,
+            56.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            260,
+            45
+          ],
+          "new": [
+            227.0,
+            31.5
+          ],
+          "class": "coswald"
+        }
+      ],
+      "east_residential_1": [
+        {
+          "index": 0,
+          "old": [
+            290,
+            -100
+          ],
+          "new": [
+            203.0,
+            -70.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            235,
+            -175
+          ],
+          "new": [
+            164.5,
+            -122.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            210,
+            -255
+          ],
+          "new": [
+            147.0,
+            -178.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            220,
+            -340
+          ],
+          "new": [
+            154.0,
+            -238.0
+          ],
+          "class": "scale"
+        }
+      ],
+      "east_residential_2": [
+        {
+          "index": 0,
+          "old": [
+            425,
+            -350
+          ],
+          "new": [
+            297.5,
+            -245.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            335,
+            -365
+          ],
+          "new": [
+            234.5,
+            -255.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            260,
+            -390
+          ],
+          "new": [
+            182.0,
+            -273.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            185,
+            -420
+          ],
+          "new": [
+            129.5,
+            -294.0
+          ],
+          "class": "scale"
+        }
+      ],
+      "fabric_south_cross": [
+        {
+          "index": 0,
+          "old": [
+            -55,
+            240
+          ],
+          "new": [
+            -7.0,
+            199.5
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            -20,
+            210
+          ],
+          "new": [
+            -20,
+            210
+          ],
+          "class": "core"
+        },
+        {
+          "index": 2,
+          "old": [
+            35,
+            190
+          ],
+          "new": [
+            35,
+            190
+          ],
+          "class": "core"
+        },
+        {
+          "index": 3,
+          "old": [
+            100,
+            170
+          ],
+          "new": [
+            74.0,
+            91.0
+          ],
+          "class": "override"
+        }
+      ],
+      "cinder_west_cross": [
+        {
+          "index": 0,
+          "old": [
+            -65,
+            330
+          ],
+          "new": [
+            -45.5,
+            231.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -145,
+            315
+          ],
+          "new": [
+            -104.0,
+            203.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            -220,
+            285
+          ],
+          "new": [
+            -154.0,
+            199.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -305,
+            260
+          ],
+          "new": [
+            -213.5,
+            182.0
+          ],
+          "class": "scale"
+        }
+      ],
+      "weigh_north_lane": [
+        {
+          "index": 0,
+          "old": [
+            -180,
+            210
+          ],
+          "new": [
+            -126.0,
+            147.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -190,
+            130
+          ],
+          "new": [
+            -133.0,
+            91.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -195,
+            55
+          ],
+          "new": [
+            -121.8,
+            45.1
+          ],
+          "class": "gaunt"
+        },
+        {
+          "index": 3,
+          "old": [
+            -218,
+            18
+          ],
+          "new": [
+            -144.8,
+            8.1
+          ],
+          "class": "gaunt"
+        },
+        {
+          "index": 4,
+          "old": [
+            -230,
+            -45
+          ],
+          "new": [
+            -161.0,
+            -31.5
+          ],
+          "class": "scale"
+        }
+      ],
+      "river_ward_cross": [
+        {
+          "index": 0,
+          "old": [
+            -455,
+            80
+          ],
+          "new": [
+            -318.5,
+            56.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -390,
+            40
+          ],
+          "new": [
+            -273.0,
+            28.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -320,
+            15
+          ],
+          "new": [
+            -224.0,
+            10.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -250,
+            -5
+          ],
+          "new": [
+            -176.8,
+            -14.9
+          ],
+          "class": "gaunt"
+        },
+        {
+          "index": 4,
+          "old": [
+            -180,
+            -30
+          ],
+          "new": [
+            -106.8,
+            -39.9
+          ],
+          "class": "gaunt"
+        }
+      ],
+      "cut_south_west": [
+        {
+          "index": 0,
+          "old": [
+            -360,
+            455
+          ],
+          "new": [
+            -252.0,
+            318.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -385,
+            350
+          ],
+          "new": [
+            -284.2,
+            254.6
+          ],
+          "class": "shambles"
+        },
+        {
+          "index": 2,
+          "old": [
+            -400,
+            250
+          ],
+          "new": [
+            -280.0,
+            175.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -405,
+            150
+          ],
+          "new": [
+            -283.5,
+            105.0
+          ],
+          "class": "scale"
+        }
+      ],
+      "cut_south_mid": [
+        {
+          "index": 0,
+          "old": [
+            -350,
+            80
+          ],
+          "new": [
+            -258.5,
+            48.5
+          ],
+          "class": "tallage_bridge"
+        },
+        {
+          "index": 1,
+          "old": [
+            -385,
+            25
+          ],
+          "new": [
+            -269.5,
+            17.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -415,
+            -40
+          ],
+          "new": [
+            -287.8,
+            -29.5
+          ],
+          "class": "parish_river"
+        },
+        {
+          "index": 3,
+          "old": [
+            -460,
+            -95
+          ],
+          "new": [
+            -322.0,
+            -66.5
+          ],
+          "class": "scale"
+        }
+      ],
+      "reed_cross": [
+        {
+          "index": 0,
+          "old": [
+            -440,
+            -250
+          ],
+          "new": [
+            -308.0,
+            -175.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -380,
+            -260
+          ],
+          "new": [
+            -266.0,
+            -182.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -320,
+            -275
+          ],
+          "new": [
+            -224.0,
+            -192.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -250,
+            -290
+          ],
+          "new": [
+            -155.5,
+            -173.6
+          ],
+          "class": "maren"
+        }
+      ],
+      "maren_north_lane": [
+        {
+          "index": 0,
+          "old": [
+            -205,
+            -250
+          ],
+          "new": [
+            -143.5,
+            -175.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -210,
+            -320
+          ],
+          "new": [
+            -115.5,
+            -203.6
+          ],
+          "class": "maren"
+        },
+        {
+          "index": 2,
+          "old": [
+            -235,
+            -382
+          ],
+          "new": [
+            -140.5,
+            -265.6
+          ],
+          "class": "maren"
+        },
+        {
+          "index": 3,
+          "old": [
+            -210,
+            -455
+          ],
+          "new": [
+            -115.5,
+            -338.6
+          ],
+          "class": "maren"
+        }
+      ],
+      "sluice_lane": [
+        {
+          "index": 0,
+          "old": [
+            -250,
+            -520
+          ],
+          "new": [
+            -175.0,
+            -364.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            -305,
+            -570
+          ],
+          "new": [
+            -213.5,
+            -399.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            -305,
+            -610
+          ],
+          "new": [
+            -213.5,
+            -427.0
+          ],
+          "class": "old_sluice"
+        },
+        {
+          "index": 3,
+          "old": [
+            -245,
+            -640
+          ],
+          "new": [
+            -171.5,
+            -448.0
+          ],
+          "class": "scale"
+        }
+      ],
+      "west_inner_wall": [
+        {
+          "index": 0,
+          "old": [
+            430,
+            455
+          ],
+          "new": [
+            301.0,
+            318.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            250,
+            485
+          ],
+          "new": [
+            175.0,
+            339.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            50,
+            490
+          ],
+          "new": [
+            35.0,
+            343.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -170,
+            485
+          ],
+          "new": [
+            -119.0,
+            339.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 4,
+          "old": [
+            -390,
+            455
+          ],
+          "new": [
+            -273.0,
+            318.5
+          ],
+          "class": "scale"
+        }
+      ],
+      "north_inner_wall": [
+        {
+          "index": 0,
+          "old": [
+            455,
+            430
+          ],
+          "new": [
+            318.5,
+            301.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            475,
+            220
+          ],
+          "new": [
+            332.5,
+            154.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            475,
+            10
+          ],
+          "new": [
+            332.5,
+            7.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            450,
+            -220
+          ],
+          "new": [
+            315.0,
+            -154.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 4,
+          "old": [
+            435,
+            -485
+          ],
+          "new": [
+            304.5,
+            -339.5
+          ],
+          "class": "scale"
+        }
+      ],
+      "east_inner_wall": [
+        {
+          "index": 0,
+          "old": [
+            415,
+            -610
+          ],
+          "new": [
+            290.5,
+            -427.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 1,
+          "old": [
+            220,
+            -635
+          ],
+          "new": [
+            154.0,
+            -444.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 2,
+          "old": [
+            20,
+            -640
+          ],
+          "new": [
+            14.0,
+            -448.0
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 3,
+          "old": [
+            -190,
+            -635
+          ],
+          "new": [
+            -133.0,
+            -444.5
+          ],
+          "class": "scale"
+        },
+        {
+          "index": 4,
+          "old": [
+            -390,
+            -620
+          ],
+          "new": [
+            -273.0,
+            -434.0
+          ],
+          "class": "scale"
+        }
+      ],
+      "south_inner_wall": [
+        {
+          "index": 0,
+          "old": [
+            -445,
+            -590
+          ],
+          "new": [
+            -311.5,
+            -413.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 1,
+          "old": [
+            -470,
+            -420
+          ],
+          "new": [
+            -329.0,
+            -294.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 2,
+          "old": [
+            -480,
+            -220
+          ],
+          "new": [
+            -336.0,
+            -154.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 3,
+          "old": [
+            -480,
+            -20
+          ],
+          "new": [
+            -336.0,
+            -10.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 4,
+          "old": [
+            -450,
+            210
+          ],
+          "new": [
+            -270.0,
+            176.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 5,
+          "old": [
+            -430,
+            430
+          ],
+          "new": [
+            -224.0,
+            188.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 6,
+          "old": null,
+          "new": [
+            -224.0,
+            212.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 7,
+          "old": null,
+          "new": [
+            -242.0,
+            258.0
+          ],
+          "class": "override"
+        },
+        {
+          "index": 8,
+          "old": null,
+          "new": [
+            -272.0,
+            295.0
+          ],
+          "class": "override"
+        }
+      ]
+    },
+    "wall": {
+      "old": [
+        [
+          475,
+          485
+        ],
+        [
+          505,
+          130
+        ],
+        [
+          465,
+          -650
+        ],
+        [
+          330,
+          -675
+        ],
+        [
+          -445,
+          -660
+        ],
+        [
+          -510,
+          -120
+        ],
+        [
+          -475,
+          485
+        ]
+      ],
+      "new": [
+        [
+          332.5,
+          339.5
+        ],
+        [
+          353.5,
+          91.0
+        ],
+        [
+          325.5,
+          -455.0
+        ],
+        [
+          231.0,
+          -472.5
+        ],
+        [
+          -311.5,
+          -462.0
+        ],
+        [
+          -357.0,
+          -84.0
+        ],
+        [
+          -332.5,
+          339.5
+        ]
+      ]
+    }
+  },
+  "baseline_road_contacts": [
+    {
+      "building": "gate_reed_1",
+      "road": "reed_route",
+      "distance": 0.0
+    },
+    {
+      "building": "gate_reed_1",
+      "road": "south_inner_wall",
+      "distance": 0.0
+    },
+    {
+      "building": "named_bellfounders_1",
+      "road": "bellfounder_spur",
+      "distance": 0.0
+    },
+    {
+      "building": "named_bellfounders_2",
+      "road": "bellfounder_spur",
+      "distance": 0.323
+    },
+    {
+      "building": "named_bellfounders_4",
+      "road": "bellfounder_spur",
+      "distance": 0.0
+    },
+    {
+      "building": "named_bellfounders_5",
+      "road": "bellfounder_spur",
+      "distance": 3.692
+    },
+    {
+      "building": "named_bellstand_tower",
+      "road": "harne_road",
+      "distance": 0.0
+    },
+    {
+      "building": "named_bonded_warehouse",
+      "road": "cut_south_mid",
+      "distance": 0.0
+    },
+    {
+      "building": "named_chain_bridge",
+      "road": "cut",
+      "distance": 0.0
+    },
+    {
+      "building": "named_chapter_house",
+      "road": "north_service",
+      "distance": 0.0
+    },
+    {
+      "building": "named_cloth_hall_4",
+      "road": "drapers_reach",
+      "distance": 0.0
+    },
+    {
+      "building": "named_cloth_hall_5",
+      "road": "drapers_reach",
+      "distance": 0.0
+    },
+    {
+      "building": "named_cloth_hall_6",
+      "road": "drapers_reach",
+      "distance": 0.0
+    },
+    {
+      "building": "named_gaunt_house",
+      "road": "river_ward_cross",
+      "distance": 2.422
+    },
+    {
+      "building": "named_gaunt_house",
+      "road": "weigh_north_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_glaziers_guild",
+      "road": "cinder_row",
+      "distance": 1.953
+    },
+    {
+      "building": "named_glaziers_guild",
+      "road": "needle",
+      "distance": 0.0
+    },
+    {
+      "building": "named_masons_lodge",
+      "road": "fabric_way",
+      "distance": 0.0
+    },
+    {
+      "building": "named_moorings_1",
+      "road": "river_east_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_moorings_1",
+      "road": "tanners_slip",
+      "distance": 0.0
+    },
+    {
+      "building": "named_moorings_2",
+      "road": "eelback",
+      "distance": 0.0
+    },
+    {
+      "building": "named_moorings_2",
+      "road": "reed_route",
+      "distance": 0.0
+    },
+    {
+      "building": "named_moorings_3",
+      "road": "reed_route",
+      "distance": 0.0
+    },
+    {
+      "building": "named_old_sluice",
+      "road": "cut",
+      "distance": 0.0
+    },
+    {
+      "building": "named_old_sluice",
+      "road": "east_inner_wall",
+      "distance": 0.0
+    },
+    {
+      "building": "named_old_sluice",
+      "road": "sluice_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_saint_marens",
+      "road": "maren_north_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_saint_marens",
+      "road": "maren_to_bell",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_1",
+      "road": "north_cross_1",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_2",
+      "road": "north_cross_1",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_3",
+      "road": "loft_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_3",
+      "road": "north_cross_1",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_3",
+      "road": "stone_west_spur",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_4",
+      "road": "loft_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_4",
+      "road": "north_cross_1",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_6",
+      "road": "loft_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_6",
+      "road": "stone_west_spur",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_7",
+      "road": "loft_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_seven_lofts_7",
+      "road": "stone_west_spur",
+      "distance": 0.826
+    },
+    {
+      "building": "named_shambles_1",
+      "road": "south_inner_wall",
+      "distance": 0.0
+    },
+    {
+      "building": "named_shambles_3",
+      "road": "cut_south_west",
+      "distance": 0.0
+    },
+    {
+      "building": "named_shambles_4",
+      "road": "shambles_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_shambles_6",
+      "road": "cut_south_west",
+      "distance": 0.0
+    },
+    {
+      "building": "named_shambles_7",
+      "road": "river_west_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_shambles_7",
+      "road": "shambles_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "named_sparr_workshop",
+      "road": "cinder_row",
+      "distance": 0.0
+    },
+    {
+      "building": "named_tally_bridge",
+      "road": "cut",
+      "distance": 0.0
+    },
+    {
+      "building": "named_toll_house",
+      "road": "needle",
+      "distance": 0.0
+    },
+    {
+      "building": "named_toll_house",
+      "road": "tallage_to_gradine",
+      "distance": 0.0
+    },
+    {
+      "building": "reserve_church_north_east",
+      "road": "east_wall_road",
+      "distance": 0.0
+    },
+    {
+      "building": "reserve_church_river",
+      "road": "cut_south_mid",
+      "distance": 0.0
+    },
+    {
+      "building": "reserve_church_west",
+      "road": "loft_lane",
+      "distance": 0.0
+    },
+    {
+      "building": "reserve_church_west_cut",
+      "road": "west_cut_link",
+      "distance": 0.0
+    }
+  ],
+  "validation": {
+    "accepted_road_regressions": [
+      "named_chapter_house vs road north_service: 0.00 -> 0.00 m (pre-existing)",
+      "named_toll_house vs road needle: 0.00 -> 0.00 m (pre-existing)",
+      "named_toll_house vs road tallage_to_gradine: 0.00 -> 0.00 m (pre-existing)",
+      "named_bonded_warehouse vs road cut_south_mid: 0.00 -> 0.00 m (pre-existing)",
+      "named_gaunt_house vs road weigh_north_lane: 0.00 -> 0.00 m (pre-existing)",
+      "named_gaunt_house vs road river_ward_cross: 2.42 -> 2.42 m (pre-existing)",
+      "named_saint_marens vs road maren_to_bell: 0.00 -> 0.00 m (pre-existing)",
+      "named_saint_marens vs road maren_north_lane: 0.00 -> 0.00 m (pre-existing)",
+      "named_moorings_1 vs road tanners_slip: 0.00 -> 0.00 m (pre-existing)",
+      "named_moorings_1 vs road river_east_lane: 0.00 -> 0.00 m (pre-existing)",
+      "named_moorings_2 vs road reed_route: 0.00 -> 0.00 m (pre-existing)",
+      "named_moorings_2 vs road eelback: 0.00 -> 0.00 m (pre-existing)",
+      "named_moorings_3 vs road reed_route: 0.00 -> 0.00 m (pre-existing)",
+      "named_bellstand_tower vs road harne_road: 0.00 -> 0.00 m (pre-existing)",
+      "named_seven_lofts_1 vs road north_cross_1: 0.00 -> 0.00 m (pre-existing)",
+      "named_seven_lofts_2 vs road north_cross_1: 0.00 -> 0.00 m (pre-existing)",
+      "named_seven_lofts_3 vs road loft_lane: 0.00 -> 0.00 m (pre-existing)",
+      "named_seven_lofts_3 vs road stone_west_spur: 0.00 -> 0.00 m (pre-existing)",
+      "named_seven_lofts_3 vs road north_cross_1: 0.00 -> 0.00 m (pre-existing)",
+      "named_seven_lofts_4 vs road loft_lane: 0.00 -> 0.00 m (pre-existing)",
+      "named_seven_lofts_6 vs road loft_lane: 0.00 -> 0.00 m (pre-existing)",
+      "named_seven_lofts_6 vs road stone_west_spur: 0.00 -> 0.00 m (pre-existing)",
+      "named_seven_lofts_7 vs road loft_lane: 0.00 -> 0.00 m (pre-existing)",
+      "named_seven_lofts_7 vs road stone_west_spur: 0.83 -> 0.83 m (pre-existing)",
+      "named_shambles_3 vs road cut_south_west: 0.00 -> 0.00 m (pre-existing)",
+      "named_shambles_4 vs road shambles_lane: 0.00 -> 0.00 m (pre-existing)",
+      "named_shambles_6 vs road cut_south_west: 0.00 -> 0.00 m (pre-existing)",
+      "named_shambles_7 vs road shambles_lane: 0.00 -> 0.00 m (pre-existing)",
+      "named_shambles_7 vs road river_west_lane: 0.00 -> 2.27 m (pre-existing)",
+      "named_bellfounders_1 vs road bellfounder_spur: 0.00 -> 0.00 m (pre-existing)",
+      "named_bellfounders_2 vs road bellfounder_spur: 0.32 -> 0.32 m (pre-existing)",
+      "named_bellfounders_4 vs road bellfounder_spur: 0.00 -> 0.00 m (pre-existing)",
+      "named_old_sluice vs road sluice_lane: 0.00 -> 0.00 m (pre-existing)",
+      "named_old_sluice vs road east_inner_wall: 0.00 -> 0.00 m (pre-existing)",
+      "reserve_church_west vs road loft_lane: 0.00 -> 0.00 m (pre-existing)",
+      "reserve_church_north_east vs road east_wall_road: 0.00 -> 0.00 m (pre-existing)",
+      "reserve_church_west_cut vs road west_cut_link: 0.00 -> 0.00 m (pre-existing)",
+      "reserve_church_river vs road cut_south_mid: 0.00 -> 0.00 m (pre-existing)"
+    ],
+    "seam_crossings": [
+      "cut[0->1] (scale/old_sluice) crosses named_old_sluice (pre-existing)",
+      "cut[0->1] (scale/old_sluice) crosses named_chain_bridge (pre-existing)",
+      "cut[0->1] (scale/old_sluice) crosses named_tally_bridge (pre-existing)",
+      "harne_road[0->1] (bellstand_tower/scale) crosses named_bellstand_tower (pre-existing)",
+      "reed_route[0->1] (gate_reed/scale) crosses gate_reed_1 (pre-existing)",
+      "needle[3->4] (scale/tallage_bridge) crosses named_toll_house (pre-existing)",
+      "tanners_slip[1->2] (maren/override) crosses named_moorings_1 (pre-existing)",
+      "tanners_slip[2->3] (override/maren) crosses named_moorings_1 (pre-existing)",
+      "tallage_to_gradine[0->1] (tallage_bridge/scale) crosses named_toll_house (pre-existing)",
+      "maren_to_bell[0->1] (maren/scale) crosses named_saint_marens (pre-existing)",
+      "loft_lane[1->2] (parish_west/scale) crosses reserve_church_west (pre-existing)",
+      "loft_lane[2->3] (scale/seven_lofts) crosses named_seven_lofts_3 (pre-existing)",
+      "loft_lane[2->3] (scale/seven_lofts) crosses named_seven_lofts_4 (pre-existing)",
+      "loft_lane[3->4] (seven_lofts/scale) crosses named_seven_lofts_6 (pre-existing)",
+      "loft_lane[3->4] (seven_lofts/scale) crosses named_seven_lofts_7 (pre-existing)",
+      "stone_west_spur[1->2] (scale/seven_lofts) crosses named_seven_lofts_6 (pre-existing)",
+      "east_wall_road[1->2] (scale/parish_north_east) crosses reserve_church_north_east (pre-existing)",
+      "east_wall_road[2->3] (parish_north_east/scale) crosses reserve_church_north_east (pre-existing)",
+      "bellfounder_spur[0->1] (scale/bellfounders) crosses named_bellfounders_4 (pre-existing)",
+      "bellfounder_spur[1->2] (bellfounders/scale) crosses named_bellfounders_1 (pre-existing)",
+      "west_cut_link[1->2] (scale/parish_west_cut) crosses reserve_church_west_cut (pre-existing)",
+      "west_cut_link[2->3] (parish_west_cut/scale) crosses reserve_church_west_cut (pre-existing)",
+      "shambles_lane[1->2] (scale/shambles) crosses named_shambles_4 (pre-existing)",
+      "river_east_lane[2->3] (override/scale) crosses named_moorings_1 (pre-existing)",
+      "north_cross_1[0->1] (scale/seven_lofts) crosses named_seven_lofts_1 (pre-existing)",
+      "north_cross_1[0->1] (scale/seven_lofts) crosses named_seven_lofts_2 (pre-existing)",
+      "north_cross_1[1->2] (seven_lofts/override) crosses named_seven_lofts_2 (pre-existing)",
+      "north_cross_1[1->2] (seven_lofts/override) crosses named_seven_lofts_3 (pre-existing)",
+      "weigh_north_lane[3->4] (gaunt/scale) crosses named_gaunt_house (pre-existing)",
+      "cut_south_west[0->1] (scale/shambles) crosses named_shambles_3 (pre-existing)",
+      "cut_south_west[1->2] (shambles/scale) crosses named_shambles_3 (pre-existing)",
+      "cut_south_west[1->2] (shambles/scale) crosses named_shambles_6 (pre-existing)",
+      "cut_south_mid[0->1] (tallage_bridge/scale) crosses named_bonded_warehouse (pre-existing)",
+      "cut_south_mid[1->2] (scale/parish_river) crosses reserve_church_river (pre-existing)",
+      "cut_south_mid[2->3] (parish_river/scale) crosses reserve_church_river (pre-existing)",
+      "sluice_lane[1->2] (scale/old_sluice) crosses named_old_sluice (pre-existing)",
+      "sluice_lane[2->3] (old_sluice/scale) crosses named_old_sluice (pre-existing)"
+    ],
+    "projected_road_points": []
+  }
+}

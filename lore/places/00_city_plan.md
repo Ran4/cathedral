@@ -34,23 +34,23 @@ The Lanthorn keeps its existing footprint and height. For planning purposes:
 
 The target walled enclosure is an irregular polygon close to these limits:
 
-- north wall: `x = 470..510`;
-- south wall: `x = -475..-515`;
-- west wall: `z = 490..525`;
-- east wall: `z = -640..-680`.
+- north wall: `x = 329..357`;
+- south wall: `x = -332.5..-360.5`;
+- west wall: `z = 343..367.5`;
+- east wall: `z = -448..-476`.
 
-This gives about 1.2 km west to east and 1.0 km north to south. Its geometric
-centre is near `(0, -75)`, putting the Lanthorn roughly seventy metres west of
-centre as the lore requires.
+This gives about 840 m west to east and 700 m north to south. Its geometric
+centre is near `(0, -52.5)`, keeping the Lanthorn west of centre — now by
+roughly fifty metres — as the lore requires.
 
 Corners should be rounded, angled, or stepped around old property and ground;
 they should not read as a perfect rectangle from above. The broad planning
 polygon is:
 
 ```text
-NW (475, 485) -> N (505, 130) -> NE (465, -650)
-   -> E (330, -675) -> SE (-445, -660)
-   -> S (-510, -120) -> SW (-475, 485) -> NW
+NW (332.5, 339.5) -> N (353.5, 91) -> NE (325.5, -455)
+   -> E (231, -472.5) -> SE (-311.5, -462)
+   -> S (-357, -84) -> SW (-332.5, 339.5) -> NW
 ```
 
 These wall points are targets, not area boxes. Gate openings and towers will
@@ -69,10 +69,12 @@ longer be a single flat slab.
 - The wharf apron falls beyond it to the Serle's north bank around `y = -10`.
 
 The grades must stay cartable. Short steps belong at courts, churchyards, and
-pedestrian passages, not on the River Cartway or Cut.
+pedestrian passages, not on the River Cartway or Cut. Since the 2026-07 0.7×
+plan shrink these same rises happen over shorter runs — grades are roughly 1.4×
+steeper than first authored — and the height targets may be re-authored later.
 
 The Serle flows west to east, therefore from `+z` toward `-z`, beyond the south
-wall. Its near bank lies roughly seventy metres outside the wall. The outer
+wall. Its near bank lies roughly fifty metres outside the wall. The outer
 wharves occupy that strip and may be visible through the River Gate, but the
 working water is outside the playable walled city unless a future feature
 explicitly expands scope.
@@ -108,8 +110,8 @@ close.
 
 ### The water city
 
-The Cut was driven straight across the southern third from about `z = 465` to
-`z = -605`, centred close to `x = -305`. Bridges, salt houses, fish markets,
+The Cut was driven straight across the southern third from about `z = 325.5` to
+`z = -422`, centred close to `x = -213.5`. Bridges, salt houses, fish markets,
 and warehouses attached themselves to its banks. The Tallage grew at its
 junction with the customs route. Saint Maren's and the Alder Moorings grew
 farther east among boat-families.
@@ -149,14 +151,17 @@ overlap the everyday catchment of a square.
 
 | Ward | Approximate bounds | Character and reason |
 |---|---|---|
-| Fabric Ward | `x = -110..180`, `z = -160..235` | Lanthorn, Gradine, Chapter, pilgrims, fabric workers, Skinners' Court, Ford Well |
-| Wick Ward | `x = -170..130`, `z = 235..500` | Wickmarket, west gate traffic, chandlers, honey, lodging, back lanes |
-| Cloth Ward | `x = 80..275`, `z = 190..390` | Draper's Reach, tentering, cloth halls, merchant lofts |
-| Wallwright Ward | `x = 175..485`, `z = 40..260` | Coswald's Yard, stone, timber, lime, masons, northern gate road |
-| Cinder Ward | `x = -270..20`, `z = 115..315` | Cinder Row, fire-conscious workshops, Burnt Court, the Needle's west approaches |
-| Weigh Ward | `x = -435..-175`, `z = -40..235` | Tallage, salt houses, Tally Bridge, Gaunt Passage, customs and pawning |
-| Reed Ward | `x = -455..-160`, `z = -500..-235` | Maren's Green, church and crypt, fish, Moorings, tanners, boat-families |
-| Bell and Sluice Wards | `x = -180..330`, `z = -620..-150` | Bellstand, Ilvane Chapel, eastern housing, bellfounding, Old Sluice |
+| Fabric Ward | `x = -77..126`, `z = -112..164.5` | Lanthorn, Gradine, Chapter, pilgrims, fabric workers, Skinners' Court, Ford Well |
+| Wick Ward | `x = -119..91`, `z = 164.5..350` | Wickmarket, west gate traffic, chandlers, honey, lodging, back lanes |
+| Cloth Ward | `x = 56..192.5`, `z = 133..273` | Draper's Reach, tentering, cloth halls, merchant lofts |
+| Wallwright Ward | `x = 122.5..339.5`, `z = 28..182` | Coswald's Yard, stone, timber, lime, masons, northern gate road |
+| Cinder Ward | `x = -189..14`, `z = 80.5..220.5` | Cinder Row, fire-conscious workshops, Burnt Court, the Needle's west approaches |
+| Weigh Ward | `x = -304.5..-122.5`, `z = -28..164.5` | Tallage, salt houses, Tally Bridge, Gaunt Passage, customs and pawning |
+| Reed Ward | `x = -318.5..-112`, `z = -350..-164.5` | Maren's Green, church and crypt, fish, Moorings, tanners, boat-families |
+| Bell and Sluice Wards | `x = -126..231`, `z = -434..-105` | Bellstand, Ilvane Chapel, eastern housing, bellfounding, Old Sluice |
+
+These bounds are mirrored by `scripts/bake_places.py` (`WARD_BOUNDS`); keep the
+two in sync.
 
 The far north-east and far west margins contain dense but less famous
 residential and food-storage streets. They are not empty filler: they hold
@@ -167,15 +172,15 @@ work in the named trades.
 
 ### Wool Gate
 
-The western gate is centred near `(-35, 510)`. The upstream road toward Brede
+The western gate is centred near `(-24.5, 357)`. The upstream road toward Brede
 and the Combs enters here with wool, hides, honey, and pilgrims. Inside, the
 street bends through the Wickmarket before aligning with the west approach.
-The bend prevents an implausible half-kilometre ceremonial boulevard and means
+The bend prevents an implausible quarter-kilometre ceremonial boulevard and means
 the Lanthorn is revealed in stages.
 
 ### Stone Gate
 
-The northern gate is centred near `(495, 135)`. Stone, lime, long timber, and
+The northern gate is centred near `(346.5, 94.5)`. Stone, lime, long timber, and
 Fabric carts descend from it to Coswald's Yard. The Lantern Road to Ostrelle
 also leaves by this gate before separating from the quarry and timber roads
 beyond the wall. This fixes the city end of the six-week journey without
@@ -183,22 +188,22 @@ filling in the distant geography.
 
 ### Harne Gate
 
-The eastern gate is centred near `(15, -665)`. The dry road toward Harne and
+The eastern gate is centred near `(10.5, -465.5)`. The dry road toward Harne and
 the downstream country enters here. Inside, it reaches the Old Sluice road and
 the Bellstand by doglegs rather than looking axially through the whole city.
 
 ### River Gate
 
-The main southern gate is centred near `(-505, -135)`. It is the broadest
+The main southern gate is centred near `(-353.5, -94.5)`. It is the broadest
 working gate, with paired leaves, a porter wicket, toll shelter, dung ruts, and
 room for one cart to wait while another passes. The River Cartway reaches the
-Cut near `(-305, -125)` and splits west to the Tallage and east to Maren's
+Cut near `(-213.5, -87.5)` and splits west to the Tallage and east to Maren's
 Green. This route carries freight; pilgrims do not get a picturesque private
 gate to the water.
 
 ### Reed Postern
 
-The foot and handcart postern near `(-455, -535)` serves eastern wharf hands,
+The foot and handcart postern near `(-318.5, -374.5)` serves eastern wharf hands,
 fish carriers, funerals, and the Reed Ward. It cannot admit an ox cart. Maren's
 Slip climbs from it toward the Green. The postern gives boat-families a short
 working route without weakening the River Gate's customs role.
@@ -227,7 +232,7 @@ Wool Gate -> Wickmarket -> Pilgrim Bend -> statue courts -> Gradine -> west door
 
 From the Wool Gate to the Wickmarket, the road is six to seven metres wide and
 commercial. East of the Wickmarket it narrows, turns around a lodging block,
-and only then finds the Lanthorn axis. Near `z = 225` it opens enough for the
+and only then finds the Lanthorn axis. Near `z = 200` it opens enough for the
 Dawn Bearer and Seraph to stand in separate side courts at their fixed
 positions. The final approach funnels to the Gradine rather than expanding
 into a second square.
@@ -238,7 +243,7 @@ ordinary stone and market-edge space, not magical sanctuaries.
 
 ### The Cut
 
-The Cut centreline stays close to `x = -305`. Its ordinary clear cart width is
+The Cut centreline stays close to `x = -213.5`. Its ordinary clear cart width is
 eight to twelve metres, widening at the Tallage and Maren's Green and narrowing
 under the Tally and Chain bridges. Bank-front buildings face it on slightly
 raised thresholds. At long range, its straight run is visible in fragments
@@ -249,7 +254,7 @@ along the route (see `wells_and_water.md`).
 
 ### River Cartway
 
-This route climbs from the River Gate to the Cut junction at `(-305, -125)`.
+This route climbs from the River Gate to the Cut junction at `(-213.5, -87.5)`.
 It has a hard-wearing central strip, wheel ruts, porter margins, dung collection,
 and no stairs. Westbound freight reaches the Tallage in a few minutes;
 eastbound fish and boat gear reach Maren's Green without crossing Tallage
@@ -337,11 +342,11 @@ Water is valuable, geometry is inherited, and stalls occupy good ground.
 | Place | Target centre | Usable open character |
 |---|---:|---|
 | Gradine | `(0, 131)` | `77 x 52 m`, shallow stepped forecourt, axial but crowded |
-| Wickmarket | `(-25, 355)` | about `82 x 68 m`, bent trapezoid with hot-work islands |
-| Coswald's Yard | `(255, 155)` | about `112 x 88 m`, rough working yard with tracing floor |
-| Tallage | `(-305, 90)` | about `118 x 86 m`, elongated along the Cut and broken by weighing equipment |
-| Maren's Green | `(-305, -365)` | about `105 x 88 m`, market street, churchyard edge, smoke and bridge constriction |
-| Bellstand | `(45, -255)` | about `78 x 66 m`, sloped civic square dominated off-centre by tower and platform |
+| Wickmarket | `(-17.5, 248.5)` | about `57 x 48 m`, bent trapezoid with hot-work islands |
+| Coswald's Yard | `(223.5, 108.5)` | about `78 x 62 m`, rough working yard with tracing floor |
+| Tallage | `(-213.5, 63)` | about `83 x 60 m`, elongated along the Cut and broken by weighing equipment |
+| Maren's Green | `(-213.5, -255.5)` | about `74 x 62 m`, market street, churchyard edge, smoke and bridge constriction |
+| Bellstand | `(31.5, -178.5)` | about `55 x 46 m`, sloped civic square dominated off-centre by tower and platform |
 
 The dimensions describe the overall breathing room, not a single empty
 rectangle. Arcades, stairs, stalls, trees, wells, walls, and traffic reduce the

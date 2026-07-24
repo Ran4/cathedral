@@ -45,10 +45,10 @@ use crate::smart_actors::{AreaDebugState, ChatInputState, ConfigMenuState};
 
 // --- The baked crop, mirrored from scripts/render_map_texture.py ------------ //
 // (The building bounding box; the script prints these when it re-bakes.)
-const VX0: f32 = -528.5;
-const VX1: f32 = 683.5;
-const VY0: f32 = -523.0;
-const VY1: f32 = 513.0;
+const VX0: f32 = -375.5;
+const VX1: f32 = 484.0;
+const VY0: f32 = -371.5;
+const VY1: f32 = 364.5;
 
 /// Image aspect (width / height), from the crop. The minimap and fullscreen
 /// frames are sized in one viewport axis and derive the other from this, so the
@@ -598,7 +598,7 @@ mod tests {
     fn constants_match_the_bake_viewbox() {
         // These four define the crop in scripts/render_map_texture.py; if they
         // drift, the marker and click math silently desync from the image.
-        assert_eq!((VX0, VX1, VY0, VY1), (-528.5, 683.5, -523.0, 513.0));
+        assert_eq!((VX0, VX1, VY0, VY1), (-375.5, 484.0, -371.5, 364.5));
     }
 
     #[test]

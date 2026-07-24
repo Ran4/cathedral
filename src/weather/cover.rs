@@ -148,8 +148,8 @@ impl PrecipitationOcclusionMap {
         // building shells. Its generous roof rectangle is the named drive-mode
         // acceptance point at the tower's foot.
         map.rasterize_rect(
-            Vec2::new(47.5, -257.0),
-            Vec2::new(63.0, -239.0),
+            Vec2::new(28.3, -176.0),
+            Vec2::new(43.8, -158.0),
             8.2,
             CoverMaterial::Stone,
             true,
@@ -157,11 +157,11 @@ impl PrecipitationOcclusionMap {
 
         // Gate vaults: they are open routes under masonry, not house interiors.
         for (centre, half, height) in [
-            (Vec2::new(-35.0, 485.0), Vec2::new(8.0, 10.0), 13.0),
-            (Vec2::new(495.0, 135.0), Vec2::new(10.0, 8.0), 13.0),
-            (Vec2::new(15.0, -665.0), Vec2::new(9.0, 9.0), 13.0),
-            (Vec2::new(-505.0, -135.0), Vec2::new(9.0, 9.0), 13.0),
-            (Vec2::new(-447.0, -538.0), Vec2::new(8.0, 8.0), 10.0),
+            (Vec2::new(-24.5, 332.0), Vec2::new(8.0, 10.0), 13.0),
+            (Vec2::new(346.5, 94.5), Vec2::new(10.0, 8.0), 13.0),
+            (Vec2::new(10.5, -465.5), Vec2::new(9.0, 9.0), 13.0),
+            (Vec2::new(-353.5, -94.5), Vec2::new(9.0, 9.0), 13.0),
+            (Vec2::new(-310.5, -377.5), Vec2::new(8.0, 8.0), 10.0),
         ] {
             map.rasterize_rect(
                 centre - half,
@@ -175,12 +175,12 @@ impl PrecipitationOcclusionMap {
         // Social market roofs. Only their small pitch is covered; the square
         // around each remains honestly exposed.
         for centre in [
-            Vec2::new(-21.5, 356.5),
-            Vec2::new(-28.5, 353.5),
-            Vec2::new(255.0, 155.1),
-            Vec2::new(-304.9, 90.1),
-            Vec2::new(-301.5, -363.5),
-            Vec2::new(-308.5, -366.5),
+            Vec2::new(-15.05, 249.55),
+            Vec2::new(-19.95, 247.45),
+            Vec2::new(223.5, 108.57),
+            Vec2::new(-213.43, 63.07),
+            Vec2::new(-211.05, -254.45),
+            Vec2::new(-215.95, -256.55),
         ] {
             map.rasterize_rect(
                 centre - Vec2::new(3.2, 2.4),
@@ -195,7 +195,7 @@ impl PrecipitationOcclusionMap {
         // Their graph place nodes sit at the serving pitches, so mark only the
         // compact rooms instead of treating the whole building shell as public
         // precipitation cover.
-        for centre in [Vec2::new(-324.4, -441.1), Vec2::new(45.1, -254.9)] {
+        for centre in [Vec2::new(-231.9, -324.7), Vec2::new(25.9, -173.9)] {
             map.rasterize_rect(
                 centre - Vec2::splat(3.2),
                 centre + Vec2::splat(3.2),
@@ -215,31 +215,31 @@ impl PrecipitationOcclusionMap {
                 4.4,
             ),
             (
-                Vec2::new(239.0, 143.0),
+                Vec2::new(172.0, 120.0),
                 Vec2::new(3.1, 2.8),
                 CoverMaterial::Slate,
                 4.2,
             ),
             (
-                Vec2::new(-340.0, 314.0),
+                Vec2::new(-239.2, 218.6),
                 Vec2::new(3.4, 4.0),
                 CoverMaterial::Tile,
                 4.3,
             ),
             (
-                Vec2::new(51.0, 368.4),
+                Vec2::new(8.0, 254.4),
                 Vec2::new(3.2, 1.8),
                 CoverMaterial::Slate,
                 3.2,
             ),
             (
-                Vec2::new(94.0, 219.2),
+                Vec2::new(135.0, 184.2),
                 Vec2::new(3.8, 1.9),
                 CoverMaterial::Tile,
                 3.2,
             ),
             (
-                Vec2::new(-291.0, -348.2),
+                Vec2::new(-196.5, -231.8),
                 Vec2::new(3.1, 1.7),
                 CoverMaterial::Tile,
                 3.2,
@@ -448,15 +448,15 @@ mod tests {
         let map = PrecipitationOcclusionMap::default();
         for (name, point) in [
             ("Lanthorn nave", Vec3::new(0.0, 1.5, 20.0)),
-            ("Bellfoot Passage", Vec3::new(55.0, 1.5, -248.0)),
-            ("Chain Bridge", Vec3::new(-305.0, 1.5, 425.0)),
-            ("Wickmarket awning", Vec3::new(-21.5, 1.5, 356.5)),
+            ("Bellfoot Passage", Vec3::new(35.8, 1.5, -167.0)),
+            ("Chain Bridge", Vec3::new(-213.5, 1.5, 297.5)),
+            ("Wickmarket awning", Vec3::new(-15.05, 1.5, 249.55)),
             ("Ford Well roof", Vec3::new(88.0, 1.5, 35.0)),
         ] {
             assert!(map.is_sheltered(point), "{name} should be covered");
             assert!(map.sample(point.x, point.z).impact_y > point.y);
         }
-        assert!(!map.is_sheltered(Vec3::new(-25.0, 1.5, 345.0)));
+        assert!(!map.is_sheltered(Vec3::new(-17.5, 1.5, 241.5)));
     }
 
     #[test]
@@ -470,8 +470,8 @@ mod tests {
     #[test]
     fn puddle_surface_follows_cobbles_and_excludes_the_dry_cut() {
         let map = PrecipitationOcclusionMap::default();
-        assert!(map.sample(-25.0, 345.0).puddle_surface);
-        assert!(!map.sample(-305.0, -200.0).puddle_surface);
+        assert!(map.sample(-17.5, 241.5).puddle_surface);
+        assert!(!map.sample(-213.5, -140.0).puddle_surface);
     }
 
     #[test]

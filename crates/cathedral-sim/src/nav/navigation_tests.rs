@@ -78,43 +78,32 @@ fn navigation_bitset_matches_its_manifest() {
     assert_eq!(fnv, claimed, "navigation.bin no longer matches navigation.json");
 }
 
-/// Every named place routes from the cathedral forecourt. The one plan anchor
-/// that legitimately does not appear is "Outer Serle wharves" — genuinely beyond
-/// the south wall, on real water the city has no bridge to (02_navigation.md §6).
+/// Every named place routes from the cathedral forecourt. Since the 0.7x
+/// shrink even "Outer Serle wharves" bakes: its anchor moved within the 60 m
+/// place-snap of the River Gate street nodes, so walking there ends at the
+/// gate — the closest dry ground the city offers (02_navigation.md §6).
 ///
 /// This pins the *identity* of the present places, not just their count: the
-/// baked set must be exactly the plan's `named_place_index` names minus that one.
-/// A count-only check would pass a 1-for-1 swap (a different place silently
-/// dropping while the Serle wharves reappeared), which this does not.
+/// baked set must be exactly the plan's `named_place_index` names. A
+/// count-only check would pass a 1-for-1 swap, which this does not.
 #[test]
 fn every_named_place_is_reachable() {
     use std::collections::BTreeSet;
 
-    const EXPECTED_ABSENT: &str = "Outer Serle wharves";
-
     let nav = nav();
     let plan = plan();
 
-    let all_plan_names: BTreeSet<String> = plan["named_place_index"]
+    let expected: BTreeSet<String> = plan["named_place_index"]
         .as_array()
         .unwrap()
         .iter()
         .map(|p| p["name"].as_str().unwrap().to_string())
         .collect();
-    assert!(
-        all_plan_names.contains(EXPECTED_ABSENT),
-        "the plan should still name {EXPECTED_ABSENT:?}"
-    );
-    let expected: BTreeSet<String> = all_plan_names
-        .iter()
-        .filter(|name| name.as_str() != EXPECTED_ABSENT)
-        .cloned()
-        .collect();
 
     let present: BTreeSet<String> = nav.places().iter().map(|p| p.name.clone()).collect();
     assert_eq!(
         present, expected,
-        "the baked places must be exactly the plan anchors minus {EXPECTED_ABSENT:?}"
+        "the baked places must be exactly the plan anchors"
     );
 
     let dist = nav.distances_from(nav.forecourt());
@@ -132,16 +121,17 @@ fn every_named_place_is_reachable() {
 
 /// The test M1 exists to catch: the `stable_hash % polygon.len()` door once put
 /// 106 front doors against a wall. Picking the edge by reachability takes it from
-/// 2,154 to essentially every building — 2,559 today. The five buildings the
-/// renderer draws no door for (the Lanthorn, the malt-house and the three
-/// bridges) plus two enclosed parcels with no reachable edge correctly get none,
-/// so 2,566 − 5 − 2 = 2,559 is the ceiling; the floor keeps a little headroom.
+/// 2,154 to essentially every building — 1,025 in the post-shrink fabric. The
+/// five buildings the renderer draws no door for (the Lanthorn, the malt-house
+/// and the three bridges) plus two enclosed parcels with no reachable edge
+/// correctly get none, so 1,032 − 5 − 2 = 1,025 is the ceiling; the floor
+/// keeps a little headroom.
 #[test]
 fn every_door_is_reachable() {
     let nav = nav();
     assert!(
-        nav.doors().len() >= 2_555,
-        "expected >= 2555 doors, baked {}",
+        nav.doors().len() >= 1_020,
+        "expected >= 1020 doors, baked {}",
         nav.doors().len()
     );
     let dist = nav.distances_from(nav.forecourt());

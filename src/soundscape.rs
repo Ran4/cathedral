@@ -81,75 +81,76 @@ const DUSK_GRACE_SECONDS: f64 = 8.0;
 const SPEED_OF_SOUND_MPS: f32 = 343.0;
 const WEATHER_AUDIO_SAMPLE_RATE: u32 = 22_050;
 
-const WICKMARKET: Vec3 = Vec3::new(-25.0, 1.3, 355.0);
-const TALLAGE_WEIGHBEAM: Vec3 = Vec3::new(-306.0, 1.5, 65.0);
-const TALLAGE_SQUARE: Vec2 = Vec2::new(-305.0, 90.0);
-const TALLAGE_MEASUREMENT_RADIUS_M: f32 = 62.0;
-const COMMON_OVEN: Vec3 = Vec3::new(-165.875, 1.2, 439.625);
-const CINDER_ROW: Vec3 = Vec3::new(-130.0, 1.2, 205.0);
-const BURNT_COURT: Vec3 = Vec3::new(-172.0, 1.2, 232.0);
-const STONE_GATE: Vec3 = Vec3::new(495.0, 5.0, 135.0);
-const STONE_GATE_HOUSING: Vec3 = Vec3::new(483.5, 5.5, 135.0);
-const RIVER_GATE: Vec3 = Vec3::new(-505.0, 4.0, -135.0);
+const WICKMARKET: Vec3 = Vec3::new(-17.5, 1.3, 248.5);
+const TALLAGE_WEIGHBEAM: Vec3 = Vec3::new(-214.2, 1.5, 45.5);
+const TALLAGE_SQUARE: Vec2 = Vec2::new(-213.5, 63.0);
+const TALLAGE_MEASUREMENT_RADIUS_M: f32 = 43.0;
+const COMMON_OVEN: Vec3 = Vec3::new(-116.1125, 1.2, 307.7375);
+const CINDER_ROW: Vec3 = Vec3::new(-91.0, 1.2, 143.5);
+const BURNT_COURT: Vec3 = Vec3::new(-123.4, 1.2, 166.4);
+const STONE_GATE: Vec3 = Vec3::new(346.5, 5.0, 94.5);
+const STONE_GATE_HOUSING: Vec3 = Vec3::new(335.0, 5.5, 94.5);
+const RIVER_GATE: Vec3 = Vec3::new(-353.5, 4.0, -94.5);
 const FORD_WELL: Vec3 = Vec3::new(88.0, 1.0, 35.0);
-const THREE_CURB: Vec3 = Vec3::new(-131.0, 0.8, 166.0);
-const CHAIN_WELL: Vec3 = Vec3::new(-197.0, -2.5, 73.0);
+const THREE_CURB: Vec3 = Vec3::new(-91.7, 0.8, 116.2);
+const CHAIN_WELL: Vec3 = Vec3::new(-123.8, -2.5, 63.1);
 // The city plan's compass is north +x, east -z. This is the north half of
 // the west front, high enough that 3D attenuation carries the calls down from
 // the canonical unfinished tower rather than making them sound street-level.
 const NORTH_TOWER_NESTS: Vec3 = Vec3::new(34.0, 46.0, 75.0);
 // The fish landing sits at the eastern end of the built outer-wharf strip,
-// close to the Reed Postern but almost 300 m from the dry Cut.
-const OUTER_FISH_WHARF: Vec3 = Vec3::new(-594.0, 13.0, -404.0);
-const SPARR_FURNACE_YARD: Vec3 = Vec3::new(-115.0, 2.0, 250.0);
-const SAINT_MARENS_CHURCH: Vec3 = Vec3::new(-235.0, 3.0, -392.0);
+// close to the Reed Postern but some 200 m from the dry Cut.
+const OUTER_FISH_WHARF: Vec3 = Vec3::new(-415.8, 13.0, -282.8);
+const SPARR_FURNACE_YARD: Vec3 = Vec3::new(-112.0, 2.0, 270.0);
+const SAINT_MARENS_CHURCH: Vec3 = Vec3::new(-140.5, 3.0, -275.6);
 /// Maren Smallvoice hangs in Saint Maren's own small tower, lifted to the
 /// louvres so the knell carries over the Reed Ward roofs rather than out of a
 /// doorway at street level (`saint_marens_church` in `areas.json`).
-const SMALLVOICE_TOWER: Vec3 = Vec3::new(-235.0, 17.0, -392.0);
+const SMALLVOICE_TOWER: Vec3 = Vec3::new(-140.5, 17.0, -275.6);
 /// The Scold hangs in the Bellstand's watch-bell tower — the civic bell, east
 /// of the Lanthorn (`bellstand_tower`, whose box rises to y = 30).
-const SCOLD_TOWER: Vec3 = Vec3::new(64.0, 24.0, -270.0);
+const SCOLD_TOWER: Vec3 = Vec3::new(44.8, 24.0, -189.0);
 /// Clemence Skep's honey pitch: the north-row Wickmarket stall beside her
 /// husband's family wax stand (`lore/families/family_vell.md` — the wax-house
 /// married the honey-seller), one stall east of Osanne Vell's.
-const HONEY_STALL: Vec3 = Vec3::new(16.9, 1.3, 359.4);
+const HONEY_STALL: Vec3 = Vec3::new(11.83, 1.3, 251.58);
 
 // Occupied courts and gate-edge holdings that keep a few birds: quiet lanes in
 // five different wards, each well clear of a market bed and of the swept
-// Gradine. Taken from real door points in `assets/world/homes.json`.
+// Gradine. Taken from real door points in the post-shrink
+// `assets/world/homes.json` bake.
 const HEN_YARD_ANCHORS: [Vec3; 5] = [
-    Vec3::new(-9.4, 1.0, -147.6),   // Fabric Ward, off Bellfoot Passage
-    Vec3::new(-2.4, 1.0, 451.9),    // Wick Ward, a Wool Gate holding
-    Vec3::new(220.4, 1.0, 64.9),    // Wallwright Ward, a Malt Passage food yard
-    Vec3::new(-294.1, 1.0, -272.6), // Reed Ward, by Reed Cistern
-    Vec3::new(401.9, 1.0, 212.4),   // Cloth Ward, a Stone Gate holding
+    Vec3::new(-29.375, 1.0, -177.375), // Fabric Ward, off the fixed precinct's south edge
+    Vec3::new(14.375, 1.0, 306.125),   // Wick Ward, a Wool Gate holding
+    Vec3::new(148.625, 1.0, 39.375),   // Wallwright Ward, a Malt Passage food yard
+    Vec3::new(-183.625, 1.0, -190.875), // Reed Ward, by Reed Cistern
+    Vec3::new(300.375, 1.0, 102.375),  // Cloth Ward, a Stone Gate holding
 ];
 
 const MARKET_DOG_ANCHORS: [Vec3; 6] = [
-    Vec3::new(-62.0, 1.3, 355.0),
-    Vec3::new(-318.0, 1.3, 90.0),
-    Vec3::new(292.0, 1.3, 185.0),
-    Vec3::new(-316.0, 1.3, -365.0),
+    Vec3::new(-43.4, 1.3, 248.5),   // Wickmarket edge
+    Vec3::new(-222.6, 1.3, 63.0),   // Tallage edge
+    Vec3::new(249.4, 1.3, 129.5),   // Coswald's Yard (scaled + the yard's 45 m east shift)
+    Vec3::new(-221.2, 1.3, -255.5), // Maren's Green edge
     STONE_GATE_HOUSING,
     RIVER_GATE,
 ];
 
 const CAT_ROOF_ANCHORS: [Vec3; 5] = [
-    Vec3::new(-370.0, 10.5, -445.0), // Eelback Alley / fish lanes
-    Vec3::new(-172.0, 11.5, 232.0),  // Burnt Court
-    Vec3::new(153.0, 11.0, -13.0),   // Crookneck Lane
-    Vec3::new(37.0, 11.0, 429.0),    // Slate Cistern back lanes
-    Vec3::new(-231.0, 10.5, 25.0),   // Gaunt Passage roofs
+    Vec3::new(-275.5, 10.5, -328.6), // Eelback Alley / fish lanes
+    Vec3::new(-123.4, 11.5, 166.4),  // Burnt Court
+    Vec3::new(107.1, 11.0, -9.1),    // Crookneck Lane
+    Vec3::new(25.9, 11.0, 300.3),    // Slate Cistern back lanes
+    Vec3::new(-157.8, 10.5, 15.1),   // Gaunt Passage roofs
 ];
 
 // These sit beyond the four principal gatehouses, where a farm flock can use
 // a wet cart rut without suggesting a permanent ornamental pond in the city.
 const GATE_GEESE_ANCHORS: [Vec3; 4] = [
-    Vec3::new(-35.0, 0.7, 530.0),
-    Vec3::new(520.0, 0.7, 135.0),
-    Vec3::new(15.0, 0.7, -680.0),
-    Vec3::new(-525.0, 0.7, -135.0),
+    Vec3::new(-24.5, 0.7, 377.0),
+    Vec3::new(371.5, 0.7, 94.5),
+    Vec3::new(10.5, 0.7, -480.5),
+    Vec3::new(-373.5, 0.7, -94.5),
 ];
 
 /// The integration boundary for genuine, externally observed activity.
@@ -377,9 +378,9 @@ pub(crate) fn classify_special_well(position: Vec3) -> Option<SpecialWell> {
 }
 
 /// Convert a sale/coin sound inside the Tallage's bounded market area into the
-/// authored weighbeam source.  The live stall pitch is about 25 m from the
+/// authored weighbeam source.  The live stall pitch is about 30 m from the
 /// beam, so testing only the beam itself would silently miss genuine sales;
-/// the 62 m square radius covers its stalls without capturing the neighbouring
+/// the 43 m square radius covers its stalls without capturing the neighbouring
 /// Weigh Ward streets wholesale.
 pub(crate) fn tallage_measurement_anchor(position: Vec3) -> Option<Vec3> {
     (position.is_finite()
@@ -1839,10 +1840,10 @@ struct NpcSoundState {
 }
 
 const DUSTY_WORK_ZONES: [(Vec2, f32); 4] = [
-    (Vec2::new(255.0, 155.0), 58.0),
-    (Vec2::new(-165.875, 439.625), 30.0),
-    (Vec2::new(-130.0, 205.0), 68.0),
-    (Vec2::new(120.0, 260.0), 105.0),
+    (Vec2::new(223.5, 108.5), 40.6),
+    (Vec2::new(-116.1125, 307.7375), 21.0),
+    (Vec2::new(-91.0, 143.5), 47.6),
+    (Vec2::new(100.0, 220.0), 73.5),
 ];
 
 #[allow(clippy::too_many_arguments)]
@@ -2313,12 +2314,16 @@ fn schedule_urban_nature_sounds(
     );
 }
 
+// Each point sits on a road ribbon of the shrunk plan: the west approach by
+// the Gradine forecourt, the dry Cut through the Tallage, the wall-road /
+// fabric-way crossing inside Stone Gate, the river cartway inside River Gate,
+// and the loft-lane bend at the Seven Lofts.
 const AUTHORED_RUTS: [Vec2; 5] = [
-    Vec2::new(0.0, 202.0),
-    Vec2::new(-304.0, 90.0),
-    Vec2::new(475.0, 136.0),
-    Vec2::new(-479.0, -134.0),
-    Vec2::new(360.0, 335.0),
+    Vec2::new(0.0, 171.0),
+    Vec2::new(-212.8, 63.0),
+    Vec2::new(332.5, 95.5),
+    Vec2::new(-335.3, -93.5),
+    Vec2::new(252.0, 234.5),
 ];
 
 #[derive(Debug)]
@@ -2527,35 +2532,35 @@ const STATIC_EMITTERS: [StaticEmitter; 31] = [
     StaticEmitter {
         key: 3,
         sound: SoundscapeSound::EelSmokeFire,
-        position: Vec3::new(-257.894, 0.7, -364.732),
+        position: Vec3::new(-163.394, 0.7, -248.332),
         schedule: EmitterSchedule::MarenLowmarket,
         priority: 55,
     },
     StaticEmitter {
         key: 4,
         sound: SoundscapeSound::EelSmokeFire,
-        position: Vec3::new(-349.648, 0.7, -356.714),
+        position: Vec3::new(-255.148, 0.7, -240.314),
         schedule: EmitterSchedule::MarenLowmarket,
         priority: 55,
     },
     StaticEmitter {
         key: 5,
         sound: SoundscapeSound::EelSmokeFire,
-        position: Vec3::new(-270.444, 0.7, -353.739),
+        position: Vec3::new(-175.944, 0.7, -237.339),
         schedule: EmitterSchedule::MarenLowmarket,
         priority: 55,
     },
     StaticEmitter {
         key: 6,
         sound: SoundscapeSound::EelSmokeFire,
-        position: Vec3::new(-323.471, 0.7, -336.611),
+        position: Vec3::new(-228.971, 0.7, -220.211),
         schedule: EmitterSchedule::MarenLowmarket,
         priority: 55,
     },
     StaticEmitter {
         key: 7,
         sound: SoundscapeSound::EelSmokeFire,
-        position: Vec3::new(-262.372, 0.7, -365.300),
+        position: Vec3::new(-167.872, 0.7, -248.900),
         schedule: EmitterSchedule::MarenLowmarket,
         priority: 55,
     },
@@ -2576,21 +2581,21 @@ const STATIC_EMITTERS: [StaticEmitter; 31] = [
     StaticEmitter {
         key: 11,
         sound: SoundscapeSound::Loom,
-        position: Vec3::new(48.0, 1.5, 334.0),
+        position: Vec3::new(37.0, 1.5, 256.0),
         schedule: EmitterSchedule::LoomWork,
         priority: 62,
     },
     StaticEmitter {
         key: 12,
         sound: SoundscapeSound::Loom,
-        position: Vec3::new(111.0, 1.5, 278.0),
+        position: Vec3::new(96.0, 1.5, 234.0),
         schedule: EmitterSchedule::LoomWork,
         priority: 62,
     },
     StaticEmitter {
         key: 13,
         sound: SoundscapeSound::Loom,
-        position: Vec3::new(175.0, 1.5, 218.0),
+        position: Vec3::new(154.0, 1.5, 204.0),
         schedule: EmitterSchedule::LoomWork,
         priority: 62,
     },
@@ -2603,38 +2608,39 @@ const STATIC_EMITTERS: [StaticEmitter; 31] = [
     },
     // House-door coordinates in quiet residential lanes, lifted to their
     // eaves. None is within the playback radius of a market or furnace bed.
+    // Re-picked from real door points of the post-shrink homes.json bake.
     StaticEmitter {
         key: 21,
         sound: SoundscapeSound::SparrowsUnderEaves,
-        position: Vec3::new(153.0, 8.5, -13.0),
+        position: Vec3::new(125.125, 8.5, 5.375),
         schedule: EmitterSchedule::DaylightAnimals,
         priority: 28,
     },
     StaticEmitter {
         key: 22,
         sound: SoundscapeSound::SparrowsUnderEaves,
-        position: Vec3::new(37.0, 8.5, 429.0),
+        position: Vec3::new(-38.125, 8.5, 315.125),
         schedule: EmitterSchedule::DaylightAnimals,
         priority: 28,
     },
     StaticEmitter {
         key: 23,
         sound: SoundscapeSound::SparrowsUnderEaves,
-        position: Vec3::new(274.0, 9.5, -298.0),
+        position: Vec3::new(192.875, 9.5, -217.875),
         schedule: EmitterSchedule::DaylightAnimals,
         priority: 28,
     },
     StaticEmitter {
         key: 24,
         sound: SoundscapeSound::SparrowsUnderEaves,
-        position: Vec3::new(-273.0, 8.0, -26.0),
+        position: Vec3::new(-181.875, 8.0, -39.625),
         schedule: EmitterSchedule::DaylightAnimals,
         priority: 28,
     },
     StaticEmitter {
         key: 25,
         sound: SoundscapeSound::SparrowsUnderEaves,
-        position: Vec3::new(-387.0, 7.5, -247.0),
+        position: Vec3::new(-274.375, 7.5, -177.875),
         schedule: EmitterSchedule::DaylightAnimals,
         priority: 28,
     },
@@ -2643,21 +2649,21 @@ const STATIC_EMITTERS: [StaticEmitter; 31] = [
     StaticEmitter {
         key: 26,
         sound: SoundscapeSound::SwallowsOverCourt,
-        position: Vec3::new(-172.0, 17.2, 232.0),
+        position: Vec3::new(-123.4, 17.2, 166.4),
         schedule: EmitterSchedule::DaylightAnimals,
         priority: 36,
     },
     StaticEmitter {
         key: 27,
         sound: SoundscapeSound::SwallowsOverCourt,
-        position: Vec3::new(94.0, 17.0, 223.0),
+        position: Vec3::new(135.0, 17.0, 188.0),
         schedule: EmitterSchedule::DaylightAnimals,
         priority: 36,
     },
     StaticEmitter {
         key: 28,
         sound: SoundscapeSound::SwallowsOverCourt,
-        position: Vec3::new(55.0, 17.0, -300.0),
+        position: Vec3::new(35.8, 17.0, -219.0),
         schedule: EmitterSchedule::DaylightAnimals,
         priority: 36,
     },
@@ -2673,21 +2679,21 @@ const STATIC_EMITTERS: [StaticEmitter; 31] = [
     StaticEmitter {
         key: 30,
         sound: SoundscapeSound::FliesAtWaste,
-        position: Vec3::new(-306.0, 0.7, -365.0),
+        position: Vec3::new(-214.2, 0.7, -255.5),
         schedule: EmitterSchedule::WarmDayWaste,
         priority: 18,
     },
     StaticEmitter {
         key: 31,
         sound: SoundscapeSound::FliesAtWaste,
-        position: Vec3::new(-395.0, 0.7, 315.0),
+        position: Vec3::new(-294.2, 0.7, 219.6),
         schedule: EmitterSchedule::WarmDayWaste,
         priority: 18,
     },
     StaticEmitter {
         key: 32,
         sound: SoundscapeSound::FliesAtWaste,
-        position: Vec3::new(-391.0, 0.7, -345.0),
+        position: Vec3::new(-296.5, 0.7, -228.6),
         schedule: EmitterSchedule::WarmDayWaste,
         priority: 18,
     },
@@ -3330,10 +3336,12 @@ fn inside_saint_maren_congregation_area(position: Vec3) -> bool {
     // The parish church itself is not an explorable interior yet. A narrow
     // eight-metre apron admits people gathered at its doors and churchyard
     // edge without counting the whole fish quarter as a congregation.
+    // The box's centre rides the Maren cluster; the half-extents are kept
+    // because the church itself did not shrink.
     inside_box(
         position,
-        Vec3::new(-258.0, -1.0, -418.0),
-        Vec3::new(-212.0, 18.0, -366.0),
+        Vec3::new(-163.5, -1.0, -301.6),
+        Vec3::new(-117.5, 18.0, -249.6),
     )
 }
 
@@ -3427,7 +3435,7 @@ fn update_virtualized_loops(
                     .translation()
                     .xz()
                     .distance_squared(WICKMARKET.xz())
-                    < 58.0_f32.powi(2)
+                    < 41.0_f32.powi(2)
             })
             .take(3)
             .count();
@@ -4080,7 +4088,7 @@ mod tests {
         assert!(!dusk_or_night(None));
 
         assert!(NORTH_TOWER_NESTS.y > 40.0);
-        assert!(OUTER_FISH_WHARF.x < -580.0);
+        assert!(OUTER_FISH_WHARF.x < -400.0);
         assert!(OUTER_FISH_WHARF.xz().distance(TALLAGE_SQUARE) > 250.0);
         assert_eq!(
             STATIC_EMITTERS
@@ -4109,7 +4117,7 @@ mod tests {
         assert!(
             GATE_GEESE_ANCHORS
                 .iter()
-                .all(|source| source.xz().length() > 500.0)
+                .all(|source| source.xz().length() > 350.0)
         );
     }
 
@@ -4230,40 +4238,43 @@ mod tests {
     fn a_bed_follows_the_nearest_part_of_its_place_and_stops_having_a_direction_inside() {
         let geometry = AreaBedGeometry::from_shipped_map();
 
-        // The Cut is five boxes over a kilometre: a listener at its southern end
-        // must hear the corridor beside them, not a point source at its middle.
-        let south = Vec3::new(-305.0, 1.0, -500.0);
+        // The Cut is five boxes over three quarters of a kilometre: a listener
+        // at its southern end must hear the corridor beside them, not a point
+        // source at its middle.
+        let south = Vec3::new(-213.5, 1.0, -350.0);
         let (anchor, distance) = geometry.anchor("the_cut", south).expect("the Cut resolves");
         assert_eq!(distance, 0.0, "inside the corridor");
         assert_eq!(anchor, south, "the bed has no direction from inside");
 
-        let north = Vec3::new(-305.0, 1.0, 400.0);
+        let north = Vec3::new(-213.5, 1.0, 280.0);
         let (_, inside_north) = geometry.anchor("the_cut", north).expect("the Cut resolves");
-        assert_eq!(inside_north, 0.0, "the same bed, 900 m up the corridor");
+        assert_eq!(inside_north, 0.0, "the same bed, 630 m up the corridor");
 
         // Approaching from the side lands on the nearest wall of the nearest box.
-        let beside = Vec3::new(-285.0, 1.0, 200.0);
+        // The Cut's post-shrink area boxes are seam-derived from the translated
+        // bridges, so its east face sits at x = -207.9, not centreline - 8.
+        let beside = Vec3::new(-193.5, 1.0, 140.0);
         let (anchor, distance) = geometry
             .anchor("the_cut", beside)
             .expect("the Cut resolves");
-        assert!((distance - 12.0).abs() < 0.01, "{distance}");
-        assert_eq!(anchor.x, -297.0);
+        assert!((distance - 14.4).abs() < 0.01, "{distance}");
+        assert_eq!(anchor.x, -207.9);
         assert_eq!(anchor.z, beside.z, "the anchor tracks along the corridor");
 
         // Height counts: flying over Gaunt Passage is not standing in it.
         let (_, overhead) = geometry
-            .anchor("gaunt_passage", Vec3::new(-228.0, 60.0, 26.0))
+            .anchor("gaunt_passage", Vec3::new(-154.8, 60.0, 16.1))
             .expect("the passage resolves");
         assert!(overhead > 40.0, "{overhead}");
 
-        assert!(geometry.contains("hungry_ox", Vec3::new(-330.0, 1.0, -455.0)));
-        assert!(!geometry.contains("hungry_ox", Vec3::new(-330.0, 1.0, -400.0)));
+        assert!(geometry.contains("hungry_ox", Vec3::new(-237.5, 1.0, -338.6)));
+        assert!(!geometry.contains("hungry_ox", Vec3::new(-237.5, 1.0, -283.6)));
         assert!(geometry.anchor("no_such_place", Vec3::ZERO).is_none());
 
         // The round parks a tavern worker on the Ox's own nav node — which sits
         // about a metre inside the box — and lets them drift up to their eight
         // metre leash. Strict containment reported the tavern empty all evening.
-        let ox_workplace_node = Vec3::new(-324.375, 1.0, -441.125);
+        let ox_workplace_node = Vec3::new(-231.875, 1.0, -324.725);
         assert!(geometry.contains("hungry_ox", ox_workplace_node));
         let leash_north = ox_workplace_node + Vec3::Z * 8.0;
         assert!(
@@ -4274,7 +4285,7 @@ mod tests {
             geometry.occupied_by("hungry_ox", leash_north),
             "a worker at the end of their leash is still working the Ox"
         );
-        assert!(!geometry.occupied_by("hungry_ox", Vec3::new(-330.0, 1.0, -420.0)));
+        assert!(!geometry.occupied_by("hungry_ox", Vec3::new(-237.5, 1.0, -303.6)));
     }
 
     #[test]
@@ -5035,13 +5046,13 @@ mod tests {
     #[test]
     fn tallage_sales_route_to_the_authored_weighbeam_only_inside_the_square() {
         assert_eq!(
-            tallage_measurement_anchor(Vec3::new(-305.0, 0.0, 90.0)),
-            Some(Vec3::new(-306.0, 1.5, 65.0))
+            tallage_measurement_anchor(Vec3::new(-213.5, 0.0, 63.0)),
+            Some(Vec3::new(-214.2, 1.5, 45.5))
         );
-        // A representative stall pitch ~25 m north of the beam remains in the
+        // A representative stall pitch ~30 m from the beam remains in the
         // market catchment, while the neighbouring Chain Well does not.
         assert_eq!(
-            tallage_measurement_anchor(Vec3::new(-341.994, 0.0, 87.453)),
+            tallage_measurement_anchor(Vec3::new(-239.396, 0.0, 61.217)),
             Some(TALLAGE_WEIGHBEAM)
         );
         assert_eq!(tallage_measurement_anchor(CHAIN_WELL), None);

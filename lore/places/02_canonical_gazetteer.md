@@ -120,13 +120,13 @@ occupies the alleged site without evidence.
 
 ### The Wickmarket
 
-The Wickmarket is a bent, roughly trapezoidal square centred near `(-25, 355)`.
+The Wickmarket is a bent, roughly trapezoidal square centred near `(-17.5, 248.5)`.
 The Wool Gate road enters its west side, western approach traffic leaves its
 east/north-east corner, the Draper's Reach begins north-east, and the Needle
 disappears behind the south row. This makes it both a destination and a place
 every west-side traveller crosses.
 
-The north row holds Osanne Vell's stall at about `(18, 350)`, close enough to
+The north row holds Osanne Vell's stall at about `(12.6, 245)`, close enough to
 observe arrivals from both the gate and Draper's Reach. Chandlers dip candles
 under lean-tos around several stone hot-work islands. Other pitches sell wax,
 tallow, wicking, honey, lamp fittings, sand pots, and rendered fat. The
@@ -145,9 +145,9 @@ candles. No exterior candle behaves strangely.
 
 ### The Needle
 
-The Needle begins in the Wickmarket's south back lanes around `(-75, 310)` and
+The Needle begins in the Wickmarket's south back lanes around `(-52.5, 217)` and
 works toward the Tallage through several inherited turns. The route as a whole
-is narrow, but its famous midpoint near `(-162, 230)` is only about 1.1 metres
+is narrow, but its famous midpoint near `(-113.4, 161)` is only about 1.1 metres
 wide after F.371 encroachment. Bowed plaster and timber walls almost touch at
 upper level. Scraped corners, a worn central tread, dripping eaves, tiny doors,
 and a bricked cellar light explain the pinch.
@@ -168,8 +168,9 @@ crypt, or scatter. The Needle is never itself a meeting place.
 ### The Draper's Reach
 
 The Draper's Reach occupies the long cloth-hall frontage between the
-Wickmarket and Coswald's Yard, bending from about `(35, 320)` toward
-`(210, 185)`. It is not a tunnel for its full length. Arcaded and roofed
+Wickmarket and Coswald's Yard, bending from about `(22, 241)` toward
+`(170, 174)` and passing just north of the fixed Seraph court. It is not a
+tunnel for its full length. Arcaded and roofed
 sections alternate with two short open courts so rain, work, and the changing
 parcels remain legible.
 
@@ -197,22 +198,24 @@ meetings. Public architecture must support both exits and the roof escape.
 
 ### Tenterhook Lane
 
-Tenterhook Lane is now fixed as the open working lane south of the cloth halls,
-running from about `(95, 220)` toward `(-35, 185)`. Fullers stretch cloth on
+Tenterhook Lane is now fixed as the open working lane on the sunward south-east
+side of the cloth halls, running from about `(152, 172)` toward `(114, 204)`
+parallel to the gallery's Coswald half. Fullers stretch cloth on
 frames where sun and wind reach between lower sheds. The lane needs broad
 working pockets without becoming another square.
 
 Water-intensive fulling happens in tubs and workshops, not in an invented
 canal. Used water is carried or drained through controlled culverts. Frames,
 hooks, mallets, chalk, wet wool smell, and disputes over shade give the lane
-its character. Its western end connects to Cinder Ward; its eastern/northern
-steps climb toward the Draper's Reach.
+its character. Since the re-laid ring it no longer reaches Cinder Ward: both
+ends climb by short steps to the Draper's Reach gallery, one near its middle
+and one near its Coswald end.
 
 ## Coswald's Yard and builders' quarter
 
 ### Coswald's Yard
 
-Coswald's Yard sits around `(255, 155)`, on rising northern ground between the
+Coswald's Yard sits around `(223.5, 108.5)`, on rising northern ground between the
 Stone Gate and the Lanthorn. It is the largest of the five squares but the
 least empty. Rough and dressed stone, long timber racks, lime shelters,
 scaffold poles, hoists, templates, cranes, banker benches, and an open tracing
@@ -221,7 +224,7 @@ floor divide the working ground.
 The Stone Gate road enters from the north. Fabric Way leaves the south side,
 framing intermittent views of the Lanthorn's scaffolded north-tower crown. The
 Draper's Reach arrives from the west/south-west; Crookneck Lane leaves east;
-Malt Passage cuts under the south-east edge. These routes allow stone and
+Malt Passage cuts under the malt-house off the south-west corner. These routes allow stone and
 timber to cross the yard without driving through mason benches.
 
 The square's surface is compacted earth, stone chips, reused slabs, lime dust,
@@ -245,7 +248,7 @@ does not convert the entire yard into a festival arena.
 
 ### The masons' lodge
 
-The lodge fronts the south side of the yard near `(205, 150)`. A deep porch
+The lodge fronts the yard's south-west corner near `(156, 150)`. A deep porch
 faces the working ground. Inside are benches, moulding profiles, templates,
 apprentice places, locked charter chests, a meal room, and an upper chamber for
 masters. The building expresses durable guild pride through excellent stone
@@ -260,13 +263,14 @@ not a haunted architectural effect.
 
 Coswald's Yard is the first place intended for authored construction after
 this planning step. Its initial build should stay within the rough envelope
-`x = 195..315`, `z = 105..205` and meet these requirements:
+`x = 181.5..265.5`, `z = 73.5..143.5` and meet these requirements:
 
 - a north entrance accepts stone and long timber from the Stone Gate road;
 - a south entrance feeds Fabric Way without aiming a load at a cathedral door;
 - the Draper's Reach arrives at the south-west edge;
 - Crookneck Lane and Malt Passage leave on the east/south-east side;
-- the masons' lodge occupies the south edge with its porch facing the yard;
+- the masons' lodge closes the south-west corner with its porch facing the
+  yard;
 - a clear heavy-load route survives between stone stacks, hoists, and benches;
 - an open tracing floor, lime shelter, timber racks, crane, rough stone,
   dressed work, templates, apprentices, and waste chips all have working room;
@@ -283,8 +287,9 @@ geometry and remain non-overlapping.
 
 ### Malt Passage
 
-Malt Passage is now fixed under the malt-house at the south-east edge of
-Coswald's Yard around `(232, 112)`. It links a brewer's service lane to the
+Malt Passage is now fixed under the malt-house just south of the masons'
+lodge, off Coswald's Yard's south-west corner around `(170, 118)`. It links a
+brewer's service lane to the
 Fabric route. The low passage smells of warm grain and kiln smoke; sacks pass
 overhead by hoist, and carts cannot take its tight inner turn.
 
@@ -295,7 +300,7 @@ passage in Ombreval hides a conspiracy.
 ### Crookneck Lane
 
 Crookneck Lane is now fixed as the bent route from the builders' quarter toward
-the Ilvane and Bell wards. It turns hard at approximately `(165, -15)` where an
+the Ilvane and Bell wards. It turns hard at approximately `(100, -14)` where an
 old property neck forces traffic around two opposed gables. From above the two
 bends resemble a crooked neck; at street level neither next reach is visible
 until the turn.
@@ -309,7 +314,7 @@ long Fabric loads, which must use the wider service ways.
 ### Cinder Row
 
 Cinder Row bends from the Wickmarket's south-east quarter toward the south
-side of the Gradine, passing through about `(-135, 205)`. Before F.171 it was
+side of the Gradine, passing through about `(-91, 144)`. Before F.171 it was
 Glassmakers' Row. Its rebuilt lower storeys are continuous stone with stout
 party walls; upper floors return in timber and plaster because people rebuilt
 what they could afford.
@@ -321,7 +326,8 @@ make it a production street rather than a shop display. Furnace glow is
 restrained and material; coloured glass never glows by magic.
 
 The glaziers' guildhall and the Sparrs' first furnace cluster near
-`(-140, 235)`. Their procession route runs north/east along the Row, takes the
+`(-104, 232)`, at the Row's upper end just north of the Dawn Bearer court.
+Their procession route runs north/east along the Row, takes the
 final working bend, and enters the Gradine from the side before aligning with
 the west doors. It is long enough for citizens to join and narrow enough for
 wrapped panes to matter.
@@ -348,7 +354,7 @@ story—Sparrs, Crakes, and the cell—that ordinary trade never voices.
 
 ### Burnt Court
 
-Burnt Court is now fixed behind Cinder Row at `(-172, 232)`. The F.171 fire
+Burnt Court is now fixed behind Cinder Row at `(-123.4, 166.4)`. The F.171 fire
 destroyed its former name more thoroughly than its stone party walls. Rebuilt
 rooms lean on blackened lower masonry around a small court reached through a
 fire-scarred passage.
@@ -363,7 +369,7 @@ handbook requires.
 ### The Tallage
 
 The Tallage is the customs square where the River Cartway meets the dry Cut,
-centred near `(-305, 90)`. It is elongated east–west along the former channel.
+centred near `(-213.5, 63)`. It is elongated east–west along the former channel.
 Freight arriving from the outer wharves is sorted into waiting, weighing,
 bonded, released, and disputed space rather than dumped into one open plaza.
 
@@ -387,7 +393,7 @@ weather, isolated cart-rut puddles after rain, never a canal.
 ### The Tally Bridge
 
 The Tally Bridge is the F.247 stone overhead connection between toll-house and
-bonded warehouse, centred around `(-305, 105)`. Its two arches face along the
+bonded warehouse, centred around `(-213.5, 73.5)`. Its two arches face along the
 Cut and divide passing traffic below. Clerks and sealed documents use the upper
 passage; carts, porters, arguments, and sunset shadows use the arches.
 
@@ -402,7 +408,7 @@ water, boats, mist, or a toll chain beneath it.
 
 ### Lise Copp's pawnshop
 
-The pawnshop is a narrow deep-fronted house around `(-262, 43)`, facing the
+The pawnshop is a narrow deep-fronted house around `(-188.8, 33.1)`, facing the
 bridge from the east corner. The public room has a strong counter, hanging
 pledges, shuttered shelves, a scale, seals, cord, and a small back light. A
 second room receives private valuations without becoming a fantasy thieves'
@@ -415,7 +421,7 @@ read. The architecture supports discretion but does not announce it.
 
 ### Doctor Ferrant's house and study
 
-Ferrant keeps house off the Tallage's east corner near `(-242, 20)`. Patients
+Ferrant keeps house off the Tallage's east corner near `(-168.8, 10.1)`. Patients
 enter at street level. His study occupies a better-lit upper room with a roof
 platform screened by parapet and neighbouring gables. Plumb lines, sighting
 rods, copied charts, lenses, a quadrant, candle pellets, correspondence, and a
@@ -427,7 +433,7 @@ Tallage, Tally Bridge pawnshop, and Lanthorn is short and public.
 
 ### Gaunt Passage and the old Gaunt house
 
-The old Gaunt house stands north/east of the Tallage around `(-218, 18)`. The
+The old Gaunt house stands north/east of the Tallage around `(-144.8, 8.1)`. The
 salt-factor line is extinct, but salt merchants still use its thick, vented
 cellars. Salt bloom, bulging masonry, barrow scars, sack hoists, and a lawful
 flow of odd-hour deliveries make the building's survival plausible.
@@ -440,7 +446,7 @@ observation, not literally a dead end.
 
 At the midpoint is a barred grate in Grigor Ashe's cellar wall. The grate is
 within arm's reach of the public passage. Beyond, the cellar connects to a
-bonded weighing yard around `(-195, -2)` whose two cart gates open onto
+bonded weighing yard around `(-121.8, -11.9)` whose two cart gates open onto
 different doglegging lanes. These relationships are required for the Whisper
 Arrests history, lawful salt traffic, overhearing risk, and escape.
 
@@ -451,8 +457,8 @@ ordinary hearing distance.
 
 ## The Cut
 
-The Cut runs almost straight from the Chain Bridge quarter near `z = 465` to
-the Old Sluice near `z = -610`, centred around `x = -305`. It is simultaneously
+The Cut runs almost straight from the Chain Bridge quarter near `z = 325` to
+the Old Sluice near `z = -427`, centred around `x = -213.5`. It is simultaneously
 a street, a district, and the former bed of the Serle. Its straightness is
 strange only because the rest of Ombreval bends.
 
@@ -479,7 +485,7 @@ soundings**, is quietly bought by diggers, masons, and the Line-keeper — see
 ### The Chain Bridge
 
 The Chain Bridge is now fixed near the western end of the Cut at
-`(-305, 425)`. Its working name comes from the former harbour chain-house, not
+`(-213.5, 297.5)`. Its working name comes from the former harbour chain-house, not
 from a saint. The water chain is long gone. The remaining bridge carries a
 narrow upper store and keeper's passage between two old bank buildings.
 
@@ -490,7 +496,7 @@ work; no chain bars present traffic and no active harbour lies beyond.
 
 ### The Old Sluice
 
-The Old Sluice closes the east end of the Cut around `(-305, -610)`, just
+The Old Sluice closes the east end of the Cut around `(-213.5, -427)`, just
 inside the eastern wall system. It is a dry stone gatehouse of multiple heavy
 arches, blocked side apertures, worn lifting grooves, removed gate machinery,
 rusted iron, and buildings pressed against later repairs.
@@ -511,7 +517,7 @@ voice, green reflection, or environmental effect marks the true arch.
 
 ### Maren's Green
 
-Maren's Green occupies a linked set of market spaces around `(-305, -365)`,
+Maren's Green occupies a linked set of market spaces around `(-213.5, -255.5)`,
 where the east Cut, River Gate branch, churchyard, fish hall, Moorings gate,
 and Maren's Slip converge. It is called a green by inheritance, not because it
 is a lawn. Packed earth, dry paving, fish slabs, smoke racks, stall boards, and
@@ -536,13 +542,13 @@ enough that neither history turns the place into a memorial set.
 ### The Church of Saint Maren of the Reeds
 
 Saint Maren's is a low parish church north of the old Cut around
-`(-235, -382)`. Its modest tower holds Maren Smallvoice. The church is visibly
+`(-140.5, -265.6)`. Its modest tower holds Maren Smallvoice. The church is visibly
 older and poorer than the Lanthorn: patched fieldstone, limewash, reused roof
 timber, a small porch, alms rooms, and practical additions built by
 boat-families.
 
 The churchyard lies between church and Green. Graves are close, paths narrow,
-and the surface dry. The charnel door around `(-276, -365)` faces the market;
+and the surface dry. The charnel door around `(-181.5, -248.6)` faces the market;
 its lintel can be read obliquely from the Eel Bridge without a person lingering
 at the threshold. The single current given name is chalked plainly and changes
 with the next burial.
@@ -569,7 +575,7 @@ Fitch understands what the lintel is read for and keeps silent on purpose.
 ### The Alder Moorings
 
 The Alder Moorings is a dry warehouse court south/east of the Green around
-`(-367, -407)`. A broad arched gate admits handcarts. Timber galleries, loft
+`(-272.5, -290.6)`. A broad arched gate admits handcarts. Timber galleries, loft
 doors, hoists, rope racks, canvas repair, fish baskets, freight bales, poles,
 and a rough ledger table fill the yard.
 
@@ -585,7 +591,7 @@ door into Eelback Alley, important for morning loading and family privacy.
 ### The Eel Bridge
 
 The Eel Bridge is a low enclosed timber gallery over the fish-market lane near
-`(-343, -374)`. It joins upper rooms of the fish hall and Alder warehouse
+`(-248.5, -257.6)`. It joins upper rooms of the fish hall and Alder warehouse
 complex. Its external stair occupies too much of one side of the lane, leaving
 just enough clear width for a laden cart.
 
@@ -600,7 +606,7 @@ oak, sag, tar, fish scales, soot, and hand-worn rails.
 ### The Hungry Ox
 
 The Hungry Ox stands on the south/east edge of the Green near
-`(-330, -447)`. It is a broad-fronted, low-ceilinged boatmen's tavern with a
+`(-235.5, -330.6)`. It is a broad-fronted, low-ceilinged boatmen's tavern with a
 public room, small kitchen, yard, loft lodging, and doors placed to serve both
 the Green and Eelback Alley.
 
@@ -617,7 +623,7 @@ readable words.
 ### Tanners' Slip
 
 Tanners' Slip runs behind and south of Maren's Green, centred around
-`(-390, -345)`. It is a cramped working dogleg of hide scraping, trimming,
+`(-295.5, -228.6)`. It is a cramped working dogleg of hide scraping, trimming,
 stretching, bark tannin, closed barrels, covered empty vats, sheds, and patched
 firebreak masonry left after the F.157 tannery fire.
 
@@ -627,14 +633,14 @@ Sharp smells and stained labour are present without graphic gore. A blind turn
 and service courts make it a place market visitors avoid unless they have
 business.
 
-An empty brine-rotted cellar near `(-415, -405)` is reached from its back end.
+An empty brine-rotted cellar near `(-315.5, -288.6)` is reached from its back end.
 **Secret:** A twice-wrong whisperer may be fed a false meeting here precisely
 because nobody the cell loves uses the place.
 
 ### Maren's Slip
 
 Maren's Slip is now fixed as the steep pedestrian and handcart way from the
-Green toward the Reed Postern, from about `(-375, -435)` to `(-455, -535)`.
+Green toward the Reed Postern, from about `(-280.5, -318.6)` to `(-318.5, -374.5)`.
 Its name attaches Saint Maren to a walkway as the naming handbook requires.
 
 The slip uses shallow ramps, a few side steps, retaining walls, handholds, and
@@ -650,7 +656,7 @@ pole laid across the coffin. Do not “fix” this sightline.
 ### Eelback Alley
 
 Eelback Alley is now fixed behind the Hungry Ox and smokehouses around
-`(-370, -445)`. Uneven fill over old bank foundations gives its paving a long
+`(-275.5, -328.6)`. Uneven fill over old bank foundations gives its paving a long
 hump like an eel's spine. Kitchen doors, fuel stacks, smokehouse vents, stable
 gates, tavern refuse, and the Moorings service door face it.
 
@@ -662,13 +668,13 @@ useful alternative when the Eel Bridge stair blocks the market lane.
 ### The Bellstand
 
 The Bellstand lies east of and behind the Lanthorn's east end, centred around
-`(45, -255)`. Bell Way enters from the cathedral quarter through a compressed
+`(31.5, -178.5)`. Bell Way enters from the cathedral quarter through a compressed
 approach; the Harne Gate road leaves east; Crookneck Lane arrives from the
 north. The square slopes slightly east and is smaller than its public role
 suggests.
 
 The old watch-bell tower stands off-centre on the north/east edge around
-`(62, -270)`. The Scold is visible in its open upper stage. A steep external
+`(44.8, -189)`. The Scold is visible in its open upper stage. A steep external
 stair descends over Bellfoot Passage. The crier's worn platform, posting wall,
 watch shelter, and a stone edge for listeners create a civic focus without a
 central ornamental fountain.
@@ -685,7 +691,7 @@ is unattested. It receives no special light or physical response.
 ### Bellfoot Passage
 
 Bellfoot Passage runs directly beneath the watch-tower's steep external stair
-near `(55, -248)`. Thick civic masonry, timber bracing, worn notices, guard
+near `(35.8, -167)`. Thick civic masonry, timber bracing, worn notices, guard
 traffic, and the bright square framed at its exit give the passage its
 identity.
 
@@ -697,7 +703,7 @@ observer without containing a hidden grate, code mark, or alternate vault.
 
 ## The Ilvane Chapel and anchorhold
 
-The Ilvane Chapel stands north-east of the Lanthorn around `(175, -92)`, where
+The Ilvane Chapel stands north-east of the Lanthorn around `(122.5, -64.4)`, where
 Crookneck Lane and a smaller east–west lane meet. It is close enough for the
 Custody's architectural punishment to feel deliberate, but not inside the
 cathedral precinct.
@@ -708,7 +714,7 @@ claim of structural danger. The building is neither a romantic ruin nor an
 open dungeon. Neighbours use the lane and walls as they do any stubborn old
 property.
 
-The occupied anchorhold is built into the north wall near `(193, -92)`. Its
+The occupied anchorhold is built into the north wall near `(141.5, -64.4)`. Its
 small squint opens north onto the lane. An alms shelf, basket, rain hood, worn
 standing stone, and space for two quiet visitors let Dame Aldith speak and
 receive necessities without revealing most of her body or cell.

@@ -48,6 +48,7 @@ CHARACTERS_DIR = ROOT / "lore" / "characters"
 BUILDINGS_PATH = ROOT / "lore" / "places" / "ombreval_buildings.json"
 NAV_PATH = ROOT / "assets" / "world" / "navigation.json"
 PLACES_PATH = ROOT / "assets" / "world" / "places.json"
+ROUNDS_PATH = ROOT / "assets" / "world" / "rounds.json"
 OUT_PATH = ROOT / "assets" / "world" / "homes.json"
 
 # A homeless circumstance means no bed — and being in the street at curfew is the
@@ -184,9 +185,19 @@ def main() -> None:
                 best = b
         return best
 
+    # M5's off-map road-party actors live on the road between cities: they get
+    # neither a home nor a bedless entry (round/tests.rs pins this contract).
+    # Pre-shrink they fell out emergently; at 0.7x their gate-side spawns would
+    # otherwise bind to city doors.
+    road_members = {
+        member
+        for party in json.loads(ROUNDS_PATH.read_text())["road_parties"]
+        for member in party["members"]
+    }
+
     for c in characters:
         cid = c["id"]
-        if cid == "player":
+        if cid == "player" or cid in road_members:
             continue
         spawn = c["spawn_location"]
         sx, sz = spawn["x"], spawn["z"]

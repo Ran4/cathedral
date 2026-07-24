@@ -6,8 +6,8 @@
 
 ## Why add anything
 
-The established places describe trade and belief unusually well, but a 1.2 by
-1.0 km fortified city also needs controlled entrances, food stores, waste
+The established places describe trade and belief unusually well, but an 840 by
+700 m fortified city also needs controlled entrances, food stores, waste
 work, water, fire-prone industry, ordinary congregations, and a clear
 relationship to roads outside. Without them the named squares become isolated
 sets rather than parts of one material economy.
@@ -19,7 +19,7 @@ possible.
 
 ### The Wool Gate
 
-The Wool Gate is the western gate at approximately `(-35, 510)`. Wool from
+The Wool Gate is the western gate at approximately `(-24.5, 357)`. Wool from
 Brede and the Combs, honey, hides, upland food, western pilgrims, and ordinary
 road traffic enter here. Its two squat towers are broad enough for guard rooms
 and upper storage, not cathedral-scale keeps.
@@ -36,7 +36,7 @@ experience.
 
 ### The Stone Gate
 
-The Stone Gate is the northern gate at approximately `(495, 135)`. Quarry
+The Stone Gate is the northern gate at approximately `(346.5, 94.5)`. Quarry
 stone, lime, scaffold timber, charcoal, grain from northern farms, and the land
 road toward Ostrelle use it. Its inner road descends directly to Coswald's Yard
 with wide corners, reinforced paving at braking points, and no steps.
@@ -52,7 +52,7 @@ toll-gates; this plan fixes only the first direction, not the distant route.
 
 ### The Harne Gate
 
-The Harne Gate is the eastern gate at approximately `(15, -665)`. It serves
+The Harne Gate is the eastern gate at approximately `(10.5, -465.5)`. It serves
 the downstream land road toward Harne and Salorge, messengers, carriers,
 pilgrims arriving by road rather than river, and eastern farms.
 
@@ -67,7 +67,7 @@ controls Ombreval.
 
 ### The River Gate
 
-The River Gate at approximately `(-505, -135)` is already implicit in core
+The River Gate at approximately `(-353.5, -94.5)` is already implicit in core
 lore and receives its fixed site here. It is the city's principal freight
 gate. The outer wharves, north-bank apron, toll shelter, animal holding,
 stable yards, porters, and customs messengers all focus on it.
@@ -84,7 +84,7 @@ the wharves; it does not activate an in-city water simulation.
 
 ### The Reed Postern
 
-The Reed Postern at approximately `(-455, -535)` is a narrow south-east wall
+The Reed Postern at approximately `(-318.5, -374.5)` is a narrow south-east wall
 opening for eastern wharf hands, fish baskets, handbarrows, funerals, and Reed
 Ward residents. One animal may be led through; an ox cart may not.
 
@@ -115,8 +115,8 @@ receives a grand proper name in this guide.
 ## The outer Serle wharves
 
 The working Serle lies outside the south wall. Its near bank and wharf strip
-sit around `x = -570..-590`; navigable water lies farther south. The developed
-wharves extend roughly from `z = 120` in the west to `z = -450` in the east.
+sit around `x = -399..-413`; navigable water lies farther south. The developed
+wharves extend roughly from `z = 84` in the west to `z = -315` in the east.
 
 Separate working reaches handle wool and general bales, salt casks, fish and
 eels, timber rafts or poles, and passenger landings. Cranes are timber
@@ -148,7 +148,7 @@ the impossible light belongs to one interior window only.
 
 ## Seven Lofts
 
-Seven Lofts is a defended granary compound near `(360, 335)`, between the Wool
+Seven Lofts is a defended granary compound near `(252, 234.5)`, between the Wool
 and Stone gate routes. Its fixed name comes from seven tall roofed storage bays
 built in different campaigns around a shared weighing yard. The bays need not
 be identical, and residents argue whether a rebuilt eighth bay counts.
@@ -170,7 +170,7 @@ of argument over who received grain first.
 
 ## The Shambles
 
-The Shambles is fixed near `(-395, 315)`, south of the western Cut and down-
+The Shambles is fixed near `(-294.2, 219.6)`, south of the western Cut and down-
 slope from the Wickmarket. It grows from the already established historical
 reference to wolves crossing frozen Serle ice into the shambles in F.38.
 
@@ -188,7 +188,7 @@ chandlers' supply without turning the square itself into a slaughter yard.
 
 ## Bellfounders' Yard
 
-Bellfounders' Yard is fixed near `(155, -485)` in the east ward, close to the
+Bellfounders' Yard is fixed near `(108.5, -339.5)` in the east ward, close to the
 Harne road and wall. Casting needs clay, wax, charcoal, metal, pits, lifting,
 and a way to haul heavy bells; testing needs neighbours willing or unable to
 complain. The site is therefore accessible but away from the Lanthorn and
@@ -229,13 +229,13 @@ a spatial pass would create shallow canon.
 
 Four sites are therefore protected from dense redevelopment:
 
-1. west parish reserve around `(105, 430)` for gate households, chandlers,
+1. west parish reserve around `(73.5, 301)` for gate households, chandlers,
    wool carriers, and lodging keepers;
-2. north-east reserve around `(330, -300)` for wall households, carters, and
+2. north-east reserve around `(231, -210)` for wall households, carters, and
    small metal trades;
-3. west Cut reserve around `(-220, 395)` for rope-makers, Shambles workers,
+3. west Cut reserve around `(-154, 276.5)` for rope-makers, Shambles workers,
    porters, and poor tenants; and
-4. River Ward reserve around `(-420, -35)` for gate workers, wharf porters,
+4. River Ward reserve around `(-292.8, -24.5)` for gate workers, wharf porters,
    stable hands, and freight families.
 
 Each future parish needs a congregation, income, burial arrangement, feast,

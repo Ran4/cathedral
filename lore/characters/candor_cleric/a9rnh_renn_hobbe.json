@@ -29,9 +29,9 @@
   "mother": null,
   "children": [],
   "spawn_location": {
-    "x": -477.5,
+    "x": -334.25,
     "y": 0.91,
-    "z": -317.5,
+    "z": -222.25,
     "facing": -2.9792
   },
   "circumstances": [],

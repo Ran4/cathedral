@@ -431,7 +431,9 @@ mod tests {
         assert_eq!(map.areas.len(), 70);
         assert_eq!(
             map.areas.iter().map(|area| area.boxes.len()).sum::<usize>(),
-            86
+            // 91 since the 0.7x shrink: the Wickmarket and Bellstand squares
+            // gained carve-out boxes around intruding translated neighbours.
+            91
         );
         for (position, label) in [
             (

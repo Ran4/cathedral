@@ -5,7 +5,7 @@
       "id": "lanthorn_nave",
       "label": "the Lanthorn roof",
       "polygon_xz": [[-46.0, -101.0], [46.0, -101.0], [46.0, 78.0], [-46.0, 78.0]],
-      "route_node": 570,
+      "route_node": 472,
       "access": "public",
       "capacity": 80,
       "spread_radius_m": 8.0,
@@ -14,8 +14,8 @@
     {
       "id": "bellfoot_passage",
       "label": "the Bellfoot Passage roof",
-      "polygon_xz": [[47.5, -257.0], [63.0, -257.0], [63.0, -239.0], [47.5, -239.0]],
-      "route_node": 651,
+      "polygon_xz": [[28.3, -176.0], [43.8, -176.0], [43.8, -158.0], [28.3, -158.0]],
+      "route_node": 546,
       "capacity": 18,
       "spread_radius_m": 5.0,
       "cover": "stone"
@@ -23,8 +23,8 @@
     {
       "id": "chain_bridge_passage",
       "label": "the Chain Bridge house",
-      "polygon_xz": [[-327.0, 419.0], [-283.0, 419.0], [-283.0, 431.0], [-327.0, 431.0]],
-      "route_node": 588,
+      "polygon_xz": [[-235.5, 291.5], [-191.5, 291.5], [-191.5, 303.5], [-235.5, 303.5]],
+      "route_node": 491,
       "capacity": 20,
       "spread_radius_m": 8.0,
       "cover": "timber"
@@ -32,8 +32,8 @@
     {
       "id": "tally_bridge_passage",
       "label": "the Tally Bridge house",
-      "polygon_xz": [[-335.5, 98.0], [-274.5, 98.0], [-274.5, 112.0], [-335.5, 112.0]],
-      "route_node": 589,
+      "polygon_xz": [[-244.0, 66.5], [-183.0, 66.5], [-183.0, 80.5], [-244.0, 80.5]],
+      "route_node": 492,
       "capacity": 24,
       "spread_radius_m": 9.0,
       "cover": "timber"
@@ -41,8 +41,8 @@
     {
       "id": "eel_bridge_passage",
       "label": "the Eel Bridge house",
-      "polygon_xz": [[-349.0, -389.5], [-337.0, -389.5], [-337.0, -358.5], [-349.0, -358.5]],
-      "route_node": 617,
+      "polygon_xz": [[-254.5, -273.1], [-242.5, -273.1], [-242.5, -242.1], [-254.5, -242.1]],
+      "route_node": 511,
       "capacity": 14,
       "spread_radius_m": 7.0,
       "cover": "timber"
@@ -50,8 +50,8 @@
     {
       "id": "malt_passage",
       "label": "the Malt Passage roof",
-      "polygon_xz": [[220.0, 102.0], [247.0, 104.0], [246.0, 121.0], [219.0, 119.0]],
-      "route_node": 635,
+      "polygon_xz": [[136.0, 95.0], [163.0, 97.0], [162.0, 114.0], [135.0, 112.0]],
+      "route_node": 534,
       "capacity": 15,
       "spread_radius_m": 6.0,
       "cover": "timber"
@@ -59,8 +59,8 @@
     {
       "id": "gaunt_passage",
       "label": "the Gaunt Passage roof",
-      "polygon_xz": [[-241.0, 3.0], [-230.0, 3.0], [-230.0, 37.0], [-241.0, 37.0]],
-      "route_node": 610,
+      "polygon_xz": [[-167.8, -6.9], [-156.8, -6.9], [-156.8, 27.1], [-167.8, 27.1]],
+      "route_node": 506,
       "capacity": 12,
       "spread_radius_m": 6.0,
       "cover": "timber"
@@ -68,8 +68,8 @@
     {
       "id": "wickmarket_bread_awning",
       "label": "the Wickmarket bread awning",
-      "polygon_xz": [[-24.7, 354.1], [-18.3, 354.1], [-18.3, 358.9], [-24.7, 358.9]],
-      "route_node": 700,
+      "polygon_xz": [[-17.2, 247.6], [-10.8, 247.6], [-10.8, 252.4], [-17.2, 252.4]],
+      "route_node": 610,
       "capacity": 5,
       "spread_radius_m": 2.0,
       "cover": "canvas",
@@ -78,8 +78,8 @@
     {
       "id": "wickmarket_provisions_awning",
       "label": "the Wickmarket provisions awning",
-      "polygon_xz": [[-31.7, 351.1], [-25.3, 351.1], [-25.3, 355.9], [-31.7, 355.9]],
-      "route_node": 9,
+      "polygon_xz": [[-24.2, 244.6], [-17.8, 244.6], [-17.8, 249.4], [-24.2, 249.4]],
+      "route_node": 14,
       "capacity": 5,
       "spread_radius_m": 2.0,
       "cover": "canvas",
@@ -88,7 +88,7 @@
     {
       "id": "coswald_market_awning",
       "label": "the Coswald's Yard market awning",
-      "polygon_xz": [[251.8, 152.7], [258.2, 152.7], [258.2, 157.5], [251.8, 157.5]],
+      "polygon_xz": [[220.3, 106.17], [226.7, 106.17], [226.7, 110.97], [220.3, 110.97]],
       "route_node": 24,
       "capacity": 6,
       "spread_radius_m": 2.2,
@@ -98,8 +98,8 @@
     {
       "id": "tallage_market_awning",
       "label": "the Tallage market awning",
-      "polygon_xz": [[-308.1, 87.7], [-301.7, 87.7], [-301.7, 92.5], [-308.1, 92.5]],
-      "route_node": 584,
+      "polygon_xz": [[-216.63, 60.67], [-210.23, 60.67], [-210.23, 65.47], [-216.63, 65.47]],
+      "route_node": 487,
       "capacity": 6,
       "spread_radius_m": 2.2,
       "cover": "canvas",
@@ -108,8 +108,8 @@
     {
       "id": "marens_green_north_awning",
       "label": "the Maren's Green herring awning",
-      "polygon_xz": [[-304.7, -365.9], [-298.3, -365.9], [-298.3, -361.1], [-304.7, -361.1]],
-      "route_node": 586,
+      "polygon_xz": [[-213.2, -256.4], [-206.8, -256.4], [-206.8, -251.6], [-213.2, -251.6]],
+      "route_node": 488,
       "capacity": 5,
       "spread_radius_m": 2.0,
       "cover": "canvas",
@@ -118,8 +118,8 @@
     {
       "id": "marens_green_south_awning",
       "label": "the Maren's Green eel awning",
-      "polygon_xz": [[-311.7, -368.9], [-305.3, -368.9], [-305.3, -364.1], [-311.7, -364.1]],
-      "route_node": 683,
+      "polygon_xz": [[-220.2, -259.4], [-213.8, -259.4], [-213.8, -254.6], [-220.2, -254.6]],
+      "route_node": 586,
       "capacity": 5,
       "spread_radius_m": 2.0,
       "cover": "canvas",
@@ -128,8 +128,8 @@
     {
       "id": "hungry_ox_hearth",
       "label": "the Hungry Ox hearth-room",
-      "polygon_xz": [[-327.6, -444.3], [-321.2, -444.3], [-321.2, -437.9], [-327.6, -437.9]],
-      "route_node": 621,
+      "polygon_xz": [[-235.1, -327.9], [-228.7, -327.9], [-228.7, -321.5], [-235.1, -321.5]],
+      "route_node": 514,
       "capacity": 12,
       "spread_radius_m": 2.2,
       "cover": "tile",
@@ -138,8 +138,8 @@
     {
       "id": "bellstand_hearth",
       "label": "the Bell and Ladle hearth-room",
-      "polygon_xz": [[41.9, -258.1], [48.3, -258.1], [48.3, -251.7], [41.9, -251.7]],
-      "route_node": 43,
+      "polygon_xz": [[26.87, -181.63], [33.27, -181.63], [33.27, -175.23], [26.87, -175.23]],
+      "route_node": 489,
       "capacity": 12,
       "spread_radius_m": 2.2,
       "cover": "tile",
@@ -149,7 +149,7 @@
       "id": "ford_well_roof",
       "label": "the Ford Well roof",
       "polygon_xz": [[84.8, 32.0], [91.2, 32.0], [91.2, 38.0], [84.8, 38.0]],
-      "route_node": 579,
+      "route_node": 482,
       "capacity": 6,
       "spread_radius_m": 2.4,
       "cover": "tile"
@@ -157,8 +157,8 @@
     {
       "id": "lodge_well_roof",
       "label": "the Lodge Well roof",
-      "polygon_xz": [[235.9, 140.2], [242.1, 140.2], [242.1, 145.8], [235.9, 145.8]],
-      "route_node": 661,
+      "polygon_xz": [[168.9, 117.2], [175.1, 117.2], [175.1, 122.8], [168.9, 122.8]],
+      "route_node": 561,
       "capacity": 6,
       "spread_radius_m": 2.3,
       "cover": "slate"
@@ -166,8 +166,8 @@
     {
       "id": "shambles_well_roof",
       "label": "the Shambles well roof",
-      "polygon_xz": [[-343.4, 310.0], [-336.6, 310.0], [-336.6, 318.0], [-343.4, 318.0]],
-      "route_node": 674,
+      "polygon_xz": [[-242.6, 214.6], [-235.8, 214.6], [-235.8, 222.6], [-242.6, 222.6]],
+      "route_node": 577,
       "capacity": 6,
       "spread_radius_m": 2.4,
       "cover": "tile"
@@ -175,8 +175,8 @@
     {
       "id": "saint_marens_porch",
       "label": "Saint Maren's church porch",
-      "polygon_xz": [[-218.0, -379.0], [-207.0, -379.0], [-207.0, -368.0], [-218.0, -368.0]],
-      "route_node": 448,
+      "polygon_xz": [[-123.5, -262.6], [-112.5, -262.6], [-112.5, -251.6], [-123.5, -251.6]],
+      "route_node": 368,
       "capacity": 10,
       "spread_radius_m": 3.5,
       "cover": "stone"
@@ -184,8 +184,8 @@
     {
       "id": "wool_gate_vault",
       "label": "the Wool Gate vault",
-      "polygon_xz": [[-43.0, 475.0], [-27.0, 475.0], [-27.0, 495.0], [-43.0, 495.0]],
-      "route_node": 5,
+      "polygon_xz": [[-32.5, 322.0], [-16.5, 322.0], [-16.5, 342.0], [-32.5, 342.0]],
+      "route_node": 9,
       "capacity": 14,
       "spread_radius_m": 5.0,
       "cover": "stone"
@@ -193,8 +193,8 @@
     {
       "id": "stone_gate_vault",
       "label": "the Stone Gate vault",
-      "polygon_xz": [[485.0, 127.0], [505.0, 127.0], [505.0, 143.0], [485.0, 143.0]],
-      "route_node": 17,
+      "polygon_xz": [[336.5, 86.5], [356.5, 86.5], [356.5, 102.5], [336.5, 102.5]],
+      "route_node": 20,
       "capacity": 14,
       "spread_radius_m": 5.0,
       "cover": "stone"
@@ -202,8 +202,8 @@
     {
       "id": "harne_gate_vault",
       "label": "the Harne Gate vault",
-      "polygon_xz": [[6.0, -674.0], [24.0, -674.0], [24.0, -656.0], [6.0, -656.0]],
-      "route_node": 50,
+      "polygon_xz": [[1.5, -474.5], [19.5, -474.5], [19.5, -456.5], [1.5, -456.5]],
+      "route_node": 43,
       "capacity": 14,
       "spread_radius_m": 5.0,
       "cover": "stone"
@@ -211,8 +211,8 @@
     {
       "id": "river_gate_vault",
       "label": "the River Gate vault",
-      "polygon_xz": [[-514.0, -144.0], [-496.0, -144.0], [-496.0, -126.0], [-514.0, -126.0]],
-      "route_node": 36,
+      "polygon_xz": [[-362.5, -103.5], [-344.5, -103.5], [-344.5, -85.5], [-362.5, -85.5]],
+      "route_node": 29,
       "capacity": 14,
       "spread_radius_m": 5.0,
       "cover": "stone"

@@ -159,7 +159,7 @@ are already on the map:
 - **flour**: a metadata-free `flour` kind; Averil buys from Bertran at the Wool Gate mill face — the
   same silent-purchase machinery pointed at a different counter;
 - **grain from outside**: carts through the Wool Gate to **Seven Lofts**, the defended granary
-  (`~(360,335)`), on a morning schedule — the visible edge of
+  (`~(252,234)`), on a morning schedule — the visible edge of
   [08_near_countryside.md](08_near_countryside.md), whose wider harvest/weather/trouble signals
   now have a physical carrier;
 - the nightly wallet reset is now household redistribution plus explicitly logged residual

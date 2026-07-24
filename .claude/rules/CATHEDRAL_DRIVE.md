@@ -57,8 +57,8 @@ Example — hear four named places and both bells (`[soundscape] bed in: <area>`
 lines name whichever place bed is playing):
 
 ```sh
-CATHEDRAL_DRIVE='tp -305 3 200 0; sleep 3; tp -228 3 26 0; sleep 3; \
-  weather rain 0.7; tp 120 3 260 0; sleep 3; weather timeline; \
+CATHEDRAL_DRIVE='tp -214 3 140 0; sleep 3; tp -155 3 16 0; sleep 3; \
+  weather rain 0.7; tp 100 3 214 0; sleep 3; weather timeline; \
   bell knell 17; sleep 4; bell summons; sleep 3; quit' cargo run
 ```
 

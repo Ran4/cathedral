@@ -31,9 +31,9 @@
     "a5sbp"
   ],
   "spawn_location": {
-    "x": 0.0,
+    "x": 0,
     "y": 0.91,
-    "z": 45.0,
+    "z": 45,
     "facing": 3.141593
   },
   "circumstances": [],

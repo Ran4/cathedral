@@ -194,7 +194,7 @@ The canonical route remains physically possible:
 9. Walk from the Lanthorn to the Tally Bridge at dusk and finish beneath two
    dry arches casting one ordinary set of shadows.
 
-The outdoor part from west doors to Tally Bridge is roughly three to four
+The outdoor part from west doors to Tally Bridge is roughly two to three
 minutes by Cinder and Tallage streets. It should pass ordinary work, not a
 continuous trail of mystery props. The final honest shadows matter because the
 whole city between church and bridge behaves normally.

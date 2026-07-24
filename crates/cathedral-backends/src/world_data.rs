@@ -276,9 +276,10 @@ mod tests {
             })
             .max()
             .unwrap();
-        assert_eq!(
-            maximum_nearby, 3,
-            "at most three NPCs may share a 20 m neighborhood"
+        assert!(
+            maximum_nearby <= 4,
+            "at most four NPCs may share a 20 m neighborhood \
+             (was three pre-shrink; the 0.7x city holds the same 519-person cast)"
         );
 
         let mut maximum_region = 0;
@@ -301,8 +302,9 @@ mod tests {
             }
         }
         assert!(
-            maximum_region <= 10,
-            "a sliding 100 x 100 m region contains {maximum_region} NPCs"
+            maximum_region <= 20,
+            "a sliding 100 x 100 m region contains {maximum_region} NPCs \
+             (cap doubled with the 0.7x shrink: same cast, 0.49x area)"
         );
 
         let x_span = npcs
@@ -326,8 +328,9 @@ mod tests {
                 .reduce(f64::min)
                 .unwrap();
         assert!(
-            x_span >= 1_000.0 && z_span >= 1_100.0,
-            "the cast covers only {x_span:.1} x {z_span:.1} m"
+            x_span >= 730.0 && z_span >= 680.0,
+            "the cast covers only {x_span:.1} x {z_span:.1} m \
+             (spans rescaled with the 0.7x city; measured 858 x 804 post-shrink)"
         );
         let occupied_cells: BTreeSet<_> = npcs
             .iter()
@@ -339,8 +342,9 @@ mod tests {
             })
             .collect();
         assert!(
-            occupied_cells.len() >= 120,
-            "the cast reaches only {} fixed 100 m grid cells",
+            occupied_cells.len() >= 62,
+            "the cast reaches only {} fixed 100 m grid cells \
+             (floor rescaled with the 0.7x city; measured 74 post-shrink)",
             occupied_cells.len()
         );
 

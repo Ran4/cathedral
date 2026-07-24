@@ -18,7 +18,7 @@ This bible is the source of truth for roughly twenty sibling documents — depos
 
 ## 1. Names
 
-**The city: OMBREVAL** — a free fortified city of roughly 1.2 × 1.0 km beside the river **Serle**, which runs beyond the south wall. Chroniclers relish the irony that a city named for shadow became famous for light. Years count from the **Fabric era** (F.1 = the cathedral's first stone); the present year is **F.437**.
+**The city: OMBREVAL** — a free fortified city of roughly 840 × 700 m beside the river **Serle**, which runs beyond the south wall. Chroniclers relish the irony that a city named for shadow became famous for light. Years count from the **Fabric era** (F.1 = the cathedral's first stone); the present year is **F.437**.
 
 **The cathedral:** formally the **Great Church of Saint Ambrelle**; everyone calls it **the Lanthorn**. Its west front carries the **Great Rose**, whose central round light is **the eye**; its ceremonial forecourt is **the Gradine**, named for its shallow processional steps.
 

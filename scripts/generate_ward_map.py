@@ -50,6 +50,7 @@ screen = plan.screen
 svg_points = plan.svg_points
 district_for = plan.district_for
 point_in_polygon = plan.point_in_polygon
+T = plan.T  # the shared 0.7x shrink transform
 
 # The ward map lands beside the cadastral plan in lore/places/, wherever this
 # script is run from. Its provenance line self-corrects if the file moves.
@@ -91,16 +92,23 @@ ANCHOR_END = "</svg>"
 # World (x, z) positions of the cadastral map's own text labels — its bold
 # direct-labels and faint ward labels (mirrored from generate_top_down_map.py).
 # Bold ward names are placed to keep clear of these so the two label sets do not
-# overprint. Distances are 1:1 with screen distance (screen = (z, -x), which is
-# a rotation, so world distances carry over unchanged).
-MAP_LABELS: list[tuple[float, float]] = [
-    (0, -12), (0, 132), (-25, 355), (255, 155), (-305, 90), (-305, -365),
-    (45, -255), (360, 335), (-395, 315), (155, -485), (-305, -610), (-225, -390),
-    (-380, -418), (175, -92), (-35, 530), (515, 135), (15, -687), (-527, -135),
-    (-474, -535),
-    (-45, 420), (170, 320), (345, 120), (20, 15), (-185, 220), (-260, 5),
-    (-365, -300), (205, -285), (-120, -540),
+# overprint. Each label is the LEGACY design position transformed through T by
+# the class of the place it names, so the two maps stay in exact registration in
+# the shrunk 0.7x layout (screen = (-z, x) is a rotation, distances carry over).
+_LEGACY_MAP_LABELS: list[tuple[tuple[float, float], str]] = [
+    # Direct labels (same order + class as generate_top_down_map.py::direct_labels).
+    ((0, -12), "core"), ((0, 132), "core"), ((-25, 355), "scale"), ((255, 155), "coswald"),
+    ((-305, 90), "scale"), ((-305, -365), "scale"), ((45, -255), "scale"), ((360, 335), "seven_lofts"),
+    ((-395, 315), "shambles"), ((155, -485), "bellfounders"), ((-305, -610), "old_sluice"),
+    ((-225, -390), "maren"), ((-380, -418), "maren"), ((175, -92), "ilvane"),
+    ((-35, 530), "gate_wool"), ((515, 135), "gate_stone"), ((15, -687), "gate_harne"),
+    ((-527, -135), "gate_river"), ((-474, -535), "gate_reed"),
+    # Faint ward labels (all scale with the city).
+    ((-45, 420), "scale"), ((170, 320), "scale"), ((345, 120), "scale"), ((20, 15), "scale"),
+    ((-185, 220), "scale"), ((-260, 5), "scale"), ((-365, -300), "scale"), ((205, -285), "scale"),
+    ((-120, -540), "scale"),
 ]
+MAP_LABELS: list[tuple[float, float]] = [T.apply_class(point, cls) for point, cls in _LEGACY_MAP_LABELS]
 
 
 def open_label_pos(ward_key: str, centroid: tuple[float, float], avoid: list) -> tuple[float, float]:
@@ -230,7 +238,8 @@ def ward_names(accum, total) -> tuple[str, list]:
 def key_panel(stats, enclosure) -> str:
     """A compact ward colour key, below the cadastral map's own panels."""
     stats = sorted(stats, key=lambda item: -item[1])
-    px, py, pw, ph = 735, 723, 350, 104
+    # Below the shrunk map, bottom-left (the old spot at x=735 is now off-map).
+    px, py, pw, ph = -450, 452, 350, 104
     panel_style = "fill:#f4ecd7;stroke:#574b39;stroke-width:1.2"
     title_style = "font-family:Georgia,serif;font-size:11px;font-weight:bold;fill:#30291f;letter-spacing:1px"
     text_style = "font-family:Arial,sans-serif;font-size:6.4px;fill:#30291f"
@@ -266,7 +275,7 @@ def retitle(svg: str) -> str:
             "<desc id=\"map-desc\">The authoritative cadastral plan of Ombreval with a translucent"
             " colour wash over its eight planning wards (the district_for() partition).</desc>",
         ),
-        ("-566\">OMBREVAL</text>", "-566\">OMBREVAL — THE WARDS</text>"),
+        ("-508\">OMBREVAL</text>", "-508\">OMBREVAL — THE WARDS</text>"),
         ("AUTHORITATIVE TOP-DOWN BUILDING PLAN", "PLANNING WARDS OVER THE BUILDING PLAN"),
     ]
     for old, new in replacements:

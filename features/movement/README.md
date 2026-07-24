@@ -151,11 +151,11 @@ nothing and a bell that costs 3,500 inbox lines a day.
 **Walking speed is set at 1.8 m/s** — a brisk, purposeful medieval pace. The lore's one pedestrian
 timing was re-cut to match. `lore/places/04_routes_and_sightlines.md`:
 
-> The outdoor part from west doors to Tally Bridge is roughly **three to four minutes**.
+> The outdoor part from west doors to Tally Bridge is roughly **two to three minutes**.
 
-West doors ≈ `(0, 81)`, Tally Bridge ≈ `(-305, 105)` — about 310 m as the crow flies, more on the
-ground. At 1.8 m/s that ~360 m walk is ~3½ minutes. (It was first written at 1.2 m/s — the slower
-amble "six to seven minutes" implied; movement takes the brisker pace so cross-town trips read better
+West doors ≈ `(0, 81)`, Tally Bridge ≈ `(-213.5, 73.5)` — about 214 m as the crow flies, more on the
+ground. At 1.8 m/s that ~250 m walk is ~2⅓ minutes. (It was first written at 1.2 m/s — the slower
+amble implied roughly double; movement takes the brisker pace so cross-town trips read better
 under the 24× clock, and the lore follows the number.)
 
 **Twenty daily routes are already authored.** `lore/second_sun/05_dramatis_personae.md` gives every

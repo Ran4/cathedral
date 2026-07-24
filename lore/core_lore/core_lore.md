@@ -21,7 +21,7 @@ The default present year is **F.437**, the 437th year since the first stone of t
 
 ## The city and river
 
-- **Ombreval** is a free walled city-state, roughly 1.2 km west to east and 1.0 km north to south.
+- **Ombreval** is a free walled city-state, roughly 840 m west to east and 700 m north to south.
 - **The Serle** flows west to east outside the south wall. Nobody renames water.
 - From F.83 until the Great Rains, its straightened urban reach was **the Cut**. The river was diverted beyond the walls in F.363–369; the filled Cut survives as an unusually straight trade street and district.
 - River cargo lands at wharves beyond the south wall and comes through the river gate by cart and porter. The **Old Sluice** at the Cut's east end is a dry historic landmark.

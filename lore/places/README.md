@@ -49,7 +49,7 @@ overlapping areas merely because this guide discusses them together.
 
 ## The plan in one paragraph
 
-Ombreval is an irregular walled city about 1.2 km west to east and 1.0 km north
+Ombreval is an irregular walled city about 840 m west to east and 700 m north
 to south. The Lanthorn stands a little west of its geometric centre on the old
 ford ground. Crooked streets radiate from that older centre, while the filled
 Cut runs conspicuously straight across the southern third. The Serle itself
@@ -105,8 +105,8 @@ schematic in the spatial index:
   3600 × 2880 quick-look render. Use the HTML or SVG when individual roofs or
   index text need to be read.
 - [`ombreval_buildings.json`](ombreval_buildings.json) is the machine-readable
-  inventory behind the drawing. The current revision contains 2,566 individual
-  building footprints: 2,501 ordinary urban-fabric buildings and 65 named,
+  inventory behind the drawing. The current revision contains 1,030 individual
+  building footprints: 965 ordinary urban-fabric buildings and 65 named,
   reserved, gate, bridge, church, civic, or complex-building footprints.
 - [`scripts/generate_top_down_map.py`](../../scripts/generate_top_down_map.py)
   contains the deterministic geometry and layout rules. It validates IDs,
@@ -139,7 +139,9 @@ character, and the binding relationships listed below.
   (first-match-wins, non-overlapping), **not** the overlapping ward bounding
   boxes tabulated in [`00_city_plan.md`](00_city_plan.md). By that partition the
   Bell-and-Sluice wards are ~33% of the enclosure; the boxes give a smaller ~21%.
-  Regenerate with `uv run scripts/generate_ward_map.py`.
+  (Those shares predate the 2026-07 0.7× plan shrink and may have drifted
+  slightly; regenerate to re-check.) Regenerate with
+  `uv run scripts/generate_ward_map.py`.
 
 ## Source ledger
 

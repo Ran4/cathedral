@@ -14,10 +14,10 @@ use cathedral_sim::Office;
 
 use crate::{controller::DynamicBarrier, smart_actors::WorldClockState, soundscape::SoundscapeCue};
 
-const STONE_MIN_Z: f32 = 123.0;
-const STONE_MAX_Z: f32 = 147.0;
-const RIVER_MIN_Z: f32 = -151.5;
-const RIVER_MAX_Z: f32 = -118.5;
+const STONE_MIN_Z: f32 = 82.5;
+const STONE_MAX_Z: f32 = 106.5;
+const RIVER_MIN_Z: f32 = -111.0;
+const RIVER_MAX_Z: f32 = -78.0;
 
 const LEAF_HEIGHT: f32 = 7.2;
 const LEAF_THICKNESS: f32 = 0.46;
@@ -29,7 +29,7 @@ const RIVER_BAR_LIFT_SECONDS: f32 = 3.527;
 const RIVER_BAR_LOWER_SECONDS: f32 = 1.8;
 // Just inside the eastern (city-facing) leaf surface, where the oak actually
 // bears on the ledgers rather than hovering in front of them.
-const RIVER_BAR_X: f32 = -504.42;
+const RIVER_BAR_X: f32 = -352.92;
 const RIVER_BAR_LOCKED_Y: f32 = 3.25;
 const RIVER_BAR_RAISED_Y: f32 = 7.82;
 const CLOSED_BARRIER_THRESHOLD: f32 = 0.015;
@@ -387,7 +387,7 @@ pub(super) fn spawn_gate_mechanisms(
         dark_wood,
         iron,
         GateKind::Stone,
-        495.0,
+        346.5,
         STONE_MIN_Z,
         STONE_MAX_Z,
         -1.0,
@@ -400,7 +400,7 @@ pub(super) fn spawn_gate_mechanisms(
         dark_wood,
         iron,
         GateKind::River,
-        -505.0,
+        -353.5,
         RIVER_MIN_Z,
         RIVER_MAX_Z,
         1.0,
@@ -408,8 +408,8 @@ pub(super) fn spawn_gate_mechanisms(
     spawn_river_bar(commands, cube, timber, iron);
 
     for (gate, x, min_z, max_z) in [
-        (GateKind::Stone, 495.0, STONE_MIN_Z, STONE_MAX_Z),
-        (GateKind::River, -505.0, RIVER_MIN_Z, RIVER_MAX_Z),
+        (GateKind::Stone, 346.5, STONE_MIN_Z, STONE_MAX_Z),
+        (GateKind::River, -353.5, RIVER_MIN_Z, RIVER_MAX_Z),
     ] {
         commands.spawn((
             Name::new(match gate {

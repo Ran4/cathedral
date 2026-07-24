@@ -7,6 +7,17 @@
 The output is deterministic. Changing the seed, generation rules, or source
 geometry is a map revision: individual unnamed building IDs and footprints are
 otherwise intended to remain stable for later world-building work.
+
+Layout coordinates in the tables below are the **legacy** design coordinates
+(the 1200x1000 m layout). The city is shrunk to ~840x700 m at *consumption
+time* by the transform ``T`` in ``scripts/shrink_transform.py``: building and
+prop SIZES are unchanged, the sacred cathedral core does not move, and the
+ordinary fabric is regenerated to fit the smaller enclosure. Edit the legacy
+tables here; edit the transform (anchors, clusters, hand-authored ring/corner
+overrides) in ``shrink_transform.py``. The resolved old->new mapping for every
+named building, site, fixture, place mark and road point is dumped to
+``lore/places/shrink_transform.json`` for downstream (areas, characters, Rust
+constants) to read instead of re-deriving.
 """
 
 from __future__ import annotations
@@ -19,6 +30,8 @@ from pathlib import Path
 import random
 import re
 from typing import Iterable, Sequence
+
+import shrink_transform as T
 
 
 Point = tuple[float, float]  # world (x, z): north +x, west +z
@@ -366,28 +379,40 @@ FIXTURES: list[Fixture] = [
 ]
 
 
-def add_market_fixtures() -> None:
+def build_market_fixtures(target: list[Fixture]) -> None:
+    """Market-stall scatter, shrunk with the plan.
+
+    Each group's centre follows its square under the transform (Coswald's also
+    shifts east), the scatter radii scale x0.7, and the counts are reduced. The
+    Gradine group is CORE: identity centre and kept radii.
+    """
     rng = random.Random(SEED ^ 0xF17E)
+    # (group, cx, cz, radius_x, radius_z, count, transform class, radius scale)
     groups = [
-        ("wick", -25, 355, 48, 34, 18),
-        ("coswald", 255, 155, 55, 38, 12),
-        ("tallage", -305, 90, 54, 35, 14),
-        ("maren", -305, -365, 48, 36, 18),
-        ("gradine", 0, 131, 32, 20, 10),
+        ("wick", -25, 355, 48, 34, 12, "scale", T.S),
+        ("coswald", 255, 155, 55, 38, 9, "coswald", T.S),
+        ("tallage", -305, 90, 54, 35, 10, "scale", T.S),
+        ("maren", -305, -365, 48, 36, 12, "scale", T.S),
+        ("gradine", 0, 131, 32, 20, 10, "core", 1.0),
     ]
-    for group, cx, cz, radius_x, radius_z, count in groups:
+    for group, cx, cz, radius_x, radius_z, count, cls, radius_scale in groups:
+        centre_x, centre_z = T.apply_class((float(cx), float(cz)), cls)
+        rx = radius_x * radius_scale
+        rz = radius_z * radius_scale
         for index in range(count):
             angle = rng.random() * math.tau
             radius = math.sqrt(rng.random())
-            x = cx + math.cos(angle) * radius_x * radius
-            z = cz + math.sin(angle) * radius_z * radius
-            kind = "stone_stack" if group == "coswald" and index < 7 else "stall"
-            if group == "maren" and index < 5:
+            x = centre_x + math.cos(angle) * rx * radius
+            z = centre_z + math.sin(angle) * rz * radius
+            kind = "stone_stack" if group == "coswald" and index < 5 else "stall"
+            if group == "maren" and index < 4:
                 kind = "smoke_rack"
-            FIXTURES.append(Fixture(f"{group}_fixture_{index + 1:02d}", kind, (x, z), (5.0, 2.8), rng.uniform(-20, 20)))
+            target.append(Fixture(f"{group}_fixture_{index + 1:02d}", kind, (x, z), (5.0, 2.8), rng.uniform(-20, 20)))
 
 
-add_market_fixtures()
+# Static fixtures stay in legacy coordinates here; both they and the market
+# groups are transformed in the "APPLY TRANSFORM T" block below.
+STATIC_FIXTURES_LEGACY: list[Fixture] = list(FIXTURES)
 
 
 PLACE_MARKS: list[PlaceMark] = []
@@ -573,21 +598,23 @@ def min_wall_distance(point: Point) -> float:
 
 
 def district_for(x: float, z: float) -> str:
-    if -170 <= x <= 130 and z >= 235:
+    # Ward-partition thresholds are the legacy bounds scaled x0.7 to match the
+    # shrunk enclosure (the plan is generated directly in the shrunk frame).
+    if -119 <= x <= 91 and z >= 164.5:
         return "Wick Ward"
-    if x >= 120 and z >= 175:
+    if x >= 84 and z >= 122.5:
         return "Cloth Ward"
-    if x >= 175 and z >= 35:
+    if x >= 122.5 and z >= 24.5:
         return "Wallwright Ward"
-    if -280 <= x <= 30 and 110 <= z <= 320:
+    if -196 <= x <= 21 and 77 <= z <= 224:
         return "Cinder Ward"
-    if -440 <= x <= -170 and -40 <= z <= 240:
+    if -308 <= x <= -119 and -28 <= z <= 168:
         return "Weigh Ward"
-    if x <= -160 and z <= -235:
+    if x <= -112 and z <= -164.5:
         return "Reed Ward"
-    if z <= -145:
+    if z <= -101.5:
         return "Bell and Sluice Wards"
-    if -120 <= x <= 190 and -170 <= z <= 235:
+    if -84 <= x <= 133 and -119 <= z <= 164.5:
         return "Fabric Ward"
     return "Outer wards"
 
@@ -605,16 +632,20 @@ DISTRICT_ANGLES = {
 }
 
 
+# Two extra residential entries per ward since the 0.7x shrink: the fabric holds
+# ~40% of the pre-shrink building count but must still house the same 500-person
+# cast, so dwellings take a larger share of the smaller fabric (bake_homes.py
+# needs ~420 residential doors).
 USE_WEIGHTS = {
-    "Wick Ward": ["residential", "trade", "trade", "workshop", "tavern"],
-    "Cloth Ward": ["residential", "trade", "trade", "storage", "storage"],
-    "Wallwright Ward": ["residential", "workshop", "workshop", "storage", "trade"],
-    "Cinder Ward": ["residential", "workshop", "workshop", "trade", "storage"],
-    "Weigh Ward": ["residential", "trade", "trade", "storage", "storage"],
-    "Reed Ward": ["residential", "trade", "industrial", "storage", "tavern"],
-    "Bell and Sluice Wards": ["residential", "residential", "trade", "workshop", "storage"],
-    "Fabric Ward": ["residential", "trade", "lodging", "workshop", "residential"],
-    "Outer wards": ["residential", "residential", "workshop", "storage", "trade"],
+    "Wick Ward": ["residential", "residential", "residential", "trade", "trade", "workshop", "tavern"],
+    "Cloth Ward": ["residential", "residential", "residential", "trade", "trade", "storage", "storage"],
+    "Wallwright Ward": ["residential", "residential", "residential", "workshop", "workshop", "storage", "trade"],
+    "Cinder Ward": ["residential", "residential", "residential", "workshop", "workshop", "trade", "storage"],
+    "Weigh Ward": ["residential", "residential", "residential", "trade", "trade", "storage", "storage"],
+    "Reed Ward": ["residential", "residential", "residential", "trade", "industrial", "storage", "tavern"],
+    "Bell and Sluice Wards": ["residential", "residential", "residential", "residential", "trade", "workshop", "storage"],
+    "Fabric Ward": ["residential", "residential", "residential", "trade", "lodging", "workshop", "residential"],
+    "Outer wards": ["residential", "residential", "residential", "residential", "workshop", "storage", "trade"],
 }
 
 
@@ -706,6 +737,23 @@ def generate_buildings() -> list[Building]:
             if overlaps(site_bound)
         ):
             return False
+        # Keep wells, cisterns, statues and stalls breathing room: since the
+        # close-tightening, fabric packs ground that used to be protected by
+        # the big precinct rect, so fixtures need their own clearance.
+        for fixture in FIXTURES:
+            fx, fz = fixture.position
+            if abs(centre[0] - fx) > 40.0 and abs(centre[1] - fz) > 40.0:
+                continue
+            if point_in_polygon((fx, fz), polygon):
+                return False
+            angle = math.radians(fixture.angle_deg)
+            ca, sa = math.cos(angle), math.sin(angle)
+            half_x = fixture.size[0] * 0.5 + 1.5
+            half_z = fixture.size[1] * 0.5 + 1.5
+            for px, pz in polygon:
+                dx, dz = px - fx, pz - fz
+                if abs(dx * ca - dz * sa) < half_x and abs(dx * sa + dz * ca) < half_z:
+                    return False
 
         buildings.append(building)
         for key in bins_for(polygon):
@@ -725,12 +773,15 @@ def generate_buildings() -> list[Building]:
         district = district_for(cx, cz)
         choices = USE_WEIGHTS[district]
         use = local.choice(choices)
-        if street_facing and use == "residential" and local.random() < 0.38:
+        # 0.38 pre-shrink; eased so the smaller fabric still yields the ~420
+        # residential doors the authored cast's homes need (bake_homes.py).
+        if street_facing and use == "residential" and local.random() < 0.28:
             use = "trade"
         material = local.choice(MATERIALS_BY_USE[use])
-        radial = math.hypot(cx, cz + 50)
-        base_levels = 3 if radial < 360 else 2
-        if street_facing and radial < 470:
+        # Storey radius thresholds shrink with the plan (legacy 50/360/470 x0.7).
+        radial = math.hypot(cx, cz + 35)
+        base_levels = 3 if radial < 252 else 2
+        if street_facing and radial < 329:
             base_levels += 1 if local.random() < 0.22 else 0
         levels = max(1, min(4, base_levels + local.choice([-1, 0, 0, 0, 1])))
         return Building(
@@ -805,11 +856,14 @@ def generate_buildings() -> list[Building]:
     infill_rng = random.Random(SEED ^ 0x1AF111)
     orientation_cache: dict[tuple[int, int], float] = {}
     infill_number = 1
-    for _attempt in range(30_000):
-        if infill_number > 1_750:
+    # 45k attempts since the close-tightening: the freed cathedral surround is
+    # rejection-limited, and the extra attempts pack it (and stray pockets).
+    for _attempt in range(45_000):
+        if infill_number > 900:
             break
-        cx = infill_rng.uniform(-475, 475)
-        cz = infill_rng.uniform(-645, 470)
+        # Sampling bounds shrink with the plan (legacy +-475 / -645..470 x0.7).
+        cx = infill_rng.uniform(-332.5, 332.5)
+        cz = infill_rng.uniform(-451.5, 329)
         if not point_in_polygon((cx, cz), WALL):
             continue
 
@@ -852,6 +906,247 @@ def generate_buildings() -> list[Building]:
             infill_number += 1
 
     return buildings
+
+
+# =========================================================================== #
+#  APPLY TRANSFORM T (scripts/shrink_transform.py) at consumption time.        #
+#                                                                              #
+#  Everything above is in legacy design coordinates. From here down the SVG,   #
+#  JSON, HTML and the ordinary-fabric generator all see the shrunk 0.7x        #
+#  layout. The resolved old->new mapping is captured for the sidecar.          #
+# =========================================================================== #
+
+LEGACY_WALL: Polygon = list(WALL)
+LEGACY_ROADS: list[Road] = list(ROADS)
+LEGACY_SITES: list[Site] = list(SITES)
+LEGACY_NAMED: list[Building] = list(NAMED_BUILDINGS)
+LEGACY_STATIC_FIXTURES: list[Fixture] = list(STATIC_FIXTURES_LEGACY)
+LEGACY_MARKS: list[PlaceMark] = list(PLACE_MARKS)
+
+_legacy_named_poly = {building.id: building.polygon for building in LEGACY_NAMED}
+_legacy_site_poly = {site.id: site.polygon for site in LEGACY_SITES}
+_legacy_fixture = {fixture.id: (fixture.position, fixture.size) for fixture in LEGACY_STATIC_FIXTURES}
+
+
+def _bbox(poly: Sequence[Point]) -> tuple[float, float, float, float]:
+    xs = [p[0] for p in poly]
+    zs = [p[1] for p in poly]
+    return (min(xs), max(xs), min(zs), max(zs))
+
+
+def _entity_bbox(entity_id: str) -> tuple[float, float, float, float]:
+    if entity_id in _legacy_named_poly:
+        return _bbox(_legacy_named_poly[entity_id])
+    if entity_id in _legacy_site_poly:
+        return _bbox(_legacy_site_poly[entity_id])
+    if entity_id in _legacy_fixture:
+        (px, pz), (sx, sz) = _legacy_fixture[entity_id]
+        return (px - sx / 2, px + sx / 2, pz - sz / 2, pz + sz / 2)
+    raise KeyError(f"cluster member {entity_id!r} missing from legacy tables")
+
+
+# Road-point region rule: cluster member-bbox unions (+12 m), used only to
+# classify road polyline points that no explicit table pins.
+CLUSTER_REGION_BBOX: dict[str, tuple[float, float, float, float]] = {}
+for _cluster, _members in T.CLUSTER_MEMBERS.items():
+    _boxes = [_entity_bbox(member) for member in _members]
+    CLUSTER_REGION_BBOX[_cluster] = (
+        min(b[0] for b in _boxes) - 12.0,
+        max(b[1] for b in _boxes) + 12.0,
+        min(b[2] for b in _boxes) - 12.0,
+        max(b[3] for b in _boxes) + 12.0,
+    )
+
+# The fixed sacred core polygons, used by the projection post-pass. Taken from
+# the TRANSFORMED site shapes: since the close-tightening the precinct is the
+# 6 m apron (not the legacy 158x225 rect), and roads may legitimately run
+# through the freed band the old rect covered.
+CORE_POLYGONS: list[Polygon] = [
+    T.site_new_polygon(site_id, _legacy_site_poly[site_id]) for site_id in T.CORE_SITE_IDS
+]
+
+
+def _cluster_for_point(point: Point) -> str | None:
+    x, z = point
+    for name in T.CLUSTER_PRECEDENCE:
+        minx, maxx, minz, maxz = CLUSTER_REGION_BBOX[name]
+        if minx <= x <= maxx and minz <= z <= maxz:
+            return name
+    return None
+
+
+def _project_out_of_core(point: Point) -> tuple[Point, bool]:
+    """Push a transformed non-core road point just outside any fixed core
+    polygon it landed inside (a safety net behind the explicit overrides)."""
+    for poly in CORE_POLYGONS:
+        if point_in_polygon(point, poly):
+            centre = T.centroid(poly)
+            best = point
+            best_d = math.inf
+            for edge_a, edge_b in polygon_edges(poly):
+                ax, az = edge_a
+                bx, bz = edge_b
+                dx = bx - ax
+                dz = bz - az
+                length_sq = dx * dx + dz * dz
+                t = 0.0 if length_sq == 0 else max(0.0, min(1.0, ((point[0] - ax) * dx + (point[1] - az) * dz) / length_sq))
+                candidate = (ax + t * dx, az + t * dz)
+                d = math.hypot(point[0] - candidate[0], point[1] - candidate[1])
+                if d < best_d:
+                    best_d = d
+                    best = candidate
+            ox = best[0] - centre[0]
+            oz = best[1] - centre[1]
+            norm = math.hypot(ox, oz) or 1.0
+            return (best[0] + ox / norm * 2.5, best[1] + oz / norm * 2.5), True
+    return point, False
+
+
+def _transform_roads() -> tuple[list[Road], dict, list]:
+    resolved: dict[str, list[dict]] = {}
+    projected: list[tuple[str, int, Point]] = []
+    roads: list[Road] = []
+    for road in LEGACY_ROADS:
+        if road.id in T.ROAD_OVERRIDE_POINTS:
+            new_points = [tuple(p) for p in T.ROAD_OVERRIDE_POINTS[road.id]]
+            classes = ["override"] * len(new_points)
+        else:
+            new_points = []
+            classes = []
+            forced_whole = T.ROAD_FORCED_CLUSTER_WHOLE.get(road.id)
+            for index, point in enumerate(road.points):
+                override = T.ROAD_POINT_OVERRIDES.get(road.id, {}).get(index)
+                if override is not None:
+                    new_points.append(tuple(override))
+                    classes.append("override")
+                    continue
+                if index in T.ROAD_FORCED_IDENTITY.get(road.id, set()):
+                    new_points.append(point)
+                    classes.append("core")
+                    continue
+                forced_point_cluster = T.ROAD_FORCED_CLUSTER_POINT.get(road.id, {}).get(index)
+                forced_class = T.ROAD_FORCED_CLASS.get(road.id, {}).get(index)
+                if forced_whole is not None:
+                    cls = forced_whole
+                elif forced_point_cluster is not None:
+                    cls = forced_point_cluster
+                elif forced_class is not None:
+                    cls = forced_class
+                elif T.in_core_bbox(point):
+                    cls = "core"
+                else:
+                    cls = _cluster_for_point(point) or "scale"
+                new_point = T.apply_class(point, cls)
+                if cls != "core":
+                    new_point, was_projected = _project_out_of_core(new_point)
+                    if was_projected:
+                        projected.append((road.id, index, new_point))
+                new_points.append(new_point)
+                classes.append(cls)
+        roads.append(Road(road.id, road.name, list(new_points), road.width_m, road.tier, road.label))
+        resolved[road.id] = [
+            {
+                "index": index,
+                "old": list(road.points[index]) if index < len(road.points) else None,
+                "new": [round(x, 3), round(z, 3)],
+                "class": classes[index],
+            }
+            for index, (x, z) in enumerate(new_points)
+        ]
+    return roads, resolved, projected
+
+
+def _round_point(point: Point) -> list[float]:
+    return [round(point[0], 3), round(point[1], 3)]
+
+
+# --- roads ---------------------------------------------------------------- #
+ROADS, RESOLVED_ROADS, PROJECTED_ROAD_POINTS = _transform_roads()
+
+# --- sites ---------------------------------------------------------------- #
+RESOLVED_SITES: dict[str, dict] = {}
+_sites: list[Site] = []
+for _site in LEGACY_SITES:
+    _new_poly = T.site_new_polygon(_site.id, _site.polygon)
+    _sites.append(Site(_site.id, _site.name, _new_poly, _site.kind))
+    RESOLVED_SITES[_site.id] = {
+        "old_centroid": _round_point(T.centroid(_site.polygon)),
+        "new_centroid": _round_point(T.centroid(_new_poly)),
+        "class": T.SITE_CLASS[_site.id],
+    }
+SITES = _sites
+
+# --- named buildings ------------------------------------------------------ #
+RESOLVED_NAMED: dict[str, dict] = {}
+_named: list[Building] = []
+for _building in LEGACY_NAMED:
+    _new_poly = T.named_new_polygon(_building.id, _building.polygon)
+    _named.append(Building(_building.id, _building.name, _new_poly, _building.use, _building.material, _building.levels, _building.named, _building.district))
+    RESOLVED_NAMED[_building.id] = {
+        "old_centroid": _round_point(T.centroid(_building.polygon)),
+        "new_centroid": _round_point(T.centroid(_new_poly)),
+        "class": T.NAMED_CLASS[_building.id],
+    }
+NAMED_BUILDINGS = _named
+
+# --- fixtures (static transform + regenerated market groups) -------------- #
+RESOLVED_FIXTURES: dict[str, dict] = {}
+_fixtures: list[Fixture] = []
+for _fixture in LEGACY_STATIC_FIXTURES:
+    _new_pos = T.fixture_new_position(_fixture.id, _fixture.position)
+    _fixtures.append(Fixture(_fixture.id, _fixture.kind, _new_pos, _fixture.size, _fixture.angle_deg, _fixture.label))
+    RESOLVED_FIXTURES[_fixture.id] = {
+        "old": _round_point(_fixture.position),
+        "new": _round_point(_new_pos),
+        "class": T.FIXTURE_CLASS[_fixture.id],
+    }
+build_market_fixtures(_fixtures)
+FIXTURES = _fixtures
+
+# --- place marks ---------------------------------------------------------- #
+RESOLVED_MARKS: dict[int, dict] = {}
+_marks: list[PlaceMark] = []
+for _mark in LEGACY_MARKS:
+    _new_anchor = T.mark_new_anchor(_mark.number, _mark.anchor)
+    _marks.append(PlaceMark(_mark.number, _mark.name, _new_anchor, _mark.kind))
+    RESOLVED_MARKS[_mark.number] = {
+        "name": _mark.name,
+        "old": _round_point(_mark.anchor),
+        "new": _round_point(_new_anchor),
+        "class": T.MARK_CLASS[_mark.number],
+    }
+PLACE_MARKS = _marks
+
+# --- wall ----------------------------------------------------------------- #
+WALL = [T.scale(p) for p in LEGACY_WALL]
+
+
+# --- baseline named-vs-road clearances (from the untransformed tables) ----- #
+def _required_clearance(road: Road) -> float:
+    return road.width_m / 2.0 + (0.8 if road.tier in {"alley", "passage"} else 1.5)
+
+
+def _building_road_distance(poly: Sequence[Point], road: Road) -> float:
+    best = math.inf
+    for edge_a, edge_b in polygon_edges(poly):
+        for start, end in zip(road.points, road.points[1:]):
+            distance = segment_distance(edge_a, edge_b, start, end)
+            if distance < best:
+                best = distance
+    return best
+
+
+BASELINE_ROAD_CLEAR: dict[tuple[str, str], float] = {}
+for _building in LEGACY_NAMED:
+    for _road in LEGACY_ROADS:
+        _distance = _building_road_distance(_building.polygon, _road)
+        if _distance < 40.0:
+            BASELINE_ROAD_CLEAR[(_building.id, _road.id)] = _distance
+
+GATE_BUILDING_IDS = {
+    "gate_wool_1", "gate_wool_2", "gate_stone_1", "gate_stone_2",
+    "gate_harne_1", "gate_harne_2", "gate_river_1", "gate_river_2", "gate_reed_1",
+}
 
 
 BUILDINGS = generate_buildings()
@@ -909,6 +1204,225 @@ def validate_plan() -> None:
                     )
         for key in keys:
             bins.setdefault(key, []).append(building)
+
+
+def _fixture_polygon(fixture: Fixture) -> Polygon:
+    px, pz = fixture.position
+    sx, sz = fixture.size
+    return rect(px, pz, sx, sz, fixture.angle_deg)
+
+
+def _bbox_overlaps(a: Sequence[Point], b: Sequence[Point]) -> bool:
+    ax0, ax1, az0, az1 = _bbox(a)
+    bx0, bx1, bz0, bz1 = _bbox(b)
+    return not (ax1 < bx0 or ax0 > bx1 or az1 < bz0 or az0 > bz1)
+
+
+def validate_transform() -> dict:
+    """Shrink-specific validation on the TRANSFORMED plan.
+
+    Beyond the identity/overlap checks of ``validate_plan``, this catches the
+    ways a 0.7x layout can go wrong: a named building drifting onto a road, a
+    site, or a *fixture* (the statues!), a named/site straying outside the wall,
+    and road seams that now cross a footprint. Pre-existing (baseline) contacts
+    are tolerated; only NEW contacts or >1 m regressions fail.
+    """
+    failures: list[str] = []
+    accepted_road_regressions: list[str] = []
+    named = [b for b in BUILDINGS if b.named]
+
+    # 1. named-vs-road clearance, compared to the untransformed baseline. The
+    #    "contact" threshold is the pavement half-width + 1 m: a dense medieval
+    #    street legitimately has buildings inside the nominal setback, so only a
+    #    building sitting on/next to the carriageway is a real fault. The dry Cut
+    #    is whitelisted -- taverns, bridges and yards line the dry channel (the
+    #    baseline plan already has many buildings on it).
+    for building in named:
+        if building.id in GATE_BUILDING_IDS:
+            continue  # gate towers straddle the wall-lane by construction
+        for road in ROADS:
+            if road.id == "cut":
+                continue
+            contact = road.width_m / 2.0 + 1.0
+            distance = _building_road_distance(building.polygon, road)
+            if distance >= contact - 1e-6:
+                continue
+            base = BASELINE_ROAD_CLEAR.get((building.id, road.id), math.inf)
+            if base < contact and distance >= base - 1.0:
+                accepted_road_regressions.append(
+                    f"{building.id} vs road {road.id}: {base:.2f} -> {distance:.2f} m (pre-existing)"
+                )
+            else:
+                failures.append(
+                    f"NEW road contact: {building.id} vs {road.id} "
+                    f"{distance:.2f} m < {contact:.2f} (baseline {base if base != math.inf else 'far'})"
+                )
+
+    # 2/3. named-vs-site and named-vs-fixture overlaps, baseline-compared.
+    baseline_named_site = {
+        (b.id, s.id)
+        for b in LEGACY_NAMED for s in LEGACY_SITES
+        if _bbox_overlaps(b.polygon, s.polygon) and polygons_intersect(b.polygon, s.polygon)
+    }
+    for building in named:
+        for site in SITES:
+            if not _bbox_overlaps(building.polygon, site.polygon):
+                continue
+            if polygons_intersect(building.polygon, site.polygon) and (building.id, site.id) not in baseline_named_site:
+                failures.append(f"NEW named-vs-site overlap: {building.id} covers site {site.id}")
+
+    legacy_fixture_polys = {f.id: _fixture_polygon(f) for f in LEGACY_STATIC_FIXTURES}
+    baseline_named_fixture = {
+        (b.id, fid)
+        for b in LEGACY_NAMED for fid, fp in legacy_fixture_polys.items()
+        if _bbox_overlaps(b.polygon, fp) and polygons_intersect(b.polygon, fp)
+    }
+    for building in named:
+        for fixture in FIXTURES:
+            # Market-stall scatter lands inside adjacent named buildings in the
+            # baseline too (stalls in the toll house, bridges, warehouse); only
+            # the civic fixtures -- statues, wells, cisterns -- must stay clear.
+            if "_fixture_" in fixture.id:
+                continue
+            fpoly = _fixture_polygon(fixture)
+            if not _bbox_overlaps(building.polygon, fpoly):
+                continue
+            if polygons_intersect(building.polygon, fpoly) and (building.id, fixture.id) not in baseline_named_fixture:
+                failures.append(f"NEW named-vs-fixture overlap: {building.id} covers fixture {fixture.id}")
+
+    # 4. named / site containment inside the transformed wall (gates excepted).
+    for building in named:
+        if building.id in GATE_BUILDING_IDS:
+            continue
+        if not all(point_in_polygon(point, WALL) for point in building.polygon):
+            failures.append(f"named building {building.id} crosses the city wall")
+    for site in SITES:
+        if not all(point_in_polygon(point, WALL) for point in site.polygon):
+            failures.append(f"site {site.id} crosses the city wall")
+
+    # 5. seam report: road segments whose endpoints took different classes and
+    #    now cross a named footprint that they did NOT cross in the baseline.
+    named_by_id = {b.id: b for b in named}
+    legacy_named_by_id = {b.id: b for b in LEGACY_NAMED}
+    seam_crossings: list[str] = []
+    for road in ROADS:
+        classes = [entry["class"] for entry in RESOLVED_ROADS[road.id]]
+        legacy_road = next((r for r in LEGACY_ROADS if r.id == road.id), None)
+        for index in range(len(road.points) - 1):
+            if index + 1 >= len(classes) or classes[index] == classes[index + 1]:
+                continue
+            a, b = road.points[index], road.points[index + 1]
+            for building in named:
+                if not any(segments_intersect(a, b, e1, e2) for e1, e2 in polygon_edges(building.polygon)):
+                    if not point_in_polygon(a, building.polygon) and not point_in_polygon(b, building.polygon):
+                        continue
+                # crossed now; did the baseline segment cross the legacy footprint?
+                crossed_before = False
+                if legacy_road is not None and index < len(legacy_road.points) - 1 and building.id in legacy_named_by_id:
+                    la, lb = legacy_road.points[index], legacy_road.points[index + 1]
+                    lpoly = legacy_named_by_id[building.id].polygon
+                    crossed_before = any(segments_intersect(la, lb, e1, e2) for e1, e2 in polygon_edges(lpoly))
+                label = f"{road.id}[{index}->{index + 1}] ({classes[index]}/{classes[index + 1]}) crosses {building.id}"
+                if crossed_before:
+                    seam_crossings.append(label + " (pre-existing)")
+                else:
+                    failures.append("NEW seam crossing: " + label)
+
+    return {
+        "failures": failures,
+        "accepted_road_regressions": accepted_road_regressions,
+        "seam_crossings": seam_crossings,
+        "projected_road_points": [
+            {"road": rid, "index": idx, "new": _round_point(pt)} for rid, idx, pt in PROJECTED_ROAD_POINTS
+        ],
+    }
+
+
+def write_sidecar(report: dict) -> None:
+    """Write the resolved old->new mapping downstream phases read from."""
+    _road_required = {r.id: _required_clearance(r) for r in LEGACY_ROADS}
+    _baseline_contacts = [
+        {"building": bid, "road": rid, "distance": round(dist, 3)}
+        for (bid, rid), dist in sorted(BASELINE_ROAD_CLEAR.items())
+        if dist < _road_required[rid]
+    ]
+    clusters = {
+        name: {
+            "anchor": list(T.CLUSTER_ANCHORS[name]),
+            "delta": [round(T.CLUSTER_DELTAS[name][0], 3), round(T.CLUSTER_DELTAS[name][1], 3)],
+            "members": sorted(T.CLUSTER_MEMBERS[name]),
+            "region_bbox": [round(v, 3) for v in CLUSTER_REGION_BBOX[name]],
+        }
+        for name in T.CLUSTER_ANCHORS
+    }
+    payload = {
+        "schema_version": 1,
+        "generated_by": GENERATED_BY,
+        "note": (
+            "Resolved 0.7x city-shrink mapping. Downstream phases (areas.json, "
+            "characters, Rust constants, docs) MUST read answers here instead of "
+            "re-deriving membership. Legacy coordinates are the pre-shrink design "
+            "layout; new coordinates are the shipped shrunk layout."
+        ),
+        "S": T.S,
+        "coswald_shift": list(T.COSWALD_SHIFT),
+        "core": {
+            "site_ids": sorted(T.CORE_SITE_IDS),
+            "named_ids": sorted(T.CORE_NAMED_IDS),
+            "fixture_ids": sorted(T.CORE_FIXTURE_IDS),
+            "bboxes": [list(b) for b in T.CORE_BBOXES],
+        },
+        "clusters": clusters,
+        "cluster_precedence": T.CLUSTER_PRECEDENCE,
+        "entity_nudges": {k: list(v) for k, v in T.ENTITY_NUDGE.items()},
+        "burnt_court_nudge": list(T.BURNT_COURT_NUDGE),
+        "road_point_overrides": {
+            rid: {str(i): list(p) for i, p in pts.items()} for rid, pts in T.ROAD_POINT_OVERRIDES.items()
+        },
+        "road_forced_identity": {rid: sorted(idx) for rid, idx in T.ROAD_FORCED_IDENTITY.items()},
+        "road_forced_class": T.ROAD_FORCED_CLASS,
+        "road_forced_cluster_whole": T.ROAD_FORCED_CLUSTER_WHOLE,
+        "road_forced_cluster_point": {rid: {str(i): c for i, c in pts.items()} for rid, pts in T.ROAD_FORCED_CLUSTER_POINT.items()},
+        "road_override_points": {rid: [list(p) for p in pts] for rid, pts in T.ROAD_OVERRIDE_POINTS.items()},
+        "override_rect": {k: list(v) for k, v in T.OVERRIDE_RECT.items()},
+        "override_fixture": {k: list(v) for k, v in T.OVERRIDE_FIXTURE.items()},
+        "override_mark": {str(k): list(v) for k, v in T.OVERRIDE_MARK.items()},
+        "mark_class": {str(k): v for k, v in T.MARK_CLASS.items()},
+        # The per-actor cluster assignment table (phase B2). Actors that spawn
+        # OUTSIDE their ensemble's region but belong to it are pinned here; the
+        # rest use the region rule + snap-to-walkable (see review_sim.json).
+        "actor_cluster": {
+            "Bertran of the Ox": "maren",
+        },
+        "actor_cluster_note": (
+            "Region-capture applies to character spawns too, but ~52 sheets have "
+            ">15 m capture-vs-scale divergence (audit list in review_sim.json); "
+            "Bertran of the Ox spawns 35 m outside the maren region yet keeps the "
+            "Hungry Ox tavern, so he is pinned to maren. Cobb (cloth_worker) is "
+            "NOT captured by the dropped cloth region and scales. B2 must snap "
+            "every spawn to the nearest walkable cell after applying T."
+        ),
+        "resolved": {
+            "named_buildings": RESOLVED_NAMED,
+            "sites": RESOLVED_SITES,
+            "fixtures": RESOLVED_FIXTURES,
+            "marks": {str(k): v for k, v in RESOLVED_MARKS.items()},
+            "roads": RESOLVED_ROADS,
+            "wall": {
+                "old": [list(p) for p in LEGACY_WALL],
+                "new": [_round_point(p) for p in WALL],
+            },
+        },
+        "baseline_road_contacts": _baseline_contacts,
+        "validation": {
+            "accepted_road_regressions": report["accepted_road_regressions"],
+            "seam_crossings": report["seam_crossings"],
+            "projected_road_points": report["projected_road_points"],
+        },
+    }
+    (OUTPUT_DIR / "shrink_transform.json").write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
 
 
 def screen(point: Point) -> Point:
@@ -969,7 +1483,7 @@ def ridge_for(poly: Sequence[Point]) -> tuple[Point, Point]:
 
 def svg_header() -> str:
     return """<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-  width="8600" height="7200" viewBox="-600 -610 1720 1440" role="img"
+  width="6700" height="6450" viewBox="-470 -545 1340 1290" role="img"
   aria-labelledby="map-title map-desc">
 <title id="map-title">Authoritative top-down building plan of Ombreval, F.437</title>
 <desc id="map-desc">A detailed cadastral city map showing every planned building footprint, streets, walls, gates, the dry Cut, the Serle outside the south wall, and numbered locations for all named places.</desc>
@@ -1078,29 +1592,32 @@ def render_svg() -> None:
         f"<!-- Generated by {GENERATED_BY} (seed 0x{SEED:X}). "
         "Do not edit by hand; re-run the script to regenerate. -->"
     )
-    parts.append('<rect class="map-bg" x="-600" y="-610" width="1720" height="1440"/>')
+    parts.append('<rect class="map-bg" x="-470" y="-545" width="1340" height="1290"/>')
     parts.append('<g id="map-art">')
 
-    # Terrain and river context.
-    parts.append('<rect class="outer-ground" x="-570" y="-545" width="1290" height="1250"/>')
+    # Terrain and river context (cosmetic, scaled 0.7 with the city).
+    parts.append('<rect class="outer-ground" x="-399" y="-381.5" width="903" height="875"/>')
     city_points = svg_points(WALL)
     parts.append(f'<polygon id="city-ground" class="city-ground" points="{city_points}"/>')
-    for y in [-420, -260, -100, 80, 245, 410]:
-        parts.append(f'<path class="contour" d="M -560 {y} C -250 {y - 22}, 100 {y + 18}, 690 {y - 8}"/>')
+    for y in [-294, -182, -70, 56, 171.5, 287]:
+        parts.append(f'<path class="contour" d="M -392 {y} C -175 {y - 15.4}, 70 {y + 12.6}, 483 {y - 5.6}"/>')
 
-    river_poly: Polygon = [(-575, 640), (-575, -735), (-690, -735), (-690, 640)]
+    river_poly: Polygon = [(-402.5, 448), (-402.5, -514.5), (-483, -514.5), (-483, 448)]
     parts.append(f'<polygon class="river" points="{svg_points(river_poly)}"/>')
-    for x in [-605, -635, -666]:
-        start = screen((x, 625))
-        end = screen((x, -720))
-        parts.append(f'<path class="river-current" d="M {start[0]} {start[1]} C -150 {start[1] - 8}, 250 {end[1] + 9}, {end[0]} {end[1]}"/>')
+    for x in [-423.5, -444.5, -466.2]:
+        start = screen((x, 437.5))
+        end = screen((x, -504))
+        parts.append(f'<path class="river-current" d="M {start[0]} {start[1]} C -105 {start[1] - 5.6}, 175 {end[1] + 6.3}, {end[0]} {end[1]}"/>')
 
-    # Outer wharf aprons and individual sheds.
-    for index, z in enumerate(range(95, -451, -38), 1):
-        wharf = rect(-568, float(z), 24, 27, 0)
+    # Outer wharf aprons and individual sheds. The 38 m pitch and shed sizes are
+    # KEPT (they are physical structures); only the count and river offset shrink:
+    # 11 sheds at x = -397.6 (= 0.7 * -568), z from 66.5 stepping -38.
+    for index in range(1, 12):
+        z = 66.5 - (index - 1) * 38.0
+        wharf = rect(-397.6, z, 24, 27, 0)
         parts.append(f'<polygon id="wharf-shed-{index:02d}" class="wharf" points="{svg_points(wharf)}"><title>Outer wharf shed {index}</title></polygon>')
-        quay_a = screen((-590, z + 14))
-        quay_b = screen((-590, z - 14))
+        quay_a = screen((-413, z + 14))
+        quay_b = screen((-413, z - 14))
         parts.append(f'<path class="wharf" d="M {quay_a[0]} {quay_a[1]} L {quay_b[0]} {quay_b[1]}" stroke-width="4"/>')
 
     # Site grounds beneath roads and buildings.
@@ -1167,32 +1684,33 @@ def render_svg() -> None:
             parts.append(f'<rect id="fixture-{fixture.id}" class="fixture fixture-{fixture.kind}" x="{sx - width / 2:.2f}" y="{sy - height / 2:.2f}" width="{width:.2f}" height="{height:.2f}" transform="rotate({-fixture.angle_deg:.2f} {sx:.2f} {sy:.2f})"><title>{title}</title></rect>')
     parts.append('</g>')
 
-    # Ward names sit beneath specific place labels.
+    # Ward names sit beneath specific place labels (scaled with the city).
     ward_labels = [
         ("WICK WARD", (-45, 420)), ("CLOTH WARD", (170, 320)), ("WALLWRIGHT WARD", (345, 120)),
         ("FABRIC WARD", (20, 15)), ("CINDER WARD", (-185, 220)), ("WEIGH WARD", (-260, 5)),
         ("REED WARD", (-365, -300)), ("BELL WARD", (205, -285)), ("SLUICE WARD", (-120, -540)),
     ]
     for label, point in ward_labels:
-        sx, sy = screen(point)
+        sx, sy = screen(T.scale(point))
         parts.append(f'<text class="ward-label" x="{sx}" y="{sy}">{label}</text>')
 
-    # Direct labels for the principal anchors.
+    # Direct labels for the principal anchors, each transformed through T by the
+    # class of the place it names (gate labels ride their gate delta, etc.).
     direct_labels = [
-        ("THE LANTHORN", (0, -12), "major"), ("THE GRADINE", (0, 132), "minor"),
-        ("THE WICKMARKET", (-25, 355), "major"), ("COSWALD'S YARD", (255, 155), "major"),
-        ("THE TALLAGE", (-305, 90), "major"), ("MAREN'S GREEN", (-305, -365), "major"),
-        ("THE BELLSTAND", (45, -255), "major"), ("SEVEN LOFTS", (360, 335), "minor"),
-        ("THE SHAMBLES", (-395, 315), "minor"), ("BELLFOUNDERS' YARD", (155, -485), "minor"),
-        ("OLD SLUICE", (-305, -610), "minor"), ("SAINT MAREN'S", (-225, -390), "minor"),
-        ("ALDER MOORINGS", (-380, -418), "minor"), ("ILVANE CHAPEL", (175, -92), "minor"),
-        ("WOOL GATE", (-35, 530), "minor"), ("STONE GATE", (515, 135), "minor"),
-        ("HARNE GATE", (15, -687), "minor"), ("RIVER GATE", (-527, -135), "minor"),
-        ("REED POSTERN", (-474, -535), "minor"),
+        ("THE LANTHORN", (0, -12), "major", "core"), ("THE GRADINE", (0, 132), "minor", "core"),
+        ("THE WICKMARKET", (-25, 355), "major", "scale"), ("COSWALD'S YARD", (255, 155), "major", "coswald"),
+        ("THE TALLAGE", (-305, 90), "major", "scale"), ("MAREN'S GREEN", (-305, -365), "major", "scale"),
+        ("THE BELLSTAND", (45, -255), "major", "scale"), ("SEVEN LOFTS", (360, 335), "minor", "seven_lofts"),
+        ("THE SHAMBLES", (-395, 315), "minor", "shambles"), ("BELLFOUNDERS' YARD", (155, -485), "minor", "bellfounders"),
+        ("OLD SLUICE", (-305, -610), "minor", "old_sluice"), ("SAINT MAREN'S", (-225, -390), "minor", "maren"),
+        ("ALDER MOORINGS", (-380, -418), "minor", "maren"), ("ILVANE CHAPEL", (175, -92), "minor", "ilvane"),
+        ("WOOL GATE", (-35, 530), "minor", "gate_wool"), ("STONE GATE", (515, 135), "minor", "gate_stone"),
+        ("HARNE GATE", (15, -687), "minor", "gate_harne"), ("RIVER GATE", (-527, -135), "minor", "gate_river"),
+        ("REED POSTERN", (-474, -535), "minor", "gate_reed"),
     ]
     parts.append('<g id="direct-labels">')
-    for text_value, point, weight in direct_labels:
-        sx, sy = screen(point)
+    for text_value, point, weight, cls in direct_labels:
+        sx, sy = screen(T.apply_class(point, cls))
         parts.append(f'<text class="direct-{weight}" x="{sx:.2f}" y="{sy:.2f}">{escape(text_value)}</text>')
     parts.append('</g>')
 
@@ -1205,36 +1723,37 @@ def render_svg() -> None:
     parts.append('</g>')
     parts.append('</g>')  # map-art
 
-    # Title, orientation, scale, legends, and complete numbered index.
+    # Title, orientation, scale, legends, and complete numbered index. The
+    # information block hugs the shrunk map (panels start just east of it).
     parts.append('<g id="map-information">')
-    parts.append('<text class="map-title" x="-550" y="-566">OMBREVAL</text>')
-    parts.append('<text class="map-subtitle" x="-548" y="-548">AUTHORITATIVE TOP-DOWN BUILDING PLAN · F.437 · NORTH +X · EAST −Z</text>')
+    parts.append('<text class="map-title" x="-455" y="-508">OMBREVAL</text>')
+    parts.append('<text class="map-subtitle" x="-453" y="-490">AUTHORITATIVE TOP-DOWN BUILDING PLAN · F.437 · NORTH +X · EAST −Z</text>')
 
-    # Scale bar.
-    parts.append('<g transform="translate(-530,690)"><path d="M 0 0 L 200 0" stroke="#30291f" stroke-width="3"/><path d="M 0 -5 L 0 5 M 50 -5 L 50 5 M 100 -5 L 100 5 M 150 -5 L 150 5 M 200 -5 L 200 5" stroke="#30291f" stroke-width="2"/><text class="panel-text" x="0" y="16">0</text><text class="panel-text" x="100" y="16" text-anchor="middle">100 m</text><text class="panel-text" x="200" y="16" text-anchor="end">200 m</text></g>')
+    # Scale bar (bottom-left of the shrunk map).
+    parts.append('<g transform="translate(-430,420)"><path d="M 0 0 L 200 0" stroke="#30291f" stroke-width="3"/><path d="M 0 -5 L 0 5 M 50 -5 L 50 5 M 100 -5 L 100 5 M 150 -5 L 150 5 M 200 -5 L 200 5" stroke="#30291f" stroke-width="2"/><text class="panel-text" x="0" y="16">0</text><text class="panel-text" x="100" y="16" text-anchor="middle">100 m</text><text class="panel-text" x="200" y="16" text-anchor="end">200 m</text></g>')
 
     # Building legend.
-    parts.append('<rect class="panel" x="735" y="-535" width="350" height="150" rx="5"/>')
-    parts.append('<text class="panel-title" x="750" y="-512">MAP KEY</text>')
+    parts.append('<rect class="panel" x="500" y="-535" width="350" height="150" rx="5"/>')
+    parts.append('<text class="panel-title" x="515" y="-512">MAP KEY</text>')
     legend_items = [
         ("plaster", "Plaster / residential fabric"), ("half_timber", "Half-timber fabric"),
         ("fieldstone", "Fieldstone / storage / industry"), ("limestone", "Civic, church, fortification"),
     ]
     for index, (material, label) in enumerate(legend_items):
         y = -490 + index * 20
-        parts.append(f'<rect class="building material-{material}" x="752" y="{y - 8}" width="18" height="12"/>')
-        parts.append(f'<text class="panel-text" x="778" y="{y + 1}">{escape(label)}</text>')
-    parts.append('<circle class="place-marker" cx="760" cy="-405" r="5.8"/><text class="place-number" x="760" y="-405">#</text><text class="panel-text" x="778" y="-402">Numbered named-place anchor</text>')
-    parts.append('<text class="panel-small" x="750" y="-388">Every footprint has an SVG/JSON ID, use, material, and storey count.</text>')
+        parts.append(f'<rect class="building material-{material}" x="517" y="{y - 8}" width="18" height="12"/>')
+        parts.append(f'<text class="panel-text" x="543" y="{y + 1}">{escape(label)}</text>')
+    parts.append('<circle class="place-marker" cx="525" cy="-405" r="5.8"/><text class="place-number" x="525" y="-405">#</text><text class="panel-text" x="543" y="-402">Numbered named-place anchor</text>')
+    parts.append('<text class="panel-small" x="515" y="-388">Every footprint has an SVG/JSON ID, use, material, and storey count.</text>')
 
     # Exhaustive place index in two columns.
     panel_y = -370
     panel_height = 965
-    parts.append(f'<rect class="panel" x="735" y="{panel_y}" width="350" height="{panel_height}" rx="5"/>')
-    parts.append('<text class="panel-title" x="750" y="-345">NAMED PLACE INDEX</text>')
-    columns = [PLACE_MARKS[:30], PLACE_MARKS[30:]]
+    parts.append(f'<rect class="panel" x="500" y="{panel_y}" width="350" height="{panel_height}" rx="5"/>')
+    parts.append('<text class="panel-title" x="515" y="-345">NAMED PLACE INDEX</text>')
+    columns = [PLACE_MARKS[:35], PLACE_MARKS[35:]]
     for column_index, places in enumerate(columns):
-        x = 750 + column_index * 170
+        x = 515 + column_index * 170
         for row, place in enumerate(places):
             y = -323 + row * 26.5
             parts.append(f'<text class="panel-text" x="{x}" y="{y}"><tspan font-weight="bold">{place.number:02d}</tspan>  {escape(place.name)}</text>')
@@ -1242,12 +1761,12 @@ def render_svg() -> None:
 
     unnamed_count = sum(not building.named for building in BUILDINGS)
     named_count = sum(building.named for building in BUILDINGS)
-    parts.append('<rect class="panel" x="735" y="610" width="350" height="105" rx="5"/>')
-    parts.append('<text class="panel-title" x="750" y="636">PLAN INVENTORY</text>')
-    parts.append(f'<text class="panel-text" x="750" y="657">{len(BUILDINGS):,} total building footprints</text>')
-    parts.append(f'<text class="panel-text" x="750" y="674">{unnamed_count:,} individually placed urban-fabric buildings</text>')
-    parts.append(f'<text class="panel-text" x="750" y="691">{named_count:,} named, reserved, bridge, gate, and complex buildings</text>')
-    parts.append(f'<text class="panel-small" x="750" y="707">Generated by {escape(GENERATED_BY)} · seed 0x{SEED:X} · 1 SVG unit = 1 m</text>')
+    parts.append('<rect class="panel" x="500" y="610" width="350" height="105" rx="5"/>')
+    parts.append('<text class="panel-title" x="515" y="636">PLAN INVENTORY</text>')
+    parts.append(f'<text class="panel-text" x="515" y="657">{len(BUILDINGS):,} total building footprints</text>')
+    parts.append(f'<text class="panel-text" x="515" y="674">{unnamed_count:,} individually placed urban-fabric buildings</text>')
+    parts.append(f'<text class="panel-text" x="515" y="691">{named_count:,} named, reserved, bridge, gate, and complex buildings</text>')
+    parts.append(f'<text class="panel-small" x="515" y="707">Generated by {escape(GENERATED_BY)} · seed 0x{SEED:X} · 1 SVG unit = 1 m</text>')
     parts.append('</g>')
     parts.append('</svg>')
 
@@ -1409,13 +1928,33 @@ def write_html() -> None:
 
 def main() -> None:
     validate_plan()
+    report = validate_transform()
+    # Render the artifacts first (even on validation failure) so the SVG can be
+    # rasterised for visual inspection while iterating; then fail loudly.
     render_svg()
     write_json()
     write_html()
+    write_sidecar(report)
+    unnamed = sum(not building.named for building in BUILDINGS)
+    frontage = sum(building.id.startswith("omb_f") for building in BUILDINGS)
+    infill = sum(building.id.startswith("omb_i") for building in BUILDINGS)
     print(
-        f"Wrote {SVG_PATH.name}, {JSON_PATH.name}, and {HTML_PATH.name}: "
-        f"{len(BUILDINGS)} buildings, {len(ROADS)} roads, {len(PLACE_MARKS)} named places."
+        f"Wrote {SVG_PATH.name}, {JSON_PATH.name}, {HTML_PATH.name}, and shrink_transform.json: "
+        f"{len(BUILDINGS)} buildings ({unnamed} unnamed = {frontage} frontage + {infill} infill), "
+        f"{len(FIXTURES)} fixtures, {len(ROADS)} roads, {len(PLACE_MARKS)} named places."
     )
+    if report["accepted_road_regressions"]:
+        print(f"Accepted {len(report['accepted_road_regressions'])} pre-existing road regressions.")
+    if report["seam_crossings"]:
+        print(f"Seam crossings (pre-existing, tolerated): {len(report['seam_crossings'])}.")
+    if report["projected_road_points"]:
+        print(f"Core-projected {len(report['projected_road_points'])} road points out of the fixed core.")
+    if report["failures"]:
+        import sys
+        print(f"\nSHRINK VALIDATION FAILED ({len(report['failures'])}):", file=sys.stderr)
+        for failure in report["failures"]:
+            print("  " + failure, file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

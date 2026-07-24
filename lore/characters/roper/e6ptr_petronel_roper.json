@@ -26,9 +26,9 @@
   "mother": "e5hob",
   "children": [],
   "spawn_location": {
-    "x": -302.0,
+    "x": -211.4,
     "y": 0.91,
-    "z": 330.0,
+    "z": 231.0,
     "facing": 3.141593
   },
   "circumstances": [],

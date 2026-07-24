@@ -27,9 +27,9 @@
   "mother": "dtib0",
   "children": [],
   "spawn_location": {
-    "x": 35.0,
+    "x": 15.8,
     "y": 0.91,
-    "z": -257.0,
+    "z": -176.0,
     "facing": 1.570796
   },
   "circumstances": [],

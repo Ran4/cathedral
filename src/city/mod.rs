@@ -42,10 +42,10 @@ use crate::{
 use monuments::build_approach_monuments;
 use plan::{Building, CityPlan, Fixture, Road, Site};
 
-const GROUND_MIN_X: f32 = -710.0;
-const GROUND_MAX_X: f32 = 550.0;
-const GROUND_MIN_Z: f32 = -745.0;
-const GROUND_MAX_Z: f32 = 650.0;
+const GROUND_MIN_X: f32 = -497.0;
+const GROUND_MAX_X: f32 = 385.0;
+const GROUND_MIN_Z: f32 = -521.5;
+const GROUND_MAX_Z: f32 = 455.0;
 const WALL_HEIGHT: f32 = 14.0;
 const WALL_THICKNESS: f32 = 3.2;
 const BUILDING_FLOOR_HEIGHT: f32 = 3.15;
@@ -400,7 +400,7 @@ fn build_city(
         roads: plan.roads.len(),
         sites: plan.sites.len(),
         fixtures: plan.fixtures.len(),
-        wharf_sheds: 15,
+        wharf_sheds: 11,
     });
 }
 
@@ -683,15 +683,15 @@ fn build_ground_context(
 
     // The Serle remains wholly beyond the south wall, exactly as on the map.
     let mut river = MeshData::default();
-    add_surface_quad(&mut river, -690.0, -575.0, -735.0, 640.0, 0.025, 18.0);
+    add_surface_quad(&mut river, -483.0, -402.5, -514.5, 448.0, 0.025, 18.0);
     spawn_batch(commands, meshes, &materials.water, river, "The Serle");
 
-    // The SVG includes fifteen individual wharf sheds and quay reaches outside
+    // The SVG includes eleven individual wharf sheds and quay reaches outside
     // the machine-readable urban-building inventory.  They are nevertheless
     // authored map buildings and therefore belong in the 3D context.
-    for index in 0_usize..15 {
-        let z = 95.0 - index as f32 * 38.0;
-        let center = Vec3::new(-568.0, 3.0, z);
+    for index in 0_usize..11 {
+        let z = 66.5 - index as f32 * 38.0;
+        let center = Vec3::new(-397.6, 3.0, z);
         spawn_box_named(
             commands,
             primitives,
@@ -708,19 +708,19 @@ fn build_ground_context(
             commands,
             &primitives.pyramid,
             &materials.terracotta,
-            Transform::from_xyz(-568.0, 7.3, z).with_scale(Vec3::new(18.5, 3.0, 20.5)),
+            Transform::from_xyz(-397.6, 7.3, z).with_scale(Vec3::new(18.5, 3.0, 20.5)),
             format!("Outer wharf shed {:02} roof", index + 1),
         );
         collision_world.add_box(
-            Vec3::new(-580.0, 0.0, z - 13.5),
-            Vec3::new(-556.0, 8.5, z + 13.5),
+            Vec3::new(-409.6, 0.0, z - 13.5),
+            Vec3::new(-385.6, 8.5, z + 13.5),
         );
 
         spawn_box_named(
             commands,
             primitives,
             &materials.timber,
-            Vec3::new(-590.0, 0.18, z),
+            Vec3::new(-419.6, 0.18, z),
             Vec3::new(16.0, 0.35, 27.0),
             format!("Outer wharf quay {:02}", index + 1),
         );
@@ -729,7 +729,7 @@ fn build_ground_context(
                 commands,
                 primitives,
                 &materials.dark_wood,
-                Vec3::new(-598.0, 1.5, post_z),
+                Vec3::new(-427.6, 1.5, post_z),
                 0.35,
                 3.0,
             );
@@ -2925,7 +2925,7 @@ fn build_bellstand_belfry(
     materials: &CityMaterials,
     collision_world: &mut CollisionWorld,
 ) {
-    let center = Vec2::new(64.0, -270.0);
+    let center = Vec2::new(44.8, -189.0);
     let (half_x, half_z) = (11.0, 12.5);
     let floor_y = 23.5;
     let stage_top = 31.2;
@@ -3123,17 +3123,17 @@ fn build_bellfoot_passage(
 ) {
     // --- Frame ------------------------------------------------------------
     // The tower's north face; the porch projects from it into the square.
-    let face_z = -257.5_f32;
-    let mouth_z = -244.5_f32;
-    let x_w = 54.0_f32; // west wall centreline
-    let x_e = 59.5_f32; // east (spandrel) wall centreline
+    let face_z = -176.5_f32;
+    let mouth_z = -163.5_f32;
+    let x_w = 34.8_f32; // west wall centreline
+    let x_e = 40.3_f32; // east (spandrel) wall centreline
     let wall_th = 0.7_f32;
     let in_w = x_w + wall_th * 0.5; // interior west face
     let in_e = x_e - wall_th * 0.5; // interior east face
     let ceil_y = 3.15_f32; // boarded soffit underside
     let wall_top = 3.95_f32;
     let spandrel_top = 2.45_f32; // the east wall the stair springs from
-    let board_e = 57.7_f32; // boards stop short so the stair underside shows
+    let board_e = 38.5_f32; // boards stop short so the stair underside shows
 
     // One batch per material, committed at the end.
     let mut stone = MeshData::default();
@@ -3311,7 +3311,7 @@ fn build_bellfoot_passage(
 
     // Heavy oak tie-beams span the whole passage — the reference's thick
     // timber bracing, and what the soffit boards hang from.
-    for z in [-247.6_f32, -252.4] {
+    for z in [-166.6_f32, -171.4] {
         spawn_box_named(
             commands,
             city_meshes,
@@ -3326,9 +3326,9 @@ fn build_bellfoot_passage(
     // A solid stone flight: filled step blocks between stone stringer parapets,
     // climbing the tower face to the watch door. Never floating treads over a
     // plank — the earlier build read as a hollow wooden ramp.
-    let x_stair = 59.7_f32;
+    let x_stair = 40.5_f32;
     let stair_half = 1.55_f32;
-    let foot_z = -239.0_f32;
+    let foot_z = -158.0_f32;
     let foot_y = 0.1_f32;
     let n_steps = 42_usize;
     let going = 0.42_f32;
@@ -3454,7 +3454,7 @@ fn build_bellfoot_passage(
         for row in 0..2 {
             tag += 1;
             let h = stable_hash(&format!("bellfoot_west_notice_{tag}"));
-            let z = -246.3 - col as f32 * 1.12 - (h % 22) as f32 / 100.0;
+            let z = -165.3 - col as f32 * 1.12 - (h % 22) as f32 / 100.0;
             let cy = 1.12 + row as f32 * 0.82 + ((h >> 5) % 26) as f32 / 100.0;
             let hw = 0.17 + (h % 12) as f32 / 100.0;
             let hh = 0.22 + ((h >> 3) % 20) as f32 / 100.0;
@@ -3471,7 +3471,7 @@ fn build_bellfoot_passage(
     }
     for col in 0..4 {
         let h = stable_hash(&format!("bellfoot_east_notice_{col}"));
-        let z = -247.6 - col as f32 * 1.55;
+        let z = -166.6 - col as f32 * 1.55;
         let cy = 1.2 + (h % 40) as f32 / 100.0;
         let hw = 0.19 + (h % 10) as f32 / 200.0;
         ab(
@@ -3488,7 +3488,7 @@ fn build_bellfoot_passage(
 
     // --- Lanterns that burn day and night --------------------------------
     let porch_mid_x = (in_w + board_e) * 0.5;
-    for z in [-247.8_f32, -253.2] {
+    for z in [-166.8_f32, -172.2] {
         let head_y = ceil_y - 0.75;
         ab(
             &mut iron,
@@ -3543,7 +3543,7 @@ fn build_bellfoot_passage(
     }
     // Iron wall bracket + lantern by the mouth (the reference's hanging lamp).
     let wl_x = in_w + 0.05;
-    let wl_z = -245.7_f32;
+    let wl_z = -164.7_f32;
     let wl_y = 2.65_f32;
     ab(
         &mut iron,
@@ -3589,8 +3589,8 @@ fn build_bellfoot_passage(
 
     // --- A little market clutter, inhabiting the shade -------------------
     for (bx, bz, r, hgt) in [
-        (in_w + 0.55, -251.0_f32, 0.34_f32, 0.42_f32),
-        (in_w + 0.5, -252.1, 0.30, 0.36),
+        (in_w + 0.55, -170.0_f32, 0.34_f32, 0.42_f32),
+        (in_w + 0.5, -171.1, 0.30, 0.36),
     ] {
         spawn_cylinder(
             commands,
@@ -3605,14 +3605,14 @@ fn build_bellfoot_passage(
         commands,
         city_meshes,
         &materials.timber,
-        Vec3::new(in_w + 0.55, 0.32, -249.6),
+        Vec3::new(in_w + 0.55, 0.32, -168.6),
         Vec3::new(0.7, 0.64, 0.5),
         "Bellfoot crate",
     );
 
     // --- Tower-base plinth: heavy civic masonry on the north face --------
     stone.set_brush([0.80, 0.78, 0.73]);
-    ab(&mut stone, 52.6, 75.4, 0.0, 1.2, face_z, face_z + 0.5);
+    ab(&mut stone, 33.4, 56.2, 0.0, 1.2, face_z, face_z + 0.5);
     stone.reset_brush();
 
     // --- Commit the batches ----------------------------------------------
@@ -3653,7 +3653,7 @@ fn build_saint_maren_tower(
     materials: &CityMaterials,
     collision_world: &mut CollisionWorld,
 ) {
-    let center = Vec3::new(-253.0, 8.5, -402.0);
+    let center = Vec3::new(-158.5, 8.5, -285.6);
     spawn_box_named(
         commands,
         meshes,
@@ -3792,8 +3792,8 @@ fn build_parish_towers(
 }
 
 fn build_old_sluice_face(commands: &mut Commands, meshes: &CityMeshes, materials: &CityMaterials) {
-    let face_z = -588.86;
-    for x in [-318.0, -292.0] {
+    let face_z = -405.86;
+    for x in [-226.5, -200.5] {
         spawn_box_named(
             commands,
             meshes,
@@ -3811,7 +3811,7 @@ fn build_old_sluice_face(commands: &mut Commands, meshes: &CityMeshes, materials
             "Old Sluice arch lintel",
         );
     }
-    for x in [-329.0, -305.0, -281.0] {
+    for x in [-237.5, -213.5, -189.5] {
         spawn_box_named(
             commands,
             meshes,
@@ -3832,7 +3832,7 @@ fn build_charnel_and_ilvane_details(
         commands,
         meshes,
         &materials.dark_wood,
-        Vec3::new(-284.08, 1.35, -365.0),
+        Vec3::new(-189.58, 1.35, -248.6),
         Vec3::new(0.16, 2.7, 1.65),
         "Saint Maren's charnel door",
     );
@@ -3840,7 +3840,7 @@ fn build_charnel_and_ilvane_details(
         commands,
         meshes,
         &materials.limestone,
-        Vec3::new(-284.2, 2.95, -365.0),
+        Vec3::new(-189.7, 2.95, -248.6),
         Vec3::new(0.5, 0.45, 2.4),
         "Saint Maren's worn charnel lintel",
     );
@@ -3851,7 +3851,7 @@ fn build_charnel_and_ilvane_details(
         commands,
         meshes,
         &materials.fieldstone,
-        Vec3::new(174.5, 1.7, -66.45),
+        Vec3::new(122.0, 1.7, -38.85),
         Vec3::new(2.6, 3.4, 0.22),
         "Mortared Ilvane Chapel door",
     );
@@ -3859,7 +3859,7 @@ fn build_charnel_and_ilvane_details(
         commands,
         meshes,
         &materials.window,
-        Vec3::new(198.36, 2.0, -92.0),
+        Vec3::new(145.86, 2.0, -64.4),
         Vec3::new(0.12, 0.65, 0.45),
         "Ilvane anchorhold north squint",
     );
@@ -3867,7 +3867,7 @@ fn build_charnel_and_ilvane_details(
         commands,
         meshes,
         &materials.timber,
-        Vec3::new(198.55, 1.05, -92.0),
+        Vec3::new(146.05, 1.05, -64.4),
         Vec3::new(0.55, 0.15, 1.2),
         "Ilvane anchorhold alms shelf",
     );
@@ -4401,23 +4401,23 @@ fn add_mouth_arch(
 }
 
 fn build_ropewalk(commands: &mut Commands, meshes: &CityMeshes, materials: &CityMaterials) {
-    for z in (232..=288).step_by(8) {
+    for z in (162..=202).step_by(8) {
         spawn_box_named(
             commands,
             meshes,
             &materials.timber,
-            Vec3::new(-260.0, 1.35, z as f32),
+            Vec3::new(-182.0, 1.35, z as f32),
             Vec3::new(0.18, 2.7, 0.18),
             "The Cut ropewalk post",
         );
     }
-    for x in [-260.8, -260.25, -259.7] {
+    for x in [-182.8, -182.25, -181.7] {
         spawn_box_named(
             commands,
             meshes,
             &materials.dark_wood,
-            Vec3::new(x, 1.9, 260.0),
-            Vec3::new(0.035, 0.035, 58.0),
+            Vec3::new(x, 1.9, 182.0),
+            Vec3::new(0.035, 0.035, 40.6),
             "The Cut ropewalk line",
         );
     }
@@ -4434,7 +4434,7 @@ fn build_osanne_stall(
         meshes,
         materials,
         collision_world,
-        Vec3::new(18.0, 0.0, 350.0),
+        Vec3::new(12.6, 0.0, 245.0),
         Vec2::new(5.2, 3.0),
         -8.0_f32.to_radians(),
         1,
@@ -4443,12 +4443,12 @@ fn build_osanne_stall(
 }
 
 fn build_wharf_cranes(commands: &mut Commands, meshes: &CityMeshes, materials: &CityMaterials) {
-    for (index, z) in [52.0, -176.0, -404.0].into_iter().enumerate() {
+    for (index, z) in [36.4, -123.2, -282.8].into_iter().enumerate() {
         spawn_yard_crane(
             commands,
             meshes,
             materials,
-            Vec3::new(-601.0, 0.0, z),
+            Vec3::new(-430.6, 0.0, z),
             PI * 0.5,
             &format!("Outer Serle wharf crane {}", index + 1),
         );
@@ -7016,11 +7016,11 @@ fn build_fortifications(
     collision_world: &mut CollisionWorld,
 ) {
     let openings = [
-        (Vec2::new(-35.0, 510.0), 18.0),
-        (Vec2::new(495.0, 135.0), 28.0),
-        (Vec2::new(15.0, -665.0), 18.0),
-        (Vec2::new(-505.0, -135.0), 37.0),
-        (Vec2::new(-455.0, -535.0), 6.0),
+        (Vec2::new(-24.5, 357.0), 18.0),
+        (Vec2::new(346.5, 94.5), 28.0),
+        (Vec2::new(10.5, -465.5), 18.0),
+        (Vec2::new(-353.5, -94.5), 37.0),
+        (Vec2::new(-318.5, -374.5), 6.0),
     ];
 
     for (start, end) in plan
@@ -7186,22 +7186,22 @@ fn build_gatehouses(
     let houses = [
         (
             "Wool Gate upper store",
-            Vec3::new(-35.0, 12.0, 510.0),
+            Vec3::new(-24.5, 12.0, 357.0),
             Vec3::new(58.0, 7.0, 7.0),
         ),
         (
             "Stone Gate upper store",
-            Vec3::new(495.0, 12.0, 135.0),
+            Vec3::new(346.5, 12.0, 94.5),
             Vec3::new(7.0, 7.0, 68.0),
         ),
         (
             "Harne Gate upper store",
-            Vec3::new(15.0, 12.0, -665.0),
+            Vec3::new(10.5, 12.0, -465.5),
             Vec3::new(58.0, 7.0, 7.0),
         ),
         (
             "River Gate upper store",
-            Vec3::new(-505.0, 12.0, -135.0),
+            Vec3::new(-353.5, 12.0, -94.5),
             Vec3::new(7.0, 7.0, 82.0),
         ),
     ];
@@ -7681,6 +7681,7 @@ mod tests {
             .init_asset::<Mesh>()
             .init_asset::<Image>()
             .init_asset::<StandardMaterial>()
+            .init_asset::<WindowGlassMaterial>()
             .init_resource::<CollisionWorld>()
             .add_systems(Startup, build_city);
         app.update();
@@ -7878,6 +7879,7 @@ mod tests {
             .init_asset::<Mesh>()
             .init_asset::<Image>()
             .init_asset::<StandardMaterial>()
+            .init_asset::<WindowGlassMaterial>()
             .init_resource::<CollisionWorld>()
             .add_systems(Startup, build_city);
 
@@ -7885,15 +7887,19 @@ mod tests {
 
         let world = app.world_mut();
         let stats = *world.resource::<CityBuildStats>();
-        assert_eq!(stats.planned_buildings, 2_566);
+        // 0.7x city-shrink revision (see plan.rs): fewer ordinary houses and
+        // market stalls; named/road/place/site inventories preserved.
+        assert_eq!(stats.planned_buildings, 1_108);
         // The Lanthorn is rendered by CathedralPlugin; every other footprint is
         // rendered by this plugin from the authoritative plan.
-        assert_eq!(stats.rendered_plan_buildings, 2_565);
+        assert_eq!(stats.rendered_plan_buildings, 1_107);
         assert_eq!(stats.named_places, 69);
         assert_eq!(stats.roads, 49);
         assert_eq!(stats.sites, 23);
-        assert_eq!(stats.fixtures, 91);
-        assert_eq!(stats.wharf_sheds, 15);
+        assert_eq!(stats.fixtures, 72);
+        // wharf_sheds is built by the 3D wharf loop in this file (x=-397.6,
+        // 11 sheds at the kept 38 m pitch), matching the regenerated SVG.
+        assert_eq!(stats.wharf_sheds, 11);
 
         let place_markers = world
             .query::<&LorePlaceNumber>()
@@ -7925,7 +7931,9 @@ mod tests {
                 .count(),
             4
         );
-        assert!(world.resource::<CollisionWorld>().len() > 3_000);
+        let collider_count = world.resource::<CollisionWorld>().len();
+        // ~1,032 buildings post-shrink (was 2,566 / > 3_000 colliders).
+        assert!(collider_count > 1_400, "{collider_count} colliders");
     }
 
     /// Every water fixture in the plan is built, marked for its loop, and asks
@@ -7938,6 +7946,7 @@ mod tests {
             .init_asset::<Mesh>()
             .init_asset::<Image>()
             .init_asset::<StandardMaterial>()
+            .init_asset::<WindowGlassMaterial>()
             .init_resource::<CollisionWorld>()
             .add_systems(Startup, build_city);
         app.update();
@@ -7998,6 +8007,7 @@ mod tests {
             .init_asset::<Mesh>()
             .init_asset::<Image>()
             .init_asset::<StandardMaterial>()
+            .init_asset::<WindowGlassMaterial>()
             .init_resource::<CollisionWorld>()
             .add_systems(Startup, build_city);
         app.update();
@@ -8022,11 +8032,11 @@ mod tests {
     fn wall_openings_interrupt_the_curtain_at_every_gate() {
         let plan = plan::load();
         let openings = [
-            (Vec2::new(-35.0, 510.0), 18.0),
-            (Vec2::new(495.0, 135.0), 28.0),
-            (Vec2::new(15.0, -665.0), 18.0),
-            (Vec2::new(-505.0, -135.0), 37.0),
-            (Vec2::new(-455.0, -535.0), 6.0),
+            (Vec2::new(-24.5, 357.0), 18.0),
+            (Vec2::new(346.5, 94.5), 28.0),
+            (Vec2::new(10.5, -465.5), 18.0),
+            (Vec2::new(-353.5, -94.5), 37.0),
+            (Vec2::new(-318.5, -374.5), 6.0),
         ];
         for (gate, width) in openings {
             let mut matched_wall = false;
@@ -8075,14 +8085,14 @@ mod tests {
         assert_eq!(gaunt.polygon.len(), 8);
         assert_eq!(triangulate_polygon(&gaunt.polygon).len(), 6);
 
-        let passage = Vec2::new(-235.0, 20.0);
+        let passage = Vec2::new(-161.8, 10.1);
         assert!(!point_in_polygon_for_test(passage, &gaunt.polygon));
 
         let mut collision_world = CollisionWorld::default();
         add_footprint_colliders(&mut collision_world, &gaunt.polygon, 0.0, 8.0);
         assert!(
             collision_world
-                .nearest_ray_hit(Vec3::new(-239.0, 1.0, 20.0), Vec3::X, 7.0)
+                .nearest_ray_hit(Vec3::new(-165.8, 1.0, 10.1), Vec3::X, 7.0)
                 .is_none(),
             "the triangulated collider must not seal Gaunt House's passage"
         );

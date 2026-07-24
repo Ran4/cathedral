@@ -1540,7 +1540,7 @@ cart is legible in the rendered city. With a clean committed-default config (and
 offline), run:
 
 ```sh
-CATHEDRAL_DRIVE='sleep 2; tp -35 16 530 0 -20; shot brede_cart_entry; sleep 20; shot brede_cart_route; quit' cargo run
+CATHEDRAL_DRIVE='sleep 2; tp -24 16 377 0 -20; shot brede_cart_entry; sleep 20; shot brede_cart_route; quit' cargo run
 ```
 
 Review the two archived screenshots and `logs/latest_session/logs.jsonl`: the first must visibly

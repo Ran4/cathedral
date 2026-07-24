@@ -225,7 +225,7 @@ pub(super) fn setup_weather_rendering(
             scattering_asymmetry: 0.62,
             ..default()
         },
-        Transform::from_xyz(-30.0, 10.0, -70.0).with_scale(Vec3::new(1_150.0, 21.0, 1_180.0)),
+        Transform::from_xyz(-21.0, 10.0, -49.0).with_scale(Vec3::new(805.0, 21.0, 826.0)),
         Visibility::Hidden,
     ));
     commands.spawn((
@@ -240,7 +240,7 @@ pub(super) fn setup_weather_rendering(
             scattering_asymmetry: 0.54,
             ..default()
         },
-        Transform::from_xyz(-315.0, 7.0, -145.0).with_scale(Vec3::new(390.0, 15.0, 980.0)),
+        Transform::from_xyz(-213.5, 7.0, -101.5).with_scale(Vec3::new(273.0, 15.0, 686.0)),
         Visibility::Hidden,
     ));
 

@@ -81,9 +81,9 @@ const POLL_STEP_SECONDS: f64 = 1.0;
 /// served in time would read as a crowd that chose not to speak.
 const TURN_SPACING_SECONDS: f64 = 3.2;
 
-/// The city, from `lore/characters/**/*.json`.
-const CITY_MIN: Vec3 = Vec3::new(-520.0, 0.91, -680.0);
-const CITY_MAX: Vec3 = Vec3::new(505.0, 0.91, 495.0);
+/// The city, from `lore/characters/**/*.json` (0.7x shrunk layout).
+const CITY_MIN: Vec3 = Vec3::new(-364.0, 0.91, -476.0);
+const CITY_MAX: Vec3 = Vec3::new(353.5, 0.91, 346.5);
 
 #[derive(Clone, Default)]
 struct SharedCognition(Rc<RefCell<FakeCognition>>);

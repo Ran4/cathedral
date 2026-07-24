@@ -12,7 +12,7 @@ original generated material artwork — cathedral limestone, weathered city
 plaster, half-timber infill, dark fieldstone, terracotta and slate roofs, and
 the great rose window.
 
-The cathedral, **the Lanthorn**, opens into a roughly 1.2 × 1.0 km walled city.
+The cathedral, **the Lanthorn**, opens into a roughly 840 × 700 m walled city.
 Most streets pinch and change width between independently offset façades; each
 block hides a 4.6 m route that doglegs twice, lateral alleys, projecting upper
 floors, covered passages, small courts, and frequent overhead bridges between
@@ -39,8 +39,8 @@ Two things make Ombreval more than scenery:
 > follows is only the shape of it. Note that most of the lore is *not* directly
 > represented in the game.
 
-**Ombreval** is a free walled city-state on the river **Serle**, roughly 1.2 km
-west-to-east and 1.0 km north-to-south. Its oldest ground was a ford-market;
+**Ombreval** is a free walled city-state on the river **Serle**, roughly 840 m
+west-to-east and 700 m north-to-south. Its oldest ground was a ford-market;
 the Lanthorn — properly the Great Church of Saint Ambrelle, and the city's
 cathedral, civic clock, largest employer, and perpetual building project — rose
 a little west of the centre, its west front and Great Rose facing the stepped

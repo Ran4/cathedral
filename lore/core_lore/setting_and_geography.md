@@ -43,8 +43,8 @@ Praelucent a temporal monarch.
 ## Ombreval at a glance
 
 **Ombreval** is a free, walled city-state beside the river **Serle**, which now
-runs west to east beyond its south wall. It measures roughly 1.2 kilometres
-west to east and 1.0 kilometre north to south, also described locally as twelve
+runs west to east beyond its south wall. It measures roughly 840 metres
+west to east and 700 metres north to south, also described locally as twelve
 hundred by a thousand paces.
 Its name has long invited jokes about a city named for shadow becoming famous
 for light.

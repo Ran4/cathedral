@@ -1817,7 +1817,7 @@ mod tests {
     fn routine_world_sounds_route_without_creating_npc_reflex_stimuli() {
         use crate::soundscape::{SoundscapeCue, SpecialWell};
 
-        let market = Vec3::new(-21.375, 0.91, 356.625);
+        let market = Vec3::new(-14.9625, 0.91, 249.6375);
         assert_eq!(
             soundscape_route("market_cry", market),
             SoundscapeRoute {
@@ -1839,11 +1839,11 @@ mod tests {
 
         // The Tallage balance supplements the authoritative coin sound at its
         // exact authored beam; an ordinary market sale keeps coins alone.
-        let tallage = soundscape_route("coin_clink", Vec3::new(-304.875, 0.91, 90.125));
+        let tallage = soundscape_route("coin_clink", Vec3::new(-213.4125, 0.91, 63.0875));
         assert_eq!(
             tallage.cue,
             Some(SoundscapeCue::MarketMeasurement {
-                position: Vec3::new(-306.0, 1.5, 65.0),
+                position: Vec3::new(-214.2, 1.5, 45.5),
             })
         );
         assert!(!tallage.replace_standard);
