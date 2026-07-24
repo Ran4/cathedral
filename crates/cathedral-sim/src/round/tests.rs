@@ -4830,8 +4830,9 @@ fn every_food_pitch_uses_the_shared_shelter_map() {
 
     assert_eq!(
         round.stalls.len(),
-        8,
-        "the committed food document still has eight stalls"
+        13,
+        "the committed food document still has thirteen stalls \
+         (eight food + the lore-wave chandlery/wares/simples/badge pitches)"
     );
     for stall in &round.stalls {
         assert!(

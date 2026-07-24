@@ -84,6 +84,9 @@ pub(crate) struct ItemPropAssets {
     fish_fin: Handle<StandardMaterial>,
     copper: Handle<StandardMaterial>,
     generic_item: Handle<StandardMaterial>,
+    apple_red: Handle<StandardMaterial>,
+    pale_wax: Handle<StandardMaterial>,
+    parchment: Handle<StandardMaterial>,
 }
 
 /// Creates the bounded shared handles every hand prop draws from. The body
@@ -118,6 +121,9 @@ pub(crate) fn setup_item_prop_assets(
             ..default()
         }),
         generic_item: materials.add(matte(Color::srgb(0.74, 0.66, 0.24))),
+        apple_red: materials.add(matte(Color::srgb(0.62, 0.22, 0.14))),
+        pale_wax: materials.add(matte(Color::srgb(0.85, 0.80, 0.62))),
+        parchment: materials.add(matte(Color::srgb(0.82, 0.76, 0.60))),
     });
 }
 
@@ -178,13 +184,43 @@ fn spawn_prop_root(
                     fade.clone(),
                 ));
             }
-            "stew" => {
-                // A squat cylinder standing in for a bowl.
+            "stew" | "ale_pot" | "cup" | "bowl" => {
+                // A squat cylinder standing in for a bowl, pot or cup.
                 prop.spawn((
                     Name::new("Bowl of stew"),
                     Mesh3d(assets.coin_mesh.clone()),
                     MeshMaterial3d(assets.generic_item.clone()),
                     Transform::from_scale(Vec3::new(0.9, 0.7, 0.9)),
+                    fade.clone(),
+                ));
+            }
+            "apple" => {
+                prop.spawn((
+                    Name::new("Apple"),
+                    Mesh3d(assets.fish_body_mesh.clone()),
+                    MeshMaterial3d(assets.apple_red.clone()),
+                    Transform::from_scale(Vec3::splat(0.05)),
+                    fade.clone(),
+                ));
+            }
+            "candle" => {
+                // A thin upright stick of wax — the carried light of the
+                // Wickmarket chandlers (unlit; lamplight stays the lamps' job).
+                prop.spawn((
+                    Name::new("Candle"),
+                    Mesh3d(assets.coin_mesh.clone()),
+                    MeshMaterial3d(assets.pale_wax.clone()),
+                    Transform::from_scale(Vec3::new(0.12, 3.6, 0.12)),
+                    fade.clone(),
+                ));
+            }
+            "letter" | "page" | "book" => {
+                // A flat parchment leaf on the palm.
+                prop.spawn((
+                    Name::new("Paper"),
+                    Mesh3d(assets.generic_item_mesh.clone()),
+                    MeshMaterial3d(assets.parchment.clone()),
+                    Transform::from_scale(Vec3::new(0.75, 0.06, 1.0)),
                     fade.clone(),
                 ));
             }

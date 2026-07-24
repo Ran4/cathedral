@@ -105,7 +105,7 @@ offer_item {"item_id": "fzbn9"}                      # Without target: offered t
 accept_offered_item {"item_id": "fzbn9"}             # Take an item currently offered to you
 decline_offer {"item_id": "fzbn9"}                   # Turn down an item offered to you (the offerer keeps it)
 retract_offer {"item_id": "fzbn9"}                   # Withdraw an offer you made
-eat {"item_id": "fzbn9"}                             # Eat something you hold; it is gone for good
+eat {"item_id": "fzbn9"}                             # Eat (or drink) something you hold; it is gone for good
 go_to {"place_id": "pl_x2vw"}                        # Set off for a place you know (an entry in places_you_know); you arrive after walking there
 go_to {"person": "4bfk4"}                            # Set off toward someone you can currently see; you follow while you can see them
 stop {}                                              # Abandon your go_to errand and go back to your own business

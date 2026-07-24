@@ -123,6 +123,12 @@ vendors' sheets gain a `you_sell` price line so they stop inventing prices.
 
 ## 5. The catalog
 
+*(2026-07-24: superseded in size — the lore-item wave
+(`features/implemented/add_items_described_in_the_lore.md`) grew the catalog to ~55 kinds
+(Tier 1+2: ale, water, candles, staple foods, tools, papers, wearables, keepsakes…), added
+drink-side `thirst` to `Edible`, and five more stalls (chandlery, wares ×2, simples, badges).
+`assets/world/items.json` is the source of truth; the table below is the original M0–M5 core.)*
+
 Deliberately small — one coin, four foods. No item explosion: one bread, two named fishes, one
 tavern dish. Everything else the market *talks about* (honey, cheese, eggs, simples) stays talk
 until a feature needs it, and there is no generic "fish" — a fish on a slab in Ombreval is a

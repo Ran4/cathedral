@@ -13,7 +13,7 @@ use serde_json::{Map, Value};
 use crate::{
     GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS, GOAL_MAX_CHARS, GOAL_NONE, HEARING_RADIUS_M,
     HUNGER_MAX, ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS, PLAYER_SPEECH_MAX_CHARS,
-    WALK_SPEED_MPS,
+    THIRST_MAX, WALK_SPEED_MPS,
     character::{ActiveGesture, IntentTarget, TravelIntent},
     error::{ActionError, ActionErrorCode},
     event::DomainEvent,
@@ -1000,6 +1000,10 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
     // (`features/food_and_items/03_hunger.md` §2). An ad-hoc test kind that is
     // edible-by-tolerance carries no catalog satiety and simply feeds nothing.
     let satiety = world.item_catalog.satiety(&item).unwrap_or(0);
+    // Drinks (thirst > satiety in the catalog) run through the same verb and
+    // consume rule; only the narrated verb and the thirst refill differ.
+    let quench = world.item_catalog.thirst_quench(&item).unwrap_or(0);
+    let is_drink = world.item_catalog.is_drink(&item);
     // `eat` consumes exactly one unit, so the wording is always singular.
     let eaten_phrase = counted_phrase(world, &item, 1);
     let eaten_noun = counted_noun(world, &item, 1);
@@ -1020,13 +1024,20 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
     if let Some(eater) = world.characters.get_mut(actor_id) {
         let hunger = &mut eater.state.needs.hunger;
         *hunger = (*hunger + f64::from(satiety)).min(HUNGER_MAX);
+        let thirst = &mut eater.state.needs.thirst;
+        *thirst = (*thirst + f64::from(quench)).min(THIRST_MAX);
     }
 
+    let (past, present) = if is_drink {
+        ("drank", "drinks")
+    } else {
+        ("ate", "eats")
+    };
     let lines = hearers
         .iter()
         .map(|observer| {
             let eater = cap_first(&identify_ids(world, observer, actor_id));
-            (observer.clone(), format!("{eater} ate {eaten_phrase}"))
+            (observer.clone(), format!("{eater} {past} {eaten_phrase}"))
         })
         .collect();
     deliver(world, lines, false);
@@ -1034,7 +1045,7 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
     world.touch_public_state();
     world.assert_invariants();
     Ok(format!(
-        "{} eats the {eaten_noun}",
+        "{} {present} the {eaten_noun}",
         world.characters[actor_id].name()
     ))
 }
@@ -2179,6 +2190,44 @@ mod tests {
         assert_eq!(error.code, ActionErrorCode::ItemCommitted);
         assert_eq!(world.items[&apple].quantity, 1);
         assert_eq!(world.offers[&apple].quantity, 1);
+        world.assert_invariants();
+    }
+
+    #[test]
+    fn drinking_refills_thirst_and_is_narrated_as_drinking() {
+        let mut world = displacement_world();
+        let drinker = ActorId::from_raw("giver");
+        let ale = ItemId::from_raw("ale01");
+        world.add_item(Item::new(ale.clone(), "ale"));
+        world
+            .characters
+            .get_mut(&drinker)
+            .unwrap()
+            .state
+            .holds
+            .push(ale.clone());
+        {
+            let needs = &mut world.characters.get_mut(&drinker).unwrap().state.needs;
+            needs.thirst = 40.0;
+            needs.hunger = 40.0;
+        }
+
+        let result =
+            apply_action(&mut world, &drinker, "eat", &json!({"item_id": "ale01"})).unwrap();
+
+        assert_eq!(result, "Giver drinks the pot of ale");
+        let needs = &world.characters[&drinker].state.needs;
+        assert_eq!(needs.thirst, 200.0, "ale quenches 160");
+        assert_eq!(needs.hunger, 65.0, "ale feeds a little (25)");
+        assert!(!world.items.contains_key(&ale));
+        // The hearers' percept uses the same verb.
+        assert!(
+            world.characters[&ActorId::from_raw("receiver")]
+                .inbox()
+                .iter()
+                .any(|line| line.contains("drank a pot of ale")),
+            "hearers hear a drink, not a meal"
+        );
         world.assert_invariants();
     }
 

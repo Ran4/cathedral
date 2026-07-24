@@ -411,8 +411,10 @@ mod tests {
         assert_eq!(snapshot.actors.len(), cast_counts(&root).0 + 1);
         let encoded = serde_json::to_vec(&snapshot).unwrap();
         assert!(
-            encoded.len() <= 128 * 1024,
-            "public snapshot is {} bytes, over 128 KiB",
+            encoded.len() <= 160 * 1024,
+            "public snapshot is {} bytes, over 160 KiB \
+             (bound raised from 128 KiB when the lore-item wave seeded ~65 held \
+             goal items — apples, knives, blankets, kindling)",
             encoded.len()
         );
     }

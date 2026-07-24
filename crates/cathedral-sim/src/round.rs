@@ -4567,6 +4567,12 @@ fn silent_eat(world: &mut World, eater: &ActorId, item_id: &ItemId) -> bool {
     let Some(satiety) = world.item_catalog.satiety(&item) else {
         return false; // not food (a race, or a bad decision) — eat nothing
     };
+    let quench = world.item_catalog.thirst_quench(&item).unwrap_or(0);
+    let verb = if world.item_catalog.is_drink(&item) {
+        "drank"
+    } else {
+        "ate"
+    };
     let noun = world.item_catalog.display_name(&item);
     if world.consume_item_quantity(eater, item_id, 1).is_err() {
         return false;
@@ -4574,7 +4580,9 @@ fn silent_eat(world: &mut World, eater: &ActorId, item_id: &ItemId) -> bool {
     if let Some(character) = world.characters.get_mut(eater) {
         let hunger = &mut character.state.needs.hunger;
         *hunger = (*hunger + f64::from(satiety)).min(HUNGER_MAX);
-        character.remember_percept(format!("You ate a {noun}."));
+        let thirst = &mut character.state.needs.thirst;
+        *thirst = (*thirst + f64::from(quench)).min(crate::THIRST_MAX);
+        character.remember_percept(format!("You {verb} a {noun}."));
     }
     world.touch_public_state();
     true
@@ -5547,7 +5555,7 @@ fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId)
         }
         (ItemMatcher::new(kind.clone()), price, true)
     } else {
-        let mut best: Option<(u32, ItemId, Item)> = None;
+        let mut best: Option<(u32, u32, ItemId, Item)> = None;
         for stock_id in world.characters.get(&vendor)?.holds() {
             let Some(item) = world.items.get(stock_id) else {
                 continue;
@@ -5564,14 +5572,21 @@ fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId)
             if item_price > buyer_sparks {
                 continue;
             }
-            let better = best.as_ref().is_none_or(|(best_price, best_id, _)| {
-                item_price < *best_price || (item_price == *best_price && stock_id < best_id)
-            });
+            // Cheapest wins; at the same price the most filling wins (a spark
+            // buys a herring, not an egg, off a mixed provisions board), then
+            // the id tie-break keeps it deterministic.
+            let satiety = world.item_catalog.satiety(item).unwrap_or(0);
+            let better = best
+                .as_ref()
+                .is_none_or(|(best_price, best_satiety, best_id, _)| {
+                    (item_price, std::cmp::Reverse(satiety), stock_id)
+                        < (*best_price, std::cmp::Reverse(*best_satiety), best_id)
+                });
             if better {
-                best = Some((item_price, stock_id.clone(), item.clone()));
+                best = Some((item_price, satiety, stock_id.clone(), item.clone()));
             }
         }
-        let (price, _stock_id, item) = best?;
+        let (price, _satiety, _stock_id, item) = best?;
         let matcher = ItemMatcher {
             kind: item.kind.clone(),
             metadata: item.metadata.clone(),

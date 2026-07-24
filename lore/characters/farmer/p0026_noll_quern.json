@@ -33,5 +33,6 @@
   "memories": [],
   "core_character_description": "You are a pruner in Wick Ward streets, working beside the Quern household. Irregular work and neighbours' small alms barely keep you fed. You bargain cheerfully and remember exact sums. Today you need to return a borrowed knife. You have ink on one thumb.",
   "extended_character_description": "",
+  "holds": ["kn004"],
   "goal": "Return a borrowed knife"
 }

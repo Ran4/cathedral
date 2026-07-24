@@ -9,8 +9,24 @@
     },
     "provisions": {
       "occupations": ["food_provisioner", "grocer_and_spicer", "market_seller"],
-      "listings": [{ "kind": "herring" }],
-      "restock": [{ "kind": "herring", "quantity": 6 }]
+      "listings": [
+        { "kind": "herring" },
+        { "kind": "apple" },
+        { "kind": "cheese" },
+        { "kind": "egg" },
+        { "kind": "milk" },
+        { "kind": "honey" },
+        { "kind": "salt" }
+      ],
+      "restock": [
+        { "kind": "herring", "quantity": 6 },
+        { "kind": "apple", "quantity": 6 },
+        { "kind": "cheese", "quantity": 3 },
+        { "kind": "egg", "quantity": 8 },
+        { "kind": "milk", "quantity": 3 },
+        { "kind": "honey", "quantity": 2 },
+        { "kind": "salt", "quantity": 2 }
+      ]
     },
     "fish": {
       "occupations": ["fish_trader", "market_seller"],
@@ -22,8 +38,11 @@
     },
     "pot": {
       "occupations": ["cook", "tavern_worker"],
-      "listings": [{ "kind": "stew" }],
-      "restock": [],
+      "listings": [{ "kind": "ale" }, { "kind": "pie" }],
+      "restock": [
+        { "kind": "ale", "quantity": 12 },
+        { "kind": "pie", "quantity": 6 }
+      ],
       "conjure_per_serving": "stew"
     },
     "grain": {
@@ -48,6 +67,67 @@
         { "kind": "cloth", "metadata": { "grade": "broadcloth" } }
       ],
       "restock": []
+    },
+    "chandlery": {
+      "occupations": ["chandler"],
+      "listings": [
+        { "kind": "candle" },
+        { "kind": "candle", "metadata": { "fat": "beeswax" } },
+        { "kind": "lamp_oil" },
+        { "kind": "wick" },
+        { "kind": "firewood" }
+      ],
+      "restock": [
+        { "kind": "candle", "quantity": 10 },
+        { "kind": "candle", "metadata": { "fat": "beeswax" }, "quantity": 4 },
+        { "kind": "lamp_oil", "quantity": 6 },
+        { "kind": "wick", "quantity": 6 },
+        { "kind": "firewood", "quantity": 6 }
+      ]
+    },
+    "wares": {
+      "occupations": ["market_seller"],
+      "listings": [
+        { "kind": "bucket" },
+        { "kind": "basket" },
+        { "kind": "rope" },
+        { "kind": "knife" },
+        { "kind": "cup" },
+        { "kind": "bowl" },
+        { "kind": "cook_pot" },
+        { "kind": "blanket" },
+        { "kind": "purse" },
+        { "kind": "dice" },
+        { "kind": "leather" },
+        { "kind": "keepsake", "metadata": { "kind": "wooden button" } }
+      ],
+      "restock": [
+        { "kind": "bucket", "quantity": 2 },
+        { "kind": "basket", "quantity": 3 },
+        { "kind": "rope", "quantity": 3 },
+        { "kind": "knife", "quantity": 2 },
+        { "kind": "cup", "quantity": 4 },
+        { "kind": "bowl", "quantity": 4 },
+        { "kind": "cook_pot", "quantity": 1 },
+        { "kind": "blanket", "quantity": 2 },
+        { "kind": "purse", "quantity": 2 },
+        { "kind": "dice", "quantity": 2 },
+        { "kind": "leather", "quantity": 2 },
+        { "kind": "keepsake", "metadata": { "kind": "wooden button" }, "quantity": 4 }
+      ]
+    },
+    "simples": {
+      "occupations": ["healer"],
+      "listings": [{ "kind": "simples" }, { "kind": "bandage" }],
+      "restock": [
+        { "kind": "simples", "quantity": 4 },
+        { "kind": "bandage", "quantity": 6 }
+      ]
+    },
+    "badges": {
+      "occupations": ["market_seller", "church_attendant"],
+      "listings": [{ "kind": "badge", "metadata": { "kind": "pilgrim" } }],
+      "restock": [{ "kind": "badge", "metadata": { "kind": "pilgrim" }, "quantity": 8 }]
     }
   },
   "stalls": [
@@ -90,6 +170,31 @@
       "name": "The Bell and Ladle pot", "site": "The Bellstand", "trade": "pot",
       "pitch_offset": [0.0, 0.0], "preferred_vendor": "gr8tp",
       "open": { "offices": ["kindling", "dayspring", "high_wick", "waning", "lamplight", "snuffing"] }
+    },
+    {
+      "name": "The Wickmarket chandlery stall", "site": "The Wickmarket", "trade": "chandlery",
+      "pitch_offset": [0.0, 6.5], "preferred_vendor": "dpcrk",
+      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+    },
+    {
+      "name": "The Wickmarket wares stall", "site": "The Wickmarket", "trade": "wares",
+      "pitch_offset": [-6.5, 4.5],
+      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+    },
+    {
+      "name": "The Maren's Green wares stall", "site": "Maren's Green", "trade": "wares",
+      "pitch_offset": [-8.0, 4.0],
+      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+    },
+    {
+      "name": "The Maren's Green simples bench", "site": "Maren's Green", "trade": "simples",
+      "pitch_offset": [-4.0, 10.0],
+      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+    },
+    {
+      "name": "The Gradine badge stall", "site": "The Gradine", "trade": "badges",
+      "pitch_offset": [2.5, 2.5], "preferred_vendor": "p0014",
+      "open": { "offices": ["dayspring", "high_wick", "waning"] }
     }
   ],
   "counters": [
@@ -127,6 +232,10 @@
   ],
   "working_capital": { "p008s": 30, "e7mil": 24, "davqn": 24, "e1skl": 48 },
   "historical_stock": [
-    { "owner": "p008s", "kind": "grain", "quantity": 6 }
+    { "owner": "p008s", "kind": "grain", "quantity": 6 },
+    { "owner": "dpcrk", "kind": "candle", "quantity": 6 },
+    { "owner": "dpcrk", "kind": "lamp_oil", "quantity": 4 },
+    { "owner": "g5brt", "kind": "ale", "quantity": 8 },
+    { "owner": "gr8tp", "kind": "ale", "quantity": 8 }
   ]
 }

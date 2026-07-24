@@ -159,10 +159,16 @@ impl Item {
 // ---------------------------------------------------------------- the catalog
 
 /// A kind's edibility (`eat` applies `satiety` to the hunger gauge in M2).
+/// Drinks are edible kinds whose `thirst` outweighs their `satiety`: `eat`
+/// applies both gauges, so a pot of ale quenches more than it feeds
+/// (`features/implemented/add_items_described_in_the_lore.md`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Edible {
     pub satiety: u32,
+    /// What one unit restores on the thirst gauge. 0 (the default) for dry food.
+    #[serde(default)]
+    pub thirst: u32,
 }
 
 fn default_true() -> bool {
@@ -359,6 +365,23 @@ impl ItemCatalog {
             .map(|edible| edible.satiety)
     }
 
+    /// What an `eat` of this item restores on the thirst gauge, if it is edible.
+    pub fn thirst_quench(&self, item: &Item) -> Option<u32> {
+        self.kinds
+            .get(&item.kind)
+            .and_then(|def| def.edible.as_ref())
+            .map(|edible| edible.thirst)
+    }
+
+    /// Whether this kind is a drink — edible, quenching more than it feeds —
+    /// which only changes the verb the world narrates (`drank`, not `ate`).
+    pub fn is_drink(&self, item: &Item) -> bool {
+        self.kinds
+            .get(&item.kind)
+            .and_then(|def| def.edible.as_ref())
+            .is_some_and(|edible| edible.thirst > edible.satiety)
+    }
+
     /// The catalog price of this exact stack in sparks (M1/M4). `None` if the
     /// kind is unpriced or unknown.
     pub fn price_sparks(&self, item: &Item) -> Option<u32> {
@@ -447,7 +470,11 @@ mod tests {
     #[test]
     fn the_embedded_catalog_loads_and_has_the_core_kinds() {
         let catalog = catalog();
-        for kind in ["spark", "loaf", "herring", "smoked_eel", "stew", "generic"] {
+        for kind in [
+            "spark", "loaf", "herring", "smoked_eel", "stew", "generic",
+            // A sample of the lore wave (`add_items_described_in_the_lore.md`):
+            "ale", "water", "candle", "apple", "badge", "rope", "keepsake", "letter",
+        ] {
             assert!(
                 catalog.get(&ItemKind::from_raw(kind)).is_some(),
                 "missing kind {kind}"
@@ -479,8 +506,30 @@ mod tests {
         assert_eq!(catalog.display_name(&anvil), "anvil");
 
         // Unknown ad-hoc kind renders as itself.
-        let apple = Item::new(ItemId::from_raw("ap001"), "apple");
-        assert_eq!(catalog.display_name(&apple), "apple");
+        let sturgeon = Item::new(ItemId::from_raw("st001"), "sturgeon");
+        assert_eq!(catalog.display_name(&sturgeon), "sturgeon");
+
+        // Declared adjectives prefix in key order: the lore wave's keepsake.
+        let button =
+            Item::new(ItemId::from_raw("kp001"), "keepsake").with_metadata("kind", "wooden button");
+        assert_eq!(catalog.display_name(&button), "wooden button keepsake");
+    }
+
+    #[test]
+    fn drinks_declare_a_thirst_refill() {
+        let catalog = catalog();
+        let ale = Item::new(ItemId::from_raw("a"), "ale");
+        assert!(catalog.is_edible(&ale));
+        assert!(catalog.is_drink(&ale));
+        assert!(catalog.thirst_quench(&ale).unwrap_or(0) > 0);
+        // Dry food quenches nothing and is not a drink.
+        let loaf = Item::new(ItemId::from_raw("l"), "loaf");
+        assert!(!catalog.is_drink(&loaf));
+        assert_eq!(catalog.thirst_quench(&loaf), Some(0));
+        // Water is pure drink: no satiety at all.
+        let water = Item::new(ItemId::from_raw("w"), "water");
+        assert_eq!(catalog.satiety(&water), Some(0));
+        assert!(catalog.is_drink(&water));
     }
 
     #[test]
@@ -517,7 +566,7 @@ mod tests {
         let bad_key = Item::new(ItemId::from_raw("l"), "loaf").with_metadata("colour", "brown");
         assert!(catalog.validate_seed_item(&bad_key).is_err());
 
-        let unknown_kind = Item::new(ItemId::from_raw("x"), "apple");
+        let unknown_kind = Item::new(ItemId::from_raw("x"), "sturgeon");
         assert!(catalog.validate_seed_item(&unknown_kind).is_err());
         // But the lenient path tolerates the ad-hoc kind.
         assert!(catalog.validate_item(&unknown_kind).is_ok());

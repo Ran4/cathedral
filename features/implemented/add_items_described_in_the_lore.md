@@ -2,6 +2,39 @@
 
 tl;dr: implement all items in Tier 1 and Tier 2 below.
 
+**Status: implemented 2026-07-24.** Every Tier 1 and Tier 2 kind is in
+`assets/world/items.json` (~55 kinds total; grain/flour/wool/cloth were already there from M5).
+What shipped beyond the raw catalog rows:
+
+- **Drinks.** `Edible` gained a `thirst` refill; `eat` (and the ladder's silent meal) applies it
+  and narrates `drank` when a kind quenches more than it feeds. Ale (1 spark, the tavern default),
+  water, and milk hook the existing thirst gauge. The `eat` verb line in `turn.j2` now says
+  "Eat (or drink)" — golden fixtures regenerated for that one decided line.
+- **Vendors** (`assets/world/food.json`): provisions stalls now stock apple/cheese/egg/milk/
+  honey/salt beside the herring; the two tavern pots stock ale and hot pies beside the conjured
+  stew; and five new pitches — **the Wickmarket chandlery stall** (candles incl. beeswax, lamp
+  oil, wick, firewood; Petronel Crake preferred), **Wickmarket and Maren's Green wares stalls**
+  (bucket, basket, rope, knife, cup, bowl, cook-pot, blanket, purse, dice, leather, wooden-button
+  keepsakes), **the Maren's Green simples bench** (healers; simples + bandages), and **the
+  Gradine badge stall** (pilgrim badges; Gude Crake preferred). Each pitch has an authored awning
+  in `shelters.json`. At a price tie the silent purchase now prefers the most filling kind, so a
+  spark still buys a herring off a mixed board.
+- **Metadata per the combining pass**: `candle {dye, fat}`, `apple {condition: bruised}`,
+  `meat {cure: salted}`, `badge {authenticity, kind}`, `coat {cut: grey}`, `dice {marking}`,
+  `keepsake {kind: 8 trinkets}`; named one-off papers use the `display` override on `ledger` /
+  `contraband_page` / `letter` rather than a kind per title.
+- **Character goals made real**: 65 seed items back the possession-implying ambient goals
+  ("Sell the last bruised apple" ×12 hold their bruised apple, "Return a borrowed knife" ×10,
+  "Keep rain off a bundle of kindling" ×18, "Dry a blanket before curfew" ×15, "Keep your bread
+  from a bold pigeon" ×4, "Carry a small bundle" ×4, Gude Crake's badges, Ede Rook's marked
+  dice). The impossible "Recover a dropped wooden button" (×3) became "Buy a wooden button to
+  replace the one you dropped" — the wares stalls sell them for a spark. Buy-side goals (lamp
+  oil ×13, cord ×13, cracked cup ×14, bandages ×6…) now have real counters to buy from.
+- **Hand props**: apple, candle, paper (letter/page/book), and cup/pot shapes join the fish /
+  coin / loaf / stew prop vocabulary; everything else falls back to the generic cube as designed.
+
+Tier 3+ and the appendix remain unimplemented by design; the quarry below is the record.
+
 *A structural/meta document: an inventory of every portable physical thing the canon lore
 mentions that could plausibly become an item kind. Compiled 2026-07-17 from `core_lore/`,
 `families/`, `second_sun/` (including the documents and design notes),

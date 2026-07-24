@@ -31,5 +31,6 @@
   "memories": [],
   "core_character_description": "You worked as an errand child and are now held from Cloth Ward streets, still tied to a shared cloth work-and-lodging group. Stone House rations and food carried in by kin are your present support. You speak slowly and test every claim. Today you need to return a borrowed knife. Your coat is too large and belted twice.",
   "extended_character_description": "",
+  "holds": ["kn002"],
   "goal": "Return a borrowed knife"
 }
