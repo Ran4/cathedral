@@ -85,6 +85,17 @@ pub struct CharacterSheet {
     pub facing_yaw: f64,
     #[serde(default)]
     pub holds: Vec<ItemId>,
+    /// Seeded body pockets (`features/extra_pockets.md` M0): each entry
+    /// reserves one unit of a held stack in a body slot, so a seeded world can
+    /// simply *have* a coin in a cheek. Validated by the seed loader (the item
+    /// must be in `holds`, palmable, the slot available and under capacity).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pockets: Vec<PocketedUnit>,
+    /// Authored `frontbutt` slot availability. `None` derives it from the lore
+    /// profile's gender (`"f"` has one); the player record in `seed.json` and
+    /// any lore file may say so explicitly instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frontbutt: Option<bool>,
     /// The `"None"` string sentinel, not an Option — `set_goal` compares
     /// against it and the prompt renders it directly (D15).
     #[serde(default = "goal_none")]
@@ -107,6 +118,23 @@ pub struct CharacterSheet {
     pub presence_epoch: u64,
     #[serde(default)]
     pub economic_class: EconomicClass,
+}
+
+impl CharacterSheet {
+    /// Whether this body has `slot` at all (`features/extra_pockets.md`).
+    /// Everyone has a mouth and a butt; `frontbutt` is authored on the sheet,
+    /// defaulting from the lore profile's gender. A non-lore fixture without
+    /// the authored field has none.
+    pub fn has_body_slot(&self, slot: BodySlot) -> bool {
+        match slot {
+            BodySlot::Mouth | BodySlot::Butt => true,
+            BodySlot::Frontbutt => self.frontbutt.unwrap_or_else(|| {
+                self.lore
+                    .as_ref()
+                    .is_some_and(|profile| profile.gender.eq_ignore_ascii_case("f"))
+            }),
+        }
+    }
 }
 
 /// The M2 ping-pong: an actor walks back and forth between two named nav places.
@@ -165,11 +193,20 @@ pub struct Movement {
 pub enum StatusKind {
     Drunkenness,
     Weariness,
+    /// The poop clock's pressure (`features/extra_pockets.md` M3): ramps from 0
+    /// while a formed stool rides a lower body slot, cleared by `expel`. Unlike
+    /// the other two this one *is* written by the sim (the engine's digest
+    /// pass), quantized so the ramp does not republish the snapshot every poll.
+    Urgency,
 }
 
 impl StatusKind {
     /// Every kind, in the order they cross the snapshot.
-    pub const ALL: [StatusKind; 2] = [StatusKind::Drunkenness, StatusKind::Weariness];
+    pub const ALL: [StatusKind; 3] = [
+        StatusKind::Drunkenness,
+        StatusKind::Weariness,
+        StatusKind::Urgency,
+    ];
 
     /// The `snake_case` wire form — the string the debug hooks parse and serde
     /// serializes to.
@@ -177,6 +214,7 @@ impl StatusKind {
         match self {
             StatusKind::Drunkenness => "drunkenness",
             StatusKind::Weariness => "weariness",
+            StatusKind::Urgency => "urgency",
         }
     }
 
@@ -185,6 +223,68 @@ impl StatusKind {
     pub fn from_wire(text: &str) -> Option<Self> {
         StatusKind::ALL.into_iter().find(|kind| kind.as_str() == text)
     }
+}
+
+/// A body pocket (`features/extra_pockets.md`): a cavity a palmable stack-unit
+/// can ride in, out of everyone's sight. `snake_case` so `"mouth"` is both the
+/// serde form and the `pocket_item` verb's wire argument. `Ord` fixes the
+/// rendering order (mouth first) wherever slots are listed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BodySlot {
+    Mouth,
+    Butt,
+    Frontbutt,
+}
+
+impl BodySlot {
+    /// Every slot, in rendering order.
+    pub const ALL: [BodySlot; 3] = [BodySlot::Mouth, BodySlot::Butt, BodySlot::Frontbutt];
+
+    /// The `snake_case` wire form — the `pocket_item` argument and serde form.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            BodySlot::Mouth => "mouth",
+            BodySlot::Butt => "butt",
+            BodySlot::Frontbutt => "frontbutt",
+        }
+    }
+
+    /// Resolve a verb argument to a slot, or `None` for an unknown one.
+    pub fn from_wire(text: &str) -> Option<Self> {
+        BodySlot::ALL.into_iter().find(|slot| slot.as_str() == text)
+    }
+
+    /// Whether this is one of the two lower slots (`expel`'s domain).
+    pub fn is_lower(self) -> bool {
+        matches!(self, BodySlot::Butt | BodySlot::Frontbutt)
+    }
+}
+
+/// One pocketed stack-unit: a reservation through the `inventory.rs` authority,
+/// exactly like an offer promise — the unit stays in `holds`/`World.items`, but
+/// cannot be offered, sold, eaten or counted by a restock while it rides here.
+/// Each entry is exactly one unit; two sparks in one cheek are two entries.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PocketedUnit {
+    pub slot: BodySlot,
+    pub item_id: ItemId,
+}
+
+/// Something working through the gut (`features/extra_pockets.md` M3): a meal
+/// on its way to becoming a stool, or a swallowed inedible on its way back.
+/// Formed items land in the butt slot when `due_game_days` lapses on the game
+/// clock — a pure function of (actor, meal, clock), no RNG.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GutEntry {
+    /// What comes out: `"poop"` for a meal, the swallowed kind otherwise.
+    pub kind: crate::item::ItemKind,
+    /// The swallowed unit's metadata; formation stamps `condition=poopstained`
+    /// on non-poop kinds.
+    pub metadata: std::collections::BTreeMap<String, String>,
+    /// The game-day stamp when it lands, from `World.current_time` at meal time.
+    pub due_game_days: f64,
 }
 
 /// The dynamic drive layer — the "statuses" axis of
@@ -293,6 +393,18 @@ pub struct CharacterState {
     pub facing_yaw: f64,
     /// Ordered: accept appends to the end, removal preserves the rest.
     pub holds: Vec<ItemId>,
+    /// Pocketed stack-units (`features/extra_pockets.md`): reservations against
+    /// `holds` stacks, one unit per entry, insertion-ordered per slot. At most
+    /// [`crate::POCKET_SLOT_CAPACITY`] entries per slot. Empty for everyone the
+    /// verbs never touched, which keeps the snapshot byte-identical.
+    pub pockets: Vec<PocketedUnit>,
+    /// The gut queue (`extra_pockets.md` M3): meals brewing into stools and
+    /// swallowed inedibles on their way through. Never rendered on the prompt;
+    /// the formed item's arrival is the percept.
+    pub gut: Vec<GutEntry>,
+    /// Game-day stamp of the oldest still-pocketed stool, from which the engine
+    /// ramps the `urgency` carriage status. `None` while the breeches are clear.
+    pub urgency_since_game_days: Option<f64>,
     pub goal: String,
     /// Insertion-ordered, deduped by exact string on `remember`.
     pub memories: Vec<String>,
@@ -367,6 +479,9 @@ impl CharacterState {
             position_m: sheet.position_m,
             facing_yaw: sheet.facing_yaw,
             holds: sheet.holds.clone(),
+            pockets: sheet.pockets.clone(),
+            gut: Vec::new(),
+            urgency_since_game_days: None,
             goal: sheet.goal.clone(),
             memories: sheet.memories.clone(),
             knows: sheet.knows.clone(),
@@ -491,6 +606,43 @@ impl Character {
 
     pub fn holds(&self) -> &[ItemId] {
         &self.state.holds
+    }
+
+    pub fn pockets(&self) -> &[PocketedUnit] {
+        &self.state.pockets
+    }
+
+    /// Whether this body has `slot` at all (`features/extra_pockets.md`).
+    pub fn has_body_slot(&self, slot: BodySlot) -> bool {
+        self.sheet.has_body_slot(slot)
+    }
+
+    /// How many units currently ride in `slot`.
+    pub fn pocketed_in_slot(&self, slot: BodySlot) -> usize {
+        self.state
+            .pockets
+            .iter()
+            .filter(|unit| unit.slot == slot)
+            .count()
+    }
+
+    /// The slot a unit of `item_id` rides in, if any (first entry wins — the
+    /// `retrieve_item` rule that makes `slot` derivable).
+    pub fn pocket_slot_of(&self, item_id: &ItemId) -> Option<BodySlot> {
+        self.state
+            .pockets
+            .iter()
+            .find(|unit| &unit.item_id == item_id)
+            .map(|unit| unit.slot)
+    }
+
+    /// The pocket entries for the public snapshot, in state order.
+    pub fn pocket_snapshot(&self) -> Vec<(BodySlot, ItemId)> {
+        self.state
+            .pockets
+            .iter()
+            .map(|unit| (unit.slot, unit.item_id.clone()))
+            .collect()
     }
 
     pub fn goal(&self) -> &str {
@@ -656,6 +808,8 @@ mod tests {
             position_m: Vec3::ZERO,
             facing_yaw: 0.0,
             holds: Vec::new(),
+            pockets: Vec::new(),
+            frontbutt: None,
             goal: goal_none(),
             memories: Vec::new(),
             knows: BTreeSet::new(),
@@ -818,7 +972,11 @@ mod tests {
             serde_json::to_string(&StatusKind::Weariness).unwrap(),
             "\"weariness\""
         );
-        assert_eq!(StatusKind::ALL.len(), 2);
+        assert_eq!(
+            serde_json::to_string(&StatusKind::Urgency).unwrap(),
+            "\"urgency\""
+        );
+        assert_eq!(StatusKind::ALL.len(), 3);
         for kind in StatusKind::ALL {
             assert_eq!(StatusKind::from_wire(kind.as_str()), Some(kind));
             let json = serde_json::to_string(&kind).unwrap();

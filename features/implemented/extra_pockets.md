@@ -31,7 +31,7 @@ Gargle things, make love -> semen in your butt/frontbutt/mouth etc.
   price discount (metadata already forks stacks, so wet sparks won't merge with dry).
   This works for all sorts of things - if poop in butt and you put bread in butt, the
   bread turns into poopstained bread, which... the npc:s won't like lol
-  but you can always your poopstained bread to get wet bread (also not nice).
+  but you can always wash your poopstained bread to get wet bread (also not nice).
 * **Two-stage drinking** — drinking becomes "take a mouthful" first, then choose:
   swallow (satiety/thirst/drunkenness apply), spit (item lands on the ground, or *at
   someone*), gargle (pure theatre + sound), or hold it and walk around like a wine
@@ -184,3 +184,67 @@ split applies. Park it as `features/intimacy.md`, not started.
 * `spit` with no target: to hand (retrieve, but wetter) or to ground (item entity at
   your feet)? Ground needs items-on-the-floor to exist as a rendered thing.
   For no, target only. In future, when we have items on the floor, then it should drop on floor.
+
+----------
+
+## Implementation notes (M0–M4 shipped, 2026-07-24)
+
+Everything above is implemented except the intimacy seam (parked as
+`features/intimacy.md`). Where the letter of the sketch and the code differ:
+
+* **Capacity** is two stack-units per cavity (`POCKET_SLOT_CAPACITY`), per the
+  resolved open question. When the gut forms something into a full butt slot,
+  the displaced unit is picked by the deterministic hash idiom and simply
+  returns to plain `holds` (un-concealed) — nothing is destroyed.
+* **A pocketed unit is a reservation**, exactly like an offer promise: the item
+  stays in `World.items`/`holds`, `uncommitted_quantity` subtracts it, and the
+  snapshot carries `ActorSnapshot.pockets: Vec<(BodySlot, ItemId)>`.
+* **The metadata economy**: a mouth stamps `condition=wet` on non-drinks (via
+  the new `World::restamp_metadata` stack-forking operation); sharing a lower
+  slot with a stool stamps `condition=poopstained`. Both values are valid on
+  *any* kind (`UNIVERSAL_CONDITIONS`) without per-kind declaration; a kind's own
+  declared conditions (the apple's `bruised`) still work. Washing is not
+  implemented — there is no verb for it yet.
+* **Drinks are palmable by fiat** (ale, milk, holy water): pocketing one unit is
+  the "mouthful". A pail of water is deliberately not (`too_big` is honest).
+* **`spit`**: target-only (as resolved). A spat solid *transfers to the target*
+  (they now hold the wet thing); a spat mouthful of drink is consumed. When
+  items-on-the-ground exist, untargeted spit should drop there instead.
+* **`expel`**: voids both lower slots. Stools are consumed ("the gutter");
+  anything else returns to plain `holds`. With a law-cast character within 20 m,
+  a witnessed spit-at-someone or a voided stool mechanically raises a ward
+  notice from the nearest officer (prose only, no ids — the notices split).
+* **The gut**: meals coalesce into at most one brewing stool; a swallowed
+  inedible always queues its own return (`condition=poopstained`). Lapse is
+  `GUT_MIN_GAME_DAYS` (3 game hours) plus a hashed spread of up to 3 more; the
+  engine's digest pass forms it, stains co-residents, and ramps the new
+  `urgency` carriage status (0→1 over 2 game hours, quantized to 1/16 so the
+  snapshot is not republished every poll). `expel` clears it on the next poll.
+  Clock-less worlds (the frozen fixtures) have no gut at all.
+* **Night soil round**: skipped, per the resolved question.
+* **Sounds**: `gulp` (2 m), `spit` (4 m), `gargle` (6 m), `soft_report` (8 m)
+  are catalog rows, all `actor_emittable`, with generated mp3 assets (the same
+  run also filled in the long-missing `coin_clink` — its route comment says the
+  standard playback supplements the balance-pan cue — and a `market_cry` that
+  the soundscape route replaces, so that one sits unused). The spit *verb*
+  renders its own targeted percepts and does not use the catalog row; the row
+  is for `make_sound` theatre.
+* **Muffled speech**: flavor-only, as resolved — a speaker with anything in the
+  mouth slot gets "said through a full mouth" in listeners' inbox lines; the
+  text is never garbled.
+* **Prompt cost**: the verb docs and explainer render only when the actor has a
+  pocketed unit or holds something palmable (`has_pockets`), and `frontbutt`
+  is mentioned only for bodies that have one. Golden fixtures were re-blessed
+  once, as planned.
+* **Frontbutt availability** is authored: `frontbutt` on a lore sheet or the
+  player's seed record, defaulting from lore `gender == "f"`. The player record
+  ships `false` — flip it in `assets/world/seed.json` to test.
+* **Authored cheeking** (M4): Gude Quern (`p004q`, guide, pickpocket) spawns
+  with a wet spark in her cheek and a memory explaining the habit.
+* **Player UI**: `I` toggles the "Pack and pockets" screen
+  (`src/smart_actors/inventory_ui.rs`): cursor released, movement/quickbar
+  suppressed, carried + per-slot sections, right-click context menus (put in
+  mouth/butt/frontbutt, eat, swallow, spit at the gazed target, gargle, take
+  out, expel), errors surfaced in a feedback line, every control drive-mode
+  clickable by `Name`. Fully-pocketed stacks are hidden from NPC hand props
+  (concealment); `status <name> urgency 0.8` eyeballs the pressed walk.

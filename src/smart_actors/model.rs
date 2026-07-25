@@ -32,6 +32,10 @@ const MAX_LABEL_CHARS: usize = 256;
 /// A stack's metadata is a handful of short catalog-declared descriptors; a
 /// projection carrying more is malformed.
 const MAX_METADATA_ENTRIES: usize = 16;
+/// The slot model's capacity (`features/extra_pockets.md`): two stack-units per
+/// cavity, total. The sim enforces it; the mirror is the gate for every other
+/// snapshot source, and the inventory screen lays out against it.
+pub(super) const MAX_POCKETED_PER_SLOT: usize = 2;
 
 /// Stable, opaque identity of an actor in the engine's world.
 #[derive(Component, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -190,6 +194,14 @@ pub struct ActorSnapshot {
     /// byte-identical to before M5 for every actor no debug hook touched.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub statuses: Vec<(cathedral_sim::StatusKind, f32)>,
+    /// Pocketed stack-units (`features/extra_pockets.md`): one entry per unit
+    /// riding a body cavity, naming the slot and the held stack it came out of.
+    /// The unit stays in `holds` — a pocket entry is a reservation, not a move —
+    /// so the host reads this to know a carry prop must *not* render and to
+    /// build the inventory screen's body sections. The sim enum crosses as-is
+    /// like `statuses`; skipped when empty, which is the universal case.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pockets: Vec<(cathedral_sim::BodySlot, ItemId)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -318,6 +330,11 @@ impl From<&cathedral_sim::PublicSnapshot> for WorldSnapshot {
                         .iter()
                         .map(|&(kind, value)| (kind, clamp_status(value)))
                         .collect(),
+                    pockets: actor
+                        .pockets
+                        .iter()
+                        .map(|(slot, item_id)| (*slot, item_id_from_sim(item_id)))
+                        .collect(),
                 })
                 .collect(),
             items: snapshot
@@ -381,6 +398,17 @@ pub enum SnapshotError {
         actor_id: ActorId,
         item_id: ItemId,
     },
+    /// A pocket entry naming a stack the actor does not hold
+    /// (`features/extra_pockets.md`: a pocketed unit never leaves `holds`).
+    PocketedItemNotHeld {
+        actor_id: ActorId,
+        item_id: ItemId,
+    },
+    /// More units in one cavity than the slot model allows (two, total).
+    PocketOverfull {
+        actor_id: ActorId,
+        slot: cathedral_sim::BodySlot,
+    },
     MultipleOwners {
         item_id: ItemId,
         first_owner: ActorId,
@@ -435,6 +463,17 @@ impl fmt::Display for SnapshotError {
                 formatter,
                 "actor {:?} holds unknown item {:?}",
                 actor_id.0, item_id.0
+            ),
+            Self::PocketedItemNotHeld { actor_id, item_id } => write!(
+                formatter,
+                "actor {:?} pockets item {:?} it does not hold",
+                actor_id.0, item_id.0
+            ),
+            Self::PocketOverfull { actor_id, slot } => write!(
+                formatter,
+                "actor {:?} has more than {MAX_POCKETED_PER_SLOT} units in its {} slot",
+                actor_id.0,
+                slot.as_str()
             ),
             Self::DuplicateHeldItem { actor_id, item_id } => write!(
                 formatter,
@@ -766,6 +805,27 @@ impl ValidatedSnapshot {
                     });
                 }
             }
+            // A pocketed unit is a *reservation* against a stack the actor
+            // still holds (`features/extra_pockets.md`), so every entry must
+            // name one of the ids just collected — and no cavity may carry
+            // more than the slot model's two units.
+            let mut per_slot: HashMap<cathedral_sim::BodySlot, usize> = HashMap::new();
+            for (slot, item_id) in &actor.pockets {
+                if !held_by_actor.contains(item_id) {
+                    return Err(SnapshotError::PocketedItemNotHeld {
+                        actor_id: actor.id.clone(),
+                        item_id: item_id.clone(),
+                    });
+                }
+                let count = per_slot.entry(*slot).or_default();
+                *count += 1;
+                if *count > MAX_POCKETED_PER_SLOT {
+                    return Err(SnapshotError::PocketOverfull {
+                        actor_id: actor.id.clone(),
+                        slot: *slot,
+                    });
+                }
+            }
         }
 
         if let Some(item) = snapshot
@@ -857,6 +917,7 @@ mod tests {
             holds: holds.iter().map(|id| ItemId((*id).into())).collect(),
             active_gesture: None,
             statuses: Vec::new(),
+            pockets: Vec::new(),
         }
     }
 

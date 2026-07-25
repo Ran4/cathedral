@@ -41,7 +41,7 @@ use cathedral_sim::WALK_Y;
 use crate::controller::{PlayerController, TeleportPlayer};
 use crate::fonts::CathedralFonts;
 use crate::nav_overlay::Navigation;
-use crate::smart_actors::{AreaDebugState, ChatInputState, ConfigMenuState};
+use crate::smart_actors::{AreaDebugState, ChatInputState, ConfigMenuState, InventoryUiState};
 
 // --- The baked crop, mirrored from scripts/render_map_texture.py ------------ //
 // (The building bounding box; the script prints these when it re-bakes.)
@@ -307,17 +307,19 @@ fn toggle_fullscreen_map(
     keyboard: Res<ButtonInput<KeyCode>>,
     menu: Option<Res<ConfigMenuState>>,
     chat: Option<Res<ChatInputState>>,
+    inventory: Option<Res<InventoryUiState>>,
     mut map_state: ResMut<MapState>,
 ) {
     let menu_open = menu.map(|m| m.open).unwrap_or(false);
     let chat_open = chat.map(|c| c.open).unwrap_or(false);
+    let inventory_open = inventory.map(|i| i.open).unwrap_or(false);
 
     if menu_open && map_state.fullscreen_open {
         // The settings menu takes over the cursor; yield the map to it.
         map_state.fullscreen_open = false;
         return;
     }
-    if keyboard.just_pressed(KeyCode::KeyM) && !menu_open && !chat_open {
+    if keyboard.just_pressed(KeyCode::KeyM) && !menu_open && !chat_open && !inventory_open {
         map_state.fullscreen_open = !map_state.fullscreen_open;
     }
 }
@@ -341,6 +343,7 @@ fn set_visibility<F: bevy::ecs::query::QueryFilter>(
 fn sync_map_state(
     map_state: Res<MapState>,
     menu: Option<Res<ConfigMenuState>>,
+    inventory: Option<Res<InventoryUiState>>,
     mut previous_open: Local<Option<bool>>,
     mut fullscreen: Query<&mut Visibility, (With<FullscreenMapRoot>, Without<MinimapRoot>)>,
     mut minimap: Query<&mut Visibility, (With<MinimapRoot>, Without<FullscreenMapRoot>)>,
@@ -363,7 +366,9 @@ fn sync_map_state(
     if open {
         cursor.visible = true;
         cursor.grab_mode = CursorGrabMode::None;
-    } else if !menu.map(|m| m.open).unwrap_or(false) {
+    } else if !menu.map(|m| m.open).unwrap_or(false)
+        && !inventory.map(|i| i.open).unwrap_or(false)
+    {
         cursor.visible = false;
         cursor.grab_mode = CursorGrabMode::Locked;
     }

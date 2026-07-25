@@ -55,3 +55,11 @@ illegal_activity_label = "In secret:"
 home_label = "Home:"
 # The parenthesis tying `home` to its wayfinding handle: `(go_to pl_x9k2)`.
 home_place_label = "go_to"
+# The `you_hold` suffix for a stack-unit riding a body pocket
+# (`features/extra_pockets.md`): `- k3f9x wet spark (in your mouth)`. The register
+# is period-euphemistic on purpose — partly tone, partly because blunt anatomical
+# prompt text is a real provider-compliance risk, and a model plays along with a
+# euphemism far more reliably.
+pocket_mouth_note = "in your mouth"
+pocket_butt_note = "carried privily, behind"
+pocket_frontbutt_note = "carried privily, before"

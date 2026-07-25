@@ -114,7 +114,7 @@ fn spawn_controls(commands: &mut Commands, fonts: &CathedralFonts) {
             ));
 
             panel.spawn((
-                Text::new("ENTER  chat   ·   F  fart   ·   '  flight   ·   M  map   ·   B  areas   ·   ESC  settings"),
+                Text::new("ENTER  chat   ·   F  fart   ·   '  flight   ·   M  map   ·   I  pockets   ·   B  areas   ·   ESC  settings"),
                 TextFont {
                     font: fonts.body(),
                     font_size: FontSize::Px(12.5),

@@ -713,6 +713,24 @@ const DRUNK_ROLL_MAX_RAD: f32 = 0.35;
 /// forward into a stoop (a negative X-rotation, like the bow).
 const WEARY_ARM_DROP: f32 = 0.7;
 const WEARY_STOOP_RAD: f32 = 0.30;
+/// Urgency (`features/extra_pockets.md` M3's poop clock) presses the walk into
+/// a mincing hurry: the visual cadence quickens by up to 40 %. Like the drunk
+/// stagger this reshapes only the phase the sim already advanced — the root
+/// stays exactly where the sim put it, so quick little steps are a look, not a
+/// moved actor.
+const URGENT_CADENCE_GAIN: f32 = 0.40;
+/// Urgency drops the arm swing toward 0.55× (1 − 0.45): the arms are held in,
+/// not swung. Composed with the weary drop, so a tired *and* pressed body has
+/// barely any swing left.
+const URGENT_ARM_DROP: f32 = 0.45;
+/// Urgency folds the torso forward — the clenched half-crouch. Deliberately
+/// smaller than `WEARY_STOOP_RAD`: this is a body holding itself, not one
+/// giving up.
+const URGENT_STOOP_RAD: f32 = 0.12;
+/// Urgency draws the thighs together (an adduction about the leg's local Z,
+/// mirrored per side). Small on purpose — legible from a few metres, never a
+/// pantomime.
+const URGENT_KNEE_PINCH_RAD: f32 = 0.11;
 
 /// L2 activity (M2): the idle↔carry/offer arm crossfade — §4's "a layer ramps
 /// its weight in/out", so a retracted offer reads as motion, not a pop.
@@ -1459,17 +1477,21 @@ fn shin_gate(cycle: f32) -> f32 {
     (cycle + SHIN_GATE_ADVANCE_RAD).cos().max(0.0)
 }
 
-/// §8 carriage: the two publicly-visible statuses that reshape the walk L0/L1
+/// §8 carriage: the publicly-visible statuses that reshape the walk L0/L1
 /// already computed. Fed from [`crate::smart_actors::model::ActorSnapshot`]
-/// via [`BodyPoseState::set_carriage`]. `default` is sober and rested, and
-/// every field below is scaled by a status, so a defaulted `Carriage` leaves
-/// the pose byte-identical.
+/// via [`BodyPoseState::set_carriage`]. `default` is sober, rested and
+/// unpressed, and every field below is scaled by a status, so a defaulted
+/// `Carriage` leaves the pose byte-identical.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 struct Carriage {
     /// `0..=1`. Staggering phase noise, lateral sway, a wandering lean.
     drunkenness: f32,
     /// `0..=1`. Drops the arm swing and adds a forward stoop.
     weariness: f32,
+    /// `0..=1`. Quickens the cadence, pinches the knees, drops the arm swing
+    /// and adds a small forward stoop — the pressed walk of a full gut
+    /// (`features/extra_pockets.md`).
+    urgency: f32,
 }
 
 impl Carriage {
@@ -1483,6 +1505,7 @@ impl Carriage {
             match kind {
                 K::Drunkenness => carriage.drunkenness = value,
                 K::Weariness => carriage.weariness = value,
+                K::Urgency => carriage.urgency = value,
             }
         }
         carriage
@@ -1493,6 +1516,19 @@ impl Carriage {
 /// (`1 − WEARY_ARM_DROP·w`). Identity at `w = 0`.
 fn weary_arm_swing(base: f32, weariness: f32) -> f32 {
     base * (1.0 - WEARY_ARM_DROP * weariness)
+}
+
+/// Arm-swing amplitude after urgency clenches it toward 0.55× at `u = 1`.
+/// Identity at `u = 0`; composed on top of [`weary_arm_swing`].
+fn urgent_arm_swing(base: f32, urgency: f32) -> f32 {
+    base * (1.0 - URGENT_ARM_DROP * urgency)
+}
+
+/// The visual cadence multiplier: urgency winds the stride up to 1.4× at
+/// `u = 1` — the same "visual only, the root is the sim's" licence the drunk
+/// phase wobble takes. Exactly 1.0 at `u = 0`.
+fn urgent_cadence(urgency: f32) -> f32 {
+    1.0 + URGENT_CADENCE_GAIN * urgency
 }
 
 /// The drunk stagger's phase offset (stride-cycle units), added to `gait_phase`
@@ -1524,8 +1560,9 @@ fn slow_wander(now: f64, seed: u32, salt: u32) -> f32 {
 
 /// The carriage torso offset read by both L0 and L1: an extra roll (the drunk
 /// sway plus a wandering lean, clamped) and an extra pitch (the weary forward
-/// stoop, negative like the bow). Both vanish at status 0, so a defaulted
-/// `Carriage` returns `(0.0, 0.0)` and the walk/idle torso is untouched.
+/// stoop plus urgency's smaller one, negative like the bow). All vanish at
+/// status 0, so a defaulted `Carriage` returns `(0.0, 0.0)` and the walk/idle
+/// torso is untouched.
 fn carriage_torso(carriage: Carriage, now: f64, seed: u32) -> (f32, f32) {
     use std::f64::consts::TAU as TAU64;
     let d = carriage.drunkenness;
@@ -1533,7 +1570,9 @@ fn carriage_torso(carriage: Carriage, now: f64, seed: u32) -> (f32, f32) {
         d * DRUNK_SWAY_RAD * ((now * DRUNK_SWAY_HZ + f64::from(hash01(seed, 42))) * TAU64).sin() as f32;
     let lean = d * DRUNK_LEAN_RAD * slow_wander(now, seed, 43);
     let roll = (sway + lean).clamp(-DRUNK_ROLL_MAX_RAD, DRUNK_ROLL_MAX_RAD);
-    let stoop = -WEARY_STOOP_RAD * carriage.weariness;
+    // Both stoops fold the same way (negative X, like the bow) and simply add:
+    // a tired body pressed for a privy is the most bent of all.
+    let stoop = -(WEARY_STOOP_RAD * carriage.weariness + URGENT_STOOP_RAD * carriage.urgency);
     (roll, stoop)
 }
 
@@ -1542,7 +1581,8 @@ fn carriage_torso(carriage: Carriage, now: f64, seed: u32) -> (f32, f32) {
 /// lean. Positive local-X rotation swings a hanging limb toward −Z (forward).
 /// `carriage` (§8) is read here, not as a separate layer: drunkenness staggers
 /// the visual phase and sways/leans the torso, weariness drops the arm swing
-/// and stoops the torso — all zero at a default `Carriage`, so a sober walk is
+/// and stoops the torso, urgency quickens the cadence, pinches the knees and
+/// clenches the arms — all zero at a default `Carriage`, so a sober walk is
 /// byte-identical to before M5.
 fn apply_locomotion(
     pose: &mut PoseDeltas,
@@ -1554,13 +1594,28 @@ fn apply_locomotion(
     seed: u32,
 ) {
     // Drunkenness staggers the visual gait phase; sober, the offset is 0.
-    let cycle = (gait_phase + carriage.drunkenness * drunk_phase_wobble(now, seed)) * TAU;
+    // Urgency winds the same phase forward faster (a mincing hurry); unpressed,
+    // the multiplier is exactly 1.
+    let cycle = (gait_phase * urgent_cadence(carriage.urgency)
+        + carriage.drunkenness * drunk_phase_wobble(now, seed))
+        * TAU;
     let swing = cycle.sin();
 
-    pose.left_thigh
-        .blend_over(JointDelta::from_rotation(Quat::from_rotation_x(THIGH_SWING_RAD * swing)), weight);
-    pose.right_thigh
-        .blend_over(JointDelta::from_rotation(Quat::from_rotation_x(-THIGH_SWING_RAD * swing)), weight);
+    // Urgency draws the thighs together — mirrored per side, so the pinch is
+    // adduction rather than a lean. Zero at `u = 0`.
+    let pinch = URGENT_KNEE_PINCH_RAD * carriage.urgency;
+    pose.left_thigh.blend_over(
+        JointDelta::from_rotation(
+            Quat::from_rotation_z(pinch) * Quat::from_rotation_x(THIGH_SWING_RAD * swing),
+        ),
+        weight,
+    );
+    pose.right_thigh.blend_over(
+        JointDelta::from_rotation(
+            Quat::from_rotation_z(-pinch) * Quat::from_rotation_x(-THIGH_SWING_RAD * swing),
+        ),
+        weight,
+    );
     pose.left_shin.blend_over(
         JointDelta::from_rotation(Quat::from_rotation_x(-SHIN_BEND_RAD * shin_gate(cycle))),
         weight,
@@ -1569,8 +1624,12 @@ fn apply_locomotion(
         JointDelta::from_rotation(Quat::from_rotation_x(-SHIN_BEND_RAD * shin_gate(cycle + PI))),
         weight,
     );
-    // Weariness drops the swing toward 0.3×; rested, the amplitude is unchanged.
-    let arm_swing = weary_arm_swing(ARM_SWING_RAD, carriage.weariness);
+    // Weariness drops the swing toward 0.3× and urgency clenches it further
+    // toward 0.55×; rested and unpressed, the amplitude is unchanged.
+    let arm_swing = urgent_arm_swing(
+        weary_arm_swing(ARM_SWING_RAD, carriage.weariness),
+        carriage.urgency,
+    );
     pose.left_upper_arm.blend_over(
         JointDelta::from_rotation(Quat::from_rotation_x(-arm_swing * swing)),
         weight,
@@ -1610,7 +1669,7 @@ fn idle_pulse(t: f64, period: f64, phase: f64, window: (f32, f32, f32, f32)) -> 
 /// L1 idle life (§4): breathing, occasional weight shift, rare head glance —
 /// every period and phase drawn from the actor-id seed so crowds don't sync.
 /// `carriage` (§8) is read here too so a *standing* drunk still sways and a
-/// weary body still stoops; zero at a default `Carriage`.
+/// weary — or pressed — body still stoops; zero at a default `Carriage`.
 fn apply_idle(pose: &mut PoseDeltas, weight: f32, now: f64, seed: u32, carriage: Carriage) {
     // Breathing: a gentle chest expansion with a hint of pitch.
     let breath_period = BREATH_PERIOD_BASE_S + BREATH_PERIOD_SPAN_S * hash01(seed, 1) as f64;
@@ -2817,6 +2876,7 @@ mod tests {
         let drunk = Carriage {
             drunkenness: 0.8,
             weariness: 0.0,
+            urgency: 0.0,
         };
         let mut rolls = Vec::new();
         let mut max_wobble = 0.0_f32;
@@ -2865,6 +2925,7 @@ mod tests {
         let weary = Carriage {
             drunkenness: 0.0,
             weariness: 1.0,
+            urgency: 0.0,
         };
         let (roll, pitch) = carriage_torso(weary, 2.0, 0x2468);
         assert_eq!(roll, 0.0, "weariness does not sway");
@@ -2875,7 +2936,57 @@ mod tests {
         assert!(x < -0.1, "the weary torso pitches forward: {x}");
     }
 
-    /// `Carriage::from_statuses` maps the snapshot slice onto the two axes and
+    /// Urgency (u = 1) quickens the cadence, clenches the arm swing, pinches
+    /// the thighs together and folds the torso a little — every one of them
+    /// exactly identity at u = 0.
+    #[test]
+    fn urgency_quickens_clenches_and_stoops() {
+        assert_eq!(urgent_cadence(0.0), 1.0);
+        assert!((urgent_cadence(1.0) - (1.0 + URGENT_CADENCE_GAIN)).abs() < 1e-6);
+        assert!(urgent_cadence(0.5) > urgent_cadence(0.0));
+
+        assert_eq!(urgent_arm_swing(ARM_SWING_RAD, 0.0), ARM_SWING_RAD);
+        assert!((urgent_arm_swing(ARM_SWING_RAD, 1.0) - 0.55 * ARM_SWING_RAD).abs() < 1e-6);
+        assert!(urgent_arm_swing(ARM_SWING_RAD, 1.0) < urgent_arm_swing(ARM_SWING_RAD, 0.5));
+
+        let urgent = Carriage {
+            drunkenness: 0.0,
+            weariness: 0.0,
+            urgency: 1.0,
+        };
+        // A smaller fold than weariness's, and no sway at all.
+        let (roll, pitch) = carriage_torso(urgent, 2.0, 0x9BDF);
+        assert_eq!(roll, 0.0, "urgency does not sway");
+        assert!((pitch + URGENT_STOOP_RAD).abs() < 1e-6, "urgency folds the torso: {pitch}");
+        const { assert!(URGENT_STOOP_RAD < WEARY_STOOP_RAD) };
+
+        // The walk: the same gait phase lands the legs further round the cycle,
+        // the arms swing less, and the thighs are drawn together.
+        let mut calm = PoseDeltas::default();
+        let mut pressed = PoseDeltas::default();
+        apply_locomotion(&mut calm, 1.0, 0.3, 0.0, Carriage::default(), 4.0, 0x9BDF);
+        apply_locomotion(&mut pressed, 1.0, 0.3, 0.0, urgent, 4.0, 0x9BDF);
+        assert!(
+            calm.left_thigh
+                .rotation
+                .angle_between(pressed.left_thigh.rotation)
+                > 0.05,
+            "the quickened cadence must move the legs"
+        );
+        let arm_angle = |delta: &JointDelta| delta.rotation.to_euler(EulerRot::ZYX).2.abs();
+        assert!(
+            arm_angle(&pressed.right_upper_arm) < arm_angle(&calm.right_upper_arm),
+            "urgency must clench the arm swing"
+        );
+        let (calm_z, _, _) = calm.left_thigh.rotation.to_euler(EulerRot::ZYX);
+        let (pressed_z, _, _) = pressed.left_thigh.rotation.to_euler(EulerRot::ZYX);
+        assert!(
+            pressed_z > calm_z + 0.05,
+            "the left thigh must adduct: {calm_z} -> {pressed_z}"
+        );
+    }
+
+    /// `Carriage::from_statuses` maps the snapshot slice onto its axes and
     /// ignores anything it has no pose for.
     #[test]
     fn carriage_reads_the_snapshot_statuses() {
@@ -2884,11 +2995,13 @@ mod tests {
         assert_eq!(
             Carriage::from_statuses(&[
                 (StatusKind::Drunkenness, 0.7),
-                (StatusKind::Weariness, 0.4)
+                (StatusKind::Weariness, 0.4),
+                (StatusKind::Urgency, 0.9)
             ]),
             Carriage {
                 drunkenness: 0.7,
                 weariness: 0.4,
+                urgency: 0.9,
             }
         );
     }
@@ -3265,6 +3378,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                     ActorSnapshot {
                         id: ActorId("player".into()),
@@ -3276,6 +3390,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                 ],
                 items: vec![],
@@ -3393,6 +3508,7 @@ mod tests {
                     holds: vec![],
                     active_gesture: dance,
                     statuses: Vec::new(),
+                    pockets: Vec::new(),
                 },
                 ActorSnapshot {
                     id: ActorId("player".into()),
@@ -3404,6 +3520,7 @@ mod tests {
                     holds: vec![],
                     active_gesture: None,
                     statuses: Vec::new(),
+                    pockets: Vec::new(),
                 },
             ],
             items: vec![],
@@ -3514,6 +3631,7 @@ mod tests {
             holds: vec![],
             active_gesture: None,
             statuses: Vec::new(),
+            pockets: Vec::new(),
         };
         let mut mirror = WorldMirror::default();
         mirror
@@ -3533,6 +3651,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                 ],
                 items: vec![],
@@ -3671,6 +3790,7 @@ mod tests {
                     holds: vec![],
                     active_gesture: None,
                     statuses: Vec::new(),
+                    pockets: Vec::new(),
                 }
             })
             .collect();
@@ -3684,6 +3804,7 @@ mod tests {
             holds: vec![],
             active_gesture: None,
             statuses: Vec::new(),
+            pockets: Vec::new(),
         });
         let mut mirror = WorldMirror::default();
         mirror

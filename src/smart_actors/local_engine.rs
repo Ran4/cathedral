@@ -762,6 +762,57 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
             request_id,
             item_id: SimItemId::from_raw(item_id.0),
         },
+        BridgeCommand::PlayerPocket {
+            request_id,
+            item_id,
+            slot,
+        } => EngineCommand::PlayerPocket {
+            request_id,
+            item_id: SimItemId::from_raw(item_id.0),
+            slot,
+        },
+        BridgeCommand::PlayerRetrieve {
+            request_id,
+            item_id,
+        } => EngineCommand::PlayerRetrieve {
+            request_id,
+            item_id: SimItemId::from_raw(item_id.0),
+        },
+        BridgeCommand::PlayerSwallow {
+            request_id,
+            item_id,
+        } => EngineCommand::PlayerSwallow {
+            request_id,
+            item_id: SimItemId::from_raw(item_id.0),
+        },
+        BridgeCommand::PlayerSpit {
+            request_id,
+            item_id,
+            target_id,
+            position_m,
+            spatial_seq,
+        } => EngineCommand::PlayerSpit {
+            request_id,
+            item_id: SimItemId::from_raw(item_id.0),
+            target_id: SimActorId::from_raw(target_id.0),
+            position_m: to_sim(position_m),
+            spatial_seq: to_seq(spatial_seq),
+        },
+        BridgeCommand::PlayerGargle {
+            request_id,
+            item_id,
+        } => EngineCommand::PlayerGargle {
+            request_id,
+            item_id: SimItemId::from_raw(item_id.0),
+        },
+        BridgeCommand::PlayerExpel { request_id } => EngineCommand::PlayerExpel { request_id },
+        BridgeCommand::PlayerEat {
+            request_id,
+            item_id,
+        } => EngineCommand::PlayerEat {
+            request_id,
+            item_id: SimItemId::from_raw(item_id.0),
+        },
         BridgeCommand::PlayerSound { sound_id } => EngineCommand::PlayerSound { sound_id },
         BridgeCommand::DebugSound {
             sound_id,

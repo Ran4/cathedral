@@ -167,6 +167,13 @@ impl SmartActorHudState {
         });
     }
 
+    /// The transient toast still on screen, if any. The inventory overlay sits
+    /// *above* the HUD, so it mirrors this into its own feedback line rather
+    /// than letting the engine's refusal ("your mouth is full") hide behind it.
+    pub(super) fn transient_text(&self) -> Option<&str> {
+        self.transient.as_ref().map(|message| message.text.as_str())
+    }
+
     pub fn show_player_transcript(&mut self, transcript: &str) {
         let transcript = transcript.trim();
         if transcript.is_empty() {
@@ -522,7 +529,7 @@ fn spawn_voice_status_panel(
                 ));
             panel.spawn((
                 VoicePanelControlsText,
-                Text::new("[V] MICROPHONE   [Z] TRANSCRIPTION   [X] NPC VOICES"),
+                Text::new("[V] MICROPHONE   [Z] TRANSCRIPTION   [X] NPC VOICES   [I] POCKETS"),
                 TextFont {
                     font: title_font,
                     font_size: FontSize::Px(VOICE_PANEL_CONTROLS_FONT_SIZE),

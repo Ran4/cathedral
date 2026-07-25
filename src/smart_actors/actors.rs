@@ -724,6 +724,7 @@ mod tests {
             holds: vec![],
             active_gesture: None,
             statuses: Vec::new(),
+            pockets: Vec::new(),
         };
 
         assert!(actor_is_stranger_to_player(&actor));
@@ -769,6 +770,7 @@ mod tests {
             holds: vec![],
             active_gesture: None,
             statuses: Vec::new(),
+            pockets: Vec::new(),
         };
         mirror
             .replace_snapshot(WorldSnapshot {
@@ -807,6 +809,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                 ],
                 items: vec![],
@@ -899,6 +902,7 @@ mod tests {
             holds: vec![],
             active_gesture: None,
             statuses: Vec::new(),
+            pockets: Vec::new(),
         };
         mirror
             .replace_snapshot(WorldSnapshot {
@@ -918,6 +922,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                 ],
                 items: vec![],

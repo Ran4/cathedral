@@ -84,7 +84,13 @@ accepted, declined, or retracted. item_id always takes an id (like "fzbn9"),
 never a name. Items can stack: a ×3 after an item means you hold three;
 offer_item with "quantity" hands over part of a stack, and eating consumes one.
 
-since_your_last_turn is history, in order — it can already be out of date (an
+{% if has_pockets %}A small item can also ride out of sight in a body pocket: pocket_item puts one
+in your mouth or, privily, below. People see the motion, never the thing — but
+a pocketed item cannot be offered, eaten or sold until you retrieve_item it.
+A mouthful of drink can be swallowed, spat at someone within reach, or gargled;
+what you swallow whole and cannot digest passes through you in its own time.
+
+{% endif %}since_your_last_turn is history, in order — it can already be out of date (an
 offer you heard about may be gone, taken by someone else). you_hold, you_offer
 and offered_to_you are the current truth: you can only accept offers listed in
 offered_to_you.
@@ -143,7 +149,13 @@ go_to {"place_id": "pl_x2vw"}                        # Set off for a place you k
 go_to {"person": "4bfk4"}                            # Set off toward someone you can currently see; you follow while you can see them
 stop {}                                              # Abandon your go_to errand and go back to your own business
 tell_way {"person": "4bfk4", "place_id": "pl_x2vw"}  # Teach someone within earshot the way to a place you know; they can then go_to it
-{% if has_law_verbs %}raise_notice {"about": "an outland stranger in a grey hood", "deed": "took a boy's spark and gave no badge", "where": "the tenter-frames", "accused": "4bfk4", "wronged": "e3cob"}  # Law only: put a wrong on the ward's tongues; "where"/"accused"/"wronged" optional
+{% if has_pockets %}pocket_item {"item_id": "c0prs", "slot": "mouth"}    # Hide one small thing you hold in a body pocket; slots: mouth, butt{% if has_frontbutt %}, frontbutt{% endif %}
+retrieve_item {"item_id": "c0prs"}                   # Take it back out into your hand
+swallow {"item_id": "c0prs"}                         # Swallow what is in your mouth (food nourishes; anything else passes through in time)
+spit {"item_id": "c0prs", "target": "4bfk4"}         # Spit what is in your mouth at someone within 4 metres
+gargle {"item_id": "c0prs"}                          # Gargle a mouthful of drink; you still have it afterwards
+expel {}                                             # Void whatever you carry privily below, where you stand
+{% endif %}{% if has_law_verbs %}raise_notice {"about": "an outland stranger in a grey hood", "deed": "took a boy's spark and gave no badge", "where": "the tenter-frames", "accused": "4bfk4", "wronged": "e3cob"}  # Law only: put a wrong on the ward's tongues; "where"/"accused"/"wronged" optional
 {% endif %}{% if sounds_enabled %}make_sound {"sound": "fart"}                         # Deliberately make a noise everyone within earshot perceives; sounds: {{ emittable_sounds }}
 {% endif %}gesture {"kind": "wave|beckon|nod|shake_head|shrug|point|bow|dance", "to": "optional name"}  # Small body language others can see; use it instead of narrating gestures in say
 set_goal {"goal": "Eat fish"}

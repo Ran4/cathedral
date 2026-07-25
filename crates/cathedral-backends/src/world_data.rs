@@ -188,6 +188,23 @@ mod tests {
             sven.holds.iter().map(|id| id.as_str()).collect::<Vec<_>>(),
             ["fzbn9"]
         );
+
+        // Authored cheeking (`features/extra_pockets.md` M4): the retired river
+        // guide who supplements her living by pickpocketing keeps her own coin
+        // where no cutpurse can reach it. The seeded pocket has to survive lore
+        // composition, not merely parse.
+        let gude = seed
+            .characters
+            .iter()
+            .find(|character| character.id.as_str() == "p004q")
+            .expect("Gude Quern is part of the cast");
+        assert_eq!(
+            gude.holds.iter().map(|id| id.as_str()).collect::<Vec<_>>(),
+            ["sp001"]
+        );
+        assert_eq!(gude.pockets.len(), 1);
+        assert_eq!(gude.pockets[0].slot, cathedral_sim::BodySlot::Mouth);
+        assert_eq!(gude.pockets[0].item_id.as_str(), "sp001");
     }
 
     #[test]

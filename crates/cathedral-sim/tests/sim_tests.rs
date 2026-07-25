@@ -31,6 +31,8 @@ fn character(actor_id: &str, name: &str, x: f64) -> Character {
 
 fn controlled_character(actor_id: &str, name: &str, x: f64, control: Control) -> Character {
     Character::from_sheet(CharacterSheet {
+        pockets: Vec::new(),
+        frontbutt: None,
         id: actor(actor_id),
         name: name.to_string(),
         control,

@@ -821,6 +821,8 @@ mod tests {
 
     fn character(id: &str, x: f64, control: Control) -> Character {
         Character::from_sheet(CharacterSheet {
+            pockets: Vec::new(),
+            frontbutt: None,
             id: ActorId::from_raw(id),
             name: id.to_uppercase(),
             control,

@@ -33,7 +33,7 @@ Actions (each fires ~0.5 s after the previous):
   drunk/weary walk can be eyeballed, e.g. `status Ilse drunkenness 0.8` or
   `status p006v weariness 1`. The target is resolved by display name first (may
   contain spaces), then by the actor id the HUD shows for strangers (`id p006v`).
-  Kinds are `drunkenness` and `weariness`; value is a `0..=1` float. A handle
+  Kinds are `drunkenness`, `weariness` and `urgency`; value is a `0..=1` float. A handle
   matching nobody is logged (`logs.jsonl` source `engine`, and stderr) and
   skipped — not a fault. The stand-in for the ale the sim does not model yet
   (npc_bodies M5).

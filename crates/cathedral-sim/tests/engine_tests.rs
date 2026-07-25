@@ -2212,3 +2212,172 @@ fn speech_event_id(messages: &[EngineMessage]) -> SpeechEventId {
         _ => unreachable!(),
     }
 }
+
+
+// ---------------------------------------------- body pockets (extra_pockets.md)
+
+/// Put one apple and one spark in the player's hands, both palmable.
+fn give_the_player_something_palmable(engine: &mut Engine) {
+    let world = engine.world_mut();
+    world.add_item(cathedral_sim::Item::new(ItemId::from_raw("appl1"), "apple"));
+    world.add_item(cathedral_sim::Item::new(ItemId::from_raw("sprk1"), "spark"));
+    let player = world
+        .characters
+        .get_mut(&player())
+        .expect("the seeded world has a player");
+    player.state.holds.push(ItemId::from_raw("appl1"));
+    player.state.holds.push(ItemId::from_raw("sprk1"));
+}
+
+/// The player's own inventory verbs go through the same `apply_action` the cast
+/// uses, and the pockets they fill cross on the public snapshot.
+#[test]
+fn the_players_pocket_commands_apply_and_reach_the_snapshot() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    give_the_player_something_palmable(&mut harness.engine);
+
+    let messages = harness.send(EngineCommand::PlayerPocket {
+        request_id: "r1".into(),
+        item_id: ItemId::from_raw("sprk1"),
+        slot: cathedral_sim::BodySlot::Mouth,
+    });
+    let (success, error, line) = result(&messages);
+    assert!(success, "{error:?} {line}");
+    assert_eq!(line, "Player pockets the wet spark (mouth)");
+
+    // The snapshot carries the slot and the (restamped) stack it rides.
+    let snapshot = snapshot_of(&messages).expect("pocketing republishes the world");
+    let pockets = snapshot
+        .actors
+        .iter()
+        .find(|actor| actor.id == player())
+        .map(|actor| actor.pockets.clone())
+        .unwrap_or_default();
+    assert_eq!(pockets.len(), 1);
+    assert_eq!(pockets[0].0, cathedral_sim::BodySlot::Mouth);
+    let wet = pockets[0].1.clone();
+
+    // Swallowing it queues the gut and leaves the mouth empty.
+    let messages = harness.send(EngineCommand::PlayerSwallow {
+        request_id: "r2".into(),
+        item_id: wet,
+    });
+    let (success, error, line) = result(&messages);
+    assert!(success, "{error:?} {line}");
+    assert_eq!(line, "Player swallows the wet spark");
+    assert!(
+        harness.engine.world().characters[&player()]
+            .pockets()
+            .is_empty()
+    );
+
+    // Nothing rides below, so `expel` refuses — with the model-visible code.
+    let messages = harness.send(EngineCommand::PlayerExpel {
+        request_id: "r3".into(),
+    });
+    let (success, error, message) = result(&messages);
+    assert!(!success);
+    assert_eq!(error.as_deref(), Some("nothing_to_expel"));
+    assert_eq!(message, "nothing rides in your lower slots");
+}
+
+/// The poop clock end to end (`extra_pockets.md` M3): a meal, then a gut that
+/// lands on the game clock, an urgency that ramps while it rides, and an
+/// `expel` that clears both.
+#[test]
+fn the_gut_forms_a_stool_on_the_clock_and_expel_clears_the_urgency() {
+    // One game day per 60 real seconds: the gut's three-game-hour floor is 7.5 s
+    // away, its spread another 7.5, and the urgency ramp is 5.
+    let clock = WorldClock::new(60.0, Office::Dayspring, 0, 0.05);
+    let mut engine = Engine::new(
+        EngineConfig {
+            clock,
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player");
+    engine.poll(0.0, Vec::new());
+    give_the_player_something_palmable(&mut engine);
+
+    let messages = engine.poll(
+        1.0,
+        vec![EngineCommand::PlayerEat {
+            request_id: "eat".into(),
+            item_id: ItemId::from_raw("appl1"),
+        }],
+    );
+    let (success, error, line) = result(&messages);
+    assert!(success, "{error:?} {line}");
+    assert_eq!(line, "Player eats the apple");
+    assert_eq!(engine.world().characters[&player()].state.gut.len(), 1);
+
+    // Nothing has landed yet at two game hours.
+    engine.poll(6.0, Vec::new());
+    assert!(
+        engine.world().characters[&player()].pockets().is_empty(),
+        "the gut has a floor of three game hours"
+    );
+
+    // Past the floor and the whole spread: it lands, and the host is told.
+    let messages = engine.poll(17.0, Vec::new());
+    let digested: Vec<&EngineMessage> = messages
+        .iter()
+        .filter(|message| matches!(message, EngineMessage::WorldEvent { kind, .. } if kind == "digest"))
+        .collect();
+    assert_eq!(digested.len(), 1, "{messages:#?}");
+    let player_character = &engine.world().characters[&player()];
+    assert!(player_character.state.gut.is_empty());
+    let (slot, stool) = player_character
+        .pocket_snapshot()
+        .first()
+        .cloned()
+        .expect("the gut has done its work");
+    assert_eq!(slot, cathedral_sim::BodySlot::Butt);
+    assert_eq!(engine.world().items[&stool].kind.as_str(), "poop");
+    // The player is never prompted, so the news is the world event above, not an
+    // inbox line — `notify_percept` drops everything a scheduler never drains.
+    assert!(player_character.inbox().is_empty());
+    let urgency = |engine: &Engine| {
+        engine.world().characters[&player()]
+            .state
+            .statuses
+            .get(&cathedral_sim::StatusKind::Urgency)
+            .copied()
+    };
+    assert_eq!(urgency(&engine), Some(0.0), "the ramp starts at nothing");
+
+    // Half the ramp later the pressure shows, quantized to sixteenths.
+    engine.poll(20.0, Vec::new());
+    let ramped = urgency(&engine).expect("urgency rides while a stool does");
+    assert!(ramped > 0.0 && ramped <= 1.0, "urgency is {ramped}");
+    assert_eq!(ramped * 16.0, (ramped * 16.0).round(), "quantized");
+
+    let messages = engine.poll(
+        21.0,
+        vec![EngineCommand::PlayerExpel {
+            request_id: "void".into(),
+        }],
+    );
+    let (success, error, line) = result(&messages);
+    assert!(success, "{error:?} {line}");
+    assert_eq!(line, "Player relieves themself where they stand");
+    assert!(!engine.world().items.contains_key(&stool));
+    assert!(engine.world().characters[&player()].pockets().is_empty());
+
+    // The status clears on the next digest, with the stool gone.
+    engine.poll(22.0, Vec::new());
+    assert_eq!(urgency(&engine), None);
+}

@@ -121,6 +121,53 @@ heard = "[You heard a stallholder cry their wares across the square.]"
 sfx_prompt = "A single medieval market stallholder calling their wares across a busy square, one short wordless rhythmic cry, outdoors with a light crowd murmur behind, no music, no discernible words"
 duration_seconds = 3.0
 
+# Body pockets (features/extra_pockets.md M1/M3). The four beats the mouth and
+# the lower slots make, with honest radii: swallowing the evidence has to be
+# quiet (2 m) or it is not a smuggling mechanic, while gargling carries. `spit`
+# does not emit its row — the verb's own percepts name the target — it exists so
+# an LLM can spit theatrically with make_sound. The last row is deliberately
+# unnamed and its percepts tactfully vague; the `seen` lines avoid a reflexive
+# pronoun so the same template reads for a witness and for "You".
+[[sounds]]
+sound_id = "gulp"
+sound_class = "body"
+audible_distance = 2.0
+actor_emittable = true
+seen = "{actor} swallowed hard."
+heard = "[You heard a small wet gulp nearby.]"
+sfx_prompt = "A single hard nervous swallow, one wet gulp in a dry throat, very close and intimate, no music, no voices"
+duration_seconds = 1.0
+
+[[sounds]]
+sound_id = "spit"
+sound_class = "body"
+audible_distance = 4.0
+actor_emittable = true
+seen = "{actor} spat on the ground."
+heard = "[You heard someone spit.]"
+sfx_prompt = "A single contemptuous spit landing on stone paving, one short wet splat, close and dry, outdoors, no music, no voices"
+duration_seconds = 1.0
+
+[[sounds]]
+sound_id = "gargle"
+sound_class = "body"
+audible_distance = 6.0
+actor_emittable = true
+seen = "{actor} gargled noisily."
+heard = "[You heard someone gargling nearby.]"
+sfx_prompt = "A person gargling a mouthful of liquid noisily for a few seconds and stopping, comedic and unhurried, close and dry, no music, no discernible words"
+duration_seconds = 2.0
+
+[[sounds]]
+sound_id = "soft_report"
+sound_class = "body"
+audible_distance = 8.0
+actor_emittable = true
+seen = "{actor} eased a private discomfort, unmistakably."
+heard = "[You heard a soft, unfortunate sound nearby.]"
+sfx_prompt = "A short soft muffled bodily noise followed by a quiet splash on stone, discreet and low, a narrow medieval alley behind it, no music, no voices"
+duration_seconds = 1.5
+
 # Looping scene assets. Read only by the generator and Bevy; the sim never sees
 # these (an inbox line per fireplace crackle would be token suicide —
 # design/06 §5). The two water loops are placed on the plan's well and cistern

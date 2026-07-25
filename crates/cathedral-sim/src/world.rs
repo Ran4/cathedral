@@ -809,6 +809,7 @@ impl World {
                     holds: actor.holds().to_vec(),
                     active_gesture: actor.active_gesture(),
                     statuses: actor.statuses(),
+                    pockets: actor.pocket_snapshot(),
                 }
             })
             .collect();
@@ -926,6 +927,42 @@ impl World {
                     seen_stuff.push((item_id, &item.metadata));
                 }
             }
+            // Body pockets (`extra_pockets.md`): every pocketed unit points at a
+            // stack this same actor holds, rides a slot this body has, fits
+            // (palmable), and no slot is over capacity.
+            let mut slot_counts: BTreeMap<crate::character::BodySlot, usize> = BTreeMap::new();
+            for unit in actor.pockets() {
+                assert!(
+                    actor.holds().contains(&unit.item_id),
+                    "actor {} pockets {} without holding it",
+                    actor.id(),
+                    unit.item_id
+                );
+                assert!(
+                    actor.has_body_slot(unit.slot),
+                    "actor {} pockets {} in a {} they do not have",
+                    actor.id(),
+                    unit.item_id,
+                    unit.slot.as_str()
+                );
+                let item = &self.items[&unit.item_id];
+                assert!(
+                    self.item_catalog.size(item) == crate::item::ItemSize::Palmable,
+                    "actor {} pockets non-palmable {}",
+                    actor.id(),
+                    unit.item_id
+                );
+                *slot_counts.entry(unit.slot).or_default() += 1;
+            }
+            for (slot, count) in slot_counts {
+                assert!(
+                    count <= crate::POCKET_SLOT_CAPACITY,
+                    "actor {} carries {count} units in their {} (capacity {})",
+                    actor.id(),
+                    slot.as_str(),
+                    crate::POCKET_SLOT_CAPACITY
+                );
+            }
         }
         for (item_id, offer) in &self.offers {
             assert!(
@@ -954,7 +991,8 @@ impl World {
             let reserved = self.transform_reserved_quantity(item_id);
             let committed = reserved
                 .checked_add(offer.quantity)
-                .expect("offer plus transform commitment overflow");
+                .and_then(|sum| sum.checked_add(self.pocketed_quantity(item_id)))
+                .expect("offer plus transform plus pocket commitment overflow");
             assert!(
                 committed <= self.items[item_id].quantity,
                 "item {item_id} commits {committed} units but holds only {}",
@@ -967,6 +1005,7 @@ impl World {
             let offered = self.offered_quantity(item_id);
             let committed = reserved
                 .checked_add(offered)
+                .and_then(|sum| sum.checked_add(self.pocketed_quantity(item_id)))
                 .expect("inventory commitments overflow");
             assert!(
                 committed <= item.quantity,
@@ -1116,6 +1155,8 @@ mod tests {
 
     fn character(id: &str, x: f64) -> Character {
         Character::from_sheet(CharacterSheet {
+            pockets: Vec::new(),
+            frontbutt: None,
             id: ActorId::from_raw(id),
             name: id.to_uppercase(),
             control: Control::Llm,
@@ -1356,6 +1397,8 @@ mod tests {
     fn walker(nav: &NavData) -> Character {
         let start = nav.node_point(nav.place("a").unwrap().node);
         let mut character = Character::from_sheet(CharacterSheet {
+            pockets: Vec::new(),
+            frontbutt: None,
             id: ActorId::from_raw("walker"),
             name: "WALKER".into(),
             control: Control::Llm,
@@ -1831,6 +1874,8 @@ mod tests {
         // A display name deliberately unlike the id, so a name hit and an id hit
         // are distinguishable.
         world.add_character(Character::from_sheet(CharacterSheet {
+            pockets: Vec::new(),
+            frontbutt: None,
             id: ActorId::from_raw("p006v"),
             name: "Wend Carrow".into(),
             control: Control::Llm,

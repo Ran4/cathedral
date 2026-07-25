@@ -161,6 +161,62 @@ impl WorldSeed {
                 }
                 holders.push((item_id, &character.id));
             }
+            // Seeded body pockets (`extra_pockets.md` M0): every entry must
+            // reserve a unit of a held stack, fit (palmable), ride a slot the
+            // body has, and respect capacity — the same rules
+            // `World::assert_invariants` enforces, caught here as an error
+            // instead of a build panic.
+            let mut slot_counts: std::collections::BTreeMap<crate::character::BodySlot, usize> =
+                std::collections::BTreeMap::new();
+            let mut pocketed_counts: std::collections::BTreeMap<&ItemId, u32> =
+                std::collections::BTreeMap::new();
+            for unit in &character.pockets {
+                if !character.holds.contains(&unit.item_id) {
+                    return Err(SeedError::new(format!(
+                        "character '{}' pockets item '{}' without holding it",
+                        character.id, unit.item_id
+                    )));
+                }
+                if !character.has_body_slot(unit.slot) {
+                    return Err(SeedError::new(format!(
+                        "character '{}' pockets '{}' in a {} they do not have",
+                        character.id,
+                        unit.item_id,
+                        unit.slot.as_str()
+                    )));
+                }
+                let seed_item = self
+                    .items
+                    .iter()
+                    .find(|item| item.id == unit.item_id)
+                    .expect("pocketed items are held, and held items exist");
+                let item = Item::from(seed_item);
+                if catalog.size(&item) != crate::item::ItemSize::Palmable {
+                    return Err(SeedError::new(format!(
+                        "character '{}' pockets '{}', which is not palmable",
+                        character.id, unit.item_id
+                    )));
+                }
+                *slot_counts.entry(unit.slot).or_default() += 1;
+                let pocketed = pocketed_counts.entry(&unit.item_id).or_default();
+                *pocketed += 1;
+                if *pocketed > item.quantity {
+                    return Err(SeedError::new(format!(
+                        "character '{}' pockets more units of '{}' than the stack holds",
+                        character.id, unit.item_id
+                    )));
+                }
+            }
+            for (slot, count) in slot_counts {
+                if count > crate::POCKET_SLOT_CAPACITY {
+                    return Err(SeedError::new(format!(
+                        "character '{}' pockets {count} units in their {} (capacity {})",
+                        character.id,
+                        slot.as_str(),
+                        crate::POCKET_SLOT_CAPACITY
+                    )));
+                }
+            }
             // A `knows` entry pointing at nobody is tolerated, exactly as in
             // Python (`main.py:165` skips ids that are not in the world) — only
             // the id's *shape* has to be sound.

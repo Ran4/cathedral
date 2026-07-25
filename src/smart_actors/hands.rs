@@ -241,12 +241,27 @@ fn spawn_prop_root(
 /// One hand's desired content: the item and its prop vocabulary key.
 type HandContent = Option<(ItemId, String)>;
 
+/// How many units of `item_id` this actor has pocketed
+/// (`features/extra_pockets.md`). One entry per unit, so a stack of two with
+/// both cheeks full counts 2.
+fn pocketed_units(actor: &ActorSnapshot, item_id: &ItemId) -> u32 {
+    actor
+        .pockets
+        .iter()
+        .filter(|(_, pocketed)| pocketed == item_id)
+        .count()
+        .min(u32::MAX as usize) as u32
+}
+
 /// What each hand of one actor should hold, from the authoritative snapshot:
 /// the oldest standing offer's item in the RIGHT hand (the rest of several
 /// simultaneous offers exist only in text — accepted loss, §6), and the first
 /// held non-currency item that is not that offer in the LEFT. Spark stacks
 /// never render as carry — the whole cast holds a wallet, and nobody walks
-/// around with their purse in their fist.
+/// around with their purse in their fist. A stack whose every unit is pocketed
+/// is out of sight by definition (`features/extra_pockets.md`: "others see
+/// nothing while an item is pocketed"), so it renders no carry prop either; a
+/// partially-pocketed stack still has units in the open and does.
 fn desired_hand_props(mirror: &WorldMirror, actor: &ActorSnapshot) -> (HandContent, HandContent) {
     let offered = mirror
         .offers()
@@ -268,6 +283,9 @@ fn desired_hand_props(mirror: &WorldMirror, actor: &ActorSnapshot) -> (HandConte
         }
         let item = mirror.item(item_id)?;
         if item.kind == "spark" {
+            return None;
+        }
+        if pocketed_units(actor, item_id) >= item.quantity {
             return None;
         }
         Some((item_id.clone(), item.visual_key.clone()))
@@ -651,6 +669,24 @@ mod tests {
             holds: holds.iter().map(|held| ItemId((*held).into())).collect(),
             active_gesture: None,
             statuses: Vec::new(),
+            pockets: Vec::new(),
+        }
+    }
+
+    /// `actor`, plus `count` units of `item` tucked into the cheek
+    /// (`features/extra_pockets.md`: one pocket entry per stack-unit).
+    fn actor_pocketing(id: &str, holds: &[&str], item: &str, count: usize) -> ActorSnapshot {
+        let mut snapshot = actor(id, holds);
+        snapshot.pockets = (0..count)
+            .map(|_| (cathedral_sim::BodySlot::Mouth, ItemId(item.into())))
+            .collect();
+        snapshot
+    }
+
+    fn stack(id: &str, kind: &str, visual_key: &str, quantity: u32) -> ItemSnapshot {
+        ItemSnapshot {
+            quantity,
+            ..item(id, kind, visual_key)
         }
     }
 
@@ -703,6 +739,35 @@ mod tests {
             left,
             Some((ItemId("loaf".into()), "loaf".into())),
             "carry skips the wallet and the offered fish"
+        );
+    }
+
+    /// Concealment (`features/extra_pockets.md`): a stack with every unit
+    /// pocketed shows no carry prop — that is the entire point of a cheek —
+    /// while a stack with units still in the open keeps its prop.
+    #[test]
+    fn a_fully_pocketed_stack_renders_no_carry_prop() {
+        let hidden = mirror_with(
+            vec![actor_pocketing("ilse", &["loaf"], "loaf", 1)],
+            vec![item("loaf", "loaf", "loaf")],
+            vec![],
+        );
+        let snapshot = hidden.actor(&ActorId("ilse".into())).unwrap().clone();
+        let (left, right) = desired_hand_props(&hidden, &snapshot);
+        assert_eq!(left, None, "a pocketed loaf is out of sight");
+        assert_eq!(right, None);
+
+        let partial = mirror_with(
+            vec![actor_pocketing("ilse", &["herrings"], "herrings", 1)],
+            vec![stack("herrings", "herring", "fish", 2)],
+            vec![],
+        );
+        let snapshot = partial.actor(&ActorId("ilse".into())).unwrap().clone();
+        let (left, _) = desired_hand_props(&partial, &snapshot);
+        assert_eq!(
+            left,
+            Some((ItemId("herrings".into()), "fish".into())),
+            "one of two herrings is still in the open"
         );
     }
 

@@ -34,7 +34,7 @@ use bevy::{
 };
 
 use crate::map::MapState;
-use crate::smart_actors::ConfigMenuState;
+use crate::smart_actors::{ConfigMenuState, InventoryUiState};
 use crate::smart_actors::model::ActorId;
 
 const FIXED_HZ: f64 = 120.0;
@@ -557,20 +557,22 @@ fn initially_capture_cursor(mut cursor: Single<&mut CursorOptions, With<PrimaryW
 /// `KeyCode::Quote` is a *physical* key position (Bevy/winit use US-layout
 /// positions); on the sv-SE layout that same physical key is `ä`. Chosen
 /// deliberately when F became the fart key — do not "fix" it to a logical key.
+#[allow(clippy::too_many_arguments)]
 fn collect_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse_buttons: Res<ButtonInput<MouseButton>>,
     menu: Res<ConfigMenuState>,
     map: Res<MapState>,
+    inventory: Option<Res<InventoryUiState>>,
     mut input: ResMut<ControllerInput>,
     mut controller: Single<&mut PlayerController>,
     mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
 ) {
-    // While the fullscreen map is open the cursor is released for clicking; the
-    // map owns the cursor, and the player holds still (movement, jump, the fly
-    // toggle, and click-to-recapture all pause). Mouse-look already stops on its
-    // own once the cursor is unlocked.
-    if map.fullscreen_open {
+    // While the fullscreen map or the `I` inventory screen is open the cursor is
+    // released for clicking; that overlay owns the cursor, and the player holds
+    // still (movement, jump, the fly toggle, and click-to-recapture all pause).
+    // Mouse-look already stops on its own once the cursor is unlocked.
+    if map.fullscreen_open || inventory.is_some_and(|inventory| inventory.open) {
         input.movement = Vec2::ZERO;
         input.running = false;
         input.fly_vertical = 0.0;

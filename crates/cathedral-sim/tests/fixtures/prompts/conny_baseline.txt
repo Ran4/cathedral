@@ -113,7 +113,7 @@ go_to {"place_id": "pl_x2vw"}                        # Set off for a place you k
 go_to {"person": "4bfk4"}                            # Set off toward someone you can currently see; you follow while you can see them
 stop {}                                              # Abandon your go_to errand and go back to your own business
 tell_way {"person": "4bfk4", "place_id": "pl_x2vw"}  # Teach someone within earshot the way to a place you know; they can then go_to it
-make_sound {"sound": "fart"}                         # Deliberately make a noise everyone within earshot perceives; sounds: fart, glass_break, draw_water, chain_windlass, pour_trough, pail_clatter
+make_sound {"sound": "fart"}                         # Deliberately make a noise everyone within earshot perceives; sounds: fart, glass_break, draw_water, chain_windlass, pour_trough, pail_clatter, gulp, spit, gargle, soft_report
 gesture {"kind": "wave|beckon|nod|shake_head|shrug|point|bow|dance", "to": "optional name"}  # Small body language others can see; use it instead of narrating gestures in say
 set_goal {"goal": "Eat fish"}
 set_goal {"goal": null}                              # Clear your goal (achieved or given up)

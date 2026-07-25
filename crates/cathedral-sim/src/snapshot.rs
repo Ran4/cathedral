@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     appearance::AppearanceSnapshot,
-    character::{Control, StatusKind},
+    character::{BodySlot, Control, StatusKind},
     gesture::GestureKind,
     ids::{ActorId, ItemId},
     item::ItemKind,
@@ -59,6 +59,14 @@ pub struct ActorSnapshot {
     /// size (and every frozen serialization test) is unchanged.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub statuses: Vec<(StatusKind, f32)>,
+    /// Pocketed stack-units (`features/extra_pockets.md`): which held stack
+    /// rides in which body slot, one entry per unit. The items stay in `holds`
+    /// too — this is the reservation, which the host uses for the player's own
+    /// inventory screen and to keep pocketed things out of NPC hands. Skipped
+    /// when empty — the universal case — so the 500-actor snapshot's size is
+    /// unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pockets: Vec<(BodySlot, ItemId)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

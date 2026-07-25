@@ -155,6 +155,8 @@ mod tests {
 
     fn character(id: &str, position: Vec3, facing_yaw: f64) -> Character {
         Character::from_sheet(CharacterSheet {
+            pockets: Vec::new(),
+            frontbutt: None,
             id: ActorId::from_raw(id),
             name: id.to_uppercase(),
             control: Control::Llm,

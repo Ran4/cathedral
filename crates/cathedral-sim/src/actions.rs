@@ -13,13 +13,17 @@ use serde_json::{Map, Value};
 use crate::{
     GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS, GOAL_MAX_CHARS, GOAL_NONE, HEARING_RADIUS_M,
     HUNGER_MAX, ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS, PLAYER_SPEECH_MAX_CHARS,
-    THIRST_MAX, WALK_SPEED_MPS,
-    character::{ActiveGesture, IntentTarget, TravelIntent},
+    POCKET_SLOT_CAPACITY, THIRST_MAX, WALK_SPEED_MPS,
+    character::{ActiveGesture, BodySlot, GutEntry, IntentTarget, PocketedUnit, TravelIntent},
     error::{ActionError, ActionErrorCode},
     event::DomainEvent,
     gesture::{GestureKind, GestureSpec, GestureTarget},
     ids::{ActorId, ItemId, PlaceId},
     inventory::{InventoryError, InventoryErrorCode},
+    item::{
+        CONDITION_METADATA_KEY, CONDITION_POOPSTAINED, CONDITION_WET, Item, ItemKind, ItemSize,
+        POOP_KIND,
+    },
     math::Vec3,
     offer::Offer,
     perception::{cap_first, emit_sound, identify_ids},
@@ -100,6 +104,12 @@ fn dispatch(
         "decline_offer" => decline_offer(world, actor_id, args),
         "retract_offer" => retract_offer(world, actor_id, args),
         "eat" => eat(world, actor_id, args),
+        "pocket_item" => pocket_item(world, actor_id, args),
+        "retrieve_item" => retrieve_item(world, actor_id, args),
+        "swallow" => swallow(world, actor_id, args),
+        "spit" => spit(world, actor_id, args),
+        "gargle" => gargle(world, actor_id, args),
+        "expel" => expel(world, actor_id, args),
         "set_goal" => set_goal(world, actor_id, args),
         "make_sound" => make_sound(world, actor_id, args),
         "gesture" => gesture(world, actor_id, args),
@@ -448,6 +458,18 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
         target = Some(target_id);
     }
 
+    // Muffled speech (`extra_pockets.md` M1): a cheeked coin marks how the
+    // words *land*, never what they say — flavour-only, because the model
+    // already works hard to read past STT noise and garbled text would only
+    // teach it to distrust the transcript. The speaker's own line, the
+    // `DomainEvent` the host reads and the transcript are all untouched; an
+    // empty mouth changes zero bytes.
+    let muffle = if world.characters[actor_id].pocketed_in_slot(BodySlot::Mouth) > 0 {
+        " through a full mouth"
+    } else {
+        ""
+    };
+
     let line = if let Some(target_id) = &target {
         let own = format!(
             "You said to {}: \"{text}\"",
@@ -463,10 +485,10 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
             .map(|recipient| {
                 let speaker = cap_first(&identify_ids(world, recipient, actor_id));
                 let line = if recipient == target_id {
-                    format!("{speaker} said to you: \"{text}\"")
+                    format!("{speaker} said to you{muffle}: \"{text}\"")
                 } else {
                     format!(
-                        "{speaker} said to {}: \"{text}\"",
+                        "{speaker} said to {}{muffle}: \"{text}\"",
                         identify_ids(world, recipient, target_id)
                     )
                 };
@@ -489,7 +511,10 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
             .iter()
             .map(|recipient| {
                 let speaker = cap_first(&identify_ids(world, recipient, actor_id));
-                (recipient.clone(), format!("{speaker} said: \"{text}\""))
+                (
+                    recipient.clone(),
+                    format!("{speaker} said{muffle}: \"{text}\""),
+                )
             })
             .collect();
         deliver(world, percepts, true);
@@ -1032,14 +1057,18 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
 
     // The gauge: satiety lifts hunger toward full, and the eater's next sheet
     // simply stops calling them hungry — the loop closes with no memory hygiene
-    // (`03_hunger.md` §5). The eater is never the player (no `PlayerEat`), so
-    // this only ever moves an enrolled townsperson's need.
+    // (`03_hunger.md` §5). Since `extra_pockets.md` M1 the player eats through
+    // this same verb (`EngineCommand::PlayerEat`), so the write is not an
+    // enrolled townsperson's alone.
     if let Some(eater) = world.characters.get_mut(actor_id) {
         let hunger = &mut eater.state.needs.hunger;
         *hunger = (*hunger + f64::from(satiety)).min(HUNGER_MAX);
         let thirst = &mut eater.state.needs.thirst;
         *thirst = (*thirst + f64::from(quench)).min(THIRST_MAX);
     }
+    // The gut starts its clock on the meal (`extra_pockets.md` M3); a clock-less
+    // world queues nothing at all.
+    queue_gut(world, actor_id, None);
 
     let (past, present) = if is_drink {
         ("drank", "drinks")
@@ -1061,6 +1090,653 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
         "{} {present} the {eaten_noun}",
         world.characters[actor_id].name()
     ))
+}
+
+// --------------------------------------------------- body pockets and the gut
+
+/// The item a pocket verb names: held by the actor, and present in the world.
+/// The two error wordings are `eat`'s, verbatim — the model learns one sentence
+/// for "that is not an id you hold".
+fn held_item(world: &World, actor_id: &ActorId, item_id: &ItemId) -> Result<Item, ActionError> {
+    if !world.characters[actor_id].holds().contains(item_id) {
+        return Err(ActionError::new(
+            ActionErrorCode::NotOwner,
+            format!(
+                "you hold no item with id {} (item_id takes an id, not a name)",
+                repr_id(item_id.as_str())
+            ),
+        ));
+    }
+    world.items.get(item_id).cloned().ok_or_else(|| {
+        ActionError::new(
+            ActionErrorCode::UnknownItem,
+            format!("there is no item with id {}", repr_id(item_id.as_str())),
+        )
+    })
+}
+
+/// The mouth-slot entry a `swallow`/`spit`/`gargle` names, or the error that
+/// says why not: pocketed elsewhere is `wrong_slot`, pocketed nowhere is
+/// `not_pocketed` (with the verb that would fix it).
+fn require_mouthful(
+    world: &World,
+    actor_id: &ActorId,
+    item_id: &ItemId,
+) -> Result<Item, ActionError> {
+    match world.characters[actor_id].pocket_slot_of(item_id) {
+        Some(BodySlot::Mouth) => {}
+        Some(_) => {
+            let item = world.items.get(item_id);
+            let noun = item.map_or_else(
+                || "thing".to_string(),
+                |item| counted_noun(world, item, 1),
+            );
+            return Err(ActionError::new(
+                ActionErrorCode::WrongSlot,
+                format!("the {noun} is not in your mouth"),
+            ));
+        }
+        None => {
+            return Err(ActionError::new(
+                ActionErrorCode::NotPocketed,
+                format!(
+                    "nothing with id {} rides in your mouth - pocket_item it there first",
+                    repr_id(item_id.as_str())
+                ),
+            ));
+        }
+    }
+    world.items.get(item_id).cloned().ok_or_else(|| {
+        ActionError::new(
+            ActionErrorCode::UnknownItem,
+            format!("there is no item with id {}", repr_id(item_id.as_str())),
+        )
+    })
+}
+
+/// Take the actor's first pocket entry in `slot` holding `item_id`, returning
+/// where it sat so a failed follow-up can put it back.
+fn take_pocket_entry(world: &mut World, actor_id: &ActorId, item_id: &ItemId) -> Option<(usize, PocketedUnit)> {
+    let pockets = &mut world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .state
+        .pockets;
+    let index = pockets.iter().position(|unit| &unit.item_id == item_id)?;
+    Some((index, pockets.remove(index)))
+}
+
+fn restore_pocket_entry(world: &mut World, actor_id: &ActorId, index: usize, unit: PocketedUnit) {
+    let pockets = &mut world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .state
+        .pockets;
+    let index = index.min(pockets.len());
+    pockets.insert(index, unit);
+}
+
+/// A deterministic operation key for the stack forks these verbs cause. The
+/// event sequence is monotonic per world, so no two pocket operations collide.
+fn pocket_operation_key(world: &World, verb: &str, actor_id: &ActorId) -> String {
+    format!("{verb}:{actor_id}:{}", world.event_sequence)
+}
+
+/// `pocket_item` (`features/extra_pockets.md` M1/M2): hide one palmable
+/// stack-unit in a body cavity. The unit stays in `holds` — it is a reservation
+/// like an offer promise — but nobody can see it any more. What everyone *can*
+/// see is the motion, and (deliberately) not what moved: a cheeked coin and a
+/// cheeked draught read the same from two metres.
+fn pocket_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["item_id", "slot"], &[])?;
+    let item_id = parse_item_id(&parsed["item_id"])?;
+    let slot_value = &parsed["slot"];
+    let Some(slot) = slot_value.as_str().and_then(BodySlot::from_wire) else {
+        return Err(ActionError::new(
+            ActionErrorCode::WrongSlot,
+            format!("there is no body slot {}", py_repr(slot_value)),
+        ));
+    };
+    let item = held_item(world, actor_id, &item_id)?;
+    let actor = &world.characters[actor_id];
+    if !actor.has_body_slot(slot) {
+        return Err(ActionError::new(
+            ActionErrorCode::WrongSlot,
+            format!("you have no {}", slot.as_str()),
+        ));
+    }
+    if world.item_catalog.size(&item) != ItemSize::Palmable {
+        return Err(ActionError::new(
+            ActionErrorCode::TooBig,
+            format!(
+                "a {} does not fit in your {}",
+                world.item_catalog.display_name(&item),
+                slot.as_str()
+            ),
+        ));
+    }
+    if actor.pocketed_in_slot(slot) >= POCKET_SLOT_CAPACITY {
+        return Err(ActionError::new(
+            ActionErrorCode::SlotFull,
+            format!("your {} is full", slot.as_str()),
+        ));
+    }
+    if world.uncommitted_quantity(&item_id) == 0 {
+        return Err(ActionError::new(
+            ActionErrorCode::ItemCommitted,
+            "no unit of that stack is free; retract or replace the offer first",
+        ));
+    }
+
+    // The metadata economy (M2), stamped before the unit is reserved — a
+    // pocketed unit is committed, so the fork has to happen while it is free.
+    // A mouth wets whatever is not already a drink or already conditioned; a
+    // lower slot sharing with a stool stains.
+    let is_drink = world.item_catalog.is_drink(&item);
+    let condition = item.metadata.get(CONDITION_METADATA_KEY).map(String::as_str);
+    let stamp = if slot == BodySlot::Mouth {
+        (!is_drink && condition.is_none()).then_some(CONDITION_WET)
+    } else {
+        let shares_with_a_stool = world.characters[actor_id].pockets().iter().any(|unit| {
+            unit.slot == slot
+                && world
+                    .items
+                    .get(&unit.item_id)
+                    .is_some_and(|other| other.kind.as_str() == POOP_KIND)
+        });
+        (shares_with_a_stool
+            && item.kind.as_str() != POOP_KIND
+            && condition != Some(CONDITION_POOPSTAINED))
+        .then_some(CONDITION_POOPSTAINED)
+    };
+    let pocketed_id = match stamp {
+        None => item_id.clone(),
+        Some(value) => {
+            let key = pocket_operation_key(world, "pocket", actor_id);
+            world
+                .restamp_metadata(actor_id, &item_id, 1, CONDITION_METADATA_KEY, value, &key)
+                .map_err(inventory_action_error)?
+        }
+    };
+    // Re-read: the restamp may have forked or merged the stack the unit rides.
+    let pocketed = world.items[&pocketed_id].clone();
+    let phrase = counted_phrase(world, &pocketed, 1);
+    let noun = counted_noun(world, &pocketed, 1);
+
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .state
+        .pockets
+        .push(PocketedUnit {
+            slot,
+            item_id: pocketed_id.clone(),
+        });
+
+    // Body language, like `gesture`: a percept, not an inbox notice. The
+    // item-blind wording is the whole mechanic — a watcher sees a hand at a
+    // mouth, never what was in it. A mouthful of drink is the exception, and
+    // deliberately so: cheeking a draught has to look exactly like drinking it.
+    let (own, witnessed) = match (slot, is_drink) {
+        (BodySlot::Mouth, true) => (
+            format!("You took a mouthful of {phrase}."),
+            format!("took a mouthful of {phrase}"),
+        ),
+        (BodySlot::Mouth, false) => (
+            format!("You slipped the {noun} into your mouth."),
+            "slipped something into their mouth".to_string(),
+        ),
+        _ => (
+            format!("You tucked the {noun} away, out of sight."),
+            "slipped something out of sight beneath their clothes".to_string(),
+        ),
+    };
+    let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
+    let lines: Vec<(ActorId, String)> = hearers
+        .iter()
+        .map(|observer| {
+            let who = cap_first(&identify_ids(world, observer, actor_id));
+            (observer.clone(), format!("{who} {witnessed}"))
+        })
+        .collect();
+    deliver(world, lines, true);
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .remember_percept(own);
+
+    world_event(
+        world,
+        "pocket_item",
+        actor_id,
+        None,
+        Some(pocketed_id),
+        1,
+        hearers,
+    );
+    world.touch_public_state();
+    world.assert_invariants();
+    Ok(format!(
+        "{} pockets the {noun} ({})",
+        world.characters[actor_id].name(),
+        slot.as_str()
+    ))
+}
+
+/// `retrieve_item` — back into the hand. The slot is derived, never asked for:
+/// the model already told the world where it went.
+fn retrieve_item(
+    world: &mut World,
+    actor_id: &ActorId,
+    args: &Value,
+) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["item_id"], &[])?;
+    let item_id = parse_item_id(&parsed["item_id"])?;
+    let Some(slot) = world.characters[actor_id].pocket_slot_of(&item_id) else {
+        return Err(ActionError::new(
+            ActionErrorCode::NotPocketed,
+            format!(
+                "nothing with id {} rides in your body slots",
+                repr_id(item_id.as_str())
+            ),
+        ));
+    };
+    let item = world.items[&item_id].clone();
+    let noun = counted_noun(world, &item, 1);
+    take_pocket_entry(world, actor_id, &item_id).expect("the entry was just found");
+
+    let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
+    let lines: Vec<(ActorId, String)> = hearers
+        .iter()
+        .map(|observer| {
+            let who = cap_first(&identify_ids(world, observer, actor_id));
+            let line = if slot == BodySlot::Mouth {
+                format!("{who} took something from their mouth")
+            } else {
+                format!("{who} fetched something from beneath their clothes")
+            };
+            (observer.clone(), line)
+        })
+        .collect();
+    deliver(world, lines, true);
+    let own = if slot == BodySlot::Mouth {
+        format!("You took the {noun} back out of your mouth.")
+    } else {
+        format!("You brought the {noun} back out from under your clothes.")
+    };
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .remember_percept(own);
+
+    world_event(
+        world,
+        "retrieve_item",
+        actor_id,
+        None,
+        Some(item_id),
+        1,
+        hearers,
+    );
+    world.touch_public_state();
+    world.assert_invariants();
+    Ok(format!(
+        "{} retrieves the {noun}",
+        world.characters[actor_id].name()
+    ))
+}
+
+/// `swallow` — the second stage of drinking, and the smuggler's trick. Food
+/// feeds; anything else goes down whole and comes back on the gut clock
+/// (`extra_pockets.md` M3). The only thing a bystander gets is a 2 m gulp:
+/// swallowing the evidence has to be quiet, or it is not a mechanic.
+fn swallow(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["item_id"], &[])?;
+    let item_id = parse_item_id(&parsed["item_id"])?;
+    let item = require_mouthful(world, actor_id, &item_id)?;
+    let noun = counted_noun(world, &item, 1);
+
+    let (index, unit) = take_pocket_entry(world, actor_id, &item_id).expect("checked above");
+    if let Err(error) = world.consume_item_quantity(actor_id, &item_id, 1) {
+        restore_pocket_entry(world, actor_id, index, unit);
+        return Err(inventory_action_error(error));
+    }
+
+    if world.item_catalog.is_edible(&item) {
+        let satiety = world.item_catalog.satiety(&item).unwrap_or(0);
+        let quench = world.item_catalog.thirst_quench(&item).unwrap_or(0);
+        if let Some(eater) = world.characters.get_mut(actor_id) {
+            let hunger = &mut eater.state.needs.hunger;
+            *hunger = (*hunger + f64::from(satiety)).min(HUNGER_MAX);
+            let thirst = &mut eater.state.needs.thirst;
+            *thirst = (*thirst + f64::from(quench)).min(THIRST_MAX);
+        }
+        queue_gut(world, actor_id, None);
+    } else {
+        // Swallow the evidence: the thing itself is queued, and comes back
+        // stained on its own schedule.
+        queue_gut(world, actor_id, Some((item.kind.clone(), item.metadata.clone())));
+    }
+
+    if world.sounds_enabled
+        && let Some(sound) = world.sound_catalog.get("gulp").cloned()
+    {
+        emit_sound(world, Some(actor_id), &sound, None);
+    }
+    world_event(world, "swallow", actor_id, None, Some(item_id), 1, Vec::new());
+    world.touch_public_state();
+    world.assert_invariants();
+    Ok(format!(
+        "{} swallows the {noun}",
+        world.characters[actor_id].name()
+    ))
+}
+
+/// `spit` — the insult with a real payload. A drink is gone (the mouthful
+/// splashes); anything solid lands on the target, who now holds a wet thing.
+/// Targeted only for now: items on the floor do not exist
+/// (`extra_pockets.md`, open questions).
+fn spit(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["item_id", "target"], &[])?;
+    let item_id = parse_item_id(&parsed["item_id"])?;
+    let target_id = parse_actor_id(&parsed["target"], "target")?;
+    if !world.is_present(&target_id) {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownTarget,
+            format!("there is nobody with id {}", repr_id(target_id.as_str())),
+        ));
+    }
+    if target_id == *actor_id {
+        return Err(ActionError::new(
+            ActionErrorCode::SelfTarget,
+            "you cannot spit at yourself",
+        ));
+    }
+    require_interaction_range(world, actor_id, &target_id)?;
+    let item = require_mouthful(world, actor_id, &item_id)?;
+    let phrase = counted_phrase(world, &item, 1);
+    let noun = counted_noun(world, &item, 1);
+    let is_drink = world.item_catalog.is_drink(&item);
+
+    let (index, unit) = take_pocket_entry(world, actor_id, &item_id).expect("checked above");
+    let moved = if is_drink {
+        world.consume_item_quantity(actor_id, &item_id, 1)
+    } else {
+        let key = pocket_operation_key(world, "spit", actor_id);
+        world
+            .transfer_item_quantity(actor_id, &target_id, &item_id, 1, &key)
+            .map(|_| ())
+    };
+    if let Err(error) = moved {
+        restore_pocket_entry(world, actor_id, index, unit);
+        return Err(inventory_action_error(error));
+    }
+
+    let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
+    let lines: Vec<(ActorId, String)> = hearers
+        .iter()
+        .map(|observer| {
+            let who = cap_first(&identify_ids(world, observer, actor_id));
+            let line = if observer == &target_id {
+                format!("{who} spat {phrase} at you!")
+            } else {
+                format!(
+                    "{who} spat {phrase} at {}",
+                    identify_ids(world, observer, &target_id)
+                )
+            };
+            (observer.clone(), line)
+        })
+        .collect();
+    deliver(world, lines, true);
+    let own = format!(
+        "You spat {phrase} at {}.",
+        identify_ids(world, actor_id, &target_id)
+    );
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .remember_percept(own);
+
+    world_event(
+        world,
+        "spit",
+        actor_id,
+        Some(target_id.clone()),
+        Some(item_id),
+        1,
+        hearers,
+    );
+    raise_ward_notice_for(
+        world,
+        actor_id,
+        "spat upon a neighbour in the open street",
+        Some(target_id.clone()),
+    );
+    world.touch_public_state();
+    world.assert_invariants();
+    Ok(format!(
+        "{} spits {noun} at {}",
+        world.characters[actor_id].name(),
+        world.characters[&target_id].name()
+    ))
+}
+
+/// `gargle` — pure theatre, and a sound. The mouthful survives and stays where
+/// it was; gargling holy water does nothing mechanical at all, which is the
+/// joke (`extra_pockets.md`, open questions).
+fn gargle(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["item_id"], &[])?;
+    let item_id = parse_item_id(&parsed["item_id"])?;
+    let item = require_mouthful(world, actor_id, &item_id)?;
+    if !world.item_catalog.is_drink(&item) {
+        return Err(ActionError::new(
+            ActionErrorCode::NotEdible,
+            "you can only gargle a drink",
+        ));
+    }
+    let noun = counted_noun(world, &item, 1);
+    // The catalog row carries the whole percept fan-out — nothing changes hands.
+    if world.sounds_enabled
+        && let Some(sound) = world.sound_catalog.get("gargle").cloned()
+    {
+        emit_sound(world, Some(actor_id), &sound, None);
+    }
+    world_event(world, "gargle", actor_id, None, Some(item_id), 1, Vec::new());
+    Ok(format!(
+        "{} gargles the {noun}",
+        world.characters[actor_id].name()
+    ))
+}
+
+/// `expel` — whatever rides below comes out where you stand. Stools are gone
+/// for good (the world has no ground items); anything else simply stops being
+/// hidden. Where you do it matters: an officer in earshot puts it on the ward's
+/// tongues.
+fn expel(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    args_object(args, &[], &[])?;
+    let lower: Vec<PocketedUnit> = world.characters[actor_id]
+        .pockets()
+        .iter()
+        .filter(|unit| unit.slot.is_lower())
+        .cloned()
+        .collect();
+    if lower.is_empty() {
+        return Err(ActionError::new(
+            ActionErrorCode::NothingToExpel,
+            "nothing rides in your lower slots",
+        ));
+    }
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .state
+        .pockets
+        .retain(|unit| !unit.slot.is_lower());
+
+    // A stool is left in the gutter (there is nowhere else for it); anything
+    // else was in `holds` all along and simply stops being concealed.
+    let mut voided = 0u32;
+    for unit in &lower {
+        let is_stool = world
+            .items
+            .get(&unit.item_id)
+            .is_some_and(|item| item.kind.as_str() == POOP_KIND);
+        if is_stool && world.consume_item_quantity(actor_id, &unit.item_id, 1).is_ok() {
+            voided += 1;
+        }
+    }
+
+    if world.sounds_enabled
+        && let Some(sound) = world.sound_catalog.get("soft_report").cloned()
+    {
+        emit_sound(world, Some(actor_id), &sound, None);
+    }
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .remember_percept("You relieved yourself where you stood.");
+    world_event(
+        world,
+        "expel",
+        actor_id,
+        None,
+        None,
+        lower.len() as u32,
+        Vec::new(),
+    );
+    if voided > 0 {
+        raise_ward_notice_for(world, actor_id, "fouled the street in open view", None);
+    }
+    world.touch_public_state();
+    world.assert_invariants();
+    Ok(format!(
+        "{} relieves themself where they stand",
+        world.characters[actor_id].name()
+    ))
+}
+
+/// The law's own eyes (`law_and_order.md` M3 × `extra_pockets.md` M4): a public
+/// indecency an officer *witnesses* needs no report and no verb — the nearest
+/// law-cast character within earshot raises the notice mechanically, from their
+/// own point of view. The prose carries a name only when that officer knows it;
+/// otherwise "a stranger", never an id (the unknown-people rule). An officer
+/// fouling the street themself is nonsense, and is skipped.
+fn raise_ward_notice_for(
+    world: &mut World,
+    offender_id: &ActorId,
+    deed: &str,
+    wronged: Option<ActorId>,
+) {
+    if crate::notices::is_law(&world.characters[offender_id]) {
+        return;
+    }
+    // `nearby` is ordered by distance then id, so this is the nearest officer.
+    let Some(officer_id) = nearby(world, offender_id, HEARING_RADIUS_M)
+        .into_iter()
+        .find(|id| world.characters.get(id).is_some_and(crate::notices::is_law))
+    else {
+        return;
+    };
+    let officer = &world.characters[&officer_id];
+    let about = if officer.knows().contains(offender_id) {
+        world.characters[offender_id].name().to_string()
+    } else {
+        "a stranger".to_string()
+    };
+    let place = world
+        .area_map
+        .location_description(world.characters[offender_id].position_m());
+    // Stamped exactly as `raise_notice` does: a clock-less world raises an
+    // undated notice that never decays.
+    let since = world
+        .current_time
+        .map(|time| format!("{}'s {}", time.weekday.label(), time.office.label()));
+    let raised_game_days = world.current_time.map(|time| time.day as f64 + time.fraction);
+    let notice_id = world.notices.raise(
+        about,
+        deed.to_string(),
+        place,
+        since,
+        raised_game_days,
+        officer_id,
+        Some(offender_id.clone()),
+        wronged,
+    );
+    let line = world
+        .notices
+        .live()
+        .iter()
+        .find(|notice| notice.id == notice_id)
+        .expect("just raised")
+        .line();
+    // The offender is excluded from the carriers — the ward talks *about* them.
+    let carriers = crate::notices::carrier_ids(world, notice_id, offender_id);
+    let lines = carriers
+        .into_iter()
+        .map(|carrier| (carrier, format!("word in the ward: {line}")))
+        .collect();
+    deliver(world, lines, true);
+}
+
+/// Queue what the gut is working on (`extra_pockets.md` M3): `None` is a meal
+/// (one stool per gut, however many meals — a second meal coalesces into the
+/// one already brewing), `Some((kind, metadata))` a swallowed inedible on its
+/// way back. Formation time is a pure function of (actor, meal, clock): the
+/// `hash01` idiom, so the headless runner and the tests replay identically.
+///
+/// A clock-less world (the hermetic fixtures) queues nothing at all, which is
+/// what keeps the frozen golden prompts byte-identical.
+pub(crate) fn queue_gut(
+    world: &mut World,
+    actor_id: &ActorId,
+    contents: Option<(ItemKind, std::collections::BTreeMap<String, String>)>,
+) {
+    let Some(time) = world.current_time else {
+        return;
+    };
+    let Some(actor) = world.characters.get(actor_id) else {
+        return;
+    };
+    let (kind, metadata) = match contents {
+        None => {
+            if actor
+                .state
+                .gut
+                .iter()
+                .any(|entry| entry.kind.as_str() == POOP_KIND)
+            {
+                return;
+            }
+            (
+                ItemKind::from_raw(POOP_KIND),
+                std::collections::BTreeMap::new(),
+            )
+        }
+        Some(contents) => contents,
+    };
+    let game_days = time.day as f64 + time.fraction;
+    let spread = crate::world::hash01("gut_clock", actor_id, actor.state.gut.len() as u64);
+    let due_game_days = game_days + crate::GUT_MIN_GAME_DAYS + spread * crate::GUT_SPREAD_GAME_DAYS;
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("checked above")
+        .state
+        .gut
+        .push(GutEntry {
+            kind,
+            metadata,
+            due_game_days,
+        });
 }
 
 fn set_goal(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
@@ -1777,6 +2453,8 @@ mod tests {
 
     fn character(id: &str, name: &str, x: f64) -> Character {
         Character::from_sheet(CharacterSheet {
+            pockets: Vec::new(),
+            frontbutt: None,
             id: ActorId::from_raw(id),
             name: name.into(),
             control: Control::Llm,
@@ -3106,5 +3784,679 @@ mod tests {
         )
         .unwrap();
         assert!(world.notices.is_empty(), "a fine to the law settles the word");
+    }
+
+    // ------------------------------------------- body pockets (extra_pockets.md)
+
+    /// A carrier at 0 with three sparks, a loaf, a pot of ale and an apple; a
+    /// watcher at 2 and a nosey neighbour at 5 (both strangers to everyone), and
+    /// one soul 30 m off, out of every radius.
+    fn pocket_world() -> World {
+        let mut world = World::new();
+        let mut carrier = character("carry", "Carrier", 0.0);
+        for id in ["sparks", "loafx", "alepot", "applex"] {
+            carrier.state.holds.push(ItemId::from_raw(id));
+        }
+        world.add_character(carrier);
+        world.add_character(character("watch", "Watcher", 2.0));
+        world.add_character(character("nosey", "Nosey", 5.0));
+        world.add_character(character("faroff", "Faroff", 30.0));
+        world.add_item(Item::stack(ItemId::from_raw("sparks"), "spark", 3));
+        world.add_item(Item::new(ItemId::from_raw("loafx"), "loaf"));
+        world.add_item(Item::new(ItemId::from_raw("alepot"), "ale"));
+        world.add_item(Item::new(ItemId::from_raw("applex"), "apple"));
+        world
+    }
+
+    fn only_pocketed(world: &World, actor_id: &ActorId) -> (crate::character::BodySlot, ItemId) {
+        let snapshot = world.characters[actor_id].pocket_snapshot();
+        assert_eq!(snapshot.len(), 1, "expected exactly one pocketed unit");
+        snapshot[0].clone()
+    }
+
+    fn condition_of(world: &World, item_id: &ItemId) -> Option<String> {
+        world.items[item_id]
+            .metadata
+            .get(CONDITION_METADATA_KEY)
+            .cloned()
+    }
+
+    /// The classic cutpurse defence (`extra_pockets.md`, the fun list): a coin
+    /// in the cheek forks the stack wet, cannot be spent while it rides there,
+    /// and comes back — still wet — the moment it is retrieved.
+    #[test]
+    fn a_cheeked_spark_forks_the_stack_wet_and_cannot_be_spent_until_retrieved() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+
+        let line = apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "sparks", "slot": "mouth"}),
+        )
+        .unwrap();
+        assert_eq!(line, "Carrier pockets the wet spark (mouth)");
+
+        // Metadata is stack identity, so the wet unit left the dry stack.
+        assert_eq!(world.items[&ItemId::from_raw("sparks")].quantity, 2);
+        let (slot, wet_id) = only_pocketed(&world, &carrier);
+        assert_eq!(slot, crate::character::BodySlot::Mouth);
+        assert_eq!(condition_of(&world, &wet_id).as_deref(), Some("wet"));
+        assert_eq!(world.items[&wet_id].quantity, 1);
+        // A pocketed unit is a commitment, exactly like an offer promise.
+        assert_eq!(world.uncommitted_quantity(&wet_id), 0);
+        let error = apply_action(
+            &mut world,
+            &carrier,
+            "offer_item",
+            &json!({"item_id": wet_id.as_str(), "target": "watch"}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::ItemCommitted);
+
+        // The transition is visible; the coin never is.
+        let seen = world.characters[&ActorId::from_raw("watch")]
+            .inbox()
+            .last()
+            .cloned()
+            .unwrap();
+        assert_eq!(seen, "A stranger (id carry) slipped something into their mouth");
+        assert!(
+            world.characters[&ActorId::from_raw("faroff")]
+                .inbox()
+                .is_empty()
+        );
+
+        apply_action(
+            &mut world,
+            &carrier,
+            "retrieve_item",
+            &json!({"item_id": wet_id.as_str()}),
+        )
+        .unwrap();
+        assert!(world.characters[&carrier].pockets().is_empty());
+        assert_eq!(condition_of(&world, &wet_id).as_deref(), Some("wet"));
+        assert_eq!(world.uncommitted_quantity(&wet_id), 1);
+        world.assert_invariants();
+    }
+
+    /// Every refusal the body has, and the house rule that a failed action
+    /// leaves the world exactly as it found it.
+    #[test]
+    fn the_pocket_verbs_refuse_what_a_body_cannot_do_and_change_nothing() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+        let revision = world.world_revision;
+
+        for (verb, args, code) in [
+            (
+                "pocket_item",
+                json!({"item_id": "loafx", "slot": "mouth"}),
+                ActionErrorCode::TooBig,
+            ),
+            (
+                "pocket_item",
+                json!({"item_id": "sparks", "slot": "frontbutt"}),
+                ActionErrorCode::WrongSlot,
+            ),
+            (
+                "pocket_item",
+                json!({"item_id": "sparks", "slot": "ear"}),
+                ActionErrorCode::WrongSlot,
+            ),
+            (
+                "pocket_item",
+                json!({"item_id": "gh0st", "slot": "mouth"}),
+                ActionErrorCode::NotOwner,
+            ),
+            (
+                "retrieve_item",
+                json!({"item_id": "sparks"}),
+                ActionErrorCode::NotPocketed,
+            ),
+            (
+                "swallow",
+                json!({"item_id": "sparks"}),
+                ActionErrorCode::NotPocketed,
+            ),
+            (
+                "gargle",
+                json!({"item_id": "alepot"}),
+                ActionErrorCode::NotPocketed,
+            ),
+            ("expel", json!({}), ActionErrorCode::NothingToExpel),
+            (
+                "spit",
+                json!({"item_id": "sparks", "target": "carry"}),
+                ActionErrorCode::SelfTarget,
+            ),
+            (
+                "spit",
+                json!({"item_id": "sparks", "target": "nobody"}),
+                ActionErrorCode::UnknownTarget,
+            ),
+            (
+                "spit",
+                json!({"item_id": "sparks", "target": "faroff"}),
+                ActionErrorCode::OutOfRange,
+            ),
+        ] {
+            let error = apply_action(&mut world, &carrier, verb, &args).unwrap_err();
+            assert_eq!(error.code, code, "{verb} {args}");
+        }
+
+        assert!(world.characters.values().all(|c| c.inbox().is_empty()));
+        assert!(world.characters[&carrier].pockets().is_empty());
+        assert!(world.drain_events().is_empty());
+        assert_eq!(world.world_revision, revision);
+        world.assert_invariants();
+    }
+
+    /// Two in a cheek is the resolved capacity — and objectively funnier than
+    /// one. The third simply does not fit.
+    #[test]
+    fn a_cheek_takes_two_units_and_the_third_does_not_fit() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+        let cheek = json!({"item_id": "sparks", "slot": "mouth"});
+
+        apply_action(&mut world, &carrier, "pocket_item", &cheek).unwrap();
+        apply_action(&mut world, &carrier, "pocket_item", &cheek).unwrap();
+        assert_eq!(
+            world.characters[&carrier].pocketed_in_slot(crate::character::BodySlot::Mouth),
+            2
+        );
+        // Both units merged into the one wet stack, and both are committed.
+        let snapshot = world.characters[&carrier].pocket_snapshot();
+        assert_eq!(snapshot[0].1, snapshot[1].1);
+        assert_eq!(world.pocketed_quantity(&snapshot[0].1), 2);
+
+        let error = apply_action(&mut world, &carrier, "pocket_item", &cheek).unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::SlotFull);
+        assert_eq!(error.message, "your mouth is full");
+        world.assert_invariants();
+    }
+
+    /// Two-stage drinking: the mouthful reads to everyone as drinking (which is
+    /// what makes cheeking a deception at all), and swallowing applies the very
+    /// same satiety and thirst `eat` would have.
+    #[test]
+    fn a_mouthful_of_ale_reads_as_drinking_and_swallowing_it_feeds_the_drinker() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+        {
+            let needs = &mut world.characters.get_mut(&carrier).unwrap().state.needs;
+            needs.hunger = 0.0;
+            needs.thirst = 0.0;
+        }
+
+        let line = apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "alepot", "slot": "mouth"}),
+        )
+        .unwrap();
+        assert_eq!(line, "Carrier pockets the pot of ale (mouth)");
+        // A drink is named: from two metres this is a person having a drink.
+        assert_eq!(
+            world.characters[&ActorId::from_raw("watch")]
+                .inbox()
+                .last()
+                .unwrap(),
+            "A stranger (id carry) took a mouthful of a pot of ale"
+        );
+        // Nothing in your mouth can be eaten until you retrieve it.
+        let error = apply_action(&mut world, &carrier, "eat", &json!({"item_id": "alepot"}))
+            .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::ItemCommitted);
+
+        let line = apply_action(&mut world, &carrier, "swallow", &json!({"item_id": "alepot"}))
+            .unwrap();
+        assert_eq!(line, "Carrier swallows the pot of ale");
+        let carrier_character = &world.characters[&carrier];
+        assert_eq!(carrier_character.needs().hunger, 25.0);
+        assert_eq!(carrier_character.needs().thirst, 160.0);
+        assert!(carrier_character.pockets().is_empty());
+        assert!(!world.items.contains_key(&ItemId::from_raw("alepot")));
+        // A clock-less world has no gut clock to start.
+        assert!(carrier_character.state.gut.is_empty());
+        world.assert_invariants();
+    }
+
+    /// The gut clock (M3): a meal queues one stool however many meals it takes,
+    /// a swallowed inedible queues its own return, and both are stamped from
+    /// the world clock — never a fresh draw.
+    #[test]
+    fn meals_coalesce_in_the_gut_and_a_swallowed_key_queues_its_own_return() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+        world.add_item(Item::new(ItemId::from_raw("keyxx"), "key"));
+        world
+            .characters
+            .get_mut(&carrier)
+            .unwrap()
+            .state
+            .holds
+            .push(ItemId::from_raw("keyxx"));
+        world.current_time =
+            Some(crate::clock::WorldClock::new(3600.0, crate::clock::Office::HighWick, 2, 0.05).at(0.0));
+        let now_days = world.current_time.unwrap().day as f64 + world.current_time.unwrap().fraction;
+
+        apply_action(&mut world, &carrier, "eat", &json!({"item_id": "applex"})).unwrap();
+        apply_action(&mut world, &carrier, "eat", &json!({"item_id": "loafx"})).unwrap();
+        let gut = world.characters[&carrier].state.gut.clone();
+        assert_eq!(gut.len(), 1, "one stool brews, however many meals");
+        assert_eq!(gut[0].kind.as_str(), "poop");
+        assert!(gut[0].due_game_days >= now_days + crate::GUT_MIN_GAME_DAYS);
+        assert!(
+            gut[0].due_game_days
+                <= now_days + crate::GUT_MIN_GAME_DAYS + crate::GUT_SPREAD_GAME_DAYS
+        );
+
+        // Swallowing the evidence: the key rides the gut on its own schedule.
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "keyxx", "slot": "mouth"}),
+        )
+        .unwrap();
+        let (_, wet_key) = only_pocketed(&world, &carrier);
+        apply_action(
+            &mut world,
+            &carrier,
+            "swallow",
+            &json!({"item_id": wet_key.as_str()}),
+        )
+        .unwrap();
+        let gut = world.characters[&carrier].state.gut.clone();
+        assert_eq!(gut.len(), 2);
+        assert_eq!(gut[1].kind.as_str(), "key");
+        assert_eq!(
+            gut[1].metadata.get(CONDITION_METADATA_KEY).map(String::as_str),
+            Some(CONDITION_WET),
+            "the mouth's wet stamp travels with it"
+        );
+        world.assert_invariants();
+    }
+
+    /// Spitting: a solid lands on the person you spat it at (they now hold a wet
+    /// thing), a mouthful of drink is simply gone, and the square understands
+    /// both.
+    #[test]
+    fn spitting_hands_a_solid_to_the_target_and_a_drink_is_gone() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+        let watcher = ActorId::from_raw("watch");
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "sparks", "slot": "mouth"}),
+        )
+        .unwrap();
+        let (_, wet_id) = only_pocketed(&world, &carrier);
+
+        let line = apply_action(
+            &mut world,
+            &carrier,
+            "spit",
+            &json!({"item_id": wet_id.as_str(), "target": "watch"}),
+        )
+        .unwrap();
+        assert_eq!(line, "Carrier spits wet spark at Watcher");
+        assert!(world.characters[&carrier].pockets().is_empty());
+        assert_eq!(world.characters[&watcher].holds(), std::slice::from_ref(&wet_id));
+        assert_eq!(condition_of(&world, &wet_id).as_deref(), Some("wet"));
+        assert_eq!(
+            world.characters[&watcher].inbox().last().unwrap(),
+            "A stranger (id carry) spat a wet spark at you!"
+        );
+        assert_eq!(
+            world.characters[&ActorId::from_raw("nosey")]
+                .inbox()
+                .last()
+                .unwrap(),
+            "A stranger (id carry) spat a wet spark at a stranger (id watch)"
+        );
+
+        // A mouthful of drink splashes and is gone; nobody gains a pot of ale.
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "alepot", "slot": "mouth"}),
+        )
+        .unwrap();
+        apply_action(
+            &mut world,
+            &carrier,
+            "spit",
+            &json!({"item_id": "alepot", "target": "watch"}),
+        )
+        .unwrap();
+        assert!(!world.items.contains_key(&ItemId::from_raw("alepot")));
+        assert_eq!(world.characters[&watcher].holds(), [wet_id]);
+        world.assert_invariants();
+    }
+
+    /// The butt economy (M2/M3/M4): what joins a stool is stained, `expel`
+    /// leaves the stool in the gutter and gives everything else back, and an
+    /// officer in earshot puts it on the ward's tongues — in prose, with no ids.
+    #[test]
+    fn a_stool_stains_its_company_and_expelling_it_before_an_officer_raises_the_ward() {
+        let mut world = pocket_world();
+        world.add_character(lored(
+            "srgnt",
+            "Sergeant",
+            6.0,
+            "bailiff_and_gaoler",
+            Some(0.0),
+        ));
+        let carrier = ActorId::from_raw("carry");
+        let stool = ItemId::from_raw("turd1");
+
+        // Seeded state: a stool already rides the breeches (the digest pass is
+        // the engine's business; this verb only has to deal with the result).
+        world.add_item(Item::new(stool.clone(), "poop"));
+        {
+            let state = &mut world.characters.get_mut(&carrier).unwrap().state;
+            state.holds.push(stool.clone());
+            state.pockets.push(PocketedUnit {
+                slot: crate::character::BodySlot::Butt,
+                item_id: stool.clone(),
+            });
+        }
+        world.assert_invariants();
+
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "applex", "slot": "butt"}),
+        )
+        .unwrap();
+        let stained = world.characters[&carrier]
+            .pocket_snapshot()
+            .into_iter()
+            .map(|(_, item_id)| item_id)
+            .find(|item_id| world.items[item_id].kind.as_str() == "apple")
+            .unwrap();
+        assert_eq!(
+            condition_of(&world, &stained).as_deref(),
+            Some("poopstained"),
+            "an apple that shares a slot with a stool does not come out clean"
+        );
+
+        let line = apply_action(&mut world, &carrier, "expel", &json!({})).unwrap();
+        assert_eq!(line, "Carrier relieves themself where they stand");
+        assert!(world.characters[&carrier].pockets().is_empty());
+        assert!(!world.items.contains_key(&stool), "left in the gutter");
+        assert!(
+            world.characters[&carrier].holds().contains(&stained),
+            "the apple was in hand all along; the reservation simply ended"
+        );
+
+        // The ward hears about it, from the officer's own eyes: a description,
+        // never an id (`notices.rs`, the unknown-people rule).
+        assert_eq!(world.notices.live().len(), 1);
+        let notice = &world.notices.live()[0];
+        assert_eq!(notice.line(), "a stranger — fouled the street in open view");
+        assert_eq!(notice.raised_by, ActorId::from_raw("srgnt"));
+        assert_eq!(notice.accused, Some(carrier.clone()));
+        assert!(!notice.line().contains("carry"));
+        assert!(
+            world.characters[&ActorId::from_raw("srgnt")]
+                .inbox()
+                .iter()
+                .any(|line| line.starts_with("word in the ward: ")),
+        );
+        assert!(
+            !world.characters[&carrier]
+                .inbox()
+                .iter()
+                .any(|line| line.starts_with("word in the ward: ")),
+            "the ward talks about the offender, not to them"
+        );
+        world.assert_invariants();
+    }
+
+    /// Spitting at a neighbour under an officer's eye is the ward's business —
+    /// and the officer's notice keeps the private linkage that lets restitution
+    /// settle it later (`law_and_order.md` M3).
+    #[test]
+    fn spitting_at_someone_before_an_officer_puts_it_on_the_wards_tongues() {
+        let mut world = pocket_world();
+        world.add_character(lored(
+            "srgnt",
+            "Sergeant",
+            6.0,
+            "bailiff_and_gaoler",
+            Some(0.0),
+        ));
+        let carrier = ActorId::from_raw("carry");
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "sparks", "slot": "mouth"}),
+        )
+        .unwrap();
+        let (_, wet_id) = only_pocketed(&world, &carrier);
+
+        apply_action(
+            &mut world,
+            &carrier,
+            "spit",
+            &json!({"item_id": wet_id.as_str(), "target": "watch"}),
+        )
+        .unwrap();
+
+        assert_eq!(world.notices.live().len(), 1);
+        let notice = &world.notices.live()[0];
+        assert_eq!(
+            notice.line(),
+            "a stranger — spat upon a neighbour in the open street"
+        );
+        assert_eq!(notice.accused, Some(carrier));
+        assert_eq!(notice.wronged, Some(ActorId::from_raw("watch")));
+        world.assert_invariants();
+    }
+
+    /// An officer who spits raises nothing: the ward against itself is nonsense.
+    #[test]
+    fn the_law_does_not_raise_the_ward_against_its_own_spitting() {
+        let mut world = pocket_world();
+        let mut sergeant = lored("srgnt", "Sergeant", 1.0, "bailiff_and_gaoler", Some(0.0));
+        sergeant.state.holds.push(ItemId::from_raw("srgspk"));
+        world.add_character(sergeant);
+        world.add_item(Item::new(ItemId::from_raw("srgspk"), "spark"));
+        let sergeant = ActorId::from_raw("srgnt");
+
+        apply_action(
+            &mut world,
+            &sergeant,
+            "pocket_item",
+            &json!({"item_id": "srgspk", "slot": "mouth"}),
+        )
+        .unwrap();
+        let (_, wet_id) = only_pocketed(&world, &sergeant);
+        apply_action(
+            &mut world,
+            &sergeant,
+            "spit",
+            &json!({"item_id": wet_id.as_str(), "target": "watch"}),
+        )
+        .unwrap();
+        assert!(world.notices.is_empty());
+        world.assert_invariants();
+    }
+
+    /// Expelling with nobody's law in earshot is nobody's business.
+    #[test]
+    fn a_private_moment_raises_no_notice() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+        let stool = ItemId::from_raw("turd1");
+        world.add_item(Item::new(stool.clone(), "poop"));
+        {
+            let state = &mut world.characters.get_mut(&carrier).unwrap().state;
+            state.holds.push(stool.clone());
+            state.pockets.push(PocketedUnit {
+                slot: crate::character::BodySlot::Butt,
+                item_id: stool,
+            });
+        }
+
+        apply_action(&mut world, &carrier, "expel", &json!({})).unwrap();
+        assert!(world.notices.is_empty());
+        world.assert_invariants();
+    }
+
+    /// Muffled speech (`extra_pockets.md` M1, the resolved open question):
+    /// listeners are *told* the words came through a full mouth; the words
+    /// themselves are never garbled, and the marker leaves with the mouthful.
+    #[test]
+    fn a_full_mouth_marks_the_listeners_line_and_never_the_words() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+        let watcher = ActorId::from_raw("watch");
+
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "sparks", "slot": "mouth"}),
+        )
+        .unwrap();
+        let (_, wet_id) = only_pocketed(&world, &carrier);
+
+        let line = apply_action(&mut world, &carrier, "say", &json!({"text": "good day"})).unwrap();
+        // The transcript and the event the host reads are untouched.
+        assert_eq!(line, "Carrier (aloud): \"good day\"");
+        assert_eq!(
+            world.drain_events().pop().unwrap().text.as_deref(),
+            Some("good day")
+        );
+        assert_eq!(
+            world.characters[&watcher].inbox().last().unwrap(),
+            "A stranger (id carry) said through a full mouth: \"good day\""
+        );
+        // Targeted speech carries it too, after the person spoken to.
+        apply_action(
+            &mut world,
+            &carrier,
+            "say",
+            &json!({"target": "watch", "text": "and to you"}),
+        )
+        .unwrap();
+        assert_eq!(
+            world.characters[&watcher].inbox().last().unwrap(),
+            "A stranger (id carry) said to you through a full mouth: \"and to you\""
+        );
+        assert_eq!(
+            world.characters[&ActorId::from_raw("nosey")]
+                .inbox()
+                .last()
+                .unwrap(),
+            "A stranger (id carry) said to a stranger (id watch) through a full mouth: \
+             \"and to you\""
+        );
+        // The speaker's own recollection is never marked.
+        assert_eq!(
+            world.characters[&carrier].recent_history().last().unwrap(),
+            "You said to a stranger (id watch): \"and to you\""
+        );
+
+        // An empty mouth speaks plainly again.
+        apply_action(
+            &mut world,
+            &carrier,
+            "retrieve_item",
+            &json!({"item_id": wet_id.as_str()}),
+        )
+        .unwrap();
+        apply_action(&mut world, &carrier, "say", &json!({"text": "better"})).unwrap();
+        assert_eq!(
+            world.characters[&watcher].inbox().last().unwrap(),
+            "A stranger (id carry) said: \"better\""
+        );
+    }
+
+    /// `gargle` is theatre with a sound: the mouthful survives, in the mouth.
+    #[test]
+    fn gargling_keeps_the_mouthful_and_refuses_anything_solid() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+        world.sound_catalog = SoundCatalog::new(
+            vec![
+                Sound::new(
+                    "gargle",
+                    "body",
+                    6.0,
+                    "[You heard someone gargling nearby.]",
+                    Some("{actor} gargled noisily.".into()),
+                    "prompt",
+                    2.0,
+                    true,
+                )
+                .unwrap(),
+            ],
+            Vec::new(),
+        )
+        .unwrap();
+
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "sparks", "slot": "mouth"}),
+        )
+        .unwrap();
+        let (_, wet_id) = only_pocketed(&world, &carrier);
+        let error = apply_action(
+            &mut world,
+            &carrier,
+            "gargle",
+            &json!({"item_id": wet_id.as_str()}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::NotEdible);
+
+        apply_action(
+            &mut world,
+            &carrier,
+            "retrieve_item",
+            &json!({"item_id": wet_id.as_str()}),
+        )
+        .unwrap();
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "alepot", "slot": "mouth"}),
+        )
+        .unwrap();
+        let line = apply_action(&mut world, &carrier, "gargle", &json!({"item_id": "alepot"}))
+            .unwrap();
+        assert_eq!(line, "Carrier gargles the pot of ale");
+        // Still in the mouth, still a pot of ale.
+        assert_eq!(
+            only_pocketed(&world, &carrier),
+            (crate::character::BodySlot::Mouth, ItemId::from_raw("alepot"))
+        );
+        // The watcher is not facing the carrier, so the sound is unattributed —
+        // the verb itself delivers no percept at all; the catalog row is the
+        // whole fan-out.
+        assert_eq!(
+            world.characters[&ActorId::from_raw("watch")]
+                .inbox()
+                .last()
+                .unwrap(),
+            "[You heard someone gargling nearby.]"
+        );
+        world.assert_invariants();
     }
 }

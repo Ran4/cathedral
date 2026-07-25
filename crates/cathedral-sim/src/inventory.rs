@@ -243,21 +243,38 @@ impl World {
             .expect("transform reservations overflow an item stack")
     }
 
-    /// Quantity available to a new operation. Offers and transforms are both
-    /// commitments; neither silently loses its promise to a later caller.
+    /// Quantity of this stack riding in the owner's body pockets
+    /// (`features/extra_pockets.md`): a commitment exactly like an offer —
+    /// retrieval-first is the rule, so a pocketed unit cannot be offered, sold,
+    /// eaten or counted by a restock while it rides there.
+    pub fn pocketed_quantity(&self, item_id: &ItemId) -> u32 {
+        self.characters
+            .values()
+            .flat_map(|character| character.pockets())
+            .filter(|unit| &unit.item_id == item_id)
+            .count() as u32
+    }
+
+    /// Quantity available to a new operation. Offers, transforms and body
+    /// pockets are all commitments; none silently loses its promise to a later
+    /// caller.
     pub fn uncommitted_quantity(&self, item_id: &ItemId) -> u32 {
         let held = self.items.get(item_id).map_or(0, |item| item.quantity);
         held.saturating_sub(
             self.offered_quantity(item_id)
-                .saturating_add(self.transform_reserved_quantity(item_id)),
+                .saturating_add(self.transform_reserved_quantity(item_id))
+                .saturating_add(self.pocketed_quantity(item_id)),
         )
     }
 
     /// Offer replacement may provisionally release precisely the offer being
-    /// replaced, while retaining every transform reservation.
+    /// replaced, while retaining every transform and pocket reservation.
     pub fn available_for_offer_replacement(&self, item_id: &ItemId) -> u32 {
         let held = self.items.get(item_id).map_or(0, |item| item.quantity);
-        held.saturating_sub(self.transform_reserved_quantity(item_id))
+        held.saturating_sub(
+            self.transform_reserved_quantity(item_id)
+                .saturating_add(self.pocketed_quantity(item_id)),
+        )
     }
 
     pub fn held_quantity(&self, owner: &ActorId, matcher: &ItemMatcher) -> u32 {
@@ -686,6 +703,137 @@ impl World {
             self.items.get_mut(item_id).expect("item checked").quantity -= quantity;
         }
         Ok(())
+    }
+
+    /// Re-stamp `quantity` uncommitted units of `item_id` with metadata
+    /// `key=value`, keeping them with the same owner (`extra_pockets.md` M2 —
+    /// the wet coin, the poopstained bread). Metadata is stack identity, so
+    /// this forks the stack: the restamped units leave for (or merge into) a
+    /// stack differing only in `key`. Returns the id of the stack now carrying
+    /// the restamped units. Does not bump `world_revision`; callers batch.
+    pub fn restamp_metadata(
+        &mut self,
+        owner: &ActorId,
+        item_id: &ItemId,
+        quantity: u32,
+        key: &str,
+        value: &str,
+        operation_key: &str,
+    ) -> Result<ItemId, InventoryError> {
+        if quantity == 0 {
+            return Err(InventoryError::new(
+                InventoryErrorCode::BadQuantity,
+                "restamp quantity must be positive",
+            ));
+        }
+        if !self
+            .characters
+            .get(owner)
+            .is_some_and(|actor| actor.holds().contains(item_id))
+        {
+            return Err(InventoryError::new(
+                InventoryErrorCode::NotOwner,
+                format!("{owner} does not hold {item_id}"),
+            ));
+        }
+        let item = self.items.get(item_id).cloned().ok_or_else(|| {
+            InventoryError::new(
+                InventoryErrorCode::UnknownItem,
+                format!("missing item {item_id}"),
+            )
+        })?;
+        if item.metadata.get(key).map(String::as_str) == Some(value) {
+            return Ok(item_id.clone());
+        }
+        let available = self.uncommitted_quantity(item_id);
+        if quantity > available {
+            return Err(InventoryError::new(
+                InventoryErrorCode::ItemCommitted,
+                format!("only {available} of {item_id} is uncommitted"),
+            ));
+        }
+        let mut metadata = item.metadata.clone();
+        metadata.insert(key.to_string(), value.to_string());
+        let matcher = ItemMatcher {
+            kind: item.kind.clone(),
+            metadata,
+        };
+        let probe = matcher.to_item(ItemId::from_raw("restamp_probe"), quantity);
+        self.item_catalog
+            .validate_item(&probe)
+            .map_err(|message| InventoryError::new(InventoryErrorCode::InvalidContent, message))?;
+        let merge_target = if self.item_catalog.stackable(&item) {
+            self.characters[owner]
+                .holds()
+                .iter()
+                .find(|id| {
+                    self.items
+                        .get(*id)
+                        .is_some_and(|other| matcher.matches(other))
+                })
+                .cloned()
+        } else {
+            None
+        };
+        if let Some(target) = &merge_target {
+            self.items[target]
+                .quantity
+                .checked_add(quantity)
+                .ok_or_else(|| {
+                    InventoryError::new(InventoryErrorCode::ArithmeticOverflow, "stack overflow")
+                })?;
+        }
+
+        // Provenance never follows a fork, exactly like a transfer.
+        self.deduct_legacy_shares(item_id, quantity);
+        let whole = quantity == item.quantity;
+        let destination = match (whole, merge_target) {
+            (true, Some(target)) => {
+                self.items
+                    .get_mut(&target)
+                    .expect("merge target exists")
+                    .quantity += quantity;
+                self.items.remove(item_id);
+                self.legacy_restock_shares.remove(item_id);
+                self.characters
+                    .get_mut(owner)
+                    .expect("owner checked")
+                    .state
+                    .holds
+                    .retain(|held| held != item_id);
+                target
+            }
+            (true, None) => {
+                self.items
+                    .get_mut(item_id)
+                    .expect("item checked")
+                    .metadata
+                    .insert(key.to_string(), value.to_string());
+                item_id.clone()
+            }
+            (false, Some(target)) => {
+                self.items.get_mut(item_id).expect("item checked").quantity -= quantity;
+                self.items
+                    .get_mut(&target)
+                    .expect("merge target exists")
+                    .quantity += quantity;
+                target
+            }
+            (false, None) => {
+                self.items.get_mut(item_id).expect("item checked").quantity -= quantity;
+                let new_id = self.resolve_item_id(item_id, operation_key);
+                let forked = matcher.to_item(new_id.clone(), quantity);
+                self.items.insert(new_id.clone(), forked);
+                self.characters
+                    .get_mut(owner)
+                    .expect("owner checked")
+                    .state
+                    .holds
+                    .push(new_id.clone());
+                new_id
+            }
+        };
+        Ok(destination)
     }
 
     /// Add a legacy template and mark only the newly conjured quantity.

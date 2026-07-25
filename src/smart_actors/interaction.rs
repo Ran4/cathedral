@@ -65,6 +65,45 @@ pub enum PlayerIntent {
         request_id: String,
         item_id: ItemId,
     },
+    // ------------------------------------------------ the body pockets
+    // (`features/extra_pockets.md`). Everything you do to your own body needs
+    // nobody else nearby, so only `Spit` carries a position.
+    /// Tuck one unit of a held stack into a body cavity.
+    Pocket {
+        request_id: String,
+        item_id: ItemId,
+        slot: cathedral_sim::BodySlot,
+    },
+    /// Take a pocketed unit back into the open; the slot is derivable sim-side.
+    Retrieve {
+        request_id: String,
+        item_id: ItemId,
+    },
+    Swallow {
+        request_id: String,
+        item_id: ItemId,
+    },
+    /// Spitting is aimed at somebody within `ITEM_INTERACTION_RADIUS_M`, so it
+    /// carries a position exactly like an offer does.
+    Spit {
+        request_id: String,
+        item_id: ItemId,
+        target_id: ActorId,
+        spatial_seq: u64,
+        position: Vec3,
+    },
+    Gargle {
+        request_id: String,
+        item_id: ItemId,
+    },
+    /// Void the lower slots where you stand; names no item — the gut decides.
+    Expel {
+        request_id: String,
+    },
+    Eat {
+        request_id: String,
+        item_id: ItemId,
+    },
     DebugSay {
         request_id: String,
         text: String,
@@ -82,12 +121,18 @@ pub enum PlayerIntent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PendingKind {
+pub(super) enum PendingKind {
     Recording,
     Offer { item_id: ItemId, target_id: ActorId, quantity: Option<u32> },
     Accept { item_id: ItemId },
     Decline { item_id: ItemId },
     Retract { item_id: ItemId },
+    /// Every body-pocket verb that names an item (`features/extra_pockets.md`).
+    /// They all move the same thing — a stack-unit between the open and a
+    /// cavity — so one kind covers the lot; the label is only for the toast.
+    BodySlot { item_id: ItemId },
+    /// `expel` names no item: whatever is down there comes out.
+    Expel,
     DebugSay,
     Say,
 }
@@ -98,8 +143,9 @@ impl PendingKind {
             Self::Offer { item_id, .. }
             | Self::Accept { item_id }
             | Self::Decline { item_id }
-            | Self::Retract { item_id } => Some(item_id),
-            Self::Recording | Self::DebugSay | Self::Say => None,
+            | Self::Retract { item_id }
+            | Self::BodySlot { item_id } => Some(item_id),
+            Self::Recording | Self::Expel | Self::DebugSay | Self::Say => None,
         }
     }
 
@@ -147,12 +193,12 @@ impl InteractionState {
         self.coin_offer_count.clamp(1, stack.max(1))
     }
 
-    fn request_id(&mut self) -> String {
+    pub(super) fn request_id(&mut self) -> String {
         self.next_request = self.next_request.wrapping_add(1).max(1);
         format!("rust-{}", self.next_request)
     }
 
-    fn insert_pending(&mut self, request_id: String, kind: PendingKind, revision: u64) {
+    pub(super) fn insert_pending(&mut self, request_id: String, kind: PendingKind, revision: u64) {
         self.pending.insert(
             request_id,
             PendingCommand {
@@ -472,8 +518,14 @@ pub fn select_inventory_item(
     keyboard: Res<ButtonInput<KeyCode>>,
     scroll: Res<AccumulatedMouseScroll>,
     mirror: Res<WorldMirror>,
+    inventory: Option<Res<super::inventory_ui::InventoryUiState>>,
     mut state: ResMut<InteractionState>,
 ) {
+    // The `I` screen owns the pointer while it is open: its wheel scrolls the
+    // panel and its digits are not quickbar keys.
+    if inventory.is_some_and(|inventory| inventory.open) {
+        return;
+    }
     let player_id = ActorId("player".into());
     let Some(player) = mirror.actor(&player_id) else {
         return;
@@ -1252,6 +1304,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                     ActorSnapshot {
                         id: ActorId("ilse".into()),
@@ -1263,6 +1316,7 @@ mod tests {
                         holds: vec![ItemId("coin".into()), ItemId("fish".into())],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                 ],
                 items: vec![
@@ -1335,6 +1389,7 @@ mod tests {
                     holds: vec![ItemId("spk".into()), ItemId("one".into())],
                     active_gesture: None,
                     statuses: Vec::new(),
+                    pockets: Vec::new(),
                 }],
                 items: vec![
                     ItemSnapshot {
@@ -1620,6 +1675,7 @@ mod tests {
                         holds: vec![ItemId("purse".into()), ItemId("loaf".into())],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                     ActorSnapshot {
                         id: ActorId("wyn".into()),
@@ -1631,6 +1687,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                 ],
                 items: vec![

@@ -289,6 +289,7 @@ pub(super) fn collect_chat_input(
     mut keyboard: ResMut<ButtonInput<KeyCode>>,
     mut keyboard_events: MessageReader<KeyboardInput>,
     menu: Res<ConfigMenuState>,
+    inventory: Res<super::inventory_ui::InventoryUiState>,
     cursor: Query<&CursorOptions, With<PrimaryWindow>>,
     config: Res<SmartActorsConfig>,
     runtime: Res<SmartActorRuntime>,
@@ -301,6 +302,7 @@ pub(super) fn collect_chat_input(
     if !chat.open {
         if !keyboard.any_just_pressed([KeyCode::Enter, KeyCode::NumpadEnter])
             || menu.open
+            || inventory.open
             || cursor
                 .single()
                 .map_or(true, |cursor| cursor.grab_mode == CursorGrabMode::None)

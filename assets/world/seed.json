@@ -66,7 +66,8 @@
     { "id": "bl015", "kind": "blanket" },
     { "id": "ap011", "kind": "apple", "metadata": { "condition": "bruised" } },
     { "id": "ap012", "kind": "apple", "metadata": { "condition": "bruised" } },
-    { "id": "kn010", "kind": "knife" }
+    { "id": "kn010", "kind": "knife" },
+    { "id": "sp001", "kind": "spark", "metadata": { "condition": "wet" } }
   ],
   "characters": [
     {
@@ -83,6 +84,7 @@
       },
       "facing_yaw": 0.0,
       "holds": [],
+      "frontbutt": false,
       "memories": [],
       "knows": []
     }

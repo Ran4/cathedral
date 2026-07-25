@@ -104,6 +104,8 @@ impl WorldDump {
         }
         for dump in self.characters {
             let mut character = Character::from_sheet(CharacterSheet {
+                pockets: Vec::new(),
+                frontbutt: None,
                 id: dump.id,
                 name: dump.name,
                 control: dump.control,

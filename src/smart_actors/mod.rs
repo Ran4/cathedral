@@ -21,6 +21,7 @@ mod config_menu;
 mod hands;
 mod hud;
 mod interaction;
+mod inventory_ui;
 mod lamps;
 mod microphone;
 mod sound;
@@ -46,6 +47,7 @@ pub use area_debug::AreaDebugState;
 pub use chat::{ChatInputSet, ChatInputState};
 pub use clock::WorldClockState;
 pub use config_menu::ConfigMenuState;
+pub use inventory_ui::InventoryUiState;
 pub use targeting::ActorFocus;
 
 /// The one actor the game itself controls.
@@ -391,6 +393,25 @@ impl Plugin for SmartActorsPlugin {
                     .chain(),
             );
 
+        // The `I` screen likewise exists whether or not smart actors run: with
+        // no mirror it simply shows an empty pack. Only the systems that write
+        // a `PlayerIntent` need the engine, and they are registered below.
+        app.init_resource::<inventory_ui::InventoryUiState>()
+            .add_systems(Startup, inventory_ui::spawn_inventory_ui)
+            .add_systems(
+                Update,
+                (
+                    // After the settings menu's own toggle, so an Escape that
+                    // opens the menu closes the inventory in the same frame.
+                    inventory_ui::toggle_inventory,
+                    inventory_ui::handle_inventory_tile_clicks,
+                    inventory_ui::refresh_inventory_ui,
+                    inventory_ui::update_inventory_ui,
+                )
+                    .chain()
+                    .after(config_menu::update_config_menu),
+            );
+
         if !self.config.enabled {
             let mut hud = hud::SmartActorHudState::default();
             hud.connection = hud::ConnectionUiState::Disabled;
@@ -440,6 +461,15 @@ impl Plugin for SmartActorsPlugin {
             .add_message::<crate::soundscape::SoundscapeCue>()
             .add_message::<hands::HandoverFeedback>()
             .add_message::<body::PresentGesture>()
+            // The inventory's menu entries are the only part of the screen that
+            // needs the engine (they write intents), so they live here rather
+            // than in the always-on block above.
+            .add_systems(
+                Update,
+                inventory_ui::handle_inventory_actions
+                    .after(inventory_ui::handle_inventory_tile_clicks)
+                    .before(inventory_ui::refresh_inventory_ui),
+            )
             .configure_sets(
                 PostUpdate,
                 (
@@ -1514,6 +1544,25 @@ fn describe_world_event(
     } else {
         mirror.actor(actor_id)?.name_for_player.as_str()
     };
+    // Two kinds name no item at all (`features/extra_pockets.md`): `expel`
+    // empties whatever is down there, and `digest` is the gut announcing
+    // itself. They are answered before the item lookup so they still toast.
+    match kind {
+        "expel" => {
+            return Some(if player_acted {
+                "You relieve yourself".into()
+            } else {
+                format!("{actor} relieves themself")
+            });
+        }
+        // Only ever your own gut's business — the sim sends it with no
+        // recipients, so a bystander never reaches this function for it.
+        "digest" if player_acted => {
+            return Some("Something has made its way through you".into());
+        }
+        "digest" => return None,
+        _ => {}
+    }
     let snapshot = item_id.and_then(|item_id| mirror.item(item_id))?;
     // Counted for a transient toast: "3 sparks", "3 loaves" — the plural is
     // catalog-derived host-side, so irregulars read correctly.
@@ -1554,6 +1603,37 @@ fn describe_world_event(
             format!("You eat the {item}")
         } else {
             format!("{actor} eats the {item}")
+        }),
+        // The body pockets (`features/extra_pockets.md`). Others see only the
+        // transition, never the contents — "something", the same discretion the
+        // sim's percepts keep.
+        "pocket_item" => Some(if player_acted {
+            format!("You tuck the {item} away")
+        } else {
+            format!("{actor} tucks something away")
+        }),
+        "retrieve_item" => Some(if player_acted {
+            format!("You take the {item} back out")
+        } else {
+            format!("{actor} takes something out")
+        }),
+        "swallow" => Some(if player_acted {
+            format!("You swallow the {item}")
+        } else {
+            format!("{actor} swallows the {item}")
+        }),
+        "spit" if target_id == Some(player_id) => Some(format!("{actor} spits the {item} at you!")),
+        "spit" if player_acted => {
+            let target = target_id
+                .and_then(|target_id| mirror.actor(target_id))
+                .map_or_else(|| "someone".to_string(), |target| target.name_for_player.clone());
+            Some(format!("You spit the {item} at {target}"))
+        }
+        "spit" => Some(format!("{actor} spits at someone")),
+        "gargle" => Some(if player_acted {
+            format!("You gargle the {item}")
+        } else {
+            format!("{actor} gargles")
         }),
         _ => None,
     }
@@ -1708,6 +1788,59 @@ fn intent_to_command(intent: &interaction::PlayerIntent) -> Result<bridge::Bridg
             request_id: request_id.clone(),
             item_id: item_id.clone(),
         },
+        interaction::PlayerIntent::Pocket {
+            request_id,
+            item_id,
+            slot,
+        } => bridge::BridgeCommand::PlayerPocket {
+            request_id: request_id.clone(),
+            item_id: item_id.clone(),
+            slot: *slot,
+        },
+        interaction::PlayerIntent::Retrieve {
+            request_id,
+            item_id,
+        } => bridge::BridgeCommand::PlayerRetrieve {
+            request_id: request_id.clone(),
+            item_id: item_id.clone(),
+        },
+        interaction::PlayerIntent::Swallow {
+            request_id,
+            item_id,
+        } => bridge::BridgeCommand::PlayerSwallow {
+            request_id: request_id.clone(),
+            item_id: item_id.clone(),
+        },
+        interaction::PlayerIntent::Spit {
+            request_id,
+            item_id,
+            target_id,
+            spatial_seq,
+            position: value,
+        } => bridge::BridgeCommand::PlayerSpit {
+            request_id: request_id.clone(),
+            item_id: item_id.clone(),
+            target_id: target_id.clone(),
+            position_m: position(*value)?,
+            spatial_seq: *spatial_seq,
+        },
+        interaction::PlayerIntent::Gargle {
+            request_id,
+            item_id,
+        } => bridge::BridgeCommand::PlayerGargle {
+            request_id: request_id.clone(),
+            item_id: item_id.clone(),
+        },
+        interaction::PlayerIntent::Expel { request_id } => bridge::BridgeCommand::PlayerExpel {
+            request_id: request_id.clone(),
+        },
+        interaction::PlayerIntent::Eat {
+            request_id,
+            item_id,
+        } => bridge::BridgeCommand::PlayerEat {
+            request_id: request_id.clone(),
+            item_id: item_id.clone(),
+        },
         interaction::PlayerIntent::Sound { sound_id } => bridge::BridgeCommand::PlayerSound {
             sound_id: sound_id.clone(),
         },
@@ -1747,6 +1880,13 @@ fn intent_request_id(intent: &interaction::PlayerIntent) -> Option<&str> {
         | interaction::PlayerIntent::Accept { request_id, .. }
         | interaction::PlayerIntent::Decline { request_id, .. }
         | interaction::PlayerIntent::Retract { request_id, .. }
+        | interaction::PlayerIntent::Pocket { request_id, .. }
+        | interaction::PlayerIntent::Retrieve { request_id, .. }
+        | interaction::PlayerIntent::Swallow { request_id, .. }
+        | interaction::PlayerIntent::Spit { request_id, .. }
+        | interaction::PlayerIntent::Gargle { request_id, .. }
+        | interaction::PlayerIntent::Expel { request_id }
+        | interaction::PlayerIntent::Eat { request_id, .. }
         | interaction::PlayerIntent::DebugSay { request_id, .. }
         | interaction::PlayerIntent::Say { request_id, .. } => Some(request_id),
     }
@@ -1953,6 +2093,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                     model::ActorSnapshot {
                         id: model::ActorId("near".into()),
@@ -1964,6 +2105,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                     model::ActorSnapshot {
                         id: model::ActorId("far".into()),
@@ -1976,6 +2118,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                 ],
                 items: vec![],
@@ -2083,6 +2226,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                     model::ActorSnapshot {
                         id: giver.clone(),
@@ -2094,6 +2238,7 @@ mod tests {
                         holds: vec![coin.clone()],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                     model::ActorSnapshot {
                         id: other.clone(),
@@ -2105,6 +2250,7 @@ mod tests {
                         holds: vec![],
                         active_gesture: None,
                         statuses: Vec::new(),
+                        pockets: Vec::new(),
                     },
                 ],
                 items: vec![model::ItemSnapshot {

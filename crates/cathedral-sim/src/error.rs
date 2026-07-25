@@ -50,6 +50,18 @@ pub enum ActionErrorCode {
     /// inventing a threshold just to have a refusal is what
     /// `features/movement/05_the_llm_seam.md` §2 warns against.
     TooFar,
+    /// `pocket_item` into a cavity already carrying its capacity
+    /// (`features/extra_pockets.md`).
+    SlotFull,
+    /// `retrieve_item`/`swallow`/`spit`/`gargle` of an item not riding in a
+    /// body slot (or not in the slot the verb needs).
+    NotPocketed,
+    /// `pocket_item` of a kind that is not palmable.
+    TooBig,
+    /// A body slot this character does not have, or the wrong slot for the verb.
+    WrongSlot,
+    /// `expel` with empty lower slots.
+    NothingToExpel,
 }
 
 impl ActionErrorCode {
@@ -81,6 +93,11 @@ impl ActionErrorCode {
             Self::UnknownPlace => "unknown_place",
             Self::NoRoute => "no_route",
             Self::TooFar => "too_far",
+            Self::SlotFull => "slot_full",
+            Self::NotPocketed => "not_pocketed",
+            Self::TooBig => "too_big",
+            Self::WrongSlot => "wrong_slot",
+            Self::NothingToExpel => "nothing_to_expel",
         }
     }
 }
@@ -231,6 +248,11 @@ pub enum CommandErrorCode {
     UnknownPlace,
     NoRoute,
     TooFar,
+    SlotFull,
+    NotPocketed,
+    TooBig,
+    WrongSlot,
+    NothingToExpel,
     // ---- from `SpatialUpdateErrorCode` (the position that came with it)
     InvalidPosition,
     StaleSpatialSeq,
@@ -288,6 +310,11 @@ impl CommandErrorCode {
             Self::UnknownPlace => "unknown_place",
             Self::NoRoute => "no_route",
             Self::TooFar => "too_far",
+            Self::SlotFull => "slot_full",
+            Self::NotPocketed => "not_pocketed",
+            Self::TooBig => "too_big",
+            Self::WrongSlot => "wrong_slot",
+            Self::NothingToExpel => "nothing_to_expel",
             Self::InvalidPosition => "invalid_position",
             Self::StaleSpatialSeq => "stale_spatial_seq",
             Self::InvalidRequest => "invalid_request",
@@ -340,6 +367,11 @@ impl From<ActionErrorCode> for CommandErrorCode {
             ActionErrorCode::UnknownPlace => Self::UnknownPlace,
             ActionErrorCode::NoRoute => Self::NoRoute,
             ActionErrorCode::TooFar => Self::TooFar,
+            ActionErrorCode::SlotFull => Self::SlotFull,
+            ActionErrorCode::NotPocketed => Self::NotPocketed,
+            ActionErrorCode::TooBig => Self::TooBig,
+            ActionErrorCode::WrongSlot => Self::WrongSlot,
+            ActionErrorCode::NothingToExpel => Self::NothingToExpel,
         }
     }
 }

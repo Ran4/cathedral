@@ -399,6 +399,10 @@ mod tests {
                 "pail_clatter",
                 "coin_clink",
                 "market_cry",
+                "gulp",
+                "spit",
+                "gargle",
+                "soft_report",
             ]
         );
         for sound in catalog.sounds() {
@@ -458,8 +462,31 @@ mod tests {
                 "draw_water",
                 "chain_windlass",
                 "pour_trough",
-                "pail_clatter"
+                "pail_clatter",
+                "gulp",
+                "spit",
+                "gargle",
+                "soft_report",
             ]
+        );
+
+        // Body pockets (extra_pockets.md M1/M3): the mouth and the lower slots.
+        // The `seen` lines take "You" as readily as a name — no reflexive
+        // pronoun — because `emit_sound` renders the emitter's own memory from
+        // the same template.
+        for body in ["gulp", "spit", "gargle", "soft_report"] {
+            let sound = catalog.get(body).unwrap();
+            assert_eq!(sound.sound_class, "body", "{body}");
+            assert!(sound.actor_emittable, "{body}");
+            let seen = sound.seen.as_deref().unwrap_or_default();
+            assert!(seen.starts_with("{actor} "), "{body}: {seen}");
+            assert!(!seen.contains("themself"), "{body}: {seen}");
+            assert!(sound.heard.starts_with("[You heard"), "{body}");
+        }
+        assert_eq!(
+            catalog.get("gulp").unwrap().audible_distance,
+            2.0,
+            "swallowing the evidence has to be quiet"
         );
         assert_eq!(
             catalog.get("chain_windlass").unwrap().audible_distance,

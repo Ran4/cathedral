@@ -34,13 +34,15 @@ use crate::{
         CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS,
         StageConfig, WarmExchanges, on_stage,
     },
-    character::{Control, StatusKind},
+    character::{BodySlot, Control, GutEntry, PocketedUnit, StatusKind},
     clock::{Office, Weekday, WorldClock, stroke_times},
     error::{CommandError, CommandErrorCode, EngineInitError},
     event::{DomainEvent, EventType},
     floor::ConversationFloor,
     gesture::{self, GestureKind},
     ids::{ActorId, ItemId, SpeechEventId},
+    inventory::StockSpec,
+    item::{CONDITION_METADATA_KEY, CONDITION_POOPSTAINED, POOP_KIND},
     math::Vec3,
     nav::NavData,
     notices,
@@ -345,6 +347,45 @@ pub enum EngineCommand {
     /// The one player action with no position: you can withdraw an offer from
     /// anywhere.
     PlayerRetract {
+        request_id: String,
+        item_id: ItemId,
+    },
+    /// The player's own inventory verbs (`features/extra_pockets.md` M1): the
+    /// right-click menu's counterparts to the LLM's `pocket_item`/`retrieve_item`
+    /// /`swallow`/`gargle`/`expel`/`eat`. All position-free — what you do with
+    /// your own body needs nobody else nearby — except [`Self::PlayerSpit`].
+    PlayerPocket {
+        request_id: String,
+        item_id: ItemId,
+        slot: BodySlot,
+    },
+    PlayerRetrieve {
+        request_id: String,
+        item_id: ItemId,
+    },
+    PlayerSwallow {
+        request_id: String,
+        item_id: ItemId,
+    },
+    /// Spitting is aimed at somebody within 4 m, so it carries a position like
+    /// an offer does.
+    PlayerSpit {
+        request_id: String,
+        item_id: ItemId,
+        target_id: ActorId,
+        position_m: Vec3,
+        spatial_seq: i64,
+    },
+    PlayerGargle {
+        request_id: String,
+        item_id: ItemId,
+    },
+    PlayerExpel {
+        request_id: String,
+    },
+    /// Eating through the same verb the cast uses — the player's hunger is not
+    /// modelled, but the item is consumed and the gut clock starts either way.
+    PlayerEat {
         request_id: String,
         item_id: ItemId,
     },
@@ -1076,6 +1117,11 @@ impl Engine {
         // ran out this poll bumps the revision the flush then publishes.
         self.expire_gestures(now);
 
+        // The gut, on the same terms: the action layer has no clock, so the
+        // poop clock lapses here (`extra_pockets.md` M3) and the urgency it
+        // ramps rides the very next snapshot.
+        self.digest(now);
+
         // The scheduler's turn produced domain events in this same poll; the
         // floor they acquire here gates the *next* one.
         self.flush(now, &mut out);
@@ -1256,6 +1302,86 @@ impl Engine {
                 now,
                 &request_id,
                 "retract_offer",
+                json!({"item_id": item_id.as_str()}),
+                None,
+                out,
+            ),
+
+            EngineCommand::PlayerPocket {
+                request_id,
+                item_id,
+                slot,
+            } => self.player_action(
+                now,
+                &request_id,
+                "pocket_item",
+                json!({"item_id": item_id.as_str(), "slot": slot.as_str()}),
+                None,
+                out,
+            ),
+
+            EngineCommand::PlayerRetrieve {
+                request_id,
+                item_id,
+            } => self.player_action(
+                now,
+                &request_id,
+                "retrieve_item",
+                json!({"item_id": item_id.as_str()}),
+                None,
+                out,
+            ),
+
+            EngineCommand::PlayerSwallow {
+                request_id,
+                item_id,
+            } => self.player_action(
+                now,
+                &request_id,
+                "swallow",
+                json!({"item_id": item_id.as_str()}),
+                None,
+                out,
+            ),
+
+            EngineCommand::PlayerSpit {
+                request_id,
+                item_id,
+                target_id,
+                position_m,
+                spatial_seq,
+            } => self.player_action(
+                now,
+                &request_id,
+                "spit",
+                json!({"item_id": item_id.as_str(), "target": target_id.as_str()}),
+                Some((spatial_seq, position_m)),
+                out,
+            ),
+
+            EngineCommand::PlayerGargle {
+                request_id,
+                item_id,
+            } => self.player_action(
+                now,
+                &request_id,
+                "gargle",
+                json!({"item_id": item_id.as_str()}),
+                None,
+                out,
+            ),
+
+            EngineCommand::PlayerExpel { request_id } => {
+                self.player_action(now, &request_id, "expel", json!({}), None, out)
+            }
+
+            EngineCommand::PlayerEat {
+                request_id,
+                item_id,
+            } => self.player_action(
+                now,
+                &request_id,
+                "eat",
                 json!({"item_id": item_id.as_str()}),
                 None,
                 out,
@@ -1962,6 +2088,247 @@ impl Engine {
         if cleared {
             self.world.touch_public_state();
         }
+    }
+
+    /// The poop clock (`features/extra_pockets.md` M3), ticked beside the
+    /// gesture deadlines and for the same reason: `actions.rs` has no clock, so
+    /// a queued meal can only *land* here. Two passes, for everyone — the round
+    /// enrols a fraction of the cast, and the player is not enrolled at all:
+    ///
+    /// 1. **Formation.** Every gut entry whose game-day stamp has lapsed
+    ///    becomes one held stack-unit riding the butt slot. A full slot
+    ///    displaces one of its occupants (deterministically chosen — no RNG);
+    ///    what forms beside a stool stains, and so does whatever was already
+    ///    there.
+    /// 2. **Urgency.** While a stool rides a pocket the `urgency` carriage
+    ///    status ramps over [`crate::URGENCY_RAMP_GAME_DAYS`], quantized to
+    ///    sixteenths so a smooth ramp does not republish the snapshot every
+    ///    poll. `expel` clears both the stool and the status.
+    fn digest(&mut self, now: f64) {
+        let game_days = self.clock.game_days(now);
+        let actor_ids: Vec<ActorId> = self.world.characters.keys().cloned().collect();
+        let mut changed = false;
+        for actor_id in &actor_ids {
+            changed |= self.form_gut_contents(actor_id, game_days);
+            changed |= self.ramp_urgency(actor_id, game_days);
+        }
+        if changed {
+            self.world.touch_public_state();
+        }
+    }
+
+    /// Pass one: land everything the gut has finished with. Returns whether the
+    /// public snapshot changed.
+    fn form_gut_contents(&mut self, actor_id: &ActorId, game_days: f64) -> bool {
+        let Some(actor) = self.world.characters.get_mut(actor_id) else {
+            return false;
+        };
+        if actor.state.gut.is_empty() {
+            return false;
+        }
+        let (due, pending): (Vec<GutEntry>, Vec<GutEntry>) = std::mem::take(&mut actor.state.gut)
+            .into_iter()
+            .partition(|entry| entry.due_game_days <= game_days);
+        actor.state.gut = pending;
+        if due.is_empty() {
+            return false;
+        }
+
+        for entry in due {
+            // A full slot loses one of its occupants — it simply stops being
+            // hidden, the item itself is untouched (the resolved open question:
+            // "one of those two will be dropped").
+            let occupied = self.world.characters[actor_id].pocketed_in_slot(BodySlot::Butt);
+            if occupied >= crate::POCKET_SLOT_CAPACITY {
+                let roll = crate::world::hash01(
+                    "gut_displace",
+                    actor_id,
+                    self.world.event_sequence.unsigned_abs(),
+                );
+                let nth = ((roll * occupied as f64) as usize).min(occupied.saturating_sub(1));
+                let pockets = &mut self
+                    .world
+                    .characters
+                    .get_mut(actor_id)
+                    .expect("checked above")
+                    .state
+                    .pockets;
+                let displaced = pockets
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, unit)| unit.slot == BodySlot::Butt)
+                    .map(|(index, _)| index)
+                    .nth(nth)
+                    .map(|index| pockets.remove(index));
+                // A displaced *stool* is not carried in the hands afterwards —
+                // it falls where the owner stands, exactly as `expel` leaves it
+                // (the world has no ground items). Anything else was in `holds`
+                // all along and simply stops being hidden.
+                if let Some(unit) = displaced
+                    && self
+                        .world
+                        .items
+                        .get(&unit.item_id)
+                        .is_some_and(|item| item.kind.as_str() == POOP_KIND)
+                {
+                    let _ = self
+                        .world
+                        .consume_item_quantity(actor_id, &unit.item_id, 1);
+                }
+            }
+
+            // A stool is never stamped; anything else comes back the way the
+            // journey left it.
+            let mut metadata = entry.metadata.clone();
+            if entry.kind.as_str() != POOP_KIND {
+                metadata.insert(
+                    CONDITION_METADATA_KEY.to_string(),
+                    CONDITION_POOPSTAINED.to_string(),
+                );
+            }
+            let stock = StockSpec {
+                kind: entry.kind.clone(),
+                metadata,
+                quantity: 1,
+            };
+            let key = format!("digest:{actor_id}:{}", self.world.event_sequence);
+            let Ok(item_id) = self.world.add_stock(actor_id, &stock, &key) else {
+                continue;
+            };
+            self.world
+                .characters
+                .get_mut(actor_id)
+                .expect("checked above")
+                .state
+                .pockets
+                .push(PocketedUnit {
+                    slot: BodySlot::Butt,
+                    item_id: item_id.clone(),
+                });
+            self.stain_lower_slot(actor_id);
+
+            let formed = self.world.items[&item_id].clone();
+            let line = if entry.kind.as_str() == POOP_KIND {
+                "system: your gut has done its work - something rides in your breeches; expel it in a fitting place.".to_string()
+            } else {
+                format!(
+                    "system: the {} you swallowed has come through - it rides in your breeches.",
+                    self.world.item_catalog.display_name(&formed)
+                )
+            };
+            let position = self.world.characters[actor_id].position_m();
+            if let Some(actor) = self.world.characters.get_mut(actor_id) {
+                actor.notify_percept(line);
+            }
+            self.world.emit(DomainEvent::world_event(
+                "digest",
+                actor_id.clone(),
+                None,
+                Some(item_id),
+                1,
+                position,
+                Vec::new(),
+            ));
+        }
+        self.world.assert_invariants();
+        true
+    }
+
+    /// Everything sharing a lower slot with a stool is stained (M2's metadata
+    /// economy). A pocketed unit is committed, so each one leaves its slot for
+    /// exactly as long as the restamp takes.
+    fn stain_lower_slot(&mut self, actor_id: &ActorId) {
+        let carries_a_stool = self.world.characters[actor_id].pockets().iter().any(|unit| {
+            unit.slot == BodySlot::Butt
+                && self
+                    .world
+                    .items
+                    .get(&unit.item_id)
+                    .is_some_and(|item| item.kind.as_str() == POOP_KIND)
+        });
+        if !carries_a_stool {
+            return;
+        }
+        for _ in 0..crate::POCKET_SLOT_CAPACITY {
+            let target = self.world.characters[actor_id]
+                .pockets()
+                .iter()
+                .position(|unit| {
+                    unit.slot == BodySlot::Butt
+                        && self.world.items.get(&unit.item_id).is_some_and(|item| {
+                            item.kind.as_str() != POOP_KIND
+                                && item.metadata.get(CONDITION_METADATA_KEY).map(String::as_str)
+                                    != Some(CONDITION_POOPSTAINED)
+                        })
+                });
+            let Some(index) = target else {
+                return;
+            };
+            let unit = self
+                .world
+                .characters
+                .get_mut(actor_id)
+                .expect("the actor is in the world")
+                .state
+                .pockets
+                .remove(index);
+            let key = format!("digest_stain:{actor_id}:{}", self.world.event_sequence);
+            let stained = self.world.restamp_metadata(
+                actor_id,
+                &unit.item_id,
+                1,
+                CONDITION_METADATA_KEY,
+                CONDITION_POOPSTAINED,
+                &key,
+            );
+            // A restamp that cannot happen puts the unit back untouched, and
+            // stops — retrying it on the next poll would only spin.
+            let failed = stained.is_err();
+            let item_id = stained.unwrap_or_else(|_| unit.item_id.clone());
+            self.world
+                .characters
+                .get_mut(actor_id)
+                .expect("the actor is in the world")
+                .state
+                .pockets
+                .push(PocketedUnit {
+                    slot: unit.slot,
+                    item_id,
+                });
+            if failed {
+                return;
+            }
+        }
+    }
+
+    /// Pass two: the pressure. Returns whether the public snapshot changed.
+    fn ramp_urgency(&mut self, actor_id: &ActorId, game_days: f64) -> bool {
+        let carries_a_stool = self.world.characters[actor_id].pockets().iter().any(|unit| {
+            self.world
+                .items
+                .get(&unit.item_id)
+                .is_some_and(|item| item.kind.as_str() == POOP_KIND)
+        });
+        let Some(actor) = self.world.characters.get_mut(actor_id) else {
+            return false;
+        };
+        if !carries_a_stool {
+            actor.state.urgency_since_game_days = None;
+            return actor.state.statuses.remove(&StatusKind::Urgency).is_some();
+        }
+        let since = *actor
+            .state
+            .urgency_since_game_days
+            .get_or_insert(game_days);
+        let urgency = ((game_days - since) / crate::URGENCY_RAMP_GAME_DAYS).clamp(0.0, 1.0);
+        // Sixteenths: the carriage cannot show more, and every change here
+        // republishes the whole snapshot.
+        let quantized = (urgency * 16.0).round() / 16.0;
+        if actor.state.statuses.get(&StatusKind::Urgency).copied() == Some(quantized) {
+            return false;
+        }
+        actor.state.statuses.insert(StatusKind::Urgency, quantized);
+        true
     }
 
     fn flush(&mut self, now: f64, out: &mut Vec<EngineMessage>) {

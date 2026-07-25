@@ -276,6 +276,63 @@ fn the_sheet_carries_the_wards_word_and_only_the_law_gets_the_verb() {
     assert!(law.contains("You serve the city's law"), "and explained");
 }
 
+/// extra_pockets.md M1/M4: the body-pocket verbs are documented conditionally —
+/// an actor with empty pockets and nothing palmable in hand pays zero extra
+/// tokens — the frontbutt is named only to a body that has one, and a pocketed
+/// unit marks its own `you_hold` line.
+#[test]
+fn the_body_pocket_verbs_render_only_for_a_body_that_could_use_them() {
+    let env = prompt_env();
+    let mut world = seed_world();
+
+    // Conny's hands are empty and his pockets with them: nothing renders.
+    let empty_handed = render_prompt(&world, &actor("cb947"), None, &env).unwrap();
+    assert!(!empty_handed.contains("pocket_item"));
+    assert!(!empty_handed.contains("ride out of sight"));
+
+    // Sven holds a herring, which is palmable — so he is told he can hide it.
+    let sven = actor("sv3n1");
+    let holder = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(
+        holder.contains("pocket_item {\"item_id\": \"c0prs\", \"slot\": \"mouth\"}"),
+        "the verb line is listed"
+    );
+    assert!(
+        holder.contains("A small item can also ride out of sight in a body pocket"),
+        "and explained"
+    );
+    assert!(holder.contains("slots: mouth, butt"));
+    assert!(
+        !holder.contains("frontbutt"),
+        "a body without one is never told of it"
+    );
+    for verb in ["retrieve_item {", "swallow {", "spit {", "gargle {", "expel {}"] {
+        assert!(holder.contains(verb), "missing {verb}");
+    }
+
+    // Authored availability (the cast is hand-written, so this is data).
+    world.characters.get_mut(&sven).unwrap().sheet.frontbutt = Some(true);
+    let with_frontbutt = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(with_frontbutt.contains("slots: mouth, butt, frontbutt"));
+
+    // The owner's own sheet is the only place a pocketed unit shows at all.
+    apply_action(
+        &mut world,
+        &sven,
+        "pocket_item",
+        &json!({"item_id": "fzbn9", "slot": "mouth"}),
+    )
+    .unwrap();
+    let pocketed = render_prompt(&world, &sven, None, &env).unwrap();
+    assert_eq!(
+        md_section(&pocketed, "you_hold").unwrap(),
+        ["fzbn9 wet herring (in your mouth)"]
+    );
+    // Nobody else's sheet mentions it — that is the entire point.
+    let watcher = render_prompt(&world, &actor("cb947"), None, &env).unwrap();
+    assert!(!watcher.contains("in your mouth"));
+}
+
 #[test]
 fn a_moved_character_gets_a_freshly_resolved_prompt_location() {
     let env = prompt_env();

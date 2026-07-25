@@ -146,6 +146,42 @@ pub enum BridgeCommand {
         request_id: String,
         item_id: ItemId,
     },
+    // ------------------------------------------------ the body pockets
+    // (`features/extra_pockets.md`). The sim enum crosses as-is, like
+    // `DebugStatus`'s `StatusKind`: mirroring three variants would only be
+    // drift risk.
+    PlayerPocket {
+        request_id: String,
+        item_id: ItemId,
+        slot: cathedral_sim::BodySlot,
+    },
+    PlayerRetrieve {
+        request_id: String,
+        item_id: ItemId,
+    },
+    PlayerSwallow {
+        request_id: String,
+        item_id: ItemId,
+    },
+    /// Aimed at somebody within reach, so it carries a position like an offer.
+    PlayerSpit {
+        request_id: String,
+        item_id: ItemId,
+        target_id: ActorId,
+        position_m: Position,
+        spatial_seq: u64,
+    },
+    PlayerGargle {
+        request_id: String,
+        item_id: ItemId,
+    },
+    PlayerExpel {
+        request_id: String,
+    },
+    PlayerEat {
+        request_id: String,
+        item_id: ItemId,
+    },
     /// Fire-and-forget deliberate player noise (the F key). No request_id and
     /// no command_result: there is no failure the player can act on, and
     /// rate-limited sounds are dropped silently at the engine.

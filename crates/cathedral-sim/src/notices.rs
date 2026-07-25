@@ -323,6 +323,8 @@ mod tests {
             curiosity: None,
         });
         Character::from_sheet(CharacterSheet {
+            pockets: Vec::new(),
+            frontbutt: None,
             id: ActorId::from_raw(id),
             name: id.to_uppercase(),
             control: Control::Llm,

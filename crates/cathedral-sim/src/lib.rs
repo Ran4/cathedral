@@ -59,8 +59,9 @@ pub use attention::{
     STAGE_PARTNER_MEMORY_SECONDS, StageConfig, WarmExchanges, context_hash, curiosity_of, on_stage,
 };
 pub use character::{
-    Character, CharacterSheet, CharacterState, Control, EconomicClass, IntentTarget, Movement,
-    Needs, Patrol, Presence, StatusKind, TravelIntent, VendorListing,
+    BodySlot, Character, CharacterSheet, CharacterState, Control, EconomicClass, GutEntry,
+    IntentTarget, Movement, Needs, Patrol, PocketedUnit, Presence, StatusKind, TravelIntent,
+    VendorListing,
 };
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
@@ -81,8 +82,8 @@ pub use inventory::{
     TransformReceipt, TransformReceiptLine,
 };
 pub use item::{
-    DISPLAY_METADATA_KEY, Edible, InvalidKind, Item, ItemCatalog, ItemCatalogError, ItemKind,
-    ItemKindDef,
+    CONDITION_METADATA_KEY, CONDITION_POOPSTAINED, CONDITION_WET, DISPLAY_METADATA_KEY, Edible,
+    InvalidKind, Item, ItemCatalog, ItemCatalogError, ItemKind, ItemKindDef, ItemSize, POOP_KIND,
 };
 pub use lore::{
     CONTROLLED_CIRCUMSTANCES, LoreCast, LoreCharacterSheet, LoreError, LoreProfile,
@@ -219,6 +220,22 @@ pub const HUNGER_SEED_DECLARED_HUNGRY: f64 = 25.0;
 /// A food stall's queue is "short" below this — the [`WELL_QUEUE_SHORT`] twin,
 /// the predicate rung 7 joins on (M3 binds the stalls this reads against).
 pub const FOOD_QUEUE_SHORT: usize = 4;
+// --- Body pockets and the poop clock (`features/extra_pockets.md`).
+/// How many stack-units one cavity carries. Two, per the resolved open
+/// question: bread inserted beside a stool becomes `[poop, poopstained bread]`,
+/// and a third thing simply does not fit (`slot_full`).
+pub const POCKET_SLOT_CAPACITY: usize = 2;
+/// The gut's floor, in game-days: nothing lands sooner than three game hours
+/// after the meal (M3 — "the poop clock").
+pub const GUT_MIN_GAME_DAYS: f64 = 3.0 / 24.0;
+/// The deterministic per-meal spread above the floor: up to three further game
+/// hours, from `hash01("gut_clock", actor, meals)` — no RNG, so headless runs
+/// replay identically.
+pub const GUT_SPREAD_GAME_DAYS: f64 = 3.0 / 24.0;
+/// How long after formation the `urgency` carriage status takes to ramp from 0
+/// to 1, in game-days (two game hours). Expel to clear.
+pub const URGENCY_RAMP_GAME_DAYS: f64 = 2.0 / 24.0;
+
 /// How long one sale takes at the pitch, in real seconds — a coin counted, a
 /// loaf wrapped ([`04_the_bread_round.md`] §5). The [`WATER_DRAW_SECONDS`] twin,
 /// a touch longer: money changes hands.

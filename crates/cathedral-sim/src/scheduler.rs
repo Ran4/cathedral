@@ -1026,6 +1026,8 @@ mod tests {
 
     fn lore_character(id: &str, significance: Significance) -> Character {
         Character::from_sheet(CharacterSheet {
+            pockets: Vec::new(),
+            frontbutt: None,
             id: ActorId::from_raw(id),
             name: id.into(),
             control: Control::Llm,

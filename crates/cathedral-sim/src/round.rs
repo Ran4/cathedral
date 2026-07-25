@@ -4584,6 +4584,10 @@ fn silent_eat(world: &mut World, eater: &ActorId, item_id: &ItemId) -> bool {
         *thirst = (*thirst + f64::from(quench)).min(crate::THIRST_MAX);
         character.remember_percept(format!("You {verb} a {noun}."));
     }
+    // A ladder meal starts the gut clock exactly like the verb does
+    // (`extra_pockets.md` M3) — the round feeds most of the cast, so without
+    // this the poop clock would only ever run for the handful who `eat`.
+    crate::actions::queue_gut(world, eater, None);
     world.touch_public_state();
     true
 }

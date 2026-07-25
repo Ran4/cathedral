@@ -23,6 +23,27 @@ use crate::ids::{ItemId, is_valid_id};
 /// exploding the catalog with a kind per prop.
 pub const DISPLAY_METADATA_KEY: &str = "display";
 
+/// The `condition` metadata key (`features/extra_pockets.md` M2). Unlike other
+/// metadata it is allowed on **any** kind for the two body-pocket values below
+/// (a kind may still declare its own additional values, like the apple's
+/// `bruised`), because any palmable thing can end up in a mouth or worse.
+/// It is an ordinary stack-forking adjective: wet sparks never merge with dry.
+pub const CONDITION_METADATA_KEY: &str = "condition";
+
+/// A mouth leaves any non-drink item `wet`.
+pub const CONDITION_WET: &str = "wet";
+
+/// Sharing a lower slot with a stool leaves an item `poopstained`.
+pub const CONDITION_POOPSTAINED: &str = "poopstained";
+
+/// The condition values every kind may carry without declaring them.
+pub const UNIVERSAL_CONDITIONS: [&str; 2] = [CONDITION_WET, CONDITION_POOPSTAINED];
+
+/// The kind the gut forms (`features/extra_pockets.md` M3) — the one item the
+/// sim creates out of nobody's stock. Never written inline: the digest pass, the
+/// `expel` verb and the staining rule all branch on it.
+pub const POOP_KIND: &str = "poop";
+
 /// The embedded catalog, parsed once. `include_str!` like `rounds.json`
 /// (`round.rs`), so both hosts and the headless binary get it with no wiring.
 static EMBEDDED_CATALOG: LazyLock<Arc<ItemCatalog>> = LazyLock::new(|| {
@@ -175,6 +196,19 @@ fn default_true() -> bool {
     true
 }
 
+/// How big one unit of a kind is (`features/extra_pockets.md` M0). Only
+/// `palmable` fits a body pocket; a halberd does not go in your mouth, and the
+/// error for trying is `too_big`. The serde default is `handheld` — a new kind
+/// must opt *in* to being pocketable.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ItemSize {
+    Palmable,
+    #[default]
+    Handheld,
+    Bulky,
+}
+
 /// One catalog row.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -195,6 +229,10 @@ pub struct ItemKindDef {
     /// Present iff the kind can be `eat`en (reserved for M2's hunger gauge).
     #[serde(default)]
     pub edible: Option<Edible>,
+    /// One unit's bulk; `palmable` is what fits a body pocket
+    /// (`features/extra_pockets.md`). Defaults to `handheld`.
+    #[serde(default)]
+    pub size: ItemSize,
     /// The **only** metadata keys this kind may carry, each mapped to its allowed
     /// values (an empty list means "any string"). An item with an undeclared key
     /// or value fails validation — this is what stops content from silently
@@ -382,6 +420,15 @@ impl ItemCatalog {
             .is_some_and(|edible| edible.thirst > edible.satiety)
     }
 
+    /// One unit's bulk (`features/extra_pockets.md`). An **unknown** ad-hoc
+    /// test kind reads as palmable — the same tolerance `is_edible` extends —
+    /// so compact fixtures can pocket their props.
+    pub fn size(&self, item: &Item) -> ItemSize {
+        self.kinds
+            .get(&item.kind)
+            .map_or(ItemSize::Palmable, |def| def.size)
+    }
+
     /// The catalog price of this exact stack in sparks (M1/M4). `None` if the
     /// kind is unpriced or unknown.
     pub fn price_sparks(&self, item: &Item) -> Option<u32> {
@@ -417,6 +464,15 @@ impl ItemCatalog {
             if key == DISPLAY_METADATA_KEY {
                 continue;
             }
+            // The universal `condition` values are allowed on every kind — a
+            // mouth or a shared lower slot can stamp anything palmable
+            // (`extra_pockets.md` M2). A kind's own declared conditions (the
+            // apple's `bruised`) still pass through the declared check below.
+            if key == CONDITION_METADATA_KEY
+                && UNIVERSAL_CONDITIONS.contains(&value.as_str())
+            {
+                continue;
+            }
             let Some(allowed) = def.metadata.get(key) else {
                 return Err(format!(
                     "item '{}' carries metadata key '{key}' that kind '{}' does not declare",
@@ -446,10 +502,17 @@ impl ItemCatalog {
     }
 }
 
-/// Prefix a kind's declared metadata values (in key order) before `base`.
+/// Prefix a kind's declared metadata values (in key order) before `base`. The
+/// universal `condition` key joins the declared keys in the same sorted order,
+/// so an undeclared `condition=wet` still renders "wet spark".
 fn with_adjectives(def: &ItemKindDef, item: &Item, base: &str) -> String {
+    let mut keys: std::collections::BTreeSet<&str> =
+        def.metadata.keys().map(String::as_str).collect();
+    if item.metadata.contains_key(CONDITION_METADATA_KEY) {
+        keys.insert(CONDITION_METADATA_KEY);
+    }
     let mut phrase = String::new();
-    for key in def.metadata.keys() {
+    for key in keys {
         if let Some(value) = item.metadata.get(key) {
             phrase.push_str(value);
             phrase.push(' ');

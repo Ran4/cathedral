@@ -216,6 +216,14 @@ pub struct LoreCharacterSheet {
     pub voice_key: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub holds: Vec<ItemId>,
+    /// Seeded body pockets (`features/extra_pockets.md`): authored deception
+    /// content — a coin already in a cheek. Validated by the seed loader.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pockets: Vec<crate::character::PocketedUnit>,
+    /// Authored `frontbutt` availability override; `None` derives it from
+    /// `gender` (`"f"` has one).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frontbutt: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub goal: Option<String>,
     /// Overrides the derived willingness to speak first (see [`LoreProfile`]).
@@ -369,6 +377,8 @@ impl LoreCharacterSheet {
             ),
             facing_yaw: self.spawn_location.facing,
             holds: self.holds,
+            pockets: self.pockets,
+            frontbutt: self.frontbutt,
             goal: self.goal.unwrap_or_else(|| GOAL_NONE.to_string()),
             memories: self.memories,
             knows: self.knows.into_iter().collect(),

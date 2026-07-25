@@ -146,8 +146,10 @@ struct Args {
     /// anyone drunk — so a drunk or weary carriage can be poked in for a
     /// transcript or a `--trace-positions` walk. NAME resolves by display name
     /// first, then by actor id (`--status p006v=weariness:1`). Kinds:
-    /// drunkenness, weariness; value is a 0..=1 float. A handle matching nobody
-    /// is a stderr diagnostic, not a fault. Sits beside `--say` as a pre-run poke.
+    /// drunkenness, weariness, urgency; value is a 0..=1 float. (The sim writes
+    /// `urgency` itself on the poop clock, `features/extra_pockets.md` M3 — this
+    /// only forces it.) A handle matching nobody is a stderr diagnostic, not a
+    /// fault. Sits beside `--say` as a pre-run poke.
     #[arg(long, value_name = "NAME=KIND:VALUE")]
     status: Vec<String>,
 
@@ -264,7 +266,9 @@ fn parse_status_flag(spec: &str) -> Result<(String, StatusKind, f64), String> {
         return Err(format!("--status `{spec}` names nobody"));
     }
     let kind = StatusKind::from_wire(kind_word).ok_or_else(|| {
-        format!("--status `{spec}`: unknown kind `{kind_word}` (try drunkenness, weariness)")
+        format!(
+            "--status `{spec}`: unknown kind `{kind_word}` (try drunkenness, weariness, urgency)"
+        )
     })?;
     let value = match value_word.parse::<f64>() {
         Ok(value) if value.is_finite() && (0.0..=1.0).contains(&value) => value,

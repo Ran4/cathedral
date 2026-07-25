@@ -97,6 +97,13 @@ pub struct PromptStrings {
     /// The parenthesis tying `home` to its wayfinding handle — `(go_to
     /// pl_x9k2)` — so walking home never needs a scan of `places_you_know`.
     pub home_place_label: String,
+    /// The `you_hold` suffix for a unit riding the mouth
+    /// (`features/extra_pockets.md`): `- k3f9x wet spark (in your mouth)`.
+    pub pocket_mouth_note: String,
+    /// The same for the butt slot — period-euphemistic on purpose.
+    pub pocket_butt_note: String,
+    /// The same for the frontbutt slot.
+    pub pocket_frontbutt_note: String,
 }
 
 impl PromptStrings {
@@ -306,6 +313,12 @@ struct ItemRef<'a> {
     name: String,
     /// The stack (or offered) quantity; rendered as `×N` when above 1.
     quantity: u32,
+    /// Where units of this stack ride, when any of them do
+    /// (`features/extra_pockets.md`): the `you_hold` suffix `(in your mouth)`.
+    /// Only the owner's own sheet ever carries it — that is the entire point of
+    /// a body pocket — so every other construction site passes `None`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pocketed: Option<String>,
 }
 
 /// One `you_sell` line: a kind's display name and its catalog price in sparks.
@@ -417,6 +430,19 @@ pub fn render_prompt(
     // cast (`law_and_order.md` M3) — every other sheet keeps its exact bytes.
     let has_notices = !sheet.word_in_the_ward.is_empty();
     let has_law_verbs = crate::notices::is_law(actor);
+    // The body-pocket verbs are documented only to someone who could use them
+    // today — anything already pocketed, or anything palmable in hand
+    // (`features/extra_pockets.md`: "an actor with empty pockets and nothing
+    // palmable in hand gets zero extra tokens"). The frontbutt is named only to
+    // a body that has one.
+    let has_pockets = !actor.pockets().is_empty()
+        || actor.holds().iter().any(|item_id| {
+            world
+                .items
+                .get(item_id)
+                .is_some_and(|item| world.item_catalog.size(item) == crate::item::ItemSize::Palmable)
+        });
+    let has_frontbutt = actor.has_body_slot(crate::character::BodySlot::Frontbutt);
     let sheet_md = sheet_markdown(&sheet, &env.strings);
     let emittable_sounds = world.sound_catalog.emittable_sound_ids().join(", ");
 
@@ -430,6 +456,8 @@ pub fn render_prompt(
                 has_round,
                 has_notices,
                 has_law_verbs,
+                has_pockets,
+                has_frontbutt,
             })
         })
         .map_err(|error| PromptError::new(format!("the turn template did not render: {error}")))
@@ -521,6 +549,9 @@ fn build_sheet<'a>(
             name: world.item_catalog.display_name(entity),
             // The offer's own quantity, which may be a slice of a larger stack.
             quantity: offer.quantity,
+            // A pocketed unit cannot be offered at all, so an offer line never
+            // carries the suffix.
+            pocketed: None,
         };
         if offer.giver_id == *actor.id() {
             let target = offer
@@ -654,6 +685,7 @@ fn build_sheet<'a>(
                     id: item_id,
                     name: world.item_catalog.display_name(item),
                     quantity: item.quantity,
+                    pocketed: pocket_note(actor, item_id, item.quantity, strings),
                 })
             })
             .collect(),
@@ -687,6 +719,41 @@ fn build_sheet<'a>(
         the_only_languages_you_know: &strings.languages,
         current_goal: actor.goal(),
     }
+}
+
+/// Where units of one held stack ride, as the `you_hold` suffix — `in your
+/// mouth`, or `1 in your mouth; 1 carried privily, behind` when a stack is
+/// split across cavities (`features/extra_pockets.md`). The count is dropped
+/// when the whole stack rides one slot: "×1 spark (1 in your mouth)" would be
+/// pure noise. `None` — the overwhelmingly common case — renders nothing at all.
+fn pocket_note(
+    actor: &Character,
+    item_id: &ItemId,
+    quantity: u32,
+    strings: &PromptStrings,
+) -> Option<String> {
+    let mut parts: Vec<String> = Vec::new();
+    for slot in crate::character::BodySlot::ALL {
+        let count = actor
+            .pockets()
+            .iter()
+            .filter(|unit| unit.slot == slot && &unit.item_id == item_id)
+            .count();
+        if count == 0 {
+            continue;
+        }
+        let phrase = match slot {
+            crate::character::BodySlot::Mouth => &strings.pocket_mouth_note,
+            crate::character::BodySlot::Butt => &strings.pocket_butt_note,
+            crate::character::BodySlot::Frontbutt => &strings.pocket_frontbutt_note,
+        };
+        parts.push(if count as u32 == quantity {
+            phrase.clone()
+        } else {
+            format!("{count} {phrase}")
+        });
+    }
+    (!parts.is_empty()).then(|| parts.join("; "))
 }
 
 /// The sheet's sentence for where the current walk ends, or `None` while
@@ -986,11 +1053,16 @@ fn you_are_line(you_are: &YouAre, strings: &PromptStrings) -> String {
 /// suffix when the stack (or offered) quantity is above 1: `c0prs spark ×7`.
 /// Single-item traffic keeps its exact bytes.
 fn item_md(item: &ItemRef<'_>) -> String {
-    if item.quantity > 1 {
+    let mut line = if item.quantity > 1 {
         format!("{} {} ×{}", item.id, item.name, item.quantity)
     } else {
         format!("{} {}", item.id, item.name)
+    };
+    // The body-pocket suffix, on the owner's own `you_hold` line only.
+    if let Some(pocketed) = &item.pocketed {
+        line.push_str(&format!(" ({pocketed})"));
     }
+    line
 }
 
 /// `loaf, 2 sparks` — one `you_sell` line: the kind's display name and its
@@ -1139,6 +1211,9 @@ mod tests {
             illegal_activity_label: "In secret:".into(),
             home_label: "Home:".into(),
             home_place_label: "go_to".into(),
+            pocket_mouth_note: "in your mouth".into(),
+            pocket_butt_note: "carried privily, behind".into(),
+            pocket_frontbutt_note: "carried privily, before".into(),
         }
     }
 
@@ -1152,7 +1227,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\n";
         let error = PromptEnv::new("x", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }

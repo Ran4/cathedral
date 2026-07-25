@@ -45,6 +45,8 @@ fn character(
     knows: &[&str],
 ) -> Character {
     Character::from_sheet(CharacterSheet {
+        pockets: Vec::new(),
+        frontbutt: None,
         id: actor(actor_id),
         name: name.to_string(),
         control,
