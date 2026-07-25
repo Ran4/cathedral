@@ -2338,6 +2338,7 @@ impl Engine {
                 EventType::Sound => self.flush_sound(now, &event, out),
                 EventType::WorldEvent => {
                     self.hold_for_handoff(now, &event);
+                    self.nudge_pocket_witness(now, &event);
                     flush_world_event(&event, out);
                 }
                 EventType::Gesture => flush_gesture(&event, out),
@@ -2446,6 +2447,32 @@ impl Engine {
         }
         round::interrupt_for_conversation(&mut self.round, &mut self.world, actor_id);
         round::interrupt_for_conversation(&mut self.round, &mut self.world, target_id);
+    }
+
+    /// Somebody hoisting their clothes an arm's length away is not something
+    /// you finish selling your fish through: the plain-sight witnesses of a
+    /// lower-slot `pocket_item` / `retrieve_item` (`extra_pockets.md` M2 — the
+    /// verb decides who those are, and lists nobody for a mouth) get the next
+    /// turn, exactly as the nearest witness of a sound does. Percepts alone
+    /// wait for the idle rotation, which is a long time to hold a straight face.
+    ///
+    /// One nudge per act — the turn stream is global and single — and the
+    /// player is never a candidate: he is not prompted, he reacts himself.
+    fn nudge_pocket_witness(&mut self, now: f64, event: &DomainEvent) {
+        if !matches!(event.kind.as_str(), "pocket_item" | "retrieve_item") {
+            return;
+        }
+        for candidate in &event.witness_ids {
+            let is_llm = self
+                .world
+                .characters
+                .get(candidate)
+                .is_some_and(|character| character.control() == Control::Llm);
+            if is_llm {
+                self.scheduler.prioritize(&self.world, candidate, true, now);
+                return;
+            }
+        }
     }
 
     /// `_send_sound_event` (`server.py:2166-2221`): the player's percept, the

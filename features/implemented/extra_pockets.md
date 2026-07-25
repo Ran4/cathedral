@@ -205,6 +205,31 @@ Everything above is implemented except the intimacy seam (parked as
   *any* kind (`UNIVERSAL_CONDITIONS`) without per-kind declaration; a kind's own
   declared conditions (the apple's `bruised`) still work. Washing is not
   implemented — there is no verb for it yet.
+  *(An unconditional butt stamp — an empty cavity fouling whatever entered it —
+  was tried on 2026-07-25 and reverted the same day: what fouls a thing is the
+  company it keeps. The stool-sharing rule is the intended one.)*
+* **What witnesses get** is a two-ring fan-out (`deliver_pocket_percept`), added
+  2026-07-25: everyone within `HEARING_RADIUS_M` still gets the item-blind line
+  ("slipped something out of sight beneath their clothes"), but anyone inside
+  `POCKET_PLAIN_SIGHT_RADIUS_M` (4 m, arm's length) is told what moved and which
+  cavity took it — "hitched up their clothes and pushed an apple up their arse"
+  / "up their cunt", "slipped a spark into their mouth", and the same on the way
+  out ("pulled an apple out of their arse"). Concealment is now a matter of
+  distance rather than magic; a mouthful of drink still reads as drinking at
+  every range, so cheeking a draught survives. Ids still never appear — the
+  observer's own `identify_ids` naming does the addressing. The turn explainer
+  states the four-metre rule, so golden fixtures were re-blessed for it.
+  **Note the register reversal**: the design above argued for period euphemism
+  partly against provider-compliance risk. The blunt wording is a deliberate
+  later call (the euphemism was not legible enough — NPCs read "slipped
+  something away" and carried on haggling); if a provider ever starts refusing
+  turns, these two strings are the first suspects.
+* **The reaction is immediate** for the lower slots. The verb records its
+  plain-sight watchers in `DomainEvent.witness_ids` (a mouth records none, so
+  cheeking stays sly and cheap), and `Engine::nudge_pocket_witness` hands the
+  nearest LLM one the priority slot — the same one-nudge-per-act shape
+  `flush_sound` uses. Without it the percept sat in an inbox until the idle
+  rotation came round, which is why the first version of this looked broken.
 * **Drinks are palmable by fiat** (ale, milk, holy water): pocketing one unit is
   the "mouthful". A pail of water is deliberately not (`too_big` is honest).
 * **`spit`**: target-only (as resolved). A spat solid *transfers to the target*
@@ -235,7 +260,7 @@ Everything above is implemented except the intimacy seam (parked as
 * **Prompt cost**: the verb docs and explainer render only when the actor has a
   pocketed unit or holds something palmable (`has_pockets`), and `frontbutt`
   is mentioned only for bodies that have one. Golden fixtures were re-blessed
-  once, as planned.
+  once as planned, and again in 2026-07 for the four-metre visibility line.
 * **Frontbutt availability** is authored: `frontbutt` on a lore sheet or the
   player's seed record, defaulting from lore `gender == "f"`. The player record
   ships `false` — flip it in `assets/world/seed.json` to test.

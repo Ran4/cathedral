@@ -44,7 +44,10 @@ pub struct DomainEvent {
     pub recipient_ids: Vec<ActorId>,
     pub sound_id: Option<String>,
     pub audible_distance: Option<f64>,
-    /// Sound events only; a subsequence of `recipient_ids`.
+    /// Who *saw* it, not merely who was in range — a subsequence of
+    /// `recipient_ids`. Sounds fill it with those inside the seen radius; the
+    /// body-pocket verbs fill it with the watchers at arm's length, and the
+    /// engine hands one of them the next turn. Empty everywhere else.
     pub witness_ids: Vec<ActorId>,
 }
 

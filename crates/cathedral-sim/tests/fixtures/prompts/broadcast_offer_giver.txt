@@ -55,8 +55,9 @@ never a name. Items can stack: a ×3 after an item means you hold three;
 offer_item with "quantity" hands over part of a stack, and eating consumes one.
 
 A small item can also ride out of sight in a body pocket: pocket_item puts one
-in your mouth or, privily, below. People see the motion, never the thing — but
-a pocketed item cannot be offered, eaten or sold until you retrieve_item it.
+in your mouth or, privily, below. Anyone within four metres sees what you put
+where; farther off they see only the motion. A pocketed item cannot be offered,
+eaten or sold until you retrieve_item it, and a mouth leaves it wet.
 A mouthful of drink can be swallowed, spat at someone within reach, or gargled;
 what you swallow whole and cannot digest passes through you in its own time.
 

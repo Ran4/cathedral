@@ -13,7 +13,7 @@ use serde_json::{Map, Value};
 use crate::{
     GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS, GOAL_MAX_CHARS, GOAL_NONE, HEARING_RADIUS_M,
     HUNGER_MAX, ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS, PLAYER_SPEECH_MAX_CHARS,
-    POCKET_SLOT_CAPACITY, THIRST_MAX, WALK_SPEED_MPS,
+    POCKET_PLAIN_SIGHT_RADIUS_M, POCKET_SLOT_CAPACITY, THIRST_MAX, WALK_SPEED_MPS,
     character::{ActiveGesture, BodySlot, GutEntry, IntentTarget, PocketedUnit, TravelIntent},
     error::{ActionError, ActionErrorCode},
     event::DomainEvent,
@@ -339,13 +339,23 @@ fn world_event(
 
 /// "a herring" for a single unit, "3 sparks" for many — the noun phrase (with
 /// article) that the counted percept lines embed where the old wording said
-/// "a {name}" (`01_items_and_stacks.md` §4). `n <= 1` keeps the exact "a {name}"
-/// wording, so single-item traffic renders byte-identically to today.
+/// "a {name}" (`01_items_and_stacks.md` §4).
 fn counted_phrase(world: &World, item: &crate::item::Item, quantity: u32) -> String {
     if quantity <= 1 {
-        format!("a {}", world.item_catalog.display_name(item))
+        let name = world.item_catalog.display_name(item);
+        format!("{} {name}", indefinite_article(&name))
     } else {
         format!("{quantity} {}", world.item_catalog.display_plural(item))
+    }
+}
+
+/// "a" or "an". Spelling, not phonetics — the catalog's vowel-initial names
+/// (apple, ale, onion, egg) are all honest cases, and these lines are read by a
+/// language model that will happily mirror "a apple" back at the player.
+fn indefinite_article(name: &str) -> &'static str {
+    match name.chars().next() {
+        Some(first) if "aeiou".contains(first.to_ascii_lowercase()) => "an",
+        _ => "a",
     }
 }
 
@@ -1184,6 +1194,62 @@ fn pocket_operation_key(world: &World, verb: &str, actor_id: &ActorId) -> String
     format!("{verb}:{actor_id}:{}", world.event_sequence)
 }
 
+/// The two-ring percept fan-out the pocket verbs share. Everyone in earshot
+/// gets a line, but only the watchers standing at arm's length
+/// ([`POCKET_PLAIN_SIGHT_RADIUS_M`]) get the one that names what moved and
+/// which cavity took it: concealment is a matter of distance, not of magic.
+/// Returns (everyone told, the ones who saw it plainly) — the first list is the
+/// world event's recipients, the second its witnesses, which is what the engine
+/// hands the next turn to.
+fn deliver_pocket_percept(
+    world: &mut World,
+    actor_id: &ActorId,
+    seen_near: &str,
+    seen_far: &str,
+) -> (Vec<ActorId>, Vec<ActorId>) {
+    let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
+    let plain_sight = nearby(world, actor_id, POCKET_PLAIN_SIGHT_RADIUS_M);
+    let lines: Vec<(ActorId, String)> = hearers
+        .iter()
+        .map(|observer| {
+            let who = cap_first(&identify_ids(world, observer, actor_id));
+            let what = match plain_sight.contains(observer) {
+                true => seen_near,
+                false => seen_far,
+            };
+            (observer.clone(), format!("{who} {what}"))
+        })
+        .collect();
+    deliver(world, lines, true);
+    (hearers, plain_sight)
+}
+
+/// A world event that also records who *saw* it, not merely who was in range —
+/// the engine turns that list into an immediate reaction
+/// ([`crate::Engine::nudge_pocket_witness`]). Distinct from `world_event` so
+/// the twenty other call sites keep their exact shape.
+fn world_event_witnessed(
+    world: &mut World,
+    kind: &str,
+    actor_id: &ActorId,
+    item_id: Option<ItemId>,
+    recipients: Vec<ActorId>,
+    witnesses: Vec<ActorId>,
+) -> i64 {
+    let position = world.characters[actor_id].position_m();
+    let mut event = DomainEvent::world_event(
+        kind,
+        actor_id.clone(),
+        None,
+        item_id,
+        1,
+        position,
+        recipients,
+    );
+    event.witness_ids = witnesses;
+    world.emit(event)
+}
+
 /// `pocket_item` (`features/extra_pockets.md` M1/M2): hide one palmable
 /// stack-unit in a body cavity. The unit stays in `holds` — it is a reservation
 /// like an offer promise — but nobody can see it any more. What everyone *can*
@@ -1233,7 +1299,8 @@ fn pocket_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<St
     // The metadata economy (M2), stamped before the unit is reserved — a
     // pocketed unit is committed, so the fork has to happen while it is free.
     // A mouth wets whatever is not already a drink or already conditioned; a
-    // lower slot sharing with a stool stains.
+    // lower slot sharing with a stool stains. An empty lower slot leaves no
+    // mark: what fouls a thing is the company it keeps, not the cavity.
     let is_drink = world.item_catalog.is_drink(&item);
     let condition = item.metadata.get(CONDITION_METADATA_KEY).map(String::as_str);
     let stamp = if slot == BodySlot::Mouth {
@@ -1246,6 +1313,8 @@ fn pocket_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<St
                     .get(&unit.item_id)
                     .is_some_and(|other| other.kind.as_str() == POOP_KIND)
         });
+        // A stool is never stamped (it *is* the stamp) and neither is anything
+        // already fouled: either way the restamp forks a stack for no change.
         (shares_with_a_stool
             && item.kind.as_str() != POOP_KIND
             && condition != Some(CONDITION_POOPSTAINED))
@@ -1264,6 +1333,9 @@ fn pocket_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<St
     let pocketed = world.items[&pocketed_id].clone();
     let phrase = counted_phrase(world, &pocketed, 1);
     let noun = counted_noun(world, &pocketed, 1);
+    // What a watcher saw go in was still clean: the stamp is what the cavity
+    // does to it, not what was carried across the square.
+    let seen_phrase = counted_phrase(world, &item, 1);
 
     world
         .characters
@@ -1277,46 +1349,54 @@ fn pocket_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<St
         });
 
     // Body language, like `gesture`: a percept, not an inbox notice. The
-    // item-blind wording is the whole mechanic — a watcher sees a hand at a
-    // mouth, never what was in it. A mouthful of drink is the exception, and
-    // deliberately so: cheeking a draught has to look exactly like drinking it.
-    let (own, witnessed) = match (slot, is_drink) {
+    // item-blind wording is the mechanic, but only at a distance — somebody at
+    // arm's length sees the thing and the cavity both, because hoisting your
+    // clothes in a market is not sleight of hand. A mouthful of drink is the
+    // exception at every range, and deliberately so: cheeking a draught has to
+    // look exactly like drinking it.
+    let (own, seen_near, seen_far) = match (slot, is_drink) {
         (BodySlot::Mouth, true) => (
             format!("You took a mouthful of {phrase}."),
-            format!("took a mouthful of {phrase}"),
+            format!("took a mouthful of {seen_phrase}"),
+            format!("took a mouthful of {seen_phrase}"),
         ),
         (BodySlot::Mouth, false) => (
             format!("You slipped the {noun} into your mouth."),
+            format!("slipped {seen_phrase} into their mouth"),
             "slipped something into their mouth".to_string(),
         ),
-        _ => (
+        (BodySlot::Butt, _) => (
             format!("You tucked the {noun} away, out of sight."),
+            format!("hitched up their clothes and pushed {seen_phrase} up their arse"),
+            "slipped something out of sight beneath their clothes".to_string(),
+        ),
+        (BodySlot::Frontbutt, _) => (
+            format!("You tucked the {noun} away, out of sight."),
+            format!("hitched up their clothes and pushed {seen_phrase} up their cunt"),
             "slipped something out of sight beneath their clothes".to_string(),
         ),
     };
-    let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
-    let lines: Vec<(ActorId, String)> = hearers
-        .iter()
-        .map(|observer| {
-            let who = cap_first(&identify_ids(world, observer, actor_id));
-            (observer.clone(), format!("{who} {witnessed}"))
-        })
-        .collect();
-    deliver(world, lines, true);
+    let (hearers, plain_sight) = deliver_pocket_percept(world, actor_id, &seen_near, &seen_far);
     world
         .characters
         .get_mut(actor_id)
         .expect("the actor is in the world")
         .remember_percept(own);
 
-    world_event(
+    // Only what somebody plainly saw is worth a turn of their attention, and
+    // only from a lower slot: a hand at a mouth is the sly act the cutpurse
+    // defence needs, but a man hoisting his clothes in front of you is not
+    // something you go on selling fish through.
+    world_event_witnessed(
         world,
         "pocket_item",
         actor_id,
-        None,
         Some(pocketed_id),
-        1,
-        hearers,
+        hearers.clone(),
+        match slot {
+            BodySlot::Mouth => Vec::new(),
+            _ => plain_sight,
+        },
     );
     world.touch_public_state();
     world.assert_invariants();
@@ -1347,22 +1427,26 @@ fn retrieve_item(
     };
     let item = world.items[&item_id].clone();
     let noun = counted_noun(world, &item, 1);
+    let phrase = counted_phrase(world, &item, 1);
     take_pocket_entry(world, actor_id, &item_id).expect("the entry was just found");
 
-    let hearers = nearby(world, actor_id, HEARING_RADIUS_M);
-    let lines: Vec<(ActorId, String)> = hearers
-        .iter()
-        .map(|observer| {
-            let who = cap_first(&identify_ids(world, observer, actor_id));
-            let line = if slot == BodySlot::Mouth {
-                format!("{who} took something from their mouth")
-            } else {
-                format!("{who} fetched something from beneath their clothes")
-            };
-            (observer.clone(), line)
-        })
-        .collect();
-    deliver(world, lines, true);
+    // Coming out is as visible as going in — and here the close watcher gets
+    // the thing as it now is, stains and all, because that is what they see.
+    let (seen_near, seen_far) = match slot {
+        BodySlot::Mouth => (
+            format!("took {phrase} from their mouth"),
+            "took something from their mouth".to_string(),
+        ),
+        BodySlot::Butt => (
+            format!("pulled {phrase} out of their arse"),
+            "fetched something from beneath their clothes".to_string(),
+        ),
+        BodySlot::Frontbutt => (
+            format!("pulled {phrase} out of their cunt"),
+            "fetched something from beneath their clothes".to_string(),
+        ),
+    };
+    let (hearers, plain_sight) = deliver_pocket_percept(world, actor_id, &seen_near, &seen_far);
     let own = if slot == BodySlot::Mouth {
         format!("You took the {noun} back out of your mouth.")
     } else {
@@ -1374,14 +1458,16 @@ fn retrieve_item(
         .expect("the actor is in the world")
         .remember_percept(own);
 
-    world_event(
+    world_event_witnessed(
         world,
         "retrieve_item",
         actor_id,
-        None,
         Some(item_id),
-        1,
-        hearers,
+        hearers.clone(),
+        match slot {
+            BodySlot::Mouth => Vec::new(),
+            _ => plain_sight,
+        },
     );
     world.touch_public_state();
     world.assert_invariants();
@@ -3855,13 +3941,23 @@ mod tests {
         .unwrap_err();
         assert_eq!(error.code, ActionErrorCode::ItemCommitted);
 
-        // The transition is visible; the coin never is.
-        let seen = world.characters[&ActorId::from_raw("watch")]
-            .inbox()
-            .last()
-            .cloned()
-            .unwrap();
-        assert_eq!(seen, "A stranger (id carry) slipped something into their mouth");
+        // The transition is visible, and how much of it depends on where the
+        // watcher stands: at two metres the coin itself is plain, at five it is
+        // "something", at thirty there is nothing to hear about at all.
+        let saw = |id: &str| {
+            world.characters[&ActorId::from_raw(id)]
+                .inbox()
+                .last()
+                .cloned()
+        };
+        assert_eq!(
+            saw("watch").as_deref(),
+            Some("A stranger (id carry) slipped a spark into their mouth")
+        );
+        assert_eq!(
+            saw("nosey").as_deref(),
+            Some("A stranger (id carry) slipped something into their mouth")
+        );
         assert!(
             world.characters[&ActorId::from_raw("faroff")]
                 .inbox()
@@ -4219,6 +4315,89 @@ mod tests {
                 .iter()
                 .any(|line| line.starts_with("word in the ward: ")),
             "the ward talks about the offender, not to them"
+        );
+        world.assert_invariants();
+    }
+
+    /// Concealment is a matter of distance, not magic: the neighbour at two
+    /// metres sees the thing and the cavity both, the one at five sees a motion
+    /// under the clothes, and thirty metres away there is nothing to tell. An
+    /// empty lower slot marks nothing — only the company of a stool does, which
+    /// is why the apple comes back out exactly as it went in.
+    #[test]
+    fn a_pocketing_is_plain_at_arms_length_and_a_mere_motion_across_the_square() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+        let saw = |world: &World, id: &str| {
+            world.characters[&ActorId::from_raw(id)]
+                .inbox()
+                .last()
+                .cloned()
+        };
+
+        let line = apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "applex", "slot": "butt"}),
+        )
+        .unwrap();
+        assert_eq!(line, "Carrier pockets the apple (butt)");
+        let (slot, apple) = only_pocketed(&world, &carrier);
+        assert_eq!(slot, crate::character::BodySlot::Butt);
+        assert_eq!(
+            condition_of(&world, &apple),
+            None,
+            "an empty cavity is not a stool"
+        );
+        assert_eq!(
+            saw(&world, "watch").as_deref(),
+            Some("A stranger (id carry) hitched up their clothes and pushed an apple up their arse")
+        );
+        assert_eq!(
+            saw(&world, "nosey").as_deref(),
+            Some("A stranger (id carry) slipped something out of sight beneath their clothes")
+        );
+        assert!(
+            world.characters[&ActorId::from_raw("faroff")]
+                .inbox()
+                .is_empty()
+        );
+
+        // Coming out is as visible as going in, and by the same two rings.
+        apply_action(
+            &mut world,
+            &carrier,
+            "retrieve_item",
+            &json!({"item_id": apple.as_str()}),
+        )
+        .unwrap();
+        assert_eq!(
+            saw(&world, "watch").as_deref(),
+            Some("A stranger (id carry) pulled an apple out of their arse")
+        );
+        assert_eq!(
+            saw(&world, "nosey").as_deref(),
+            Some("A stranger (id carry) fetched something from beneath their clothes")
+        );
+
+        // The frontbutt names its own side of the body to the close watcher.
+        world
+            .characters
+            .get_mut(&carrier)
+            .expect("the carrier is in the world")
+            .sheet
+            .frontbutt = Some(true);
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "sparks", "slot": "frontbutt"}),
+        )
+        .unwrap();
+        assert_eq!(
+            saw(&world, "watch").as_deref(),
+            Some("A stranger (id carry) hitched up their clothes and pushed a spark up their cunt")
         );
         world.assert_invariants();
     }

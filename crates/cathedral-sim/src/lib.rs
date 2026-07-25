@@ -235,6 +235,11 @@ pub const GUT_SPREAD_GAME_DAYS: f64 = 3.0 / 24.0;
 /// How long after formation the `urgency` carriage status takes to ramp from 0
 /// to 1, in game-days (two game hours). Expel to clear.
 pub const URGENCY_RAMP_GAME_DAYS: f64 = 2.0 / 24.0;
+/// Arm's length: how close a witness must stand to see *what* somebody pocketed
+/// or retrieved, and *where* they put it. Beyond it the act is only a motion —
+/// concealment survives across a square, never at two paces, which is what
+/// keeps "swallow the evidence" a matter of patience rather than nerve.
+pub const POCKET_PLAIN_SIGHT_RADIUS_M: f64 = ITEM_INTERACTION_RADIUS_M;
 
 /// How long one sale takes at the pitch, in real seconds — a coin counted, a
 /// loaf wrapped ([`04_the_bread_round.md`] §5). The [`WATER_DRAW_SECONDS`] twin,

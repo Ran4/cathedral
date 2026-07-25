@@ -2282,6 +2282,127 @@ fn the_players_pocket_commands_apply_and_reach_the_snapshot() {
     assert_eq!(message, "nothing rides in your lower slots");
 }
 
+/// What the player does with his own body is the cast's business too: the
+/// neighbour standing in front of him is told what went where, and the woman
+/// across the square gets only the motion (`extra_pockets.md` M2).
+#[test]
+fn the_players_pocketing_below_is_witnessed_at_arms_length() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    give_the_player_something_palmable(&mut harness.engine);
+
+    // Sven stands at arm's length; Ilse watches from the far side of the square.
+    let sven = ActorId::from_raw("sv3n1");
+    let ilse = ActorId::from_raw("k0fb1");
+    for (actor_id, x) in [(&sven, 0.5), (&ilse, 12.0)] {
+        harness
+            .engine
+            .world_mut()
+            .characters
+            .get_mut(actor_id)
+            .expect("the demo seed has this character")
+            .state
+            .position_m = PLAYER_SPAWN + Vec3::new(x, 0.0, 0.0);
+    }
+
+    let messages = harness.send(EngineCommand::PlayerPocket {
+        request_id: "r1".into(),
+        item_id: ItemId::from_raw("appl1"),
+        slot: cathedral_sim::BodySlot::Butt,
+    });
+    let (success, error, line) = result(&messages);
+    assert!(success, "{error:?} {line}");
+    assert_eq!(line, "Player pockets the apple (butt)");
+
+    fn heard(engine: &Engine, actor_id: &ActorId) -> String {
+        engine.world().characters[actor_id]
+            .inbox()
+            .last()
+            .cloned()
+            .unwrap_or_default()
+    }
+    assert!(
+        heard(&harness.engine, &sven).ends_with("hitched up their clothes and pushed an apple up their arse"),
+        "the man in front of him saw it plainly: {}",
+        heard(&harness.engine, &sven)
+    );
+    assert!(
+        heard(&harness.engine, &ilse).ends_with("slipped something out of sight beneath their clothes"),
+        "twelve metres away it is only a motion: {}",
+        heard(&harness.engine, &ilse)
+    );
+
+    // Being seen is the only thing that happened to it: an empty cavity leaves
+    // no mark, so the apple rides below exactly as it was carried in.
+    let pocketed = harness.engine.world().characters[&player()]
+        .pocket_snapshot()
+        .first()
+        .cloned()
+        .expect("it rides below")
+        .1;
+    let item = &harness.engine.world().items[&pocketed];
+    assert_eq!(item.metadata.get("condition"), None);
+
+    // And the man who watched it gets the next turn, rather than finishing his
+    // sentence about fish: a percept alone would wait for the idle rotation.
+    assert_eq!(
+        harness.engine.scheduler().priority_actor_id(),
+        Some(&sven),
+        "the witness at arm's length was handed the priority slot"
+    );
+
+    // Taking it out again is the same act in reverse, and reads as bluntly.
+    let messages = harness.send(EngineCommand::PlayerRetrieve {
+        request_id: "r2".into(),
+        item_id: ItemId::from_raw("appl1"),
+    });
+    let (success, error, line) = result(&messages);
+    assert!(success, "{error:?} {line}");
+    assert!(
+        heard(&harness.engine, &sven).ends_with("pulled an apple out of their arse"),
+        "{}",
+        heard(&harness.engine, &sven)
+    );
+    assert_eq!(
+        harness.engine.scheduler().priority_actor_id(),
+        Some(&sven)
+    );
+}
+
+/// A cheeked coin is the sly act the cutpurse defence is built on, so it buys
+/// no turn of anybody's attention — only the lower slots do
+/// (`extra_pockets.md` M2, the reaction nudge).
+#[test]
+fn cheeking_something_nudges_nobody() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    give_the_player_something_palmable(&mut harness.engine);
+    harness
+        .engine
+        .world_mut()
+        .characters
+        .get_mut(&ActorId::from_raw("sv3n1"))
+        .expect("the demo seed has Sven")
+        .state
+        .position_m = PLAYER_SPAWN + Vec3::new(1.0, 0.0, 0.0);
+
+    let messages = harness.send(EngineCommand::PlayerPocket {
+        request_id: "r1".into(),
+        item_id: ItemId::from_raw("sprk1"),
+        slot: cathedral_sim::BodySlot::Mouth,
+    });
+    let (success, error, line) = result(&messages);
+    assert!(success, "{error:?} {line}");
+    // Seen, and said so — but not worth dropping what you were doing for.
+    assert!(
+        harness.engine.world().characters[&ActorId::from_raw("sv3n1")]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("slipped a spark into their mouth"))
+    );
+    assert_eq!(harness.engine.scheduler().priority_actor_id(), None);
+}
+
 /// The poop clock end to end (`extra_pockets.md` M3): a meal, then a gut that
 /// lands on the game clock, an urgency that ramps while it rides, and an
 /// `expel` that clears both.
