@@ -172,6 +172,15 @@ impl LocalEngine {
     pub(super) fn round(&self) -> Option<&cathedral_sim::Round> {
         self.engine.as_ref().map(|engine| engine.round())
     }
+
+    /// The live world, mutably — **tests only**. The acceptance tests stage a
+    /// world state (someone holding an item out to the player) that otherwise
+    /// takes a scripted conversation and a scheduler turn to reach. Nothing in
+    /// the game writes the world except through a command; keep it that way.
+    #[cfg(test)]
+    pub(super) fn world_mut(&mut self) -> Option<&mut cathedral_sim::World> {
+        self.engine.as_mut().map(|engine| engine.world_mut())
+    }
 }
 
 /// Start the engine and hand the ECS its resources.

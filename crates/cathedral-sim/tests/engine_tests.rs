@@ -1304,6 +1304,75 @@ fn a_silent_player_decline_hands_the_offerer_the_priority_slot() {
     );
 }
 
+/// The third way an offer can end, and the only one nobody chooses: the two
+/// drift apart. Until this existed, walking off did not resolve the offer — it
+/// made it *unresolvable*, since accept and decline both need 4 m — so Ilse
+/// stood with her arm out and her coin uncommittable for the rest of the run.
+#[test]
+fn walking_out_of_earshot_lapses_the_offer_and_tells_the_host_why() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    let ilse = ActorId::from_raw("k0fb1");
+    let coin = ItemId::from_raw("c0prs");
+    harness.npc(
+        "k0fb1",
+        "offer_item",
+        json!({"item_id": "c0prs", "target": "player"}),
+    );
+    assert!(harness.engine.world().offers.contains_key(&coin));
+
+    // 40 m up the street, on the hot channel a walking player rides.
+    let messages = harness.send(EngineCommand::SpatialUpdate {
+        spatial_seq: 1,
+        updates: vec![cathedral_sim::SpatialActorUpdate::new(
+            player(),
+            Vec3::new(0.0, 0.91, 151.0),
+            Some(0.0),
+        )],
+    });
+
+    assert!(
+        harness.engine.world().offers.is_empty(),
+        "the promise ends with the distance"
+    );
+    // She keeps the coin, and it is hers to spend again.
+    assert_eq!(harness.engine.world().characters[&ilse].holds(), [coin]);
+    assert!(
+        harness.engine.world().characters[&ilse]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("is too far away now")),
+        "she is told why her hand is empty-handed again: {:?}",
+        harness.engine.world().characters[&ilse].inbox()
+    );
+
+    let lapsed = messages
+        .iter()
+        .find(|message| {
+            matches!(message, EngineMessage::WorldEvent { kind, .. } if kind == "lapse_offer")
+        })
+        .expect("the host hears it, so the HUD can say why");
+    let EngineMessage::WorldEvent {
+        actor_id,
+        target_id,
+        recipient_ids,
+        ..
+    } = lapsed
+    else {
+        unreachable!("matched above")
+    };
+    assert_eq!(actor_id, &ilse);
+    assert_eq!(target_id.as_ref(), Some(&player()));
+    assert!(
+        recipient_ids.contains(&player()),
+        "the player is on the recipient list the HUD keys its notice on"
+    );
+
+    // Nobody is nudged for it: the lapse fires precisely when the stage gate is
+    // right to leave the giver unprompted.
+    assert_eq!(harness.engine.scheduler().priority_actor_id(), None);
+}
+
 /// A *failed* accept wakes nobody: there is nothing for the offerer to read.
 #[test]
 fn a_failed_accept_hands_out_no_priority_slot() {

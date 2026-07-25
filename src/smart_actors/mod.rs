@@ -1124,28 +1124,40 @@ fn process_engine_message(
         } => {
             // Presentation feedback only. Offers and ownership still reconcile
             // exclusively from authoritative snapshots.
-            let text = describe_world_event(
+            let actor = model::actor_id_from_sim(&actor_id);
+            let target = target_id.as_ref().map(model::actor_id_from_sim);
+            let item = item_id.as_ref().map(model::item_id_from_sim);
+            // An offer of the player's that ended with nothing changing hands
+            // gets the notice slot and its reason, not the 4 s toast the next
+            // event would overwrite. Everything else — including two other
+            // people refusing each other — toasts exactly as it always did.
+            if let Some((headline, reason)) = describe_offer_rejection(
                 &kind,
-                &model::actor_id_from_sim(&actor_id),
-                target_id.as_ref().map(model::actor_id_from_sim).as_ref(),
-                item_id.as_ref().map(model::item_id_from_sim).as_ref(),
+                &actor,
+                target.as_ref(),
+                item.as_ref(),
+                quantity,
+                mirror,
+            ) {
+                hud.show_offer_outcome(&headline, &reason);
+            } else if let Some(text) = describe_world_event(
+                &kind,
+                &actor,
+                target.as_ref(),
+                item.as_ref(),
                 quantity,
                 &recipient_ids
                     .iter()
                     .map(model::actor_id_from_sim)
                     .collect::<Vec<_>>(),
                 &**mirror,
-            );
-            if let Some(text) = text {
+            ) {
                 hud.toast(text);
             }
             // The hand-over choreography (npc_bodies M2): the same events, as
             // body language. `sale` never reaches the toast above
             // (`describe_world_event` is player-scoped and the silent market
             // is NPC-only); here it plays the vendor→buyer hand-over.
-            let actor = model::actor_id_from_sim(&actor_id);
-            let target = target_id.as_ref().map(model::actor_id_from_sim);
-            let item = item_id.as_ref().map(model::item_id_from_sim);
             match (kind.as_str(), target, item) {
                 ("accept_offered_item", Some(giver), Some(item)) => {
                     presentation.hands.write(hands::HandoverFeedback::Accepted {
@@ -1521,6 +1533,71 @@ fn actor_is_near_player(actor: &model::ActorSnapshot, mirror: &model::WorldMirro
     let actor_position: Vec3 = actor.position_m.into();
     let player_position: Vec3 = player.position_m.into();
     actor_position.distance_squared(player_position) <= HEARING_RADIUS_M * HEARING_RADIUS_M
+}
+
+/// An offer the player was part of that ended with nothing changing hands, as
+/// a headline and the **reason** for it — the two ways it can happen read
+/// identically in the world (the item simply stays put), so the reason is the
+/// whole point of saying anything.
+///
+/// `None` for everything else, including a refusal between two other people:
+/// that is news, not feedback, and the toast already carries it.
+fn describe_offer_rejection(
+    kind: &str,
+    actor_id: &model::ActorId,
+    target_id: Option<&model::ActorId>,
+    item_id: Option<&model::ItemId>,
+    quantity: u32,
+    mirror: &model::WorldMirror,
+) -> Option<(String, String)> {
+    if !matches!(kind, "decline_offer" | "lapse_offer") {
+        return None;
+    }
+    let player_id = mirror.player_id()?;
+    let target_id = target_id?;
+    // Both events pair (actor, target): a decline runs decliner → giver, a
+    // lapse giver → the one it was held out to. So the other party is whichever
+    // of the two the player is not, and if he is neither, this is not his.
+    let player_acted = actor_id == player_id;
+    let other_id = if player_acted {
+        target_id
+    } else if target_id == player_id {
+        actor_id
+    } else {
+        return None;
+    };
+    let other = mirror.actor(other_id)?.name_for_player.clone();
+    let snapshot = mirror.item(item_id?)?;
+    let count = quantity.max(1);
+    let item = if count > 1 {
+        format!("{count} {}", snapshot.display_plural)
+    } else {
+        snapshot.name.clone()
+    };
+    let apart = cathedral_sim::OFFER_LAPSE_RADIUS_M;
+    match kind {
+        "decline_offer" if player_acted => Some((
+            "OFFER DECLINED".into(),
+            format!("You refused the {item} {other} held out"),
+        )),
+        "decline_offer" => Some((
+            "OFFER DECLINED".into(),
+            format!("{other} refused the {item} you held out"),
+        )),
+        // Nobody refused anything here, so both sides get the same cause and
+        // differ only in where the item ended up.
+        "lapse_offer" if player_acted => Some((
+            "OFFER LAPSED".into(),
+            format!("You and {other} drifted more than {apart:.0} m apart — you keep the {item}"),
+        )),
+        "lapse_offer" => Some((
+            "OFFER LAPSED".into(),
+            format!(
+                "You and {other} drifted more than {apart:.0} m apart — the {item} stays with them"
+            ),
+        )),
+        _ => None,
+    }
 }
 
 /// The player-facing sentence one world event deserves, or `None` when it is
@@ -2204,8 +2281,14 @@ mod tests {
         assert!(tts_selection_is_usable(&runtime));
     }
 
-    #[test]
-    fn redirected_offer_keeps_player_withdrawal_feedback_visible() {
+    /// The player, Ilse (holding a copper coin) and Frans, close together.
+    fn offer_feedback_mirror() -> (
+        model::WorldMirror,
+        model::ActorId,
+        model::ActorId,
+        model::ActorId,
+        model::ItemId,
+    ) {
         let player = model::ActorId("player".into());
         let giver = model::ActorId("giver".into());
         let other = model::ActorId("other".into());
@@ -2266,6 +2349,12 @@ mod tests {
                 road_carts: vec![],
             })
             .unwrap();
+        (mirror, player, giver, other, coin)
+    }
+
+    #[test]
+    fn redirected_offer_keeps_player_withdrawal_feedback_visible() {
+        let (mirror, player, giver, other, coin) = offer_feedback_mirror();
 
         assert_eq!(
             describe_world_event(
@@ -2298,10 +2387,100 @@ mod tests {
         );
     }
 
-    /// The seam's acceptance test: the whole plugin, the in-process engine, and
-    /// the fake backends — no subprocess, no network, no `uv`.
     #[test]
-    fn complete_plugin_reaches_ready_and_spawns_the_cast_headlessly() {
+    fn a_refused_offer_names_who_refused_and_which_way_it_went() {
+        let (mirror, player, giver, other, coin) = offer_feedback_mirror();
+
+        let refusal = |actor, target, quantity| {
+            describe_offer_rejection(
+                "decline_offer",
+                actor,
+                Some(target),
+                Some(&coin),
+                quantity,
+                &mirror,
+            )
+        };
+
+        // Ilse turning down what the player held out…
+        assert_eq!(
+            refusal(&giver, &player, 1),
+            Some((
+                "OFFER DECLINED".into(),
+                "Ilse refused the copper coin you held out".into()
+            ))
+        );
+        // …and the player turning down hers. Quantities are counted like the
+        // toast's, so a partial purse reads honestly.
+        assert_eq!(
+            refusal(&player, &giver, 3),
+            Some((
+                "OFFER DECLINED".into(),
+                "You refused the 3 copper coins Ilse held out".into()
+            ))
+        );
+
+        // Two other people refusing each other is news, not feedback: it stays
+        // the plain toast it has always been.
+        assert_eq!(refusal(&giver, &other, 1), None);
+        assert_eq!(
+            describe_world_event(
+                "decline_offer",
+                &giver,
+                Some(&other),
+                Some(&coin),
+                1,
+                std::slice::from_ref(&player),
+                &mirror,
+            )
+            .as_deref(),
+            Some("Ilse declines the copper coin")
+        );
+    }
+
+    #[test]
+    fn a_lapsed_offer_blames_the_distance_and_says_where_the_item_went() {
+        let (mirror, player, giver, _, coin) = offer_feedback_mirror();
+
+        let lapse = |giver, target| {
+            describe_offer_rejection("lapse_offer", giver, Some(target), Some(&coin), 1, &mirror)
+        };
+
+        // The player walked away from his own offer: he keeps the coin.
+        assert_eq!(
+            lapse(&player, &giver),
+            Some((
+                "OFFER LAPSED".into(),
+                "You and Ilse drifted more than 20 m apart — you keep the copper coin".into()
+            ))
+        );
+        // The same drift seen from the other end of it.
+        assert_eq!(
+            lapse(&giver, &player),
+            Some((
+                "OFFER LAPSED".into(),
+                "You and Ilse drifted more than 20 m apart — the copper coin stays with them"
+                    .into()
+            ))
+        );
+        // A lapse is nobody's action, so it must never read as a refusal.
+        assert_eq!(
+            describe_world_event(
+                "lapse_offer",
+                &giver,
+                Some(&player),
+                Some(&coin),
+                1,
+                std::slice::from_ref(&player),
+                &mirror,
+            ),
+            None
+        );
+    }
+
+    /// The whole plugin on the in-process engine and the fake backends — no
+    /// subprocess, no network, no `uv` — pumped until the cast is online.
+    fn ready_fake_plugin_app() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default(), TransformPlugin))
             .init_asset::<Mesh>()
@@ -2357,6 +2536,97 @@ mod tests {
         }
         assert!(app.world().resource::<SmartActorRuntime>().ready);
         app.update();
+        app
+    }
+
+    /// The rejection notice through the real plugin: Ilse holds her coin out to
+    /// the player, the player walks off up the street, and the HUD says in its
+    /// own slot why the coin never changed hands. The sim's half of this is
+    /// `engine_tests::walking_out_of_earshot_lapses_the_offer_and_tells_the_host_why`;
+    /// this is the wire from that event to the words on screen.
+    #[test]
+    fn walking_away_from_an_offer_puts_the_reason_and_its_cause_on_the_hud() {
+        let mut app = ready_fake_plugin_app();
+        let ilse = cathedral_sim::ActorId::from_raw("k0fb1");
+        {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let sim = engine.world_mut().expect("the engine is live");
+            // Beside the player, so the offer is inside the 4 m it needs. Where
+            // her round has her standing varies with the hour.
+            sim.characters
+                .get_mut(&ilse)
+                .expect("Ilse is in the seeded cast")
+                .state
+                .position_m = cathedral_sim::Vec3::new(1.0, 0.91, 111.0);
+            cathedral_sim::apply_action(
+                sim,
+                &ilse,
+                "offer_item",
+                &serde_json::json!({"item_id": "c0prs", "target": "player"}),
+            )
+            .expect("Ilse holds her coin out to the player");
+        }
+
+        // The card first: what the player is walking away from.
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline
+            && app
+                .world()
+                .resource::<hud::SmartActorHudState>()
+                .offer_card
+                .is_empty()
+        {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+        assert!(
+            app.world()
+                .resource::<hud::SmartActorHudState>()
+                .offer_card
+                .contains("offers you"),
+            "the offer card shows before the player leaves"
+        );
+
+        // Forty metres up the street. The position rides the 10 Hz hot channel,
+        // so this takes a few frames of real time to land.
+        {
+            let world = app.world_mut();
+            let mut players =
+                world.query_filtered::<&mut Transform, With<crate::controller::PlayerController>>();
+            players
+                .single_mut(world)
+                .expect("the player exists")
+                .translation = Vec3::new(0.0, 0.91, 151.0);
+        }
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline
+            && app
+                .world()
+                .resource::<hud::SmartActorHudState>()
+                .offer_outcome_text()
+                .is_none()
+        {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+
+        let hud_state = app.world().resource::<hud::SmartActorHudState>();
+        assert_eq!(
+            hud_state.offer_outcome_text(),
+            Some(
+                "OFFER LAPSED\nYou and Ilse drifted more than 20 m apart — the spark stays with them"
+            )
+        );
+        // The card it replaces is gone: the offer really ended, and the HUD is
+        // not still inviting a [Y] that would now fail.
+        assert!(hud_state.offer_card.is_empty());
+    }
+
+    /// The seam's acceptance test: the whole plugin, the in-process engine, and
+    /// the fake backends — no subprocess, no network, no `uv`.
+    #[test]
+    fn complete_plugin_reaches_ready_and_spawns_the_cast_headlessly() {
+        let mut app = ready_fake_plugin_app();
 
         {
             let world = app.world_mut();

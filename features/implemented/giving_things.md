@@ -7,6 +7,12 @@ The consent and ownership rules below remain normative. References to actors
 being at the same textual location are superseded by the smart-actor feature's
 inclusive 4 m interaction checks and 20 m event-delivery radius.
 
+**Superseded (2026-07-25):** Decision 2 below ("offers persist, no auto-expiry")
+no longer holds for *targeted* offers — they now lapse on their own once the two
+parties drift more than 20 m apart, because past that neither of them can accept
+or decline. Broadcast offers are unchanged. See
+`features/implemented/offer_lapse.md`.
+
 ## Summary
 
 Items change hands via a two-step handshake: one character offers an item
@@ -83,6 +89,7 @@ strangers). Item names are public.
 | accept_offered_item           | —                                                           | `Conny took a fish from Sven`   | `Conny accepted the fish (id fzbn9) you offered` |
 | decline_offer         | —                                                           | `Ilse declined a fish from Conny` | `Ilse declined the fish (id fzbn9) you offered` |
 | retract_offer         | `Sven withdrew the offered fish (id fzbn9)`                 | —                               | —                                 |
+| lapse_offer (2026-07) | `You are too far from Sven now; the fish (id fzbn9) they held out for you is no longer on offer` | — (nobody can see both)         | `Conny is too far away now; the fish (id fzbn9) you held out is yours again` |
 
 Events are descriptive history, past tense, with **no accept-syntax hint**:
 by the time a character reads them they can be stale (a broadcast offer is
@@ -113,8 +120,9 @@ pending offer must be visible every turn, not just when it happens:
   and the offer events/hints repeat it.
 - **Self-offer** → error.
 - **Refusal:** `decline_offer` resolves a targeted offer; simply ignoring
-  one is also fine (it stays pending until declined, retracted, or
-  replaced). Broadcast offers can only be ignored, not declined.
+  one is also fine (it stays pending until declined, retracted, replaced, or
+  — since 2026-07 — until the two walk 20 m apart). Broadcast offers can only
+  be ignored, not declined.
 - **Simultaneous barter doesn't exist:** a trade is two offer/accept pairs
   in opposite directions; one side trusts first. Intentional — negotiation
   is where the roleplay is.
@@ -123,7 +131,11 @@ pending offer must be visible every turn, not just when it happens:
 
 1. Untargeted `offer_item` = broadcast offer: **yes**.
 2. Offers persist (no auto-expiry); explicit GC by the agent via
-   `retract_offer`: **yes**.
+   `retract_offer`: **yes** — *revised 2026-07-25*: a targeted offer also
+   lapses on its own past 20 m (`features/implemented/offer_lapse.md`), because
+   the original decision assumed a "location" the two either shared or did not.
+   With continuous positions, walking away stopped resolving an offer and
+   started making it unresolvable instead.
 3. Quantities/money: deferred. Items are singular entities; the demo seeds
    a single `{"id": "c0prs", "name": "copper coin"}` for Ilse so a purchase
    can emerge. Stacking ("two coppers") is a later feature.

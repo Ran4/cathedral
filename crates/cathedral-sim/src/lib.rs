@@ -132,6 +132,14 @@ pub use world::{SpatialActorUpdate, World};
 pub const HEARING_RADIUS_M: f64 = 20.0;
 /// Proximity required for a targeted offer, an accept, and a decline.
 pub const ITEM_INTERACTION_RADIUS_M: f64 = 4.0;
+/// How far a targeted offer's two parties may drift before the promise lapses
+/// on its own ([`actions::lapse_distant_offers`]). The same 20 m that bounds
+/// every percept, and for the same reason: past it neither can answer the offer
+/// — an accept and a decline both need 4 m — and neither hears what the other
+/// does, so the held-out hand is a promise nobody can see or refuse. Inclusive:
+/// only a strictly greater distance lapses it, matching the sheet's
+/// `offered_to_you` boundary.
+pub const OFFER_LAPSE_RADIUS_M: f64 = HEARING_RADIUS_M;
 /// Maximum `say` text length — applies to every actor despite the name.
 pub const PLAYER_SPEECH_MAX_CHARS: usize = 500;
 /// Maximum `set_goal` text length.

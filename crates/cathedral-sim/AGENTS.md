@@ -181,6 +181,15 @@ round may have taken a broadcast offer); the accept syntax appears only in
 `offered_to_you`, which is always current. Full design:
 `features/implemented/giving_things.md`.
 
+A targeted offer also ends **by itself** when the two drift more than
+`OFFER_LAPSE_RADIUS_M` (20 m) apart: `actions::lapse_distant_offers`, swept once
+per `Engine::poll`, emits a `lapse_offer` world event and tells both parties why
+(`features/implemented/offer_lapse.md`). It is not a verb — no reply can ask for
+it — because past 20 m neither party *can* answer an offer that accept and
+decline both need 4 m for, and the units stay committed against eating or
+selling until something resolves it. Broadcast offers never lapse: they name
+nobody to drift from.
+
 ## Data, not code
 
 The data files below are the single source of truth for what would otherwise be

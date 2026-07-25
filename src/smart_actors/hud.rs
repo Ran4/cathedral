@@ -17,6 +17,9 @@ pub(super) const DEGRADED: Color = Color::srgb(0.97, 0.74, 0.31);
 pub(super) const OFFLINE: Color = Color::srgb(0.96, 0.40, 0.36);
 pub(super) const LOADER_TRACK: Color = Color::srgba(0.24, 0.25, 0.27, 0.92);
 const PLAYER_TRANSCRIPT_LIFETIME: Duration = Duration::from_secs(8);
+/// Longer than a toast's 4 s: a refused offer is a thing that happened *to*
+/// the player, and the 4 s slot is overwrite-prone by design.
+const OFFER_OUTCOME_LIFETIME: Duration = Duration::from_secs(8);
 const CONNECTION_FONT_SIZE: f32 = 21.0;
 const CONNECTION_DETAIL_FONT_SIZE: f32 = 15.75;
 const VOICE_PANEL_FONT_SIZE: f32 = 15.6;
@@ -114,6 +117,10 @@ pub struct SmartActorHudState {
     pub connection_detail: String,
     pub inventory: String,
     pub offer_card: String,
+    /// The offer card's counterpart: why an offer the player was part of ended
+    /// with nothing changing hands. Its own slot, on its own clock, so a toast
+    /// cannot swallow it.
+    offer_outcome: Option<TimedMessage>,
     pub focus_hint: String,
     pub subtitle: String,
     pub microphone_available: bool,
@@ -138,6 +145,7 @@ impl Default for SmartActorHudState {
             connection_detail: "Launching the local character service…".into(),
             inventory: String::new(),
             offer_card: String::new(),
+            offer_outcome: None,
             focus_hint: String::new(),
             subtitle: String::new(),
             microphone_available: false,
@@ -165,6 +173,27 @@ impl SmartActorHudState {
             text,
             remaining: Duration::from_secs(4),
         });
+    }
+
+    /// An offer of the player's that ended with nothing changing hands, and
+    /// why: `headline` names the outcome, `reason` says what caused it. Both
+    /// are shown, on two lines — "OFFER DECLINED" alone leaves the player
+    /// guessing whether they were refused or simply walked too far.
+    pub fn show_offer_outcome(&mut self, headline: &str, reason: &str) {
+        if headline.is_empty() {
+            return;
+        }
+        self.offer_outcome = Some(TimedMessage {
+            text: format!("{headline}\n{reason}"),
+            remaining: OFFER_OUTCOME_LIFETIME,
+        });
+    }
+
+    #[cfg(test)]
+    pub(super) fn offer_outcome_text(&self) -> Option<&str> {
+        self.offer_outcome
+            .as_ref()
+            .map(|message| message.text.as_str())
     }
 
     /// The transient toast still on screen, if any. The inventory overlay sits
@@ -213,6 +242,7 @@ impl SmartActorHudState {
         self.connection = ConnectionUiState::Offline;
         self.connection_detail = detail.into();
         self.offer_card.clear();
+        self.offer_outcome = None;
         self.focus_hint.clear();
         self.subtitle.clear();
         self.player_transcript = None;
@@ -321,6 +351,8 @@ pub(super) struct ConnectionDetailText;
 pub(super) struct InventoryText;
 #[derive(Component)]
 pub(super) struct OfferCardText;
+#[derive(Component)]
+pub(super) struct OfferOutcomeText;
 #[derive(Component)]
 pub(super) struct FocusHintText;
 #[derive(Component)]
@@ -442,6 +474,18 @@ pub fn spawn_smart_actor_hud(mut commands: Commands, fonts: Option<Res<Cathedral
         ZIndex(12),
     ));
 
+    // Directly under the offer card, whose place it takes once the offer is
+    // gone: the same part of the screen the player was already reading, and
+    // clear of the focus hint above and the toast below.
+    spawn_centered_text(
+        &mut commands,
+        "Offer outcome notice",
+        OfferOutcomeText,
+        65.0,
+        17.0,
+        OFFLINE,
+        body_font.clone(),
+    );
     spawn_centered_text(
         &mut commands,
         "Actor focus hint",
@@ -645,6 +689,7 @@ pub fn update_smart_actor_hud(
             Option<&ConnectionDetailText>,
             Option<&InventoryText>,
             Option<&OfferCardText>,
+            Option<&OfferOutcomeText>,
             Option<&FocusHintText>,
             Option<&PlayerTranscriptText>,
             Option<&VoicePanelText>,
@@ -655,6 +700,7 @@ pub fn update_smart_actor_hud(
             With<ConnectionDetailText>,
             With<InventoryText>,
             With<OfferCardText>,
+            With<OfferOutcomeText>,
             With<FocusHintText>,
             With<PlayerTranscriptText>,
             With<VoicePanelText>,
@@ -672,6 +718,12 @@ pub fn update_smart_actor_hud(
         message.remaining = message.remaining.saturating_sub(time.delta());
         if message.remaining.is_zero() {
             state.player_transcript = None;
+        }
+    }
+    if let Some(message) = state.offer_outcome.as_mut() {
+        message.remaining = message.remaining.saturating_sub(time.delta());
+        if message.remaining.is_zero() {
+            state.offer_outcome = None;
         }
     }
 
@@ -734,6 +786,10 @@ pub fn update_smart_actor_hud(
         .player_transcript
         .as_ref()
         .map_or("", |message| message.text.as_str());
+    let offer_outcome_text = state
+        .offer_outcome
+        .as_ref()
+        .map_or("", |message| message.text.as_str());
 
     for (
         mut text,
@@ -743,6 +799,7 @@ pub fn update_smart_actor_hud(
         detail,
         inventory,
         offer,
+        offer_outcome,
         hint,
         player_transcript,
         voice_panel,
@@ -768,6 +825,8 @@ pub fn update_smart_actor_hud(
             set_optional_text(&state.inventory, &mut text, node.as_mut());
         } else if offer.is_some() {
             set_optional_text(&state.offer_card, &mut text, node.as_mut());
+        } else if offer_outcome.is_some() {
+            set_optional_text(offer_outcome_text, &mut text, node.as_mut());
         } else if hint.is_some() {
             set_optional_text(&state.focus_hint, &mut text, node.as_mut());
         } else if player_transcript.is_some() {
@@ -880,6 +939,53 @@ mod tests {
     }
 
     #[test]
+    fn a_rejected_offer_notice_survives_the_toast_that_would_have_hidden_it() {
+        let mut state = SmartActorHudState::default();
+        state.show_offer_outcome("OFFER LAPSED", "You and Ilse drifted more than 20 m apart");
+        // The 4 s slot is overwritten constantly; the reason must not be.
+        state.toast("Ilse eats the loaf of bread");
+
+        assert_eq!(
+            state.offer_outcome_text(),
+            Some("OFFER LAPSED\nYou and Ilse drifted more than 20 m apart")
+        );
+        assert_eq!(state.transient_text(), Some("Ilse eats the loaf of bread"));
+        assert!(OFFER_OUTCOME_LIFETIME > Duration::from_secs(4));
+    }
+
+    #[test]
+    fn the_offer_outcome_notice_spawns_hidden_and_clear_of_its_neighbours() {
+        let mut app = App::new();
+        app.add_systems(Startup, spawn_smart_actor_hud);
+        app.update();
+
+        let world = app.world_mut();
+        let (notice_font, notice_color, notice_node) = world
+            .query_filtered::<(&TextFont, &TextColor, &Node), With<OfferOutcomeText>>()
+            .single(world)
+            .expect("offer outcome notice exists");
+        assert_eq!(notice_font.font_size, FontSize::Px(17.0));
+        assert_eq!(notice_color.0, OFFLINE);
+        assert_eq!(notice_node.display, Display::None);
+
+        // Between the offer card it replaces (58%) and the toast (73%), so a
+        // rejection never lands on top of either.
+        let layer_top = world
+            .query::<(&Name, &Node)>()
+            .iter(world)
+            .find(|(name, _)| name.as_str() == "Offer outcome notice centering layer")
+            .map(|(_, node)| node.top)
+            .expect("the notice has a centering layer");
+        assert_eq!(layer_top, percent(65));
+        let card_top = world
+            .query_filtered::<&Node, With<OfferCardText>>()
+            .single(world)
+            .expect("offer card exists")
+            .top;
+        assert_eq!(card_top, percent(58));
+    }
+
+    #[test]
     fn disconnect_clears_only_transient_actionable_ui() {
         let mut state = SmartActorHudState {
             inventory: "[1] copper coin".into(),
@@ -896,6 +1002,7 @@ mod tests {
 
         assert_eq!(state.inventory, "[1] copper coin");
         assert!(state.offer_card.is_empty());
+        assert!(state.offer_outcome_text().is_none());
         assert!(state.subtitle.is_empty());
         assert!(state.player_transcript.is_none());
         assert!(!state.microphone_available);

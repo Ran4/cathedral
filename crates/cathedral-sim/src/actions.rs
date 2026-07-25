@@ -12,8 +12,9 @@ use serde_json::{Map, Value};
 
 use crate::{
     GO_TO_BUDGET_FACTOR, GO_TO_MIN_BUDGET_SECONDS, GOAL_MAX_CHARS, GOAL_NONE, HEARING_RADIUS_M,
-    HUNGER_MAX, ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS, PLAYER_SPEECH_MAX_CHARS,
-    POCKET_PLAIN_SIGHT_RADIUS_M, POCKET_SLOT_CAPACITY, THIRST_MAX, WALK_SPEED_MPS,
+    HUNGER_MAX, ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS, OFFER_LAPSE_RADIUS_M,
+    PLAYER_SPEECH_MAX_CHARS, POCKET_PLAIN_SIGHT_RADIUS_M, POCKET_SLOT_CAPACITY, THIRST_MAX,
+    WALK_SPEED_MPS,
     character::{ActiveGesture, BodySlot, GutEntry, IntentTarget, PocketedUnit, TravelIntent},
     error::{ActionError, ActionErrorCode},
     event::DomainEvent,
@@ -1014,6 +1015,95 @@ fn retract_offer(
         "{} retracts the offer of the {withdrawn_noun}",
         world.characters[actor_id].name()
     ))
+}
+
+/// Lapse every targeted offer whose two parties have drifted more than
+/// [`OFFER_LAPSE_RADIUS_M`] apart, and say so to both.
+///
+/// The one offer resolution nobody *acts*: it is deliberately not a verb, so no
+/// reply can ask for it and no model has to remember to. Until it existed an
+/// unanswered offer stood forever — the giver's arm out, the offered units
+/// committed against eating or selling — and walking away made it *unanswerable*
+/// rather than resolving it, because an accept and a decline both need 4 m. A
+/// promise neither party can see or refuse is not a promise (the same reasoning
+/// that expires an offer at the city gate, `round.rs`).
+///
+/// Broadcast offers are left alone: they name nobody to drift away from, and
+/// they travel with the giver, so anyone beside them can always still take one.
+///
+/// Pure, like everything else in the sim: distance only, no clock. Returns the
+/// items whose offers lapsed.
+pub fn lapse_distant_offers(world: &mut World) -> Vec<ItemId> {
+    let lapsing: Vec<(ItemId, ActorId, ActorId, u32)> = world
+        .offers
+        .values()
+        .filter_map(|offer| {
+            let target_id = offer.target_id.clone()?;
+            // A departure already has its own expiry rules; this one only
+            // judges two people who are both here.
+            if !world.is_present(&offer.giver_id) || !world.is_present(&target_id) {
+                return None;
+            }
+            let giver = world.characters.get(&offer.giver_id)?;
+            let target = world.characters.get(&target_id)?;
+            let apart = giver.position_m().distance_squared(target.position_m());
+            (apart > OFFER_LAPSE_RADIUS_M * OFFER_LAPSE_RADIUS_M).then(|| {
+                (
+                    offer.item_id.clone(),
+                    offer.giver_id.clone(),
+                    target_id,
+                    offer.quantity,
+                )
+            })
+        })
+        .collect();
+    if lapsing.is_empty() {
+        return Vec::new();
+    }
+
+    let mut lapsed: Vec<ItemId> = Vec::new();
+    for (item_id, giver_id, target_id, quantity) in lapsing {
+        // An offer of an item that has left the world shows on no sheet, so
+        // nobody is told it ended — the same silence `repair_and_fail` keeps.
+        let Some(item) = world.items.get(&item_id).cloned() else {
+            world.offers.remove(&item_id);
+            lapsed.push(item_id);
+            continue;
+        };
+        let noun = counted_noun(world, &item, quantity);
+        world.offers.remove(&item_id);
+        let giver_line = format!(
+            "{} is too far away now; the {noun} (id {item_id}) you held out is yours again",
+            cap_first(&identify_ids(world, &giver_id, &target_id))
+        );
+        let target_line = format!(
+            "You are too far from {} now; the {noun} (id {item_id}) they held out for you is no longer on offer",
+            identify_ids(world, &target_id, &giver_id)
+        );
+        deliver(
+            world,
+            vec![
+                (giver_id.clone(), giver_line),
+                (target_id.clone(), target_line),
+            ],
+            false,
+        );
+        // Both parties, and nobody else: at this distance there is no bystander
+        // who can see them both, so there is no third party to tell.
+        world_event(
+            world,
+            "lapse_offer",
+            &giver_id,
+            Some(target_id.clone()),
+            Some(item_id.clone()),
+            quantity,
+            vec![giver_id.clone(), target_id],
+        );
+        lapsed.push(item_id);
+    }
+    world.touch_public_state();
+    world.assert_invariants();
+    lapsed
 }
 
 fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
@@ -2918,6 +3008,145 @@ mod tests {
         // The failed action still mutated: offer gone, revision bumped.
         assert!(world.offers.is_empty());
         assert_eq!(world.world_revision, revision + 1);
+    }
+
+    /// Walk the receiver `x` metres out and sweep. Returns what lapsed.
+    fn drift_and_sweep(world: &mut World, x: f64) -> Vec<ItemId> {
+        world
+            .characters
+            .get_mut(&ActorId::from_raw("receiver"))
+            .unwrap()
+            .state
+            .position_m = Vec3::new(x, 0.0, 0.0);
+        lapse_distant_offers(world)
+    }
+
+    fn offer_the_apple(world: &mut World, target: Option<&str>) {
+        let args = match target {
+            Some(target) => json!({"item_id": "apple", "target": target}),
+            None => json!({"item_id": "apple"}),
+        };
+        apply_action(world, &ActorId::from_raw("giver"), "offer_item", &args).unwrap();
+        world.drain_events();
+    }
+
+    #[test]
+    fn an_offer_lapses_once_the_two_have_drifted_out_of_earshot() {
+        let mut world = offer_world();
+        let giver = ActorId::from_raw("giver");
+        let receiver = ActorId::from_raw("receiver");
+        let apple = ItemId::from_raw("apple");
+        offer_the_apple(&mut world, Some("receiver"));
+        for actor in [&giver, &receiver] {
+            world.characters.get_mut(actor).unwrap().state.inbox.clear();
+        }
+        let revision = world.world_revision;
+
+        assert_eq!(drift_and_sweep(&mut world, 25.0), vec![apple.clone()]);
+
+        assert!(world.offers.is_empty());
+        // The giver keeps what they held out, and it is uncommitted again.
+        assert_eq!(
+            world.characters[&giver].holds(),
+            std::slice::from_ref(&apple)
+        );
+        assert_eq!(world.uncommitted_quantity(&apple), 1);
+        assert_eq!(world.world_revision, revision + 1);
+
+        assert!(world.characters[&giver].inbox()[0].contains("is too far away now"));
+        assert!(
+            world.characters[&receiver].inbox()[0].contains("no longer on offer"),
+            "the target hears it too: {:?}",
+            world.characters[&receiver].inbox()
+        );
+
+        let events = world.drain_events();
+        let kinds: Vec<&str> = events.iter().map(|event| event.kind.as_str()).collect();
+        assert_eq!(kinds, ["lapse_offer"]);
+        assert_eq!(events[0].actor_id.as_ref(), Some(&giver));
+        assert_eq!(events[0].target_id.as_ref(), Some(&receiver));
+        assert_eq!(events[0].item_id.as_ref(), Some(&apple));
+        assert_eq!(events[0].recipient_ids, vec![giver, receiver]);
+        world.assert_invariants();
+    }
+
+    #[test]
+    fn a_lapse_frees_the_offered_units_the_giver_could_not_spend() {
+        let mut world = offer_world();
+        let giver = ActorId::from_raw("giver");
+        offer_the_apple(&mut world, Some("receiver"));
+
+        // The promise holds the apple hostage while it stands.
+        let error =
+            apply_action(&mut world, &giver, "eat", &json!({"item_id": "apple"})).unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::ItemCommitted);
+
+        drift_and_sweep(&mut world, 25.0);
+        apply_action(&mut world, &giver, "eat", &json!({"item_id": "apple"})).unwrap();
+        world.assert_invariants();
+    }
+
+    #[test]
+    fn an_offer_survives_right_up_to_the_lapse_radius() {
+        let mut world = offer_world();
+        let apple = ItemId::from_raw("apple");
+        offer_the_apple(&mut world, Some("receiver"));
+
+        // Inclusive at exactly 20 m, like `offered_to_you`'s own boundary.
+        assert!(drift_and_sweep(&mut world, OFFER_LAPSE_RADIUS_M).is_empty());
+        assert!(world.offers.contains_key(&apple));
+        assert!(world.drain_events().is_empty());
+
+        assert_eq!(
+            drift_and_sweep(&mut world, OFFER_LAPSE_RADIUS_M + 0.01),
+            vec![apple]
+        );
+    }
+
+    #[test]
+    fn a_broadcast_offer_never_lapses_on_distance() {
+        let mut world = offer_world();
+        let apple = ItemId::from_raw("apple");
+        offer_the_apple(&mut world, None);
+
+        // It names nobody to drift from, and it travels with the giver: whoever
+        // stands beside them can still take it.
+        assert!(drift_and_sweep(&mut world, 400.0).is_empty());
+        assert!(world.offers.contains_key(&apple));
+        assert!(world.drain_events().is_empty());
+    }
+
+    #[test]
+    fn a_lapse_gives_the_player_structured_feedback_but_no_prose() {
+        let mut world = offer_world();
+        let giver = ActorId::from_raw("giver");
+        let receiver = ActorId::from_raw("receiver");
+        world.characters.get_mut(&receiver).unwrap().sheet.control = Control::Player;
+        offer_the_apple(&mut world, Some("receiver"));
+
+        drift_and_sweep(&mut world, 25.0);
+
+        // No inbox prose for a player — but the HUD's toast is keyed on the
+        // recipient list, so he must still be on it.
+        assert!(world.characters[&receiver].inbox().is_empty());
+        let events = world.drain_events();
+        assert_eq!(events[0].kind, "lapse_offer");
+        assert_eq!(events[0].recipient_ids, vec![giver, receiver]);
+    }
+
+    #[test]
+    fn a_departed_party_to_an_offer_is_left_to_the_gates_own_expiry() {
+        let mut world = offer_world();
+        let receiver = ActorId::from_raw("receiver");
+        let apple = ItemId::from_raw("apple");
+        offer_the_apple(&mut world, Some("receiver"));
+        world.characters.get_mut(&receiver).unwrap().state.presence =
+            crate::Presence::BeyondTheWalls;
+
+        // Someone outside the walls has no distance worth judging; the road
+        // party's own rules already expired this at the gate.
+        assert!(drift_and_sweep(&mut world, 25.0).is_empty());
+        assert!(world.offers.contains_key(&apple));
     }
 
     /// giver@0 holds the apple, receiver@3, other@2 — Python's OfferTests world.

@@ -28,7 +28,7 @@ use serde_json::{Value, json};
 
 use crate::{
     HEARING_RADIUS_M, MAX_BELL_CATCHUP_OFFICES, MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS,
-    actions::apply_action,
+    actions::{self, apply_action},
     areas::AreaMap,
     attention::{
         CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS,
@@ -1035,6 +1035,18 @@ impl Engine {
         for command in commands {
             self.apply_command(now, command, &mut completions, &mut out);
         }
+
+        // A promise nobody can answer is not a promise: a targeted offer whose
+        // two parties have drifted past `OFFER_LAPSE_RADIUS_M` ends here. After
+        // the commands, so the player's own position update this poll counts;
+        // before the scheduler, so a percept it produces is on the sheet of
+        // anyone prompted in the same poll. Its events ride the flush below.
+        //
+        // Deliberately no priority nudge, unlike an answered offer
+        // (`player_offer_reply`): a lapse fires exactly when the two are far
+        // apart, which is when the stage gate is right to leave the giver
+        // unprompted. The percept keeps in their inbox until they next think.
+        actions::lapse_distant_offers(&mut self.world);
 
         // Computed once per poll (D20): the floor's expiry purge is a side
         // effect, and the scheduler must not be able to change how often it runs.
