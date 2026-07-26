@@ -202,6 +202,105 @@ the HUD, and NPC↔NPC acceptance happens inside the acceptor's own turn whose
 `say` handoff usually covers the offerer — the player-accept path is the one
 with no natural wake-up at all.)
 
+## Problem 4 — settlement is a side effect of the item plumbing, not a choice
+
+Found by reading M3 back, 2026-07-26. Restitution was deliberately built on the
+existing offer/accept machinery so M3 would need no verb but `raise_notice`
+(see item 3 under Problem 2). The result is blunter than intended:
+`accept_offered_item` calls `notices::settle_on_transfer` unconditionally after
+the transfer (`crates/cathedral-sim/src/actions.rs:850`), and that function
+(`notices.rs:226`) tests exactly two things — is the giver the accused, and is
+the acceptor the wronged party or *any* law officer. It never looks at what
+moved, how much it was worth, or whether the transfer had anything to do with
+the wrong.
+
+So today:
+
+- **Ordinary commerce launders a theft.** A sergeant buying a loaf from the
+  accused clears the notice. So does the robbed boy accepting a rope he asked
+  for an hour later. Neither party said anything about the wrong; neither knows
+  the word just died.
+- **It is value-blind.** A crust settles a stolen spark.
+- **One accepted item is a general amnesty**: `settle_on_transfer` clears
+  *every* live notice naming the giver, including ones the acceptor never heard
+  of and the fouling notices raised automatically by
+  `raise_ward_notice_for` (actions.rs:1812), which carry no wronged party at all.
+- **It takes the judgment away from the actor the feature exists to give it
+  to.** M3's whole thesis is that confrontation is character, not procedure —
+  and then the one genuinely characterful call (*is this enough? do I take it as
+  restitution or keep the word alive?*) is decided by the transfer plumbing.
+- **A corrupt officer cannot be corrupt.** The lore stocks the law bench with
+  bribe-takers — Havise Ashe, a bench sergeant with a real M2 beat, is "taking
+  bribes during inspection"; Betriss Pell and Averil Stott are "gate bribery";
+  Odo Trask is the deliberate incorruptible. None of it can express itself:
+  taking the purse *is* absolution, and refusing is the only lever there is.
+
+### M3.5 — settlement as an act
+
+**DONE 2026-07-26.** Built as scoped below; the three places the implementation
+departs from it are marked *as built* inline.
+
+Make the clearing a verb the accepting character chooses, and make the transfer
+reputation-neutral.
+
+- **`settle_notice {"notice_id": 3}`** — callable by the law cast (as
+  `raise_notice` is) *and* by the wronged party named on that notice, whether or
+  not they serve the law, so the boy can forgive his own spark. Per-notice, never
+  a blanket clear. Not settling is refusing; no counter-verb is needed.
+- **Remove the call at actions.rs:850.** A transfer is then just a transfer.
+- **Guard the dropped-verb failure mode with the idiom the codebase already
+  leans on.** The bad trade here is real: the player pays, the sergeant says "we
+  are square", the model never emits the verb, and the word stays live —
+  indistinguishable from being cheated. So on a transfer *from* an accused *to*
+  a law officer or the wronged party, hand the acceptor a percept ("this may be
+  the restitution the ward's word wants — settle_notice if it answers it, or say
+  why not") and a priority turn, exactly as `notices::confront` and the M0
+  accept nudge do. With the prompt in front of them, an officer who then keeps
+  the word alive is a story, not a bug.
+- **Keep two narrow mechanical paths**, because a verb cannot cover them:
+  1. The accused returning *the very item named in the notice* to the wronged
+     party. This needs `WardNotice` to record what was taken — an optional
+     `taken: Option<ItemId>` set from a new optional `raise_notice` arg (and
+     from `raise_ward_notice_for`, which knows) — plus a line in the law
+     paragraph: pass `taken` when you know what was taken.
+     *As built:* `raise_ward_notice_for` passes `None` and gained no parameter.
+     Neither wrong it raises *takes* anything — a spitter leaves the mouthful
+     behind, a fouler leaves worse — so there is nothing whose return could
+     settle those words, and a parameter both callers pass `None` to would be
+     a seam with nothing on the other side. `taken` comes only from
+     `raise_notice`.
+  2. **The player as acceptor.** The player has no verbs. When an NPC accused
+     hands the player-as-wronged the taking, nothing would ever settle it, so
+     that acceptance must still clear mechanically — and it is the one case
+     where the transfer really is unambiguous. *As built:* not restricted to
+     the `taken` item — for the player any transfer from the accused settles,
+     since no verb of his could ever distinguish them.
+- **Prompt cost:** one verb line and a sentence in the law paragraph, both
+  already gated on `has_law_verbs` (prompt/mod.rs:472) except for the
+  wronged-party case, which needs the verb listed when a live notice names you
+  as wronged. Non-law, notice-less prompts stay byte-identical; the law fixtures
+  are regenerated with the ignored `regenerate_golden_fixtures` test.
+  *As built:* two further prompt changes were needed, both on carrier sheets
+  only — the golden fixtures carry no notices and did not move a byte.
+  1. `word_in_the_ward` bullets are **numbered** (`- notice 3 — …`), exactly as
+     `your_round`'s legs are and for the same reason: `settle_notice` names a
+     notice by its number, and the sheet is the only place the model can read
+     one off.
+  2. The wronged party gets their own short paragraph (the law's is written for
+     officers), and `notices::carries` now always carries a notice to the person
+     it names as wronged — a taciturn victim would otherwise hold the verb with
+     no number to give it.
+- **Tests:** an unrelated purchase from an accused no longer settles anything;
+  the officer's `settle_notice` clears exactly one notice and the carriers hear
+  it die; a non-law non-wronged caller is refused; the wronged party may settle
+  their own; returning the named `taken` item settles without the verb; the
+  player accepting restitution settles; the restitution percept lands and the
+  acceptor is the next selected actor even off stage.
+
+Bribery falls out of this for free, which is the point: the sergeant takes the
+purse and simply does not call `settle_notice`, and Odo Trask takes nothing at
+all.
+
 ## Suggested order
 
 - **M0** — the accept/decline nudge (the bug; one call + test). **DONE
@@ -235,5 +334,18 @@ with no natural wake-up at all.)
   the taking to the wronged, or paying any law officer — settles the word;
   otherwise it decays after `NOTICE_LIFE_GAME_DAYS` (20 game days). Non-law,
   notice-less prompts are byte-identical (golden fixtures unchanged).
+  *(Superseded by M3.5: a transfer no longer settles anything by itself.)*
+- **M3.5** — settlement as an act, not a side effect of any transfer (Problem
+  4). **DONE 2026-07-26**: `settle_notice {"notice_id": N}` (`actions.rs`) is
+  the law cast's and the wronged party's, per-notice, never a blanket clear;
+  `notices::settle_on_transfer` is gone, replaced by `settle_on_return` (the
+  named `taken` handed back to the wronged, and the player-as-wronged, the two
+  settlements no verb can reach) and `restitution_candidates`, which settles
+  nothing and instead earns the acceptor the "this may be what the word wants"
+  percept plus a priority turn (`Engine::nudge_restitution_acceptor`, the M0
+  accept-nudge argument from the other side of the exchange). `raise_notice`
+  gained the optional `taken`; the sheet numbers its notices; the wronged always
+  carry their own word. Bribery now expresses itself by omission: the sergeant
+  takes the purse and simply does not call the verb.
 - **M4** (someday) — the stone: arrest, the gaol cast, bench days. Not before
   M3 has proven the loop is fun.

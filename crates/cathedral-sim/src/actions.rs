@@ -123,6 +123,7 @@ fn dispatch(
         "set_round" => set_round(world, actor_id, args),
         "tell_way" => tell_way(world, actor_id, args),
         "raise_notice" => raise_notice(world, actor_id, args),
+        "settle_notice" => settle_notice(world, actor_id, args),
         // Checked last, after every verb has had its chance to match.
         unknown => Err(ActionError::new(
             ActionErrorCode::UnknownVerb,
@@ -840,22 +841,18 @@ fn accept_offered_item(
         "item_transfer",
         &giver_id,
         Some(actor_id.clone()),
-        Some(item_id),
+        Some(item_id.clone()),
         quantity,
         Vec::new(),
     );
-    // law_and_order.md M3: restitution settles the ward's word. The accused
-    // handing the taking back to the wronged — or paying any law officer —
-    // clears every live notice naming them, and the carriers hear it die.
-    for notice in crate::notices::settle_on_transfer(world, &giver_id, actor_id) {
-        let settled_line = format!("the ward's word is settled, restitution made: {}", notice.line());
-        let carriers = crate::notices::carrier_ids(world, notice.id, &giver_id);
-        let lines = carriers
-            .into_iter()
-            .map(|carrier| (carrier, settled_line.clone()))
-            .collect();
-        deliver(world, lines, true);
+    // law_and_order.md M3.5: a transfer is a transfer. It clears a word only in
+    // the two cases no verb could reach — the named taking handed back, and the
+    // player as the wronged party — and otherwise merely *offers* itself as
+    // restitution to whoever took it, who decides with `settle_notice`.
+    for notice in crate::notices::settle_on_return(world, &giver_id, actor_id, &item_id) {
+        announce_settled(world, &notice, &giver_id, "restitution made");
     }
+    offer_restitution(world, &giver_id, actor_id);
     world.touch_public_state();
     world.assert_invariants();
     Ok(format!(
@@ -1849,6 +1846,11 @@ fn raise_ward_notice_for(
         officer_id,
         Some(offender_id.clone()),
         wronged,
+        // Neither wrong this raises *takes* anything — a spitter leaves the
+        // mouthful behind, a fouler leaves worse — so there is nothing whose
+        // return could settle the word on its own (M3.5). Only `raise_notice`'s
+        // optional `taken` ever fills this in.
+        None,
     );
     let line = world
         .notices
@@ -2617,11 +2619,15 @@ fn tell_way(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Strin
 /// `raise_notice` (`law_and_order.md` M3): a law-cast actor puts a wrong on
 /// the ward's tongues. The prose (`about`/`deed`/`where`) is what carriers
 /// hear and repeat — descriptions and places, never ids — while the optional
-/// `accused`/`wronged` ids are the private linkage that lets restitution
-/// through `accept_offered_item` settle the word instead of waiting out the
-/// decay clock.
+/// `accused`/`wronged` ids are the private linkage a settlement needs to find
+/// its notice, and `taken` (M3.5) is the one thing whose return settles the
+/// word without anybody having to judge it.
 fn raise_notice(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
-    let parsed = args_object(args, &["about", "deed"], &["where", "accused", "wronged"])?;
+    let parsed = args_object(
+        args,
+        &["about", "deed"],
+        &["where", "accused", "wronged", "taken"],
+    )?;
     if !crate::notices::is_law(&world.characters[actor_id]) {
         return Err(ActionError::new(
             ActionErrorCode::InvalidAction,
@@ -2654,6 +2660,18 @@ fn raise_notice(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<S
             "you cannot raise the ward against yourself",
         ));
     }
+    let taken = optional_arg(parsed, "taken")
+        .map(|value| {
+            let item_id = parse_item_id(value)?;
+            if !world.items.contains_key(&item_id) {
+                return Err(ActionError::new(
+                    ActionErrorCode::UnknownItem,
+                    format!("there is no item with id {}", repr_id(item_id.as_str())),
+                ));
+            }
+            Ok(item_id)
+        })
+        .transpose()?;
 
     // Stamped from the host-set clock, like the sheet's `the_day`; a clock-less
     // world raises an undated notice that never decays (hermetic tests).
@@ -2670,6 +2688,7 @@ fn raise_notice(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<S
         actor_id.clone(),
         accused.clone(),
         wronged,
+        taken,
     );
     let line = world
         .notices
@@ -2707,6 +2726,112 @@ fn raise_notice(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<S
         "{} puts the word in the ward: {line}",
         world.characters[actor_id].name()
     ))
+}
+
+/// `settle_notice` (`law_and_order.md` M3.5): one word comes off the ward's
+/// tongues because somebody with standing said so. The law cast may settle any
+/// notice — a fine taken, a talking-to given, or a purse quietly pocketed — and
+/// the wronged party may settle their own, law or not. Per-notice, never a
+/// blanket clear, and there is no counter-verb: *not* settling is refusing, and
+/// an unanswered word simply decays.
+fn settle_notice(
+    world: &mut World,
+    actor_id: &ActorId,
+    args: &Value,
+) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["notice_id"], &[])?;
+    let Some(notice_id) = parsed["notice_id"].as_u64() else {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidArguments,
+            "notice_id must be the number of a notice in word_in_the_ward",
+        ));
+    };
+    let Some(notice) = world.notices.get(notice_id) else {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownTarget,
+            format!("the ward is saying no notice numbered {notice_id}"),
+        ));
+    };
+    if !crate::notices::may_settle(world, actor_id, notice) {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidAction,
+            "only those who serve the city's law - or the one who was wronged - can take a word off the ward's tongues",
+        ));
+    }
+    let notice = world.notices.settle(notice_id).expect("just found above");
+    let line = notice.line();
+    let carriers = announce_settled(world, &notice, actor_id, "the wrong answered");
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the settler is in the world")
+        .remember_percept(format!("You settled the ward's word: {line}"));
+    world_event(
+        world,
+        "settle_notice",
+        actor_id,
+        notice.accused.clone(),
+        None,
+        1,
+        carriers,
+    );
+    // No `touch_public_state`: notices are prompt state, not carriage state —
+    // `raise_notice` republishes nothing either.
+    Ok(format!(
+        "{} settles the ward's word: {line}",
+        world.characters[actor_id].name()
+    ))
+}
+
+/// Tell the carriers a word has died, and hand back who was told (the event's
+/// recipients). `except` is whoever already knows — the accused whose
+/// restitution ended it, or the settler, who gets their own history line.
+fn announce_settled(
+    world: &mut World,
+    notice: &crate::notices::WardNotice,
+    except: &ActorId,
+    reason: &str,
+) -> Vec<ActorId> {
+    let settled_line = format!("the ward's word is settled, {reason}: {}", notice.line());
+    let carriers = crate::notices::carrier_ids(world, notice.id, except);
+    let lines = carriers
+        .iter()
+        .map(|carrier| (carrier.clone(), settled_line.clone()))
+        .collect();
+    deliver(world, lines, true);
+    carriers
+}
+
+/// The percept that keeps a dropped verb from reading as a cheat (M3.5): when
+/// the accused hands something to a law officer or to the wronged, the acceptor
+/// is told this may be what the ward's word wants and that `settle_notice` is
+/// theirs to call. The engine gives them the turn to answer it in
+/// ([`crate::Engine::nudge_restitution_acceptor`]) — with the question in front
+/// of them, an officer who pockets the purse and keeps the word alive is a
+/// story rather than a bug. The player is never told: he has no verbs, and the
+/// transfers he could settle already settled themselves.
+fn offer_restitution(world: &mut World, giver_id: &ActorId, acceptor_id: &ActorId) {
+    if !world.characters[acceptor_id].control().is_llm() {
+        return;
+    }
+    let lines: Vec<(ActorId, String)> =
+        crate::notices::restitution_candidates(world, giver_id, acceptor_id)
+            .into_iter()
+            .filter_map(|notice_id| world.notices.get(notice_id))
+            .map(|notice| {
+                (
+                    acceptor_id.clone(),
+                    format!(
+                        "what you were just handed may be what the ward's word wants \
+                         (notice {}): {} - settle_notice if it answers the wrong, or let the \
+                         word stand and say why",
+                        notice.id,
+                        notice.line()
+                    ),
+                )
+            })
+            .collect();
+    deliver(world, lines, true);
 }
 
 #[cfg(test)]
@@ -3988,7 +4113,8 @@ mod tests {
     }
 
     /// A sergeant, a second officer, a talkative and a taciturn citizen, a
-    /// thief holding the taking, and the wronged boy.
+    /// thief holding the taking (and a loaf to trade honestly with), and the
+    /// wronged boy.
     fn ward_world() -> World {
         let mut world = World::new();
         world.add_character(lored("srgnt", "Sergeant", 0.0, "bailiff_and_gaoler", Some(0.0)));
@@ -3997,9 +4123,11 @@ mod tests {
         world.add_character(lored("quiet", "Quiet", 5.0, "baker", Some(0.0)));
         let mut thief = lored("thief", "Thief", 2.0, "carter", Some(0.0));
         thief.state.holds.push(ItemId::from_raw("spark"));
+        thief.state.holds.push(ItemId::from_raw("loafx"));
         world.add_character(thief);
         world.add_character(lored("wrngd", "Wronged", 3.0, "tenter_boy", Some(0.0)));
         world.add_item(Item::new(ItemId::from_raw("spark"), "spark"));
+        world.add_item(Item::new(ItemId::from_raw("loafx"), "loaf"));
         world
     }
 
@@ -4011,6 +4139,44 @@ mod tests {
             "accused": "thief",
             "wronged": "wrngd",
         })
+    }
+
+    /// The same word with the taking named — the one arg that lets a return
+    /// settle itself, with nobody judging anything (M3.5).
+    fn raise_args_naming_the_taking() -> Value {
+        let mut args = raise_args();
+        args["taken"] = json!("spark");
+        args
+    }
+
+    /// The sergeant puts the word in the ward.
+    fn raise_the_word(world: &mut World, args: &Value) {
+        apply_action(world, &ActorId::from_raw("srgnt"), "raise_notice", args).unwrap();
+    }
+
+    /// `giver` holds `item` out and `taker` takes it.
+    fn hand_over(world: &mut World, giver: &str, taker: &str, item: &str) {
+        apply_action(
+            world,
+            &ActorId::from_raw(giver),
+            "offer_item",
+            &json!({"item_id": item, "target": taker}),
+        )
+        .unwrap();
+        apply_action(
+            world,
+            &ActorId::from_raw(taker),
+            "accept_offered_item",
+            &json!({"item_id": item}),
+        )
+        .unwrap();
+    }
+
+    fn inbox_has(world: &World, id: &str, prefix: &str) -> bool {
+        world.characters[&ActorId::from_raw(id)]
+            .inbox()
+            .iter()
+            .any(|line| line.starts_with(prefix))
     }
 
     #[test]
@@ -4093,105 +4259,186 @@ mod tests {
         assert!(world.notices.is_empty());
     }
 
+    // -------------------------------------- settlement as an act (M3.5)
+
+    /// The whole of Problem 4 in one test: ordinary commerce with an accused no
+    /// longer launders the wrong, and a fine into an officer's hand no longer
+    /// absolves anybody by itself. What the officer gets instead is the
+    /// question, and the notice stays live until they answer it.
     #[test]
-    fn restitution_to_the_wronged_settles_the_word() {
+    fn a_transfer_from_the_accused_never_settles_the_word_by_itself() {
         let mut world = ward_world();
-        apply_action(
-            &mut world,
-            &ActorId::from_raw("srgnt"),
-            "raise_notice",
-            &raise_args(),
-        )
-        .unwrap();
+        raise_the_word(&mut world, &raise_args_naming_the_taking());
 
-        // The accused hands the taking back; the wronged accepts.
-        apply_action(
-            &mut world,
-            &ActorId::from_raw("thief"),
-            "offer_item",
-            &json!({"item_id": "spark", "target": "wrngd"}),
-        )
-        .unwrap();
-        apply_action(
-            &mut world,
-            &ActorId::from_raw("wrngd"),
-            "accept_offered_item",
-            &json!({"item_id": "spark"}),
-        )
-        .unwrap();
-
-        assert!(world.notices.is_empty(), "restitution clears the notice");
+        // The talkative baker buys the thief's loaf, as anyone might.
+        hand_over(&mut world, "thief", "gossp", "loafx");
+        assert_eq!(
+            world.notices.live().len(),
+            1,
+            "ordinary commerce cannot launder a theft"
+        );
         assert!(
-            world.characters[&ActorId::from_raw("gatek")]
-                .inbox()
-                .iter()
-                .any(|line| line.starts_with("the ward's word is settled")),
-            "the carriers hear the word die"
+            !inbox_has(&world, "gossp", "what you were just handed"),
+            "a bystander is asked nothing - they have no standing to settle"
+        );
+
+        // The thief pays the gate keeper the very spark the notice names. Even
+        // that settles nothing: the wronged is the boy, and whether a spark in
+        // an officer's palm answers the wrong is the officer's to judge.
+        hand_over(&mut world, "thief", "gatek", "spark");
+        assert_eq!(
+            world.notices.live().len(),
+            1,
+            "a fine is an offer of restitution, not an absolution"
+        );
+        assert!(
+            inbox_has(&world, "gatek", "what you were just handed"),
+            "the officer is asked whether this answers the word"
+        );
+        let asked = world.characters[&ActorId::from_raw("gatek")]
+            .inbox()
+            .iter()
+            .find(|line| line.starts_with("what you were just handed"))
+            .unwrap();
+        assert!(
+            asked.contains("(notice 1)") && asked.contains("settle_notice"),
+            "it names the notice and the verb: {asked}"
         );
     }
 
+    /// The verb itself: one notice, chosen, and the ward hears that word die.
     #[test]
-    fn a_fine_paid_to_any_law_officer_settles_but_a_bystander_gift_does_not() {
+    fn settle_notice_clears_exactly_the_notice_it_names() {
         let mut world = ward_world();
-        let raise = |world: &mut World| {
-            apply_action(
-                world,
-                &ActorId::from_raw("srgnt"),
-                "raise_notice",
-                &raise_args(),
-            )
-            .unwrap();
-        };
-        raise(&mut world);
+        raise_the_word(&mut world, &raise_args());
+        // A second wrong by the same man — settling one may not settle both.
+        raise_the_word(
+            &mut world,
+            &json!({
+                "about": "the same carter",
+                "deed": "fouled the street",
+                "accused": "thief",
+            }),
+        );
+        assert_eq!(world.notices.live().len(), 2);
 
-        // Handing the spark to a mere bystander answers nothing.
-        apply_action(
-            &mut world,
-            &ActorId::from_raw("thief"),
-            "offer_item",
-            &json!({"item_id": "spark", "target": "gossp"}),
-        )
-        .unwrap();
-        apply_action(
-            &mut world,
-            &ActorId::from_raw("gossp"),
-            "accept_offered_item",
-            &json!({"item_id": "spark"}),
-        )
-        .unwrap();
-        assert_eq!(world.notices.live().len(), 1, "a bystander gift settles nothing");
-
-        // Paying the gate keeper — any law officer — settles it.
-        let spark = ItemId::from_raw("spark");
-        world
-            .characters
-            .get_mut(&ActorId::from_raw("gossp"))
-            .unwrap()
-            .state
-            .holds
-            .retain(|id| id != &spark);
-        world
-            .characters
-            .get_mut(&ActorId::from_raw("thief"))
-            .unwrap()
-            .state
-            .holds
-            .push(spark.clone());
-        apply_action(
-            &mut world,
-            &ActorId::from_raw("thief"),
-            "offer_item",
-            &json!({"item_id": "spark", "target": "gatek"}),
-        )
-        .unwrap();
-        apply_action(
+        let line = apply_action(
             &mut world,
             &ActorId::from_raw("gatek"),
-            "accept_offered_item",
-            &json!({"item_id": "spark"}),
+            "settle_notice",
+            &json!({"notice_id": 1}),
         )
         .unwrap();
-        assert!(world.notices.is_empty(), "a fine to the law settles the word");
+        assert!(line.starts_with("Gatekeeper settles the ward's word"), "{line}");
+
+        let live = world.notices.live();
+        assert_eq!(live.len(), 1, "never a blanket clear");
+        assert_eq!(live[0].id, 2, "the other wrong is still going around");
+        assert!(
+            inbox_has(&world, "gossp", "the ward's word is settled, the wrong answered"),
+            "the carriers hear it die"
+        );
+        assert!(
+            !inbox_has(&world, "gatek", "the ward's word is settled"),
+            "the settler is not told their own news"
+        );
+        assert!(
+            world.characters[&ActorId::from_raw("gatek")]
+                .recent_history()
+                .last()
+                .unwrap()
+                .starts_with("You settled the ward's word"),
+        );
+        let event = world.drain_events().pop().unwrap();
+        assert_eq!(event.kind, "settle_notice");
+        assert_eq!(event.target_id, Some(ActorId::from_raw("thief")));
+    }
+
+    /// Standing: the law, and the one who was wronged. Nobody else — a
+    /// bystander cannot forgive a spark that was never theirs.
+    #[test]
+    fn only_the_law_and_the_wronged_may_settle_a_word() {
+        let mut world = ward_world();
+        raise_the_word(&mut world, &raise_args());
+
+        let error = apply_action(
+            &mut world,
+            &ActorId::from_raw("gossp"),
+            "settle_notice",
+            &json!({"notice_id": 1}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::InvalidAction);
+        assert_eq!(world.notices.live().len(), 1);
+
+        let error = apply_action(
+            &mut world,
+            &ActorId::from_raw("srgnt"),
+            "settle_notice",
+            &json!({"notice_id": 7}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::UnknownTarget);
+
+        // The boy is no officer, but it is his spark to forgive.
+        apply_action(
+            &mut world,
+            &ActorId::from_raw("wrngd"),
+            "settle_notice",
+            &json!({"notice_id": 1}),
+        )
+        .unwrap();
+        assert!(world.notices.is_empty());
+    }
+
+    /// The first settlement no verb can reach: the accused hands back the very
+    /// thing the notice names, to the person it was taken from. Nothing to
+    /// judge, so nobody is asked to judge it — and it needs `taken` to have
+    /// been recorded, or the boy is merely being handed something.
+    #[test]
+    fn returning_the_named_taking_settles_the_word_without_the_verb() {
+        let mut world = ward_world();
+        raise_the_word(&mut world, &raise_args_naming_the_taking());
+        hand_over(&mut world, "thief", "wrngd", "spark");
+        assert!(world.notices.is_empty(), "the taking is back where it belongs");
+        assert!(
+            inbox_has(&world, "gatek", "the ward's word is settled, restitution made"),
+            "the carriers hear the word die"
+        );
+
+        // Without `taken`, the same handover is only an offer of restitution:
+        // whether a loaf answers a stolen spark is the boy's to say.
+        let mut world = ward_world();
+        raise_the_word(&mut world, &raise_args());
+        hand_over(&mut world, "thief", "wrngd", "loafx");
+        assert_eq!(world.notices.live().len(), 1);
+        assert!(
+            inbox_has(&world, "wrngd", "what you were just handed"),
+            "the wronged is asked, and holds the verb to answer with"
+        );
+    }
+
+    /// The second: the player as the wronged party. He has no verbs at all, so
+    /// an NPC's restitution to him must settle mechanically or never settle.
+    #[test]
+    fn the_player_accepting_restitution_settles_the_word() {
+        let mut world = ward_world();
+        world
+            .characters
+            .get_mut(&ActorId::from_raw("wrngd"))
+            .unwrap()
+            .sheet
+            .control = Control::Player;
+        // No `taken` recorded, and the loaf is not the spark: for the player it
+        // settles anyway, because nothing else ever could.
+        raise_the_word(&mut world, &raise_args());
+        hand_over(&mut world, "thief", "wrngd", "loafx");
+
+        assert!(world.notices.is_empty(), "the player's acceptance is the answer");
+        assert!(
+            !inbox_has(&world, "wrngd", "what you were just handed"),
+            "and he is never asked a question he has no verb to answer"
+        );
     }
 
     // ------------------------------------------- body pockets (extra_pockets.md)

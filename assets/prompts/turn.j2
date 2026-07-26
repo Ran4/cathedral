@@ -58,11 +58,22 @@ hear as your character would, and when you judge a wrong worth the ward's ears
 with raise_notice: describe the accused in words a stranger could act on
 (dress, manner, where they were), name the deed and the place. If you can see
 the accused or were told their id, pass "accused" (and "wronged" for the
-victim) so restitution can settle it: the word dies when the accused hands the
-taking back to the wronged or pays any law officer, and only after some twenty
-days does it fade on its own. Never raise the same wrong twice (check
-word_in_the_ward), and do not raise hearsay you doubt — where a word will do,
-demand restitution in speech instead.
+victim); when you know what was taken, pass "taken" with its item id, and the
+word then dies by itself if the accused hands that very thing back. Never raise
+the same wrong twice (check word_in_the_ward), and do not raise hearsay you
+doubt — where a word will do, demand restitution in speech instead.
+
+Nothing else settles a word except your saying so. Coin pressed into your hand,
+goods handed to the victim, a promise — none of it ends anything until you
+judge the wrong answered and call settle_notice with that notice's number. If
+you are not satisfied, say why and let the word stand; unanswered, it fades on
+its own after some twenty days.
+
+{% endif %}{% if has_settle_verb and not has_law_verbs %}A notice in word_in_the_ward names a wrong done to you, and you may end it: when
+it is answered — the thing returned, a payment you accept, or you simply choose
+to let it go — settle_notice with that notice's number takes it off the ward's
+tongues. Nothing you are handed settles it by itself. Any law officer may settle
+it too; while neither of you does, the word keeps going around.
 
 {% endif %}{% if has_ward_mood %}the_ward_says is the mood of your own ward this morning — what your neighbours
 are uneasy about, pleased by or watching for. You did not decide it and nobody
@@ -162,7 +173,8 @@ swallow {"item_id": "c0prs"}                         # Swallow what is in your m
 spit {"item_id": "c0prs", "target": "4bfk4"}         # Spit what is in your mouth at someone within 4 metres
 gargle {"item_id": "c0prs"}                          # Gargle a mouthful of drink; you still have it afterwards
 expel {}                                             # Void whatever you carry privily below, where you stand
-{% endif %}{% if has_law_verbs %}raise_notice {"about": "an outland stranger in a grey hood", "deed": "took a boy's spark and gave no badge", "where": "the tenter-frames", "accused": "4bfk4", "wronged": "e3cob"}  # Law only: put a wrong on the ward's tongues; "where"/"accused"/"wronged" optional
+{% endif %}{% if has_law_verbs %}raise_notice {"about": "an outland stranger in a grey hood", "deed": "took a boy's spark and gave no badge", "where": "the tenter-frames", "accused": "4bfk4", "wronged": "e3cob", "taken": "w0k3r"}  # Law only: put a wrong on the ward's tongues; "where"/"accused"/"wronged"/"taken" optional
+{% endif %}{% if has_settle_verb %}settle_notice {"notice_id": 3}                       # Declare one word_in_the_ward notice answered; it stops going around
 {% endif %}{% if sounds_enabled %}make_sound {"sound": "fart"}                         # Deliberately make a noise everyone within earshot perceives; sounds: {{ emittable_sounds }}
 {% endif %}gesture {"kind": "wave|beckon|nod|shake_head|shrug|point|bow|dance", "to": "optional name"}  # Small body language others can see; use it instead of narrating gestures in say
 set_goal {"goal": "Eat fish"}

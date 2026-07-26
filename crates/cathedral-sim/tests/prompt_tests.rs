@@ -231,6 +231,7 @@ fn the_sheet_carries_the_wards_word_and_only_the_law_gets_the_verb() {
         actor("k0fb1"),
         None,
         None,
+        None,
     );
     // Sven has no lore, so the carry roll is certain (`CURIOSITY_WITHOUT_LORE`)
     // — but he is no law officer, so the verb stays off his sheet.
@@ -241,15 +242,21 @@ fn the_sheet_carries_the_wards_word_and_only_the_law_gets_the_verb() {
         ),
         "the section renders with its note"
     );
+    // Numbered like the round's legs since M3.5: `settle_notice` names a
+    // notice by its number, and the sheet is where it is read off.
     assert!(after.contains(
-        "- an outland stranger in a grey hood — took a boy's spark, at the tenter-frames; \
-         the word since Highmarket's Dayspring"
+        "- notice 1 — an outland stranger in a grey hood — took a boy's spark, \
+         at the tenter-frames; the word since Highmarket's Dayspring"
     ));
     assert!(
         after.contains("word_in_the_ward is what the ward is saying"),
         "the turn prompt explains how to weigh the word"
     );
     assert!(!after.contains("raise_notice"), "the verb is the law's alone");
+    assert!(
+        !after.contains("settle_notice"),
+        "a mere carrier can neither raise nor settle"
+    );
 
     // A law occupation brings the verb and its paragraph.
     world.characters.get_mut(&sven).unwrap().sheet.lore = Some(LoreProfile {
@@ -277,6 +284,59 @@ fn the_sheet_carries_the_wards_word_and_only_the_law_gets_the_verb() {
     let law = render_prompt(&world, &sven, None, &env).unwrap();
     assert!(law.contains("raise_notice {\"about\""), "the verb line is listed");
     assert!(law.contains("You serve the city's law"), "and explained");
+    assert!(
+        law.contains("settle_notice {\"notice_id\": 3}"),
+        "M3.5: the law may also end a word"
+    );
+    assert!(
+        law.contains("Nothing else settles a word except your saying so"),
+        "and is told that no transfer does it for them"
+    );
+}
+
+/// law_and_order.md M3.5: `settle_notice` reaches exactly one person outside
+/// the law cast — whoever a live notice names as wronged. It is their spark to
+/// forgive, so they get the verb, its own short paragraph, and (through
+/// `notices::carries`) the notice itself however taciturn they are.
+#[test]
+fn the_wronged_party_holds_the_settle_verb_without_serving_the_law() {
+    let env = prompt_env();
+    let mut world = seed_world();
+    let sven = actor("sv3n1");
+
+    world.notices.raise(
+        "an outland stranger in a grey hood".into(),
+        "took a boy's spark".into(),
+        None,
+        None,
+        None,
+        actor("cb947"),
+        Some(actor("k0fb1")),
+        Some(sven.clone()),
+        None,
+    );
+
+    let wronged = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(
+        wronged.contains("settle_notice {\"notice_id\": 3}"),
+        "the wronged may end their own word"
+    );
+    assert!(
+        wronged.contains("names a wrong done to you, and you may end it"),
+        "with the paragraph written for them, not the law's"
+    );
+    assert!(
+        !wronged.contains("raise_notice"),
+        "raising the ward is still the law's alone"
+    );
+    assert!(
+        !wronged.contains("You serve the city's law"),
+        "and the law paragraph stays off their sheet"
+    );
+
+    // The bystander two doors down is neither: no verb, no paragraph.
+    let bystander = render_prompt(&world, &actor("cb947"), None, &env).unwrap();
+    assert!(!bystander.contains("settle_notice"));
 }
 
 /// movement M6: the Night Office's ward mood reaches the turn sheet of the

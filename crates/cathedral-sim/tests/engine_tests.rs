@@ -1304,6 +1304,91 @@ fn a_silent_player_decline_hands_the_offerer_the_priority_slot() {
     );
 }
 
+/// Law-and-order M3.5: taking something from a man the ward's word names is a
+/// question, and the acceptor has already spent the turn in which they took it.
+/// The sim puts the question in their inbox; the engine owes them the turn to
+/// answer it — ungated by proximity, exactly like the M0 accept nudge, because
+/// off stage the idle rotation would never come round to it.
+#[test]
+fn a_transfer_from_the_accused_hands_the_acceptor_the_priority_slot() {
+    use cathedral_sim::{LoreProfile, PlanningWard, Significance};
+
+    let mut harness = Builder::default().build();
+    harness.ready();
+    let sven = ActorId::from_raw("sv3n1");
+    let conny = ActorId::from_raw("cb947");
+
+    // Conny walks a bench sergeant's beat; Sven is the man the word names.
+    harness
+        .engine
+        .world_mut()
+        .characters
+        .get_mut(&conny)
+        .unwrap()
+        .sheet
+        .lore = Some(LoreProfile {
+        significance: Significance::Minor,
+        planning_ward: PlanningWard::Fabric,
+        age: 40,
+        gender: "m".into(),
+        occupation_id: Some("bailiff_and_gaoler".into()),
+        occupation_display: Some("Court sergeant and gaoler".into()),
+        title: Some("Bench sergeant".into()),
+        rank: None,
+        faction_role: None,
+        illegal_activity: None,
+        district: "Bell-and-Sluice streets".into(),
+        father: None,
+        mother: None,
+        children: Vec::new(),
+        circumstances: Vec::new(),
+        conditions: Vec::new(),
+        home: None,
+        core_character_description: String::new(),
+        extended_character_description: String::new(),
+        curiosity: None,
+    });
+    harness.engine.world_mut().notices.raise(
+        "a fisherman in a wet apron".into(),
+        "took a boy's spark and gave no badge".into(),
+        None,
+        None,
+        None,
+        conny.clone(),
+        Some(sven.clone()),
+        None,
+        None,
+    );
+    assert_eq!(harness.engine.scheduler().priority_actor_id(), None);
+
+    // Sven presses his fish on the sergeant. Nobody says a word.
+    harness.npc(
+        "sv3n1",
+        "offer_item",
+        json!({"item_id": "fzbn9", "target": "cb947"}),
+    );
+    harness.npc("cb947", "accept_offered_item", json!({"item_id": "fzbn9"}));
+    harness.poll();
+
+    assert_eq!(
+        harness.engine.scheduler().priority_actor_id(),
+        Some(&conny),
+        "the sergeant is owed the turn that decides whether this settles it"
+    );
+    assert!(
+        harness.engine.world().characters[&conny]
+            .inbox()
+            .iter()
+            .any(|line| line.starts_with("what you were just handed")),
+        "with the question on the sheet in front of them"
+    );
+    assert_eq!(
+        harness.engine.world().notices.live().len(),
+        1,
+        "and the word still going around until they say otherwise"
+    );
+}
+
 /// The third way an offer can end, and the only one nobody chooses: the two
 /// drift apart. Until this existed, walking off did not resolve the offer — it
 /// made it *unresolvable*, since accept and decline both need 4 m — so Ilse

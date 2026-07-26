@@ -2429,6 +2429,7 @@ impl Engine {
                 EventType::WorldEvent => {
                     self.hold_for_handoff(now, &event);
                     self.nudge_pocket_witness(now, &event);
+                    self.nudge_restitution_acceptor(now, &event);
                     flush_world_event(&event, out);
                 }
                 EventType::Gesture => flush_gesture(&event, out),
@@ -2563,6 +2564,30 @@ impl Engine {
                 return;
             }
         }
+    }
+
+    /// The wake-up behind `settle_notice` (`law_and_order.md` M3.5). Taking a
+    /// purse from someone the ward's word names is a question — is this the
+    /// restitution? — and the acceptor has already spent the turn in which they
+    /// took it. `actions::offer_restitution` put the question in their inbox;
+    /// without the turn to answer it, a paid-up player would look no different
+    /// from an unpaid one until the idle rotation happened to come round, which
+    /// off stage is never (the M0 accept-nudge argument, from the other side of
+    /// the exchange). Ungated by proximity like every priority handoff, and not
+    /// immediate: the inter-turn delay and the floor still govern when.
+    fn nudge_restitution_acceptor(&mut self, now: f64, event: &DomainEvent) {
+        if event.kind != "accept_offered_item" {
+            return;
+        }
+        let (Some(acceptor_id), Some(giver_id)) = (&event.actor_id, &event.target_id) else {
+            return;
+        };
+        if notices::restitution_candidates(&self.world, giver_id, acceptor_id).is_empty() {
+            return;
+        }
+        let acceptor_id = acceptor_id.clone();
+        self.scheduler
+            .prioritize(&self.world, &acceptor_id, false, now);
     }
 
     /// `_send_sound_event` (`server.py:2166-2221`): the player's percept, the

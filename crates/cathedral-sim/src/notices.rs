@@ -6,10 +6,18 @@
 //! `raise_notice` verb after hearing a report or witnessing the deed. The
 //! prose carries *descriptions and places, never ids* (the "unknown people"
 //! rule; strangers have no names), while the record privately keeps the
-//! accused/wronged ids the raiser supplied so restitution can settle it: the
-//! accused handing the taken thing back to the wronged — or paying any law
-//! officer — clears the word through the existing offer/accept machinery
-//! (`actions::accept_offered_item`).
+//! accused/wronged ids the raiser supplied so a settlement can find its notice.
+//!
+//! **Settling is an act, not plumbing** (M3.5). A word comes off the ward's
+//! tongues because somebody with standing — the law cast, or the wronged party
+//! themselves — chose to end it with `settle_notice`. Handing over a purse
+//! never settles anything by itself: it earns the acceptor a percept saying
+//! this may be what the word wants, and the turn in which to judge it. That is
+//! what lets a bench sergeant take a bribe and keep the word alive, and what
+//! keeps a loaf bought from an accused baker from quietly laundering a theft.
+//! Only two transfers settle on their own, because no verb could reach them:
+//! the accused handing back *the very thing the notice names* ([`WardNotice::taken`]),
+//! and the player as the wronged party, who has no verbs at all.
 //!
 //! Who carries the word: the law cast always; ordinary citizens are diluted
 //! through the same deterministic-hash idiom as the curiosity gate
@@ -33,13 +41,13 @@ use std::{
 use crate::{
     HEARING_RADIUS_M,
     attention::curiosity_of,
-    character::Character,
-    ids::ActorId,
+    character::{Character, Control},
+    ids::{ActorId, ItemId},
     world::World,
 };
 
-/// The occupations that serve the city's law: they may `raise_notice`, they
-/// always carry the word, and a fine paid to any of them settles a notice.
+/// The occupations that serve the city's law: they may `raise_notice` and
+/// `settle_notice`, and they always carry the word.
 /// Deliberately narrower than `attention::RESERVED_TRADES` — a scribe is
 /// reserved company, not a law officer — and deliberately including the
 /// toll-house's revenue men, who share Odo Trask's counter at the Tallage.
@@ -90,8 +98,14 @@ pub struct WardNotice {
     /// Private settlement linkage, never rendered: who the raiser meant.
     /// Without it the notice can only expire.
     pub accused: Option<ActorId>,
-    /// Who was wronged — restitution is the accused handing them the taking.
+    /// Who was wronged. They may settle their own word whether or not they
+    /// serve the law, and they always carry it ([`carries`]) — the sheet is
+    /// where they read the number `settle_notice` names.
     pub wronged: Option<ActorId>,
+    /// The thing taken, when the raiser knew it (M3.5). The one transfer that
+    /// needs no verb: the accused handing *this* back to the wronged is not a
+    /// judgement call, so it settles the word on its own.
+    pub taken: Option<ItemId>,
     /// Law-cast carriers already served the face-to-face percept, once each.
     served: BTreeSet<ActorId>,
 }
@@ -135,6 +149,7 @@ impl Notices {
         raised_by: ActorId,
         accused: Option<ActorId>,
         wronged: Option<ActorId>,
+        taken: Option<ItemId>,
     ) -> u64 {
         self.next_id += 1;
         let id = self.next_id;
@@ -148,6 +163,7 @@ impl Notices {
             raised_by,
             accused,
             wronged,
+            taken,
             served: BTreeSet::new(),
         });
         if self.live.len() > NOTICES_MAX_LIVE {
@@ -158,6 +174,18 @@ impl Notices {
 
     pub fn live(&self) -> &[WardNotice] {
         &self.live
+    }
+
+    /// The notice with this id, while the ward is still saying it.
+    pub fn get(&self, id: u64) -> Option<&WardNotice> {
+        self.live.iter().find(|notice| notice.id == id)
+    }
+
+    /// Take one word off the ward's tongues. Per-notice by design: a settlement
+    /// answers *a* wrong, never every wrong its subject is named in.
+    pub fn settle(&mut self, id: u64) -> Option<WardNotice> {
+        let index = self.live.iter().position(|notice| notice.id == id)?;
+        Some(self.live.remove(index))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -182,15 +210,24 @@ pub fn is_law(character: &Character) -> bool {
         .is_some_and(|occupation| LAW_OCCUPATIONS.contains(&occupation))
 }
 
-/// Whether the word reaches this person at all: the law always; everyone else
-/// through a deterministic roll against their talkativeness — the same
-/// "hash, never a fresh draw" idiom as `attention::opens_first`, so which
-/// gossips repeat a story is reproducible in tests and drive scripts.
+/// Whether the word reaches this person at all: the law always, and the
+/// wronged party always — they are the one person who cannot need telling, and
+/// since M3.5 the sheet is where they read the number `settle_notice` names.
+/// Everyone else comes through a deterministic roll against their talkativeness
+/// — the same "hash, never a fresh draw" idiom as `attention::opens_first`, so
+/// which gossips repeat a story is reproducible in tests and drive scripts.
 pub fn carries(world: &World, actor_id: &ActorId, notice_id: u64) -> bool {
     let Some(character) = world.characters.get(actor_id) else {
         return false;
     };
     if is_law(character) {
+        return true;
+    }
+    if world
+        .notices
+        .get(notice_id)
+        .is_some_and(|notice| notice.wronged.as_ref() == Some(actor_id))
+    {
         return true;
     }
     let mut hasher = DefaultHasher::new();
@@ -220,17 +257,58 @@ pub fn carrier_ids(world: &World, notice_id: u64, except: &ActorId) -> Vec<Actor
         .collect()
 }
 
-/// Settle every live notice this transfer answers: the accused (`giver`)
-/// handing the taking back to the wronged, or paying a law officer. Returns
-/// the settled notices so the caller can tell the carriers the word is dead.
-pub fn settle_on_transfer(world: &mut World, giver: &ActorId, acceptor: &ActorId) -> Vec<WardNotice> {
+/// Who may end this word: the law cast, exactly as they may raise one — and
+/// the wronged party named on it, whether or not they serve the law. It is the
+/// boy's own spark; forgiving it is his to do.
+pub fn may_settle(world: &World, actor_id: &ActorId, notice: &WardNotice) -> bool {
+    notice.wronged.as_ref() == Some(actor_id)
+        || world.characters.get(actor_id).is_some_and(is_law)
+}
+
+/// The live notices a transfer from `giver` to `acceptor` *might* be answering:
+/// the giver is the accused, and the acceptor is the wronged party or any law
+/// officer. It settles nothing — whether a crust answers a stolen spark is the
+/// acceptor's judgement, and M3.5 exists to leave it there — but it is what
+/// earns them the restitution percept and the turn to make it
+/// (`actions::accept_offered_item`, `Engine::nudge_restitution_acceptor`).
+pub fn restitution_candidates(world: &World, giver: &ActorId, acceptor: &ActorId) -> Vec<u64> {
     let acceptor_is_law = world.characters.get(acceptor).is_some_and(is_law);
+    world
+        .notices
+        .live
+        .iter()
+        .filter(|notice| notice.accused.as_ref() == Some(giver))
+        .filter(|notice| acceptor_is_law || notice.wronged.as_ref() == Some(acceptor))
+        .map(|notice| notice.id)
+        .collect()
+}
+
+/// The settlements no verb can reach, and the only transfers that still clear a
+/// word by themselves (M3.5):
+///
+/// 1. the accused handing the wronged **the very thing the notice names** — not
+///    a judgement call, so it needs no judge;
+/// 2. the accused handing anything to the **player** as the wronged party — the
+///    player has no verbs, so nothing else would ever end it.
+///
+/// Returns the settled notices so the caller can tell the carriers the word is
+/// dead.
+pub fn settle_on_return(
+    world: &mut World,
+    giver: &ActorId,
+    acceptor: &ActorId,
+    item_id: &ItemId,
+) -> Vec<WardNotice> {
+    let acceptor_is_player = world
+        .characters
+        .get(acceptor)
+        .is_some_and(|character| character.control() == Control::Player);
     let mut settled = Vec::new();
     let live = std::mem::take(&mut world.notices.live);
     for notice in live {
-        let names_giver = notice.accused.as_ref() == Some(giver);
-        let answers = names_giver
-            && (acceptor_is_law || notice.wronged.as_ref() == Some(acceptor));
+        let answers = notice.accused.as_ref() == Some(giver)
+            && notice.wronged.as_ref() == Some(acceptor)
+            && (acceptor_is_player || notice.taken.as_ref() == Some(item_id));
         if answers {
             settled.push(notice);
         } else {
@@ -355,6 +433,7 @@ mod tests {
             ActorId::from_raw("srgnt"),
             accused.map(ActorId::from_raw),
             None,
+            None,
         )
     }
 
@@ -380,6 +459,38 @@ mod tests {
         }
         assert_eq!(notices.live().len(), NOTICES_MAX_LIVE);
         assert_eq!(notices.live()[0].id, 2, "the oldest was dropped");
+    }
+
+    /// M3.5: the wronged party carries their own word however taciturn they
+    /// are. They cannot need telling — and since the verb names a notice by
+    /// number, the sheet section is the only place they could read it off.
+    #[test]
+    fn the_wronged_carry_their_own_word_whatever_the_roll_says() {
+        let taciturn = |id: &str| {
+            let mut character = person(id, 0.0, Some("baker"));
+            character.sheet.lore.as_mut().unwrap().curiosity = Some(0.0);
+            character
+        };
+        let mut world = World::new();
+        world.add_character(taciturn("wrngd"));
+        world.add_character(taciturn("quiet"));
+        let notice_id = world.notices.raise(
+            "a stranger".into(),
+            "a wrong".into(),
+            None,
+            None,
+            None,
+            ActorId::from_raw("srgnt"),
+            None,
+            Some(ActorId::from_raw("wrngd")),
+            None,
+        );
+
+        assert!(carries(&world, &ActorId::from_raw("wrngd"), notice_id));
+        assert!(
+            !carries(&world, &ActorId::from_raw("quiet"), notice_id),
+            "the ward's other silent bakers are spared it"
+        );
     }
 
     /// The face-to-face percept: a law officer within hearing of the accused

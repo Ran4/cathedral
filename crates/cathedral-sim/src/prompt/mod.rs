@@ -257,7 +257,7 @@ struct Sheet<'a> {
     /// the world sections above the time axis; omitted entirely for the
     /// (usual) carrier-less case, which keeps the frozen fixtures stable.
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    word_in_the_ward: Vec<String>,
+    word_in_the_ward: Vec<NoticeLine>,
     since_your_last_turn: Vec<&'a str>,
     recent_history: Vec<&'a str>,
     stored_memories: &'a [String],
@@ -376,6 +376,16 @@ struct PlaceRef<'a> {
     name: &'a str,
 }
 
+/// One `word_in_the_ward` entry. The number is carried, not implied by
+/// position: `settle_notice` names a notice by it, the list is filtered and
+/// capped per reader, and two carriers must be able to talk about the same
+/// number (`law_and_order.md` M3.5).
+#[derive(Serialize)]
+struct NoticeLine {
+    notice_id: u64,
+    word: String,
+}
+
 /// `_person` (`prompt.py:144-155`): `distance_m` and `moving` only appear in
 /// `you_see`.
 #[derive(Serialize)]
@@ -470,6 +480,15 @@ pub fn render_prompt(
     // and every sheet before the first Night Office keep their exact bytes.
     let has_ward_mood = sheet.the_ward_says.is_some();
     let has_law_verbs = crate::notices::is_law(actor);
+    // `settle_notice` reaches one person outside the law cast: whoever a live
+    // notice names as wronged, who may forgive their own spark (M3.5). They
+    // always carry that notice, so the number the verb takes is on their sheet.
+    let has_settle_verb = has_law_verbs
+        || world
+            .notices
+            .live()
+            .iter()
+            .any(|notice| notice.wronged.as_ref() == Some(actor_id));
     // The body-pocket verbs are documented only to someone who could use them
     // today — anything already pocketed, or anything palmable in hand
     // (`features/extra_pockets.md`: "an actor with empty pockets and nothing
@@ -497,6 +516,7 @@ pub fn render_prompt(
                 has_ward_mood,
                 has_notices,
                 has_law_verbs,
+                has_settle_verb,
                 has_pockets,
                 has_frontbutt,
             })
@@ -934,7 +954,10 @@ fn build_sheet<'a>(
             .rev()
             .filter(|notice| crate::notices::carries(world, actor.id(), notice.id))
             .take(crate::notices::NOTICES_SHEET_MAX)
-            .map(|notice| notice.line())
+            .map(|notice| NoticeLine {
+                notice_id: notice.id,
+                word: notice.line(),
+            })
             .collect(),
         since_your_last_turn,
         recent_history,
@@ -1137,9 +1160,15 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
     // The ward's word — omitted entirely for the carrier-less majority, like
     // `you_sell`, so the section never appears on an untouched sheet.
     if !sheet.word_in_the_ward.is_empty() {
+        // Numbered like `your_round`'s legs, and for the same reason: since
+        // M3.5 `settle_notice` names a notice by its number, and the sheet is
+        // the only place the model can read one off.
         sections.push(bullet_section(
             &format!("**word_in_the_ward** ({})", strings.notices_note),
-            sheet.word_in_the_ward.iter().cloned(),
+            sheet
+                .word_in_the_ward
+                .iter()
+                .map(|notice| format!("notice {} — {}", notice.notice_id, notice.word)),
             "",
         ));
     }
