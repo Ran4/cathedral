@@ -29,6 +29,41 @@ Actions (each fires ~0.5 s after the previous):
   `logs.jsonl`. The Scold's *curfew* also has a real trigger (the clock's
   edge into the Snuffing, once a day); this action is the stand-in for the
   funeral and proclamation transactions the sim does not model yet.
+- `seize <officer>` / `seize <officer> -> <target>` — stage an arrest
+  (`features/law_and_order.md` M4): the named officer takes somebody in charge
+  for the nearest station, defaulting to the player. Both handles resolve by
+  display name first (may contain spaces) then by actor id, exactly as `status`
+  does — hence the explicit `->`, since `seize Havise Ashe` is one handle and
+  not two. Every judgement above `seize` is
+  deliberately an LLM's, so a scripted run cannot otherwise reach one; this is
+  the only way to look at the tether, the grab reflex and the strain meter. It
+  goes through the same code a real seizure does, minus that verb's
+  preconditions, and prints `[smart actors] <officer> takes <who> in charge for
+  <station>`. The officer is first placed at arm's reach of the target, because
+  custody whose escort is more than 20 m off is released on the next poll — so
+  seizing from across the city would show nothing at all. A handle matching
+  nobody is logged and skipped — not a fault.
+- `commit [<name-or-id>]` — finish the escort at the Stone House
+  (`features/law_and_order.md` M5), defaulting to the player. `seize` alone only
+  ever shows the walk, and custody commits on *arrival*, so without this a
+  scripted run can never see the inside of the gaol — not the booking, not the
+  posted fee, not the bell you are told you go at, and not what walking out of
+  it costs. It forces the Stone House rather than whatever posting the seizure
+  picked (that is the thing being looked at), then runs the same
+  `Custody::commit` and arrival announcement a real arrival does. Refused, with
+  a logged reason, if nobody has them in charge — `seize` first. Prints
+  `[smart actors] <who> is committed to The Stone House`.
+
+  The whole scene, including the fifth door out:
+
+  ```sh
+  CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE='wait-online; \
+    tp 44.5 1 -207.2 90; key Quote; seize Ede Clove; sleep 2; commit; \
+    sleep 2; shot cell; hold KeyW 3; sleep 3; shot walked_out; quit' cargo run
+  ```
+
+  `key Quote` turns flying back off after the `tp` — **flying is not custody**,
+  so a still-flying player is never tethered and never walks out of anything.
 - `status <name-or-id> <kind> <value>` — set a carriage body status so a
   drunk/weary walk can be eyeballed, e.g. `status Ilse drunkenness 0.8` or
   `status p006v weariness 1`. The target is resolved by display name first (may

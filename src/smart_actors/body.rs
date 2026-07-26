@@ -66,7 +66,9 @@ const HEAD_SCALE: f32 = 0.5;
 /// this far above the neck so the halved head sits a touch higher on the neck.
 const HEAD_LIFT: f32 = 0.06;
 const SHOULDER_X: f32 = 0.265;
-const SHOULDER_Y: f32 = 0.44;
+/// Also read by `hands.rs`, which aims a custody grip just below this joint —
+/// the upper arm is a body landmark, not a number the hands may invent.
+pub(super) const SHOULDER_Y: f32 = 0.44;
 const UPPER_ARM_RADIUS: f32 = 0.062;
 const UPPER_ARM_LENGTH: f32 = 0.26;
 const ELBOW_Y: f32 = -0.31;
@@ -1015,6 +1017,11 @@ pub(crate) struct BodyPoseState {
     offer_target: Option<Vec3>,
     /// A transient stall hand-over pulse: aim point and expiry.
     offer_pulse: Option<(Vec3, f64)>,
+    /// `law_and_order.md` M4c: the arm of somebody this body has taken hold of.
+    /// It borrows the offer arm rather than growing a second one — the pose is
+    /// the same extended reach — but it outranks both an offer and a pulse,
+    /// because a hand that is on a person is not free to hold anything out.
+    grip_target: Option<Vec3>,
     carry_blend: f32,
     offer_blend: f32,
     /// The last resolved (yaw, pitch) aim, kept so a retracting arm swings
@@ -1056,6 +1063,7 @@ impl BodyPoseState {
             carry_target: false,
             offer_target: None,
             offer_pulse: None,
+            grip_target: None,
             carry_blend: 0.0,
             offer_blend: 0.0,
             offer_aim: (0.0, 0.0),
@@ -1081,6 +1089,19 @@ impl BodyPoseState {
     /// choreography, where no standing offer exists to key the arm on.
     pub(super) fn pulse_offer(&mut self, at: Vec3, now: f64) {
         self.offer_pulse = Some((at, now + STALL_PULSE_SECONDS));
+    }
+
+    /// The one reach with no envelope of its own (`law_and_order.md` M4c): a
+    /// hand on somebody's upper arm stays there until the law lets go, so this
+    /// target is held across frames by [`super::hands::hold_the_seized`] rather
+    /// than expiring like the hand-over pulse.
+    pub(super) fn set_grip(&mut self, at: Option<Vec3>) {
+        self.grip_target = at;
+    }
+
+    #[cfg(test)]
+    pub(super) fn grip(&self) -> Option<Vec3> {
+        self.grip_target
     }
 
     /// Starts a one-shot gesture, optionally turning the head (and, for the
@@ -2199,10 +2220,15 @@ pub(crate) fn animate_body_pose(
         // Tier A only per §9 — at Tier B distances they fail the §1
         // readability test anyway. M4 extends the one-shot catalog.
         if tier == PoseTier::A {
-            let offer_at = state.offer_target.or(match state.offer_pulse {
-                Some((at, until)) if now < until => Some(at),
-                _ => None,
-            });
+            // A custody grip outranks both (M4c): the arm is already on
+            // somebody, so it cannot be holding anything out to them.
+            let offer_at = state
+                .grip_target
+                .or(state.offer_target)
+                .or(match state.offer_pulse {
+                    Some((at, until)) if now < until => Some(at),
+                    _ => None,
+                });
             state.carry_blend = move_toward(
                 state.carry_blend,
                 if state.carry_target { 1.0 } else { 0.0 },

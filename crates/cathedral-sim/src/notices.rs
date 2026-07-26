@@ -33,12 +33,20 @@
 //! face-to-face percept (`confront`, ticked by the engine) and act as their
 //! character. No accuse verb exists — speech plus the percept is enough.
 //!
-//! TODO(M4, `features/law_and_order.md`): custody gives refusal a floor —
-//! summons → warrant → seize → escort. The warrant deliberately comes from an
-//! ignored summons rather than a bench: the lore's Civic Measure Court (three
-//! rotating benchers, `lore/core_lore/secular_government.md`) is a whole second
-//! system and is out of scope. If it is ever wanted, it slots in beside the
-//! release paths — "committed to await a hearing" is the seam.
+//! **Refusal has a floor** (M4). A word that nobody answers used to decay and
+//! nothing else; now it climbs. An officer out of patience calls the accused to
+//! answer by a named office bell (`summon`), and a summons still live when that
+//! bell rings becomes a **warrant** on the clock edge — after which any law-cast
+//! actor may take the accused anywhere in the city ([`crate::custody`]). Both
+//! rungs clear [`WardNotice::served`], because every rung above the second
+//! assumes the officer keeps being told the accused is standing in front of
+//! them, and a once-ever percept would stall the ladder after one encounter.
+//! A warranted notice is also exempt from oldest-out eviction: a warrant ends
+//! because somebody ended it, never because the ward changed the subject.
+//!
+//! Settlement is what discharges every rung — there is no separate "presented
+//! myself" state. Going and dealing with it *is* restitution, or it is talking
+//! the officer round until they call `settle_notice`.
 
 use std::{
     collections::BTreeSet,
@@ -49,6 +57,7 @@ use crate::{
     HEARING_RADIUS_M,
     attention::curiosity_of,
     character::{Character, Control},
+    clock::Office,
     ids::{ActorId, ItemId},
     world::World,
 };
@@ -76,12 +85,44 @@ pub const LAW_OCCUPATIONS: &[&str] = &[
 pub const NOTICE_LIFE_GAME_DAYS: f64 = 20.0;
 
 /// The most live notices the ward holds at once: raising past the cap drops
-/// the oldest. Guards the prompt budget (the sheet renders at most
-/// [`NOTICES_SHEET_MAX`] anyway) and bounds an LLM that spams the verb.
+/// the oldest *unwarranted* one. Guards the prompt budget (the sheet renders at
+/// most [`NOTICES_SHEET_MAX`] anyway) and bounds an LLM that spams the verb.
 pub const NOTICES_MAX_LIVE: usize = 8;
+
+/// How recently an officer must have raised a notice themselves for it to
+/// stand in for the lore's *breach of the peace the watchman witnessed* — one
+/// game hour ([`Notices::fresh_own_notice`]). You saw it, it was just now, you
+/// may take them without waiting for a bench.
+pub const WITNESSED_BREACH_GAME_DAYS: f64 = 1.0 / 24.0;
 
 /// The most notices one sheet renders — newest first, like `recent_history`.
 pub const NOTICES_SHEET_MAX: usize = 4;
+
+/// How far up the ladder one word has climbed (M4). Rungs 1–2 of the design's
+/// six are both [`Self::Word`] — a demand is speech, not state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Rung {
+    /// The live notice; carriers cool toward the accused.
+    Word,
+    /// An officer has called them to answer by a named bell.
+    Summoned,
+    /// The bell rang and the word still stood. Any law-cast actor may take them.
+    Warranted,
+}
+
+/// An officer out of patience, calling the accused to answer by a named office
+/// bell. Nothing but settling the notice discharges it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Summons {
+    /// Who called them, so the sheet and the HUD can name the door.
+    pub by: ActorId,
+    /// The bell named — the deadline as the city itself states it.
+    pub office: Office,
+    /// Absolute game-days at which that bell rings. `None` in clock-less worlds,
+    /// where the summons never comes due (the hermetic tests have no time to
+    /// pass), exactly as an undated notice never decays.
+    pub due_game_days: Option<f64>,
+}
 
 /// One wrong on the ward's tongues.
 #[derive(Debug, Clone, PartialEq)]
@@ -113,13 +154,24 @@ pub struct WardNotice {
     /// needs no verb: the accused handing *this* back to the wronged is not a
     /// judgement call, so it settles the word on its own.
     pub taken: Option<ItemId>,
+    /// Rung 3 (M4): the bell the accused was told to answer by, and who told
+    /// them. `None` while the word is only a word.
+    pub summons: Option<Summons>,
+    /// Rung 4: the summons went unanswered past its own bell. Any law-cast
+    /// actor may now `seize` the accused anywhere in the city.
+    pub warrant: bool,
     /// Law-cast carriers already served the face-to-face percept, once each.
+    /// Cleared on every rung change ([`Notices::summon`],
+    /// [`Notices::issue_warrants`]): the officer must be told again exactly when
+    /// there is something new to say.
     served: BTreeSet<ActorId>,
 }
 
 impl WardNotice {
     /// The one prose line everything renders — the sheet bullet, and the body
-    /// of the arrival/confrontation/settlement percepts.
+    /// of the arrival/confrontation/settlement percepts. The rung rides it
+    /// (M4), so an officer confronted again after an escalation reads the new
+    /// standing in the same sentence they read the wrong.
     pub fn line(&self) -> String {
         let mut line = format!("{} — {}", self.about, self.deed);
         if let Some(place) = &self.place {
@@ -128,7 +180,26 @@ impl WardNotice {
         if let Some(since) = &self.since {
             line.push_str(&format!("; the word since {since}"));
         }
+        if self.warrant {
+            line.push_str("; a warrant stands, and any who serve the law may take them");
+        } else if let Some(summons) = &self.summons {
+            line.push_str(&format!(
+                "; summoned to answer by {}",
+                summons.office.label()
+            ));
+        }
         line
+    }
+
+    /// How far up the ladder this word has climbed.
+    pub fn rung(&self) -> Rung {
+        if self.warrant {
+            Rung::Warranted
+        } else if self.summons.is_some() {
+            Rung::Summoned
+        } else {
+            Rung::Word
+        }
     }
 }
 
@@ -144,7 +215,14 @@ pub struct Notices {
 
 impl Notices {
     /// Record a raised notice, oldest-out past [`NOTICES_MAX_LIVE`]. Returns
-    /// the assigned id.
+    /// the assigned id, or `None` when the ward is full of warrants.
+    ///
+    /// Oldest-out **skips warranted notices** (M4). Without that a talkative
+    /// ward could evict a warrant with gossip — and M4d's escape notice could
+    /// evict the very notice it escalated from — so a warrant would end because
+    /// the subject changed rather than because anybody decided anything. When
+    /// all [`NOTICES_MAX_LIVE`] carry warrants there is nothing evictable left
+    /// and the raise is refused instead.
     #[allow(clippy::too_many_arguments)]
     pub fn raise(
         &mut self,
@@ -157,7 +235,13 @@ impl Notices {
         accused: Option<ActorId>,
         wronged: Option<ActorId>,
         taken: Option<ItemId>,
-    ) -> u64 {
+    ) -> Option<u64> {
+        if self.live.len() >= NOTICES_MAX_LIVE {
+            let Some(oldest) = self.live.iter().position(|notice| !notice.warrant) else {
+                return None;
+            };
+            self.live.remove(oldest);
+        }
         self.next_id += 1;
         let id = self.next_id;
         self.live.push(WardNotice {
@@ -171,12 +255,11 @@ impl Notices {
             accused,
             wronged,
             taken,
+            summons: None,
+            warrant: false,
             served: BTreeSet::new(),
         });
-        if self.live.len() > NOTICES_MAX_LIVE {
-            self.live.remove(0);
-        }
-        id
+        Some(id)
     }
 
     pub fn live(&self) -> &[WardNotice] {
@@ -186,6 +269,115 @@ impl Notices {
     /// The notice with this id, while the ward is still saying it.
     pub fn get(&self, id: u64) -> Option<&WardNotice> {
         self.live.iter().find(|notice| notice.id == id)
+    }
+
+    /// Rung 3 (M4): call the accused to answer by `office`, which rings at
+    /// `due_game_days`. Clears `served`, so every law carrier is confronted
+    /// afresh — that is precisely the moment they should look at the accused
+    /// again. Returns `false` for an unknown notice or one already summoned or
+    /// warranted; there is no un-summoning.
+    pub fn summon(
+        &mut self,
+        id: u64,
+        by: ActorId,
+        office: Office,
+        due_game_days: Option<f64>,
+    ) -> bool {
+        let Some(notice) = self.live.iter_mut().find(|notice| notice.id == id) else {
+            return false;
+        };
+        if notice.summons.is_some() || notice.warrant {
+            return false;
+        }
+        notice.summons = Some(Summons {
+            by,
+            office,
+            due_game_days,
+        });
+        notice.served.clear();
+        true
+    }
+
+    /// Rung 4, on the clock edge: every summons whose named bell has now rung
+    /// while its word still stands becomes a warrant. Returns the ids that just
+    /// changed, so the caller can tell the ward. Driven from `Engine::poll`
+    /// beside [`Self::expire`], because the sim itself is clock-free.
+    ///
+    /// An undated summons (a clock-less world) never comes due, exactly as an
+    /// undated notice never decays.
+    pub fn issue_warrants(&mut self, game_days: f64) -> Vec<u64> {
+        let mut issued = Vec::new();
+        for notice in &mut self.live {
+            if notice.warrant {
+                continue;
+            }
+            let due = notice
+                .summons
+                .as_ref()
+                .and_then(|summons| summons.due_game_days);
+            if due.is_some_and(|due| game_days >= due) {
+                notice.warrant = true;
+                notice.served.clear();
+                issued.push(notice.id);
+            }
+        }
+        issued
+    }
+
+    /// Whether a live warrant names this person — the first of `seize`'s two
+    /// doors (M4).
+    pub fn warrant_against(&self, accused: &ActorId) -> Option<&WardNotice> {
+        self.live
+            .iter()
+            .find(|notice| notice.warrant && notice.accused.as_ref() == Some(accused))
+    }
+
+    /// `seize`'s **second door**: the lore's *immediate breach of the peace the
+    /// watchman witnessed*, expressed in fields that already exist.
+    ///
+    /// The sim has no structured record that says "this officer saw that
+    /// happen" — percepts are prose — so written literally the precondition is
+    /// untestable. But witnessing is already modelled under another name:
+    /// `actions::raise_ward_notice_for` raises exactly a breach an officer saw
+    /// with their own eyes. So the door is *a notice whose `raised_by` is this
+    /// officer and whose `raised_game_days` is within the last game hour*. One
+    /// somebody else raised, or one this officer raised yesterday, needs the
+    /// warrant like everything else.
+    ///
+    /// Undated notices (clock-less worlds) count as fresh: there is no time in
+    /// such a world for one to go stale in.
+    pub fn fresh_own_notice(
+        &self,
+        officer: &ActorId,
+        accused: &ActorId,
+        game_days: Option<f64>,
+    ) -> Option<&WardNotice> {
+        self.live.iter().find(|notice| {
+            notice.accused.as_ref() == Some(accused)
+                && &notice.raised_by == officer
+                && match (notice.raised_game_days, game_days) {
+                    (Some(raised), Some(now)) => now - raised <= WITNESSED_BREACH_GAME_DAYS,
+                    _ => true,
+                }
+        })
+    }
+
+    /// The live notices naming this person, worst rung first then newest — what
+    /// the HUD's standing line reads off, and what an officer's own judgement
+    /// starts from.
+    pub fn against(&self, accused: &ActorId) -> Vec<&WardNotice> {
+        let mut against: Vec<&WardNotice> = self
+            .live
+            .iter()
+            .filter(|notice| notice.accused.as_ref() == Some(accused))
+            .collect();
+        against.sort_by(|left, right| {
+            right
+                .rung()
+                .cmp(&left.rung())
+                .then_with(|| right.id.cmp(&left.id))
+        });
+        against
     }
 
     /// Take one word off the ward's tongues. Per-notice by design: a settlement
@@ -431,17 +623,19 @@ mod tests {
     }
 
     fn raise(notices: &mut Notices, raised_game_days: Option<f64>, accused: Option<&str>) -> u64 {
-        notices.raise(
-            "a stranger".into(),
-            "a wrong".into(),
-            None,
-            None,
-            raised_game_days,
-            ActorId::from_raw("srgnt"),
-            accused.map(ActorId::from_raw),
-            None,
-            None,
-        )
+        notices
+            .raise(
+                "a stranger".into(),
+                "a wrong".into(),
+                None,
+                None,
+                raised_game_days,
+                ActorId::from_raw("srgnt"),
+                accused.map(ActorId::from_raw),
+                None,
+                None,
+            )
+            .expect("the ward has room")
     }
 
     #[test]
@@ -468,6 +662,154 @@ mod tests {
         assert_eq!(notices.live()[0].id, 2, "the oldest was dropped");
     }
 
+    /// M4: a warrant ends because somebody ended it, never because the ward
+    /// changed the subject. Oldest-out steps over warranted notices — and when
+    /// every slot carries one, the raise is refused rather than silently
+    /// evicting a warrant.
+    #[test]
+    fn oldest_out_never_evicts_a_warrant_and_refuses_when_all_are_warranted() {
+        let mut notices = Notices::default();
+        let oldest = raise(&mut notices, None, Some("thief"));
+        let second = raise(&mut notices, None, Some("thief"));
+        notices.summon(oldest, ActorId::from_raw("srgnt"), Office::Waning, Some(1.0));
+        assert_eq!(notices.issue_warrants(1.0), [oldest]);
+
+        for _ in 0..(NOTICES_MAX_LIVE - 1) {
+            raise(&mut notices, None, None);
+        }
+        assert_eq!(notices.live().len(), NOTICES_MAX_LIVE);
+        assert!(notices.get(oldest).is_some(), "the warrant survived");
+        assert!(notices.get(second).is_none(), "the oldest word went instead");
+
+        // Warrant every live notice, and there is nothing left to evict.
+        let ids: Vec<u64> = notices.live().iter().map(|notice| notice.id).collect();
+        for id in ids {
+            notices.summon(id, ActorId::from_raw("srgnt"), Office::Waning, Some(2.0));
+        }
+        notices.issue_warrants(2.0);
+        assert_eq!(
+            notices.raise(
+                "a stranger".into(),
+                "a wrong".into(),
+                None,
+                None,
+                None,
+                ActorId::from_raw("srgnt"),
+                None,
+                None,
+                None,
+            ),
+            None,
+            "a ward of eight warrants takes no more gossip"
+        );
+    }
+
+    /// M4a: the deadline has exactly one thing that clears it — the notice
+    /// being settled — so a summons still live when its bell rings raises the
+    /// warrant on the clock edge, and only once.
+    #[test]
+    fn a_summons_becomes_a_warrant_on_its_own_bell() {
+        let mut notices = Notices::default();
+        let id = raise(&mut notices, Some(3.0), Some("thief"));
+        assert_eq!(notices.get(id).unwrap().rung(), Rung::Word);
+
+        assert!(notices.summon(
+            id,
+            ActorId::from_raw("srgnt"),
+            Office::Lamplight,
+            Some(3.75)
+        ));
+        assert_eq!(notices.get(id).unwrap().rung(), Rung::Summoned);
+        assert!(
+            !notices.summon(id, ActorId::from_raw("other"), Office::Snuffing, Some(3.9)),
+            "there is no re-summoning, and no un-summoning"
+        );
+
+        assert!(notices.issue_warrants(3.74).is_empty(), "the bell is not yet");
+        assert_eq!(notices.issue_warrants(3.75), [id]);
+        assert_eq!(notices.get(id).unwrap().rung(), Rung::Warranted);
+        assert!(
+            notices.issue_warrants(4.0).is_empty(),
+            "a warrant issues once"
+        );
+        assert!(notices.warrant_against(&ActorId::from_raw("thief")).is_some());
+
+        // Settling is the one discharge, and it takes the warrant with it.
+        notices.settle(id);
+        assert!(notices.warrant_against(&ActorId::from_raw("thief")).is_none());
+    }
+
+    /// Every rung change re-arms the face-to-face percept: an officer already
+    /// confronted about a word is confronted again once it carries a summons,
+    /// and again on the warrant. Without this the ladder stops dead after one
+    /// encounter — `served` is written once and cleared nowhere.
+    #[test]
+    fn every_rung_change_confronts_the_officer_afresh() {
+        let mut world = World::new();
+        world.add_character(person("thief", 0.0, None));
+        world.add_character(person("srgnt", 10.0, Some("bailiff_and_gaoler")));
+        let id = raise(&mut world.notices, Some(1.0), Some("thief"));
+
+        let inbox_len = |world: &World| world.characters[&ActorId::from_raw("srgnt")].inbox().len();
+        confront(&mut world);
+        confront(&mut world);
+        assert_eq!(inbox_len(&world), 1, "served once while nothing changes");
+
+        world
+            .notices
+            .summon(id, ActorId::from_raw("srgnt"), Office::Waning, Some(1.5));
+        confront(&mut world);
+        assert_eq!(inbox_len(&world), 2, "the summons is news");
+        assert!(
+            world.characters[&ActorId::from_raw("srgnt")].inbox()[1]
+                .contains("summoned to answer by the Waning"),
+            "and the percept says what changed"
+        );
+
+        world.notices.issue_warrants(1.5);
+        confront(&mut world);
+        assert_eq!(inbox_len(&world), 3, "so is the warrant");
+        assert!(
+            world.characters[&ActorId::from_raw("srgnt")].inbox()[2].contains("a warrant stands")
+        );
+    }
+
+    /// The second door: what an officer saw with their own eyes, minutes ago.
+    #[test]
+    fn a_fresh_notice_of_your_own_is_the_witnessed_breach() {
+        let mut notices = Notices::default();
+        let (srgnt, other) = (ActorId::from_raw("srgnt"), ActorId::from_raw("other"));
+        let thief = ActorId::from_raw("thief");
+        notices.raise(
+            "a stranger".into(),
+            "a wrong".into(),
+            None,
+            None,
+            Some(5.0),
+            srgnt.clone(),
+            Some(thief.clone()),
+            None,
+            None,
+        );
+
+        let minutes_later = 5.0 + WITNESSED_BREACH_GAME_DAYS / 2.0;
+        assert!(
+            notices
+                .fresh_own_notice(&srgnt, &thief, Some(minutes_later))
+                .is_some()
+        );
+        assert!(
+            notices
+                .fresh_own_notice(&other, &thief, Some(minutes_later))
+                .is_none(),
+            "somebody else's word is not your own eyes"
+        );
+        assert!(
+            notices.fresh_own_notice(&srgnt, &thief, Some(6.0)).is_none(),
+            "yesterday's word needs the warrant like everything else"
+        );
+    }
+
     /// M3.5: the wronged party carries their own word however taciturn they
     /// are. They cannot need telling — and since the verb names a notice by
     /// number, the sheet section is the only place they could read it off.
@@ -481,17 +823,20 @@ mod tests {
         let mut world = World::new();
         world.add_character(taciturn("wrngd"));
         world.add_character(taciturn("quiet"));
-        let notice_id = world.notices.raise(
-            "a stranger".into(),
-            "a wrong".into(),
-            None,
-            None,
-            None,
-            ActorId::from_raw("srgnt"),
-            None,
-            Some(ActorId::from_raw("wrngd")),
-            None,
-        );
+        let notice_id = world
+            .notices
+            .raise(
+                "a stranger".into(),
+                "a wrong".into(),
+                None,
+                None,
+                None,
+                ActorId::from_raw("srgnt"),
+                None,
+                Some(ActorId::from_raw("wrngd")),
+                None,
+            )
+            .expect("the ward has room");
 
         assert!(carries(&world, &ActorId::from_raw("wrngd"), notice_id));
         assert!(

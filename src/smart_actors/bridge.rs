@@ -188,6 +188,31 @@ pub enum BridgeCommand {
     PlayerSound {
         sound_id: String,
     },
+    /// The grab reflex fired (`law_and_order.md` M4c). Host-side, because the
+    /// sim reads the player at 10 Hz — 1.2 m of travel per sample at run speed
+    /// — and a 3 m radius decided over there would be wrong by most of its own
+    /// radius. Fire-and-forget: a grab is not a request.
+    PlayerGrabbed {
+        holder_id: ActorId,
+    },
+    /// The player has started pulling against the hands on them, and (once)
+    /// that they got free. Two commands across a whole struggle, never a
+    /// stream: there is exactly one LLM turn in flight across the entire cast.
+    PlayerStruggling,
+    PlayerBrokeFree,
+    /// CATHEDRAL_DRIVE `seize` action (`law_and_order.md` M4): stage an arrest so
+    /// the tether, the reflex and the strain meter can be looked at. Every
+    /// judgement above `seize` is an LLM's, which is right, and which is exactly
+    /// why a scripted run cannot otherwise reach one. A developer poke, not a
+    /// modelled cause — like `DebugStatus`.
+    DebugSeize {
+        officer: String,
+        target: Option<String>,
+    },
+    /// CATHEDRAL_DRIVE `commit` action (`law_and_order.md` M5): finish the
+    /// escort at the Stone House. `seize` alone only ever shows the walk, and
+    /// the cell is the half of M5 worth looking at.
+    DebugCommit { target: Option<String> },
     /// CATHEDRAL_DRIVE stand-in for world sounds the sim cannot cause yet
     /// (nothing rings the town bell: no clock, no calendar).
     DebugSound {

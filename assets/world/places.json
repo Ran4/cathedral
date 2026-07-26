@@ -485,6 +485,13 @@
    "node": 578,
    "kind": "landmark",
    "ward": "cloth"
+  },
+  {
+   "id": "pl_kcdh",
+   "name": "The Stone House",
+   "node": 584,
+   "kind": "building",
+   "ward": "bell_and_sluice"
   }
  ],
  "wards": [
@@ -492,7 +499,7 @@
    "id": "pl_yi61",
    "ward": "fabric",
    "name": "Fabric Ward",
-   "node": 3347
+   "node": 3354
   },
   {
    "id": "pl_hdw1",
@@ -504,7 +511,7 @@
    "id": "pl_pt9g",
    "ward": "cloth",
    "name": "Cloth Ward",
-   "node": 722
+   "node": 729
   },
   {
    "id": "pl_q8ap",
@@ -516,25 +523,25 @@
    "id": "pl_6fwt",
    "ward": "cinder",
    "name": "Cinder Ward",
-   "node": 2619
+   "node": 2626
   },
   {
    "id": "pl_p8hu",
    "ward": "weigh",
    "name": "Weigh Ward",
-   "node": 3386
+   "node": 3393
   },
   {
    "id": "pl_7paj",
    "ward": "reed",
    "name": "Reed Ward",
-   "node": 884
+   "node": 891
   },
   {
    "id": "pl_8sky",
    "ward": "bell_and_sluice",
    "name": "Bell and Sluice Wards",
-   "node": 1892
+   "node": 1899
   }
  ]
 }

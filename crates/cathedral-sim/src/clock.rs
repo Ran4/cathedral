@@ -251,6 +251,30 @@ pub struct WorldTime {
 }
 
 impl WorldTime {
+    /// Absolute game-days at this instant — the same scale
+    /// [`WorldClock::game_days`] returns, and the one `WardNotice` stamps.
+    pub fn game_days(&self) -> f64 {
+        self.day as f64 + self.fraction
+    }
+
+    /// The next office bell to ring after this instant, and the absolute
+    /// game-days at which it rings. Wraps to tomorrow's Watch after the
+    /// Snuffing, so the answer is always in the future — which is what makes it
+    /// safe to hand to a deadline (`law_and_order.md` M4a: a summons names a
+    /// bell, and the city states its deadlines in its own clock).
+    pub fn next_bell(&self) -> (Office, f64) {
+        for office in Office::ALL {
+            let start = office.start_fraction();
+            if start > self.fraction + BOUNDARY_EPSILON {
+                return (office, self.day as f64 + start);
+            }
+        }
+        (
+            Office::Watch,
+            (self.day + 1) as f64 + Office::Watch.start_fraction(),
+        )
+    }
+
     /// Clock hour and minute, for a HUD readout.
     pub fn hour_minute(&self) -> (u32, u32) {
         // Round to the minute; a bell rings on the hour, so keep 07:00 at 07:00

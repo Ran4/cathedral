@@ -2750,6 +2750,29 @@ impl Round {
                 time.weekday.label(),
             ));
         }
+
+        // The Stone House's standing population (`law_and_order.md` M5b). Runs
+        // last, after the registry is in `world` and after every binding pass,
+        // so nothing that walks people around gets a later word than this one.
+        // The eight are enrolled in the round like anybody else — they have
+        // legs, a home and a water source waiting for the day they are let out —
+        // and the rung-0 guard in `decide` is what keeps them off their feet
+        // meanwhile.
+        let inmates = crate::custody::seed_authored_inmates(world);
+        if inmates.is_empty() {
+            // Not a fault before M5a, and worth saying out loud rather than
+            // silently seeding nobody — the same reason the tavern list logs.
+            diagnostics.push(format!(
+                "[smart actors] gaol: no place named \"{}\" in the registry; the city's prisoners walk free",
+                crate::custody::STONE_HOUSE_PLACE_NAME
+            ));
+        } else {
+            diagnostics.push(format!(
+                "[smart actors] gaol: {} held in {}",
+                inmates.len(),
+                crate::custody::STONE_HOUSE_PLACE_NAME
+            ));
+        }
         diagnostics
     }
 }
@@ -5326,10 +5349,23 @@ fn decay_needs(round: &mut Round, world: &mut World, clock: &WorldClock, now: f6
         if !world.is_present(id) {
             continue;
         }
+        // Read before the mutable borrow below.
+        let kept = world.custody.holds(id);
         let Some(character) = world.characters.get_mut(id) else {
             continue;
         };
-        if person.draws_water() {
+        // **Stone House rations** (`law_and_order.md` M5b). Somebody the law is
+        // holding cannot walk to a cistern or a stall — rung 0 of `decide` sees
+        // to that, and `go_to` refuses them — so without this they decay to
+        // nothing within minutes of the run starting and stay there, and eight
+        // authored inmates spend the whole game dying of thirst against a wall.
+        // The lore answered this before the code existed: Lise Skell's own sheet
+        // says *"Stone House rations and food carried in by kin are your present
+        // support"*, and the design's whole point is that families bring bread
+        // and a blanket to the grate. So custody feeds and waters: a keeper who
+        // let their prisoners die would not be a keeper, and being held is meant
+        // to be a conversation, not a slow death.
+        if person.draws_water() && !kept {
             let thirst = &mut character.state.needs.thirst;
             *thirst = (*thirst - thirst_drop).max(0.0);
         }
@@ -5358,8 +5394,12 @@ fn decay_needs(round: &mut Round, world: &mut World, clock: &WorldClock, now: f6
                 || (person.legs.is_empty()
                     && position.distance(person.base) <= CENSUS_HOME_RADIUS_M));
         let hunger = &mut character.state.needs.hunger;
-        *hunger = (*hunger - hunger_drop).max(0.0);
-        if at_hearth {
+        if !kept {
+            *hunger = (*hunger - hunger_drop).max(0.0);
+        }
+        if at_hearth || kept {
+            // The gaol is a hearth, for the reason above: rations come in, and
+            // they are the one thing a prisoner is reliably given.
             *hunger = (*hunger + hearth_gain).min(HUNGER_MAX);
         }
     }
@@ -6596,6 +6636,19 @@ fn decide(
     office: Office,
     weekday: Weekday,
 ) -> (Decision, Option<&'static str>) {
+    // Rung 0 — the law's hands (`law_and_order.md` M4b′/M5). Above every rung
+    // there is, the body's needs included: an inmate whose thirst drops must not
+    // set off for the nearest cistern and walk straight through the gaol wall,
+    // and someone being walked to a station is moved by their escort
+    // ([`crate::custody::follow_escorts`]), not by this ladder.
+    //
+    // One guard here covers curfew routing, parched, famished, stall-seeking,
+    // the social pull, the wander and the round legs, because every one of them
+    // is decided in this function. The verb needs its own guard — see `go_to`.
+    if world.custody.holds(id) {
+        return (Decision::Stay, None);
+    }
+
     let person = &round.people[id];
     let character = &world.characters[id];
     let position = character.position_m();

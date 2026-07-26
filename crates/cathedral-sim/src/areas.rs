@@ -428,12 +428,20 @@ mod tests {
     fn shipped_json_loads_and_preserves_precinct_boundaries() {
         let map = AreaMap::from_json_str(include_str!("../../../assets/world/areas.json"))
             .expect("the shipped map loads");
-        assert_eq!(map.areas.len(), 70);
+        // 71 since `law_and_order.md` M5a put the Stone House in the side court
+        // behind the Bellstand — the gaol needs a name of its own so a prisoner's
+        // `you_are` says where they are being kept.
+        assert_eq!(map.areas.len(), 71);
         assert_eq!(
             map.areas.iter().map(|area| area.boxes.len()).sum::<usize>(),
             // 91 since the 0.7x shrink: the Wickmarket and Bellstand squares
-            // gained carve-out boxes around intruding translated neighbours.
-            91
+            // gained carve-out boxes around intruding translated neighbours;
+            // +1 for the Stone House, which is a single box.
+            92
+        );
+        assert_eq!(
+            map.location_description(Vec3::new(44.5, 0.91, -207.3)).unwrap(),
+            "In the Stone House, the civic gaol in the side court behind the Bellstand"
         );
         for (position, label) in [
             (

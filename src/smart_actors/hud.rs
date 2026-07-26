@@ -121,6 +121,9 @@ pub struct SmartActorHudState {
     /// with nothing changing hands. Its own slot, on its own clock, so a toast
     /// cannot swallow it.
     offer_outcome: Option<TimedMessage>,
+    /// The law's standing line — no clock on it at all, because it is true
+    /// until the sim says otherwise (`law_and_order.md` M4).
+    law_standing: String,
     pub focus_hint: String,
     pub subtitle: String,
     pub microphone_available: bool,
@@ -146,6 +149,7 @@ impl Default for SmartActorHudState {
             inventory: String::new(),
             offer_card: String::new(),
             offer_outcome: None,
+            law_standing: String::new(),
             focus_hint: String::new(),
             subtitle: String::new(),
             microphone_available: false,
@@ -187,6 +191,18 @@ impl SmartActorHudState {
             text: format!("{headline}\n{reason}"),
             remaining: OFFER_OUTCOME_LIFETIME,
         });
+    }
+
+    /// Where the player stands with the law, in the words the sim resolved.
+    /// Empty clears the line — which is the overwhelmingly common case, and the
+    /// one where the panel must not be on screen at all.
+    pub fn set_law_standing(&mut self, text: String) {
+        self.law_standing = text;
+    }
+
+    #[cfg(test)]
+    pub(super) fn law_standing_text(&self) -> &str {
+        &self.law_standing
     }
 
     #[cfg(test)]
@@ -353,6 +369,12 @@ pub(super) struct InventoryText;
 pub(super) struct OfferCardText;
 #[derive(Component)]
 pub(super) struct OfferOutcomeText;
+/// The player's standing with the law (`law_and_order.md` M4). A **standing**
+/// line rather than a toast: it must always be on screen while it is true, and
+/// it must always name what would clear it — a brand with a visible door is a
+/// story, a brand with no door is a bug.
+#[derive(Component)]
+pub(crate) struct LawStandingText;
 #[derive(Component)]
 pub(super) struct FocusHintText;
 #[derive(Component)]
@@ -483,6 +505,18 @@ pub fn spawn_smart_actor_hud(mut commands: Commands, fonts: Option<Res<Cathedral
         OfferOutcomeText,
         65.0,
         17.0,
+        OFFLINE,
+        body_font.clone(),
+    );
+    // Top-left of the lower band, above the focus hint: the standing line is
+    // read at leisure, not glanced at, and it must never fight the offer card
+    // for the same pixels.
+    spawn_centered_text(
+        &mut commands,
+        "Law standing line",
+        LawStandingText,
+        20.0,
+        16.0,
         OFFLINE,
         body_font.clone(),
     );
@@ -690,6 +724,7 @@ pub fn update_smart_actor_hud(
             Option<&InventoryText>,
             Option<&OfferCardText>,
             Option<&OfferOutcomeText>,
+            Option<&LawStandingText>,
             Option<&FocusHintText>,
             Option<&PlayerTranscriptText>,
             Option<&VoicePanelText>,
@@ -701,6 +736,7 @@ pub fn update_smart_actor_hud(
             With<InventoryText>,
             With<OfferCardText>,
             With<OfferOutcomeText>,
+            With<LawStandingText>,
             With<FocusHintText>,
             With<PlayerTranscriptText>,
             With<VoicePanelText>,
@@ -800,6 +836,7 @@ pub fn update_smart_actor_hud(
         inventory,
         offer,
         offer_outcome,
+        law_standing,
         hint,
         player_transcript,
         voice_panel,
@@ -827,6 +864,8 @@ pub fn update_smart_actor_hud(
             set_optional_text(&state.offer_card, &mut text, node.as_mut());
         } else if offer_outcome.is_some() {
             set_optional_text(offer_outcome_text, &mut text, node.as_mut());
+        } else if law_standing.is_some() {
+            set_optional_text(&state.law_standing, &mut text, node.as_mut());
         } else if hint.is_some() {
             set_optional_text(&state.focus_hint, &mut text, node.as_mut());
         } else if player_transcript.is_some() {

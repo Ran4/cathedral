@@ -124,6 +124,27 @@ pub struct PlayerController {
     jump_buffer_remaining: f32,
 }
 
+impl PlayerController {
+    /// The live velocity, in m/s. Read by the custody grab reflex and the
+    /// strain meter to tell *stepping aside* from *leaving*
+    /// (`law_and_order.md` M4c/M4d) — pressing a key into a wall is not
+    /// pulling, and the world-frame velocity is the only thing that knows that.
+    pub fn velocity(&self) -> Vec3 {
+        self.velocity
+    }
+
+    /// Test-only: a controller already moving at `velocity`. Only the fixed-step
+    /// solve writes that field, so the custody tests — which never run the
+    /// solve — need a way to say *this player is running away* without one.
+    #[cfg(test)]
+    pub(crate) fn moving_at(velocity: Vec3) -> Self {
+        Self {
+            velocity,
+            ..Self::default()
+        }
+    }
+}
+
 impl Default for PlayerController {
     fn default() -> Self {
         Self {
@@ -438,18 +459,21 @@ struct PrismPlane {
     offset: f32,
 }
 
+/// The fixed-step authoritative player position, interpolated for rendering.
+/// `pub` so the custody tether can read where the player actually is without
+/// going through the interpolated `Transform` (`law_and_order.md` M4c).
 #[derive(Component, Debug)]
-struct PhysicalPosition {
-    previous: Vec3,
-    current: Vec3,
+pub struct PhysicalPosition {
+    pub previous: Vec3,
+    pub current: Vec3,
 }
 
 #[derive(Component)]
 pub struct PlayerCamera;
 
 #[derive(Resource, Debug, Default)]
-struct ControllerInput {
-    movement: Vec2,
+pub struct ControllerInput {
+    pub movement: Vec2,
     running: bool,
     fly_vertical: f32,
 }
@@ -643,6 +667,7 @@ fn fixed_player_movement(
     fixed_time: Res<Time<Fixed>>,
     input: Res<ControllerInput>,
     collision_world: Res<CollisionWorld>,
+    custody: Res<crate::smart_actors::custody::PlayerCustodyState>,
     dynamic_barriers: Query<(&DynamicBarrier, &Transform)>,
     player: Single<(&mut PlayerController, &mut PhysicalPosition)>,
     mut dynamic_boxes: Local<Vec<SolidBox>>,
@@ -687,10 +712,18 @@ fn fixed_player_movement(
             max: transform.translation + barrier.half_size,
         })
     }));
+    // The custody tether (`law_and_order.md` M4c) goes on the **wish**, before
+    // the sweep below — see `tethered_delta` for why that order is the whole
+    // mechanic.
+    let delta = tethered_delta(
+        physical_position.current,
+        controller.velocity * dt,
+        custody.tether(controller.flying),
+    );
     let movement = move_aabb(
         physical_position.current,
         PLAYER_HALF_SIZE,
-        controller.velocity * dt,
+        delta,
         &collision_world.boxes,
         &dynamic_boxes,
         &collision_world.convex_prisms,
@@ -705,6 +738,36 @@ fn fixed_player_movement(
             controller.coyote_remaining = COYOTE_SECONDS;
         }
     }
+}
+
+/// The custody tether's whole arithmetic (`law_and_order.md` M4c): clamp the
+/// **desired** position — where this tick's delta wants to put the player —
+/// and return the delta that reaches it, for the swept solve to resolve.
+///
+/// Never the position the sweep already returned. Clamping *that* would be a raw
+/// write into a solved result: it could push the player through a wall, and it
+/// would drag them back through the very stall that ought to have saved them.
+///
+/// In this order, collision wins over the tether for free, and putting a market
+/// stall between yourself and the officer breaks the grip by itself. If the
+/// geometry beats the anchor entirely — a corner, a doorway the officer walks
+/// past — the sweep simply stops the player, the separation grows, and the sim
+/// ends the hold once it passes the leash. No teleport, no rubber band, and
+/// never a player pinned inside a wall to preserve a state flag.
+///
+/// A player already outside the radius is pulled back to its surface, which is
+/// what being *dragged* by a walking officer means. `None` — nobody has hold, or
+/// the player is flying, which is never custody — leaves the delta exactly as
+/// the controller solved it.
+fn tethered_delta(current: Vec3, delta: Vec3, tether: Option<(Vec3, f32)>) -> Vec3 {
+    let Some((anchor, radius)) = tether else {
+        return delta;
+    };
+    let offset = current + delta - anchor;
+    if offset.length() <= radius {
+        return delta;
+    }
+    anchor + offset.normalize_or_zero() * radius - current
 }
 
 fn update_walking_velocity(controller: &mut PlayerController, input: &ControllerInput, dt: f32) {
@@ -1250,9 +1313,18 @@ fn axis_vector(axis_index: usize, value: f32) -> Vec3 {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use cathedral_sim::custody::{CUSTODY_LEASH_M, CUSTODY_TETHER_M};
+
+    use crate::smart_actors::custody::PlayerCustodyState;
+
     use super::*;
 
     const TEST_HALF_SIZE: Vec3 = Vec3::splat(0.5);
+    /// The officer's own pace. A held player is dragged at whatever speed the
+    /// grip point moves, and the grip point is a person walking.
+    const OFFICER_SPEED_MPS: f32 = 1.8;
 
     fn solid(min: Vec3, max: Vec3) -> SolidBox {
         SolidBox { min, max }
@@ -1492,6 +1564,178 @@ mod tests {
 
         close(velocity.dot(normal), 0.0);
         close(velocity.dot(tangent), 4.0);
+    }
+
+    /// `law_and_order.md` M4c, "the tether": the clamp is applied to the
+    /// **desired** position and the swept solve resolves it, so collision is
+    /// always the last word. This case is built so the two orders disagree — the
+    /// officer stands on the far side of a wall, and the only point on the
+    /// tether sphere in that direction is *inside* the wall — and the test
+    /// asserts both halves: clamping afterwards really would put the player in
+    /// the solid, and clamping first really does not.
+    #[test]
+    fn the_tether_clamps_the_desired_position_so_a_wall_still_stops_a_held_player() {
+        let wall = solid(Vec3::new(0.0, -3.0, -10.0), Vec3::new(0.4, 3.0, 10.0));
+        let anchor = Vec3::new(2.0, 0.0, 0.0);
+        let radius = CUSTODY_TETHER_M as f32;
+        let start = Vec3::new(-3.0, 0.0, 0.0);
+        // The player is running away from the officer; the tether overrides that
+        // wish entirely and pulls them back toward the grip point.
+        let delta = tethered_delta(start, Vec3::new(-1.0, 0.0, 0.0), Some((anchor, radius)));
+        assert!(delta.x > 0.0, "an outside player is dragged back inward");
+
+        let result = move_boxes(start, TEST_HALF_SIZE, delta, &[wall]);
+
+        // Outside the wall, on the player's own side of it.
+        assert!(result.contacts.blocked_x);
+        close(result.position.x, wall.min.x - TEST_HALF_SIZE.x - COLLISION_SKIN);
+
+        // …and the discriminator: had the clamp been applied to this resolved
+        // position instead, the player would now be standing in masonry.
+        let clamped_after_the_sweep =
+            anchor + (result.position - anchor).normalize_or_zero() * radius;
+        assert!(
+            clamped_after_the_sweep.x > wall.min.x - TEST_HALF_SIZE.x
+                && clamped_after_the_sweep.x < wall.max.x + TEST_HALF_SIZE.x,
+            "the case has to be one the two orders disagree about, and {} is inside the wall",
+            clamped_after_the_sweep.x
+        );
+    }
+
+    /// `law_and_order.md` M4c, "if the geometry beats the anchor entirely": a
+    /// solid between the player and a walking officer breaks the grip rather than
+    /// dragging them through it. The *ending* of the hold is the sim's (past
+    /// `CUSTODY_LEASH_M`); the host's half is that the player stays put and the
+    /// separation is allowed to grow.
+    #[test]
+    fn a_solid_between_the_player_and_a_walking_anchor_breaks_the_grip_rather_than_dragging_them_through_it()
+     {
+        let wall = solid(Vec3::new(0.0, -3.0, -10.0), Vec3::new(0.4, 3.0, 10.0));
+        let radius = CUSTODY_TETHER_M as f32;
+        let dt = 1.0 / 120.0;
+        let mut position = Vec3::new(-1.0, 0.0, 0.0);
+        // The officer is already past the wall — through a doorway, around a
+        // corner — and keeps walking, so the grip point leaves without the
+        // player.
+        let mut anchor = Vec3::new(1.0, 0.0, 0.0);
+        let mut separation = f32::INFINITY;
+
+        for tick in 0..720 {
+            anchor.x += OFFICER_SPEED_MPS * dt;
+            // The player themselves is standing still: every metre of travel
+            // here is the tether dragging them.
+            let delta = tethered_delta(position, Vec3::ZERO, Some((anchor, radius)));
+            position = move_boxes(position, TEST_HALF_SIZE, delta, &[wall]).position;
+
+            assert!(
+                position.x <= wall.min.x - TEST_HALF_SIZE.x,
+                "the drag must never pull the player into the wall (x = {})",
+                position.x
+            );
+            let now = position.distance(anchor);
+            // The first tick's drag closes the gap — the tether does its job
+            // until the wall is in the way. From the moment the sweep stops the
+            // player, every step the officer takes only opens it further.
+            assert!(
+                tick == 0 || now >= separation - 1.0e-4,
+                "a walking officer only ever increases the separation once the player is stuck"
+            );
+            separation = now;
+        }
+
+        // Dragged as far as the wall let them, and no further.
+        close(position.x, wall.min.x - TEST_HALF_SIZE.x - COLLISION_SKIN);
+        assert!(
+            separation > CUSTODY_LEASH_M as f32,
+            "the separation has to pass the leash for the sim to end the hold, but it was {separation} m"
+        );
+    }
+
+    /// `law_and_order.md` M4c: "fly mode ignores custody (developer flying is not
+    /// a jailbreak)". The tether returns `None`, so the clamp is not merely
+    /// generous — it is absent.
+    #[test]
+    fn flying_is_not_custody_so_the_clamp_never_touches_the_delta() {
+        let anchor = Vec3::new(2.0, 0.0, 0.0);
+        let state = PlayerCustodyState::held_at(anchor, 1, cathedral_sim::custody::STRAIN_BASE_SECONDS as f32);
+        let start = Vec3::new(-3.0, 0.0, 0.0);
+        let wish = Vec3::new(-1.0, 0.0, 0.0);
+
+        assert_eq!(state.tether(true), None);
+        assert_eq!(tethered_delta(start, wish, state.tether(true)), wish);
+        assert_ne!(tethered_delta(start, wish, state.tether(false)), wish);
+    }
+
+    /// The universal case: nobody has hold of you, and the tether is not in the
+    /// movement path at all.
+    #[test]
+    fn a_free_players_delta_is_handed_to_the_sweep_untouched() {
+        let wish = Vec3::new(0.4, -0.1, 0.7);
+        assert_eq!(
+            tethered_delta(Vec3::new(12.0, 1.0, -30.0), wish, None),
+            wish
+        );
+        // Inside the radius the clamp is a no-op too: turn, face them, face
+        // away, circle — a held player keeps their feet inside the sphere.
+        let anchor = Vec3::ZERO;
+        let step = Vec3::new(0.1, 0.0, 0.0);
+        assert_eq!(
+            tethered_delta(
+                Vec3::new(0.5, 0.0, 0.0),
+                step,
+                Some((anchor, CUSTODY_TETHER_M as f32))
+            ),
+            step
+        );
+    }
+
+    /// The same property as the pure test above, but through the real
+    /// fixed-step system, so the *order* inside `fixed_player_movement` is what
+    /// is under test and not just the arithmetic it calls. (The system is a
+    /// plain function, so the test drives it from `Update` rather than standing
+    /// up Bevy's fixed-timestep plumbing.)
+    #[test]
+    fn the_fixed_step_solve_clamps_before_it_sweeps_so_a_held_player_ends_up_outside_the_wall() {
+        let start = Vec3::new(-3.0, PLAYER_HALF_SIZE.y + COLLISION_SKIN, 0.0);
+        let anchor = Vec3::new(2.0, start.y, 0.0);
+
+        let mut app = App::new();
+        let mut fixed = Time::<Fixed>::from_hz(FIXED_HZ);
+        fixed.advance_by(Duration::from_secs_f64(1.0 / FIXED_HZ));
+        app.insert_resource(fixed);
+        app.init_resource::<ControllerInput>();
+
+        let mut collision_world = CollisionWorld::default();
+        collision_world.add_box(Vec3::new(-20.0, -1.0, -20.0), Vec3::new(20.0, 0.0, 20.0));
+        collision_world.add_box(Vec3::new(0.0, 0.0, -10.0), Vec3::new(0.4, 3.0, 10.0));
+        app.insert_resource(collision_world);
+        app.insert_resource(PlayerCustodyState::held_at(anchor, 1, cathedral_sim::custody::STRAIN_BASE_SECONDS as f32));
+        app.world_mut().spawn((
+            PlayerController::default(),
+            PhysicalPosition {
+                previous: start,
+                current: start,
+            },
+        ));
+        app.add_systems(Update, fixed_player_movement);
+
+        for _ in 0..60 {
+            app.update();
+        }
+
+        let world = app.world_mut();
+        let position = world
+            .query::<&PhysicalPosition>()
+            .single(world)
+            .expect("the player exists")
+            .current;
+        // Stopped at the wall's near face — the tether was dragging them at it
+        // the whole time, and the sweep won every tick.
+        close(position.x, -PLAYER_HALF_SIZE.x - COLLISION_SKIN);
+        assert!(
+            position.distance(anchor) > CUSTODY_TETHER_M as f32,
+            "geometry beating the anchor is correct; being pinned inside it is not"
+        );
     }
 
     #[test]

@@ -28,14 +28,16 @@ use serde_json::{Value, json};
 
 use crate::{
     HEARING_RADIUS_M, MAX_BELL_CATCHUP_OFFICES, MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS,
+    OFFER_LAPSE_RADIUS_M,
     actions::{self, apply_action},
     areas::AreaMap,
     attention::{
         CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS,
         StageConfig, WarmExchanges, on_stage,
     },
-    character::{BodySlot, Control, GutEntry, PocketedUnit, StatusKind},
+    character::{BodySlot, Control, GutEntry, IntentTarget, PocketedUnit, StatusKind, TravelIntent},
     clock::{Office, Weekday, WorldClock, stroke_times},
+    custody,
     error::{CommandError, CommandErrorCode, EngineInitError},
     event::{DomainEvent, EventType},
     floor::ConversationFloor,
@@ -399,6 +401,25 @@ pub enum EngineCommand {
         request_id: String,
         item_id: ItemId,
     },
+    /// The three things the host's grab reflex tells the sim
+    /// (`law_and_order.md` M4c/M4d). The reflex itself is host-side code
+    /// watching the real distance every frame, with no provider round trip in
+    /// it — that is the entire promise of the mechanic — so it is these
+    /// commands, never a sim-side distance check, that earn the holder their
+    /// percept and priority turn.
+    ///
+    /// Fire-and-forget, like [`Self::PlayerSound`]: a grab is not a request.
+    PlayerGrabbed {
+        holder_id: ActorId,
+    },
+    /// The player has begun pulling against the hands on them. Sent **once**
+    /// when the pulling starts, not per frame: there is exactly one LLM turn in
+    /// flight across the entire cast, so across a ~5 s struggle the holder gets
+    /// one turn however often they are poked, and a per-second percept would buy
+    /// five near-identical lines competing for one `since_your_last_turn`.
+    PlayerStruggling,
+    /// …and once if it succeeds.
+    PlayerBrokeFree,
     /// Fire-and-forget: no `CommandResult` ever (`server.py:1066-1092`).
     PlayerSound {
         sound_id: String,
@@ -418,6 +439,26 @@ pub enum EngineCommand {
         kind: StatusKind,
         value: f64,
     },
+    /// The drive-mode stand-in for an arrest (`law_and_order.md` M4). Every
+    /// judgement above `seize` is an LLM's, which is right — and which means a
+    /// scripted run cannot reliably *reach* a seizure to look at the thing M4c
+    /// and M4d actually build: the tether, the reflex, the strain meter. This is
+    /// the same kind of poke `DebugSetStatus` is (the ale the sim does not
+    /// model), and it goes through the same [`actions::take_into_charge`] a real
+    /// arrest does, so what it stages is not a special case.
+    ///
+    /// `officer` is a name or an id; `target` defaults to the player, who is the
+    /// case worth eyeballing. No `CommandResult`; a handle matching nobody is a
+    /// `Diagnostic`, never a fault.
+    DebugSeize {
+        officer: String,
+        target: Option<String>,
+    },
+    /// CATHEDRAL_DRIVE `commit` (`law_and_order.md` M5): finish the escort at
+    /// the Stone House, so a scripted run can look at the inside of the gaol —
+    /// the booking, the posted fee, the bell, and what walking out costs.
+    /// `target` defaults to the player.
+    DebugCommit { target: Option<String> },
     /// Advance the debug time scale to the next of 1× / 10× / 60× (the `T` key).
     /// Fire-and-forget: the host learns the new scale from the next
     /// [`EngineMessage::Clock`], so there is no `CommandResult`.
@@ -655,8 +696,91 @@ pub enum EngineMessage {
         duration_seconds: f64,
         error: Option<String>,
     },
+    /// Where the player stands with the law (`law_and_order.md` M4), on the
+    /// **hot** channel — like [`Self::Clock`] and [`Self::Movement`], and never
+    /// a `world_revision` bump: a wanted list is not carriage state, and
+    /// republishing every actor and item because a notice aged would be pure
+    /// waste. Republished only when its content changes.
+    ///
+    /// Two things ride it and both have to be exact at frame rate. The HUD's
+    /// standing line, which must **always** name what would clear a brand — a
+    /// brand with a visible door is a story, a brand with no door is a bug. And
+    /// the tether: the host clamps the player's *desired* position against
+    /// [`PlayerCustody::anchor_m`] before its swept solve, and decides the grab
+    /// reflex against these radii. That reflex cannot live in the sim, because
+    /// the sim reads the player at `POSITION_UPDATE_HZ = 10` — 1.2 m of travel
+    /// per sample at run speed, before the return trip — and a 3 m radius
+    /// decided sim-side would be wrong by most of its own radius.
+    LawStanding {
+        /// The live words naming the player, worst rung first.
+        notices: Vec<PlayerNotice>,
+        /// The law's hands, while they are on you.
+        custody: Option<PlayerCustody>,
+    },
     /// A former `[smart actors] …` stderr line; the host logs it.
     Diagnostic(String),
+}
+
+/// One live word against the player, as the HUD reads it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlayerNotice {
+    pub notice_id: u64,
+    /// The wrong as the ward says it, rung included.
+    pub line: String,
+    pub rung: notices::Rung,
+    /// What would end it, named plainly. Never a mystery box.
+    pub clears_when: String,
+}
+
+/// The law's hands on the player, as the host needs them: who, where the grip
+/// point is, and how far it reaches.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlayerCustody {
+    /// Everyone with a hand on the player's arm — empty while merely in charge.
+    /// Two holders is much worse to pull against, which is why it is a list.
+    pub holder_ids: Vec<ActorId>,
+    pub officer_id: Option<ActorId>,
+    /// "Havise Ashe", or the stranger phrasing — resolved here, because the
+    /// game never decides what the player knows.
+    pub officer_name: String,
+    pub station_name: String,
+    /// The grip point the tether clamps against: the nearest holder, or the
+    /// escorting officer while nobody has hold.
+    pub anchor_m: Vec3,
+    /// How far the player may drift while merely in charge before the officer
+    /// closes ([`crate::custody::CUSTODY_LEASH_M`]).
+    pub leash_m: f64,
+    /// How far a *held* player may move around the grip point.
+    pub tether_m: f64,
+    /// Arm's reach: the radius the host's grab reflex fires at.
+    pub reach_m: f64,
+    /// The leash has been broken and the officer is coming to take hold
+    /// ([`crate::custody::CustodyRecord::closing`]). The host's reflex fires at
+    /// [`Self::reach_m`] when this is set *or* when the player is actively
+    /// moving away — the latch is what makes "walk off, then stand still" a
+    /// losing move rather than a free one.
+    pub closing: bool,
+    /// How long the player must pull without stopping to tear free of this
+    /// grip ([`crate::custody::strain_seconds`]). The meter itself is host-side
+    /// — it is a 20 Hz input affair and the sim has no clock — but every
+    /// modifier in this number is the sim's, so a drunk player and a drunk NPC
+    /// are hard to hold for exactly the same reasons.
+    pub strain_seconds: f64,
+    pub held: bool,
+    pub committed: bool,
+    /// The posted gaol fee ([`crate::custody::GAOL_FEE_SPARKS`]), so the HUD
+    /// line can always name a door instead of a mystery box. A brand with a
+    /// visible door is a story; a brand with no door is a bug.
+    pub fee_sparks: u32,
+    /// The bell they were told they go at, as the city says it — `"Lamplight"`
+    /// — or `None` at a station, where the honest answer is "when the keeper
+    /// says". Constant for the life of the record, like every other field here:
+    /// this rides a hot channel that republishes on change, so a live countdown
+    /// would make the message new on every single poll.
+    pub release_office: Option<String>,
+    /// What the keeper's book says, which is never a name — nobody in this city
+    /// knows the player. `None` when no word named them.
+    pub booked_as: Option<String>,
 }
 
 pub struct Engine {
@@ -750,6 +874,10 @@ pub struct Engine {
     /// the first poll's `Ready` because `Engine::new` has no `out` to push to.
     startup_diagnostics: Vec<String>,
     ready_emitted: bool,
+    /// The last [`EngineMessage::LawStanding`] published, so the hot channel
+    /// resends exactly when the player's standing changes — which, for a player
+    /// who has not annoyed anybody, is never.
+    last_law_standing: Option<EngineMessage>,
 }
 
 impl Engine {
@@ -918,6 +1046,7 @@ impl Engine {
             lamp_revision_sent: 0,
             startup_diagnostics,
             ready_emitted: false,
+            last_law_standing: None,
         })
     }
 
@@ -979,7 +1108,16 @@ impl Engine {
         // live, which is almost always; the decay clock lives here because the
         // sim itself is clock-free.
         self.world.notices.expire(self.clock.game_days(now));
+        // …and, on the same clock, the one rung that nobody chooses (M4a): a
+        // summons still live when its named bell rings becomes a warrant. That
+        // is the whole of the deadline — settlement is what discharges it, and
+        // nothing else was ever tracked.
+        self.issue_warrants(now);
         notices::confront(&mut self.world);
+        // …and the law's hands, whose every clock is a way custody ends: the
+        // dead-man timer, the station's four minutes, walking off, and the
+        // officer closing on a broken leash (M4).
+        self.tick_custody(now, &mut out);
 
         // Drive the water round on the same beat: decay thirst, run the ladder,
         // work the queues at the wells. It sets the routes the *next*
@@ -1026,6 +1164,12 @@ impl Engine {
                 self.scheduler.actors_departed(&departed);
                 self.novelty.forget(&departed);
                 self.npc_exchanges.forget(&departed);
+                // An escort who has left the city cannot walk anybody anywhere,
+                // so their prisoners are simply free — the same answer the
+                // dead-man timer gives, for the same reason (M4).
+                for gone in &departed {
+                    self.world.custody.forget(gone);
+                }
                 if self
                     .last_player_exchange
                     .as_ref()
@@ -1183,10 +1327,18 @@ impl Engine {
         // Every lane counts, not just the idle one: an NPC who has just answered
         // the player has seen exactly what an idle turn would have shown him,
         // and must not then be handed one for the privilege.
-        if let Some(actor_id) = self.scheduler.take_submitted()
-            && self.config.idle_requires_news
-        {
-            self.novelty.told(now, &self.world, &actor_id);
+        if let Some(actor_id) = self.scheduler.take_submitted() {
+            if self.config.idle_requires_news {
+                self.novelty.told(now, &self.world, &actor_id);
+            }
+            // The other half of the dead-man timer (M4c): a holder who is
+            // thinking is not a starved one. Stamped on submission, because
+            // that is the moment the lane actually reached them.
+            for prisoner in self.world.custody.prisoners_of(&actor_id) {
+                if let Some(record) = self.world.custody.get_mut(&prisoner) {
+                    record.officer_last_turn = now;
+                }
+            }
         }
         for event in events {
             out.push(scheduler_message(event));
@@ -1211,8 +1363,11 @@ impl Engine {
         // floor they acquire here gates the *next* one.
         self.flush(now, &mut out);
 
-        // Last: the clock, reflecting any `CycleTimeScale` applied above.
+        // Last: the clock, reflecting any `CycleTimeScale` applied above, and
+        // the player's standing with the law — hot like the clock, and resent
+        // only when it changes.
         self.publish_clock(now, &mut out);
+        self.publish_law_standing(&mut out);
         out
     }
 
@@ -1500,6 +1655,10 @@ impl Engine {
                 spatial_seq,
             } => self.player_say(now, &request_id, &text, position_m, spatial_seq, out),
 
+            EngineCommand::PlayerGrabbed { holder_id } => self.player_grabbed(now, &holder_id),
+            EngineCommand::PlayerStruggling => self.player_struggling(now),
+            EngineCommand::PlayerBrokeFree => self.player_broke_free(now),
+
             EngineCommand::PlayerSound { sound_id } => self.player_sound(now, &sound_id, out),
 
             EngineCommand::DebugSound {
@@ -1509,6 +1668,14 @@ impl Engine {
 
             EngineCommand::DebugSetStatus { name, kind, value } => {
                 self.debug_set_status(now, &name, kind, value, out)
+            }
+
+            EngineCommand::DebugSeize { officer, target } => {
+                self.debug_seize(now, &officer, target.as_deref(), out)
+            }
+
+            EngineCommand::DebugCommit { target } => {
+                self.debug_commit(now, target.as_deref(), out)
             }
 
             // Continuity-preserving (see `WorldClock::with_scale`): time speeds
@@ -1908,6 +2075,154 @@ impl Engine {
         }
     }
 
+    /// The drive-mode arrest (`law_and_order.md` M4). Resolves both handles the
+    /// way `debug_set_status` does — name first, then id — and then does exactly
+    /// what the verb does, minus the four preconditions the verb exists to
+    /// enforce. A poke at nobody is a logged `Diagnostic`, never a fault: a typo
+    /// must not abort a drive script.
+    fn debug_seize(
+        &mut self,
+        now: f64,
+        officer: &str,
+        target: Option<&str>,
+        out: &mut Vec<EngineMessage>,
+    ) {
+        let Some(officer_id) = self.world.resolve_debug_handle(officer) else {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] invalid debug_seize: no character with the name or id '{officer}'"
+            )));
+            return;
+        };
+        let target_id = match target {
+            Some(target) => match self.world.resolve_debug_handle(target) {
+                Some(id) => id,
+                None => {
+                    out.push(EngineMessage::Diagnostic(format!(
+                        "[smart actors] invalid debug_seize: no character with the name or id '{target}'"
+                    )));
+                    return;
+                }
+            },
+            None => self.config.player_id.clone(),
+        };
+        // Put the officer at arm's reach first. Not a convenience: the verb
+        // requires four metres precisely *because* an officer has to close on
+        // foot, and `tick_custody` frees anyone whose escort is more than
+        // `OFFER_LAPSE_RADIUS_M` away — so a poke that seized from across the
+        // city would create a custody the very next poll dissolved, and show
+        // nothing. Staging the approach is exactly what the stand-in is for.
+        if let Some(at) = self
+            .world
+            .characters
+            .get(&target_id)
+            .map(|target| target.position_m())
+        {
+            let beside = Vec3::new(at.x + custody::CUSTODY_ESCORT_CONTACT_M, at.y, at.z);
+            if let Some(officer) = self.world.characters.get_mut(&officer_id) {
+                officer.state.position_m = beside;
+                officer.state.movement = None;
+            }
+        }
+        match actions::take_into_charge(
+            &mut self.world,
+            &officer_id,
+            &target_id,
+            None,
+            "a wrong nobody wrote down (drive-mode stand-in)",
+        ) {
+            Ok(line) => {
+                out.push(EngineMessage::Diagnostic(format!("[smart actors] {line}")));
+                self.scheduler
+                    .prioritize(&self.world, &officer_id, false, now);
+                self.flush(now, out);
+            }
+            Err(error) => out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] debug_seize refused: {error}"
+            ))),
+        }
+    }
+
+    /// CATHEDRAL_DRIVE `commit` (`law_and_order.md` M5). The stand-in for an
+    /// *arrival*, and it exists for the same reason `debug_seize` does: every
+    /// judgement above `seize` is deliberately an LLM's, and the escort only
+    /// commits on reaching a station, so a scripted run can otherwise never see
+    /// the inside of the Stone House at all — not the booking, not the posted
+    /// fee, not the bell, and not what walking out costs.
+    ///
+    /// It forces the gaol rather than whatever posting the seizure picked,
+    /// because the gaol is the thing being looked at; everything after that is
+    /// the same `Custody::commit` + [`Self::announce_commitment`] a real arrival
+    /// runs, so what it stages is not a special case.
+    fn debug_commit(&mut self, now: f64, target: Option<&str>, out: &mut Vec<EngineMessage>) {
+        let target_id = match target {
+            Some(target) => match self.world.resolve_debug_handle(target) {
+                Some(id) => id,
+                None => {
+                    out.push(EngineMessage::Diagnostic(format!(
+                        "[smart actors] invalid debug_commit: no character with the name or id '{target}'"
+                    )));
+                    return;
+                }
+            },
+            None => self.config.player_id.clone(),
+        };
+        if self.world.custody.get(&target_id).is_none() {
+            out.push(EngineMessage::Diagnostic(
+                "[smart actors] debug_commit refused: nobody has them in charge - `seize` first"
+                    .to_string(),
+            ));
+            return;
+        }
+        if self.world.custody.is_confined(&target_id) {
+            // Refuse *before* rewriting the station and walking people around:
+            // `Custody::commit` returns false for an already-committed record,
+            // so without this a second `commit` would teleport the keeper, move
+            // the station under them and then say nothing at all.
+            out.push(EngineMessage::Diagnostic(
+                "[smart actors] debug_commit refused: they are already committed".to_string(),
+            ));
+            return;
+        }
+        let Some(gaol) = custody::stone_house(&self.world.places) else {
+            out.push(EngineMessage::Diagnostic(
+                "[smart actors] debug_commit refused: there is no Stone House in the registry"
+                    .to_string(),
+            ));
+            return;
+        };
+        // The keeper stands at the threshold — confinement here is a person, and
+        // a station whose keeper is twenty metres off keeps nobody. A prisoner
+        // who is not the player is walked in too, exactly as the escort would
+        // have; the player's feet are never the sim's, so a drive script has to
+        // `tp` them here itself, and one committed elsewhere is judged to have
+        // walked out on the next poll — which is the mechanic working.
+        let officer = self.world.custody.get(&target_id).and_then(|record| record.officer.clone());
+        for who in officer.iter().chain(
+            (target_id != self.config.player_id).then_some(&target_id),
+        ) {
+            if let Some(character) = self.world.characters.get_mut(who) {
+                character.state.position_m = gaol.point;
+                character.state.movement = None;
+                // The errand too, not just the path: `take_into_charge` lays the
+                // officer their own walk to the station the seizure picked, and
+                // `apply_intents` would re-lay it and march the keeper straight
+                // back out of the room the poke just put them in.
+                character.state.intent = None;
+            }
+        }
+        if let Some(record) = self.world.custody.get_mut(&target_id) {
+            record.station = gaol.clone();
+        }
+        if self.world.custody.commit(&target_id, now) {
+            self.announce_commitment(now, &target_id);
+            out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] {target_id} is committed to {}",
+                gaol.name
+            )));
+            self.flush(now, out);
+        }
+    }
+
     /// Ring the offices whose bells fell in the span since the last check, and
     /// sound any strokes now due. Called once per poll, before commands, so the
     /// span tested here is stable no matter what the commands do to the scale.
@@ -2038,6 +2353,18 @@ impl Engine {
         // Overflowed the catch-up budget: drop the backlog and snap forward.
         if self.movement_now + MOVEMENT_TICK_SECONDS <= now {
             self.movement_now = now;
+        }
+
+        // The escorted walk after the movers, not with them: a led body has no
+        // path of its own, it stands where the officer's shoulder is
+        // (`law_and_order.md` M4b′). This is the whole of NPC custody's motion,
+        // and it is why the cast arresting each other costs almost nothing.
+        let escort = custody::follow_escorts(&mut self.world, now);
+        for id in escort.moved {
+            moved_ids.insert(id);
+        }
+        for prisoner in escort.committed {
+            self.announce_commitment(now, &prisoner);
         }
 
         if moved_ids.is_empty() {
@@ -2430,6 +2757,7 @@ impl Engine {
                     self.hold_for_handoff(now, &event);
                     self.nudge_pocket_witness(now, &event);
                     self.nudge_restitution_acceptor(now, &event);
+                    self.nudge_custody(now, &event);
                     flush_world_event(&event, out);
                 }
                 EventType::Gesture => flush_gesture(&event, out),
@@ -2588,6 +2916,695 @@ impl Engine {
         let acceptor_id = acceptor_id.clone();
         self.scheduler
             .prioritize(&self.world, &acceptor_id, false, now);
+    }
+
+    /// The one rung nobody chooses (`law_and_order.md` M4a): a summons still
+    /// live when its named bell rings becomes a warrant, on the clock edge. The
+    /// ward is told, the accused is told, and — because the word has changed
+    /// rung — every law carrier's `served` flag has just been cleared, so the
+    /// next `confront` pass tells them to their faces too.
+    ///
+    /// A no-op on every poll of every run that has no summons outstanding,
+    /// which is almost all of them.
+    fn issue_warrants(&mut self, now: f64) {
+        let issued = self.world.notices.issue_warrants(self.clock.game_days(now));
+        for notice_id in issued {
+            let Some(notice) = self.world.notices.get(notice_id) else {
+                continue;
+            };
+            let (line, accused) = (notice.line(), notice.accused.clone());
+            let raiser = notice.raised_by.clone();
+            let mut lines: Vec<(ActorId, String)> =
+                notices::carrier_ids(&self.world, notice_id, &raiser)
+                    .into_iter()
+                    .filter(|carrier| Some(carrier) != accused.as_ref())
+                    .map(|carrier| (carrier, format!("the bell has rung and the word is now a warrant: {line}")))
+                    .collect();
+            // The raiser is a carrier of their own word only by way of `except`;
+            // tell them too, since it is their summons that just hardened.
+            if self.world.characters.contains_key(&raiser)
+                && self.world.characters[&raiser].control().is_llm()
+                && Some(&raiser) != accused.as_ref()
+            {
+                lines.push((
+                    raiser,
+                    format!("the bell has rung and the word is now a warrant: {line}"),
+                ));
+            }
+            if let Some(accused) = &accused
+                && self
+                    .world
+                    .characters
+                    .get(accused)
+                    .is_some_and(|character| character.control().is_llm())
+            {
+                lines.push((
+                    accused.clone(),
+                    format!(
+                        "the bell you were called to answer by has rung and you did not answer; a warrant now stands against you: {line}"
+                    ),
+                ));
+            }
+            for (recipient, text) in lines {
+                if let Some(character) = self.world.characters.get_mut(&recipient) {
+                    character.notify_percept(text);
+                }
+            }
+            // The accused gets the turn to react to being wanted, wherever they
+            // are: the priority lane is ungated by proximity for exactly this.
+            if let Some(accused) = accused.filter(|id| {
+                self.world
+                    .characters
+                    .get(id)
+                    .is_some_and(|character| character.control().is_llm())
+            }) {
+                self.scheduler.prioritize(&self.world, &accused, false, now);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------- custody
+
+    /// Everything about the law's hands that needs a clock (`law_and_order.md`
+    /// M4). The sim itself is clock-free by design, so — exactly as the notice
+    /// decay does — the timers live here and the state lives in
+    /// [`crate::custody`].
+    ///
+    /// Four things, in the order they matter, and every one of them is a way
+    /// custody *ends* rather than a way it continues. Custody must always be
+    /// draining: nothing else in the sim removes a person from the world, and
+    /// the economy is made of named individuals.
+    fn tick_custody(&mut self, now: f64, out: &mut Vec<EngineMessage>) {
+        if self.world.custody.is_empty() {
+            return;
+        }
+        let mut freed: Vec<(ActorId, &'static str)> = Vec::new();
+        let mut ungripped: Vec<ActorId> = Vec::new();
+        let mut closing: Vec<(ActorId, ActorId, Vec3)> = Vec::new();
+        let mut walked_out: Vec<ActorId> = Vec::new();
+
+        for (prisoner, record) in self.world.custody.iter() {
+            let Some(prisoner_character) = self.world.characters.get(prisoner) else {
+                continue;
+            };
+            // 1. The dead-man timer, non-negotiable: a player must never be
+            //    pinned by a provider outage, a killed process, or plain lane
+            //    starvation. With one turn in flight across the whole cast a
+            //    busy scene can starve a holder past a minute with nothing
+            //    broken at all — releasing then is correct, not a false
+            //    positive, and the officer can always take hold again.
+            if record.is_held() && now - record.officer_last_turn > custody::CUSTODY_DEAD_MAN_SECONDS
+            {
+                ungripped.push(prisoner.clone());
+            }
+            // 2. The station cap: four real minutes at a gate arch, six in the
+            //    Stone House, regardless of what the models do. A gate has
+            //    nobody to talk to but the keeper; a cell has eight people.
+            //
+            //    It is a ceiling on *this session's* custody, not a sentence, so
+            //    the authored inmates (M5b) are exempt: the city was already
+            //    holding them when the run began, they are not waiting on
+            //    anything the player can watch, and freeing eight lore prisoners
+            //    six minutes into every session — with the percept "the keeper
+            //    wants the room" — would empty the one room the Stone House
+            //    exists to fill. `settle_notice` and `release` still free them,
+            //    which is the point: their door is a person, like everyone's.
+            if let Some(committed_at) = record.committed_at
+                && !record.authored
+                && now - committed_at > record.station.hold_seconds()
+            {
+                freed.push((prisoner.clone(), "the keeper wants the room"));
+                continue;
+            }
+            // 2b. The sentence, in the city's own clock (M5c). *"You go at
+            //     Lamplight"* is what the keeper said, so it has to be what
+            //     happens — and it is only the Stone House that says it, which
+            //     is also why this sits *below* the ceiling: the six minutes are
+            //     the backstop for a bell that is 8.5 real minutes off, and
+            //     whichever comes first wins.
+            //
+            //     Above the officer bind, because a committed prisoner usually
+            //     has nobody walking them anywhere any more.
+            if let Some(due) = record.sentence_due_game_days
+                && self
+                    .world
+                    .current_time
+                    .is_some_and(|time| time.day as f64 + time.fraction >= due)
+            {
+                freed.push((prisoner.clone(), "your time is served"));
+                continue;
+            }
+            // 2c. Walking out (M5d). Confinement here is a keeper at a
+            //     threshold, not a lock — most stations are not lockable rooms
+            //     and the Stone House's own lock is broken, which is Ede Clove's
+            //     authored goal and why the doorway has no leaf. So leaving is
+            //     possible, and it *costs*: the fifth door out compounds into
+            //     the same unanswerable word the struggle raises, no `wronged`
+            //     and no `taken`, which only a law officer's `settle_notice` can
+            //     ever end. Escape closes the "you could have just paid the fee"
+            //     door, and that is what makes the choice a choice.
+            //
+            //     Planar, to agree with `follow_escorts`'s arrival test — a
+            //     threshold must not behave oddly because of a step.
+            //
+            //     Unreachable for the cast: rung 0 of `round::decide` and the
+            //     `go_to` refusal between them mean an NPC never takes a step of
+            //     their own while held. This is the player's door.
+            if record.state == custody::Confinement::Committed {
+                let at = prisoner_character.position_m();
+                let strayed = f64::hypot(
+                    at.x - record.station.point.x,
+                    at.z - record.station.point.z,
+                );
+                if strayed > custody::COMMITTED_ROAM_M {
+                    walked_out.push(prisoner.clone());
+                    continue;
+                }
+            }
+            let Some(officer) = record
+                .officer
+                .as_ref()
+                .and_then(|officer| self.world.characters.get(officer))
+            else {
+                continue;
+            };
+            if record.state != custody::Confinement::InCharge {
+                continue;
+            }
+            let separation = officer.position_m().distance(prisoner_character.position_m());
+            // 3. Gone. Only the player can do this — the cast is slaved to the
+            //    escort — and it is the design saying so out loud: move while
+            //    the sergeant is still crossing the square and you are simply
+            //    away, because 8 m/s against 1.8 needs no cleverness at all.
+            //    The word against you does not go anywhere.
+            if separation > OFFER_LAPSE_RADIUS_M {
+                freed.push((prisoner.clone(), "they walked off and were gone"));
+                continue;
+            }
+            // 4. Cross the leash and the officer closes, on their own two feet.
+            //    That walk is the whole warning system: nobody is ever grabbed
+            //    out of nowhere.
+            if separation > custody::CUSTODY_LEASH_M {
+                closing.push((
+                    officer.id().clone(),
+                    prisoner.clone(),
+                    prisoner_character.position_m(),
+                ));
+            }
+        }
+
+        // Out through the broken lock (M5d). The release is not the story — the
+        // word is. Escape buys a brand no payment can answer, and the gates are
+        // deliberately *not* shut to you afterwards (only two have leaves and
+        // they answer to the clock, not the law), so what you bought is a
+        // permanent warrant rather than a locked city.
+        for prisoner in walked_out {
+            let Some(record) = self.world.custody.release(&prisoner) else {
+                continue;
+            };
+            let keeper = record
+                .officer
+                .clone()
+                .or_else(|| self.nearest_law_to(record.station.point));
+            if let Some(prisoner_character) = self.world.characters.get_mut(&prisoner)
+                && prisoner_character.control().is_llm()
+            {
+                prisoner_character.notify_percept(format!(
+                    "you are out of {} and nobody's hand is on you; the ward will hear of it",
+                    record.station.name
+                ));
+            }
+            let raised = actions::raise_escape_notice(
+                &mut self.world,
+                &prisoner,
+                keeper.as_slice(),
+            );
+            if let Some(keeper) = keeper.clone() {
+                if let Some(keeper_character) = self.world.characters.get_mut(&keeper) {
+                    keeper_character.notify_percept(format!(
+                        "they are gone from {} — the door stood open and they took it",
+                        record.station.name
+                    ));
+                }
+                self.scheduler.prioritize(&self.world, &keeper, false, now);
+            }
+            // A ward already carrying eight warrants refuses the raise
+            // (`Notices::raise`), and escape must not be silently free because
+            // the board is full: say so rather than let it pass unremarked.
+            if raised.is_none() {
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[smart actors] {prisoner} walked out of {} and no word was raised - nobody of the law was within earshot, or the ward's board is full of warrants",
+                    record.station.name
+                )));
+            }
+            self.world.touch_public_state();
+        }
+
+        // The grip lapses visibly, never silently: a hand that came off because
+        // the lane starved must read to everyone present exactly as a hand that
+        // came off because its owner chose to let go.
+        for prisoner in ungripped {
+            let holders = self
+                .world
+                .custody
+                .get(&prisoner)
+                .map(|record| record.holders.clone())
+                .unwrap_or_default();
+            self.world.custody.release_grip(&prisoner);
+            for holder in holders {
+                actions::announce_grip(&mut self.world, &holder, &prisoner, false);
+            }
+        }
+        for (officer_id, prisoner_id, last_seen) in closing {
+            // Latch it: from here the reflex may fire at arm's reach even
+            // against somebody standing perfectly still, because they broke the
+            // arrangement and this walk is the consequence. A plain distance
+            // test cannot express that — 3 m is *inside* the 8 m leash, so
+            // "at reach while outside the leash" is nowhere at all.
+            if let Some(record) = self.world.custody.get_mut(&prisoner_id) {
+                record.closing = true;
+            }
+            let follows_already = self
+                .world
+                .characters
+                .get(&officer_id)
+                .and_then(|officer| officer.state.intent.as_ref())
+                .is_some_and(|intent| {
+                    matches!(&intent.target, IntentTarget::Person { actor_id, .. } if *actor_id == prisoner_id)
+                });
+            if follows_already {
+                continue;
+            }
+            let budget = actions::route_budget_for(&self.world, &officer_id, last_seen);
+            if let Some(officer) = self.world.characters.get_mut(&officer_id) {
+                officer.state.intent = Some(TravelIntent {
+                    target: IntentTarget::Person {
+                        actor_id: prisoner_id,
+                        last_seen,
+                        visible: true,
+                    },
+                    budget_seconds: budget,
+                    deadline: None,
+                });
+            }
+        }
+        for (prisoner_id, why) in freed {
+            let Some(record) = self.world.custody.release(&prisoner_id) else {
+                continue;
+            };
+            // Every hand comes off audibly, whichever clock ended the custody.
+            for holder in &record.holders {
+                actions::announce_grip(&mut self.world, holder, &prisoner_id, false);
+            }
+            if let Some(officer_id) = &record.officer
+                && let Some(officer) = self.world.characters.get_mut(officer_id)
+            {
+                officer.notify_percept(format!(
+                    "the one you had in charge for {}: {why}",
+                    record.station.name
+                ));
+                let officer_id = officer_id.clone();
+                self.scheduler
+                    .prioritize(&self.world, &officer_id, false, now);
+            }
+            if let Some(prisoner) = self.world.characters.get_mut(&prisoner_id)
+                && prisoner.control().is_llm()
+            {
+                // With the reason, not without it. A hold that ends in silence
+                // reads exactly like one that did not, and the difference
+                // between *your time is served* and *the keeper wants the room*
+                // is the whole of what the sentence promised (M5c).
+                prisoner.notify_percept(format!("you are out of the law's hands: {why}"));
+            }
+            self.world.touch_public_state();
+        }
+    }
+
+    /// The end of the escort (`law_and_order.md` M4b): the walk is over and the
+    /// keeper's threshold begins.
+    ///
+    /// Arriving is the one moment in custody that nobody chose — the officer
+    /// walked, the destination came — so it is the moment most likely to pass in
+    /// silence if nothing says otherwise. The prisoner is told what would free
+    /// them, because that promise is owed on every rung, and the officer gets
+    /// the turn in which to hand them over or think better of it.
+    fn announce_commitment(&mut self, now: f64, prisoner_id: &ActorId) {
+        let Some(record) = self.world.custody.get(prisoner_id) else {
+            return;
+        };
+        let (station, officer) = (record.station.name.clone(), record.officer.clone());
+        let gaol = record.station.stone_house;
+        let notice_id = record.notice_id;
+        // `Custody::commit` drops every hand — arriving ends the walk. Say so,
+        // or the presented arm stays reaching at somebody nobody is holding any
+        // more: a hold that ends in silence looks exactly like one that did not.
+        for holder in record.holders.clone() {
+            actions::announce_grip(&mut self.world, &holder, prisoner_id, false);
+        }
+
+        // The sentence, said in the city's own clock (M5c). Only in the gaol:
+        // at a gate arch the honest answer is "when the keeper says", and it is
+        // the Stone House where the waiting is the content rather than the price
+        // of it. Stamped once, so the keeper cannot be asked twice and answer
+        // differently — and so nothing time-varying joins the hot channel.
+        let sentence = gaol
+            .then(|| self.world.current_time.map(|time| time.next_bell()))
+            .flatten();
+        if let Some((office, due)) = sentence
+            && let Some(record) = self.world.custody.get_mut(prisoner_id)
+        {
+            record.sentence_office = Some(office);
+            record.sentence_due_game_days = Some(due);
+        }
+
+        // Booked as a *description*, never a name: nobody in this city knows the
+        // player, and the keeper's book is the "unknown people" rule paying for
+        // itself one more time. The word already carries the description a
+        // stranger could act on, so when there is one it is what goes in the
+        // book — the same words the ward has been repeating.
+        let booked_as = notice_id
+            .and_then(|notice_id| self.world.notices.get(notice_id))
+            .map(|notice| notice.about.clone());
+
+        if let Some(prisoner) = self.world.characters.get_mut(prisoner_id)
+            && prisoner.control().is_llm()
+        {
+            let mut line = format!(
+                "you have been brought to {station}, and here you are kept until the word against you is settled or the law lets you go"
+            );
+            if let Some((office, _)) = sentence {
+                line.push_str(&format!(
+                    "; you were told you go at {}, and the bell rings over this very roof",
+                    office.label()
+                ));
+            }
+            prisoner.notify_percept(line);
+        }
+        if let Some(officer_id) = officer.clone() {
+            if let Some(officer) = self.world.characters.get_mut(&officer_id) {
+                let mut line = format!("you have brought them to {station}");
+                if let Some(booked_as) = &booked_as {
+                    line.push_str(&format!("; you enter them in the book as {booked_as}"));
+                }
+                if let Some((office, _)) = sentence {
+                    line.push_str(&format!(", to go at {}", office.label()));
+                }
+                officer.notify_percept(line);
+            }
+            self.scheduler
+                .prioritize(&self.world, &officer_id, false, now);
+        }
+
+        self.confiscate_the_taking(prisoner_id, notice_id, officer.as_ref());
+        if gaol
+            && let Some(at) = self
+                .world
+                .characters
+                .get(prisoner_id)
+                .map(|prisoner| prisoner.position_m())
+        {
+            // The one door in the city that is a door (M5c). The host cues the
+            // gaol door on this, and only here — a gate arch has no leaf to shut.
+            self.world.emit(crate::event::DomainEvent::world_event(
+                "commit",
+                prisoner_id.clone(),
+                officer,
+                None,
+                0,
+                at,
+                Vec::new(),
+            ));
+        }
+        self.world.touch_public_state();
+    }
+
+    /// Confiscation, and it is **narrow on purpose**: exactly the thing the word
+    /// says was taken, and nothing else in the pockets.
+    ///
+    /// M3.5 already models the specific stolen item (`WardNotice::taken`), and
+    /// returning it settles the word by itself (`notices::settle_on_return`), so
+    /// the gaol taking it back is the same fact arriving by the other road. A
+    /// general inventory sweep would be a rage mechanic and it would fight the
+    /// offer machinery the fee is paid through — the design says so in as many
+    /// words, and this is the whole of the enforcement.
+    ///
+    /// With no keeper to hand it to, nothing is taken. An item that vanished
+    /// into the fabric of the building could never be given back.
+    fn confiscate_the_taking(
+        &mut self,
+        prisoner_id: &ActorId,
+        notice_id: Option<u64>,
+        officer: Option<&ActorId>,
+    ) {
+        let Some(taken) = notice_id
+            .and_then(|notice_id| self.world.notices.get(notice_id))
+            .and_then(|notice| notice.taken.clone())
+        else {
+            return;
+        };
+        let Some(prisoner) = self.world.characters.get(prisoner_id) else {
+            return;
+        };
+        if !prisoner.holds().contains(&taken) {
+            return;
+        }
+        let Some(keeper) = officer.cloned().or_else(|| {
+            self.world
+                .custody
+                .get(prisoner_id)
+                .map(|record| record.station.point)
+                .and_then(|point| self.nearest_law_to(point))
+        }) else {
+            return;
+        };
+        let sequence = self.world.event_sequence + 1;
+        // A plain transfer, not the offer path: nobody offered anything, and a
+        // thing the prisoner has already promised to somebody else stays
+        // promised — `transfer_item_quantity` respects every live commitment,
+        // which is what keeps confiscation from quietly voiding a trade.
+        if self
+            .world
+            .transfer_item_quantity(
+                prisoner_id,
+                &keeper,
+                &taken,
+                1,
+                &format!("gaol_confiscation:{sequence}:{taken}"),
+            )
+            .is_err()
+        {
+            return;
+        }
+        if let Some(prisoner) = self.world.characters.get_mut(prisoner_id) {
+            prisoner.notify_percept(format!(
+                "the thing the word says you took (id {taken}) is lifted off you and set on the keeper's counter"
+            ));
+        }
+        if let Some(keeper) = self.world.characters.get_mut(&keeper) {
+            keeper.notify_percept(format!(
+                "you take the thing the word names (id {taken}) off them and enter it in the book; it is not yours, it is held"
+            ));
+        }
+    }
+
+    /// The nearest law-cast character to a point, within earshot of it — the
+    /// keeper standing at a threshold nobody was named the officer of.
+    fn nearest_law_to(&self, point: Vec3) -> Option<ActorId> {
+        self.world
+            .characters
+            .iter()
+            .filter(|(_, character)| crate::notices::is_law(character))
+            .map(|(id, character)| (id, character.position_m().distance(point)))
+            .filter(|(_, distance)| *distance <= HEARING_RADIUS_M)
+            .min_by(|(left_id, left), (right_id, right)| {
+                left.total_cmp(right).then_with(|| left_id.cmp(right_id))
+            })
+            .map(|(id, _)| id.clone())
+    }
+
+    /// The host's grab reflex fired (M4c). It is this command — never a sim-side
+    /// distance check — that earns the holder their percept and priority turn,
+    /// because the host is the only place a 3 m radius can be decided exactly.
+    fn player_grabbed(&mut self, now: f64, holder_id: &ActorId) {
+        let player_id = self.config.player_id.clone();
+        let Some(record) = self.world.custody.get(&player_id) else {
+            return;
+        };
+        if record.officer.as_ref() != Some(holder_id) && !record.holders.contains(holder_id) {
+            return;
+        }
+        if record.holders.contains(holder_id) {
+            return;
+        }
+        self.world.custody.grab(&player_id, holder_id.clone());
+        // The holder needs the turn here, not the prisoner: against the player
+        // the grab is a *reflex* the officer never decided on, so this is their
+        // first chance to say anything about the hand they just put out.
+        actions::announce_grip(&mut self.world, holder_id, &player_id, true);
+        self.scheduler.prioritize(&self.world, holder_id, false, now);
+        self.world.touch_public_state();
+    }
+
+    /// The player has begun to pull — the first of the struggle's two moments.
+    ///
+    /// The strain meter is host-side (a 20 Hz input meter, and the sim has no
+    /// clock by design), so all the sim ever hears is *started* and, maybe,
+    /// *succeeded*. Both go through [`actions::announce_struggle`], the same
+    /// call the NPC `struggle` verb makes: one prose implementation, one wake-up
+    /// rule, and the cast and the player heard the same way.
+    fn player_struggling(&mut self, _now: f64) {
+        let player_id = self.config.player_id.clone();
+        let Some(record) = self.world.custody.get(&player_id) else {
+            return;
+        };
+        if !record.is_held() {
+            return;
+        }
+        let holders = record.holders.clone();
+        actions::announce_struggle(
+            &mut self.world,
+            &player_id,
+            &holders,
+            actions::StruggleMoment::Started,
+        );
+    }
+
+    /// …and once if it succeeds. The escape notice both paths raise is
+    /// [`actions::raise_escape_notice`]'s, unanswerable by restitution — escape
+    /// closes the "you could have just paid the fee" door, and that is the cost
+    /// that makes the choice a choice.
+    fn player_broke_free(&mut self, _now: f64) {
+        let player_id = self.config.player_id.clone();
+        let Some(record) = self.world.custody.get(&player_id) else {
+            return;
+        };
+        if !record.is_held() {
+            return;
+        }
+        let holders = record.holders.clone();
+        self.world.custody.release(&player_id);
+        actions::raise_escape_notice(&mut self.world, &player_id, &holders);
+        actions::announce_struggle(
+            &mut self.world,
+            &player_id,
+            &holders,
+            actions::StruggleMoment::BrokeFree,
+        );
+        self.world.touch_public_state();
+    }
+
+    /// The wake-up every rung of custody owes somebody (`law_and_order.md`
+    /// M4b–M4d), and the reason both the cast's path and the player's converge
+    /// on one place: whichever of them produced the event, the *other* party has
+    /// just had something done to them and has not spent a turn on it.
+    ///
+    /// Ungated by proximity, like every priority handoff — an officer walking
+    /// somebody across the city is normally nowhere near the stage — and not
+    /// immediate: the inter-turn delay and the floor still govern when.
+    fn nudge_custody(&mut self, now: f64, event: &DomainEvent) {
+        // `target_id` is the counterpart in every one of these: the prisoner
+        // for the officer's acts, the holder for the prisoner's.
+        if !matches!(
+            event.kind.as_str(),
+            "seize" | "grab" | "let_go" | "release" | "struggle" | "broke_free"
+        ) {
+            return;
+        }
+        let Some(target_id) = event.target_id.clone() else {
+            return;
+        };
+        if self
+            .world
+            .characters
+            .get(&target_id)
+            .is_some_and(|character| character.control().is_llm())
+        {
+            self.scheduler
+                .prioritize(&self.world, &target_id, false, now);
+        }
+    }
+
+    /// The player's standing with the law, on the hot channel — republished
+    /// only when it changes, which is almost never.
+    fn publish_law_standing(&mut self, out: &mut Vec<EngineMessage>) {
+        let player_id = &self.config.player_id;
+        let notices: Vec<PlayerNotice> = self
+            .world
+            .notices
+            .against(player_id)
+            .into_iter()
+            .map(|notice| PlayerNotice {
+                notice_id: notice.id,
+                line: notice.line(),
+                rung: notice.rung(),
+                // A brand with a visible door is a story; a brand with no door
+                // is a bug. Say the door out loud, every time.
+                clears_when: match (&notice.taken, &notice.wronged) {
+                    (Some(_), Some(_)) => {
+                        "give back what was taken, or satisfy the law".to_string()
+                    }
+                    (_, Some(_)) => {
+                        "make it right with the one you wronged, or satisfy the law".to_string()
+                    }
+                    _ => "only the law can end this one — go and answer for it".to_string(),
+                },
+            })
+            .collect();
+        let custody = self.world.custody.get(player_id).map(|record| {
+            let anchor_of = |id: &ActorId| {
+                self.world
+                    .characters
+                    .get(id)
+                    .map(|character| character.position_m())
+            };
+            let officer_name = record
+                .officer
+                .as_ref()
+                .and_then(|officer| self.world.characters.get(officer))
+                .map_or_else(
+                    || "the keeper".to_string(),
+                    |officer| {
+                        self.world.characters[player_id]
+                            .knows()
+                            .contains(officer.id())
+                            .then(|| officer.name().to_string())
+                            .unwrap_or_else(|| "a stranger who serves the law".to_string())
+                    },
+                );
+            PlayerCustody {
+                // The grip point: whoever actually has hold, else the escort.
+                anchor_m: record
+                    .holders
+                    .first()
+                    .and_then(&anchor_of)
+                    .or_else(|| record.officer.as_ref().and_then(&anchor_of))
+                    .unwrap_or(record.station.point),
+                holder_ids: record.holders.clone(),
+                officer_id: record.officer.clone(),
+                officer_name,
+                station_name: record.station.name.clone(),
+                leash_m: custody::CUSTODY_LEASH_M,
+                tether_m: custody::CUSTODY_TETHER_M,
+                reach_m: custody::CUSTODY_REACH_M,
+                closing: record.closing,
+                strain_seconds: custody::strain_seconds(&self.world, player_id, &record.holders),
+                held: record.is_held(),
+                committed: record.state == custody::Confinement::Committed,
+                fee_sparks: custody::GAOL_FEE_SPARKS,
+                release_office: record
+                    .sentence_office
+                    .map(|office| office.label().to_string()),
+                booked_as: record
+                    .notice_id
+                    .and_then(|notice_id| self.world.notices.get(notice_id))
+                    .map(|notice| notice.about.clone()),
+            }
+        });
+        let message = EngineMessage::LawStanding { notices, custody };
+        if self.last_law_standing.as_ref() != Some(&message) {
+            self.last_law_standing = Some(message.clone());
+            out.push(message);
+        }
     }
 
     /// `_send_sound_event` (`server.py:2166-2221`): the player's percept, the

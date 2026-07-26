@@ -9,14 +9,22 @@
 //! head-shake. Everything here is presentation: props reconcile from the
 //! authoritative snapshot exactly like the fan did (no command intent removes
 //! one), and the flights are keyed on world events the sim already emitted.
+//!
+//! One reach here is not a hand-over at all: custody's grip
+//! (`features/law_and_order.md` M4c). It borrows the same extended arm, but it
+//! is a *state* rather than a beat — the hand stays on the prisoner's upper arm,
+//! tracking them, until the law lets go.
 
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::{FRAC_PI_2, PI};
 
 use bevy::prelude::*;
+use cathedral_sim::custody::CUSTODY_REACH_M;
 
 use super::body::{self, BodyPoseState, BodySide, HandAnchor, OneShotGesture};
+use super::custody::PlayerCustodyState;
 use super::model::{ActorControl, ActorId, ActorSnapshot, ItemId, WorldMirror};
+use crate::controller::{PhysicalPosition, PlayerController};
 
 /// How long a hand-over prop flies giver-hand → recipient-hand (§6: ~0.3 s).
 const HANDOVER_FLIGHT_SECONDS: f64 = 0.3;
@@ -30,6 +38,16 @@ const PROP_IN_HAND_Y: f32 = -0.05;
 const HANDLESS_HAND_HEIGHT_M: f32 = 0.35;
 /// Where an untargeted "to anyone" offer aims: a point this far ahead.
 const OPEN_OFFER_AHEAD_M: f32 = 1.5;
+/// How far below the shoulder joint a hand lands when the law takes hold: the
+/// top of the upper arm, which is where somebody actually grips you — not the
+/// wrist, and not the chest a hand-over aims at (`law_and_order.md` M4c).
+const GRIP_BELOW_SHOULDER_M: f32 = 0.10;
+/// How far the pair may drift before a held arm gives up. Every way a hold ends
+/// *without* a world event — the sim's dead-man timer, a station's four
+/// minutes, an escort who left the city — leaves the two of them standing apart,
+/// and an arm cannot follow past its own length ([`CUSTODY_REACH_M`], with a
+/// pace of slack so an ordinary step never flickers it).
+const GRIP_BREAKS_AT_M: f32 = CUSTODY_REACH_M as f32 + 1.0;
 
 /// A renderer-only prop parented to one hand anchor.
 #[derive(Component, Debug, Clone, PartialEq)]
@@ -71,6 +89,47 @@ pub(crate) enum HandoverFeedback {
         buyer: ActorId,
         item: ItemId,
     },
+    /// `grab` (`law_and_order.md` M4c): the only reach in this file that is not
+    /// a beat. The holder's arm goes to the prisoner's upper arm and **stays**
+    /// there, tracking them, for as long as the law has hold.
+    TookHold { holder: ActorId, prisoner: ActorId },
+    /// `release` / `broke_free`: every hand comes off at once. The sim's hold is
+    /// refcounted per holder, but both of the events that reach here end the
+    /// custody itself, so there is no half-let-go to present.
+    HandsOff { prisoner: ActorId },
+}
+
+/// Who has a hand on whom, keyed on the holder — the presentation twin of the
+/// sim's `CustodyRecord::holders` (`law_and_order.md` M4c).
+///
+/// Unlike every other hand state in this file it is fed by events rather than
+/// reconciled from a snapshot, and that is forced: custody is projected to the
+/// host for the **player** only ([`PlayerCustodyState`]), so an officer taking
+/// hold of an NPC exists in no snapshot the mirror ever sees. The arm therefore
+/// learns of a grip from the `grab` world event, and lets go on `release`, on
+/// `broke_free`, or when the two of them are simply too far apart to be holding
+/// each other ([`GRIP_BREAKS_AT_M`]) — which is the backstop for the release
+/// paths the sim takes without saying anything (its dead-man timer, the station
+/// cap, arrival).
+#[derive(Resource, Debug, Default)]
+pub(crate) struct GripHolds {
+    by_holder: HashMap<ActorId, ActorId>,
+}
+
+impl GripHolds {
+    fn took_hold(&mut self, holder: &ActorId, prisoner: &ActorId) {
+        self.by_holder.insert(holder.clone(), prisoner.clone());
+    }
+
+    /// Every hand off one person. A holder with no hand on anybody leaves the
+    /// map entirely, so "is anybody being held" stays one `is_empty` call.
+    fn hands_off(&mut self, prisoner: &ActorId) {
+        self.by_holder.retain(|_, held| held != prisoner);
+    }
+
+    fn is_empty(&self) -> bool {
+        self.by_holder.is_empty()
+    }
 }
 
 /// The shared item-prop meshes and palette (moved out of the offer fan).
@@ -458,6 +517,7 @@ pub(crate) fn apply_handover_feedback(
     mirror: Res<WorldMirror>,
     assets: Res<ItemPropAssets>,
     mut feedback: MessageReader<HandoverFeedback>,
+    mut grips: ResMut<GripHolds>,
     props: Query<(Entity, &HeldProp, &GlobalTransform)>,
     anchors: Query<(&HandAnchor, &GlobalTransform)>,
     mut poses: Query<(&ActorId, &mut BodyPoseState)>,
@@ -496,8 +556,109 @@ pub(crate) fn apply_handover_feedback(
                 let face = chest_point(&mirror, vendor);
                 start_gesture_for(&mut poses, buyer, OneShotGesture::Nod, face, now);
             }
+            // The hold itself is stateful, so these two only move the register;
+            // the arm is aimed every frame by `hold_the_seized`, which is where
+            // a walking escort is tracked and a broken hold is noticed.
+            HandoverFeedback::TookHold { holder, prisoner } => {
+                grips.took_hold(holder, prisoner);
+            }
+            HandoverFeedback::HandsOff { prisoner } => {
+                grips.hands_off(prisoner);
+            }
         }
     }
+}
+
+/// The visible hand (`law_and_order.md` M4c): the holder's arm on the
+/// prisoner's upper arm, held there for as long as the law has hold of them.
+///
+/// It runs every frame while anybody is held, and only then — a grip has to
+/// track a prisoner being walked to a station, and the positions that are
+/// current between snapshots are the live body transforms the hot movement
+/// channel drives (`actors::drive_npc_bodies`), never the mirror's. The player
+/// has no body at all, so their own held arm is read from the controller's
+/// authoritative position, which is also what the tether clamps.
+///
+/// The two grip sources are deliberately different in kind: the player's comes
+/// from [`PlayerCustodyState`], which the sim republishes on every change and is
+/// therefore never stale, and the cast's from [`GripHolds`], which is all the
+/// host is told about an arrest it is not part of.
+pub(crate) fn hold_the_seized(
+    mut grips: ResMut<GripHolds>,
+    law: Option<Res<PlayerCustodyState>>,
+    mirror: Option<Res<WorldMirror>>,
+    player: Option<Single<&PhysicalPosition, With<PlayerController>>>,
+    bodies: Query<(&ActorId, &Transform)>,
+    mut poses: Query<(&ActorId, &mut BodyPoseState)>,
+    mut holding: Local<bool>,
+) {
+    let player_id = mirror.as_ref().and_then(|mirror| mirror.player_id().cloned());
+    let player_at = player.map(|position| position.current);
+    let mut aims: HashMap<ActorId, Vec3> = HashMap::new();
+
+    // The player's holders first: the sim's own word, and the case M4c exists
+    // for. Their prisoner is always the player.
+    if let Some(law) = law.as_ref()
+        && let Some(custody) = law.custody.as_ref().filter(|custody| custody.held)
+        && let Some(at) = player_at.map(upper_arm_of)
+    {
+        for holder in &custody.holder_ids {
+            aims.insert(holder.clone(), at);
+        }
+    }
+    // Then the cast's own arrests, dropping any pair that is no longer close
+    // enough to be holding each other at all.
+    if !grips.is_empty() {
+        let mut broken: Vec<ActorId> = Vec::new();
+        for (holder, prisoner) in &grips.by_holder {
+            let held_at = if Some(prisoner) == player_id.as_ref() {
+                player_at
+            } else {
+                body_position(&bodies, prisoner)
+            };
+            let holder_at = body_position(&bodies, holder);
+            match (holder_at, held_at) {
+                (Some(holder_at), Some(held_at))
+                    if holder_at.distance(held_at) <= GRIP_BREAKS_AT_M =>
+                {
+                    aims.insert(holder.clone(), upper_arm_of(held_at));
+                }
+                // Out of reach, or one of them is no longer rendered: either way
+                // there is no arm left to draw.
+                _ => broken.push(prisoner.clone()),
+            }
+        }
+        for prisoner in broken {
+            grips.hands_off(&prisoner);
+        }
+    }
+
+    // Sweeping every pose costs an iteration over the whole visible cast, so it
+    // happens only while a hold is live — and once more on the frame the last
+    // one ends, to put the arm down.
+    let any = !aims.is_empty();
+    if !any && !*holding {
+        return;
+    }
+    *holding = any;
+    for (actor_id, mut pose) in poses.iter_mut() {
+        pose.set_grip(aims.get(actor_id).copied());
+    }
+}
+
+/// The grip point on one body: just below the shoulder joint, in world space.
+fn upper_arm_of(position: Vec3) -> Vec3 {
+    position + Vec3::Y * (body::SHOULDER_Y - GRIP_BELOW_SHOULDER_M)
+}
+
+/// Where a body actually is this frame, from its own (parentless) root
+/// transform rather than the mirror snapshot the movement channel has already
+/// overtaken.
+fn body_position(bodies: &Query<(&ActorId, &Transform)>, id: &ActorId) -> Option<Vec3> {
+    bodies
+        .iter()
+        .find(|(actor_id, _)| *actor_id == id)
+        .map(|(_, transform)| transform.translation)
 }
 
 /// Chest height over an actor's mirror position — the gaze/flight fallback
@@ -947,5 +1108,117 @@ mod tests {
             vec![BodySide::Left],
             "the offered prop retires with its offer"
         );
+    }
+
+    /// The visible hand (`law_and_order.md` M4c). Unlike every other reach in
+    /// this file, a grip is not a beat: it goes onto the prisoner's upper arm,
+    /// *stays* there frame after frame, and comes off on the answering event —
+    /// or, for the release paths the sim takes silently, when the two of them
+    /// are no longer close enough to be holding each other at all.
+    #[test]
+    fn a_grip_holds_the_arm_until_the_law_lets_go() {
+        let standing = |world_revision: u64, apart_m: f32| WorldSnapshot {
+            world_revision,
+            player_id: ActorId("player".into()),
+            actors: vec![
+                {
+                    let mut player = actor("player", &[]);
+                    player.control = ActorControl::Player;
+                    player
+                },
+                actor("ashe", &[]),
+                {
+                    let mut thief = actor("thief", &[]);
+                    thief.position_m = Position::new(apart_m, 0.91, 0.0).unwrap();
+                    thief
+                },
+            ],
+            items: vec![],
+            offers: vec![],
+            road_carts: vec![],
+        };
+        let mut mirror = WorldMirror::default();
+        mirror.replace_snapshot(standing(1, 1.0)).unwrap();
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<Image>()
+            .add_message::<HandoverFeedback>()
+            .init_resource::<GripHolds>()
+            .insert_resource(mirror)
+            .add_systems(
+                Startup,
+                (
+                    setup_item_prop_assets,
+                    crate::smart_actors::body::setup_body_assets,
+                ),
+            )
+            .add_systems(
+                Update,
+                (
+                    reconcile_actor_views,
+                    apply_handover_feedback,
+                    hold_the_seized,
+                )
+                    .chain(),
+            );
+        app.update();
+
+        let grip_of = |app: &mut App, id: &str| -> Option<Vec3> {
+            let world = app.world_mut();
+            world
+                .query::<(&ActorId, &BodyPoseState)>()
+                .iter(world)
+                .find(|(actor_id, _)| actor_id.0 == id)
+                .and_then(|(_, pose)| pose.grip())
+        };
+        assert_eq!(grip_of(&mut app, "ashe"), None, "nobody is held yet");
+
+        app.world_mut().write_message(HandoverFeedback::TookHold {
+            holder: ActorId("ashe".into()),
+            prisoner: ActorId("thief".into()),
+        });
+        app.update();
+        let arm = Vec3::new(1.0, 0.91 + body::SHOULDER_Y - GRIP_BELOW_SHOULDER_M, 0.0);
+        assert_eq!(
+            grip_of(&mut app, "ashe"),
+            Some(arm),
+            "the hand lands just below the prisoner's shoulder"
+        );
+
+        // The whole point of M4c's hand: it is still there next frame, with no
+        // event to renew it.
+        app.update();
+        assert_eq!(grip_of(&mut app, "ashe"), Some(arm), "and it stays");
+        assert_eq!(grip_of(&mut app, "thief"), None, "the held arm is not theirs");
+
+        // An arm cannot follow past its own length: whatever ended this hold
+        // without saying so (the dead-man timer, a station's four minutes), the
+        // two of them standing apart ends the presentation of it.
+        app.world_mut()
+            .resource_mut::<WorldMirror>()
+            .replace_snapshot(standing(2, GRIP_BREAKS_AT_M + 1.0))
+            .unwrap();
+        app.update();
+        assert_eq!(grip_of(&mut app, "ashe"), None, "out of reach, so out of hand");
+
+        // And the ordinary path: `release` takes every hand off at once.
+        app.world_mut()
+            .resource_mut::<WorldMirror>()
+            .replace_snapshot(standing(3, 1.0))
+            .unwrap();
+        app.world_mut().write_message(HandoverFeedback::TookHold {
+            holder: ActorId("ashe".into()),
+            prisoner: ActorId("thief".into()),
+        });
+        app.update();
+        assert_eq!(grip_of(&mut app, "ashe"), Some(arm));
+        app.world_mut().write_message(HandoverFeedback::HandsOff {
+            prisoner: ActorId("thief".into()),
+        });
+        app.update();
+        assert_eq!(grip_of(&mut app, "ashe"), None, "the law let go");
     }
 }

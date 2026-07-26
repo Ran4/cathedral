@@ -165,6 +165,23 @@ enum Action {
         kind: StatusKind,
         value: f64,
     },
+    /// Stage an arrest (`features/law_and_order.md` M4): the named officer takes
+    /// somebody — the player unless a second handle is given — in charge for the
+    /// nearest station. The stand-in for a judgement that is deliberately an
+    /// LLM's, and which a scripted run therefore cannot reach: without it the
+    /// tether, the grab reflex and the strain meter cannot be looked at at all.
+    /// It goes through the same code a real `seize` does, minus that verb's four
+    /// preconditions.
+    Seize {
+        officer: String,
+        target: Option<String>,
+    },
+    /// Finish the escort at the Stone House (`features/law_and_order.md` M5).
+    /// `seize` alone only ever shows the walk, and the cell is the half of M5
+    /// worth looking at: the booking, the posted fee, the bell you are told you
+    /// go at, and what walking out of it costs. Goes through the same
+    /// `Custody::commit` and arrival announcement a real arrival does.
+    Commit { target: Option<String> },
     /// Force the sim-owned weather authority, or clear back to its timeline.
     Weather {
         kind: Option<WeatherKind>,
@@ -197,6 +214,14 @@ impl Action {
             Self::Status { name, kind, value } => {
                 format!("status {name} {}:{value}", kind.as_str())
             }
+            Self::Seize { officer, target } => match target {
+                Some(target) => format!("seize {officer} -> {target}"),
+                None => format!("seize {officer}"),
+            },
+            Self::Commit { target } => match target {
+                Some(target) => format!("commit {target}"),
+                None => "commit".into(),
+            },
             Self::Weather { kind: None, .. } => "weather timeline".into(),
             Self::Weather {
                 kind: Some(kind),
@@ -289,6 +314,10 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
         }
         "bell" => parse_bell(argument, statement),
         "status" => parse_status(argument, statement),
+        "seize" => parse_seize(argument, statement),
+        "commit" => Ok(Action::Commit {
+            target: (!argument.is_empty()).then(|| argument.to_string()),
+        }),
         "weather" => parse_weather(argument, statement),
         "tp" => {
             let numbers = argument
@@ -322,6 +351,35 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
         "wait-online" | "quit" => Err(format!("`{verb}` takes no argument, got `{statement}`")),
         _ => Err(format!("unknown action `{verb}` in `{statement}`")),
     }
+}
+
+/// `seize <officer>` — take the player — or `seize <officer> -> <target>`.
+///
+/// The arrow is not decoration. Both handles are free-form names the *engine*
+/// resolves (name first, then id, exactly as `status` does), and display names
+/// contain spaces — "Havise Ashe" — so there is no way to tell one handle from
+/// two by whitespace alone. `status` gets away with splitting on it because its
+/// trailing tokens are a known kind and a number; here they are neither, so the
+/// separator is explicit rather than guessed.
+fn parse_seize(argument: &str, statement: &str) -> Result<Action, String> {
+    let (officer, target) = match argument.split_once("->") {
+        Some((officer, target)) => (officer.trim(), Some(target.trim())),
+        None => (argument.trim(), None),
+    };
+    if officer.is_empty() {
+        return Err(format!(
+            "`seize` needs an officer's name or id, e.g. `seize Havise Ashe` or `seize p009x -> p0012`, got `{statement}`"
+        ));
+    }
+    if target.is_some_and(str::is_empty) {
+        return Err(format!(
+            "`seize`'s `->` needs somebody after it in `{statement}` (omit it entirely to take the player)"
+        ));
+    }
+    Ok(Action::Seize {
+        officer: officer.to_string(),
+        target: target.map(str::to_string),
+    })
 }
 
 /// `bell curfew` / `bell summons` / `bell knell <years>`. The knell's count is
@@ -460,6 +518,13 @@ enum Directive {
         kind: StatusKind,
         value: f64,
     },
+    Seize {
+        officer: String,
+        target: Option<String>,
+    },
+    Commit {
+        target: Option<String>,
+    },
     Weather {
         kind: Option<WeatherKind>,
         intensity: Option<f64>,
@@ -576,6 +641,8 @@ impl Scheduler {
             Action::Sound(sound_id) => Some(Directive::Sound(sound_id)),
             Action::Bell(pattern) => Some(Directive::Bell(pattern)),
             Action::Status { name, kind, value } => Some(Directive::Status { name, kind, value }),
+            Action::Seize { officer, target } => Some(Directive::Seize { officer, target }),
+            Action::Commit { target } => Some(Directive::Commit { target }),
             Action::Weather { kind, intensity } => Some(Directive::Weather { kind, intensity }),
             Action::Tp {
                 position,
@@ -782,6 +849,37 @@ fn run_drive_script(
             }
             None => drive_log(&format!(
                 "[drive] {now:.1}s warning: `status` needs smart actors"
+            )),
+        },
+        Some(Directive::Commit { target }) => match bridge.as_deref() {
+            Some(bridge) => {
+                if let Err(error) = bridge.try_send(BridgeCommand::DebugCommit {
+                    target: target.clone(),
+                }) {
+                    drive_log(&format!(
+                        "[drive] {now:.1}s warning: commit not sent: {error}"
+                    ));
+                }
+            }
+            None => drive_log(&format!(
+                "[drive] {now:.1}s warning: `commit` needs smart actors"
+            )),
+        },
+        Some(Directive::Seize { officer, target }) => match bridge.as_deref() {
+            // The same host→engine path `status` takes: a bridge command the
+            // engine applies to the sim (`EngineCommand::DebugSeize`).
+            Some(bridge) => {
+                if let Err(error) = bridge.try_send(BridgeCommand::DebugSeize {
+                    officer: officer.clone(),
+                    target: target.clone(),
+                }) {
+                    drive_log(&format!(
+                        "[drive] {now:.1}s warning: seize not sent: {error}"
+                    ));
+                }
+            }
+            None => drive_log(&format!(
+                "[drive] {now:.1}s warning: `seize` needs smart actors"
             )),
         },
         Some(Directive::Weather { kind, intensity }) => match bridge.as_deref() {

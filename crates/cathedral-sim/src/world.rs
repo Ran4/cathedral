@@ -138,6 +138,14 @@ pub struct World {
     /// `world_revision` bump: the player is meant to feel the city cooling,
     /// not read a wanted list.
     pub notices: crate::notices::Notices,
+    /// Everyone the law is holding (`law_and_order.md` M4/M5) — in charge on an
+    /// escort, or committed at a station. World state for the same reasons the
+    /// notices are: the prompt renders it, the behaviour ladder is guarded by it
+    /// and `go_to` is refused through it. Custody *is* published to the host,
+    /// but on its own hot channel ([`crate::engine::EngineMessage::LawStanding`])
+    /// rather than through the cold snapshot, because the tether it drives has
+    /// to be exact at 20 Hz.
+    pub custody: crate::custody::Custody,
     /// What each ward is saying to itself tonight (movement M6): the Night
     /// Office's ward batch returns a few sentences of mood, and every Minor of
     /// that ward carries it on their sheet until the next night rewrites it.
@@ -148,6 +156,16 @@ pub struct World {
     /// public snapshot: the player is meant to hear the mood in what people
     /// say, not read it off a panel.
     pub ward_moods: BTreeMap<crate::lore::PlanningWard, String>,
+    /// Who has spoken so far in the reply currently being applied, cleared by
+    /// the scheduler before each one.
+    ///
+    /// Exactly one verb reads it: `seize` (`law_and_order.md` M4), which may not
+    /// be wordless — a seizure with no `say` in the same turn reads as the game
+    /// stealing the controller. Everywhere else the same rule is prompt
+    /// guidance (turn.j2's "setting off in silence looks to them like being
+    /// ignored"); here it is worth enforcing, because this is the one verb that
+    /// takes the player's feet.
+    pub(crate) spoke_this_turn: Option<ActorId>,
     events: Vec<DomainEvent>,
 }
 
@@ -176,6 +194,8 @@ impl Default for World {
             places: PlaceRegistry::default(),
             needle_claim: None,
             notices: crate::notices::Notices::default(),
+            custody: crate::custody::Custody::default(),
+            spoke_this_turn: None,
             ward_moods: BTreeMap::new(),
             events: Vec::new(),
         }
@@ -226,6 +246,17 @@ impl World {
         self.characters
             .get(actor_id)
             .is_some_and(|actor| actor.state.presence == Presence::InCity)
+    }
+
+    /// Whoever this world's [`Control::Player`] is, when it has one. Resolved
+    /// from control rather than from the engine's configured id, so the sim
+    /// layer can answer "is this the one body I do not own the feet of?"
+    /// without being handed the answer ([`crate::custody`]).
+    pub fn player_id(&self) -> Option<&ActorId> {
+        self.characters
+            .iter()
+            .find(|(_, character)| character.control() == Control::Player)
+            .map(|(id, _)| id)
     }
 
     pub fn presence_epoch(&self, actor_id: &ActorId) -> Option<u64> {
@@ -308,18 +339,14 @@ impl World {
     /// (case-insensitive), then the actor **id** — the `id p006v` the HUD shows
     /// for strangers, also tolerating a pasted `p006v_ilse` lore stem by its id
     /// prefix. Returns `false` (and writes nothing) when nobody matches.
-    pub fn debug_set_status(&mut self, who: &str, kind: StatusKind, value: f64) -> bool {
-        let clamped = if value.is_finite() {
-            value.clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        // Debug tooling identifies a target by name or id (the sim proper only
-        // ever resolves ids). Name wins globally, then an exact id, then the id
-        // prefix of an `<id>_<name>` stem someone may have pasted.
+    /// Resolve a developer-supplied handle to a character.
+    ///
+    /// Debug tooling identifies a target by name or id (the sim proper only ever
+    /// resolves ids). Name wins globally, then an exact id, then the id prefix of
+    /// an `<id>_<name>` stem someone may have pasted off a prompt filename.
+    pub fn resolve_debug_handle(&self, who: &str) -> Option<ActorId> {
         let id_stem = who.split('_').next().unwrap_or(who);
-        let Some(id) = self
-            .characters
+        self.characters
             .values()
             .find(|character| character.name().eq_ignore_ascii_case(who))
             .or_else(|| {
@@ -329,7 +356,15 @@ impl World {
                 })
             })
             .map(|character| character.id().clone())
-        else {
+    }
+
+    pub fn debug_set_status(&mut self, who: &str, kind: StatusKind, value: f64) -> bool {
+        let clamped = if value.is_finite() {
+            value.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let Some(id) = self.resolve_debug_handle(who) else {
             return false;
         };
         if let Some(character) = self.characters.get_mut(&id) {

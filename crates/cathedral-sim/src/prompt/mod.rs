@@ -218,6 +218,21 @@ struct Sheet<'a> {
     lore_profile: Option<PromptLoreProfile<'a>>,
     back_story: &'a str,
     you_are: YouAre,
+    /// Being in the law's hands (`law_and_order.md` M4b′): who has you, where
+    /// you are being taken, and what would end it. Gated on the state exactly as
+    /// `has_notices`, `has_pockets` and `has_frontbutt` gate theirs — the sheet's
+    /// whole idiom is that *a prompt renders nothing for a situation you are not
+    /// in*, so somebody not in custody pays zero bytes and the frozen fixtures
+    /// do not move. A person being marched across the city by a sergeant can
+    /// afford four lines about it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    you_are_held: Option<String>,
+    /// The other side of the same fact: whom this officer has taken, where they
+    /// are walking them, and whether a hand is on the arm. Without it `release`
+    /// and `grab` have no id to name — the verbs would be listed and unusable —
+    /// and an officer could not answer "who is that you have there?".
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    you_have_in_charge: Vec<String>,
     /// The actor's own daily timetable, one line per leg, as the round seeded
     /// it ([`crate::character::CharacterState::daily_round`]) — so "where will
     /// you be tomorrow?" is answered from the sheet, not improvised. Omitted
@@ -502,6 +517,19 @@ pub fn render_prompt(
                 .is_some_and(|item| world.item_catalog.size(item) == crate::item::ItemSize::Palmable)
         });
     let has_frontbutt = actor.has_body_slot(crate::character::BodySlot::Frontbutt);
+    // `grab` is rendered only to somebody who actually has a person in charge —
+    // it is the officer's deliberate counterpart to the host-side reflex, not a
+    // verb the whole law cast carries around. `struggle` is rendered only to
+    // somebody a hand is actually on (M4d), and `you_are_held` explains it.
+    let is_held = world.custody.is_held(actor_id);
+    // Keeping is wider than having *taken* (M4e/M5b), and it is one concept, not
+    // two: the Stone House's keeper is nobody's officer of record — the eight
+    // the city was already holding have none — so a flag built on
+    // `Custody::prisoners_of` misses the one person whose whole job this is,
+    // while the roster, the paragraph, `grab` and the posted fee all want the
+    // same answer. `custody::kept_by` gives it once, and `in_charge_lines` reads
+    // the very same list, so the sheet cannot offer a verb it has no id for.
+    let has_custody = crate::custody::keeps_anyone(world, actor_id);
     let sheet_md = sheet_markdown(&sheet, &env.strings);
     let emittable_sounds = world.sound_catalog.emittable_sound_ids().join(", ");
 
@@ -517,6 +545,9 @@ pub fn render_prompt(
                 has_notices,
                 has_law_verbs,
                 has_settle_verb,
+                has_custody,
+                is_held,
+                gaol_fee => gaol_fee_phrase(),
                 has_pockets,
                 has_frontbutt,
             })
@@ -912,6 +943,8 @@ fn build_sheet<'a>(
                 z: position.z,
             },
         },
+        you_are_held: held_line(world, actor.id()),
+        you_have_in_charge: in_charge_lines(world, actor),
         your_round: actor.state.daily_round.iter().map(String::as_str).collect(),
         the_ward_says: actor
             .lore()
@@ -965,6 +998,126 @@ fn build_sheet<'a>(
         the_only_languages_you_know: &strings.languages,
         current_goal: actor.goal(),
     }
+}
+
+/// The posted gaol fee, as a keeper would say it aloud. One function, so the
+/// keeper's paragraph and the prisoner's `you_are_held` line cannot come to
+/// disagree about the number or about how to count it — *"gaol fees are fixed
+/// publicly; inventing a fee is extortion"*, and two spellings of one fee is a
+/// small way of inventing one.
+fn gaol_fee_phrase() -> String {
+    let sparks = crate::custody::GAOL_FEE_SPARKS;
+    if sparks == 1 {
+        "one spark".to_string()
+    } else {
+        format!("{sparks} sparks")
+    }
+}
+
+/// The `you_are_held` section (`law_and_order.md` M4b′), or `None` — which is
+/// everybody, nearly always. Three facts and no more: who has you, where you
+/// are being taken, and what would end it. The last one is not decoration: a
+/// brand with a visible door is a story and a brand with no door is a bug, and
+/// the same promise the player's HUD line makes is owed to the cast.
+fn held_line(world: &World, actor_id: &ActorId) -> Option<String> {
+    let record = world.custody.get(actor_id)?;
+    let who = record
+        .officer
+        .as_ref()
+        .and_then(|officer| world.characters.get(officer))
+        .map(|officer| {
+            if world.characters[actor_id].knows().contains(officer.id()) {
+                officer.name().to_string()
+            } else {
+                format!("someone who serves the law (id {})", officer.id())
+            }
+        });
+    let mut line = match (&who, record.state) {
+        (Some(who), crate::custody::Confinement::InCharge) => format!(
+            "{who} has you in charge and is walking you to {}",
+            record.station.name
+        ),
+        (Some(who), crate::custody::Confinement::Committed) => format!(
+            "{who} brought you to {}, and here you are kept",
+            record.station.name
+        ),
+        (None, _) => format!("you are held at {}", record.station.name),
+    };
+    if record.is_held() {
+        line.push_str("; a hand is on your arm, and struggle is the only way out of that");
+    }
+    match record
+        .notice_id
+        .and_then(|notice_id| world.notices.get(notice_id))
+    {
+        // What would free you, always named. Restitution settles the word and
+        // the word is what holds you; an officer may also simply let you go.
+        Some(notice) => line.push_str(&format!(
+            ". The word against you is notice {} — {}. Settling that word, or the law choosing to let you go, is what ends this",
+            notice.id,
+            notice.line()
+        )),
+        None => line.push_str(
+            ". Only the law choosing to let you go ends this; ask them what it would take",
+        ),
+    }
+    // The fee is posted on the wall, so the prisoner can read it as plainly as
+    // the keeper can quote it — that is the whole point of a public fee, and it
+    // is what keeps "what would end this" from being a mystery box. It buys
+    // nothing by itself: the keeper still chooses (M3.5's bribery-by-omission).
+    line.push_str(&format!(
+        ". The posted gaol fee is {}; offering it to whoever keeps you is the plain way to ask, though taking it and freeing you is still their choice, and somebody who knows you and will come and speak for you does as well",
+        gaol_fee_phrase()
+    ));
+    // The sentence, stated in the clock everything else in this world is stated
+    // in (M5c) — and in the Stone House the bell that ends it rings directly
+    // overhead, which is what makes it a clock you are serving time against
+    // rather than a number on a screen.
+    if let Some(office) = record.sentence_office {
+        line.push_str(&format!(
+            ". You were told you go at {}; the bell rings over this very roof",
+            office.label()
+        ));
+    }
+    Some(line)
+}
+
+/// The officer's side of custody: one bullet per person they have taken, each
+/// carrying the id `release` and `grab` need. Empty — so the section vanishes —
+/// for everyone who has taken nobody, which is the whole city.
+fn in_charge_lines(world: &World, actor: &Character) -> Vec<String> {
+    // `custody::kept_by`, not `Custody::prisoners_of`: the Stone House's keeper
+    // took nobody and holds nobody — the eight the city was already holding have
+    // no arresting officer — so the roster has to be "whom am I keeping", which
+    // is the same predicate `is_keeper` gates the paragraph on.
+    crate::custody::kept_by(world, actor.id())
+        .into_iter()
+        .filter_map(|prisoner_id| {
+            let record = world.custody.get(&prisoner_id)?;
+            let prisoner = world.characters.get(&prisoner_id)?;
+            let who = if actor.knows().contains(prisoner.id()) {
+                format!("{} (id {prisoner_id})", prisoner.name())
+            } else {
+                format!("a stranger (id {prisoner_id})")
+            };
+            let where_to = match record.state {
+                crate::custody::Confinement::InCharge => {
+                    format!("walking to {}", record.station.name)
+                }
+                crate::custody::Confinement::Committed => {
+                    format!("kept at {}", record.station.name)
+                }
+            };
+            let grip = if record.holders.contains(actor.id()) {
+                " — you have hold of their arm"
+            } else if record.is_held() {
+                " — somebody else has hold of them"
+            } else {
+                " — nobody has hold of them; they walk of their own accord"
+            };
+            Some(format!("{who} — {where_to}{grip}"))
+        })
+        .collect()
 }
 
 /// Where units of one held stack ride, as the `you_hold` suffix — `in your
@@ -1073,6 +1226,20 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
     sections.push(you_line(sheet, strings));
     sections.push(format!("**back_story** — {}", sheet.back_story));
     sections.push(you_are_line(&sheet.you_are, strings));
+
+    // Being in the law's hands sits directly under `you_are`, because it is the
+    // most urgent fact about where this body is and what it may do. Omitted
+    // entirely for everybody else, so no other sheet moves a byte.
+    if let Some(held) = &sheet.you_are_held {
+        sections.push(format!("**you_are_held** — {held}"));
+    }
+    if !sheet.you_have_in_charge.is_empty() {
+        sections.push(bullet_section(
+            "**you_have_in_charge**",
+            sheet.you_have_in_charge.iter().map(String::clone),
+            "",
+        ));
+    }
 
     if !sheet.your_round.is_empty() {
         // Numbered from 1, because `set_round` names a leg by its number and
@@ -1571,6 +1738,8 @@ mod tests {
                     z: 0.0,
                 },
             },
+            you_are_held: None,
+            you_have_in_charge: Vec::new(),
             your_round: Vec::new(),
             the_ward_says: None,
             places_you_know: Vec::new(),

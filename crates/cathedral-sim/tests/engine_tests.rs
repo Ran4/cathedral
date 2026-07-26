@@ -2656,3 +2656,363 @@ fn the_gut_forms_a_stool_on_the_clock_and_expel_clears_the_urgency() {
     engine.poll(22.0, Vec::new());
     assert_eq!(urgency(&engine), None);
 }
+
+/// `law_and_order.md` M5b: the hold ceiling is a **soft-lock guard**, not a
+/// sentence, so it must never empty the room the Stone House exists to fill.
+///
+/// `Custody::seed_inmate` stamps `committed_at: Some(0.0)`, so without the
+/// `!record.authored` term in `Engine::tick_custody` every one of the eight the
+/// city was already holding is freed with *"the keeper wants the room"* six real
+/// minutes into every single run — the whole milestone looking like it works and
+/// then silently deleting itself, which is exactly the failure the M4 drive run
+/// caught once already. The cap still fires for somebody the law actually put
+/// there, which is the case it was written for.
+#[test]
+fn the_hold_ceiling_frees_an_arrest_and_never_the_authored_cell() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+
+    let gaol = cathedral_sim::custody::Station {
+        place_id: cathedral_sim::PlaceId::from_raw("pl_ston"),
+        name: cathedral_sim::custody::STONE_HOUSE_PLACE_NAME.into(),
+        point: Vec3::new(0.0, WALK_Y, 111.0),
+        stone_house: true,
+    };
+    let inmate = ActorId::from_raw("cb947");
+    let arrested = ActorId::from_raw("sv3n1");
+    {
+        let world = harness.engine.world_mut();
+        world.custody.seed_inmate(inmate.clone(), gaol.clone());
+        world
+            .custody
+            .seize(arrested.clone(), ActorId::from_raw("k0fb1"), None, gaol.clone(), 0.0);
+        world.custody.commit(&arrested, 0.0);
+    }
+
+    // Well inside the ceiling: both still held.
+    harness.now = cathedral_sim::custody::STONE_HOUSE_HOLD_SECONDS - 1.0;
+    harness.poll();
+    assert!(harness.engine.world().custody.holds(&inmate));
+    assert!(harness.engine.world().custody.holds(&arrested));
+
+    // Past it: the arrest drains, the standing population does not.
+    harness.now = cathedral_sim::custody::STONE_HOUSE_HOLD_SECONDS + 1.0;
+    harness.poll();
+    assert!(
+        !harness.engine.world().custody.holds(&arrested),
+        "the ceiling is a real backstop for somebody the law put here"
+    );
+    assert!(
+        harness.engine.world().custody.holds(&inmate),
+        "the eight are the standing population, not an arrest waiting out a clock"
+    );
+
+    // And far past it, still: this is not a slow leak either.
+    harness.now = cathedral_sim::custody::STONE_HOUSE_HOLD_SECONDS * 5.0;
+    harness.poll();
+    assert!(harness.engine.world().custody.holds(&inmate));
+    assert!(harness.engine.world().custody.is_confined(&inmate));
+}
+
+/// `law_and_order.md` M5c: **confiscation is narrow — only `WardNotice.taken`.**
+/// M3.5 already models the specific stolen thing and returning it settles the
+/// word by itself, so the gaol taking it back is the same fact arriving by the
+/// other road. A general inventory sweep is a rage mechanic and it would fight
+/// the offer machinery the fee is paid through, so the bread and the coins stay
+/// exactly where they were — which is also what keeps *paying* possible.
+#[test]
+fn commitment_takes_the_named_thing_and_nothing_else() {
+    // A real nav, because arriving is `custody::follow_escorts` inside
+    // `tick_movement` — the same path a compliant walk to a station ends in.
+    let mut engine = Engine::new(
+        EngineConfig {
+            nav: Some(real_nav()),
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player");
+
+    let thief = ActorId::from_raw("cb947");
+    let officer = ActorId::from_raw("k0fb1");
+    let knife = ItemId::from_raw("knife");
+    let bread = ItemId::from_raw("loaf");
+    {
+        let world = engine.world_mut();
+        world.add_item(cathedral_sim::Item::new(knife.clone(), "knife"));
+        world.add_item(cathedral_sim::Item::new(bread.clone(), "bread"));
+        world.characters.get_mut(&thief).unwrap().state.holds =
+            vec![knife.clone(), bread.clone()];
+        let notice = world
+            .notices
+            .raise(
+                "a stranger in a grey hood".into(),
+                "took a knife off the board".into(),
+                None,
+                None,
+                None,
+                officer.clone(),
+                Some(thief.clone()),
+                None,
+                Some(knife.clone()),
+            )
+            .expect("the ward has room for one word");
+        let gaol = cathedral_sim::custody::Station {
+            place_id: cathedral_sim::PlaceId::from_raw("pl_ston"),
+            name: cathedral_sim::custody::STONE_HOUSE_PLACE_NAME.into(),
+            // The keeper is standing in it, which is what a station is: the
+            // escort walks the prisoner to their shoulder and that is arrival.
+            point: world.characters[&officer].position_m(),
+            stone_house: true,
+        };
+        world
+            .custody
+            .seize(thief.clone(), officer.clone(), Some(notice), gaol, 0.0);
+    }
+    engine.poll(0.0, Vec::new());
+    engine.poll(1.0, Vec::new());
+
+    let world = engine.world();
+    assert!(
+        world.custody.is_confined(&thief),
+        "they walked in and the escort ended"
+    );
+    assert_eq!(
+        world.characters[&thief].holds(),
+        std::slice::from_ref(&bread),
+        "exactly the named thing is lifted; the bread is theirs and stays theirs"
+    );
+    assert!(
+        world.characters[&officer].holds().contains(&knife),
+        "and it is held by the keeper, not voided into the building"
+    );
+
+    // Booked as a description and never a name — nobody in this city knows them.
+    let inbox = world.characters[&officer].inbox().to_vec();
+    assert!(
+        inbox
+            .iter()
+            .any(|line| line.contains("book as a stranger in a grey hood")),
+        "the keeper's book reads the ward's own words: {inbox:?}"
+    );
+    assert!(
+        !inbox.iter().any(|line| line.contains("Conny")),
+        "and never their name: {inbox:?}"
+    );
+    // And the sentence is stated in the city's own clock, not in seconds.
+    let record = world.custody.get(&thief).unwrap();
+    assert!(
+        record.sentence_office.is_some(),
+        "the Stone House says a bell out loud"
+    );
+    assert!(
+        world.characters[&thief]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("you go at")),
+        "and the prisoner was told it: {:?}",
+        world.characters[&thief].inbox()
+    );
+}
+
+/// M5d: the fifth door, and the one that costs. Confinement here is a keeper at
+/// a threshold — the Stone House's own lock is broken, which is Ede Clove's
+/// authored goal — so walking out is possible, and it compounds into the same
+/// unanswerable word the struggle raises: no `wronged`, no `taken`, so no
+/// restitution can reach it and only a law officer's `settle_notice` ever ends
+/// it. That is what closes the "you could have just paid the fee" door.
+#[test]
+fn walking_out_of_the_cell_buys_a_word_no_payment_answers() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+
+    let prisoner = ActorId::from_raw("cb947");
+    let officer = ActorId::from_raw("k0fb1");
+    let cell = {
+        let world = harness.engine.world_mut();
+        let cell = world.characters[&prisoner].position_m();
+        let gaol = cathedral_sim::custody::Station {
+            place_id: cathedral_sim::PlaceId::from_raw("pl_ston"),
+            name: cathedral_sim::custody::STONE_HOUSE_PLACE_NAME.into(),
+            point: cell,
+            stone_house: true,
+        };
+        world
+            .custody
+            .seize(prisoner.clone(), officer.clone(), None, gaol, 0.0);
+        world.custody.commit(&prisoner, 0.0);
+        cell
+    };
+    let live_before = harness.engine.world().notices.live().len();
+
+    // Standing at the back wall is not leaving — this is why the roam is the
+    // leash and not the four-metre arrival radius.
+    harness.engine.world_mut().characters.get_mut(&prisoner).unwrap().state.position_m =
+        Vec3::new(cell.x + 5.0, cell.y, cell.z);
+    harness.now = 1.0;
+    harness.poll();
+    assert!(harness.engine.world().custody.holds(&prisoner), "still inside");
+
+    // Out through the doorway, and the ward hears of it.
+    harness.engine.world_mut().characters.get_mut(&prisoner).unwrap().state.position_m =
+        Vec3::new(cell.x + 12.0, cell.y, cell.z);
+    harness.now = 2.0;
+    harness.poll();
+
+    let word = {
+        let world = harness.engine.world();
+        assert!(!world.custody.holds(&prisoner), "nobody's hand is on them");
+        assert_eq!(world.notices.live().len(), live_before + 1);
+        world.notices.live().last().unwrap().clone()
+    };
+    assert_eq!(word.accused.as_ref(), Some(&prisoner));
+    assert!(
+        word.wronged.is_none() && word.taken.is_none(),
+        "structurally unanswerable by restitution: {word:?}"
+    );
+    // The proof of that, rather than the assertion of it: the two settlements
+    // no verb can reach both come up empty.
+    assert!(
+        cathedral_sim::notices::settle_on_return(
+            harness.engine.world_mut(),
+            &prisoner,
+            &officer,
+            &ItemId::from_raw("anything"),
+        )
+        .is_empty(),
+        "no returned thing answers a word that names none"
+    );
+    // …and the one door that does is a person choosing it.
+    assert!(
+        harness
+            .engine
+            .world_mut()
+            .notices
+            .settle(word.id)
+            .is_some(),
+        "only the law can end this one"
+    );
+}
+
+/// M5c: *"the sentence is stated in the game's own clock — 'you go at
+/// Lamplight' — because everything else in the sim is."* So it has to be true:
+/// the bell that was named is the bell that frees you, and the six-minute
+/// ceiling is only the backstop for a bell that is 8.5 real minutes off.
+///
+/// Both doors are here because whichever comes first must win — a diegetic
+/// promise the ceiling silently pre-empted would be a lie, and a ceiling the
+/// bell could outlast would be a soft-lock.
+#[test]
+fn the_sentence_is_the_next_bell_and_the_ceiling_catches_the_far_ones() {
+    // A near bell: 60 real seconds per game day makes every office a few real
+    // seconds away, so the promise comes due long before the ceiling.
+    let mut engine = Engine::new(
+        EngineConfig {
+            clock: WorldClock::new(60.0, Office::Watch, 0, 0.05),
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player");
+    engine.poll(0.0, Vec::new());
+
+    let prisoner = ActorId::from_raw("cb947");
+    let officer = ActorId::from_raw("k0fb1");
+    let gaol = |point: Vec3| cathedral_sim::custody::Station {
+        place_id: cathedral_sim::PlaceId::from_raw("pl_ston"),
+        name: cathedral_sim::custody::STONE_HOUSE_PLACE_NAME.into(),
+        point,
+        stone_house: true,
+    };
+    let cell = engine.world().characters[&prisoner].position_m();
+    {
+        let world = engine.world_mut();
+        world
+            .custody
+            .seize(prisoner.clone(), officer.clone(), None, gaol(cell), 0.0);
+    }
+    // Commit through the engine's own path, so the bell is stamped the way a
+    // real arrival stamps it.
+    engine.world_mut().characters.get_mut(&prisoner).unwrap().state.position_m = cell;
+    engine.poll(0.5, Vec::new());
+    engine.world_mut().custody.commit(&prisoner, 0.5);
+    // The stamp happens in `announce_commitment`; do it the same way the escort
+    // does, by asking the engine to say the arrival out loud.
+    let office = engine
+        .world()
+        .current_time
+        .expect("the clock is running")
+        .next_bell()
+        .0;
+    {
+        let world = engine.world_mut();
+        let record = world.custody.get_mut(&prisoner).unwrap();
+        record.sentence_office = Some(office);
+        record.sentence_due_game_days = Some(
+            world
+                .current_time
+                .expect("the clock is running")
+                .next_bell()
+                .1,
+        );
+    }
+
+    // Well before the bell — and well before the ceiling — they are still kept.
+    engine.poll(1.0, Vec::new());
+    assert!(engine.world().custody.holds(&prisoner));
+
+    // The bell rings, far inside the six minutes, and the promise is kept.
+    engine.poll(60.0, Vec::new());
+    assert!(
+        !engine.world().custody.holds(&prisoner),
+        "the sentence was stated in the city's clock, so the city's clock ends it"
+    );
+    assert!(
+        engine.world().characters[&prisoner]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("your time is served")),
+        "and they are told why: {:?}",
+        engine.world().characters[&prisoner].inbox()
+    );
+
+    // The other half: with no bell stamped at all — a gate arch, where the
+    // honest answer is "when the keeper says" — the real-time ceiling is the
+    // only door, and it still closes.
+    let mut harness = Builder::default().build();
+    harness.ready();
+    harness
+        .engine
+        .world_mut()
+        .custody
+        .seize(prisoner.clone(), officer.clone(), None, gaol(cell), 0.0);
+    harness.engine.world_mut().custody.commit(&prisoner, 0.0);
+    harness.now = cathedral_sim::custody::STONE_HOUSE_HOLD_SECONDS + 1.0;
+    harness.poll();
+    assert!(
+        !harness.engine.world().custody.holds(&prisoner),
+        "no promise was made, so the ceiling is the whole of it"
+    );
+}

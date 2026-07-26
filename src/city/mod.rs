@@ -2824,6 +2824,7 @@ fn build_named_details(
     collision_world: &mut CollisionWorld,
 ) {
     build_bellstand_belfry(commands, meshes, materials, collision_world);
+    build_stone_house(commands, meshes, materials, collision_world);
     build_saint_maren_tower(commands, meshes, materials, collision_world);
     build_parish_towers(commands, meshes, materials, plan, collision_world);
     build_old_sluice_face(commands, meshes, materials);
@@ -2832,6 +2833,259 @@ fn build_named_details(
     build_ropewalk(commands, meshes, materials);
     build_osanne_stall(commands, meshes, materials, collision_world);
     build_wharf_cranes(commands, meshes, materials);
+}
+
+/// The Stone House (`features/law_and_order.md` M5a) — the civic gaol, in the
+/// side court behind the Bellstand square and at the foot of the watch-bell
+/// tower.
+///
+/// The name is older than the building. `lore/core_lore/secular_government.md`
+/// puts the first Stone House by the River Gate; it was condemned in the
+/// Hammering and custody moved to the watch's own yard, and the old still call
+/// this one by the old name. The gameplay argument is the same one M2 and M4
+/// make about every station: the bench is *already posted here*
+/// (`rounds.json: workplaces["bailiff_and_gaoler"] = ["Bellstand watch-bell
+/// tower"]`), so guards and gaol in one yard costs nothing, escorts stay short,
+/// and a prisoner told they go at Lamplight hears the Scold ring Lamplight over
+/// their own head.
+///
+/// **It is a room, not a mass.** Only the walls are colliders, so the nav bake —
+/// which erodes the exported collider footprints rather than the plan
+/// (`scripts/bake_navigation.py::build_walkable`) — leaves the interior walkable
+/// and joins it to the city through the doorway. That matters twice: the eight
+/// authored inmates stand on real graph inside it (M5b), and an escort can walk
+/// somebody in. It is therefore deliberately *not* an entry in
+/// `lore/places/ombreval_buildings.json`'s `buildings` array, which would render
+/// a solid block; only its `named_place_index` anchor is authored there, which
+/// is what gives it the `pl_` id `custody::stone_house` resolves.
+///
+/// The door has no leaf. Ede Clove's authored goal is *"Replace a broken stone
+/// house lock"*, so the lock is broken in the shipped world state — which is
+/// both the lore and the requirement, since a solid leaf would cut the interior
+/// out of the walkable main component and strand everyone in it. You are
+/// confined by a person here, exactly as at a gate arch; what the Stone House
+/// adds is a room worth staying in.
+fn build_stone_house(
+    commands: &mut Commands,
+    meshes: &CityMeshes,
+    materials: &CityMaterials,
+    collision_world: &mut CollisionWorld,
+) {
+    // The court behind the tower is open ground from x 30 to about x 60 between
+    // z -211 and z -203, and this rectangle fills the middle of it: 3.5 m clear
+    // of the nearest building (`omb_f0097`, a rotated parcel to the south-east),
+    // 1.7 m off the tower's own south face, and leaving the court walkable down
+    // both flanks — x 30-39 toward Step Cistern, x 50-60 toward the yard — so
+    // nothing that used to be a way through stops being one.
+    //
+    // It does stand on part of `harne_road`'s nominal carriageway: that road is
+    // one long diagonal from (25.8, -174) to (56, -252), and its centreline
+    // clips the west wall around z -208. That is normal in this plan rather than
+    // a mistake — `scripts/bake_navigation.py` says so in as many words ("a road
+    // centreline is a schematic hint, not gospel: several cut straight through a
+    // solid building"), validates every graph edge against the walkable bitset
+    // and re-routes the blocked ones with a windowed A*. The rebake did exactly
+    // that here: the street graph came back as one component, and the court's two
+    // flanks are what carry the traffic past.
+    let (x0, x1) = (39.0_f32, 50.0_f32);
+    let (z0, z1) = (-211.2_f32, -203.2_f32);
+    let thickness = 0.7_f32;
+    let wall_top = 4.4_f32;
+    // The doorway, in the wall that faces the court and the way round to the
+    // Bellstand square. 1.6 m wide, so the agent-radius erosion still leaves
+    // 0.9 m of walkable throat and the room joins the main component.
+    let (door_z0, door_z1) = (-207.6_f32, -206.0_f32);
+    let door_top = 2.3_f32;
+
+    let mut wall = |a: Vec3, b: Vec3, name: &str| {
+        let center = (a + b) * 0.5;
+        let size = (b - a).abs();
+        spawn_box_named(commands, meshes, &materials.fieldstone, center, size, name);
+        collision_world.add_box(a.min(b), a.max(b));
+    };
+
+    // The two long walls, and the short one at the back.
+    wall(
+        Vec3::new(x1 - thickness, 0.0, z0),
+        Vec3::new(x1, wall_top, z1),
+        "Stone House wall",
+    );
+    wall(
+        Vec3::new(x0 + thickness, 0.0, z0),
+        Vec3::new(x1 - thickness, wall_top, z0 + thickness),
+        "Stone House wall",
+    );
+    wall(
+        Vec3::new(x0 + thickness, 0.0, z1 - thickness),
+        Vec3::new(x1 - thickness, wall_top, z1),
+        "Stone House wall",
+    );
+    // The court wall, in two pieces around the door.
+    wall(
+        Vec3::new(x0, 0.0, z0),
+        Vec3::new(x0 + thickness, wall_top, door_z0),
+        "Stone House wall",
+    );
+    wall(
+        Vec3::new(x0, 0.0, door_z1),
+        Vec3::new(x0 + thickness, wall_top, z1),
+        "Stone House wall",
+    );
+    // The lintel over the doorway sits above head height, so it is absent from
+    // the walk-band export and the throat below it stays open.
+    wall(
+        Vec3::new(x0, door_top, door_z0),
+        Vec3::new(x0 + thickness, wall_top, door_z1),
+        "Stone House lintel",
+    );
+
+    // Trodden flags. Visual only: a floor collider inside the walk band would
+    // be exported as a footprint and would blot the whole room off the graph.
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.paving,
+        Vec3::new(
+            (x0 + x1) * 0.5,
+            0.02,
+            (z0 + z1) * 0.5,
+        ),
+        Vec3::new(x1 - x0 - thickness * 2.0, 0.08, z1 - z0 - thickness * 2.0),
+        "Stone House floor",
+    );
+
+    // A shallow slate roof on a limestone eaves band, both clear of the walk
+    // band and therefore invisible to the nav bake.
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.limestone,
+        Vec3::new((x0 + x1) * 0.5, wall_top + 0.2, (z0 + z1) * 0.5),
+        Vec3::new(x1 - x0 + 0.5, 0.4, z1 - z0 + 0.5),
+        "Stone House eaves",
+    );
+    collision_world.add_box(
+        Vec3::new(x0 - 0.25, wall_top, z0 - 0.25),
+        Vec3::new(x1 + 0.25, wall_top + 0.4, z1 + 0.25),
+    );
+    let ridge = wall_top + 1.9;
+    for sz in [-1.0_f32, 1.0] {
+        let pitch = 0.42_f32 * sz;
+        spawn_mesh_named(
+            commands,
+            &meshes.cube,
+            &materials.slate,
+            Transform::from_translation(Vec3::new(
+                (x0 + x1) * 0.5,
+                (wall_top + 0.4 + ridge) * 0.5,
+                (z0 + z1) * 0.5 + sz * (z1 - z0) * 0.25,
+            ))
+            .with_rotation(Quat::from_rotation_x(pitch))
+            .with_scale(Vec3::new(x1 - x0 + 0.6, 0.24, (z1 - z0) * 0.58)),
+            "Stone House roof",
+        );
+    }
+
+    // The barred grate beside the door — where kin stand to pass in bread and a
+    // blanket, and M5d's visitors talk through. The wall behind it is one
+    // unbroken collider, so it is a window to look through and not a way out.
+    // Everything here has to sit **proud of the court face** (x = x0): the wall
+    // is one solid box from x0 to x0 + thickness, so anything at or inside that
+    // face is buried in masonry and simply never renders.
+    let grate_z = -204.8_f32;
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.window_room,
+        Vec3::new(x0 - 0.02, 1.7, grate_z),
+        Vec3::new(0.1, 1.0, 1.1),
+        "Stone House grate recess",
+    );
+    for offset in [-0.44_f32, -0.22, 0.0, 0.22, 0.44] {
+        spawn_box_named(
+            commands,
+            meshes,
+            &materials.iron,
+            Vec3::new(x0 - 0.1, 1.7, grate_z + offset),
+            Vec3::new(0.1, 1.05, 0.07),
+            "Stone House grate bar",
+        );
+    }
+
+    // The door itself: a heavy oak leaf standing open against the jamb, and the
+    // hasp Ede Clove has been meaning to replace all year.
+    // Thin across the wall and wide along it, standing open flat against the
+    // jamb on the court side — a leaf modelled thin along z would lie *in* the
+    // doorway, and one at x0 would be inside the wall.
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.dark_wood,
+        Vec3::new(x0 - 0.09, door_top * 0.5, door_z0 - 0.82),
+        Vec3::new(0.16, door_top - 0.1, 1.5),
+        "Stone House door",
+    );
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.iron,
+        Vec3::new(x0 - 0.12, 1.15, door_z1 + 0.06),
+        Vec3::new(0.12, 0.16, 0.34),
+        "Stone House broken hasp",
+    );
+    // A lantern that burns whatever the hour, as at the Bellfoot.
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.iron,
+        Vec3::new(x0 - 0.18, 2.75, door_z1 + 0.4),
+        Vec3::new(0.5, 0.08, 0.08),
+        "Stone House lantern bracket",
+    );
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.lantern_glass,
+        Vec3::new(x0 - 0.42, 2.55, door_z1 + 0.4),
+        Vec3::new(0.26, 0.34, 0.26),
+        "Stone House lantern",
+    );
+
+    // **The keeper's lamp, inside.** The lore is explicit that a prisoner is
+    // given nothing — no bedding, no rations, *no candle*, because families
+    // bring those — so nothing here belongs to the people held in it. This is
+    // the keeper's own light at her threshold, and it is the difference between
+    // a room and a hole: the whole of M5's argument is that the gaol is the
+    // densest social scene in the game, and eight faces you cannot see are not
+    // a scene. Warm, low and short-ranged, so the corners stay dark.
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.iron,
+        Vec3::new(x0 + thickness + 0.24, 2.5, door_z1 + 0.5),
+        Vec3::new(0.5, 0.07, 0.07),
+        "Stone House keeper's lamp bracket",
+    );
+    spawn_box_named(
+        commands,
+        meshes,
+        &materials.lantern_glass,
+        Vec3::new(x0 + thickness + 0.46, 2.32, door_z1 + 0.5),
+        Vec3::new(0.24, 0.3, 0.24),
+        "Stone House keeper's lamp",
+    );
+    commands.spawn((
+        Name::new("Stone House keeper's lamp glow"),
+        PointLight {
+            color: Color::srgb(1.0, 0.66, 0.32),
+            intensity: 26_000.0,
+            range: 13.0,
+            radius: 0.12,
+            shadow_maps_enabled: false,
+            ..default()
+        },
+        Transform::from_xyz(x0 + thickness + 0.5, 2.3, door_z1 + 0.5),
+    ));
 }
 
 /// A cast bronze bell assembled from primitives, mouth down, hung from a
@@ -7893,7 +8147,7 @@ mod tests {
         // The Lanthorn is rendered by CathedralPlugin; every other footprint is
         // rendered by this plugin from the authoritative plan.
         assert_eq!(stats.rendered_plan_buildings, 1_107);
-        assert_eq!(stats.named_places, 69);
+        assert_eq!(stats.named_places, 70);
         assert_eq!(stats.roads, 49);
         assert_eq!(stats.sites, 23);
         assert_eq!(stats.fixtures, 72);
@@ -7906,9 +8160,10 @@ mod tests {
             .iter(world)
             .map(|number| number.0)
             .collect::<Vec<_>>();
-        assert_eq!(place_markers.len(), 69);
+        assert_eq!(place_markers.len(), 70);
         assert!(place_markers.contains(&1));
-        assert!(place_markers.contains(&69));
+        // 70 is the Stone House (`law_and_order.md` M5a).
+        assert!(place_markers.contains(&70));
 
         let route_boards = world
             .query::<&route_boards::RoadSupplyRouteBoard>()

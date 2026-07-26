@@ -3704,6 +3704,15 @@
         287.5
       ],
       "kind": "landmark"
+    },
+    {
+      "number": 70,
+      "name": "The Stone House",
+      "anchor": [
+        44.5,
+        -207.3
+      ],
+      "kind": "building"
     }
   ],
   "buildings": [
@@ -33709,7 +33718,7 @@
     "named_or_reserved_buildings": 65,
     "unnamed_urban_fabric_buildings": 1043,
     "roads": 49,
-    "named_places": 69,
+    "named_places": 70,
     "fixtures": 72
   }
 }

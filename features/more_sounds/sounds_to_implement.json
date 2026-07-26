@@ -2,9 +2,9 @@
   "schema_version": 1,
   "source_catalog": "more_sounds.json",
   "workflow": "Implement the selected sounds in the game using each generated_audio.path when present, then set implemented_in_game to true. The workbench reconciles true flags back into more_sounds.json.",
-  "selected_count": 53,
-  "implemented_count": 53,
-  "generated_count": 53,
+  "selected_count": 54,
+  "implemented_count": 54,
+  "generated_count": 54,
   "selected_sound_ids": [
     "snd_001_soft_shoes_on_dry_cobbles",
     "snd_034_dusty_workshop_cough",
@@ -58,7 +58,8 @@
     "snd_337_hungry_ox_doorway_spill",
     "snd_338_old_sluice_in_daylight",
     "snd_339_skinners_court_work_and_home",
-    "snd_340_seven_lofts_grain_interior"
+    "snd_340_seven_lofts_grain_interior",
+    "snd_065_gatekeepers_key_ring"
   ],
   "sounds": [
     {
@@ -1568,6 +1569,35 @@
         "size_bytes": 2293278,
         "modified_ns": 1784737239577925781,
         "path": "generated/snd_340_seven_lofts_grain_interior.wav"
+      }
+    },
+    {
+      "sound_name": "Gatekeeper's Key Ring",
+      "category": "Gates, Watch & Fortifications",
+      "description": "A heavy ring of mismatched ward and gate keys is selected with a few low iron contacts.",
+      "tags": [
+        "gate",
+        "civic",
+        "wall",
+        "metal",
+        "interaction",
+        "proximity",
+        "one-shot"
+      ],
+      "game_placement": "Attach to gatekeepers, watchmen, vergers, and gaolers immediately before a locked-door interaction; avoid constant walking jingle.",
+      "generation_prompt": "Heavy medieval iron keys on a large ring handled and one key selected, low irregular metal contacts, no bright modern key sound. Isolated one-shot with a clean attack and the full natural decay; no music, no electronic effects, and no modern machinery.",
+      "playback_mode": "one_shot",
+      "suggested_duration_seconds": 1.4,
+      "id": "snd_065_gatekeepers_key_ring",
+      "implemented_in_game": true,
+      "generated_audio": {
+        "sound_id": "snd_065_gatekeepers_key_ring",
+        "filename": "snd_065_gatekeepers_key_ring.mp3",
+        "url": "/generated/snd_065_gatekeepers_key_ring.mp3?v=1785089118991431927",
+        "media_type": "audio/mpeg",
+        "size_bytes": 23031,
+        "modified_ns": 1785089118991431927,
+        "path": "generated/snd_065_gatekeepers_key_ring.mp3"
       }
     }
   ]

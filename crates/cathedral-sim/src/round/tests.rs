@@ -268,6 +268,10 @@ fn the_round_content_parses_and_every_destination_resolves() {
         "hj6br", "em3rl", "he3nd", "aq7ld", "ax5nf", "gw4ld", "az2sm", "gr8tp", "et7rd", "cg6ud",
         "danqn", "davqn", "e1skl", "e7mil", "p008s", "p009x", "p009z", "p00a3", "fo6gl", "hrnsk",
         "p00a7", "p00a8", "p00ad", "p00ah",
+        // M5b: the Stone House's keeper and its two guards. Narrowing three
+        // postings by name rather than widening `workplaces`, which binds the
+        // *nearest* candidate and would have gaoled the debt officer too.
+        "p009w", "p009y", "p00a2",
     ]
     .into_iter()
     .collect();
@@ -995,7 +999,10 @@ fn the_law_cast_is_stationed_where_people_are() {
         ("p009x", "bailiff_and_gaoler"),  // Havise Ashe, bench sergeant
         ("hrnsk", "watchman_and_keeper"), // Renn Skell, gate guard
         ("fo6gl", "court_officer"),       // Odo Trask, notary
-        ("p009w", "bailiff_and_gaoler"),  // Ede Clove, stone keeper — routeless
+        ("p009w", "bailiff_and_gaoler"),  // Ede Clove, Stone keeper (M5b)
+        ("p009y", "bailiff_and_gaoler"),  // Tobin Marle, prison guard (M5b)
+        ("p00a2", "bailiff_and_gaoler"),  // Ewart Rasp, prison guard (M5b)
+        ("p00a1", "bailiff_and_gaoler"),  // Segwin Vell, court usher — routeless
     ] {
         world.add_character(person(
             id,
@@ -1033,12 +1040,274 @@ fn the_law_cast_is_stationed_where_people_are() {
     let odo = &round.people[&ActorId::from_raw("fo6gl")];
     assert_eq!(leg_at(odo, Office::Dayspring).label, "Tallage toll-house");
 
-    // A bailiff with no route of his own now anchors on the tower.
+    // The Stone keeper keeps the Stone House (M5b). The gaol's confinement is a
+    // person standing at a threshold, so a keeper who wandered the ward would be
+    // an open door — and she is posted there all day, not merely at the Waning
+    // the night-watch archetype used to give her.
     let clove = &round.people[&ActorId::from_raw("p009w")];
+    for office in [
+        Office::Dayspring,
+        Office::HighWick,
+        Office::Waning,
+        Office::Lamplight,
+    ] {
+        assert_eq!(
+            leg_at(clove, office).label,
+            "The Stone House",
+            "the keeper is at her threshold at {office:?}"
+        );
+    }
+    assert!(clove.curfew_exempt, "somebody has to be awake with them");
+
+    // The two prison guards stand it in turn, which is also what makes a second
+    // pair of hands available when a prisoner pulls (M4d: two holders is much
+    // worse to pull against).
+    for (id, office) in [("p009y", Office::Dayspring), ("p00a2", Office::HighWick)] {
+        let guard = &round.people[&ActorId::from_raw(id)];
+        let posted = leg_at(guard, office);
+        assert_eq!(posted.label, "The Stone House");
+        assert_eq!(posted.doing, Arrival::Stand);
+    }
+
+    // …and the routeless rest of the bench still anchors on the tower next door,
+    // because M5b narrowed exactly three postings and left `workplaces` alone:
+    // `build_legs` binds the nearest candidate, so adding the gaol there would
+    // have quietly pulled the debt officer and the court usher inside as well.
+    let vell = &round.people[&ActorId::from_raw("p00a1")];
     assert_eq!(
-        leg_at(clove, Office::Waning).label,
+        leg_at(vell, Office::Waning).label,
         "Bellstand watch-bell tower"
     );
+}
+
+/// A character the city is already holding (`law_and_order.md` M5b) — the
+/// `prisoner` circumstance the eight authored inmates carry, and nothing else.
+fn prisoner(id: &str, position: Vec3) -> Character {
+    let mut character = person(id, position, Some("domestic_servant"), Significance::Ambient);
+    character
+        .sheet
+        .lore
+        .as_mut()
+        .expect("the fixture gives them a profile")
+        .circumstances = vec![crate::custody::PRISONER_CIRCUMSTANCE.to_string()];
+    character
+}
+
+/// M5b: the eight the lore already holds go into the room the lore already
+/// named. Their sheets say they are *"now held … Stone House rations and food
+/// carried in by kin are your present support"*, and until M5a built the place
+/// they were spawned walking free across the whole city — a live
+/// world-consistency bug, and also the gaol's entire population, already
+/// written.
+///
+/// The `authored` flag is the point of the whole record: the eight arrive
+/// `Committed` with no arresting officer and no notice, and they do not count
+/// against [`crate::custody::CUSTODY_MAX_ARRESTS`], because that cap exists to
+/// stop a bad-tempered sergeant emptying the Wickmarket, not to evict the lore.
+#[test]
+fn the_confined_are_seeded_into_the_stone_house() {
+    let nav = nav();
+    let mut world = base_world();
+    // Scattered exactly as they are authored — Bell-and-Sluice, the Cloth Ward,
+    // the far north-east — because the seeding is what gathers them.
+    // All eight, so the ring placement is exercised at its real width — see the
+    // roam assertion below for why that matters.
+    for (id, at) in [
+        ("p0055", Vec3::new(-17.0, WALK_Y, -249.9)),
+        ("p0056", Vec3::new(-12.3, WALK_Y, -173.3)),
+        ("p0057", Vec3::new(-5.3, WALK_Y, -110.3)),
+        ("p0059", Vec3::new(-0.9, WALK_Y, -317.5)),
+        ("p005a", Vec3::new(9.3, WALK_Y, -145.3)),
+        ("p005c", Vec3::new(232.4, WALK_Y, 336.8)),
+        ("p005f", Vec3::new(15.8, WALK_Y, -411.3)),
+        ("p00b0", Vec3::new(337.8, WALK_Y, -103.3)),
+    ] {
+        world.add_character(prisoner(id, at));
+    }
+    // A free neighbour, to prove the circumstance is what is read and not the
+    // occupation or the ward.
+    world.add_character(person(
+        "free1",
+        Vec3::new(-12.0, WALK_Y, -173.0),
+        Some("domestic_servant"),
+        Significance::Ambient,
+    ));
+
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    let held: Vec<&str> = world
+        .custody
+        .iter()
+        .map(|(id, _)| id.as_str())
+        .collect();
+    assert_eq!(
+        held,
+        ["p0055", "p0056", "p0057", "p0059", "p005a", "p005c", "p005f", "p00b0"]
+    );
+    assert!(
+        !world.custody.holds(&ActorId::from_raw("free1")),
+        "a housemaid who is not a prisoner is not gaoled for keeping the same trade"
+    );
+
+    let stone_house = world
+        .places
+        .named(crate::custody::STONE_HOUSE_PLACE_NAME)
+        .expect("M5a put the Stone House in the registry")
+        .clone();
+    for id in ["p0055", "p0056", "p0057", "p0059", "p005a", "p005c", "p005f", "p00b0"] {
+        let id = ActorId::from_raw(id);
+        let record = world.custody.get(&id).expect("held");
+        assert!(world.custody.is_confined(&id), "{id} is committed, not merely in charge");
+        assert!(record.authored, "{id} was here before the run began");
+        assert!(record.station.stone_house, "{id} is in the gaol, not at a gate arch");
+        assert_eq!(record.station.place_id, stone_house.id);
+        assert!(record.officer.is_none(), "nobody arrested {id}");
+        assert!(record.notice_id.is_none(), "no word of ours put {id} here");
+
+        // And they are standing in it, on ground they could walk out of if they
+        // were ever let out — never inside a wall.
+        let character = &world.characters[&id];
+        let at = character.position_m();
+        assert!(
+            nav.is_walkable(at.x, at.z),
+            "{id} stands on real graph at {at:?}"
+        );
+        // Well inside the roam, and that is load-bearing rather than tidy: a
+        // prisoner seeded past `COMMITTED_ROAM_M` is judged to have walked out
+        // on the very first poll, so a wide enough ring would have let the
+        // lore's own inmates out of the gaol the instant the game started.
+        let from_the_door =
+            f64::hypot(at.x - stone_house.point.x, at.z - stone_house.point.z);
+        assert!(
+            from_the_door <= crate::custody::COMMITTED_ROAM_M * 0.5,
+            "{id} is in the room and staying in it: {from_the_door} m"
+        );
+        assert!(character.state.movement.is_none(), "{id} is not mid-walk");
+    }
+
+    // The cap is untouched: the standing population is not an arrest.
+    assert_eq!(world.custody.arrest_count(), 0);
+    assert!(world.custody.has_room());
+}
+
+/// M5b, and the spec's own test: *"a confined NPC with `thirst` under the well
+/// rung does not path to a cistern, does not take a round leg, and is not
+/// curfew-routed."* One guard at rung 0 of [`decide`] covers all three, because
+/// all three are decided in that one function — an inmate who set off for the
+/// nearest cistern would walk straight through the gaol wall.
+#[test]
+fn a_confined_inmate_stays_put_through_thirst_a_leg_and_the_curfew() {
+    let nav = nav();
+    let mut world = base_world();
+    world.add_character(prisoner("p0056", Vec3::new(-12.3, WALK_Y, -173.3)));
+    let held = ActorId::from_raw("p0056");
+
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+    assert!(world.custody.holds(&held), "M5a's place resolved and they are in it");
+    let cell = world.characters[&held].position_m();
+    // They are enrolled like anybody else — the legs are waiting for the day
+    // they are let out; the guard is what keeps them off their feet meanwhile.
+    assert!(!round.people[&held].legs.is_empty());
+
+    let mut nudges = Vec::new();
+    for (what, office) in [
+        ("parched", Office::Dayspring),
+        ("a round leg", Office::HighWick),
+        ("the curfew", Office::Snuffing),
+    ] {
+        world
+            .characters
+            .get_mut(&held)
+            .unwrap()
+            .state
+            .needs
+            .thirst = THIRST_PARCHED - 1.0;
+        round.people.get_mut(&held).unwrap().next_decision = 0.0;
+        round.people.get_mut(&held).unwrap().phase = Phase::Idle;
+        run_ladder(
+            &mut round,
+            &mut world,
+            &nav,
+            &clock_at(office),
+            0.0,
+            &BTreeSet::new(),
+            &mut nudges,
+        );
+        let character = &world.characters[&held];
+        assert!(
+            character.state.movement.is_none(),
+            "{what} did not put a route under a confined body"
+        );
+        assert!(character.state.intent.is_none(), "{what} laid no errand either");
+        assert_eq!(character.position_m(), cell, "{what} did not move them");
+    }
+}
+
+/// M5b: **Stone House rations.** Somebody the law is holding cannot walk to a
+/// cistern or a stall — rung 0 of `decide` sees to that, and `go_to` refuses
+/// them — so without an exemption in `decay_needs` the eight authored inmates
+/// decay to nothing within minutes of every run starting and stay there, dying
+/// of thirst against a wall for the rest of the session.
+///
+/// The lore answered this before the code existed: their own sheets say *"Stone
+/// House rations and food carried in by kin are your present support"*, and
+/// M5's design turns on families bringing bread and a blanket to the grate. A
+/// keeper who let their prisoners die would not be a keeper, and being held is
+/// meant to be a conversation rather than a slow death.
+#[test]
+fn the_confined_are_fed_and_watered_because_they_cannot_go_and_get_it() {
+    let nav = nav();
+    let mut world = base_world();
+    world.add_character(prisoner("p0056", Vec3::new(-12.3, WALK_Y, -173.3)));
+    // A free neighbour on the same trade, as the control: the exemption must be
+    // custody, not occupation.
+    world.add_character(person(
+        "free1",
+        Vec3::new(-12.0, WALK_Y, -173.0),
+        Some("domestic_servant"),
+        Significance::Ambient,
+    ));
+    let held = ActorId::from_raw("p0056");
+    let free = ActorId::from_raw("free1");
+
+    let mut round = Round::new();
+    let clock = clock_at(Office::Dayspring);
+    round.seed(&mut world, &nav, 0.0, &clock);
+    assert!(world.custody.holds(&held), "M5a's place resolved and they are in it");
+
+    for who in [&held, &free] {
+        let needs = &mut world.characters.get_mut(who).unwrap().state.needs;
+        needs.thirst = 60.0;
+        needs.hunger = 60.0;
+    }
+    // A third of a game day of decay — far past THIRST_PARCHED for anyone the
+    // clock is allowed to touch.
+    decay_needs(&mut round, &mut world, &clock, 1200.0);
+
+    let kept = &world.characters[&held].state.needs;
+    assert_eq!(kept.thirst, 60.0, "the keeper brings water");
+    assert!(kept.hunger >= 60.0, "and rations: {}", kept.hunger);
+
+    // The control: the same trade, the same street, not held — and hunger, which
+    // every enrolled body loses, really does drain out of them. So the exemption
+    // is custody and not the occupation.
+    let outside = &world.characters[&free].state.needs;
+    assert!(
+        outside.hunger < 60.0,
+        "an unheld neighbour still gets hungry: {}",
+        outside.hunger
+    );
+    assert!(
+        world.characters[&held].state.needs.hunger > outside.hunger,
+        "and the difference between them is the ration"
+    );
+    // Thirst only drains for someone the round bound a water source to, which a
+    // hand-built fixture may not be; assert the exemption where it is testable.
+    if round.people[&free].draws_water() {
+        assert!(outside.thirst < 60.0, "{}", outside.thirst);
+    }
 }
 
 /// An exchange with the player holds the round: the partner neither sets off

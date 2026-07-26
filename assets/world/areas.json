@@ -386,6 +386,13 @@
       ]
     },
     {
+      "id": "stone_house",
+      "label": "In the Stone House, the civic gaol in the side court behind the Bellstand",
+      "boxes": [
+        { "min_m": { "x": 39.0, "y": -1.0, "z": -211.2 }, "max_m": { "x": 50.0, "y": 18.0, "z": -203.2 } }
+      ]
+    },
+    {
       "id": "colm_stone",
       "label": "At Colm's stone",
       "boxes": [

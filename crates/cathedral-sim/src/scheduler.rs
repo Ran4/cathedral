@@ -613,6 +613,11 @@ impl NpcScheduler {
             )));
         }
 
+        // One reply is one turn, and `seize` may not be a wordless one
+        // (`law_and_order.md` M4). Cleared here so the marker means "in *this*
+        // reply", never "at some point earlier today".
+        world.spoke_this_turn = None;
+
         for (verb, args) in actions {
             let value = Value::Object(args.clone());
             let line = match apply_action(world, &flight.actor_id, &verb, &value) {

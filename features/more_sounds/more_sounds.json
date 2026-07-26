@@ -1449,7 +1449,7 @@
       "playback_mode": "one_shot",
       "suggested_duration_seconds": 1.4,
       "id": "snd_065_gatekeepers_key_ring",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Ward Lock Turning",

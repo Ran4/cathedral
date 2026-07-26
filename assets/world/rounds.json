@@ -507,6 +507,26 @@
     {"from": "kindling", "at": "home", "doing": "idle"},
     {"from": "dayspring", "at": "The Reed Postern", "doing": "stand"},
     {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "p009w": {"_who": "Ede Clove, Stone keeper (law_and_order.md M5b — she keeps the Stone House, and the eight it holds are kept by a person and not by a lock; her own sheet says she publishes its fixed fees and answers to the Full Measure for every prisoner. A short leash because the threshold IS the confinement)", "leash_m": 6.0, "curfew_exempt": true, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "dayspring", "at": "The Stone House", "doing": "work"},
+    {"from": "high_wick", "at": "The Stone House", "doing": "work"},
+    {"from": "waning", "at": "The Stone House", "doing": "work"},
+    {"from": "lamplight", "at": "The Stone House", "doing": "work"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "p009y": {"_who": "Tobin Marle, prison guard (law_and_order.md M5b — stood at the Stone House rather than wandering the ward; his kinswoman Jonet Marle p0059 is one of the eight inside, which the surnames were always going to make true)", "leash_m": 8.0, "curfew_exempt": true, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "dayspring", "at": "The Stone House", "doing": "stand"},
+    {"from": "waning", "at": "The Stone House", "doing": "stand"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
+  ]},
+  "p00a2": {"_who": "Ewart Rasp, prison guard (law_and_order.md M5b — the Stone House's second pair of hands, which is what makes two holders possible when somebody pulls)", "leash_m": 8.0, "curfew_exempt": true, "legs": [
+    {"from": "kindling", "at": "home", "doing": "idle"},
+    {"from": "high_wick", "at": "The Stone House", "doing": "stand"},
+    {"from": "lamplight", "at": "The Stone House", "doing": "stand"},
+    {"from": "snuffing", "at": "home", "doing": "sleep"}
   ]}
  }
 }

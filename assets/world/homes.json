@@ -6,7 +6,7 @@
   "a2gpk": {
    "building": "omb_i0382",
    "edge": 2,
-   "door_node": 3504,
+   "door_node": 3511,
    "point": [
     -57.125,
     -72.375
@@ -18,7 +18,7 @@
   "a3crk": {
    "building": "omb_i0275",
    "edge": 3,
-   "door_node": 3251,
+   "door_node": 3258,
    "point": [
     -61.375,
     34.875
@@ -30,7 +30,7 @@
   "a4anh": {
    "building": "omb_i0497",
    "edge": 1,
-   "door_node": 3775,
+   "door_node": 3782,
    "point": [
     -63.625,
     69.625
@@ -42,7 +42,7 @@
   "a5sbp": {
    "building": "omb_i0353",
    "edge": 0,
-   "door_node": 3433,
+   "door_node": 3440,
    "point": [
     -68.875,
     -55.625
@@ -54,7 +54,7 @@
   "a6avh": {
    "building": "omb_i0224",
    "edge": 1,
-   "door_node": 3152,
+   "door_node": 3159,
    "point": [
     -59.875,
     -0.375
@@ -66,7 +66,7 @@
   "a7pcr": {
    "building": "omb_i0565",
    "edge": 3,
-   "door_node": 3920,
+   "door_node": 3927,
    "point": [
     -58.625,
     22.375
@@ -78,7 +78,7 @@
   "a8ewf": {
    "building": "omb_f0364",
    "edge": 3,
-   "door_node": 2112,
+   "door_node": 2119,
    "point": [
     -323.625,
     -166.125
@@ -90,7 +90,7 @@
   "a9prs": {
    "building": "omb_i0502",
    "edge": 0,
-   "door_node": 3782,
+   "door_node": 3789,
    "point": [
     122.625,
     -26.625
@@ -102,7 +102,7 @@
   "a9rnh": {
    "building": "omb_i0575",
    "edge": 2,
-   "door_node": 3943,
+   "door_node": 3950,
    "point": [
     -269.875,
     -224.625
@@ -114,7 +114,7 @@
   "ak3vd": {
    "building": "omb_i0396",
    "edge": 3,
-   "door_node": 3544,
+   "door_node": 3551,
    "point": [
     85.625,
     -2.625
@@ -126,7 +126,7 @@
   "amt4p": {
    "building": "omb_i0539",
    "edge": 2,
-   "door_node": 3870,
+   "door_node": 3877,
    "point": [
     -54.625,
     46.375
@@ -138,7 +138,7 @@
   "ar5tl": {
    "building": "omb_i0288",
    "edge": 3,
-   "door_node": 3279,
+   "door_node": 3286,
    "point": [
     -179.375,
     -207.875
@@ -150,7 +150,7 @@
   "ax5nf": {
    "building": "omb_f0460",
    "edge": 3,
-   "door_node": 2390,
+   "door_node": 2397,
    "point": [
     -136.375,
     -304.875
@@ -162,7 +162,7 @@
   "az2sm": {
    "building": "omb_i0136",
    "edge": 3,
-   "door_node": 2924,
+   "door_node": 2931,
    "point": [
     86.875,
     10.125
@@ -174,7 +174,7 @@
   "b0nll": {
    "building": "omb_i0542",
    "edge": 0,
-   "door_node": 3876,
+   "door_node": 3883,
    "point": [
     170.625,
     96.375
@@ -186,7 +186,7 @@
   "b1sbb": {
    "building": "omb_f0151",
    "edge": 2,
-   "door_node": 1293,
+   "door_node": 1300,
    "point": [
     159.125,
     26.875
@@ -198,7 +198,7 @@
   "b3glc": {
    "building": "omb_f0150",
    "edge": 0,
-   "door_node": 1291,
+   "door_node": 1298,
    "point": [
     161.125,
     43.125
@@ -210,7 +210,7 @@
   "b4hst": {
    "building": "omb_f0372",
    "edge": 0,
-   "door_node": 2133,
+   "door_node": 2140,
    "point": [
     275.625,
     64.625
@@ -222,7 +222,7 @@
   "b5ewk": {
    "building": "omb_i0538",
    "edge": 1,
-   "door_node": 3867,
+   "door_node": 3874,
    "point": [
     176.125,
     54.375
@@ -234,7 +234,7 @@
   "b6clm": {
    "building": "omb_i0257",
    "edge": 3,
-   "door_node": 3215,
+   "door_node": 3222,
    "point": [
     174.875,
     105.875
@@ -246,7 +246,7 @@
   "b9stt": {
    "building": "omb_f0157",
    "edge": 3,
-   "door_node": 1323,
+   "door_node": 1330,
    "point": [
     188.375,
     31.125
@@ -258,7 +258,7 @@
   "ba8hf": {
    "building": "omb_i0305",
    "edge": 3,
-   "door_node": 3308,
+   "door_node": 3315,
    "point": [
     199.125,
     61.875
@@ -270,7 +270,7 @@
   "bc6tf": {
    "building": "omb_f0152",
    "edge": 0,
-   "door_node": 1301,
+   "door_node": 1308,
    "point": [
     143.375,
     34.625
@@ -282,7 +282,7 @@
   "bd7hb": {
    "building": "omb_f0149",
    "edge": 0,
-   "door_node": 1290,
+   "door_node": 1297,
    "point": [
     168.125,
     54.125
@@ -294,7 +294,7 @@
   "bn1id": {
    "building": "omb_i0389",
    "edge": 3,
-   "door_node": 3532,
+   "door_node": 3539,
    "point": [
     -257.125,
     -221.375
@@ -306,7 +306,7 @@
   "bn2hm": {
    "building": "omb_f0048",
    "edge": 0,
-   "door_node": 874,
+   "door_node": 881,
    "point": [
     -202.625,
     -165.625
@@ -318,7 +318,7 @@
   "bn3sg": {
    "building": "omb_i0345",
    "edge": 3,
-   "door_node": 3413,
+   "door_node": 3420,
    "point": [
     61.125,
     51.375
@@ -330,7 +330,7 @@
   "bn4cp": {
    "building": "omb_f0426",
    "edge": 0,
-   "door_node": 2289,
+   "door_node": 2296,
    "point": [
     54.625,
     147.625
@@ -342,7 +342,7 @@
   "bn5jk": {
    "building": "omb_f0418",
    "edge": 0,
-   "door_node": 2273,
+   "door_node": 2280,
    "point": [
     4.375,
     204.125
@@ -354,7 +354,7 @@
   "bn6gb": {
    "building": "omb_f0220",
    "edge": 0,
-   "door_node": 1571,
+   "door_node": 1578,
    "point": [
     35.125,
     280.125
@@ -366,7 +366,7 @@
   "bn7an": {
    "building": "omb_i0208",
    "edge": 3,
-   "door_node": 3124,
+   "door_node": 3131,
    "point": [
     115.875,
     147.625
@@ -378,7 +378,7 @@
   "bn8jm": {
    "building": "omb_f0224",
    "edge": 3,
-   "door_node": 1582,
+   "door_node": 1589,
    "point": [
     111.625,
     273.625
@@ -390,7 +390,7 @@
   "bn9et": {
    "building": "omb_i0236",
    "edge": 1,
-   "door_node": 3178,
+   "door_node": 3185,
    "point": [
     141.875,
     45.125
@@ -402,7 +402,7 @@
   "bnawr": {
    "building": "omb_f0443",
    "edge": 1,
-   "door_node": 2362,
+   "door_node": 2369,
    "point": [
     -185.125,
     2.875
@@ -414,7 +414,7 @@
   "bnbcr": {
    "building": "omb_f0064",
    "edge": 0,
-   "door_node": 918,
+   "door_node": 925,
    "point": [
     291.125,
     119.375
@@ -426,7 +426,7 @@
   "bndhk": {
    "building": "omb_f0174",
    "edge": 0,
-   "door_node": 1388,
+   "door_node": 1395,
    "point": [
     -58.625,
     147.125
@@ -438,7 +438,7 @@
   "bnpro": {
    "building": "omb_f0146",
    "edge": 1,
-   "door_node": 1272,
+   "door_node": 1279,
    "point": [
     -105.375,
     132.125
@@ -450,7 +450,7 @@
   "bnrse": {
    "building": "omb_f0006",
    "edge": 3,
-   "door_node": 757,
+   "door_node": 764,
    "point": [
     -231.625,
     0.375
@@ -462,7 +462,7 @@
   "br2sk": {
    "building": "omb_i0446",
    "edge": 3,
-   "door_node": 3671,
+   "door_node": 3678,
    "point": [
     265.125,
     42.125
@@ -474,7 +474,7 @@
   "brn5o": {
    "building": "omb_i0462",
    "edge": 1,
-   "door_node": 3701,
+   "door_node": 3708,
    "point": [
     58.375,
     69.875
@@ -486,7 +486,7 @@
   "bt4hb": {
    "building": "omb_i0066",
    "edge": 1,
-   "door_node": 2665,
+   "door_node": 2672,
    "point": [
     90.625,
     17.625
@@ -498,7 +498,7 @@
   "c2nsl": {
    "building": "omb_f0435",
    "edge": 0,
-   "door_node": 2339,
+   "door_node": 2346,
    "point": [
     -139.875,
     221.625
@@ -510,7 +510,7 @@
   "c3wnk": {
    "building": "omb_i0384",
    "edge": 0,
-   "door_node": 3520,
+   "door_node": 3527,
    "point": [
     -154.125,
     176.875
@@ -522,7 +522,7 @@
   "c5tbo": {
    "building": "omb_i0102",
    "edge": 0,
-   "door_node": 2825,
+   "door_node": 2832,
    "point": [
     -177.375,
     141.125
@@ -534,7 +534,7 @@
   "c6pkl": {
    "building": "omb_i0352",
    "edge": 3,
-   "door_node": 3432,
+   "door_node": 3439,
    "point": [
     -153.875,
     154.875
@@ -546,7 +546,7 @@
   "c7kbd": {
    "building": "omb_i0226",
    "edge": 3,
-   "door_node": 3161,
+   "door_node": 3168,
    "point": [
     -171.125,
     124.375
@@ -558,7 +558,7 @@
   "c8ghd": {
    "building": "omb_f0347",
    "edge": 0,
-   "door_node": 2051,
+   "door_node": 2058,
    "point": [
     -238.625,
     290.625
@@ -570,7 +570,7 @@
   "cb947": {
    "building": "omb_f0428",
    "edge": 0,
-   "door_node": 2299,
+   "door_node": 2306,
    "point": [
     62.375,
     127.625
@@ -582,7 +582,7 @@
   "cf2rr": {
    "building": "omb_i0332",
    "edge": 1,
-   "door_node": 3386,
+   "door_node": 3393,
    "point": [
     -247.875,
     103.375
@@ -594,7 +594,7 @@
   "cg6ud": {
    "building": "omb_f0051",
    "edge": 2,
-   "door_node": 877,
+   "door_node": 884,
    "point": [
     -183.625,
     -306.375
@@ -606,7 +606,7 @@
   "cj9sp": {
    "building": "omb_i0372",
    "edge": 1,
-   "door_node": 3477,
+   "door_node": 3484,
    "point": [
     -103.625,
     63.875
@@ -618,7 +618,7 @@
   "danqn": {
    "building": "omb_i0363",
    "edge": 3,
-   "door_node": 3456,
+   "door_node": 3463,
    "point": [
     -95.875,
     324.875
@@ -630,7 +630,7 @@
   "davqn": {
    "building": "omb_f0346",
    "edge": 3,
-   "door_node": 2050,
+   "door_node": 2057,
    "point": [
     -86.625,
     288.125
@@ -642,7 +642,7 @@
   "dbskl": {
    "building": "omb_i0276",
    "edge": 2,
-   "door_node": 3253,
+   "door_node": 3260,
    "point": [
     -249.875,
     -18.625
@@ -654,7 +654,7 @@
   "dclsk": {
    "building": "omb_i0107",
    "edge": 3,
-   "door_node": 2837,
+   "door_node": 2844,
    "point": [
     -90.625,
     265.125
@@ -666,7 +666,7 @@
   "dewvl": {
    "building": "omb_i0367",
    "edge": 3,
-   "door_node": 3466,
+   "door_node": 3473,
    "point": [
     -80.625,
     276.375
@@ -678,7 +678,7 @@
   "dgskl": {
    "building": "omb_f0433",
    "edge": 0,
-   "door_node": 2330,
+   "door_node": 2337,
    "point": [
     -87.125,
     229.125
@@ -690,7 +690,7 @@
   "dnnsl": {
    "building": "omb_f0235",
    "edge": 3,
-   "door_node": 1604,
+   "door_node": 1611,
    "point": [
     108.875,
     311.375
@@ -702,7 +702,7 @@
   "dpcrk": {
    "building": "omb_f0339",
    "edge": 2,
-   "door_node": 2027,
+   "door_node": 2034,
    "point": [
     -69.375,
     299.875
@@ -714,7 +714,7 @@
   "drhcr": {
    "building": "omb_f0341",
    "edge": 0,
-   "door_node": 2029,
+   "door_node": 2036,
    "point": [
     -63.125,
     293.125
@@ -726,7 +726,7 @@
   "dsbhb": {
    "building": "omb_f0337",
    "edge": 2,
-   "door_node": 2014,
+   "door_node": 2021,
    "point": [
     -49.125,
     298.875
@@ -738,7 +738,7 @@
   "dtbvl": {
    "building": "omb_f0432",
    "edge": 3,
-   "door_node": 2328,
+   "door_node": 2335,
    "point": [
     -68.625,
     232.125
@@ -750,7 +750,7 @@
   "dv8ll": {
    "building": "omb_f0057",
    "edge": 0,
-   "door_node": 897,
+   "door_node": 904,
    "point": [
     -34.875,
     282.625
@@ -762,7 +762,7 @@
   "e1skl": {
    "building": "omb_f0225",
    "edge": 1,
-   "door_node": 1583,
+   "door_node": 1590,
    "point": [
     129.375,
     263.375
@@ -774,7 +774,7 @@
   "e2rhs": {
    "building": "omb_i0073",
    "edge": 1,
-   "door_node": 2693,
+   "door_node": 2700,
    "point": [
     193.125,
     168.875
@@ -786,7 +786,7 @@
   "e3cob": {
    "building": "omb_f0228",
    "edge": 0,
-   "door_node": 1594,
+   "door_node": 1601,
    "point": [
     149.875,
     241.125
@@ -798,7 +798,7 @@
   "e4bln": {
    "building": "omb_f0008",
    "edge": 0,
-   "door_node": 761,
+   "door_node": 768,
    "point": [
     -241.375,
     -26.875
@@ -810,7 +810,7 @@
   "e5hob": {
    "building": "omb_i0361",
    "edge": 1,
-   "door_node": 3449,
+   "door_node": 3456,
    "point": [
     -245.375,
     303.375
@@ -822,7 +822,7 @@
   "e6ptr": {
    "building": "omb_i0489",
    "edge": 2,
-   "door_node": 3761,
+   "door_node": 3768,
    "point": [
     -254.625,
     166.375
@@ -834,7 +834,7 @@
   "e7mil": {
    "building": "omb_f0363",
    "edge": 2,
-   "door_node": 2110,
+   "door_node": 2117,
    "point": [
     -280.625,
     53.625
@@ -846,7 +846,7 @@
   "e8sib": {
    "building": "omb_f0362",
    "edge": 2,
-   "door_node": 2109,
+   "door_node": 2116,
    "point": [
     -279.625,
     63.875
@@ -858,7 +858,7 @@
   "eatan": {
    "building": "omb_f0369",
    "edge": 0,
-   "door_node": 2123,
+   "door_node": 2130,
    "point": [
     -309.875,
     -331.875
@@ -870,7 +870,7 @@
   "ebhid": {
    "building": "omb_f0430",
    "edge": 1,
-   "door_node": 2326,
+   "door_node": 2333,
    "point": [
     79.625,
     103.875
@@ -882,7 +882,7 @@
   "ecbrd": {
    "building": "omb_i0448",
    "edge": 1,
-   "door_node": 3677,
+   "door_node": 3684,
    "point": [
     189.875,
     206.375
@@ -894,7 +894,7 @@
   "em3rl": {
    "building": "omb_i0427",
    "edge": 2,
-   "door_node": 3626,
+   "door_node": 3633,
    "point": [
     -87.125,
     -104.875
@@ -906,7 +906,7 @@
   "et7rd": {
    "building": "omb_f0455",
    "edge": 3,
-   "door_node": 2377,
+   "door_node": 2384,
    "point": [
     -183.625,
     -190.875
@@ -918,7 +918,7 @@
   "fa4sg": {
    "building": "omb_f0361",
    "edge": 2,
-   "door_node": 2107,
+   "door_node": 2114,
    "point": [
     -282.625,
     76.125
@@ -930,7 +930,7 @@
   "fa8tn": {
    "building": "omb_i0516",
    "edge": 1,
-   "door_node": 3803,
+   "door_node": 3810,
    "point": [
     -281.625,
     86.125
@@ -942,7 +942,7 @@
   "fb3sk": {
    "building": "omb_f0359",
    "edge": 2,
-   "door_node": 2105,
+   "door_node": 2112,
    "point": [
     -295.625,
     142.625
@@ -954,7 +954,7 @@
   "fc2hb": {
    "building": "omb_f0357",
    "edge": 1,
-   "door_node": 2098,
+   "door_node": 2105,
    "point": [
     -303.375,
     155.375
@@ -966,7 +966,7 @@
   "fc7sk": {
    "building": "omb_i0334",
    "edge": 3,
-   "door_node": 3392,
+   "door_node": 3399,
    "point": [
     -252.625,
     157.625
@@ -978,7 +978,7 @@
   "fc9rn": {
    "building": "omb_f0442",
    "edge": 2,
-   "door_node": 2361,
+   "door_node": 2368,
    "point": [
     -252.125,
     17.375
@@ -990,7 +990,7 @@
   "fe2tn": {
    "building": "omb_f0449",
    "edge": 2,
-   "door_node": 2368,
+   "door_node": 2375,
    "point": [
     -266.375,
     124.375
@@ -1002,7 +1002,7 @@
   "fg2sh": {
    "building": "omb_f0007",
    "edge": 2,
-   "door_node": 758,
+   "door_node": 765,
    "point": [
     -224.375,
     -16.875
@@ -1014,7 +1014,7 @@
   "fl5cp": {
    "building": "omb_f0005",
    "edge": 0,
-   "door_node": 752,
+   "door_node": 759,
    "point": [
     -239.875,
     119.625
@@ -1026,7 +1026,7 @@
   "fo6gl": {
    "building": "omb_i0455",
    "edge": 3,
-   "door_node": 3692,
+   "door_node": 3699,
    "point": [
     -258.875,
     129.375
@@ -1038,7 +1038,7 @@
   "fp6ck": {
    "building": "omb_i0387",
    "edge": 1,
-   "door_node": 3530,
+   "door_node": 3537,
    "point": [
     -254.375,
     131.125
@@ -1050,7 +1050,7 @@
   "fr5as": {
    "building": "omb_f0004",
    "edge": 2,
-   "door_node": 751,
+   "door_node": 758,
    "point": [
     -224.375,
     131.125
@@ -1062,7 +1062,7 @@
   "fr9ck": {
    "building": "omb_i0520",
    "edge": 0,
-   "door_node": 3819,
+   "door_node": 3826,
    "point": [
     -338.375,
     35.125
@@ -1074,7 +1074,7 @@
   "ft1as": {
    "building": "omb_i0162",
    "edge": 2,
-   "door_node": 3005,
+   "door_node": 3012,
    "point": [
     -312.375,
     94.125
@@ -1086,7 +1086,7 @@
   "fw7ub": {
    "building": "omb_f0167",
    "edge": 0,
-   "door_node": 1376,
+   "door_node": 1383,
    "point": [
     -279.875,
     -341.875
@@ -1098,7 +1098,7 @@
   "g2rhs": {
    "building": "omb_f0128",
    "edge": 3,
-   "door_node": 1182,
+   "door_node": 1189,
    "point": [
     -297.625,
     -366.875
@@ -1110,7 +1110,7 @@
   "g3ans": {
    "building": "omb_f0453",
    "edge": 0,
-   "door_node": 2375,
+   "door_node": 2382,
    "point": [
     -274.375,
     -177.875
@@ -1122,7 +1122,7 @@
   "g4ewt": {
    "building": "omb_i0209",
    "edge": 0,
-   "door_node": 3125,
+   "door_node": 3132,
    "point": [
     -294.125,
     -401.625
@@ -1134,7 +1134,7 @@
   "g5brt": {
    "building": "omb_i0230",
    "edge": 0,
-   "door_node": 3170,
+   "door_node": 3177,
    "point": [
     -149.625,
     -211.375
@@ -1146,7 +1146,7 @@
   "g7tbn": {
    "building": "omb_f0169",
    "edge": 0,
-   "door_node": 1382,
+   "door_node": 1389,
    "point": [
     -269.625,
     -356.375
@@ -1158,7 +1158,7 @@
   "g8rnn": {
    "building": "omb_i0155",
    "edge": 0,
-   "door_node": 2985,
+   "door_node": 2992,
    "point": [
     -273.125,
     -377.875
@@ -1170,7 +1170,7 @@
   "g9sib": {
    "building": "omb_f0053",
    "edge": 0,
-   "door_node": 884,
+   "door_node": 891,
    "point": [
     -202.625,
     -325.125
@@ -1182,7 +1182,7 @@
   "gr8tp": {
    "building": "omb_i0217",
    "edge": 3,
-   "door_node": 3139,
+   "door_node": 3146,
    "point": [
     19.125,
     -213.375
@@ -1194,7 +1194,7 @@
   "gw4ld": {
    "building": "omb_i0135",
    "edge": 2,
-   "door_node": 2923,
+   "door_node": 2930,
    "point": [
     -250.875,
     -384.375
@@ -1206,7 +1206,7 @@
   "hansl": {
    "building": "omb_f0367",
    "edge": 0,
-   "door_node": 2120,
+   "door_node": 2127,
    "point": [
     -314.375,
     -151.625
@@ -1218,7 +1218,7 @@
   "he3nd": {
    "building": "omb_i0318",
    "edge": 1,
-   "door_node": 3349,
+   "door_node": 3356,
    "point": [
     -134.875,
     239.375
@@ -1230,7 +1230,7 @@
   "hewsk": {
    "building": "omb_f0082",
    "edge": 2,
-   "door_node": 999,
+   "door_node": 1006,
    "point": [
     -317.625,
     -97.625
@@ -1242,7 +1242,7 @@
   "hgiha": {
    "building": "omb_i0227",
    "edge": 0,
-   "door_node": 3162,
+   "door_node": 3169,
    "point": [
     -295.875,
     -139.125
@@ -1254,7 +1254,7 @@
   "hj6br": {
    "building": "omb_i0215",
    "edge": 1,
-   "door_node": 3136,
+   "door_node": 3143,
    "point": [
     8.125,
     -141.625
@@ -1266,7 +1266,7 @@
   "hrnsk": {
    "building": "omb_i0228",
    "edge": 1,
-   "door_node": 3164,
+   "door_node": 3171,
    "point": [
     -275.875,
     -127.125
@@ -1278,7 +1278,7 @@
   "k0fb1": {
    "building": "omb_i0270",
    "edge": 0,
-   "door_node": 3238,
+   "door_node": 3245,
    "point": [
     73.875,
     151.375
@@ -1290,7 +1290,7 @@
   "p0006": {
    "building": "omb_f0353",
    "edge": 2,
-   "door_node": 2064,
+   "door_node": 2071,
    "point": [
     -314.375,
     139.875
@@ -1302,7 +1302,7 @@
   "p0007": {
    "building": "omb_f0023",
    "edge": 2,
-   "door_node": 800,
+   "door_node": 807,
    "point": [
     -224.375,
     -377.625
@@ -1314,7 +1314,7 @@
   "p0008": {
    "building": "omb_i0091",
    "edge": 3,
-   "door_node": 2778,
+   "door_node": 2785,
    "point": [
     -294.875,
     -444.875
@@ -1326,7 +1326,7 @@
   "p0009": {
    "building": "omb_i0211",
    "edge": 1,
-   "door_node": 3128,
+   "door_node": 3135,
    "point": [
     -317.875,
     302.125
@@ -1338,7 +1338,7 @@
   "p000a": {
    "building": "omb_f0085",
    "edge": 2,
-   "door_node": 1010,
+   "door_node": 1017,
    "point": [
     -313.625,
     -74.125
@@ -1350,7 +1350,7 @@
   "p000b": {
    "building": "omb_i0125",
    "edge": 3,
-   "door_node": 2894,
+   "door_node": 2901,
    "point": [
     -256.625,
     -397.875
@@ -1362,7 +1362,7 @@
   "p000c": {
    "building": "omb_f0461",
    "edge": 2,
-   "door_node": 2392,
+   "door_node": 2399,
    "point": [
     -125.125,
     -319.125
@@ -1374,7 +1374,7 @@
   "p000d": {
    "building": "omb_f0081",
    "edge": 2,
-   "door_node": 998,
+   "door_node": 1005,
    "point": [
     89.375,
     50.125
@@ -1386,7 +1386,7 @@
   "p000e": {
    "building": "omb_f0466",
    "edge": 0,
-   "door_node": 2407,
+   "door_node": 2414,
    "point": [
     -181.625,
     -373.875
@@ -1398,7 +1398,7 @@
   "p000f": {
    "building": "omb_i0310",
    "edge": 1,
-   "door_node": 3316,
+   "door_node": 3323,
    "point": [
     265.375,
     40.875
@@ -1410,7 +1410,7 @@
   "p000g": {
    "building": "omb_i0476",
    "edge": 0,
-   "door_node": 3722,
+   "door_node": 3729,
    "point": [
     -262.875,
     -29.625
@@ -1422,7 +1422,7 @@
   "p000h": {
    "building": "omb_f0462",
    "edge": 1,
-   "door_node": 2393,
+   "door_node": 2400,
    "point": [
     -125.125,
     -338.875
@@ -1434,7 +1434,7 @@
   "p000i": {
    "building": "omb_f0155",
    "edge": 0,
-   "door_node": 1314,
+   "door_node": 1321,
    "point": [
     118.125,
     16.625
@@ -1446,7 +1446,7 @@
   "p000j": {
    "building": "omb_i0439",
    "edge": 1,
-   "door_node": 3650,
+   "door_node": 3657,
    "point": [
     -327.625,
     104.125
@@ -1458,7 +1458,7 @@
   "p000q": {
    "building": "omb_i0336",
    "edge": 1,
-   "door_node": 3398,
+   "door_node": 3405,
    "point": [
     -157.375,
     -384.875
@@ -1470,7 +1470,7 @@
   "p000r": {
    "building": "omb_i0299",
    "edge": 1,
-   "door_node": 3301,
+   "door_node": 3308,
    "point": [
     -320.375,
     278.625
@@ -1482,7 +1482,7 @@
   "p000s": {
    "building": "omb_i0106",
    "edge": 0,
-   "door_node": 2833,
+   "door_node": 2840,
    "point": [
     -338.125,
     92.625
@@ -1494,7 +1494,7 @@
   "p000t": {
    "building": "omb_i0475",
    "edge": 1,
-   "door_node": 3720,
+   "door_node": 3727,
    "point": [
     -113.375,
     -352.625
@@ -1506,7 +1506,7 @@
   "p000u": {
    "building": "omb_i0470",
    "edge": 2,
-   "door_node": 3711,
+   "door_node": 3718,
    "point": [
     -176.625,
     -405.625
@@ -1518,7 +1518,7 @@
   "p000v": {
    "building": "omb_f0063",
    "edge": 2,
-   "door_node": 907,
+   "door_node": 914,
    "point": [
     300.375,
     102.375
@@ -1530,7 +1530,7 @@
   "p000w": {
    "building": "omb_i0369",
    "edge": 1,
-   "door_node": 3468,
+   "door_node": 3475,
    "point": [
     -305.375,
     293.125
@@ -1542,7 +1542,7 @@
   "p000x": {
    "building": "omb_f0431",
    "edge": 3,
-   "door_node": 2327,
+   "door_node": 2334,
    "point": [
     -55.125,
     236.375
@@ -1554,7 +1554,7 @@
   "p0013": {
    "building": "omb_f0242",
    "edge": 3,
-   "door_node": 1617,
+   "door_node": 1624,
    "point": [
     149.375,
     300.375
@@ -1566,7 +1566,7 @@
   "p0014": {
    "building": "omb_i0294",
    "edge": 2,
-   "door_node": 3288,
+   "door_node": 3295,
    "point": [
     95.625,
     89.375
@@ -1578,7 +1578,7 @@
   "p0015": {
    "building": "omb_i0089",
    "edge": 2,
-   "door_node": 2771,
+   "door_node": 2778,
    "point": [
     115.125,
     19.625
@@ -1590,7 +1590,7 @@
   "p0016": {
    "building": "omb_f0244",
    "edge": 2,
-   "door_node": 1622,
+   "door_node": 1629,
    "point": [
     175.875,
     298.125
@@ -1602,7 +1602,7 @@
   "p001c": {
    "building": "omb_f0351",
    "edge": 0,
-   "door_node": 2058,
+   "door_node": 2065,
    "point": [
     -333.625,
     156.625
@@ -1614,7 +1614,7 @@
   "p001h": {
    "building": "omb_i0169",
    "edge": 3,
-   "door_node": 3023,
+   "door_node": 3030,
    "point": [
     -148.125,
     -120.375
@@ -1626,7 +1626,7 @@
   "p001i": {
    "building": "omb_i0431",
    "edge": 1,
-   "door_node": 3631,
+   "door_node": 3638,
    "point": [
     -146.625,
     -102.375
@@ -1638,7 +1638,7 @@
   "p001j": {
    "building": "omb_i0081",
    "edge": 2,
-   "door_node": 2743,
+   "door_node": 2750,
    "point": [
     -127.875,
     -110.375
@@ -1650,7 +1650,7 @@
   "p001o": {
    "building": "omb_f0186",
    "edge": 1,
-   "door_node": 1422,
+   "door_node": 1429,
    "point": [
     -85.125,
     -159.875
@@ -1662,7 +1662,7 @@
   "p001p": {
    "building": "omb_i0231",
    "edge": 3,
-   "door_node": 3172,
+   "door_node": 3179,
    "point": [
     -106.375,
     -122.875
@@ -1674,7 +1674,7 @@
   "p001q": {
    "building": "omb_i0460",
    "edge": 3,
-   "door_node": 3697,
+   "door_node": 3704,
    "point": [
     -75.375,
     -125.875
@@ -1686,7 +1686,7 @@
   "p001r": {
    "building": "omb_i0166",
    "edge": 2,
-   "door_node": 3014,
+   "door_node": 3021,
    "point": [
     -80.625,
     -432.375
@@ -1698,7 +1698,7 @@
   "p001s": {
    "building": "omb_i0098",
    "edge": 1,
-   "door_node": 2816,
+   "door_node": 2823,
    "point": [
     -82.375,
     -386.375
@@ -1710,7 +1710,7 @@
   "p001t": {
    "building": "omb_i0375",
    "edge": 0,
-   "door_node": 3480,
+   "door_node": 3487,
    "point": [
     -89.625,
     -354.375
@@ -1722,7 +1722,7 @@
   "p001u": {
    "building": "omb_i0525",
    "edge": 3,
-   "door_node": 3842,
+   "door_node": 3849,
    "point": [
     -70.375,
     -419.625
@@ -1734,7 +1734,7 @@
   "p001v": {
    "building": "omb_i0424",
    "edge": 3,
-   "door_node": 3615,
+   "door_node": 3622,
    "point": [
     -86.875,
     -287.875
@@ -1746,7 +1746,7 @@
   "p001w": {
    "building": "omb_f0203",
    "edge": 2,
-   "door_node": 1483,
+   "door_node": 1490,
    "point": [
     -78.375,
     -232.625
@@ -1758,7 +1758,7 @@
   "p001x": {
    "building": "omb_i0075",
    "edge": 1,
-   "door_node": 2702,
+   "door_node": 2709,
    "point": [
     -59.375,
     -396.625
@@ -1770,7 +1770,7 @@
   "p001y": {
    "building": "omb_i0573",
    "edge": 0,
-   "door_node": 3941,
+   "door_node": 3948,
    "point": [
     -260.125,
     -444.625
@@ -1782,7 +1782,7 @@
   "p001z": {
    "building": "omb_i0028",
    "edge": 3,
-   "door_node": 2532,
+   "door_node": 2539,
    "point": [
     -282.375,
     292.875
@@ -1794,7 +1794,7 @@
   "p0020": {
    "building": "omb_f0090",
    "edge": 3,
-   "door_node": 1024,
+   "door_node": 1031,
    "point": [
     -286.875,
     -78.125
@@ -1806,7 +1806,7 @@
   "p0021": {
    "building": "omb_i0124",
    "edge": 0,
-   "door_node": 2893,
+   "door_node": 2900,
    "point": [
     -24.375,
     204.375
@@ -1818,7 +1818,7 @@
   "p0022": {
    "building": "omb_f0336",
    "edge": 3,
-   "door_node": 2013,
+   "door_node": 2020,
    "point": [
     -32.875,
     306.375
@@ -1830,7 +1830,7 @@
   "p0023": {
    "building": "omb_i0011",
    "edge": 3,
-   "door_node": 2465,
+   "door_node": 2472,
    "point": [
     -117.875,
     -392.375
@@ -1842,7 +1842,7 @@
   "p0029": {
    "building": "omb_i0319",
    "edge": 2,
-   "door_node": 3350,
+   "door_node": 3357,
    "point": [
     140.625,
     315.375
@@ -1854,7 +1854,7 @@
   "p002a": {
    "building": "omb_i0346",
    "edge": 2,
-   "door_node": 3417,
+   "door_node": 3424,
    "point": [
     121.625,
     31.875
@@ -1866,7 +1866,7 @@
   "p002b": {
    "building": "omb_i0521",
    "edge": 3,
-   "door_node": 3823,
+   "door_node": 3830,
    "point": [
     229.875,
     157.875
@@ -1878,7 +1878,7 @@
   "p002c": {
    "building": "omb_i0108",
    "edge": 2,
-   "door_node": 2841,
+   "door_node": 2848,
    "point": [
     220.375,
     180.125
@@ -1890,7 +1890,7 @@
   "p002d": {
    "building": "omb_i0205",
    "edge": 0,
-   "door_node": 3114,
+   "door_node": 3121,
    "point": [
     253.375,
     169.875
@@ -1902,7 +1902,7 @@
   "p002e": {
    "building": "omb_f0251",
    "edge": 0,
-   "door_node": 1652,
+   "door_node": 1659,
    "point": [
     212.875,
     309.375
@@ -1914,7 +1914,7 @@
   "p002f": {
    "building": "omb_i0432",
    "edge": 0,
-   "door_node": 3633,
+   "door_node": 3640,
    "point": [
     99.375,
     39.125
@@ -1926,7 +1926,7 @@
   "p002g": {
    "building": "omb_f0429",
    "edge": 2,
-   "door_node": 2300,
+   "door_node": 2307,
    "point": [
     82.875,
     124.625
@@ -1938,7 +1938,7 @@
   "p002h": {
    "building": "omb_f0074",
    "edge": 0,
-   "door_node": 969,
+   "door_node": 976,
    "point": [
     102.875,
     88.125
@@ -1950,7 +1950,7 @@
   "p002i": {
    "building": "omb_f0073",
    "edge": 0,
-   "door_node": 965,
+   "door_node": 972,
    "point": [
     113.625,
     88.375
@@ -1962,7 +1962,7 @@
   "p002j": {
    "building": "omb_i0484",
    "edge": 1,
-   "door_node": 3750,
+   "door_node": 3757,
    "point": [
     303.125,
     34.875
@@ -1974,7 +1974,7 @@
   "p002k": {
    "building": "omb_f0080",
    "edge": 0,
-   "door_node": 996,
+   "door_node": 1003,
    "point": [
     98.875,
     63.125
@@ -1986,7 +1986,7 @@
   "p002l": {
    "building": "omb_f0236",
    "edge": 2,
-   "door_node": 1605,
+   "door_node": 1612,
    "point": [
     126.875,
     318.875
@@ -1998,7 +1998,7 @@
   "p002m": {
    "building": "omb_f0027",
    "edge": 3,
-   "door_node": 810,
+   "door_node": 817,
    "point": [
     -192.875,
     266.375
@@ -2010,7 +2010,7 @@
   "p002n": {
    "building": "omb_f0026",
    "edge": 0,
-   "door_node": 809,
+   "door_node": 816,
    "point": [
     -202.625,
     311.875
@@ -2022,7 +2022,7 @@
   "p002o": {
    "building": "omb_f0028",
    "edge": 2,
-   "door_node": 812,
+   "door_node": 819,
    "point": [
     -186.125,
     238.625
@@ -2034,7 +2034,7 @@
   "p002p": {
    "building": "omb_i0569",
    "edge": 3,
-   "door_node": 3930,
+   "door_node": 3937,
    "point": [
     -152.625,
     240.375
@@ -2046,7 +2046,7 @@
   "p002q": {
    "building": "omb_i0480",
    "edge": 1,
-   "door_node": 3743,
+   "door_node": 3750,
    "point": [
     -115.625,
     34.375
@@ -2058,7 +2058,7 @@
   "p002r": {
    "building": "omb_i0572",
    "edge": 3,
-   "door_node": 3935,
+   "door_node": 3942,
    "point": [
     -225.875,
     253.375
@@ -2070,7 +2070,7 @@
   "p002s": {
    "building": "omb_f0231",
    "edge": 0,
-   "door_node": 1598,
+   "door_node": 1605,
    "point": [
     7.375,
     299.875
@@ -2082,7 +2082,7 @@
   "p002t": {
    "building": "omb_f0222",
    "edge": 1,
-   "door_node": 1576,
+   "door_node": 1583,
    "point": [
     90.375,
     257.875
@@ -2094,7 +2094,7 @@
   "p002u": {
    "building": "omb_f0420",
    "edge": 2,
-   "door_node": 2276,
+   "door_node": 2283,
    "point": [
     40.875,
     167.875
@@ -2106,7 +2106,7 @@
   "p002v": {
    "building": "omb_f0079",
    "edge": 1,
-   "door_node": 986,
+   "door_node": 993,
    "point": [
     105.625,
     55.375
@@ -2118,7 +2118,7 @@
   "p002w": {
    "building": "omb_i0329",
    "edge": 1,
-   "door_node": 3377,
+   "door_node": 3384,
    "point": [
     -182.375,
     312.625
@@ -2130,7 +2130,7 @@
   "p002x": {
    "building": "omb_i0131",
    "edge": 2,
-   "door_node": 2902,
+   "door_node": 2909,
    "point": [
     -139.625,
     310.125
@@ -2142,7 +2142,7 @@
   "p002y": {
    "building": "omb_i0168",
    "edge": 0,
-   "door_node": 3022,
+   "door_node": 3029,
    "point": [
     284.125,
     42.125
@@ -2154,7 +2154,7 @@
   "p002z": {
    "building": "omb_i0400",
    "edge": 1,
-   "door_node": 3552,
+   "door_node": 3559,
    "point": [
     -145.625,
     -408.625
@@ -2166,7 +2166,7 @@
   "p0030": {
    "building": "omb_i0552",
    "edge": 1,
-   "door_node": 3899,
+   "door_node": 3906,
    "point": [
     265.625,
     173.875
@@ -2178,7 +2178,7 @@
   "p0031": {
    "building": "omb_i0469",
    "edge": 0,
-   "door_node": 3710,
+   "door_node": 3717,
    "point": [
     -183.625,
     -430.125
@@ -2190,7 +2190,7 @@
   "p0032": {
    "building": "omb_i0254",
    "edge": 2,
-   "door_node": 3212,
+   "door_node": 3219,
    "point": [
     -152.625,
     -415.625
@@ -2202,7 +2202,7 @@
   "p0037": {
    "building": "omb_f0355",
    "edge": 3,
-   "door_node": 2096,
+   "door_node": 2103,
    "point": [
     -316.375,
     119.375
@@ -2214,7 +2214,7 @@
   "p0038": {
    "building": "omb_f0087",
    "edge": 2,
-   "door_node": 1013,
+   "door_node": 1020,
    "point": [
     -278.375,
     -95.625
@@ -2226,7 +2226,7 @@
   "p0039": {
    "building": "omb_i0181",
    "edge": 1,
-   "door_node": 3057,
+   "door_node": 3064,
    "point": [
     -255.875,
     -49.875
@@ -2238,7 +2238,7 @@
   "p003e": {
    "building": "omb_f0040",
    "edge": 0,
-   "door_node": 846,
+   "door_node": 853,
    "point": [
     -202.625,
     -61.375
@@ -2250,7 +2250,7 @@
   "p003f": {
    "building": "omb_f0038",
    "edge": 2,
-   "door_node": 838,
+   "door_node": 845,
    "point": [
     -181.875,
     -39.625
@@ -2262,7 +2262,7 @@
   "p003g": {
    "building": "omb_i0177",
    "edge": 0,
-   "door_node": 3049,
+   "door_node": 3056,
    "point": [
     -291.375,
     -111.625
@@ -2274,7 +2274,7 @@
   "p003h": {
    "building": "omb_f0447",
    "edge": 1,
-   "door_node": 2366,
+   "door_node": 2373,
    "point": [
     -273.375,
     300.875
@@ -2286,7 +2286,7 @@
   "p003i": {
    "building": "omb_i0414",
    "edge": 0,
-   "door_node": 3585,
+   "door_node": 3592,
    "point": [
     -168.375,
     327.625
@@ -2298,7 +2298,7 @@
   "p003j": {
    "building": "omb_i0429",
    "edge": 0,
-   "door_node": 3628,
+   "door_node": 3635,
    "point": [
     -153.125,
     324.125
@@ -2310,7 +2310,7 @@
   "p003m": {
    "building": "omb_i0467",
    "edge": 2,
-   "door_node": 3707,
+   "door_node": 3714,
    "point": [
     119.625,
     323.125
@@ -2322,7 +2322,7 @@
   "p003n": {
    "building": "omb_i0093",
    "edge": 1,
-   "door_node": 2788,
+   "door_node": 2795,
    "point": [
     254.875,
     300.875
@@ -2334,7 +2334,7 @@
   "p003o": {
    "building": "omb_i0001",
    "edge": 2,
-   "door_node": 2415,
+   "door_node": 2422,
    "point": [
     152.125,
     -22.125
@@ -2346,7 +2346,7 @@
   "p003u": {
    "building": "omb_i0308",
    "edge": 0,
-   "door_node": 3312,
+   "door_node": 3319,
    "point": [
     72.875,
     166.375
@@ -2358,7 +2358,7 @@
   "p003v": {
    "building": "omb_f0192",
    "edge": 0,
-   "door_node": 1449,
+   "door_node": 1456,
    "point": [
     -69.875,
     -148.875
@@ -2370,7 +2370,7 @@
   "p003w": {
    "building": "omb_i0328",
    "edge": 2,
-   "door_node": 3375,
+   "door_node": 3382,
    "point": [
     -60.625,
     -312.625
@@ -2382,7 +2382,7 @@
   "p003x": {
    "building": "omb_i0339",
    "edge": 0,
-   "door_node": 3404,
+   "door_node": 3411,
    "point": [
     -63.125,
     -268.625
@@ -2394,7 +2394,7 @@
   "p003y": {
    "building": "omb_i0519",
    "edge": 0,
-   "door_node": 3815,
+   "door_node": 3822,
    "point": [
     -50.375,
     -429.875
@@ -2406,7 +2406,7 @@
   "p003z": {
    "building": "omb_i0147",
    "edge": 3,
-   "door_node": 2962,
+   "door_node": 2969,
    "point": [
     -56.625,
     -421.625
@@ -2418,7 +2418,7 @@
   "p0040": {
    "building": "omb_i0010",
    "edge": 0,
-   "door_node": 2452,
+   "door_node": 2459,
    "point": [
     -52.375,
     -382.125
@@ -2430,7 +2430,7 @@
   "p0041": {
    "building": "omb_i0247",
    "edge": 2,
-   "door_node": 3196,
+   "door_node": 3203,
    "point": [
     -167.125,
     -51.375
@@ -2442,7 +2442,7 @@
   "p0042": {
    "building": "omb_i0330",
    "edge": 3,
-   "door_node": 3382,
+   "door_node": 3389,
    "point": [
     -91.375,
     63.125
@@ -2454,7 +2454,7 @@
   "p0043": {
    "building": "omb_f0134",
    "edge": 2,
-   "door_node": 1239,
+   "door_node": 1246,
    "point": [
     76.625,
     220.625
@@ -2466,7 +2466,7 @@
   "p0044": {
    "building": "omb_i0036",
    "edge": 0,
-   "door_node": 2551,
+   "door_node": 2558,
    "point": [
     -148.625,
     -50.875
@@ -2478,7 +2478,7 @@
   "p0045": {
    "building": "omb_i0309",
    "edge": 3,
-   "door_node": 3314,
+   "door_node": 3321,
    "point": [
     279.375,
     129.625
@@ -2490,7 +2490,7 @@
   "p0046": {
    "building": "omb_i0032",
    "edge": 0,
-   "door_node": 2546,
+   "door_node": 2553,
    "point": [
     288.375,
     309.125
@@ -2502,7 +2502,7 @@
   "p0047": {
    "building": "omb_i0290",
    "edge": 2,
-   "door_node": 3283,
+   "door_node": 3290,
    "point": [
     319.625,
     213.125
@@ -2514,7 +2514,7 @@
   "p0048": {
    "building": "omb_i0357",
    "edge": 0,
-   "door_node": 3442,
+   "door_node": 3449,
    "point": [
     -143.375,
     -428.125
@@ -2526,7 +2526,7 @@
   "p0049": {
    "building": "omb_i0167",
    "edge": 1,
-   "door_node": 3017,
+   "door_node": 3024,
    "point": [
     -127.625,
     -409.125
@@ -2538,7 +2538,7 @@
   "p004a": {
    "building": "omb_i0492",
    "edge": 1,
-   "door_node": 3769,
+   "door_node": 3776,
    "point": [
     -125.875,
     323.875
@@ -2550,7 +2550,7 @@
   "p004b": {
    "building": "omb_i0451",
    "edge": 3,
-   "door_node": 3688,
+   "door_node": 3695,
    "point": [
     -121.375,
     -413.875
@@ -2562,7 +2562,7 @@
   "p004c": {
    "building": "omb_f0176",
    "edge": 2,
-   "door_node": 1390,
+   "door_node": 1397,
    "point": [
     -164.875,
     -154.625
@@ -2574,7 +2574,7 @@
   "p004d": {
    "building": "omb_i0464",
    "edge": 0,
-   "door_node": 3704,
+   "door_node": 3711,
    "point": [
     -106.625,
     -389.625
@@ -2586,7 +2586,7 @@
   "p004e": {
    "building": "omb_i0379",
    "edge": 0,
-   "door_node": 3498,
+   "door_node": 3505,
    "point": [
     156.875,
     -17.125
@@ -2598,7 +2598,7 @@
   "p004f": {
    "building": "omb_f0275",
    "edge": 2,
-   "door_node": 1732,
+   "door_node": 1739,
    "point": [
     163.125,
     -65.375
@@ -2610,7 +2610,7 @@
   "p004g": {
    "building": "omb_i0316",
    "edge": 3,
-   "door_node": 3344,
+   "door_node": 3351,
    "point": [
     -106.875,
     -203.875
@@ -2622,7 +2622,7 @@
   "p004h": {
    "building": "omb_i0127",
    "edge": 1,
-   "door_node": 2896,
+   "door_node": 2903,
    "point": [
     -62.625,
     -287.625
@@ -2634,7 +2634,7 @@
   "p004i": {
    "building": "omb_i0121",
    "edge": 3,
-   "door_node": 2881,
+   "door_node": 2888,
    "point": [
     -92.875,
     29.375
@@ -2646,7 +2646,7 @@
   "p004j": {
    "building": "omb_i0383",
    "edge": 1,
-   "door_node": 3512,
+   "door_node": 3519,
    "point": [
     -107.375,
     15.125
@@ -2658,7 +2658,7 @@
   "p004k": {
    "building": "omb_f0247",
    "edge": 0,
-   "door_node": 1626,
+   "door_node": 1633,
    "point": [
     304.375,
     140.625
@@ -2670,7 +2670,7 @@
   "p004l": {
    "building": "omb_f0214",
    "edge": 2,
-   "door_node": 1560,
+   "door_node": 1567,
    "point": [
     -57.625,
     -199.875
@@ -2682,7 +2682,7 @@
   "p004m": {
    "building": "omb_i0142",
    "edge": 0,
-   "door_node": 2941,
+   "door_node": 2948,
    "point": [
     -40.125,
     -347.875
@@ -2694,7 +2694,7 @@
   "p004q": {
    "building": "omb_i0190",
    "edge": 3,
-   "door_node": 3071,
+   "door_node": 3078,
    "point": [
     -28.625,
     -410.875
@@ -2706,7 +2706,7 @@
   "p004r": {
    "building": "omb_i0150",
    "edge": 3,
-   "door_node": 2974,
+   "door_node": 2981,
    "point": [
     -49.125,
     -317.125
@@ -2718,7 +2718,7 @@
   "p004s": {
    "building": "omb_f0044",
    "edge": 0,
-   "door_node": 857,
+   "door_node": 864,
    "point": [
     -202.625,
     -103.375
@@ -2730,7 +2730,7 @@
   "p004t": {
    "building": "omb_i0263",
    "edge": 0,
-   "door_node": 3224,
+   "door_node": 3231,
    "point": [
     314.875,
     316.625
@@ -2742,7 +2742,7 @@
   "p004u": {
    "building": "omb_i0068",
    "edge": 3,
-   "door_node": 2673,
+   "door_node": 2680,
    "point": [
     -84.625,
     15.125
@@ -2754,7 +2754,7 @@
   "p004v": {
    "building": "omb_f0061",
    "edge": 2,
-   "door_node": 905,
+   "door_node": 912,
    "point": [
     323.375,
     100.625
@@ -2766,7 +2766,7 @@
   "p004w": {
    "building": "omb_i0248",
    "edge": 3,
-   "door_node": 3197,
+   "door_node": 3204,
    "point": [
     -30.875,
     -424.125
@@ -2778,7 +2778,7 @@
   "p004x": {
    "building": "omb_i0447",
    "edge": 0,
-   "door_node": 3672,
+   "door_node": 3679,
    "point": [
     -92.875,
     -10.875
@@ -2790,7 +2790,7 @@
   "p004y": {
    "building": "omb_i0161",
    "edge": 3,
-   "door_node": 3004,
+   "door_node": 3011,
    "point": [
     -95.875,
     -391.625
@@ -2802,7 +2802,7 @@
   "p0055": {
    "building": "omb_i0418",
    "edge": 0,
-   "door_node": 3599,
+   "door_node": 3606,
    "point": [
     -13.375,
     -265.875
@@ -2814,7 +2814,7 @@
   "p0056": {
    "building": "omb_f0196",
    "edge": 2,
-   "door_node": 1463,
+   "door_node": 1470,
    "point": [
     -22.625,
     -172.125
@@ -2826,7 +2826,7 @@
   "p0057": {
    "building": "omb_i0426",
    "edge": 1,
-   "door_node": 3620,
+   "door_node": 3627,
    "point": [
     -27.125,
     -128.875
@@ -2838,7 +2838,7 @@
   "p0058": {
    "building": "omb_f0118",
    "edge": 2,
-   "door_node": 1120,
+   "door_node": 1127,
    "point": [
     13.375,
     -408.375
@@ -2850,7 +2850,7 @@
   "p0059": {
    "building": "omb_i0096",
    "edge": 2,
-   "door_node": 2796,
+   "door_node": 2803,
    "point": [
     -5.375,
     -304.375
@@ -2862,7 +2862,7 @@
   "p005a": {
    "building": "omb_i0061",
    "edge": 0,
-   "door_node": 2654,
+   "door_node": 2661,
    "point": [
     -10.875,
     -140.125
@@ -2874,7 +2874,7 @@
   "p005b": {
    "building": "omb_i0193",
    "edge": 2,
-   "door_node": 3090,
+   "door_node": 3097,
    "point": [
     -80.125,
     -21.125
@@ -2886,7 +2886,7 @@
   "p005c": {
    "building": "omb_f0067",
    "edge": 1,
-   "door_node": 936,
+   "door_node": 943,
    "point": [
     311.375,
     85.125
@@ -2898,7 +2898,7 @@
   "p005d": {
    "building": "omb_i0315",
    "edge": 2,
-   "door_node": 3343,
+   "door_node": 3350,
    "point": [
     5.375,
     -437.625
@@ -2910,7 +2910,7 @@
   "p005e": {
    "building": "omb_i0438",
    "edge": 2,
-   "door_node": 3648,
+   "door_node": 3655,
    "point": [
     -88.375,
     -32.125
@@ -2922,7 +2922,7 @@
   "p005f": {
    "building": "omb_f0126",
    "edge": 2,
-   "door_node": 1163,
+   "door_node": 1170,
    "point": [
     32.125,
     -423.125
@@ -2934,7 +2934,7 @@
   "p005g": {
    "building": "omb_i0072",
    "edge": 0,
-   "door_node": 2692,
+   "door_node": 2699,
    "point": [
     -8.625,
     -343.375
@@ -2946,7 +2946,7 @@
   "p005h": {
    "building": "omb_f0068",
    "edge": 2,
-   "door_node": 940,
+   "door_node": 947,
    "point": [
     306.375,
     75.375
@@ -2958,7 +2958,7 @@
   "p005i": {
    "building": "omb_i0130",
    "edge": 1,
-   "door_node": 2901,
+   "door_node": 2908,
    "point": [
     14.125,
     -278.875
@@ -2970,7 +2970,7 @@
   "p005j": {
    "building": "omb_i0232",
    "edge": 2,
-   "door_node": 3173,
+   "door_node": 3180,
    "point": [
     -111.125,
     -44.375
@@ -2982,7 +2982,7 @@
   "p005k": {
    "building": "omb_i0114",
    "edge": 3,
-   "door_node": 2860,
+   "door_node": 2867,
    "point": [
     10.375,
     -248.375
@@ -2994,7 +2994,7 @@
   "p005l": {
    "building": "omb_f0159",
    "edge": 2,
-   "door_node": 1325,
+   "door_node": 1332,
    "point": [
     171.125,
     8.625
@@ -3006,7 +3006,7 @@
   "p005m": {
    "building": "omb_f0178",
    "edge": 0,
-   "door_node": 1393,
+   "door_node": 1400,
    "point": [
     -163.875,
     -147.625
@@ -3018,7 +3018,7 @@
   "p005n": {
    "building": "omb_i0109",
    "edge": 1,
-   "door_node": 2844,
+   "door_node": 2851,
    "point": [
     46.875,
     -123.375
@@ -3030,7 +3030,7 @@
   "p005o": {
    "building": "omb_i0416",
    "edge": 2,
-   "door_node": 3590,
+   "door_node": 3597,
    "point": [
     -154.375,
     -67.875
@@ -3042,7 +3042,7 @@
   "p005p": {
    "building": "omb_f0103",
    "edge": 0,
-   "door_node": 1061,
+   "door_node": 1068,
    "point": [
     25.875,
     -292.875
@@ -3054,7 +3054,7 @@
   "p005q": {
    "building": "omb_f0066",
    "edge": 3,
-   "door_node": 935,
+   "door_node": 942,
    "point": [
     329.125,
     84.625
@@ -3066,7 +3066,7 @@
   "p005r": {
    "building": "omb_i0421",
    "edge": 0,
-   "door_node": 3607,
+   "door_node": 3614,
    "point": [
     317.625,
     46.125
@@ -3078,7 +3078,7 @@
   "p005s": {
    "building": "omb_i0388",
    "edge": 0,
-   "door_node": 3531,
+   "door_node": 3538,
    "point": [
     40.625,
     -367.125
@@ -3090,7 +3090,7 @@
   "p005t": {
    "building": "omb_f0096",
    "edge": 3,
-   "door_node": 1045,
+   "door_node": 1052,
    "point": [
     38.125,
     -237.375
@@ -3102,7 +3102,7 @@
   "p005u": {
    "building": "omb_i0110",
    "edge": 3,
-   "door_node": 2845,
+   "door_node": 2852,
    "point": [
     -75.375,
     -362.375
@@ -3114,7 +3114,7 @@
   "p005v": {
    "building": "omb_i0454",
    "edge": 0,
-   "door_node": 3691,
+   "door_node": 3698,
    "point": [
     167.125,
     3.375
@@ -3126,7 +3126,7 @@
   "p005w": {
    "building": "omb_i0556",
    "edge": 1,
-   "door_node": 3906,
+   "door_node": 3913,
    "point": [
     -178.125,
     -87.875
@@ -3138,7 +3138,7 @@
   "p005x": {
    "building": "omb_i0164",
    "edge": 0,
-   "door_node": 3011,
+   "door_node": 3018,
    "point": [
     44.125,
     -431.125
@@ -3150,7 +3150,7 @@
   "p005y": {
    "building": "omb_i0507",
    "edge": 1,
-   "door_node": 3791,
+   "door_node": 3798,
    "point": [
     -98.625,
     -52.375
@@ -3162,7 +3162,7 @@
   "p005z": {
    "building": "omb_i0022",
    "edge": 1,
-   "door_node": 2512,
+   "door_node": 2519,
    "point": [
     191.875,
     5.625
@@ -3174,19 +3174,19 @@
   "p0060": {
    "building": "omb_i0183",
    "edge": 3,
-   "door_node": 3060,
+   "door_node": 3067,
    "point": [
     72.875,
     -209.625
    ],
    "ward": "Bell and Sluice Wards",
-   "landmark": "Step Cistern",
-   "place_description": "a house in the Bell and Sluice Wards, near Step Cistern"
+   "landmark": "The Stone House",
+   "place_description": "a house in the Bell and Sluice Wards, near the Stone House"
   },
   "p0061": {
    "building": "omb_f0370",
    "edge": 3,
-   "door_node": 2125,
+   "door_node": 2132,
    "point": [
     306.125,
     49.375
@@ -3198,7 +3198,7 @@
   "p0062": {
    "building": "omb_i0445",
    "edge": 0,
-   "door_node": 3667,
+   "door_node": 3674,
    "point": [
     75.125,
     -437.875
@@ -3210,7 +3210,7 @@
   "p0063": {
    "building": "omb_i0144",
    "edge": 2,
-   "door_node": 2952,
+   "door_node": 2959,
    "point": [
     -88.125,
     -341.125
@@ -3222,7 +3222,7 @@
   "p0064": {
    "building": "omb_i0259",
    "edge": 1,
-   "door_node": 3219,
+   "door_node": 3226,
    "point": [
     -161.875,
     -92.375
@@ -3234,7 +3234,7 @@
   "p0065": {
    "building": "omb_f0112",
    "edge": 0,
-   "door_node": 1106,
+   "door_node": 1113,
    "point": [
     33.375,
     -339.125
@@ -3246,7 +3246,7 @@
   "p0066": {
    "building": "omb_f0100",
    "edge": 2,
-   "door_node": 1049,
+   "door_node": 1056,
    "point": [
     48.125,
     -263.625
@@ -3258,7 +3258,7 @@
   "p0067": {
    "building": "omb_f0095",
    "edge": 1,
-   "door_node": 1035,
+   "door_node": 1042,
    "point": [
     69.125,
     -144.125
@@ -3270,7 +3270,7 @@
   "p0068": {
    "building": "omb_i0532",
    "edge": 2,
-   "door_node": 3858,
+   "door_node": 3865,
    "point": [
     212.375,
     11.125
@@ -3282,7 +3282,7 @@
   "p0069": {
    "building": "omb_i0551",
    "edge": 0,
-   "door_node": 3897,
+   "door_node": 3904,
    "point": [
     252.375,
     22.375
@@ -3294,7 +3294,7 @@
   "p006a": {
    "building": "omb_i0246",
    "edge": 1,
-   "door_node": 3195,
+   "door_node": 3202,
    "point": [
     313.625,
     22.875
@@ -3306,7 +3306,7 @@
   "p006b": {
    "building": "omb_f0254",
    "edge": 2,
-   "door_node": 1658,
+   "door_node": 1665,
    "point": [
     290.625,
     13.875
@@ -3318,7 +3318,7 @@
   "p006c": {
    "building": "omb_f0255",
    "edge": 2,
-   "door_node": 1659,
+   "door_node": 1666,
    "point": [
     281.375,
     11.875
@@ -3330,7 +3330,7 @@
   "p006d": {
    "building": "omb_i0100",
    "edge": 2,
-   "door_node": 2820,
+   "door_node": 2827,
    "point": [
     222.875,
     13.875
@@ -3342,7 +3342,7 @@
   "p006e": {
    "building": "omb_i0404",
    "edge": 1,
-   "door_node": 3563,
+   "door_node": 3570,
    "point": [
     309.625,
     -2.625
@@ -3354,7 +3354,7 @@
   "p006f": {
    "building": "omb_i0070",
    "edge": 2,
-   "door_node": 2678,
+   "door_node": 2685,
    "point": [
     -92.125,
     -51.375
@@ -3366,7 +3366,7 @@
   "p006g": {
    "building": "omb_f0258",
    "edge": 2,
-   "door_node": 1663,
+   "door_node": 1670,
    "point": [
     289.625,
     -5.125
@@ -3378,7 +3378,7 @@
   "p006h": {
    "building": "omb_i0373",
    "edge": 2,
-   "door_node": 3478,
+   "door_node": 3485,
    "point": [
     182.625,
     -21.875
@@ -3390,7 +3390,7 @@
   "p006i": {
    "building": "omb_i0014",
    "edge": 0,
-   "door_node": 2479,
+   "door_node": 2486,
    "point": [
     295.875,
     -14.875
@@ -3402,7 +3402,7 @@
   "p006j": {
    "building": "omb_f0268",
    "edge": 3,
-   "door_node": 1722,
+   "door_node": 1729,
    "point": [
     198.625,
     -17.375
@@ -3414,7 +3414,7 @@
   "p006k": {
    "building": "omb_f0263",
    "edge": 2,
-   "door_node": 1683,
+   "door_node": 1690,
    "point": [
     228.625,
     -7.375
@@ -3426,7 +3426,7 @@
   "p006l": {
    "building": "omb_i0178",
    "edge": 1,
-   "door_node": 3051,
+   "door_node": 3058,
    "point": [
     263.375,
     -24.625
@@ -3438,7 +3438,7 @@
   "p006m": {
    "building": "omb_i0202",
    "edge": 1,
-   "door_node": 3107,
+   "door_node": 3114,
    "point": [
     -124.875,
     -66.375
@@ -3450,7 +3450,7 @@
   "p006n": {
    "building": "omb_i0087",
    "edge": 0,
-   "door_node": 2766,
+   "door_node": 2773,
    "point": [
     -132.625,
     -87.625
@@ -3462,7 +3462,7 @@
   "p006o": {
    "building": "omb_i0239",
    "edge": 3,
-   "door_node": 3182,
+   "door_node": 3189,
    "point": [
     -119.875,
     -94.875
@@ -3474,7 +3474,7 @@
   "p006p": {
    "building": "omb_i0560",
    "edge": 0,
-   "door_node": 3914,
+   "door_node": 3921,
    "point": [
     -86.875,
     -102.625
@@ -3486,7 +3486,7 @@
   "p006q": {
    "building": "omb_i0269",
    "edge": 2,
-   "door_node": 3237,
+   "door_node": 3244,
    "point": [
     -176.125,
     -112.875
@@ -3498,7 +3498,7 @@
   "p006r": {
    "building": "omb_i0160",
    "edge": 0,
-   "door_node": 3003,
+   "door_node": 3010,
    "point": [
     -42.875,
     -139.875
@@ -3510,7 +3510,7 @@
   "p006s": {
    "building": "omb_f0199",
    "edge": 2,
-   "door_node": 1475,
+   "door_node": 1482,
    "point": [
     -18.125,
     -152.875
@@ -3522,7 +3522,7 @@
   "p006t": {
    "building": "omb_i0040",
    "edge": 1,
-   "door_node": 2580,
+   "door_node": 2587,
    "point": [
     281.625,
     -34.625
@@ -3534,7 +3534,7 @@
   "p006u": {
    "building": "omb_f0274",
    "edge": 2,
-   "door_node": 1730,
+   "door_node": 1737,
    "point": [
     194.625,
     -56.375
@@ -3546,7 +3546,7 @@
   "p006v": {
    "building": "omb_f0279",
    "edge": 0,
-   "door_node": 1742,
+   "door_node": 1749,
    "point": [
     153.375,
     -94.375
@@ -3558,7 +3558,7 @@
   "p006w": {
    "building": "omb_i0444",
    "edge": 1,
-   "door_node": 3664,
+   "door_node": 3671,
    "point": [
     189.875,
     -70.375
@@ -3570,7 +3570,7 @@
   "p006x": {
    "building": "omb_i0342",
    "edge": 2,
-   "door_node": 3408,
+   "door_node": 3415,
    "point": [
     315.125,
     -55.875
@@ -3582,7 +3582,7 @@
   "p006y": {
    "building": "omb_f0014",
    "edge": 1,
-   "door_node": 783,
+   "door_node": 790,
    "point": [
     -233.125,
     -116.625
@@ -3594,7 +3594,7 @@
   "p006z": {
    "building": "omb_f0206",
    "edge": 0,
-   "door_node": 1510,
+   "door_node": 1517,
    "point": [
     -97.125,
     -230.375
@@ -3606,7 +3606,7 @@
   "p0070": {
    "building": "omb_f0045",
    "edge": 2,
-   "door_node": 858,
+   "door_node": 865,
    "point": [
     -187.625,
     -115.875
@@ -3618,7 +3618,7 @@
   "p0071": {
    "building": "omb_i0159",
    "edge": 0,
-   "door_node": 2997,
+   "door_node": 3004,
    "point": [
     -91.875,
     -320.375
@@ -3630,7 +3630,7 @@
   "p0072": {
    "building": "omb_f0015",
    "edge": 1,
-   "door_node": 786,
+   "door_node": 793,
    "point": [
     -233.125,
     -125.375
@@ -3642,7 +3642,7 @@
   "p0073": {
    "building": "omb_i0101",
    "edge": 1,
-   "door_node": 2823,
+   "door_node": 2830,
    "point": [
     -48.125,
     -421.375
@@ -3654,7 +3654,7 @@
   "p0074": {
    "building": "omb_i0120",
    "edge": 0,
-   "door_node": 2877,
+   "door_node": 2884,
    "point": [
     -267.625,
     -142.375
@@ -3666,7 +3666,7 @@
   "p0075": {
    "building": "omb_i0220",
    "edge": 1,
-   "door_node": 3144,
+   "door_node": 3151,
    "point": [
     -98.125,
     -190.375
@@ -3678,7 +3678,7 @@
   "p0076": {
    "building": "omb_i0258",
    "edge": 2,
-   "door_node": 3218,
+   "door_node": 3225,
    "point": [
     -274.125,
     -142.125
@@ -3690,7 +3690,7 @@
   "p0077": {
    "building": "omb_i0212",
    "edge": 0,
-   "door_node": 3130,
+   "door_node": 3137,
    "point": [
     220.125,
     -41.125
@@ -3702,7 +3702,7 @@
   "p0078": {
    "building": "omb_i0017",
    "edge": 1,
-   "door_node": 2496,
+   "door_node": 2503,
    "point": [
     285.375,
     -59.625
@@ -3714,7 +3714,7 @@
   "p0079": {
    "building": "omb_i0025",
    "edge": 0,
-   "door_node": 2516,
+   "door_node": 2523,
    "point": [
     261.875,
     -54.375
@@ -3726,7 +3726,7 @@
   "p007a": {
    "building": "omb_i0533",
    "edge": 0,
-   "door_node": 3860,
+   "door_node": 3867,
    "point": [
     123.375,
     -111.125
@@ -3738,7 +3738,7 @@
   "p007b": {
    "building": "omb_f0181",
    "edge": 0,
-   "door_node": 1401,
+   "door_node": 1408,
    "point": [
     -113.625,
     -166.875
@@ -3750,7 +3750,7 @@
   "p007c": {
    "building": "omb_i0287",
    "edge": 2,
-   "door_node": 3275,
+   "door_node": 3282,
    "point": [
     -76.125,
     -328.625
@@ -3762,7 +3762,7 @@
   "p007d": {
    "building": "omb_i0153",
    "edge": 2,
-   "door_node": 2983,
+   "door_node": 2990,
    "point": [
     290.375,
     -74.125
@@ -3774,7 +3774,7 @@
   "p007e": {
    "building": "omb_i0024",
    "edge": 3,
-   "door_node": 2515,
+   "door_node": 2522,
    "point": [
     277.625,
     -70.125
@@ -3786,7 +3786,7 @@
   "p007f": {
    "building": "omb_i0043",
    "edge": 0,
-   "door_node": 2588,
+   "door_node": 2595,
    "point": [
     292.875,
     -77.875
@@ -3798,7 +3798,7 @@
   "p007g": {
    "building": "omb_i0390",
    "edge": 1,
-   "door_node": 3535,
+   "door_node": 3542,
    "point": [
     283.875,
     -93.125
@@ -3810,7 +3810,7 @@
   "p007h": {
    "building": "omb_f0377",
    "edge": 2,
-   "door_node": 2139,
+   "door_node": 2146,
    "point": [
     193.375,
     -78.375
@@ -3822,7 +3822,7 @@
   "p007i": {
    "building": "omb_i0041",
    "edge": 2,
-   "door_node": 2584,
+   "door_node": 2591,
    "point": [
     258.375,
     -70.625
@@ -3834,7 +3834,7 @@
   "p007j": {
    "building": "omb_i0413",
    "edge": 1,
-   "door_node": 3583,
+   "door_node": 3590,
    "point": [
     -282.125,
     -147.875
@@ -3846,7 +3846,7 @@
   "p007k": {
    "building": "omb_i0482",
    "edge": 3,
-   "door_node": 3746,
+   "door_node": 3753,
    "point": [
     -107.875,
     -159.625
@@ -3858,7 +3858,7 @@
   "p007l": {
    "building": "omb_f0366",
    "edge": 1,
-   "door_node": 2114,
+   "door_node": 2121,
    "point": [
     -309.375,
     -143.875
@@ -3870,7 +3870,7 @@
   "p007m": {
    "building": "omb_f0382",
    "edge": 0,
-   "door_node": 2151,
+   "door_node": 2158,
    "point": [
     173.875,
     -114.375
@@ -3882,7 +3882,7 @@
   "p007n": {
    "building": "omb_i0077",
    "edge": 3,
-   "door_node": 2726,
+   "door_node": 2733,
    "point": [
     255.375,
     -75.375
@@ -3894,7 +3894,7 @@
   "p007o": {
    "building": "omb_i0365",
    "edge": 1,
-   "door_node": 3458,
+   "door_node": 3465,
    "point": [
     231.625,
     -73.125
@@ -3906,7 +3906,7 @@
   "p007p": {
    "building": "omb_i0364",
    "edge": 2,
-   "door_node": 3457,
+   "door_node": 3464,
    "point": [
     236.875,
     -83.125
@@ -3918,7 +3918,7 @@
   "p007q": {
    "building": "omb_i0235",
    "edge": 1,
-   "door_node": 3176,
+   "door_node": 3183,
    "point": [
     265.875,
     -92.375
@@ -3930,7 +3930,7 @@
   "p007r": {
    "building": "omb_f0378",
    "edge": 2,
-   "door_node": 2140,
+   "door_node": 2147,
    "point": [
     212.875,
     -92.875
@@ -3942,7 +3942,7 @@
   "p007s": {
    "building": "omb_i0060",
    "edge": 3,
-   "door_node": 2647,
+   "door_node": 2654,
    "point": [
     245.625,
     -85.875
@@ -3954,7 +3954,7 @@
   "p007t": {
    "building": "omb_i0186",
    "edge": 0,
-   "door_node": 3067,
+   "door_node": 3074,
    "point": [
     110.875,
     -117.125
@@ -3966,7 +3966,7 @@
   "p007u": {
    "building": "omb_i0347",
    "edge": 1,
-   "door_node": 3418,
+   "door_node": 3425,
    "point": [
     152.625,
     -118.375
@@ -3978,7 +3978,7 @@
   "p007z": {
    "building": "omb_i0529",
    "edge": 3,
-   "door_node": 3850,
+   "door_node": 3857,
    "point": [
     -48.125,
     -396.375
@@ -3990,7 +3990,7 @@
   "p0080": {
    "building": "omb_i0154",
    "edge": 3,
-   "door_node": 2984,
+   "door_node": 2991,
    "point": [
     223.625,
     -94.625
@@ -4002,7 +4002,7 @@
   "p0081": {
    "building": "omb_f0188",
    "edge": 2,
-   "door_node": 1430,
+   "door_node": 1437,
    "point": [
     -67.875,
     -156.375
@@ -4014,7 +4014,7 @@
   "p0082": {
    "building": "omb_i0069",
    "edge": 0,
-   "door_node": 2676,
+   "door_node": 2683,
    "point": [
     -60.125,
     -347.625
@@ -4026,7 +4026,7 @@
   "p0083": {
    "building": "omb_f0280",
    "edge": 0,
-   "door_node": 1743,
+   "door_node": 1750,
    "point": [
     274.875,
     -104.375
@@ -4038,7 +4038,7 @@
   "p0084": {
    "building": "omb_i0423",
    "edge": 2,
-   "door_node": 3609,
+   "door_node": 3616,
    "point": [
     -82.125,
     -171.625
@@ -4050,7 +4050,7 @@
   "p0085": {
    "building": "omb_f0195",
    "edge": 1,
-   "door_node": 1456,
+   "door_node": 1463,
    "point": [
     -29.625,
     -178.875
@@ -4062,7 +4062,7 @@
   "p0086": {
    "building": "omb_i0052",
    "edge": 2,
-   "door_node": 2623,
+   "door_node": 2630,
    "point": [
     -92.375,
     -257.125
@@ -4074,7 +4074,7 @@
   "p0087": {
    "building": "omb_i0172",
    "edge": 3,
-   "door_node": 3031,
+   "door_node": 3038,
    "point": [
     -95.375,
     -190.875
@@ -4086,7 +4086,7 @@
   "p008e": {
    "building": "omb_i0033",
    "edge": 3,
-   "door_node": 2547,
+   "door_node": 2554,
    "point": [
     79.875,
     -423.625
@@ -4098,19 +4098,19 @@
   "p008f": {
    "building": "omb_i0452",
    "edge": 2,
-   "door_node": 3689,
+   "door_node": 3696,
    "point": [
     95.875,
     -220.125
    ],
    "ward": "Bell and Sluice Wards",
-   "landmark": "Step Cistern",
-   "place_description": "a house in the Bell and Sluice Wards, near Step Cistern"
+   "landmark": "The Stone House",
+   "place_description": "a house in the Bell and Sluice Wards, near the Stone House"
   },
   "p008g": {
    "building": "omb_i0133",
    "edge": 0,
-   "door_node": 2912,
+   "door_node": 2919,
    "point": [
     106.875,
     -421.125
@@ -4122,7 +4122,7 @@
   "p008h": {
    "building": "omb_i0479",
    "edge": 1,
-   "door_node": 3742,
+   "door_node": 3749,
    "point": [
     78.625,
     -390.125
@@ -4134,7 +4134,7 @@
   "p008i": {
    "building": "omb_i0376",
    "edge": 1,
-   "door_node": 3481,
+   "door_node": 3488,
    "point": [
     72.625,
     -297.875
@@ -4146,7 +4146,7 @@
   "p008j": {
    "building": "omb_f0317",
    "edge": 1,
-   "door_node": 1907,
+   "door_node": 1914,
    "point": [
     97.625,
     -300.125
@@ -4158,7 +4158,7 @@
   "p008k": {
    "building": "omb_f0315",
    "edge": 2,
-   "door_node": 1898,
+   "door_node": 1905,
    "point": [
     86.875,
     -272.375
@@ -4170,7 +4170,7 @@
   "p008p": {
    "building": "omb_i0501",
    "edge": 1,
-   "door_node": 3781,
+   "door_node": 3788,
    "point": [
     129.875,
     -419.125
@@ -4182,7 +4182,7 @@
   "p008q": {
    "building": "omb_i0366",
    "edge": 0,
-   "door_node": 3462,
+   "door_node": 3469,
    "point": [
     111.375,
     -405.125
@@ -4194,7 +4194,7 @@
   "p008r": {
    "building": "omb_f0316",
    "edge": 0,
-   "door_node": 1906,
+   "door_node": 1913,
    "point": [
     81.875,
     -288.375
@@ -4206,7 +4206,7 @@
   "p008s": {
    "building": "omb_i0151",
    "edge": 0,
-   "door_node": 2978,
+   "door_node": 2985,
    "point": [
     87.375,
     -402.125
@@ -4218,7 +4218,7 @@
   "p008x": {
    "building": "omb_f0394",
    "edge": 0,
-   "door_node": 2193,
+   "door_node": 2200,
    "point": [
     132.375,
     -228.375
@@ -4230,7 +4230,7 @@
   "p008y": {
    "building": "omb_i0283",
    "edge": 2,
-   "door_node": 3270,
+   "door_node": 3277,
    "point": [
     169.375,
     -408.625
@@ -4242,19 +4242,19 @@
   "p008z": {
    "building": "omb_f0393",
    "edge": 3,
-   "door_node": 2182,
+   "door_node": 2189,
    "point": [
     141.375,
     -210.375
    ],
    "ward": "Bell and Sluice Wards",
-   "landmark": "Bitter Well",
-   "place_description": "a house in the Bell and Sluice Wards, near Bitter Well"
+   "landmark": "The Stone House",
+   "place_description": "a house in the Bell and Sluice Wards, near the Stone House"
   },
   "p0090": {
    "building": "omb_i0321",
    "edge": 1,
-   "door_node": 3354,
+   "door_node": 3361,
    "point": [
     129.875,
     -129.125
@@ -4266,7 +4266,7 @@
   "p0091": {
    "building": "omb_i0506",
    "edge": 0,
-   "door_node": 3789,
+   "door_node": 3796,
    "point": [
     193.625,
     -456.625
@@ -4278,7 +4278,7 @@
   "p0092": {
    "building": "omb_f0319",
    "edge": 3,
-   "door_node": 1913,
+   "door_node": 1920,
    "point": [
     161.375,
     -389.125
@@ -4290,7 +4290,7 @@
   "p0093": {
    "building": "omb_i0434",
    "edge": 2,
-   "door_node": 3635,
+   "door_node": 3642,
    "point": [
     133.125,
     -150.875
@@ -4302,7 +4302,7 @@
   "p0094": {
    "building": "omb_f0409",
    "edge": 0,
-   "door_node": 2254,
+   "door_node": 2261,
    "point": [
     166.375,
     -257.375
@@ -4314,7 +4314,7 @@
   "p0095": {
    "building": "omb_i0249",
    "edge": 0,
-   "door_node": 3198,
+   "door_node": 3205,
    "point": [
     192.375,
     -352.375
@@ -4326,7 +4326,7 @@
   "p0096": {
    "building": "omb_i0322",
    "edge": 0,
-   "door_node": 3355,
+   "door_node": 3362,
    "point": [
     155.625,
     -324.875
@@ -4338,7 +4338,7 @@
   "p0097": {
    "building": "omb_i0020",
    "edge": 3,
-   "door_node": 2503,
+   "door_node": 2510,
    "point": [
     108.125,
     -129.375
@@ -4350,7 +4350,7 @@
   "p0098": {
    "building": "omb_f0380",
    "edge": 2,
-   "door_node": 2148,
+   "door_node": 2155,
    "point": [
     199.125,
     -109.125
@@ -4362,7 +4362,7 @@
   "p0099": {
    "building": "omb_f0413",
    "edge": 2,
-   "door_node": 2263,
+   "door_node": 2270,
    "point": [
     177.375,
     -295.625
@@ -4374,7 +4374,7 @@
   "p009a": {
    "building": "omb_i0392",
    "edge": 3,
-   "door_node": 3537,
+   "door_node": 3544,
    "point": [
     -52.625,
     -188.875
@@ -4386,7 +4386,7 @@
   "p009b": {
    "building": "omb_i0407",
    "edge": 0,
-   "door_node": 3567,
+   "door_node": 3574,
    "point": [
     93.125,
     -136.625
@@ -4398,7 +4398,7 @@
   "p009c": {
    "building": "omb_f0197",
    "edge": 3,
-   "door_node": 1465,
+   "door_node": 1472,
    "point": [
     -21.875,
     -181.625
@@ -4410,7 +4410,7 @@
   "p009d": {
    "building": "omb_i0442",
    "edge": 3,
-   "door_node": 3661,
+   "door_node": 3668,
    "point": [
     243.125,
     -105.875
@@ -4422,7 +4422,7 @@
   "p009e": {
    "building": "omb_i0196",
    "edge": 1,
-   "door_node": 3095,
+   "door_node": 3102,
    "point": [
     209.875,
     -113.375
@@ -4434,7 +4434,7 @@
   "p009f": {
    "building": "omb_i0505",
    "edge": 1,
-   "door_node": 3788,
+   "door_node": 3795,
    "point": [
     177.875,
     -171.875
@@ -4446,7 +4446,7 @@
   "p009g": {
    "building": "omb_i0126",
    "edge": 2,
-   "door_node": 2895,
+   "door_node": 2902,
    "point": [
     185.625,
     -414.625
@@ -4458,7 +4458,7 @@
   "p009h": {
    "building": "omb_i0457",
    "edge": 1,
-   "door_node": 3694,
+   "door_node": 3701,
    "point": [
     181.375,
     -404.125
@@ -4470,7 +4470,7 @@
   "p009i": {
    "building": "omb_i0063",
    "edge": 2,
-   "door_node": 2656,
+   "door_node": 2663,
    "point": [
     177.125,
     -232.875
@@ -4482,7 +4482,7 @@
   "p009j": {
    "building": "omb_i0139",
    "edge": 2,
-   "door_node": 2928,
+   "door_node": 2935,
    "point": [
     188.125,
     -204.625
@@ -4494,7 +4494,7 @@
   "p009k": {
    "building": "omb_i0023",
    "edge": 2,
-   "door_node": 2513,
+   "door_node": 2520,
    "point": [
     230.125,
     -126.125
@@ -4506,7 +4506,7 @@
   "p009l": {
    "building": "omb_i0295",
    "edge": 1,
-   "door_node": 3289,
+   "door_node": 3296,
    "point": [
     195.625,
     -141.875
@@ -4518,7 +4518,7 @@
   "p009m": {
    "building": "omb_i0463",
    "edge": 2,
-   "door_node": 3703,
+   "door_node": 3710,
    "point": [
     210.625,
     -340.125
@@ -4530,7 +4530,7 @@
   "p009n": {
    "building": "omb_i0185",
    "edge": 1,
-   "door_node": 3066,
+   "door_node": 3073,
    "point": [
     187.625,
     -296.625
@@ -4542,7 +4542,7 @@
   "p009o": {
    "building": "omb_i0003",
    "edge": 0,
-   "door_node": 2418,
+   "door_node": 2425,
    "point": [
     209.625,
     -164.625
@@ -4554,7 +4554,7 @@
   "p009p": {
    "building": "omb_f0332",
    "edge": 0,
-   "door_node": 1996,
+   "door_node": 2003,
    "point": [
     222.375,
     -396.125
@@ -4566,7 +4566,7 @@
   "p009q": {
    "building": "omb_i0192",
    "edge": 1,
-   "door_node": 3080,
+   "door_node": 3087,
    "point": [
     212.125,
     -303.625
@@ -4578,7 +4578,7 @@
   "p009r": {
    "building": "omb_i0399",
    "edge": 2,
-   "door_node": 3549,
+   "door_node": 3556,
    "point": [
     201.125,
     -215.125
@@ -4590,7 +4590,7 @@
   "p009s": {
    "building": "omb_i0293",
    "edge": 3,
-   "door_node": 3286,
+   "door_node": 3293,
    "point": [
     218.625,
     -133.625
@@ -4602,7 +4602,7 @@
   "p009t": {
    "building": "omb_i0458",
    "edge": 0,
-   "door_node": 3695,
+   "door_node": 3702,
    "point": [
     223.625,
     -457.125
@@ -4614,7 +4614,7 @@
   "p009u": {
    "building": "omb_i0397",
    "edge": 0,
-   "door_node": 3545,
+   "door_node": 3552,
    "point": [
     192.375,
     -232.625
@@ -4626,7 +4626,7 @@
   "p009v": {
    "building": "omb_i0333",
    "edge": 2,
-   "door_node": 3390,
+   "door_node": 3397,
    "point": [
     243.875,
     -128.875
@@ -4638,7 +4638,7 @@
   "p009w": {
    "building": "omb_i0207",
    "edge": 2,
-   "door_node": 3123,
+   "door_node": 3130,
    "point": [
     222.125,
     -417.625
@@ -4650,7 +4650,7 @@
   "p009x": {
    "building": "omb_i0225",
    "edge": 2,
-   "door_node": 3153,
+   "door_node": 3160,
    "point": [
     243.125,
     -374.875
@@ -4662,7 +4662,7 @@
   "p009y": {
    "building": "omb_i0574",
    "edge": 0,
-   "door_node": 3942,
+   "door_node": 3949,
    "point": [
     216.125,
     -155.375
@@ -4674,7 +4674,7 @@
   "p009z": {
    "building": "omb_f0284",
    "edge": 1,
-   "door_node": 1752,
+   "door_node": 1759,
    "point": [
     245.375,
     -146.875
@@ -4686,7 +4686,7 @@
   "p00a0": {
    "building": "omb_i0430",
    "edge": 2,
-   "door_node": 3630,
+   "door_node": 3637,
    "point": [
     243.125,
     -352.875
@@ -4698,7 +4698,7 @@
   "p00a1": {
    "building": "omb_f0304",
    "edge": 0,
-   "door_node": 1865,
+   "door_node": 1872,
    "point": [
     251.875,
     -308.375
@@ -4710,7 +4710,7 @@
   "p00a2": {
    "building": "omb_i0134",
    "edge": 1,
-   "door_node": 2913,
+   "door_node": 2920,
    "point": [
     266.125,
     -206.625
@@ -4722,7 +4722,7 @@
   "p00a3": {
    "building": "omb_f0283",
    "edge": 2,
-   "door_node": 1751,
+   "door_node": 1758,
    "point": [
     262.625,
     -139.375
@@ -4734,7 +4734,7 @@
   "p00a4": {
    "building": "omb_i0188",
    "edge": 2,
-   "door_node": 3069,
+   "door_node": 3076,
    "point": [
     215.125,
     -153.625
@@ -4746,7 +4746,7 @@
   "p00a5": {
    "building": "omb_i0210",
    "edge": 2,
-   "door_node": 3127,
+   "door_node": 3134,
    "point": [
     288.375,
     -433.625
@@ -4758,7 +4758,7 @@
   "p00a6": {
    "building": "omb_i0271",
    "edge": 3,
-   "door_node": 3239,
+   "door_node": 3246,
    "point": [
     275.875,
     -412.875
@@ -4770,7 +4770,7 @@
   "p00a7": {
    "building": "omb_f0404",
    "edge": 1,
-   "door_node": 2249,
+   "door_node": 2256,
    "point": [
     258.875,
     -260.625
@@ -4782,7 +4782,7 @@
   "p00a8": {
    "building": "omb_i0099",
    "edge": 3,
-   "door_node": 2818,
+   "door_node": 2825,
    "point": [
     265.875,
     -158.875
@@ -4794,7 +4794,7 @@
   "p00a9": {
    "building": "omb_f0335",
    "edge": 2,
-   "door_node": 2012,
+   "door_node": 2019,
    "point": [
     258.875,
     -392.125
@@ -4806,7 +4806,7 @@
   "p00aa": {
    "building": "omb_f0300",
    "edge": 3,
-   "door_node": 1812,
+   "door_node": 1819,
    "point": [
     256.375,
     -351.625
@@ -4818,7 +4818,7 @@
   "p00ab": {
    "building": "omb_i0242",
    "edge": 1,
-   "door_node": 3186,
+   "door_node": 3193,
    "point": [
     271.375,
     -309.375
@@ -4830,7 +4830,7 @@
   "p00ac": {
    "building": "omb_i0517",
    "edge": 2,
-   "door_node": 3804,
+   "door_node": 3811,
    "point": [
     282.625,
     -189.375
@@ -4842,7 +4842,7 @@
   "p00ad": {
    "building": "omb_i0419",
    "edge": 3,
-   "door_node": 3600,
+   "door_node": 3607,
    "point": [
     275.125,
     -392.375
@@ -4854,7 +4854,7 @@
   "p00ae": {
    "building": "omb_i0493",
    "edge": 1,
-   "door_node": 3770,
+   "door_node": 3777,
    "point": [
     293.625,
     -148.625
@@ -4866,7 +4866,7 @@
   "p00af": {
    "building": "omb_i0395",
    "edge": 2,
-   "door_node": 3543,
+   "door_node": 3550,
    "point": [
     290.875,
     -282.125
@@ -4878,7 +4878,7 @@
   "p00ag": {
    "building": "omb_i0566",
    "edge": 2,
-   "door_node": 3926,
+   "door_node": 3933,
    "point": [
     308.875,
     -144.375
@@ -4890,7 +4890,7 @@
   "p00ah": {
    "building": "omb_i0362",
    "edge": 0,
-   "door_node": 3453,
+   "door_node": 3460,
    "point": [
     304.625,
     -446.875
@@ -4902,7 +4902,7 @@
   "p00ai": {
    "building": "omb_i0005",
    "edge": 2,
-   "door_node": 2424,
+   "door_node": 2431,
    "point": [
     286.875,
     -204.125
@@ -4914,7 +4914,7 @@
   "p00aj": {
    "building": "omb_i0237",
    "edge": 1,
-   "door_node": 3180,
+   "door_node": 3187,
    "point": [
     187.625,
     -151.875
@@ -4926,7 +4926,7 @@
   "p00ap": {
    "building": "omb_f0399",
    "edge": 0,
-   "door_node": 2209,
+   "door_node": 2216,
    "point": [
     284.875,
     -225.375
@@ -4938,7 +4938,7 @@
   "p00aq": {
    "building": "omb_f0402",
    "edge": 0,
-   "door_node": 2218,
+   "door_node": 2225,
    "point": [
     285.125,
     -249.875
@@ -4950,14 +4950,14 @@
   "sv3n1": {
    "building": "omb_i0104",
    "edge": 2,
-   "door_node": 2828,
+   "door_node": 2835,
    "point": [
     98.625,
     -181.375
    ],
    "ward": "Bell and Sluice Wards",
-   "landmark": "Bellfoot Passage",
-   "place_description": "a house in the Bell and Sluice Wards, off Bellfoot Passage"
+   "landmark": "The Stone House",
+   "place_description": "a house in the Bell and Sluice Wards, near the Stone House"
   }
  },
  "bedless": {
@@ -5348,8 +5348,8 @@
   },
   "p008d": {
    "ward": "Bell and Sluice Wards",
-   "landmark": "Bellstand watch-bell tower",
-   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Bellstand watch-bell tower, wherever the watch will let you lie"
+   "landmark": "The Stone House",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near the Stone House, wherever the watch will let you lie"
   },
   "p008l": {
    "ward": "Bell and Sluice Wards",
@@ -5363,8 +5363,8 @@
   },
   "p008n": {
    "ward": "Bell and Sluice Wards",
-   "landmark": "Bellstand watch-bell tower",
-   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near Bellstand watch-bell tower, wherever the watch will let you lie"
+   "landmark": "The Stone House",
+   "place_description": "no fixed bed \u2014 you sleep rough in the Bell and Sluice Wards, near the Stone House, wherever the watch will let you lie"
   },
   "p008o": {
    "ward": "Bell and Sluice Wards",

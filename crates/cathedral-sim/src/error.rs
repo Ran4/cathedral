@@ -62,6 +62,15 @@ pub enum ActionErrorCode {
     WrongSlot,
     /// `expel` with empty lower slots.
     NothingToExpel,
+    /// A verb the law's hands make impossible: a confined actor's `go_to`, or a
+    /// prisoner's own errand (`features/law_and_order.md` M4b′/M5).
+    InCustody,
+    /// `seize` past the city-wide confinement cap
+    /// ([`crate::custody::CUSTODY_MAX_ARRESTS`]).
+    CustodyFull,
+    /// `seize` with neither a live warrant nor a wrong this officer put to the
+    /// ward within the hour — the lore's two doors, and nothing else.
+    NoWarrant,
 }
 
 impl ActionErrorCode {
@@ -98,6 +107,9 @@ impl ActionErrorCode {
             Self::TooBig => "too_big",
             Self::WrongSlot => "wrong_slot",
             Self::NothingToExpel => "nothing_to_expel",
+            Self::InCustody => "in_custody",
+            Self::CustodyFull => "custody_full",
+            Self::NoWarrant => "no_warrant",
         }
     }
 }
@@ -253,6 +265,9 @@ pub enum CommandErrorCode {
     TooBig,
     WrongSlot,
     NothingToExpel,
+    InCustody,
+    CustodyFull,
+    NoWarrant,
     // ---- from `SpatialUpdateErrorCode` (the position that came with it)
     InvalidPosition,
     StaleSpatialSeq,
@@ -315,6 +330,9 @@ impl CommandErrorCode {
             Self::TooBig => "too_big",
             Self::WrongSlot => "wrong_slot",
             Self::NothingToExpel => "nothing_to_expel",
+            Self::InCustody => "in_custody",
+            Self::CustodyFull => "custody_full",
+            Self::NoWarrant => "no_warrant",
             Self::InvalidPosition => "invalid_position",
             Self::StaleSpatialSeq => "stale_spatial_seq",
             Self::InvalidRequest => "invalid_request",
@@ -372,6 +390,9 @@ impl From<ActionErrorCode> for CommandErrorCode {
             ActionErrorCode::TooBig => Self::TooBig,
             ActionErrorCode::WrongSlot => Self::WrongSlot,
             ActionErrorCode::NothingToExpel => Self::NothingToExpel,
+            ActionErrorCode::InCustody => Self::InCustody,
+            ActionErrorCode::CustodyFull => Self::CustodyFull,
+            ActionErrorCode::NoWarrant => Self::NoWarrant,
         }
     }
 }

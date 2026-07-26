@@ -187,6 +187,12 @@ pub(crate) enum SoundscapeCue {
     },
     StoneGateClosing,
     RiverGateBarLift,
+    /// Somebody has been taken in charge (`law_and_order.md` M4c): the officer's
+    /// keys, at the officer. The gaol door is deliberately *not* here — that
+    /// sound is reserved for the Stone House, which M5 has yet to build.
+    CustodyKeys {
+        position: Vec3,
+    },
     /// Ring one of the two civic bells. Patterns are data, never recordings
     /// (`lore/second_sun/design/06` §1): the sequence is assembled here from a
     /// single reviewed stroke, so a knell's count is a number in the caller's
@@ -535,9 +541,10 @@ enum SoundscapeSound {
     OldSluiceInDaylight,
     SkinnersCourtLife,
     SevenLoftsGrain,
+    GatekeeperKeyRing,
 }
 
-const ALL_SOUNDS: [SoundscapeSound; 53] = [
+const ALL_SOUNDS: [SoundscapeSound; 54] = [
     SoundscapeSound::CobbleFootstep,
     SoundscapeSound::WorkshopCough,
     SoundscapeSound::EveningYawn,
@@ -591,9 +598,10 @@ const ALL_SOUNDS: [SoundscapeSound; 53] = [
     SoundscapeSound::OldSluiceInDaylight,
     SoundscapeSound::SkinnersCourtLife,
     SoundscapeSound::SevenLoftsGrain,
+    SoundscapeSound::GatekeeperKeyRing,
 ];
 
-const SOUND_DESCRIPTORS: [SoundDescriptor; 53] = [
+const SOUND_DESCRIPTORS: [SoundDescriptor; 54] = [
     descriptor(
         SoundscapeSound::CobbleFootstep,
         "snd_001_soft_shoes_on_dry_cobbles.mp3",
@@ -1024,6 +1032,18 @@ const SOUND_DESCRIPTORS: [SoundDescriptor; 53] = [
         0.22,
         68.0,
         0.14,
+    ),
+    // The keys a gate or watch keeper carries, catalogued for "watchmen,
+    // gatekeepers, and prisoner escorts" and cued when somebody is taken in
+    // charge (`law_and_order.md` M4c). Audible about as far as the seizure
+    // itself is: the hue and cry is public, but a key ring is not a bell.
+    descriptor(
+        SoundscapeSound::GatekeeperKeyRing,
+        "snd_065_gatekeepers_key_ring.mp3",
+        ClipMode::OneShot,
+        0.70,
+        24.0,
+        0.35,
     ),
 ];
 
@@ -1475,6 +1495,16 @@ fn ingest_soundscape_cues(
                         0.34,
                         0.985,
                     );
+                }
+            }
+            SoundscapeCue::CustodyKeys { position } => {
+                // One seizure is one rattle: the cooldown is the length of the
+                // clip, so a second officer taking a second person in the same
+                // scuffle is heard, and a re-sent event is not.
+                let key =
+                    positional_cooldown_key(SoundscapeSound::GatekeeperKeyRing, position, 3.0);
+                if cooldowns.allow(key, now, 1.5) {
+                    scheduled.push(now, SoundscapeSound::GatekeeperKeyRing, position);
                 }
             }
             SoundscapeCue::RiverGateBarLift => {
@@ -3850,7 +3880,7 @@ mod tests {
 
     #[test]
     fn every_route_has_a_unique_asset_and_the_right_container() {
-        assert_eq!(ALL_SOUNDS.len(), 53);
+        assert_eq!(ALL_SOUNDS.len(), 54);
         let mut files = HashSet::new();
         for (index, sound) in ALL_SOUNDS.into_iter().enumerate() {
             let descriptor = sound.descriptor();
@@ -3875,7 +3905,7 @@ mod tests {
 
     #[test]
     fn every_descriptor_points_at_a_nonempty_reviewed_asset() {
-        let assets: [&[u8]; 53] = [
+        let assets: [&[u8]; 54] = [
             include_bytes!("../assets/sounds/soundscape/snd_001_soft_shoes_on_dry_cobbles.mp3"),
             include_bytes!("../assets/sounds/soundscape/snd_034_dusty_workshop_cough.mp3"),
             include_bytes!("../assets/sounds/soundscape/snd_037_end_of_day_yawn.mp3"),
@@ -3935,6 +3965,7 @@ mod tests {
             include_bytes!("../assets/sounds/soundscape/snd_338_old_sluice_in_daylight.wav"),
             include_bytes!("../assets/sounds/soundscape/snd_339_skinners_court_work_and_home.wav"),
             include_bytes!("../assets/sounds/soundscape/snd_340_seven_lofts_grain_interior.wav"),
+            include_bytes!("../assets/sounds/soundscape/snd_065_gatekeepers_key_ring.mp3"),
         ];
         for (sound, bytes) in ALL_SOUNDS.into_iter().zip(assets) {
             assert!(
@@ -3965,7 +3996,7 @@ mod tests {
         let sounds = manifest["sounds"]
             .as_array()
             .expect("manifest sounds is an array");
-        assert_eq!(manifest["implemented_count"], 53);
+        assert_eq!(manifest["implemented_count"], 54);
         let manifested_ids: HashSet<_> = sounds
             .iter()
             .filter_map(|sound| {

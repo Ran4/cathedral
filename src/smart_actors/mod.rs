@@ -18,6 +18,7 @@ mod area_debug;
 mod chat;
 mod clock;
 mod config_menu;
+pub mod custody;
 mod hands;
 mod hud;
 mod interaction;
@@ -432,6 +433,11 @@ impl Plugin for SmartActorsPlugin {
             .init_resource::<AudioActivity>()
             .add_systems(Startup, hud::spawn_smart_actor_hud);
 
+        // The law's hands on the player (`law_and_order.md` M4c/M4d). The
+        // resource exists unconditionally because `controller.rs` reads its
+        // tether every fixed step; with no engine it is simply always empty.
+        app.add_plugins(custody::PlayerCustodyPlugin);
+
         // The Esc settings menu exists even when smart actors are disabled;
         // its rows then report the disabled state instead of toggling.
         app.init_resource::<config_menu::ConfigMenuState>()
@@ -514,6 +520,7 @@ impl Plugin for SmartActorsPlugin {
             .add_message::<sound::PlaySoundEffect>()
             .add_message::<crate::soundscape::SoundscapeCue>()
             .add_message::<hands::HandoverFeedback>()
+            .init_resource::<hands::GripHolds>()
             .add_message::<body::PresentGesture>()
             // The inventory's menu entries are the only part of the screen that
             // needs the engine (they write intents), so they live here rather
@@ -589,6 +596,11 @@ impl Plugin for SmartActorsPlugin {
                     // reconcile writes for a mover between revisions with the live
                     // interpolated pose off the hot channel.
                     actors::drive_npc_bodies,
+                    // …and after that in turn: a custody grip aims at where the
+                    // prisoner is *this* frame, which for anyone being walked to
+                    // a station is the hot channel's position, not the mirror's
+                    // (`law_and_order.md` M4c).
+                    hands::hold_the_seized,
                     road_carts::reconcile_road_carts,
                 )
                     .chain()
@@ -717,6 +729,9 @@ struct HotChannels<'w, 's> {
     lamps: ResMut<'w, lamps::CityLamps>,
     weather: ResMut<'w, WorldWeatherState>,
     lightning: MessageWriter<'w, WeatherLightning>,
+    /// The player's standing with the law (`law_and_order.md` M4). Hot for the
+    /// same reason movement is: the tether it drives is clamped every frame.
+    law: ResMut<'w, custody::PlayerCustodyState>,
     time: Res<'w, Time>,
     drain_timer: Local<'s, DrainTimer>,
 }
@@ -868,6 +883,7 @@ fn drain_bridge_messages(
                     &mut hot.lamps,
                     &mut hot.weather,
                     &mut hot.lightning,
+                    &mut hot.law,
                     hot.time.elapsed_secs_f64(),
                 );
                 // Do not open the default input device before the engine
@@ -961,6 +977,7 @@ fn process_engine_message(
     city_lamps: &mut lamps::CityLamps,
     weather: &mut WorldWeatherState,
     lightning: &mut MessageWriter<WeatherLightning>,
+    law: &mut custody::PlayerCustodyState,
     received_at_seconds: f64,
 ) {
     match message {
@@ -1212,6 +1229,30 @@ fn process_engine_message(
             // body language. `sale` never reaches the toast above
             // (`describe_world_event` is player-scoped and the silent market
             // is NPC-only); here it plays the vendor→buyer hand-over.
+            // The Scold's summons peal, which until now existed only as a
+            // drive-mode stand-in, gets its real trigger (`law_and_order.md`
+            // M4a): an officer out of patience calls the accused to answer by
+            // the next bell, and the Bellstand says so over the whole city.
+            if kind == "summon" {
+                presentation
+                    .soundscape
+                    .write(crate::soundscape::SoundscapeCue::CivicBell(
+                        crate::soundscape::BellPattern::ScoldSummons,
+                    ));
+            }
+            // Being taken in charge has a sound of its own (M4c): the keys the
+            // gate and watch keepers carry, off the officer who just took
+            // somebody. Not the gaol door — that one is reserved for the Stone
+            // House, which M5 has not built yet.
+            if kind == "seize"
+                && let Some(officer) = mirror.actor(&actor)
+            {
+                presentation
+                    .soundscape
+                    .write(crate::soundscape::SoundscapeCue::CustodyKeys {
+                        position: officer.position_m.into(),
+                    });
+            }
             match (kind.as_str(), target, item) {
                 ("accept_offered_item", Some(giver), Some(item)) => {
                     presentation.hands.write(hands::HandoverFeedback::Accepted {
@@ -1235,8 +1276,55 @@ fn process_engine_message(
                             item,
                         });
                 }
+                // Custody's hand (`law_and_order.md` M4c). `grab` and `release`
+                // are the officer's acts, so the actor is the holder; a prisoner
+                // who tears free is the actor of their own escape.
+                ("grab", Some(prisoner), _) => {
+                    presentation.hands.write(hands::HandoverFeedback::TookHold {
+                        holder: actor,
+                        prisoner,
+                    });
+                }
+                ("release", Some(prisoner), _) => {
+                    presentation
+                        .hands
+                        .write(hands::HandoverFeedback::HandsOff { prisoner });
+                }
+                ("broke_free", _, _) => {
+                    presentation
+                        .hands
+                        .write(hands::HandoverFeedback::HandsOff { prisoner: actor });
+                }
                 _ => {}
             }
+        }
+        EngineMessage::LawStanding { notices, custody } => {
+            // Purely a projection: the sim decides, and every host-side answer
+            // (the tether, the reflex, the strain meter) goes back to it as a
+            // command rather than being applied locally.
+            custody::apply_law_standing(
+                law,
+                hud,
+                &notices,
+                custody.map(|custody| custody::CustodyView {
+                    holder_ids: custody
+                        .holder_ids
+                        .iter()
+                        .map(model::actor_id_from_sim)
+                        .collect(),
+                    officer_id: custody.officer_id.as_ref().map(model::actor_id_from_sim),
+                    officer_name: custody.officer_name,
+                    station_name: custody.station_name,
+                    anchor_m: model::vec3_from_sim(custody.anchor_m),
+                    closing: custody.closing,
+                    strain_seconds: custody.strain_seconds as f32,
+                    held: custody.held,
+                    committed: custody.committed,
+                    fee_sparks: custody.fee_sparks,
+                    release_office: custody.release_office,
+                    booked_as: custody.booked_as,
+                }),
+            );
         }
         EngineMessage::Gesture {
             event_id: _,
@@ -2674,6 +2762,81 @@ mod tests {
         // The card it replaces is gone: the offer really ended, and the HUD is
         // not still inviting a [Y] that would now fail.
         assert!(hud_state.offer_card.is_empty());
+    }
+
+    /// The law's hands reach the screen (`law_and_order.md` M4). A sergeant
+    /// takes the player in charge in the sim, and the HUD's standing line says
+    /// so — the whole wire, from `world.custody` through the hot
+    /// [`EngineMessage::LawStanding`] channel to words the player can read.
+    ///
+    /// The line is not decoration: custody the player cannot see is custody they
+    /// cannot answer, and every rung of this feature owes them a named door out.
+    #[test]
+    fn being_taken_in_charge_puts_the_law_standing_line_on_the_hud() {
+        let mut app = ready_fake_plugin_app();
+        let ashe = cathedral_sim::ActorId::from_raw("p009x");
+        {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let sim = engine.world_mut().expect("the engine is live");
+            // Beside the player: `seize` is a four-metre verb, and its whole
+            // point is that an officer must close on foot first.
+            sim.characters
+                .get_mut(&ashe)
+                .expect("Havise Ashe is in the seeded cast")
+                .state
+                .position_m = cathedral_sim::Vec3::new(1.0, 0.91, 111.0);
+        }
+        app.world()
+            .resource::<bridge::BridgeHandle>()
+            .try_send(bridge::BridgeCommand::DebugSeize {
+                officer: "Havise Ashe".into(),
+                target: None,
+            })
+            .expect("the command queue has room");
+
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline
+            && app
+                .world()
+                .resource::<hud::SmartActorHudState>()
+                .law_standing_text()
+                .is_empty()
+        {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+
+        let line = app
+            .world()
+            .resource::<hud::SmartActorHudState>()
+            .law_standing_text()
+            .to_string();
+        assert!(
+            line.contains("TAKEN YOU IN CHARGE"),
+            "the standing line names the custody, got {line:?}"
+        );
+        assert!(
+            line.contains("Tallage toll-house"),
+            "…and where they are walking you, got {line:?}"
+        );
+        // The leash is explained the first time it is ever drawn: a player who
+        // does not know they may step aside will not.
+        assert!(
+            line.contains("Walk with them"),
+            "…and what the arrangement is, got {line:?}"
+        );
+
+        // …and it reaches the entity the player actually looks at, shown rather
+        // than laid out at zero size. A standing line that lives only in a
+        // resource is the same as no standing line at all.
+        app.update();
+        let world = app.world_mut();
+        let (text, node) = world
+            .query_filtered::<(&Text, &Node), With<hud::LawStandingText>>()
+            .single(world)
+            .expect("the standing line has a text entity");
+        assert!(text.0.contains("TAKEN YOU IN CHARGE"), "got {:?}", text.0);
+        assert_eq!(node.display, Display::Flex, "and it is not hidden");
     }
 
     /// The seam's acceptance test: the whole plugin, the in-process engine, and

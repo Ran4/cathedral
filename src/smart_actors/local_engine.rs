@@ -841,6 +841,15 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
             item_id: SimItemId::from_raw(item_id.0),
         },
         BridgeCommand::PlayerSound { sound_id } => EngineCommand::PlayerSound { sound_id },
+        BridgeCommand::PlayerGrabbed { holder_id } => EngineCommand::PlayerGrabbed {
+            holder_id: SimActorId::from_raw(holder_id.0),
+        },
+        BridgeCommand::PlayerStruggling => EngineCommand::PlayerStruggling,
+        BridgeCommand::PlayerBrokeFree => EngineCommand::PlayerBrokeFree,
+        BridgeCommand::DebugSeize { officer, target } => {
+            EngineCommand::DebugSeize { officer, target }
+        }
+        BridgeCommand::DebugCommit { target } => EngineCommand::DebugCommit { target },
         BridgeCommand::DebugSound {
             sound_id,
             position_m,
