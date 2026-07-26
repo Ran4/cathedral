@@ -85,6 +85,11 @@ const PITCH_LIMIT: f32 = FRAC_PI_2 - 0.01;
 const COLLISION_SKIN: f32 = 0.002;
 const SWEEP_EPSILON: f32 = 1.0e-6;
 const PRISM_GEOMETRY_EPSILON: f32 = 1.0e-3;
+/// How long to wait before hanging the sky probe on the camera — long enough
+/// for the window surface and first rendered view to exist. See
+/// [`attach_sky_probe_once_rendering`].
+const SKY_PROBE_DELAY_SECONDS: f32 = 0.75;
+
 const MAX_SLIDE_PLANES: usize = 5;
 const MAX_DEPENETRATION_STEPS: usize = 8;
 
@@ -98,6 +103,7 @@ impl Plugin for ControllerPlugin {
             .add_message::<TeleportPlayer>()
             .insert_resource(Time::<Fixed>::from_hz(FIXED_HZ))
             .add_systems(Startup, (spawn_player, initially_capture_cursor))
+            .add_systems(Update, attach_sky_probe_once_rendering)
             .add_systems(FixedUpdate, fixed_player_movement)
             .add_systems(
                 RunFixedMainLoop,
@@ -486,11 +492,8 @@ fn spawn_player(mut commands: Commands) {
                     aerial_view_lut_max_distance: 2_500.0,
                     ..default()
                 },
-                AtmosphereEnvironmentMapLight {
-                    intensity: 0.65,
-                    size: UVec2::splat(128),
-                    ..default()
-                },
+                // NOTE: the sky-probe light is *not* spawned here — see
+                // [`attach_sky_probe_once_rendering`].
                 Exposure { ev100: 12.8 },
                 Tonemapping::AcesFitted,
                 // Screen-space AO is the only occlusion signal a fully dynamic
@@ -506,6 +509,37 @@ fn spawn_player(mut commands: Commands) {
                 Transform::from_xyz(0.0, EYE_OFFSET, 0.0),
             ));
         });
+}
+
+/// Give the camera its sky-derived ambient probe, but only once the app has
+/// actually drawn a few frames.
+///
+/// `AtmosphereEnvironmentMapLight` makes bevy build an atmosphere probe whose
+/// bind group reads the *view's* atmosphere transform uniform. Those two are
+/// prepared by different systems keyed off different queries, so during the
+/// first frames — while the window surface is still coming up and the camera
+/// isn't extracted as a rendered view — the probe can exist with no transform
+/// written, and `prepare_atmosphere_probe_bind_groups` unwraps a `None`
+/// (bevy_pbr 0.19 `atmosphere/environment.rs:116`). That is the intermittent
+/// startup panic that has hit this project since the atmosphere landed.
+/// Attaching the component after the surface is live sidesteps the race
+/// entirely; the probe warms up within a frame of being added, so the visual
+/// result is the spawn-time one.
+fn attach_sky_probe_once_rendering(
+    mut commands: Commands,
+    time: Res<Time>,
+    cameras: Query<Entity, (With<PlayerCamera>, Without<AtmosphereEnvironmentMapLight>)>,
+) {
+    if time.elapsed_secs() < SKY_PROBE_DELAY_SECONDS {
+        return;
+    }
+    for camera in &cameras {
+        commands.entity(camera).insert(AtmosphereEnvironmentMapLight {
+            intensity: 0.65,
+            size: UVec2::splat(128),
+            ..default()
+        });
+    }
 }
 
 /// Relocate the player and aim the view. The drive `tp` action sets `fly: true`

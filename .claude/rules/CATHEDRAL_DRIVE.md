@@ -40,6 +40,14 @@ Actions (each fires ~0.5 s after the previous):
 - `tp <x> <y> <z> [yaw_deg [pitch_deg]]` — teleport the player and aim the view
   (yaw 0 looks toward -Z, positive pitch looks up); switches to flying so an
   elevated vantage holds for a `shot`.
+- `frame <name-or-id> [distance [bearing_deg]]` — photograph a named actor:
+  stand off their *front* by `distance` metres (default 2.6) at eye height and
+  look back at them. The handle is a case-insensitive substring of the display
+  name (spaces allowed) or an exact actor id. The bearing walks the camera
+  around them — 0° dead ahead, 90° to their left, 180° behind — so one script
+  captures a body from every side without knowing which way it happens to be
+  turned. The cast walks, so expect ~1 m of drift per action gap: shoot from
+  4 m+ and skip the `sleep`. A handle matching nobody is logged and skipped.
 - `quit` — exit immediately.
 
 Without a trailing `quit` the game exits ~2 s after the last action; a watchdog
@@ -72,7 +80,14 @@ the daily curfew without waiting out a real hour.
 `CATHEDRAL_FAKE_BACKEND=1`, which forces it without editing the file.
 Other perf/dev env levers: `CATHEDRAL_PERF=1` (frame-time recording +
 vsync off; see `features/performance_improvements/findings.md`),
-`CATHEDRAL_DRIVE_RES=1920x1080` (drive window resolution),
-`CATHEDRAL_NO_ACTORS=1` / `CATHEDRAL_NO_WEATHER=1` (ablation). NOTE: drive scripts exercise
+`CATHEDRAL_DRIVE_RES=1920x1080` (drive window resolution — a drive window asks
+to be non-resizable, which on a tiling WM does not always get you the size you
+asked for but does stop it changing between runs; check the PNG's dimensions
+before comparing two shots pixel for pixel),
+`CATHEDRAL_NO_ACTORS=1` / `CATHEDRAL_NO_WEATHER=1` (ablation),
+`CATHEDRAL_BODY_LINEUP=1` (stand a rank of 14 puppets — 7 outfit classes × 2
+builds, every headgear — on the open paving at (0, 100), in the authored rest
+pose and untouched by the sim, for A/B-ing the NPC model itself; view it with
+`tp 0 1.35 96.6 180`, or from behind with `tp 0 1.35 103.4 0`). NOTE: drive scripts exercise
 the real handlers, so e.g. clicking a backend pill persists to config.ron —
 back it up first if that matters.

@@ -98,7 +98,14 @@ fn main() {
                     primary_window: Some(Window {
                         title: config.title,
                         resolution,
-                        resizable: config.resizable,
+                        // A drive window should keep the size it asked for:
+                        // screenshots get compared frame to frame, and a
+                        // tiling WM will happily stretch a resizable window to
+                        // whatever cell it has free, changing aspect and FOV
+                        // between runs. Asking for a fixed size is a hint, not
+                        // a guarantee — some WMs still pick the size — but it
+                        // does stop it varying run to run.
+                        resizable: config.resizable && drive.is_none(),
                         mode,
                         ..default()
                     }),

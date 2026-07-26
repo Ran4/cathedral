@@ -540,7 +540,7 @@ impl Plugin for SmartActorsPlugin {
                 Startup,
                 (
                     hands::setup_item_prop_assets,
-                    body::setup_body_assets,
+                    (body::setup_body_assets, body::spawn_body_lineup).chain(),
                     road_carts::setup_road_cart_assets,
                     area_debug::spawn_area_debug_ui,
                     actor_sheet::spawn_actor_sheet,
