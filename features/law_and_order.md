@@ -315,7 +315,12 @@ talking.
 
 ## M4 — taking hold
 
-Custody. Designed 2026-07-26; the decisions below are settled, not options.
+Custody. Designed 2026-07-26 and revised the same day against the shipped code,
+which moved five things: how close an officer has to get and how they get there,
+`notices::confront`'s once-ever `served` set, which side of the sweep the tether
+clamps on, what "a breach the officer witnessed" can actually be checked
+against, and where the grab reflex lives. The decisions below are settled, not
+options.
 
 ### The constraint that shapes all of it
 
@@ -363,13 +368,63 @@ nothing escalates on a timer alone.
 3. **`summon {"notice_id": 3}`** — an officer out of patience calls you to
    answer by a named office bell. The Scold's `summons` peal exists today only
    as a drive stand-in with no real trigger; this gives it one.
-4. **warrant** — the summons ignored past its bell. Gate keepers refuse you
-   passage and any law-cast actor may take you.
+4. **warrant** — the summons ignored past its bell. Any law-cast actor may then
+   take you, anywhere in the city.
 5. **`seize`** — into custody, ≤ `ITEM_INTERACTION_RADIUS_M` (4 m), on a live
-   warrant **or** a breach of the peace the officer just witnessed. The lore's
-   two doors exactly.
+   warrant **or** on a notice *this same officer raised within the last game
+   hour*. The lore's two doors exactly — see below for why the second one is
+   written that way.
 6. **the escort** — walked to the nearest station.
 7. **`release`** — available on every turn, to the holder and to the keeper.
+
+**Gate keepers refusing passage is deliberately not a rung.** It reads well and
+it is not buildable in M4: only the Stone and River gates have working leaves
+(`src/city/gates.rs`), those leaves are driven by the office clock rather than
+by the law, and the Harne Gate, the Wool Gate and the Reed Postern are open
+holes in the wall. A law override of the gate schedule is a host-side feature
+with no home in M4a–M4e; a gate keeper who is *told* to stop you gets what every
+other officer gets, which is `seize`.
+
+### What answering means, and three ways a rung dies quietly
+
+Four decisions the ladder needs that the shipped code does not make. Each is
+small, and leaving any of the first three out makes the ladder stall *silently*
+rather than visibly — which is exactly the failure mode M3 was written to end.
+
+**What answering a summons *is*.** The notice being settled — `settle_notice` by
+an officer or by the wronged party, or `settle_on_return` — and nothing else.
+There is no separate "presented myself" state to track: going and dealing with
+it *is* restitution, or it is talking the officer round until they call the verb.
+If the notice is still live when the named bell rings, the warrant issues on the
+clock edge. That makes M4a testable — the deadline has exactly one thing that
+clears it — and it means the M3.5 machinery is what discharges every rung.
+
+**`notices::confront` must re-arm.** It serves each (notice, officer) pair once
+and never again: `served` (`notices.rs:117`) is written at `:372` and cleared
+nowhere, so it dies only with the notice. Every rung above 2 assumes the officer
+keeps being told the accused is standing in front of them — and with
+`require_news: true` (`config.ron:39`) an officer whose inbox is drained gets no
+idle turn at all, so after one encounter the ladder stops dead. **Clear `served`
+whenever the notice changes rung.** A summons, and then a warrant, each re-arm
+the face-to-face percept for every officer, which is precisely the moment they
+should look at you again.
+
+**A warrant must not be evicted by gossip.** `Notices::raise` drops the oldest
+live notice past `NOTICES_MAX_LIVE = 8` (`notices.rs:81,176`), so in a talkative
+ward a warrant can vanish without anyone deciding anything — and M4d's escape
+notice can evict the very notice it escalated from. **Oldest-out skips warranted
+notices**; if all eight carry warrants the raise is refused instead. A warrant
+ends because somebody ended it, never because the ward changed the subject.
+
+**The brand is long, and that is the choice.** `NOTICE_LIFE_GAME_DAYS` is 20
+game days, which at `seconds_per_day: 3600` is 20 real hours — so a warrant does
+not expire inside any real session, and M4d's escape notice (no `wronged`, no
+`taken`) cannot be answered by restitution either. A player who runs is wanted
+for the rest of the run and the only exit is a law officer choosing
+`settle_notice`. That is deliberate: it is what makes escaping a real cost
+rather than a delay. It is only acceptable because the exit is a person you can
+go and talk to, so — as in M5 — **the HUD must always name what would clear it**.
+A brand with a visible door is a story; a brand with no door is a bug.
 
 ### Custody is a state; the grab is its enforcement
 
@@ -388,15 +443,14 @@ an LLM sergeant who talks to you the whole distance and can let you go at any
 point. **The escort is the content, not the cell** — being marched in public is
 the punishment, and it is a conversation you can still win.
 
-### Arm's reach is the whole mechanic
+### Arm's reach, and the walk that gets there
 
 A grab cannot be a lasso: the officer is slow and an LLM turn costs seconds, so
 by the time a prompt returns a sprinting player is 30 m gone. So the grab is a
 reflex at contact range, and everything else follows from that.
 
 - **`CUSTODY_REACH_M = 3.0`** — the same order as `WELL_ARRIVE_RADIUS_M` and
-  `STALL_ARRIVE_RADIUS_M`, and inside the 4 m offer radius: if you are standing
-  in conversation you are in reach.
+  `STALL_ARRIVE_RADIUS_M`, and inside the 4 m offer radius.
 - **Pre-authorized and host-side.** `seize` is the officer declaring intent;
   the grab that enforces it fires mechanically and instantly, with no provider
   round trip. Same split as the npc_bodies gaze reflex — reflexes are code,
@@ -409,12 +463,30 @@ reflex at contact range, and everything else follows from that.
 - Cross the leash and the officer closes; reach 3 m while you are outside it or
   moving away and the grab fires.
 
-The consequence is the skill the player learns: **bolting from a standing
-conversation gets you taken, because they are already at 1.5 m; backing off to
-6 m first and then running gets you clear.** Don't let a sergeant stand next to
-you while you are wanted. That makes M2's beats and postings tactically real,
-and it makes the speed disparity stop mattering without pretending it is not
-there.
+**The approach is the tell — that is the skill, not the reach.** It would be
+convenient if standing in conversation meant standing in reach, and it does not:
+`ACTOR_FOCUS_RADIUS_M` is 20 m (`src/smart_actors/targeting.rs:15`), so the
+player aims at, talks to and is talked to by anyone within a wide square, and
+has no reason to come inside 4 m unless they want to trade. Nothing about
+ordinary conversation puts you within arm's length of anybody.
+
+So an officer who means to take you has to **close first**, on their own two
+feet, with `go_to {"person": "player"}` — 1.8 m/s, in the open, walking straight
+at you and usually talking while they do it. That walk is the whole warning
+system, and reading it is what the player learns:
+
+- **Let a sergeant close, and bolting is too late** — they are already at 1.5 m
+  and the grab is a reflex with no provider call in it.
+- **Move while they are still crossing the square and you are simply gone** —
+  8 m/s against 1.8 needs no cleverness at all.
+
+This is the better version anyway, because it is legible: nobody is ever grabbed
+out of nowhere, and every seizure is preceded by several seconds of a person
+visibly walking at you. It is what makes M2's beats and postings tactically real
+— an officer already standing where you want to be is the threat, not an officer
+who spots you across a square — and it makes the 4.4× speed disparity stop
+mattering without pretending it is not there. The player always *can* run. The
+game's only job is to make sure they knew they had to.
 
 ### What being held feels like
 
@@ -423,10 +495,22 @@ there.
 - **Movement is tethered, not disabled.** Input still runs, clamped to ~1.5 m
   around the grip point: turn, face them, face away, circle. You cannot leave.
   When the officer walks, the anchor moves and you go at their 1.8 m/s.
-- **Collision wins over the tether.** Clamp the *desired* position and let
-  `controller.rs`'s existing swept solve resolve it. Putting a market stall
-  between you and the officer therefore breaks the grip — a free, physical,
-  discoverable escape that costs nothing to build.
+- **Collision wins over the tether, and the clamp goes *before* the sweep.**
+  Clamp the **desired** position — the wish, the delta this tick — and hand that
+  to `move_aabb` (`src/controller.rs:690-698`) so the existing swept solve is
+  what actually writes the position. Never clamp the position the sweep already
+  returned: that is a raw write into a resolved result, it can push the player
+  through a wall, and it would drag them back through the very stall that ought
+  to have saved them. Done in the right order, putting a market stall between you
+  and the officer breaks the grip by itself — a free, physical, discoverable
+  escape that costs nothing to build.
+- **If geometry beats the anchor, the grip loses.** The officer is the mover, so
+  they can walk somewhere the tether cannot follow: a corner, a stall, a doorway
+  the player is wedged against. The sweep stops the player, the separation grows,
+  and once it passes `CUSTODY_LEASH_M` the hold simply ends — no teleport, no
+  rubber band, no pinning a player inside a wall to preserve a state flag. It is
+  the same escape as the stall, arrived at from the other side, and the officer
+  gets the ordinary broke-free percept and turn.
 - **A visible hand**: npc_bodies' articulated arms already do offer
   choreography; the arm goes to the upper arm and stays.
 - **Sound is already catalogued** — `features/more_sounds/more_sounds.json`
@@ -455,12 +539,23 @@ Modifiers, all on seams that already exist:
   harder than `revenue_worker`. Ede Clove should be worse to be held by than
   Odo Trask, and her sheet already says why.
 
-Struggling is loud and public:
+Struggling is loud and public — but it is **two percepts, not a stream**:
 
-- The holder gets a percept about once a second **plus a priority turn**, so
-  the LLM is in the loop for the interesting call — tighten, shout for help, or
-  let go in character ("Run then. The word will find you.").
-- Bystanders within `HEARING_RADIUS_M` get one too; a hue and cry raises itself.
+- The holder is told **once when the pulling starts** and **once if it succeeds**,
+  and gets a priority turn on each, so the LLM is in the loop for the interesting
+  call — tighten, shout for help, or let go in character ("Run then. The word
+  will find you.").
+- Bystanders within `HEARING_RADIUS_M` get the same two; a hue and cry raises
+  itself.
+
+The obvious version of this — a percept about once a second while the meter
+fills — does not survive contact with the scheduler. There is **exactly one LLM
+turn in flight at a time** (`in_flight: Option<InFlight>`, `scheduler.rs:137`),
+so across a ~5 s struggle the holder gets one turn no matter how often they are
+poked; the priority deque de-duplicates the rest, and the only thing a
+per-second percept actually achieves is five near-identical lines competing for
+one `since_your_last_turn` and crowding a 64-entry inbox. One at the start and
+one at the end says everything the model needs and costs what it is worth.
 - **Breaking free auto-raises a notice** with no `wronged` and no `taken`, the
   same shape `raise_ward_notice_for` already makes for fouling — structurally
   unanswerable by restitution. Escape closes the "you could have just paid the
@@ -495,7 +590,11 @@ All on machinery that already exists:
 4. **Wait it out** — a hard cap, no exceptions. At `seconds_per_day: 3600` an
    office bell is ~8.5 real minutes, which is far too long to stare at a wall,
    so the keeper releases after **4 real minutes** regardless of what the
-   models do.
+   models do. This is the *station* cap, and it is short on purpose: a gate
+   arch or a toll-house counter has nobody to talk to but the keeper. M5's
+   Stone House sets its own, longer ceiling of 6 minutes, because there the
+   waiting is the content — eight inmates in one room — rather than the price
+   of it. Two numbers, two rooms, and the difference is the point.
 5. **Break out** — struggle past the keeper. Compounds, as above.
 
 ### Verbs
@@ -509,68 +608,137 @@ grab {"person": "player"}                    # Take hold of someone you have in 
 release {"person": "player"}                 # Let them go
 ```
 
-- `seize` requires law occupation, ≤4 m, and a live warrant **or** a breach the
-  officer just witnessed — **plus a `say` in the same turn**, the rule turn.j2
-  already applies to a silent `go_to`. A wordless seizure reads as the game
-  stealing the controller.
+- `seize` requires law occupation, ≤4 m, and a live warrant **or** a notice this
+  officer raised themselves within the last game hour — **plus a `say` in the
+  same turn**, the rule turn.j2 already applies to a silent `go_to`. A wordless
+  seizure reads as the game stealing the controller.
 - `grab` is usually the reflex; it is exposed so an officer *can* take hold
   deliberately, and rendered only while they hold someone or have just seized.
 - Calling for help needs no verb: speech plus `go_to {"person": …}` covers it.
+
+**Why the second door is "a notice you raised yourself, recently".** The lore's
+wording is *an immediate breach of the peace the watchman witnessed*, and the
+sim has no such thing to check: percepts are prose, and there is no structured
+record anywhere that says this officer saw that happen. Written literally the
+precondition is untestable, and the test "refused with no warrant and no
+witnessed breach" cannot be authored at all.
+
+But witnessing is already modelled — just under a different name.
+`raise_ward_notice_for` (`actions.rs:1809`) is exactly a breach an officer saw
+with their own eyes, raised mechanically by the nearest law-cast character
+within earshot, and `WardNotice` already carries both fields the check needs:
+`raised_by` and `raised_game_days` (`notices.rs:103-104`). So the second door is
+**a notice whose `raised_by` is this officer and whose `raised_game_days` is
+within the last game hour** — no new state, no new verb, and the same meaning:
+you saw it, it was just now, you may take them without waiting for a bench. A
+notice somebody *else* raised, or one this officer raised yesterday, needs the
+warrant like everything else.
+
+**`seize` targets the player only in M4.** The verb reads `{"person": …}` and
+nothing about it is player-specific, but an NPC who has been taken in charge
+would have to *know* it — which means a custody line on the sheet, which means
+non-law prompts stop being byte-identical, which is the one budget promise this
+milestone makes. Every rung above `word` is also written for a target that can
+run at 8 m/s and get bored. Reject a non-player target with a plain refusal, and
+leave NPC arrest to whatever milestone wants to pay the sheet cost.
 
 ### The seam the sim does not have
 
 1. **Authority over the player's feet.** A new hot `EngineMessage` carrying
    holder, anchor and radius — hot like `Movement`/`Clock`, never bumping
-   `world_revision` — applied in `controller.rs` as a clamp *after* the sweep.
-2. **Strain stays host-side.** It is a 20 Hz input meter and the sim has no
-   clock by design; the sim hears only throttled `PlayerStruggling { holder }`
-   and `PlayerBrokeFree` commands.
-3. **A dead-man timer, non-negotiable.** If the holder takes no turn for 60 s —
+   `world_revision` — applied in `controller.rs` by clamping the **desired**
+   position and letting the existing swept solve resolve it (never the position
+   the sweep returned; see the tether bullet above).
+2. **The reflex lives in the host, and the sim is told.** `seize` is the sim's
+   decision and it publishes custody; the *grab* is host-side code that watches
+   the real distance every frame and fires with no round trip. The sim learns
+   about it from a `PlayerGrabbed { holder }` command alongside
+   `PlayerStruggling { holder }` and `PlayerBrokeFree`, and it is that command —
+   not a sim-side distance check — that earns the holder their percept and
+   priority turn. **This is not a free choice.** The sim reads the player at
+   `POSITION_UPDATE_HZ = 10` (`src/smart_actors/mod.rs:60`), which is 1.2 m of
+   travel per sample at run speed, before the return trip; a 3 m reflex decided
+   sim-side would be wrong by most of its own radius. Host-side it is exact and
+   instant, which is the entire promise of the mechanic.
+3. **Strain stays host-side.** It is a 20 Hz input meter and the sim has no
+   clock by design; the sim hears only the throttled commands above.
+4. **A dead-man timer, non-negotiable.** If the holder takes no turn for 60 s —
    provider outage, lane starvation, a killed process — the hold releases
-   itself. A player must never be pinned by an API failure.
-4. **Fly mode ignores custody** (developer flying is not a jailbreak).
-5. **Offers keep working while held**, since paying the fee is the main exit.
-6. **Refcount the hold** — two officers, one lets go, you are still held.
+   itself. A player must never be pinned by an API failure. Note that with one
+   turn in flight across the whole cast, a busy scene can starve a holder past
+   60 s with nothing broken at all; releasing then is correct, not a false
+   positive, and the officer can always take hold again.
+5. **Fly mode ignores custody** (developer flying is not a jailbreak).
+6. **Offers keep working while held**, since paying the fee is the main exit.
+7. **Refcount the hold** — two officers, one lets go, you are still held.
 
 ### Sub-milestones
 
-- **M4a — summons and warrant.** `summon` verb, the deadline on the notice, the
-  warrant flag, the Scold's peal wired to a real trigger, the HUD rung display.
-  No physical contact yet; entirely testable headlessly.
+- **M4a — summons and warrant.** `summon` verb, the deadline on the notice
+  (discharged by settlement, nothing else), the warrant flag, the `served`
+  re-arm on every rung change, the warrant exemption from oldest-out eviction,
+  the Scold's peal wired to a real trigger, the HUD rung display. No physical
+  contact yet; entirely testable headlessly.
 - **M4b — custody without a grab.** `seize` / `release`, the station picker,
   the escort walk, the leash, the HUD lines. Compliance path only: walking away
   just ends custody. This is already a complete, shippable scene.
-- **M4c — the grab.** The hold message, the tether clamp in `controller.rs`,
-  the reflex, the hand, the sounds, the dead-man timer.
-- **M4d — the struggle.** Strain, the modifiers, the percepts and priority
-  turns, the escape notice.
+- **M4c — the grab.** The hot custody message, the pre-sweep tether clamp in
+  `controller.rs`, the host-side reflex and its three commands back to the sim,
+  the hand, the sounds, the dead-man timer.
+- **M4d — the struggle.** Strain, the modifiers, the two percepts and their
+  priority turns, the escape notice.
 - **M4e — committed.** The keeper at the threshold, the posted fee, surety, the
-  4-minute cap.
+  4-minute cap at a station.
 
 ### Tests
 
-- A non-law actor's `seize` is refused; so is one at 5 m, one with no warrant
-  and no witnessed breach, and one with no `say` in the same turn.
+Sim-side (`cathedral-sim`, headless, no host):
+
+- A non-law actor's `seize` is refused; so is one at 5 m, one with no `say` in
+  the same turn, and one against a non-player target.
+- `seize` on a warranted notice is allowed; on an unwarranted notice this
+  officer raised minutes ago it is allowed; on one *another* officer raised it
+  is refused; on one this officer raised a game day ago it is refused.
+- A summons is discharged by `settle_notice` and by nothing else; a summons
+  still live when its named bell rings raises the warrant on the clock edge.
+- Every rung change clears `served`, so an officer already confronted about a
+  notice is confronted again once it carries a summons, and again on a warrant.
+- Oldest-out never evicts a warranted notice; with all eight warranted, the
+  raise is refused instead.
 - The station picker returns the nearest posting, never the Stone House by
   default.
-- Leash: inside 8 m nothing happens; outside it the officer closes; at 3 m
-  while outside it the grab fires without a provider call.
-- The reflex is instant — a scheduler test that no LLM turn is consumed by a
-  grab, and an engine test that the holder still gets the priority turn.
-- Struggling ~5 s breaks the hold; stopping for a second loses most of the
-  meter; two holders do not break in 5 s.
+- `PlayerGrabbed` earns the holder the priority turn; `PlayerStruggling` and
+  `PlayerBrokeFree` each earn one, and a struggle produces exactly two percepts
+  however long it lasts.
 - Breaking free raises an unanswerable notice (no `wronged`, no `taken`) that
   `settle_on_return` cannot clear.
 - The dead-man timer releases a held player when the holder is starved.
 - Paying the keeper earns the restitution percept and priority turn (the M3.5
   path, unchanged) and `settle_notice` + `release` frees you.
-- The 4-minute cap releases regardless of the models.
+- The 4-minute station cap releases regardless of the models.
+
+Host-side (`controller.rs`, no provider in the loop at all):
+
+- Leash: inside 8 m nothing happens; outside it the officer closes; at 3 m
+  while outside it or moving away the grab fires in the same frame.
+- The tether clamps the desired position, not the resolved one: a held player
+  pushed at a wall ends up outside it, never inside it.
+- A solid between the player and a walking anchor breaks the grip rather than
+  dragging them through it, and the separation passing `CUSTODY_LEASH_M` while
+  blocked ends the hold.
+- Struggling ~5 s breaks the hold; stopping for a second loses most of the
+  meter; two holders do not break in 5 s; drunkenness and weariness slow the
+  fill.
+- Flying is not custody: the clamp does not apply.
 
 ## M5 — the Stone House
 
 The gaol. Designed 2026-07-26, after M4 and deliberately not inside it: M4 ships
 complete on stations alone, and this is geometry plus a cast relocation plus a
-new confinement state, which wants its own milestone.
+new confinement state, which wants its own milestone. Revised the same day
+against the shipped code, which sharpened three things: the Bellstand site's
+real argument (M2 already posts the watch there), the single-lane scheduler the
+room has to live inside, and the second place `confined` has to be enforced.
 
 ### The finding that changes the scope
 
@@ -613,12 +781,44 @@ So the goal is not to make the gaol short. It is to make it the densest social
 scene in the game and let the player choose when to leave. The cap exists to
 prevent a soft-lock, not as the intended exit. **No fade to black, ever.**
 
+### The room is denser than the lane
+
+The one thing that can wreck this: eleven people in one room and **one LLM turn
+in flight across the entire city** (`in_flight: Option<InFlight>`,
+`scheduler.rs:137`), behind a stage that admits at most six
+(`config.ron: idle_cognition.max_actors: 6`). Left alone, the densest social
+scene in the game is also the one where each person speaks least often — a room
+of eight who each get a turn every eighth turn is a room of people ignoring you.
+
+Three things make it work, none of them new machinery:
+
+- **Broadcast is the gaol's native register.** A `say` with no target reaches
+  every one of them at once (`HEARING_RADIUS_M` covers the room several times
+  over), so one player line gives all eight news and the stage picks who answers.
+  Talking to a cell is not talking to eight people in sequence; it is talking to
+  a room, and the model's own choice of who speaks is the scene working.
+- **`require_news: true` is doing you a favour in here.** An inmate with nothing
+  new to react to takes no turn and costs nothing — so the room is quiet until
+  you make it not quiet, which is exactly how a cell should feel.
+- **Six on stage out of nine is not a shortfall.** The three the stage leaves out
+  are the ones with nothing to say this minute. If it ever reads as dead, the
+  lever is `max_actors` in `config.ron`, not a special case in the sim.
+
+What must **not** happen is the gaol getting its own scheduler, its own lane or
+its own cadence. One turn at a time is the sim's shape everywhere; the Stone
+House is a room, not an exception.
+
 ### Where it is — and the lore resolved
 
 The lore put the Stone House by the River Gate (`areas.json` `river_gate`,
 x ≈ −353, z ≈ −95) while the whole gaol cast, Ede Clove included, spawns at
-x ≈ 226–244 — the opposite end of Bell-and-Sluice. One had to move, and moving
-one building beats relocating nine people out of their ward circle.
+x ≈ 226–244 — the opposite end of Bell-and-Sluice. One had to move, and the
+building is the cheap one to move, because **the watch is already posted at the
+Bellstand**: `rounds.json` has `workplaces["bailiff_and_gaoler"] = ["Bellstand
+watch-bell tower"]`, put there by M2. The guards and the keeper already spend
+their working day in that yard. Building the gaol under the River Gate would
+mean either a gaol with no staff or undoing M2's postings; building it at the
+Bellstand costs nothing and the cast is standing in it already.
 
 **The Stone House goes to the Bellstand**, in the side court behind the square
 and under the watch-bell tower (`bellstand_tower`, x 33.8–55.8, z −202 to −176).
@@ -678,7 +878,10 @@ pins afterwards** (they move on every bake).
 3. **Serve it** (below).
 4. **Talk the keeper round** — `release` is on every turn.
 5. **Break out** — the lock is broken, after all. Compounds into M4d's
-   unanswerable escape notice, and now the gates are shut to you.
+   unanswerable escape notice: the one word in the city that no restitution can
+   answer and only an officer can end. Note that the gates are *not* shut to you
+   — for the reason M4's ladder gives, gate refusal is not built — so what you
+   are buying is a permanent warrant, not a locked city.
 
 A standing HUD line must always name what would free you right now. Never a
 mystery box.
@@ -692,13 +895,31 @@ minutes out. When the bell is near the ceiling never fires and the diegetic
 answer is simply true; when it is far, the player is released early and the
 keeper has a reason ("the keeper wants the room").
 
+Six here against M4e's **4** at a station, deliberately: the station cap is the
+price of standing at a gate arch with one person to talk to, and this one is
+sized for a room worth staying in. If they ever want to be one number, it is
+because the Stone House failed at being interesting, and that is the thing to
+fix instead.
+
 ### `confined` — one state, both sides of the door
 
 The eight inmates will not stay put by themselves: the movement ladder reads
 needs first, so an inmate whose `thirst` drops sets off for the nearest cistern
 and walks through the gaol wall. So `confined` is a character state checked
-**before** the needs rungs, and it blocks `go_to`, curfew routing, stall-seeking
-and round legs.
+**before** the needs rungs.
+
+It needs guarding in **two** places, because there are two ways to start
+walking:
+
+1. **The ladder** — `round.rs::decide` (`:6590`), returning "stay" above every
+   rung it already has. That one guard covers curfew routing, parched, famished,
+   stall-seeking, the social pull, the wander and the round legs, because all of
+   them are decided there.
+2. **The verb** — `go_to` in `actions.rs`, both forms: `{"place_id": …}` and
+   `{"person": …}`. The ladder guard does nothing about an LLM that simply
+   decides to leave, and a confined actor who says "I am going to the well" and
+   is not stopped is worse than one who never says it. Refuse it plainly so the
+   model reads the refusal and stays in character.
 
 It is the same state the player's commitment uses. One mechanism, both sides —
 which is the sign the design is right. Confined NPCs still speak, offer, accept,
@@ -710,9 +931,11 @@ point.
 - **M5a — the building.** Geometry beside the belfry, collider, footprint
   export, nav rebake, a `pl_` id, an `areas.json` entry so the soundscape can
   bind a bed to it.
-- **M5b — the cast moves in.** `confined` on the eight, the ladder guard, their
-  postings, and the guards (Tobin Marle, Ewart Rasp) and keeper (Ede Clove)
-  stationed rather than wandering.
+- **M5b — the cast moves in.** `confined` on the eight, both guards (the ladder
+  one and the `go_to` one), their postings, and the guards (Tobin Marle, Ewart
+  Rasp) and keeper (Ede Clove) stationed rather than wandering — M2 already
+  points `workplaces["bailiff_and_gaoler"]` at the Bellstand, so this is mostly
+  narrowing a posting that exists.
 - **M5c — commitment.** Booking by description, `taken` confiscation, the
   posted fee, the diegetic sentence and the ceiling, the HUD line.
 - **M5d — the doors.** Surety, visitors at the grate, the keeper's `release`,
@@ -724,6 +947,9 @@ point.
   are `confined`.
 - A confined NPC with `thirst` under the well rung does **not** path to a
   cistern, does not take a round leg, and is not curfew-routed.
+- A confined NPC's own `go_to` is refused — both `{"place_id": …}` and
+  `{"person": …}` — while `say`, `offer_item`, `accept_item` and `remember` all
+  still work.
 - Committing the player confiscates exactly the notice's `taken` item and
   nothing else.
 - The posted fee is a constant the keeper reports identically to every asker.
@@ -780,16 +1006,28 @@ point.
   gained the optional `taken`; the sheet numbers its notices; the wronged always
   carry their own word. Bribery now expresses itself by omission: the sergeant
   takes the purse and simply does not call the verb.
-- **M4** — taking hold (Problem 5, designed 2026-07-26, not started). The floor
-  under refusal: summons → warrant → `seize` into custody → an escort to the
-  *nearest* station → a real grab with a ~5 s struggle-out if you break the 8 m
-  leash. Custody is a state and the grab only enforces it, so complying is
-  simply walking there beside an LLM sergeant who can `release` you the whole
-  way; the reflex is host-side code at 3 m and every judgement above it is a
-  verb. Sub-milestones M4a–M4e; needs no new geometry. **The court is
-  deliberately out** — the warrant comes from an ignored summons, not a bench —
-  and the Stone House stays for grave matters only, whenever it gets built.
-- **M5** — the Stone House (designed 2026-07-26, not started). The gaol already
+- **M4** — taking hold (Problem 5, designed 2026-07-26, revised against the code
+  2026-07-26, not started). The floor under refusal: summons → warrant →
+  `seize` into custody → an escort to the *nearest* station → a real grab with a
+  ~5 s struggle-out if you break the 8 m leash. Custody is a state and the grab
+  only enforces it, so complying is simply walking there beside an LLM sergeant
+  who can `release` you the whole way; the reflex is host-side code at 3 m and
+  every judgement above it is a verb. Sub-milestones M4a–M4e; needs no new
+  geometry. **The court is deliberately out** — the warrant comes from an
+  ignored summons, not a bench — and the Stone House stays for grave matters
+  only, whenever it gets built. The review pass settled five things the first
+  draft got wrong: an officer must **close on foot** before they can take you
+  (conversation reaches 20 m, so nothing about talking puts you in reach — the
+  approach is the tell); `notices::confront` must **re-arm on every rung
+  change** or the ladder stalls after one encounter; the tether clamps the
+  **desired** position **before** the sweep, never the resolved one; the
+  witnessed-breach door becomes *a notice this officer raised within the last
+  game hour*, which is checkable from fields that already exist; and the grab
+  reflex is **host-side**, telling the sim through commands, because a 10 Hz
+  spatial feed cannot decide a 3 m radius. Gate refusal is cut — only two gates
+  have leaves and they answer to the clock, not the law.
+- **M5** — the Stone House (designed 2026-07-26, revised against the code
+  2026-07-26, not started). The gaol already
   has a cast: eight `prisoner`-circumstance characters whose sheets say they are
   held on Stone House rations, currently spawned walking free because there is
   nowhere to hold them. Jail is not a lockout here — it is the one room in the
