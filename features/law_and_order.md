@@ -301,6 +301,439 @@ Bribery falls out of this for free, which is the point: the sergeant takes the
 purse and simply does not call `settle_notice`, and Odo Trask takes nothing at
 all.
 
+## Problem 5 — refusal has no floor
+
+M3.5 gave settlement a chooser. It gave refusal nothing. A player who never
+settles simply keeps walking: officers get the `confront` percept and demand
+restitution, forever, and the word decays after `NOTICE_LIFE_GAME_DAYS`
+whether or not anyone answered it. There is no rung below "asked again more
+sternly". Worse, the wrongs that *cannot* be answered by restitution already
+exist in the tree — `raise_ward_notice_for` (actions.rs:1809) raises fouling
+notices with no `wronged` and no `taken`, so nothing but a law officer's
+`settle_notice` can ever end them — and the sim's only response to one is more
+talking.
+
+## M4 — taking hold
+
+Custody. Designed 2026-07-26; the decisions below are settled, not options.
+
+### The constraint that shapes all of it
+
+`src/controller.rs:63-64`: the player walks at 8 m/s and runs at 12. Every NPC
+in the city walks at `WALK_SPEED_MPS = 1.8` (`lib.rs:169`). **The player is
+4.4× faster than any officer**, so arrest can never be pursuit — a chase you
+always win is worse than no chase at all.
+
+Second: the sim has no authority over the player's body. It *reads* the player
+through `EngineCommand::SpatialUpdate` and never writes. Holding the player is
+a genuinely new host capability (drive's `tp` proves it is possible), and an
+LLM is what pulls the trigger. That is the largest single thing this milestone
+introduces and everything below is shaped by keeping it safe.
+
+### What the lore already decided
+
+`lore/core_lore/secular_government.md` is unusually specific, and it is the
+design:
+
+- **Two doors.** Gate and night watchmen *may stop an immediate breach of the
+  peace* with no warrant, but must bring the prisoner and written cause to the
+  Stone House by the next office bell. Bench sergeants otherwise make **arrests
+  ordered by a court**, serve summonses and escort prisoners; ordinary debt
+  collectors have no arrest power.
+- **The Stone House** by the River Gate is the civic gaol; its Stone keeper is
+  Ede Clove (`p009w`, 22, whose own `illegal_activity` is *violent debt
+  collection*). It holds the accused awaiting hearing, short sentences and
+  committed debtors. Families bring food and bedding.
+- **"Gaol fees are fixed publicly; inventing a fee is extortion."** That one
+  line is the exit design: custody is not a timer, it is a price.
+
+**The court is out of scope.** Three benchers sitting as the Civic Measure
+Court is a whole second system, so in M4 the warrant comes from an ignored
+summons rather than a bench. Leave a TODO in the custody module's doc comment
+beside the release paths — "committed to await a hearing" is exactly where a
+bench slots in later — and nowhere else.
+
+### The ladder
+
+Rungs 1–2 shipped in M3/M3.5; every rung is an act some character chooses, and
+nothing escalates on a timer alone.
+
+1. **word** — the live notice; carriers cool toward you.
+2. **demand** — `notices::confront` plus speech.
+3. **`summon {"notice_id": 3}`** — an officer out of patience calls you to
+   answer by a named office bell. The Scold's `summons` peal exists today only
+   as a drive stand-in with no real trigger; this gives it one.
+4. **warrant** — the summons ignored past its bell. Gate keepers refuse you
+   passage and any law-cast actor may take you.
+5. **`seize`** — into custody, ≤ `ITEM_INTERACTION_RADIUS_M` (4 m), on a live
+   warrant **or** a breach of the peace the officer just witnessed. The lore's
+   two doors exactly.
+6. **the escort** — walked to the nearest station.
+7. **`release`** — available on every turn, to the holder and to the keeper.
+
+### Custody is a state; the grab is its enforcement
+
+`seize` does **not** take hold of you. It puts you in custody and names a
+destination; you are free to walk. The hand comes onto your arm only when you
+break the arrangement.
+
+```
+Free ──seize──► In charge ──break──► Held ──arrive──► Committed ──release──► Free
+                    │                   │                  │
+                    └──── release ──────┴──────────────────┘
+```
+
+Compliance is the pleasant path and must stay that way: a 100–200 m walk beside
+an LLM sergeant who talks to you the whole distance and can let you go at any
+point. **The escort is the content, not the cell** — being marched in public is
+the punishment, and it is a conversation you can still win.
+
+### Arm's reach is the whole mechanic
+
+A grab cannot be a lasso: the officer is slow and an LLM turn costs seconds, so
+by the time a prompt returns a sprinting player is 30 m gone. So the grab is a
+reflex at contact range, and everything else follows from that.
+
+- **`CUSTODY_REACH_M = 3.0`** — the same order as `WELL_ARRIVE_RADIUS_M` and
+  `STALL_ARRIVE_RADIUS_M`, and inside the 4 m offer radius: if you are standing
+  in conversation you are in reach.
+- **Pre-authorized and host-side.** `seize` is the officer declaring intent;
+  the grab that enforces it fires mechanically and instantly, with no provider
+  round trip. Same split as the npc_bodies gaze reflex — reflexes are code,
+  decisions are prompts.
+- **`CUSTODY_LEASH_M = 8.0`**, deliberately `SOCIAL_PULL_RADIUS_M`: while
+  merely in charge you may step aside, look at a stall, talk to someone you
+  pass. It is not enough to drift out of by accident.
+- **The escort keeps contact**, walking at ~1.5 m, so you are normally within
+  reach without being held.
+- Cross the leash and the officer closes; reach 3 m while you are outside it or
+  moving away and the grab fires.
+
+The consequence is the skill the player learns: **bolting from a standing
+conversation gets you taken, because they are already at 1.5 m; backing off to
+6 m first and then running gets you clear.** Don't let a sergeant stand next to
+you while you are wanted. That makes M2's beats and postings tactically real,
+and it makes the speed disparity stop mattering without pretending it is not
+there.
+
+### What being held feels like
+
+- **The camera is never taken.** Losing your view is nausea; losing your feet is
+  drama. Look anywhere, including at the hand on your arm.
+- **Movement is tethered, not disabled.** Input still runs, clamped to ~1.5 m
+  around the grip point: turn, face them, face away, circle. You cannot leave.
+  When the officer walks, the anchor moves and you go at their 1.8 m/s.
+- **Collision wins over the tether.** Clamp the *desired* position and let
+  `controller.rs`'s existing swept solve resolve it. Putting a market stall
+  between you and the officer therefore breaks the grip — a free, physical,
+  discoverable escape that costs nothing to build.
+- **A visible hand**: npc_bodies' articulated arms already do offer
+  choreography; the arm goes to the upper arm and stays.
+- **Sound is already catalogued** — `features/more_sounds/more_sounds.json`
+  has the keys-jingle tagged "watchmen, gatekeepers, and prisoner escorts", and
+  the gaol door reserved for "the future Stone House near River Gate".
+- **HUD**: a standing line on the offer-lapse notice precedent — *"Havise Ashe
+  has taken you in charge — the Tallage toll-house"*, then *"Held by Havise
+  Ashe"*. The leash is explained once, the first time it is ever drawn.
+
+### The struggle-out
+
+Pull, don't mash: hold a movement direction away from the officer. A **strain**
+meter fills over **~5 s of continuous pull** and drains ~3× as fast the moment
+you stop. Escape is meant to be easy enough to be a real choice — what should
+make you hesitate is the consequence, not the difficulty.
+
+Modifiers, all on seams that already exist:
+
+- **Drunkenness and weariness** (npc_bodies M5 statuses, drive's `status`
+  action) slow the fill.
+- **Two holders is much worse**, near-impossible. The escort's right move is
+  therefore `say` — "help me hold this one" — and nearby law `go_to
+  {"person": …}`. No new verb, and being *dragged* by two people is what the
+  word actually means.
+- **Grip by occupation**: `bailiff_and_gaoler` / `militia_and_soldier` hold
+  harder than `revenue_worker`. Ede Clove should be worse to be held by than
+  Odo Trask, and her sheet already says why.
+
+Struggling is loud and public:
+
+- The holder gets a percept about once a second **plus a priority turn**, so
+  the LLM is in the loop for the interesting call — tighten, shout for help, or
+  let go in character ("Run then. The word will find you.").
+- Bystanders within `HEARING_RADIUS_M` get one too; a hue and cry raises itself.
+- **Breaking free auto-raises a notice** with no `wronged` and no `taken`, the
+  same shape `raise_ward_notice_for` already makes for fouling — structurally
+  unanswerable by restitution. Escape closes the "you could have just paid the
+  fee" door, and that is the cost that makes the choice a choice.
+
+### Confinement without geometry
+
+Custody goes to the **nearest station**, not always the Stone House: the
+Tallage toll-house counter (`pl_8so5`, Odo Trask), the five gates and the Reed
+Postern, the Bellstand watch-bell tower (`pl_5wkc`). Wickmarket → River Gate is
+~300 m, i.e. **three minutes pinned at 1.8 m/s**, which is too long; the
+nearest station is 50–150 m. This is M2's argument repeated ("law presence
+where people are, not one building"), the station list falls out of M2's
+existing postings and `workplaces["bailiff_and_gaoler"]`, and **M4 therefore
+needs no new geometry at all**.
+
+Most of those are not lockable rooms, so: **you are confined by a person, not a
+door.** The keeper holds the threshold; walking out is an escape attempt, and
+they are within 3 m, so it is the same reflex grab. Custody-by-supervision is
+period-honest and free. The Stone House, whenever it is built, becomes the one
+place with a real door — and the only place a grave matter is committed to.
+
+### Exits
+
+All on machinery that already exists:
+
+1. **Pay the posted fee** — offer coins to the keeper; `restitution_candidates`
+   already earns them the percept and the turn, and they `settle_notice` and
+   `release`.
+2. **Surety** — someone vouches for you. Pure speech; the keeper releases.
+3. **Talk your way out** — `release` is on every holder's turn.
+4. **Wait it out** — a hard cap, no exceptions. At `seconds_per_day: 3600` an
+   office bell is ~8.5 real minutes, which is far too long to stare at a wall,
+   so the keeper releases after **4 real minutes** regardless of what the
+   models do.
+5. **Break out** — struggle past the keeper. Compounds, as above.
+
+### Verbs
+
+Small, and gated exactly as `has_law_verbs` is (`prompt/mod.rs:472`) so that
+non-law, custody-less prompts stay byte-identical:
+
+```
+seize {"person": "player", "notice_id": 3}   # Law only: take someone in charge for the nearest station
+grab {"person": "player"}                    # Take hold of someone you have in charge
+release {"person": "player"}                 # Let them go
+```
+
+- `seize` requires law occupation, ≤4 m, and a live warrant **or** a breach the
+  officer just witnessed — **plus a `say` in the same turn**, the rule turn.j2
+  already applies to a silent `go_to`. A wordless seizure reads as the game
+  stealing the controller.
+- `grab` is usually the reflex; it is exposed so an officer *can* take hold
+  deliberately, and rendered only while they hold someone or have just seized.
+- Calling for help needs no verb: speech plus `go_to {"person": …}` covers it.
+
+### The seam the sim does not have
+
+1. **Authority over the player's feet.** A new hot `EngineMessage` carrying
+   holder, anchor and radius — hot like `Movement`/`Clock`, never bumping
+   `world_revision` — applied in `controller.rs` as a clamp *after* the sweep.
+2. **Strain stays host-side.** It is a 20 Hz input meter and the sim has no
+   clock by design; the sim hears only throttled `PlayerStruggling { holder }`
+   and `PlayerBrokeFree` commands.
+3. **A dead-man timer, non-negotiable.** If the holder takes no turn for 60 s —
+   provider outage, lane starvation, a killed process — the hold releases
+   itself. A player must never be pinned by an API failure.
+4. **Fly mode ignores custody** (developer flying is not a jailbreak).
+5. **Offers keep working while held**, since paying the fee is the main exit.
+6. **Refcount the hold** — two officers, one lets go, you are still held.
+
+### Sub-milestones
+
+- **M4a — summons and warrant.** `summon` verb, the deadline on the notice, the
+  warrant flag, the Scold's peal wired to a real trigger, the HUD rung display.
+  No physical contact yet; entirely testable headlessly.
+- **M4b — custody without a grab.** `seize` / `release`, the station picker,
+  the escort walk, the leash, the HUD lines. Compliance path only: walking away
+  just ends custody. This is already a complete, shippable scene.
+- **M4c — the grab.** The hold message, the tether clamp in `controller.rs`,
+  the reflex, the hand, the sounds, the dead-man timer.
+- **M4d — the struggle.** Strain, the modifiers, the percepts and priority
+  turns, the escape notice.
+- **M4e — committed.** The keeper at the threshold, the posted fee, surety, the
+  4-minute cap.
+
+### Tests
+
+- A non-law actor's `seize` is refused; so is one at 5 m, one with no warrant
+  and no witnessed breach, and one with no `say` in the same turn.
+- The station picker returns the nearest posting, never the Stone House by
+  default.
+- Leash: inside 8 m nothing happens; outside it the officer closes; at 3 m
+  while outside it the grab fires without a provider call.
+- The reflex is instant — a scheduler test that no LLM turn is consumed by a
+  grab, and an engine test that the holder still gets the priority turn.
+- Struggling ~5 s breaks the hold; stopping for a second loses most of the
+  meter; two holders do not break in 5 s.
+- Breaking free raises an unanswerable notice (no `wronged`, no `taken`) that
+  `settle_on_return` cannot clear.
+- The dead-man timer releases a held player when the holder is starved.
+- Paying the keeper earns the restitution percept and priority turn (the M3.5
+  path, unchanged) and `settle_notice` + `release` frees you.
+- The 4-minute cap releases regardless of the models.
+
+## M5 — the Stone House
+
+The gaol. Designed 2026-07-26, after M4 and deliberately not inside it: M4 ships
+complete on stations alone, and this is geometry plus a cast relocation plus a
+new confinement state, which wants its own milestone.
+
+### The finding that changes the scope
+
+Eight characters already carry the `prisoner` circumstance
+(`features/implemented/movement/03_the_ladder.md` §2), and their sheets are not
+ambiguous about where they are:
+
+> *"You worked as an errand child and are **now held** from Bell-and-Sluice
+> streets, still tied to a shared bell-and-sluice work-and-lodging group.
+> **Stone House rations** and food carried in by kin are your present
+> support."* — Lise Skell, `p0056`
+
+Betriss Skell (`p005c`), Lise Skell (`p0056`), Aldith Hobbe (`p0055`), Sible
+Rud (`p005f`), Jonet Marle (`p0059`), Havise Pike (`p005a`), Osanne Tarn
+(`p0057`), Aubin Clove (`p00b0`). Seven are young household servants — errand
+child, kitchen maid, housemaid, chamber servant — which is exactly who a
+medieval city held on a petty-theft accusation. **All eight are currently
+spawned walking around Bell-and-Sluice streets**, because there is nowhere to
+hold them. That is a live world-consistency bug, and it is also the gaol's
+entire population, already written.
+
+Three hooks sit in the same data and cost nothing to use:
+
+- **Ede Clove** (`p009w`) keeps the Stone House; **Aubin Clove** (`p00b0`) is
+  inside it. This world's surnames are family-coded (`lore/families/`).
+- **Tobin Marle** (`p009y`) is a prison guard; **Jonet Marle** (`p0059`) is an
+  inmate.
+- Ede Clove's authored goal is **"Replace a broken stone house lock."** The lock
+  is broken in the shipped world state, right now.
+
+### Why a gaol is not a lockout here
+
+Lockouts are anti-gameplay, which is why every other game fades to black and
+says *three hours later*. This game's content is talking to LLM people, and the
+Stone House is **the only place in the city with a captive cast that has nothing
+to do but talk to you**. Everywhere else people are on rounds, walking to work,
+leaving mid-sentence. In here: eight strangers, one room, and time.
+
+So the goal is not to make the gaol short. It is to make it the densest social
+scene in the game and let the player choose when to leave. The cap exists to
+prevent a soft-lock, not as the intended exit. **No fade to black, ever.**
+
+### Where it is — and the lore resolved
+
+The lore put the Stone House by the River Gate (`areas.json` `river_gate`,
+x ≈ −353, z ≈ −95) while the whole gaol cast, Ede Clove included, spawns at
+x ≈ 226–244 — the opposite end of Bell-and-Sluice. One had to move, and moving
+one building beats relocating nine people out of their ward circle.
+
+**The Stone House goes to the Bellstand**, in the side court behind the square
+and under the watch-bell tower (`bellstand_tower`, x 33.8–55.8, z −202 to −176).
+Resolved in `lore/core_lore/secular_government.md` 2026-07-26: the name is older
+than the building, the first Stone House by the River Gate was condemned in the
+Hammering — the Line-keeper's power to strip an unsafe upper storey and close a
+passage was already in that same chapter — and custody moved to the watch's own
+yard. The old shell still stands and the old still call it the Stone House.
+
+The gameplay reasons this is the better site:
+
+- **The watch is already posted here.** M2 anchored the routeless rest of the
+  bench on the Bellstand watch-bell tower via `workplaces["bailiff_and_gaoler"]`.
+  Guards and gaol in one yard is both correct and free.
+- **The Bellstand is a major place** (`pl_u2ka`) the player already knows and
+  visits; the River Gate is a far western corner nobody has a reason to reach.
+- **Escorts stay short** from most of the city — the M4 argument again.
+- **The bell rings directly overhead.** A prisoner told they go at Lamplight
+  then *hears the Scold ring Lamplight over their own head*. The peals already
+  exist (`soundscape.rs`, drive's `bell` action); this makes one of them a
+  clock the player is serving time against.
+
+Build it beside the belfry with the existing idiom — `build_bellstand_belfry`
+and `build_bellfoot_passage` (`src/city/mod.rs:2922`, `:3117`) — then the usual
+rebake: collider → `export_collision_footprints` → `scripts/bake_navigation.py`,
+plus `scripts/bake_places.py` for the new `pl_` id, and **re-pick the nav node
+pins afterwards** (they move on every bake).
+
+### What commitment does
+
+- **You are booked as a description, not a name.** Nobody in the city knows the
+  player, so the keeper's book reads *"an outland stranger in a grey hood"* —
+  the "unknown people" rule paying for itself again.
+- **Confiscation is narrow: only `WardNotice.taken`.** M3.5 already models the
+  specific stolen thing, and returning it settles the word by itself
+  (`settle_on_return`). Do **not** seize the player's inventory generally: it is
+  a rage mechanic and it would fight the offer machinery.
+- **The fee is posted publicly** — the lore is explicit that inventing one is
+  extortion, so it is a fixed number the keeper will state on request. **3
+  sparks** (a pilgrim badge was 1).
+- **You are given nothing.** No bedding, no rations, no candle; families bring
+  those, and `blanket` is already an item kind documented as *"dried before
+  curfew, carried into the gaol with food — the poverty item"*
+  (`features/implemented/add_items_described_in_the_lore.md`). **The inmates
+  have blankets and bread and the player does not.** That single asymmetry is
+  the engine of every conversation in the room, and it needs no system at all.
+
+### Five doors out
+
+1. **Pay the posted fee** — the existing offer machinery; the keeper gets the
+   M3.5 restitution percept and priority turn, then `settle_notice` + `release`.
+2. **Surety** — someone comes and vouches for you. **Build for this one.** It
+   requires a person who knows you and will cross the city for you: if you have
+   been decent, somebody shows up; if you have robbed the ward, nobody does. It
+   is speech plus `go_to` plus `release` — no new mechanism whatsoever — and it
+   silently audits the entire playthrough.
+3. **Serve it** (below).
+4. **Talk the keeper round** — `release` is on every turn.
+5. **Break out** — the lock is broken, after all. Compounds into M4d's
+   unanswerable escape notice, and now the gates are shut to you.
+
+A standing HUD line must always name what would free you right now. Never a
+mystery box.
+
+### Time is diegetic, with an invisible ceiling
+
+The sentence is stated in the game's own clock — **"you go at Lamplight"** —
+because everything else in the sim is. Back it with a hard real-time ceiling of
+**6 minutes**, since at `seconds_per_day: 3600` an office bell can be 8.5 real
+minutes out. When the bell is near the ceiling never fires and the diegetic
+answer is simply true; when it is far, the player is released early and the
+keeper has a reason ("the keeper wants the room").
+
+### `confined` — one state, both sides of the door
+
+The eight inmates will not stay put by themselves: the movement ladder reads
+needs first, so an inmate whose `thirst` drops sets off for the nearest cistern
+and walks through the gaol wall. So `confined` is a character state checked
+**before** the needs rungs, and it blocks `go_to`, curfew routing, stall-seeking
+and round legs.
+
+It is the same state the player's commitment uses. One mechanism, both sides —
+which is the sign the design is right. Confined NPCs still speak, offer, accept,
+remember and think normally; they simply have nowhere to go, which is the whole
+point.
+
+### Sub-milestones
+
+- **M5a — the building.** Geometry beside the belfry, collider, footprint
+  export, nav rebake, a `pl_` id, an `areas.json` entry so the soundscape can
+  bind a bed to it.
+- **M5b — the cast moves in.** `confined` on the eight, the ladder guard, their
+  postings, and the guards (Tobin Marle, Ewart Rasp) and keeper (Ede Clove)
+  stationed rather than wandering.
+- **M5c — commitment.** Booking by description, `taken` confiscation, the
+  posted fee, the diegetic sentence and the ceiling, the HUD line.
+- **M5d — the doors.** Surety, visitors at the grate, the keeper's `release`,
+  break-out wiring into M4d.
+
+### Tests
+
+- All eight `prisoner`-circumstance characters spawn inside the Stone House and
+  are `confined`.
+- A confined NPC with `thirst` under the well rung does **not** path to a
+  cistern, does not take a round leg, and is not curfew-routed.
+- Committing the player confiscates exactly the notice's `taken` item and
+  nothing else.
+- The posted fee is a constant the keeper reports identically to every asker.
+- Release fires at the next office bell, and at the 6-minute ceiling when the
+  bell is further off than that.
+- Surety: an unrelated NPC's `release` on a committed player is refused; the
+  keeper's is honoured.
+- Walking out past the keeper is an escape attempt and raises M4d's
+  unanswerable notice.
+
 ## Suggested order
 
 - **M0** — the accept/decline nudge (the bug; one call + test). **DONE
@@ -347,5 +780,23 @@ all.
   gained the optional `taken`; the sheet numbers its notices; the wronged always
   carry their own word. Bribery now expresses itself by omission: the sergeant
   takes the purse and simply does not call the verb.
-- **M4** (someday) — the stone: arrest, the gaol cast, bench days. Not before
-  M3 has proven the loop is fun.
+- **M4** — taking hold (Problem 5, designed 2026-07-26, not started). The floor
+  under refusal: summons → warrant → `seize` into custody → an escort to the
+  *nearest* station → a real grab with a ~5 s struggle-out if you break the 8 m
+  leash. Custody is a state and the grab only enforces it, so complying is
+  simply walking there beside an LLM sergeant who can `release` you the whole
+  way; the reflex is host-side code at 3 m and every judgement above it is a
+  verb. Sub-milestones M4a–M4e; needs no new geometry. **The court is
+  deliberately out** — the warrant comes from an ignored summons, not a bench —
+  and the Stone House stays for grave matters only, whenever it gets built.
+- **M5** — the Stone House (designed 2026-07-26, not started). The gaol already
+  has a cast: eight `prisoner`-circumstance characters whose sheets say they are
+  held on Stone House rations, currently spawned walking free because there is
+  nowhere to hold them. Jail is not a lockout here — it is the one room in the
+  city where a captive cast has nothing to do but talk to you — so it is built
+  for staying, with a diegetic sentence, a posted 3-spark fee, and **surety** as
+  the exit that quietly audits how you have treated the city. Moved to the
+  Bellstand under the watch-bell (lore resolved in `secular_government.md`: the
+  river-gate house was condemned in the Hammering and the name outlived it), so
+  the bell that counts your release rings over your head. `confined` is one
+  state on both sides of the door. Sub-milestones M5a–M5d.

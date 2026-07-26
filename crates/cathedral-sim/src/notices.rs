@@ -32,6 +32,13 @@
 //! shares hearing range with the accused while the notice is live, they get a
 //! face-to-face percept (`confront`, ticked by the engine) and act as their
 //! character. No accuse verb exists — speech plus the percept is enough.
+//!
+//! TODO(M4, `features/law_and_order.md`): custody gives refusal a floor —
+//! summons → warrant → seize → escort. The warrant deliberately comes from an
+//! ignored summons rather than a bench: the lore's Civic Measure Court (three
+//! rotating benchers, `lore/core_lore/secular_government.md`) is a whole second
+//! system and is out of scope. If it is ever wanted, it slots in beside the
+//! release paths — "committed to await a hearing" is the seam.
 
 use std::{
     collections::BTreeSet,

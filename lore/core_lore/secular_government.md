@@ -103,12 +103,23 @@ decision needs four votes including at least one from each side. The
 Praelucent does not command the Civic Measure Court, and the Common Bench does
 not inspect the Grey Press.
 
-The **Stone House** by the River Gate is the civic gaol. Its paid **Stone
-keeper**, gaolers and guards answer to the Full Measure, not to a private
-bailiff or the Candor. It holds accused people awaiting hearing, short-sentence
-prisoners and debtors whom the court has specifically committed. Families may
-bring food and bedding. Gaol fees are fixed publicly; inventing a fee is
-extortion.
+The **Stone House** under the Bellstand watch-bell is the civic gaol. Its paid
+**Stone keeper**, gaolers and guards answer to the Full Measure, not to a
+private bailiff or the Candor. It holds accused people awaiting hearing,
+short-sentence prisoners and debtors whom the court has specifically committed.
+Families may bring food and bedding. Gaol fees are fixed publicly; inventing a
+fee is extortion.
+
+The name is older than the building. The first Stone House stood by the River
+Gate, and the Hammering condemned it: the Line-keeper ordered its upper storey
+stripped and the ward hands closed the passage beside it, and custody moved
+across the city to the watch's own yard behind the Bellstand, where the guard
+already slept and the bell already rang. The old shell still stands by the
+water and the old still call it the Stone House, which is a nuisance to anyone
+giving directions and a comfort to nobody inside either one. A prisoner in the
+present house is held under the bell that counts their release — the curfew,
+the summons and the knell all ring directly overhead, which the keepers regard
+as convenient and the held do not.
 
 Paid **Bench sergeants** serve summonses, make arrests ordered by a court and
 escort prisoners. Ordinary debt collectors have no arrest power. Gate and
