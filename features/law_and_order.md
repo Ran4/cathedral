@@ -443,6 +443,12 @@ an LLM sergeant who talks to you the whole distance and can let you go at any
 point. **The escort is the content, not the cell** — being marched in public is
 the punishment, and it is a conversation you can still win.
 
+The same diagram is the NPC's, with two boxes greyed out: an NPC prisoner is
+simply led (the sim moves both of them), so *In charge* and *Held* differ only
+in whether `struggle` can work, and nothing between them touches the host. Every
+state below is written for the player because the player is the hard case; where
+it says "you", an NPC gets the cheap version of the same thing.
+
 ### Arm's reach, and the walk that gets there
 
 A grab cannot be a lasso: the officer is slow and an LLM turn costs seconds, so
@@ -599,21 +605,26 @@ All on machinery that already exists:
 
 ### Verbs
 
-Small, and gated exactly as `has_law_verbs` is (`prompt/mod.rs:472`) so that
-non-law, custody-less prompts stay byte-identical:
+Small, and gated exactly as `has_law_verbs` is (`prompt/mod.rs:472`), so a
+sheet that is neither law's nor a prisoner's does not render a byte of this:
 
 ```
-seize {"person": "player", "notice_id": 3}   # Law only: take someone in charge for the nearest station
-grab {"person": "player"}                    # Take hold of someone you have in charge
-release {"person": "player"}                 # Let them go
+seize {"person": "4bfk4", "notice_id": 3}    # Law only: take someone in charge for the nearest station
+grab {"person": "4bfk4"}                     # Take hold of someone you have in charge
+release {"person": "4bfk4"}                  # Let them go
+struggle {}                                  # Held only: try to pull free of whoever has hold of you
 ```
 
 - `seize` requires law occupation, ≤4 m, and a live warrant **or** a notice this
   officer raised themselves within the last game hour — **plus a `say` in the
   same turn**, the rule turn.j2 already applies to a silent `go_to`. A wordless
   seizure reads as the game stealing the controller.
-- `grab` is usually the reflex; it is exposed so an officer *can* take hold
-  deliberately, and rendered only while they hold someone or have just seized.
+- `grab` is usually the reflex against the player; it is exposed so an officer
+  *can* take hold deliberately, and rendered only while they hold someone or
+  have just seized. Against an NPC prisoner it is the only way hold is taken —
+  there is no reflex, because there is no one to outrun anybody.
+- `struggle` renders only to someone actually held, and is the NPC's whole
+  resistance move; the player's equivalent is a key they hold down.
 - Calling for help needs no verb: speech plus `go_to {"person": …}` covers it.
 
 **Why the second door is "a notice you raised yourself, recently".** The lore's
@@ -634,13 +645,62 @@ you saw it, it was just now, you may take them without waiting for a bench. A
 notice somebody *else* raised, or one this officer raised yesterday, needs the
 warrant like everything else.
 
-**`seize` targets the player only in M4.** The verb reads `{"person": …}` and
-nothing about it is player-specific, but an NPC who has been taken in charge
-would have to *know* it — which means a custody line on the sheet, which means
-non-law prompts stop being byte-identical, which is the one budget promise this
-milestone makes. Every rung above `word` is also written for a target that can
-run at 8 m/s and get bored. Reject a non-player target with a plain refusal, and
-leave NPC arrest to whatever milestone wants to pay the sheet cost.
+### The cast arrests each other too
+
+`seize` takes `{"person": …}` and means it. The law may take **anyone** —
+which is the half of this milestone that costs almost nothing and pays the most.
+
+**There is already an open loop it closes.** `raise_ward_notice_for`
+(`actions.rs:1809`) raises notices against *NPCs* today: a townsman who fouls
+the street in front of a sergeant gets a word on the ward's tongues, and then
+absolutely nothing happens to him, ever. The whole ladder above rung 1 has been
+written as if the player were the only person who can be wanted, and they are
+not. A city whose law only ever activates against the one outlander in it is a
+theme-park; a city where you round a corner and find Havise Ashe walking some
+baker to the Bellstand is a place that was already running before you got there.
+
+**And it is far cheaper than the player case.** Nearly everything hard about M4
+is hard because of the player specifically: the 4.4× speed gap, the host owning
+the player's feet, the tether, the reflex, the strain meter, the dead-man timer.
+None of it applies here. The sim is already the authoritative mover for NPCs, so
+an NPC in custody is *slaved to the escort* — no clamp, no host message, no
+`controller.rs` at all, and both parties walk at 1.8 m/s so there is no
+disparity to engineer around. **NPC custody is M4b plus a sheet section.** The
+grab (M4c) and the strain meter (M4d) stay what they always were: the player's.
+
+What it does need:
+
+- **The prisoner has to know.** A short `you_are_held` sheet section — who has
+  you, where you are being taken, and what would end it — plus `struggle` on
+  their verb list. Gated on the state, exactly as `has_notices`, `has_pockets`
+  and `has_frontbutt` already gate theirs (`prompt/mod.rs:478-503`).
+- **So restate the budget promise honestly.** It was never "non-law prompts are
+  byte-identical"; it is *"a prompt renders nothing for a situation you are not
+  in"*, which is the idiom the whole sheet is built on. Someone not in custody
+  and not law pays zero bytes, and the golden fixtures do not move. A person
+  being marched across the city by a sergeant can afford four lines about it.
+- **`struggle {}`** — the NPC's counterpart to the player's held movement key,
+  and the reason the player's strain meter has no equivalent here: an NPC's
+  attempt resolves in the sim on the spot. Same modifiers as the player's meter
+  (the holder's occupation grip, the prisoner's drunkenness and weariness, two
+  holders being near-hopeless) applied as one deterministic roll on the
+  `attention::opens_first` hash idiom rather than a 20 Hz meter, so a scripted
+  run reproduces. Success raises M4d's unanswerable escape notice — theirs is
+  the same brand yours is.
+- **A confinement cap, because the city has to keep working.** Nothing else in
+  the sim removes a person from the world, and the economy is made of named
+  individuals: gaol the wrong baker and the bread round stops. Cap the total in
+  custody city-wide (the eight authored inmates do not count against it), refuse
+  `seize` past it, and lean on the release paths — a station's 4 minutes, the
+  Stone House's 6 — so custody is always draining. A sergeant having a bad day
+  must not be able to empty the Wickmarket.
+- **The player is never the arresting officer.** They have no verbs and no
+  occupation. Watching is the whole point.
+
+The reward for all of it is that M5's cell stops being a fixed cast of eight and
+becomes a room with **traffic** — someone new in the corner tonight, someone
+gone tomorrow, and the possibility that the person you get talking to in there
+is somebody you got put there.
 
 ### The seam the sim does not have
 
@@ -682,20 +742,38 @@ leave NPC arrest to whatever milestone wants to pay the sheet cost.
 - **M4b — custody without a grab.** `seize` / `release`, the station picker,
   the escort walk, the leash, the HUD lines. Compliance path only: walking away
   just ends custody. This is already a complete, shippable scene.
-- **M4c — the grab.** The hot custody message, the pre-sweep tether clamp in
-  `controller.rs`, the host-side reflex and its three commands back to the sim,
-  the hand, the sounds, the dead-man timer.
-- **M4d — the struggle.** Strain, the modifiers, the two percepts and their
-  priority turns, the escape notice.
+- **M4b′ — the cast arrests each other.** The `you_are_held` sheet section, the
+  prisoner slaved to their escort, the confinement cap. Rides on M4b's escort
+  and station picker and touches no host code at all, so it lands in the same
+  breath — and it is the sub-milestone that makes the law visible to a player
+  who has done nothing wrong. `struggle` waits for M4d.
+- **M4c — the grab.** The player's case only: the hot custody message, the
+  pre-sweep tether clamp in `controller.rs`, the host-side reflex and its three
+  commands back to the sim, the hand, the sounds, the dead-man timer.
+- **M4d — the struggle.** The player's strain meter and its modifiers, the NPC's
+  `struggle` verb and its one deterministic roll, the two percepts and their
+  priority turns, the escape notice both paths raise.
 - **M4e — committed.** The keeper at the threshold, the posted fee, surety, the
-  4-minute cap at a station.
+  4-minute cap at a station — for whoever is standing there, cast or player.
 
 ### Tests
 
 Sim-side (`cathedral-sim`, headless, no host):
 
-- A non-law actor's `seize` is refused; so is one at 5 m, one with no `say` in
-  the same turn, and one against a non-player target.
+- A non-law actor's `seize` is refused; so is one at 5 m and one with no `say`
+  in the same turn.
+- An officer seizes an NPC on that NPC's own fouling notice — the whole
+  `raise_ward_notice_for` → `seize` → escort → station chain runs with the
+  player absent from the world entirely.
+- A seized NPC's sheet grows a `you_are_held` section and a `struggle` verb; the
+  same character's sheet before the seizure and after their release is
+  byte-identical, and an unrelated bystander's never moves.
+- A held NPC follows their escort without a `go_to` of their own, and their
+  `go_to` is refused while held.
+- `struggle` is refused to someone not held; it succeeds against one holder and
+  reliably fails against two; the roll is deterministic across identical runs.
+- `seize` past the confinement cap is refused, and the eight authored inmates do
+  not count toward it.
 - `seize` on a warranted notice is allowed; on an unwarranted notice this
   officer raised minutes ago it is allowed; on one *another* officer raised it
   is refused; on one this officer raised a game day ago it is refused.
@@ -781,6 +859,13 @@ So the goal is not to make the gaol short. It is to make it the densest social
 scene in the game and let the player choose when to leave. The cap exists to
 prevent a soft-lock, not as the intended exit. **No fade to black, ever.**
 
+And with M4b′ the eight are only the *standing* population. The law arrests the
+cast too, so the cell has traffic: a face in the corner tonight that was not
+there yesterday, an inmate gone by morning because somebody paid for them, and —
+the good one — the occasional person in here because of something you did. A
+fixed cast of eight is a diorama you visit once. A room whose occupants change
+is somewhere you check on.
+
 ### The room is denser than the lane
 
 The one thing that can wreck this: eleven people in one room and **one LLM turn
@@ -803,6 +888,11 @@ Three things make it work, none of them new machinery:
 - **Six on stage out of nine is not a shortfall.** The three the stage leaves out
   are the ones with nothing to say this minute. If it ever reads as dead, the
   lever is `max_actors` in `config.ron`, not a special case in the sim.
+
+This is also the ceiling that sets M4b′'s confinement cap: the room is already
+at the stage's limit with its authored eight, so arrivals should be counted in
+ones and twos, not admitted freely. A cell of twenty would not be twenty times
+the scene — it would be the same six talking with fourteen mutes behind them.
 
 What must **not** happen is the gaol getting its own scheduler, its own lane or
 its own cadence. One turn at a time is the sim's shape everywhere; the Stone
@@ -921,10 +1011,11 @@ walking:
    is not stopped is worse than one who never says it. Refuse it plainly so the
    model reads the refusal and stays in character.
 
-It is the same state the player's commitment uses. One mechanism, both sides —
-which is the sign the design is right. Confined NPCs still speak, offer, accept,
-remember and think normally; they simply have nowhere to go, which is the whole
-point.
+It is the same state the player's commitment uses, and the same one an NPC
+committed under M4b′ arrives in — the authored eight and tonight's arrest are
+not two mechanisms, they are one flag with different histories. That is the sign
+the design is right. Confined NPCs still speak, offer, accept, remember and
+think normally; they simply have nowhere to go, which is the whole point.
 
 ### Sub-milestones
 
@@ -939,12 +1030,17 @@ point.
 - **M5c — commitment.** Booking by description, `taken` confiscation, the
   posted fee, the diegetic sentence and the ceiling, the HUD line.
 - **M5d — the doors.** Surety, visitors at the grate, the keeper's `release`,
-  break-out wiring into M4d.
+  break-out wiring into M4d — all of them for the cast as well as the player, so
+  an arrested townsman's kin can come and stand surety for them whether or not
+  anyone is watching.
 
 ### Tests
 
 - All eight `prisoner`-circumstance characters spawn inside the Stone House and
   are `confined`.
+- An NPC committed by M4b′ lands in the same room in the same state, is released
+  by the same paths, and returns to their round afterwards with their posting
+  intact.
 - A confined NPC with `thirst` under the well rung does **not** path to a
   cistern, does not take a round leg, and is not curfew-routed.
 - A confined NPC's own `go_to` is refused — both `{"place_id": …}` and
@@ -1025,7 +1121,13 @@ point.
   game hour*, which is checkable from fields that already exist; and the grab
   reflex is **host-side**, telling the sim through commands, because a 10 Hz
   spatial feed cannot decide a 3 m radius. Gate refusal is cut — only two gates
-  have leaves and they answer to the clock, not the law.
+  have leaves and they answer to the clock, not the law. **The law takes the
+  cast too, not only the player** (M4b′): `raise_ward_notice_for` already brands
+  NPCs who foul the street in front of a sergeant and nothing has ever come of
+  it, and an NPC prisoner is far cheaper than a player one — the sim already
+  owns their feet, so custody is an escort plus a `you_are_held` sheet section
+  plus a `struggle` verb, with no host code at all. It needs a city-wide
+  confinement cap so a bad-tempered sergeant cannot gaol the bread supply.
 - **M5** — the Stone House (designed 2026-07-26, revised against the code
   2026-07-26, not started). The gaol already
   has a cast: eight `prisoner`-circumstance characters whose sheets say they are
@@ -1033,7 +1135,9 @@ point.
   nowhere to hold them. Jail is not a lockout here — it is the one room in the
   city where a captive cast has nothing to do but talk to you — so it is built
   for staying, with a diegetic sentence, a posted 3-spark fee, and **surety** as
-  the exit that quietly audits how you have treated the city. Moved to the
+  the exit that quietly audits how you have treated the city. The eight are only
+  the standing population — M4b′'s arrests give the cell traffic, so it is a room
+  worth checking on rather than a diorama. Moved to the
   Bellstand under the watch-bell (lore resolved in `secular_government.md`: the
   river-gate house was condemned in the Hammering and the name outlived it), so
   the bell that counts your release rings over your head. `confined` is one
