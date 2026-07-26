@@ -592,6 +592,13 @@ pub struct HttpCognition {
     next_request_id: u64,
     /// Capacity one, like `scheduler._CompletionWorker`.
     busy: Arc<AtomicBool>,
+    /// The Night Office's own capacity of one (movement M6,
+    /// `features/implemented/movement/05_the_llm_seam.md` §4). Deliberately a *second*
+    /// flag rather than a deeper queue on the first: the foreground must never
+    /// be told "busy" because a Major was reflecting, and a shared queue —
+    /// however long — would eventually say exactly that. Two slots of one, and
+    /// the player's lane is never the one that fills.
+    night_busy: Arc<AtomicBool>,
     model: Option<String>,
 }
 
@@ -611,6 +618,7 @@ impl HttpCognition {
             events,
             next_request_id: 0,
             busy: Arc::new(AtomicBool::new(false)),
+            night_busy: Arc::new(AtomicBool::new(false)),
             model,
         }
     }
@@ -644,7 +652,20 @@ impl HttpCognition {
         prompt: String,
         max_output_tokens: Option<u32>,
     ) -> Result<RequestId, CognitionBusy> {
-        if self.busy.swap(true, Ordering::SeqCst) {
+        let busy = Arc::clone(&self.busy);
+        self.submit_on(busy, prompt, max_output_tokens)
+    }
+
+    /// One lane's submit. `lane` is the capacity-of-one flag that lane owns —
+    /// [`Self::busy`] for the turn stream, [`Self::night_busy`] for the Night
+    /// Office — so the two can never refuse each other.
+    fn submit_on(
+        &mut self,
+        lane: Arc<AtomicBool>,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        if lane.swap(true, Ordering::SeqCst) {
             return Err(CognitionBusy);
         }
         let request_id = self.take_request_id();
@@ -652,7 +673,7 @@ impl HttpCognition {
         let client = match &self.client {
             Ok(client) => Arc::clone(client),
             Err(error) => {
-                self.busy.store(false, Ordering::SeqCst);
+                lane.store(false, Ordering::SeqCst);
                 self.events.send(Completion {
                     request_id,
                     result: Err(CognitionError::from(error)),
@@ -663,12 +684,11 @@ impl HttpCognition {
         };
 
         let events = self.events.clone();
-        let busy = Arc::clone(&self.busy);
         self.runtime.spawn(async move {
             let started = Instant::now();
             let result = client.complete_with_budget(prompt, max_output_tokens).await;
             let duration_seconds = started.elapsed().as_secs_f64();
-            busy.store(false, Ordering::SeqCst);
+            lane.store(false, Ordering::SeqCst);
             events.send(Completion {
                 request_id,
                 result: result.map_err(|error| CognitionError::from(&error)),
@@ -690,6 +710,15 @@ impl Cognition for HttpCognition {
         max_output_tokens: Option<u32>,
     ) -> Result<RequestId, CognitionBusy> {
         self.submit(prompt, max_output_tokens)
+    }
+
+    fn request_night(
+        &mut self,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        let lane = Arc::clone(&self.night_busy);
+        self.submit_on(lane, prompt, max_output_tokens)
     }
 }
 
@@ -1170,6 +1199,58 @@ mod tests {
             seen.push(request_id);
         }
         assert_eq!(seen, vec![RequestId(0), RequestId(1)]);
+    }
+
+    /// The Night Office's whole reason for existing (movement M6): a
+    /// reflection out on the second lane must never be why the player's reply
+    /// is told the worker is busy — and vice versa. Two slots of one, and
+    /// neither can refuse the other.
+    #[test]
+    fn the_night_lane_and_the_turn_stream_never_refuse_each_other() {
+        // Both requests are accepted before either is answered, so the two
+        // busy flags are genuinely independent rather than serialized by luck.
+        let server = MockServer::start(vec![
+            MockServer::ok(r#"{"choices": [{"message": {"content": "turn"}}]}"#),
+            MockServer::ok(r#"{"choices": [{"message": {"content": "night"}}]}"#),
+        ]);
+        let runtime = BackendRuntime::new().expect("runtime");
+        let (sender, receiver) = backend_channel();
+        let mut cognition = HttpCognition::new(
+            runtime,
+            Ok(settings(Provider::Moonshot, &server.base_url())),
+            sender,
+        );
+
+        let night = cognition
+            .request_night("reflection".to_string(), None)
+            .expect("the second lane is free");
+        let turn = cognition
+            .request("turn".to_string())
+            .expect("the player's lane is not blocked by a reflection");
+        assert_ne!(night, turn);
+
+        // Each lane is still a lane: a second request on either is refused
+        // while its own is out.
+        assert_eq!(cognition.request("another".to_string()), Err(CognitionBusy));
+        assert_eq!(
+            cognition.request_night("another".to_string(), None),
+            Err(CognitionBusy)
+        );
+
+        let mut seen = Vec::new();
+        for _ in 0..2 {
+            let BackendEvent::LlmCompletion(completion) = receiver
+                .recv_timeout(Duration::from_secs(10))
+                .expect("completion")
+            else {
+                panic!("expected a completion");
+            };
+            seen.push(completion.request_id);
+        }
+        seen.sort();
+        let mut expected = vec![night, turn];
+        expected.sort();
+        assert_eq!(seen, expected, "both lanes completed");
     }
 
     #[test]

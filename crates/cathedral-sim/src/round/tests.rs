@@ -664,6 +664,259 @@ fn seed_writes_the_daily_round_onto_the_character_state() {
 }
 
 // --------------------------------------------------------------------------- //
+// The Night Office's seams into the round (movement M6)
+// --------------------------------------------------------------------------- //
+
+/// Forty ids the home bake really housed and `rounds.json` gives no route
+/// override, so the occupation template's `lamplight: home, sleep` leg is the
+/// one the ambient evening roll finds.
+const HOUSED_AMBIENT_IDS: [&str; 40] = [
+    "a2gpk", "a3crk", "a4anh", "a5sbp", "a6avh", "a7pcr", "a8ewf", "a9rnh", "ar5tl", "b0nll",
+    "b1sbb", "b3glc", "b5ewk", "b6clm", "b9stt", "ba8hf", "bc6tf", "bd7hb", "bn1id", "bn2hm",
+    "bn3sg", "bn4cp", "bn5jk", "bn6gb", "bn7an", "bn8jm", "bn9et", "bnawr", "bnbcr", "bndhk",
+    "bnpro", "bnrse", "br2sk", "brn5o", "bt4hb", "c2nsl", "c3wnk", "c5tbo", "c6pkl", "c7kbd",
+];
+
+/// A day worker's bedtime is the office of their sleep leg — which is what
+/// staggers the Night Office across the night without a scheduler of its own.
+#[test]
+fn bedtime_is_the_office_of_the_earliest_sleep_leg() {
+    let nav = nav();
+    let mut world = base_world();
+    let mason = ActorId::from_raw("b4hst");
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    assert!(round.is_enrolled(&mason));
+    assert_eq!(
+        round.bedtime(&mason),
+        Some(Office::Lamplight),
+        "the authored mason's round beds him at dusk"
+    );
+    // Nobody the round never enrolled has a bedtime to read.
+    assert_eq!(round.bedtime(&ActorId::from_raw("nobody")), None);
+}
+
+/// `set_round` moves one leg and nothing else: the anchor and the sheet line
+/// change, the office, the weekday and the rest of the day stand — and the
+/// walker really goes there.
+#[test]
+fn a_set_round_edit_moves_one_leg_and_rewrites_only_its_sheet_line() {
+    let (mut round, mut world, nav, mason) = seed_hamel();
+    let clock = clock_at(Office::Dayspring);
+    let before = world.characters[&mason].state.daily_round.clone();
+    assert!(before.len() >= 2, "the mason keeps a multi-leg day");
+
+    // Point his working leg at the nave, a place he necessarily knows (it is a
+    // coarse destination everyone holds).
+    let lanthorn = world
+        .places
+        .named("The Lanthorn")
+        .expect("the nave is registered")
+        .id
+        .clone();
+    world
+        .characters
+        .get_mut(&mason)
+        .unwrap()
+        .state
+        .places_known
+        .insert(lanthorn.clone());
+    let line = crate::apply_action(
+        &mut world,
+        &mason,
+        "set_round",
+        &serde_json::json!({"leg": 1, "place_id": lanthorn.as_str()}),
+    )
+    .expect("a known place and a leg on the sheet");
+    assert!(line.contains("The Lanthorn"), "{line}");
+
+    // The verb records; the round carries out.
+    assert!(world.characters[&mason].state.round_edit.is_some());
+    tick(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        1.0,
+        &player(),
+        &BTreeSet::new(),
+    );
+    assert!(
+        world.characters[&mason].state.round_edit.is_none(),
+        "the edit is consumed, not re-applied every tick"
+    );
+
+    let after = &world.characters[&mason].state.daily_round;
+    assert_eq!(after.len(), before.len(), "no leg was added or removed");
+    // `leg: 1` on the sheet is index 0 in the round — the verb subtracts.
+    assert_eq!(after[1], before[1], "the other legs are untouched");
+    assert!(
+        after[0].contains("The Lanthorn"),
+        "leg 1 moved: {:?}",
+        after[0]
+    );
+    assert!(
+        after[0].starts_with(&before[0][..before[0].find(':').unwrap()]),
+        "the office and weekday of the leg stand: {:?} -> {:?}",
+        before[0],
+        after[0]
+    );
+}
+
+/// An edit naming a leg the round no longer has, or a place the registry does
+/// not hold, is dropped rather than applied — and the verb refuses both before
+/// they can get that far.
+#[test]
+fn set_round_refuses_an_unknown_place_and_a_leg_off_the_end() {
+    let (_round, mut world, _nav, mason) = seed_hamel();
+    let legs = world.characters[&mason].state.daily_round.len();
+
+    let unknown = crate::apply_action(
+        &mut world,
+        &mason,
+        "set_round",
+        &serde_json::json!({"leg": 1, "place_id": "pl_zzzz"}),
+    )
+    .unwrap_err();
+    assert_eq!(unknown.code, crate::ActionErrorCode::UnknownPlace);
+
+    let lanthorn = world.places.named("The Lanthorn").unwrap().id.clone();
+    world
+        .characters
+        .get_mut(&mason)
+        .unwrap()
+        .state
+        .places_known
+        .insert(lanthorn.clone());
+    let off_the_end = crate::apply_action(
+        &mut world,
+        &mason,
+        "set_round",
+        &serde_json::json!({"leg": legs + 1, "place_id": lanthorn.as_str()}),
+    )
+    .unwrap_err();
+    assert_eq!(off_the_end.code, crate::ActionErrorCode::InvalidArguments);
+    assert!(world.characters[&mason].state.round_edit.is_none());
+}
+
+/// The ambient cast's Night Office is a code roll and nothing else: a share of
+/// them take tomorrow's evening at a tavern hearth, the rest stay home, and a
+/// night that comes up "home" really puts back the evening the seed authored.
+#[test]
+fn the_ambient_roll_moves_some_evenings_to_a_tavern_and_restores_the_rest() {
+    let nav = nav();
+    let mut world = base_world();
+    // Forty ambient day-workers, and **housed** ones: a bedless actor has no
+    // `home` leg for the evening roll to move, which is the design, so an
+    // invented id would make this test pass by proving nothing. These are real
+    // baked homes (`assets/world/homes.json`) with no authored route override.
+    let ids: Vec<ActorId> = HOUSED_AMBIENT_IDS
+        .iter()
+        .enumerate()
+        .map(|(index, id)| {
+            world.add_character(person(
+                id,
+                Vec3::new(index as f64, WALK_Y, 95.0),
+                Some("mason"),
+                Significance::Ambient,
+            ));
+            ActorId::from_raw(*id)
+        })
+        .collect();
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+    let seeded: Vec<Vec<String>> = ids
+        .iter()
+        .map(|id| world.characters[id].state.daily_round.clone())
+        .collect();
+
+    let moved = round.reroll_ambient_evenings(&mut world, 0);
+    assert!(moved > 0, "some evening moved on the first night");
+    assert!(moved < ids.len(), "and most people stayed home");
+    // Each tavern-goer paired with the evening the seed authored for *them*.
+    let tavern_goers: Vec<(&ActorId, &Vec<String>)> = ids
+        .iter()
+        .zip(&seeded)
+        .filter(|(id, before)| world.characters[*id].state.daily_round != **before)
+        .collect();
+    assert_eq!(tavern_goers.len(), moved);
+    let (first, first_seed) = tavern_goers[0];
+    assert!(
+        world.characters[first]
+            .state
+            .daily_round
+            .iter()
+            .any(|line| line.contains("your ease at The ")),
+        "a moved evening reads as ease at a hearth, never as a bed: {:?}",
+        world.characters[first].state.daily_round
+    );
+
+    // The same night twice is the same night: idempotent, not cumulative.
+    let again = round.reroll_ambient_evenings(&mut world, 0);
+    assert_eq!(again, moved);
+
+    // Thirty nights on, the first night's tavern-goer has slept at their own
+    // hearth again — the roll is a nightly choice, not a one-way drift.
+    let mut ever_home = 0usize;
+    for day in 1..30 {
+        round.reroll_ambient_evenings(&mut world, day);
+        if world.characters[first].state.daily_round == *first_seed {
+            ever_home += 1;
+        }
+    }
+    assert!(
+        ever_home > 0,
+        "the first night's tavern-goer never went home again"
+    );
+}
+
+/// The roll never touches anybody the Night Office reflects for itself, and
+/// never a night trade — they have no evening to move.
+#[test]
+fn the_ambient_roll_leaves_the_majors_and_the_night_trades_alone() {
+    let nav = nav();
+    let mut world = base_world();
+    // Both housed, so neither is skipped for want of a bed — the roll has to
+    // pass them over for the reason under test, not by accident.
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "c8ghd",
+        Vec3::new(4.0, WALK_Y, 95.0),
+        Some("watchman_and_keeper"),
+        Significance::Ambient,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+    let before: BTreeMap<ActorId, Vec<String>> = world
+        .characters
+        .iter()
+        .map(|(id, actor)| (id.clone(), actor.state.daily_round.clone()))
+        .collect();
+
+    for day in 0..40 {
+        round.reroll_ambient_evenings(&mut world, day);
+        for (id, lines) in &before {
+            assert_eq!(
+                &world.characters[id].state.daily_round, lines,
+                "{id} was moved on day {day}"
+            );
+        }
+    }
+}
+
+// --------------------------------------------------------------------------- //
 // The round rung and curfew — using a real housed, routed major
 // --------------------------------------------------------------------------- //
 
@@ -1592,6 +1845,7 @@ fn household_vessels_queue_ahead_of_trade_vessels() {
         travel_for_intent: false,
         next_decision: 0.0,
         epoch: 0,
+        evening_seed: None,
         excused: false,
     };
     for (id, household) in [
@@ -1638,6 +1892,7 @@ fn a_full_vessel_is_delivered_by_kind() {
         travel_for_intent: false,
         next_decision: 0.0,
         epoch: 0,
+        evening_seed: None,
         excused: false,
     };
     // Household: water for the home, even while the round leg says the shop.
@@ -2689,6 +2944,7 @@ fn errand_debug_reduces_the_phase_the_well_and_the_walk() {
             travel_for_intent: false,
             next_decision: 0.0,
             epoch: 0,
+            evening_seed: None,
             excused: false,
         },
     );
@@ -3496,6 +3752,7 @@ fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
                 travel_for_intent: false,
                 next_decision: 0.0,
                 epoch: 0,
+                evening_seed: None,
                 excused: false,
             },
         );
@@ -3978,6 +4235,7 @@ fn carry_home_only_when_actually_heading_home() {
         travel_for_intent: false,
         next_decision: 0.0,
         epoch: 0,
+        evening_seed: None,
         excused: false,
     };
     round.people.insert(buyer.clone(), person);
@@ -4636,6 +4894,7 @@ fn active_production_fixture(work_minutes: u32) -> (World, Round, ActorId, World
             travel_for_intent: false,
             next_decision: 0.0,
             epoch: 0,
+            evening_seed: None,
             excused: false,
         },
     );
@@ -4747,6 +5006,7 @@ fn weather_person(position: Vec3) -> Townsperson {
         travel_for_intent: false,
         next_decision: 0.0,
         epoch: 0,
+        evening_seed: None,
         excused: false,
     }
 }

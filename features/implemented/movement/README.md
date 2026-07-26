@@ -1,8 +1,8 @@
 # Movement: the city gets up in the morning
 
-Status: in progress. **M0 (the clock), M1 (the nav bake), M2 (one NPC walks), M3 (the water round),
-M4 (the daily round) and M5 (`go_to` and the wayfinding whitelist) are implemented**; M6–M7 remain
-(see [07_milestones.md](07_milestones.md) for the per-milestone status). This folder is the plan.
+Status: **complete — M0 through M7 are implemented** (see [07_milestones.md](07_milestones.md) for the
+per-milestone status, including M7's one honest departure: the crowd shipped, the visual gait did
+not). This folder is the plan it was built from.
 
 | | |
 |---|---|
@@ -356,12 +356,12 @@ already has (`cathedral-headless`, `CATHEDRAL_DRIVE`). Full recipes in
 |---|---|---|---|
 | **M0 ✅** | **The Clock** *(implemented)* | seven offices, the week, the sun moves, the bell rings, a HUD readout, a debug time-scale key. **Nobody moves.** | `CATHEDRAL_DRIVE='wait-online; key KeyT; key KeyT; sleep 20; shot dusk'` — the sun has moved, the HUD reads the office and hour |
 | **M1 ✅** | **The bake** *(implemented)* | `assets/world/navigation.json` + the walkable bitset, the door fix, an F7 debug overlay, and the connectivity tests. **Still nobody moves.** | `cargo test -p cathedral-sim navigation` — every named place and every door reachable; `key F7` draws the graph |
-| **M2** | **One NPC walks** | hot/cold split, fixed tick, interpolation, the guard lifted. One hard-coded actor paces between two places forever. | headless prints their position advancing; a drive `shot` finds them somewhere new |
+| **M2 ✅** | **One NPC walks** *(implemented)* | hot/cold split, fixed tick, interpolation, the guard lifted. One hard-coded actor paces between two places forever. | headless prints their position advancing; a drive `shot` finds them somewhere new |
 | **M3 ✅** | **The water round** *(implemented)* | needs (thirst) → the ladder (rungs 2/6/11/12) → route → a household-first queue → draw (the keeper's windlass, heard) → home. The vertical slice. | headless `--trace-water` shows the whole cast cycling through ten kept wells; each draw reports how many NPCs heard it; stand thirty metres from a staffed well in-game and you hear the windlass |
 | **M4 ✅** | **The Round** *(implemented)* | homes (baked), workplaces + 65 occupation templates + the 20 authored routes (`rounds.json`), market days, and the Snuffing emptying the streets | headless `--watch-clock 1 --census-by-area` prints a plausible day — Moorings/taverns at the Kindling, squares full at High Wick, streets clear at the Snuffing but not the Hungry Ox |
 | **M5 ✅** | **`go_to`** *(implemented)* | the LLM verbs (`go_to`/`stop`/`tell_way`); the wayfinding registry (`places.json` baked, homes at seed) behind `places_you_know`; the intent rung with route-budget expiry, arrival/lapse percepts and their priority nudges; the prompt and sheet change; 20 golden fixtures regenerated | tell someone to meet you at the Gradine, and walk there, and they are there |
-| **M6** | **The Night Office** | reflection, agenda rewriting, the second cognition lane | an NPC's goal changes overnight because of something that happened to them yesterday |
-| **M7** | **Crowds and gait** | lane offsets, local avoidance, the lamplighter's round, the Needle's pinch | it looks like a city |
+| **M6 ✅** | **The Night Office** *(implemented)* | the second cognition lane (`Cognition::request_night`, its own capacity of one, yields absolutely, drops silently); individual reflection for the 30 Majors at their own bedtimes; ward-batched reflection for the Minors (`ward_mood` → every Minor's `the_ward_says`); a code-rolled evening for the ambients; the `set_round` verb and numbered `your_round` legs | headless `--fake --night-office --watch-clock 0.6` reports `38 reflected, 0 dropped`; in game, fly away from the cast and the night runs, stand in the crowd and it stands down |
+| **M7 ✅** | **Crowds and gait** | lane offsets, local avoidance, the lamplighter's round, the Needle's pinch | it looks like a city |
 
 M0 and M1 are independent of each other and of everything else. **M1 is where the actual risk lives**
 — get the bake green before touching the sim.

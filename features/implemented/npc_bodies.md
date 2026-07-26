@@ -29,7 +29,7 @@ a drunk walks. So this spec covers three things that ship together:
 | Speech presentation + per-NPC voice sink (`NpcVoice`, bubble lifetime) | `speech.rs:281-460,638,777-812` | the talk-animation hook |
 | Action verbs: 14, no gesture/emote; `dance {}` has a test asserting it's unknown | `actions.rs:72-101`, test `:2277` | greenfield |
 | `make_sound` + injected `emittable_sounds` prompt list | `actions.rs:1118`, `turn.j2` | the template for a gesture verb |
-| Statuses axis (drunkenness etc.) | sketched in `features/movement/03_the_ladder.md:63-90` | **does not exist in code** |
+| Statuses axis (drunkenness etc.) | sketched in `features/implemented/movement/03_the_ladder.md:63-90` | **does not exist in code** |
 | Animation infra | `bevy_animation`/`bevy_gltf` compiled in (via the `3d` feature), zero usage; no model assets anywhere | greenfield |
 
 Constants we inherit: `WALK_SPEED_MPS = 1.8` (the only speed), `SETTLED_SPEED_MPS = 0.15`

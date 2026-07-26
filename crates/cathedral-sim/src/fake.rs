@@ -70,6 +70,87 @@ pub fn fake_reply(prompt: &str) -> String {
     REPLY_NOOP.to_string()
 }
 
+/// The scripted **Night Office** reflection (movement M6). Like every other
+/// rule here it is read off the *rendered* prompt, which is the point: the fake
+/// can only emit a working `set_round` if the night sheet really carries
+/// numbered round legs and place handles the model could have named. If either
+/// stops rendering, the offline night run stops moving anybody's day and a test
+/// says so.
+///
+/// A person with no round, or no places, settles their memory and nothing else
+/// — which is also the honest answer for the anchoress bricked into her wall.
+pub fn fake_night_reply(prompt: &str) -> String {
+    if let Some(ward) = ward_name(prompt) {
+        let mut reply = format!(
+            r#"ward_mood {{"mood": "It has been an ordinary night in {ward}, and nobody is saying much."}}"#
+        );
+        // One edit, if the digest offered both a person and a place — the ward
+        // branch's own end-to-end proof.
+        if let (Some(person), Some(place)) = (first_ward_person(prompt), first_place_id(prompt)) {
+            reply.push('\n');
+            reply.push_str(&format!(
+                r#"set_round {{"person": "{person}", "leg": 1, "place_id": "{place}"}}"#
+            ));
+        }
+        return reply;
+    }
+    let name = sheet_name(prompt).unwrap_or("Someone");
+    let mut reply =
+        format!(r#"remember {{"memory": "I, {name}, lay down at the end of an ordinary day."}}"#);
+    if let (Some(place), true) = (first_place_id(prompt), has_round_legs(prompt)) {
+        reply.push('\n');
+        reply.push_str(&format!(
+            r#"set_round {{"leg": 1, "place_id": "{place}"}}"#
+        ));
+    }
+    reply
+}
+
+/// The ward the digest names, or `None` for a person's night sheet — how the
+/// fake tells the two branches of `night.j2` apart without a phrase hook.
+fn ward_name(prompt: &str) -> Option<&str> {
+    prompt
+        .lines()
+        .find_map(|line| line.strip_prefix("**the_ward** — "))
+        .map(str::trim)
+}
+
+/// The first id in the ward digest's `your_people` — `- k0fb1 — Tam Rud, …`.
+fn first_ward_person(prompt: &str) -> Option<&str> {
+    section_bullets(prompt, "**your_people**")
+        .next()?
+        .split_whitespace()
+        .next()
+}
+
+/// The first handle in `places_you_know` / `their_places` — `- pl_x2vw The
+/// Tallage`.
+fn first_place_id(prompt: &str) -> Option<&str> {
+    section_bullets(prompt, "**places_you_know**")
+        .chain(section_bullets(prompt, "**their_places**"))
+        .next()?
+        .split_whitespace()
+        .next()
+        .filter(|id| id.starts_with("pl_"))
+}
+
+/// Whether the sheet numbered any round legs — `- leg 1 — at Dayspring: …`.
+fn has_round_legs(prompt: &str) -> bool {
+    section_bullets(prompt, "**your_round**").any(|line| line.starts_with("leg "))
+}
+
+/// The `- ` bullets under one markdown section header, empty when the section
+/// is absent or took its inline empty form.
+fn section_bullets<'a>(prompt: &'a str, header: &str) -> impl Iterator<Item = &'a str> {
+    let mut lines = prompt.lines();
+    let found = lines
+        .find(|line| line.starts_with(header))
+        .is_some_and(|line| line.ends_with(':'));
+    lines
+        .take_while(move |line| found && line.starts_with("- "))
+        .map(|line| line["- ".len()..].trim())
+}
+
 /// The name on the sheet's `**you**` line.
 ///
 /// Without lore the line is the bare name (`**you** — Sven`); with lore the
@@ -134,11 +215,29 @@ impl FakeCognition {
 
 impl Cognition for FakeCognition {
     fn request(&mut self, prompt: String) -> Result<RequestId, CognitionBusy> {
+        self.stage(fake_reply(&prompt), prompt)
+    }
+
+    /// The fake has no second slot to build: it completes synchronously at
+    /// submit time, so the two lanes can never contend for it. What it does
+    /// need is the *other script* — the night prompt is a different prompt and
+    /// gets a different reply.
+    fn request_night(
+        &mut self,
+        prompt: String,
+        _max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        self.stage(fake_night_reply(&prompt), prompt)
+    }
+}
+
+impl FakeCognition {
+    fn stage(&mut self, reply: String, prompt: String) -> Result<RequestId, CognitionBusy> {
         let request_id = RequestId(self.next_request_id);
         self.next_request_id += 1;
         self.staged.push(Completion {
             request_id,
-            result: Ok(fake_reply(&prompt)),
+            result: Ok(reply),
             duration_seconds: 0.0,
         });
         self.prompts.push(prompt);

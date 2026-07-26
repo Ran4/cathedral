@@ -1,7 +1,7 @@
 //! The daily round (M4) — the non-LLM behaviour layer that gets the city up in
 //! the morning, sends it to work, moves the crowd on market days, and empties the
-//! streets at the Snuffing (`features/movement/04_the_round.md`,
-//! `features/movement/03_the_ladder.md`). It subsumes the M3 water round: water
+//! streets at the Snuffing (`features/implemented/movement/04_the_round.md`,
+//! `features/implemented/movement/03_the_ladder.md`). It subsumes the M3 water round: water
 //! is now two rungs (2 & 6) of one flat, first-match-wins ladder.
 //!
 //! Every LLM townsperson is enrolled with a **home** (baked into
@@ -39,7 +39,7 @@ use crate::{
     THIRST_MAX, THIRST_PARCHED, THIRST_THIRSTY, WALK_SPEED_MPS, WALLET_SEED_MIN, WALLET_SEED_SALT,
     WALLET_SEED_SPREAD, WATER_DRAW_SECONDS, WELL_ARRIVE_RADIUS_M,
     WELL_KEEPER_SOUND_INTERVAL_SECONDS, WELL_QUEUE_SHORT,
-    character::{Character, EconomicClass, IntentTarget, Movement, VendorListing},
+    character::{Character, EconomicClass, IntentTarget, Movement, RoundEdit, VendorListing},
     clock::{Office, Weekday, WorldClock},
     event::DomainEvent,
     homes::{HOMES_JSON, HomesDoc},
@@ -59,7 +59,7 @@ use crate::{
 
 /// Occupations that fetch water with a **household** vessel — chiefly the
 /// servant, whose day is a trip to the ward well and back (the single largest
-/// occupation in the city, `features/movement/README.md` §8). A household vessel
+/// occupation in the city, `features/implemented/movement/README.md` §8). A household vessel
 /// takes precedence in the queue (`lore/wells_and_water.md`).
 const HOUSEHOLD_OCCUPATIONS: &[&str] = &["domestic_servant"];
 /// Occupations that draw with a **trade** vessel and so queue *behind* the
@@ -154,6 +154,11 @@ const LAMP_SQUARES: &[&str] = &[
 /// hardcoded coordinates. (The Wickmarket, where an entertainer may also perform,
 /// is a market square, not a hearth, and is deliberately not one of them.)
 const TAVERNS: &[&str] = &["The Hungry Ox", "The Bellstand"];
+
+/// The share of the ambient cast whose evening the nightly code roll moves to a
+/// tavern hearth (movement M6). Deliberately small: the payoff is that the
+/// streets are not identical two nights running, not that the taverns are full.
+const AMBIENT_TAVERN_FRACTION: f64 = 0.15;
 /// Posts per square, rung around the square's interior node.
 const LAMPS_PER_SQUARE: usize = 4;
 /// The ring the posts stand on, probed inward until each lands on pavement.
@@ -174,7 +179,7 @@ const LIGHTNING_REFLEX_MIN_SECONDS: f64 = 2.5;
 const LIGHTNING_REFLEX_SPREAD_SECONDS: f64 = 1.5;
 
 /// What an actor means to do on arrival — the pathfind-then-act bridge lifted
-/// from seagame's `targetState` (`features/movement/02_navigation.md` §4).
+/// from seagame's `targetState` (`features/implemented/movement/02_navigation.md` §4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Arrival {
@@ -847,6 +852,14 @@ struct Townsperson {
     next_decision: f64,
     /// Bumped each decision; the salt that makes the deterministic choices vary.
     epoch: u64,
+    /// The evening leg exactly as the seed authored it, kept from the first
+    /// night the ambient re-roll displaced it (movement M6). Restoring from
+    /// this before each roll is what makes the roll a *nightly* choice rather
+    /// than a one-way drift: a night that comes up "home" really does put them
+    /// back at their own hearth. `None` for everyone the roll never touched —
+    /// the whole Major and Minor cast, and the ambients whose day names no
+    /// evening leg.
+    evening_seed: Option<(usize, RoundLeg)>,
     /// A pressing rung (curfew, parched) came due while they were held in a
     /// conversation, and the pressure has been injected as a `system:` percept:
     /// they have had their one turn to excuse themselves, and the next pressing
@@ -1196,6 +1209,134 @@ impl Round {
 
     pub fn drain_departed(&mut self) -> Vec<ActorId> {
         std::mem::take(&mut self.departed_this_tick)
+    }
+
+    /// Whether this actor keeps a round at all — the Night Office asks before
+    /// it spends a provider call on somebody whose day it could not change.
+    pub fn is_enrolled(&self, actor: &ActorId) -> bool {
+        self.people.contains_key(actor)
+    }
+
+    /// The ambient cast's Night Office (movement M6, `05_the_llm_seam.md` §4):
+    /// **no provider call at all**. Roughly 350 people, one deterministic roll
+    /// each off their id and the day, and about a seventh of them take
+    /// tomorrow's evening at a tavern hearth instead of at their own.
+    ///
+    /// The evening leg is the one the roll may move — for every shipped
+    /// archetype that is the `lamplight` leg, which is also their bed. Moving
+    /// it keeps nobody out all night: the curfew rung still walks the housed
+    /// home at the Snuffing, so what actually changes is the three hours
+    /// between the lamps being lit and the gates shutting. That is the evening
+    /// trade, and a tavern hearth feeds whoever stands at it
+    /// (`03_hunger.md` §4).
+    ///
+    /// Night trades keep their posts (they have no evening to move) and the
+    /// bedless keep the street (they have no hearth to leave). Returns how many
+    /// evenings moved, for the diagnostic.
+    pub fn reroll_ambient_evenings(&mut self, world: &mut World, day: i64) -> usize {
+        // The two hearths, by the same authored names the seed resolves — read
+        // off the wayfinding registry so the label the sheet shows and the point
+        // the feet walk to are one lookup and cannot disagree.
+        let taverns: Vec<(String, Vec3)> = TAVERNS
+            .iter()
+            .filter_map(|name| {
+                world
+                    .places
+                    .named(name)
+                    .map(|entry| (entry.name.clone(), entry.point))
+            })
+            .collect();
+
+        let ids: Vec<ActorId> = self.people.keys().cloned().collect();
+        let mut moved = 0usize;
+        for id in ids {
+            let ambient = world
+                .characters
+                .get(&id)
+                .and_then(|character| character.lore())
+                .is_some_and(|profile| profile.significance == Significance::Ambient);
+            if !ambient {
+                continue;
+            }
+            let Some(person) = self.people.get_mut(&id) else {
+                continue;
+            };
+            if person.curfew_exempt || person.home.is_none() {
+                continue;
+            }
+
+            // Put last night's choice back first, so the roll is a nightly
+            // decision rather than a one-way drift: a night that comes up
+            // "home" really does return them to their own hearth.
+            let mut changed = false;
+            if let Some((index, seed)) = person.evening_seed.take()
+                && let Some(leg) = person.legs.get_mut(index)
+            {
+                *leg = seed;
+                changed = true;
+            }
+
+            let evening = person
+                .legs
+                .iter()
+                .position(|leg| leg.from == Office::Lamplight && leg.is_home);
+            if let Some(index) = evening
+                && !taverns.is_empty()
+                // `as u64` on a negative day wraps, which is all a hash salt
+                // needs; the roll only has to be stable and vary by night.
+                && hash01("night_evening", &id, day as u64) < AMBIENT_TAVERN_FRACTION
+            {
+                let pick = (hash01("night_tavern", &id, day as u64) * taverns.len() as f64) as usize;
+                let (label, point) = taverns[pick.min(taverns.len() - 1)].clone();
+                person.evening_seed = Some((index, person.legs[index].clone()));
+                let leg = &mut person.legs[index];
+                leg.at = point;
+                leg.label = label;
+                // Their ease, not their bed: the curfew rung owns where they
+                // actually sleep, and "sleep at The Hungry Ox" would be a
+                // promise the ladder does not keep.
+                leg.doing = Arrival::Idle;
+                leg.is_home = false;
+                moved += 1;
+                changed = true;
+            }
+
+            if changed {
+                let lines: Vec<String> = person.legs.iter().map(leg_line).collect();
+                world
+                    .characters
+                    .get_mut(&id)
+                    .expect("the walker is in the world")
+                    .state
+                    .daily_round = lines;
+            }
+        }
+        moved
+    }
+
+    /// The office this person goes to bed at (movement M6): the **earliest**
+    /// unconditional `sleep` leg in the day's order, which for a night trade is
+    /// the Watch and for a day worker Lamplight. `None` for anyone the round
+    /// never enrolled, and for the handful whose day names no bed at all — the
+    /// anchoress bricked into her wall, the homeless — whom the Night Office
+    /// then reflects at the curfew like everybody else.
+    ///
+    /// This is what staggers the lane without a scheduler: the Round already
+    /// says when each character sleeps, and they do not all sleep at once.
+    pub fn bedtime(&self, actor: &ActorId) -> Option<Office> {
+        let person = self.people.get(actor)?;
+        let earliest_bed = |unconditional: bool| {
+            person
+                .legs
+                .iter()
+                .filter(|leg| leg.doing == Arrival::Sleep)
+                .filter(|leg| leg.only_on.is_none() == unconditional)
+                .map(|leg| leg.from)
+                .min()
+        };
+        // A weekday-restricted bed is a fallback, not a bedtime: a Bellday-only
+        // sleep leg must not decide the other six nights.
+        earliest_bed(true).or_else(|| earliest_bed(false))
     }
 
     fn is_road_member(&self, actor: &ActorId) -> bool {
@@ -2480,6 +2621,7 @@ impl Round {
                         travel_for_intent: false,
                         next_decision: now + decision_jitter(id, 0),
                         epoch: 0,
+                        evening_seed: None,
                         excused: false,
                     },
                 );
@@ -2566,6 +2708,7 @@ impl Round {
                     travel_for_intent: false,
                     next_decision: now + decision_jitter(id, 0),
                     epoch: 0,
+                    evening_seed: None,
                     excused: false,
                 },
             );
@@ -4719,7 +4862,7 @@ fn active_leg(legs: &[RoundLeg], office: Office, weekday: Weekday) -> Option<&Ro
 /// Returns the actors owed a **priority nudge**: a `go_to` arrival or lapse
 /// grants the same handoff an addressed `say` does, because off stage the idle
 /// rotation never runs — an arrival percept nobody renders would silently kill
-/// the errand chain (`features/movement/05_the_llm_seam.md` §3). The engine
+/// the errand chain (`features/implemented/movement/05_the_llm_seam.md` §3). The engine
 /// feeds them to the scheduler; the sim stays scheduler-free.
 pub fn tick(
     round: &mut Round,
@@ -4735,6 +4878,9 @@ pub fn tick(
         return nudges;
     }
     round.lightning_reflex_until.retain(|_, until| now < *until);
+    // Before anything reads a leg: a `set_round` recorded since the last tick
+    // is part of the day this tick runs, not the next one.
+    apply_round_edits(round, world, now);
     tick_food_economy(round, world, clock, now);
     round.tick_road_parties(world, nav, clock.at(now), in_conversation);
     decay_needs(round, world, clock, now);
@@ -4945,7 +5091,7 @@ pub fn interrupt_for_conversation(round: &mut Round, world: &mut World, id: &Act
 /// and lapse what expired. Runs every poll rather than on the ladder cadence,
 /// because "sets off for the Wickmarket" should mean now, a follow re-paths
 /// against a moving target, and an arrival percept should land the tick it
-/// happens (`features/movement/05_the_llm_seam.md` §2).
+/// happens (`features/implemented/movement/05_the_llm_seam.md` §2).
 fn tick_intents(
     round: &mut Round,
     world: &mut World,
@@ -5863,7 +6009,7 @@ fn enqueue(round: &mut Round, source_idx: usize, actor: ActorId) {
 /// Work each curb: finish a completed draw (refill, remember it, send home),
 /// start the next one, and clank the gear while anybody is waiting.
 ///
-/// **The well sound is a clock, not an event** (`features/movement/05_the_llm_seam.md`
+/// **The well sound is a clock, not an event** (`features/implemented/movement/05_the_llm_seam.md`
 /// §5.2, exactly as the bell is): an unattributed world sound heard only by the
 /// player, so it reaches no NPC inbox and never nudges a reaction turn. The
 /// drawer instead *remembers their own draw*, so the person the player asks can
@@ -6019,7 +6165,7 @@ fn delivery_point(person: &Townsperson, office: Office, weekday: Weekday) -> Vec
 }
 
 /// The behaviour ladder, run for idle people whose walk has ended and whose
-/// cadence has come round. First match wins (`features/movement/03_the_ladder.md`
+/// cadence has come round. First match wins (`features/implemented/movement/03_the_ladder.md`
 /// §4); M4 adds the curfew (5) and round (9) rungs to M3's water (2, 6), social
 /// (11) and wander (12).
 ///
@@ -6258,7 +6404,7 @@ enum Decision {
 
 /// The `system:` line a pressing rung injects when it is about to break a
 /// conversation hold — the nudge through the existing self-correction seam
-/// (`features/movement/05_the_llm_seam.md`) that buys the LLM one turn to
+/// (`features/implemented/movement/05_the_llm_seam.md`) that buys the LLM one turn to
 /// excuse itself before the body walks.
 const CURFEW_PRESSURE: &str = "system: night is falling and the watch clears the streets — you need to be home; excuse yourself.";
 const PARCHED_PRESSURE: &str =
@@ -7113,6 +7259,62 @@ fn leg_line(leg: &RoundLeg) -> String {
         }
     };
     format!("at {}{days}: {doing}", leg.from.label())
+}
+
+/// Carry out the `set_round` edits the Night Office recorded on characters
+/// (movement M6). One leg moves; everything else about the day stands.
+///
+/// It runs here rather than in the verb because the resolved legs are the
+/// round's and the action layer holds only a [`World`] — the same split
+/// `go_to`'s intent takes. An edit whose place has since gone, whose leg number
+/// no longer exists, or whose author the round never enrolled (a road-party
+/// member, who walks to the gate under the party's orders) is simply dropped:
+/// the verb has already told its author the leg moved, and re-telling them at
+/// midnight would be a percept nobody asked for.
+fn apply_round_edits(round: &mut Round, world: &mut World, now: f64) {
+    // Taken from the whole cast, not just the enrolled, so an edit recorded on
+    // somebody the round cannot serve is cleared rather than left to sit.
+    let mut edits: Vec<(ActorId, RoundEdit)> = Vec::new();
+    for (id, character) in world.characters.iter_mut() {
+        if let Some(edit) = character.state.round_edit.take() {
+            edits.push((id.clone(), edit));
+        }
+    }
+    for (id, edit) in edits {
+        let Some(entry) = world.places.get(&edit.place_id) else {
+            continue;
+        };
+        let (label, point) = (entry.name.clone(), entry.point);
+        // Their own door is still "home" on the sheet and to the hearth, so a
+        // leg pointed back at it reads as one.
+        let is_home = world
+            .places
+            .home_of(&id)
+            .is_some_and(|home| home.id == edit.place_id);
+        let Some(person) = round.people.get_mut(&id) else {
+            continue;
+        };
+        let Some(leg) = person.legs.get_mut(edit.leg) else {
+            continue;
+        };
+        leg.at = point;
+        leg.label = label;
+        leg.is_home = is_home;
+        // What they are *doing* there is untouched: a bed moved to the Bell and
+        // Ladle's woodstore is still a bed, and Ede of the Needle already
+        // sleeps in one.
+        let lines: Vec<String> = person.legs.iter().map(leg_line).collect();
+        // Decide again at once, so an edit to the leg already under way moves
+        // their feet tonight instead of tomorrow.
+        person.next_decision = person.next_decision.min(now);
+        person.epoch = person.epoch.wrapping_add(1);
+        world
+            .characters
+            .get_mut(&id)
+            .expect("the author is in the world")
+            .state
+            .daily_round = lines;
+    }
 }
 
 /// Give a mover a fresh walk with no patrol, keeping their gait phase seamless.

@@ -1,5 +1,5 @@
 //! The wayfinding registry — the sim side of `places_you_know` (M5,
-//! `features/movement/05_the_llm_seam.md` §3).
+//! `features/implemented/movement/05_the_llm_seam.md` §3).
 //!
 //! The model never sees a coordinate: it acts on **opaque `place_id` handles**
 //! it has been given, the same mental model the sheet already uses for people.
@@ -152,7 +152,9 @@ impl PlaceRegistry {
         Ok(registry)
     }
 
-    fn insert(&mut self, entry: PlaceEntry) -> Result<usize, PlaceError> {
+    /// `pub(crate)` for the Night Office's tests, which build a two-place
+    /// registry by hand rather than loading the whole baked one.
+    pub(crate) fn insert(&mut self, entry: PlaceEntry) -> Result<usize, PlaceError> {
         if self.by_id.contains_key(&entry.id) {
             return Err(PlaceError {
                 message: format!("duplicate place id '{}'", entry.id),

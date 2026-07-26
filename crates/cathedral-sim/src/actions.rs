@@ -15,7 +15,9 @@ use crate::{
     HUNGER_MAX, ITEM_INTERACTION_RADIUS_M, MEMORY_MAX_CHARS, OFFER_LAPSE_RADIUS_M,
     PLAYER_SPEECH_MAX_CHARS, POCKET_PLAIN_SIGHT_RADIUS_M, POCKET_SLOT_CAPACITY, THIRST_MAX,
     WALK_SPEED_MPS,
-    character::{ActiveGesture, BodySlot, GutEntry, IntentTarget, PocketedUnit, TravelIntent},
+    character::{
+        ActiveGesture, BodySlot, GutEntry, IntentTarget, PocketedUnit, RoundEdit, TravelIntent,
+    },
     error::{ActionError, ActionErrorCode},
     event::DomainEvent,
     gesture::{GestureKind, GestureSpec, GestureTarget},
@@ -118,6 +120,7 @@ fn dispatch(
         "forget" => forget(world, actor_id, args),
         "go_to" => go_to(world, actor_id, args),
         "stop" => stop(world, actor_id, args),
+        "set_round" => set_round(world, actor_id, args),
         "tell_way" => tell_way(world, actor_id, args),
         "raise_notice" => raise_notice(world, actor_id, args),
         // Checked last, after every verb has had its chance to match.
@@ -2261,7 +2264,7 @@ fn parse_place_id(value: &Value) -> Result<PlaceId, ActionError> {
 /// [`GO_TO_BUDGET_FACTOR`] × the route's expected travel time, floored for
 /// doorstep trips. Both computed at intent time, which is what lets `no_route`
 /// fail here instead of stranding the walker later
-/// (`features/movement/05_the_llm_seam.md` §2).
+/// (`features/implemented/movement/05_the_llm_seam.md` §2).
 fn route_budget(
     world: &World,
     actor_id: &ActorId,
@@ -2279,7 +2282,7 @@ fn route_budget(
 }
 
 /// `go_to` — set a travel intent; it does not move anyone
-/// (`features/movement/05_the_llm_seam.md` §2). The behaviour ladder walks it,
+/// (`features/implemented/movement/05_the_llm_seam.md` §2). The behaviour ladder walks it,
 /// arrival and lapse are percepts, and a second `go_to` replaces the first
 /// silently — the model issued both; it needs no telling.
 fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
@@ -2441,8 +2444,98 @@ fn stop(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, A
     }
 }
 
+/// `set_round` — move **one leg** of the standing daily round (movement M6,
+/// `05_the_llm_seam.md` §4).
+///
+/// The Night Office's verb, and the only way anything but the seed writes a
+/// Round. It is an intent, not an edit: the resolved legs belong to
+/// [`crate::round::Round`] and this layer holds only a [`World`], so the
+/// decision is recorded on the character and [`crate::round::tick`] carries it
+/// out — the same shape as `go_to`.
+///
+/// Deliberately not listed in `turn.j2`: a daytime turn has no reason to spend
+/// tokens on it. The dispatch table is one table, so a model that reaches for
+/// it anyway gets a working edit rather than a lie about which verbs exist.
+fn set_round(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["leg", "place_id"], &[])?;
+    let place_id = parse_place_id(&parsed["place_id"])?;
+    // The whitelist, exactly as `go_to`'s: you cannot point your day at a place
+    // you were never handed a handle for, and an id outside your set and an id
+    // outside the world are the same error.
+    if !world.characters[actor_id]
+        .state
+        .places_known
+        .contains(&place_id)
+    {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownPlace,
+            format!(
+                "you know no way to a place with id {} (places_you_know lists the ways you know)",
+                repr_id(place_id.as_str())
+            ),
+        ));
+    }
+    set_round_leg(world, actor_id, &parsed["leg"], &place_id)
+}
+
+/// The shared body of `set_round`: validate the leg number against the actor's
+/// own round and record the edit.
+///
+/// Split out because the Night Office's **ward** batch edits somebody else's
+/// round — the ward decided it, so the ward lane calls this directly with the
+/// named person (`crate::night`), having first taught them the way. The
+/// place-handle whitelist above is the *self* rule and stays with the verb.
+pub(crate) fn set_round_leg(
+    world: &mut World,
+    actor_id: &ActorId,
+    leg: &Value,
+    place_id: &PlaceId,
+) -> Result<String, ActionError> {
+    let Some(entry) = world.places.get(place_id) else {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownPlace,
+            format!(
+                "there is no place with id {}",
+                repr_id(place_id.as_str())
+            ),
+        ));
+    };
+    let place_name = entry.name.clone();
+
+    let legs = world.characters[actor_id].state.daily_round.len();
+    if legs == 0 {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidAction,
+            "you keep no standing round to change",
+        ));
+    }
+    // The sheet numbers legs from 1, so the model does too; anything outside
+    // that range names a leg that is not on the sheet in front of it.
+    let Some(number) = leg.as_u64().filter(|number| (1..=legs as u64).contains(number)) else {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidArguments,
+            format!(
+                "leg must be one of the {legs} leg numbers in your_round (1 to {legs})"
+            ),
+        ));
+    };
+
+    let actor = world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world");
+    actor.state.round_edit = Some(RoundEdit {
+        leg: number as usize - 1,
+        place_id: place_id.clone(),
+    });
+    Ok(format!(
+        "{} makes {place_name} leg {number} of their round",
+        actor.name()
+    ))
+}
+
 /// `tell_way` — the knowledge-transfer verb
-/// (`features/movement/05_the_llm_seam.md` §3). The receiving LLM stores
+/// (`features/implemented/movement/05_the_llm_seam.md` §3). The receiving LLM stores
 /// nothing: the id is written into the target's `places_known` — sim state —
 /// and at the next render the place is simply there. Targeted, not broadcast:
 /// eavesdroppers learn nothing.
@@ -3560,7 +3653,7 @@ mod tests {
 
     /// A held handle in a world with no street graph fails `no_route` — the
     /// route is priced at intent time, so an unroutable errand never starts
-    /// (`features/movement/05_the_llm_seam.md` §2). And `stop` with nothing to
+    /// (`features/implemented/movement/05_the_llm_seam.md` §2). And `stop` with nothing to
     /// stop is a harmless line, not an error.
     #[test]
     fn go_to_without_a_graph_is_no_route_and_stop_is_always_safe() {

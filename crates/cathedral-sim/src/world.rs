@@ -64,7 +64,7 @@ impl SpatialActorUpdate {
 /// until the holder leaves (or takes the long way round after
 /// [`crate::NEEDLE_REROUTE_SECONDS`]). Released the moment the holder stops
 /// walking or leaves the circle, so a conversation inside the alley can never
-/// deadlock the city (`features/movement/02_navigation.md` §5).
+/// deadlock the city (`features/implemented/movement/02_navigation.md` §5).
 #[derive(Debug, Clone, PartialEq)]
 pub struct NeedleClaim {
     pub holder: ActorId,
@@ -138,6 +138,16 @@ pub struct World {
     /// `world_revision` bump: the player is meant to feel the city cooling,
     /// not read a wanted list.
     pub notices: crate::notices::Notices,
+    /// What each ward is saying to itself tonight (movement M6): the Night
+    /// Office's ward batch returns a few sentences of mood, and every Minor of
+    /// that ward carries it on their sheet until the next night rewrites it.
+    ///
+    /// It is the Minors' whole share of reflection — one prompt buys a hundred
+    /// and twenty people a changed outlook — so it is world state like
+    /// [`notices`](Self::notices), rendered by the prompt and never part of the
+    /// public snapshot: the player is meant to hear the mood in what people
+    /// say, not read it off a panel.
+    pub ward_moods: BTreeMap<crate::lore::PlanningWard, String>,
     events: Vec<DomainEvent>,
 }
 
@@ -166,6 +176,7 @@ impl Default for World {
             places: PlaceRegistry::default(),
             needle_claim: None,
             notices: crate::notices::Notices::default(),
+            ward_moods: BTreeMap::new(),
             events: Vec::new(),
         }
     }
@@ -498,12 +509,12 @@ impl World {
     /// — it deliberately does **not** call [`touch_public_state`]: an NPC's
     /// position rides the engine's hot `Movement` channel, never the cold public
     /// snapshot, and that split is the whole point of the fixed tick
-    /// (`features/movement/06_engineering.md`). O(movers), not O(cast).
+    /// (`features/implemented/movement/06_engineering.md`). O(movers), not O(cast).
     ///
     /// `stage` is where the player stands, when the host knows: movers within
     /// [`DEFAULT_STAGE_RADIUS_M`] of it get the M7 separation steering (local
     /// avoidance is cosmetic, and nobody can tell at 200 m —
-    /// `features/movement/02_navigation.md` §5). `None` (a test stepping a bare
+    /// `features/implemented/movement/02_navigation.md` §5). `None` (a test stepping a bare
     /// world) steers nobody.
     ///
     /// [`touch_public_state`]: World::touch_public_state
@@ -573,7 +584,7 @@ impl World {
                 // Arrived. A patrolling mover (a scripted walk) flips its patrol and
                 // routes to the far end; a mover with no patrol (the M3 water
                 // round) simply stops — the behaviour ladder owns what happens on
-                // arrival, not the mover (`features/movement/03_the_ladder.md` §4).
+                // arrival, not the mover (`features/implemented/movement/03_the_ladder.md` §4).
                 if movement.path.is_empty()
                     && let Some(patrol) = movement.patrol.as_mut()
                 {

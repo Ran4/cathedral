@@ -9,7 +9,7 @@
 //! **The fixtures are blessed, not incidental.** The scenarios' *worlds* still
 //! come from Python HEAD; their prompt bytes have been regenerated twice, both
 //! times for a *decided* prompt change: M5's sheet additions
-//! (`places_you_know`, `moving` — `features/movement/05_the_llm_seam.md` §3),
+//! (`places_you_know`, `moving` — `features/implemented/movement/05_the_llm_seam.md` §3),
 //! and the markdown sheet (the JSON fence became `sheet_markdown`'s sections
 //! at roughly half the token cost). They remain the witness that
 //! `assets/prompts/turn.j2` and `sheet_markdown` still say what they said.

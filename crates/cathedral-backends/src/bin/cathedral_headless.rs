@@ -43,9 +43,9 @@ use cathedral_backends::{
 use cathedral_sim::{
     ActorId, AreaMap, Capabilities, Cognition, CognitionBusy, Completion, CuriosityConfig,
     DEFAULT_VIEW_CONE_DEGREES, Engine, EngineCommand, EngineConfig, EngineMessage, FakeCognition,
-    IdleCognitionMode, NavData, NullSight, NullTranscription, NullTts, Office, PlayerKnowledge,
-    PromptEnv, RequestId, ShelterMap, SoundCatalog, StageConfig, StatusKind, TtsBackendKind, Vec3,
-    WeatherConfig, WeatherMode, World, WorldClock, WorldSeed,
+    IdleCognitionMode, NavData, NightOfficeConfig, NullSight, NullTranscription, NullTts, Office,
+    PlayerKnowledge, PromptEnv, RequestId, ShelterMap, SoundCatalog, StageConfig, StatusKind,
+    TtsBackendKind, Vec3, WeatherConfig, WeatherMode, World, WorldClock, WorldSeed,
     engine::{
         DEFAULT_MAXIMUM_BACKOFF_SECONDS, DEFAULT_NIGHT_BRIGHTNESS, DEFAULT_SECONDS_PER_DAY,
         DEFAULT_SOUND_COOLDOWN_SECONDS, DEFAULT_STT_STREAM_GRACE_SECONDS,
@@ -209,6 +209,17 @@ struct Args {
     /// High Wick (the hearth). Needs a nav graph under `--assets`.
     #[arg(long)]
     trace_food: bool,
+
+    /// run the Night Office: the second cognition lane (movement M6)
+    ///
+    /// Majors reflect individually at their own bedtimes, the Minors are
+    /// batched one prompt per ward at the curfew, and the ambient cast's
+    /// evenings are re-rolled in code for nothing. Roughly 39 provider calls a
+    /// game day, so pair it with `--fake` unless you mean to spend them. The
+    /// `[night]` lines ride stderr with the rest of the diagnostics; `--watch-clock 1`
+    /// is the turn-free way to see a whole night pass.
+    #[arg(long)]
+    night_office: bool,
 }
 
 fn main() -> ExitCode {
@@ -410,6 +421,12 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             shelters: assets.shelters.clone(),
             // Movement and the daily round only exist when a nav graph is present.
             nav: assets.nav.clone(),
+            // The second lane, off unless asked for: 39 provider calls a game
+            // day is not something a `-t 6` run should buy by accident.
+            night_office: NightOfficeConfig {
+                enabled: args.night_office,
+                ..NightOfficeConfig::default()
+            },
         },
         &assets.seed,
         assets.areas,
@@ -573,7 +590,13 @@ impl Runner {
         let mut next_food = self.now;
         while self.now < end {
             self.now += step;
-            self.pump(Vec::new());
+            // Non-blocking, and normally empty: `--watch-clock` takes no turns.
+            // But the Night Office does — its lane is driven by the bell, not by
+            // the tick loop — so without this a watched night submits one
+            // reflection and then waits forever for an answer nobody handed
+            // back (M6).
+            let commands = self.collect_completions(false)?;
+            self.pump(commands);
             if self.trace_food {
                 // Drain every step so the restock, the sales and the ledger print
                 // in the order they happened, not clumped at the census interval.
@@ -805,6 +828,18 @@ impl Runner {
     fn print_final_state(&self) {
         println!("\n== final state ==");
         let world: &World = self.engine.world();
+        // The night's ledger (M6). Dropped reflections are not failures: the
+        // night ended before the lane reached them, which is the design.
+        if self.engine.night().enabled() {
+            let (reflected, dropped) = self.engine.night().totals();
+            println!(
+                "[night] {reflected} reflected, {dropped} dropped unspent, {} still owed",
+                self.engine.night().owed()
+            );
+            for (ward, mood) in &world.ward_moods {
+                println!("[night] {}: {mood}", ward.as_str());
+            }
+        }
         if let Some(weather) = world.current_weather {
             println!(
                 "{} (wetness: {})",
@@ -953,7 +988,11 @@ impl Assets {
             .map_err(|error| format!("invalid world areas: {error}"))?;
         let catalog = SoundCatalog::from_toml_str(&read("sounds/catalog.toml")?)
             .map_err(|error| format!("invalid sound catalog: {error}"))?;
-        let prompts = PromptEnv::new(&read("prompts/turn.j2")?, &read("prompts/strings.toml")?)
+        let prompts = PromptEnv::new(
+            &read("prompts/turn.j2")?,
+            &read("prompts/night.j2")?,
+            &read("prompts/strings.toml")?,
+        )
             .map_err(|error| format!("invalid prompt assets: {error}"))?;
         let nav = load_nav(directory);
         let shelters = Arc::new(
@@ -1041,6 +1080,16 @@ impl<T: Cognition> Cognition for Shared<T> {
         self.0
             .borrow_mut()
             .request_with_budget(prompt, max_output_tokens)
+    }
+
+    /// Forwarded, not defaulted: the default refuses, and a wrapper that
+    /// silently swallowed the second lane would make `--night-office` a no-op.
+    fn request_night(
+        &mut self,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        self.0.borrow_mut().request_night(prompt, max_output_tokens)
     }
 }
 

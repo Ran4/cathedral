@@ -272,6 +272,17 @@ impl NpcScheduler {
         self.held_result.is_some()
     }
 
+    /// Whether protected player-speech work is queued or already out.
+    ///
+    /// The Night Office's yield condition (movement M6): the player's lane is
+    /// untouchable, and a reflection must not so much as be *submitted* beside
+    /// it — not because it would take the slot (it has its own), but because a
+    /// player who is mid-conversation is the one state in which the whole city
+    /// should be spending its attention on him.
+    pub fn player_reaction_pending(&self) -> bool {
+        !self.player_reactions.is_empty() || self.in_flight_is_player_reaction()
+    }
+
     pub fn turn_order(&self) -> &[ActorId] {
         &self.order
     }
@@ -1197,6 +1208,7 @@ mod tests {
         scheduler.start(0.0);
         let env = PromptEnv::new(
             include_str!("../../../assets/prompts/turn.j2"),
+            include_str!("../../../assets/prompts/night.j2"),
             include_str!("../../../assets/prompts/strings.toml"),
         )
         .unwrap();
@@ -1365,6 +1377,7 @@ mod tests {
 
         let env = PromptEnv::new(
             include_str!("../../../assets/prompts/turn.j2"),
+            include_str!("../../../assets/prompts/night.j2"),
             include_str!("../../../assets/prompts/strings.toml"),
         )
         .unwrap();

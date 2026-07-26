@@ -50,7 +50,7 @@ pub struct ItemId(pub String);
 /// One mover's latest pose off the engine's hot channel — the host-side twin of
 /// `cathedral_sim::ActorMotion`, projected out of [`cathedral_sim::EngineMessage::Movement`]
 /// exactly as the clock is projected out of its own message: a plain per-poll
-/// value, never a snapshot, never a revision bump (features/movement/06_engineering.md,
+/// value, never a snapshot, never a revision bump (features/implemented/movement/06_engineering.md,
 /// the hot/cold split). `seq` bumps on every fresh sample so the interpolator can
 /// tell a new 20 Hz tick from a re-read of the same one.
 #[derive(Debug, Clone, Copy, Default)]

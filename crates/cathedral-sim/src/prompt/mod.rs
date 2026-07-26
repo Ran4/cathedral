@@ -34,6 +34,7 @@ use crate::{
     character::{Character, IntentTarget},
     error::PromptError,
     ids::{ActorId, ItemId, PlaceId},
+    lore::PlanningWard,
     offer::Offer,
     world::World,
 };
@@ -42,6 +43,13 @@ pub use parse::{ParsedAction, REPLY_MUST_BE_TEXT, parse_reply, parse_reply_value
 
 /// The one template `assets/prompts/turn.j2` is registered under.
 const TURN_TEMPLATE: &str = "turn.j2";
+
+/// The Night Office's template (`assets/prompts/night.j2`, movement M6). One
+/// file with two branches — the person reflecting at their own bedtime and the
+/// ward speaking for its Minors after the curfew — because they share every
+/// rule that matters: nobody can hear you, nothing you do is seen, and the only
+/// verbs are the ones that change what tomorrow looks like.
+const NIGHT_TEMPLATE: &str = "night.j2";
 
 /// The LLM-visible strings the sheet embeds (`assets/prompts/strings.toml`).
 ///
@@ -84,6 +92,13 @@ pub struct PromptStrings {
     pub round_note: String,
     /// The parenthesis after `**word_in_the_ward**` — the ward's live notices.
     pub notices_note: String,
+    /// The parenthesis after `**the_ward_says**` — the Night Office's ward
+    /// mood, on every Minor's sheet (movement M6).
+    pub ward_says_note: String,
+    /// The parenthesis after `**your_people**` in the ward digest.
+    pub ward_people_note: String,
+    /// The parenthesis after `**their_places**` in the ward digest.
+    pub ward_places_note: String,
     /// `you_are`'s walk sentence, with `%s` standing for the destination name.
     pub walking_to: String,
     /// `you_are`'s follow sentence, with `%s` standing for the person.
@@ -132,14 +147,25 @@ impl std::fmt::Debug for PromptEnv {
 }
 
 impl PromptEnv {
-    /// `turn_template` is the text of `assets/prompts/turn.j2`, `strings_toml`
-    /// that of `assets/prompts/strings.toml`. The host reads the files; the sim
+    /// `turn_template` is the text of `assets/prompts/turn.j2`,
+    /// `night_template` that of `assets/prompts/night.j2`, `strings_toml` that
+    /// of `assets/prompts/strings.toml`. The host reads the files; the sim
     /// crate never touches the filesystem.
+    ///
+    /// A missing or broken night template is a hard error exactly like a
+    /// missing turn template, and for the same reason (R11): a silently
+    /// baked-in prompt is what the data files exist to prevent, and a Night
+    /// Office that quietly did not exist would be indistinguishable from one
+    /// that ran and changed nothing.
     ///
     /// The minijinja settings are all `[BYTE]`-load-bearing: without
     /// `keep_trailing_newline` the prompt loses its final `\n`, and autoescape
     /// would HTML-escape the quotes in the sheet JSON.
-    pub fn new(turn_template: &str, strings_toml: &str) -> Result<Self, PromptError> {
+    pub fn new(
+        turn_template: &str,
+        night_template: &str,
+        strings_toml: &str,
+    ) -> Result<Self, PromptError> {
         let strings: PromptStrings = toml::from_str(strings_toml)
             .map_err(|error| PromptError::new(format!("invalid prompt strings: {error}")))?;
         if !strings.accept_with.contains("%s") {
@@ -164,6 +190,9 @@ impl PromptEnv {
         environment
             .add_template_owned(TURN_TEMPLATE, turn_template.to_string())
             .map_err(|error| PromptError::new(format!("invalid prompt template: {error}")))?;
+        environment
+            .add_template_owned(NIGHT_TEMPLATE, night_template.to_string())
+            .map_err(|error| PromptError::new(format!("invalid night template: {error}")))?;
 
         Ok(Self {
             environment,
@@ -195,6 +224,14 @@ struct Sheet<'a> {
     /// entirely when the round never enrolled this actor.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     your_round: Vec<&'a str>,
+    /// What this actor's ward is saying tonight — the mood the Night Office's
+    /// ward batch returned (movement M6, `05_the_llm_seam.md` §4). Carried by
+    /// the [`Minor`](crate::lore::Significance::Minor) cast only: it is *their*
+    /// reflection, bought one prompt for a hundred and twenty people, where a
+    /// Major reflects for themselves. `None` — every sheet until a ward has
+    /// spoken — omits the section and keeps the frozen fixtures byte-identical.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    the_ward_says: Option<&'a str>,
     /// The wayfinding whitelist (M5): the places this character can `go_to`,
     /// each an opaque handle plus the name people speak of it by. Rendered even
     /// when empty — an empty list honestly says "you know no ways".
@@ -274,7 +311,7 @@ struct LoreRelation<'a> {
 struct YouAre {
     location_description: String,
     /// The office, as a short phrase — the clock reaches the model here, not as
-    /// a percept (`features/movement/01_the_clock.md` §7). Omitted when the host
+    /// a percept (`features/implemented/movement/01_the_clock.md` §7). Omitted when the host
     /// carries no clock, which keeps the frozen golden fixtures byte-identical.
     #[serde(skip_serializing_if = "Option::is_none")]
     the_hour: Option<String>,
@@ -332,7 +369,7 @@ struct SellLine<'a> {
 
 /// One `places_you_know` entry. The key is `place_id`, not `id`, so a place
 /// handle can never be conflated with a person handle even out of context
-/// (`features/movement/05_the_llm_seam.md` §3).
+/// (`features/implemented/movement/05_the_llm_seam.md` §3).
 #[derive(Serialize)]
 struct PlaceRef<'a> {
     place_id: &'a PlaceId,
@@ -429,6 +466,9 @@ pub fn render_prompt(
     // `raise_notice` verb (with its law paragraph) is listed only for the law
     // cast (`law_and_order.md` M3) — every other sheet keeps its exact bytes.
     let has_notices = !sheet.word_in_the_ward.is_empty();
+    // …and the ward-mood explainer tracks its section, so a Major, an ambient,
+    // and every sheet before the first Night Office keep their exact bytes.
+    let has_ward_mood = sheet.the_ward_says.is_some();
     let has_law_verbs = crate::notices::is_law(actor);
     // The body-pocket verbs are documented only to someone who could use them
     // today — anything already pocketed, or anything palmable in hand
@@ -454,6 +494,7 @@ pub fn render_prompt(
                 sounds_enabled => world.sounds_enabled,
                 emittable_sounds,
                 has_round,
+                has_ward_mood,
                 has_notices,
                 has_law_verbs,
                 has_pockets,
@@ -461,6 +502,183 @@ pub fn render_prompt(
             })
         })
         .map_err(|error| PromptError::new(format!("the turn template did not render: {error}")))
+}
+
+/// Render one Major's **Night Office** prompt (movement M6): the same
+/// character sheet they read all day, wrapped in the bedtime instructions
+/// rather than the turn ones.
+///
+/// It is the same sheet on purpose — `your_round` is what `set_round` edits by
+/// number, `places_you_know` is what it may name, `recent_history` *is* the day
+/// being reflected on, and a second sheet format would be a second thing to
+/// keep true. What it does **not** do is drain: `since` stays `None`, so the
+/// inbox is read and left where it is, and whatever reached this person while
+/// they walked home is still news to them in the morning.
+pub fn render_night_prompt(
+    world: &World,
+    actor_id: &ActorId,
+    env: &PromptEnv,
+) -> Result<String, PromptError> {
+    let actor = llm_actor(world, actor_id)?;
+    let sheet = build_sheet(world, actor, None, &env.strings);
+    let sheet_md = sheet_markdown(&sheet, &env.strings);
+    env.environment
+        .get_template(NIGHT_TEMPLATE)
+        .and_then(|template| {
+            template.render(context! {
+                sheet_md,
+                is_ward => false,
+                legs => sheet.your_round.len(),
+            })
+        })
+        .map_err(|error| PromptError::new(format!("the night template did not render: {error}")))
+}
+
+/// Render one ward's **Night Office** prompt (movement M6): a hundred and
+/// twenty Minors' share of reflection, bought eight prompts a night instead of
+/// a hundred and twenty.
+///
+/// The digest is deliberately not a character sheet. A ward is not a person: it
+/// has no hands, no position and no history of its own, and what it knows is
+/// exactly who lives in it, what each of them is set on, what the ward is
+/// saying, and where its feet can be pointed.
+pub fn render_ward_prompt(
+    world: &World,
+    ward: PlanningWard,
+    env: &PromptEnv,
+) -> Result<String, PromptError> {
+    let sheet_md = ward_markdown(world, ward, &env.strings);
+    env.environment
+        .get_template(NIGHT_TEMPLATE)
+        .and_then(|template| {
+            template.render(context! {
+                sheet_md,
+                is_ward => true,
+                legs => 0,
+            })
+        })
+        .map_err(|error| PromptError::new(format!("the night template did not render: {error}")))
+}
+
+/// The ward digest the ward branch of `night.j2` embeds — the twin of
+/// [`sheet_markdown`], and, like it, all layout and no prose.
+///
+/// `their_places` is the ward's own registered places plus everybody's coarse
+/// handles: a `set_round` edit the ward makes is the ward's decision, so the
+/// night lane teaches the handle to whoever it names rather than requiring them
+/// to have already known it ([`crate::night`]).
+fn ward_markdown(world: &World, ward: PlanningWard, strings: &PromptStrings) -> String {
+    let mut sections: Vec<String> = Vec::with_capacity(6);
+
+    sections.push(format!("**the_ward** — {}", ward_label(ward)));
+    if let Some(time) = world.current_time {
+        let mut line = format!(
+            "**tonight** — {} of {}",
+            time.office.label(),
+            time.weekday.label()
+        );
+        if let Some(weather) = world.current_weather {
+            line.push_str(&format!("; {}", weather.prompt_phrase(None)));
+        }
+        sections.push(line);
+    }
+
+    // Everybody the batch speaks for, in roster order, with the one fact that
+    // says where a night might move them: what they are set on.
+    sections.push(bullet_section(
+        &format!("**your_people** ({})", strings.ward_people_note),
+        ward_minors(world, ward).map(|actor| {
+            let trade = actor
+                .lore()
+                .and_then(|profile| {
+                    profile
+                        .title
+                        .as_deref()
+                        .or(profile.occupation_display.as_deref())
+                })
+                .unwrap_or("no fixed trade");
+            format!(
+                "{} — {}, {trade} — set on: {}",
+                actor.id(),
+                actor.name(),
+                actor.goal()
+            )
+        }),
+        &strings.nobody,
+    ));
+
+    sections.push(bullet_section(
+        &format!("**the_word** ({})", strings.notices_note),
+        world
+            .notices
+            .live()
+            .iter()
+            .rev()
+            .map(|notice| notice.line()),
+        &strings.nothing,
+    ));
+
+    // The ward's own places first, then the coarse handles everyone holds. A
+    // major square is both, so the pass is de-duplicated by id — `Vec::dedup`
+    // would not do it, the two runs are not adjacent.
+    let mut seen: std::collections::BTreeSet<&PlaceId> = std::collections::BTreeSet::new();
+    let places: Vec<String> = world
+        .places
+        .ward_places(ward.as_str())
+        .chain(world.places.coarse())
+        .filter(|entry| seen.insert(&entry.id))
+        .map(|entry| format!("{} {}", entry.id, entry.name))
+        .collect();
+    sections.push(bullet_section(
+        &format!("**their_places** ({})", strings.ward_places_note),
+        places.into_iter(),
+        &strings.no_places,
+    ));
+
+    sections.push(format!(
+        "**last_night** — {}",
+        world
+            .ward_moods
+            .get(&ward)
+            .map(String::as_str)
+            .unwrap_or(&strings.nothing_yet)
+    ));
+
+    sections.join("\n\n")
+}
+
+/// The ward's [`Minor`](crate::lore::Significance::Minor) cast, in roster
+/// order — exactly the people a ward batch reflects *for*, and the only people
+/// its `set_round` edits may name.
+pub(crate) fn ward_minors(
+    world: &World,
+    ward: PlanningWard,
+) -> impl Iterator<Item = &Character> + '_ {
+    world.roster.iter().filter_map(move |actor_id| {
+        let actor = world.characters.get(actor_id)?;
+        let profile = actor.lore()?;
+        (profile.significance == crate::lore::Significance::Minor
+            && profile.planning_ward == ward
+            && actor.control().is_llm()
+            && world.is_present(actor_id))
+        .then_some(actor)
+    })
+}
+
+/// The ward as its people name it — the `snake_case` planning key turned back
+/// into the words on the wayfinding registry's ward anchor ("Cinder Ward"), or
+/// the key itself if the registry has no anchor for it (a nav-less world).
+fn ward_label(ward: PlanningWard) -> String {
+    match ward {
+        PlanningWard::Fabric => "the Fabric Ward".to_string(),
+        PlanningWard::Wick => "the Wick Ward".to_string(),
+        PlanningWard::Cloth => "the Cloth Ward".to_string(),
+        PlanningWard::Wallwright => "the Wallwright Ward".to_string(),
+        PlanningWard::Cinder => "the Cinder Ward".to_string(),
+        PlanningWard::Weigh => "the Weigh Ward".to_string(),
+        PlanningWard::Reed => "the Reed Ward".to_string(),
+        PlanningWard::BellAndSluice => "the Bell and Sluice Ward".to_string(),
+    }
 }
 
 /// The sheet as structured JSON — the markdown's source data, exposed for
@@ -675,6 +893,11 @@ fn build_sheet<'a>(
             },
         },
         your_round: actor.state.daily_round.iter().map(String::as_str).collect(),
+        the_ward_says: actor
+            .lore()
+            .filter(|profile| profile.significance == crate::lore::Significance::Minor)
+            .and_then(|profile| world.ward_moods.get(&profile.planning_ward))
+            .map(String::as_str),
         places_you_know,
         you_hold: actor
             .holds()
@@ -829,10 +1052,27 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
     sections.push(you_are_line(&sheet.you_are, strings));
 
     if !sheet.your_round.is_empty() {
+        // Numbered from 1, because `set_round` names a leg by its number and
+        // the sheet is the only place the model can read one off (M6). The
+        // number is structure, like the section labels, so it lives here.
         sections.push(bullet_section(
             &format!("**your_round** ({})", strings.round_note),
-            sheet.your_round.iter().map(|leg| (*leg).to_string()),
+            sheet
+                .your_round
+                .iter()
+                .enumerate()
+                .map(|(index, leg)| format!("leg {} — {leg}", index + 1)),
             "",
+        ));
+    }
+
+    // What the ward is saying tonight (M6): the Minors' whole share of the
+    // Night Office, carried by everyone the batch spoke for. Omitted entirely
+    // until a ward has reflected, which keeps the frozen fixtures stable.
+    if let Some(mood) = sheet.the_ward_says {
+        sections.push(format!(
+            "**the_ward_says** ({}) — {mood}",
+            strings.ward_says_note
         ));
     }
 
@@ -1205,6 +1445,9 @@ mod tests {
             the_day_label: "The day:".into(),
             round_note: "your standing day, leg by leg; each begins when its bell rings".into(),
             notices_note: "what the ward is saying; hearsay and descriptions, not proof".into(),
+            ward_says_note: "how your ward feels this morning".into(),
+            ward_people_note: "the ordinary householders and trades of this ward".into(),
+            ward_places_note: "set_round may name any of these place_ids".into(),
             walking_to: "You are on your way to %s.".into(),
             following: "You are following %s.".into(),
             faction_role_label: "Faction role:".into(),
@@ -1227,8 +1470,8 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\n";
-        let error = PromptEnv::new("x", toml).unwrap_err();
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\n";
+        let error = PromptEnv::new("x", "y", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
 
@@ -1300,6 +1543,7 @@ mod tests {
                 },
             },
             your_round: Vec::new(),
+            the_ward_says: None,
             places_you_know: Vec::new(),
             you_hold: Vec::new(),
             you_sell: Vec::new(),

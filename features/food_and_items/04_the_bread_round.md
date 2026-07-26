@@ -32,7 +32,7 @@ The stall table lives in a new embedded `assets/world/food.json` (the `rounds.js
 | The Tallage | 1 | ditto | Lowmarket only |
 | Maren's Green | 2 (herring, eel) | ditto | market hours, busiest Lowmarket |
 | The Hungry Ox | 1 (the pot) | at the door — the area exists (`hungry_ox`, areas.json) | the tavern archetype's whole day; curfew-exempt |
-| The Bell and Ladle | 1 (the pot) | **blocked: the area does not exist** — `features/movement/08_risks.md:100` already demands it: *"Named in 4 of the 20 authored routes and it does not exist in areas.json. Add it, at the Bellstand."* This feature adds it. | as the Ox |
+| The Bell and Ladle | 1 (the pot) | **blocked: the area does not exist** — `features/implemented/movement/08_risks.md:100` already demands it: *"Named in 4 of the 20 authored routes and it does not exist in areas.json. Add it, at the Bellstand."* This feature adds it. | as the Ox |
 
 Seven pitches. Sixty stall fixtures stand in the streets; seven of them come alive. That asymmetry
 is correct — the rest are set dressing until the supply chain gives them tenants — but `food.json`

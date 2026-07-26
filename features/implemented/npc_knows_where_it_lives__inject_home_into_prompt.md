@@ -39,7 +39,7 @@ Original design note follows.
 The home-binding bake already exists — `scripts/bake_homes.py` writes
 `assets/world/homes.json`, one residential door per non-homeless character, the
 ~132 `pauper`/`unhoused`/`insecure_lodging` deliberately left bedless
-(`features/movement/04_the_round.md` §3). That bake is a **spatial** binding:
+(`features/implemented/movement/04_the_round.md` §3). That bake is a **spatial** binding:
 `{building, edge, door_node, point}`. It steers feet (walk home at the Snuffing,
 leash/drift anchor for the round), not speech.
 

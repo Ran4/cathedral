@@ -167,12 +167,12 @@ pub struct Movement {
     /// re-routes to the far end when the path empties. `None` — the walk simply
     /// stops on arrival (speed → 0) and a higher layer decides what happens next;
     /// this is what the M3 water round uses, since the behaviour ladder owns the
-    /// arrival, not the mover (`features/movement/03_the_ladder.md` §4).
+    /// arrival, not the mover (`features/implemented/movement/03_the_ladder.md` §4).
     pub patrol: Option<Patrol>,
     /// Seconds spent standing at the mouth of an occupied one-person choke (M7:
     /// the Needle's claim). 0 while moving freely; when it exceeds the reroute
     /// budget the mover tries the long way round instead
-    /// (`features/movement/02_navigation.md` §5: "you wait, or you take Cinder
+    /// (`features/implemented/movement/02_navigation.md` §5: "you wait, or you take Cinder
     /// Row").
     pub choke_wait: f64,
 }
@@ -288,7 +288,7 @@ pub struct GutEntry {
 }
 
 /// The dynamic drive layer — the "statuses" axis of
-/// `features/movement/03_the_ladder.md` §2/§3: raw, sim-written need state the
+/// `features/implemented/movement/03_the_ladder.md` §2/§3: raw, sim-written need state the
 /// behaviour ladder reads inline (`needs.thirst < THIRST_PARCHED`). Small on
 /// purpose; M3 shipped thirst, food & items M2 grows hunger, with fatigue/duty
 /// still following. Every gauge runs `0..=`[`THIRST_MAX`], high = satisfied.
@@ -360,7 +360,7 @@ pub enum IntentTarget {
     },
     /// Someone the actor could *see* when the intent was set — the sight gate
     /// that keeps a hoarded id from becoming a tracking device
-    /// (`features/movement/05_the_llm_seam.md` §2). While they stay visible the
+    /// (`features/implemented/movement/05_the_llm_seam.md` §2). While they stay visible the
     /// follow tracks them; losing sight degrades the intent to `last_seen`.
     Person {
         actor_id: ActorId,
@@ -384,6 +384,27 @@ pub struct TravelIntent {
     /// The absolute expiry, stamped by the round on the first tick that sees
     /// the intent — the action layer has no clock to stamp it with.
     pub deadline: Option<f64>,
+}
+
+/// A `set_round` decision: **one leg** of tomorrow moved to somewhere else
+/// (movement M6, `05_the_llm_seam.md` §4).
+///
+/// One leg, never the whole day — the Round is authored content and the Night
+/// Office edits it, it does not write it. A character who decides to take
+/// their meal at the Hungry Ox instead of at home changes one line, and
+/// tomorrow they walk somewhere different; the player, who has no idea why,
+/// sees a person who has changed their habits.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RoundEdit {
+    /// Zero-based index into [`CharacterState::daily_round`] — which is exactly
+    /// the round's resolved leg list, one prose line per leg. The *model* names
+    /// legs from 1, because the sheet numbers them that way; the verb subtracts
+    /// before it gets here.
+    pub leg: usize,
+    /// Where the leg now puts their feet. Resolved against the wayfinding
+    /// registry when the round applies the edit, so a place that has since gone
+    /// simply leaves the leg where it was.
+    pub place_id: PlaceId,
 }
 
 /// Everything an action may change.
@@ -443,6 +464,16 @@ pub struct CharacterState {
     /// section. Empty for anyone the round never enrolled — the section is
     /// then omitted, keeping the frozen golden fixtures byte-identical.
     pub daily_round: Vec<String>,
+    /// A `set_round` edit waiting for the round to apply it (movement M6).
+    ///
+    /// The verb lives in [`crate::actions`], which only ever holds a
+    /// [`World`](crate::world::World) — the resolved legs are the round's, so
+    /// the verb records the *decision* here and
+    /// [`crate::round::tick`] carries it out on its next pass, exactly as
+    /// `go_to` records an [`intent`](Self::intent) the ladder later walks.
+    /// Cleared when applied; a second edit before then simply replaces the
+    /// first (the model issued both).
+    pub round_edit: Option<RoundEdit>,
     /// The bound vendor's price list, rendered as the sheet's `you_sell`
     /// section: what this actor's stall charges, priced from the item catalog's
     /// stock template — not from current stock, so a sold-out baker still knows
@@ -493,6 +524,7 @@ impl CharacterState {
             places_known: BTreeSet::new(),
             intent: None,
             daily_round: Vec::new(),
+            round_edit: None,
             you_sell: Vec::new(),
             active_gesture: None,
             leaving_city: false,
@@ -584,7 +616,7 @@ impl Character {
     /// Whether the character is settled enough to count as "present" for the
     /// novelty gate. A mover crossing the square is not news at every step; a man
     /// who has stopped — and the player, who never carries a [`Movement`] — is
-    /// (`features/movement/05_the_llm_seam.md` §5.1).
+    /// (`features/implemented/movement/05_the_llm_seam.md` §5.1).
     pub fn is_settled(&self) -> bool {
         self.speed() < SETTLED_SPEED_MPS
     }
@@ -749,8 +781,8 @@ impl Character {
     /// percepts onto the front and append a `system:` line without going through
     /// the capping methods, so a run of provider failures would otherwise grow
     /// `inbox` and `pending_history` one line past the bound each time, without
-    /// limit (`features/movement/05_the_llm_seam.md` §5.3;
-    /// `features/movement/code_review.md` finding 2). This keeps the same
+    /// limit (`features/implemented/movement/05_the_llm_seam.md` §5.3;
+    /// `features/implemented/movement/code_review.md` finding 2). This keeps the same
     /// invariant those methods do — the oldest, stalest lines fall off the front.
     pub fn rebound_percepts(&mut self) {
         cap_front(&mut self.state.inbox, INBOX_MAX_ENTRIES);
@@ -851,7 +883,7 @@ mod tests {
     /// A character the scheduler never prompts still receives sounds and speech,
     /// so its inbox and pending_history are bounded — the oldest, stalest lines
     /// fall off rather than growing for the whole session
-    /// (`features/movement/05_the_llm_seam.md` §5.3).
+    /// (`features/implemented/movement/05_the_llm_seam.md` §5.3).
     #[test]
     fn the_never_prompted_inbox_is_bounded_and_keeps_the_newest() {
         const OVERFLOW: usize = 5;

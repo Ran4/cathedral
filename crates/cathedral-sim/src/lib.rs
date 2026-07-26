@@ -29,6 +29,7 @@ pub mod item;
 pub mod lore;
 pub mod math;
 pub mod nav;
+pub mod night;
 pub mod notices;
 pub mod offer;
 pub mod perception;
@@ -60,8 +61,8 @@ pub use attention::{
 };
 pub use character::{
     BodySlot, Character, CharacterSheet, CharacterState, Control, EconomicClass, GutEntry,
-    IntentTarget, Movement, Needs, Patrol, PocketedUnit, Presence, StatusKind, TravelIntent,
-    VendorListing,
+    IntentTarget, Movement, Needs, Patrol, PocketedUnit, Presence, RoundEdit, StatusKind,
+    TravelIntent, VendorListing,
 };
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
@@ -72,7 +73,7 @@ pub use error::{
     SpatialUpdateError, SpatialUpdateErrorCode,
 };
 pub use event::{DomainEvent, EventType};
-pub use fake::{FakeCognition, fake_reply};
+pub use fake::{FakeCognition, fake_night_reply, fake_reply};
 pub use floor::{ConversationFloor, floor_audio_failsafe_seconds, speech_reading_seconds};
 pub use gesture::{DANCE_MAX_SECONDS, GESTURES, GestureKind, GestureSpec, GestureTarget};
 pub use ids::{ActorId, InvalidId, ItemId, PartyId, PlaceId, RequestId, SpeechEventId};
@@ -93,13 +94,17 @@ pub use math::{Vec3, vec3, vec3_from_json, vec3_to_json};
 pub use nav::{
     Door, Edge, NavData, NavError, NavGrid, Place, Route, Site, WALK_Y, door_edges_from_json,
 };
+pub use night::{
+    NightGate, NightOffice, NightOfficeConfig, WARD_EDITS_MAX, WARD_MOOD_MAX_CHARS, stage_occupied,
+};
 pub use notices::{LAW_OCCUPATIONS, NOTICE_LIFE_GAME_DAYS, Notices, WardNotice};
 pub use offer::Offer;
 pub use perception::{cap_first, emit_sound, identify, sees};
 pub use places::{PlaceEntry, PlaceError, PlaceRegistry};
 pub use prompt::{
     ParsedAction, PromptEnv, PromptStrings, parse_reply, parse_reply_value, py_round,
-    render_prompt, render_prompt_and_drain, render_sheet_value,
+    render_night_prompt, render_prompt, render_prompt_and_drain, render_sheet_value,
+    render_ward_prompt,
 };
 pub use round::{
     Arrival, CartLoadKind, Census, ClosedMarketVisit, CounterBindingKey, CounterSession,
@@ -152,23 +157,23 @@ pub const RECENT_HISTORY_MAX_ENTRIES: usize = 32;
 /// scheduled actor drains its inbox every turn, so this only ever bites an actor
 /// the stage gate never prompts — whose oldest unread percepts are stale anyway.
 /// Without it, an ambient NPC near steady activity accumulates prose forever
-/// (`character.rs`; `features/movement/05_the_llm_seam.md` §5.3). Generous
+/// (`character.rs`; `features/implemented/movement/05_the_llm_seam.md` §5.3). Generous
 /// against `RECENT_HISTORY_MAX_ENTRIES` so a normal turn never loses a percept.
 pub const INBOX_MAX_ENTRIES: usize = 64;
 /// The fixed movement slice: NPC positions advance in whole 20 Hz steps, so a
 /// stutter in the host's frame time can never change how far anyone walks — the
 /// sim is the authoritative mover and the host only interpolates between the
-/// samples it publishes (`features/movement/06_engineering.md`).
+/// samples it publishes (`features/implemented/movement/06_engineering.md`).
 pub const MOVEMENT_TICK_SECONDS: f64 = 0.05;
-/// A brisk medieval walking pace (`features/movement/01_the_clock.md` §6).
+/// A brisk medieval walking pace (`features/implemented/movement/01_the_clock.md` §6).
 pub const WALK_SPEED_MPS: f64 = 1.8;
 /// Below this an actor counts as "settled" for the novelty gate: a man crossing
 /// the square is not news at every step, but the moment he stops (speed → 0) his
-/// arrival is (`features/movement/05_the_llm_seam.md` §5.1).
+/// arrival is (`features/implemented/movement/05_the_llm_seam.md` §5.1).
 pub const SETTLED_SPEED_MPS: f64 = 0.15;
 
 // --- The water round (M3): the dynamic thirst need and the behaviour ladder
-// (`features/movement/03_the_ladder.md`). Every gauge runs `0..=THIRST_MAX`,
+// (`features/implemented/movement/03_the_ladder.md`). Every gauge runs `0..=THIRST_MAX`,
 // high = satisfied.
 /// Full satisfaction, and the seed cap for a need gauge.
 pub const THIRST_MAX: f64 = 255.0;
@@ -188,7 +193,7 @@ pub const WATER_DRAW_SECONDS: f64 = 3.0;
 pub const WELL_KEEPER_SOUND_INTERVAL_SECONDS: f64 = 4.0;
 /// The behaviour ladder re-evaluates an idle actor on a jittered cadence in this
 /// range (real seconds), staggered across the cast by a per-actor hash so no
-/// scheduler is needed (`features/movement/03_the_ladder.md` §5).
+/// scheduler is needed (`features/implemented/movement/03_the_ladder.md` §5).
 pub const LADDER_DECISION_MIN_SECONDS: f64 = 1.0;
 pub const LADDER_DECISION_MAX_SECONDS: f64 = 6.0;
 /// A mover is "at the well" once within this of the source's draw point.
@@ -204,7 +209,7 @@ pub const WELL_QUEUE_SHORT: usize = 4;
 /// Full satisfaction, and the seed cap for the hunger gauge.
 pub const HUNGER_MAX: f64 = 255.0;
 /// Rung 3 — "famished": drop everything, eat what you hold or go to the hearth
-/// now. The ladder spec's reserved number (`features/movement/03_the_ladder.md`).
+/// now. The ladder spec's reserved number (`features/implemented/movement/03_the_ladder.md`).
 pub const HUNGER_FAMISHED: f64 = 15.0;
 /// Rung 7 — "hungry": seek food when convenient (a short queue at an open,
 /// affordable stall — M3). The ladder spec's other reserved number.
@@ -297,7 +302,7 @@ pub const WALLET_SEED_SPREAD: u32 = 6;
 pub const WALLET_SEED_SALT: &str = "wallet";
 
 // --- `go_to` (M5): the LLM-issued travel intent
-// (`features/movement/05_the_llm_seam.md` §2). A suggestion layered on an
+// (`features/implemented/movement/05_the_llm_seam.md` §2). A suggestion layered on an
 // already-autonomous body: it expires, needs preempt it, and lapsing is a
 // percept.
 /// An intent lives for this multiple of its route's expected travel time in
@@ -322,7 +327,7 @@ pub const PERSON_ARRIVE_RADIUS_M: f64 = 2.0;
 pub const WALK_DESTINATION_SNAP_M: f64 = 15.0;
 
 // --- Crowds (M7): lane offsets, on-stage avoidance, the Needle's claim
-// (`features/movement/02_navigation.md` §5, `07_milestones.md` M7).
+// (`features/implemented/movement/02_navigation.md` §5, `07_milestones.md` M7).
 /// The keep-right centre of the lane band: a walker's stable lateral offset is
 /// this fraction of the usable corridor half-width, to their right.
 pub const LANE_KEEP_RIGHT_FRACTION: f64 = 0.4;
@@ -335,7 +340,7 @@ pub const AVOID_PERSONAL_RADIUS_M: f64 = 1.2;
 /// speed, so avoidance bends a path and never launches anyone.
 pub const AVOID_PUSH_MPS: f64 = 0.9;
 /// At most this many neighbours contribute to one mover's separation push
-/// (`features/movement/02_navigation.md` §5: "the ≤ 6 neighbours").
+/// (`features/implemented/movement/02_navigation.md` §5: "the ≤ 6 neighbours").
 pub const AVOID_MAX_NEIGHBOURS: usize = 6;
 /// The one-person choke around the Needle's node: a claim circle, entered only
 /// with the claim (or behind its holder). Covers the crossing and the mouths of

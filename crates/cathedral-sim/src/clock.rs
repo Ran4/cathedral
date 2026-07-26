@@ -10,7 +10,7 @@
 //! The lore names the seven offices and the seven weekdays and gives the
 //! offices a rough time of day (`lore/core_lore/trade_and_daily_life.md`,
 //! `lore/second_sun/11_glossary_and_naming.md`); the clock hours below are the
-//! ones `features/movement/01_the_clock.md` §3 settled on. This module
+//! ones `features/implemented/movement/01_the_clock.md` §3 settled on. This module
 //! implements that document.
 
 use std::cmp::Ordering;
@@ -103,7 +103,7 @@ impl Office {
 
     /// A short, present-tense description of what this hour is like in the city —
     /// what an NPC would feel about the time without reading a clock. Rendered
-    /// into the sheet's `you_are.the_hour` (`features/movement/01_the_clock.md`
+    /// into the sheet's `you_are.the_hour` (`features/implemented/movement/01_the_clock.md`
     /// §7), so the model always knows roughly what time it is and never spends a
     /// turn to learn it.
     pub fn prompt_phrase(self) -> &'static str {
@@ -289,7 +289,7 @@ impl WorldClock {
         // from config (RON parses `NaN`/`inf`) would sail through and become a
         // NaN `brightness`, then a NaN sun illuminance and ambient fill on the
         // host. Reject non-finite here, as `seconds_per_day` already does, and
-        // fall back to full dark (`features/movement/code_review.md` finding 4).
+        // fall back to full dark (`features/implemented/movement/code_review.md` finding 4).
         let night_brightness = if night_brightness.is_finite() {
             night_brightness.clamp(0.0, 1.0)
         } else {
@@ -420,7 +420,7 @@ impl WorldClock {
 /// full summer morning, not the tail of dawn — full day, a dusk ramp from 17:00
 /// down to the night floor by the Snuffing (21:00). A single float, compared
 /// against inline thresholds by every consumer — there is no time-of-day enum
-/// in the behaviour code (`features/movement/01_the_clock.md` §5).
+/// in the behaviour code (`features/implemented/movement/01_the_clock.md` §5).
 fn brightness_at(fraction: f64, night: f64) -> f64 {
     const DAWN_START: f64 = 5.0 / 24.0;
     const DAWN_END: f64 = 6.5 / 24.0;

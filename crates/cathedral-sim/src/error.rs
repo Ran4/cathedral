@@ -48,7 +48,7 @@ pub enum ActionErrorCode {
     /// Reserved for the body refusing a `go_to` (a real starvation state plus a
     /// real distance). Deliberately unraised until the hunger need exists —
     /// inventing a threshold just to have a refusal is what
-    /// `features/movement/05_the_llm_seam.md` §2 warns against.
+    /// `features/implemented/movement/05_the_llm_seam.md` §2 warns against.
     TooFar,
     /// `pocket_item` into a cavity already carrying its capacity
     /// (`features/extra_pockets.md`).

@@ -12,7 +12,7 @@
 //! (`features/npc_knows_where_it_lives__inject_home_into_prompt.md`).
 //!
 //! The ~100 people with a homeless circumstance have no `homes` entry — no bed
-//! is content (`features/movement/04_the_round.md` §3) — but they *do* get a
+//! is content (`features/implemented/movement/04_the_round.md` §3) — but they *do* get a
 //! `bedless` entry: an explicit no-fixed-bed framing, so the model plays the
 //! circumstance instead of silently inventing a cottage.
 

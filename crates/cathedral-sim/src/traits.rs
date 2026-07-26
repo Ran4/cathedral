@@ -136,6 +136,29 @@ pub trait Cognition {
         let _ = max_output_tokens;
         self.request(prompt)
     }
+
+    /// Submit on the **second lane** — the Night Office
+    /// (`features/implemented/movement/05_the_llm_seam.md` §4).
+    ///
+    /// It is a separate method rather than a flag because it must be a separate
+    /// *slot*: the whole point of the lane is that a reflection can never
+    /// occupy the capacity the player's reply needs. A backend whose queue
+    /// holds one request answers `request_night` out of a second queue of one,
+    /// or not at all.
+    ///
+    /// So the default **refuses**, and that is the safe answer rather than a
+    /// missing feature: a backend that has not built itself a second slot must
+    /// not be handed night work through the first one. A refusal is not an
+    /// error — [`NightOffice`](crate::night::NightOffice) drops the reflection
+    /// and nobody notices.
+    fn request_night(
+        &mut self,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        let _ = (prompt, max_output_tokens);
+        Err(CognitionBusy)
+    }
 }
 
 // ----------------------------------------------------------------- speech I/O

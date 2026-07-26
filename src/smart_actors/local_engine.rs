@@ -70,7 +70,7 @@ fn assets_dir() -> PathBuf {
 /// The committed navigation artifact — the baked walkable surface and the welded
 /// street graph the movers route on — embedded so the sim walks on exactly the
 /// bytes the F7 overlay draws (`nav_overlay.rs`) and the city renderer reads
-/// (`city/mod.rs`): one geometry, three consumers (features/movement/02_navigation.md).
+/// (`city/mod.rs`): one geometry, three consumers (features/implemented/movement/02_navigation.md).
 const NAV_JSON: &str = include_str!("../../assets/world/navigation.json");
 const NAV_BIN: &[u8] = include_bytes!("../../assets/world/navigation.bin");
 const SHELTERS_JSON: &str = include_str!("../../assets/world/shelters.json");
@@ -107,6 +107,16 @@ impl Cognition for SharedCognition {
         self.0
             .borrow_mut()
             .request_with_budget(prompt, max_output_tokens)
+    }
+
+    /// Forwarded, not defaulted: the default refuses, and the fake completes
+    /// synchronously, so an offline run exercises the whole night path.
+    fn request_night(
+        &mut self,
+        prompt: String,
+        max_output_tokens: Option<u32>,
+    ) -> Result<RequestId, CognitionBusy> {
+        self.0.borrow_mut().request_night(prompt, max_output_tokens)
     }
 }
 
@@ -272,7 +282,11 @@ fn build(
         .map_err(|error| format!("invalid world areas: {error}"))?;
     let catalog = SoundCatalog::from_toml_str(&read("sounds/catalog.toml")?)
         .map_err(|error| format!("invalid sound catalog: {error}"))?;
-    let prompts = PromptEnv::new(&read("prompts/turn.j2")?, &read("prompts/strings.toml")?)
+    let prompts = PromptEnv::new(
+        &read("prompts/turn.j2")?,
+        &read("prompts/night.j2")?,
+        &read("prompts/strings.toml")?,
+    )
         .map_err(|error| format!("invalid prompt assets: {error}"))?;
 
     let options = BackendsOptions {
@@ -305,7 +319,7 @@ fn build(
     // The walkable graph the engine steps its movers on. A parse failure is not
     // fatal: the engine keeps `nav: None`, nobody walks, and the rest of the cast
     // is none the wiser — exactly the frozen-fixture default (engine.rs). Only
-    // handing it a `Some` turns movement on (features/movement/02_navigation.md).
+    // handing it a `Some` turns movement on (features/implemented/movement/02_navigation.md).
     let nav = match NavData::from_parts(NAV_JSON, NAV_BIN) {
         Ok(nav) => Some(Arc::new(nav)),
         Err(error) => {
@@ -354,6 +368,10 @@ fn build(
         stage: config.idle_cognition.stage(),
         idle_requires_news: config.idle_cognition.require_news,
         idle_curiosity: config.idle_cognition.curiosity(),
+        // …and, for the same reason, the one caller with a night worth having:
+        // the second lane spends its calls in the hours the player is somewhere
+        // quiet, which only exists when there is a player (M6).
+        night_office: config.night_office.config(),
         clock: WorldClock::new(
             config.clock.seconds_per_day,
             Office::from_config_name(&config.clock.start_office).unwrap_or_else(|| {

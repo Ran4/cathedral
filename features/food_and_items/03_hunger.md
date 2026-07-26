@@ -31,12 +31,12 @@ pub const HUNGER_DECAY_PER_GAME_SECOND: f64 = HUNGER_MAX / (10.0 * 3600.0);
 ```
 
 The thresholds 15/70 are not invented here — they are the numbers the ladder spec reserved
-(`features/movement/03_the_ladder.md:160,164`).
+(`features/implemented/movement/03_the_ladder.md:160,164`).
 
 **The rhythm the decay buys.** 255 over 10 game hours means someone who eats a full meal (satiety
 150) at noon crosses `HUNGRY` (70) about 3 game hours later and would hit `FAMISHED` around
 suppertime — two real meals a day, which is exactly the lore's day: dinner at High Wick (*"the main
-meal and the market's peak"*, `features/movement/01_the_clock.md:118`) and supper toward Lamplight.
+meal and the market's peak"*, `features/implemented/movement/01_the_clock.md:118`) and supper toward Lamplight.
 Thirst crosses its whole gauge in 4 hours; hunger is deliberately the slower, heavier need.
 
 **Decay implementation:** one line added to the existing `decay_thirst` loop (`round.rs:1398-1414`,

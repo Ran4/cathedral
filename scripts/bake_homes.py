@@ -8,7 +8,7 @@ Every character who *should* have a bed is bound to one residential building's
 baked door, so the daily round (``crates/cathedral-sim/src/round.rs``) can walk
 them home at the Snuffing and out again at the Kindling. The join is
 ``character.planning_ward`` (eight snake_case wards) → ``building.district``
-(ward-level strings), per ``features/movement/04_the_round.md`` §3.
+(ward-level strings), per ``features/implemented/movement/04_the_round.md`` §3.
 
 The algorithm, deterministic and byte-reproducible like ``bake_navigation.py``:
 

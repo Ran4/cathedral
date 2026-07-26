@@ -152,7 +152,7 @@ like `"fish"` is an error, never a fallback.
 - `make_sound {"sound_id": "<id>"}` — emit a catalog sound
   (`assets/sounds/catalog.toml`); only rows with `actor_emittable = true`.
 - `go_to {"place_id": "<pl_…>"}` / `go_to {"person": "<id>"}` — set a travel
-  *intent*; it moves nobody (M5, `features/movement/05_the_llm_seam.md`). The
+  *intent*; it moves nobody (M5, `features/implemented/movement/05_the_llm_seam.md`). The
   behaviour ladder (`round.rs`) walks it as a rung between thirsty and the
   round; the intent expires on a route-derived real-seconds budget and the
   pressing needs preempt it — arrival and every lapse are percepts, and both

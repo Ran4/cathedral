@@ -9,7 +9,7 @@ M5a–M5d contract and the pending visual command.
 | | |
 |---|---|
 | **The brief** | items with metadata and quantities, copper-only money, hunger that eating cures, food vendors, and a visible grain/flour/bread and wool/cloth supply chain |
-| **The sibling** | `features/movement/` — the clock, the ladder, the round, and the water round this design copies shamelessly |
+| **The sibling** | `features/implemented/movement/` — the clock, the ladder, the round, and the water round this design copies shamelessly |
 | **This folder** | the design the brief asked for |
 
 ---
@@ -35,13 +35,13 @@ shipped with the reservations intact:
 - **The needs struct is built to grow.** `crates/cathedral-sim/src/character.rs:111-124`: *"M3
   ships thirst only, with hunger/fatigue/duty following."* `Needs` is a one-field struct waiting for
   its second field.
-- **The ladder reserved the rungs.** `features/movement/03_the_ladder.md` §3 already specifies
+- **The ladder reserved the rungs.** `features/implemented/movement/03_the_ladder.md` §3 already specifies
   **rung 3 starving** (`hunger < 15` → food) and **rung 7 hungry** (`hunger < 70` → food), exactly
   mirroring parched (2) / thirsty (6), with destinations *"home hearth, a cookshop, a tavern, a food
   stall."*
 - **An error variant sits reserved and unraised.** `crates/cathedral-sim/src/error.rs:39` has
   `TooFar`, with the milestone note *"`TooFar` is reserved, unraised, until hunger exists"*
-  (`features/movement/07_milestones.md:373`).
+  (`features/implemented/movement/07_milestones.md:373`).
 - **The vendors are already routed.** `assets/world/rounds.json` sends `baker`,
   `food_provisioner` and `grocer_and_spicer` to the Wickmarket, `fish_trader` and `market_seller`
   to Maren's Green, `cook`/`tavern_worker`/`brewer` to the Hungry Ox and the Bellstand — via the
@@ -106,7 +106,7 @@ vendors' sheets gain a `you_sell` price line so they stop inventing prices.
   plain civic meal, and the spine of the catalog below.
 - **Dinner is at noon.** *"Peace with the impossible, and dinner at noon"*
   (`lore/second_sun/08_folk_culture.md:160`); High Wick is *"the main meal and the market's peak"*
-  (`features/movement/01_the_clock.md:118`). The meal legs in [03](03_hunger.md) hang on this.
+  (`features/implemented/movement/01_the_clock.md:118`). The meal legs in [03](03_hunger.md) hang on this.
 - **Bakers begin at the Kindling** (`07_what_everyone_knows.md:29`: *"Bakers, cooks, servants,
   carriers, and well keepers begin work"*) — which is exactly when the morning stock appears.
 - **Market days move the crowd**: Highmarket at the Wickmarket and Coswald's Yard, Lowmarket at the

@@ -416,11 +416,11 @@ the id for. The first walks coarse (a ward id everyone has), asks; the second an
 
 ---
 
-## M6 — The Night Office
+## M6 — The Night Office  ✅ *implemented*
 
 **Ships.** The second cognition lane (one in flight; yields absolutely to the player; drops silently).
-Individual reflection for the 31 Majors, at their own bedtimes. Ward-batched reflection for the 120
-Minors. Code-rolled Rounds for the 350 Ambients. The `set_round` verb.
+Individual reflection for the ~31 Majors, at their own bedtimes. Ward-batched reflection for the ~120
+Minors. Code-rolled Rounds for the ~350 Ambients. The `set_round` verb.
 
 Roughly **39 provider calls per game day.**
 
@@ -428,6 +428,102 @@ Roughly **39 provider calls per game day.**
 changed because of something that happened to them yesterday**, and their day is slightly different
 for it. And the harder test — watch the foreground latency while a Night Office is running. If the
 player's reply is ever slower because a Major was reflecting, the lane is wrong.
+
+**Status — done and verified. The shipped cast is 30 Majors and 8 populated wards, so the number is
+38 calls a game day, not 39.**
+
+**The lane is a second slot all the way down.** `Cognition::request_night` is a distinct trait method,
+not a flag, because it had to be a distinct *capacity*: `HttpCognition` now holds two `AtomicBool`
+lanes and the night one is never `busy`, so a reflection out on the wire can never be why the player's
+reply is told the worker is busy (`llm.rs::the_night_lane_and_the_turn_stream_never_refuse_each_other`
+accepts both before either is answered). The trait's **default refuses** — a backend that has not
+built itself a second slot must not be handed night work through the first one — and a refusal is not
+an error: the reflection goes back to the front of the queue and waits five seconds
+(`crates/cathedral-sim/src/night.rs`).
+
+**The gate** (`NightGate`) closes on four things, and each alone stands the lane down: the player is
+owed a reply (`NpcScheduler::player_reaction_pending`), the player is speaking, a line is being
+presented, or **anybody at all is on stage with the player**. That last is the expensive question — a
+`characters_within` scan — so `NightOffice::wants_slot` is asked first and it is only computed on the
+handful of polls a night actually owes a reflection. A night that stands down says so, throttled to
+one line a minute: `[night] standing down (somebody is on stage with the player); 21 reflections owed`.
+
+**One honest departure, and it is the headless runner's fault.** The stage question is asked only under
+`IdleCognitionMode::Stage`. Choosing `All` is the host declaring it has no player neighborhood worth
+reasoning about — which is exactly true of `cathedral-headless`, whose "player" is a fixture standing
+in the middle of the cast and would otherwise block every night forever. A host with a real player
+uses `Stage` and gets the real gate; the drive run below proves both halves.
+
+**Bedtime staggers itself, as promised.** `Round::bedtime` reads the office of each Major's earliest
+unconditional `sleep` leg — the Watch for a lamplighter, Lamplight for a day worker, the Snuffing as
+the fallback for the handful whose day names no bed (Dame Aldith, bricked into her wall, reflects at
+the curfew like everybody else). No scheduler, no jitter table: the Round already said when each
+character sleeps. Ward batches ring together at the Snuffing.
+
+**Trickled, not burst.** After each submit the lane waits out 1/400th of a *game* day — about nine
+real seconds at the shipped clock, so thirty-eight calls spread across roughly a tenth of the day
+rather than landing in the same second of it. It is a fraction of the game day and not a constant
+because the debug time-scale exists: at 60× a whole night is a real minute, and a fixed nine-second
+pace would drop nearly every reflection unspent.
+
+**Rule 3 is a `day` stamp and nothing else.** Each queued reflection carries the game day its bedtime
+fell on; `submit` drops everything whose day is not today before taking the next one. A missed Night
+Office costs a `dropped` counter and nothing more — no percept, no retry, no `system:` line waiting in
+the morning's inbox. The same stamp is what stops a 60× debug clock buying anyone two nights.
+
+**What a reflection may change** is `remember`, `forget`, `set_goal`, `set_round` and `wait`, checked
+in `night.rs::is_night_verb` before `apply_action` ever sees it — the refusal is about *when*, not
+about whether the verb exists. A reply that reaches for `say` or `go_to` gets a diagnostic and nothing
+else: a private thought at midnight must not become the morning's news, so nothing the night does
+touches an inbox. `night.j2` is one file with two branches (the person at their bedtime, the ward
+after the curfew) and offers only those verbs.
+
+**`set_round` is an intent, exactly like `go_to`.** The resolved legs belong to `Round` and the action
+layer holds only a `World`, so the verb records a `CharacterState::round_edit` and `round::tick`
+carries it out. It moves **one** leg — the office, the weekday and what they are *doing* there all
+stand; only the anchor and the sheet line change. It is deliberately **not** listed in `turn.j2`: a
+daytime turn has no reason to spend tokens on it, and the dispatch table is one table, so a model that
+reaches for it anyway gets a working edit rather than a lie about which verbs exist. Two departures
+from the sketch in [05](05_the_llm_seam.md) §4: the argument is `place_id` (M5 made places opaque
+handles; `"gaunt_passage"` predates that), and legs are named **from 1**, because that is how the sheet
+now numbers them — `**your_round**` renders `- leg 2 — at Lamplight: home to sleep`, which is the only
+place the model can read a leg number off.
+
+**The ward batch** returns `ward_mood` — a few sentences every Minor of that ward then carries on their
+sheet as `**the_ward_says**`, with its own explainer paragraph — plus up to three `set_round` edits
+naming specific people. Those edits **teach the way** as part of making them (the ward decided it, so
+requiring the person to have already held the handle would make the verb useless), which is the one
+deliberate hole in the self-only whitelist. The digest is not a character sheet: a ward has no hands,
+no position and no history, so it gets its people, what each is set on, the live notices, its places,
+and last night's mood.
+
+**The ambient tier costs nothing at all.** `Round::reroll_ambient_evenings` rolls
+`hash01("night_evening", id, day)` for each housed, non-night-trade ambient at the Snuffing; ~15% take
+tomorrow's evening at a tavern hearth instead of their own. It stores the evening the seed authored
+(`Townsperson::evening_seed`) and puts it back before each roll, so it is a nightly choice and not a
+one-way drift, and it sets the leg to `Idle` rather than `Sleep` — the curfew rung still walks them
+home at the Snuffing, so what actually changes is the three hours between the lamps and the gates. A
+tavern hearth feeds whoever stands at it.
+
+**How you know:**
+
+```sh
+cargo test --workspace                 # incl. night.rs's 26, the round's 4, the two-lane llm test
+# A whole game night, offline and instant: 38 reflected, 0 dropped, 0 owed.
+cargo run -p cathedral-backends --bin cathedral-headless -- \
+    --fake --night-office --start-office waning --seconds-per-day 300 --watch-clock 0.6
+# In game, both halves of the gate. Fly away from the cast and the night runs:
+CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE_TIMEOUT=120 \
+  CATHEDRAL_DRIVE='wait-online; tp 0 140 0 0 -80; key KeyT; key KeyT; sleep 60; quit' cargo run
+# …stand in the crowd at spawn and it stands down instead:
+CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE_TIMEOUT=120 \
+  CATHEDRAL_DRIVE='wait-online; key KeyT; key KeyT; sleep 60; quit' cargo run
+```
+
+The offline fake reads its `set_round` **off the rendered night sheet** — the first `place_id` in
+`places_you_know`, leg 1 of `your_round` — so an offline run is also a regression test that the sheet
+still carries numbered legs and place handles a model could have named. If either stops rendering, the
+fake stops moving anybody's day and a test says so.
 
 ---
 

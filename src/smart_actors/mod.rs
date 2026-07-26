@@ -34,7 +34,7 @@ use bevy::prelude::*;
 use bevy::transform::TransformSystems;
 use cathedral_sim::{
     Capabilities, CuriosityConfig, DEFAULT_STAGE_MAX_ACTORS, DEFAULT_STAGE_RADIUS_M, EngineMessage,
-    IdleCognitionMode, StageConfig, StatusEvent, TtsBackendKind,
+    IdleCognitionMode, NightOfficeConfig, StageConfig, StatusEvent, TtsBackendKind,
 };
 use serde::{Deserialize, Serialize};
 
@@ -83,8 +83,11 @@ pub struct SmartActorsConfig {
     /// Who gets to think when nothing has happened
     /// (features/gate_idle_cognition_on_proximity.md).
     pub idle_cognition: IdleCognitionSettings,
+    /// What the cast does with the night (features/implemented/movement/05_the_llm_seam.md
+    /// §4) — the second cognition lane.
+    pub night_office: NightOfficeSettings,
     /// The world clock: the day/night cycle, the offices, the bell
-    /// (features/movement/01_the_clock.md).
+    /// (features/implemented/movement/01_the_clock.md).
     pub clock: ClockSettings,
 }
 
@@ -171,9 +174,59 @@ impl IdleCognitionSettings {
     }
 }
 
+/// The Night Office (movement M6): once a game day, at their own bedtime, a
+/// character may rewrite their own agenda.
+///
+/// It runs on a **second** cognition lane that yields absolutely to the player:
+/// one request in flight, never submitted while anyone is on stage, the floor
+/// is busy, the microphone is open or a reply is owed — and dropped silently if
+/// the night runs out. Turning it off costs you nothing but a city whose people
+/// never change their minds; turning it on costs roughly 39 provider calls a
+/// game day.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct NightOfficeSettings {
+    pub enabled: bool,
+    /// Individual reflection for the ~31 Majors, staggered across the night by
+    /// their own bedtimes — 31 calls a game day. This is the tier that pays for
+    /// itself: it is what makes an NPC's goal change overnight because of
+    /// something that happened to them yesterday.
+    pub majors: bool,
+    /// Ward-batched reflection for the ~120 Minors, one prompt per ward at the
+    /// curfew — 8 calls a game day. Returns a few sentences of mood that every
+    /// Minor of that ward then carries.
+    pub wards: bool,
+    /// The ~350 ambients' code-rolled evening: no provider call at all, so
+    /// there is no cost reason to turn this off — only a taste one, if you would
+    /// rather the streets were the same every night.
+    pub ambients: bool,
+}
+
+impl Default for NightOfficeSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            majors: true,
+            wards: true,
+            ambients: true,
+        }
+    }
+}
+
+impl NightOfficeSettings {
+    pub fn config(&self) -> NightOfficeConfig {
+        NightOfficeConfig {
+            enabled: self.enabled,
+            majors: self.majors,
+            wards: self.wards,
+            ambients: self.ambients,
+        }
+    }
+}
+
 /// The world clock (movement M0). A day/night cycle, the seven offices, and the
 /// bell — all a pure projection of the engine's `now`, configured here and
-/// resolved in the sim (`features/movement/01_the_clock.md`).
+/// resolved in the sim (`features/implemented/movement/01_the_clock.md`).
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct ClockSettings {
@@ -239,6 +292,7 @@ impl Default for SmartActorsConfig {
             stt_trailing_silence_ms: 400,
             sounds: SoundsConfig::default(),
             idle_cognition: IdleCognitionSettings::default(),
+            night_office: NightOfficeSettings::default(),
             clock: ClockSettings::default(),
         }
     }

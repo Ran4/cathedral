@@ -118,7 +118,7 @@ fields:
 Note: the field was renamed from `statuses` to `circumstances` so the word
 `statuses` can be reused for the transient internal-drive/mood layer (hunger,
 health, drunkenness, …) introduced by the movement work. See
-`features/movement/03_the_ladder.md`.
+`features/implemented/movement/03_the_ladder.md`.
 
 A character who begs should usually retain a real former, occasional or
 intermittent occupation. Examples include an injured porter, an unemployed

@@ -38,10 +38,14 @@ pub fn demo_seed() -> String {
     .expect("the preserved demo seed loads")
 }
 
-/// The shipped prompt environment: `turn.j2` + `strings.toml`.
+/// The shipped prompt environment: `turn.j2` + `night.j2` + `strings.toml`.
 pub fn prompt_env() -> PromptEnv {
-    PromptEnv::new(&asset("prompts/turn.j2"), &asset("prompts/strings.toml"))
-        .expect("the shipped prompt assets must load")
+    PromptEnv::new(
+        &asset("prompts/turn.j2"),
+        &asset("prompts/night.j2"),
+        &asset("prompts/strings.toml"),
+    )
+    .expect("the shipped prompt assets must load")
 }
 
 pub fn catalog() -> SoundCatalog {

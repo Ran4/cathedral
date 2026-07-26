@@ -271,7 +271,7 @@ fn clock_office(messages: &[EngineMessage]) -> Option<Office> {
 
 /// The offices ring as a *sound for the player alone* — never a percept, never a
 /// nudge — and every poll republishes the clock. This is the whole budget
-/// argument of `features/movement/01_the_clock.md` §7 in one test: a bell that
+/// argument of `features/implemented/movement/01_the_clock.md` §7 in one test: a bell that
 /// costs nothing because no character ever hears it.
 #[test]
 fn the_offices_ring_for_the_player_only_and_publish_the_clock() {
@@ -438,7 +438,7 @@ fn clock_only_engine(clock: WorldClock) -> Engine {
 /// hours later, ~7.5 s away at 60 s/day) — every owed stroke must still ring in
 /// due-time order, none stranded behind a later-office stroke. This is the
 /// regression for the per-office FIFO that only drained its front
-/// (`features/movement/code_review.md` finding 1).
+/// (`features/implemented/movement/code_review.md` finding 1).
 #[test]
 fn overlapping_office_ordinals_ring_in_due_order() {
     // 60 s/day opening at Dayspring (07:00). High Wick (noon) rings at 12.5 s
@@ -737,7 +737,7 @@ fn round_engine() -> Engine {
 /// priority slot through the engine's nudge forwarding, exactly as an
 /// addressed `say` would. Off stage there is no idle rotation, so without this
 /// the ending's percept would sit unread and the errand chain die silently
-/// (`features/movement/05_the_llm_seam.md` §3).
+/// (`features/implemented/movement/05_the_llm_seam.md` §3).
 #[test]
 fn an_intent_ending_hands_the_walker_the_priority_slot() {
     let mut engine = round_engine();

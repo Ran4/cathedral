@@ -244,7 +244,7 @@ dependency order:
 | tests | `fixtures/prompts/manifest.json` items gain kinds (anvil/rope/loaf → `generic` with display overrides, or real kinds where they exist); **regenerate all fixtures once**: `cargo test -p cathedral-sim --test golden_prompts -- --ignored` |
 
 The fixture regeneration is the "most expensive small change" the movement plan kept deferring
-(`features/movement/07_milestones.md:357`). M0 and the hunger condition line
+(`features/implemented/movement/07_milestones.md:357`). M0 and the hunger condition line
 ([03](03_hunger.md) §5) land in the **same regeneration** — pay it once.
 
 ---

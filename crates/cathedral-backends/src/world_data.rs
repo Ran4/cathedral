@@ -397,6 +397,7 @@ mod tests {
         );
         let env = PromptEnv::new(
             &fs::read_to_string(root.join("assets/prompts/turn.j2")).unwrap(),
+            &fs::read_to_string(root.join("assets/prompts/night.j2")).unwrap(),
             &fs::read_to_string(root.join("assets/prompts/strings.toml")).unwrap(),
         )
         .unwrap();

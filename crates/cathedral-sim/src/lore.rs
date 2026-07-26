@@ -61,6 +61,19 @@ pub enum PlanningWard {
 }
 
 impl PlanningWard {
+    /// The eight wards, in declaration order — the order the Night Office fills
+    /// its ward batches in, so a night is the same night every run.
+    pub const ALL: [PlanningWard; 8] = [
+        PlanningWard::Fabric,
+        PlanningWard::Wick,
+        PlanningWard::Cloth,
+        PlanningWard::Wallwright,
+        PlanningWard::Cinder,
+        PlanningWard::Weigh,
+        PlanningWard::Reed,
+        PlanningWard::BellAndSluice,
+    ];
+
     /// The snake_case spelling the serde rename uses — also the key the baked
     /// wayfinding registry (`assets/world/places.json`) files its wards under.
     pub fn as_str(self) -> &'static str {
@@ -80,7 +93,7 @@ impl PlanningWard {
 /// Circumstance spellings shared by authoring and loader validation. Social,
 /// economic and legal standing only; health and bodily conditions do not belong
 /// here (they remain in `conditions`), nor do transient drives (those are the
-/// dynamic `statuses` layer — see `features/movement/03_the_ladder.md`).
+/// dynamic `statuses` layer — see `features/implemented/movement/03_the_ladder.md`).
 pub const CONTROLLED_CIRCUMSTANCES: &[&str] = &[
     "alms_dependent",
     "begs_regularly",

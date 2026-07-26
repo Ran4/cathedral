@@ -39,7 +39,7 @@ fn metric_people_have_distance_and_perspective_name() {
 }
 
 /// The clock reaches the model through the sheet, not as a percept
-/// (`features/movement/01_the_clock.md` §7): a field when the world has a clock,
+/// (`features/implemented/movement/01_the_clock.md` §7): a field when the world has a clock,
 /// and absent — keeping the frozen fixtures byte-identical — when it does not.
 #[test]
 fn the_sheet_carries_the_hour_only_when_the_world_has_a_clock() {
@@ -196,7 +196,10 @@ fn the_sheet_carries_the_daily_round_when_the_round_seeded_one() {
         ),
         "the section renders with its note"
     );
-    assert!(after.contains("- at Dayspring, on Bellday only: prayers at The Lanthorn"));
+    // Numbered from 1 since M6: `set_round {"leg": 2, …}` names a leg, and the
+    // sheet is the only place the model can read one off.
+    assert!(after.contains("- leg 1 — at Dayspring: work at The Wickmarket"));
+    assert!(after.contains("- leg 2 — at Dayspring, on Bellday only: prayers at The Lanthorn"));
     assert!(
         after.contains("your_round is your standing daily routine"),
         "the turn prompt explains how to read the round"
@@ -274,6 +277,77 @@ fn the_sheet_carries_the_wards_word_and_only_the_law_gets_the_verb() {
     let law = render_prompt(&world, &sven, None, &env).unwrap();
     assert!(law.contains("raise_notice {\"about\""), "the verb line is listed");
     assert!(law.contains("You serve the city's law"), "and explained");
+}
+
+/// movement M6: the Night Office's ward mood reaches the turn sheet of the
+/// Minors it was bought for, with its explainer — and nobody else's, which is
+/// what keeps the golden fixtures frozen.
+#[test]
+fn the_turn_sheet_carries_the_ward_mood_for_a_minor_of_that_ward() {
+    use cathedral_sim::{PlanningWard, Significance};
+
+    let env = prompt_env();
+    let mut world = seed_world();
+    let sven = actor("sv3n1");
+
+    world
+        .ward_moods
+        .insert(PlanningWard::Fabric, "The rain has not let up.".into());
+    // Sven has no lore at all, so he belongs to no ward and carries nothing.
+    let no_lore = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(!no_lore.contains("**the_ward_says**"));
+    assert!(!no_lore.contains("the_ward_says is the mood"));
+
+    let mut profile = LoreProfile {
+        significance: Significance::Major,
+        planning_ward: PlanningWard::Fabric,
+        age: 40,
+        gender: "m".into(),
+        occupation_id: Some("mason".into()),
+        occupation_display: Some("Mason".into()),
+        title: None,
+        rank: None,
+        faction_role: None,
+        illegal_activity: None,
+        district: "Fabric".into(),
+        father: None,
+        mother: None,
+        children: Vec::new(),
+        circumstances: Vec::new(),
+        conditions: Vec::new(),
+        home: None,
+        core_character_description: String::new(),
+        extended_character_description: String::new(),
+        curiosity: None,
+    };
+    // A Major of that ward reflects for themselves, so the batch is not theirs.
+    world.characters.get_mut(&sven).unwrap().sheet.lore = Some(profile.clone());
+    let major = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(!major.contains("**the_ward_says**"));
+
+    profile.significance = Significance::Minor;
+    world.characters.get_mut(&sven).unwrap().sheet.lore = Some(profile.clone());
+    let minor = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(
+        minor.contains(
+            "**the_ward_says** (how your ward feels this morning; you share it, you did not \
+             decide it) — The rain has not let up."
+        ),
+        "the section renders with its note"
+    );
+    assert!(
+        minor.contains("the_ward_says is the mood of your own ward"),
+        "the turn prompt explains how to hold a mood"
+    );
+
+    // A Minor of another ward hears nothing of it.
+    profile.planning_ward = PlanningWard::Reed;
+    world.characters.get_mut(&sven).unwrap().sheet.lore = Some(profile);
+    assert!(
+        !render_prompt(&world, &sven, None, &env)
+            .unwrap()
+            .contains("**the_ward_says**")
+    );
 }
 
 /// extra_pockets.md M1/M4: the body-pocket verbs are documented conditionally —

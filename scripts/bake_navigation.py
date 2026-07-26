@@ -13,7 +13,7 @@ like `areas.json`), never touching the filesystem itself:
 The bake is deterministic: no RNG, sorted iteration, quarter-metre grid. Running
 it twice on the same plan yields byte-identical output (`bake_is_reproducible`).
 
-Design: features/movement/02_navigation.md. The load-bearing rules:
+Design: features/implemented/movement/02_navigation.md. The load-bearing rules:
 
   * "roads win" is *not* a blind carve. A road cell under a ground-level solid
     stays blocked (you cannot walk through a house); the passages stay open

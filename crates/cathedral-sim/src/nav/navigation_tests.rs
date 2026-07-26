@@ -2,7 +2,7 @@
 //!
 //! Several of these were written for us in `lore/places/04_routes_and_sightlines.md`
 //! under "Route acceptance tests for later builds"; the rest are the mechanical
-//! guards from `features/movement/02_navigation.md` §8. They load the committed
+//! guards from `features/implemented/movement/02_navigation.md` §8. They load the committed
 //! artifacts exactly as the host does — no filesystem, no bake at test time.
 
 use serde_json::Value;

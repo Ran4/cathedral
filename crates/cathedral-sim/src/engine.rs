@@ -45,6 +45,7 @@ use crate::{
     item::{CONDITION_METADATA_KEY, CONDITION_POOPSTAINED, POOP_KIND},
     math::Vec3,
     nav::NavData,
+    night::{NightGate, NightOffice, NightOfficeConfig, stage_occupied},
     notices,
     perception::{cap_first, emit_sound, identify},
     prompt::PromptEnv,
@@ -103,15 +104,15 @@ pub const MAX_COMMAND_MESSAGE_CHARS: usize = 300;
 pub const MAX_TTS_FAILURE_REASON_CHARS: usize = 160;
 
 /// Default real seconds per game day: one game day per real hour (24×), Skyrim's
-/// number (`features/movement/01_the_clock.md` §9).
+/// number (`features/implemented/movement/01_the_clock.md` §9).
 pub const DEFAULT_SECONDS_PER_DAY: f64 = 3_600.0;
 /// Default night brightness floor — genuinely dark, lifted only by lamps and the
-/// moon (`features/movement/01_the_clock.md` §5).
+/// moon (`features/implemented/movement/01_the_clock.md` §5).
 pub const DEFAULT_NIGHT_BRIGHTNESS: f64 = 0.05;
 /// The world sound the offices ring. Audible at 600 m — most of the city — which
 /// is exactly why it reaches the player as a bell but never as a percept: the
 /// office is a clock, not an event (`assets/sounds/catalog.toml`,
-/// `features/movement/01_the_clock.md` §7).
+/// `features/implemented/movement/01_the_clock.md` §7).
 const TOWN_BELL_SOUND_ID: &str = "town_bell";
 
 /// Status state the voice selection adds to the scheduler's `STATE_*` set.
@@ -252,7 +253,7 @@ pub struct EngineConfig {
     /// behavior that the shipped tests pin.
     pub idle_curiosity: CuriosityConfig,
     /// The world's clock — the seven offices, the week, the sun's brightness
-    /// (`features/movement/01_the_clock.md`). A pure projection of the `now` the
+    /// (`features/implemented/movement/01_the_clock.md`). A pure projection of the `now` the
     /// host already passes to [`Engine::poll`], so it keeps the sim clock-free.
     pub clock: WorldClock,
     /// Whether crossing an office rings the town bell for the player. On by
@@ -268,8 +269,16 @@ pub struct EngineConfig {
     /// builds config as `EngineConfig { .., ..default() }`, so the whole test
     /// suite and the frozen fixtures inherit `None` and are byte-for-byte
     /// unchanged. Movement only happens once a host sets this
-    /// (`features/movement/02_navigation.md`).
+    /// (`features/implemented/movement/02_navigation.md`).
     pub nav: Option<Arc<NavData>>,
+    /// The Night Office (movement M6): the second cognition lane, and the three
+    /// tiers it serves ([`crate::night`]).
+    ///
+    /// Defaults to **off**, like every gate before it, so the whole test suite,
+    /// the frozen fixtures and any library embedder keep their exact behaviour
+    /// until they ask for a night. `config.ron` turns it on for the game and
+    /// `--night-office` for the headless runner.
+    pub night_office: NightOfficeConfig,
 }
 
 impl Default for EngineConfig {
@@ -306,6 +315,7 @@ impl Default for EngineConfig {
             },
             shelters: Arc::new(ShelterMap::default()),
             nav: None,
+            night_office: NightOfficeConfig::default(),
         }
     }
 }
@@ -513,7 +523,7 @@ pub enum EngineMessage {
     /// the HUD smoothly. Cheap by design — a handful of scalars, no allocation,
     /// no world-revision bump — because the clock changes every frame and must
     /// never re-trigger the snapshot chain. The office reaches the LLM through
-    /// the sheet, never here (`features/movement/01_the_clock.md` §7).
+    /// the sheet, never here (`features/implemented/movement/01_the_clock.md` §7).
     Clock {
         /// Whole days since the epoch; day 0 is a Bellday.
         day: i64,
@@ -541,7 +551,7 @@ pub enum EngineMessage {
     /// is cheap by design and must **never** bump `world_revision` or re-trigger
     /// the snapshot chain: positions change every tick, and routing them through
     /// the cold public snapshot would republish the whole world 20 times a second
-    /// (`features/movement/06_engineering.md`, the hot/cold split). The host
+    /// (`features/implemented/movement/06_engineering.md`, the hot/cold split). The host
     /// interpolates between successive samples to render smoothly.
     Movement {
         moved: Vec<ActorMotion>,
@@ -717,8 +727,13 @@ pub struct Engine {
     movement_now: f64,
     /// The M3 water round: thirst, the behaviour ladder, the queues at the wells.
     /// Empty and inert unless the host supplied a nav graph
-    /// (`features/movement/03_the_ladder.md`).
+    /// (`features/implemented/movement/03_the_ladder.md`).
     round: Round,
+    /// The second cognition lane (movement M6): the Night Office. Inert unless
+    /// `config.night_office.enabled`; when it is, it is polled *before* the
+    /// scheduler so it can take its own completion out of the queue before the
+    /// turn stream discards it as stale ([`crate::night`]).
+    night: NightOffice,
     /// The `now` at or after which the deterministic round may tick again. The
     /// ladder and its services are a 20 Hz behaviour, not a per-frame one
     /// ([`MOVEMENT_TICK_SECONDS`]): running its ~13 whole-cast passes on every
@@ -809,6 +824,12 @@ impl Engine {
             startup_diagnostics.extend(round.seed(&mut world, nav, now, &config.clock));
         }
 
+        // The Night Office reads its bedtimes off the seeded round, so it is
+        // built here and not a line earlier (M6). Off by default, and then this
+        // is two map lookups and a `None`.
+        let mut night = NightOffice::new(config.night_office, now);
+        startup_diagnostics.extend(night.seed(&world, &round));
+
         let mut capabilities = capabilities;
         // One source of truth for the selection: the config's, which the host
         // has already run through the availability fallback.
@@ -890,6 +911,7 @@ impl Engine {
             // The first movement span opens at construction, mirroring the clock.
             movement_now: now,
             round,
+            night,
             // The first poll's `now` is >= this, so the round ticks on the first
             // poll exactly as it did every poll before the gate.
             next_round_tick_at: now,
@@ -1093,6 +1115,57 @@ impl Engine {
                 Some(stage) => IdleGate::Stage(stage),
             }
         };
+
+        // The second lane, before the first (M6). Two reasons for the order,
+        // and both are load-bearing: the scheduler drains `completions` and
+        // discards anything it is not waiting on, so a night reply left behind
+        // it would be logged as a stale result and lost — and a `set_round` the
+        // night applies is part of the world any turn submitted this same poll
+        // is prompted from.
+        let mut night_events: Vec<SchedulerEvent> = Vec::new();
+        self.night.ring(
+            now,
+            &mut self.world,
+            &mut self.round,
+            &self.clock,
+            &mut night_events,
+        );
+        // `wants_slot` first, so the stage question — a `characters_within`
+        // scan — is asked on the handful of polls a night owes a reflection,
+        // not on every frame of every run.
+        //
+        // And only under `Stage`: choosing `All` is the host declaring that it
+        // has no player neighborhood worth reasoning about (the headless
+        // runner's "player" is a fixture standing in the middle of the cast and
+        // would block every night forever), which is the same declaration that
+        // turns the idle gate off. A host with a real player uses `Stage`, and
+        // gets the real gate.
+        let gate = NightGate {
+            floor_busy,
+            player_composing: self.speech_router.player_composing(),
+            stage_occupied: self.config.idle_mode == IdleCognitionMode::Stage
+                && self.night.wants_slot(now)
+                && stage_occupied(
+                    &self.world,
+                    &self.config.player_id,
+                    self.conversation_partner(now),
+                    &self.config.stage,
+                ),
+            player_reaction: self.scheduler.player_reaction_pending(),
+        };
+        night_events.extend(self.night.poll(
+            now,
+            &mut self.world,
+            &self.clock,
+            &mut completions,
+            gate,
+            self.cognition.as_mut(),
+            &self.env,
+        ));
+        for event in night_events {
+            out.push(scheduler_message(event));
+        }
+
         let events = self.scheduler.poll(
             now,
             &mut self.world,
@@ -1179,6 +1252,11 @@ impl Engine {
     /// The daily round (M4, subsuming M3's water), for tests and tracing.
     pub fn round(&self) -> &Round {
         &self.round
+    }
+
+    /// The second cognition lane (M6), for tests and the headless tracer.
+    pub fn night(&self) -> &NightOffice {
+        &self.night
     }
 
     /// A one-line census of the water round for `--trace-water`.
@@ -1939,7 +2017,7 @@ impl Engine {
 
         // Where the player stands, for the on-stage separation steering — the
         // same "near the player" the attention gate uses, so there is one
-        // answer, not three (`features/movement/06_engineering.md` §4).
+        // answer, not three (`features/implemented/movement/06_engineering.md` §4).
         let stage = self
             .world
             .characters
@@ -2006,7 +2084,7 @@ impl Engine {
     /// Ring one stroke of the town bell — a sound *for the player only*, from the
     /// Lanthorn. It reaches the player's ears (its lone recipient) but no LLM
     /// inbox and nudges nobody: the office is a clock, not an event, so it queues
-    /// nothing and costs no tokens (`features/movement/01_the_clock.md` §7).
+    /// nothing and costs no tokens (`features/implemented/movement/01_the_clock.md` §7).
     /// Deviations — the Ruin, the name-knell — stay real percepts, emitted the
     /// ordinary way.
     fn emit_bell(&mut self, out: &mut Vec<EngineMessage>) {

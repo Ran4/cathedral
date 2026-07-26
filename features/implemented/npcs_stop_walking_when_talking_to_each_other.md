@@ -62,7 +62,7 @@ already forces proximity; this adds *standing*.)
 **3. The rung override — urgency beats chat.** The hold must not outrank the
 ladder's high rungs, or a long exchange leaves both of them in the street at
 the Snuffing — *exactly the person the watch stops*
-(`features/movement/04_the_round.md` §6). Instead of skipping a warm actor
+(`features/implemented/movement/04_the_round.md` §6). Instead of skipping a warm actor
 outright, `run_ladder` evaluates them and honors the hold **only against rungs
 below curfew**: parched (rung 2) and curfew (rung 5) break the hold; the round
 (rung 9), social pull (11) and wander (12) respect it. One comparison, no new
@@ -73,7 +73,7 @@ mid-sentence: inject the pressure as a `system:` percept on the standard
 self-correction channel ("night is falling — you need to be home") so the LLM
 gets **one turn to excuse itself**, then release the hold regardless of what it
 says. The prompt already carries `current_goal`; this is a nudge through an
-existing seam (`features/movement/05_the_llm_seam.md`), not new plumbing.
+existing seam (`features/implemented/movement/05_the_llm_seam.md`), not new plumbing.
 
 ## Scope / caution
 

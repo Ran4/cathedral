@@ -338,7 +338,7 @@ fn provider_failure_requeues_percepts_without_duplication() {
 /// failure restores the drained percepts and appends a `system:` line; before
 /// the re-cap that pushed the buffer one entry past `INBOX_MAX_ENTRIES` every
 /// time, so a persistently-failing provider leaked memory one line per retry
-/// (`features/movement/code_review.md` finding 2). No player is nearby, so the
+/// (`features/implemented/movement/code_review.md` finding 2). No player is nearby, so the
 /// only thing touching the inbox is the failure path itself.
 #[test]
 fn repeated_provider_failures_keep_the_inbox_bounded() {

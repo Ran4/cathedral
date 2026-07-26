@@ -18,7 +18,7 @@
 //!   69 named places, 23 sites and ~2,560 building doors hung off it as leaves.
 //!   A* over it is a few microseconds.
 //!
-//! Design: `features/movement/02_navigation.md`.
+//! Design: `features/implemented/movement/02_navigation.md`.
 
 use std::collections::{BinaryHeap, HashMap};
 
@@ -447,7 +447,7 @@ impl NavData {
 
     /// [`route_nodes`], never expanding through `avoid` — the "take Cinder Row
     /// instead" route around an occupied one-person choke
-    /// (`features/movement/02_navigation.md` §5). `None` when every way there
+    /// (`features/implemented/movement/02_navigation.md` §5). `None` when every way there
     /// leads through the avoided node (or the goal *is* it).
     ///
     /// [`route_nodes`]: NavData::route_nodes

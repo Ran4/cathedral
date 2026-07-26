@@ -129,6 +129,7 @@ fn walk(curiosity: CuriosityConfig) -> Vec<Passer> {
         SoundCatalog::from_toml_str(&read(&assets.join("sounds/catalog.toml"))).expect("sounds");
     let prompts = PromptEnv::new(
         &read(&assets.join("prompts/turn.j2")),
+        &read(&assets.join("prompts/night.j2")),
         &read(&assets.join("prompts/strings.toml")),
     )
     .expect("prompts");

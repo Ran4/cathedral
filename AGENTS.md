@@ -37,6 +37,16 @@ player's neighborhood (`crates/cathedral-sim/src/attention.rs`), while speech an
 anywhere. `config.ron: smart_actors.idle_cognition.mode` switches between `"stage"` and the old city-wide
 clock (`"all"`) without a rebuild.
 
+Once a game day the cast also **sleeps on it** — the Night Office
+(`crates/cathedral-sim/src/night.rs`). At their own bedtime a Major reflects on the day and may settle a
+memory, change what they are set on, and move one leg of tomorrow with `set_round`; the Minors are batched
+one prompt per ward at the curfew, which returns a mood every Minor of that ward then carries; the ambient
+cast's evenings are re-rolled in code for no tokens at all. ~38 provider calls a game day, on a **second**
+cognition lane (`Cognition::request_night`, its own capacity of one) that yields absolutely to the player —
+it never submits while anyone is on stage with you, while a line is being presented, while the microphone is
+open, or while a reply is owed, and a night it runs out of drops silently. `config.ron:
+smart_actors.night_office` turns each tier off; `cathedral-headless --night-office` runs one in a terminal.
+
 Everything is configured in `config.ron` under `smart_actors: (...)`; secrets stay in `prompt_playgound/.env`
 (real environment variables win over it). For runs without network or API keys, set `fake_backend: true` — a
 deterministic offline mode also used by the integration tests.
@@ -54,6 +64,9 @@ cargo run -p cathedral-backends --bin cathedral-headless -- --fake -t 6    # off
 cargo run -p cathedral-backends --bin cathedral-headless -- -t 10 -v       # live provider, full prompts
 cargo run -p cathedral-backends --bin cathedral-headless -- --fake -t 6 --stage  # gate idle turns on proximity
 cargo run -p cathedral-backends --bin cathedral-headless -- --one-shot FILE  # send one file, print the reply
+# a whole game night in a few seconds: 30 majors, 8 wards, the ambient roll
+cargo run -p cathedral-backends --bin cathedral-headless -- \
+    --fake --night-office --start-office waning --seconds-per-day 300 --watch-clock 0.6
 ```
 
 stdout is the transcript, the final world state and the run cost in USD;

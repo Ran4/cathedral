@@ -42,6 +42,14 @@ the_day_label = "The day:"
 round_note = "your standing day, leg by leg; each begins when its bell rings"
 # The parenthesis after `**word_in_the_ward**` — the ward's live notices.
 notices_note = "what the ward is saying; hearsay and descriptions, not proof"
+# The parenthesis after `**the_ward_says**` — the mood the Night Office's ward
+# batch returned, carried by every Minor of that ward (movement M6).
+ward_says_note = "how your ward feels this morning; you share it, you did not decide it"
+# The parenthesis after `**your_people**` in the ward digest — the ward
+# batch's own sheet, not a person's.
+ward_people_note = "the ordinary householders and trades of this ward"
+# The parenthesis after `**their_places**` in the ward digest.
+ward_places_note = "set_round may name any of these place_ids"
 # `you_are`'s walk sentence; `%s` is the destination name.
 walking_to = "You are on your way to %s."
 # `you_are`'s follow sentence; `%s` is the person being followed.

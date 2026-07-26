@@ -5,7 +5,7 @@
 """Bake ``assets/world/places.json`` — the wayfinding registry for M5's `go_to`.
 
 The LLM never sees a coordinate: it walks to opaque ``place_id`` handles listed
-on its sheet under ``places_you_know`` (``features/movement/05_the_llm_seam.md``
+on its sheet under ``places_you_know`` (``features/implemented/movement/05_the_llm_seam.md``
 §3). This bake gives every nav place that handle, assigns it a planning ward
 (so "the places of your own ward" can be seeded), and plants one walkable
 anchor per ward (so "Reed Ward" is itself a coarse destination everyone holds).
