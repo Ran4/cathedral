@@ -712,14 +712,6 @@ impl Character {
         &self.state.pending_history
     }
 
-    /// Queue private prose — only for actors whose scheduler consumes it.
-    pub fn notify(&mut self, text: impl Into<String>) {
-        if self.control().is_llm() {
-            self.state.inbox.push(text.into());
-            cap_front(&mut self.state.inbox, INBOX_MAX_ENTRIES);
-        }
-    }
-
     /// Retain one bounded, model-visible history line. Speech and other
     /// percepts share the window, including the actor's own lines.
     ///
@@ -899,14 +891,6 @@ mod tests {
             assert_eq!(buffer[0], format!("line {OVERFLOW}"));
             assert_eq!(buffer[INBOX_MAX_ENTRIES - 1], format!("line {}", offered - 1));
         }
-
-        // `notify` (private prose, no pending_history) caps the inbox too.
-        let mut chatterer = Character::from_sheet(sheet(Control::Llm));
-        for index in 0..offered {
-            chatterer.notify(format!("note {index}"));
-        }
-        assert_eq!(chatterer.inbox().len(), INBOX_MAX_ENTRIES);
-        assert!(chatterer.pending_history().is_empty());
     }
 
     /// The barrage case from
@@ -983,7 +967,6 @@ mod tests {
     #[test]
     fn players_accumulate_no_prose() {
         let mut character = Character::from_sheet(sheet(Control::Player));
-        character.notify("inbox");
         character.notify_percept("percept");
         character.remember_percept("history");
         assert!(character.inbox().is_empty());

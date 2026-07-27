@@ -419,17 +419,13 @@ fn repair_and_fail(
     ActionError::new(code, message)
 }
 
-fn deliver(world: &mut World, lines: Vec<(ActorId, String)>, percept: bool) {
+fn deliver(world: &mut World, lines: Vec<(ActorId, String)>) {
     for (recipient, text) in lines {
-        let character = world
+        world
             .characters
             .get_mut(&recipient)
-            .expect("recipients come from the world");
-        if percept {
-            character.notify_percept(text);
-        } else {
-            character.notify(text);
-        }
+            .expect("recipients come from the world")
+            .notify_percept(text);
     }
 }
 
@@ -518,7 +514,7 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
                 (recipient.clone(), line)
             })
             .collect();
-        deliver(world, percepts, true);
+        deliver(world, percepts);
         format!(
             "{} -> {}: \"{text}\"",
             world.characters[actor_id].name(),
@@ -540,7 +536,7 @@ fn say(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
                 )
             })
             .collect();
-        deliver(world, percepts, true);
+        deliver(world, percepts);
         format!("{} (aloud): \"{text}\"", world.characters[actor_id].name())
     };
 
@@ -641,7 +637,7 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
             "{} withdrew the offered {old_noun} (id {item_id})",
             cap_first(&identify_ids(world, &old_target, actor_id))
         );
-        deliver(world, vec![(old_target.clone(), line)], false);
+        deliver(world, vec![(old_target.clone(), line)]);
         world_event(
             world,
             "retract_offer",
@@ -669,7 +665,7 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
                 (observer.clone(), line)
             })
             .collect();
-        deliver(world, lines, false);
+        deliver(world, lines);
         format!(
             "{} offers the {offered_noun} to {}",
             world.characters[actor_id].name(),
@@ -688,7 +684,7 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
                 )
             })
             .collect();
-        deliver(world, lines, false);
+        deliver(world, lines);
         format!(
             "{} offers the {offered_noun} to anyone nearby",
             world.characters[actor_id].name()
@@ -831,7 +827,7 @@ fn accept_offered_item(
             (observer.clone(), line)
         })
         .collect();
-    deliver(world, lines, false);
+    deliver(world, lines);
     world_event(
         world,
         "accept_offered_item",
@@ -938,7 +934,7 @@ fn decline_offer(
             (observer.clone(), line)
         })
         .collect();
-    deliver(world, lines, false);
+    deliver(world, lines);
     world_event(
         world,
         "decline_offer",
@@ -1004,7 +1000,7 @@ fn retract_offer(
             "{} withdrew the offered {withdrawn_noun} (id {item_id})",
             cap_first(&identify_ids(world, target_id, actor_id))
         );
-        deliver(world, vec![(target_id.clone(), line)], false);
+        deliver(world, vec![(target_id.clone(), line)]);
         recipients.push(target_id.clone());
     }
     // target_id is reported even when the target was never notified or is gone.
@@ -1094,7 +1090,6 @@ pub fn lapse_distant_offers(world: &mut World) -> Vec<ItemId> {
                 (giver_id.clone(), giver_line),
                 (target_id.clone(), target_line),
             ],
-            false,
         );
         // Both parties, and nobody else: at this distance there is no bystander
         // who can see them both, so there is no third party to tell.
@@ -1190,7 +1185,7 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
             (observer.clone(), format!("{eater} {past} {eaten_phrase}"))
         })
         .collect();
-    deliver(world, lines, false);
+    deliver(world, lines);
     world_event(world, "eat", actor_id, None, Some(item_id), 1, hearers);
     world.touch_public_state();
     world.assert_invariants();
@@ -1318,7 +1313,7 @@ fn deliver_pocket_percept(
             (observer.clone(), format!("{who} {what}"))
         })
         .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
     (hearers, plain_sight)
 }
 
@@ -1677,7 +1672,7 @@ fn spit(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, A
             (observer.clone(), line)
         })
         .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
     let own = format!(
         "You spat {phrase} at {}.",
         identify_ids(world, actor_id, &target_id)
@@ -1877,7 +1872,7 @@ fn raise_ward_notice_for(
         .into_iter()
         .map(|carrier| (carrier, format!("word in the ward: {line}")))
         .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
 }
 
 /// Queue what the gut is working on (`extra_pockets.md` M3): `None` is a meal
@@ -2046,7 +2041,7 @@ fn gesture(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String
             )
         })
         .collect();
-    deliver(world, percepts, true);
+    deliver(world, percepts);
 
     // Only a looper (`dance`) sets snapshot state; every other kind ends a
     // running loop — the same rule `dispatch` enforces for the other verbs.
@@ -2634,7 +2629,7 @@ fn tell_way(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Strin
         .state
         .places_known
         .insert(place_id);
-    deliver(world, vec![(target_id.clone(), told)], true);
+    deliver(world, vec![(target_id.clone(), told)]);
     world
         .characters
         .get_mut(actor_id)
@@ -2746,7 +2741,7 @@ fn raise_notice(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<S
         .iter()
         .map(|carrier| (carrier.clone(), format!("word in the ward: {line}")))
         .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
     world
         .characters
         .get_mut(actor_id)
@@ -2921,7 +2916,7 @@ fn summon(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String,
         ));
     }
     let recipients: Vec<ActorId> = lines.iter().map(|(id, _)| id.clone()).collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
     world
         .characters
         .get_mut(actor_id)
@@ -3157,7 +3152,7 @@ pub(crate) fn take_into_charge(
             (witness.clone(), line)
         })
         .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
     world_event(
         world,
         "seize",
@@ -3294,7 +3289,7 @@ fn release(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String
             (witness.clone(), line)
         })
         .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
     world
         .characters
         .get_mut(actor_id)
@@ -3441,7 +3436,7 @@ pub(crate) fn announce_struggle(
             (witness.clone(), line)
         })
         .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
     // `HeldFast` is not news to anyone but the room: the hands are where they
     // were, so nobody is owed a turn to decide anything about it.
     if moment != StruggleMoment::HeldFast {
@@ -3489,7 +3484,7 @@ pub(crate) fn announce_grip(
             (witness.clone(), line)
         })
         .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
     world_event(
         world,
         if taken { "grab" } else { "let_go" },
@@ -3557,7 +3552,7 @@ pub(crate) fn raise_escape_notice(
         .into_iter()
         .map(|carrier| (carrier, format!("word in the ward: {line}")))
         .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
     Some(notice_id)
 }
 
@@ -3576,7 +3571,7 @@ fn announce_settled(
         .iter()
         .map(|carrier| (carrier.clone(), settled_line.clone()))
         .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
     carriers
 }
 
@@ -3609,7 +3604,7 @@ fn offer_restitution(world: &mut World, giver_id: &ActorId, acceptor_id: &ActorI
                 )
             })
             .collect();
-    deliver(world, lines, true);
+    deliver(world, lines);
 }
 
 #[cfg(test)]
