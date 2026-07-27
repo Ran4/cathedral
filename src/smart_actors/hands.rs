@@ -648,7 +648,7 @@ pub(crate) fn hold_the_seized(
 
 /// The grip point on one body: just below the shoulder joint, in world space.
 fn upper_arm_of(position: Vec3) -> Vec3 {
-    position + Vec3::Y * (body::SHOULDER_Y - GRIP_BELOW_SHOULDER_M)
+    position + Vec3::Y * (body::SHOULDER_ROOT_Y - GRIP_BELOW_SHOULDER_M)
 }
 
 /// Where a body actually is this frame, from its own (parentless) root
@@ -1181,7 +1181,8 @@ mod tests {
             prisoner: ActorId("thief".into()),
         });
         app.update();
-        let arm = Vec3::new(1.0, 0.91 + body::SHOULDER_Y - GRIP_BELOW_SHOULDER_M, 0.0);
+        let arm =
+            Vec3::new(1.0, 0.91, 0.0) + Vec3::Y * (body::SHOULDER_ROOT_Y - GRIP_BELOW_SHOULDER_M);
         assert_eq!(
             grip_of(&mut app, "ashe"),
             Some(arm),

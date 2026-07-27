@@ -29,8 +29,9 @@ use cathedral_sim::{StatusKind, WeatherKind};
 use crate::controller::{PlayerController, TeleportPlayer};
 use crate::session_log;
 use crate::smart_actors::SmartActorRuntime;
+use crate::smart_actors::actors::ActorView;
 use crate::smart_actors::bridge::{BridgeCommand, BridgeHandle};
-use crate::smart_actors::model::Position;
+use crate::smart_actors::model::{ActorId, Position};
 use crate::soundscape::{BellPattern, SoundscapeCue};
 
 pub const DRIVE_ENV: &str = "CATHEDRAL_DRIVE";
@@ -80,6 +81,37 @@ impl DrivePlugin {
             timeout: Duration::from_secs_f64(timeout),
         })
     }
+}
+
+/// Default stand-off for `frame`: close enough that a body fills the frame,
+/// far enough that the whole silhouette (headgear to feet) is in it.
+const FRAME_DEFAULT_DISTANCE_M: f32 = 2.6;
+/// Camera height above the actor's root for `frame` — roughly chest/chin, so
+/// the shot is level rather than looking down on the crown.
+const FRAME_EYE_HEIGHT_M: f32 = 0.52;
+/// What the framed camera aims at, above the actor root: the sternum, which
+/// puts head and feet symmetrically in frame.
+const FRAME_LOOK_AT_HEIGHT_M: f32 = 0.30;
+
+/// Where to stand to photograph `actor`, and how to aim.
+///
+/// The camera is placed on a bearing measured from the actor's own facing
+/// (0° = in front of them, looking back at their face), so a script can walk
+/// around a body without knowing which way it happens to be turned. Returns
+/// `(position, yaw_degrees, pitch_degrees)` in the `tp` convention: yaw 0 looks
+/// toward −Z, positive pitch looks up.
+fn frame_view(actor: &Transform, distance: f32, bearing_degrees: f32) -> (Vec3, f32, f32) {
+    let facing = actor.rotation * Vec3::NEG_Z;
+    let bearing = Quat::from_rotation_y(bearing_degrees.to_radians());
+    let mut away = bearing * facing;
+    away.y = 0.0;
+    let away = away.normalize_or(Vec3::Z);
+    let position = actor.translation + away * distance + Vec3::Y * FRAME_EYE_HEIGHT_M;
+    let target = actor.translation + Vec3::Y * FRAME_LOOK_AT_HEIGHT_M;
+    let look = target - position;
+    let yaw = (-look.x).atan2(-look.z);
+    let pitch = look.y.atan2(look.xz().length());
+    (position, yaw.to_degrees(), pitch.to_degrees())
 }
 
 /// Stdout is the documented evidence trail; the session `logs.jsonl` gets the
@@ -194,6 +226,18 @@ enum Action {
         yaw_degrees: f32,
         pitch_degrees: f32,
     },
+    /// Frame a named actor for a portrait shot: stand off their *front* by
+    /// `distance` metres at eye height and look back at them. The handle is a
+    /// case-insensitive substring of the display name or the actor id; the
+    /// bearing offsets the camera around them (0° dead ahead, 90° to their
+    /// left, 180° behind), so one script can capture a body from every side.
+    /// The stand-in for a model viewer the game does not have — actors walk,
+    /// so a fixed `tp` cannot hold a body in shot.
+    Frame {
+        handle: String,
+        distance: f32,
+        bearing_degrees: f32,
+    },
     Quit,
 }
 
@@ -238,6 +282,11 @@ impl Action {
                 "tp {} {} {} {yaw_degrees} {pitch_degrees}",
                 position.x, position.y, position.z
             ),
+            Self::Frame {
+                handle,
+                distance,
+                bearing_degrees,
+            } => format!("frame {handle} {distance} {bearing_degrees}"),
             Self::Quit => "quit".into(),
         }
     }
@@ -346,6 +395,7 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
                 )),
             }
         }
+        "frame" => parse_frame(argument, statement),
         "wait-online" if argument.is_empty() => Ok(Action::WaitOnline),
         "quit" if argument.is_empty() => Ok(Action::Quit),
         "wait-online" | "quit" => Err(format!("`{verb}` takes no argument, got `{statement}`")),
@@ -411,6 +461,40 @@ fn parse_bell(argument: &str, statement: &str) -> Result<Action, String> {
         return Err(format!("too many arguments in `{statement}`"));
     }
     Ok(Action::Bell(pattern))
+}
+
+/// `frame <name-or-id> [distance [bearing_deg]]`. The handle may contain
+/// spaces, so the optional trailing numbers are peeled off the end — a token
+/// only counts as one if it parses as a number, which keeps a name like
+/// `Maren Smallvoice` whole.
+fn parse_frame(argument: &str, statement: &str) -> Result<Action, String> {
+    let mut tokens: Vec<&str> = argument.split_whitespace().collect();
+    let mut numbers: Vec<f32> = Vec::new();
+    while numbers.len() < 2 && tokens.len() > 1 {
+        match tokens[tokens.len() - 1].parse::<f32>() {
+            Ok(number) if number.is_finite() => {
+                numbers.insert(0, number);
+                tokens.pop();
+            }
+            _ => break,
+        }
+    }
+    if tokens.is_empty() {
+        return Err(format!(
+            "`frame` needs `<name-or-id> [distance [bearing_deg]]`, e.g. `frame Ilse 2.5`, got `{statement}`"
+        ));
+    }
+    let distance = numbers.first().copied().unwrap_or(FRAME_DEFAULT_DISTANCE_M);
+    if !(0.2..=200.0).contains(&distance) {
+        return Err(format!(
+            "`frame` distance `{distance}` must be 0.2..=200 m in `{statement}`"
+        ));
+    }
+    Ok(Action::Frame {
+        handle: tokens.join(" "),
+        distance,
+        bearing_degrees: numbers.get(1).copied().unwrap_or(0.0),
+    })
 }
 
 /// `status <name-or-id> <kind> <value>` (`features/npc_bodies.md` §8). The
@@ -534,6 +618,11 @@ enum Directive {
         yaw_degrees: f32,
         pitch_degrees: f32,
     },
+    Frame {
+        handle: String,
+        distance: f32,
+        bearing_degrees: f32,
+    },
     Quit,
 }
 
@@ -653,6 +742,15 @@ impl Scheduler {
                 yaw_degrees,
                 pitch_degrees,
             }),
+            Action::Frame {
+                handle,
+                distance,
+                bearing_degrees,
+            } => Some(Directive::Frame {
+                handle,
+                distance,
+                bearing_degrees,
+            }),
             Action::Quit => {
                 self.finished = true;
                 Some(Directive::Quit)
@@ -702,6 +800,7 @@ fn run_drive_script(
     runtime: Option<Res<SmartActorRuntime>>,
     bridge: Option<Res<BridgeHandle>>,
     players: Query<&GlobalTransform, With<PlayerController>>,
+    actors: Query<(&Name, &ActorId, &Transform), With<ActorView>>,
     mut interactions: Query<(&Name, &mut Interaction)>,
     mut teleports: MessageWriter<TeleportPlayer>,
     mut cues: MessageWriter<SoundscapeCue>,
@@ -910,6 +1009,32 @@ fn run_drive_script(
                 fly: true,
             });
         }
+        Some(Directive::Frame {
+            handle,
+            distance,
+            bearing_degrees,
+        }) => {
+            let needle = handle.to_lowercase();
+            let found = actors.iter().find(|(name, actor_id, _)| {
+                name.as_str().to_lowercase().contains(&needle)
+                    || actor_id.0.to_lowercase() == needle
+            });
+            match found {
+                Some((_, _, actor)) => {
+                    let (position, yaw_degrees, pitch_degrees) =
+                        frame_view(actor, distance, bearing_degrees);
+                    teleports.write(TeleportPlayer {
+                        position,
+                        yaw_degrees,
+                        pitch_degrees,
+                        fly: true,
+                    });
+                }
+                None => drive_log(&format!(
+                    "[drive] {now:.1}s warning: no actor named like `{handle}`"
+                )),
+            }
+        }
         Some(Directive::Quit) => {
             exit.write(AppExit::Success);
         }
@@ -918,6 +1043,8 @@ fn run_drive_script(
 
 #[cfg(test)]
 mod tests {
+    use std::f32::consts::FRAC_PI_2;
+
     use super::*;
 
     #[test]
@@ -951,6 +1078,63 @@ mod tests {
             ])
         );
         assert!(parse_script("type").is_err());
+    }
+
+    #[test]
+    fn frame_peels_optional_numbers_off_a_multi_word_name() {
+        assert_eq!(
+            parse_script("frame Maren Smallvoice"),
+            Ok(vec![Action::Frame {
+                handle: "Maren Smallvoice".into(),
+                distance: FRAME_DEFAULT_DISTANCE_M,
+                bearing_degrees: 0.0,
+            }])
+        );
+        assert_eq!(
+            parse_script("frame Maren Smallvoice 3"),
+            Ok(vec![Action::Frame {
+                handle: "Maren Smallvoice".into(),
+                distance: 3.0,
+                bearing_degrees: 0.0,
+            }])
+        );
+        assert_eq!(
+            parse_script("frame Ilse 2.5 90"),
+            Ok(vec![Action::Frame {
+                handle: "Ilse".into(),
+                distance: 2.5,
+                bearing_degrees: 90.0,
+            }])
+        );
+        assert!(parse_script("frame").is_err());
+        assert!(parse_script("frame Ilse 900").is_err());
+    }
+
+    #[test]
+    fn frame_stands_in_front_of_the_actor_and_looks_back() {
+        // An actor at the origin facing +X (yaw 0 faces −Z, so −90° turns to +X).
+        let actor = Transform::from_xyz(0.0, 0.91, 0.0)
+            .with_rotation(Quat::from_rotation_y(-FRAC_PI_2));
+        let (position, yaw, pitch) = frame_view(&actor, 3.0, 0.0);
+
+        // Dead ahead of them: 3 m along their facing, at eye height.
+        assert!((position.x - 3.0).abs() < 1e-4, "{position:?}");
+        assert!(position.z.abs() < 1e-4, "{position:?}");
+        assert!((position.y - (0.91 + FRAME_EYE_HEIGHT_M)).abs() < 1e-4);
+
+        // Looking back at them: the camera's forward points −X.
+        let forward = Quat::from_rotation_y(yaw.to_radians())
+            * Quat::from_rotation_x(pitch.to_radians())
+            * Vec3::NEG_Z;
+        let to_actor = (actor.translation + Vec3::Y * FRAME_LOOK_AT_HEIGHT_M) - position;
+        assert!(
+            forward.dot(to_actor.normalize()) > 0.9999,
+            "forward {forward:?} vs {to_actor:?}"
+        );
+
+        // A 180° bearing photographs the same body from behind.
+        let (behind, _, _) = frame_view(&actor, 3.0, 180.0);
+        assert!((behind.x + 3.0).abs() < 1e-4, "{behind:?}");
     }
 
     #[test]

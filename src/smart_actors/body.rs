@@ -28,7 +28,7 @@ use std::time::Instant;
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::visibility::VisibilityRange;
 use bevy::image::{ImageAddressMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor};
-use bevy::mesh::{Indices, Mesh, MeshBuilder, PrimitiveTopology, VertexAttributeValues};
+use bevy::mesh::{Indices, Mesh, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
 use cathedral_sim::{
     AppearanceSnapshot, Build, Headgear, MOVEMENT_TICK_SECONDS, OutfitClass, SETTLED_SPEED_MPS,
@@ -42,57 +42,87 @@ use super::model::{ActorId, MovementInbox, WorldMirror};
 
 // ---------------------------------------------------------------------------
 // Proportions. All root-local metres; the root sits on the sim walk plane
-// (`WALK_Y` = 0.91 above ground), so ground is y = −0.91 and the head top ends
-// at ≈ +0.92 (≈ 1.83 m tall), matching the retired capsule's silhouette.
+// (`WALK_Y` = 0.91 above ground), so ground is [`GROUND_Y`] = −0.91 and the
+// head top ends at ≈ +0.80 (≈ 1.71 m tall) — the silhouette height the
+// retired capsule had, so doors, bridges and streets keep their scale.
+//
+// The skeleton is laid out from human proportions for a 1.71 m figure rather
+// than by eye: hip joint at 0.53 of stature, shoulder joint 0.82, elbow 0.63,
+// wrist 0.48, knee 0.285, ankle 0.045. Each constant below is that height
+// minus the 0.91 m root, which is why almost none of them are round.
 // ---------------------------------------------------------------------------
 
-const PELVIS_SIZE: Vec3 = Vec3::new(0.30, 0.19, 0.20);
-const TORSO_JOINT_Y: f32 = 0.05;
-const TORSO_HEIGHT: f32 = 0.52;
-/// Torso cross-sections are ellipses; depth = width × this squash.
-const TORSO_DEPTH_RATIO: f32 = 0.62;
+/// Ground level, root-local. The soles are authored to land exactly here, so
+/// a standing puppet never floats or sinks.
+const GROUND_Y: f32 = -0.91;
+
+/// Pelvis: authored root-local (its joint transform is the identity), from the
+/// crotch up to the waist, where the torso takes over.
+const PELVIS_CROTCH_Y: f32 = -0.125;
+const PELVIS_WAIST_Y: f32 = 0.125;
+
+/// Waist joint, in the pelvis: where the torso pivots. The iliac crest sits at
+/// 0.60 of stature, i.e. 0.12 above a root that is itself at the hip joint.
+const TORSO_JOINT_Y: f32 = 0.12;
+/// Waist → collar rim, torso-local. Stops below the chin on purpose: a torso
+/// that runs up to the jaw is what made the old puppet read as a sack with a
+/// head balanced on it.
+const TORSO_HEIGHT: f32 = 0.435;
+/// Shoulder (glenohumeral) joint, torso-local. Its X is the half-span between
+/// the two arm sockets, not the outer shoulder width — the deltoid swells
+/// past it to the ≈0.45 m shoulder breadth of a 1.71 m figure.
+const SHOULDER_X: f32 = 0.160;
+const SHOULDER_Y: f32 = 0.345;
 /// Neck pivot (torso-local): the head nods around this, not its centre.
-const NECK_JOINT_Y: f32 = 0.47;
+const NECK_JOINT_Y: f32 = 0.445;
 /// Head centre above the neck pivot (baked into the head mesh).
-const HEAD_CENTER_ABOVE_NECK: f32 = 0.16;
-const HEAD_RADIUS: f32 = 0.24;
-/// The head mesh and its headgear are authored at natural scale, then the head
-/// joint renders them at [`HEAD_SCALE`]. The retired capsule sized the head at
-/// its full [`HEAD_RADIUS`], which reads as an oversized ball; halving it about
-/// the neck pivot shrinks the mesh, the face and any headgear together and
-/// seats the smaller head down onto the shoulders (M6 npc_bodies follow-up).
-const HEAD_SCALE: f32 = 0.5;
-/// Raise the whole head joint (mesh, face, headgear and its nod pivot together)
-/// this far above the neck so the halved head sits a touch higher on the neck.
-const HEAD_LIFT: f32 = 0.06;
-const SHOULDER_X: f32 = 0.265;
-/// Also read by `hands.rs`, which aims a custody grip just below this joint —
-/// the upper arm is a body landmark, not a number the hands may invent.
-pub(super) const SHOULDER_Y: f32 = 0.44;
-const UPPER_ARM_RADIUS: f32 = 0.062;
-const UPPER_ARM_LENGTH: f32 = 0.26;
-const ELBOW_Y: f32 = -0.31;
-const FOREARM_RADIUS: f32 = 0.052;
-const FOREARM_LENGTH: f32 = 0.235;
-const HAND_ANCHOR_Y: f32 = -0.27;
-const HIP_X: f32 = 0.095;
-const HIP_Y: f32 = -0.09;
-const THIGH_RADIUS: f32 = 0.075;
-const THIGH_LENGTH: f32 = 0.34;
-const KNEE_Y: f32 = -0.42;
-const SHIN_RADIUS: f32 = 0.058;
-const SHIN_LENGTH: f32 = 0.34;
+const HEAD_CENTER_ABOVE_NECK: f32 = 0.119;
+/// The head ovoid's three half-axes: narrow across, deeper front-to-back,
+/// tallest of all. (A sphere reads as a ball; these are a skull.) Sized from
+/// head breadth 0.152 m / length 0.195 m / height 0.224 m at this stature.
+const HEAD_HALF_WIDTH: f32 = 0.077;
+const HEAD_HALF_DEPTH: f32 = 0.096;
+const HEAD_HALF_HEIGHT: f32 = 0.112;
+
+const UPPER_ARM_LENGTH: f32 = 0.30;
+/// Elbow, upper-arm-local.
+const ELBOW_Y: f32 = -UPPER_ARM_LENGTH;
+const FOREARM_LENGTH: f32 = 0.26;
+/// Wrist, forearm-local: where the hand mesh is seated.
+const WRIST_Y: f32 = -FOREARM_LENGTH;
+/// The prop grip, forearm-local — a little past the wrist so a carried loaf
+/// sits in the fingers rather than on the cuff.
+const HAND_ANCHOR_Y: f32 = -0.30;
+
+const HIP_X: f32 = 0.093;
+const HIP_Y: f32 = -0.02;
+const THIGH_LENGTH: f32 = 0.42;
+/// Knee, thigh-local.
+const KNEE_Y: f32 = -THIGH_LENGTH;
+const SHIN_LENGTH: f32 = 0.39;
+/// Ankle, shin-local: where the foot is seated. Sole to ground:
+/// −0.02 − 0.42 − 0.39 = −0.83, and the boot is 0.08 deep.
+const ANKLE_Y: f32 = -SHIN_LENGTH;
+const FOOT_HEIGHT: f32 = -(GROUND_Y - (HIP_Y + KNEE_Y + ANKLE_Y));
+
+/// Root-local height of the shoulder joint (the waist joint plus the
+/// torso-local socket). Read by `hands.rs`, which aims a custody grip just
+/// below it — the upper arm is a body landmark, not a number the hands may
+/// invent.
+pub(super) const SHOULDER_ROOT_Y: f32 = TORSO_JOINT_Y + SHOULDER_Y;
 
 /// Neutral standing pose: arms hang with a slight outward tilt and elbow bend,
 /// thighs splay a touch so the feet stand a little apart.
 const ARM_HANG_TILT_RAD: f32 = 0.10;
-const ELBOW_BEND_RAD: f32 = 0.28;
-const THIGH_SPLAY_RAD: f32 = 0.03;
+const ELBOW_BEND_RAD: f32 = 0.16;
+const THIGH_SPLAY_RAD: f32 = 0.025;
 
 /// Physical metres one outfit-cloth texture tile covers. Part UVs are scaled
 /// by their physical size over this so the weave reads consistently at body
-/// scale across torso, limbs and pelvis.
-const CLOTH_TILE_M: f32 = 0.85;
+/// scale across torso, limbs and pelvis. The artwork is a macro photograph of
+/// cloth, so the span has to be small enough that a thread reads as a thread
+/// and not as sacking rope.
+const CLOTH_TILE_M: f32 = 0.35;
 
 /// The face image spans the front hemisphere: its frame edge lands this many
 /// radians away from the front pole (−Z) of the head sphere.
@@ -105,6 +135,64 @@ const FACE_UV_RHO_MAX: f32 = 1.8;
 
 const OUTFIT_TINT_BAND: usize = 4;
 const FACE_COUNT: usize = 24;
+
+/// Hose are dyed separately from the tunic they are worn under, so the legs
+/// get their own small tint band over the same class weave. This is the single
+/// cheapest thing that stops a crowd reading as people in one-piece sacks: a
+/// tunic over contrasting hose, cinched at the belt, above dark shoes *is* the
+/// medieval silhouette, and it is legible from across a square.
+const HOSE_TINT_BAND: usize = 4;
+const HOSE_TINTS: [[f32; 3]; HOSE_TINT_BAND] = [
+    [0.52, 0.46, 0.39], // shadowed wool
+    [0.41, 0.44, 0.51], // slate
+    [0.60, 0.48, 0.32], // tan
+    [0.38, 0.41, 0.36], // moss
+];
+
+/// Skin tone of each painted face, sampled from the portrait's forehead,
+/// cheeks and chin by `scripts/generate_npc_surface_maps.py`. The neck and
+/// hands are untextured geometry, so they take their colour from here and
+/// match whichever face the actor drew — a mismatched hand is the single most
+/// obvious tell that a body is assembled from parts.
+const FACE_SKIN_TONES: [[f32; 3]; FACE_COUNT] = [
+    [0.567, 0.451, 0.312],
+    [0.524, 0.417, 0.308],
+    [0.684, 0.558, 0.402],
+    [0.645, 0.508, 0.344],
+    [0.539, 0.414, 0.284],
+    [0.661, 0.513, 0.347],
+    [0.652, 0.535, 0.392],
+    [0.727, 0.580, 0.427],
+    [0.644, 0.518, 0.364],
+    [0.621, 0.492, 0.358],
+    [0.663, 0.512, 0.373],
+    [0.691, 0.543, 0.369],
+    [0.664, 0.490, 0.308],
+    [0.656, 0.524, 0.331],
+    [0.707, 0.539, 0.372],
+    [0.667, 0.534, 0.375],
+    [0.645, 0.522, 0.369],
+    [0.547, 0.433, 0.306],
+    [0.633, 0.450, 0.320],
+    [0.590, 0.482, 0.353],
+    [0.683, 0.568, 0.413],
+    [0.655, 0.492, 0.319],
+    [0.588, 0.471, 0.338],
+    [0.425, 0.337, 0.229],
+];
+
+/// Hair colours, in the engraving's muted register. Uncovered heads used to
+/// read bald from behind (the clamped face texture paints the whole rear cap
+/// in flat skin); a hair shell fixes that and gives the crowd another cheap
+/// axis of variety.
+const HAIR_COLORS: [[f32; 3]; 6] = [
+    [0.062, 0.052, 0.046], // black
+    [0.118, 0.084, 0.058], // dark brown
+    [0.198, 0.136, 0.084], // brown
+    [0.268, 0.160, 0.086], // auburn
+    [0.352, 0.288, 0.216], // ash blond
+    [0.402, 0.388, 0.362], // grey
+];
 
 // ---------------------------------------------------------------------------
 // Components
@@ -142,6 +230,13 @@ pub(super) fn crowd_fade() -> VisibilityRange {
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ActorFace(pub(crate) ActorId);
 
+/// Marks a cloth part that wears the separately-dyed hose rather than the
+/// tunic. It still carries [`ActorOutfit`] — the hose is derived from the
+/// appearance, so an appearance swap must repaint it — and this only tells
+/// reconcile which of the two materials to resolve.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct HosePart;
+
 /// All part entities of one puppet, stored on the actor root so pose systems
 /// (M1+) never walk the hierarchy by name.
 #[derive(Component, Debug)]
@@ -172,22 +267,38 @@ pub struct BodyRig {
 pub(crate) struct BodyAssets {
     pelvis_mesh: Handle<Mesh>,
     torso_mesh: Handle<Mesh>,
+    neck_mesh: Handle<Mesh>,
     head_mesh: Handle<Mesh>,
+    hair_mesh: Handle<Mesh>,
     upper_arm_mesh: Handle<Mesh>,
     forearm_mesh: Handle<Mesh>,
+    left_hand_mesh: Handle<Mesh>,
+    right_hand_mesh: Handle<Mesh>,
     thigh_mesh: Handle<Mesh>,
     shin_mesh: Handle<Mesh>,
+    foot_mesh: Handle<Mesh>,
+    belt_mesh: Handle<Mesh>,
+    mantle_mesh: Handle<Mesh>,
+    /// One per [`GarmentCut`]: robe, tunic, short tunic.
+    skirt_meshes: [Handle<Mesh>; 3],
     hood_mesh: Handle<Mesh>,
     coif_mesh: Handle<Mesh>,
     brim_mesh: Handle<Mesh>,
     kettle_helm_mesh: Handle<Mesh>,
     /// `[class][tint]` — 7 textured cloth bands × the quantized tint band.
     outfits: [[Handle<StandardMaterial>; OUTFIT_TINT_BAND]; 7],
+    /// The same weaves dyed for the legs, on their own tint band.
+    hose: [[Handle<StandardMaterial>; HOSE_TINT_BAND]; 7],
     /// The named majors' legacy colors as tints over their class texture.
     sven_outfit: Handle<StandardMaterial>,
     conny_outfit: Handle<StandardMaterial>,
     ilse_outfit: Handle<StandardMaterial>,
     faces: Vec<Handle<StandardMaterial>>,
+    /// One flat skin material per face, tinted to that portrait's tone, for
+    /// the neck and hands.
+    skins: Vec<Handle<StandardMaterial>>,
+    hair: Vec<Handle<StandardMaterial>>,
+    leather_material: Handle<StandardMaterial>,
     hood_material: Handle<StandardMaterial>,
     coif_material: Handle<StandardMaterial>,
     felt_material: Handle<StandardMaterial>,
@@ -215,6 +326,40 @@ impl BodyAssets {
         appearance: &AppearanceSnapshot,
     ) -> Handle<StandardMaterial> {
         self.faces[face_index(appearance.palette_seed)].clone()
+    }
+
+    /// The bare-skin material matching this appearance's face — neck, hands.
+    fn skin_material(&self, appearance: &AppearanceSnapshot) -> Handle<StandardMaterial> {
+        self.skins[face_index(appearance.palette_seed)].clone()
+    }
+
+    /// The hose material for this appearance's legs.
+    pub(crate) fn hose_material(
+        &self,
+        appearance: &AppearanceSnapshot,
+    ) -> Handle<StandardMaterial> {
+        self.hose[class_index(appearance.outfit)][hose_index(appearance.palette_seed)].clone()
+    }
+
+    /// Mesh + material for this appearance's hair, or `None` when the
+    /// headgear covers the scalp anyway (a hood, a coif, a helm) — the shell
+    /// would only ever be geometry inside a hat.
+    fn hair_visual(
+        &self,
+        appearance: &AppearanceSnapshot,
+    ) -> Option<(Handle<Mesh>, Handle<StandardMaterial>)> {
+        match appearance.headgear {
+            Headgear::None | Headgear::Brim => Some((
+                self.hair_mesh.clone(),
+                self.hair[hair_index(appearance.palette_seed)].clone(),
+            )),
+            Headgear::Hood | Headgear::Coif | Headgear::KettleHelm => None,
+        }
+    }
+
+    /// The skirt mesh for this appearance's garment cut.
+    fn skirt_mesh(&self, appearance: &AppearanceSnapshot) -> Handle<Mesh> {
+        self.skirt_meshes[garment_index(appearance.outfit)].clone()
     }
 
     /// Mesh + material of the appearance's headgear, if any. The hood wears
@@ -260,6 +405,46 @@ fn face_index(palette_seed: u32) -> usize {
     (palette_seed.wrapping_mul(0x9E37_79B1) >> 8) as usize % FACE_COUNT
 }
 
+/// Deterministic hair pick, on a third rehash so hair, face and tint vary
+/// independently across the crowd.
+fn hair_index(palette_seed: u32) -> usize {
+    (palette_seed.wrapping_mul(0x85EB_CA6B) >> 13) as usize % HAIR_COLORS.len()
+}
+
+/// Deterministic hose pick, on a fourth rehash — a tunic tint and a hose dye
+/// have nothing to do with each other, and correlating them would put the
+/// whole crowd in matching suits.
+fn hose_index(palette_seed: u32) -> usize {
+    (palette_seed.wrapping_mul(0xC2B2_AE35) >> 19) as usize % HOSE_TINT_BAND
+}
+
+/// Which classes work with their sleeves pushed up. Bare forearms are a class
+/// cue at conversational range that costs nothing — the skin material is
+/// already loaded for the hands.
+fn bares_forearms(class: OutfitClass) -> bool {
+    matches!(class, OutfitClass::Laborer | OutfitClass::Craftsman)
+}
+
+/// Which garment cut an outfit class wears. The robe is the vestment/rank
+/// silhouette, the short tunic is cut to work in, and everything between is
+/// the city's ordinary tunic — occupation legible at 30 m from the outline
+/// alone (§1's readability target), before palette or headgear.
+fn garment_index(class: OutfitClass) -> usize {
+    match class {
+        OutfitClass::Cleric | OutfitClass::Notable => 0,
+        OutfitClass::Merchant | OutfitClass::Craftsman | OutfitClass::Watch | OutfitClass::Poor => 1,
+        OutfitClass::Laborer => 2,
+    }
+}
+
+/// The three cuts, indexed by [`garment_index`].
+const GARMENT_CUTS: [GarmentCut; 3] = [ROBE, TUNIC, SHORT_TUNIC];
+
+/// A mantle over the shoulders marks the two classes that wear rank.
+fn wears_mantle(class: OutfitClass) -> bool {
+    matches!(class, OutfitClass::Cleric | OutfitClass::Notable)
+}
+
 /// Builds the bounded mesh/material set shared by all actor puppets.
 pub(crate) fn setup_body_assets(
     mut commands: Commands,
@@ -267,11 +452,16 @@ pub(crate) fn setup_body_assets(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let cloth = |texture: Handle<Image>, tint: Color| StandardMaterial {
+    // Cloth carries a normal map derived from its own weave
+    // (`scripts/generate_npc_surface_maps.py`): sunlight then rakes across the
+    // fabric instead of sliding over a flat decal, which is most of what
+    // separates a clothed body from a painted box at conversational range.
+    let cloth = |texture: Handle<Image>, normal: Handle<Image>, tint: Color| StandardMaterial {
         base_color: tint,
         base_color_texture: Some(texture),
+        normal_map_texture: Some(normal),
         perceptual_roughness: 0.88,
-        reflectance: 0.28,
+        reflectance: 0.24,
         ..default()
     };
     // Subtle multipliers over the already-muted cloth artwork: as-authored,
@@ -291,12 +481,42 @@ pub(crate) fn setup_body_assets(
         "textures/npc/outfit_notable.png",
         "textures/npc/outfit_poor.png",
     ];
+    const OUTFIT_NORMALS: [&str; 7] = [
+        "textures/npc/outfit_cleric_normal.png",
+        "textures/npc/outfit_merchant_normal.png",
+        "textures/npc/outfit_craftsman_normal.png",
+        "textures/npc/outfit_laborer_normal.png",
+        "textures/npc/outfit_watch_normal.png",
+        "textures/npc/outfit_notable_normal.png",
+        "textures/npc/outfit_poor_normal.png",
+    ];
     let textures: Vec<Handle<Image>> = OUTFIT_TEXTURES
         .iter()
         .map(|path| load_repeating_texture(&asset_server, path))
         .collect();
+    // Normal maps must not be colour-managed — they carry vectors, not sRGB.
+    let normals: Vec<Handle<Image>> = OUTFIT_NORMALS
+        .iter()
+        .map(|path| load_linear_repeating_texture(&asset_server, path))
+        .collect();
     let outfits = std::array::from_fn(|class| {
-        std::array::from_fn(|tint| materials.add(cloth(textures[class].clone(), tint_band[tint])))
+        std::array::from_fn(|tint| {
+            materials.add(cloth(
+                textures[class].clone(),
+                normals[class].clone(),
+                tint_band[tint],
+            ))
+        })
+    });
+    let hose = std::array::from_fn(|class| {
+        std::array::from_fn(|tint| {
+            let [r, g, b] = HOSE_TINTS[tint];
+            materials.add(cloth(
+                textures[class].clone(),
+                normals[class].clone(),
+                Color::srgb(r, g, b),
+            ))
+        })
     });
 
     // The majors keep their legacy colors as tints over their composed class
@@ -314,18 +534,19 @@ pub(crate) fn setup_body_assets(
             (linear.blue * scale).min(1.0),
         )
     };
-    let sven_outfit = materials.add(cloth(
-        textures[class_index(OutfitClass::Craftsman)].clone(),
-        lift(Color::srgb(0.19, 0.28, 0.36)),
-    ));
-    let conny_outfit = materials.add(cloth(
-        textures[class_index(OutfitClass::Merchant)].clone(),
-        lift(Color::srgb(0.16, 0.42, 0.49)),
-    ));
-    let ilse_outfit = materials.add(cloth(
-        textures[class_index(OutfitClass::Cleric)].clone(),
-        lift(Color::srgb(0.50, 0.24, 0.18)),
-    ));
+    let bespoke = |class: OutfitClass, color: Color| {
+        let index = class_index(class);
+        cloth(
+            textures[index].clone(),
+            normals[index].clone(),
+            lift(color),
+        )
+    };
+    let sven_outfit =
+        materials.add(bespoke(OutfitClass::Craftsman, Color::srgb(0.19, 0.28, 0.36)));
+    let conny_outfit =
+        materials.add(bespoke(OutfitClass::Merchant, Color::srgb(0.16, 0.42, 0.49)));
+    let ilse_outfit = materials.add(bespoke(OutfitClass::Cleric, Color::srgb(0.50, 0.24, 0.18)));
 
     // Painted faces, clamp-to-edge: the head mesh sends everything outside the
     // front hemisphere past [0,1], where the sampler holds the image's uniform
@@ -345,6 +566,35 @@ pub(crate) fn setup_body_assets(
         })
         .collect();
 
+    // Bare skin for the neck and hands, one tone per face so they always
+    // match the portrait the actor drew. Darkened a little against the
+    // sampled tone: the portrait is a *painted* surface carrying its own
+    // shading, while these are flat albedo taking the sun full on, so
+    // matching the numbers exactly makes a neck glow next to its own face.
+    const SKIN_SHADE: f32 = 0.84;
+    let skins = FACE_SKIN_TONES
+        .iter()
+        .map(|[r, g, b]| {
+            materials.add(StandardMaterial {
+                base_color: Color::srgb(r * SKIN_SHADE, g * SKIN_SHADE, b * SKIN_SHADE),
+                perceptual_roughness: 0.70,
+                reflectance: 0.22,
+                ..default()
+            })
+        })
+        .collect();
+    let hair = HAIR_COLORS
+        .iter()
+        .map(|[r, g, b]| {
+            materials.add(StandardMaterial {
+                base_color: Color::srgb(*r, *g, *b),
+                perceptual_roughness: 0.80,
+                reflectance: 0.20,
+                ..default()
+            })
+        })
+        .collect();
+
     // Open shells (caps, brims) need both faces drawn.
     let shell = |color: Color, roughness: f32, metallic: f32| StandardMaterial {
         base_color: color,
@@ -358,24 +608,41 @@ pub(crate) fn setup_body_assets(
     commands.insert_resource(BodyAssets {
         pelvis_mesh: meshes.add(pelvis_mesh()),
         torso_mesh: meshes.add(torso_mesh()),
+        neck_mesh: meshes.add(neck_mesh()),
         head_mesh: meshes.add(head_mesh()),
-        upper_arm_mesh: meshes.add(limb_mesh(UPPER_ARM_RADIUS, UPPER_ARM_LENGTH)),
-        forearm_mesh: meshes.add(limb_mesh(FOREARM_RADIUS, FOREARM_LENGTH)),
-        thigh_mesh: meshes.add(limb_mesh(THIGH_RADIUS, THIGH_LENGTH)),
-        shin_mesh: meshes.add(limb_mesh(SHIN_RADIUS, SHIN_LENGTH)),
+        hair_mesh: meshes.add(hair_mesh()),
+        upper_arm_mesh: meshes.add(upper_arm_mesh()),
+        forearm_mesh: meshes.add(forearm_mesh()),
+        left_hand_mesh: meshes.add(hand_mesh(BodySide::Left)),
+        right_hand_mesh: meshes.add(hand_mesh(BodySide::Right)),
+        thigh_mesh: meshes.add(thigh_mesh()),
+        shin_mesh: meshes.add(shin_mesh()),
+        foot_mesh: meshes.add(foot_mesh()),
+        belt_mesh: meshes.add(belt_mesh()),
+        mantle_mesh: meshes.add(mantle_mesh()),
+        skirt_meshes: GARMENT_CUTS.map(|cut| meshes.add(skirt_mesh(cut))),
         hood_mesh: meshes.add(hood_mesh()),
         coif_mesh: meshes.add(coif_mesh()),
         brim_mesh: meshes.add(brim_mesh()),
         kettle_helm_mesh: meshes.add(kettle_helm_mesh()),
         outfits,
+        hose,
         sven_outfit,
         conny_outfit,
         ilse_outfit,
         faces,
+        skins,
+        hair,
+        leather_material: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.20, 0.145, 0.100),
+            perceptual_roughness: 0.62,
+            reflectance: 0.34,
+            ..default()
+        }),
         hood_material: materials.add(shell(Color::srgb(0.30, 0.27, 0.24), 0.92, 0.0)),
         coif_material: materials.add(shell(Color::srgb(0.78, 0.74, 0.66), 0.90, 0.0)),
         felt_material: materials.add(shell(Color::srgb(0.16, 0.15, 0.14), 0.85, 0.0)),
-        iron_material: materials.add(shell(Color::srgb(0.42, 0.44, 0.47), 0.45, 0.55)),
+        iron_material: materials.add(shell(Color::srgb(0.33, 0.335, 0.345), 0.52, 0.32)),
     });
 }
 
@@ -385,6 +652,26 @@ fn load_clamped_texture(asset_server: &AssetServer, path: String) -> Handle<Imag
         .with_settings(|settings: &mut ImageLoaderSettings| {
             let mut sampler = ImageSamplerDescriptor::linear();
             sampler.set_address_mode(ImageAddressMode::ClampToEdge);
+            settings.sampler = ImageSampler::Descriptor(sampler);
+        })
+        .load(path)
+}
+
+/// Like [`load_repeating_texture`], but without sRGB decoding: a normal map's
+/// channels are a vector, and colour-managing them tilts every lighting
+/// calculation on the cloth.
+fn load_linear_repeating_texture(
+    asset_server: &AssetServer,
+    path: &'static str,
+) -> Handle<Image> {
+    asset_server
+        .load_builder()
+        .with_settings(|settings: &mut ImageLoaderSettings| {
+            settings.is_srgb = false;
+            let mut sampler = ImageSamplerDescriptor::linear();
+            sampler
+                .set_address_mode(ImageAddressMode::Repeat)
+                .set_anisotropic_filter(8);
             settings.sampler = ImageSampler::Descriptor(sampler);
         })
         .load(path)
@@ -458,8 +745,7 @@ fn rest_pose(scales: &BuildScales) -> RestPose {
             scales.height,
             scales.shoulder / scales.hip,
         )),
-        head: Transform::from_xyz(0.0, NECK_JOINT_Y + HEAD_LIFT, 0.0)
-            .with_scale(Vec3::splat(HEAD_SCALE)),
+        head: Transform::from_xyz(0.0, NECK_JOINT_Y, 0.0),
         left_upper_arm: arm(-1.0),
         right_upper_arm: arm(1.0),
         left_forearm: forearm,
@@ -474,8 +760,15 @@ fn rest_pose(scales: &BuildScales) -> RestPose {
 /// Spawns the full part hierarchy under `root` and returns the rig map.
 ///
 /// The caller (actors.rs) owns the root and its anchors; this owns everything
-/// below. Every mesh part carries the cloned `VisibilityRange` fade and cloth
-/// parts carry [`ActorOutfit`] so the reconcile hot-swap reaches them all.
+/// below. Every mesh part carries the cloned `VisibilityRange` fade, and the
+/// parts whose colour is derived from the appearance carry [`ActorOutfit`] so
+/// the reconcile hot-swap reaches them — the legs additionally [`HosePart`],
+/// which sends reconcile to the hose material instead. Skin, hair and leather
+/// carry neither: a hot-swap must not repaint a hand.
+///
+/// Everything *structural* is spawn-time — headgear, hair, the garment cut, the
+/// mantle, whether the forearms are sleeved — because an appearance never
+/// restructures after creation today (same rule the M0 rig shipped under).
 /// The root also grows a [`BodyPoseState`] so [`animate_body_pose`] can drive
 /// the parts.
 pub(super) fn spawn_body(
@@ -490,13 +783,41 @@ pub(super) fn spawn_body(
     let rest = rest_pose(&scales);
     let outfit = assets.outfit_material(appearance);
     let face = assets.face_material(appearance);
+    let skin = assets.skin_material(appearance);
 
-    let cloth_part = |name: &'static str, mesh: &Handle<Mesh>, transform: Transform| {
+    let hose = assets.hose_material(appearance);
+    let dressed_part = |name: &'static str,
+                        mesh: &Handle<Mesh>,
+                        material: &Handle<StandardMaterial>,
+                        transform: Transform| {
         (
             Name::new(name),
             ActorOutfit(actor_id.clone()),
             Mesh3d(mesh.clone()),
-            MeshMaterial3d(outfit.clone()),
+            MeshMaterial3d(material.clone()),
+            transform,
+            fade.clone(),
+        )
+    };
+    let cloth_part = |name: &'static str, mesh: &Handle<Mesh>, transform: Transform| {
+        dressed_part(name, mesh, &outfit, transform)
+    };
+    // Legs wear the separately-dyed hose, and reconcile has to know that: a
+    // `HosePart` still carries `ActorOutfit` (it is outfit-derived, so an
+    // appearance swap must repaint it) but resolves to a different material.
+    let hose_part = |name: &'static str, mesh: &Handle<Mesh>, transform: Transform| {
+        (dressed_part(name, mesh, &hose, transform), HosePart)
+    };
+    // Skin, leather and hair are not outfit-tinted, so they carry no
+    // `ActorOutfit` — an appearance hot-swap must not repaint a hand.
+    let fixed_part = |name: &'static str,
+                      mesh: &Handle<Mesh>,
+                      material: &Handle<StandardMaterial>,
+                      transform: Transform| {
+        (
+            Name::new(name),
+            Mesh3d(mesh.clone()),
+            MeshMaterial3d(material.clone()),
             transform,
             fade.clone(),
         )
@@ -508,12 +829,40 @@ pub(super) fn spawn_body(
             ChildOf(root),
         ))
         .id();
+    // The garment hangs off the hips, not the ribs, so it rides the pelvis.
+    commands.spawn((
+        cloth_part(
+            "Body skirt",
+            &assets.skirt_mesh(appearance),
+            Transform::IDENTITY,
+        ),
+        ChildOf(pelvis),
+    ));
+    commands.spawn((
+        fixed_part(
+            "Body belt",
+            &assets.belt_mesh,
+            &assets.leather_material,
+            Transform::IDENTITY,
+        ),
+        ChildOf(pelvis),
+    ));
     let torso = commands
         .spawn((
             cloth_part("Body torso", &assets.torso_mesh, rest.torso),
             ChildOf(pelvis),
         ))
         .id();
+    if wears_mantle(appearance.outfit) {
+        commands.spawn((
+            cloth_part("Body mantle", &assets.mantle_mesh, Transform::IDENTITY),
+            ChildOf(torso),
+        ));
+    }
+    commands.spawn((
+        fixed_part("Body neck", &assets.neck_mesh, &skin, Transform::IDENTITY),
+        ChildOf(torso),
+    ));
     let head = commands
         .spawn((
             Name::new("Body head"),
@@ -525,6 +874,12 @@ pub(super) fn spawn_body(
             ChildOf(torso),
         ))
         .id();
+    if let Some((mesh, material)) = assets.hair_visual(appearance) {
+        commands.spawn((
+            fixed_part("Body hair", &mesh, &material, Transform::IDENTITY),
+            ChildOf(head),
+        ));
+    }
     let headgear = assets
         .headgear_visual(appearance)
         .map(|(mesh, material)| {
@@ -561,12 +916,35 @@ pub(super) fn spawn_body(
                 ChildOf(torso),
             ))
             .id();
-        let forearm = commands
-            .spawn((
-                cloth_part(fore_name, &assets.forearm_mesh, fore_rest),
-                ChildOf(upper),
-            ))
-            .id();
+        // Sleeves pushed up for the trades: the forearm is skin, not cloth.
+        let forearm = if bares_forearms(appearance.outfit) {
+            commands
+                .spawn((
+                    fixed_part(fore_name, &assets.forearm_mesh, &skin, fore_rest),
+                    ChildOf(upper),
+                ))
+                .id()
+        } else {
+            commands
+                .spawn((
+                    cloth_part(fore_name, &assets.forearm_mesh, fore_rest),
+                    ChildOf(upper),
+                ))
+                .id()
+        };
+        let (hand_mesh, hand_name) = match side {
+            BodySide::Left => (&assets.left_hand_mesh, "Left hand"),
+            BodySide::Right => (&assets.right_hand_mesh, "Right hand"),
+        };
+        commands.spawn((
+            fixed_part(
+                hand_name,
+                hand_mesh,
+                &skin,
+                Transform::from_xyz(0.0, WRIST_Y, 0.0),
+            ),
+            ChildOf(forearm),
+        ));
         let hand = commands
             .spawn((
                 Name::new(match side {
@@ -599,16 +977,28 @@ pub(super) fn spawn_body(
         };
         let thigh = commands
             .spawn((
-                cloth_part(thigh_name, &assets.thigh_mesh, thigh_rest),
+                hose_part(thigh_name, &assets.thigh_mesh, thigh_rest),
                 ChildOf(pelvis),
             ))
             .id();
         let shin = commands
             .spawn((
-                cloth_part(shin_name, &assets.shin_mesh, shin_rest),
+                hose_part(shin_name, &assets.shin_mesh, shin_rest),
                 ChildOf(thigh),
             ))
             .id();
+        commands.spawn((
+            fixed_part(
+                match side {
+                    BodySide::Left => "Left foot",
+                    BodySide::Right => "Right foot",
+                },
+                &assets.foot_mesh,
+                &assets.leather_material,
+                Transform::from_xyz(0.0, ANKLE_Y, 0.0),
+            ),
+            ChildOf(shin),
+        ));
         (thigh, shin)
     };
     let (left_thigh, left_shin) = leg(BodySide::Left);
@@ -634,6 +1024,98 @@ pub(super) fn spawn_body(
         left_hand,
         right_hand,
     }
+}
+
+// ---------------------------------------------------------------------------
+// The body lineup (dev only)
+// ---------------------------------------------------------------------------
+
+/// Set `CATHEDRAL_BODY_LINEUP=1` to stand a rank of puppets on the western
+/// approach, one per (outfit class × build), for eyeballing the model itself.
+pub const BODY_LINEUP_ENV: &str = "CATHEDRAL_BODY_LINEUP";
+/// Where the rank stands: on the open paving north of the player spawn
+/// (`PLAYER_SPAWN` = (0, 0.91, 95)), so a `tp 0 1.5 <z> 180` looks straight
+/// down it. Root y matches the sim's walk plane so the feet land on the ground.
+const LINEUP_CENTER: Vec3 = Vec3::new(0.0, 0.91, 100.0);
+const LINEUP_SPACING_M: f32 = 1.25;
+
+/// A fixed cast of appearances covering every outfit class, both builds and
+/// every headgear — the comparison rig for body work.
+///
+/// These puppets carry no [`ActorView`], so reconcile never sees them and the
+/// pose pipeline never animates them: they hold the authored rest pose, which
+/// is exactly what a model review wants. Nothing about them reaches the sim.
+fn lineup_cast() -> Vec<AppearanceSnapshot> {
+    const CLASSES: [OutfitClass; 7] = [
+        OutfitClass::Cleric,
+        OutfitClass::Merchant,
+        OutfitClass::Craftsman,
+        OutfitClass::Laborer,
+        OutfitClass::Watch,
+        OutfitClass::Notable,
+        OutfitClass::Poor,
+    ];
+    const HEADGEAR: [Headgear; 5] = [
+        Headgear::Hood,
+        Headgear::None,
+        Headgear::Brim,
+        Headgear::None,
+        Headgear::KettleHelm,
+    ];
+    let mut cast = Vec::new();
+    for (index, class) in CLASSES.into_iter().enumerate() {
+        for (build_index, build) in [Build::Female, Build::Male].into_iter().enumerate() {
+            cast.push(AppearanceSnapshot {
+                build,
+                outfit: class,
+                headgear: if index == 0 && build_index == 1 {
+                    Headgear::Coif
+                } else {
+                    HEADGEAR[(index * 2 + build_index) % HEADGEAR.len()]
+                },
+                // Spread over the tint band and the face set deterministically.
+                palette_seed: (index as u32 * 2 + build_index as u32)
+                    .wrapping_mul(0x27D4_EB2D)
+                    .wrapping_add(0x1234_5678),
+                bespoke: None,
+            });
+        }
+    }
+    cast
+}
+
+/// Spawns the lineup when its env var is set; a no-op otherwise (and always in
+/// a normal run, so there is zero cost or behavior change without the flag).
+pub(crate) fn spawn_body_lineup(mut commands: Commands, assets: Option<Res<BodyAssets>>) {
+    let Some(assets) = assets else {
+        return;
+    };
+    if std::env::var(BODY_LINEUP_ENV).is_err() {
+        return;
+    }
+    let cast = lineup_cast();
+    let fade = crowd_fade();
+    let span = (cast.len() as f32 - 1.0) * LINEUP_SPACING_M;
+    for (index, appearance) in cast.iter().enumerate() {
+        let x = LINEUP_CENTER.x - span * 0.5 + index as f32 * LINEUP_SPACING_M;
+        let actor_id = ActorId(format!("lineup{index:02}"));
+        let root = commands
+            .spawn((
+                Name::new(format!("Body lineup {index:02}: {:?}", appearance.outfit)),
+                Transform::from_xyz(x, LINEUP_CENTER.y, LINEUP_CENTER.z),
+                Visibility::default(),
+            ))
+            .id();
+        let rig = spawn_body(&mut commands, root, &assets, &actor_id, appearance, &fade);
+        commands.entity(root).insert(rig);
+    }
+    info!(
+        "[body lineup] {} puppets at ({}, {}) — tp 0 1.5 {} 180 to view",
+        cast.len(),
+        LINEUP_CENTER.x,
+        LINEUP_CENTER.z,
+        LINEUP_CENTER.z - 4.0
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -2367,42 +2849,202 @@ pub(crate) fn animate_body_pose(
 
 // ---------------------------------------------------------------------------
 // Mesh builders
+//
+// Every part is a *loft*: a stack of cross-sections revolved into a surface.
+// That single primitive is what separates a body from a pile of sausages — a
+// calf can swell and taper to an ankle, a torso can have a waist and a
+// shoulder line, a boot can be a rounded box with a flat sole, and a garment
+// can be a closed tube of cloth with a visible hem. Capsules and cuboids can
+// do none of that.
 // ---------------------------------------------------------------------------
 
-/// Scales every UV so the cloth weave tiles at a consistent physical size.
-fn scale_uvs(mesh: &mut Mesh, scale: Vec2) {
-    if let Some(VertexAttributeValues::Float32x2(uvs)) = mesh.attribute_mut(Mesh::ATTRIBUTE_UV_0) {
-        for uv in uvs.iter_mut() {
-            uv[0] *= scale.x;
-            uv[1] *= scale.y;
+/// Sector counts. Limbs are seen in silhouette more than in the round, so they
+/// get fewer; the head and the garments carry the read and get more.
+const LIMB_SECTORS: usize = 12;
+const TORSO_SECTORS: usize = 20;
+const GARMENT_SECTORS: usize = 22;
+const HEAD_SECTORS: usize = 26;
+const HEAD_STACKS: usize = 20;
+
+/// One cross-section of a lofted part: a superellipse of `half_width` (x) by
+/// `half_depth` (z), centred `offset_x`/`offset_z` off the part's axis, at
+/// height `y`.
+///
+/// `roundness` is the superellipse exponent — 2 is a plain ellipse (limbs,
+/// necks), 3–4 squares the section off toward a rounded box (a boot, a chest,
+/// a hand). Rings are authored in the part's own local frame, with the origin
+/// at the joint the part rotates around, so pose systems can rotate the part
+/// transform in place (the invariant the whole rig depends on).
+#[derive(Debug, Clone, Copy)]
+struct Ring {
+    y: f32,
+    half_width: f32,
+    half_depth: f32,
+    offset_x: f32,
+    offset_z: f32,
+    roundness: f32,
+}
+
+impl Ring {
+    const fn new(y: f32, half_width: f32, half_depth: f32) -> Self {
+        Self {
+            y,
+            half_width,
+            half_depth,
+            offset_x: 0.0,
+            offset_z: 0.0,
+            roundness: 2.0,
         }
+    }
+
+    /// Shift this section off the part axis — how a foot leans forward over
+    /// its ankle, or a chest sits proud of the spine.
+    const fn at(mut self, offset_x: f32, offset_z: f32) -> Self {
+        self.offset_x = offset_x;
+        self.offset_z = offset_z;
+        self
+    }
+
+    /// Square the section off toward a rounded box.
+    const fn boxy(mut self, roundness: f32) -> Self {
+        self.roundness = roundness;
+        self
+    }
+
+    /// Mean radius — used for UV scaling and for the profile arc length.
+    fn mean_radius(&self) -> f32 {
+        (self.half_width + self.half_depth) * 0.5
+    }
+
+    fn point(&self, angle: f32) -> Vec3 {
+        let (sin, cos) = angle.sin_cos();
+        // Superellipse: |x/a|^n + |z/b|^n = 1, parametrised so n = 2 is the
+        // plain ellipse and larger n pushes the corners out toward a box.
+        let shape = |value: f32| value.abs().powf(2.0 / self.roundness) * value.signum();
+        Vec3::new(
+            self.offset_x + self.half_width * shape(cos),
+            self.y,
+            self.offset_z + self.half_depth * shape(sin),
+        )
     }
 }
 
-/// A thin capsule with its origin baked at the top joint (the ball the part
-/// pivots around), hanging down −Y.
-fn limb_mesh(radius: f32, length: f32) -> Mesh {
-    let mut mesh = Capsule3d::new(radius, length)
-        .mesh()
-        .build()
-        .translated_by(Vec3::new(0.0, -length * 0.5, 0.0));
-    scale_uvs(
-        &mut mesh,
-        Vec2::new(
-            TAU * radius / CLOTH_TILE_M,
-            (length + 2.0 * radius) / CLOTH_TILE_M,
-        ),
-    );
-    mesh
+/// Which ends of a loft get a flat cap. Ends buried inside a parent part (a
+/// thigh top inside the pelvis) need none; ends the player can see do.
+#[derive(Debug, Clone, Copy)]
+struct Caps {
+    bottom: bool,
+    top: bool,
 }
 
-fn pelvis_mesh() -> Mesh {
-    let mut mesh = Cuboid::new(PELVIS_SIZE.x, PELVIS_SIZE.y, PELVIS_SIZE.z)
-        .mesh()
-        .build();
-    let span = PELVIS_SIZE.x.max(PELVIS_SIZE.y) / CLOTH_TILE_M;
-    scale_uvs(&mut mesh, Vec2::splat(span));
-    mesh
+impl Caps {
+    const NONE: Self = Self {
+        bottom: false,
+        top: false,
+    };
+    const BOTH: Self = Self {
+        bottom: true,
+        top: true,
+    };
+    const TOP: Self = Self {
+        bottom: false,
+        top: true,
+    };
+    const BOTTOM: Self = Self {
+        bottom: true,
+        top: false,
+    };
+}
+
+/// Revolves `rings` into a smooth-shaded surface.
+///
+/// Normals come from the two surface tangents (around the ring, and along the
+/// profile), which makes them exact for any cross-section and any offset — and
+/// it means a profile that *descends* (the outside of a skirt, traced from the
+/// hem back up to the waist) gets consistently outward normals and consistent
+/// winding without a flag, because both flip together. That is what lets a
+/// garment be one closed tube of cloth — down the inside, round the hem, up
+/// the outside — instead of a one-sided cone that shows its back faces.
+///
+/// UVs run the weave at a physical `tile_m` metres per repeat: `u` around the
+/// ring by arc length, `v` along the profile by arc length.
+fn loft(rings: &[Ring], sectors: usize, caps: Caps, tile_m: f32) -> Mesh {
+    debug_assert!(rings.len() >= 2 && sectors >= 3);
+    let stride = (sectors + 1) as u32;
+    let mut positions: Vec<[f32; 3]> = Vec::new();
+    let mut normals: Vec<[f32; 3]> = Vec::new();
+    let mut uvs: Vec<[f32; 2]> = Vec::new();
+    let mut indices: Vec<u32> = Vec::new();
+
+    // Profile arc length per ring, for a v that never stretches.
+    let mut v = vec![0.0_f32; rings.len()];
+    for index in 1..rings.len() {
+        let (previous, ring) = (rings[index - 1], rings[index]);
+        let along = Vec2::new(
+            ring.mean_radius() - previous.mean_radius(),
+            ring.y - previous.y,
+        );
+        v[index] = v[index - 1] + along.length();
+    }
+    let circumference =
+        TAU * rings.iter().map(Ring::mean_radius).sum::<f32>() / rings.len() as f32;
+
+    let sample = TAU / sectors as f32 * 0.25;
+    for (index, ring) in rings.iter().enumerate() {
+        let previous = rings[index.saturating_sub(1)];
+        let next = rings[(index + 1).min(rings.len() - 1)];
+        for sector in 0..=sectors {
+            let angle = sector as f32 / sectors as f32 * TAU;
+            let position = ring.point(angle);
+            let around = ring.point(angle + sample) - ring.point(angle - sample);
+            let along = next.point(angle) - previous.point(angle);
+            let normal = along.cross(around).normalize_or(Vec3::Y);
+            positions.push(position.to_array());
+            normals.push(normal.to_array());
+            uvs.push([
+                angle / TAU * circumference / tile_m,
+                v[index] / tile_m,
+            ]);
+        }
+    }
+    for ring in 0..rings.len() as u32 - 1 {
+        for sector in 0..sectors as u32 {
+            let a = ring * stride + sector;
+            let (b, c, d) = (a + 1, a + stride, a + stride + 1);
+            indices.extend_from_slice(&[a, c, b, b, c, d]);
+        }
+    }
+
+    for (wants_cap, ring, up) in [
+        (caps.bottom, rings[0], false),
+        (caps.top, rings[rings.len() - 1], true),
+    ] {
+        if !wants_cap {
+            continue;
+        }
+        let normal = [0.0, if up { 1.0 } else { -1.0 }, 0.0];
+        let center = positions.len() as u32;
+        positions.push([ring.offset_x, ring.y, ring.offset_z]);
+        normals.push(normal);
+        uvs.push([0.5, 0.5]);
+        let rim = positions.len() as u32;
+        for sector in 0..=sectors {
+            let angle = sector as f32 / sectors as f32 * TAU;
+            let point = ring.point(angle);
+            positions.push(point.to_array());
+            normals.push(normal);
+            uvs.push([point.x / tile_m, point.z / tile_m]);
+        }
+        for sector in 0..sectors as u32 {
+            let (a, b) = (rim + sector, rim + sector + 1);
+            if up {
+                indices.extend_from_slice(&[center, a, b]);
+            } else {
+                indices.extend_from_slice(&[center, b, a]);
+            }
+        }
+    }
+    mesh_from_parts(positions, normals, uvs, indices)
 }
 
 fn mesh_from_parts(
@@ -2421,174 +3063,321 @@ fn mesh_from_parts(
     .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
 }
 
-/// The tapered torso: an elliptical frustum, origin at the waist (its base),
-/// wider at the shoulders, capped top and bottom.
-fn torso_mesh() -> Mesh {
-    // (fraction of height, half-width). Shoulders round off at the top.
-    const PROFILE: [(f32, f32); 7] = [
-        (0.00, 0.150),
-        (0.15, 0.158),
-        (0.35, 0.175),
-        (0.55, 0.196),
-        (0.75, 0.220),
-        (0.90, 0.235),
-        (1.00, 0.226),
-    ];
-    const SECTORS: usize = 24;
-
-    let mut positions = Vec::new();
-    let mut normals = Vec::new();
-    let mut uvs = Vec::new();
-    let mut indices = Vec::new();
-    let ring_stride = (SECTORS + 1) as u32;
-    let mean_circumference = TAU * 0.19;
-
-    for (ring, (t, rx)) in PROFILE.iter().enumerate() {
-        let y = t * TORSO_HEIGHT;
-        let rz = rx * TORSO_DEPTH_RATIO;
-        // Profile slope for the normal's vertical component.
-        let (prev, next) = (
-            PROFILE[ring.saturating_sub(1)],
-            PROFILE[(ring + 1).min(PROFILE.len() - 1)],
-        );
-        let dy = ((next.0 - prev.0) * TORSO_HEIGHT).max(1e-4);
-        let slope = -(next.1 - prev.1) / dy;
-        for sector in 0..=SECTORS {
-            let a = sector as f32 / SECTORS as f32 * TAU;
-            let (sin, cos) = a.sin_cos();
-            positions.push([rx * cos, y, rz * sin]);
-            // Ellipse outward direction, tilted by the taper slope.
-            let n = Vec3::new(cos * rz, slope * rx.min(rz) * 0.9, sin * rx).normalize();
-            normals.push([n.x, n.y, n.z]);
-            uvs.push([
-                a / TAU * mean_circumference / CLOTH_TILE_M,
-                (TORSO_HEIGHT - y) / CLOTH_TILE_M,
-            ]);
+/// Concatenates meshes into one part (a hand and its thumb, a boot and its
+/// sole). All inputs must carry position/normal/UV and U32 indices, which
+/// everything [`loft`] builds does.
+fn merge_meshes(parts: impl IntoIterator<Item = Mesh>) -> Mesh {
+    let mut positions: Vec<[f32; 3]> = Vec::new();
+    let mut normals: Vec<[f32; 3]> = Vec::new();
+    let mut uvs: Vec<[f32; 2]> = Vec::new();
+    let mut indices: Vec<u32> = Vec::new();
+    for part in parts {
+        let base = positions.len() as u32;
+        let Some(VertexAttributeValues::Float32x3(part_positions)) =
+            part.attribute(Mesh::ATTRIBUTE_POSITION)
+        else {
+            continue;
+        };
+        positions.extend_from_slice(part_positions);
+        if let Some(VertexAttributeValues::Float32x3(part_normals)) =
+            part.attribute(Mesh::ATTRIBUTE_NORMAL)
+        {
+            normals.extend_from_slice(part_normals);
         }
-    }
-    for ring in 0..PROFILE.len() - 1 {
-        let base = ring as u32 * ring_stride;
-        for sector in 0..SECTORS as u32 {
-            let a = base + sector;
-            let b = a + 1;
-            let c = a + ring_stride;
-            let d = b + ring_stride;
-            indices.extend_from_slice(&[a, c, b, b, c, d]);
+        if let Some(VertexAttributeValues::Float32x2(part_uvs)) =
+            part.attribute(Mesh::ATTRIBUTE_UV_0)
+        {
+            uvs.extend_from_slice(part_uvs);
         }
-    }
-    // Caps: a centre fan at each end (the top shoulder plane is visible from
-    // bridges and stairs).
-    for (t, rx, up) in [(0.0_f32, PROFILE[0].1, false), (1.0, PROFILE[6].1, true)] {
-        let y = t * TORSO_HEIGHT;
-        let rz = rx * TORSO_DEPTH_RATIO;
-        let normal = [0.0, if up { 1.0 } else { -1.0 }, 0.0];
-        let center = positions.len() as u32;
-        positions.push([0.0, y, 0.0]);
-        normals.push(normal);
-        uvs.push([0.5, 0.5]);
-        let first_rim = positions.len() as u32;
-        for sector in 0..=SECTORS {
-            let a = sector as f32 / SECTORS as f32 * TAU;
-            let (sin, cos) = a.sin_cos();
-            positions.push([rx * cos, y, rz * sin]);
-            normals.push(normal);
-            uvs.push([
-                (0.5 + cos * 0.5) * rx / CLOTH_TILE_M,
-                (0.5 + sin * 0.5) * rx / CLOTH_TILE_M,
-            ]);
-        }
-        for sector in 0..SECTORS as u32 {
-            let (a, b) = (first_rim + sector, first_rim + sector + 1);
-            if up {
-                indices.extend_from_slice(&[center, a, b]);
-            } else {
-                indices.extend_from_slice(&[center, b, a]);
-            }
+        if let Some(Indices::U32(part_indices)) = part.indices() {
+            indices.extend(part_indices.iter().map(|index| index + base));
         }
     }
     mesh_from_parts(positions, normals, uvs, indices)
 }
 
-/// Azimuthal face projection: maps a unit direction on the head sphere into
-/// the face image. The front pole (−Z) is the image centre; the frame edge
-/// lands [`FACE_EDGE_ANGLE_RAD`] away; everything beyond runs off past [0,1]
-/// where the clamped sampler paints the image's uniform skin-tone border.
+// --- Trunk -----------------------------------------------------------------
+
+/// The pelvis: crotch to waist, flaring over the hip crests. Authored
+/// root-local (its joint transform is the identity apart from the build's hip
+/// scaling). Both ends are buried — the thighs plug the bottom, the torso the
+/// top — so it needs no caps.
+fn pelvis_mesh() -> Mesh {
+    loft(
+        &[
+            Ring::new(PELVIS_CROTCH_Y, 0.104, 0.094).boxy(2.4),
+            Ring::new(-0.055, 0.146, 0.113).boxy(2.6),
+            Ring::new(0.020, 0.157, 0.116).boxy(2.6),
+            Ring::new(PELVIS_WAIST_Y, 0.139, 0.101).boxy(2.4),
+        ],
+        TORSO_SECTORS,
+        Caps::NONE,
+        CLOTH_TILE_M,
+    )
+}
+
+/// The torso: waist, ribcage, shoulder line, and a rim that closes around the
+/// neck. The last two rings matter more than they look — without them the top
+/// of the torso is a flat plate with a head hovering over it, which is exactly
+/// how the old puppet read. Origin at the waist.
+fn torso_mesh() -> Mesh {
+    loft(
+        &[
+            Ring::new(0.000, 0.132, 0.096).boxy(2.4),
+            Ring::new(0.080, 0.148, 0.105).boxy(2.6),
+            Ring::new(0.170, 0.166, 0.113).boxy(2.9),
+            Ring::new(0.250, 0.181, 0.114).boxy(3.2),
+            Ring::new(0.310, 0.190, 0.106).boxy(3.4),
+            // The acromion shelf and the trapezius slope off it. Without
+            // these two the torso pinches straight in above the chest and the
+            // deltoids read as two balls stuck to a sack.
+            Ring::new(0.352, 0.186, 0.096).boxy(3.2),
+            Ring::new(0.392, 0.142, 0.080).boxy(2.6),
+            Ring::new(TORSO_HEIGHT, 0.078, 0.068).boxy(2.2),
+        ],
+        TORSO_SECTORS,
+        Caps::BOTTOM,
+        CLOTH_TILE_M,
+    )
+}
+
+/// The neck — bare skin between the collar rim and the jaw. Static relative to
+/// the torso (the head pivots on top of it), so it is a plain child part.
+/// Origin at the torso's waist, like the torso itself; its base starts inside
+/// the collar so no gap can open at the seam.
+fn neck_mesh() -> Mesh {
+    loft(
+        &[
+            Ring::new(0.340, 0.070, 0.066),
+            Ring::new(0.400, 0.056, 0.053),
+            Ring::new(0.440, 0.051, 0.050),
+            // Stops under the jaw: run it any higher and the column shows in
+            // front of the chin instead of behind it.
+            Ring::new(0.468, 0.049, 0.051),
+        ],
+        LIMB_SECTORS,
+        Caps::NONE,
+        CLOTH_TILE_M,
+    )
+}
+
+// --- Limbs -----------------------------------------------------------------
+
+/// Upper arm: deltoid cap at the shoulder, tapering to the elbow. Origin at
+/// the shoulder joint, hanging down −Y — the pivot convention every part
+/// follows.
+fn upper_arm_mesh() -> Mesh {
+    loft(
+        &[
+            // The top ring stays small so the arm continues the trapezius
+            // slope instead of budding off it: outer edge 0.19 under a torso
+            // that is 0.165 wide there, then 0.215 under a 0.187 chest.
+            Ring::new(0.030, 0.030, 0.030),
+            Ring::new(-0.005, 0.055, 0.054),
+            Ring::new(-0.080, 0.053, 0.052),
+            Ring::new(-0.190, 0.047, 0.046),
+            Ring::new(ELBOW_Y, 0.042, 0.041),
+        ],
+        LIMB_SECTORS,
+        Caps::NONE,
+        CLOTH_TILE_M,
+    )
+}
+
+/// Forearm: the flexor swell below the elbow, tapering hard into the wrist.
+fn forearm_mesh() -> Mesh {
+    loft(
+        &[
+            Ring::new(0.020, 0.043, 0.042),
+            Ring::new(-0.055, 0.047, 0.045),
+            Ring::new(-0.150, 0.037, 0.036),
+            Ring::new(WRIST_Y, 0.029, 0.026),
+        ],
+        LIMB_SECTORS,
+        Caps::NONE,
+        CLOTH_TILE_M,
+    )
+}
+
+/// A hand: flattened palm, a finger block that tapers to the tips, and a thumb
+/// lobe set out to the side. Origin at the wrist, fingers hanging −Y.
+///
+/// `side` only moves the thumb; the rest is symmetric. At three metres the
+/// thumb is what makes a handover read as a hand receiving something rather
+/// than a stump touching it.
+fn hand_mesh(side: BodySide) -> Mesh {
+    let sign = match side {
+        BodySide::Left => -1.0,
+        BodySide::Right => 1.0,
+    };
+    let palm = loft(
+        &[
+            Ring::new(0.006, 0.029, 0.025).boxy(2.6),
+            Ring::new(-0.030, 0.036, 0.025).boxy(3.0),
+            Ring::new(-0.075, 0.040, 0.023).boxy(3.2),
+            Ring::new(-0.120, 0.037, 0.020).boxy(3.0),
+            Ring::new(-0.152, 0.028, 0.015).boxy(2.6),
+            Ring::new(-0.168, 0.015, 0.009),
+        ],
+        LIMB_SECTORS,
+        Caps::NONE,
+        CLOTH_TILE_M,
+    );
+    // The thumb leaves the palm forward and out, so it reads from the front.
+    let thumb = loft(
+        &[
+            Ring::new(0.000, 0.016, 0.015),
+            Ring::new(-0.030, 0.015, 0.014),
+            Ring::new(-0.055, 0.011, 0.010),
+        ],
+        8,
+        Caps::TOP,
+        CLOTH_TILE_M,
+    )
+    .rotated_by(Quat::from_rotation_z(sign * 0.62) * Quat::from_rotation_x(-0.30))
+    .translated_by(Vec3::new(sign * 0.026, -0.026, -0.012));
+    merge_meshes([palm, thumb])
+}
+
+/// Thigh: hip to knee, thickest just below the hip.
+fn thigh_mesh() -> Mesh {
+    loft(
+        &[
+            Ring::new(0.035, 0.081, 0.084),
+            Ring::new(-0.055, 0.088, 0.092),
+            Ring::new(-0.200, 0.076, 0.080),
+            Ring::new(-0.340, 0.062, 0.064),
+            Ring::new(KNEE_Y, 0.055, 0.056),
+        ],
+        LIMB_SECTORS,
+        Caps::NONE,
+        CLOTH_TILE_M,
+    )
+}
+
+/// Shin: the calf swell, then a long taper to the ankle. The calf is the
+/// silhouette cue that a leg is a leg and not a dowel.
+fn shin_mesh() -> Mesh {
+    loft(
+        &[
+            Ring::new(0.020, 0.054, 0.055),
+            Ring::new(-0.065, 0.058, 0.064).at(0.0, -0.004),
+            Ring::new(-0.150, 0.050, 0.053),
+            Ring::new(-0.280, 0.040, 0.040),
+            Ring::new(ANKLE_Y, 0.034, 0.035),
+        ],
+        LIMB_SECTORS,
+        Caps::NONE,
+        CLOTH_TILE_M,
+    )
+}
+
+/// A turnshoe: heel, instep, toe, flat sole. Lofted along its own length and
+/// then laid down, so the cross-sections run across the foot the way a
+/// cobbler's would. Origin at the ankle, sole exactly on [`GROUND_Y`].
+fn foot_mesh() -> Mesh {
+    // Authored with +Y forward (toward the toe) and +Z up, then rotated so +Y
+    // becomes −Z (the facing direction) and +Z becomes up.
+    let sole = -FOOT_HEIGHT;
+    let section = |forward: f32, half_width: f32, top: f32| {
+        Ring::new(forward, half_width, (top - sole) * 0.5)
+            .at(0.0, (top + sole) * 0.5)
+            .boxy(3.4)
+    };
+    loft(
+        &[
+            section(-0.058, 0.030, 0.028),
+            section(-0.028, 0.040, 0.046),
+            section(0.018, 0.045, 0.026),
+            section(0.082, 0.044, 0.000),
+            section(0.136, 0.036, -0.022),
+            section(0.168, 0.019, -0.044),
+        ],
+        LIMB_SECTORS,
+        Caps::BOTH,
+        CLOTH_TILE_M,
+    )
+    .rotated_by(Quat::from_rotation_x(-FRAC_PI_2))
+}
+
+// --- Head ------------------------------------------------------------------
+
+/// Azimuthal face projection: maps a unit direction on the head ovoid into the
+/// face image. The front pole (−Z) is the image centre; the frame edge lands
+/// [`FACE_EDGE_ANGLE_RAD`] away; everything beyond runs off past [0,1] where
+/// the clamped sampler paints the image's uniform skin-tone border.
+///
+/// Deliberately a function of the *undeformed* sphere direction: the head's
+/// features (§ [`head_mesh`]) move vertex positions only, so the portrait
+/// stays registered on the face however the skull is shaped, and the nose
+/// geometry lands under the painted nose.
 fn face_uv(direction: Vec3) -> Vec2 {
     let theta = (-direction.z).clamp(-1.0, 1.0).acos();
     let rho = (theta / FACE_EDGE_ANGLE_RAD).min(FACE_UV_RHO_MAX);
     let phi = direction.y.atan2(direction.x);
-    Vec2::new(
-        0.5 - 0.5 * rho * phi.cos(),
-        0.5 - 0.5 * rho * phi.sin(),
-    )
+    Vec2::new(0.5 - 0.5 * rho * phi.cos(), 0.5 - 0.5 * rho * phi.sin())
 }
 
+/// Where the painted nose sits on the portrait, as an angle below the front
+/// pole: the generated faces are cropped tight and centred, so the nose tip
+/// lands a little under the image centre for all of them.
+const NOSE_POLAR_RAD: f32 = 0.19;
+/// Nose relief, and the angular half-widths of the ridge (narrow across, long
+/// down the face).
+const NOSE_PROJECTION_M: f32 = 0.023;
+const NOSE_SPREAD_X_RAD: f32 = 0.24;
+const NOSE_SPREAD_Y_RAD: f32 = 0.30;
+/// The brow shelf: a wide, shallow ridge that catches the sun and puts the
+/// eyes in shadow.
+const BROW_POLAR_RAD: f32 = -0.30;
+const BROW_PROJECTION_M: f32 = 0.008;
+/// The chin, well below the front pole where the jaw taper has already pulled
+/// the skull in.
+const CHIN_POLAR_RAD: f32 = 0.86;
+const CHIN_PROJECTION_M: f32 = 0.011;
+/// Ears, at the sides just behind the widest point of the skull.
+const EAR_PROJECTION_M: f32 = 0.013;
+
 /// A sphere reads as a ball, not a head, so the ovoid is shaped on four axes:
-/// taller than it is wide, tapered below the cheeks to a chin, its crown rounded
-/// a touch narrower than the temples, and — the cue that sells it in profile —
-/// the face plane (−Z) flattened while the occiput (+Z) fills out behind. The
-/// width tapers all sit below the head centre, where no headgear rides, so hats
-/// and hoods keep their authored fit.
-const HEAD_VERTICAL_STRETCH: f32 = 1.18;
-const HEAD_JAW_TAPER: f32 = 0.40;
-const HEAD_CROWN_TAPER: f32 = 0.07;
-const HEAD_FACE_FLATTEN: f32 = 0.90;
-const HEAD_OCCIPUT_BULGE: f32 = 1.08;
+/// tapered below the cheeks to a chin, its crown a touch narrower than the
+/// temples, the face plane flattened and the occiput filled out behind. The
+/// width tapers all sit below the head centre, where no headgear rides, so
+/// hats and hoods keep their authored fit.
+const HEAD_JAW_TAPER: f32 = 0.21;
+const HEAD_CROWN_TAPER: f32 = 0.08;
+const HEAD_FACE_FLATTEN: f32 = 0.94;
+const HEAD_OCCIPUT_BULGE: f32 = 1.05;
 
-/// The head — an ovoid with the painted face planar-projected onto its front
-/// (−Z) hemisphere. Origin at the neck joint; the shape is centred
-/// [`HEAD_CENTER_ABOVE_NECK`] above it so the head pivots at the neck. Only the
-/// vertex *positions* are shaped (see [`HEAD_VERTICAL_STRETCH`] &c.); face UVs
-/// come from the unit `direction`, so the projection (and its orientation
-/// contract) is independent of the shape. Normals are recomputed from the
-/// shaped geometry rather than derived analytically, so the multi-axis warp
-/// still shades smoothly.
+/// The head: a shaped ovoid with the painted face projected onto its front
+/// hemisphere and real relief for the nose, brow, chin and ears.
+///
+/// Origin at the neck joint; the shape is centred [`HEAD_CENTER_ABOVE_NECK`]
+/// above it so the head pivots at the neck. Only vertex *positions* are
+/// shaped — face UVs come from the unit `direction`, so the projection (and
+/// its orientation contract) is independent of the shape, and the relief lands
+/// under the painted feature rather than beside it. Normals are recomputed
+/// from the shaped geometry so the warp still shades smoothly.
 fn head_mesh() -> Mesh {
-    const SECTORS: usize = 24;
-    const STACKS: usize = 16;
-
     let mut positions = Vec::new();
     let mut uvs = Vec::new();
     let mut indices = Vec::new();
 
-    for stack in 0..=STACKS {
-        let polar = stack as f32 / STACKS as f32 * PI;
+    for stack in 0..=HEAD_STACKS {
+        let polar = stack as f32 / HEAD_STACKS as f32 * PI;
         let (ring_r, y) = (polar.sin(), polar.cos());
-        for sector in 0..=SECTORS {
-            let a = sector as f32 / SECTORS as f32 * TAU;
-            let direction = Vec3::new(ring_r * a.cos(), y, ring_r * a.sin());
-            // Jaw taper: full width through the cranium (y ≥ 0), narrowing over
-            // the lower head (smoothstep in −y) to a chin; the crown rounds off
-            // a little narrower than the temples above the centre.
-            let below = (-direction.y).clamp(0.0, 1.0);
-            let jaw = 1.0 - HEAD_JAW_TAPER * below * below * (3.0 - 2.0 * below);
-            let above = direction.y.clamp(0.0, 1.0);
-            let crown = 1.0 - HEAD_CROWN_TAPER * above * above;
-            let width = jaw * crown;
-            // Depth: the face plane (−Z) sits flatter, the occiput (+Z) fuller,
-            // so the silhouette reads as a head and not a globe.
-            let front = (-direction.z).clamp(0.0, 1.0);
-            let back = direction.z.clamp(0.0, 1.0);
-            let depth = width
-                * (1.0 - (1.0 - HEAD_FACE_FLATTEN) * front + (HEAD_OCCIPUT_BULGE - 1.0) * back);
-            let shaped = Vec3::new(
-                direction.x * width,
-                direction.y * HEAD_VERTICAL_STRETCH,
-                direction.z * depth,
-            );
-            let position = shaped * HEAD_RADIUS + Vec3::Y * HEAD_CENTER_ABOVE_NECK;
-            positions.push([position.x, position.y, position.z]);
+        for sector in 0..=HEAD_SECTORS {
+            let angle = sector as f32 / HEAD_SECTORS as f32 * TAU;
+            let direction = Vec3::new(ring_r * angle.cos(), y, ring_r * angle.sin());
+            positions.push(head_point(direction).to_array());
             let uv = face_uv(direction);
             uvs.push([uv.x, uv.y]);
         }
     }
-    let stride = (SECTORS + 1) as u32;
-    for stack in 0..STACKS as u32 {
-        for sector in 0..SECTORS as u32 {
+    let stride = (HEAD_SECTORS + 1) as u32;
+    for stack in 0..HEAD_STACKS as u32 {
+        for sector in 0..HEAD_SECTORS as u32 {
             let a = stack * stride + sector;
-            let b = a + 1;
-            let c = a + stride;
-            let d = c + 1;
+            let (b, c, d) = (a + 1, a + stride, a + stride + 1);
             indices.extend_from_slice(&[a, b, c, b, d, c]);
         }
     }
@@ -2599,9 +3388,139 @@ fn head_mesh() -> Mesh {
         .with_computed_smooth_normals()
 }
 
+/// The skull surface for a unit sphere `direction`, head-local (origin at the
+/// neck joint). Shared with the hair shell so the two can never drift apart.
+fn head_point(direction: Vec3) -> Vec3 {
+    // Jaw taper: full width through the cranium, narrowing over the lower head
+    // to a chin; the crown rounds off a little narrower than the temples.
+    let below = (-direction.y).clamp(0.0, 1.0);
+    let jaw = 1.0 - HEAD_JAW_TAPER * below * below * (3.0 - 2.0 * below);
+    let above = direction.y.clamp(0.0, 1.0);
+    let crown = 1.0 - HEAD_CROWN_TAPER * above * above;
+    let width = jaw * crown;
+    // Depth: the face plane (−Z) sits flatter, the occiput (+Z) fuller.
+    let front = (-direction.z).clamp(0.0, 1.0);
+    let back = direction.z.clamp(0.0, 1.0);
+    let depth =
+        width * (1.0 - (1.0 - HEAD_FACE_FLATTEN) * front + (HEAD_OCCIPUT_BULGE - 1.0) * back);
+    let mut point = Vec3::new(
+        direction.x * width * HEAD_HALF_WIDTH,
+        direction.y * HEAD_HALF_HEIGHT,
+        direction.z * depth * HEAD_HALF_DEPTH,
+    );
+
+    // Features, as displacements along −Z (out of the face) and ±X (ears).
+    // Each is an angular lobe around a point on the face, so it lands on the
+    // painted feature and fades out smoothly instead of creasing.
+    let facing = (-direction.z).clamp(-1.0, 1.0).acos();
+    if facing < 1.4 {
+        // Angular offsets from the front pole, in the portrait's frame.
+        let across = direction.x.atan2(-direction.z);
+        let down = -direction.y.atan2((direction.x * direction.x + direction.z * direction.z).sqrt());
+        let lobe = |dx: f32, dy: f32, sx: f32, sy: f32| {
+            (-(dx * dx) / (sx * sx) - (dy * dy) / (sy * sy)).exp()
+        };
+        let nose = lobe(
+            across,
+            down - NOSE_POLAR_RAD,
+            NOSE_SPREAD_X_RAD,
+            NOSE_SPREAD_Y_RAD,
+        );
+        let brow = lobe(across, down - BROW_POLAR_RAD, 0.62, 0.13);
+        let chin = lobe(across, down - CHIN_POLAR_RAD, 0.40, 0.22);
+        point.z -= NOSE_PROJECTION_M * nose
+            + BROW_PROJECTION_M * brow
+            + CHIN_PROJECTION_M * chin;
+    }
+    // Ears: lobes on both flanks, level with the eyes and set back a little.
+    let side = direction.x.abs();
+    let ear = (-((side - 0.97).powi(2)) / 0.0016
+        - (direction.y - 0.02).powi(2) / 0.030
+        - (direction.z - 0.16).powi(2) / 0.055)
+        .exp();
+    point.x += EAR_PROJECTION_M * ear * direction.x.signum();
+
+    point + Vec3::Y * HEAD_CENTER_ABOVE_NECK
+}
+
+/// Hair: a shell hugging the skull, cut to a hairline that rides high over the
+/// brow, drops past the ears and covers the nape. Origin at the neck joint,
+/// like the head it sits on.
+///
+/// Solves the documented "uncovered heads read bald from behind" hole: the
+/// face texture clamps to flat skin over the whole rear cap, and the answer is
+/// to put hair there rather than to paint the back of 24 portraits.
+fn hair_mesh() -> Mesh {
+    /// Hair volume at the crown; it thins to nothing at the rim so the
+    /// hairline is an edge in the shading rather than a shelf sticking out.
+    const THICKNESS: f32 = 0.013;
+    /// Minimum stand-off, so the shell never z-fights the scalp.
+    const LIFT: f32 = 0.003;
+    /// Amplitude of the wave that keeps the shell from shading like a helmet.
+    const WAVE_M: f32 = 0.0035;
+    const STACKS: usize = 16;
+
+    let mut positions = Vec::new();
+    let mut uvs = Vec::new();
+    let mut indices = Vec::new();
+
+    // The hairline, as the polar angle from the crown where the shell stops:
+    // it stops above the brow at the face (≈62°), passes over the ears at the
+    // flanks (≈88°) and covers the nape well below the equator behind (≈122°).
+    // Any lower at the front and it reads as a bathing cap, not hair.
+    let hairline = |angle: f32| {
+        let front = -angle.sin(); // 1 at the face (−Z), −1 at the nape
+        let base = 1.54 - 0.46 * front.max(0.0) + 0.59 * (-front).max(0.0);
+        // A clean arc across the forehead reads as the brim of a cap; a few
+        // low harmonics make it a hairline.
+        base * (1.0 + 0.055 * (angle * 3.0 + 1.1).cos() + 0.028 * (angle * 7.0).cos())
+    };
+
+    for stack in 0..=STACKS {
+        let t = stack as f32 / STACKS as f32;
+        // Full thickness over the crown, tapering out over the last quarter.
+        let volume = LIFT + THICKNESS * (1.0 - t).min(0.25) / 0.25;
+        for sector in 0..=HEAD_SECTORS {
+            let angle = sector as f32 / HEAD_SECTORS as f32 * TAU;
+            let polar = t * hairline(angle);
+            let (sin, cos) = polar.sin_cos();
+            let direction = Vec3::new(sin * angle.cos(), cos, sin * angle.sin());
+            let scalp = head_point(direction);
+            let outward = (scalp - Vec3::Y * HEAD_CENTER_ABOVE_NECK).normalize_or(Vec3::Y);
+            // A shallow wave around the head and down it — a perfectly smooth
+            // shell shades like a helmet, and this is the cheapest thing that
+            // makes the highlight break up like hair instead.
+            let wave = WAVE_M
+                * (angle * 5.0).cos()
+                * (t * PI).sin()
+                * (0.6 + 0.4 * (polar * 4.0).cos());
+            positions.push((scalp + outward * (volume + wave)).to_array());
+            uvs.push([angle / TAU, t]);
+        }
+    }
+    let stride = (HEAD_SECTORS + 1) as u32;
+    for stack in 0..STACKS as u32 {
+        for sector in 0..HEAD_SECTORS as u32 {
+            let a = stack * stride + sector;
+            let (b, c, d) = (a + 1, a + stride, a + stride + 1);
+            indices.extend_from_slice(&[a, b, c, b, d, c]);
+        }
+    }
+    // Normals from the waved geometry, not from the sphere it started as —
+    // the wave only reads if the shading follows it.
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+        .with_inserted_indices(Indices::U32(indices))
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs)
+        .with_computed_smooth_normals()
+}
+
+// --- Headgear --------------------------------------------------------------
+
 /// A surface of revolution around +Y from a `(radius, y)` profile, with the
 /// rim optionally sheared downward toward the back (+Z) so a hood can cover
-/// the nape while leaving the face open. Origin at the head-sphere centre.
+/// the nape while leaving the face open. Origin at the head-ovoid centre —
+/// headgear parents to the head at [`HEAD_CENTER_ABOVE_NECK`].
 fn revolved_cap(profile: &[(f32, f32)], sectors: usize, back_drop: f32, uv_span: f32) -> Mesh {
     let mut positions = Vec::new();
     let mut normals = Vec::new();
@@ -2613,38 +3532,29 @@ fn revolved_cap(profile: &[(f32, f32)], sectors: usize, back_drop: f32, uv_span:
     let depth = (crown_y - rim_y).max(1e-4);
 
     for (ring, (radius, y)) in profile.iter().enumerate() {
-        // Ring slope for normals.
-        let (prev, next) = (
+        let (previous, next) = (
             profile[ring.saturating_sub(1)],
             profile[(ring + 1).min(profile.len() - 1)],
         );
-        let (dr, dy) = (next.0 - prev.0, next.1 - prev.1);
+        let (dr, dy) = (next.0 - previous.0, next.1 - previous.1);
         let n = Vec2::new(-dy, dr).normalize_or(Vec2::Y);
-        // How far down the cap this ring sits (0 crown, 1 rim) — the shear
-        // fades in over it so the crown stays put.
         let shear_weight = (crown_y - y) / depth;
         for sector in 0..=sectors {
-            let a = sector as f32 / sectors as f32 * TAU;
-            let (sin, cos) = a.sin_cos();
-            // Backness: 1 behind the head (+Z), 0 at the face (−Z).
+            let angle = sector as f32 / sectors as f32 * TAU;
+            let (sin, cos) = angle.sin_cos();
             let backness = (1.0 + sin) * 0.5;
             let y_sheared = y - back_drop * backness * shear_weight;
             positions.push([radius * cos, y_sheared, radius * sin]);
             let normal = Vec3::new(n.x * cos, n.y, n.x * sin).normalize_or(Vec3::Y);
             normals.push([normal.x, normal.y, normal.z]);
-            uvs.push([
-                a / TAU * uv_span,
-                shear_weight * uv_span,
-            ]);
+            uvs.push([angle / TAU * uv_span, shear_weight * uv_span]);
         }
     }
     let stride = (sectors + 1) as u32;
     for ring in 0..profile.len() as u32 - 1 {
         for sector in 0..sectors as u32 {
             let a = ring * stride + sector;
-            let b = a + 1;
-            let c = a + stride;
-            let d = c + 1;
+            let (b, c, d) = (a + 1, a + stride, a + stride + 1);
             indices.extend_from_slice(&[a, c, b, b, c, d]);
         }
     }
@@ -2655,31 +3565,32 @@ fn revolved_cap(profile: &[(f32, f32)], sectors: usize, back_drop: f32, uv_span:
 fn hood_mesh() -> Mesh {
     revolved_cap(
         &[
-            (0.001, 0.305),
-            (0.10, 0.295),
-            (0.19, 0.262),
-            (0.26, 0.203),
-            (0.295, 0.135),
-            (0.302, 0.100),
+            (0.001, 0.163),
+            (0.052, 0.158),
+            (0.098, 0.140),
+            (0.130, 0.104),
+            (0.148, 0.058),
+            (0.152, 0.026),
         ],
         20,
-        0.22,
+        0.115,
         0.6,
     )
 }
 
-/// Coif: a close-fitting linen cap tied under the skull.
+/// Coif: a close-fitting linen cap tied under the skull. Deliberately snug —
+/// any looser and it reads as a bonnet.
 fn coif_mesh() -> Mesh {
     revolved_cap(
         &[
-            (0.001, 0.262),
-            (0.10, 0.252),
-            (0.175, 0.222),
-            (0.228, 0.168),
-            (0.252, 0.105),
+            (0.001, 0.128),
+            (0.038, 0.125),
+            (0.068, 0.110),
+            (0.090, 0.078),
+            (0.098, 0.040),
         ],
         20,
-        0.16,
+        0.062,
         0.5,
     )
 }
@@ -2688,11 +3599,11 @@ fn coif_mesh() -> Mesh {
 fn brim_mesh() -> Mesh {
     revolved_cap(
         &[
-            (0.001, 0.300),
-            (0.12, 0.290),
-            (0.185, 0.245),
-            (0.195, 0.130),
-            (0.350, 0.105),
+            (0.001, 0.168),
+            (0.055, 0.163),
+            (0.088, 0.136),
+            (0.093, 0.062),
+            (0.176, 0.048),
         ],
         20,
         0.0,
@@ -2704,16 +3615,129 @@ fn brim_mesh() -> Mesh {
 fn kettle_helm_mesh() -> Mesh {
     revolved_cap(
         &[
-            (0.001, 0.320),
-            (0.10, 0.312),
-            (0.19, 0.276),
-            (0.252, 0.202),
-            (0.262, 0.135),
-            (0.360, 0.085),
+            (0.001, 0.172),
+            (0.046, 0.168),
+            (0.086, 0.148),
+            (0.113, 0.104),
+            (0.118, 0.062),
+            (0.166, 0.032),
         ],
         20,
         0.0,
         0.5,
+    )
+}
+
+// --- Garments --------------------------------------------------------------
+
+/// How far below the waist a garment's hem falls, and how wide it flares
+/// there. The hem must clear the leg it covers: a thigh swings ±27° at a
+/// walk (`THIGH_SWING_RAD`), so the knee travels 0.19 m fore and aft, and a
+/// hem narrower than that would saw through the leg every stride. Every
+/// (drop, flare) pair below is checked against that in
+/// `garment_hems_clear_the_leg_swing`.
+#[derive(Debug, Clone, Copy)]
+struct GarmentCut {
+    /// Hem height, root-local.
+    hem_y: f32,
+    /// Hem half-width.
+    flare: f32,
+}
+
+/// Below-the-knee robe: clerics and notables. Wide enough that a full stride
+/// stays inside it, which is also simply what a habit looks like.
+const ROBE: GarmentCut = GarmentCut {
+    hem_y: -0.46,
+    flare: 0.356,
+};
+/// Mid-thigh tunic: the working city's default.
+const TUNIC: GarmentCut = GarmentCut {
+    hem_y: -0.220,
+    flare: 0.262,
+};
+/// Short tunic, cut for work: labourers.
+const SHORT_TUNIC: GarmentCut = GarmentCut {
+    hem_y: -0.168,
+    flare: 0.245,
+};
+
+/// A garment skirt as a *closed tube* of cloth: down the inside from the
+/// waist, round the hem, and back up the outside.
+///
+/// The point of the tube is that it needs no double-sided material — the
+/// player sees cloth from every angle, including a real thickness at the hem —
+/// and the loft's tangent-derived normals make the descending run come out
+/// correct on its own. Origin at the root (it parents to the pelvis), so the
+/// hips carry it.
+fn skirt_mesh(cut: GarmentCut) -> Mesh {
+    const THICKNESS: f32 = 0.012;
+    let top = PELVIS_WAIST_Y + 0.02;
+    let waist = 0.152;
+    // Cloth hangs off the hips and only swings out low down, so the middle
+    // ring sits well past halfway with barely any of the flare spent — the
+    // difference between a tunic and a bell.
+    let mid_y = top + (cut.hem_y - top) * 0.52;
+    let mid = waist + (cut.flare - waist) * 0.44;
+    loft(
+        &[
+            // Down the inside.
+            Ring::new(top, waist - THICKNESS, waist * 0.80 - THICKNESS),
+            Ring::new(mid_y, mid - THICKNESS, mid * 0.86 - THICKNESS),
+            Ring::new(cut.hem_y + 0.012, cut.flare - THICKNESS, cut.flare * 0.9 - THICKNESS),
+            // Round the hem.
+            Ring::new(cut.hem_y, cut.flare - THICKNESS * 0.4, cut.flare * 0.9 - THICKNESS * 0.4),
+            Ring::new(cut.hem_y - 0.004, cut.flare, cut.flare * 0.9),
+            // Up the outside.
+            Ring::new(cut.hem_y + 0.012, cut.flare, cut.flare * 0.9),
+            Ring::new(mid_y, mid, mid * 0.86),
+            Ring::new(top, waist, waist * 0.80),
+        ],
+        GARMENT_SECTORS,
+        Caps::NONE,
+        CLOTH_TILE_M,
+    )
+}
+
+/// A belt: a narrow band around the waist, sitting proud of the garment it
+/// cinches — hence radii a centimetre outside the skirt's at the same height,
+/// not the body's. Origin at the root, like the skirt.
+fn belt_mesh() -> Mesh {
+    let y = PELVIS_WAIST_Y - 0.080;
+    loft(
+        &[
+            Ring::new(y - 0.023, 0.168, 0.136).boxy(2.6),
+            Ring::new(y - 0.014, 0.176, 0.144).boxy(2.6),
+            Ring::new(y + 0.014, 0.176, 0.144).boxy(2.6),
+            Ring::new(y + 0.023, 0.168, 0.136).boxy(2.6),
+        ],
+        TORSO_SECTORS,
+        Caps::NONE,
+        CLOTH_TILE_M,
+    )
+}
+
+/// A shoulder mantle — the short cape a cleric or a notable wears. Same
+/// closed-tube construction as the skirt, hung from the torso, so rank reads
+/// as a distinct garment layer at 30 m. It stops above the elbow, so the arms
+/// clearly emerge from under it. Origin at the torso's waist.
+fn mantle_mesh() -> Mesh {
+    const THICKNESS: f32 = 0.011;
+    loft(
+        &[
+            // Up the inside, from the hem.
+            Ring::new(0.128, 0.203 - THICKNESS, 0.152 - THICKNESS).boxy(2.8),
+            Ring::new(0.250, 0.213 - THICKNESS, 0.150 - THICKNESS).boxy(3.0),
+            Ring::new(0.345, 0.194 - THICKNESS, 0.124 - THICKNESS).boxy(2.8),
+            Ring::new(0.388, 0.132, 0.090).boxy(2.4),
+            // Over the shoulder ridge and back down the outside.
+            Ring::new(0.396, 0.130, 0.088).boxy(2.4),
+            Ring::new(0.345, 0.194, 0.124).boxy(2.8),
+            Ring::new(0.250, 0.213, 0.150).boxy(3.0),
+            Ring::new(0.120, 0.203, 0.152).boxy(2.8),
+        ],
+        GARMENT_SECTORS,
+        Caps::NONE,
+        CLOTH_TILE_M,
     )
 }
 
@@ -2746,6 +3770,176 @@ mod tests {
         let rear_rim = face_uv(Vec3::new(0.4, 0.4, 0.82).normalize());
         let radial = (rear_rim - Vec2::splat(0.5)).length();
         assert!(radial > 0.72, "rear cap too close to the face: {radial}");
+    }
+
+    /// Reads a mesh's positions and normals back for the geometry contracts.
+    fn geometry(mesh: &Mesh) -> (Vec<Vec3>, Vec<Vec3>) {
+        let read = |attribute| match mesh.attribute(attribute) {
+            Some(VertexAttributeValues::Float32x3(values)) => {
+                values.iter().map(|v| Vec3::from_array(*v)).collect()
+            }
+            _ => Vec::new(),
+        };
+        (
+            read(Mesh::ATTRIBUTE_POSITION),
+            read(Mesh::ATTRIBUTE_NORMAL),
+        )
+    }
+
+    /// The loft's normals must face *out* of the surface, and must do so
+    /// whether the profile climbs or falls — that is the whole reason a
+    /// garment can be one closed tube of cloth rather than a one-sided cone.
+    #[test]
+    fn loft_normals_point_outward_up_and_down_the_profile() {
+        // A plain rising cone.
+        let rising = loft(
+            &[Ring::new(0.0, 0.20, 0.20), Ring::new(0.5, 0.10, 0.10)],
+            12,
+            Caps::NONE,
+            1.0,
+        );
+        let (positions, normals) = geometry(&rising);
+        for (position, normal) in positions.iter().zip(&normals) {
+            let radial = Vec3::new(position.x, 0.0, position.z).normalize();
+            assert!(
+                normal.dot(radial) > 0.5,
+                "rising wall points inward at {position:?}: {normal:?}"
+            );
+        }
+
+        // The same wall authored top-down: the normals must flip with it, so
+        // the *inside* of a tube comes out facing its cavity.
+        let falling = loft(
+            &[Ring::new(0.5, 0.10, 0.10), Ring::new(0.0, 0.20, 0.20)],
+            12,
+            Caps::NONE,
+            1.0,
+        );
+        let (positions, normals) = geometry(&falling);
+        for (position, normal) in positions.iter().zip(&normals) {
+            let radial = Vec3::new(position.x, 0.0, position.z).normalize();
+            assert!(
+                normal.dot(radial) < -0.5,
+                "descending wall points outward at {position:?}: {normal:?}"
+            );
+        }
+    }
+
+    /// A garment hem has to clear the leg it covers: the thigh swings
+    /// `THIGH_SWING_RAD` either way at a walk, so a hem narrower than the
+    /// knee's travel would saw through the leg every stride. This is the check
+    /// the (drop, flare) pairs in [`ROBE`] &c. are chosen against.
+    #[test]
+    fn garment_hems_clear_the_leg_swing() {
+        for (name, cut) in [
+            ("robe", ROBE),
+            ("tunic", TUNIC),
+            ("short tunic", SHORT_TUNIC),
+        ] {
+            // How far down the leg the hem falls, and which bone is there.
+            let below_hip = HIP_Y - cut.hem_y;
+            let (along_bone, limb_radius) = if below_hip <= THIGH_LENGTH {
+                // Thigh: interpolate its authored taper at that depth.
+                let t = below_hip / THIGH_LENGTH;
+                (below_hip, 0.088 - 0.033 * t)
+            } else {
+                (below_hip, 0.060)
+            };
+            let swing = HIP_X + along_bone * THIGH_SWING_RAD.sin() + limb_radius;
+            assert!(
+                cut.flare >= swing,
+                "{name} hem {} is inside the leg's {swing:.3} m swing",
+                cut.flare
+            );
+            // …but not comically wider than it needs to be, or it reads as a
+            // crinoline rather than as clothing.
+            assert!(
+                cut.flare < swing + 0.05,
+                "{name} hem {} is a bell, not a garment (needs {swing:.3})",
+                cut.flare
+            );
+        }
+    }
+
+    /// The whole point of authoring against real proportions: a standing
+    /// puppet's soles land exactly on the ground, and its crown lands at the
+    /// silhouette height the streets and doors were built for.
+    #[test]
+    fn the_skeleton_stands_on_the_ground_at_the_authored_height() {
+        let ankle = HIP_Y + KNEE_Y + ANKLE_Y;
+        let (positions, _) = geometry(&foot_mesh());
+        let sole = positions
+            .iter()
+            .fold(f32::MAX, |lowest, point| lowest.min(point.y));
+        assert!(
+            (ankle + sole - GROUND_Y).abs() < 1e-4,
+            "sole lands at {}, not {GROUND_Y}",
+            ankle + sole
+        );
+
+        let head_top = TORSO_JOINT_Y + NECK_JOINT_Y + HEAD_CENTER_ABOVE_NECK + HEAD_HALF_HEIGHT;
+        let stature = head_top - GROUND_Y;
+        assert!(
+            (1.69..=1.73).contains(&stature),
+            "silhouette height drifted to {stature} m"
+        );
+        // The chin has to clear the collar, or the head sits in the torso
+        // with no neck — how the first cut of this rig read.
+        let chin = TORSO_JOINT_Y + NECK_JOINT_Y + HEAD_CENTER_ABOVE_NECK - HEAD_HALF_HEIGHT;
+        let collar = TORSO_JOINT_Y + TORSO_HEIGHT;
+        assert!(
+            (0.005..=0.06).contains(&(chin - collar)),
+            "neck shows {} m of skin between collar and chin",
+            chin - collar
+        );
+    }
+
+    /// Hands mirror: same shape, thumbs on opposite sides.
+    #[test]
+    fn hands_mirror_across_the_body() {
+        let (left, _) = geometry(&hand_mesh(BodySide::Left));
+        let (right, _) = geometry(&hand_mesh(BodySide::Right));
+        assert_eq!(left.len(), right.len());
+        let reach = |hand: &[Vec3]| {
+            hand.iter()
+                .fold(f32::MIN, |widest, point| widest.max(point.x))
+        };
+        // The thumb is the only asymmetry, so each hand reaches further to
+        // its own side than the other does.
+        assert!(reach(&right) > reach(&left) + 0.01, "thumbs are not mirrored");
+        // Both hang from the wrist down past the fingertips, same length.
+        let drop = |hand: &[Vec3]| hand.iter().fold(f32::MAX, |low, p| low.min(p.y));
+        assert!((drop(&left) - drop(&right)).abs() < 1e-5);
+        assert!(drop(&left) < -0.15, "hand is too short to read as a hand");
+    }
+
+    /// The face relief has to land on the painted feature, not beside it:
+    /// the nose is the one place the skull must stand proud of the ovoid.
+    #[test]
+    fn the_face_carries_relief_where_the_portrait_paints_it() {
+        let on_sphere = |polar_down: f32, across: f32| {
+            let (sin_d, cos_d) = polar_down.sin_cos();
+            let (sin_a, cos_a) = across.sin_cos();
+            Vec3::new(cos_d * sin_a, -sin_d, -cos_d * cos_a)
+        };
+        let plain = |direction: Vec3| {
+            // The same ovoid without any feature displacement.
+            direction.z * HEAD_HALF_DEPTH
+        };
+        let nose_tip = head_point(on_sphere(NOSE_POLAR_RAD, 0.0));
+        assert!(
+            nose_tip.z < plain(on_sphere(NOSE_POLAR_RAD, 0.0)) - 0.015,
+            "no nose: {nose_tip:?}"
+        );
+        // …and the cheek beside it stays flat.
+        let cheek = on_sphere(NOSE_POLAR_RAD, 0.9);
+        assert!(
+            (head_point(cheek).z - plain(cheek) * 0.94).abs() < 0.006,
+            "the nose lobe has smeared across the cheek"
+        );
+        // The back of the head carries none of it.
+        let back = head_point(Vec3::Z);
+        assert!(back.z > HEAD_HALF_DEPTH, "occiput lost its bulge: {back:?}");
     }
 
     /// The variety axes are deterministic and bounded: every seed lands in
@@ -3923,10 +5117,13 @@ mod tests {
 
         assert!(app.world().get_resource::<BodyAssets>().is_some());
         let materials = app.world().resource::<Assets<StandardMaterial>>();
-        // 7×4 outfit band + 3 bespoke + 24 faces + 4 headgear = 59.
-        assert_eq!(materials.len(), 59);
+        // 7×4 outfit band + 7×4 hose band + 3 bespoke + 24 faces + 24 skins
+        // + 6 hair + 1 leather + 4 headgear = 118.
+        assert_eq!(materials.len(), 118);
         let meshes = app.world().resource::<Assets<Mesh>>();
-        assert_eq!(meshes.len(), 11);
+        // pelvis, torso, neck, head, hair, upper arm, forearm, 2 hands,
+        // thigh, shin, foot, belt, mantle, 3 skirt cuts, 4 headgear = 21.
+        assert_eq!(meshes.len(), 21);
 
         // The bespoke majors and the band are all distinct shared handles.
         let assets = app.world().resource::<BodyAssets>();

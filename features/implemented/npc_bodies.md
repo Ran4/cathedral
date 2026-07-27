@@ -594,7 +594,73 @@ not the gameplay:
   they land it is one float write into `statuses` per §8, and the body already
   knows what to do.)*
 
-M0→M1→M2 are strictly ordered; M3/M4/M5 are independent after M2 (M4 only needs M0's arms).
+- **M6 The second cut of the model.** M0's rig hit the milestone but not the §1
+  aesthetic: seen close it was a wide slab torso with a floating cuboid pelvis, capsule
+  limbs that ended in nothing where hands and feet should be, an oversized head sitting
+  directly on the shoulders, and — from behind — a bald skin-toned cap. This is the
+  re-model, geometry only: no sim change, no new verbs, no pose-pipeline change (every
+  joint, rest-pose composition and layer in §4–§8 works unaltered on the new parts).
+  *(Shipped — all in `body.rs`. **The primitive is now a loft**: `Ring` (a superellipse
+  cross-section of `half_width` × `half_depth`, offsettable off the part axis, `roundness`
+  2 = ellipse … 3.5 = rounded box) revolved by `loft()` into a smooth surface whose normals
+  come from the two surface tangents. That normal rule is load-bearing: a profile authored
+  *downward* gets outward normals and reversed winding together, which is what lets a
+  garment be one **closed tube of cloth** — down the inside, round the hem, up the
+  outside — with a real thickness at the hem and no double-sided material. Capsules and
+  cuboids are gone; every part is a profile.
+  **Proportions were re-derived from anthropometry** for a 1.71 m figure rather than tuned
+  by eye (hip joint 0.53 of stature, shoulder 0.82, elbow 0.63, wrist 0.48, knee 0.285,
+  ankle 0.045), so the constants block is mostly "that height minus the 0.91 m root". The
+  silhouette height is unchanged, and `the_skeleton_stands_on_the_ground_at_the_authored_height`
+  pins the sole on `GROUND_Y`, the crown at 1.69–1.73 m and 5–60 mm of neck between collar
+  and chin — the last one because the first cut of this pass buried the chin *inside* the
+  collar and the second grew a giraffe neck.
+  **New parts** (18 always-on + hair/headgear/mantle, up from 11+headgear): a neck; hands
+  with a palm, a finger block and a mirrored thumb; turnshoes lofted along their own length
+  and laid down, sole exactly on the ground; a hair shell cut to a hairline that clears the
+  brow, passes the ears and covers the nape — which is what finally answers M0's "uncovered
+  heads read bald from behind", since it puts hair there instead of repainting 24
+  portraits; a garment skirt in three cuts (robe / tunic / short tunic, by class); a belt;
+  and a shoulder mantle for the two classes that wear rank. `garment_hems_clear_the_leg_swing`
+  is the check the (drop, flare) pairs are chosen against — a hem narrower than the knee's
+  travel at `THIGH_SWING_RAD` saws through the leg every stride — and it also fails a hem
+  that is *comically* wider than it needs to be, because the first cut read as a crinoline.
+  **The head** keeps the M0 face projection *exactly* (the orientation contract test is
+  untouched — UVs still come from the undeformed sphere direction) and grows relief under
+  it: a nose ridge at the polar angle the portraits paint one, a brow shelf, a chin and
+  ears, each an angular lobe so it lands on the painted feature and fades out instead of
+  creasing. `HEAD_SCALE`/`HEAD_LIFT` are gone: the ovoid is authored at its real size
+  (0.077 × 0.096 × 0.112 half-axes) and the headgear profiles were re-authored to fit it.
+  **Materials** gained three axes that cost nothing per actor: cloth carries a **normal
+  map** derived from its own weave by the new `scripts/generate_npc_surface_maps.py` (no
+  API key — it differentiates the existing albedo), so sun rakes across fabric instead of
+  sliding over a decal; the neck and hands take a **skin tone sampled from the actor's own
+  portrait** by the same script (a mismatched hand is the loudest tell that a body is
+  assembled from parts) and shaded 0.84, because a painted face carries its own shading and
+  a flat albedo next to it glows; and the legs wear **separately-dyed hose** on their own
+  tint band — tunic over contrasting hose, cinched at a belt, above dark shoes *is* the
+  medieval silhouette, and it is the cheapest thing that stops a crowd reading as people in
+  one-piece sacks. Laborers and craftsmen get bare forearms (sleeves pushed up), which is
+  free: the skin material is already loaded for their hands. `HosePart` rides alongside
+  `ActorOutfit` so an appearance hot-swap still repaints legs — with the *hose* material.
+  `CLOTH_TILE_M` dropped 0.85 → 0.35 so the weave reads as thread rather than sacking.
+  **Cost:** the pose systems are unchanged (same joints), and an A/B tour against the
+  pre-change build measured p95 28.6 vs 29.0 ms and p99 36.7 vs 36.9 ms — inside noise, on
+  a vsync-locked machine where the actor-free tour is itself 32.7 ms at p99. Part count per
+  actor roughly doubles but every mesh and material is still a shared handle.
+  **Tooling this needed and now has:** `CATHEDRAL_BODY_LINEUP=1` stands a rank of 14
+  puppets (7 classes × 2 builds, every headgear) on the western approach in the authored
+  rest pose, carrying no `ActorView` so neither reconcile nor the pose pipeline touches
+  them — the A/B rig, since the cast walks and a fixed `tp` cannot hold a body in shot; and
+  a drive `frame <name-or-id> [distance [bearing]]` action that stands the camera off a
+  named actor's front and looks back at them. Also fixed while in here: the intermittent
+  `bevy_pbr` atmosphere-probe `unwrap()` panic at startup, by hanging
+  `AtmosphereEnvironmentMapLight` on the camera three-quarters of a second in rather than
+  at spawn, so the probe cannot exist on a frame where the camera is not yet an extracted
+  view.)*
+
+M0→M1→M2 are strictly ordered; M3/M4/M5 are independent after M2 (M4 only needs M0's arms);
+M6 is geometry only and depends on nothing.
 
 ## 12. Risks & open questions
 

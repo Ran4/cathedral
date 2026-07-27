@@ -72,6 +72,20 @@ pub(crate) struct ThinkingIndicator(ActorId);
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ActorOutfit(pub(super) ActorId);
 
+/// Every dressed part of every body, and whether it wears hose rather than the
+/// tunic. Excludes the head, which carries its face instead — the two queries
+/// write the same component and so must stay disjoint.
+type OutfitParts<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static ActorOutfit,
+        Has<super::body::HosePart>,
+        &'static mut MeshMaterial3d<StandardMaterial>,
+    ),
+    Without<super::body::ActorFace>,
+>;
+
 /// Reconciles stationary NPC roots, primitive bodies, anchors, and name labels.
 ///
 /// Player-controlled records are represented by the controller's existing root
@@ -85,10 +99,7 @@ pub(crate) fn reconcile_actor_views(
     mut roots: Query<(Entity, &ActorId, &mut Transform), With<ActorView>>,
     mut labels: Query<(Entity, &ActorNameLabel, &mut Text)>,
     indicators: Query<(Entity, &ThinkingIndicator)>,
-    mut outfits: Query<
-        (&ActorOutfit, &mut MeshMaterial3d<StandardMaterial>),
-        Without<super::body::ActorFace>,
-    >,
+    mut outfits: OutfitParts,
     mut faces: Query<
         (&super::body::ActorFace, &mut MeshMaterial3d<StandardMaterial>),
         Without<ActorOutfit>,
@@ -167,11 +178,16 @@ pub(crate) fn reconcile_actor_views(
     }
 
     // Appearance hot-swap: every cloth part of a body shares the actor's
-    // outfit material; the head carries its face. Meshes (headgear, build)
-    // are spawn-time — appearances never restructure after creation today.
-    for (outfit, mut material) in &mut outfits {
+    // outfit material, except the legs, which share its hose; the head carries
+    // its face. Meshes (headgear, build) are spawn-time — appearances never
+    // restructure after creation today.
+    for (outfit, is_hose, mut material) in &mut outfits {
         if let Some(actor) = desired_by_id.get(&outfit.0) {
-            let desired = body_assets.outfit_material(&actor.appearance);
+            let desired = if is_hose {
+                body_assets.hose_material(&actor.appearance)
+            } else {
+                body_assets.outfit_material(&actor.appearance)
+            };
             if material.0 != desired {
                 material.0 = desired;
             }
@@ -858,7 +874,13 @@ mod tests {
                 (mesh.0.clone(), material.0.clone(), fade.is_some())
             })
             .collect();
-        assert_eq!(parts.len(), 11 + 12 + 12, "13-part budget: 11 + headgear");
+        // 18 always-present parts — pelvis, skirt, belt, torso, neck, head,
+        // and (upper arm, forearm, hand) / (thigh, shin, foot) per side —
+        // plus the optional hair, headgear and rank mantle:
+        //   plain  laborer, bare-headed: 18 + hair                = 19
+        //   watch  helmed (helm hides hair): 18 + headgear        = 19
+        //   cleric hooded, mantled:  18 + headgear + mantle       = 20
+        assert_eq!(parts.len(), 19 + 19 + 20, "the per-actor part budget");
         assert!(
             parts.iter().all(|(_, _, fade)| *fade),
             "every mesh part carries the VisibilityRange fade"
@@ -867,12 +889,12 @@ mod tests {
         let distinct_materials: HashSet<_> =
             parts.iter().map(|(_, material, _)| material.clone()).collect();
         assert!(
-            distinct_meshes.len() <= 11,
+            distinct_meshes.len() <= 21,
             "meshes are shared handles: {}",
             distinct_meshes.len()
         );
         assert!(
-            (4..=9).contains(&distinct_materials.len()),
+            (6..=16).contains(&distinct_materials.len()),
             "bounded but varied material set: {}",
             distinct_materials.len()
         );
