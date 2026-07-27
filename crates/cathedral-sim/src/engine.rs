@@ -28,7 +28,7 @@ use serde_json::{Value, json};
 
 use crate::{
     HEARING_RADIUS_M, MAX_BELL_CATCHUP_OFFICES, MAX_MOVEMENT_CATCHUP_SLICES, MOVEMENT_TICK_SECONDS,
-    OFFER_LAPSE_RADIUS_M,
+    OFFER_LAPSE_RADIUS_M, PLACE_ARRIVE_RADIUS_M,
     actions::{self, apply_action},
     areas::AreaMap,
     attention::{
@@ -1166,9 +1166,11 @@ impl Engine {
                 self.npc_exchanges.forget(&departed);
                 // An escort who has left the city cannot walk anybody anywhere,
                 // so their prisoners are simply free — the same answer the
-                // dead-man timer gives, for the same reason (M4).
+                // dead-man timer gives, for the same reason (M4) — and they are
+                // *told* so, with the reason, like every other release: a hold
+                // that ends in silence looks exactly like one that did not.
                 for gone in &departed {
-                    self.world.custody.forget(gone);
+                    custody::forget_departed(&mut self.world, gone);
                 }
                 if self
                     .last_player_exchange
@@ -2131,6 +2133,13 @@ impl Engine {
             "a wrong nobody wrote down (drive-mode stand-in)",
         ) {
             Ok(line) => {
+                // The verb path gets this from the ladder's own escort sweep a
+                // tick later; the stand-in has the `Round` in hand, so the
+                // officer's committed errands — a well queue place, a stall
+                // visit, a claimed shelter — are dropped before the very next
+                // pump can walk the delivery off the leash.
+                self.round
+                    .abandon_bodily_errands(&mut self.world, &officer_id);
                 out.push(EngineMessage::Diagnostic(format!("[smart actors] {line}")));
                 self.scheduler
                     .prioritize(&self.world, &officer_id, false, now);
@@ -3002,6 +3011,7 @@ impl Engine {
         let mut ungripped: Vec<ActorId> = Vec::new();
         let mut closing: Vec<(ActorId, ActorId, Vec3)> = Vec::new();
         let mut walked_out: Vec<ActorId> = Vec::new();
+        let mut relay: Vec<(ActorId, custody::Station)> = Vec::new();
 
         for (prisoner, record) in self.world.custody.iter() {
             let Some(prisoner_character) = self.world.characters.get(prisoner) else {
@@ -3068,8 +3078,11 @@ impl Engine {
             //     threshold must not behave oddly because of a step.
             //
             //     Unreachable for the cast: rung 0 of `round::decide` and the
-            //     `go_to` refusal between them mean an NPC never takes a step of
-            //     their own while held. This is the player's door.
+            //     `go_to` refusal mean an NPC never takes a step of their own
+            //     while held, the round's `set_route` refuses a prisoner so no
+            //     mechanical mover re-lays one either, and `follow_escorts`
+            //     clears whatever walk the seizure interrupted. This is the
+            //     player's door.
             if record.state == custody::Confinement::Committed {
                 let at = prisoner_character.position_m();
                 let strayed = f64::hypot(
@@ -3092,13 +3105,15 @@ impl Engine {
                 continue;
             }
             let separation = officer.position_m().distance(prisoner_character.position_m());
-            // 3. Gone. Only the player can do this — the cast is slaved to the
-            //    escort — and it is the design saying so out loud: move while
-            //    the sergeant is still crossing the square and you are simply
-            //    away, because 8 m/s against 1.8 needs no cleverness at all.
-            //    The word against you does not go anywhere.
+            // 3. Gone. A gap this wide is almost always the player's doing —
+            //    8 m/s against 1.8 needs no cleverness at all, and the word
+            //    against you does not go anywhere — but the sim does not
+            //    adjudicate whose feet opened it: the officer's side has its
+            //    own movers, gated but not provably immovable, and a release
+            //    that names a culprit it never established would lie to one
+            //    party or the other. The arrangement is simply over; say that.
             if separation > OFFER_LAPSE_RADIUS_M {
-                freed.push((prisoner.clone(), "they walked off and were gone"));
+                freed.push((prisoner.clone(), "you were parted and the arrangement lapsed"));
                 continue;
             }
             // 4. Cross the leash and the officer closes, on their own two feet.
@@ -3110,6 +3125,30 @@ impl Engine {
                     prisoner.clone(),
                     prisoner_character.position_m(),
                 ));
+            }
+            // 5. The station walk itself must always be live. The intent the
+            //    seizure laid can die with the delivery half-done — the budget
+            //    burns down through conversation holds, and the closing chase
+            //    above *replaces* it with a Person-follow that ends at the grab
+            //    — and the ladder deliberately stands an escort with no intent
+            //    (`round::decide`, rung 0's other side) rather than letting the
+            //    lower rungs walk him away. So whenever the record is still in
+            //    charge and the officer's feet are owed to nobody, re-aim them
+            //    at the station exactly as the seize verb did. Never while the
+            //    chase is on — latched, or breaking this very poll: that walk
+            //    aims at the prisoner on purpose, and the grab that ends it
+            //    clears the latch, which is what lets this rung take over on
+            //    the very next poll. And never within the arrival radius:
+            //    `tick_intents` ends a Place intent standing inside it, so a
+            //    re-lay there would say "You have arrived" (and burn a priority
+            //    nudge) every poll an uncommitted prisoner — the player, walked
+            //    by nobody but themself — kept the officer waiting at the door.
+            else if !record.closing
+                && self.world.is_present(officer.id())
+                && officer.state.intent.is_none()
+                && officer.position_m().distance(record.station.point) > PLACE_ARRIVE_RADIUS_M
+            {
+                relay.push((officer.id().clone(), record.station.clone()));
             }
         }
 
@@ -3173,6 +3212,26 @@ impl Engine {
             self.world.custody.release_grip(&prisoner);
             for holder in holders {
                 actions::announce_grip(&mut self.world, &holder, &prisoner, false);
+            }
+        }
+        // Re-lay the station walk (clause 5). Before the closing loop, so an
+        // officer with two prisoners — one beside him earning a re-lay, one
+        // strayed and owed a chase — ends the poll aimed at the runaway: the
+        // chase below overwrites whatever this lays, which is the precedence
+        // the two walks have always had.
+        for (officer_id, station) in relay {
+            let budget = actions::route_budget_for(&self.world, &officer_id, station.point);
+            if let Some(officer) = self.world.characters.get_mut(&officer_id) {
+                officer.state.places_known.insert(station.place_id.clone());
+                officer.state.intent = Some(TravelIntent {
+                    target: IntentTarget::Place {
+                        place_id: station.place_id,
+                        name: station.name,
+                        point: station.point,
+                    },
+                    budget_seconds: budget,
+                    deadline: None,
+                });
             }
         }
         for (officer_id, prisoner_id, last_seen) in closing {

@@ -1036,7 +1036,7 @@ fn retract_offer(
 /// Pure, like everything else in the sim: distance only, no clock. Returns the
 /// items whose offers lapsed.
 pub fn lapse_distant_offers(world: &mut World) -> Vec<ItemId> {
-    let lapsing: Vec<(ItemId, ActorId, ActorId, u32)> = world
+    let lapsing: Vec<ItemId> = world
         .offers
         .values()
         .filter_map(|offer| {
@@ -1049,62 +1049,135 @@ pub fn lapse_distant_offers(world: &mut World) -> Vec<ItemId> {
             let giver = world.characters.get(&offer.giver_id)?;
             let target = world.characters.get(&target_id)?;
             let apart = giver.position_m().distance_squared(target.position_m());
-            (apart > OFFER_LAPSE_RADIUS_M * OFFER_LAPSE_RADIUS_M).then(|| {
-                (
-                    offer.item_id.clone(),
-                    offer.giver_id.clone(),
-                    target_id,
-                    offer.quantity,
-                )
-            })
+            (apart > OFFER_LAPSE_RADIUS_M * OFFER_LAPSE_RADIUS_M).then(|| offer.item_id.clone())
         })
         .collect();
     if lapsing.is_empty() {
         return Vec::new();
     }
-
-    let mut lapsed: Vec<ItemId> = Vec::new();
-    for (item_id, giver_id, target_id, quantity) in lapsing {
-        // An offer of an item that has left the world shows on no sheet, so
-        // nobody is told it ended — the same silence `repair_and_fail` keeps.
-        let Some(item) = world.items.get(&item_id).cloned() else {
-            world.offers.remove(&item_id);
-            lapsed.push(item_id);
-            continue;
-        };
-        let noun = counted_noun(world, &item, quantity);
-        world.offers.remove(&item_id);
-        let giver_line = format!(
-            "{} is too far away now; the {noun} (id {item_id}) you held out is yours again",
-            cap_first(&identify_ids(world, &giver_id, &target_id))
-        );
-        let target_line = format!(
-            "You are too far from {} now; the {noun} (id {item_id}) they held out for you is no longer on offer",
-            identify_ids(world, &target_id, &giver_id)
-        );
-        deliver(
-            world,
-            vec![
-                (giver_id.clone(), giver_line),
-                (target_id.clone(), target_line),
-            ],
-        );
-        // Both parties, and nobody else: at this distance there is no bystander
-        // who can see them both, so there is no third party to tell.
-        world_event(
-            world,
-            "lapse_offer",
-            &giver_id,
-            Some(target_id.clone()),
-            Some(item_id.clone()),
-            quantity,
-            vec![giver_id.clone(), target_id],
-        );
-        lapsed.push(item_id);
+    for item_id in &lapsing {
+        lapse_offer(world, item_id, &OfferLapse::DriftedApart);
     }
     world.touch_public_state();
     world.assert_invariants();
-    lapsed
+    lapsing
+}
+
+/// Why the world — not a verb — is lapsing a standing offer. The cause picks
+/// the wording each party hears; the machinery around the words never varies
+/// ([`lapse_offer`]). There is deliberately no silent variant: an offer lives
+/// on two sheets, and removing it from one without a word leaves the other
+/// mind believing a promise that no longer exists — the exact untruth the
+/// lapse percepts exist to prevent
+/// (`features/implemented/movement/05_the_llm_seam.md` §2).
+pub(crate) enum OfferLapse {
+    /// The two parties drifted past [`OFFER_LAPSE_RADIUS_M`]
+    /// ([`lapse_distant_offers`]).
+    DriftedApart,
+    /// `leaver` — one of the offer's two parties — has reached the city gate
+    /// with a road party, and a promise cannot follow a traveller through it
+    /// (the gate expiry, `round.rs`).
+    ThroughTheGate { leaver: ActorId },
+}
+
+/// Lapse one offer through the full courtesy path: the removal, a percept for
+/// every party still owed one, and the `lapse_offer` event the HUD notice
+/// rides. This is the single door every world-caused expiry goes through —
+/// the distance sweep above and the road party's gate expiry alike — so no
+/// caller can strip an offer off somebody's sheet without the other party
+/// hearing why. Callers batch their own [`World::touch_public_state`] /
+/// [`World::assert_invariants`], exactly as [`lapse_distant_offers`] does.
+///
+/// A broadcast offer (no target) can only reach here through the gate: it
+/// names nobody to drift from, so only its giver is told.
+pub(crate) fn lapse_offer(world: &mut World, item_id: &ItemId, cause: &OfferLapse) {
+    let Some(offer) = world.offers.get(item_id).cloned() else {
+        return;
+    };
+    // An offer of an item that has left the world shows on no sheet, so
+    // nobody is told it ended — the same silence `repair_and_fail` keeps.
+    let Some(item) = world.items.get(item_id).cloned() else {
+        world.offers.remove(item_id);
+        return;
+    };
+    let giver_id = offer.giver_id.clone();
+    let noun = counted_noun(world, &item, offer.quantity);
+    world.offers.remove(item_id);
+    let mut lines: Vec<(ActorId, String)> = Vec::new();
+    // Both parties, and nobody else: a lapse has no bystander who can see both
+    // sheets at once, so there is no third party to tell.
+    let mut recipients: Vec<ActorId> = vec![giver_id.clone()];
+    match (&offer.target_id, cause) {
+        (Some(target_id), OfferLapse::DriftedApart) => {
+            lines.push((
+                giver_id.clone(),
+                format!(
+                    "{} is too far away now; the {noun} (id {item_id}) you held out is yours again",
+                    cap_first(&identify_ids(world, &giver_id, target_id))
+                ),
+            ));
+            lines.push((
+                target_id.clone(),
+                format!(
+                    "You are too far from {} now; the {noun} (id {item_id}) they held out for you is no longer on offer",
+                    identify_ids(world, target_id, &giver_id)
+                ),
+            ));
+            recipients.push(target_id.clone());
+        }
+        (Some(target_id), OfferLapse::ThroughTheGate { leaver }) => {
+            if leaver == &giver_id {
+                lines.push((
+                    giver_id.clone(),
+                    format!(
+                        "You are leaving through the gate; the {noun} (id {item_id}) you held out to {} is yours again",
+                        identify_ids(world, &giver_id, target_id)
+                    ),
+                ));
+                lines.push((
+                    target_id.clone(),
+                    format!(
+                        "{} is leaving through the gate; the {noun} (id {item_id}) they held out for you is no longer on offer",
+                        cap_first(&identify_ids(world, target_id, &giver_id))
+                    ),
+                ));
+            } else {
+                lines.push((
+                    giver_id.clone(),
+                    format!(
+                        "{} is leaving through the gate; the {noun} (id {item_id}) you held out is yours again",
+                        cap_first(&identify_ids(world, &giver_id, target_id))
+                    ),
+                ));
+                lines.push((
+                    target_id.clone(),
+                    format!(
+                        "You are leaving through the gate; the {noun} (id {item_id}) {} held out for you is no longer on offer",
+                        identify_ids(world, target_id, &giver_id)
+                    ),
+                ));
+            }
+            recipients.push(target_id.clone());
+        }
+        (None, _) => {
+            lines.push((
+                giver_id.clone(),
+                format!(
+                    "You are leaving through the gate; the {noun} (id {item_id}) you held out is yours again"
+                ),
+            ));
+        }
+    }
+    deliver(world, lines);
+    world_event(
+        world,
+        "lapse_offer",
+        &giver_id,
+        offer.target_id.clone(),
+        Some(item_id.clone()),
+        offer.quantity,
+        recipients,
+    );
 }
 
 fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {

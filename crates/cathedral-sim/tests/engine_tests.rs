@@ -2846,6 +2846,96 @@ fn commitment_takes_the_named_thing_and_nothing_else() {
     );
 }
 
+/// `law_and_order.md` M4: the station walk is always live. The intent the
+/// seizure lays can die with the delivery half-done — its budget burns down
+/// through conversation holds, and the closing chase overwrites it with a
+/// Person-follow that ends at the grab — and the ladder deliberately stands an
+/// escort with no intent rather than let the lower rungs walk him away. So the
+/// custody poll re-aims an intent-less escort at the station, stands down
+/// while the chase latch holds (that walk aims at the prisoner on purpose),
+/// and takes over again the poll after a hand lands.
+#[test]
+fn the_custody_poll_relays_a_dead_station_intent_and_never_fights_the_chase() {
+    let mut engine = Engine::new(
+        EngineConfig {
+            nav: Some(real_nav()),
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player");
+
+    let prisoner = ActorId::from_raw("cb947");
+    let officer = ActorId::from_raw("k0fb1");
+    // Far enough that the escort cannot arrive during this test, so the record
+    // stays in charge throughout.
+    let station_point = Vec3::new(0.0, WALK_Y, 300.0);
+    {
+        let world = engine.world_mut();
+        let gaol = cathedral_sim::custody::Station {
+            place_id: cathedral_sim::PlaceId::from_raw("pl_ston"),
+            name: cathedral_sim::custody::STONE_HOUSE_PLACE_NAME.into(),
+            point: station_point,
+            stone_house: true,
+        };
+        world
+            .custody
+            .seize(prisoner.clone(), officer.clone(), None, gaol, 0.0);
+        // No intent laid — exactly the post-expiry / post-grab state.
+        assert!(world.characters[&officer].state.intent.is_none());
+    }
+
+    engine.poll(0.0, Vec::new());
+    match &engine.world().characters[&officer].state.intent {
+        Some(intent) => match &intent.target {
+            cathedral_sim::IntentTarget::Place { point, .. } => assert!(
+                point.distance(station_point) < 1.0,
+                "the re-laid walk aims at the station, not {point:?}"
+            ),
+            other => panic!("expected a Place intent at the station, got {other:?}"),
+        },
+        None => panic!("the custody poll re-aims an intent-less escort at the station"),
+    }
+
+    // While the chase latch is set the re-lay stands down: that walk aims at
+    // the prisoner on purpose, and a station intent would overwrite it.
+    {
+        let world = engine.world_mut();
+        world.characters.get_mut(&officer).unwrap().state.intent = None;
+        world.custody.get_mut(&prisoner).unwrap().closing = true;
+    }
+    engine.poll(1.0, Vec::new());
+    assert!(
+        engine.world().characters[&officer].state.intent.is_none(),
+        "no station walk is laid over a live chase"
+    );
+
+    // The grab ends the chase and clears the latch; the next poll re-aims.
+    engine.world_mut().custody.grab(&prisoner, officer.clone());
+    engine.poll(2.0, Vec::new());
+    match &engine.world().characters[&officer].state.intent {
+        Some(intent) => match &intent.target {
+            cathedral_sim::IntentTarget::Place { point, .. } => assert!(
+                point.distance(station_point) < 1.0,
+                "after the hand lands the escort re-aims at the station, not {point:?}"
+            ),
+            other => panic!("expected a Place intent at the station, got {other:?}"),
+        },
+        None => panic!("the grab cleared the latch, so the next poll re-aims"),
+    }
+}
+
 /// M5d: the fifth door, and the one that costs. Confinement here is a keeper at
 /// a threshold — the Stone House's own lock is broken, which is Ede Clove's
 /// authored goal — so walking out is possible, and it compounds into the same

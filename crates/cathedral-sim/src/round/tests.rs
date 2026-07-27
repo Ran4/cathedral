@@ -1418,6 +1418,192 @@ fn an_escort_is_not_marched_to_food_mid_delivery() {
     );
 }
 
+/// Session 514's other half: the escort gate held the needs rungs, but once
+/// the station intent died — its budget burned through conversation holds, or
+/// the closing chase's Person-follow ending at the grab — the round leg, the
+/// social pull, the wander and the weather shelters were all still willing to
+/// walk the officer away, dragging an NPC prisoner across town or silently
+/// freeing a player one at the 20 m poll. An escort with no live `go_to`
+/// stands where they are until the custody poll re-aims them.
+#[test]
+fn an_escort_with_no_errand_stands_rather_than_walk_their_round() {
+    let nav = nav();
+    let mut world = base_world();
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "taken1",
+        Vec3::new(1.0, WALK_Y, 95.0),
+        Some("domestic_servant"),
+        Significance::Ambient,
+    ));
+    let officer = ActorId::from_raw("b4hst");
+    let taken = ActorId::from_raw("taken1");
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    // Control: free at the working morning, away from his post, the round rung
+    // really does walk him — the guarded assertions below mean something.
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &officer,
+        0,
+        Office::Kindling,
+        Weekday::Bellday,
+    ) {
+        Decision::Travel(_) => {}
+        other => panic!("control: the round leg walks a free mason, got {other:?}"),
+    }
+
+    // Taken in charge, and with no intent at all — the post-expiry, post-grab
+    // state nothing used to heal.
+    let station = crate::custody::stone_house(&world.places).expect("M5a built the gaol");
+    world
+        .custody
+        .seize(taken.clone(), officer.clone(), Some(1), station, 0.0);
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &officer,
+        0,
+        Office::Kindling,
+        Weekday::Bellday,
+    ) {
+        Decision::Stay => {}
+        other => panic!("an escort with no errand stands, got {other:?}"),
+    }
+
+    // A stored weather-shelter claim may not move him either.
+    round.weather_shelter_intents.insert(
+        officer.clone(),
+        WeatherShelterIntent {
+            shelter: 0,
+            target: Vec3::new(10.0, WALK_Y, 95.0),
+            release_threshold: 0.08,
+            below_since_days: None,
+            release_after_days: 1.0,
+        },
+    );
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &officer,
+        0,
+        Office::Kindling,
+        Weekday::Bellday,
+    ) {
+        Decision::Stay => {}
+        other => panic!("a sheltering escort stands too, got {other:?}"),
+    }
+}
+
+/// An officer seized mid-errand must not finish the errand first: the
+/// committed-state skips at the top of `run_ladder` would otherwise carry a
+/// live well or stall errand to completion — the whole walk-queue-draw-deliver
+/// arc — before `decide` ever saw the fresh station intent, and `tick_intents`
+/// never lays a walk from a well phase. The escort sweep abandons the errand
+/// through the same release paths a closing stall uses: no leaked queue slot,
+/// no leaked `serving` entry, and the shelter claim dropped with it.
+#[test]
+fn a_seizure_abandons_the_officers_well_and_stall_errands() {
+    let nav = nav();
+    let clock = clock_at(Office::Dayspring);
+    let mut world = base_world();
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "taken1",
+        Vec3::new(1.0, WALK_Y, 95.0),
+        Some("domestic_servant"),
+        Significance::Ambient,
+    ));
+    let officer = ActorId::from_raw("b4hst");
+    let taken = ActorId::from_raw("taken1");
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    assert!(!round.sources.is_empty(), "the seeded city has wells");
+    assert!(!round.stalls.is_empty(), "the seeded city has stalls");
+
+    // Mid-well-errand — standing in the queue at the curb — with a claimed
+    // shelter from earlier drizzle beside it.
+    round.sources[0].queue.push(officer.clone());
+    round.people.get_mut(&officer).expect("enrolled").phase = Phase::Queued;
+    round.weather_shelter_intents.insert(
+        officer.clone(),
+        WeatherShelterIntent {
+            shelter: 0,
+            target: Vec3::new(10.0, WALK_Y, 95.0),
+            release_threshold: 0.08,
+            below_since_days: None,
+            release_after_days: 1.0,
+        },
+    );
+    let station = crate::custody::stone_house(&world.places).expect("M5a built the gaol");
+    world
+        .custody
+        .seize(taken.clone(), officer.clone(), Some(1), station, 0.0);
+
+    let mut nudges = Vec::new();
+    run_ladder(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        0.0,
+        &BTreeSet::new(),
+        &mut nudges,
+    );
+    assert!(
+        !round.sources[0].queue.contains(&officer),
+        "the queue slot is given back, not leaked"
+    );
+    assert_eq!(
+        round.people[&officer].phase,
+        Phase::Idle,
+        "the well errand is abandoned"
+    );
+    assert!(
+        !round.weather_shelter_intents.contains_key(&officer),
+        "the shelter claim is dropped"
+    );
+
+    // Mid-stall-errand too: queued to buy when the seizure lands.
+    round.stalls[0].queue.push(officer.clone());
+    round.people.get_mut(&officer).expect("enrolled").food = Some(FoodErrand {
+        stall: 0,
+        phase: FoodPhase::Queued,
+    });
+    run_ladder(
+        &mut round,
+        &mut world,
+        &nav,
+        &clock,
+        1.0,
+        &BTreeSet::new(),
+        &mut nudges,
+    );
+    assert!(
+        round.people[&officer].food.is_none(),
+        "the stall errand is abandoned"
+    );
+    assert!(
+        !round.stalls[0].queue.contains(&officer),
+        "the stall queue slot is given back, not leaked"
+    );
+}
+
 /// An exchange with the player holds the round: the partner neither sets off
 /// on an errand nor keeps walking one already begun, and the round resumes on
 /// its own once the exchange goes cold.
@@ -4835,6 +5021,7 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
             spent_sparks: 0,
             last_failed_fingerprint: None,
             travel_deadline_real: None,
+            deadline_hold_began_real: None,
         },
     );
     world.characters.get_mut(&leader).unwrap().state.intent = Some(TravelIntent {
@@ -4878,7 +5065,7 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
         .push("A durable road line".into());
 
     let revision = world.world_revision;
-    round.begin_road_return(&mut world, &party_id, 2);
+    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
     assert_eq!(
         world.world_revision,
         revision + 1,
@@ -4916,7 +5103,7 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
     }
     let time = clock.at(0.0);
     let revision = world.world_revision;
-    round.tick_road_parties(&mut world, &nav, time, &BTreeSet::new());
+    round.tick_road_parties(&mut world, &nav, time, 0.0, &BTreeSet::new());
     assert_eq!(
         world.world_revision,
         revision + 1,
@@ -4928,7 +5115,7 @@ fn return_mode_clears_competing_state_and_the_next_boundary_unloads_every_member
     );
     assert!(!world.offers.contains_key(&personal));
     let revision = world.world_revision;
-    round.tick_road_parties(&mut world, &nav, time, &BTreeSet::new());
+    round.tick_road_parties(&mut world, &nav, time, 0.0, &BTreeSet::new());
     assert_eq!(
         world.world_revision,
         revision + 1,
@@ -5073,6 +5260,570 @@ fn boundary_failure_and_missed_trip_leave_the_trip_and_manifest_unchanged() {
             .iter()
             .any(|line| line.contains("boundary_exchange_failed"))
     );
+}
+
+/// `law_and_order.md` M4/M5: the one choke point every mechanical mover lays a
+/// route through refuses a body in the law's hands. `follow_escorts`' per-tick
+/// clear runs *before* `round::tick`, so any mover that re-lays after it wins
+/// the next movement slice — which is how a committed prisoner used to creep
+/// out of the gaol at full walking speed and get branded an escapee for a walk
+/// they never chose.
+#[test]
+fn set_route_refuses_a_body_in_the_laws_hands() {
+    let mut world = base_world();
+    world.add_character(person(
+        "taken1",
+        Vec3::ZERO,
+        Some("domestic_servant"),
+        Significance::Ambient,
+    ));
+    let taken = ActorId::from_raw("taken1");
+    let station = crate::custody::Station {
+        place_id: PlaceId::from_raw("pl_test"),
+        name: "The Wool Gate".into(),
+        point: Vec3::ZERO,
+        stone_house: false,
+    };
+    world
+        .custody
+        .seize(taken.clone(), ActorId::from_raw("srgnt"), Some(1), station, 0.0);
+
+    let path = vec![Vec3::new(10.0, WALK_Y, 0.0)];
+    set_route(&mut world, &taken, path.clone());
+    assert!(
+        world.characters[&taken].state.movement.is_none(),
+        "no round mover routes the law's prisoner"
+    );
+
+    // The moment the law lets go, the same call walks them again.
+    world.custody.release(&taken);
+    set_route(&mut world, &taken, path);
+    assert!(world.characters[&taken].is_walking());
+}
+
+/// The full shape of the escape-brand bug: a road party's trading leg re-lays a
+/// route every tick a member is `!is_walking()`, so the escort-side clear in
+/// `follow_escorts` never won and a member committed at the gate arch walked to
+/// Seven Lofts at full speed — past [`crate::custody::COMMITTED_ROAM_M`] within
+/// seconds, into M4d's unanswerable escape notice. The threshold has to hold
+/// under the engine's real per-poll order: escort clear first, round re-lay
+/// second, movement slice last.
+#[test]
+fn a_committed_road_party_member_never_creeps_off_their_threshold() {
+    let nav = nav();
+    let clock = clock_on(Office::Dayspring, 2);
+    let mut world = road_party_world();
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let time = clock.at(0.0);
+    let party_id = PartyId::from_raw("brede_wool_gate");
+    let leader = ActorId::from_raw("rbrde");
+    let carter = ActorId::from_raw("cbred");
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::InCity
+    );
+
+    // Control: the Dayspring leg is live and really does route a free member —
+    // the guarded stillness below means something.
+    round.tick_road_parties(&mut world, &nav, time, 0.0, &BTreeSet::new());
+    assert!(
+        world.characters[&leader].is_walking(),
+        "control: the trading leg walks a free member"
+    );
+
+    // The law takes the carter where they stand and commits them there. Four
+    // of the eight postings *are* gates, and the party entered at one: the
+    // nearest station to a just-entered member is the arch itself.
+    let station =
+        crate::custody::nearest_station(&world.places, world.characters[&carter].position_m())
+            .expect("the baked city has postings");
+    assert_eq!(station.name, "The Wool Gate");
+    world
+        .custody
+        .seize(carter.clone(), leader.clone(), Some(1), station.clone(), 0.0);
+    world.custody.commit(&carter, 0.0);
+    {
+        let actor = world.characters.get_mut(&carter).expect("carter exists");
+        actor.state.position_m = station.point;
+        actor.state.movement = None;
+        actor.state.intent = None;
+    }
+
+    // Ten seconds of polls in the engine's own order. Unguarded, the very
+    // first re-lay wins every slice and 1.8 m/s crosses the 8 m roam radius
+    // in under five.
+    let mut now = 0.0;
+    for _ in 0..200 {
+        crate::custody::follow_escorts(&mut world, now);
+        round.tick_road_parties(&mut world, &nav, time, 0.0, &BTreeSet::new());
+        world.step_movement(0.05, &nav, None);
+        now += 0.05;
+    }
+    let at = world.characters[&carter].position_m();
+    let strayed = f64::hypot(at.x - station.point.x, at.z - station.point.z);
+    assert!(
+        strayed <= crate::custody::COMMITTED_ROAM_M,
+        "a committed member stays at the threshold, strayed {strayed:.1} m"
+    );
+    assert!(
+        world.characters[&carter].state.movement.is_none(),
+        "the party lays no walk for the law's prisoner"
+    );
+    world.assert_invariants();
+}
+
+/// A departure must not carry anybody out of the world while the law holds
+/// them: `transition_presence` would dissolve a custody nobody released. The
+/// held member stays behind — the cast is fixed and this is a named person
+/// with a life in the city — and the party leaves without them, neither
+/// stranded at the gate waiting for somebody who can never arrive nor held up
+/// by the prisoner's conversation with their keeper.
+#[test]
+fn a_held_member_stays_behind_and_the_party_departs_without_them() {
+    let nav = nav();
+    let clock = clock_on(Office::Dayspring, 2);
+    let mut world = road_party_world();
+    world.add_character(person(
+        "srgnt",
+        Vec3::ZERO,
+        Some("bailiff_and_gaoler"),
+        Significance::Minor,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let time = clock.at(0.0);
+    let party_id = PartyId::from_raw("brede_wool_gate");
+    let leader = ActorId::from_raw("rbrde");
+    let carter = ActorId::from_raw("cbred");
+    let third = ActorId::from_raw("dbred");
+    let officer = ActorId::from_raw("srgnt");
+    let gate = round.road_parties[&party_id].gate_point;
+
+    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    for member in round.road_parties[&party_id].members.clone() {
+        world.characters.get_mut(&member).unwrap().state.position_m = gate;
+    }
+    // Committed at the arch itself, after the return already marked them
+    // leaving — the departure has to unsay that flag for the one who stays.
+    let station = crate::custody::nearest_station(&world.places, gate).expect("postings");
+    world
+        .custody
+        .seize(carter.clone(), officer.clone(), Some(1), station, 0.0);
+    world.custody.commit(&carter, 0.0);
+    assert!(world.characters[&carter].state.leaving_city);
+
+    round.tick_road_parties(&mut world, &nav, time, 0.0, &BTreeSet::new());
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::DeparturePending,
+        "a held crew member does not strand the party at the gate"
+    );
+    // The prisoner talking to their keeper holds nothing: only the departing
+    // must be out of conversation.
+    round.tick_road_parties(&mut world, &nav, time, 0.0, &warm(&carter));
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::BeyondTheWalls
+    );
+    assert!(!world.is_present(&leader));
+    assert!(!world.is_present(&third));
+    assert!(
+        world.is_present(&carter),
+        "the law's prisoner is not carried out of the world"
+    );
+    assert!(
+        world.custody.is_confined(&carter),
+        "the custody nobody released still stands"
+    );
+    assert!(
+        !world.characters[&carter].state.leaving_city,
+        "somebody staying is not leaving"
+    );
+    assert!(
+        !round.road_parties[&party_id].members.contains(&carter),
+        "the roster stops naming somebody who no longer travels"
+    );
+    let departed = round.drain_departed();
+    assert!(departed.contains(&leader) && departed.contains(&third));
+    assert!(
+        !departed.contains(&carter),
+        "the engine must not forget somebody who is still here"
+    );
+    assert!(
+        round
+            .drain_food_log()
+            .iter()
+            .any(|line| line.contains("road_left_behind")),
+        "staying behind is said in the trace"
+    );
+    world.assert_invariants();
+}
+
+/// The cart, the manifest and the boundary exchange are all the leader's, so a
+/// party whose *leader* the law holds does not leave at all: it waits out the
+/// custody — the hold ceilings drain every one in minutes — and departs
+/// whole once the law lets go.
+#[test]
+fn a_party_whose_leader_the_law_holds_waits_and_departs_whole_on_release() {
+    let nav = nav();
+    let clock = clock_on(Office::Dayspring, 2);
+    let mut world = road_party_world();
+    world.add_character(person(
+        "srgnt",
+        Vec3::ZERO,
+        Some("bailiff_and_gaoler"),
+        Significance::Minor,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let time = clock.at(0.0);
+    let party_id = PartyId::from_raw("brede_wool_gate");
+    let leader = ActorId::from_raw("rbrde");
+    let officer = ActorId::from_raw("srgnt");
+    let gate = round.road_parties[&party_id].gate_point;
+
+    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    for member in round.road_parties[&party_id].members.clone() {
+        world.characters.get_mut(&member).unwrap().state.position_m = gate;
+    }
+    let station = crate::custody::nearest_station(&world.places, gate).expect("postings");
+    world
+        .custody
+        .seize(leader.clone(), officer.clone(), Some(1), station, 0.0);
+
+    round.tick_road_parties(&mut world, &nav, time, 0.0, &BTreeSet::new());
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::Returning,
+        "no departure forms around a held leader"
+    );
+
+    world.custody.release(&leader);
+    round.tick_road_parties(&mut world, &nav, time, 0.0, &BTreeSet::new());
+    round.tick_road_parties(&mut world, &nav, time, 0.0, &BTreeSet::new());
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::BeyondTheWalls
+    );
+    assert_eq!(round.road_parties[&party_id].members.len(), 3, "nobody was left behind");
+    world.assert_invariants();
+}
+
+/// A stock-errand world with the Brede grain cart bound at Seven Lofts and an
+/// enrolled city buyer for the `betriss_grain` plan: the seller stands at his
+/// pitch, the buyer stands at the party's gate with a long walk ahead. The
+/// clock is 100 real hours per game day so the whole timeline below stays
+/// inside Dayspring — nothing here is about offices.
+fn grain_errand_fixture() -> (NavData, WorldClock, World, Round, ActorId) {
+    let nav = nav();
+    let clock = WorldClock::new(360_000.0, Office::Dayspring, 2, 0.05);
+    let mut world = road_party_world();
+    world.add_character(person(
+        "p008s",
+        Vec3::ZERO,
+        Some("merchant"),
+        Significance::Minor,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let buyer = ActorId::from_raw("p008s");
+    let seller = ActorId::from_raw("rbrde");
+    let pitch = round.counters["brede_grain_seven_lofts"].pitch;
+    let gate = round.road_parties[&PartyId::from_raw("brede_wool_gate")].gate_point;
+    world.characters.get_mut(&seller).unwrap().state.position_m = pitch;
+    world.characters.get_mut(&buyer).unwrap().state.position_m = gate;
+    (nav, clock, world, round, buyer)
+}
+
+/// `07_the_supply_chain.md`: a conversation or a pressing need *pauses* a
+/// stock errand rather than ending it — but `travel_deadline_real` was a real
+/// clock that never paused, so a buyer legitimately diverted mid-walk (the
+/// famished rung, a lightning flinch, a chat) came back past the deadline,
+/// took `TravelExpired`, and forfeited the binding for the rest of the day: a
+/// timeout firing on state another system caused. The deadline now moves
+/// forward by exactly the span the hold owned — and still expires a walk that
+/// stays stuck once the errand has the body back.
+#[test]
+fn a_pressing_diversion_pauses_the_stock_travel_deadline() {
+    let (nav, clock, mut world, mut round, buyer) = grain_errand_fixture();
+    let quiet = BTreeSet::new();
+
+    round.tick_stock_plans(&mut world, &nav, clock.at(0.0), 0.0, &quiet);
+    let deadline = round.market_errands[&buyer]
+        .travel_deadline_real
+        .expect("the walk stamps its deadline");
+    assert!(world.characters[&buyer].is_walking(), "the errand walks");
+
+    // The stand-in for any pressing hold: the lightning flinch is one of the
+    // three OR'd conditions of the very errand-hold gate the deadline must
+    // respect, and it needs no stall or hunger fixture.
+    round
+        .lightning_reflex_until
+        .insert(buyer.clone(), deadline + 500.0);
+    round.tick_stock_plans(&mut world, &nav, clock.at(10.0), 10.0, &quiet);
+    round.tick_stock_plans(&mut world, &nav, clock.at(deadline + 100.0), deadline + 100.0, &quiet);
+    assert!(
+        round.market_errands.contains_key(&buyer),
+        "a held errand never expires, however long the hold"
+    );
+
+    // The first tick after the hold is exactly where the old clock fired.
+    let resume = deadline + 501.0;
+    round.tick_stock_plans(&mut world, &nav, clock.at(resume), resume, &quiet);
+    assert!(
+        round.market_errands.contains_key(&buyer),
+        "the deadline was paused for the hold, not burned by it"
+    );
+    assert!(
+        !round.closed_market_visits.contains_key("betriss_grain"),
+        "the day's binding stays open"
+    );
+    let extended = round.market_errands[&buyer]
+        .travel_deadline_real
+        .expect("still walking");
+    assert!(
+        (extended - (deadline + (resume - 10.0))).abs() < 1e-6,
+        "the deadline moved by exactly the held span"
+    );
+
+    // Still meaningful: with the body its own again, a walk that never
+    // arrives still ends the visit.
+    let late = extended + 1.0;
+    round.tick_stock_plans(&mut world, &nav, clock.at(late), late, &quiet);
+    assert!(!round.market_errands.contains_key(&buyer));
+    assert_eq!(
+        round.closed_market_visits["betriss_grain"].end_reason,
+        MarketVisitEnd::TravelExpired
+    );
+    world.assert_invariants();
+}
+
+/// The same pause for the conversation hold — the spec's own words are that
+/// conversation pauses an errand rather than cancelling it, and a chat is no
+/// more the walk's fault than hunger is.
+#[test]
+fn a_conversation_pauses_the_stock_travel_deadline() {
+    let (nav, clock, mut world, mut round, buyer) = grain_errand_fixture();
+    let quiet = BTreeSet::new();
+
+    round.tick_stock_plans(&mut world, &nav, clock.at(0.0), 0.0, &quiet);
+    let deadline = round.market_errands[&buyer]
+        .travel_deadline_real
+        .expect("the walk stamps its deadline");
+
+    let held = warm(&buyer);
+    round.tick_stock_plans(&mut world, &nav, clock.at(5.0), 5.0, &held);
+    let resume = deadline + 200.0;
+    round.tick_stock_plans(&mut world, &nav, clock.at(resume), resume, &quiet);
+    assert!(
+        round.market_errands.contains_key(&buyer),
+        "a long conversation does not cost the buyer the visit"
+    );
+    let extended = round.market_errands[&buyer]
+        .travel_deadline_real
+        .expect("still walking");
+    assert!((extended - (deadline + (resume - 5.0))).abs() < 1e-6);
+    world.assert_invariants();
+}
+
+/// The road's recall ends a live `go_to` through [`end_intent`], so the mind
+/// that issued it is told why the body gave up — silent abandonment leaves it
+/// believing an untruth (05_the_llm_seam.md §2). The one exception is a member
+/// in the law's hands: the departure goes without them and the seizure's own
+/// percepts already own their story.
+#[test]
+fn the_road_return_ends_a_live_intent_with_the_why_percept() {
+    let nav = nav();
+    let clock = clock_on(Office::Dayspring, 2);
+    let mut world = road_party_world();
+    world.add_character(person(
+        "srgnt",
+        Vec3::ZERO,
+        Some("bailiff_and_gaoler"),
+        Significance::Minor,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let party_id = PartyId::from_raw("brede_wool_gate");
+    let leader = ActorId::from_raw("rbrde");
+    let carter = ActorId::from_raw("cbred");
+    let officer = ActorId::from_raw("srgnt");
+
+    let errand = |name: &str| {
+        Some(TravelIntent {
+            target: IntentTarget::Place {
+                place_id: PlaceId::from_raw(name),
+                name: name.into(),
+                point: Vec3::new(100.0, WALK_Y, 100.0),
+            },
+            budget_seconds: 100.0,
+            deadline: Some(100.0),
+        })
+    };
+    world.characters.get_mut(&leader).unwrap().state.intent = errand("somewhere");
+    world.characters.get_mut(&carter).unwrap().state.intent = errand("elsewhere");
+    let station = crate::custody::nearest_station(
+        &world.places,
+        world.characters[&carter].position_m(),
+    )
+    .expect("postings");
+    world
+        .custody
+        .seize(carter.clone(), officer.clone(), Some(1), station, 0.0);
+
+    let mut nudges = Vec::new();
+    round.begin_road_return(&mut world, &party_id, 2, &mut nudges);
+
+    assert!(world.characters[&leader].state.intent.is_none());
+    assert!(
+        world.characters[&leader]
+            .inbox()
+            .iter()
+            .any(|line| line
+                == "The road turned you back before you reached somewhere — the party is leaving for the gate."),
+        "the recall says why: {:?}",
+        world.characters[&leader].inbox()
+    );
+    assert!(
+        nudges.contains(&leader),
+        "the lapse grants the same priority turn every end_intent does"
+    );
+    assert!(world.characters[&carter].state.intent.is_none());
+    assert!(
+        !world.characters[&carter]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("The road turned you back")),
+        "a held member is not told they are leaving — they are not"
+    );
+    assert!(!nudges.contains(&carter));
+    world.assert_invariants();
+}
+
+/// A member's offers expire at the gate through the same courtesy machinery
+/// the distance sweep uses: both parties are told, and the `lapse_offer`
+/// event the HUD notice rides is emitted — a bare `offers.remove` left the
+/// other party's arm out toward a promise that no longer existed.
+#[test]
+fn gate_expired_offers_lapse_with_percepts_and_the_event() {
+    let nav = nav();
+    let clock = clock_on(Office::Dayspring, 2);
+    let mut world = road_party_world();
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let party_id = PartyId::from_raw("brede_wool_gate");
+    let carter = ActorId::from_raw("cbred");
+    let city = ActorId::from_raw("city1");
+    let gate = round.road_parties[&party_id].gate_point;
+
+    world.add_character(person("city1", gate, None, Significance::Minor));
+    let personal = world
+        .add_stock(&carter, &stock("generic", 1), "road:test:personal")
+        .unwrap();
+    world.characters.get_mut(&city).unwrap().state.position_m =
+        world.characters[&carter].position_m();
+    apply_action(
+        &mut world,
+        &carter,
+        "offer_item",
+        &json!({"item_id": personal.as_str(), "target": city.as_str()}),
+    )
+    .unwrap();
+
+    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    for member in round.road_parties[&party_id].members.clone() {
+        world.characters.get_mut(&member).unwrap().state.position_m = gate;
+    }
+    for actor in [&carter, &city] {
+        world.characters.get_mut(actor).unwrap().state.inbox.clear();
+    }
+    world.drain_events();
+
+    round.tick_road_parties(&mut world, &nav, clock.at(0.0), 0.0, &BTreeSet::new());
+
+    assert!(!world.offers.contains_key(&personal));
+    assert!(
+        world.characters[&carter]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("You are leaving through the gate")
+                && line.contains("is yours again")),
+        "the giver hears the expiry: {:?}",
+        world.characters[&carter].inbox()
+    );
+    assert!(
+        world.characters[&city]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("is leaving through the gate")
+                && line.contains("no longer on offer")),
+        "the target hears it too: {:?}",
+        world.characters[&city].inbox()
+    );
+    let events = world.drain_events();
+    let lapse = events
+        .iter()
+        .find(|event| event.kind == "lapse_offer")
+        .expect("the gate expiry emits the event the HUD rides");
+    assert_eq!(lapse.item_id.as_ref(), Some(&personal));
+    assert_eq!(lapse.actor_id.as_ref(), Some(&carter));
+    assert_eq!(lapse.target_id.as_ref(), Some(&city));
+    assert_eq!(lapse.recipient_ids, vec![carter, city]);
+    world.assert_invariants();
+}
+
+/// A returning carrier caught mid-conversation gets the road's own pressure
+/// line and one turn's grace before the body walks — the ladder's `excused`
+/// mechanism, carried by the party because road members are never enrolled in
+/// `people`. Before this, the body simply strode off to the gate the moment
+/// the exchange went cold, mid-topic, with no `system:` excuse ever injected.
+#[test]
+fn a_conversing_carrier_is_pressured_and_granted_one_grace_beat() {
+    let nav = nav();
+    let clock = clock_on(Office::Dayspring, 2);
+    let mut world = road_party_world();
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let party_id = PartyId::from_raw("brede_wool_gate");
+    let carter = ActorId::from_raw("cbred");
+    // Far from the gate, on a walkable pitch, so the fall-through walk is real.
+    let away = round.counters["brede_grain_seven_lofts"].pitch;
+    world.characters.get_mut(&carter).unwrap().state.position_m = away;
+
+    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    let held = warm(&carter);
+    let pressure_lines = |world: &World| {
+        world.characters[&carter]
+            .inbox()
+            .iter()
+            .filter(|line| line.contains("the road party is leaving"))
+            .count()
+    };
+
+    round.tick_road_parties(&mut world, &nav, clock.at(0.0), 0.0, &held);
+    assert_eq!(pressure_lines(&world), 1, "the pressure is said, once");
+    assert!(
+        world.characters[&carter].state.movement.is_none(),
+        "the percept comes before the feet"
+    );
+
+    // Inside the grace (the jitter floor is 1 s): still standing, still told
+    // exactly once.
+    round.tick_road_parties(&mut world, &nav, clock.at(0.9), 0.9, &held);
+    assert_eq!(pressure_lines(&world), 1);
+    assert!(world.characters[&carter].state.movement.is_none());
+
+    // Grace spent (past the 6 s jitter ceiling): the body walks even though
+    // the exchange is still warm — exactly the ladder's second pressing
+    // decision.
+    round.tick_road_parties(&mut world, &nav, clock.at(10.0), 10.0, &held);
+    assert_eq!(pressure_lines(&world), 1, "the pressure is never repeated");
+    assert!(
+        world.characters[&carter].is_walking(),
+        "one grace beat, then the gate"
+    );
+    world.assert_invariants();
 }
 
 #[test]
@@ -5362,6 +6113,202 @@ fn production_target_counts_every_output_with_the_same_stacking_key() {
             .sum::<u32>(),
         2
     );
+}
+
+/// A registered destination for the round-edit guard tests, built by hand the
+/// way the Night Office's own tests build their two-place registries.
+fn register_place(world: &mut World, id: &str, name: &str, point: Vec3) -> PlaceId {
+    let place_id = PlaceId::from_raw(id);
+    world
+        .places
+        .insert(crate::places::PlaceEntry {
+            id: place_id.clone(),
+            name: name.into(),
+            point,
+            ward: None,
+            coarse: true,
+        })
+        .expect("the test place registers");
+    place_id
+}
+
+/// A night edit that would rename the one Work leg a half-done transform
+/// accrues on is refused when the round applies it, and the author hears why —
+/// while an edit to the same author's *unbound* leg still lands: only the
+/// trade's leg is held, never the whole sheet.
+#[test]
+fn a_round_edit_that_would_strand_a_live_transform_is_refused_with_the_reason() {
+    let (mut world, mut round, producer, _clock) = active_production_fixture(240);
+    let bellstand = register_place(
+        &mut world,
+        "pl_bell",
+        "The Bellstand",
+        Vec3::new(30.0, WALK_Y, 30.0),
+    );
+
+    world
+        .characters
+        .get_mut(&producer)
+        .unwrap()
+        .state
+        .round_edit = Some(RoundEdit {
+        leg: 0,
+        place_id: bellstand.clone(),
+    });
+    apply_round_edits(&mut round, &mut world, 0.0);
+
+    assert!(
+        world.characters[&producer].state.round_edit.is_none(),
+        "a refused edit is consumed, not retried every tick"
+    );
+    assert_eq!(
+        round.people[&producer].legs[0].label, "Test Mill",
+        "the Work leg the job accrues on stands"
+    );
+    assert!(
+        world.characters[&producer]
+            .pending_history()
+            .iter()
+            .any(|line| line.contains("Test Mill") && line.contains("holds you there")),
+        "the author learns the reason: {:?}",
+        world.characters[&producer].pending_history()
+    );
+
+    // The sleep leg binds nothing, so the same destination is fine there.
+    world
+        .characters
+        .get_mut(&producer)
+        .unwrap()
+        .state
+        .round_edit = Some(RoundEdit {
+        leg: 1,
+        place_id: bellstand,
+    });
+    apply_round_edits(&mut round, &mut world, 0.0);
+    assert_eq!(
+        round.people[&producer].legs[1].label, "The Bellstand",
+        "the unbound leg moved"
+    );
+    assert!(
+        world.active_transform_job(&producer).is_some(),
+        "the job rides out the harmless edit untouched"
+    );
+}
+
+/// The stall arm of the same guard: the bound keeper's only leg at the stall's
+/// site cannot be renamed out from under tomorrow's `bind_vendors`.
+#[test]
+fn a_round_edit_that_would_unstaff_a_stall_is_refused_with_the_reason() {
+    let (mut world, mut round, keeper, _clock) = active_production_fixture(240);
+    // Isolate the stall arm from the production arm.
+    world.transform_jobs.clear();
+    round.stalls.push(FoodStall {
+        name: "Flour Board".into(),
+        site: "Test Mill".into(),
+        pitch: Vec3::ZERO,
+        trade: "bread".into(),
+        vendor: Some(keeper.clone()),
+        queue: Vec::new(),
+        serving: None,
+        preferred: None,
+        open: OpenSpec {
+            offices: vec![Office::HighWick],
+            weekdays: None,
+        },
+        cry_next: 0.0,
+    });
+    let bellstand = register_place(
+        &mut world,
+        "pl_bell",
+        "The Bellstand",
+        Vec3::new(30.0, WALK_Y, 30.0),
+    );
+
+    world.characters.get_mut(&keeper).unwrap().state.round_edit = Some(RoundEdit {
+        leg: 0,
+        place_id: bellstand,
+    });
+    apply_round_edits(&mut round, &mut world, 0.0);
+
+    assert_eq!(
+        round.people[&keeper].legs[0].label, "Test Mill",
+        "the keeper's routing leg stands"
+    );
+    assert!(
+        world.characters[&keeper]
+            .pending_history()
+            .iter()
+            .any(|line| line.contains("Your stall at Test Mill")),
+        "the keeper learns the reason: {:?}",
+        world.characters[&keeper].pending_history()
+    );
+}
+
+/// The safety net under the guard: a job stranded any other way — here the leg
+/// label simply dies out from under it — releases its reservations after a
+/// full idle game day, and the stock is usable again.
+#[test]
+fn a_stranded_transform_releases_its_reservations_after_a_full_idle_day() {
+    let (mut world, mut round, producer, clock) = active_production_fixture(240);
+    let grain = world.active_transform_job(&producer).unwrap().inputs[0]
+        .item_id
+        .clone();
+    assert_eq!(
+        world.uncommitted_quantity(&grain),
+        0,
+        "the input is committed while the job lives"
+    );
+
+    // Sever the leg-label binding directly: from the job's point of view every
+    // lost worker — dead route data, a guard bypass, a future system — looks
+    // exactly like this, and not a minute ever accrues again.
+    round.people.get_mut(&producer).unwrap().legs[0].label = "Somewhere Else".into();
+
+    // The fixture clock runs 1440 real seconds per game day. Half a day of
+    // stillness is an honest pause, not abandonment.
+    round.tick_production(&mut world, &clock, 0.0, &BTreeSet::new());
+    round.tick_production(&mut world, &clock, 720.0, &BTreeSet::new());
+    assert!(
+        world.active_transform_job(&producer).is_some(),
+        "half a day idle is still just paused"
+    );
+
+    round.tick_production(&mut world, &clock, 1441.0, &BTreeSet::new());
+    assert!(
+        world.active_transform_job(&producer).is_none(),
+        "a full idle day abandons the job"
+    );
+    assert_eq!(
+        world.uncommitted_quantity(&grain),
+        1,
+        "the reserved grain is uncommitted stock again"
+    );
+    let trace = round.drain_food_log();
+    assert!(
+        trace
+            .iter()
+            .any(|line| line.starts_with("transform_abandoned: producer")),
+        "the abandonment is traced: {trace:?}"
+    );
+    world.assert_invariants();
+}
+
+/// A job whose progress figure keeps moving restarts the watchdog window every
+/// pump; only a figure sitting exactly still for a whole day is swept.
+#[test]
+fn a_transform_still_accruing_work_is_never_swept() {
+    let (mut world, mut round, producer, clock) = active_production_fixture(100_000);
+
+    // Each pump a day apart crosses the authored Waning Work window, so the
+    // progress figure moves between every pair of observations.
+    round.tick_production(&mut world, &clock, 0.0, &BTreeSet::new());
+    round.tick_production(&mut world, &clock, 1441.0, &BTreeSet::new());
+    round.tick_production(&mut world, &clock, 2882.0, &BTreeSet::new());
+
+    let job = world
+        .active_transform_job(&producer)
+        .expect("a working job is never abandoned");
+    assert!(job.progress_work_minutes > 0.0, "work really accrued");
 }
 
 // --------------------------------------------------------------------------- //

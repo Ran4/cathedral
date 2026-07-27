@@ -1290,20 +1290,18 @@ fn a_visitor_at_the_grate_is_heard_by_the_whole_cell() {
     }
 }
 
-/// M5d, and the one the review pass caught: **nothing else in the sim knows
-/// about custody.** `round::decide`'s rung 0 and the `go_to` refusal are the only
-/// two guards and neither is a *mover* — `apply_intents` re-lays a
-/// `go_to {"person": …}` route every tick its target is in sight, and the stock
-/// plans, the road parties and the finished well-draw all call `set_route`
-/// without asking. So a townsman arrested mid-errand kept a live intent, was
-/// re-routed, and `World::step_movement` walked him out through the doorway —
-/// where the engine's roam check read a stray it did not cause, released him,
-/// and branded him with the one word no restitution can answer.
+/// M5d, and the one the review pass caught: a townsman arrested mid-errand kept
+/// a live intent, was re-routed, and `World::step_movement` walked him out
+/// through the doorway — where the engine's roam check read a stray it did not
+/// cause, released him, and branded him with the one word no restitution can
+/// answer. A person who never chose to leave, and who *could not have* —
+/// `go_to` is refused while held — wanted for the rest of the run for it.
 ///
-/// A person who never chose to leave, and who *could not have* — `go_to` is
-/// refused while held — wanted for the rest of the run for it. So a committed
-/// body has no errand and no path, re-asserted every tick rather than cleared
-/// once at `seize`, because one clear cannot outlast a mover that re-lays.
+/// The round's `set_route` now refuses a prisoner outright, so the re-laying
+/// movers cannot fight this; what no guard reaches is the walk that *already
+/// existed* at the seizure. So a committed body has no errand and no path,
+/// re-asserted every tick rather than cleared once, because a stale intent can
+/// land between any two polls and one missed clear is a branding.
 #[test]
 fn a_committed_body_keeps_no_errand_and_no_path_for_a_mover_to_follow() {
     let mut world = law_world();
@@ -1370,4 +1368,67 @@ fn a_confined_inmate_never_walks_out_by_standing_still() {
         "sitting against the back wall is further than arriving"
     );
     assert!(f64::hypot(at.x, at.z) <= custody::COMMITTED_ROAM_M, "and is not leaving");
+}
+
+// ---------------------------------------------------------- the departed escort
+
+/// M4: an escort who leaves the city cannot walk anybody anywhere, so their
+/// prisoner is simply free — the same answer the dead-man timer gives, for the
+/// same reason — and they are **told** so, with the reason. The engine used to
+/// call `Custody::forget` and discard the freed list: no percept, no reason, a
+/// hold that ended in silence and so looked exactly like one that did not,
+/// while every clock-driven release in `tick_custody` says what ended and why.
+#[test]
+fn a_departing_escort_frees_their_prisoner_audibly_and_with_the_reason() {
+    let mut world = law_world();
+    world
+        .custody
+        .seize(actor("tamrd"), actor("srgnt"), Some(1), toll_house(), 0.0);
+    // A second hand is still on the arm when the officer of record leaves: the
+    // custody dissolves whole, and that grip must come off audibly too.
+    world.custody.grab(&actor("tamrd"), actor("wrdn"));
+
+    custody::forget_departed(&mut world, &actor("srgnt"));
+
+    assert!(
+        !world.custody.holds(&actor("tamrd")),
+        "an escort beyond the walls holds nobody"
+    );
+    let inbox = world.characters[&actor("tamrd")].inbox();
+    assert!(
+        inbox.iter().any(|line| {
+            line.contains("out of the law's hands")
+                && line.contains("Tallage toll-house")
+                && line.contains("left the city")
+        }),
+        "the freed learn they are free, and why: {inbox:?}"
+    );
+    // The grip's end is announced to whoever is standing there — the same
+    // witness line every other release path emits (`announce_grip` addresses
+    // bystanders; the prisoner's own news is the reason line above).
+    let overheard = world.characters[&actor("wrdn")].inbox();
+    assert!(
+        overheard.iter().any(|line| line.contains("lets go of")),
+        "the lingering hand comes off audibly: {overheard:?}"
+    );
+
+    // A committed prisoner keeps their cell when the officer who brought them
+    // departs — the keeper holds the threshold, not the escort — so the walk-out
+    // path stays what frees them, never a departure they had no part in.
+    world
+        .custody
+        .seize(actor("gossp"), actor("wrdn"), Some(2), toll_house(), 1.0);
+    world.custody.commit(&actor("gossp"), 2.0);
+    custody::forget_departed(&mut world, &actor("wrdn"));
+    assert!(
+        world.custody.is_confined(&actor("gossp")),
+        "commitment survives its officer's departure"
+    );
+    assert!(
+        !world.characters[&actor("gossp")]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("out of the law's hands")),
+        "nobody is told they are free who is not"
+    );
 }

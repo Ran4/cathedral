@@ -436,7 +436,13 @@ impl Custody {
 
     /// Everyone a departed character was holding or being held by, tidied. Called
     /// when the round takes somebody out of the city.
-    pub fn forget(&mut self, gone: &ActorId) -> Vec<ActorId> {
+    ///
+    /// Returns the freed with their records — which still name whoever else had
+    /// hold — so the caller can say what ended and to whom, exactly as
+    /// [`Self::release`] does: a hold that ends in silence looks exactly like
+    /// one that did not. [`forget_departed`] is that saying, for the callers
+    /// that hold a whole [`World`].
+    pub fn forget(&mut self, gone: &ActorId) -> Vec<(ActorId, CustodyRecord)> {
         self.held.remove(gone);
         let mut freed = Vec::new();
         for (prisoner, record) in &mut self.held {
@@ -448,10 +454,16 @@ impl Custody {
         // An escort who left the city cannot walk anybody anywhere; their
         // prisoners are simply free, which is the same answer the dead-man timer
         // gives for the same reason.
-        for prisoner in &freed {
-            self.held.remove(prisoner);
-        }
         freed
+            .into_iter()
+            .map(|prisoner| {
+                let record = self
+                    .held
+                    .remove(&prisoner)
+                    .expect("the freed came from the map");
+                (prisoner, record)
+            })
+            .collect()
     }
 }
 
@@ -577,21 +589,25 @@ pub fn follow_escorts(world: &mut World, now: f64) -> EscortStep {
 
     arrived.retain(|prisoner| world.custody.commit(prisoner, now));
 
-    // **Nothing else in the sim knows about custody.** `round::decide`'s rung 0
-    // and the `go_to` refusal are the only two guards, and neither is a mover:
-    // `apply_intents` re-lays a `go_to {"person": …}` route every tick the target
-    // is in sight, and `tick_stock_plans`, `tick_road_parties` and the finished
-    // draw in `service_sources` all call `set_route` without asking. A prisoner
-    // taken mid-errand therefore keeps a live intent, gets re-routed, and
-    // `World::step_movement` walks them straight out through the doorway — where
-    // the engine's roam check reads a stray it did not cause, releases them, and
-    // brands them with M4d's unanswerable escape notice. A person who never
-    // chose to leave, and who could not have (`go_to` is refused while held),
-    // wanted for the rest of the run for it.
+    // **Little else in the sim knows about custody, and what does is a guard,
+    // not a mover.** `round::decide`'s rung 0 and the `go_to` refusal stop a
+    // held body *choosing* to walk, and `round`'s `set_route` — the one
+    // primitive every mechanical mover lays a route through — refuses a
+    // prisoner outright, so `tick_stock_plans`, `tick_road_parties` and the
+    // finished draw in `service_sources`, which all re-lay on their own clock
+    // *after* this function runs, cannot out-shout the clear below. What no
+    // guard reaches is the walk that already existed: a prisoner taken
+    // mid-errand still carries the movement and intent laid before the
+    // seizure, and `World::step_movement` has no custody check, so a live path
+    // would carry them straight out through the doorway — where the engine's
+    // roam check reads a stray it did not cause, releases them, and brands
+    // them with M4d's unanswerable escape notice. A person who never chose to
+    // leave, wanted for the rest of the run for it.
     //
     // So a committed body has no errand and no path, re-asserted every tick
-    // rather than once at `seize`: one clear cannot outlast movers that re-lay,
-    // and there is no single choke point to guard instead.
+    // rather than once at commitment, because a hand-off between systems can
+    // land a stale intent between any two polls and one missed clear is a
+    // branding.
     let confined: Vec<ActorId> = world
         .custody
         .iter()
@@ -612,6 +628,36 @@ pub fn follow_escorts(world: &mut World, now: f64) -> EscortStep {
     EscortStep {
         moved,
         committed: arrived,
+    }
+}
+
+/// A departure's side of custody: tidy the law's map of somebody the round has
+/// taken out of the city, and give anyone freed by it the same audible release
+/// every other path gives (`law_and_order.md` M4).
+///
+/// The engine's `tick_custody` never sees this ending — the dead-man timer, the
+/// hold ceilings and the separation poll all run on clocks, and an escort
+/// walking out with a road party is not a clock — so without this the freed
+/// learned nothing: no percept, no reason, a hold that ended in silence and so
+/// looked exactly like one that did not. Mirrors the freed loop in
+/// `tick_custody`: lingering hands come off audibly, and the prisoner is told
+/// why they are free. The one voice missing is the officer's own percept —
+/// they are beyond the walls, and a departure clears the inbox they would have
+/// read it in.
+pub fn forget_departed(world: &mut World, gone: &ActorId) {
+    for (prisoner_id, record) in world.custody.forget(gone) {
+        for holder in &record.holders {
+            crate::actions::announce_grip(world, holder, &prisoner_id, false);
+        }
+        if let Some(prisoner) = world.characters.get_mut(&prisoner_id)
+            && prisoner.control().is_llm()
+        {
+            prisoner.notify_percept(format!(
+                "you are out of the law's hands: the one walking you to {} has left the city",
+                record.station.name
+            ));
+        }
+        world.touch_public_state();
     }
 }
 
@@ -1019,7 +1065,12 @@ mod tests {
         let (thief, ashe) = (ActorId::from_raw("thief"), ActorId::from_raw("ashe"));
         let mut custody = Custody::default();
         custody.seize(thief.clone(), ashe.clone(), Some(1), station("a gate"), 0.0);
-        assert_eq!(custody.forget(&ashe), [thief.clone()]);
+        let freed = custody.forget(&ashe);
+        // The record comes back with the id, so the caller can say what ended
+        // — the station by name — rather than freeing anybody in silence.
+        assert_eq!(freed.len(), 1);
+        assert_eq!(freed[0].0, thief);
+        assert_eq!(freed[0].1.station.name, "a gate");
         assert!(!custody.holds(&thief));
 
         // A committed prisoner keeps their cell when the officer who brought

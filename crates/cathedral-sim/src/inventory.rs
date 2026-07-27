@@ -1070,6 +1070,18 @@ impl World {
         self.transform_jobs.values()
     }
 
+    /// Drop the producer's active job without completing it, returning what was
+    /// dropped. Reservations are *derived* from the live job set
+    /// ([`Self::transform_reserved_quantity`], [`Self::future_output_quantity`]),
+    /// so removal alone hands every reserved input back to uncommitted stock and
+    /// releases the promised output capacity — nothing is consumed, nothing is
+    /// produced, and the receipt ledger never hears of it. This is the only
+    /// non-completing exit a job has: without it, a job whose worker can no
+    /// longer reach its site would hold its inputs committed forever.
+    pub fn abandon_transform_job(&mut self, producer: &ActorId) -> Option<TransformJob> {
+        self.transform_jobs.remove(producer)
+    }
+
     /// Finish the producer's active job. Callers that need idempotent replay by
     /// logical job key use [`Self::complete_transform_job_by_id`].
     pub fn complete_transform_job(
