@@ -188,9 +188,15 @@ pub(crate) enum SoundscapeCue {
     StoneGateClosing,
     RiverGateBarLift,
     /// Somebody has been taken in charge (`law_and_order.md` M4c): the officer's
-    /// keys, at the officer. The gaol door is deliberately *not* here — that
-    /// sound is reserved for the Stone House, which M5 has yet to build.
+    /// keys, at the officer.
     CustodyKeys {
+        position: Vec3,
+    },
+    /// Somebody has been committed to the Stone House (`law_and_order.md` M5c):
+    /// the one door in this city that is a door. Cued only for the gaol — a gate
+    /// arch has no leaf to shut, and confinement there is a keeper standing at a
+    /// threshold. The catalogue reserved this clip for exactly this moment.
+    GaolDoor {
         position: Vec3,
     },
     /// Ring one of the two civic bells. Patterns are data, never recordings
@@ -542,9 +548,10 @@ enum SoundscapeSound {
     SkinnersCourtLife,
     SevenLoftsGrain,
     GatekeeperKeyRing,
+    StoneHouseCellDoor,
 }
 
-const ALL_SOUNDS: [SoundscapeSound; 54] = [
+const ALL_SOUNDS: [SoundscapeSound; 55] = [
     SoundscapeSound::CobbleFootstep,
     SoundscapeSound::WorkshopCough,
     SoundscapeSound::EveningYawn,
@@ -599,9 +606,10 @@ const ALL_SOUNDS: [SoundscapeSound; 54] = [
     SoundscapeSound::SkinnersCourtLife,
     SoundscapeSound::SevenLoftsGrain,
     SoundscapeSound::GatekeeperKeyRing,
+    SoundscapeSound::StoneHouseCellDoor,
 ];
 
-const SOUND_DESCRIPTORS: [SoundDescriptor; 54] = [
+const SOUND_DESCRIPTORS: [SoundDescriptor; 55] = [
     descriptor(
         SoundscapeSound::CobbleFootstep,
         "snd_001_soft_shoes_on_dry_cobbles.mp3",
@@ -1044,6 +1052,18 @@ const SOUND_DESCRIPTORS: [SoundDescriptor; 54] = [
         0.70,
         24.0,
         0.35,
+    ),
+    // The gaol door, iron-bound oak through a close masonry corridor: hinge
+    // groan, dense wooden impact, bolt and key. Louder and further-carrying than
+    // the key ring, because being shut in is public — the Bellstand square hears
+    // it — and it is the last thing a committed prisoner hears before the room.
+    descriptor(
+        SoundscapeSound::StoneHouseCellDoor,
+        "snd_080_stone_house_cell_door.mp3",
+        ClipMode::OneShot,
+        0.85,
+        34.0,
+        0.4,
     ),
 ];
 
@@ -1505,6 +1525,18 @@ fn ingest_soundscape_cues(
                     positional_cooldown_key(SoundscapeSound::GatekeeperKeyRing, position, 3.0);
                 if cooldowns.allow(key, now, 1.5) {
                     scheduled.push(now, SoundscapeSound::GatekeeperKeyRing, position);
+                }
+            }
+            SoundscapeCue::GaolDoor { position } => {
+                // Positional, on the same idiom as the keys: two people
+                // committed within a few seconds of each other is one door.
+                let key = positional_cooldown_key(
+                    SoundscapeSound::StoneHouseCellDoor,
+                    position,
+                    3.0,
+                );
+                if cooldowns.allow(key, now, 4.0) {
+                    scheduled.push(now, SoundscapeSound::StoneHouseCellDoor, position);
                 }
             }
             SoundscapeCue::RiverGateBarLift => {
@@ -3880,7 +3912,7 @@ mod tests {
 
     #[test]
     fn every_route_has_a_unique_asset_and_the_right_container() {
-        assert_eq!(ALL_SOUNDS.len(), 54);
+        assert_eq!(ALL_SOUNDS.len(), 55);
         let mut files = HashSet::new();
         for (index, sound) in ALL_SOUNDS.into_iter().enumerate() {
             let descriptor = sound.descriptor();
@@ -3905,7 +3937,7 @@ mod tests {
 
     #[test]
     fn every_descriptor_points_at_a_nonempty_reviewed_asset() {
-        let assets: [&[u8]; 54] = [
+        let assets: [&[u8]; 55] = [
             include_bytes!("../assets/sounds/soundscape/snd_001_soft_shoes_on_dry_cobbles.mp3"),
             include_bytes!("../assets/sounds/soundscape/snd_034_dusty_workshop_cough.mp3"),
             include_bytes!("../assets/sounds/soundscape/snd_037_end_of_day_yawn.mp3"),
@@ -3966,6 +3998,7 @@ mod tests {
             include_bytes!("../assets/sounds/soundscape/snd_339_skinners_court_work_and_home.wav"),
             include_bytes!("../assets/sounds/soundscape/snd_340_seven_lofts_grain_interior.wav"),
             include_bytes!("../assets/sounds/soundscape/snd_065_gatekeepers_key_ring.mp3"),
+            include_bytes!("../assets/sounds/soundscape/snd_080_stone_house_cell_door.mp3"),
         ];
         for (sound, bytes) in ALL_SOUNDS.into_iter().zip(assets) {
             assert!(
@@ -3996,7 +4029,7 @@ mod tests {
         let sounds = manifest["sounds"]
             .as_array()
             .expect("manifest sounds is an array");
-        assert_eq!(manifest["implemented_count"], 54);
+        assert_eq!(manifest["implemented_count"], 55);
         let manifested_ids: HashSet<_> = sounds
             .iter()
             .filter_map(|sound| {

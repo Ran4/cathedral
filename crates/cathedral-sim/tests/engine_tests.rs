@@ -2780,8 +2780,11 @@ fn commitment_takes_the_named_thing_and_nothing_else() {
             .custody
             .seize(thief.clone(), officer.clone(), Some(notice), gaol, 0.0);
     }
-    engine.poll(0.0, Vec::new());
-    engine.poll(1.0, Vec::new());
+    // The escort walks them to the officer's shoulder and commits on the very
+    // first pump — the station point *is* where the keeper stands — so the
+    // arrival is announced in poll zero, not the one after it.
+    let mut arrival = engine.poll(0.0, Vec::new());
+    arrival.extend(engine.poll(1.0, Vec::new()));
 
     let world = engine.world();
     assert!(
@@ -2810,6 +2813,23 @@ fn commitment_takes_the_named_thing_and_nothing_else() {
         !inbox.iter().any(|line| line.contains("Conny")),
         "and never their name: {inbox:?}"
     );
+    // The gaol door, the one door in the city that is a door (M5c). The sim
+    // emits `commit` only for the Stone House — a gate arch has no leaf to shut
+    // — so the host needs no station test of its own to cue it.
+    assert!(
+        arrival
+            .iter()
+            .any(|message| matches!(message, EngineMessage::WorldEvent { kind, .. } if kind == "commit")),
+        "arriving is a world event the host can put a sound on: {:?}",
+        arrival
+            .iter()
+            .filter_map(|message| match message {
+                EngineMessage::WorldEvent { kind, .. } => Some(kind.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    );
+
     // And the sentence is stated in the city's own clock, not in seconds.
     let record = world.custody.get(&thief).unwrap();
     assert!(

@@ -1348,20 +1348,28 @@ what holds you here, the masonry is; you have to find the door. And **`tp`
 engages flying, and flying is not custody**, so a drive script that teleports
 into the cell must `key Quote` before it means anything.
 
+**The gaol door.** `snd_080_stone_house_cell_door` was reserved for exactly this
+moment and is now generated and routed: `SoundscapeSound::StoneHouseCellDoor`
+beside `GatekeeperKeyRing`, cued by `SoundscapeCue::GaolDoor` on the sim's
+`commit` world event. Louder and further-carrying than the key ring (0.85 gain,
+34 m against 24) because being shut in is public — the Bellstand square hears it
+— and it is the last thing a committed prisoner hears before the room. It needs
+no station test of its own: the sim emits `commit` only for the gaol, since a
+gate arch has no leaf to shut. Its `game_placement` said *"the future Stone House
+near River Gate"*, which was two moves out of date, and now names the Bellstand.
+
+**The keeper's lamp.** The lore is explicit that a prisoner is given nothing —
+no bedding, no rations, *no candle* — so nothing in the room belongs to the
+people held in it. But an unlit room is not a scene, and M5's whole argument is
+that this is the densest social scene in the game: eight faces you cannot see are
+not eight people. So the light is the keeper's own, at her threshold, warm and
+short-ranged enough that the corners stay dark.
+
 ### What is left
 
-- **The gaol door sound.** `more_sounds.json` reserves
-  `snd_080_stone_house_cell_door` for exactly this, the sim now emits a `commit`
-  world event for the host to cue it on, and the clip cannot be generated here:
-  `features/more_sounds/generate_sound.py` needs an ElevenLabs key and
-  `prompt_playgound/.env` has none. Generate it, then add the
-  `SoundscapeSound`/`SoundscapeCue` pair beside `GatekeeperKeyRing` and flip
-  `implemented_in_game` (its `game_placement` also still says *"the future Stone
-  House near River Gate"*, which is now two moves out of date).
-- **The cell is very dark.** Correct for a gaol and correct for the lore — *"you
-  are given nothing… no candle"* — but the room is where the densest social scene
-  in the game is supposed to happen, and faces are hard to read in it. The
-  keeper's own lamp at the threshold would be the diegetic fix.
+Nothing in M5. The one thing this milestone touches and does not finish is the
+court — `custody.rs`'s `TODO(the bench)` still marks where *"committed to await a
+hearing"* would slot in, and it is deliberately a whole second system.
 
 ### Tests
 

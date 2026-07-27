@@ -1242,8 +1242,7 @@ fn process_engine_message(
             }
             // Being taken in charge has a sound of its own (M4c): the keys the
             // gate and watch keepers carry, off the officer who just took
-            // somebody. Not the gaol door — that one is reserved for the Stone
-            // House, which M5 has not built yet.
+            // somebody.
             if kind == "seize"
                 && let Some(officer) = mirror.actor(&actor)
             {
@@ -1251,6 +1250,19 @@ fn process_engine_message(
                     .soundscape
                     .write(crate::soundscape::SoundscapeCue::CustodyKeys {
                         position: officer.position_m.into(),
+                    });
+            }
+            // …and being shut in has the other (M5c). The sim emits `commit`
+            // only for the Stone House — a gate arch has no leaf — so this needs
+            // no station test of its own, and the position is the prisoner's,
+            // because the door is the last thing they hear before the room.
+            if kind == "commit"
+                && let Some(prisoner) = mirror.actor(&actor)
+            {
+                presentation
+                    .soundscape
+                    .write(crate::soundscape::SoundscapeCue::GaolDoor {
+                        position: prisoner.position_m.into(),
                     });
             }
             match (kind.as_str(), target, item) {

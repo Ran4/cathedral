@@ -1742,12 +1742,12 @@
         "interior",
         "sequence"
       ],
-      "game_placement": "Reserve for the future Stone House near River Gate, prisoner transfers, and visits; use quieter lock-only variants for routine checks.",
+      "game_placement": "Cued when somebody is committed to the Stone House in the side court behind the Bellstand (law_and_order.md M5c); the sim emits the event only for the gaol, since a gate arch has no leaf to shut.",
       "generation_prompt": "Heavy iron-bound oak gaol cell door opening and closing in a narrow stone corridor, hinge groan, dense wooden impact, bolt and key. Natural hand-timed sequence with small human variations rather than metronomic timing; no electronic effects or modern machinery.",
       "playback_mode": "sequence",
       "suggested_duration_seconds": 3.5,
       "id": "snd_080_stone_house_cell_door",
-      "implemented_in_game": false
+      "implemented_in_game": true
     },
     {
       "sound_name": "Wickmarket Highmarket Crowd Bed",
