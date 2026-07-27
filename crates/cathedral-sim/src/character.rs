@@ -221,7 +221,9 @@ impl StatusKind {
     /// Resolve the wire string a debug hook wrote to a kind, or `None` for an
     /// unknown one (the caller turns that into a usage error).
     pub fn from_wire(text: &str) -> Option<Self> {
-        StatusKind::ALL.into_iter().find(|kind| kind.as_str() == text)
+        StatusKind::ALL
+            .into_iter()
+            .find(|kind| kind.as_str() == text)
     }
 }
 
@@ -610,7 +612,10 @@ impl Character {
 
     /// The character's current walking speed in m/s — 0 for anyone not walking.
     pub fn speed(&self) -> f64 {
-        self.state.movement.as_ref().map_or(0.0, |movement| movement.speed)
+        self.state
+            .movement
+            .as_ref()
+            .map_or(0.0, |movement| movement.speed)
     }
 
     /// Whether the character is settled enough to count as "present" for the
@@ -889,7 +894,10 @@ mod tests {
         for buffer in [character.inbox(), character.pending_history()] {
             assert_eq!(buffer.len(), INBOX_MAX_ENTRIES);
             assert_eq!(buffer[0], format!("line {OVERFLOW}"));
-            assert_eq!(buffer[INBOX_MAX_ENTRIES - 1], format!("line {}", offered - 1));
+            assert_eq!(
+                buffer[INBOX_MAX_ENTRIES - 1],
+                format!("line {}", offered - 1)
+            );
         }
     }
 
@@ -1009,24 +1017,27 @@ mod tests {
 
         // Insert out of order and out of range; `statuses()` clamps and sorts.
         character.state.statuses.insert(StatusKind::Weariness, 1.4);
-        character.state.statuses.insert(StatusKind::Drunkenness, -0.2);
+        character
+            .state
+            .statuses
+            .insert(StatusKind::Drunkenness, -0.2);
         assert_eq!(
             character.statuses(),
-            vec![
-                (StatusKind::Drunkenness, 0.0),
-                (StatusKind::Weariness, 1.0)
-            ]
+            vec![(StatusKind::Drunkenness, 0.0), (StatusKind::Weariness, 1.0)]
         );
 
         // Non-finite reads as no carriage; a clean value passes through exactly.
-        character.state.statuses.insert(StatusKind::Weariness, f64::NAN);
-        character.state.statuses.insert(StatusKind::Drunkenness, 0.5);
+        character
+            .state
+            .statuses
+            .insert(StatusKind::Weariness, f64::NAN);
+        character
+            .state
+            .statuses
+            .insert(StatusKind::Drunkenness, 0.5);
         assert_eq!(
             character.statuses(),
-            vec![
-                (StatusKind::Drunkenness, 0.5),
-                (StatusKind::Weariness, 0.0)
-            ]
+            vec![(StatusKind::Drunkenness, 0.5), (StatusKind::Weariness, 0.0)]
         );
     }
 }

@@ -593,9 +593,7 @@ fn offer_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
     if quantity > available {
         return Err(ActionError::new(
             ActionErrorCode::ItemCommitted,
-            format!(
-                "only {available} units are free; retract or replace an existing offer first"
-            ),
+            format!("only {available} units are free; retract or replace an existing offer first"),
         ));
     }
     let held_phrase = counted_phrase(world, &item, quantity);
@@ -1131,10 +1129,7 @@ fn eat(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, Ac
     if !world.item_catalog.is_edible(&item) {
         return Err(ActionError::new(
             ActionErrorCode::NotEdible,
-            format!(
-                "a {} is not food",
-                world.item_catalog.display_name(&item)
-            ),
+            format!("a {} is not food", world.item_catalog.display_name(&item)),
         ));
     }
     // The satiety this unit restores, applied to the eater's hunger below
@@ -1230,10 +1225,8 @@ fn require_mouthful(
         Some(BodySlot::Mouth) => {}
         Some(_) => {
             let item = world.items.get(item_id);
-            let noun = item.map_or_else(
-                || "thing".to_string(),
-                |item| counted_noun(world, item, 1),
-            );
+            let noun =
+                item.map_or_else(|| "thing".to_string(), |item| counted_noun(world, item, 1));
             return Err(ActionError::new(
                 ActionErrorCode::WrongSlot,
                 format!("the {noun} is not in your mouth"),
@@ -1259,7 +1252,11 @@ fn require_mouthful(
 
 /// Take the actor's first pocket entry in `slot` holding `item_id`, returning
 /// where it sat so a failed follow-up can put it back.
-fn take_pocket_entry(world: &mut World, actor_id: &ActorId, item_id: &ItemId) -> Option<(usize, PocketedUnit)> {
+fn take_pocket_entry(
+    world: &mut World,
+    actor_id: &ActorId,
+    item_id: &ItemId,
+) -> Option<(usize, PocketedUnit)> {
     let pockets = &mut world
         .characters
         .get_mut(actor_id)
@@ -1395,7 +1392,10 @@ fn pocket_item(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<St
     // lower slot sharing with a stool stains. An empty lower slot leaves no
     // mark: what fouls a thing is the company it keeps, not the cavity.
     let is_drink = world.item_catalog.is_drink(&item);
-    let condition = item.metadata.get(CONDITION_METADATA_KEY).map(String::as_str);
+    let condition = item
+        .metadata
+        .get(CONDITION_METADATA_KEY)
+        .map(String::as_str);
     let stamp = if slot == BodySlot::Mouth {
         (!is_drink && condition.is_none()).then_some(CONDITION_WET)
     } else {
@@ -1599,7 +1599,11 @@ fn swallow(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String
     } else {
         // Swallow the evidence: the thing itself is queued, and comes back
         // stained on its own schedule.
-        queue_gut(world, actor_id, Some((item.kind.clone(), item.metadata.clone())));
+        queue_gut(
+            world,
+            actor_id,
+            Some((item.kind.clone(), item.metadata.clone())),
+        );
     }
 
     if world.sounds_enabled
@@ -1607,7 +1611,15 @@ fn swallow(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String
     {
         emit_sound(world, Some(actor_id), &sound, None);
     }
-    world_event(world, "swallow", actor_id, None, Some(item_id), 1, Vec::new());
+    world_event(
+        world,
+        "swallow",
+        actor_id,
+        None,
+        Some(item_id),
+        1,
+        Vec::new(),
+    );
     world.touch_public_state();
     world.assert_invariants();
     Ok(format!(
@@ -1727,7 +1739,15 @@ fn gargle(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String,
     {
         emit_sound(world, Some(actor_id), &sound, None);
     }
-    world_event(world, "gargle", actor_id, None, Some(item_id), 1, Vec::new());
+    world_event(
+        world,
+        "gargle",
+        actor_id,
+        None,
+        Some(item_id),
+        1,
+        Vec::new(),
+    );
     Ok(format!(
         "{} gargles the {noun}",
         world.characters[actor_id].name()
@@ -1768,7 +1788,11 @@ fn expel(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, 
             .items
             .get(&unit.item_id)
             .is_some_and(|item| item.kind.as_str() == POOP_KIND);
-        if is_stool && world.consume_item_quantity(actor_id, &unit.item_id, 1).is_ok() {
+        if is_stool
+            && world
+                .consume_item_quantity(actor_id, &unit.item_id, 1)
+                .is_ok()
+        {
             voided += 1;
         }
     }
@@ -1839,7 +1863,9 @@ fn raise_ward_notice_for(
     let since = world
         .current_time
         .map(|time| format!("{}'s {}", time.weekday.label(), time.office.label()));
-    let raised_game_days = world.current_time.map(|time| time.day as f64 + time.fraction);
+    let raised_game_days = world
+        .current_time
+        .map(|time| time.day as f64 + time.fraction);
     // A ward already full of warrants takes no more gossip (M4); an officer's
     // own eyes are no exception, and there is nobody to report the refusal to.
     let Some(notice_id) = world.notices.raise(
@@ -2343,10 +2369,12 @@ fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, 
             // handle for. An id outside the actor's set and an id outside the
             // world are the same error — no information leak about which
             // handles exist.
-            let entry = world
-                .places
-                .get(&place_id)
-                .filter(|_| world.characters[actor_id].state.places_known.contains(&place_id));
+            let entry = world.places.get(&place_id).filter(|_| {
+                world.characters[actor_id]
+                    .state
+                    .places_known
+                    .contains(&place_id)
+            });
             let Some(entry) = entry else {
                 return Err(ActionError::new(
                     ActionErrorCode::UnknownPlace,
@@ -2424,9 +2452,10 @@ fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, 
 
     let destination = match &intent.target {
         IntentTarget::Place { name, .. } => name.clone(),
-        IntentTarget::Person { actor_id: target_id, .. } => {
-            identify_ids(world, actor_id, target_id)
-        }
+        IntentTarget::Person {
+            actor_id: target_id,
+            ..
+        } => identify_ids(world, actor_id, target_id),
     };
     let (line, own_line) = match &intent.target {
         IntentTarget::Place { .. } => (
@@ -2436,7 +2465,10 @@ fn go_to(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, 
             ),
             format!("You set off for {destination}."),
         ),
-        IntentTarget::Person { actor_id: target_id, .. } => (
+        IntentTarget::Person {
+            actor_id: target_id,
+            ..
+        } => (
             format!(
                 "{} sets off after {}",
                 world.characters[actor_id].name(),
@@ -2522,10 +2554,7 @@ pub(crate) fn set_round_leg(
     let Some(entry) = world.places.get(place_id) else {
         return Err(ActionError::new(
             ActionErrorCode::UnknownPlace,
-            format!(
-                "there is no place with id {}",
-                repr_id(place_id.as_str())
-            ),
+            format!("there is no place with id {}", repr_id(place_id.as_str())),
         ));
     };
     let place_name = entry.name.clone();
@@ -2539,12 +2568,13 @@ pub(crate) fn set_round_leg(
     }
     // The sheet numbers legs from 1, so the model does too; anything outside
     // that range names a leg that is not on the sheet in front of it.
-    let Some(number) = leg.as_u64().filter(|number| (1..=legs as u64).contains(number)) else {
+    let Some(number) = leg
+        .as_u64()
+        .filter(|number| (1..=legs as u64).contains(number))
+    else {
         return Err(ActionError::new(
             ActionErrorCode::InvalidArguments,
-            format!(
-                "leg must be one of the {legs} leg numbers in your_round (1 to {legs})"
-            ),
+            format!("leg must be one of the {legs} leg numbers in your_round (1 to {legs})"),
         ));
     };
 
@@ -2585,10 +2615,12 @@ fn tell_way(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Strin
         ));
     }
     // The speaker must hold the id — you cannot share a way you do not know.
-    let entry = world
-        .places
-        .get(&place_id)
-        .filter(|_| world.characters[actor_id].state.places_known.contains(&place_id));
+    let entry = world.places.get(&place_id).filter(|_| {
+        world.characters[actor_id]
+            .state
+            .places_known
+            .contains(&place_id)
+    });
     let Some(entry) = entry else {
         return Err(ActionError::new(
             ActionErrorCode::UnknownPlace,
@@ -2648,7 +2680,11 @@ fn tell_way(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Strin
 /// `accused`/`wronged` ids are the private linkage a settlement needs to find
 /// its notice, and `taken` (M3.5) is the one thing whose return settles the
 /// word without anybody having to judge it.
-fn raise_notice(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+fn raise_notice(
+    world: &mut World,
+    actor_id: &ActorId,
+    args: &Value,
+) -> Result<String, ActionError> {
     let parsed = args_object(
         args,
         &["about", "deed"],
@@ -2704,7 +2740,9 @@ fn raise_notice(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<S
     let since = world
         .current_time
         .map(|time| format!("{}'s {}", time.weekday.label(), time.office.label()));
-    let raised_game_days = world.current_time.map(|time| time.day as f64 + time.fraction);
+    let raised_game_days = world
+        .current_time
+        .map(|time| time.day as f64 + time.fraction);
     // Refused only when every slot the ward has is a live warrant (M4): a
     // warrant may not be evicted by gossip, so when there is nothing else to
     // drop, the gossip is what gives way.
@@ -2747,15 +2785,7 @@ fn raise_notice(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<S
         .get_mut(actor_id)
         .expect("the raiser is in the world")
         .remember_percept(format!("You put the word in the ward: {line}"));
-    world_event(
-        world,
-        "raise_notice",
-        actor_id,
-        accused,
-        None,
-        1,
-        carriers,
-    );
+    world_event(world, "raise_notice", actor_id, accused, None, 1, carriers);
     Ok(format!(
         "{} puts the word in the ward: {line}",
         world.characters[actor_id].name()
@@ -3053,7 +3083,6 @@ fn seize(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, 
     let (notice_id, notice_line) = (notice.id, notice.line());
 
     take_into_charge(world, actor_id, &target_id, Some(notice_id), &notice_line)
-
 }
 
 /// The seizure itself, with every judgement already made: pick the nearest
@@ -3100,9 +3129,13 @@ pub(crate) fn take_into_charge(
     // `seized_at` and the dead-man clock are stamped by the engine, which has
     // the only clock; a bare `apply_action` (the tests, the headless runner)
     // seizes at zero, exactly as a clock-less world raises an undated notice.
-    world
-        .custody
-        .seize(target_id.clone(), officer_id.clone(), notice_id, station, 0.0);
+    world.custody.seize(
+        target_id.clone(),
+        officer_id.clone(),
+        notice_id,
+        station,
+        0.0,
+    );
 
     // The escort's own feet: the officer walks to the station like anybody with
     // an errand, and the prisoner is slaved to them
@@ -3217,7 +3250,11 @@ fn grab(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, A
             ),
         ));
     }
-    if world.custody.get(&target_id).is_some_and(|record| record.holders.contains(actor_id)) {
+    if world
+        .custody
+        .get(&target_id)
+        .is_some_and(|record| record.holders.contains(actor_id))
+    {
         return Ok(format!(
             "{} already has hold of {}",
             world.characters[actor_id].name(),
@@ -3506,14 +3543,11 @@ pub(crate) fn raise_escape_notice(
     escapee_id: &ActorId,
     holders: &[ActorId],
 ) -> Option<u64> {
-    let raiser = holders
-        .first()
-        .cloned()
-        .or_else(|| {
-            nearby(world, escapee_id, HEARING_RADIUS_M)
-                .into_iter()
-                .find(|id| world.characters.get(id).is_some_and(crate::notices::is_law))
-        })?;
+    let raiser = holders.first().cloned().or_else(|| {
+        nearby(world, escapee_id, HEARING_RADIUS_M)
+            .into_iter()
+            .find(|id| world.characters.get(id).is_some_and(crate::notices::is_law))
+    })?;
     let about = if world
         .characters
         .get(&raiser)
@@ -3543,11 +3577,7 @@ pub(crate) fn raise_escape_notice(
         None,
         None,
     )?;
-    let line = world
-        .notices
-        .get(notice_id)
-        .expect("just raised")
-        .line();
+    let line = world.notices.get(notice_id).expect("just raised").line();
     let lines = crate::notices::carrier_ids(world, notice_id, escapee_id)
         .into_iter()
         .map(|carrier| (carrier, format!("word in the ward: {line}")))
@@ -4245,7 +4275,13 @@ mod tests {
         )
         .unwrap();
         world.drain_events();
-        world.characters.get_mut(&receiver).unwrap().state.inbox.clear();
+        world
+            .characters
+            .get_mut(&receiver)
+            .unwrap()
+            .state
+            .inbox
+            .clear();
 
         let error =
             apply_action(&mut world, &giver, "eat", &json!({"item_id": "apple"})).unwrap_err();
@@ -4558,9 +4594,11 @@ mod tests {
         let mut world = offer_world();
         let giver = ActorId::from_raw("giver");
         // A home entry needs no nav graph to register.
-        let home_id = world
-            .places
-            .add_home(&ActorId::from_raw("receiver"), "Receiver", Vec3::new(9.0, 0.0, 0.0));
+        let home_id = world.places.add_home(
+            &ActorId::from_raw("receiver"),
+            "Receiver",
+            Vec3::new(9.0, 0.0, 0.0),
+        );
         world
             .characters
             .get_mut(&giver)
@@ -4737,8 +4775,8 @@ mod tests {
 
         // beckon and point require a target.
         for kind in ["beckon", "point"] {
-            let error = apply_action(&mut world, &speaker, "gesture", &json!({"kind": kind}))
-                .unwrap_err();
+            let error =
+                apply_action(&mut world, &speaker, "gesture", &json!({"kind": kind})).unwrap_err();
             assert_eq!(error.code, ActionErrorCode::InvalidArguments, "{kind}");
         }
         // shrug and dance take none.
@@ -4782,7 +4820,8 @@ mod tests {
         let speaker = ActorId::from_raw("speaker");
         let revision = world.world_revision;
 
-        let line = apply_action(&mut world, &speaker, "gesture", &json!({"kind": "dance"})).unwrap();
+        let line =
+            apply_action(&mut world, &speaker, "gesture", &json!({"kind": "dance"})).unwrap();
         assert_eq!(line, "Speaker is dancing.");
         assert_eq!(
             world.characters[&speaker].active_gesture(),
@@ -4810,9 +4849,11 @@ mod tests {
     fn point_accepts_a_known_place_handle_and_names_it() {
         let mut world = speech_world();
         let speaker = ActorId::from_raw("speaker");
-        let place_id = world
-            .places
-            .add_home(&ActorId::from_raw("target"), "Target", Vec3::new(4.0, 0.0, 0.0));
+        let place_id = world.places.add_home(
+            &ActorId::from_raw("target"),
+            "Target",
+            Vec3::new(4.0, 0.0, 0.0),
+        );
         world
             .characters
             .get_mut(&speaker)
@@ -4839,9 +4880,11 @@ mod tests {
         assert_eq!(event.kind, "point");
 
         // An unheld place id falls through to person resolution and misses.
-        let stray = world
-            .places
-            .add_home(&ActorId::from_raw("bystander"), "Bystander", Vec3::new(3.0, 0.0, 0.0));
+        let stray = world.places.add_home(
+            &ActorId::from_raw("bystander"),
+            "Bystander",
+            Vec3::new(3.0, 0.0, 0.0),
+        );
         let error = apply_action(
             &mut world,
             &speaker,
@@ -4890,8 +4933,20 @@ mod tests {
     /// wronged boy.
     fn ward_world() -> World {
         let mut world = World::new();
-        world.add_character(lored("srgnt", "Sergeant", 0.0, "bailiff_and_gaoler", Some(0.0)));
-        world.add_character(lored("gatek", "Gatekeeper", 5.0, "watchman_and_keeper", Some(0.0)));
+        world.add_character(lored(
+            "srgnt",
+            "Sergeant",
+            0.0,
+            "bailiff_and_gaoler",
+            Some(0.0),
+        ));
+        world.add_character(lored(
+            "gatek",
+            "Gatekeeper",
+            5.0,
+            "watchman_and_keeper",
+            Some(0.0),
+        ));
         world.add_character(lored("gossp", "Gossip", 5.0, "baker", Some(1.0)));
         world.add_character(lored("quiet", "Quiet", 5.0, "baker", Some(0.0)));
         let mut thief = lored("thief", "Thief", 2.0, "carter", Some(0.0));
@@ -4973,7 +5028,10 @@ mod tests {
             &raise_args(),
         )
         .unwrap();
-        assert!(line.contains("Sergeant puts the word in the ward"), "{line}");
+        assert!(
+            line.contains("Sergeant puts the word in the ward"),
+            "{line}"
+        );
         assert_eq!(world.notices.live().len(), 1);
         let notice = &world.notices.live()[0];
         assert_eq!(
@@ -5102,13 +5160,20 @@ mod tests {
             &json!({"notice_id": 1}),
         )
         .unwrap();
-        assert!(line.starts_with("Gatekeeper settles the ward's word"), "{line}");
+        assert!(
+            line.starts_with("Gatekeeper settles the ward's word"),
+            "{line}"
+        );
 
         let live = world.notices.live();
         assert_eq!(live.len(), 1, "never a blanket clear");
         assert_eq!(live[0].id, 2, "the other wrong is still going around");
         assert!(
-            inbox_has(&world, "gossp", "the ward's word is settled, the wrong answered"),
+            inbox_has(
+                &world,
+                "gossp",
+                "the ward's word is settled, the wrong answered"
+            ),
             "the carriers hear it die"
         );
         assert!(
@@ -5173,9 +5238,16 @@ mod tests {
         let mut world = ward_world();
         raise_the_word(&mut world, &raise_args_naming_the_taking());
         hand_over(&mut world, "thief", "wrngd", "spark");
-        assert!(world.notices.is_empty(), "the taking is back where it belongs");
         assert!(
-            inbox_has(&world, "gatek", "the ward's word is settled, restitution made"),
+            world.notices.is_empty(),
+            "the taking is back where it belongs"
+        );
+        assert!(
+            inbox_has(
+                &world,
+                "gatek",
+                "the ward's word is settled, restitution made"
+            ),
             "the carriers hear the word die"
         );
 
@@ -5207,7 +5279,10 @@ mod tests {
         raise_the_word(&mut world, &raise_args());
         hand_over(&mut world, "thief", "wrngd", "loafx");
 
-        assert!(world.notices.is_empty(), "the player's acceptance is the answer");
+        assert!(
+            world.notices.is_empty(),
+            "the player's acceptance is the answer"
+        );
         assert!(
             !inbox_has(&world, "wrngd", "what you were just handed"),
             "and he is never asked a question he has no verb to answer"
@@ -5446,12 +5521,17 @@ mod tests {
             "A stranger (id carry) took a mouthful of a pot of ale"
         );
         // Nothing in your mouth can be eaten until you retrieve it.
-        let error = apply_action(&mut world, &carrier, "eat", &json!({"item_id": "alepot"}))
-            .unwrap_err();
+        let error =
+            apply_action(&mut world, &carrier, "eat", &json!({"item_id": "alepot"})).unwrap_err();
         assert_eq!(error.code, ActionErrorCode::ItemCommitted);
 
-        let line = apply_action(&mut world, &carrier, "swallow", &json!({"item_id": "alepot"}))
-            .unwrap();
+        let line = apply_action(
+            &mut world,
+            &carrier,
+            "swallow",
+            &json!({"item_id": "alepot"}),
+        )
+        .unwrap();
         assert_eq!(line, "Carrier swallows the pot of ale");
         let carrier_character = &world.characters[&carrier];
         assert_eq!(carrier_character.needs().hunger, 25.0);
@@ -5478,9 +5558,11 @@ mod tests {
             .state
             .holds
             .push(ItemId::from_raw("keyxx"));
-        world.current_time =
-            Some(crate::clock::WorldClock::new(3600.0, crate::clock::Office::HighWick, 2, 0.05).at(0.0));
-        let now_days = world.current_time.unwrap().day as f64 + world.current_time.unwrap().fraction;
+        world.current_time = Some(
+            crate::clock::WorldClock::new(3600.0, crate::clock::Office::HighWick, 2, 0.05).at(0.0),
+        );
+        let now_days =
+            world.current_time.unwrap().day as f64 + world.current_time.unwrap().fraction;
 
         apply_action(&mut world, &carrier, "eat", &json!({"item_id": "applex"})).unwrap();
         apply_action(&mut world, &carrier, "eat", &json!({"item_id": "loafx"})).unwrap();
@@ -5513,7 +5595,10 @@ mod tests {
         assert_eq!(gut.len(), 2);
         assert_eq!(gut[1].kind.as_str(), "key");
         assert_eq!(
-            gut[1].metadata.get(CONDITION_METADATA_KEY).map(String::as_str),
+            gut[1]
+                .metadata
+                .get(CONDITION_METADATA_KEY)
+                .map(String::as_str),
             Some(CONDITION_WET),
             "the mouth's wet stamp travels with it"
         );
@@ -5546,7 +5631,10 @@ mod tests {
         .unwrap();
         assert_eq!(line, "Carrier spits wet spark at Watcher");
         assert!(world.characters[&carrier].pockets().is_empty());
-        assert_eq!(world.characters[&watcher].holds(), std::slice::from_ref(&wet_id));
+        assert_eq!(
+            world.characters[&watcher].holds(),
+            std::slice::from_ref(&wet_id)
+        );
         assert_eq!(condition_of(&world, &wet_id).as_deref(), Some("wet"));
         assert_eq!(
             world.characters[&watcher].inbox().last().unwrap(),
@@ -5694,7 +5782,9 @@ mod tests {
         );
         assert_eq!(
             saw(&world, "watch").as_deref(),
-            Some("A stranger (id carry) hitched up their clothes and pushed an apple up their arse")
+            Some(
+                "A stranger (id carry) hitched up their clothes and pushed an apple up their arse"
+            )
         );
         assert_eq!(
             saw(&world, "nosey").as_deref(),
@@ -5960,13 +6050,21 @@ mod tests {
             &json!({"item_id": "alepot", "slot": "mouth"}),
         )
         .unwrap();
-        let line = apply_action(&mut world, &carrier, "gargle", &json!({"item_id": "alepot"}))
-            .unwrap();
+        let line = apply_action(
+            &mut world,
+            &carrier,
+            "gargle",
+            &json!({"item_id": "alepot"}),
+        )
+        .unwrap();
         assert_eq!(line, "Carrier gargles the pot of ale");
         // Still in the mouth, still a pot of ale.
         assert_eq!(
             only_pocketed(&world, &carrier),
-            (crate::character::BodySlot::Mouth, ItemId::from_raw("alepot"))
+            (
+                crate::character::BodySlot::Mouth,
+                ItemId::from_raw("alepot")
+            )
         );
         // The watcher is not facing the carrier, so the sound is unattributed —
         // the verb itself delivers no percept at all; the catalog row is the
