@@ -19,7 +19,7 @@ use super::targeting::ActorTarget;
 use super::{HEARING_RADIUS_M, SmartActorRuntime};
 
 const NAME_ANCHOR_Y: f32 = 0.9;
-const MAX_NAME_LABEL_DISTANCE_M: f32 = 80.0;
+const MAX_NAME_LABEL_DISTANCE_M: f32 = 35.0;
 const FULL_STRANGER_NAME_LABEL_DISTANCE_M: f32 = 8.0;
 const MAX_STRANGER_NAME_LABEL_DISTANCE_M: f32 = 15.0;
 const NAME_LABEL_BACKGROUND_ALPHA: f32 = 0.78;

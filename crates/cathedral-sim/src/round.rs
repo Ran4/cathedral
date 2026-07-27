@@ -5325,6 +5325,25 @@ fn update_weather_shelter_intents(round: &mut Round, world: &mut World, game_day
             release.push(id.clone());
             continue;
         }
+        // Their own hearth outranks a public awning. Acquisition already
+        // refuses the resident standing at home, but a claim taken *before*
+        // the walk home (the famished rung sent them to the hearth mid-seek)
+        // sits above the round in `decide` and would march them back out of a
+        // dry house into the rain — holding a capacity slot against a soaked
+        // neighbour the whole time. A claim dies at the holder's own door.
+        if round
+            .people
+            .get(id)
+            .and_then(|person| person.home)
+            .is_some_and(|home| {
+                world.characters.get(id).is_some_and(|character| {
+                    character.position_m().distance(home) <= HOME_ARRIVE_RADIUS_M
+                })
+            })
+        {
+            release.push(id.clone());
+            continue;
+        }
         if precipitation + f64::EPSILON < intent.release_threshold {
             let below_since = intent.below_since_days.get_or_insert(game_days);
             if game_days - *below_since >= intent.release_after_days {
@@ -5652,7 +5671,15 @@ fn tick_intents(
         let tracking = matches!(&intent.target, IntentTarget::Person { visible: true, .. });
         let person = &round.people[&id];
         let lay = match person.phase {
-            Phase::Idle => fresh || tracking,
+            // A follow resuming from a stand waits for the ladder cadence,
+            // exactly as a place walk does: `interrupt_for_conversation` puts
+            // the walker in `Idle` so the pause after answering a line is the
+            // answer's beat — a per-poll re-lay here would have the follower
+            // back on their feet one movement tick later, chasing a moving
+            // target out of the 20 m say radius while their reply is still
+            // being written. Fresh stays immediate: "sets off after them"
+            // should mean now.
+            Phase::Idle => fresh || (tracking && now >= person.next_decision),
             Phase::Travelling => {
                 (fresh || tracking)
                     && person

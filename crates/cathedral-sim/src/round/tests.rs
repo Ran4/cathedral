@@ -6442,6 +6442,108 @@ fn exposed_actor_uses_reachable_shelter_after_conversation_and_atomic_work() {
     assert!(round.weather_shelter(&world, &actor).is_none());
 }
 
+/// A claim taken in the street dies at the holder's own door. The famished
+/// rung can send a shelter-seeker home to the hearth mid-walk; the stored
+/// claim sits above the round in `decide`, so without this release the fed
+/// resident would be marched back out of a dry house into the rain — holding
+/// the awning's capacity slot against a soaked neighbour the whole time.
+#[test]
+fn a_shelter_claim_dies_at_the_holders_own_door() {
+    let home = Vec3::new(0.0, WALK_Y, 95.0);
+    let away = Vec3::new(30.0, WALK_Y, 95.0);
+    let id = ActorId::from_raw("homer");
+    let mut world = base_world();
+    world.add_character(person("homer", away, Some("baker"), Significance::Minor));
+    // Hard rain the whole test: the hysteresis can never be the releaser.
+    world.current_weather = Some(test_weather(WeatherKind::Downpour, 0.88));
+    let mut round = Round::default();
+    let mut homer = weather_person(away);
+    homer.home = Some(home);
+    round.people.insert(id.clone(), homer);
+    round.weather_shelter_intents.insert(
+        id.clone(),
+        WeatherShelterIntent {
+            shelter: 0,
+            target: Vec3::new(-30.0, WALK_Y, 95.0),
+            release_threshold: 0.22,
+            below_since_days: None,
+            release_after_days: 1.0,
+        },
+    );
+
+    // In the street the claim stands through the sweep.
+    update_weather_shelter_intents(&mut round, &mut world, 0.0, 0.0);
+    assert!(
+        round.weather_shelter_intents.contains_key(&id),
+        "away from home, the claim is kept"
+    );
+
+    // At their own door it is released, rain or no rain.
+    world.characters.get_mut(&id).unwrap().state.position_m = home;
+    update_weather_shelter_intents(&mut round, &mut world, 0.0, 1.0);
+    assert!(
+        !round.weather_shelter_intents.contains_key(&id),
+        "the hearth outranks the awning"
+    );
+}
+
+/// The pause after answering a line is the answer's beat for a *follow* too:
+/// `interrupt_for_conversation` stands the walker down, and the tracking
+/// re-lay waits out the ladder cadence exactly as a place walk does. Per-poll
+/// resumption had the follower back on their feet one movement tick later,
+/// chasing a moving target out of the 20 m say radius while their reply was
+/// still being written.
+#[test]
+fn an_interrupted_follow_waits_out_the_answers_beat() {
+    let nav = nav();
+    let start = Vec3::new(0.0, WALK_Y, 95.0);
+    let quarry_at = Vec3::new(0.0, WALK_Y, 105.0);
+    let chaser = ActorId::from_raw("chaser");
+    let mut world = base_world();
+    world.add_character(person("chaser", start, Some("mason"), Significance::Minor));
+    world.add_character(person("quarry", quarry_at, Some("baker"), Significance::Minor));
+    let mut round = Round::default();
+    round.people.insert(chaser.clone(), weather_person(start));
+    // A live follow already under way (the stamped deadline marks it un-fresh),
+    // walking when the player's line lands.
+    world.characters.get_mut(&chaser).unwrap().state.intent = Some(TravelIntent {
+        target: IntentTarget::Person {
+            actor_id: ActorId::from_raw("quarry"),
+            last_seen: quarry_at,
+            visible: true,
+        },
+        budget_seconds: 600.0,
+        deadline: Some(600.0),
+    });
+    {
+        let person = round.people.get_mut(&chaser).unwrap();
+        person.phase = Phase::Travelling;
+        person.travel_target = Some(quarry_at);
+        person.travel_for_intent = true;
+        // The cadence the ladder would have scheduled from its last decision.
+        person.next_decision = 5.0;
+    }
+    interrupt_for_conversation(&mut round, &mut world, &chaser);
+    assert_eq!(round.people[&chaser].phase, Phase::Idle);
+
+    // The very next poll does not put them back on their feet.
+    let mut nudges = Vec::new();
+    tick_intents(&mut round, &mut world, &nav, 1.0, &mut nudges);
+    assert!(
+        world.characters[&chaser].state.movement.is_none(),
+        "the answer's beat holds the follow"
+    );
+    assert_eq!(round.people[&chaser].phase, Phase::Idle);
+
+    // Once the cadence comes due, the chase resumes.
+    tick_intents(&mut round, &mut world, &nav, 5.0, &mut nudges);
+    assert!(
+        world.characters[&chaser].state.movement.is_some(),
+        "the cadence resumes the chase"
+    );
+    assert_eq!(round.people[&chaser].phase, Phase::Travelling);
+}
+
 #[test]
 fn every_committed_shelter_has_a_valid_route_node_and_walkable_spread_point() {
     let nav = nav();

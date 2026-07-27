@@ -3061,7 +3061,7 @@ fn summon(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String,
 /// - **Within four metres.** Conversation reaches twenty
 ///   (`ACTOR_FOCUS_RADIUS_M`), so nothing about *talking* to somebody puts you
 ///   in reach of them: an officer who means to take you has to close on their
-///   own two feet, at 1.8 m/s, in the open. That walk is the entire warning
+///   own two feet, at 2.1 m/s, in the open. That walk is the entire warning
 ///   system, and reading it is what the player learns.
 /// - **A warrant, or your own eyes within the hour** — the lore's two doors,
 ///   exactly ([`crate::notices::Notices::fresh_own_notice`]).

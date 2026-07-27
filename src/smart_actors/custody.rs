@@ -47,7 +47,7 @@ const STRAIN_DRAIN_FACTOR: f32 = 3.0;
 /// pulling against it.
 const PULLING_SPEED_MPS: f32 = 0.4;
 /// The outward speed that counts as *moving away* rather than milling about
-/// beside your escort. A person walks at 1.8 m/s and the player walks at 8, so
+/// beside your escort. A person walks at 2.1 m/s and the player walks at 8, so
 /// this separates "stepped aside to look at a stall" from "left".
 const FLEEING_SPEED_MPS: f32 = 2.5;
 

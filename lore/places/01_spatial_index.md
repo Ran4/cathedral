@@ -193,16 +193,16 @@ Times assume an unhurried resident in ordinary traffic, not a running player.
 
 | From | To | Distance | Street time |
 |---|---|---:|---:|
-| Gradine | Wickmarket | about `170 m` | `3 min` |
-| Gradine | Coswald's Yard | about `210 m` | `3..4 min` |
-| Gradine | Bellstand | about `230 m` | `4 min` |
-| Gradine | Tallage | about `275 m` | `4..5 min` |
-| Gradine | Maren's Green | about `390 m` | `6 min` |
-| Tallage | Maren's Green along Cut | about `320 m` | `5 min` |
-| River Gate | Tallage | about `250 m` | `4 min` with no load |
-| River Gate | Maren's Green | about `295 m` | `5 min` with no load |
-| Wool Gate | Harne Gate | about `870 m` by streets | `13..15 min` |
-| Stone Gate | River Gate | about `770 m` by streets | `12..13 min` |
+| Gradine | Wickmarket | about `170 m` | `2.5 min` |
+| Gradine | Coswald's Yard | about `210 m` | `3 min` |
+| Gradine | Bellstand | about `230 m` | `3.5 min` |
+| Gradine | Tallage | about `275 m` | `4 min` |
+| Gradine | Maren's Green | about `390 m` | `5..6 min` |
+| Tallage | Maren's Green along Cut | about `320 m` | `4.5 min` |
+| River Gate | Tallage | about `250 m` | `3.5 min` with no load |
+| River Gate | Maren's Green | about `295 m` | `4 min` with no load |
+| Wool Gate | Harne Gate | about `870 m` by streets | `11..13 min` |
+| Stone Gate | River Gate | about `770 m` by streets | `10..11 min` |
 
 Loaded carts, crowds, bridge constrictions, market days, and processions can
 double these times. That friction is part of the city's scale.

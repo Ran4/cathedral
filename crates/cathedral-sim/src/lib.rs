@@ -167,7 +167,7 @@ pub const INBOX_MAX_ENTRIES: usize = 64;
 /// samples it publishes (`features/implemented/movement/06_engineering.md`).
 pub const MOVEMENT_TICK_SECONDS: f64 = 0.05;
 /// A brisk medieval walking pace (`features/implemented/movement/01_the_clock.md` §6).
-pub const WALK_SPEED_MPS: f64 = 1.8;
+pub const WALK_SPEED_MPS: f64 = 2.1;
 /// Below this an actor counts as "settled" for the novelty gate: a man crossing
 /// the square is not news at every step, but the moment he stops (speed → 0) his
 /// arrival is (`features/implemented/movement/05_the_llm_seam.md` §5.1).

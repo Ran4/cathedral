@@ -1819,7 +1819,7 @@ mod tests {
         ));
         world.add_character(mover(
             "hold2",
-            Vec3::new(5.0, WALK_Y, 0.0),
+            Vec3::new(-6.0, WALK_Y, 0.0),
             vec![Vec3::new(30.0, WALK_Y, 0.0), Vec3::new(50.0, WALK_Y, 0.0)],
         ));
         world.add_character(mover(

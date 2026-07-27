@@ -521,7 +521,7 @@ pub fn stone_house(places: &PlaceRegistry) -> Option<Station> {
 /// nothing.** The sim is already the authoritative mover for the cast, so a
 /// prisoner is simply slaved to the person walking them: no clamp, no host
 /// message, no `controller.rs`, and both parties move at
-/// [`crate::WALK_SPEED_MPS`], so there is no 4.4× disparity to engineer around.
+/// [`crate::WALK_SPEED_MPS`], so there is no 3.8× disparity to engineer around.
 /// The player's case is the expensive one and none of it applies here.
 ///
 /// The player is never moved by this — the sim has no authority over their feet

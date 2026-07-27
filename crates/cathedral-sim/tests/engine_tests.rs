@@ -615,11 +615,11 @@ fn movement_advances_on_the_hot_channel_without_touching_the_revision() {
         );
     }
 
-    // A whole second at 1.8 m/s: ~1.8 m (within one slice's f64 boundary), and a
-    // whole number of 0.09 m slices.
+    // A whole second at WALK_SPEED_MPS: ~that many metres (within one slice's
+    // f64 boundary), and a whole number of slices.
     assert!(
-        (last_advance - 1.8).abs() <= WALK_SPEED_MPS * 0.05 + 1e-9,
-        "advanced ~1.8 m/s (got {last_advance})"
+        (last_advance - WALK_SPEED_MPS).abs() <= WALK_SPEED_MPS * 0.05 + 1e-9,
+        "advanced ~WALK_SPEED_MPS m/s (got {last_advance})"
     );
     let slices = last_advance / (WALK_SPEED_MPS * 0.05);
     assert!(
