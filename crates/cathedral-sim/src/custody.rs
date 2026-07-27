@@ -291,6 +291,19 @@ impl Custody {
             .is_some_and(|record| record.state == Confinement::Committed)
     }
 
+    /// Whether this person is walking somebody to a station right now — the
+    /// officer of, or a hand on, a record still merely in charge. The question
+    /// the behaviour ladder's escort guard asks: an escort whose own needs
+    /// divert them walks off the leash and frees the prisoner behind them.
+    /// Deliberately false once the prisoner is committed — the keeper at the
+    /// threshold is free to go and eat.
+    pub fn is_escorting(&self, escort: &ActorId) -> bool {
+        self.held.values().any(|record| {
+            record.state == Confinement::InCharge
+                && (record.officer.as_ref() == Some(escort) || record.holders.contains(escort))
+        })
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (&ActorId, &CustodyRecord)> {
         self.held.iter()
     }

@@ -1310,6 +1310,114 @@ fn the_confined_are_fed_and_watered_because_they_cannot_go_and_get_it() {
     }
 }
 
+/// Session 514: a famished Bencher walking the player to the Stone House was
+/// marched off to the Hungry Ox by the famished rung — "Rasmus, hunger has
+/// turned me back" — and the 20 m poll freed the prisoner behind him.
+/// Delivering a prisoner outranks the body (rung 0's other side): while the
+/// escort has somebody merely in charge, the pressing rungs wait and the
+/// station `go_to` keeps the feet, and the moment the prisoner is committed
+/// the body presses again.
+#[test]
+fn an_escort_is_not_marched_to_food_mid_delivery() {
+    let nav = nav();
+    let mut world = base_world();
+    // A real housed major (the guard reads custody, not occupation — and the
+    // famished control below needs his non-exempt hearth to press him home).
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
+    world.add_character(person(
+        "taken1",
+        Vec3::new(1.0, WALK_Y, 95.0),
+        Some("domestic_servant"),
+        Significance::Ambient,
+    ));
+    let officer = ActorId::from_raw("b4hst");
+    let taken = ActorId::from_raw("taken1");
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    // Famished at a meal office, free: the ladder really would divert him —
+    // the control that makes the guarded assertions below mean anything.
+    world
+        .characters
+        .get_mut(&officer)
+        .unwrap()
+        .state
+        .needs
+        .hunger = HUNGER_FAMISHED / 2.0;
+    let (_, pressure) = decide(
+        &round,
+        &world,
+        &nav,
+        &officer,
+        0,
+        Office::HighWick,
+        Weekday::Bellday,
+    );
+    assert_eq!(
+        pressure,
+        Some(FAMISHED_PRESSURE),
+        "a free famished officer is pressed toward food"
+    );
+
+    // Taken in charge and aimed at the gaol, exactly as the `seize` verb
+    // leaves the officer: the delivery now outranks the hunger.
+    let station = crate::custody::stone_house(&world.places).expect("M5a built the gaol");
+    let station_point = station.point;
+    world
+        .custody
+        .seize(taken.clone(), officer.clone(), Some(1), station, 0.0);
+    world.characters.get_mut(&officer).unwrap().state.intent = Some(TravelIntent {
+        target: IntentTarget::Place {
+            place_id: PlaceId::from_raw("pl_gaol"),
+            name: crate::custody::STONE_HOUSE_PLACE_NAME.into(),
+            point: station_point,
+        },
+        budget_seconds: 600.0,
+        deadline: Some(600.0),
+    });
+    let (decision, pressure) = decide(
+        &round,
+        &world,
+        &nav,
+        &officer,
+        0,
+        Office::HighWick,
+        Weekday::Bellday,
+    );
+    assert_eq!(pressure, None, "no pressure line marches an escort off");
+    match decision {
+        Decision::TravelIntent(target) => assert!(
+            target.distance(station_point) < 1.0,
+            "he keeps walking to the Stone House, not to {target:?}"
+        ),
+        other => panic!("expected the station go_to to keep the feet, got {other:?}"),
+    }
+
+    // Committed: the keeper at the threshold is free again, and the same
+    // hunger presses at once.
+    assert!(world.custody.commit(&taken, 0.0));
+    world.characters.get_mut(&officer).unwrap().state.intent = None;
+    let (_, pressure) = decide(
+        &round,
+        &world,
+        &nav,
+        &officer,
+        0,
+        Office::HighWick,
+        Weekday::Bellday,
+    );
+    assert_eq!(
+        pressure,
+        Some(FAMISHED_PRESSURE),
+        "the delivery done, the body gets its say"
+    );
+}
+
 /// An exchange with the player holds the round: the partner neither sets off
 /// on an errand nor keeps walking one already begun, and the round resumes on
 /// its own once the exchange goes cold.

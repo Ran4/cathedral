@@ -6649,6 +6649,17 @@ fn decide(
         return (Decision::Stay, None);
     }
 
+    // Rung 0, the escort's side: delivering a prisoner outranks the body.
+    // While somebody is merely in charge, their escort's curfew, thirst and
+    // hunger all wait for the commit — a famished officer who turned aside for
+    // the tavern (session 514) walked off the leash, and the 20 m poll freed
+    // the prisoner behind him. The wait is bounded: the hold ceiling and the
+    // dead-man timer both end an escort in minutes, and the moment the
+    // prisoner is committed (or breaks free) the pressing rungs fire again.
+    // The `go_to` aiming the officer at the station is rung 8, below all of
+    // these, so it needs the whole flight of them gated.
+    let escorting = world.custody.is_escorting(id);
+
     let person = &round.people[id];
     let character = &world.characters[id];
     let position = character.position_m();
@@ -6664,6 +6675,7 @@ fn decide(
     // works for them, and the rest linger in the street, which is exactly the
     // person the watch stops (`04_the_round.md` §6).
     if night
+        && !escorting
         && !person.curfew_exempt
         && let Some(home) = person.home
     {
@@ -6677,7 +6689,8 @@ fn decide(
     // Rung 2 — parched: drop everything and go to the well now. Below curfew, so
     // a housed drawer waits out the night at home and sets off at the Kindling;
     // the homeless and the night trades still draw at any hour.
-    if let Some((thirst, _)) = water
+    if !escorting
+        && let Some((thirst, _)) = water
         && thirst < THIRST_PARCHED
     {
         return (Decision::ApproachWell, Some(PARCHED_PRESSURE));
@@ -6689,7 +6702,7 @@ fn decide(
     // excuse itself before the body walks (the `excused` flag), exactly as
     // parched does — and rides only with the divert, so it injects only when the
     // rung actually acts.
-    if character.needs().hunger < HUNGER_FAMISHED {
+    if !escorting && character.needs().hunger < HUNGER_FAMISHED {
         // Eat what you hold, standing — for anyone, the night trades included,
         // at any hour: a famished actor with food in hand always eats it (but a
         // commercially listed food is only a last preference, not protected
@@ -6732,7 +6745,8 @@ fn decide(
     }
 
     // Rung 6 — thirsty: the well, but only if its queue is short.
-    if let Some((thirst, queue_len)) = water
+    if !escorting
+        && let Some((thirst, queue_len)) = water
         && thirst < THIRST_THIRSTY
         && queue_len < WELL_QUEUE_SHORT
     {
@@ -6745,7 +6759,7 @@ fn decide(
     // nearest open, staffed, affordable stall whose queue is short
     // (`FOOD_QUEUE_SHORT`). Quiet, like thirsty — no pressure percept. Its place
     // in the ladder is fixed: after thirsty (6), before the `go_to` errand (8).
-    if character.needs().hunger < HUNGER_HUNGRY {
+    if !escorting && character.needs().hunger < HUNGER_HUNGRY {
         if let Some(item_id) = held_edible(round, world, character) {
             if !held_meal_waits_for_home(round, world, id, office, weekday) {
                 return (Decision::EatHeld(item_id), None);
