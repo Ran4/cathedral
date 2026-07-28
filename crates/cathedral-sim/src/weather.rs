@@ -26,6 +26,20 @@ const WETNESS_WINDOW_DAYS: i64 = 6;
 /// The quadrature cell of the drying integral: one whole game hour, on a grid
 /// anchored to the absolute day axis rather than to the sample instant.
 const DRYING_STEP_HOURS: f64 = 1.0;
+/// How much falling weather a developer's override is ever credited with.  A
+/// forced sky is a spell with no authored beginning or end, so its wetting is
+/// bounded at a working day: otherwise how wet the streets are would depend on
+/// how long the window had been left open, and a drizzle held overnight would
+/// soak the city exactly as a downpour does.  Drying is *not* bounded with it —
+/// that is real elapsed game time, and stopping it froze the aftermath forever.
+const FORCED_WETTING_HOURS: f64 = 8.0;
+/// Where a forced spell's drying integral stops counting.  The night floor
+/// alone spends this much within three game weeks, and it multiplies a street
+/// that was at most soaked to begin with: `exp(-24)` leaves under 4e-11 of it,
+/// dry past every band, phrase and material the sample feeds.  The bound is
+/// what keeps sampling an override left on for a game year from costing a
+/// year's worth of hours.
+const FORCED_DRYING_EXHAUSTED: f64 = 24.0;
 
 /// The named state actors and diagnostics use.  Renderers should prefer the
 /// continuous fields on [`WeatherSample`].
@@ -1176,9 +1190,11 @@ fn forced_sample(forced: ForcedWeather, time: f64) -> WeatherSample {
     let intensity = forced
         .intensity
         .unwrap_or_else(|| representative_intensity(forced.kind));
-    let elapsed_hours = forced.began_at_days.map_or(1.0, |began| {
-        ((time - began).max(0.0) * HOURS_PER_DAY).min(8.0)
-    });
+    // An override with no start instant — the config's `Forced` mode, which has
+    // stood since before the world began — is credited with one hour of its own
+    // sky, and inherits nothing to dry.
+    let began = forced.began_at_days.unwrap_or(time - DAYS_PER_HOUR);
+    let elapsed_hours = (time - began).max(0.0) * HOURS_PER_DAY;
     let (cloud, precipitation, wind, gust, fog, visibility, thunder) = match forced.kind {
         WeatherKind::Clear => (0.06, 0.0, [0.9, -0.25], 0.08, 0.0, 350.0, 0.0),
         WeatherKind::BrokenCloud => (0.48, 0.0, [1.8, -0.7], 0.24, 0.0, 300.0, 0.0),
@@ -1203,12 +1219,19 @@ fn forced_sample(forced: ForcedWeather, time: f64) -> WeatherSample {
         WeatherKind::Downpour | WeatherKind::Thunderstorm => 8.5,
         _ => 0.0,
     };
-    let new_wetness = 1.0 - (-elapsed_hours * precipitation * wetting_rate).exp();
-    let daylight = summer_daylight(time.rem_euclid(1.0));
-    let drying = drying_per_hour(daylight, cloud, wind_speed(wind));
-    let inherited_wetness = forced.initial_wetness * (-drying * elapsed_hours).exp();
+    let new_wetness =
+        1.0 - (-elapsed_hours.min(FORCED_WETTING_HOURS) * precipitation * wetting_rate).exp();
+    // What the override inherited from the sky it replaced dries across the
+    // whole span it has stood, integrated the way a scheduled shower's
+    // aftermath is: the rate swings with the sun, so one instant's rate
+    // stretched over the window had the streets breathing wet again every dusk
+    // instead of drying out once.
+    let dried = forced_drying(began * HOURS_PER_DAY, time * HOURS_PER_DAY, cloud, wind);
+    let inherited_wetness = forced.initial_wetness * (-dried).exp();
     let wetness = 1.0 - (1.0 - inherited_wetness) * (1.0 - new_wetness);
     let new_standing = ((new_wetness - 0.55) / 0.45).clamp(0.0, 1.0);
+    // Puddles need no quadrature: their drain rate is a constant under a forced
+    // sky, so the plain exponential over the true elapsed time is the integral.
     let inherited_standing = forced.initial_standing_water * (-0.62 * elapsed_hours).exp();
     let standing_water = new_standing.max(inherited_standing);
     WeatherSample {
@@ -1313,6 +1336,38 @@ fn drying_per_hour(daylight: f64, cloud_cover: f64, wind_mps: f64) -> f64 {
     const NIGHT: f64 = 0.045;
     let day = 0.10 + 0.42 * daylight * (1.0 - cloud_cover * 0.78) + 0.025 * wind_mps.min(10.0);
     lerp(NIGHT, day, smoothstep(daylight / 0.08))
+}
+
+/// The drying budget a forced sky spends between two absolute game-hour
+/// instants, on the same anchored whole-hour grid as
+/// [`WeatherTimeline::integrate_drying`] and for the same reason: the answer may
+/// only ever grow as `to_hours` advances.  The sky is the override's own
+/// constant cloud and wind, since a forced spell has no fronts to read.
+///
+/// The walk stops at [`FORCED_DRYING_EXHAUSTED`], which is also what bounds it:
+/// the rate never falls below its night floor, so the budget always reaches that
+/// ceiling within a few hundred cells however long the override has stood.
+fn forced_drying(from_hours: f64, to_hours: f64, cloud_cover: f64, wind: [f64; 2]) -> f64 {
+    if !from_hours.is_finite() || !to_hours.is_finite() || to_hours <= from_hours {
+        return 0.0;
+    }
+    let wind_mps = wind_speed(wind);
+    let mut dried = 0.0_f64;
+    let first = from_hours.div_euclid(DRYING_STEP_HOURS) as i64;
+    let last = to_hours.div_euclid(DRYING_STEP_HOURS) as i64;
+    for cell in first..=last {
+        if dried >= FORCED_DRYING_EXHAUSTED {
+            break;
+        }
+        let cell_start = cell as f64 * DRYING_STEP_HOURS;
+        let span = to_hours.min(cell_start + DRYING_STEP_HOURS) - from_hours.max(cell_start);
+        if span <= 0.0 {
+            continue;
+        }
+        let at = (cell_start + 0.5 * DRYING_STEP_HOURS) * DAYS_PER_HOUR;
+        dried += drying_per_hour(summer_daylight(at.rem_euclid(1.0)), cloud_cover, wind_mps) * span;
+    }
+    dried
 }
 
 fn wind_speed(wind: [f64; 2]) -> f64 {
@@ -1953,6 +2008,59 @@ mod tests {
         assert!(drying.surface_wetness < just_ended.surface_wetness);
         assert!(drying.surface_wetness > 0.05);
         assert!(drying.standing_water < just_ended.standing_water);
+    }
+
+    #[test]
+    fn a_forced_clear_sky_dries_the_aftermath_out_instead_of_re_soaking_every_night() {
+        // The drive path: `weather downpour` at eight in the morning, `weather
+        // clear` an hour later, then a game week of that dry sky standing over
+        // the wet streets it inherited.
+        let mut timeline = WeatherTimeline::default();
+        timeline.set_override(WeatherKind::Downpour, Some(0.95), 8.0 + 8.0 / 24.0);
+        let cleared = 8.0 + 9.0 / 24.0;
+        let soaked = timeline.sample(cleared);
+        assert!(soaked.surface_wetness > 0.9, "{soaked:?}");
+        assert!(soaked.standing_water > 0.9, "{soaked:?}");
+
+        timeline.set_override(WeatherKind::Clear, None, cleared);
+        let mut previous = timeline.sample(cleared);
+        // Nothing is falling, so nothing may rise, at any game minute of the
+        // week: bounding the drying window left the aftermath breathing with the
+        // sun, back to a soaked 0.6975 at every nightfall for as long as the
+        // process ran.
+        for minute in 1..=(7 * 24 * 60) {
+            let sample = timeline.sample(cleared + minute as f64 / MINUTES_PER_DAY);
+            assert!(
+                sample.surface_wetness <= previous.surface_wetness + 1e-12,
+                "wetness rose to {} at minute {minute} under a forced clear sky",
+                sample.surface_wetness
+            );
+            assert!(
+                sample.standing_water <= previous.standing_water + 1e-12,
+                "standing water rose to {} at minute {minute}",
+                sample.standing_water
+            );
+            previous = sample;
+        }
+        // And it is actually gone, not merely no longer rising: puddles inside
+        // half a game day, the last of the damp inside a day and a half.
+        assert!(timeline.sample(cleared + 0.5).standing_water < 0.001);
+        assert!(timeline.sample(cleared + 1.5).surface_wetness < 0.001);
+    }
+
+    #[test]
+    fn a_forced_drizzle_never_wets_beyond_its_working_day() {
+        // The other half of the same window: an override has no authored end,
+        // so what it *lays down* stays bounded however long it is left on —
+        // otherwise a drizzle would silently become a downpour overnight.
+        let mut timeline = WeatherTimeline::new(WeatherConfig {
+            frequency: 0.0,
+            ..WeatherConfig::default()
+        });
+        timeline.set_override(WeatherKind::Drizzle, Some(0.2), 5.0);
+        let half_a_day = timeline.sample(5.5).surface_wetness;
+        assert!((0.70..0.75).contains(&half_a_day), "{half_a_day}");
+        assert_eq!(timeline.sample(8.0).surface_wetness, half_a_day);
     }
 
     #[test]

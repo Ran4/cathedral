@@ -45,7 +45,7 @@ not five.
 - [F] **medium** `crates/cathedral-sim/src/engine.rs:2742` — ramp_urgency deletes the debug-written `urgency` status in the same poll it is set
 - [F] **medium** `crates/cathedral-sim/src/scheduler.rs:812` — An actor queued in both the player-reaction and priority lanes takes two turns
 - [F] **medium** `crates/cathedral-sim/src/custody.rs:414` — commit clears holders before the arrival announcement reads them
-- [ ] **medium** `crates/cathedral-sim/src/weather.rs:1073` — Forced weather's 8-hour elapsed cap freezes the wet aftermath forever
+- [F] **medium** `crates/cathedral-sim/src/weather.rs:1073` — Forced weather's 8-hour elapsed cap freezes the wet aftermath forever
 - [ ] **medium** `crates/cathedral-sim/src/nav/mod.rs:590` — offset_route validates only vertices, so lane paths run through walls for up to 10 m
 - [ ] **medium** `crates/cathedral-backends/src/worker.rs:362` — Worker::forget kills the child but never reaps it: a zombie per worker failure
 - [ ] **medium** `src/smart_actors/mod.rs:1252` — Custody sounds placed from the cold snapshot, which lacks a mover's live position
