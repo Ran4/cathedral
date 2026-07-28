@@ -1338,7 +1338,7 @@ impl Engine {
             // that is the moment the lane actually reached them.
             for prisoner in self.world.custody.prisoners_of(&actor_id) {
                 if let Some(record) = self.world.custody.get_mut(&prisoner) {
-                    record.officer_last_turn = now;
+                    record.officer_last_turn = Some(now);
                 }
             }
         }
@@ -3007,6 +3007,17 @@ impl Engine {
         if self.world.custody.is_empty() {
             return;
         }
+        // Start the dead-man clock of anything the action layer has just made or
+        // just touched — a seizure, and a hand landing on an arm, are both its
+        // work and it has no clock to stamp them with. Exactly what
+        // `round::tick_intents` does for a fresh `go_to`'s expiry, and it has to
+        // happen here, above the timer that reads it: judged against a stamp
+        // nobody had set, every grip that landed more than
+        // `CUSTODY_DEAD_MAN_SECONDS` into the session was let go on the very
+        // next poll, and the tether never engaged at all.
+        for record in self.world.custody.records_mut() {
+            record.officer_last_turn.get_or_insert(now);
+        }
         let mut freed: Vec<(ActorId, &'static str)> = Vec::new();
         let mut ungripped: Vec<ActorId> = Vec::new();
         let mut closing: Vec<(ActorId, ActorId, Vec3)> = Vec::new();
@@ -3023,7 +3034,10 @@ impl Engine {
             //    busy scene can starve a holder past a minute with nothing
             //    broken at all — releasing then is correct, not a false
             //    positive, and the officer can always take hold again.
-            if record.is_held() && now - record.officer_last_turn > custody::CUSTODY_DEAD_MAN_SECONDS
+            if record.is_held()
+                && record
+                    .officer_last_turn
+                    .is_some_and(|last_turn| now - last_turn > custody::CUSTODY_DEAD_MAN_SECONDS)
             {
                 ungripped.push(prisoner.clone());
             }

@@ -3199,9 +3199,13 @@ pub(crate) fn take_into_charge(
     let station_place = station.place_id.clone();
     let station_point = station.point;
 
-    // `seized_at` and the dead-man clock are stamped by the engine, which has
-    // the only clock; a bare `apply_action` (the tests, the headless runner)
-    // seizes at zero, exactly as a clock-less world raises an undated notice.
+    // The action layer has no clock, so `seized_at` is zero here exactly as a
+    // clock-less world raises an undated notice. The one stamp that is *read*
+    // against real seconds — the dead-man timer's `officer_last_turn` — is
+    // deliberately no number at all: `Custody::seize` leaves it unstarted and
+    // the engine starts it on the first poll that sees the record, because a
+    // zero there reads as an hour of starvation and drops the grip a poll after
+    // it lands.
     world.custody.seize(
         target_id.clone(),
         officer_id.clone(),

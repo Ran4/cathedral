@@ -3126,3 +3126,158 @@ fn the_sentence_is_the_next_bell_and_the_ceiling_catches_the_far_ones() {
         "no promise was made, so the ceiling is the whole of it"
     );
 }
+
+/// M4c's dead-man timer is a **floor** under a provider outage, not a fuse on a
+/// fresh arrest — and for a long time it was the second, because nothing ever
+/// started its clock.
+///
+/// `officer_last_turn` had three writers and not one of them was the moment a
+/// hand lands: `take_into_charge` runs in the action layer, which has no clock
+/// and so could only ever name zero, and the engine's own refresh is stamped at
+/// *submission*, before the reply that seizes has been applied. So the timer
+/// measured "real seconds since the process started" and applied it the instant
+/// anybody took hold: seize the player five minutes into a session, close on
+/// them, put a hand out, and the grip was announced and then let go about
+/// sixteen milliseconds later. The tether, the strain meter and the struggle
+/// were all unreachable, and the player simply walked away.
+///
+/// Through the real path on purpose — `DebugSeize` is the same
+/// `actions::take_into_charge` a verb reaches, and `PlayerGrabbed` is the
+/// host's reflex — because both halves of the defect are in that path and
+/// neither is visible from a record built by hand.
+#[test]
+fn a_hand_that_has_just_landed_survives_the_dead_man_timer() {
+    let mut engine = Engine::new(
+        EngineConfig {
+            nav: Some(real_nav()),
+            ..EngineConfig::default()
+        },
+        &seed(),
+        areas(),
+        catalog(),
+        prompt_env(),
+        Box::new(SharedCognition::default()),
+        Box::new(NullTranscription),
+        Box::new(TtsProbe::default()),
+        Box::new(NullSight),
+        Capabilities::new(false, false, false, false, false, TtsBackendKind::Off),
+        (PLAYER_SPAWN, 0.0),
+        0,
+        0.0,
+    )
+    .expect("the seeded world has a player");
+    engine.poll(0.0, Vec::new());
+
+    // Five minutes in — long past `CUSTODY_DEAD_MAN_SECONDS`, which is the
+    // whole point: any session older than a minute used to be one where no
+    // grip could land at all.
+    let officer = ActorId::from_raw("k0fb1");
+    let seized_at = 300.0;
+    engine.poll(
+        seized_at,
+        vec![EngineCommand::DebugSeize {
+            officer: officer.to_string(),
+            target: None,
+        }],
+    );
+    assert!(
+        engine.world().custody.holds(&player()),
+        "the stand-in takes the player in charge exactly as the verb does"
+    );
+
+    // The host's reflex fires: they strayed, the officer closed, a hand landed.
+    engine.poll(
+        seized_at + 0.1,
+        vec![EngineCommand::PlayerGrabbed {
+            holder_id: officer.clone(),
+        }],
+    );
+    assert!(engine.world().custody.is_held(&player()), "the hand is on the arm");
+
+    // …and it is still there on the next poll. Nobody has been handed a turn in
+    // between — with no cognition nobody can be — which is exactly the starved
+    // lane the timer exists for, and exactly the case where a grip one poll old
+    // must not be judged by it.
+    engine.poll(seized_at + 0.2, Vec::new());
+    assert!(
+        engine.world().custody.is_held(&player()),
+        "a grip that landed a tenth of a second ago has not been abandoned"
+    );
+    assert!(
+        !engine.world().characters[&player()]
+            .inbox()
+            .iter()
+            .any(|line| line.contains("lets go of your arm")),
+        "and nobody announced letting go: {:?}",
+        engine.world().characters[&player()].inbox()
+    );
+}
+
+/// The other end of the same repair, and the guard against over-correcting it:
+/// a landing hand restarts the clock, and a clock that has run is still allowed
+/// to run out.
+///
+/// The record here is stamped honestly at seizure, so only the grab is under
+/// test: an officer who took somebody at t=300 and was starved of turns until
+/// t=400 has a stale stamp by any reading — and it must not be the stamp the
+/// hand they then put out is judged by. `Custody::grab` unstarts the clock and
+/// the next poll starts it again, so the grip is measured from itself.
+///
+/// No nav graph, so nothing in this world moves on its own: the escort walk,
+/// the arrival and the leash are somebody else's tests, and here they would
+/// only be noise.
+#[test]
+fn a_landing_hand_restarts_the_dead_man_clock_which_still_runs_out() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+
+    let prisoner = ActorId::from_raw("cb947");
+    let officer = ActorId::from_raw("k0fb1");
+    {
+        let world = harness.engine.world_mut();
+        // Far enough that nobody arrives anywhere: this is about the grip.
+        let station = cathedral_sim::custody::Station {
+            place_id: cathedral_sim::PlaceId::from_raw("pl_ston"),
+            name: cathedral_sim::custody::STONE_HOUSE_PLACE_NAME.into(),
+            point: Vec3::new(0.0, WALK_Y, 300.0),
+            stone_house: true,
+        };
+        world
+            .custody
+            .seize(prisoner.clone(), officer.clone(), None, station, 300.0);
+        // A pace apart, so neither the leash nor the lapse has anything to say.
+        let beside = world.characters[&officer].position_m();
+        world.characters.get_mut(&prisoner).unwrap().state.position_m =
+            Vec3::new(beside.x + 1.0, beside.y, beside.z);
+    }
+
+    // A hundred seconds of nothing. Merely in charge is not held, so the timer
+    // has no grip to judge and the custody stands.
+    harness.now = 400.0;
+    harness.poll();
+    assert!(harness.engine.world().custody.holds(&prisoner), "still in charge");
+
+    // Now the hand lands — the `grab` verb's own call, with the officer's last
+    // turn a hundred seconds behind it.
+    harness.engine.world_mut().custody.grab(&prisoner, officer.clone());
+    harness.now = 400.1;
+    harness.poll();
+    assert!(
+        harness.engine.world().custody.is_held(&prisoner),
+        "the grip is a tenth of a second old, whatever the lane did before it"
+    );
+
+    // And then it really is abandoned: a full minute with nobody thinking, and
+    // the hand comes off — while the custody itself stands, because the
+    // dead-man timer ends a grip and never a custody.
+    harness.now = 400.1 + cathedral_sim::custody::CUSTODY_DEAD_MAN_SECONDS + 1.0;
+    harness.poll();
+    assert!(
+        !harness.engine.world().custody.is_held(&prisoner),
+        "a grip nobody has thought about for a minute is a starved one"
+    );
+    assert!(
+        harness.engine.world().custody.holds(&prisoner),
+        "but they are still in the law's hands"
+    );
+}

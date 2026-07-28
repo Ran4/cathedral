@@ -238,8 +238,17 @@ pub struct CustodyRecord {
     pub seized_at: f64,
     pub committed_at: Option<f64>,
     /// When the escort last took a turn, for the dead-man timer. Refreshed by
-    /// the engine every time the officer thinks.
-    pub officer_last_turn: f64,
+    /// the engine every time the officer thinks, and it is the only clock a
+    /// grip is judged against.
+    ///
+    /// `None` until the first poll that sees the record stamps it — the same
+    /// idiom, for the same reason, as [`crate::character::TravelIntent`]'s
+    /// `deadline`. A custody is *made* in the action layer, which has no clock,
+    /// so a record forced to name a number here could only ever name zero, and
+    /// zero reads as a full minute of starvation the moment the session is a
+    /// minute old. `None` says the truth instead — the clock has not started —
+    /// and a clock that has not started has run out of nothing.
+    pub officer_last_turn: Option<f64>,
 }
 
 impl CustodyRecord {
@@ -308,6 +317,11 @@ impl Custody {
         self.held.iter()
     }
 
+    /// Every record, mutably — for the engine, which owns every clock in them.
+    pub fn records_mut(&mut self) -> impl Iterator<Item = &mut CustodyRecord> {
+        self.held.values_mut()
+    }
+
     /// How many arrests count against [`CUSTODY_MAX_ARRESTS`] — the authored
     /// inmates never do.
     pub fn arrest_count(&self) -> usize {
@@ -343,7 +357,7 @@ impl Custody {
                 sentence_due_game_days: None,
                 seized_at: now,
                 committed_at: None,
-                officer_last_turn: now,
+                officer_last_turn: None,
             },
         );
     }
@@ -365,7 +379,7 @@ impl Custody {
                 sentence_due_game_days: None,
                 seized_at: 0.0,
                 committed_at: Some(0.0),
-                officer_last_turn: 0.0,
+                officer_last_turn: None,
             },
         );
     }
@@ -373,7 +387,12 @@ impl Custody {
     /// Put a hand on the arm. Idempotent per holder, and refcounted.
     ///
     /// A hand landing ends the closing: they strayed, the officer came, and the
-    /// chase such as it was is over.
+    /// chase such as it was is over. It restarts the dead-man clock for the same
+    /// reason: that timer asks whether *this* grip has been abandoned, and a
+    /// grip one poll old has not been, whatever the lane did to the officer in
+    /// the minute they spent walking over. Left stale, it judged a hand that had
+    /// just landed by how long ago somebody was last handed a prompt, and let go
+    /// again on the very next poll.
     pub fn grab(&mut self, prisoner: &ActorId, holder: ActorId) -> bool {
         let Some(record) = self.held.get_mut(prisoner) else {
             return false;
@@ -382,6 +401,7 @@ impl Custody {
             record.holders.push(holder);
         }
         record.closing = false;
+        record.officer_last_turn = None;
         true
     }
 
