@@ -1248,28 +1248,35 @@ fn process_engine_message(
                     ));
             }
             // Being taken in charge has a sound of its own (M4c): the keys the
-            // gate and watch keepers carry, off the officer who just took
-            // somebody.
+            // gate and watch keepers carry. Hung on the person *taken*, not on
+            // the officer whose belt they are on: `seize` is a four-metre verb,
+            // so the two are at arm's reach and either would place the rattle
+            // inside its own falloff — but the officer is the one a seizure
+            // moves. She closes on foot in the verb path, and the drive
+            // stand-in teleports her beside the target inside this very poll,
+            // so at this instant hers is the one position neither channel here
+            // has heard about yet. The target's, nobody has touched.
             if kind == "seize"
-                && let Some(officer) = mirror.actor(&actor)
+                && let Some(position) =
+                    live_position(target.as_ref().unwrap_or(&actor), &**mirror, movement_inbox)
             {
                 presentation
                     .soundscape
-                    .write(crate::soundscape::SoundscapeCue::CustodyKeys {
-                        position: officer.position_m.into(),
-                    });
+                    .write(crate::soundscape::SoundscapeCue::CustodyKeys { position });
             }
             // …and being shut in has the other (M5c). The sim emits `commit`
             // only for the Stone House — a gate arch has no leaf — so this needs
-            // no station test of its own, and the position is the prisoner's,
-            // because the door is the last thing they hear before the room.
-            if kind == "commit"
-                && let Some(prisoner) = mirror.actor(&actor)
-            {
+            // no station test of its own, and the door is a fixed fitting of the
+            // city rather than something to read off a person: everyone this
+            // event names has just been *put* in the room. The escort's arrival
+            // is what commits, and the drive stand-in sets keeper and prisoner
+            // to the gaol point in the same poll, so every pose the host tracks
+            // still has them out in the street they walked in from.
+            if kind == "commit" {
                 presentation
                     .soundscape
                     .write(crate::soundscape::SoundscapeCue::GaolDoor {
-                        position: prisoner.position_m.into(),
+                        position: crate::soundscape::STONE_HOUSE_DOOR,
                     });
             }
             match (kind.as_str(), target, item) {
@@ -1599,6 +1606,35 @@ fn retire_superseded_movement(
             .actor(actor_id)
             .is_some_and(|actor| Vec3::from(actor.position_m) == sample.position)
     });
+}
+
+/// Where somebody stands *now*, for the message arms that have to put a real
+/// sound in a real place.
+///
+/// `ActorSnapshot::position_m` alone will not do it. It is the cold channel:
+/// `World::step_movement` writes a walker's position without ever calling
+/// `touch_public_state`, so between revisions the mirror simply does not know
+/// they have moved — and `Engine::flush` pushes a poll's world events *before*
+/// the snapshot that poll owes, so an event arm reads a mirror that is a
+/// revision behind the very thing it is reacting to. The hot channel is the
+/// 20 Hz `Movement` tick, written a few arms above in this same drain, and
+/// [`retire_superseded_movement`] means a sample that is still here is one the
+/// last snapshot agreed with. So: the sample when there is one, the snapshot
+/// otherwise, and `None` for somebody the projection has never heard of.
+///
+/// Neither channel can answer for a *teleport* — the sim moving someone by a
+/// path that ships no tick, whose snapshot is still behind us in the queue. A
+/// caller whose event implies one (`commit`) must not ask this question at all.
+fn live_position(
+    actor_id: &model::ActorId,
+    mirror: &model::WorldMirror,
+    movement_inbox: &model::MovementInbox,
+) -> Option<Vec3> {
+    movement_inbox
+        .0
+        .get(actor_id)
+        .map(|sample| sample.position)
+        .or_else(|| mirror.actor(actor_id).map(|actor| actor.position_m.into()))
 }
 
 fn next_tts_backend(runtime: &SmartActorRuntime) -> bridge::TtsBackend {
@@ -3226,6 +3262,120 @@ mod tests {
         let sim = engine.world_mut().expect("the engine is live");
         assert!(sim.custody.holds(&ilse), "she is still in the law's charge");
         assert!(!sim.custody.is_held(&ilse), "but nobody has hold of her");
+    }
+
+    /// Pumps frames until a soundscape cue the drain writes matches, and hands
+    /// back what `pick` took out of it. Deliberately no `thread::sleep`: the
+    /// local engine drains its command queue on the very next poll, and real
+    /// seconds passing would let the round walk the subjects out from under the
+    /// assertion.
+    fn pump_for_cue<T>(
+        app: &mut App,
+        mut pick: impl FnMut(crate::soundscape::SoundscapeCue) -> Option<T>,
+        note: &str,
+    ) -> T {
+        for _ in 0..600 {
+            app.update();
+            let cues: Vec<crate::soundscape::SoundscapeCue> = app
+                .world_mut()
+                .resource_mut::<Messages<crate::soundscape::SoundscapeCue>>()
+                .drain()
+                .collect();
+            for cue in cues {
+                if let Some(found) = pick(cue) {
+                    return found;
+                }
+            }
+        }
+        panic!("{note}");
+    }
+
+    /// The two custody cues are real clips at a real `Vec3`
+    /// (`soundscape.rs`: `GatekeeperKeyRing` and `StoneHouseCellDoor` are
+    /// scheduled at exactly the position handed over), and both used to be read
+    /// off `ActorSnapshot::position_m` — the *cold* channel. `step_movement`
+    /// never bumps the world revision, and `Engine::flush` pushes a poll's world
+    /// events before the snapshot that poll owes, so that reading is always at
+    /// least one revision behind the event being reacted to. The drive stand-ins
+    /// are the extreme of it and the reason this test uses them: `debug_seize`
+    /// teleports the officer to arm's reach and `debug_commit` puts everybody in
+    /// the gaol, both inside the very poll whose event is then placed from the
+    /// pose they held *before* it.
+    #[test]
+    fn the_custody_cues_sound_where_the_scene_is_and_not_a_revision_behind_it() {
+        let mut app = ready_fake_plugin_app();
+        let ilse = cathedral_sim::ActorId::from_raw("k0fb1");
+        let ashe = cathedral_sim::ActorId::from_raw("p009x");
+        // A corner of the Wick Ward, and a beat right across the city from it:
+        // whichever of the two the cue picks up is unmistakable.
+        let corner = Vec3::new(12.0, 0.91, 140.0);
+        let far_beat = Vec3::new(-214.0, 0.91, 45.0);
+        // The gaol as the *sim* knows it, so the door assertion below is not
+        // merely the host agreeing with its own constant.
+        let gaol = {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let sim = engine.world_mut().expect("the engine is live");
+            let point = cathedral_sim::custody::stone_house(&sim.places)
+                .expect("the Stone House is in the registry")
+                .point;
+            Vec3::new(point.x as f32, point.y as f32, point.z as f32)
+        };
+
+        hold_actor_at(&mut app, &ashe, far_beat, 3);
+        hold_actor_at(&mut app, &ilse, corner, 3);
+
+        app.world()
+            .resource::<bridge::BridgeHandle>()
+            .try_send(bridge::BridgeCommand::DebugSeize {
+                officer: "Havise Ashe".into(),
+                target: Some("k0fb1".into()),
+            })
+            .expect("the command queue has room");
+        let keys = pump_for_cue(
+            &mut app,
+            |cue| match cue {
+                crate::soundscape::SoundscapeCue::CustodyKeys { position } => Some(position),
+                _ => None,
+            },
+            "the seizure never rattled any keys",
+        );
+        // At the woman being taken, which is where the officer now stands too —
+        // `seize` is a four-metre verb — and not out on the beat she was walking
+        // when the last snapshot went out.
+        assert!(
+            keys.distance(corner) < 1.5,
+            "the keys rattled {:.0} m from the seizure, out at {:?}",
+            keys.distance(corner),
+            keys,
+        );
+        assert!(
+            keys.distance(far_beat) > 100.0,
+            "and emphatically not back on her old beat"
+        );
+
+        app.world()
+            .resource::<bridge::BridgeHandle>()
+            .try_send(bridge::BridgeCommand::DebugCommit {
+                target: Some("k0fb1".into()),
+            })
+            .expect("the command queue has room");
+        let door = pump_for_cue(
+            &mut app,
+            |cue| match cue {
+                crate::soundscape::SoundscapeCue::GaolDoor { position } => Some(position),
+                _ => None,
+            },
+            "the commitment never shut a door",
+        );
+        // The one door in the city that is a door, and it is a fitting of the
+        // city: it shuts at the Stone House whatever the projection still
+        // believes about where the prisoner is standing.
+        assert!(
+            door.distance(gaol) < 8.0,
+            "the gaol door slammed {:.0} m from the gaol, out at {:?}",
+            door.distance(gaol),
+            door,
+        );
     }
 
     /// Holds one of the cast at a fixed pose, exactly as `Engine::debug_commit`

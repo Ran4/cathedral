@@ -91,6 +91,14 @@ const BURNT_COURT: Vec3 = Vec3::new(-123.4, 1.2, 166.4);
 const STONE_GATE: Vec3 = Vec3::new(346.5, 5.0, 94.5);
 const STONE_GATE_HOUSING: Vec3 = Vec3::new(335.0, 5.5, 94.5);
 const RIVER_GATE: Vec3 = Vec3::new(-353.5, 4.0, -94.5);
+/// The Stone House doorway (`law_and_order.md` M5c), taken off
+/// `city::build_stone_house`: the court face is x = 39 and the throat is the
+/// 1.6 m gap between z -207.6 and z -206, with the leaf hung against the jamb
+/// beside it. A gaol door is a fitting of the city like the two gates above and
+/// never moves, which is the whole reason the [`SoundscapeCue::GaolDoor`]
+/// caller reads it from here rather than off one of the people the `commit`
+/// event names — see the note there.
+pub(crate) const STONE_HOUSE_DOOR: Vec3 = Vec3::new(39.4, 1.2, -206.8);
 const FORD_WELL: Vec3 = Vec3::new(88.0, 1.0, 35.0);
 const THREE_CURB: Vec3 = Vec3::new(-91.7, 0.8, 116.2);
 const CHAIN_WELL: Vec3 = Vec3::new(-123.8, -2.5, 63.1);

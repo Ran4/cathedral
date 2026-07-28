@@ -48,7 +48,7 @@ not five.
 - [F] **medium** `crates/cathedral-sim/src/weather.rs:1073` — Forced weather's 8-hour elapsed cap freezes the wet aftermath forever
 - [F] **medium** `crates/cathedral-sim/src/nav/mod.rs:590` — offset_route validates only vertices, so lane paths run through walls for up to 10 m
 - [F] **medium** `crates/cathedral-backends/src/worker.rs:362` — Worker::forget kills the child but never reaps it: a zombie per worker failure
-- [ ] **medium** `src/smart_actors/mod.rs:1252` — Custody sounds placed from the cold snapshot, which lacks a mover's live position
+- [F] **medium** `src/smart_actors/mod.rs:1252` — Custody sounds placed from the cold snapshot, which lacks a mover's live position
 - [F] **medium** `src/smart_actors/actors.rs:235` — MovementInbox is never pruned, so a stale pose overrides an authoritative reposition
 - [ ] **medium** `src/smart_actors/body.rs:2102` — Urgency multiplies the absolute accumulated gait phase, snapping the legs
 - [ ] **medium** `src/smart_actors/body.rs:2649` — Gait-phase interpolation sweeps backwards when the sim resets the phase to 0
