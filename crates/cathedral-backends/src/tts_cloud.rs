@@ -18,7 +18,7 @@ use futures_util::StreamExt;
 use serde::Serialize;
 
 use crate::{
-    config::SpeechSettings,
+    config::{SpeechSettings, timeout_duration},
     stt_cloud::{NO_KEY_MESSAGE, is_retryable, transport_error},
     tts::{PcmChunk, StreamCompletion, resolve_openai_voice, validate_tts_text},
     wav::{MAX_PCM_CHUNK_BYTES, MAX_WAV_BYTES, accept_wav_bytes},
@@ -304,7 +304,7 @@ impl CloudTts {
             api_key: settings.api_key.clone(),
             base_url: settings.base_url.trim_end_matches('/').to_string(),
             model: settings.tts_model.clone(),
-            timeout: Duration::from_secs_f64(settings.timeout_seconds.max(0.001)),
+            timeout: timeout_duration(settings.timeout_seconds),
             settings: settings.clone(),
         }
     }

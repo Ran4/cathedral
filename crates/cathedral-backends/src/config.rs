@@ -15,6 +15,7 @@ use std::{
     collections::BTreeMap,
     fmt,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use cathedral_sim::TtsBackendKind;
@@ -32,6 +33,29 @@ pub const POCKET_WORKER_SCRIPT: &str = "pocket_tts_worker.py";
 pub const DEFAULT_LLM_TIMEOUT_SECONDS: f64 = 45.0;
 /// `server.py:515-517` — the scheduler's inter-turn delay.
 pub const DEFAULT_NPC_TURN_DELAY_SECONDS: f64 = 1.0;
+
+/// The floor under any configured timeout: a request must be given *some* time.
+pub const MIN_TIMEOUT_SECONDS: f64 = 0.001;
+/// And the ceiling. An hour is already far past any provider call this game
+/// waits on; the number that matters is that it is nowhere near the ~1.8e19 s
+/// where [`Duration::from_secs_f64`] stops returning and starts **panicking**.
+/// Every timeout below comes from an environment variable that
+/// [`Environment::float`] screens for non-finiteness only, so without a ceiling
+/// a stray `LLM_TIMEOUT_SECONDS=1e20` would kill the task that read it.
+pub const MAX_TIMEOUT_SECONDS: f64 = 3_600.0;
+
+/// A configured timeout in seconds as a [`Duration`], clamped *before* the
+/// conversion — clamping the constructed `Duration` would be too late, because
+/// the conversion is the thing that panics.
+pub fn timeout_duration(seconds: f64) -> Duration {
+    // NOT `clamp`, which clippy will offer and which would reintroduce the very
+    // panic this exists to prevent: `clamp` returns NaN for a NaN input, and
+    // `Duration::from_secs_f64` panics on NaN. `f64::max` returns the other
+    // operand, so a garbage timeout comes out as the floor.
+    #[allow(clippy::manual_clamp)]
+    let seconds = seconds.max(MIN_TIMEOUT_SECONDS).min(MAX_TIMEOUT_SECONDS);
+    Duration::from_secs_f64(seconds)
+}
 
 // ------------------------------------------------------------- speech defaults
 
@@ -1021,6 +1045,36 @@ mod tests {
         let settings = config.llm.expect("configured");
         assert!(!settings.content_parts);
         assert_eq!(settings.timeout_seconds, 12.5);
+    }
+
+    /// `Environment::float` lets any finite number through, so the clamp is the
+    /// only thing standing between `LLM_TIMEOUT_SECONDS=1e20` and the panic
+    /// inside `Duration::from_secs_f64` (which takes the whole request task,
+    /// and its lane, with it).
+    #[test]
+    fn a_configured_timeout_is_clamped_before_it_becomes_a_duration() {
+        assert_eq!(timeout_duration(12.5), Duration::from_millis(12_500));
+        assert_eq!(
+            timeout_duration(1e20),
+            Duration::from_secs_f64(MAX_TIMEOUT_SECONDS)
+        );
+        assert_eq!(
+            timeout_duration(f64::MAX),
+            Duration::from_secs_f64(MAX_TIMEOUT_SECONDS)
+        );
+        assert_eq!(
+            timeout_duration(0.0),
+            Duration::from_secs_f64(MIN_TIMEOUT_SECONDS)
+        );
+        assert_eq!(
+            timeout_duration(-5.0),
+            Duration::from_secs_f64(MIN_TIMEOUT_SECONDS)
+        );
+        // NaN would survive `f64::clamp`; `max` then `min` sends it to the floor.
+        assert_eq!(
+            timeout_duration(f64::NAN),
+            Duration::from_secs_f64(MIN_TIMEOUT_SECONDS)
+        );
     }
 
     #[test]

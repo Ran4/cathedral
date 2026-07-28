@@ -75,7 +75,7 @@ use cathedral_sim::{Cognition, CognitionBusy, CognitionError, Completion, Reques
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::{LlmConfigError, LlmSettings},
+    config::{LlmConfigError, LlmSettings, timeout_duration},
     events::BackendSender,
     runtime::BackendRuntime,
 };
@@ -476,9 +476,7 @@ impl LlmClient {
             .http
             .post(self.settings.chat_completions_url())
             .bearer_auth(&self.settings.api_key)
-            .timeout(Duration::from_secs_f64(
-                self.settings.timeout_seconds.max(0.001),
-            ))
+            .timeout(timeout_duration(self.settings.timeout_seconds))
             .json(&body)
             .send()
             .await
@@ -572,7 +570,13 @@ fn parse_retry_after(header: Option<&str>) -> Option<Duration> {
     if !seconds.is_finite() || seconds < 0.0 {
         return None;
     }
-    Some(Duration::from_secs_f64(seconds).min(MAX_RETRY_AFTER))
+    // Clamp the *seconds*, not the `Duration`: `Duration::from_secs_f64`
+    // panics outright above ~1.8e19 s, so a header of `1e20` — finite,
+    // non-negative, and through both guards above — would take the whole
+    // completion task down before `.min()` ever ran.
+    Some(Duration::from_secs_f64(
+        seconds.min(MAX_RETRY_AFTER.as_secs_f64()),
+    ))
 }
 
 fn snippet(body: &str) -> String {
@@ -685,17 +689,81 @@ impl HttpCognition {
 
         let events = self.events.clone();
         self.runtime.spawn(async move {
+            let guard = LaneGuard::new(lane, events, request_id);
             let started = Instant::now();
             let result = client.complete_with_budget(prompt, max_output_tokens).await;
-            let duration_seconds = started.elapsed().as_secs_f64();
-            lane.store(false, Ordering::SeqCst);
-            events.send(Completion {
-                request_id,
-                result: result.map_err(|error| CognitionError::from(&error)),
-                duration_seconds,
-            });
+            guard.finish(result, started.elapsed().as_secs_f64());
         });
         Ok(request_id)
+    }
+}
+
+/// The lane's release, tied to the task's lifetime rather than to it reaching
+/// its last line.
+///
+/// Freeing the flag and pushing the [`Completion`] are the only two things that
+/// let another turn start: the scheduler clears its `in_flight` on the matching
+/// completion and has no timeout of its own. So a task that ends *without*
+/// doing them — tokio catches a panic and simply drops the future, and a
+/// runtime shutdown drops it too — silently ends every LLM turn for the rest of
+/// the process. Holding the release in a value that runs on drop makes that
+/// unreachable: an unwind through the task still frees the lane and still
+/// reports a failure the scheduler can back off from.
+///
+/// The happy path is unchanged — [`Self::finish`] consumes the guard and sends
+/// the real result, so exactly one completion is ever sent per request.
+struct LaneGuard {
+    lane: Arc<AtomicBool>,
+    events: BackendSender,
+    request_id: RequestId,
+    /// Cleared by [`Self::finish`]: the drop that immediately follows it has
+    /// nothing left to report.
+    armed: bool,
+}
+
+impl LaneGuard {
+    fn new(lane: Arc<AtomicBool>, events: BackendSender, request_id: RequestId) -> Self {
+        Self {
+            lane,
+            events,
+            request_id,
+            armed: true,
+        }
+    }
+
+    /// The task's own tail: disarm, then release the lane and report the result.
+    fn finish(mut self, result: Result<String, LlmError>, duration_seconds: f64) {
+        self.armed = false;
+        self.release(
+            result.map_err(|error| CognitionError::from(&error)),
+            duration_seconds,
+        );
+    }
+
+    fn release(&self, result: Result<String, CognitionError>, duration_seconds: f64) {
+        self.lane.store(false, Ordering::SeqCst);
+        self.events.send(Completion {
+            request_id: self.request_id,
+            result,
+            duration_seconds,
+        });
+    }
+}
+
+impl Drop for LaneGuard {
+    fn drop(&mut self) {
+        if !self.armed {
+            return;
+        }
+        // Only ever reached when the task died before its tail. It reads as a
+        // transport failure because that is what it is from the sim's side: the
+        // request went out and no answer came back.
+        self.release(
+            Err(CognitionError::from(&LlmError::Transport(
+                "the completion task ended without a result".to_string(),
+            ))),
+            0.0,
+        );
     }
 }
 
@@ -1288,5 +1356,79 @@ mod tests {
             None
         );
         assert_eq!(parse_retry_after(None), None);
+    }
+
+    /// A header past `Duration`'s range is finite and non-negative, so it walks
+    /// straight through both guards. Clamping the constructed `Duration` came
+    /// one step too late: `from_secs_f64` panics above ~1.8e19 s, which killed
+    /// the completion task before it could free its lane.
+    #[test]
+    fn a_retry_after_beyond_a_durations_range_clamps_instead_of_panicking() {
+        assert_eq!(
+            parse_retry_after(Some("100000000000000000000")),
+            Some(MAX_RETRY_AFTER)
+        );
+        assert_eq!(parse_retry_after(Some("1e20")), Some(MAX_RETRY_AFTER));
+        assert_eq!(
+            parse_retry_after(Some(&f64::MAX.to_string())),
+            Some(MAX_RETRY_AFTER)
+        );
+    }
+
+    /// The same conversion, reached from `LLM_TIMEOUT_SECONDS` instead:
+    /// `Environment::float` screens for non-finiteness only, so an absurd
+    /// timeout used to panic the request task and wedge cognition for the rest
+    /// of the run rather than simply waiting a long time.
+    #[test]
+    fn an_absurd_configured_timeout_still_completes_the_request() {
+        let server = MockServer::start(vec![MockServer::ok(
+            r#"{"choices": [{"message": {"content": "hi"}}]}"#,
+        )]);
+        let mut settings = settings(Provider::Openai, &server.base_url());
+        settings.timeout_seconds = 1e20;
+        let completion = complete_once(settings, backend_channel());
+        assert_eq!(completion.result, Ok("hi".to_string()));
+    }
+
+    /// The other half of that failure: whatever kills a completion task, the
+    /// lane must come back. (The panic message tokio prints while this runs is
+    /// the test doing its job.)
+    #[test]
+    fn a_panicking_completion_task_still_frees_its_lane() {
+        let runtime = BackendRuntime::new().expect("runtime");
+        let (sender, receiver) = backend_channel();
+        let lane = Arc::new(AtomicBool::new(true));
+        let task_lane = Arc::clone(&lane);
+        runtime.spawn(async move {
+            let _guard = LaneGuard::new(task_lane, sender, RequestId(7));
+            panic!("the provider client blew up");
+        });
+
+        let event = receiver
+            .recv_timeout(Duration::from_secs(10))
+            .expect("a failure is reported even though the task died");
+        let BackendEvent::LlmCompletion(completion) = event else {
+            panic!("expected a completion");
+        };
+        assert_eq!(completion.request_id, RequestId(7));
+        assert!(completion.result.is_err(), "{completion:?}");
+        assert!(
+            !lane.load(Ordering::SeqCst),
+            "the lane is free for the next turn"
+        );
+    }
+
+    /// And the happy path still reports exactly once — the guard must not add a
+    /// second completion behind the real one.
+    #[test]
+    fn a_finished_completion_task_reports_once() {
+        let server = MockServer::start(vec![MockServer::ok(
+            r#"{"choices": [{"message": {"content": "hi"}}]}"#,
+        )]);
+        let events = backend_channel();
+        let receiver = events.1.clone();
+        let completion = complete_once(settings(Provider::Openai, &server.base_url()), events);
+        assert_eq!(completion.result, Ok("hi".to_string()));
+        assert!(receiver.try_recv().is_err(), "only one completion is sent");
     }
 }

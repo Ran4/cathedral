@@ -18,7 +18,7 @@ use cathedral_sim::SpeechError;
 use serde::Deserialize;
 
 use crate::{
-    config::SpeechSettings,
+    config::{SpeechSettings, timeout_duration},
     wav::{MAX_WAV_BYTES, require_existing_wav},
     worker::truncate,
 };
@@ -55,7 +55,7 @@ impl CloudTranscriber {
             api_key: settings.api_key.clone(),
             base_url: settings.base_url.trim_end_matches('/').to_string(),
             model: settings.stt_model.clone(),
-            timeout: Duration::from_secs_f64(settings.timeout_seconds.max(0.001)),
+            timeout: timeout_duration(settings.timeout_seconds),
         }
     }
 
