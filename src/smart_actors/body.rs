@@ -1527,6 +1527,12 @@ pub(crate) struct BodyPoseState {
     // L0/L1 (Present). Applied directly, no blend — the debug hooks step them,
     // and a future ale would ramp its own float sim-side.
     carriage: Carriage,
+    /// The stride phase urgency's quickened cadence has wound on ahead of the
+    /// sim's own, in cycles, integrated frame by frame by
+    /// [`advance_urgent_phase`] and wrapped into one cycle. It lives here rather
+    /// than being derived inside `apply_locomotion` because a rate only becomes
+    /// a phase by remembering the phase it has already produced.
+    urgent_phase: f32,
 }
 
 impl BodyPoseState {
@@ -1557,6 +1563,7 @@ impl BodyPoseState {
             gaze_yaw: 0.0,
             gaze_pitch: 0.0,
             carriage: Carriage::default(),
+            urgent_phase: 0.0,
         }
     }
 
@@ -2029,9 +2036,30 @@ fn urgent_arm_swing(base: f32, urgency: f32) -> f32 {
 
 /// The visual cadence multiplier: urgency winds the stride up to 1.4× at
 /// `u = 1` — the same "visual only, the root is the sim's" licence the drunk
-/// phase wobble takes. Exactly 1.0 at `u = 0`.
+/// phase wobble takes. Exactly 1.0 at `u = 0`. It multiplies a *rate*, never a
+/// phase; [`advance_urgent_phase`] is the only thing entitled to apply it.
 fn urgent_cadence(urgency: f32) -> f32 {
     1.0 + URGENT_CADENCE_GAIN * urgency
+}
+
+/// One frame of the surplus stride phase urgency has wound on ahead of the sim
+/// — the extra cycles, in stride-cycle units, added to `gait_phase` before the
+/// cycle is taken.
+///
+/// A cadence is a rate, so it has to be *integrated*. `gait_phase` is the sim's
+/// unbounded accumulator (`world.rs` only ever adds to it, and `set_route`
+/// deliberately carries it across route legs so the gait is seamless), so
+/// scaling that absolute value by the cadence would displace the whole stride
+/// by `gait_phase · Δk` the moment the pressure changed: 100 cycles into a walk
+/// one sixteenth of urgency is a 2.5-cycle jump — half a stride, which swaps
+/// which leg is forward — and the poop clock steps sixteen of them. Accruing
+/// the surplus at the sim's own phase rate instead leaves the legs exactly
+/// where they are and changes only how fast they go from here.
+///
+/// Wrapped into one cycle so the offset stays bounded however far anyone walks;
+/// a whole cycle is invisible to the sine and cosine downstream.
+fn advance_urgent_phase(current: f32, phase_rate: f32, dt: f32, urgency: f32) -> f32 {
+    (current + phase_rate * dt * (urgent_cadence(urgency) - 1.0)).rem_euclid(1.0)
 }
 
 /// The drunk stagger's phase offset (stride-cycle units), added to `gait_phase`
@@ -2084,9 +2112,11 @@ fn carriage_torso(carriage: Carriage, now: f64, seed: u32) -> (f32, f32) {
 /// lean. Positive local-X rotation swings a hanging limb toward −Z (forward).
 /// `carriage` (§8) is read here, not as a separate layer: drunkenness staggers
 /// the visual phase and sways/leans the torso, weariness drops the arm swing
-/// and stoops the torso, urgency quickens the cadence, pinches the knees and
-/// clenches the arms — all zero at a default `Carriage`, so a sober walk is
-/// byte-identical to before M5.
+/// and stoops the torso, urgency pinches the knees and clenches the arms — all
+/// zero at a default `Carriage`, so a sober walk is byte-identical to before M5.
+/// Urgency's quickened cadence is the one carriage effect that cannot be
+/// evaluated from a single frame: it arrives already integrated into
+/// `gait_phase` by the caller (see [`advance_urgent_phase`]).
 fn apply_locomotion(
     pose: &mut PoseDeltas,
     weight: f32,
@@ -2096,12 +2126,10 @@ fn apply_locomotion(
     now: f64,
     seed: u32,
 ) {
-    // Drunkenness staggers the visual gait phase; sober, the offset is 0.
-    // Urgency winds the same phase forward faster (a mincing hurry); unpressed,
-    // the multiplier is exactly 1.
-    let cycle = (gait_phase * urgent_cadence(carriage.urgency)
-        + carriage.drunkenness * drunk_phase_wobble(now, seed))
-        * TAU;
+    // Only bounded *offsets* are laid on the phase, never a scale of it — the
+    // phase is an accumulator, so a factor on it is a teleport. Sober, the
+    // drunk offset is 0 and the cycle is exactly the phase handed in.
+    let cycle = (gait_phase + carriage.drunkenness * drunk_phase_wobble(now, seed)) * TAU;
     let swing = cycle.sin();
 
     // Urgency draws the thighs together — mirrored per side, so the pinch is
@@ -2630,6 +2658,7 @@ pub(crate) fn animate_body_pose(
         // root position sweep, and derive a smoothed yaw rate for turn lean.
         let mut gait_phase = 0.0_f32;
         let mut speed = 0.0_f32;
+        let mut phase_rate = 0.0_f32;
         let mut target_yaw_rate = 0.0_f32;
         if let Some(sample) = inbox.0.get(actor_id) {
             let history = state.history.get_or_insert(GaitHistory {
@@ -2646,7 +2675,22 @@ pub(crate) fn animate_body_pose(
                 // them in Tier C) sweeping from the stale sample would thrash
                 // the legs; snap instead.
                 let stale = now - history.t0 > SAMPLE_STALE_SECONDS;
-                history.prev_phase = if stale { sample.gait_phase } else { history.cur_phase };
+                // A restart is not a gap, so the clock never catches it: the sim
+                // only ever *adds* to `gait_phase`, so a sample whose phase has
+                // gone backwards can only be one. `set_route` begins again at 0
+                // whenever a route is laid while `movement` is None, and several
+                // ladder sites clear the movement and re-decide on the very next
+                // tick — well inside `SAMPLE_STALE_SECONDS` — while the tick a
+                // walker *arrives* reports 0 too. Sweeping to 0 from a phase 80
+                // cycles deep would whirl the legs backwards through all eighty:
+                // exactly the thrash the stale branch exists to prevent, so snap
+                // for the same reason.
+                let restarted = sample.gait_phase < history.cur_phase;
+                history.prev_phase = if stale || restarted {
+                    sample.gait_phase
+                } else {
+                    history.cur_phase
+                };
                 history.prev_yaw = if stale { sample.facing_yaw } else { history.cur_yaw };
                 history.cur_phase = sample.gait_phase;
                 history.cur_yaw = sample.facing_yaw;
@@ -2659,6 +2703,12 @@ pub(crate) fn animate_body_pose(
             gait_phase = history.prev_phase + (history.cur_phase - history.prev_phase) * t;
             if fresh {
                 speed = history.speed;
+                // The sim's own stride rate, read off the same pair of samples
+                // the yaw rate is; urgency's cadence surplus integrates against
+                // it below. A snapped pair (stale or restarted) reads 0, which
+                // is right: nothing was walked between two unrelated samples.
+                phase_rate =
+                    (history.cur_phase - history.prev_phase) / MOVEMENT_TICK_SECONDS as f32;
                 target_yaw_rate = angle_delta(history.prev_yaw, history.cur_yaw)
                     / MOVEMENT_TICK_SECONDS as f32;
             }
@@ -2666,6 +2716,8 @@ pub(crate) fn animate_body_pose(
         state.yaw_rate +=
             (target_yaw_rate - state.yaw_rate) * (dt * YAW_RATE_SMOOTHING_PER_S).min(1.0);
         state.walk_blend = move_toward(state.walk_blend, walk_factor(speed), dt / WALK_BLEND_SECONDS);
+        state.urgent_phase =
+            advance_urgent_phase(state.urgent_phase, phase_rate, dt, state.carriage.urgency);
 
         // The layer stack (§4). Idle life is Tier A only; at those weights a
         // Tier B body simply holds rest between strides.
@@ -2688,7 +2740,7 @@ pub(crate) fn animate_body_pose(
             apply_locomotion(
                 &mut pose,
                 locomotion_weight,
-                gait_phase,
+                gait_phase + state.urgent_phase,
                 state.yaw_rate,
                 state.carriage,
                 now,
@@ -4180,12 +4232,28 @@ mod tests {
         assert!((pitch + URGENT_STOOP_RAD).abs() < 1e-6, "urgency folds the torso: {pitch}");
         const { assert!(URGENT_STOOP_RAD < WEARY_STOOP_RAD) };
 
-        // The walk: the same gait phase lands the legs further round the cycle,
-        // the arms swing less, and the thighs are drawn together.
+        // A second of walking at a brisk 1.2 cycles/s: the pressed body has
+        // wound 0.4 of a stride on ahead of the sim's phase, the calm one
+        // nothing at all. The cadence is integrated, so it is the *offset* that
+        // grows — the phase handed to `apply_locomotion` is never scaled.
+        let mut calm_phase = 0.0_f32;
+        let mut pressed_phase = 0.0_f32;
+        for _ in 0..50 {
+            calm_phase = advance_urgent_phase(calm_phase, 1.2, 0.02, 0.0);
+            pressed_phase = advance_urgent_phase(pressed_phase, 1.2, 0.02, 1.0);
+        }
+        assert_eq!(calm_phase, 0.0, "an unpressed body accrues no surplus");
+        assert!(
+            (pressed_phase - 1.2 * URGENT_CADENCE_GAIN).abs() < 1e-4,
+            "a second of urgent walking is 0.4 of a stride ahead: {pressed_phase}"
+        );
+
+        // The walk: that surplus lands the legs further round the cycle, the
+        // arms swing less, and the thighs are drawn together.
         let mut calm = PoseDeltas::default();
         let mut pressed = PoseDeltas::default();
         apply_locomotion(&mut calm, 1.0, 0.3, 0.0, Carriage::default(), 4.0, 0x9BDF);
-        apply_locomotion(&mut pressed, 1.0, 0.3, 0.0, urgent, 4.0, 0x9BDF);
+        apply_locomotion(&mut pressed, 1.0, 0.3 + pressed_phase, 0.0, urgent, 4.0, 0x9BDF);
         assert!(
             calm.left_thigh
                 .rotation
@@ -4204,6 +4272,47 @@ mod tests {
             pressed_z > calm_z + 0.05,
             "the left thigh must adduct: {calm_z} -> {pressed_z}"
         );
+    }
+
+    /// A change of urgency must never *displace* the stride, however deep into a
+    /// walk it lands. `gait_phase` is an unbounded accumulator, so the cadence
+    /// may only be integrated on top of it — scaling it stepped the legs by
+    /// `gait_phase · Δk`, half a stride at a time (which swaps which leg is
+    /// forward), on each of the sixteen quantised steps the poop clock takes and
+    /// instantly for `CATHEDRAL_DRIVE='status Ilse urgency 1'`.
+    #[test]
+    fn an_urgency_step_never_pops_the_legs_of_a_long_walk() {
+        // ~150 m into one continuous route, and mid-stride rather than on a
+        // cycle boundary, so any displacement is plainly visible.
+        let gait_phase = 100.3_f32;
+        let leg = |urgency: f32| {
+            let mut pose = PoseDeltas::default();
+            let carriage = Carriage {
+                drunkenness: 0.0,
+                weariness: 0.0,
+                urgency,
+            };
+            apply_locomotion(&mut pose, 1.0, gait_phase, 0.0, carriage, 3.0, 0x5AA5);
+            // The thigh's local X is the swing alone; its Z is urgency's
+            // deliberate adduction, which is allowed to move.
+            (
+                pose.left_thigh.rotation.to_euler(EulerRot::ZYX).2,
+                pose.left_shin.rotation,
+            )
+        };
+        // Sixteenths, exactly as `Engine::ramp_urgency` quantises them.
+        for step in 0..16 {
+            let (before_swing, before_shin) = leg(step as f32 / 16.0);
+            let (after_swing, after_shin) = leg((step + 1) as f32 / 16.0);
+            assert!(
+                (after_swing - before_swing).abs() < 1e-5,
+                "urgency step {step} moved the thigh swing: {before_swing} -> {after_swing}"
+            );
+            assert!(
+                before_shin.angle_between(after_shin) < 1e-5,
+                "urgency step {step} moved the knee fold"
+            );
+        }
     }
 
     /// `Carriage::from_statuses` maps the snapshot slice onto its axes and
@@ -4964,6 +5073,146 @@ mod tests {
         assert!(
             thigh_forwardness(world, "walker").abs() < 0.05,
             "leaving the animated tiers must settle the legs to rest"
+        );
+    }
+
+    /// The sim restarts `gait_phase` at 0: `set_route` reads the old phase
+    /// through `map_or(0.0, …)`, so a route laid while `movement` is None begins
+    /// again — and several ladder sites clear the movement and re-decide at
+    /// once, so the restart lands a tick later, nowhere near
+    /// `SAMPLE_STALE_SECONDS`. The two-sample history has to recognise the
+    /// restart itself; the clock cannot see it, and sweeping into it runs the
+    /// legs backwards through every cycle already walked.
+    #[test]
+    fn a_restarted_gait_phase_snaps_instead_of_sweeping_backwards() {
+        use bevy::asset::AssetPlugin;
+
+        use crate::smart_actors::actors::reconcile_actor_views;
+        use crate::smart_actors::model::{
+            ActorControl, ActorSnapshot, MotionSample, Position, WorldMirror, WorldSnapshot,
+        };
+
+        let mut mirror = WorldMirror::default();
+        mirror
+            .replace_snapshot(WorldSnapshot {
+                world_revision: 1,
+                player_id: ActorId("player".into()),
+                actors: vec![
+                    ActorSnapshot {
+                        id: ActorId("walker".into()),
+                        name_for_player: "walker".into(),
+                        control: ActorControl::Llm,
+                        position_m: Position::new(0.0, 0.91, 0.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance: Default::default(),
+                        holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
+                        pockets: Vec::new(),
+                    },
+                    ActorSnapshot {
+                        id: ActorId("player".into()),
+                        name_for_player: "You".into(),
+                        control: ActorControl::Player,
+                        position_m: Position::new(0.0, 0.91, 3.0).unwrap(),
+                        facing_yaw: 0.0,
+                        appearance: Default::default(),
+                        holds: vec![],
+                        active_gesture: None,
+                        statuses: Vec::new(),
+                        pockets: Vec::new(),
+                    },
+                ],
+                items: vec![],
+                offers: vec![],
+                road_carts: vec![],
+            })
+            .unwrap();
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<Image>()
+            .insert_resource(mirror)
+            .insert_resource(MovementInbox::default())
+            .init_resource::<ReflexState>()
+            .add_systems(Startup, setup_body_assets)
+            .add_systems(Update, (reconcile_actor_views, animate_body_pose).chain());
+        app.world_mut().spawn((
+            PlayerCamera,
+            GlobalTransform::from(Transform::from_xyz(0.0, 1.7, 3.0)),
+        ));
+        app.update();
+
+        let walker = ActorId("walker".into());
+        let sample = |seq: u64, gait_phase: f32| MotionSample {
+            position: Vec3::new(0.0, 0.91, 0.0),
+            facing_yaw: 0.0,
+            speed: 1.8,
+            gait_phase,
+            seq,
+        };
+        // 80 cycles — ~120 m — into one continuous errand.
+        let world = app.world_mut();
+        world
+            .resource_mut::<MovementInbox>()
+            .0
+            .insert(walker.clone(), sample(1, 80.0));
+        let root = world
+            .query::<(Entity, &ActorId, &BodyRig)>()
+            .iter(world)
+            .find(|(_, id, _)| id.0 == "walker")
+            .map(|(entity, _, _)| entity)
+            .expect("walker spawned");
+        world
+            .entity_mut(root)
+            .get_mut::<BodyPoseState>()
+            .unwrap()
+            .walk_blend = 1.0;
+        app.update();
+        let established_at = app.world().resource::<Time>().elapsed_secs_f64();
+
+        // The errand is abandoned and the ladder lays a fresh route on the next
+        // tick, so the next sample carries a phase of 0.25 milliseconds after
+        // one of 80.
+        app.world_mut()
+            .resource_mut::<MovementInbox>()
+            .0
+            .insert(walker.clone(), sample(2, 0.25));
+        app.update();
+        let restarted_at = app.world().resource::<Time>().elapsed_secs_f64();
+        assert!(
+            restarted_at - established_at <= SAMPLE_STALE_SECONDS,
+            "the restart must land inside the stale window or this proves nothing"
+        );
+
+        let history = app
+            .world()
+            .entity(root)
+            .get::<BodyPoseState>()
+            .unwrap()
+            .history
+            .expect("the walker has a gait history");
+        assert_eq!(
+            (history.prev_phase, history.cur_phase),
+            (0.25, 0.25),
+            "the restart must be snapped to, not swept into from 80 cycles"
+        );
+
+        // And the legs are where phase 0.25 puts them — mid-stride, thigh
+        // forward — rather than back at the abandoned walk's phase.
+        let world = app.world_mut();
+        let thigh = world
+            .query::<(&ActorId, &BodyRig)>()
+            .iter(world)
+            .find(|(id, _)| id.0 == "walker")
+            .map(|(_, rig)| rig.left_thigh)
+            .unwrap();
+        let forwardness = (world.entity(thigh).get::<Transform>().unwrap().rotation * Vec3::NEG_Y).z;
+        assert!(
+            forwardness < -0.3,
+            "the restarted stride must pose at its own phase: {forwardness}"
         );
     }
 

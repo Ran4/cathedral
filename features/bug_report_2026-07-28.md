@@ -50,8 +50,8 @@ not five.
 - [F] **medium** `crates/cathedral-backends/src/worker.rs:362` — Worker::forget kills the child but never reaps it: a zombie per worker failure
 - [F] **medium** `src/smart_actors/mod.rs:1252` — Custody sounds placed from the cold snapshot, which lacks a mover's live position
 - [F] **medium** `src/smart_actors/actors.rs:235` — MovementInbox is never pruned, so a stale pose overrides an authoritative reposition
-- [ ] **medium** `src/smart_actors/body.rs:2102` — Urgency multiplies the absolute accumulated gait phase, snapping the legs
-- [ ] **medium** `src/smart_actors/body.rs:2649` — Gait-phase interpolation sweeps backwards when the sim resets the phase to 0
+- [F] **medium** `src/smart_actors/body.rs:2102` — Urgency multiplies the absolute accumulated gait phase, snapping the legs
+- [F] **medium** `src/smart_actors/body.rs:2649` — Gait-phase interpolation sweeps backwards when the sim resets the phase to 0
 - [F] **medium** `src/city/mod.rs:7338` — Wall-tower collider is the AABB of a 45-degree-rotated square: twice the visible footprint
 - [ ] **medium** `src/scene.rs:425` — Outer aisle wall split does not line up with the transept: 3 m hole in the cathedral shell
 - [ ] **medium** `src/scene.rs:983` — Baldachin's two front columns float 0.54 m above the altar steps
