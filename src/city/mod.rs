@@ -4127,6 +4127,14 @@ fn build_charnel_and_ilvane_details(
     );
 }
 
+/// The spine pier standing in every bridge mouth, in plan: `WIDTH` across the
+/// mouth (the flanks the two half-mouth arches spring off) and `DEPTH` back
+/// into the passage. The depth is the shell's to give — a mouth 27 m wide is
+/// still only a mouth, and a pier sized from it would be a wall laid across the
+/// road it is meant to leave open.
+const BRIDGE_PIER_WIDTH: f32 = 1.25;
+const BRIDGE_PIER_DEPTH: f32 = 1.25;
+
 fn build_bridge_supports(
     commands: &mut Commands,
     meshes: &CityMeshes,
@@ -4149,16 +4157,24 @@ fn build_bridge_supports(
             .collect::<Vec<_>>();
         let edge_01 = p[0].distance(p[1]);
         let edge_12 = p[1].distance(p[2]);
-        let (ends, width) = if edge_01 >= edge_12 {
-            ([(p[0] + p[3]) * 0.5, (p[1] + p[2]) * 0.5], edge_12)
+        // The mouths are the two short edges — the same reading the passage
+        // dressing and the mouth arches stand on.
+        let ends = if edge_01 >= edge_12 {
+            [(p[0] + p[3]) * 0.5, (p[1] + p[2]) * 0.5]
         } else {
-            ([(p[0] + p[1]) * 0.5, (p[2] + p[3]) * 0.5], edge_01)
+            [(p[0] + p[1]) * 0.5, (p[2] + p[3]) * 0.5]
         };
-        for end in ends {
-            let size = Vec2::new(1.25, (width - 1.0).max(1.2));
-            let long = (ends[1] - ends[0]).normalize_or_zero();
-            let angle = long.x.atan2(long.y);
-            let center = Vec3::new(end.x, 2.1, end.y);
+        let long = (ends[1] - ends[0]).normalize_or_zero();
+        let angle = long.x.atan2(long.y);
+        let size = Vec3::new(BRIDGE_PIER_WIDTH, 4.2, BRIDGE_PIER_DEPTH);
+        for (end_index, end) in ends.into_iter().enumerate() {
+            // Set the pier back half its depth, so its outer face is flush with
+            // the mouth rather than half of it standing out in the street: this
+            // stone runs from the ground to the shell, straight through the
+            // walk band, and everything outside the footprint is road.
+            let inward = if end_index == 0 { long } else { -long };
+            let footing = end + inward * (BRIDGE_PIER_DEPTH * 0.5);
+            let center = Vec3::new(footing.x, 2.1, footing.y);
             spawn_rotated_box_named(
                 commands,
                 meshes,
@@ -4168,19 +4184,14 @@ fn build_bridge_supports(
                     &materials.timber
                 },
                 center,
-                Vec3::new(size.x, 4.2, size.y),
+                size,
                 angle,
                 format!(
                     "{} support",
                     building.name.as_deref().unwrap_or(&building.id)
                 ),
             );
-            add_rotated_box_collider_at(
-                collision_world,
-                center,
-                Vec3::new(size.x, 4.2, size.y),
-                angle,
-            );
+            add_rotated_box_collider_at(collision_world, center, size, angle);
         }
     }
 }
@@ -4279,30 +4290,35 @@ fn build_covered_passages(
                 across,
             );
 
-            // Posted notices on both faces of the spine pier at this mouth.
-            let pier_half = (width - 1.0).max(1.2) * 0.5;
+            // Posted notices on both faces of the spine pier at this mouth —
+            // set back with the pier, and sharing out its depth, since that
+            // narrow flank is all the board there is to nail them to.
+            let pier_center = *end + inward * (BRIDGE_PIER_DEPTH * 0.5);
             for side in [-1.0, 1.0] {
                 let face_normal = across * side;
                 let count = 1 + (hash >> (end_index as u32 * 4 + (side as i32 + 1) as u32)) % 3;
+                let slot = BRIDGE_PIER_DEPTH / count as f32;
                 for notice in 0..count {
                     let notice_hash = hash
                         ^ (end_index as u32 * 41)
                         ^ ((side as i32 + 2) as u32 * 97)
                         ^ notice.wrapping_mul(0x9E37_79B9);
-                    let along = (notice as f32 - (count as f32 - 1.0) * 0.5)
-                        * (0.62 + (notice_hash % 30) as f32 / 100.0)
-                        + ((notice_hash >> 5) % 40) as f32 / 100.0
-                        - 0.2;
-                    let spot = *end
-                        + long_dir * along.clamp(-pier_half + 0.4, pier_half - 0.4)
-                        + face_normal * 0.665;
+                    let notice_width = (0.28 + (notice_hash % 18) as f32 / 100.0).min(slot - 0.06);
+                    let margin = (BRIDGE_PIER_DEPTH - notice_width) * 0.5;
+                    let along = ((notice as f32 - (count as f32 - 1.0) * 0.5) * slot
+                        + ((notice_hash >> 5) % 9) as f32 / 100.0
+                        - 0.04)
+                        .clamp(-margin, margin);
+                    let spot = pier_center
+                        + long_dir * along
+                        + face_normal * (BRIDGE_PIER_WIDTH * 0.5 + 0.04);
                     add_facade_panel(
                         &mut notices,
                         spot,
                         1.45 + ((notice_hash >> 7) % 50) as f32 / 100.0,
                         long_dir,
                         Vec3::new(face_normal.x, 0.0, face_normal.y),
-                        0.28 + (notice_hash % 18) as f32 / 100.0,
+                        notice_width,
                         0.36 + ((notice_hash >> 3) % 22) as f32 / 100.0,
                     );
                 }
@@ -4437,7 +4453,7 @@ fn build_bridge_arches(
 
         // The spine pier `build_bridge_supports` stands in every mouth: each
         // half-mouth arch springs off its flank and the mouth corner.
-        let pier_half = 0.625;
+        let pier_half = BRIDGE_PIER_WIDTH * 0.5;
         let spring_y = 3.2;
         let ring = 0.3;
         // Intrados crown; the ring riding 0.01 + `ring` outside it tucks its
@@ -8427,6 +8443,79 @@ mod tests {
         // future change cannot quietly buy the clearance above by dropping the
         // whole ring.
         assert_eq!(towers.len(), 24, "{towers:?}");
+    }
+
+    /// A bridge's spine pier holds the shell up from inside its own footprint;
+    /// everything outside that footprint is road. Before this was caught the
+    /// pier was sized from the mouth's *width* and centred on the mouth
+    /// midpoint, so the malt-house piers ran 26 m along Malt Passage with 13 m
+    /// of that standing out in Fabric Way, solid from the ground to 4.2 m. Read
+    /// the pier corners off the built entities, because it is the collider, not
+    /// the sizing rule, that severs the street.
+    #[test]
+    fn no_bridge_pier_stands_outside_its_shell() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<Image>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<WindowGlassMaterial>()
+            .init_resource::<CollisionWorld>()
+            .add_systems(Startup, build_city);
+        app.update();
+
+        let world = app.world_mut();
+        let piers = world
+            .query::<(&Name, &Transform)>()
+            .iter(world)
+            .filter(|(name, _)| name.as_str().ends_with(" support"))
+            .map(|(name, transform)| (name.to_string(), *transform))
+            .collect::<Vec<_>>();
+
+        let plan = plan::load();
+        let boundary_distance = |point: Vec2, polygon: &[[f32; 2]]| {
+            polygon
+                .iter()
+                .zip(polygon.iter().cycle().skip(1))
+                .map(|(a, b)| {
+                    segment_distance_squared(point, Vec2::from_array(*a), Vec2::from_array(*b))
+                        .sqrt()
+                })
+                .fold(f32::INFINITY, f32::min)
+        };
+        for (name, transform) in &piers {
+            let owner = name.trim_end_matches(" support");
+            let building = plan
+                .buildings
+                .iter()
+                .find(|building| building.name.as_deref().unwrap_or(&building.id) == owner)
+                .unwrap_or_else(|| panic!("{name} belongs to no cadastral building"));
+
+            let center = Vec2::new(transform.translation.x, transform.translation.z);
+            let across = transform.rotation * (Vec3::X * transform.scale.x * 0.5);
+            let along = transform.rotation * (Vec3::Z * transform.scale.z * 0.5);
+            for (u, v) in [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)] {
+                let offset = across * u + along * v;
+                let corner = center + Vec2::new(offset.x, offset.z);
+                let outside = boundary_distance(corner, &building.polygon);
+                assert!(
+                    point_in_polygon(corner, &building.polygon) || outside <= 0.02,
+                    "{name} corner {corner:?} stands {outside:.2} m outside {}",
+                    building.id
+                );
+            }
+            // And it stands *in* the mouth, its outer face flush with it: that
+            // is where the half-mouth arches spring off its flanks.
+            let setback = boundary_distance(center, &building.polygon);
+            assert!(
+                (setback - BRIDGE_PIER_DEPTH * 0.5).abs() < 0.02,
+                "{name} sits {setback:.2} m from the mouth, not {:.2} m",
+                BRIDGE_PIER_DEPTH * 0.5
+            );
+        }
+        // Both mouths of the three bridges and the malt house, so a future
+        // change cannot buy the clearance above by dropping the piers.
+        assert_eq!(piers.len(), 8, "{piers:?}");
     }
 
     #[test]
