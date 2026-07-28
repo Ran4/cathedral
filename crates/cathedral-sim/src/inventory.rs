@@ -310,12 +310,38 @@ impl World {
             .unwrap_or(0)
     }
 
+    /// Every stack a purse is made of. A purse is counted by **kind**, never by
+    /// [`ItemMatcher`]'s exact identity: a coin carried in a cheek comes back
+    /// stamped `condition=wet` and one that shared a lower slot with a stool
+    /// `poopstained` (`features/extra_pockets.md` M2, and `seed.json` ships Gude
+    /// Quern's wet cheek coin as her whole savings), yet a spark is a spark and
+    /// nothing ever takes the stamp off again. The matcher is the *supply
+    /// chain's* identity — a wet loaf is not the loaf the customer asked for —
+    /// and money is the one place that distinction would merely lose coins.
+    /// This is also exactly the set `debit_sparks` drains, which is the point:
+    /// the guard must count what the deduction will find.
+    fn spark_stacks(&self, owner: &ActorId) -> impl Iterator<Item = &ItemId> {
+        self.characters
+            .get(owner)
+            .into_iter()
+            .flat_map(|character| character.holds())
+            .filter(|id| {
+                self.items
+                    .get(*id)
+                    .is_some_and(|item| item.kind.as_str() == "spark")
+            })
+    }
+
     pub fn spendable_sparks(&self, owner: &ActorId) -> u32 {
-        self.uncommitted_held_quantity(owner, &ItemMatcher::new("spark"))
+        self.spark_stacks(owner).fold(0u32, |sum, id| {
+            sum.saturating_add(self.uncommitted_quantity(id))
+        })
     }
 
     pub fn wallet_sparks(&self, owner: &ActorId) -> u32 {
-        self.held_quantity(owner, &ItemMatcher::new("spark"))
+        self.spark_stacks(owner)
+            .filter_map(|id| self.items.get(id))
+            .fold(0u32, |sum, item| sum.saturating_add(item.quantity))
     }
 
     /// Set a purse to an exact boundary float without ever crediting an item id
@@ -1522,16 +1548,7 @@ impl World {
                 format!("{owner} lacks {amount} uncommitted sparks"),
             ));
         }
-        let ids: Vec<ItemId> = self.characters[owner]
-            .holds()
-            .iter()
-            .filter(|id| {
-                self.items
-                    .get(*id)
-                    .is_some_and(|item| item.kind.as_str() == "spark")
-            })
-            .cloned()
-            .collect();
+        let ids: Vec<ItemId> = self.spark_stacks(owner).cloned().collect();
         let mut remaining = amount;
         for id in ids {
             if remaining == 0 {
@@ -1547,6 +1564,9 @@ impl World {
         Ok(())
     }
 
+    /// Fresh coin is always clean: a payment mints (or merges into) a plain
+    /// `spark` stack, so someone whose only purse is a tagged one ends up
+    /// holding two stacks. `spark_stacks` counts both, so nothing is lost.
     pub fn credit_sparks(
         &mut self,
         owner: &ActorId,

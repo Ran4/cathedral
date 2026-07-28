@@ -26,7 +26,7 @@ not five.
 - [F] **high** `crates/cathedral-sim/src/round.rs:5505` — interrupt_for_conversation never stops a walk to a food stall
 - [F] **high** `crates/cathedral-sim/src/round.rs:5531` — Road-party members' go_to intents are never ticked, so they never arrive or lapse
 - [F] **high** `crates/cathedral-sim/src/engine.rs:3026` — Dead-man timer can drop a grip next poll: `grab` never refreshes officer_last_turn
-- [ ] **high** `crates/cathedral-sim/src/inventory.rs:1531` — debit_sparks spends tagged sparks the solvency check never counted
+- [F] **high** `crates/cathedral-sim/src/inventory.rs:1531` — debit_sparks spends tagged sparks the solvency check never counted
 - [F] **high** `crates/cathedral-sim/src/custody.rs:384` — Dead-man timer never stamped at seizure or on grab, so a grip dies next poll
 - [ ] **high** `crates/cathedral-sim/src/weather.rs:748` — Street wetness snaps 0.09 -> 0.77 in one game minute at the daylight cliff
 - [ ] **high** `crates/cathedral-backends/src/llm.rs:575` — Retry-After clamped after Duration::from_secs_f64, which panics and wedges cognition

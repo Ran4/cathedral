@@ -320,6 +320,128 @@ fn catalog_sale_is_atomic_conserving_and_respects_offers() {
     world.assert_invariants();
 }
 
+/// A coin that has been in a cheek comes back stamped `condition=wet`
+/// (`features/extra_pockets.md` M2) and never loses the stamp. It is still
+/// money — and, more to the point, the set of stacks the solvency guard counts
+/// has to be the set `debit_sparks` drains, or a purse pays out coins it was
+/// never credited with holding.
+#[test]
+fn a_tagged_coin_is_money_to_the_counter_as_well_as_to_the_spender() {
+    let mut world = World::new();
+    let buyer = add_actor(&mut world, "buyer", EconomicClass::Resident);
+    let seller = add_actor(&mut world, "seller", EconomicClass::Resident);
+    let traveller = add_actor(&mut world, "road1", EconomicClass::RoadParty);
+    let wet_spark = |quantity: u32| StockSpec {
+        kind: "spark".into(),
+        metadata: BTreeMap::from([("condition".into(), "wet".into())]),
+        quantity,
+    };
+    let coins = |world: &World| -> u64 {
+        world
+            .items
+            .values()
+            .filter(|item| item.kind.as_str() == "spark")
+            .map(|item| u64::from(item.quantity))
+            .sum()
+    };
+    world
+        .add_stock(&seller, &stock("herring", 4), "purse:counter")
+        .unwrap();
+
+    // A wet coin buys on its own: refusing a purse for what has happened to it
+    // would leave Gude Quern's authored cheek coin worthless forever.
+    let wet = world.add_stock(&buyer, &wet_spark(1), "purse:wet").unwrap();
+    assert_eq!(world.wallet_sparks(&buyer), 1, "a wet coin is in the purse");
+    assert_eq!(world.spendable_sparks(&buyer), 1, "and free to spend");
+    world
+        .market_sale(
+            &buyer,
+            &seller,
+            &[MarketRequestLine {
+                matcher: ItemMatcher::new("herring"),
+                quantity: 1,
+            }],
+            1,
+            "purse:wet-sale",
+        )
+        .unwrap();
+    assert!(!world.items.contains_key(&wet), "the wet coin paid for it");
+    assert_eq!(world.wallet_sparks(&buyer), 0);
+
+    // A mixed purse: fresh coin is clean and never merges into a tagged stack,
+    // so both stacks have to be counted and both spent from.
+    world
+        .add_stock(&buyer, &wet_spark(1), "purse:wet-again")
+        .unwrap();
+    world.credit_sparks(&buyer, 3, "purse:wages").unwrap();
+    assert_eq!(world.wallet_sparks(&buyer), 4);
+    assert_eq!(world.spendable_sparks(&buyer), 4);
+    let before = world.wallet_sparks(&buyer);
+    let minted = coins(&world);
+    let receipt = world
+        .market_sale(
+            &buyer,
+            &seller,
+            &[MarketRequestLine {
+                matcher: ItemMatcher::new("herring"),
+                quantity: 3,
+            }],
+            3,
+            "purse:mixed-sale",
+        )
+        .unwrap();
+    assert_eq!(receipt.total_sparks, 3);
+    assert_eq!(
+        world.wallet_sparks(&buyer),
+        before - receipt.total_sparks,
+        "the counted purse falls by exactly what was paid"
+    );
+    assert_eq!(coins(&world), minted, "no spark is minted or destroyed");
+
+    // The boundary float (`round.rs` unloads a road party to an exact purse):
+    // settling to zero has to leave no coin behind, of any condition.
+    world
+        .add_stock(&traveller, &wet_spark(1), "purse:traveller-wet")
+        .unwrap();
+    world
+        .credit_sparks(&traveller, 3, "purse:traveller-float")
+        .unwrap();
+    let (cash_in, cash_out) = world
+        .settle_wallet_exact(&traveller, 0, "purse:boundary")
+        .unwrap();
+    assert_eq!((cash_in, cash_out), (0, 4));
+    assert_eq!(world.wallet_sparks(&traveller), 0);
+    assert!(
+        world.characters[&traveller]
+            .holds()
+            .iter()
+            .all(|id| world.items[id].kind.as_str() != "spark"),
+        "an unloaded traveller walks out with no coin at all"
+    );
+
+    // Counting by kind never loosens a commitment: a coin riding in a cheek is
+    // in the purse and out of reach at the same time.
+    let coin = world
+        .credit_sparks(&traveller, 1, "purse:cheek")
+        .unwrap()
+        .unwrap();
+    apply_action(
+        &mut world,
+        &traveller,
+        "pocket_item",
+        &json!({"item_id": coin.as_str(), "slot": "mouth"}),
+    )
+    .unwrap();
+    world.drain_events();
+    assert_eq!(world.wallet_sparks(&traveller), 1);
+    assert_eq!(world.spendable_sparks(&traveller), 0);
+    assert_eq!(
+        world.debit_sparks(&traveller, 1).unwrap_err().code,
+        InventoryErrorCode::InsufficientFunds
+    );
+    world.assert_invariants();
+}
+
 #[test]
 fn non_stackable_stock_stays_distinct_and_unknown_wallets_are_rejected() {
     let mut world = World::new();
