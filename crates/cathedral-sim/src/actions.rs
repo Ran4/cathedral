@@ -3389,7 +3389,24 @@ fn release(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String
     }
     let record = world.custody.release(&target_id).expect("found above");
     let station = record.station.name.clone();
-    let witnesses = nearby(world, &target_id, HEARING_RADIUS_M);
+    // Earshot of the *releaser*, exactly as the seizure fans out from the
+    // officer: `nearby` excludes its own origin, so a circle centred on the
+    // prisoner is the one circle the prisoner is not in — and the whole point
+    // of this loop is the line addressed to them. It also handed the releaser a
+    // third-person line about their own act, where the rule everywhere else is
+    // that an actor is left out of their own recipients and remembers it
+    // instead (the `remember_percept` below).
+    //
+    // But a keeper opens this door from as far off as earshot and an officer of
+    // record from anywhere at all (`custody::keeps`), so the one person the news
+    // is *for* goes on the list by name rather than by distance. Every other
+    // ending of custody states itself to them — `custody::forget_departed`, the
+    // freed loop in `tick_custody` — and being talked round must not be the one
+    // that ends in silence.
+    let mut witnesses = nearby(world, actor_id, HEARING_RADIUS_M);
+    if !witnesses.contains(&target_id) {
+        witnesses.push(target_id.clone());
+    }
     let lines: Vec<(ActorId, String)> = witnesses
         .iter()
         .map(|witness| {

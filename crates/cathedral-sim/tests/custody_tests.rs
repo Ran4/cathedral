@@ -620,6 +620,81 @@ fn only_the_law_within_hearing_opens_the_door() {
     assert!(!world.custody.holds(&actor("tamrd")));
 }
 
+/// M4b: being talked round is an *ending*, and an ending nobody tells the
+/// prisoner about is indistinguishable from still being held — their sheet's
+/// `you_are_held` paragraph simply vanishes and the model keeps answering as a
+/// prisoner. Every other way out says so (`custody::forget_departed`, the freed
+/// loop in `tick_custody`), so the verb must too — and the news has to reach
+/// them whether the hand that opens the door is on their arm or twenty metres
+/// off at a threshold.
+#[test]
+fn a_release_tells_the_one_let_go_as_well_as_the_street() {
+    let mut world = law_world();
+    raise_word(&mut world, "srgnt", "tamrd");
+    say_and_seize(&mut world, "srgnt", "tamrd").expect("the word and then the hand");
+
+    apply_action(
+        &mut world,
+        &actor("srgnt"),
+        "release",
+        &json!({"person": "tamrd"}),
+    )
+    .expect("the officer of record may always let them go");
+
+    let freed = world.characters[&actor("tamrd")].inbox();
+    assert!(
+        freed
+            .iter()
+            .any(|line| line.contains("lets you go") && line.contains("free to walk away")),
+        "the one let go hears it in the second person: {freed:?}"
+    );
+    // The street still watches a release happen, exactly as it watched the
+    // seizure — and in the third person, because it did not happen to them.
+    let overheard = world.characters[&actor("gossp")].inbox();
+    assert!(
+        overheard
+            .iter()
+            .any(|line| line.contains("lets") && line.contains("go") && !line.contains("you")),
+        "a bystander hears the ending too: {overheard:?}"
+    );
+    // The releaser is not a witness to themselves: they remember the act
+    // (`recent_history`), like every other emitter in the crate.
+    let releaser = &world.characters[&actor("srgnt")];
+    assert!(
+        !releaser.inbox().iter().any(|line| line.contains("lets")),
+        "nobody is told about their own hand: {:?}",
+        releaser.inbox()
+    );
+    assert!(
+        releaser
+            .recent_history()
+            .iter()
+            .any(|line| line.contains("You let them go rather than see them to")),
+        "…they remember it instead: {:?}",
+        releaser.recent_history()
+    );
+
+    // And the far arm of `custody::keeps`: the officer of record keeps whoever
+    // they took from anywhere at all, so a release said from beyond earshot is
+    // still a release the prisoner is owed the news of.
+    let mut world = law_world();
+    raise_word(&mut world, "srgnt", "tamrd");
+    say_and_seize(&mut world, "srgnt", "tamrd").expect("the word and then the hand");
+    move_to(&mut world, "srgnt", 45.0);
+    apply_action(
+        &mut world,
+        &actor("srgnt"),
+        "release",
+        &json!({"person": "tamrd"}),
+    )
+    .expect("the officer of record is their keeper wherever they stand");
+    let freed = world.characters[&actor("tamrd")].inbox();
+    assert!(
+        freed.iter().any(|line| line.contains("lets you go")),
+        "distance may cost the street the news, never the prisoner: {freed:?}"
+    );
+}
+
 /// M5b: *"it is the same state the player's commitment uses, and the same one
 /// an NPC committed under M4b′ arrives in — the authored eight and tonight's
 /// arrest are not two mechanisms, they are one flag with different histories."*
