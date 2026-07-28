@@ -3457,7 +3457,7 @@ fn release(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String
 /// people is what the word means).
 fn struggle(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
     args_object(args, &[], &[])?;
-    let Some(record) = world.custody.get(actor_id) else {
+    let Some(record) = world.custody.get_mut(actor_id) else {
         return Err(ActionError::new(
             ActionErrorCode::InvalidAction,
             "nobody has hold of you",
@@ -3470,10 +3470,15 @@ fn struggle(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Strin
         ));
     }
     let holders = record.holders.clone();
-    let chance = crate::custody::break_free_chance(world, actor_id, &holders);
     // The die *is* the situation: who is pulling, who is holding, and which
-    // attempt this is. Two identical runs answer identically.
-    let attempt = world.characters[actor_id].recent_history().len() as u64;
+    // attempt this is. Two identical runs answer identically — and because it is
+    // a hash rather than a draw, "which attempt this is" has to genuinely
+    // advance or every retry replays the first one's verdict for ever. The count
+    // is the record's ([`crate::custody::CustodyRecord::struggles`]), which
+    // lasts exactly as long as the grip does; it was the prisoner's
+    // `recent_history` length, and that is a capped buffer that stops moving.
+    let attempt = record.note_struggle();
+    let chance = crate::custody::break_free_chance(world, actor_id, &holders);
     let broke = crate::custody::struggle_roll(actor_id, &holders, attempt, chance);
 
     // Both percepts, in one action: an NPC's attempt resolves on the spot,
@@ -3540,27 +3545,37 @@ pub(crate) fn announce_struggle(
     holders: &[ActorId],
     moment: StruggleMoment,
 ) -> Vec<ActorId> {
+    // The struggler's own line, first and separately. `nearby` excludes its own
+    // origin, so a circle centred on them is the one circle they are not in —
+    // and these second-person strings were only ever addressed to them. It is
+    // `remember_percept` rather than the inbox because they are the *actor*
+    // here, exactly as `say` and `seize` record their own act: what you just did
+    // is not news that reached you. Without it a failed struggle leaves the
+    // model no evidence it ever tried, and the next turn re-issues the verb
+    // against an unchanged sheet.
+    let own = match moment {
+        StruggleMoment::Started => "You pull against the hands on you.",
+        StruggleMoment::BrokeFree => "You tore free of the law's hands.",
+        StruggleMoment::HeldFast => "You fought to get free and could not.",
+    };
+    world
+        .characters
+        .get_mut(struggler_id)
+        .expect("the struggler is in the world")
+        .remember_percept(own);
     let witnesses = nearby(world, struggler_id, HEARING_RADIUS_M);
     let lines: Vec<(ActorId, String)> = witnesses
         .iter()
         .map(|witness| {
             let who = cap_first(&identify_ids(world, witness, struggler_id));
-            let theirs = witness == struggler_id;
-            let line = match (moment, theirs) {
-                (StruggleMoment::Started, true) => "You pull against the hands on you.".to_string(),
-                (StruggleMoment::Started, false) => {
+            let line = match moment {
+                StruggleMoment::Started => {
                     format!("{who} is fighting to get free of the law's hands")
                 }
-                (StruggleMoment::BrokeFree, true) => {
-                    "You tore free of the law's hands.".to_string()
-                }
-                (StruggleMoment::BrokeFree, false) => {
+                StruggleMoment::BrokeFree => {
                     format!("{who} tore free of the law's hands and ran")
                 }
-                (StruggleMoment::HeldFast, true) => {
-                    "You fought to get free and could not.".to_string()
-                }
-                (StruggleMoment::HeldFast, false) => {
+                StruggleMoment::HeldFast => {
                     format!("{who} fought against the hands holding them, and did not get free")
                 }
             };

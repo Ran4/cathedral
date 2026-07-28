@@ -38,8 +38,8 @@ not five.
 - [F] **high** `src/smart_actors/mod.rs:900` — Engine disconnect never clears PlayerCustodyState — a held player stays tethered forever
 - [F] **medium** `crates/cathedral-sim/src/round.rs:7130` — Curfew rung's Stay-at-home short-circuits rung 3's eat-what-you-hold
 - [F] **medium** `crates/cathedral-sim/src/actions.rs:3388` — `release` never tells the person being released: the second-person branch is unreachable
-- [ ] **medium** `crates/cathedral-sim/src/actions.rs:3455` — `struggle`'s attempt counter saturates, so every repeat attempt replays one frozen die
-- [ ] **medium** `crates/cathedral-sim/src/actions.rs:3522` — `announce_struggle` excludes the struggler, so an NPC gets no record of their own struggle
+- [F] **medium** `crates/cathedral-sim/src/actions.rs:3455` — `struggle`'s attempt counter saturates, so every repeat attempt replays one frozen die
+- [F] **medium** `crates/cathedral-sim/src/actions.rs:3522` — `announce_struggle` excludes the struggler, so an NPC gets no record of their own struggle
 - [ ] **medium** `crates/cathedral-sim/src/engine.rs:3320` — announce_commitment's hand-release loop is always empty (commit cleared holders)
 - [ ] **medium** `crates/cathedral-sim/src/engine.rs:3275` — Engine custody endings emit only `let_go`, which nothing clears the grip on
 - [ ] **medium** `crates/cathedral-sim/src/engine.rs:2742` — ramp_urgency deletes the debug-written `urgency` status in the same poll it is set

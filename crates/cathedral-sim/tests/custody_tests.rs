@@ -917,32 +917,106 @@ fn one_hand_can_be_torn_free_of_and_two_cannot() {
     let held = apply_action(&mut world, &thief, "struggle", &json!({})).unwrap();
     assert!(held.contains("struggles and is held fast"), "{held}");
     assert!(world.custody.is_held(&thief));
-    // And again, and again: pulling repeatedly is not a fresh 4% chance each
-    // time. The attempt number is the prisoner's `recent_history` length, and a
-    // struggle's percepts arrive as *pending* history, so until this body takes
-    // an actual turn it is the same die — which is precisely why a spammed verb
-    // cannot be waited out.
-    for _ in 0..4 {
+    // And again, and again. Each pull is its own throw (see
+    // [`every_pull_is_its_own_draw_and_not_one_frozen_verdict`]) — but a 5%
+    // throw is a 5% throw, so a spammed verb is not a way out of two hands
+    // either. What being dragged costs you is turns, not a die roll.
+    for _ in 0..8 {
         apply_action(&mut world, &thief, "struggle", &json!({})).unwrap();
         assert!(world.custody.is_held(&thief), "two hands do not slip");
     }
-    // The far side of the same fact: once the turn is over and the percepts
-    // graduate into history, the situation has changed and so has the die.
-    let presented = world
-        .characters
-        .get_mut(&thief)
-        .unwrap()
-        .take_pending_history();
-    world
-        .characters
-        .get_mut(&thief)
-        .unwrap()
-        .absorb_presented_history(&presented);
-    apply_action(&mut world, &thief, "struggle", &json!({})).unwrap();
-    assert!(
-        world.custody.is_held(&thief),
-        "and a new die against two hands is still 4%"
+}
+
+/// M4d: a second pull is a *second attempt*, not a replay of the first. The die
+/// is a hash rather than a draw — the sim contains no RNG anywhere — so the
+/// "which attempt this is" seed has to genuinely advance with the pulling. It
+/// used to be the prisoner's `recent_history` length, a buffer capped at 32 that
+/// pins there for anybody who has lived a while, and with the seed frozen the
+/// same hands answered the same way for ever: an escort no number of tries could
+/// break, instead of an independent attempt each time.
+#[test]
+fn every_pull_is_its_own_draw_and_not_one_frozen_verdict() {
+    let (thief, ashe) = (actor("tamrd"), actor("srgnt"));
+    let mut world = law_world();
+    raise_word(&mut world, "srgnt", "tamrd");
+    say_and_seize(&mut world, "srgnt", "tamrd").expect("taken in charge");
+    world.custody.grab(&thief, ashe.clone());
+
+    // The gaoler's grip is a little better than one in three, and this thief's
+    // first throw against it loses — which is exactly the position the frozen
+    // die made permanent.
+    let first = apply_action(&mut world, &thief, "struggle", &json!({})).unwrap();
+    assert!(first.contains("struggles and is held fast"), "{first}");
+    assert_eq!(
+        world.custody.get(&thief).unwrap().struggles,
+        1,
+        "the count the die is seeded from lives on the record, and it moved"
     );
+
+    let mut attempts = 1;
+    while world.custody.holds(&thief) && attempts < 20 {
+        apply_action(&mut world, &thief, "struggle", &json!({})).unwrap();
+        attempts += 1;
+    }
+    assert!(
+        !world.custody.holds(&thief),
+        "keeping at it gets you out of one pair of hands: {attempts} tries and still held"
+    );
+    // Deterministic all the same: the same thief in the same hands takes the
+    // same number of tries in every run, so a drive script reproduces.
+    assert_eq!(attempts, 5, "and the count itself is reproducible");
+}
+
+/// M4d: the person doing the pulling is told about it too. Everything here fans
+/// out from `nearby`, which passes its origin as `characters_within`'s *exclude*
+/// argument — so the second-person half of the announcement reached nobody at
+/// all. The holder and the street heard the hue and cry while the struggler's own
+/// history stayed blank, and a model with no evidence it ever tried simply reads
+/// its unchanged sheet and tries the same thing again.
+#[test]
+fn a_struggler_hears_their_own_struggle() {
+    let (thief, trask, ashe) = (actor("tamrd"), actor("wrdn"), actor("srgnt"));
+    let mut world = law_world();
+    raise_word(&mut world, "srgnt", "tamrd");
+    say_and_seize(&mut world, "srgnt", "tamrd").expect("taken in charge");
+    world.custody.grab(&thief, ashe.clone());
+    let held = apply_action(&mut world, &thief, "struggle", &json!({})).unwrap();
+    assert!(held.contains("struggles and is held fast"), "{held}");
+
+    // Both moments, in the second person, and remembered rather than delivered:
+    // it is what this body just did, not news that reached it.
+    let own = world.characters[&thief].recent_history().join("\n");
+    assert!(own.contains("You pull against the hands on you."), "{own}");
+    assert!(
+        own.contains("You fought to get free and could not."),
+        "{own}"
+    );
+    assert!(
+        !own.contains("is fighting to get free"),
+        "and never the street's third-person line about themselves: {own}"
+    );
+
+    // The street still gets exactly what it got before — a hue and cry raises
+    // itself, and the holder is owed the interesting call.
+    let street = world.characters[&trask].inbox().join("\n");
+    assert!(
+        street.contains("is fighting to get free of the law's hands"),
+        "{street}"
+    );
+    assert!(
+        street.contains("fought against the hands holding them, and did not get free"),
+        "{street}"
+    );
+
+    // …and the other ending says so in the same voice.
+    let mut world = law_world();
+    raise_word(&mut world, "wrdn", "tamrd");
+    say_and_seize(&mut world, "wrdn", "tamrd").expect("taken in charge");
+    world.custody.grab(&thief, trask.clone());
+    let broke = apply_action(&mut world, &thief, "struggle", &json!({})).unwrap();
+    assert!(broke.contains("tears free and runs"), "{broke}");
+    let own = world.characters[&thief].recent_history().join("\n");
+    assert!(own.contains("You tore free of the law's hands."), "{own}");
 }
 
 /// The sim contains no RNG anywhere, so the die *is* the situation: who is

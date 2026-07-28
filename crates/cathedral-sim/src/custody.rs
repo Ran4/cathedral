@@ -249,11 +249,32 @@ pub struct CustodyRecord {
     /// minute old. `None` says the truth instead — the clock has not started —
     /// and a clock that has not started has run out of nothing.
     pub officer_last_turn: Option<f64>,
+    /// How many times they have pulled against these hands ([`struggle_roll`]'s
+    /// "which attempt this is"), counted here because this record is the only
+    /// thing that lasts exactly as long as the grip it is about — a new seizure
+    /// is a new record and therefore a fresh count, which is what starting over
+    /// should mean.
+    ///
+    /// It has to be a number that genuinely advances. The die is a *hash*, not
+    /// a draw, so a seed that stops moving replays one verdict for ever: the
+    /// first version of this read the prisoner's `recent_history` length, which
+    /// is a buffer capped at [`crate::RECENT_HISTORY_MAX_ENTRIES`] and therefore
+    /// pinned at 32 for anybody who has lived past their first few dozen lines
+    /// — an escort no number of tries could ever break, instead of an
+    /// independent attempt each time.
+    pub struggles: u64,
 }
 
 impl CustodyRecord {
     pub fn is_held(&self) -> bool {
         !self.holders.is_empty()
+    }
+
+    /// Count one attempt at pulling free and hand back its number, so the die
+    /// cannot be thrown without its own seed moving on.
+    pub fn note_struggle(&mut self) -> u64 {
+        self.struggles = self.struggles.saturating_add(1);
+        self.struggles
     }
 }
 
@@ -358,6 +379,7 @@ impl Custody {
                 seized_at: now,
                 committed_at: None,
                 officer_last_turn: None,
+                struggles: 0,
             },
         );
     }
@@ -380,6 +402,7 @@ impl Custody {
                 seized_at: 0.0,
                 committed_at: Some(0.0),
                 officer_last_turn: None,
+                struggles: 0,
             },
         );
     }
