@@ -7335,8 +7335,11 @@ fn build_fortifications(
         }
     }
     // A tower is a 12 m square set corner-on, so it reaches this far from its
-    // centre in the worst direction — which is also exactly what its collider
-    // spans.
+    // centre in the worst direction — out along a diagonal, to a corner.  The
+    // collider below is that diamond exactly; the gate test just under here
+    // wants the circumscribing radius instead, because a corner poking into an
+    // arch bricks it up as surely as a face would, and which way the diagonal
+    // happens to point is not worth the arithmetic.
     let tower_reach = 12.0 * SQRT_2 * 0.5;
     // That rule is blind to the gates, and at four of the five it plants a tower
     // in the very arch the curtain was just cut for: the Stone and River gates
@@ -7375,9 +7378,21 @@ fn build_fortifications(
                 .with_scale(Vec3::new(9.4, 5.2, 9.4)),
             format!("Wall tower {:02} roof", index + 1),
         );
-        collision_world.add_box(
-            Vec3::new(point.x - tower_reach, 0.0, point.y - tower_reach),
-            Vec3::new(point.x + tower_reach, height + 5.7, point.y + tower_reach),
+        // The masonry is a diamond, so give it the diamond: its four corners lie
+        // on the world axes, `tower_reach` out.  The circumscribing box this used
+        // to register is twice the area — 288 m² of solid against 144 m² of
+        // stone — and the surplus sits exactly where the player walks past a
+        // tower face, stopping them against open paving.  This is the same
+        // exact-footprint path every cadastral building takes.
+        collision_world.add_convex_prism(
+            &[
+                [point.x + tower_reach, point.y],
+                [point.x, point.y + tower_reach],
+                [point.x - tower_reach, point.y],
+                [point.x, point.y - tower_reach],
+            ],
+            0.0,
+            height + 5.7,
         );
     }
 
@@ -8443,6 +8458,90 @@ mod tests {
         // future change cannot quietly buy the clearance above by dropping the
         // whole ring.
         assert_eq!(towers.len(), 24, "{towers:?}");
+    }
+
+    /// A tower is a 12 m square set *corner-on*, so the ground off the middle of
+    /// each of its four faces is open paving. The collider used to be the
+    /// axis-aligned box that circumscribes that diamond — 288 m² of solid for
+    /// 144 m² of stone, the surplus sitting in four triangles exactly where the
+    /// player walks past a face and stops against nothing. The nav bake
+    /// subtracts these footprints, so it ate the phantom corners out of the
+    /// walkable set too. Take the tower's own solid out of the exported set
+    /// before probing it: the curtain it stands on is a separate box, and that
+    /// one is deliberately loose.
+    #[test]
+    fn a_wall_tower_is_solid_only_where_its_masonry_is() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<Image>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<WindowGlassMaterial>()
+            .init_resource::<CollisionWorld>()
+            .add_systems(Startup, build_city);
+        app.update();
+        let collision = std::mem::take(app.world_mut().resource_mut::<CollisionWorld>().as_mut());
+
+        let world = app.world_mut();
+        let towers = world
+            .query::<(&Name, &Transform)>()
+            .iter(world)
+            .filter(|(name, _)| {
+                name.as_str().starts_with("Wall tower") && !name.as_str().ends_with("roof")
+            })
+            .map(|(name, transform)| {
+                (
+                    name.to_string(),
+                    Vec2::new(transform.translation.x, transform.translation.z),
+                )
+            })
+            .collect::<Vec<_>>();
+        assert!(!towers.is_empty(), "the curtain has no towers to check");
+
+        let footprints: Vec<Vec<[f32; 2]>> = collision
+            .solid_footprints_in_band(WALK_BAND_LO, WALK_BAND_HI)
+            .into_iter()
+            .map(|polygon| polygon.into_iter().map(|v| [v.x, v.y]).collect())
+            .collect();
+        for (name, point) in &towers {
+            // A tower can share its centre with the 8 m curtain chunk it stands
+            // on, so of the solids centred there take the largest: at 144 m² the
+            // tower dwarfs any chunk of wall (96 m² at its fattest, where the
+            // curtain runs diagonally), and the box it wrongly used to register
+            // was centred on the tower too — so this picks the tower out either
+            // way and the assertions below get to name the real fault.
+            let footprint = footprints
+                .iter()
+                .filter(|polygon| {
+                    let centroid = polygon
+                        .iter()
+                        .fold(Vec2::ZERO, |sum, v| sum + Vec2::from_array(*v))
+                        / polygon.len() as f32;
+                    centroid.distance(*point) < 0.05
+                })
+                .max_by(|a, b| {
+                    plan::signed_area(a)
+                        .abs()
+                        .total_cmp(&plan::signed_area(b).abs())
+                })
+                .unwrap_or_else(|| panic!("{name} at {point:?} registered no collider"));
+
+            let area = plan::signed_area(footprint).abs();
+            assert!(
+                (area - 144.0).abs() < 1.0,
+                "{name} is solid over {area:.0} m² for 12 × 12 m of stone"
+            );
+
+            // 6 m out along a diagonal is 2.5 m clear of the face it crosses,
+            // and 2.5 m inside the bounding box that used to be registered.
+            for (dx, dz) in [(6.0, 6.0), (6.0, -6.0), (-6.0, 6.0), (-6.0, -6.0)] {
+                let probe = Vec2::new(point.x + dx, point.y + dz);
+                assert!(
+                    !point_in_polygon(probe, footprint),
+                    "{name} is solid at {probe:?}, which is open ground off its face"
+                );
+            }
+        }
     }
 
     /// A bridge's spine pier holds the shell up from inside its own footprint;
