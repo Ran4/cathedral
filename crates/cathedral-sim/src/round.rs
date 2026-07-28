@@ -5488,13 +5488,14 @@ fn lamp_ring(nav: &NavData, centre: Vec3) -> Vec<Vec3> {
 /// next movement slice — so the partner does not drift out of interaction
 /// range while answering.
 ///
-/// Only walks are interrupted; someone Queued or Drawing at a well is already
-/// standing still and keeps their place. Dropping the walker to [`Phase::Idle`]
-/// hands them back to the ladder, which re-decides once the exchange goes cold
-/// (the [`tick`] hold above) — so an interrupted errand resumes on its own.
-/// Anyone not enrolled (a scripted mover) is none of the round's business and
-/// is left alone — as is an *excused* walker: their pressing errand has already
-/// outranked the conversation, and a parting line must not stop them again.
+/// Only walks are interrupted; someone Queued or Drawing at a well — or queued
+/// or eating at a stall — is already standing still and keeps their place.
+/// Dropping the walker to [`Phase::Idle`] hands them back to the ladder, which
+/// re-decides once the exchange goes cold (the [`tick`] hold above) — so an
+/// interrupted errand resumes on its own. Anyone not enrolled (a scripted
+/// mover) is none of the round's business and is left alone — as is an
+/// *excused* walker: their pressing errand has already outranked the
+/// conversation, and a parting line must not stop them again.
 pub fn interrupt_for_conversation(round: &mut Round, world: &mut World, id: &ActorId) {
     let Some(person) = round.people.get_mut(id) else {
         return;
@@ -5502,10 +5503,22 @@ pub fn interrupt_for_conversation(round: &mut Round, world: &mut World, id: &Act
     if person.excused {
         return;
     }
-    if !matches!(
-        person.phase,
-        Phase::Approaching | Phase::Travelling | Phase::Returning
-    ) {
+    // A stall errand is a walk the water phases cannot see: [`Decision::ApproachStall`]
+    // leaves the phase standing at [`Phase::Idle`] while the body crosses the square,
+    // so asking the phases alone would let a buyer stroll off to the pitch mid-sentence.
+    // Only the Approaching leg is a walk. The errand itself is left standing: stopped
+    // short of the pitch, [`resolve_food_arrivals`] drops it next tick and the ladder
+    // has them back — the same door a failed re-route leaves by.
+    let walking_to_stall = matches!(
+        person.food.as_ref().map(|errand| &errand.phase),
+        Some(FoodPhase::Approaching)
+    );
+    if !walking_to_stall
+        && !matches!(
+            person.phase,
+            Phase::Approaching | Phase::Travelling | Phase::Returning
+        )
+    {
         return;
     }
     person.phase = Phase::Idle;

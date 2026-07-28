@@ -1663,6 +1663,65 @@ fn a_conversation_with_the_player_pins_the_round() {
     assert_eq!(round.people[&id].phase, Phase::Idle);
 }
 
+/// A stall errand is the one walk the water phases cannot see — `ApproachStall`
+/// leaves the phase standing at Idle — so the interrupt has to ask the food
+/// errand too. Addressed halfway across the square, the buyer stops where they
+/// stand instead of joining the market queue with an answer still owed.
+#[test]
+fn a_conversation_stops_a_walk_to_a_food_stall() {
+    let nav = nav();
+    let clock = clock_at(Office::HighWick);
+    let id = ActorId::from_raw("b4hst");
+    let mut world = base_world();
+    world.add_character(person(
+        "b4hst",
+        Vec3::new(0.0, WALK_Y, 95.0),
+        Some("mason"),
+        Significance::Major,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    assert!(!round.stalls.is_empty(), "the seeded city has stalls");
+
+    // The hunger rung's own act: the walk is laid, the water phase left standing.
+    apply_decision(
+        &mut round,
+        &mut world,
+        &nav,
+        &id,
+        Decision::ApproachStall(0),
+    );
+    assert!(
+        world.characters[&id].is_walking(),
+        "the buyer set off for the pitch"
+    );
+    assert_eq!(round.people[&id].phase, Phase::Idle);
+    assert!(matches!(
+        round.people[&id].food.as_ref().map(|errand| &errand.phase),
+        Some(FoodPhase::Approaching)
+    ));
+
+    // Addressed mid-square: the buyer stops on the spot...
+    interrupt_for_conversation(&mut round, &mut world, &id);
+    assert!(
+        !world.characters[&id].is_walking(),
+        "a buyer stops to talk instead of walking on to the stall"
+    );
+
+    // ...and, stopped short of the pitch, the errand is handed back to the ladder
+    // rather than pinning them out of the ladder's reach for a queue slot they
+    // never reached.
+    resolve_food_arrivals(&mut round, &mut world);
+    assert!(
+        round.people[&id].food.is_none(),
+        "the abandoned stall errand does not outlive the interrupt"
+    );
+    assert!(
+        !round.stalls[0].queue.contains(&id),
+        "and they never join the queue they never walked to"
+    );
+}
+
 /// The same courtesy between two NPCs: while their exchange is warm the ladder
 /// walks neither of them off to their post, and when it lapses both errands
 /// resume on their own.
