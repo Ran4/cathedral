@@ -26,7 +26,7 @@ use bevy::ui::UiSystems;
 use bevy::window::PrimaryWindow;
 use cathedral_sim::{StatusKind, WeatherKind};
 
-use crate::controller::{PlayerController, TeleportPlayer};
+use crate::controller::{EYE_OFFSET, PlayerController, TeleportPlayer};
 use crate::session_log;
 use crate::smart_actors::SmartActorRuntime;
 use crate::smart_actors::actors::ActorView;
@@ -100,18 +100,31 @@ const FRAME_LOOK_AT_HEIGHT_M: f32 = 0.30;
 /// around a body without knowing which way it happens to be turned. Returns
 /// `(position, yaw_degrees, pitch_degrees)` in the `tp` convention: yaw 0 looks
 /// toward −Z, positive pitch looks up.
+///
+/// `position` is a *body* position, because that is what a teleport takes: the
+/// camera rides [`EYE_OFFSET`] above the player root and no teleport moves it.
+/// So the aim is solved for where the eye will be and the body handed back
+/// below it — sending the eye's own position would hoist the camera that much
+/// higher again and leave the pitch answering a viewpoint nobody looks from.
+/// (Framing someone standing on the ground asks for an eye a little below
+/// standing height, so the movement sweep floats the player back up onto the
+/// pavement; that costs centimetres, not the camera's whole 0.65 m.)
 fn frame_view(actor: &Transform, distance: f32, bearing_degrees: f32) -> (Vec3, f32, f32) {
     let facing = actor.rotation * Vec3::NEG_Z;
     let bearing = Quat::from_rotation_y(bearing_degrees.to_radians());
     let mut away = bearing * facing;
     away.y = 0.0;
     let away = away.normalize_or(Vec3::Z);
-    let position = actor.translation + away * distance + Vec3::Y * FRAME_EYE_HEIGHT_M;
+    let eye = actor.translation + away * distance + Vec3::Y * FRAME_EYE_HEIGHT_M;
     let target = actor.translation + Vec3::Y * FRAME_LOOK_AT_HEIGHT_M;
-    let look = target - position;
+    let look = target - eye;
     let yaw = (-look.x).atan2(-look.z);
     let pitch = look.y.atan2(look.xz().length());
-    (position, yaw.to_degrees(), pitch.to_degrees())
+    (
+        eye - Vec3::Y * EYE_OFFSET,
+        yaw.to_degrees(),
+        pitch.to_degrees(),
+    )
 }
 
 /// Stdout is the documented evidence trail; the session `logs.jsonl` gets the
@@ -1045,7 +1058,10 @@ fn run_drive_script(
 mod tests {
     use std::f32::consts::FRAC_PI_2;
 
+    use bevy::transform::TransformPlugin;
+
     use super::*;
+    use crate::controller::{PhysicalPosition, PlayerCamera, apply_teleports};
 
     #[test]
     fn example_script_parses() {
@@ -1117,16 +1133,21 @@ mod tests {
             .with_rotation(Quat::from_rotation_y(-FRAC_PI_2));
         let (position, yaw, pitch) = frame_view(&actor, 3.0, 0.0);
 
-        // Dead ahead of them: 3 m along their facing, at eye height.
+        // Dead ahead of them: 3 m along their facing, and low enough that the
+        // camera hanging EYE_OFFSET above the body lands at eye height.
         assert!((position.x - 3.0).abs() < 1e-4, "{position:?}");
         assert!(position.z.abs() < 1e-4, "{position:?}");
-        assert!((position.y - (0.91 + FRAME_EYE_HEIGHT_M)).abs() < 1e-4);
+        let eye = position + Vec3::Y * EYE_OFFSET;
+        assert!(
+            (eye.y - (0.91 + FRAME_EYE_HEIGHT_M)).abs() < 1e-4,
+            "{eye:?}"
+        );
 
         // Looking back at them: the camera's forward points −X.
         let forward = Quat::from_rotation_y(yaw.to_radians())
             * Quat::from_rotation_x(pitch.to_radians())
             * Vec3::NEG_Z;
-        let to_actor = (actor.translation + Vec3::Y * FRAME_LOOK_AT_HEIGHT_M) - position;
+        let to_actor = (actor.translation + Vec3::Y * FRAME_LOOK_AT_HEIGHT_M) - eye;
         assert!(
             forward.dot(to_actor.normalize()) > 0.9999,
             "forward {forward:?} vs {to_actor:?}"
@@ -1135,6 +1156,72 @@ mod tests {
         // A 180° bearing photographs the same body from behind.
         let (behind, _, _) = frame_view(&actor, 3.0, 180.0);
         assert!((behind.x + 3.0).abs() < 1e-4, "{behind:?}");
+    }
+
+    /// `frame_view` on its own cannot catch aiming a camera that is somewhere
+    /// else, so this drives the whole path the action really takes: the pose
+    /// goes out as a teleport, `apply_teleports` lands it on the player *body*,
+    /// and the camera hanging `EYE_OFFSET` above it is where the shot is
+    /// actually taken from.
+    #[test]
+    fn a_framed_shot_lands_the_real_camera_at_eye_height_looking_at_the_actor() {
+        let actor = Transform::from_xyz(0.0, 0.91, 0.0)
+            .with_rotation(Quat::from_rotation_y(-FRAC_PI_2));
+        let (position, yaw_degrees, pitch_degrees) =
+            frame_view(&actor, FRAME_DEFAULT_DISTANCE_M, 0.0);
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, TransformPlugin))
+            .add_message::<TeleportPlayer>()
+            .add_systems(Update, apply_teleports);
+        app.world_mut()
+            .spawn((
+                PlayerController::default(),
+                PhysicalPosition {
+                    previous: Vec3::ZERO,
+                    current: Vec3::ZERO,
+                },
+                Transform::default(),
+            ))
+            .with_children(|player| {
+                player.spawn((PlayerCamera, Transform::from_xyz(0.0, EYE_OFFSET, 0.0)));
+            });
+        app.world_mut().write_message(TeleportPlayer {
+            position,
+            yaw_degrees,
+            pitch_degrees,
+            fly: true,
+        });
+        app.update();
+
+        let world = app.world_mut();
+        let camera = world
+            .query_filtered::<&GlobalTransform, With<PlayerCamera>>()
+            .single(world)
+            .expect("the player camera exists")
+            .compute_transform();
+
+        // Chest/chin height, level with the body rather than over its crown.
+        assert!(
+            (camera.translation.y - (0.91 + FRAME_EYE_HEIGHT_M)).abs() < 1e-4,
+            "camera at {:?}",
+            camera.translation
+        );
+        assert!(
+            (camera.translation.x - FRAME_DEFAULT_DISTANCE_M).abs() < 1e-4
+                && camera.translation.z.abs() < 1e-4,
+            "camera at {:?}",
+            camera.translation
+        );
+
+        // And the solved pitch really points at the sternum from there.
+        let sternum = actor.translation + Vec3::Y * FRAME_LOOK_AT_HEIGHT_M;
+        let to_actor = (sternum - camera.translation).normalize();
+        assert!(
+            (camera.rotation * Vec3::NEG_Z).dot(to_actor) > 0.9999,
+            "aimed {:?}, actor is {to_actor:?}",
+            camera.rotation * Vec3::NEG_Z
+        );
     }
 
     #[test]

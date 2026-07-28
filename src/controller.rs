@@ -43,7 +43,11 @@ const FIXED_HZ: f64 = 120.0;
 const PLAYER_SPAWN: Vec3 = Vec3::new(0.0, 0.91, 95.0);
 const PLAYER_START_YAW: f32 = PI;
 const PLAYER_HALF_SIZE: Vec3 = Vec3::new(0.35, 0.9, 0.35);
-const EYE_OFFSET: f32 = 0.65;
+/// How far the camera rides above the player root. [`TeleportPlayer::position`]
+/// names the *body*, and [`apply_teleports`] re-aims the camera without moving
+/// it, so anything that solves a pose for the eye has to subtract this again
+/// before it sends one.
+pub(crate) const EYE_OFFSET: f32 = 0.65;
 
 // A standing player is a full-height AABB centred at WALK_Y, so its body spans
 // the vertical band [WALK_Y - half_height, WALK_Y + half_height]. The collision
@@ -577,7 +581,11 @@ pub struct TeleportPlayer {
     pub fly: bool,
 }
 
-fn apply_teleports(
+/// Lands `position` on the player *body*; the camera is a child hanging
+/// [`EYE_OFFSET`] above it and only its rotation is touched here. `pub(crate)`
+/// so the drive `frame` test can watch where a pose really puts the eye instead
+/// of re-deriving it.
+pub(crate) fn apply_teleports(
     mut teleports: MessageReader<TeleportPlayer>,
     player: Single<
         (&mut PlayerController, &mut PhysicalPosition, &mut Transform),
