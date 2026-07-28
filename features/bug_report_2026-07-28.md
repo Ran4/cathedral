@@ -32,7 +32,7 @@ not five.
 - [F] **high** `crates/cathedral-backends/src/llm.rs:575` — Retry-After clamped after Duration::from_secs_f64, which panics and wedges cognition
 - [F] **high** `src/smart_actors/custody.rs:146` — Strain-meter bar is overwritten before it renders, so pulling shows no progress
 - [F] **high** `src/smart_actors/custody.rs:285` — grab_reflex measures the officer from the frozen snapshot position, not live
-- [ ] **high** `src/city/mod.rs:7301` — Curtain towers are planted inside gate openings, walling the arches shut
+- [F] **high** `src/city/mod.rs:7301` — Curtain towers are planted inside gate openings, walling the arches shut
 - [ ] **high** `src/city/mod.rs:4158` — Bridge spine pier is sized from the mouth WIDTH, so half of it stands outside the shell
 - [ ] **high** `src/city/route_boards.rs:54` — Route boards use pre-shrink coordinates; two float outside the world entirely
 - [ ] **high** `src/smart_actors/mod.rs:900` — Engine disconnect never clears PlayerCustodyState — a held player stays tethered forever

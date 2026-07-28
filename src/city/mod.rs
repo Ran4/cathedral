@@ -18,7 +18,7 @@ pub(crate) use surfaces::CobbleRoadNetwork;
 
 use std::{
     collections::{BTreeMap, HashMap},
-    f32::consts::PI,
+    f32::consts::{PI, SQRT_2},
 };
 
 use bevy::{
@@ -7262,6 +7262,17 @@ fn point_in_polygon(point: Vec2, polygon: &[[f32; 2]]) -> bool {
     inside
 }
 
+/// The five ways through the curtain, as (centre, clear width in metres).  The
+/// wall is cut for each of them and the tower ring is kept out of each of them,
+/// so they live here rather than inside one of the two.
+const WALL_OPENINGS: [(Vec2, f32); 5] = [
+    (Vec2::new(-24.5, 357.0), 18.0),  // the Wool Gate
+    (Vec2::new(346.5, 94.5), 28.0),   // the Stone Gate
+    (Vec2::new(10.5, -465.5), 18.0),  // the Harne Gate
+    (Vec2::new(-353.5, -94.5), 37.0), // the River Gate
+    (Vec2::new(-318.5, -374.5), 6.0), // the Reed Postern
+];
+
 fn build_fortifications(
     commands: &mut Commands,
     meshes: &CityMeshes,
@@ -7269,14 +7280,6 @@ fn build_fortifications(
     plan: &CityPlan,
     collision_world: &mut CollisionWorld,
 ) {
-    let openings = [
-        (Vec2::new(-24.5, 357.0), 18.0),
-        (Vec2::new(346.5, 94.5), 28.0),
-        (Vec2::new(10.5, -465.5), 18.0),
-        (Vec2::new(-353.5, -94.5), 37.0),
-        (Vec2::new(-318.5, -374.5), 6.0),
-    ];
-
     for (start, end) in plan
         .wall_polygon_xz
         .iter()
@@ -7284,7 +7287,7 @@ fn build_fortifications(
     {
         let start = Vec2::from_array(*start);
         let end = Vec2::from_array(*end);
-        for (segment_start, segment_end) in wall_ranges_around_gates(start, end, &openings) {
+        for (segment_start, segment_end) in wall_ranges_around_gates(start, end, &WALL_OPENINGS) {
             spawn_wall_segment(
                 commands,
                 meshes,
@@ -7315,7 +7318,28 @@ fn build_fortifications(
             tower_points.push(start.lerp(end, step as f32 / divisions as f32));
         }
     }
+    // A tower is a 12 m square set corner-on, so it reaches this far from its
+    // centre in the worst direction — which is also exactly what its collider
+    // spans.
+    let tower_reach = 12.0 * SQRT_2 * 0.5;
+    // That rule is blind to the gates, and at four of the five it plants a tower
+    // in the very arch the curtain was just cut for: the Stone and River gates
+    // end on a wall vertex, the Harne gate sits under a 115 m division, and the
+    // next division along clips the Reed postern.  Leave those out rather than
+    // shove them aside.  Every gate already carries its own flanking pair in the
+    // cadastral plan (`gate_stone_1`/`_2` and kin, four storeys of limestone),
+    // standing just past the shoulders of the arch, so the gateway keeps its
+    // towers and the two corners keep theirs; a nudged curtain tower would only
+    // crowd up against one of those.  The index is taken before the skip so a
+    // surviving tower keeps the number — and the height — the bird's-eye map
+    // gives it as `wall-tower-NN`.
+    let arches = gate_arches(&plan.wall_polygon_xz, &WALL_OPENINGS);
     for (index, point) in tower_points.into_iter().enumerate() {
+        if arches.iter().any(|(arch_start, arch_end)| {
+            segment_distance_squared(point, *arch_start, *arch_end) < tower_reach * tower_reach
+        }) {
+            continue;
+        }
         let height = 18.0 + (stable_hash(&format!("wall-tower-{index}")) % 500) as f32 / 100.0;
         spawn_rotated_box_named(
             commands,
@@ -7335,10 +7359,9 @@ fn build_fortifications(
                 .with_scale(Vec3::new(9.4, 5.2, 9.4)),
             format!("Wall tower {:02} roof", index + 1),
         );
-        let half = 12.0 * 2.0_f32.sqrt() * 0.5;
         collision_world.add_box(
-            Vec3::new(point.x - half, 0.0, point.y - half),
-            Vec3::new(point.x + half, height + 5.7, point.y + half),
+            Vec3::new(point.x - tower_reach, 0.0, point.y - tower_reach),
+            Vec3::new(point.x + tower_reach, height + 5.7, point.y + tower_reach),
         );
     }
 
@@ -7382,6 +7405,35 @@ fn wall_ranges_around_gates(start: Vec2, end: Vec2, openings: &[(Vec2, f32)]) ->
         ranges.push((start + edge * cursor, end));
     }
     ranges
+}
+
+/// The stretches of curtain the gates take out, in world space — the complement
+/// of what `wall_ranges_around_gates` leaves standing, and on the same terms
+/// (an opening only belongs to the edge it projects onto within 32 m).  Nothing
+/// solid may sit on one of these segments: they are the arches themselves.
+fn gate_arches(polygon: &[[f32; 2]], openings: &[(Vec2, f32)]) -> Vec<(Vec2, Vec2)> {
+    let mut arches = Vec::new();
+    for (start, end) in polygon.iter().zip(polygon.iter().cycle().skip(1)) {
+        let start = Vec2::from_array(*start);
+        let end = Vec2::from_array(*end);
+        let edge = end - start;
+        let length = edge.length();
+        for (point, width) in openings {
+            let t = (*point - start).dot(edge) / edge.length_squared();
+            if !(0.0..=1.0).contains(&t) {
+                continue;
+            }
+            if (start + edge * t).distance(*point) > 32.0 {
+                continue;
+            }
+            let half_t = width * 0.5 / length;
+            arches.push((
+                start + edge * (t - half_t).clamp(0.0, 1.0),
+                start + edge * (t + half_t).clamp(0.0, 1.0),
+            ));
+        }
+    }
+    arches
 }
 
 fn spawn_wall_segment(
@@ -8286,14 +8338,7 @@ mod tests {
     #[test]
     fn wall_openings_interrupt_the_curtain_at_every_gate() {
         let plan = plan::load();
-        let openings = [
-            (Vec2::new(-24.5, 357.0), 18.0),
-            (Vec2::new(346.5, 94.5), 28.0),
-            (Vec2::new(10.5, -465.5), 18.0),
-            (Vec2::new(-353.5, -94.5), 37.0),
-            (Vec2::new(-318.5, -374.5), 6.0),
-        ];
-        for (gate, width) in openings {
+        for (gate, width) in WALL_OPENINGS {
             let mut matched_wall = false;
             for (a, b) in plan
                 .wall_polygon_xz
@@ -8327,6 +8372,61 @@ mod tests {
             }
             assert!(matched_wall, "gate at {gate:?} does not meet the curtain");
         }
+    }
+
+    /// Cutting the curtain for a gate is only half the job: the tower ring is
+    /// laid on the same wall line by a rule that knows nothing about openings,
+    /// and a 12 m tower set corner-on in an arch walls it straight back up.
+    /// Before this was caught, four of the five gates had one — the Harne arch
+    /// was down to a 1 m slot and the Stone Gate to 6 m of a 24 m passage.
+    /// Read off the built entities, because it is the tower's collider, not the
+    /// tower rule, that stops the player.
+    #[test]
+    fn no_wall_tower_is_planted_in_a_gate_opening() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<Image>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<WindowGlassMaterial>()
+            .init_resource::<CollisionWorld>()
+            .add_systems(Startup, build_city);
+        app.update();
+
+        let world = app.world_mut();
+        let towers = world
+            .query::<(&Name, &Transform)>()
+            .iter(world)
+            .filter(|(name, _)| {
+                name.as_str().starts_with("Wall tower") && !name.as_str().ends_with("roof")
+            })
+            .map(|(name, transform)| {
+                (
+                    name.to_string(),
+                    Vec2::new(transform.translation.x, transform.translation.z),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let plan = plan::load();
+        let arches = gate_arches(&plan.wall_polygon_xz, &WALL_OPENINGS);
+        assert_eq!(arches.len(), WALL_OPENINGS.len());
+        let tower_reach = 12.0 * SQRT_2 * 0.5;
+        for (name, point) in &towers {
+            for (arch_start, arch_end) in &arches {
+                let clearance = segment_distance_squared(*point, *arch_start, *arch_end).sqrt();
+                assert!(
+                    clearance >= tower_reach,
+                    "{name} at {point:?} reaches {:.2} m into the arch \
+                     {arch_start:?}–{arch_end:?}",
+                    tower_reach - clearance
+                );
+            }
+        }
+        // 28 vertex-and-division points, less the four the gates claim — so a
+        // future change cannot quietly buy the clearance above by dropping the
+        // whole ring.
+        assert_eq!(towers.len(), 24, "{towers:?}");
     }
 
     #[test]
