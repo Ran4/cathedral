@@ -5432,6 +5432,142 @@ fn a_committed_road_party_member_never_creeps_off_their_threshold() {
     world.assert_invariants();
 }
 
+/// A road member is never enrolled in `people` — the party owns their feet —
+/// but `go_to` accepts them like anybody else, so the intent pass has to reach
+/// them all the same. Unticked, the errand never had its deadline stamped,
+/// never arrived and never lapsed, while [`Round::tick_road_parties`] went on
+/// honouring it above the trading leg: one `go_to` parked a carrier at a frozen
+/// point for the rest of the trip, away from the counter their stock errand
+/// needs them standing at.
+#[test]
+fn a_road_members_errand_arrives_with_a_percept_and_a_nudge() {
+    let nav = nav();
+    let clock = clock_on(Office::Dayspring, 2);
+    let mut world = road_party_world();
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let party_id = PartyId::from_raw("brede_wool_gate");
+    let leader = ActorId::from_raw("rbrde");
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::InCity
+    );
+    assert!(
+        !round.people.contains_key(&leader),
+        "the round deliberately never enrols a road member"
+    );
+
+    // Stand him a short street's walk from the Gradine and hand him the way
+    // there: a road member is seeded no `places_known` of his own, so this is
+    // the state `tell_way` — the only way he ever holds a handle — leaves him in.
+    let gradine_node = nav.place("The Gradine").expect("baked").node;
+    let entry = world.places.named("The Gradine").expect("baked");
+    let (place_id, gradine) = (entry.id.clone(), entry.point);
+    let up_the_street = nav.node_point(nav.adjacency()[gradine_node][0].to);
+    let start = gradine + (up_the_street - gradine).normalize() * 20.0;
+    assert!(
+        nav.is_walkable(start.x, start.z),
+        "the street midline is walkable"
+    );
+    {
+        let actor = world
+            .characters
+            .get_mut(&leader)
+            .expect("the leader exists");
+        actor.state.position_m = start;
+        actor.state.places_known.insert(place_id.clone());
+    }
+
+    apply_action(
+        &mut world,
+        &leader,
+        "go_to",
+        &json!({"place_id": place_id.as_str()}),
+    )
+    .unwrap();
+    // The party is what walks him — the intent pass lays no route for somebody
+    // it holds no phase for.
+    tick_collect(&mut round, &mut world, &nav, &clock, 0.1);
+    assert!(
+        world.characters[&leader].is_walking(),
+        "the trading leg walks the errand it is honouring"
+    );
+
+    let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.1, 200, |world| {
+        world.characters[&leader].state.intent.is_none()
+    });
+    let walker = &world.characters[&leader];
+    assert!(
+        walker.position_m().distance(gradine) <= PLACE_ARRIVE_RADIUS_M + 0.5,
+        "the errand really was walked, not merely forgotten: {:?}",
+        walker.position_m()
+    );
+    assert!(
+        walker
+            .inbox()
+            .iter()
+            .any(|line| line == "You have arrived at The Gradine."),
+        "arrival is a percept for a road member too: {:?}",
+        walker.inbox()
+    );
+    assert!(
+        nudges.contains(&leader),
+        "the arrival granted the priority nudge"
+    );
+    world.assert_invariants();
+}
+
+/// The other half of the same errand: a road member's `go_to {person}` is
+/// walked by the party, so the party has to stop at the *errand's* distance and
+/// not at its own six-metre leg radius — otherwise the follower is parked
+/// within talking distance of somebody they are told they never caught.
+#[test]
+fn a_road_members_follow_closes_to_conversation_distance() {
+    let nav = nav();
+    let clock = clock_on(Office::Dayspring, 2);
+    let mut world = road_party_world();
+    let leader = ActorId::from_raw("rbrde");
+    let target = ActorId::from_raw("targt");
+    let gradine_node = nav.place("The Gradine").expect("baked").node;
+    let start = nav.node_point(gradine_node);
+    let up_the_street = nav.node_point(nav.adjacency()[gradine_node][0].to);
+    let target_at = start + (up_the_street - start).normalize() * 12.0;
+    world.add_character(person("targt", target_at, None, Significance::Major));
+    world.nav = Some(std::sync::Arc::new(nav.clone()));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    // After the seed: entering the city puts every member on their gate point.
+    world
+        .characters
+        .get_mut(&leader)
+        .expect("the leader exists")
+        .state
+        .position_m = start;
+
+    apply_action(&mut world, &leader, "go_to", &json!({"person": "targt"})).unwrap();
+    let (_, nudges) = beats_until(&mut round, &mut world, &nav, &clock, 0.0, 200, |world| {
+        world.characters[&leader].state.intent.is_none()
+    });
+    let gap = world.characters[&leader]
+        .position_m()
+        .distance(world.characters[&target].position_m());
+    assert!(
+        gap <= PERSON_ARRIVE_RADIUS_M + 0.5,
+        "the party walked the follow all the way in, gap {gap}"
+    );
+    assert!(
+        world.characters[&leader]
+            .inbox()
+            .iter()
+            .any(|line| line == "You have caught up with a stranger (id targt)."),
+        "{:?}",
+        world.characters[&leader].inbox()
+    );
+    assert!(nudges.contains(&leader));
+    world.assert_invariants();
+}
+
 /// A departure must not carry anybody out of the world while the law holds
 /// them: `transition_presence` would dissolve a custody nobody released. The
 /// held member stays behind — the cast is fixed and this is a named person

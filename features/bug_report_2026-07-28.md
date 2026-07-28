@@ -24,7 +24,7 @@ not five.
 [F] -> Fixed
 
 - [F] **high** `crates/cathedral-sim/src/round.rs:5505` — interrupt_for_conversation never stops a walk to a food stall
-- [ ] **high** `crates/cathedral-sim/src/round.rs:5531` — Road-party members' go_to intents are never ticked, so they never arrive or lapse
+- [F] **high** `crates/cathedral-sim/src/round.rs:5531` — Road-party members' go_to intents are never ticked, so they never arrive or lapse
 - [ ] **high** `crates/cathedral-sim/src/engine.rs:3026` — Dead-man timer can drop a grip next poll: `grab` never refreshes officer_last_turn
 - [ ] **high** `crates/cathedral-sim/src/inventory.rs:1531` — debit_sparks spends tagged sparks the solvency check never counted
 - [ ] **high** `crates/cathedral-sim/src/custody.rs:384` — Dead-man timer never stamped at seizure or on grab, so a grip dies next poll

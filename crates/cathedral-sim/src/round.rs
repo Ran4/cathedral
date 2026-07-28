@@ -1798,17 +1798,23 @@ impl Round {
                                 continue;
                             }
                             // Explicit `go_to` remains above the ordinary party
-                            // route while the party is trading.
-                            let target =
-                                actor
-                                    .state
-                                    .intent
-                                    .as_ref()
-                                    .map_or(target, |intent| match &intent.target {
-                                        IntentTarget::Place { point, .. } => *point,
-                                        IntentTarget::Person { last_seen, .. } => *last_seen,
-                                    });
-                            if actor.position_m().distance(target) <= ROUND_ARRIVE_RADIUS_M {
+                            // route while the party is trading — and it brings
+                            // its own arrival radius with it: stopping a
+                            // follower six metres short of the person they set
+                            // out to catch is a "caught up with" [`tick_intents`]
+                            // can never say, so the errand would only ever lapse.
+                            let (target, arrive_radius) = actor.state.intent.as_ref().map_or(
+                                (target, ROUND_ARRIVE_RADIUS_M),
+                                |intent| match &intent.target {
+                                    IntentTarget::Place { point, .. } => {
+                                        (*point, PLACE_ARRIVE_RADIUS_M)
+                                    }
+                                    IntentTarget::Person { last_seen, .. } => {
+                                        (*last_seen, PERSON_ARRIVE_RADIUS_M)
+                                    }
+                                },
+                            );
+                            if actor.position_m().distance(target) <= arrive_radius {
                                 world
                                     .characters
                                     .get_mut(member)
@@ -5541,7 +5547,26 @@ fn tick_intents(
     now: f64,
     nudges: &mut Vec<ActorId>,
 ) {
-    let ids: Vec<ActorId> = round.people.keys().cloned().collect();
+    // The enrolled cast *and* every road-party member. Road members are
+    // deliberately absent from `people` — their feet belong to the party, not
+    // to the round — but `go_to` accepts them like anyone else (it refuses only
+    // `leaving_city` and the law's hands), and an intent nothing ticks never
+    // has its deadline stamped, never arrives and never lapses. Nor does it lie
+    // quiet: [`Round::tick_road_parties`] reads the intent *above* the trading
+    // leg, so one dead errand parks a carrier at a frozen point — away from
+    // their own counter — for the rest of the trip. Collected as a set, so the
+    // pass keeps one deterministic id order.
+    let ids: BTreeSet<ActorId> = round
+        .people
+        .keys()
+        .cloned()
+        .chain(
+            round
+                .road_parties
+                .values()
+                .flat_map(|party| party.members.iter().cloned()),
+        )
+        .collect();
     for id in ids {
         if !world.is_present(&id) {
             continue;
@@ -5552,9 +5577,13 @@ fn tick_intents(
         let Some(mut intent) = character.state.intent.clone() else {
             // The intent ended outside this pass — `stop {}` is self-initiated
             // and emits no percept — but its walk may still be under way: halt
-            // exactly that walk and hand the body back to the ladder.
-            let person = round.people.get_mut(&id).expect("person exists");
-            if person.travel_for_intent {
+            // exactly that walk and hand the body back to the ladder. A road
+            // member has no such walk to halt: `travel_for_intent` is the
+            // round's own bookkeeping and they were never enrolled in it, the
+            // same nothing [`end_intent`] finds to unwind for them.
+            if let Some(person) = round.people.get_mut(&id)
+                && person.travel_for_intent
+            {
                 person.travel_for_intent = false;
                 if person.phase == Phase::Travelling {
                     person.phase = Phase::Idle;
@@ -5677,12 +5706,20 @@ fn tick_intents(
         // and the rung order is what lets the needs outrank the errand. Only
         // the free phases lay anything; a committed well errand keeps its
         // queue place, and the rung picks the intent up when it resolves.
+        //
+        // A road member is the one exception: the laying is not theirs, because
+        // the feet are not. [`Round::tick_road_parties`] already walks them to
+        // this very target — it honours the intent above the trading leg — and
+        // there is no `people` entry to keep a phase in. Everything above (the
+        // deadline, the arrival, the follow's last-seen) is still owed to them.
         let (target, arrive_radius) = match &intent.target {
             IntentTarget::Place { point, .. } => (*point, PLACE_ARRIVE_RADIUS_M),
             IntentTarget::Person { last_seen, .. } => (*last_seen, PERSON_ARRIVE_RADIUS_M),
         };
         let tracking = matches!(&intent.target, IntentTarget::Person { visible: true, .. });
-        let person = &round.people[&id];
+        let Some(person) = round.people.get(&id) else {
+            continue;
+        };
         let lay = match person.phase {
             // A follow resuming from a stand waits for the ladder cadence,
             // exactly as a place walk does: `interrupt_for_conversation` puts
