@@ -307,6 +307,238 @@ fn the_round_content_parses_and_every_destination_resolves() {
     }
 }
 
+/// The three committed assets that pin **bare nav node indices** still resolve
+/// to the world points they were baked against.
+///
+/// A change to the city's colliders runs the whole chain, in this order:
+///
+/// ```sh
+/// cargo test -p cathedralbevy export_collision_footprints -- --ignored
+/// uv run scripts/bake_navigation.py    # welds — and renumbers — the graph
+/// uv run scripts/bake_places.py
+/// uv run scripts/bake_homes.py
+/// # then re-point assets/world/shelters.json by hand: it has no script
+/// ```
+///
+/// The second step is the one that rots everything downstream. Re-welding the
+/// street graph renumbers it wholesale — a 2026-07 re-bake took 472 street
+/// nodes to 457, moving every index from 20 up — and `places.json`'s `node`,
+/// `homes.json`'s `door_node` and `shelters.json`'s `route_node` are all bare
+/// `usize` indices into that list. A stale one is still a *valid* index, so
+/// nothing refuses to load: it simply means somewhere else, by up to 900 m.
+/// The last time half this chain was run, the only evidence was four oblique
+/// failures elsewhere in the suite ("lanthorn_nave has no walkable spread
+/// point", a shelter binding a hearth across the ward, an inmate standing on
+/// the open street graph) — none of which named the asset or the command.
+/// Hence one test that does both.
+#[test]
+fn every_baked_nav_pin_still_resolves_to_the_point_it_was_baked_against() {
+    let nav = nav();
+
+    // ----------------------------------------------------------------- //
+    // places.json — the wayfinding registry
+    // ----------------------------------------------------------------- //
+    // A place's `node` is a straight copy of the graph's own place of that
+    // name (`bake_places.py`), so it must still resolve to that same point.
+    // The metre of slack is a courtesy to a future bake that merely re-orders
+    // coincident nodes; a renumbering throws the point across the city.
+    const PLACE_TOLERANCE_M: f64 = 1.0;
+    let places: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../assets/world/places.json"))
+            .expect("places.json parses");
+    let baked = places["places"].as_array().expect("places.json has places");
+    let baked_names: BTreeSet<&str> = baked
+        .iter()
+        .map(|place| place["name"].as_str().expect("a place has a name"))
+        .collect();
+    let graph_names: BTreeSet<&str> = nav.places().iter().map(|p| p.name.as_str()).collect();
+    assert_eq!(
+        baked_names, graph_names,
+        "places.json no longer names the same places as navigation.json — \
+         re-run `uv run scripts/bake_places.py`"
+    );
+    for place in baked {
+        let name = place["name"].as_str().expect("a place has a name");
+        let node = place["node"].as_u64().expect("a place pins a node") as usize;
+        assert!(
+            node < nav.node_count(),
+            "places.json pins node {node} for {name}, past the end of a \
+             {}-node graph — re-run `uv run scripts/bake_places.py`",
+            nav.node_count()
+        );
+        let pinned = nav.node_point(node);
+        let in_the_graph = nav.node_point(nav.place(name).expect("named above").node);
+        let drift = pinned.distance(in_the_graph);
+        assert!(
+            drift <= PLACE_TOLERANCE_M,
+            "places.json is out of step with navigation.json — re-run \
+             `uv run scripts/bake_places.py` ({name} pins node {node} at \
+             {pinned:?}, but the graph puts {name} at {in_the_graph:?}, \
+             {drift:.0} m away)"
+        );
+    }
+
+    // The eight ward anchors have no name in the graph to check against: the
+    // bake plants each one at the nav node nearest the centroid of its ward's
+    // buildings. The houses `homes.json` bound in the same ward are a large
+    // sample of exactly those buildings — and its `ward` is the building's own
+    // district string, which is the anchor's `name` — so a live anchor stands
+    // among them: 12 m to 30 m today, the loosest being the Bell and Sluice
+    // Wards' long sprawl and the Cinder Ward's mere seven houses. Coarse on
+    // purpose, and it needs no third file: a renumbered anchor lands in
+    // another ward entirely.
+    const WARD_ANCHOR_TOLERANCE_M: f64 = 80.0;
+    let homes_json: serde_json::Value =
+        serde_json::from_str(HOMES_JSON).expect("homes.json parses");
+    let homes = homes_json["homes"]
+        .as_object()
+        .expect("homes.json has a homes map");
+    for ward in places["wards"].as_array().expect("places.json has wards") {
+        let name = ward["name"].as_str().expect("a ward has a name");
+        let node = ward["node"].as_u64().expect("a ward pins a node") as usize;
+        assert!(
+            node < nav.node_count(),
+            "places.json pins node {node} for {name}, past the end of a \
+             {}-node graph — re-run `uv run scripts/bake_places.py`",
+            nav.node_count()
+        );
+        let houses: Vec<&serde_json::Value> = homes
+            .values()
+            .filter(|home| home["ward"].as_str() == Some(name))
+            .collect();
+        assert!(!houses.is_empty(), "{name} houses somebody");
+        let count = houses.len() as f64;
+        let centre = Vec3::new(
+            houses.iter().map(|h| h["point"][0].as_f64().unwrap()).sum::<f64>() / count,
+            WALK_Y,
+            houses.iter().map(|h| h["point"][1].as_f64().unwrap()).sum::<f64>() / count,
+        );
+        let drift = nav.node_point(node).distance(centre);
+        assert!(
+            drift <= WARD_ANCHOR_TOLERANCE_M,
+            "places.json's {name} anchor is out of step with navigation.json — \
+             re-run `uv run scripts/bake_places.py` (node {node} stands \
+             {drift:.0} m from the centre of the ward's own baked houses, \
+             tolerance {WARD_ANCHOR_TOLERANCE_M} m)"
+        );
+    }
+
+    // ----------------------------------------------------------------- //
+    // homes.json — the home-binding
+    // ----------------------------------------------------------------- //
+    // `point` is the door node's own coordinate at bake time, rounded to four
+    // decimals, so the two must still agree to well under a metre. The sim
+    // never reads `door_node` (the round walks to `point`), which is precisely
+    // why it rots unwatched — and it is the one witness that the whole entry,
+    // building and all, was baked against *this* graph.
+    const HOME_TOLERANCE_M: f64 = 0.5;
+    for (id, home) in homes {
+        let building = home["building"].as_str().expect("a home names a building");
+        let node = home["door_node"].as_u64().expect("a home pins a door node") as usize;
+        assert!(
+            node < nav.node_count(),
+            "homes.json pins door node {node} for {id}, past the end of a \
+             {}-node graph — re-run `uv run scripts/bake_homes.py`",
+            nav.node_count()
+        );
+        let door = nav.door(building).unwrap_or_else(|| {
+            panic!(
+                "homes.json is out of step with navigation.json — re-run \
+                 `uv run scripts/bake_homes.py` ({id}'s building {building} \
+                 has no baked door in the graph at all)"
+            )
+        });
+        assert_eq!(
+            door.node, node,
+            "homes.json is out of step with navigation.json — re-run \
+             `uv run scripts/bake_homes.py` ({id}'s building {building} is \
+             doored on node {} now, not the pinned {node})",
+            door.node
+        );
+        let baked_point = Vec3::new(
+            home["point"][0].as_f64().expect("a home point is a number"),
+            WALK_Y,
+            home["point"][1].as_f64().expect("a home point is a number"),
+        );
+        let drift = nav.node_point(node).distance(baked_point);
+        assert!(
+            drift <= HOME_TOLERANCE_M,
+            "homes.json is out of step with navigation.json — re-run \
+             `uv run scripts/bake_homes.py` ({id}'s door node {node} resolves \
+             to {:?}, {drift:.0} m from the baked point {baked_point:?})",
+            nav.node_point(node)
+        );
+    }
+
+    // ----------------------------------------------------------------- //
+    // shelters.json — hand-authored, and the only pin with no script
+    // ----------------------------------------------------------------- //
+    // `route_node` is where the weather ladder routes a soaked NPC before the
+    // final stride into the covered polygon, so it belongs *at* the shelter.
+    // Measured against the polygon rather than its centre, because
+    // `lanthorn_nave` sits 44.6 m off centre on purpose: the collision export
+    // subtracts the cathedral footprint wholesale (CathedralPlugin builds that
+    // interior, so none of it reaches the bake), the nave therefore owns no
+    // street node of its own, and its pin is the apron inside the west wall —
+    // long-standing, intended, and still under 92 m of roof, so still 0 m from
+    // the polygon. The worst honest gap today is 7.3 m, the simples awning on
+    // Maren's Green, whose node is out in the square.
+    const SHELTER_TOLERANCE_M: f64 = 12.0;
+    let shelters =
+        crate::ShelterMap::from_json_str(include_str!("../../../../assets/world/shelters.json"))
+            .expect("shelters.json loads");
+    for shelter in shelters.shelters() {
+        assert!(
+            shelter.route_node < nav.node_count(),
+            "shelters.json is hand-authored — there is no bake script for it. \
+             `{}` pins route node {}, past the end of a {}-node graph; \
+             re-point it by hand against assets/world/navigation.json",
+            shelter.id,
+            shelter.route_node,
+            nav.node_count()
+        );
+        let pinned = nav.node_point(shelter.route_node);
+        let drift = if shelter.contains(pinned) {
+            0.0
+        } else {
+            distance_to_polygon_xz(pinned, &shelter.polygon_xz)
+        };
+        assert!(
+            drift <= SHELTER_TOLERANCE_M,
+            "shelters.json is out of step with navigation.json, and it is \
+             hand-authored — there is no bake script for it: re-point its \
+             `route_node` values by hand against assets/world/navigation.json \
+             (`{}` pins node {} at {pinned:?}, {drift:.0} m outside its own \
+             polygon, tolerance {SHELTER_TOLERANCE_M} m)",
+            shelter.id,
+            shelter.route_node
+        );
+    }
+}
+
+/// Metres from `point` to the nearest edge of a closed XZ polygon. Only ever
+/// asked about a point already known to be outside it, so it needs no winding
+/// test of its own.
+fn distance_to_polygon_xz(point: Vec3, polygon: &[[f64; 2]]) -> f64 {
+    let mut nearest = f64::INFINITY;
+    for index in 0..polygon.len() {
+        let [ax, az] = polygon[index];
+        let [bx, bz] = polygon[(index + 1) % polygon.len()];
+        let (dx, dz) = (bx - ax, bz - az);
+        let length_squared = dx * dx + dz * dz;
+        let along = if length_squared == 0.0 {
+            0.0
+        } else {
+            (((point.x - ax) * dx + (point.z - az) * dz) / length_squared).clamp(0.0, 1.0)
+        };
+        nearest = nearest.min(f64::hypot(
+            point.x - (ax + along * dx),
+            point.z - (az + along * dz),
+        ));
+    }
+    nearest
+}
+
 // --------------------------------------------------------------------------- //
 // active_leg — the schedule
 // --------------------------------------------------------------------------- //

@@ -2826,9 +2826,25 @@ mod tests {
             line.contains("TAKEN YOU IN CHARGE"),
             "the standing line names the custody, got {line:?}"
         );
+        // …and where they are walking you. Which posting that is depends on
+        // where the sergeant happened to be standing, so ask the sim rather
+        // than naming one here: the wire is what is under test, not the
+        // geometry that decided the nearest door.
+        let station = {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let sim = engine.world_mut().expect("the engine is live");
+            sim.custody
+                .iter()
+                .find(|(prisoner, _)| prisoner.as_str() == PLAYER_ID)
+                .expect("the player is in charge")
+                .1
+                .station
+                .name
+                .clone()
+        };
         assert!(
-            line.contains("Tallage toll-house"),
-            "…and where they are walking you, got {line:?}"
+            line.contains(&station),
+            "…and where they are walking you ({station}), got {line:?}"
         );
         // The leash is explained the first time it is ever drawn: a player who
         // does not know they may step aside will not.
