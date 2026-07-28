@@ -247,23 +247,9 @@ impl Worker {
     /// interrupt a worker that is mid-download (`speech_client.py:778-789`).
     pub fn close(&self) {
         let child = self.child.lock().expect("worker child lock").take();
-        let Some(mut child) = child else { return };
-        if matches!(child.try_wait(), Ok(Some(_))) {
-            return;
+        if let Some(child) = child {
+            terminate_and_reap(child);
         }
-        terminate(&child);
-        let deadline = Instant::now() + TERMINATE_GRACE;
-        loop {
-            match child.try_wait() {
-                Ok(Some(_)) => return,
-                Ok(None) if Instant::now() < deadline => {
-                    std::thread::sleep(Duration::from_millis(10));
-                }
-                _ => break,
-            }
-        }
-        let _ = child.kill();
-        let _ = child.wait();
     }
 
     // ------------------------------------------------------------- internals
@@ -353,14 +339,34 @@ impl Worker {
     fn forget(&self, io: &mut Option<WorkerIo>) {
         *io = None;
         let child = self.child.lock().expect("worker child lock").take();
-        if let Some(mut child) = child
-            && !matches!(child.try_wait(), Ok(Some(_)))
-        {
-            terminate(&child);
-            // Reaped by the OS; we do not wait, because forgetting happens on
-            // the request path and a wedged child must not hold a turn.
-            let _ = child.try_wait();
+        let Some(child) = child else { return };
+        // A dead child is reaped by its *parent*, not by the OS, and `Child` has
+        // no `Drop` that waits — a signalled worker we drop here stays a zombie
+        // for the rest of the session, one pid per poisoned stream. But we
+        // cannot wait for it either: forgetting happens on the request path and
+        // a wedged child must not hold a turn. So the corpse goes to a
+        // short-lived thread that runs the same `SIGTERM → 1 s → SIGKILL → wait`
+        // shutdown does, out of the caller's way.
+        let reaper = std::thread::Builder::new()
+            .name(format!("{}-worker-reaper", self.spec.log_source))
+            .spawn(move || terminate_and_reap(child));
+        if reaper.is_err() {
+            log(
+                self.spec.log_source,
+                "could not start a reaper thread; a forgotten worker may linger",
+            );
         }
+    }
+
+    /// The pid of the child currently held, so a test can follow it into
+    /// `/proc` after the worker has let go of it.
+    #[cfg(test)]
+    fn child_pid(&self) -> Option<u32> {
+        self.child
+            .lock()
+            .expect("worker child lock")
+            .as_ref()
+            .map(Child::id)
     }
 
     fn child_is_running(&self) -> bool {
@@ -483,6 +489,28 @@ fn terminate(child: &Child) {
     {
         let _ = child;
     }
+}
+
+/// The full teardown of one child: `SIGTERM → wait 1 s → SIGKILL`, and then the
+/// `wait` that actually collects it. Blocking, so a caller on the request path
+/// hands it to a thread ([`Worker::forget`]) rather than running it inline.
+fn terminate_and_reap(mut child: Child) {
+    if matches!(child.try_wait(), Ok(Some(_))) {
+        return;
+    }
+    terminate(&child);
+    let deadline = Instant::now() + TERMINATE_GRACE;
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => return,
+            Ok(None) if Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            _ => break,
+        }
+    }
+    let _ = child.kill();
+    let _ = child.wait();
 }
 
 pub(crate) fn truncate(text: &str, characters: usize) -> String {
@@ -807,6 +835,53 @@ done
             "stub returned an invalid response"
         );
         assert!(!worker.child_is_running());
+    }
+
+    /// …and it is *reaped*, not merely signalled. On unix a dead child stays a
+    /// zombie until its parent collects it, so a session that poisons the stream
+    /// once per spoken line would otherwise leak a pid apiece.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_forgotten_child_leaves_no_zombie() {
+        let stub = StubWorker::new(
+            "zombie",
+            &[
+                r#"{"type":"ready"}"#,
+                r#"{"type":"result","request_id":99,"text":"for someone else"}"#,
+            ],
+        );
+        let (sender, _events) = backend_channel();
+        let worker = Worker::new(stub.spec(MESSAGES), sender);
+        worker.warm().expect("ready");
+        let pid = worker.child_pid().expect("a spawned child");
+
+        // The poison path: the child is certainly still alive when it is let go.
+        echo(&worker, body(&[])).expect_err("a poisoned stream");
+        assert!(worker.child_pid().is_none(), "the child is let go");
+
+        // The pid disappears from /proc only once somebody has waited on it; an
+        // unreaped one sits at `Z` forever.
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < deadline {
+            if process_state(pid).is_none() {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        panic!(
+            "pid {pid} is still around as {:?} — nobody reaped it",
+            process_state(pid)
+        );
+    }
+
+    /// The one-letter run state of a pid (`R`, `S`, `Z`, …), or `None` once the
+    /// process is gone. The `comm` field can hold spaces and parentheses, so the
+    /// state is read from after the *last* `)`.
+    #[cfg(target_os = "linux")]
+    fn process_state(pid: u32) -> Option<char> {
+        let stat = fs::read_to_string(format!("/proc/{pid}/stat")).ok()?;
+        let (_, rest) = stat.rsplit_once(')')?;
+        rest.split_whitespace().next()?.chars().next()
     }
 
     #[test]
