@@ -1120,6 +1120,56 @@ PLACE_MARKS = _marks
 # --- wall ----------------------------------------------------------------- #
 WALL = [T.scale(p) for p in LEGACY_WALL]
 
+# The five ways through the curtain, as (centre, clear width in metres), in the
+# shrunk frame — the same table the world keeps as `WALL_OPENINGS` in
+# `src/city/mod.rs`, which is the source of truth: it cuts the curtain for each
+# of them and keeps the tower ring out of them. The centres are the gate anchors
+# from the tables above, scaled; the widths are the clear passage of the arch.
+WALL_OPENINGS: list[tuple[Point, float]] = [
+    (T.scale((-35, 510)), 18.0),    # the Wool Gate
+    (T.scale((495, 135)), 28.0),    # the Stone Gate
+    (T.scale((15, -665)), 18.0),    # the Harne Gate
+    (T.scale((-505, -135)), 37.0),  # the River Gate
+    (T.scale((-455, -535)), 6.0),   # the Reed Postern
+]
+
+# A wall tower is a 12 m square set corner-on, so it reaches this far from its
+# centre in the worst direction — out along a diagonal, to a corner. A corner
+# poking into an arch bricks it up as surely as a face would, so the gate test
+# below uses this circumscribing radius rather than the diamond itself.
+TOWER_REACH = 12.0 * math.sqrt(2) * 0.5
+
+
+def gate_arches(polygon: Sequence[Point], openings: Sequence[tuple[Point, float]]) -> list[tuple[Point, Point]]:
+    """The stretches of curtain the gates take out, in world space.
+
+    The mirror of `gate_arches` in `src/city/mod.rs`, on the same terms (an
+    opening only belongs to the edge it projects onto within 32 m). Nothing
+    solid may sit on one of these segments: they are the arches themselves.
+    """
+    arches: list[tuple[Point, Point]] = []
+    for start, end in polygon_edges(polygon):
+        edge_x, edge_z = end[0] - start[0], end[1] - start[1]
+        length_sq = edge_x * edge_x + edge_z * edge_z
+        length = math.sqrt(length_sq)
+        for (gate_x, gate_z), width in openings:
+            t = ((gate_x - start[0]) * edge_x + (gate_z - start[1]) * edge_z) / length_sq
+            if not 0.0 <= t <= 1.0:
+                continue
+            if math.hypot(start[0] + edge_x * t - gate_x, start[1] + edge_z * t - gate_z) > 32.0:
+                continue
+            half_t = width * 0.5 / length
+            low = min(max(t - half_t, 0.0), 1.0)
+            high = min(max(t + half_t, 0.0), 1.0)
+            arches.append((
+                (start[0] + edge_x * low, start[1] + edge_z * low),
+                (start[0] + edge_x * high, start[1] + edge_z * high),
+            ))
+    return arches
+
+
+GATE_ARCHES = gate_arches(WALL, WALL_OPENINGS)
+
 
 # --- baseline named-vs-road clearances (from the untransformed tables) ----- #
 def _required_clearance(road: Road) -> float:
@@ -1667,6 +1717,21 @@ def render_svg() -> None:
             t = step / (int(length // 115) + 1)
             tower_points.append((start[0] + (end[0] - start[0]) * t, start[1] + (end[1] - start[1]) * t))
     for index, point in enumerate(tower_points, 1):
+        # That rule is blind to the gates, and at four of the five it plants a
+        # tower in the very arch the curtain is cut for (the Stone and River
+        # gates end on a wall vertex, the Harne gate sits under a 115 m
+        # division, and the next division along clips the Reed postern). The
+        # world leaves those four out — `build_fortifications` in
+        # `src/city/mod.rs`, the source of truth for this rule — so the map must
+        # not draw towers that are not there. Every gate keeps its own flanking
+        # pair from the cadastral plan (`gate_stone_1`/`_2` and kin). The index
+        # is taken *before* the skip, so a surviving tower keeps the number the
+        # world gives it as `Wall tower NN`.
+        if any(
+            point_segment_distance(point, arch_start, arch_end) < TOWER_REACH
+            for arch_start, arch_end in GATE_ARCHES
+        ):
+            continue
         sx, sy = screen(point)
         parts.append(f'<rect id="wall-tower-{index:02d}" class="wall-tower" x="{sx - 6:.2f}" y="{sy - 6:.2f}" width="12" height="12" transform="rotate(45 {sx:.2f} {sy:.2f})"><title>Wall tower {index}</title></rect>')
     parts.append('</g>')
