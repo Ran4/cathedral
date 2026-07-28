@@ -116,6 +116,23 @@ impl PlayerCustodyState {
             .map(|custody| (custody.anchor_m, CUSTODY_TETHER_M as f32))
     }
 
+    /// Let the player go when the engine dies (`drain_bridge_messages`'s
+    /// `Disconnected` arm). Of everything the sim projects into the host this is
+    /// the one thing that holds the player's *feet*: the tether clamps them to
+    /// [`CUSTODY_TETHER_M`] around a grip point that stops moving the moment the
+    /// sim does, and the `LawStanding` that ends a custody can never arrive
+    /// afterwards — the drain refuses every message once the engine is known
+    /// dead. A hold with nobody left to end it is a permanent one, and the only
+    /// way out of it would be the developer flying key.
+    ///
+    /// The words against them go the same way: a notice names the door that
+    /// clears it, and with the sim gone there is no longer anybody to walk
+    /// through it. Clearing this also takes the standing line off the screen,
+    /// because [`law_standing_hud`] composes that line from nothing else.
+    pub(super) fn clear_on_disconnect(&mut self) {
+        *self = Self::default();
+    }
+
     /// Test-only: what the sim publishes once `holders` pairs of hands have hold
     /// of the player at `anchor`, with the sim's own `strain_seconds` for that
     /// grip. Shared with `controller.rs`'s tether tests, so both halves of the

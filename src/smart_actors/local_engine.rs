@@ -191,6 +191,17 @@ impl LocalEngine {
     pub(super) fn world_mut(&mut self) -> Option<&mut cathedral_sim::World> {
         self.engine.as_mut().map(|engine| engine.world_mut())
     }
+
+    /// Die exactly as a panicking poll does — **tests only**. [`Self::pump`]'s
+    /// `catch_unwind` arm drops the engine and disconnects; a test that has to
+    /// keep driving its own `App` afterwards cannot reach that arm (a real panic
+    /// would have to come from inside the sim), and what the host does with a
+    /// dead engine is precisely what wants covering.
+    #[cfg(test)]
+    pub(super) fn die_as_if_panicked(&mut self) {
+        self.engine = None;
+        self.fail("the actor engine panicked: staged by a test".to_string());
+    }
 }
 
 /// Start the engine and hand the ECS its resources.

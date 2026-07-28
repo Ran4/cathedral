@@ -35,7 +35,7 @@ not five.
 - [F] **high** `src/city/mod.rs:7301` — Curtain towers are planted inside gate openings, walling the arches shut
 - [F] **high** `src/city/mod.rs:4158` — Bridge spine pier is sized from the mouth WIDTH, so half of it stands outside the shell
 - [F] **high** `src/city/route_boards.rs:54` — Route boards use pre-shrink coordinates; two float outside the world entirely
-- [ ] **high** `src/smart_actors/mod.rs:900` — Engine disconnect never clears PlayerCustodyState — a held player stays tethered forever
+- [F] **high** `src/smart_actors/mod.rs:900` — Engine disconnect never clears PlayerCustodyState — a held player stays tethered forever
 - [ ] **medium** `crates/cathedral-sim/src/round.rs:7130` — Curfew rung's Stay-at-home short-circuits rung 3's eat-what-you-hold
 - [ ] **medium** `crates/cathedral-sim/src/actions.rs:3388` — `release` never tells the person being released: the second-person branch is unreachable
 - [ ] **medium** `crates/cathedral-sim/src/actions.rs:3455` — `struggle`'s attempt counter saturates, so every repeat attempt replays one frozen die

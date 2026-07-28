@@ -911,6 +911,13 @@ fn drain_bridge_messages(
                 runtime.thinking_actor_id = None;
                 interaction.clear_pending();
                 microphone_input.clear_on_disconnect();
+                // The hot channels freeze wherever the engine's last message
+                // left them, which for three of them is merely stale scenery — a
+                // walker stopped mid-street, a lamp left lit, a sky that stops
+                // changing. The law's is not: it holds the player's feet, and
+                // nothing above can ever release them again, so it is let go of
+                // here (see [`custody::PlayerCustodyState::clear_on_disconnect`]).
+                hot.law.clear_on_disconnect();
                 hud.clear_transients_on_disconnect(truncate_owned(message, 300));
                 presentation.clear.write(speech::ClearSpeechPresentation);
                 if microphone_present {
@@ -2954,6 +2961,102 @@ mod tests {
             .single(world)
             .expect("the standing line has a text entity");
         assert!(text.0.contains("[#####-----]"), "got {:?}", text.0);
+    }
+
+    /// …and an engine that dies with hold of the player lets them go
+    /// (`law_and_order.md` M4c). A sim panic is a real ending — `LocalEngine`
+    /// catches it, drops the engine and disconnects — and custody is the one
+    /// projection that would outlive it: the tether clamps the player's desired
+    /// position every fixed step, around an anchor nobody is standing at any
+    /// more, and the `LawStanding` that would end the hold can never arrive,
+    /// because the drain refuses every message once the engine is known dead.
+    #[test]
+    fn an_engine_that_dies_holding_the_player_lets_go_of_them() {
+        let mut app = ready_fake_plugin_app();
+        let ashe = cathedral_sim::ActorId::from_raw("p009x");
+        {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let sim = engine.world_mut().expect("the engine is live");
+            sim.characters
+                .get_mut(&ashe)
+                .expect("Havise Ashe is in the seeded cast")
+                .state
+                .position_m = cathedral_sim::Vec3::new(1.0, 0.91, 111.0);
+        }
+        let settle_on = |app: &mut App, needle: &str| {
+            let deadline = std::time::Instant::now() + Duration::from_secs(5);
+            while std::time::Instant::now() < deadline
+                && !app
+                    .world()
+                    .resource::<hud::SmartActorHudState>()
+                    .law_standing_text()
+                    .contains(needle)
+            {
+                app.update();
+                thread::sleep(Duration::from_millis(5));
+            }
+            let line = app
+                .world()
+                .resource::<hud::SmartActorHudState>()
+                .law_standing_text()
+                .to_string();
+            assert!(line.contains(needle), "expected {needle:?}, got {line:?}");
+        };
+
+        // Taken in charge, then a hand on the arm — the command the host's own
+        // grab reflex sends. Only a *held* player is tethered.
+        app.world()
+            .resource::<bridge::BridgeHandle>()
+            .try_send(bridge::BridgeCommand::DebugSeize {
+                officer: "Havise Ashe".into(),
+                target: None,
+            })
+            .expect("the command queue has room");
+        settle_on(&mut app, "TAKEN YOU IN CHARGE");
+        app.world()
+            .resource::<bridge::BridgeHandle>()
+            .try_send(bridge::BridgeCommand::PlayerGrabbed {
+                holder_id: model::ActorId("p009x".into()),
+            })
+            .expect("the command queue has room");
+        settle_on(&mut app, "HELD BY");
+        assert!(
+            app.world()
+                .resource::<custody::PlayerCustodyState>()
+                .tether(false)
+                .is_some(),
+            "the tether is on before the engine dies"
+        );
+
+        // The sim panics mid-poll.
+        app.world_mut()
+            .non_send_mut::<local_engine::LocalEngine>()
+            .die_as_if_panicked();
+        app.update();
+
+        assert!(!app.world().resource::<SmartActorRuntime>().connected);
+        assert!(
+            app.world()
+                .resource::<custody::PlayerCustodyState>()
+                .tether(false)
+                .is_none(),
+            "a hold nobody is left to end must not outlive its engine"
+        );
+        // …and the line comes off the screen with it: an offline HUD claiming
+        // the player is held names a door that no longer opens.
+        assert_eq!(
+            app.world()
+                .resource::<hud::SmartActorHudState>()
+                .law_standing_text(),
+            ""
+        );
+        let world = app.world_mut();
+        let (text, node) = world
+            .query_filtered::<(&Text, &Node), With<hud::LawStandingText>>()
+            .single(world)
+            .expect("the standing line has a text entity");
+        assert_eq!(text.0, "", "got {:?}", text.0);
+        assert_eq!(node.display, Display::None, "and it is hidden");
     }
 
     /// The seam's acceptance test: the whole plugin, the in-process engine, and
