@@ -311,6 +311,21 @@ fn schedule_bell_pattern(
     plan
 }
 
+/// The rope a peal holds, and for how long after its first stroke.
+///
+/// One peal per bell at a time: a second summons on top of a ringing one would
+/// make the strokes uncountable, which is the one thing these bells may never
+/// be. The key is therefore the *bell* rather than the pattern, and both ropes
+/// into it — the cue and the daily curfew — claim the same entry, or the guard
+/// would cover only half the bronze. The window runs a second past the last
+/// stroke, so no peal is answered on its own tail.
+fn bell_occupancy(plan: &BellPlan) -> (u64, f64) {
+    (
+        stable_hash(&format!("civic-bell:{}", plan.sound as u8)),
+        f64::from(plan.strokes.saturating_sub(1)) * plan.interval_seconds + 1.0,
+    )
+}
+
 /// Leave the evidence a drive script asserts on: one line per peal, carrying
 /// the count, in `logs/latest_session/logs.jsonl` under source `drive`.
 fn log_bell_peal(plan: &BellPlan, context: &str) {
@@ -1361,7 +1376,10 @@ impl ScheduledSounds {
 
 #[derive(Resource, Default)]
 struct CueCooldowns {
-    last_allowed: HashMap<u64, f64>,
+    /// When each key is free again, rather than when it last fired: a peal is
+    /// queued whole, well before its first stroke, so occupancy has to be
+    /// expressible as a window that has not started yet.
+    free_at: HashMap<u64, f64>,
     last_pruned_at: f64,
 }
 
@@ -1370,18 +1388,26 @@ impl CueCooldowns {
         if now >= self.last_pruned_at
             && now - self.last_pruned_at >= CUE_COOLDOWN_PRUNE_INTERVAL_SECONDS
         {
-            self.last_allowed
-                .retain(|_, last| now >= *last && now - *last <= CUE_COOLDOWN_RETENTION_SECONDS);
+            // A window that has not closed yet is a sound still to be heard,
+            // however stale the entry looks against the retention clock.
+            self.free_at.retain(|_, free_at| {
+                now < *free_at || now - *free_at <= CUE_COOLDOWN_RETENTION_SECONDS
+            });
             self.last_pruned_at = now;
         }
-        let allowed = self
-            .last_allowed
-            .get(&key)
-            .is_none_or(|last| now - *last >= seconds);
+        let allowed = self.free_at.get(&key).is_none_or(|free_at| now >= *free_at);
         if allowed {
-            self.last_allowed.insert(key, now);
+            self.free_at.insert(key, now + seconds);
         }
         allowed
+    }
+
+    /// Take a key for a window that begins later — the only way to claim one,
+    /// since `allow` can only measure from the moment it is asked. A hold
+    /// already in place is never shortened: the longer sound keeps the floor.
+    fn hold(&mut self, key: u64, free_at: f64) {
+        let entry = self.free_at.entry(key).or_insert(free_at);
+        *entry = entry.max(free_at);
     }
 }
 
@@ -1555,12 +1581,9 @@ fn ingest_soundscape_cues(
             }
             SoundscapeCue::CivicBell(pattern) => {
                 let plan = pattern.plan();
-                // One peal per bell at a time: a second summons on top of a
-                // ringing one would make the strokes uncountable, which is the
-                // one thing these bells may never be.
-                let key = stable_hash(&format!("civic-bell:{}", plan.sound as u8));
-                let occupies =
-                    f64::from(plan.strokes.saturating_sub(1)) * plan.interval_seconds + 1.0;
+                // The rope is taken for the length of the peal, so nothing
+                // rings between these strokes.
+                let (key, occupies) = bell_occupancy(&plan);
                 if cooldowns.allow(key, now, occupies) {
                     let plan = schedule_bell_pattern(
                         pattern,
@@ -1584,6 +1607,7 @@ fn schedule_curfew_bell(
     clock: Option<Res<WorldClockState>>,
     mut state: ResMut<CivicBellState>,
     mut scheduled: ResMut<ScheduledSounds>,
+    mut cooldowns: ResMut<CueCooldowns>,
 ) {
     let now = time.elapsed_secs_f64();
     let Some(clock) = clock.filter(|clock| clock.present) else {
@@ -1602,12 +1626,19 @@ fn schedule_curfew_bell(
     }
     state.curfew_day = Some(clock.day);
     // Wait out the Lanthorn's seven strokes, then the grace, then the law.
+    let first_stroke_at = now + office_bell_span_seconds(Office::Snuffing) + DUSK_GRACE_SECONDS;
     let plan = schedule_bell_pattern(
         BellPattern::ScoldCurfew,
-        now + office_bell_span_seconds(Office::Snuffing) + DUSK_GRACE_SECONDS,
+        first_stroke_at,
         &format!("curfew:{}", clock.day),
         &mut scheduled,
     );
+    // The law's peal is never refused, but it must still take the rope, and
+    // take it from here rather than from the first stroke: the whole peal is
+    // queued now, and a summons cried anywhere in the grace or the nine
+    // strokes would fall between them at its own faster tempo.
+    let (key, occupies) = bell_occupancy(&plan);
+    cooldowns.hold(key, first_stroke_at + occupies);
     log_bell_peal(&plan, &format!(", day {}", clock.day));
 }
 
@@ -4647,6 +4678,7 @@ mod tests {
             let mut app = App::new();
             app.add_plugins(MinimalPlugins)
                 .init_resource::<ScheduledSounds>()
+                .init_resource::<CueCooldowns>()
                 .init_resource::<CivicBellState>()
                 .insert_resource(clock(Office::Waning, Weekday::Second))
                 .add_systems(Update, schedule_curfew_bell);
@@ -4700,6 +4732,59 @@ mod tests {
         fresh.update();
         fresh.update();
         assert_eq!(strokes(&fresh), 0);
+    }
+
+    #[test]
+    fn a_summons_cried_during_the_curfew_peal_never_falls_between_its_strokes() {
+        fn strokes(app: &App, sound: SoundscapeSound) -> usize {
+            app.world()
+                .resource::<ScheduledSounds>()
+                .0
+                .iter()
+                .filter(|queued| queued.sound == sound)
+                .count()
+        }
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_message::<SoundscapeCue>()
+            .init_resource::<ScheduledSounds>()
+            .init_resource::<CueCooldowns>()
+            .init_resource::<CivicBellState>()
+            .init_resource::<WellSoundState>()
+            .init_resource::<WorkSoundState>()
+            .insert_resource(clock(Office::Waning, Weekday::Second))
+            .add_systems(
+                Update,
+                (ingest_soundscape_cues, schedule_curfew_bell).chain(),
+            );
+
+        // The office edges into the Snuffing and the whole curfew is queued at
+        // once, a dusk grace ahead of its first stroke.
+        app.update();
+        *app.world_mut().resource_mut::<WorldClockState>() =
+            clock(Office::Snuffing, Weekday::Second);
+        app.update();
+        let curfew = usize::from(BellPattern::ScoldCurfew.plan().strokes);
+        assert_eq!(strokes(&app, SoundscapeSound::ScoldStroke), curfew);
+
+        // An officer cries a summons while that peal is still to come.
+        app.world_mut()
+            .write_message(SoundscapeCue::CivicBell(BellPattern::ScoldSummons));
+        app.update();
+        assert_eq!(
+            strokes(&app, SoundscapeSound::ScoldStroke),
+            curfew,
+            "five quick strokes among the nine would leave the curfew uncountable"
+        );
+
+        // Maren Smallvoice hangs in her own tower and is not held by the Scold.
+        app.world_mut()
+            .write_message(SoundscapeCue::CivicBell(BellPattern::NameKnell {
+                years: 3,
+            }));
+        app.update();
+        assert_eq!(strokes(&app, SoundscapeSound::SmallvoiceStroke), 3);
     }
 
     #[test]
@@ -5090,7 +5175,18 @@ mod tests {
             assert!(cooldowns.allow(key, 20.0, 1.0));
         }
         assert!(cooldowns.allow(999, 200.0, 1.0));
-        assert_eq!(cooldowns.last_allowed.len(), 1);
+        assert_eq!(cooldowns.free_at.len(), 1);
+
+        // A hold claims a window that has not begun yet, and a prune landing
+        // inside it must not clear it: an entry stamped ahead of now is a sound
+        // still to be heard, not a stale one.
+        cooldowns.hold(11, 300.0);
+        assert!(!cooldowns.allow(11, 299.9, 1.0));
+        assert!(cooldowns.allow(11, 300.0, 1.0));
+        // The longer sound keeps the floor.
+        cooldowns.hold(11, 310.0);
+        cooldowns.hold(11, 305.0);
+        assert!(!cooldowns.allow(11, 309.9, 1.0));
     }
 
     #[test]

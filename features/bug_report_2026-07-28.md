@@ -55,7 +55,7 @@ not five.
 - [F] **medium** `src/city/mod.rs:7338` — Wall-tower collider is the AABB of a 45-degree-rotated square: twice the visible footprint
 - [F] **medium** `src/scene.rs:425` — Outer aisle wall split does not line up with the transept: 3 m hole in the cathedral shell
 - [F] **medium** `src/scene.rs:983` — Baldachin's two front columns float 0.54 m above the altar steps
-- [ ] **medium** `src/soundscape.rs:1597` — Daily curfew peal never claims the Scold's cooldown, so a summons rings on top of it
+- [F] **medium** `src/soundscape.rs:1597` — Daily curfew peal never claims the Scold's cooldown, so a summons rings on top of it
 - [ ] **medium** `src/drive.rs:109` — drive `frame` ignores the camera's 0.65 m eye offset, aiming shots 0.65 m too high
 - [F] **medium** `src/smart_actors/mod.rs:1300` — `let_go` world event is never projected — the visible custody grip is never released
 - [F] **medium** `crates/cathedral-sim/src/actions.rs:3603` — `announce_grip`'s second-person branch is unreachable, so a prisoner is never told a hand landed on or left their arm *(found while fixing the above; not one of the 46 original findings)*
