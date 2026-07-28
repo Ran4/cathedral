@@ -133,6 +133,8 @@ pub struct NpcScheduler {
     /// This is deliberately separate from `priority_handoffs`: a background
     /// NPC reply can finish in the same poll as STT and hand its addressee the
     /// ordinary lane. That must not erase the listener the player just woke.
+    /// Separate lanes, one queue slot: no actor is ever in both at once, or the
+    /// two pops would spend two provider calls on the one turn's worth of news.
     player_reactions: VecDeque<ActorId>,
     in_flight: Option<InFlight>,
     /// A finished turn the floor would not let us apply yet.
@@ -298,7 +300,11 @@ impl NpcScheduler {
     /// An actor already queued is not queued twice: their one turn answers
     /// everything that has reached them, because the render drains the whole
     /// inbox. De-duplication is also what bounds the queue (by the cast size)
-    /// without a cap.
+    /// without a cap. It spans **both** lanes — somebody the player has already
+    /// woken needs nothing from this one, and a second slot here would buy a
+    /// paid provider call whose `since_your_last_turn` the earlier turn already
+    /// emptied. The lanes are split so a background handoff cannot *erase* the
+    /// player's listener, not so the same actor thinks twice.
     ///
     /// `immediate` collapses the remaining inter-turn/backoff delay. It never
     /// preempts the in-flight request and never bypasses floor gating; without
@@ -316,7 +322,7 @@ impl NpcScheduler {
         if actor.control() != Control::Llm || !world.is_present(actor_id) {
             return false;
         }
-        if !self.priority_handoffs.contains(actor_id) {
+        if !self.priority_handoffs.contains(actor_id) && !self.player_reactions.contains(actor_id) {
             self.priority_handoffs.push_back(actor_id.clone());
         }
         if immediate {
@@ -332,6 +338,11 @@ impl NpcScheduler {
     /// actor is already thinking, one queued follow-up remains necessary: that
     /// in-flight prompt cannot contain the words that arrived after it was
     /// rendered.
+    ///
+    /// The de-duplication is cross-lane and this lane wins: an ordinary handoff
+    /// still waiting for them is *absorbed* rather than left standing, because
+    /// the one turn we are queueing here drains the percept that handoff was
+    /// queued for too.
     pub fn prioritize_player_reaction(
         &mut self,
         world: &World,
@@ -344,6 +355,7 @@ impl NpcScheduler {
         if actor.control() != Control::Llm || !world.is_present(actor_id) {
             return false;
         }
+        self.priority_handoffs.retain(|queued| queued != actor_id);
         if !self.player_reactions.contains(actor_id) {
             self.player_reactions.push_back(actor_id.clone());
         }
@@ -847,7 +859,16 @@ impl NpcScheduler {
         None
     }
 
+    /// Put a player reaction that never reached the model back at the head of
+    /// its lane.
+    ///
+    /// Cross-lane like the two `prioritize`s, and for a reason only this path
+    /// has: the actor was *off* both queues while their prompt was out, so an
+    /// ordinary handoff could queue them in the meantime. The retry renders
+    /// after it and drains it, so leaving that slot standing would owe them a
+    /// second, contentless turn.
     fn requeue_player_reaction_front(&mut self, actor_id: &ActorId) {
+        self.priority_handoffs.retain(|queued| queued != actor_id);
         if let Some(index) = self
             .player_reactions
             .iter()
@@ -1369,6 +1390,57 @@ mod tests {
             scheduler.select_next_actor(IdleGate::All),
             Some((ActorId::from_raw("ambnt"), false))
         );
+    }
+
+    /// The two lanes are a priority split, not a second seat. An actor nudged
+    /// in both used to pop off each in turn: the first turn drained her whole
+    /// inbox answering the player, and the second was a paid provider call with
+    /// an empty `since_your_last_turn` that could also make her speak again
+    /// unprompted. The rotation is empty here, so every `Some` below is a lane.
+    #[test]
+    fn an_actor_queued_in_both_lanes_takes_a_single_turn() {
+        let mut world = World::new();
+        world.add_character(lore_character("major", Significance::Major));
+        let mut scheduler = NpcScheduler::new(Vec::new(), 0.0, 60.0, 0.0);
+        let major = ActorId::from_raw("major");
+
+        // The world nudges her first (a pocket percept in plain sight), and the
+        // player speaks to her a second later.
+        assert!(scheduler.prioritize(&world, &major, true, 0.0));
+        assert!(scheduler.prioritize_player_reaction(&world, &major, 1.0));
+        assert_eq!(
+            scheduler.select_next_actor(IdleGate::All),
+            Some((major.clone(), true)),
+            "the player's lane still wins the promotion"
+        );
+        assert_eq!(
+            scheduler.select_next_actor(IdleGate::All),
+            None,
+            "the nudge was absorbed by that turn, not left owing a second one"
+        );
+
+        // …and the other way round: the player wakes her, then a sound reaches
+        // her before she is selected.
+        assert!(scheduler.prioritize_player_reaction(&world, &major, 2.0));
+        assert!(
+            scheduler.prioritize(&world, &major, true, 2.0),
+            "the handoff is accepted — she will answer it — it just buys no slot"
+        );
+        assert_eq!(
+            scheduler.select_next_actor(IdleGate::All),
+            Some((major.clone(), true))
+        );
+        assert_eq!(scheduler.select_next_actor(IdleGate::All), None);
+
+        // The one window in which she is on neither queue is while her prompt
+        // is out; a handoff landing there must not survive the retry either.
+        assert!(scheduler.prioritize(&world, &major, false, 3.0));
+        scheduler.requeue_player_reaction_front(&major);
+        assert_eq!(
+            scheduler.select_next_actor(IdleGate::All),
+            Some((major.clone(), true))
+        );
+        assert_eq!(scheduler.select_next_actor(IdleGate::All), None);
     }
 
     #[test]

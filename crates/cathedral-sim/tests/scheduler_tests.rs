@@ -579,6 +579,47 @@ fn player_reaction_survives_a_same_poll_background_handoff() {
     assert_eq!(harness.prompted_names(), ["Sven", "Conny", "Ilse"]);
 }
 
+/// A world nudge and player speech reaching the same NPC buy her one turn, not
+/// one per lane. She used to pop off `player_reactions`, answer the player from
+/// a prompt whose render had drained her whole inbox, and then pop off
+/// `priority_handoffs` for a second paid provider call with an empty
+/// `since_your_last_turn` — which could also make her speak again unprompted.
+#[test]
+fn a_nudge_and_player_speech_to_the_same_actor_buy_one_turn() {
+    let mut harness = Harness::new(Box::new(noop), 0.0);
+    player_beside_sven(&mut harness.world);
+    harness.start();
+    harness.poll_pending(); // Sven's prompt is out, so nothing else is selected yet.
+
+    // Something Ilse can see happens — the ordinary lane…
+    assert!(
+        harness
+            .scheduler
+            .prioritize(&harness.world, &actor("k0fb1"), true, harness.now)
+    );
+    // …and then the player speaks to her — the protected one.
+    player_says(&mut harness.world, "k0fb1", "sorry about that");
+    assert!(harness.scheduler.prioritize_player_reaction(
+        &harness.world,
+        &actor("k0fb1"),
+        harness.now
+    ));
+
+    harness.poll_times(2);
+    // Ilse answers once, and the round robin then resumes at Conny instead of
+    // spending a third call on a contentless second Ilse turn.
+    assert_eq!(harness.prompted_names(), ["Sven", "Ilse", "Conny"]);
+    // The one turn she took really did carry both nudges' news.
+    assert!(
+        md_section(&harness.cognition.prompts[1], "since_your_last_turn")
+            .unwrap()
+            .iter()
+            .any(|line| line.contains("sorry about that")),
+        "{:?}",
+        md_section(&harness.cognition.prompts[1], "since_your_last_turn")
+    );
+}
+
 /// 19. `test_broadcast_say_leaves_round_robin_order_unchanged`
 #[test]
 fn broadcast_say_leaves_round_robin_order_unchanged() {
