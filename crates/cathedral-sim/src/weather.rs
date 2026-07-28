@@ -18,6 +18,14 @@ const DAYS_PER_HOUR: f64 = 1.0 / HOURS_PER_DAY;
 const MINUTES_PER_DAY: f64 = HOURS_PER_DAY * 60.0;
 const FRONT_LEAD_HOURS: f64 = 1.0;
 const FRONT_TAIL_HOURS: f64 = 1.5;
+/// How far back a shower can still be felt underfoot.  Six days of drying is
+/// worth at least ~18 hours of exponent even under permanent overcast, so the
+/// oldest episode in the window is down to under 2e-8 by the time it falls out
+/// of it — the same invisible step the old night-rate bound bought with sixteen.
+const WETNESS_WINDOW_DAYS: i64 = 6;
+/// The quadrature cell of the drying integral: one whole game hour, on a grid
+/// anchored to the absolute day axis rather than to the sample instant.
+const DRYING_STEP_HOURS: f64 = 1.0;
 
 /// The named state actors and diagnostics use.  Renderers should prefer the
 /// continuous fields on [`WeatherSample`].
@@ -487,7 +495,7 @@ impl WeatherTimeline {
 
         sample.kind = semantic;
         sample.semantic_revision = self.semantic_revision_at(time, semantic);
-        let (wetness, standing) = self.accumulated_water(time, &sample);
+        let (wetness, standing) = self.accumulated_water(time);
         sample.surface_wetness = wetness;
         sample.standing_water = standing;
         sample.visibility_m = visibility_for(&sample);
@@ -718,53 +726,142 @@ impl WeatherTimeline {
         })
     }
 
-    fn accumulated_water(&self, time: f64, current: &WeatherSample) -> (f64, f64) {
-        let mut dry_product = 1.0;
-        let mut standing = 0.0_f64;
+    /// Surface wetness and standing water underfoot at `time`.
+    ///
+    /// Drying is an **integral** over the hours since a shower ended, never one
+    /// instant's rate stretched backwards across them.  Sampling the rate once
+    /// and multiplying it by the whole elapsed window made a dry evening's
+    /// wetness *rise*: the moment dusk crossed the old night/day branch, hours
+    /// already spent in full sun were re-billed at the night rate, and a street
+    /// went from damp to soaked between two game minutes with no rain in it.
+    ///
+    /// The quadrature holds the rate constant across each whole game hour, on a
+    /// grid anchored to the absolute day axis.  The anchoring is the whole
+    /// trick: two samples of the same span always read the same cells, so
+    /// advancing `time` can only ever add to the exponent.  Wetness is therefore
+    /// monotonically non-increasing whenever nothing is falling, and continuous
+    /// through dusk and dawn.  Sampling stays independent of poll cadence.
+    fn accumulated_water(&self, time: f64) -> (f64, f64) {
         let day = time.floor() as i64;
-        // Night is the slowest drying case (0.045/hour). Sixteen days makes
-        // the oldest possible contribution smaller than 3e-8 before it falls
-        // out of this bounded analytic window, avoiding a visible midnight
-        // step while keeping sampling independent of poll cadence.
-        for episode_day in (day - 16)..=day {
+        // Every episode whose sky the sweep below has to read, materialised
+        // once: re-rolling the hashes per game hour would cost more than the
+        // integral itself.  Tomorrow's slot is in because a front's overcast
+        // lead reaches back across midnight.
+        let mut episodes: Vec<Episode> = Vec::with_capacity(2 * (WETNESS_WINDOW_DAYS as usize + 2));
+        for episode_day in (day - WETNESS_WINDOW_DAYS)..=(day + 1) {
             for slot in 0..2_u8 {
-                let Some(episode) = self.precipitation_episode(episode_day, slot) else {
-                    continue;
-                };
-                if time <= episode.rain_start {
-                    continue;
+                if let Some(episode) = self.precipitation_episode(episode_day, slot) {
+                    episodes.push(episode);
                 }
-                let dose = episode.rainfall_hours_until(time);
+            }
+        }
+        let mut showers: Vec<Shower> = episodes
+            .iter()
+            .filter(|episode| time > episode.rain_start)
+            .map(|episode| {
                 let wetting_rate = match episode.kind {
                     WeatherKind::Drizzle => 0.8,
                     WeatherKind::Rain => 3.0,
                     WeatherKind::Downpour | WeatherKind::Thunderstorm => 8.5,
                     _ => 0.0,
                 };
-                let saturated = 1.0 - (-dose * wetting_rate).exp();
-                let hours_since = ((time - episode.rain_end).max(0.0)) * HOURS_PER_DAY;
-                let daylight = summer_daylight(time.rem_euclid(1.0));
-                let wind = wind_speed(current.wind_xz_mps);
-                let drying_per_hour = if daylight < 0.08 {
-                    0.045
-                } else {
-                    0.10 + 0.42 * daylight * (1.0 - current.cloud_cover * 0.78)
-                        + 0.025 * wind.min(10.0)
-                };
-                let contribution = saturated * (-drying_per_hour * hours_since).exp();
-                dry_product *= 1.0 - contribution.clamp(0.0, 0.999_999);
+                let saturated = 1.0 - (-episode.rainfall_hours_until(time) * wetting_rate).exp();
+                Shower {
+                    // A shower still falling has spent no drying at all.
+                    ended_hours: episode.rain_end.min(time) * HOURS_PER_DAY,
+                    saturated,
+                    ponded: ((saturated - 0.55) / 0.45).clamp(0.0, 1.0),
+                }
+            })
+            .collect();
+        if showers.is_empty() {
+            return (0.0, 0.0);
+        }
+        // One sweep serves them all: walk the cursor through the endings in
+        // order, banking the running budgets as each one passes, and the
+        // integral from any ending to now is a difference of two totals.
+        showers.sort_by(|left, right| left.ended_hours.total_cmp(&right.ended_hours));
+        let mut cursor = showers[0].ended_hours;
+        let mut dried = 0.0_f64;
+        let mut drained = 0.0_f64;
+        let mut banked: Vec<(f64, f64)> = Vec::with_capacity(showers.len());
+        for shower in &showers {
+            let (since_dried, since_drained) =
+                self.integrate_drying(&episodes, cursor, shower.ended_hours);
+            dried += since_dried;
+            drained += since_drained;
+            cursor = cursor.max(shower.ended_hours);
+            banked.push((dried, drained));
+        }
+        let (since_dried, since_drained) =
+            self.integrate_drying(&episodes, cursor, time * HOURS_PER_DAY);
+        dried += since_dried;
+        drained += since_drained;
 
-                let ponded = ((saturated - 0.55) / 0.45).clamp(0.0, 1.0);
-                // 1–3 game hours to drain most standing water; dense overcast
-                // keeps the slow end of that range.
-                let drain_per_hour = lerp(0.9, 0.38, current.cloud_cover);
-                standing = standing.max(ponded * (-drain_per_hour * hours_since).exp());
-            }
+        let mut dry_product = 1.0_f64;
+        let mut standing = 0.0_f64;
+        for (shower, (dried_at_end, drained_at_end)) in showers.iter().zip(banked) {
+            let contribution = shower.saturated * (-(dried - dried_at_end)).exp();
+            dry_product *= 1.0 - contribution.clamp(0.0, 0.999_999);
+            standing = standing.max(shower.ponded * (-(drained - drained_at_end)).exp());
         }
         (
             (1.0 - dry_product).clamp(0.0, 1.0),
             standing.clamp(0.0, 1.0),
         )
+    }
+
+    /// The drying and draining budgets spent between two absolute game-hour
+    /// instants.  The rate is held constant across each whole hour of the fixed
+    /// grid, so the two halves of a split hour add up to exactly the whole one
+    /// and a caller may chain segments without the grid shifting under it.
+    ///
+    /// The loop is bounded by the episode window: the oldest ending it is ever
+    /// handed lies inside [`WETNESS_WINDOW_DAYS`] + 1 days of `to_hours`.
+    fn integrate_drying(&self, episodes: &[Episode], from_hours: f64, to_hours: f64) -> (f64, f64) {
+        if !from_hours.is_finite() || !to_hours.is_finite() || to_hours <= from_hours {
+            return (0.0, 0.0);
+        }
+        let mut dried = 0.0_f64;
+        let mut drained = 0.0_f64;
+        let first = from_hours.div_euclid(DRYING_STEP_HOURS) as i64;
+        let last = to_hours.div_euclid(DRYING_STEP_HOURS) as i64;
+        for cell in first..=last {
+            let cell_start = cell as f64 * DRYING_STEP_HOURS;
+            let span = to_hours.min(cell_start + DRYING_STEP_HOURS) - from_hours.max(cell_start);
+            if span <= 0.0 {
+                continue;
+            }
+            let at = (cell_start + 0.5 * DRYING_STEP_HOURS) * DAYS_PER_HOUR;
+            let (cloud, wind) = self.drying_sky(at, episodes);
+            dried += drying_per_hour(summer_daylight(at.rem_euclid(1.0)), cloud, wind) * span;
+            // 1–3 game hours to drain most standing water; dense overcast keeps
+            // the slow end of that range.
+            drained += lerp(0.9, 0.38, cloud) * span;
+        }
+        (dried, drained)
+    }
+
+    /// Cloud cover and wind speed as the drying integral sees them: the
+    /// continuous baseline, lifted by whatever front stood overhead at that
+    /// hour.  It rebuilds those two scalars the way [`Self::timeline_sample`]
+    /// does rather than calling it, since a sample is the thing being built.
+    /// Dawn fog is deliberately left out — a short bank whose own cloud lift is
+    /// small, and never worth a second episode search per hour.
+    fn drying_sky(&self, time: f64, episodes: &[Episode]) -> (f64, f64) {
+        let baseline = self.baseline_sample(time);
+        let mut cloud = baseline.cloud_cover;
+        let mut wind = baseline.wind_xz_mps;
+        for episode in episodes {
+            let envelope = episode.cloud_envelope(time);
+            if envelope <= 0.0 {
+                continue;
+            }
+            cloud = cloud.max(lerp(baseline.cloud_cover, 0.99, envelope));
+            wind[0] = lerp(wind[0], episode.wind[0], envelope);
+            wind[1] = lerp(wind[1], episode.wind[1], envelope);
+        }
+        (cloud, wind_speed(wind))
     }
 
     /// Lightning events crossed in `(previous, now]`.  A long catch-up returns
@@ -924,6 +1021,16 @@ struct Episode {
 #[derive(Debug, Clone, Copy)]
 struct EpisodePhase {
     kind: WeatherKind,
+}
+
+/// One past shower reduced to what the ground still remembers of it: when it
+/// stopped falling, how wet it got the stones, and how much of that stood in
+/// the hollows.  Everything else about the episode is spent by then.
+#[derive(Debug, Clone, Copy)]
+struct Shower {
+    ended_hours: f64,
+    saturated: f64,
+    ponded: f64,
 }
 
 impl Episode {
@@ -1098,12 +1205,8 @@ fn forced_sample(forced: ForcedWeather, time: f64) -> WeatherSample {
     };
     let new_wetness = 1.0 - (-elapsed_hours * precipitation * wetting_rate).exp();
     let daylight = summer_daylight(time.rem_euclid(1.0));
-    let drying_per_hour = if daylight < 0.08 {
-        0.045
-    } else {
-        0.10 + 0.42 * daylight * (1.0 - cloud * 0.78) + 0.025 * wind_speed(wind).min(10.0)
-    };
-    let inherited_wetness = forced.initial_wetness * (-drying_per_hour * elapsed_hours).exp();
+    let drying = drying_per_hour(daylight, cloud, wind_speed(wind));
+    let inherited_wetness = forced.initial_wetness * (-drying * elapsed_hours).exp();
     let wetness = 1.0 - (1.0 - inherited_wetness) * (1.0 - new_wetness);
     let new_standing = ((new_wetness - 0.55) / 0.45).clamp(0.0, 1.0);
     let inherited_standing = forced.initial_standing_water * (-0.62 * elapsed_hours).exp();
@@ -1196,6 +1299,20 @@ fn summer_daylight(fraction: f64) -> f64 {
     } else {
         1.0 - smoothstep((fraction - DUSK) / (NIGHT - DUSK))
     }
+}
+
+/// How much of a wet street one game hour takes off, as a continuous function
+/// of the sky over it.  Night is the floor; the sun, a thin sky and moving air
+/// each add to it.
+///
+/// The day terms fade in across the same narrow band of first light they used
+/// to switch on at, instead of stepping there.  A step in this rate is a step in
+/// the exponent every wet street in the city is drawn from, and the old
+/// `daylight < 0.08` branch put one at roughly 20:11 and 05:15 every day.
+fn drying_per_hour(daylight: f64, cloud_cover: f64, wind_mps: f64) -> f64 {
+    const NIGHT: f64 = 0.045;
+    let day = 0.10 + 0.42 * daylight * (1.0 - cloud_cover * 0.78) + 0.025 * wind_mps.min(10.0);
+    lerp(NIGHT, day, smoothstep(daylight / 0.08))
 }
 
 fn wind_speed(wind: [f64; 2]) -> f64 {
@@ -1646,6 +1763,89 @@ mod tests {
             }
         }
         assert!(witnessed, "the test window should contain a rain ending");
+    }
+
+    /// The fine sweep `semantic_revision_changes_only_at_actual_named_boundaries`
+    /// cannot do: it only ever looks at schedule boundaries, and the drying rate
+    /// changes with the light, which has no schedule.  Wetness is an integral of
+    /// that rate, so with nothing falling it may only ever go down, and it may
+    /// never travel far in one game minute even when something is.
+    #[test]
+    fn wetness_only_falls_in_dry_weather_and_never_jumps_in_a_minute() {
+        // A downpour's own wetting is the fastest legitimate move on either
+        // curve; the measured worst case across these seeds is about 0.066 for
+        // wetness, and standing water amplifies that by its 1/0.45 ponding
+        // slope.
+        const MAX_WETNESS_DELTA: f64 = 0.12;
+        const MAX_STANDING_DELTA: f64 = 0.28;
+        for seed in [437, 0, 99] {
+            let timeline = WeatherTimeline::new(WeatherConfig {
+                seed,
+                ..WeatherConfig::default()
+            });
+            let mut previous = timeline.sample(0.0);
+            for minute in 1..=(60 * 24 * 60) {
+                let time = minute as f64 / MINUTES_PER_DAY;
+                let now = timeline.sample(time);
+                let day = time.floor() as i64;
+                let hour = ((time - day as f64) * HOURS_PER_DAY).floor() as i64;
+                let where_ = format!("seed {seed}, day {day} {hour:02}h, minute {minute}");
+                for (name, before, after, bound) in [
+                    (
+                        "wetness",
+                        previous.surface_wetness,
+                        now.surface_wetness,
+                        MAX_WETNESS_DELTA,
+                    ),
+                    (
+                        "standing water",
+                        previous.standing_water,
+                        now.standing_water,
+                        MAX_STANDING_DELTA,
+                    ),
+                ] {
+                    assert!(
+                        (after - before).abs() <= bound,
+                        "{name} jumped {before:.4} -> {after:.4} in one minute at {where_}"
+                    );
+                    if previous.precipitation == 0.0 && now.precipitation == 0.0 {
+                        assert!(
+                            after <= before + 1.0e-9,
+                            "{name} rose {before:.4} -> {after:.4} with nothing falling at {where_}"
+                        );
+                    }
+                }
+                previous = now;
+            }
+        }
+    }
+
+    /// Dusk and dawn are the two instants the old hard `daylight < 0.08` branch
+    /// stepped the drying rate at, and it stepped it retroactively across every
+    /// hour already elapsed.  Wetness must cross them the way the light does.
+    #[test]
+    fn wetness_is_continuous_across_dusk_and_dawn() {
+        let timeline = WeatherTimeline::default();
+        for day in 0..14 {
+            // The band the sun crosses 8% in: about 05:15 and about 20:19.
+            for start_hour in [5.0_f64, 20.0] {
+                let start = day as f64 + start_hour * DAYS_PER_HOUR;
+                let mut previous = timeline.sample(start);
+                for second in 1..=(45 * 60) {
+                    let time = start + second as f64 / 86_400.0;
+                    let now = timeline.sample(time);
+                    if previous.precipitation == 0.0 && now.precipitation == 0.0 {
+                        assert!(
+                            (now.surface_wetness - previous.surface_wetness).abs() < 1.0e-3,
+                            "wetness stepped {:.4} -> {:.4} at day {day} {time}",
+                            previous.surface_wetness,
+                            now.surface_wetness,
+                        );
+                    }
+                    previous = now;
+                }
+            }
+        }
     }
 
     #[test]
