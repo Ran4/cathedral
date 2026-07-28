@@ -38,7 +38,7 @@ use super::{
     SmartActorSet,
     bridge::{BridgeCommand, BridgeHandle},
     hud::SmartActorHudState,
-    model::{ActorId, WorldMirror},
+    model::ActorId,
 };
 
 /// How much faster the meter drains than it fills, the moment you stop pulling.
@@ -78,7 +78,10 @@ pub struct CustodyView {
     pub officer_id: Option<ActorId>,
     pub officer_name: String,
     pub station_name: String,
-    /// The grip point the tether clamps around.
+    /// The grip point the tether clamps around — and, while nobody has hold
+    /// yet, the escorting officer's own position, which is what [`grab_reflex`]
+    /// measures arm's reach against. The sim republishes the whole standing
+    /// line whenever it moves, so unlike the mirror it is never stale.
     pub anchor_m: Vec3,
     /// The leash has been broken and the officer is coming to take hold. See
     /// [`grab_reflex`] for why this is a latch from the sim rather than a
@@ -291,11 +294,10 @@ fn standing_text(
 /// leaving the leash or by moving away.
 fn grab_reflex(
     state: Res<PlayerCustodyState>,
-    mirror: Option<Res<WorldMirror>>,
     player: Option<Single<(&PlayerController, &PhysicalPosition)>>,
     handle: Option<Res<BridgeHandle>>,
 ) {
-    let (Some(player), Some(handle), Some(mirror)) = (player, handle, mirror) else {
+    let (Some(player), Some(handle)) = (player, handle) else {
         return;
     };
     let Some(custody) = state.custody.as_ref() else {
@@ -309,11 +311,20 @@ fn grab_reflex(
     let Some(officer_id) = custody.officer_id.as_ref() else {
         return;
     };
-    let Some(officer) = mirror.actor(officer_id) else {
-        return;
-    };
     let here = position.current;
-    let officer_at: Vec3 = officer.position_m.into();
+    // Where the officer is *now*, which is [`CustodyView::anchor_m`] and never
+    // [`WorldMirror`]: nobody has hold yet — that is checked above — so the sim
+    // fills the anchor with the escort's own position and republishes the
+    // standing line with every step they take. The mirror cannot answer this at
+    // all, because walking rides the hot `Movement` channel and never bumps a
+    // revision, so it has the officer frozen wherever the last unrelated
+    // snapshot left them: for the whole walk from a seizure to a station that is
+    // wrong by far more than the radius being measured here, in both directions.
+    // (`hands::hold_the_seized` avoids the same trap by ordering itself after
+    // the hot channel has driven the bodies.) A drain lands the anchor in
+    // `PostUpdate` and this runs in `Update`, so it is one frame old at worst,
+    // which at an officer's 2.1 m/s is three centimetres.
+    let officer_at = custody.anchor_m;
     let separation = here.distance(officer_at);
     if separation > CUSTODY_REACH_M as f32 {
         return;
@@ -423,7 +434,9 @@ mod tests {
     use cathedral_sim::{custody::STRAIN_BASE_SECONDS, engine::PlayerNotice, notices::Rung};
     use crossbeam_channel::{Receiver, bounded};
 
-    use crate::smart_actors::model::{ActorControl, ActorSnapshot, Position, WorldSnapshot};
+    use crate::smart_actors::model::{
+        ActorControl, ActorSnapshot, Position, WorldMirror, WorldSnapshot,
+    };
 
     use super::*;
 
@@ -455,7 +468,11 @@ mod tests {
         }
     }
 
-    fn mirror_with(player_at: Vec3, officer_at: Vec3) -> WorldMirror {
+    /// The cold snapshot, and the reason it is here at all: neither custody
+    /// system may read a walking officer out of it. It carries a deliberately
+    /// separate `snapshot_officer_at` so a test can put the mirror's officer
+    /// somewhere the live one is not.
+    fn mirror_with(player_at: Vec3, snapshot_officer_at: Vec3) -> WorldMirror {
         let mut mirror = WorldMirror::default();
         mirror
             .replace_snapshot(WorldSnapshot {
@@ -463,7 +480,7 @@ mod tests {
                 player_id: ActorId("player".into()),
                 actors: vec![
                     actor("player", ActorControl::Player, player_at),
-                    actor("sergeant0", ActorControl::Llm, officer_at),
+                    actor("sergeant0", ActorControl::Llm, snapshot_officer_at),
                 ],
                 items: vec![],
                 offers: vec![],
@@ -502,6 +519,11 @@ mod tests {
     /// engine, no provider. The player entity carries a real `PlayerController`
     /// because both systems ask it for the world-frame velocity — pressing a key
     /// into a wall is neither fleeing nor pulling, and only the velocity knows.
+    ///
+    /// The mirror is inserted even though nothing here may use it: where it puts
+    /// the officer is the trap, not the answer (see [`mirror_with`]). Every test
+    /// but one passes the same point twice, because the two only diverge once
+    /// somebody walks.
     struct CustodyApp {
         app: App,
         commands: Receiver<BridgeCommand>,
@@ -511,14 +533,14 @@ mod tests {
         state: PlayerCustodyState,
         controller: PlayerController,
         player_at: Vec3,
-        officer_at: Vec3,
+        snapshot_officer_at: Vec3,
     ) -> CustodyApp {
         let (sender, commands) = bounded(64);
         let mut app = App::new();
         app.init_resource::<Time>()
             .init_resource::<ControllerInput>()
             .insert_resource(state)
-            .insert_resource(mirror_with(player_at, officer_at))
+            .insert_resource(mirror_with(player_at, snapshot_officer_at))
             .insert_resource(BridgeHandle::new(sender, PathBuf::from("/tmp")));
         app.world_mut().spawn((
             controller,
@@ -807,6 +829,58 @@ mod tests {
         app.frame();
 
         assert!(app.sent().is_empty());
+    }
+
+    /// The officer's half of the same 3 m test has to be as live as the player's,
+    /// and the cold snapshot cannot supply it: walking rides the hot `Movement`
+    /// channel, which never bumps a revision, so a mirror written when the
+    /// seizure was declared still has the officer standing at the seizure point
+    /// for the whole walk to the station. Both ways round are reachable in an
+    /// ordinary arrest, and both are worse than the reflex not existing: the
+    /// officer who is really there never takes hold, and the one who is really
+    /// thirty metres up the street grabs a player who walked over her ghost.
+    #[test]
+    fn the_reflex_measures_the_officer_where_they_are_now_and_not_where_a_snapshot_left_them() {
+        let player_at = Vec3::new(CUSTODY_REACH_M as f32 - 0.1, 0.9, 0.0);
+        let beside_the_player = Vec3::new(0.0, 0.9, 0.0);
+        let up_the_street = Vec3::new(30.0, 0.9, 0.0);
+
+        // She strayed after them, closed the distance on her own two feet, and
+        // is now at arm's reach — however old the snapshot behind her is.
+        let mut closed_on = custody_app(
+            closing_on_you(beside_the_player),
+            // Standing still: it is the latch that fires this, not the flight.
+            PlayerController::moving_at(Vec3::ZERO),
+            player_at,
+            up_the_street,
+        );
+
+        closed_on.frame();
+
+        assert_eq!(
+            closed_on.sent(),
+            vec![BridgeCommand::PlayerGrabbed {
+                holder_id: officer_id()
+            }],
+            "the officer standing right there never takes hold"
+        );
+
+        // And the mirror image: the player has wandered back over the point the
+        // snapshot froze her at while she is still up the street, and a grab
+        // from thirty metres away is exactly the lasso this reflex is not.
+        let mut walked_off = custody_app(
+            closing_on_you(up_the_street),
+            PlayerController::moving_at(Vec3::ZERO),
+            player_at,
+            beside_the_player,
+        );
+
+        walked_off.frame();
+
+        assert!(
+            walked_off.sent().is_empty(),
+            "an officer thirty metres off took hold of somebody"
+        );
     }
 
     // --------------------------------------------------------- the strain meter
