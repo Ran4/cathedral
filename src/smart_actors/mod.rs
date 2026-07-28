@@ -997,12 +997,12 @@ fn process_engine_message(
             // unrenderable — a sim bug, not a lost message, and there is no
             // resync left to ask for. The handshake simply never completes and
             // the HUD keeps saying so.
-            if accept_snapshot(&mut **mirror, runtime, hud, &snapshot) {
+            if accept_snapshot(&mut **mirror, runtime, hud, movement_inbox, &snapshot) {
                 apply_ready_capabilities(runtime, hud, capabilities);
             }
         }
         EngineMessage::Snapshot(snapshot) => {
-            accept_snapshot(&mut **mirror, runtime, hud, &snapshot);
+            accept_snapshot(&mut **mirror, runtime, hud, movement_inbox, &snapshot);
         }
         EngineMessage::Clock {
             day,
@@ -1553,11 +1553,13 @@ fn accept_snapshot(
     mirror: &mut model::WorldMirror,
     runtime: &mut SmartActorRuntime,
     hud: &mut hud::SmartActorHudState,
+    movement_inbox: &mut model::MovementInbox,
     snapshot: &cathedral_sim::PublicSnapshot,
 ) -> bool {
     match mirror.replace_snapshot(snapshot.into()) {
         Ok(revision) => {
             runtime.mirror_revision = Some(revision);
+            retire_superseded_movement(mirror, movement_inbox);
             true
         }
         Err(error) => {
@@ -1565,6 +1567,38 @@ fn accept_snapshot(
             false
         }
     }
+}
+
+/// Drops the hot-channel samples the snapshot just accepted has overruled.
+///
+/// The two channels are allowed to disagree in exactly one direction: between
+/// revisions the mirror's position for a walker is stale, and
+/// `actors::drive_npc_bodies` winning over it is the whole point of the split.
+/// But the sim also moves people by paths that emit no 20 Hz `Movement` tick at
+/// all — a `commit` teleport into the Stone House, a road party re-entering at
+/// its gate — and then the snapshot is the *newer* of the two. Nothing else ever
+/// removes an entry here, so without this the sample from before the reposition
+/// would drag the body back out into the street it was last walking down and
+/// keep it there: reconcile only runs on a revision bump, and the interpolation
+/// clamps at the pose it already reached.
+///
+/// The rule is that a walker's two channels agree exactly. A poll steps the
+/// movers before it takes the snapshot, and both readings come from the same
+/// `position_m()` through the same `as f32`, so anyone whose sample does *not*
+/// match was put where they now stand by something other than a walk. Somebody
+/// who has left the mirror altogether — a departed road party, whose actor view
+/// reconcile has just despawned — has no authoritative position to agree with,
+/// and goes too: that is what stops a stale pre-departure sample sliding them
+/// off the gate they re-enter at.
+fn retire_superseded_movement(
+    mirror: &model::WorldMirror,
+    movement_inbox: &mut model::MovementInbox,
+) {
+    movement_inbox.0.retain(|actor_id, sample| {
+        mirror
+            .actor(actor_id)
+            .is_some_and(|actor| Vec3::from(actor.position_m) == sample.position)
+    });
 }
 
 fn next_tts_backend(runtime: &SmartActorRuntime) -> bridge::TtsBackend {
@@ -3192,6 +3226,228 @@ mod tests {
         let sim = engine.world_mut().expect("the engine is live");
         assert!(sim.custody.holds(&ilse), "she is still in the law's charge");
         assert!(!sim.custody.is_held(&ilse), "but nobody has hold of her");
+    }
+
+    /// Holds one of the cast at a fixed pose, exactly as `Engine::debug_commit`
+    /// leaves somebody it has teleported: position, path and errand written in
+    /// one poll, and the world revision bumped for it. Re-applied every frame
+    /// because the round goes on running underneath — otherwise an errand laid
+    /// mid-test would walk the subject off and the two channels would be
+    /// disagreeing about something other than the thing under test.
+    fn hold_actor_at(app: &mut App, actor_id: &cathedral_sim::ActorId, at: Vec3, frames: usize) {
+        for _ in 0..frames {
+            {
+                let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+                let sim = engine.world_mut().expect("the engine is live");
+                let character = sim
+                    .characters
+                    .get_mut(actor_id)
+                    .expect("the actor is in the seeded cast");
+                character.state.position_m =
+                    cathedral_sim::Vec3::new(at.x.into(), at.y.into(), at.z.into());
+                character.state.movement = None;
+                character.state.intent = None;
+                sim.touch_public_state();
+            }
+            app.update();
+        }
+    }
+
+    /// Where the renderer is actually drawing somebody this frame, or `None`
+    /// while the projection has no body for them at all.
+    fn projected_body(app: &mut App, id: &str) -> Option<Vec3> {
+        let world = app.world_mut();
+        world
+            .query_filtered::<(&model::ActorId, &Transform), With<actors::ActorView>>()
+            .iter(world)
+            .find(|(actor_id, _)| actor_id.0 == id)
+            .map(|(_, transform)| transform.translation)
+    }
+
+    /// Asserts the drawn body stands where the authoritative pose says it does.
+    /// Deliberately not an exact compare: interpolating between two samples of
+    /// the same pose still costs `Vec3::lerp` a float ULP, and every failure
+    /// these tests guard against is hundreds of metres wide.
+    fn assert_body_stands_at(app: &mut App, id: &str, expected: Vec3, note: &str) {
+        let body = projected_body(app, id).expect("the actor has a projected body");
+        let drift = body.distance(expected);
+        assert!(drift < 0.01, "{note}: {drift} m off {expected}");
+    }
+
+    /// The snapshot outranks a hot-channel sample it disagrees with.
+    ///
+    /// Between revisions the mirror's position for a walker is stale and
+    /// `actors::drive_npc_bodies` overriding it is the whole point of the
+    /// hot/cold split — but the sim also moves people by paths that ship no
+    /// 20 Hz tick at all, and the documented one is the drive script's `commit`
+    /// teleport into the Stone House. Nothing used to retire the sample from
+    /// before such a move, so the body was written straight back out into the
+    /// street it had been walking down and stood there until some errand
+    /// happened to give it a new walk: `shot cell` photographed an empty cell.
+    #[test]
+    fn a_reposition_in_the_snapshot_retires_the_stale_movement_sample() {
+        let mut app = ready_fake_plugin_app();
+        let ilse = cathedral_sim::ActorId::from_raw("k0fb1");
+        let street = Vec3::new(12.0, 0.91, 140.0);
+        let gaol = Vec3::new(44.5, 0.91, -207.2);
+
+        hold_actor_at(&mut app, &ilse, street, 4);
+        assert_body_stands_at(
+            &mut app,
+            "k0fb1",
+            street,
+            "the projection has her out in the street",
+        );
+
+        // The walk she is on when the sim moves her: one 20 Hz sample, written
+        // exactly as the `Movement` arm writes one.
+        {
+            let mut inbox = app.world_mut().resource_mut::<model::MovementInbox>();
+            let sample = inbox.0.entry(model::ActorId("k0fb1".into())).or_default();
+            sample.position = street;
+            sample.speed = 2.1;
+            sample.seq = sample.seq.wrapping_add(1);
+        }
+        app.update();
+        app.update();
+        assert_body_stands_at(
+            &mut app,
+            "k0fb1",
+            street,
+            "and the hot channel is what is driving her body",
+        );
+
+        // A revision bump that does not move her must not cost her that sample:
+        // agreeing with the snapshot is precisely what an ordinary walker does.
+        {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            engine
+                .world_mut()
+                .expect("the engine is live")
+                .touch_public_state();
+        }
+        app.update();
+        app.update();
+        assert!(
+            app.world()
+                .resource::<model::MovementInbox>()
+                .0
+                .contains_key(&model::ActorId("k0fb1".into())),
+            "a snapshot that agrees with the sample leaves it alone"
+        );
+
+        // …and now the teleport `commit` is: she is inside the Stone House, and
+        // no movement tick ever said so.
+        hold_actor_at(&mut app, &ilse, gaol, 4);
+        assert_body_stands_at(
+            &mut app,
+            "k0fb1",
+            gaol,
+            &format!(
+                "the snapshot outranks a sample from {} m up the street",
+                street.distance(gaol).round()
+            ),
+        );
+
+        // And the half-finished sweep went with the sample. Left behind, her
+        // next step would open from the street pose it is still holding — and
+        // its `seq` could even match the re-created channel's and be read as a
+        // re-read of the tick that made it.
+        let world = app.world_mut();
+        assert!(
+            world
+                .query_filtered::<&model::ActorId, With<actors::NpcMotion>>()
+                .iter(world)
+                .all(|actor_id| actor_id.0 != "k0fb1"),
+            "the interpolation the snapshot overruled was dropped with it"
+        );
+    }
+
+    /// The same rule for the road parties, which is where it bites without a
+    /// drive script. A carrier who leaves the city drops out of the snapshot and
+    /// their actor view is despawned; when they re-enter at their gate they get
+    /// a fresh entity standing on `party.gate_point`. The sample from the walk
+    /// they departed on is still in the inbox, so the first thing the new body
+    /// used to do was slide off the gate and back to wherever they had been days
+    /// before.
+    #[test]
+    fn re_entering_at_a_gate_is_not_undone_by_a_pre_departure_sample() {
+        let mut app = ready_fake_plugin_app();
+        let ilse = cathedral_sim::ActorId::from_raw("k0fb1");
+        let street = Vec3::new(12.0, 0.91, 140.0);
+        let gate = Vec3::new(-4.0, 0.91, 246.0);
+
+        hold_actor_at(&mut app, &ilse, street, 4);
+        {
+            let mut inbox = app.world_mut().resource_mut::<model::MovementInbox>();
+            let sample = inbox.0.entry(model::ActorId("k0fb1".into())).or_default();
+            sample.position = street;
+            sample.speed = 2.1;
+            sample.seq = sample.seq.wrapping_add(1);
+        }
+        app.update();
+        assert_body_stands_at(
+            &mut app,
+            "k0fb1",
+            street,
+            "she is on the street with a live sample under her",
+        );
+
+        // Out through the gate with the party. She leaves the snapshot entirely,
+        // and her body with it.
+        {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            engine
+                .world_mut()
+                .expect("the engine is live")
+                .transition_presence(
+                    std::slice::from_ref(&ilse),
+                    cathedral_sim::Presence::BeyondTheWalls,
+                    &std::collections::BTreeMap::new(),
+                )
+                .expect("she may leave the city");
+        }
+        app.update();
+        app.update();
+        assert_eq!(
+            projected_body(&mut app, "k0fb1"),
+            None,
+            "her actor view went with her"
+        );
+        assert!(
+            !app.world()
+                .resource::<model::MovementInbox>()
+                .0
+                .contains_key(&model::ActorId("k0fb1".into())),
+            "and so did the sample: an actor the snapshot no longer carries has \
+             no authoritative pose for one to agree with"
+        );
+
+        // …and back in days later, on the gate point the party re-enters at.
+        {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let mut entry = std::collections::BTreeMap::new();
+            entry.insert(
+                ilse.clone(),
+                cathedral_sim::Vec3::new(gate.x.into(), gate.y.into(), gate.z.into()),
+            );
+            engine
+                .world_mut()
+                .expect("the engine is live")
+                .transition_presence(
+                    std::slice::from_ref(&ilse),
+                    cathedral_sim::Presence::InCity,
+                    &entry,
+                )
+                .expect("she may come home");
+        }
+        hold_actor_at(&mut app, &ilse, gate, 4);
+        assert_body_stands_at(
+            &mut app,
+            "k0fb1",
+            gate,
+            "the new body stands on the gate it entered at",
+        );
     }
 
     /// The seam's acceptance test: the whole plugin, the in-process engine, and

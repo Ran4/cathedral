@@ -215,24 +215,36 @@ pub(crate) fn reconcile_actor_views(
 ///
 /// Runs after `reconcile_actor_views` (same `ReconcileMirror` set), which writes
 /// a mover's *stale* snapshot position on every revision bump; this corrects it
-/// the same frame. Non-movers never appear in `MovementInbox`, so they are left
-/// entirely to reconcile. Children (body parts, labels) ride the root
-/// automatically. This only moves and turns the root; `speed`/`gait_phase` are
-/// deliberately unread *here* — the walk cycle they drive lives on the part
-/// transforms, in `body::animate_body_pose` (npc_bodies M1), which keeps its
-/// own two-sample history because this component's fields are private.
+/// the same frame. Only while the two channels describe the same walk, though:
+/// a sample the snapshot has overruled — a teleport, a re-entry at a gate — is
+/// dropped from the inbox as that snapshot lands (`retire_superseded_movement`),
+/// and the branch below forgets the half-finished sweep with it. (Which is why
+/// this no longer skips a whole frame on an empty inbox: retiring samples is
+/// exactly what empties it, and the sweeps left behind still have to go.)
+/// Non-movers never appear in `MovementInbox`, so they are left to reconcile.
+/// Children (body parts, labels) ride the root automatically. This only moves
+/// and turns the root; `speed`/`gait_phase` are deliberately unread *here* — the
+/// walk cycle they drive lives on the part transforms, in
+/// `body::animate_body_pose` (npc_bodies M1), which keeps its own two-sample
+/// history because this component's fields are private.
 pub(crate) fn drive_npc_bodies(
     mut commands: Commands,
     time: Res<Time>,
     inbox: Res<MovementInbox>,
     mut movers: Query<(Entity, &ActorId, &mut Transform, Option<&mut NpcMotion>), With<ActorView>>,
 ) {
-    if inbox.0.is_empty() {
-        return;
-    }
     let now = time.elapsed_secs_f64();
     for (entity, actor_id, mut transform, motion) in &mut movers {
         let Some(sample) = inbox.0.get(actor_id) else {
+            // Either a non-mover, who never had a sample, or somebody whose
+            // sample the snapshot just overruled and `retire_superseded_movement`
+            // removed. Reconcile has already placed them authoritatively this
+            // frame, so the transform is right and the only thing left is to
+            // forget the sweep that lost: kept, it would resume from the pose
+            // they were teleported out of the moment they walk again.
+            if motion.is_some() {
+                commands.entity(entity).remove::<NpcMotion>();
+            }
             continue;
         };
         match motion {
