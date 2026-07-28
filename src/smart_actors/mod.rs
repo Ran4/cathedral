@@ -1316,7 +1316,6 @@ fn process_engine_message(
             // command rather than being applied locally.
             custody::apply_law_standing(
                 law,
-                hud,
                 &notices,
                 custody.map(|custody| custody::CustodyView {
                     holder_ids: custody
@@ -2849,6 +2848,96 @@ mod tests {
             .expect("the standing line has a text entity");
         assert!(text.0.contains("TAKEN YOU IN CHARGE"), "got {:?}", text.0);
         assert_eq!(node.display, Display::Flex, "and it is not hidden");
+    }
+
+    /// …and so does the meter (`law_and_order.md` M4d). The strain bar is the
+    /// host's half of that same line — the sim owns the words, the host owns the
+    /// pull — and the two have to be composed by **one** writer, downstream of
+    /// the drain, because the sim's half arrives constantly: `anchor_m` follows
+    /// the grip, so every step an escorting officer takes republishes
+    /// `LawStanding`. A bar written earlier in the frame is thrown away before
+    /// anybody can see it, in precisely the situation the meter exists for.
+    #[test]
+    fn the_strain_bar_survives_the_standing_line_a_walking_officer_republishes() {
+        let mut app = ready_fake_plugin_app();
+        let ashe = cathedral_sim::ActorId::from_raw("p009x");
+        let stand_ashe_at = |app: &mut App, at: cathedral_sim::Vec3| {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let sim = engine.world_mut().expect("the engine is live");
+            sim.characters
+                .get_mut(&ashe)
+                .expect("Havise Ashe is in the seeded cast")
+                .state
+                .position_m = at;
+        };
+        // The standing line the sim has settled on, once it says `needle`.
+        let settle_on = |app: &mut App, needle: &str| {
+            let deadline = std::time::Instant::now() + Duration::from_secs(5);
+            while std::time::Instant::now() < deadline
+                && !app
+                    .world()
+                    .resource::<hud::SmartActorHudState>()
+                    .law_standing_text()
+                    .contains(needle)
+            {
+                app.update();
+                thread::sleep(Duration::from_millis(5));
+            }
+            let line = app
+                .world()
+                .resource::<hud::SmartActorHudState>()
+                .law_standing_text()
+                .to_string();
+            assert!(line.contains(needle), "expected {needle:?}, got {line:?}");
+        };
+
+        // Beside the player, taken in charge, and then a hand on the arm — the
+        // command the host's own grab reflex sends.
+        stand_ashe_at(&mut app, cathedral_sim::Vec3::new(1.0, 0.91, 111.0));
+        app.world()
+            .resource::<bridge::BridgeHandle>()
+            .try_send(bridge::BridgeCommand::DebugSeize {
+                officer: "Havise Ashe".into(),
+                target: None,
+            })
+            .expect("the command queue has room");
+        settle_on(&mut app, "TAKEN YOU IN CHARGE");
+        app.world()
+            .resource::<bridge::BridgeHandle>()
+            .try_send(bridge::BridgeCommand::PlayerGrabbed {
+                holder_id: model::ActorId("p009x".into()),
+            })
+            .expect("the command queue has room");
+        settle_on(&mut app, "HELD BY");
+
+        // Half a meter's worth of pulling. This harness has no controller
+        // plugin, so `strain_meter` never pumps — its arithmetic is unit-tested
+        // in `custody.rs`, and what is on trial here is only whether a meter the
+        // player has filled survives to the screen.
+        app.world_mut()
+            .resource_mut::<custody::PlayerCustodyState>()
+            .strain = 0.5;
+        // Havise takes a step, which is all it takes: the grip point moved, so
+        // the sim republishes the whole standing line in this frame's drain.
+        stand_ashe_at(&mut app, cathedral_sim::Vec3::new(1.4, 0.91, 111.0));
+        app.update();
+
+        let line = app
+            .world()
+            .resource::<hud::SmartActorHudState>()
+            .law_standing_text()
+            .to_string();
+        assert!(line.contains("HELD BY"), "got {line:?}");
+        assert!(
+            line.contains("[#####-----]"),
+            "the meter the player filled is still on the line, got {line:?}"
+        );
+        let world = app.world_mut();
+        let (text, _) = world
+            .query_filtered::<(&Text, &Node), With<hud::LawStandingText>>()
+            .single(world)
+            .expect("the standing line has a text entity");
+        assert!(text.0.contains("[#####-----]"), "got {:?}", text.0);
     }
 
     /// The seam's acceptance test: the whole plugin, the in-process engine, and

@@ -35,6 +35,7 @@ use cathedral_sim::custody::{CUSTODY_LEASH_M, CUSTODY_REACH_M, CUSTODY_TETHER_M}
 use crate::controller::{ControllerInput, PhysicalPosition, PlayerController};
 
 use super::{
+    SmartActorSet,
     bridge::{BridgeCommand, BridgeHandle},
     hud::SmartActorHudState,
     model::{ActorId, WorldMirror},
@@ -60,6 +61,11 @@ pub struct PlayerCustodyState {
     pub custody: Option<CustodyView>,
     /// `0..=1`. Filled by pulling away from the grip, drained by not.
     pub strain: f32,
+    /// The words against the player, kept here beside the custody they are
+    /// drawn with. Both halves of the standing line have to live in one place
+    /// for [`law_standing_hud`] to be its one writer — see there for why it
+    /// must be.
+    notices: Vec<cathedral_sim::engine::PlayerNotice>,
     /// Whether the sim has already been told this pull started, so it is told
     /// once and not at 120 Hz.
     struggling_reported: bool,
@@ -141,32 +147,39 @@ pub(super) struct PlayerCustodyPlugin;
 
 impl Plugin for PlayerCustodyPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<PlayerCustodyState>().add_systems(
-            Update,
-            (grab_reflex, strain_meter, law_standing_hud).chain(),
-        );
+        app.init_resource::<PlayerCustodyState>()
+            .add_systems(Update, (grab_reflex, strain_meter).chain())
+            // The line itself is drawn after the drain has landed the sim's
+            // half of it and before the HUD is presented, because that is the
+            // only window in the frame where both halves are current. See
+            // [`law_standing_hud`].
+            .add_systems(
+                PostUpdate,
+                law_standing_hud
+                    .after(SmartActorSet::DrainBridge)
+                    .before(SmartActorSet::Present),
+            );
     }
 }
 
-/// Take the sim's word for the player's standing, and put the standing line on
-/// screen. The line always names what would clear each word: a brand with a
-/// visible door is a story, a brand with no door is a bug.
+/// Take the sim's word for the player's standing. The words themselves reach
+/// the screen through [`law_standing_hud`], once the meter has also had its say
+/// this frame; nothing here writes the HUD.
 pub(super) fn apply_law_standing(
     state: &mut PlayerCustodyState,
-    hud: &mut SmartActorHudState,
     notices: &[cathedral_sim::engine::PlayerNotice],
     custody: Option<CustodyView>,
 ) {
     let was_held = state.custody.as_ref().is_some_and(|custody| custody.held);
     let now_held = custody.as_ref().is_some_and(|custody| custody.held);
     state.custody = custody;
+    state.notices = notices.to_vec();
     if was_held && !now_held {
         // Somebody let go, or the dead-man timer did; the meter starts fresh
         // for the next pair of hands.
         state.strain = 0.0;
         state.struggling_reported = false;
     }
-    hud.set_law_standing(standing_text(notices, state.custody.as_ref()));
 }
 
 /// The committed line's header: where they are kept, who keeps them, and what
@@ -184,13 +197,12 @@ fn committed_header(custody: &CustodyView) -> String {
     line
 }
 
-/// The doors out of a commitment, in the order you would try them. Shared by
-/// [`standing_text`] and [`law_standing_hud`] rather than written twice,
-/// because the second one **replaces** the whole standing line while a hand is
-/// on the arm — so a committed player who gets grabbed heading for the door
-/// would otherwise lose the bell, the fee and the surety hint at exactly the
-/// moment they most need them, which is the "never a mystery box" rule failing
-/// in its worst case.
+/// The doors out of a commitment, in the order you would try them. Its own
+/// function because the committed line owes them in *every* state a committed
+/// player can be in, hand on the arm included — somebody grabbed heading for
+/// the doorway must not lose the bell, the fee and the surety hint at exactly
+/// the moment they most need them, which is the "never a mystery box" rule
+/// failing in its worst case.
 fn committed_doors(custody: &CustodyView) -> String {
     let bell = match &custody.release_office {
         Some(office) => format!("You go at {office}."),
@@ -203,12 +215,17 @@ fn committed_doors(custody: &CustodyView) -> String {
     )
 }
 
-/// The standing line itself. Custody first — it is what the player is doing
-/// right now — then the words against them, worst rung first, each with its own
-/// door named.
+/// The standing line itself, whole: custody first — it is what the player is
+/// doing right now — then the meter, if there is a hand to pull against, then
+/// the words against them, worst rung first, each with its own door named.
+///
+/// The meter belongs *in here* rather than in a second write over the top,
+/// because the two are one line: a writer that knew only the strain would drop
+/// the notices, and a writer that knew only the sim's word would drop the bar.
 fn standing_text(
     notices: &[cathedral_sim::engine::PlayerNotice],
     custody: Option<&CustodyView>,
+    strain: f32,
 ) -> String {
     let mut lines: Vec<String> = Vec::new();
     if let Some(custody) = custody {
@@ -230,6 +247,20 @@ fn standing_text(
         // Three doors and a bell, in the order you would try them.
         if custody.committed {
             lines.push(committed_doors(custody));
+        }
+        // The meter, so pulling reads as progress rather than as nothing
+        // happening. A committed player can be taken hold of too — the keeper's
+        // answer to somebody walking for the door — and there the bar needs its
+        // own invitation, because the header above it is about the room and not
+        // about the grip.
+        if custody.held {
+            let filled = (strain.clamp(0.0, 1.0) * 10.0).round() as usize;
+            let bar = format!("[{}{}]", "#".repeat(filled), "-".repeat(10 - filled));
+            lines.push(if custody.committed {
+                format!("Pull away to struggle free  {bar}")
+            } else {
+                bar
+            });
         }
         // The leash, explained once, the first time it is ever drawn.
         if !custody.committed && !custody.held {
@@ -366,32 +397,23 @@ fn strain_meter(
     }
 }
 
-/// While a hand is on the arm, the standing line carries the meter, so pulling
-/// reads as progress rather than as nothing happening.
+/// The **one** writer of the standing line, and the reason it is a system at
+/// all: its two halves move on different clocks. The sim's words land in
+/// [`SmartActorSet::DrainBridge`] and land often — `anchor_m` follows the grip,
+/// so an escorting officer republishes them with every step — while the meter
+/// that [`strain_meter`] fills moves every frame. Composed anywhere but here,
+/// after that drain and before [`SmartActorSet::Present`] draws it, one of the
+/// two writes wins the frame and the other is discarded unseen; the bar is the
+/// half that used to lose, in precisely the situation it exists for.
 fn law_standing_hud(state: Res<PlayerCustodyState>, mut hud: ResMut<SmartActorHudState>) {
     if !state.is_changed() {
         return;
     }
-    let Some(custody) = state.custody.as_ref().filter(|custody| custody.held) else {
-        return;
-    };
-    let filled = (state.strain * 10.0).round() as usize;
-    let bar = format!("[{}{}]", "#".repeat(filled), "-".repeat(10 - filled));
-    // A committed player can be taken hold of too — the keeper's answer to
-    // somebody walking for the door — and this system replaces the whole
-    // standing line, so it has to carry the doors that line was promising.
-    hud.set_law_standing(if custody.committed {
-        format!(
-            "{}\n{}\nPull away to struggle free  {bar}",
-            committed_header(custody),
-            committed_doors(custody)
-        )
-    } else {
-        format!(
-            "HELD BY {} — pull away to struggle free\n{bar}",
-            custody.officer_name.to_uppercase()
-        )
-    });
+    hud.set_law_standing(standing_text(
+        &state.notices,
+        state.custody.as_ref(),
+        state.strain,
+    ));
 }
 
 #[cfg(test)]
@@ -543,6 +565,28 @@ mod tests {
         fn sent(&self) -> Vec<BridgeCommand> {
             self.commands.try_iter().collect()
         }
+    }
+
+    // ------------------------------------------------------------- the plugin
+
+    /// The custody plugin is added even when smart actors are switched off in
+    /// `config.ron` — `controller.rs` reads the tether every fixed step, and with
+    /// no engine it is simply always empty. That is also the one build where
+    /// `SmartActorSet` is never configured, so the standing line's ordering has
+    /// to be a constraint the schedule can satisfy against nothing.
+    #[test]
+    fn the_plugin_builds_with_the_smart_actor_sets_absent() {
+        let mut app = App::new();
+        // The two the host already guarantees: the meter's clock, and the HUD
+        // seam, which is initialised whether or not smart actors are on.
+        app.init_resource::<Time>()
+            .init_resource::<SmartActorHudState>()
+            .add_plugins(PlayerCustodyPlugin);
+
+        app.update();
+
+        let state = app.world().resource::<PlayerCustodyState>();
+        assert!(state.custody.is_none());
     }
 
     // ------------------------------------------------------------- the tether
@@ -979,11 +1023,10 @@ mod tests {
         app.pump(3.0, true);
         assert!(app.strain() > 0.5);
 
-        let mut hud = SmartActorHudState::default();
         {
             let world = app.app.world_mut();
             let mut state = world.resource_mut::<PlayerCustodyState>();
-            apply_law_standing(&mut state, &mut hud, &[], None);
+            apply_law_standing(&mut state, &[], None);
         }
 
         assert_eq!(app.strain(), 0.0);
@@ -995,7 +1038,7 @@ mod tests {
             let restored = PlayerCustodyState::held_at(anchor, 1, STRAIN_BASE_SECONDS as f32)
                 .custody
                 .expect("held_at publishes custody");
-            apply_law_standing(&mut state, &mut hud, &[], Some(restored));
+            apply_law_standing(&mut state, &[], Some(restored));
         }
         app.pump(0.5, true);
         assert_eq!(app.sent(), vec![BridgeCommand::PlayerStruggling]);
@@ -1036,7 +1079,7 @@ mod tests {
         custody.officer_name = "Havise Ashe".into();
         custody.station_name = "the Bellstand".into();
 
-        let text = standing_text(&notices, state.custody.as_ref());
+        let text = standing_text(&notices, state.custody.as_ref(), 0.0);
 
         assert!(text.contains("HAVISE ASHE HAS TAKEN YOU IN CHARGE — the Bellstand"));
         // The leash is explained in the only state it can still be obeyed in.
@@ -1051,10 +1094,14 @@ mod tests {
         assert!(text.contains("WARRANT:") && text.contains("WORD:"));
 
         // Held, the line is the struggle instead — and the leash sentence goes,
-        // because walking with them is no longer on offer.
+        // because walking with them is no longer on offer. The meter joins the
+        // line rather than replacing it: a pull is one more thing true about the
+        // player, and the words against them do not stop being true while it
+        // lasts.
         let held = PlayerCustodyState::held_at(Vec3::ZERO, 1, STRAIN_BASE_SECONDS as f32);
-        let held_text = standing_text(&notices, held.custody.as_ref());
+        let held_text = standing_text(&notices, held.custody.as_ref(), 0.4);
         assert!(held_text.starts_with("HELD BY HAVISE ASHE — pull away to struggle free"));
+        assert!(held_text.contains("[####------]"), "{held_text}");
         assert!(!held_text.contains("Walk with them"));
         for notice in &notices {
             assert!(held_text.contains(&notice.clears_when));
@@ -1079,7 +1126,7 @@ mod tests {
         custody.booked_as = Some("an outland stranger in a grey hood".into());
         custody.fee_sparks = 3;
 
-        let text = standing_text(&[], state.custody.as_ref());
+        let text = standing_text(&[], state.custody.as_ref(), 0.0);
 
         assert!(text.contains("HELD AT THE STONE HOUSE — Ede Clove keeps you here"));
         // Booked as a description, never a name — nobody in this city knows you.
@@ -1092,18 +1139,22 @@ mod tests {
         // The leash sentence is for someone who may still walk with them.
         assert!(!text.contains("Walk with them"), "{text}");
 
-        // And a hand on the arm must not cost them the door. `law_standing_hud`
-        // replaces the whole standing line while somebody is pulling, so a
-        // committed player grabbed on their way to the doorway would otherwise
-        // lose the bell, the fee and the surety hint at exactly the moment they
-        // most need them — the "never a mystery box" rule failing in its worst
-        // case, and a state the shipped code could reach through the `grab` verb.
+        // And a hand on the arm must not cost them the door: a committed player
+        // grabbed on their way to the doorway keeps the bell, the fee and the
+        // surety hint at exactly the moment they most need them — the "never a
+        // mystery box" rule failing in its worst case, and a state the shipped
+        // code can reach through the `grab` verb — while the meter and its own
+        // invitation join them.
         let custody = state.custody.as_mut().expect("custody is published");
         custody.held = true;
-        let while_held = standing_text(&[], state.custody.as_ref());
+        let while_held = standing_text(&[], state.custody.as_ref(), 0.7);
         assert!(while_held.contains("HELD AT THE STONE HOUSE"), "{while_held}");
         assert!(while_held.contains("You go at Lamplight."), "{while_held}");
         assert!(while_held.contains("3 sparks is the posted fee"), "{while_held}");
+        assert!(
+            while_held.contains("Pull away to struggle free  [#######---]"),
+            "{while_held}"
+        );
         let custody = state.custody.as_mut().expect("custody is published");
         custody.held = false;
 
@@ -1111,19 +1162,35 @@ mod tests {
         let custody = state.custody.as_mut().expect("custody is published");
         custody.release_office = None;
         custody.booked_as = None;
-        let arch = standing_text(&[], state.custody.as_ref());
+        let arch = standing_text(&[], state.custody.as_ref(), 0.0);
         assert!(arch.contains("You go when the keeper says."), "{arch}");
         assert!(arch.contains("3 sparks is the posted fee"), "{arch}");
         assert!(!arch.contains("booked as"), "{arch}");
+    }
+
+    /// What the one writer actually puts on the HUD, given a standing the drain
+    /// has already landed. Only the words are on trial here; the ordering that
+    /// writer exists for is exercised through the whole plugin and the real
+    /// schedule by
+    /// `smart_actors::tests::the_strain_bar_survives_the_standing_line_a_walking_officer_republishes`.
+    fn drawn_standing_line(state: &PlayerCustodyState) -> String {
+        let mut app = App::new();
+        app.insert_resource(state.clone())
+            .init_resource::<SmartActorHudState>()
+            .add_systems(Update, law_standing_hud);
+        app.update();
+        app.world()
+            .resource::<SmartActorHudState>()
+            .law_standing_text()
+            .to_string()
     }
 
     /// The universal case: nothing stands against you, so nothing is on screen —
     /// and the line the sim resolves is what reaches the HUD, unedited.
     #[test]
     fn the_standing_line_is_empty_when_nothing_stands_against_you() {
-        assert_eq!(standing_text(&[], None), "");
+        assert_eq!(standing_text(&[], None, 0.0), "");
 
-        let mut hud = SmartActorHudState::default();
         let mut state = PlayerCustodyState::default();
         let brand = [notice(
             1,
@@ -1131,14 +1198,17 @@ mod tests {
             Rung::Word,
             "make it good with the ward",
         )];
-        apply_law_standing(&mut state, &mut hud, &brand, None);
-        assert_eq!(hud.law_standing_text(), standing_text(&brand, None));
-        assert!(hud.law_standing_text().contains("make it good with the ward"));
+        apply_law_standing(&mut state, &brand, None);
+        assert_eq!(
+            drawn_standing_line(&state),
+            standing_text(&brand, None, 0.0)
+        );
+        assert!(drawn_standing_line(&state).contains("make it good with the ward"));
 
         // Settled: the panel goes away entirely rather than lingering on a word
         // the player has already answered.
-        apply_law_standing(&mut state, &mut hud, &[], None);
+        apply_law_standing(&mut state, &[], None);
         assert!(state.custody.is_none());
-        assert_eq!(hud.law_standing_text(), "");
+        assert_eq!(drawn_standing_line(&state), "");
     }
 }

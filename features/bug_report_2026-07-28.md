@@ -30,7 +30,7 @@ not five.
 - [F] **high** `crates/cathedral-sim/src/custody.rs:384` — Dead-man timer never stamped at seizure or on grab, so a grip dies next poll
 - [F] **high** `crates/cathedral-sim/src/weather.rs:748` — Street wetness snaps 0.09 -> 0.77 in one game minute at the daylight cliff
 - [F] **high** `crates/cathedral-backends/src/llm.rs:575` — Retry-After clamped after Duration::from_secs_f64, which panics and wedges cognition
-- [ ] **high** `src/smart_actors/custody.rs:146` — Strain-meter bar is overwritten before it renders, so pulling shows no progress
+- [F] **high** `src/smart_actors/custody.rs:146` — Strain-meter bar is overwritten before it renders, so pulling shows no progress
 - [ ] **high** `src/smart_actors/custody.rs:285` — grab_reflex measures the officer from the frozen snapshot position, not live
 - [ ] **high** `src/city/mod.rs:7301` — Curtain towers are planted inside gate openings, walling the arches shut
 - [ ] **high** `src/city/mod.rs:4158` — Bridge spine pier is sized from the mouth WIDTH, so half of it stands outside the shell
