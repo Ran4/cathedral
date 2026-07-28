@@ -53,8 +53,8 @@ not five.
 - [F] **medium** `src/smart_actors/body.rs:2102` — Urgency multiplies the absolute accumulated gait phase, snapping the legs
 - [F] **medium** `src/smart_actors/body.rs:2649` — Gait-phase interpolation sweeps backwards when the sim resets the phase to 0
 - [F] **medium** `src/city/mod.rs:7338` — Wall-tower collider is the AABB of a 45-degree-rotated square: twice the visible footprint
-- [ ] **medium** `src/scene.rs:425` — Outer aisle wall split does not line up with the transept: 3 m hole in the cathedral shell
-- [ ] **medium** `src/scene.rs:983` — Baldachin's two front columns float 0.54 m above the altar steps
+- [F] **medium** `src/scene.rs:425` — Outer aisle wall split does not line up with the transept: 3 m hole in the cathedral shell
+- [F] **medium** `src/scene.rs:983` — Baldachin's two front columns float 0.54 m above the altar steps
 - [ ] **medium** `src/soundscape.rs:1597` — Daily curfew peal never claims the Scold's cooldown, so a summons rings on top of it
 - [ ] **medium** `src/drive.rs:109` — drive `frame` ignores the camera's 0.65 m eye offset, aiming shots 0.65 m too high
 - [F] **medium** `src/smart_actors/mod.rs:1300` — `let_go` world event is never projected — the visible custody grip is never released

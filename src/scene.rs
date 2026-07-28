@@ -420,9 +420,20 @@ fn build_outer_shell(
     material: &CathedralMaterials,
     collision_world: &mut CollisionWorld,
 ) {
-    // Long outer aisle walls, split at the transept openings.
+    // The two runs of outer aisle wall as (centre, length) in Z: the nave from
+    // the transept's north line up to the west front, the choir from the apse
+    // down to the transept's south line. The transept crosses the aisle at
+    // z=-39 and z=-7 — the lines its end walls, the walls that tie them back to
+    // the aisle, and the crossing piers all stand on — so the split has to land
+    // on exactly those two. A span stopping short of one opens an 18 m tall
+    // hole in the outer shell that the player walks straight out through; a span
+    // running past one leaves a stub of aisle wall standing inside the transept
+    // arch. The wall box, its collider and the cornice that caps it all read
+    // this single pair, so they can no longer drift apart from each other.
+    const AISLE_WALL_SPANS: [(f32, f32); 2] = [(35.5, 85.0), (-67.5, 57.0)];
+
     for side in [-1.0, 1.0] {
-        for (center_z, length) in [(34.0, 88.0), (-69.5, 53.0)] {
+        for (center_z, length) in AISLE_WALL_SPANS {
             spawn_box(
                 commands,
                 mesh,
@@ -473,7 +484,7 @@ fn build_outer_shell(
 
     // Heavy cornices visually cap the lower side aisles.
     for side in [-1.0, 1.0] {
-        for (center_z, length) in [(34.0, 88.0), (-69.5, 53.0)] {
+        for (center_z, length) in AISLE_WALL_SPANS {
             spawn_box(
                 commands,
                 mesh,
@@ -912,6 +923,27 @@ fn build_crossing_and_dome(
     }
 }
 
+/// How many treads the high altar rises through.
+const ALTAR_STEP_COUNT: usize = 4;
+
+/// One tread of the high altar's stair as a (centre, size) box standing on the
+/// sanctuary floor.
+///
+/// Each step is 2.1 m narrower and 1.55 m shallower than the one below it and
+/// its centre retreats 0.35 m toward the apse, so the tread the congregation
+/// climbs is cut back 1.125 m each time while the back edge barely moves. The
+/// shape is named rather than inlined because the baldachin has to stand on the
+/// top one and nothing else in the sanctuary is level — see the predella note in
+/// `build_apse_and_altar`.
+fn altar_step(index: usize) -> (Vec3, Vec3) {
+    let step = index as f32;
+    let height = 0.28 * (step + 1.0);
+    (
+        Vec3::new(0.0, height * 0.5, -82.5 - step * 0.35),
+        Vec3::new(17.0 - step * 2.1, height, 12.0 - step * 1.55),
+    )
+}
+
 fn build_apse_and_altar(
     commands: &mut Commands,
     mesh: &CathedralMeshes,
@@ -958,10 +990,8 @@ fn build_apse_and_altar(
     collision_world.add_box(Vec3::new(-24.0, 0.0, -106.0), Vec3::new(24.0, 22.0, -104.0));
 
     // Rising altar steps.
-    for i in 0..4 {
-        let width = 17.0 - i as f32 * 2.1;
-        let depth = 12.0 - i as f32 * 1.55;
-        let height = 0.28 * (i + 1) as f32;
+    for i in 0..ALTAR_STEP_COUNT {
+        let (center, size) = altar_step(i);
         spawn_box(
             commands,
             mesh,
@@ -970,16 +1000,26 @@ fn build_apse_and_altar(
             } else {
                 &material.marble_light
             },
-            Vec3::new(0.0, height * 0.5, -82.5 - i as f32 * 0.35),
-            Vec3::new(width, height, depth),
+            center,
+            size,
             Quat::IDENTITY,
         );
     }
     collision_world.add_box(Vec3::new(-8.5, 0.0, -89.0), Vec3::new(8.5, 1.15, -76.5));
 
     // Gilded baldachin: four dark columns, entablature, canopy, and cross.
+    //
+    // A ciborium's four columns carry one entablature, so all four have to be
+    // footed on one level, and the sanctuary offers exactly one: the predella,
+    // the top step. That is what its 10.7 x 7.35 m surface is sized for — a
+    // 1.67 m plinth at x=±4.4 and z=centre±2.7 keeps a hand's width of stone all
+    // round. Because the steps retreat toward the apse as they rise, that centre
+    // is z=-83.55 and not the stair's nominal -82.5; entablature, canopy and
+    // cross ride the same line so the gilding stays over its own columns. The
+    // feet sit 20 mm into the 1.12 m top surface, bedded rather than balanced.
+    const PREDELLA_CENTER_Z: f32 = -83.55;
     for x in [-4.4, 4.4] {
-        for z in [-85.5, -78.2] {
+        for z in [PREDELLA_CENTER_Z - 2.7, PREDELLA_CENTER_Z + 2.7] {
             spawn_compound_column(commands, mesh, material, Vec3::new(x, 1.1, z), 0.62, 10.0);
             spawn_cylinder(
                 commands,
@@ -995,7 +1035,7 @@ fn build_apse_and_altar(
         commands,
         mesh,
         &material.gold,
-        Vec3::new(0.0, 11.25, -81.85),
+        Vec3::new(0.0, 11.25, PREDELLA_CENTER_Z),
         Vec3::new(11.3, 1.0, 10.1),
         Quat::IDENTITY,
     );
@@ -1003,13 +1043,13 @@ fn build_apse_and_altar(
         commands,
         &mesh.sphere,
         &material.gold,
-        Transform::from_xyz(0.0, 12.0, -81.85).with_scale(Vec3::new(5.3, 2.1, 4.7)),
+        Transform::from_xyz(0.0, 12.0, PREDELLA_CENTER_Z).with_scale(Vec3::new(5.3, 2.1, 4.7)),
     );
     spawn_box(
         commands,
         mesh,
         &material.gold,
-        Vec3::new(0.0, 15.0, -81.85),
+        Vec3::new(0.0, 15.0, PREDELLA_CENTER_Z),
         Vec3::new(0.28, 4.3, 0.28),
         Quat::IDENTITY,
     );
@@ -1017,7 +1057,7 @@ fn build_apse_and_altar(
         commands,
         mesh,
         &material.gold,
-        Vec3::new(0.0, 15.6, -81.85),
+        Vec3::new(0.0, 15.6, PREDELLA_CENTER_Z),
         Vec3::new(2.4, 0.28, 0.28),
         Quat::IDENTITY,
     );
@@ -1522,8 +1562,9 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn cathedral_builds_headlessly_with_architecture_and_collision() {
+    /// The whole interior, built once headlessly: meshes as entities, masonry in
+    /// the `CollisionWorld`.
+    fn built_cathedral() -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
             .init_asset::<Mesh>()
@@ -1531,8 +1572,13 @@ mod tests {
             .init_asset::<StandardMaterial>()
             .init_resource::<CollisionWorld>()
             .add_systems(Startup, build_cathedral);
-
         app.update();
+        app
+    }
+
+    #[test]
+    fn cathedral_builds_headlessly_with_architecture_and_collision() {
+        let mut app = built_cathedral();
 
         let world = app.world_mut();
         let mesh_entity_count = world
@@ -1551,5 +1597,108 @@ mod tests {
             "expected a navigable structural shell, got {} colliders",
             collision_world.len()
         );
+    }
+
+    /// The outer aisle wall is broken for the transept, and the break has to
+    /// land on the transept's own lines or the shell is not closed. Walk the
+    /// whole wall line at standing height: from the apse to the west front,
+    /// x=±44 is solid stone everywhere except the daylight of the transept
+    /// arch, which is the 30 m between the inner faces of the 2 m connecting
+    /// walls centred on z=-39 and z=-7. A span that stops short of a connecting
+    /// wall shows up as a hole you can walk out of; one that overruns shows up
+    /// as a stub of 18 m wall standing inside the arch.
+    #[test]
+    fn outer_aisle_wall_closes_the_shell_except_at_the_transept_arch() {
+        const APSE_Z: f32 = -96.0;
+        const WEST_FRONT_Z: f32 = 78.0;
+        const ARCH_SOUTH_Z: f32 = -38.0;
+        const ARCH_NORTH_Z: f32 = -8.0;
+        const SAMPLE_M: f32 = 0.25;
+        const WALK_Y: f32 = 1.0;
+
+        let app = built_cathedral();
+        let collision_world = app.world().resource::<CollisionWorld>();
+
+        let mut holes = Vec::new();
+        let mut stubs = Vec::new();
+        for sample in 0..=((WEST_FRONT_Z - APSE_Z) / SAMPLE_M) as i32 {
+            let z = APSE_Z + sample as f32 * SAMPLE_M;
+            let inside_arch = z > ARCH_SOUTH_Z && z < ARCH_NORTH_Z;
+            for x in [-44.0, 44.0] {
+                match collision_world.contains_point(Vec3::new(x, WALK_Y, z)) {
+                    true if inside_arch => stubs.push((x, z)),
+                    false if !inside_arch => holes.push((x, z)),
+                    _ => {}
+                }
+            }
+        }
+
+        assert!(
+            holes.is_empty(),
+            "{} samples of the aisle wall line are open ground, e.g. {:?}",
+            holes.len(),
+            &holes[..holes.len().min(8)]
+        );
+        assert!(
+            stubs.is_empty(),
+            "{} samples inside the transept arch are walled off, e.g. {:?}",
+            stubs.len(),
+            &stubs[..stubs.len().min(8)]
+        );
+    }
+
+    /// Every baldachin column stands on stone. `spawn_compound_column` takes the
+    /// bottom of the base plinth, and the altar steps both shrink and retreat
+    /// toward the apse as they rise, so a column footed at the predella's height
+    /// but placed beyond the predella's edge hangs in mid-air over a lower
+    /// tread. Sample just beneath each plinth's four corners and require an
+    /// altar step to be there.
+    #[test]
+    fn baldachin_columns_stand_on_the_altar_steps() {
+        // `spawn_compound_column`'s plinth, at the baldachin's 0.62 scale.
+        let plinth_size = Vec3::new(2.7, 0.7, 2.7) * 0.62;
+        // The apse's boundary columns share that scale but are footed on the
+        // floor, so height alone separates the baldachin's four from them.
+        let mut app = built_cathedral();
+        let world = app.world_mut();
+        let plinths = world
+            .query_filtered::<&Transform, With<Mesh3d>>()
+            .iter(world)
+            .filter(|transform| {
+                transform.scale.distance(plinth_size) < 1.0e-3 && transform.translation.y > 1.0
+            })
+            .copied()
+            .collect::<Vec<_>>();
+        assert_eq!(
+            plinths.len(),
+            4,
+            "expected the baldachin's four column plinths above the altar steps"
+        );
+
+        for plinth in plinths {
+            let underside = plinth.translation.y - plinth.scale.y * 0.5;
+            for (toward_x, toward_z) in [(-1.0, -1.0), (-1.0, 1.0), (1.0, -1.0), (1.0, 1.0)] {
+                let corner = plinth.translation
+                    + Vec3::new(
+                        toward_x * plinth.scale.x * 0.5,
+                        0.0,
+                        toward_z * plinth.scale.z * 0.5,
+                    );
+                // A step bears the corner when its top surface reaches the
+                // plinth's underside; 50 mm of slack allows the bedding-in
+                // without allowing a visible shadow gap.
+                let borne = (0..ALTAR_STEP_COUNT).any(|index| {
+                    let (center, size) = altar_step(index);
+                    center.y + size.y * 0.5 >= underside - 0.05
+                        && (corner.x - center.x).abs() <= size.x * 0.5
+                        && (corner.z - center.z).abs() <= size.z * 0.5
+                });
+                assert!(
+                    borne,
+                    "the plinth corner at {corner:?} hangs over nothing: its underside is at \
+                     y={underside} and none of the {ALTAR_STEP_COUNT} altar steps reaches it"
+                );
+            }
+        }
     }
 }
