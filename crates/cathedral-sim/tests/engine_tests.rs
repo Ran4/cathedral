@@ -2650,6 +2650,32 @@ fn the_gut_forms_a_stool_on_the_clock_and_expel_clears_the_urgency() {
     assert!(ramped > 0.0 && ramped <= 1.0, "urgency is {ramped}");
     assert_eq!(ramped * 16.0, (ramped * 16.0).round(), "quantized");
 
+    // A forced value outranks the ramp for as long as it stands…
+    engine.poll(
+        20.1,
+        vec![EngineCommand::DebugSetStatus {
+            name: "Player".into(),
+            kind: cathedral_sim::StatusKind::Urgency,
+            value: 1.0,
+        }],
+    );
+    assert_eq!(urgency(&engine), Some(1.0), "the poke outranks the clock");
+    // …and giving it back picks the ramp up where it was: the anchor keeps
+    // being stamped underneath, so the two hours do not start over.
+    engine.poll(
+        20.2,
+        vec![EngineCommand::DebugSetStatus {
+            name: "Player".into(),
+            kind: cathedral_sim::StatusKind::Urgency,
+            value: 0.0,
+        }],
+    );
+    let resumed = urgency(&engine).expect("the clock owns the key again");
+    assert!(
+        (ramped..1.0).contains(&resumed),
+        "the ramp resumed at {resumed}, not at {ramped}"
+    );
+
     let messages = engine.poll(
         21.0,
         vec![EngineCommand::PlayerExpel {
@@ -2665,6 +2691,75 @@ fn the_gut_forms_a_stool_on_the_clock_and_expel_clears_the_urgency() {
     // The status clears on the next digest, with the stool gone.
     engine.poll(22.0, Vec::new());
     assert_eq!(urgency(&engine), None);
+}
+
+/// `npc_bodies.md` §8 meets the poop clock: a forced `urgency` has to outlive
+/// the poll that wrote it.
+///
+/// `digest` runs at the end of every single poll, and its second pass owns the
+/// whole `urgency` key — it removes it from everyone not carrying a stool. So a
+/// value written by `DebugSetStatus` was deleted a millisecond later, in that
+/// same poll, and the drive-mode `status` action and `cathedral-headless
+/// --status` silently did nothing for the one kind whose documentation
+/// (`CATHEDRAL_DRIVE.md`, and the flag's own help: "this only forces it") says
+/// they do. Forcing `0` is the way back: the clock owns the key again.
+#[test]
+fn a_forced_urgency_outlives_the_poop_clock_and_is_given_back_at_zero() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    let ilse = ActorId::from_raw("k0fb1");
+    let urgency = |engine: &Engine| {
+        engine.world().characters[&ilse]
+            .state
+            .statuses
+            .get(&cathedral_sim::StatusKind::Urgency)
+            .copied()
+    };
+    // The *last* snapshot of a poll is what the host ends up rendering: the
+    // poke flushes one of its own, and the digest below may publish another.
+    let published = |messages: &[EngineMessage]| {
+        messages
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                EngineMessage::Snapshot(snapshot) => Some(snapshot),
+                _ => None,
+            })
+            .expect("the poke bumps the world revision")
+            .actors
+            .iter()
+            .find(|actor| actor.id == ilse)
+            .expect("Ilse is in the snapshot")
+            .statuses
+            .iter()
+            .find(|(kind, _)| *kind == cathedral_sim::StatusKind::Urgency)
+            .map(|(_, value)| *value)
+    };
+
+    let messages = harness.send(EngineCommand::DebugSetStatus {
+        name: "Ilse".into(),
+        kind: cathedral_sim::StatusKind::Urgency,
+        value: 1.0,
+    });
+    assert_eq!(urgency(&harness.engine), Some(1.0));
+    assert_eq!(published(&messages), Some(1.0), "{messages:#?}");
+
+    // Ilse carries no stool, so every later poll is exactly the one that used
+    // to wipe the poke.
+    harness.poll();
+    harness.poll();
+    assert_eq!(urgency(&harness.engine), Some(1.0), "a forced status holds");
+
+    // …and forcing zero hands the key straight back to the clock, which removes
+    // it again from a woman with clean breeches.
+    harness.send(EngineCommand::DebugSetStatus {
+        name: "Ilse".into(),
+        kind: cathedral_sim::StatusKind::Urgency,
+        value: 0.0,
+    });
+    assert_eq!(urgency(&harness.engine), None);
+    harness.poll();
+    assert_eq!(urgency(&harness.engine), None);
 }
 
 /// `law_and_order.md` M5b: the hold ceiling is a **soft-lock guard**, not a

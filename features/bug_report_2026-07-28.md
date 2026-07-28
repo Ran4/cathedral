@@ -42,7 +42,7 @@ not five.
 - [F] **medium** `crates/cathedral-sim/src/actions.rs:3522` — `announce_struggle` excludes the struggler, so an NPC gets no record of their own struggle
 - [F] **medium** `crates/cathedral-sim/src/engine.rs:3320` — announce_commitment's hand-release loop is always empty (commit cleared holders)
 - [F] **medium** `crates/cathedral-sim/src/engine.rs:3275` — Engine custody endings emit only `let_go`, which nothing clears the grip on
-- [ ] **medium** `crates/cathedral-sim/src/engine.rs:2742` — ramp_urgency deletes the debug-written `urgency` status in the same poll it is set
+- [F] **medium** `crates/cathedral-sim/src/engine.rs:2742` — ramp_urgency deletes the debug-written `urgency` status in the same poll it is set
 - [ ] **medium** `crates/cathedral-sim/src/scheduler.rs:812` — An actor queued in both the player-reaction and priority lanes takes two turns
 - [F] **medium** `crates/cathedral-sim/src/custody.rs:414` — commit clears holders before the arrival announcement reads them
 - [ ] **medium** `crates/cathedral-sim/src/weather.rs:1073` — Forced weather's 8-hour elapsed cap freezes the wet aftermath forever

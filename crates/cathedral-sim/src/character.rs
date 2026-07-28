@@ -428,6 +428,14 @@ pub struct CharacterState {
     /// Game-day stamp of the oldest still-pocketed stool, from which the engine
     /// ramps the `urgency` carriage status. `None` while the breeches are clear.
     pub urgency_since_game_days: Option<f64>,
+    /// A developer-forced `urgency`, or `None`. The poop clock owns that status
+    /// key outright — it rewrites it every poll for a stool-carrier and removes
+    /// it from everyone else — so a debug poke at `urgency` has to be *held*
+    /// somewhere the clock reads, or the very poll that wrote it wipes it again
+    /// (`features/npc_bodies.md` §8). Written only by
+    /// [`crate::world::World::debug_set_status`]; forcing `0` clears it and
+    /// hands the key straight back to the clock.
+    pub debug_urgency: Option<f64>,
     pub goal: String,
     /// Insertion-ordered, deduped by exact string on `remember`.
     pub memories: Vec<String>,
@@ -515,6 +523,7 @@ impl CharacterState {
             pockets: sheet.pockets.clone(),
             gut: Vec::new(),
             urgency_since_game_days: None,
+            debug_urgency: None,
             goal: sheet.goal.clone(),
             memories: sheet.memories.clone(),
             knows: sheet.knows.clone(),

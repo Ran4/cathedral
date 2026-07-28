@@ -2529,7 +2529,9 @@ impl Engine {
     /// 2. **Urgency.** While a stool rides a pocket the `urgency` carriage
     ///    status ramps over [`crate::URGENCY_RAMP_GAME_DAYS`], quantized to
     ///    sixteenths so a smooth ramp does not republish the snapshot every
-    ///    poll. `expel` clears both the stool and the status.
+    ///    poll. `expel` clears both the stool and the status. A debug-forced
+    ///    `urgency` ([`crate::character::CharacterState::debug_urgency`])
+    ///    outranks the ramp until it is given back with a `0`.
     fn digest(&mut self, now: f64) {
         let game_days = self.clock.game_days(now);
         let actor_ids: Vec<ActorId> = self.world.characters.keys().cloned().collect();
@@ -2740,21 +2742,33 @@ impl Engine {
         };
         if !carries_a_stool {
             actor.state.urgency_since_game_days = None;
-            return actor.state.statuses.remove(&StatusKind::Urgency).is_some();
         }
-        let since = *actor
-            .state
-            .urgency_since_game_days
-            .get_or_insert(game_days);
-        let urgency = ((game_days - since) / crate::URGENCY_RAMP_GAME_DAYS).clamp(0.0, 1.0);
-        // Sixteenths: the carriage cannot show more, and every change here
-        // republishes the whole snapshot.
-        let quantized = (urgency * 16.0).round() / 16.0;
-        if actor.state.statuses.get(&StatusKind::Urgency).copied() == Some(quantized) {
-            return false;
+        // The clock's own reading first, whether or not it is what gets
+        // published: the ramp's anchor keeps being stamped (and cleared) under
+        // a debug override, so lifting one hands the key back mid-ramp instead
+        // of restarting the two hours.
+        let ramped = carries_a_stool.then(|| {
+            let since = *actor.state.urgency_since_game_days.get_or_insert(game_days);
+            let urgency = ((game_days - since) / crate::URGENCY_RAMP_GAME_DAYS).clamp(0.0, 1.0);
+            // Sixteenths: the carriage cannot show more, and every change here
+            // republishes the whole snapshot.
+            (urgency * 16.0).round() / 16.0
+        });
+        // A forced `urgency` outranks it (`npc_bodies.md` §8). This pass owns
+        // the whole key — it rewrites it for a stool-carrier and removes it
+        // from everyone else — so without this the debug poke was deleted in
+        // the very poll that wrote it, and the clenched walk a developer asked
+        // to eyeball never rendered.
+        match actor.state.debug_urgency.or(ramped) {
+            Some(urgency) => {
+                if actor.state.statuses.get(&StatusKind::Urgency).copied() == Some(urgency) {
+                    return false;
+                }
+                actor.state.statuses.insert(StatusKind::Urgency, urgency);
+                true
+            }
+            None => actor.state.statuses.remove(&StatusKind::Urgency).is_some(),
         }
-        actor.state.statuses.insert(StatusKind::Urgency, quantized);
-        true
     }
 
     fn flush(&mut self, now: f64, out: &mut Vec<EngineMessage>) {

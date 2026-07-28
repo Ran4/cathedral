@@ -369,6 +369,16 @@ impl World {
         };
         if let Some(character) = self.characters.get_mut(&id) {
             character.state.statuses.insert(kind, clamped);
+            // `urgency` is the one kind the sim writes for itself (the poop
+            // clock, `extra_pockets.md` M3), and it rewrites the key every poll
+            // — so a poke at it is *also* recorded as an override the clock
+            // honours, or it would not survive to the end of this very poll.
+            // Forcing `0` is how a developer gives the key back: there is
+            // nothing to eyeball at zero, and the clock's own reading takes
+            // over again on the next poll.
+            if kind == StatusKind::Urgency {
+                character.state.debug_urgency = (clamped > 0.0).then_some(clamped);
+            }
             self.touch_public_state();
             true
         } else {
