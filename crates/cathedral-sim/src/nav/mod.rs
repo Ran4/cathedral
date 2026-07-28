@@ -30,6 +30,13 @@ use crate::math::Vec3;
 /// navigation is 2D on this plane — the city has no second storey you stand on.
 pub const WALK_Y: f64 = 0.91;
 
+/// How many times [`NavData::offset_route`]'s segment sweep may back a lane off
+/// before it leaves that stretch on the centreline. Every failing segment halves
+/// both its ends on every pass, so the widest corridor in the city (the Cut's
+/// 10 m half-width) reaches the give-up width in seven; the eighth is the pass
+/// that finds nothing left to do.
+const LANE_BACKOFF_PASSES: usize = 8;
+
 /// Navigation data that cannot be loaded without leaving the graph ambiguous.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NavError {
@@ -532,10 +539,11 @@ impl NavData {
     /// walker's **right** (so two streams meeting pass right shoulder to right
     /// shoulder), and the usable corridor at each vertex is the *traversed*
     /// segments' half-width minus the agent radius — nothing in a 1.2 m alley,
-    /// a couple of metres on the Cut. Every shifted vertex is validated against
-    /// the walkable bitset (halving the shift until it lands on ground), so the
-    /// lane can never put a body inside a wall. The final vertex is left exact:
-    /// arrival semantics (the curb, the doorstep) stay point-precise.
+    /// a couple of metres on the Cut. Every shifted vertex *and the whole
+    /// stretch between two of them* is validated against the walkable bitset
+    /// (halving the shift until it lands on ground), so the lane can never put a
+    /// body inside a wall. The final vertex is left exact: arrival semantics
+    /// (the curb, the doorstep) stay point-precise.
     pub fn offset_route(&self, route: &Route, lane: f64) -> Vec<Vec3> {
         let points = &route.points;
         let n = points.len();
@@ -550,10 +558,13 @@ impl NavData {
             })
             .collect();
 
-        let mut shifted = Vec::with_capacity(n);
+        // Each vertex's sideways displacement, held apart from the vertex itself
+        // so the segment sweep below can back one off without having to work out
+        // afresh which way it was shifted.
+        let mut shift: Vec<Vec3> = Vec::with_capacity(n);
         for i in 0..n {
             if i == n - 1 {
-                shifted.push(points[i]);
+                shift.push(Vec3::ZERO);
                 break;
             }
             // Averaged travel direction at the vertex (miter), in XZ.
@@ -571,7 +582,7 @@ impl NavData {
                 }
             };
             let Some(dir) = dir else {
-                shifted.push(points[i]);
+                shift.push(Vec3::ZERO);
                 continue;
             };
             // Right of travel: yaw 0 faces -Z, and looking down -Z with +Y up,
@@ -586,18 +597,64 @@ impl NavData {
             let mut offset = lane.clamp(-1.0, 1.0) * usable;
             // Halve the shift until it lands on walkable ground; give up on the
             // centreline vertex, which is on the graph and always walkable.
-            let mut point = points[i];
+            let mut accepted = Vec3::ZERO;
             for _ in 0..3 {
-                let candidate = points[i] + right * offset;
-                if self.is_walkable(candidate.x, candidate.z) {
-                    point = candidate;
+                let candidate = right * offset;
+                if self.is_walkable(points[i].x + candidate.x, points[i].z + candidate.z) {
+                    accepted = candidate;
                     break;
                 }
                 offset *= 0.5;
             }
-            shifted.push(point);
+            shift.push(accepted);
         }
-        shifted
+
+        // Two validated ends say nothing about the stretch between them. A graph
+        // edge can run tens of metres while its `half_width_m` describes only its
+        // widest part, so a corridor that pinches in the middle takes the whole
+        // shifted segment through a building while both vertices sit happily on
+        // paving. Walk each segment across the bitset and back both its ends off
+        // until it clears: the centreline is on the graph, so the retreat always
+        // has ground to land on.
+        let give_up_m = self.grid.cell_m * 0.5;
+        for _ in 0..LANE_BACKOFF_PASSES {
+            let mut settled = true;
+            for i in 0..n - 1 {
+                if shift[i] == Vec3::ZERO && shift[i + 1] == Vec3::ZERO {
+                    continue; // already the centreline; there is nowhere left to go
+                }
+                if self.segment_walkable(points[i] + shift[i], points[i + 1] + shift[i + 1]) {
+                    continue;
+                }
+                // Both ends give ground, so a pinch in a long leg costs the lane
+                // only around itself instead of flattening the whole route.
+                settled = false;
+                shift[i] = back_off(shift[i], give_up_m);
+                shift[i + 1] = back_off(shift[i + 1], give_up_m);
+            }
+            if settled {
+                break;
+            }
+        }
+
+        (0..n).map(|i| points[i] + shift[i]).collect()
+    }
+
+    /// Is every point of the stretch `a` → `b` on walkable ground? Sampled a
+    /// grid cell apart, which is the resolution the bitset is baked at — and it
+    /// is baked eroded by the agent radius, so nothing a body would collide with
+    /// hides between two samples.
+    fn segment_walkable(&self, a: Vec3, b: Vec3) -> bool {
+        let span = Vec3::new(b.x - a.x, 0.0, b.z - a.z);
+        let length = span.length();
+        if length < 1e-9 {
+            return self.is_walkable(a.x, a.z);
+        }
+        let steps = (length / self.grid.cell_m).ceil() as usize;
+        (0..=steps).all(|s| {
+            let t = s as f64 / steps as f64;
+            self.is_walkable(a.x + span.x * t, a.z + span.z * t)
+        })
     }
 
     fn route_from_nodes(&self, nodes: Vec<usize>) -> Route {
@@ -642,6 +699,18 @@ fn distance(a: [f64; 2], b: [f64; 2]) -> f64 {
     let dx = a[0] - b[0];
     let dz = a[1] - b[1];
     (dx * dx + dz * dz).sqrt()
+}
+
+/// Halve a lane shift, or surrender it entirely once halving it again could no
+/// longer change which grid cell the body stands in — a shift that small is not
+/// a lane, and pretending otherwise would only cost more passes.
+fn back_off(shift: Vec3, give_up_m: f64) -> Vec3 {
+    let halved = shift * 0.5;
+    if halved.length() < give_up_m {
+        Vec3::ZERO
+    } else {
+        halved
+    }
 }
 
 /// Unit direction `from` → `to` on the walk plane, or `None` for coincident

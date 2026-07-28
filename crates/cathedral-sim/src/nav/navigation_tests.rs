@@ -292,3 +292,87 @@ fn route_is_self_consistent() {
         assert!(nav.is_walkable(p.x, p.z), "routed point {p:?} is off-surface");
     }
 }
+
+/// The longest unbroken off-surface stretch of `a` → `b`, in metres. Walked at
+/// 0.05 m — five times finer than `offset_route`'s own stride — so a lane cannot
+/// clear this by merely agreeing with the production sampling.
+fn off_surface_run_m(nav: &NavData, a: Vec3, b: Vec3) -> f64 {
+    let length = ((a.x - b.x).powi(2) + (a.z - b.z).powi(2)).sqrt();
+    if length < 1e-9 {
+        return 0.0;
+    }
+    let steps = (length / 0.05).ceil() as usize;
+    let stride = length / steps as f64;
+    let (mut run, mut worst) = (0.0_f64, 0.0_f64);
+    for s in 0..=steps {
+        let t = s as f64 / steps as f64;
+        if nav.is_walkable(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t) {
+            run = 0.0;
+        } else {
+            run += stride;
+            worst = worst.max(run);
+        }
+    }
+    worst
+}
+
+/// A lane must clear the walls along the whole stretch it walks, not merely at
+/// the vertices it shifts. An edge can run tens of metres while its
+/// `half_width_m` describes only its widest part, so a vertex-only check passed
+/// both ends of a pinching corridor while the shifted line between them lay
+/// inside a building — 10.5 m of it at the worst, on a route between two named
+/// places anybody could be sent to.
+///
+/// Every named place to every other, both ways (the mirrored lane walks the
+/// other side of the street), across the whole range `world::lane_fraction`
+/// produces: 0.4 keeping right, jittered ±0.3. What is tolerated is one grid
+/// cell of corner clipping between two of `offset_route`'s samples, which the
+/// bitset's 0.35 m erosion still leaves a body clear of the wall.
+///
+/// The second assertion is the other half of the bargain: the cheap way to keep
+/// every lane out of a wall is to have no lanes, and a conga line down the crown
+/// of the street is what the offset exists to prevent.
+#[test]
+fn lanes_clear_the_walls_between_their_vertices() {
+    let nav = nav();
+    let nodes: Vec<usize> = nav.places().iter().map(|p| p.node).collect();
+    let (mut worst_run_m, mut worst_where) = (0.0_f64, String::new());
+    let (mut total_shift_m, mut vertices) = (0.0_f64, 0usize);
+    for &a in &nodes {
+        for &b in &nodes {
+            let Some(route) = nav.route_nodes(a, b) else {
+                continue;
+            };
+            for lane in [0.1_f64, 0.4, 0.7] {
+                let path = nav.offset_route(&route, lane);
+                for (i, point) in path.iter().enumerate() {
+                    // The last vertex is deliberately left exact, so it is not
+                    // evidence either way about how much lane survived.
+                    if i + 1 < path.len() {
+                        let centre = route.points[i];
+                        total_shift_m +=
+                            ((point.x - centre.x).powi(2) + (point.z - centre.z).powi(2)).sqrt();
+                        vertices += 1;
+                    }
+                }
+                for pair in path.windows(2) {
+                    let run = off_surface_run_m(&nav, pair[0], pair[1]);
+                    if run > worst_run_m {
+                        worst_run_m = run;
+                        worst_where = format!("node {a} -> {b}, lane {lane}");
+                    }
+                }
+            }
+        }
+    }
+    assert!(
+        worst_run_m <= nav.grid().cell_m + 1e-9,
+        "a lane runs {worst_run_m:.2} m off the walkable surface ({worst_where})"
+    );
+    // 0.29 m as this is written; the floor leaves room for the fabric to change.
+    let mean_shift_m = total_shift_m / vertices.max(1) as f64;
+    assert!(
+        mean_shift_m > 0.25,
+        "the lanes have collapsed onto the centreline: mean shift {mean_shift_m:.3} m"
+    );
+}
