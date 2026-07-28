@@ -7177,11 +7177,24 @@ fn decide(
         && !person.curfew_exempt
         && let Some(home) = person.home
     {
-        return if position.distance(home) <= HOME_ARRIVE_RADIUS_M {
-            (Decision::Stay, None)
-        } else {
-            (Decision::Travel(home), Some(CURFEW_PRESSURE))
-        };
+        if position.distance(home) > HOME_ARRIVE_RADIUS_M {
+            return (Decision::Travel(home), Some(CURFEW_PRESSURE));
+        }
+        // Home already, so the curfew is asking for nothing but standing still —
+        // and eating what is in your hand *is* standing still. Rung 3's meal is
+        // therefore lifted over this rung, and only the meal: everything else
+        // the famished rung does is a walk out of the door, which is the one
+        // thing the curfew exists to stop. Without it the night swallows the
+        // invariant whole — the hearth refill is gated on `is_meal_office`, so
+        // the Snuffing and the Watch are eight game hours of pure decay, and a
+        // sleeper who carried supper home would cross famished in the small
+        // hours and hold the loaf uneaten until the Kindling lifted the rung.
+        if character.needs().hunger < HUNGER_FAMISHED
+            && let Some(item_id) = held_edible(round, world, character)
+        {
+            return (Decision::EatHeld(item_id), None);
+        }
+        return (Decision::Stay, None);
     }
 
     // Rung 2 — parched: drop everything and go to the well now. Below curfew, so
@@ -7204,7 +7217,9 @@ fn decide(
         // Eat what you hold, standing — for anyone, the night trades included,
         // at any hour: a famished actor with food in hand always eats it (but a
         // commercially listed food is only a last preference, not protected
-        // from its hungry owner).
+        // from its hungry owner). "At any hour" is why the curfew rung above
+        // carries this one branch too: the housed reach it only through their
+        // own door.
         if let Some(item_id) = held_edible(round, world, character) {
             return (Decision::EatHeld(item_id), None);
         }

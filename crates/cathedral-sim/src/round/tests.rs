@@ -2160,6 +2160,103 @@ fn curfew_sends_the_housed_home_at_the_snuffing() {
     }
 }
 
+/// Rung 3's invariant — *a famished actor with food in hand always eats it, at
+/// any hour* (`03_hunger.md` §3) — survives the curfew rung standing above it.
+/// The night has no hearth (the refill is gated on `is_meal_office`), so a mason
+/// who carried supper home and crossed famished in the small hours must be able
+/// to eat the loaf at his own door instead of holding it until the Kindling. The
+/// curfew keeps everything it is for: the same famished holder out in the street
+/// is still walked home first, with the excuse-yourself pressure, and the meal is
+/// a standing act that lays no route.
+#[test]
+fn a_famished_holder_eats_at_his_own_door_through_the_curfew() {
+    let (mut round, mut world, nav, id) = seed_hamel();
+    let home = round.people[&id].home.expect("housed");
+    assert!(
+        !round.people[&id].curfew_exempt,
+        "a mason keeps no night post"
+    );
+    let loaf = ItemId::from_raw("supper_loaf");
+    world.add_item(Item::stack(loaf.clone(), "loaf", 1));
+    {
+        let character = world.characters.get_mut(&id).expect("enrolled");
+        character.state.holds.push(loaf.clone());
+        character.state.needs.hunger = HUNGER_FAMISHED / 2.0;
+    }
+
+    // Out in the street at the Snuffing, the curfew still owns him — the loaf
+    // does not buy him the right to stand about eating in the watch's way.
+    let (street, pressure) = decide(
+        &round,
+        &world,
+        &nav,
+        &id,
+        0,
+        Office::Snuffing,
+        Weekday::Bellday,
+    );
+    assert!(
+        matches!(street, Decision::Travel(target) if target.distance(home) < 1.0),
+        "the famished holder is still sent home at curfew, got {street:?}"
+    );
+    assert_eq!(
+        pressure,
+        Some(CURFEW_PRESSURE),
+        "and still gets his one turn to excuse himself"
+    );
+
+    // At his door, though, standing still is all the curfew asks — so he eats.
+    world
+        .characters
+        .get_mut(&id)
+        .expect("enrolled")
+        .state
+        .position_m = home;
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &id,
+        0,
+        Office::Snuffing,
+        Weekday::Bellday,
+    ) {
+        Decision::EatHeld(item) => assert_eq!(item, loaf, "he eats the loaf he carried home"),
+        other => panic!("famished at his own door, he eats what he holds, got {other:?}"),
+    }
+    apply_decision(&mut round, &mut world, &nav, &id, Decision::EatHeld(loaf));
+    assert!(
+        world.characters[&id].needs().hunger > HUNGER_FAMISHED,
+        "the supper feeds him"
+    );
+    assert!(
+        !world.characters[&id].is_walking(),
+        "and it never took a step out of the door"
+    );
+
+    // Empty-handed and famished again, the same door at the same hour is the
+    // plain curfew Stay — the rung below only ever borrowed the one branch.
+    world
+        .characters
+        .get_mut(&id)
+        .expect("enrolled")
+        .state
+        .needs
+        .hunger = HUNGER_FAMISHED / 2.0;
+    match decide_only(
+        &round,
+        &world,
+        &nav,
+        &id,
+        0,
+        Office::Snuffing,
+        Weekday::Bellday,
+    ) {
+        Decision::Stay => {}
+        other => panic!("with nothing to eat he stays in for the night, got {other:?}"),
+    }
+}
+
 #[test]
 fn a_night_trade_is_not_sent_home_by_curfew() {
     // A tavern worker (curfew-exempt) keeps their post at the Snuffing.
