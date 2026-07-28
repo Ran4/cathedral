@@ -2222,8 +2222,8 @@ impl Engine {
         if let Some(record) = self.world.custody.get_mut(&target_id) {
             record.station = gaol.clone();
         }
-        if self.world.custody.commit(&target_id, now) {
-            self.announce_commitment(now, &target_id);
+        if let Some(released) = self.world.custody.commit(&target_id, now) {
+            self.announce_commitment(now, &target_id, &released);
             out.push(EngineMessage::Diagnostic(format!(
                 "[smart actors] {target_id} is committed to {}",
                 gaol.name
@@ -2372,8 +2372,8 @@ impl Engine {
         for id in escort.moved {
             moved_ids.insert(id);
         }
-        for prisoner in escort.committed {
-            self.announce_commitment(now, &prisoner);
+        for (prisoner, released) in escort.committed {
+            self.announce_commitment(now, &prisoner, &released);
         }
 
         if moved_ids.is_empty() {
@@ -3321,18 +3321,23 @@ impl Engine {
     /// silence if nothing says otherwise. The prisoner is told what would free
     /// them, because that promise is owed on every rung, and the officer gets
     /// the turn in which to hand them over or think better of it.
-    fn announce_commitment(&mut self, now: f64, prisoner_id: &ActorId) {
+    ///
+    /// `released` is what [`custody::Custody::commit`] handed back: the hands
+    /// arriving took off the arm. It is an argument rather than something read
+    /// off the record here because the commit already dropped them — read after
+    /// the fact, the list is always empty and the loop below never ran at all.
+    fn announce_commitment(&mut self, now: f64, prisoner_id: &ActorId, released: &[ActorId]) {
         let Some(record) = self.world.custody.get(prisoner_id) else {
             return;
         };
         let (station, officer) = (record.station.name.clone(), record.officer.clone());
         let gaol = record.station.stone_house;
         let notice_id = record.notice_id;
-        // `Custody::commit` drops every hand — arriving ends the walk. Say so,
-        // or the presented arm stays reaching at somebody nobody is holding any
-        // more: a hold that ends in silence looks exactly like one that did not.
-        for holder in record.holders.clone() {
-            actions::announce_grip(&mut self.world, &holder, prisoner_id, false);
+        // Every hand comes off — arriving ends the walk. Say so, or the
+        // presented arm stays reaching at somebody nobody is holding any more:
+        // a hold that ends in silence looks exactly like one that did not.
+        for holder in released {
+            actions::announce_grip(&mut self.world, holder, prisoner_id, false);
         }
 
         // The sentence, said in the city's own clock (M5c). Only in the gaol:

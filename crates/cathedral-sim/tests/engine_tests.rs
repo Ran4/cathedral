@@ -119,6 +119,7 @@ struct Builder {
     tts_selected: TtsBackendKind,
     tts: TtsProbe,
     turn_delay_seconds: f64,
+    nav: bool,
 }
 
 impl Default for Builder {
@@ -132,6 +133,7 @@ impl Default for Builder {
             tts_selected: TtsBackendKind::Off,
             tts: TtsProbe::default(),
             turn_delay_seconds: 0.0,
+            nav: false,
         }
     }
 }
@@ -158,6 +160,13 @@ impl Builder {
         self
     }
 
+    /// The committed nav graph. Without one `tick_movement` returns at once, so
+    /// this is also the switch that makes the escort walk run at all.
+    fn walkable(mut self) -> Self {
+        self.nav = true;
+        self
+    }
+
     fn build(self) -> Harness {
         let cognition = SharedCognition::default();
         let capabilities = Capabilities::new(
@@ -174,6 +183,7 @@ impl Builder {
                 sounds_enabled: self.sounds_enabled,
                 turn_delay_seconds: self.turn_delay_seconds,
                 tts_selected: self.tts_selected,
+                nav: self.nav.then(real_nav),
                 ..EngineConfig::default()
             },
             &seed(),
@@ -3279,5 +3289,102 @@ fn a_landing_hand_restarts_the_dead_man_clock_which_still_runs_out() {
     assert!(
         harness.engine.world().custody.holds(&prisoner),
         "but they are still in the law's hands"
+    );
+}
+
+/// Arriving is where the *most* hands come off — `Custody::commit` drops every
+/// one of them at once — and it was the one ending nobody was ever told about:
+/// the commit cleared `holders` and `announce_commitment` then read them, so the
+/// loop written to say so ran over an empty list every single time.
+///
+/// Three things go silent with it, which is why it is worth a test of its own:
+/// the prisoner is never told the hand left their arm, the street never hears
+/// it, and no `let_go` reaches the host — which draws the officer's arm on the
+/// prisoner from the `grab` event and keeps it there until something says
+/// otherwise (`src/smart_actors/hands.rs`). Two hands, because "help me hold
+/// this one" is the escort's best move (M4d) and *every* one of them comes off.
+///
+/// Through `follow_escorts` on purpose: that is the arrival the cast actually
+/// walks to, and the whole defect was in the order its two steps happen in.
+#[test]
+fn arriving_at_a_station_says_every_hand_came_off() {
+    let mut harness = Builder::default().walkable().build();
+    harness.ready();
+
+    let prisoner = ActorId::from_raw("cb947");
+    let officer = ActorId::from_raw("k0fb1");
+    let second_hand = ActorId::from_raw("sv3n1");
+    {
+        let world = harness.engine.world_mut();
+        // The station is where the officer already stands, so this poll's escort
+        // tick *is* the arrival — the walk to it is somebody else's test.
+        let at = world.characters[&officer].position_m();
+        let station = cathedral_sim::custody::Station {
+            place_id: cathedral_sim::PlaceId::from_raw("pl_ston"),
+            name: cathedral_sim::custody::STONE_HOUSE_PLACE_NAME.into(),
+            point: at,
+            stone_house: true,
+        };
+        world
+            .custody
+            .seize(prisoner.clone(), officer.clone(), None, station, 0.0);
+        world.custody.grab(&prisoner, officer.clone());
+        world.custody.grab(&prisoner, second_hand.clone());
+        world.characters.get_mut(&second_hand).unwrap().state.position_m = at;
+    }
+
+    harness.now = 1.0;
+    let messages = harness.poll();
+
+    assert!(
+        harness.engine.world().custody.is_confined(&prisoner),
+        "the escort ended at the threshold"
+    );
+    assert!(
+        !harness.engine.world().custody.is_held(&prisoner),
+        "committed is held by a person at a threshold, not by a grip"
+    );
+
+    // Said to the one it happened to, in the second person, once per hand.
+    let inbox = harness.engine.world().characters[&prisoner].inbox().to_vec();
+    assert_eq!(
+        inbox
+            .iter()
+            .filter(|line| line.contains("lets go of your arm"))
+            .count(),
+        2,
+        "both hands came off audibly, and they were told: {inbox:?}"
+    );
+    // …and to the street, in the third person, because it did not happen to
+    // them: each holder hears the other's hand leave.
+    let overheard = harness.engine.world().characters[&second_hand].inbox().to_vec();
+    assert!(
+        overheard.iter().any(|line| line.contains("lets go of")
+            && !line.contains("your arm")),
+        "whoever is standing there sees it too: {overheard:?}"
+    );
+
+    // And the host is told, once per hand: `let_go` is the only thing that ever
+    // takes the drawn arm off an NPC's prisoner, since an NPC's custody is in no
+    // snapshot the mirror sees.
+    let let_go: Vec<(ActorId, Option<ActorId>)> = messages
+        .iter()
+        .filter_map(|message| match message {
+            EngineMessage::WorldEvent {
+                kind,
+                actor_id,
+                target_id,
+                ..
+            } if kind == "let_go" => Some((actor_id.clone(), target_id.clone())),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        let_go,
+        vec![
+            (officer, Some(prisoner.clone())),
+            (second_hand, Some(prisoner)),
+        ],
+        "one event per hand, naming whose it was"
     );
 }

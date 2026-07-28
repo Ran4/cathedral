@@ -1295,14 +1295,26 @@ fn process_engine_message(
                             item,
                         });
                 }
-                // Custody's hand (`law_and_order.md` M4c). `grab` and `release`
-                // are the officer's acts, so the actor is the holder; a prisoner
-                // who tears free is the actor of their own escape.
+                // Custody's hand (`law_and_order.md` M4c). `grab`, `let_go` and
+                // `release` are the officer's acts, so the actor is the holder;
+                // a prisoner who tears free is the actor of their own escape.
                 ("grab", Some(prisoner), _) => {
                     presentation.hands.write(hands::HandoverFeedback::TookHold {
                         holder: actor,
                         prisoner,
                     });
+                }
+                // A hand coming off an arm without the custody ending, which is
+                // every clock-driven one: the dead-man timer, the station cap,
+                // and arriving at the station. `release` is the verb and
+                // `broke_free` the struggle — neither of them is what the sim
+                // sends when an escort simply reaches the door, so without this
+                // arm the officer's hand stayed drawn on the prisoner for the
+                // rest of the run.
+                ("let_go", _, _) => {
+                    presentation
+                        .hands
+                        .write(hands::HandoverFeedback::HandOff { holder: actor });
                 }
                 ("release", Some(prisoner), _) => {
                     presentation
@@ -3057,6 +3069,129 @@ mod tests {
             .expect("the standing line has a text entity");
         assert_eq!(text.0, "", "got {:?}", text.0);
         assert_eq!(node.display, Display::None, "and it is hidden");
+    }
+
+    /// …and the drawn arm comes off when the sim says the hand did
+    /// (`law_and_order.md` M4c). An NPC's custody is in **no** snapshot — only
+    /// the player's is projected — so the visible grip is fed entirely by world
+    /// events: it goes on with `grab`, and the answering event is the only thing
+    /// that can ever take it off again. Every clock-driven ending of a grip
+    /// sends `let_go`, which this file's match used to drop into `_ => {}`, so
+    /// an officer's arm stayed clamped to somebody nobody was holding any more
+    /// for the rest of the run.
+    ///
+    /// The dead-man timer is the trigger because it leaves the pair standing
+    /// exactly where they were. The 4 m grip-break backstop is the only other
+    /// thing that can put an arm down, and a test it could explain would prove
+    /// nothing at all.
+    #[test]
+    fn a_hand_the_sim_takes_off_an_arm_stops_being_drawn() {
+        let mut app = ready_fake_plugin_app();
+        let ilse = cathedral_sim::ActorId::from_raw("k0fb1");
+        let ashe = cathedral_sim::ActorId::from_raw("p009x");
+
+        // Where the officer's arm is aimed this frame, straight off the pose the
+        // renderer reads — the thing the player actually sees.
+        let grip_of = |app: &mut App, id: &str| -> Option<Vec3> {
+            let world = app.world_mut();
+            world
+                .query::<(&model::ActorId, &body::BodyPoseState)>()
+                .iter(world)
+                .find(|(actor_id, _)| actor_id.0 == id)
+                .and_then(|(_, pose)| pose.grip())
+        };
+        let body_at = |app: &mut App, id: &str| -> Vec3 {
+            let world = app.world_mut();
+            world
+                .query::<(&model::ActorId, &Transform)>()
+                .iter(world)
+                .find(|(actor_id, _)| actor_id.0 == id)
+                .map(|(_, transform)| transform.translation)
+                .expect("the cast is spawned")
+        };
+
+        // Havise takes Ilse in charge — the stand-in stands her at arm's reach
+        // first, exactly where an officer's own chase would end — and then puts
+        // a hand on her arm, through the `grab` verb's own path.
+        app.world()
+            .resource::<bridge::BridgeHandle>()
+            .try_send(bridge::BridgeCommand::DebugSeize {
+                officer: "Havise Ashe".into(),
+                target: Some("k0fb1".into()),
+            })
+            .expect("the command queue has room");
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let held = engine
+                .world_mut()
+                .expect("the engine is live")
+                .custody
+                .holds(&ilse);
+            drop(engine);
+            if held {
+                break;
+            }
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+        {
+            let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+            let sim = engine.world_mut().expect("the engine is live");
+            assert!(sim.custody.holds(&ilse), "the stand-in took her in charge");
+            cathedral_sim::apply_action(
+                sim,
+                &ashe,
+                "grab",
+                &serde_json::json!({"person": "k0fb1"}),
+            )
+            .expect("an officer at arm's reach may take hold");
+        }
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline && grip_of(&mut app, "p009x").is_none() {
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+        assert!(
+            grip_of(&mut app, "p009x").is_some(),
+            "the `grab` event put her arm on Ilse's"
+        );
+
+        // Now starve the lane the holder's turn would come down: past
+        // `CUSTODY_DEAD_MAN_SECONDS` the sim takes the hand off by itself, and
+        // the only thing it says about it is `let_go`. Re-stamped every frame,
+        // because a turn of Havise's own restarts that clock.
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while std::time::Instant::now() < deadline && grip_of(&mut app, "p009x").is_some() {
+            {
+                let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+                let sim = engine.world_mut().expect("the engine is live");
+                if let Some(record) = sim.custody.get_mut(&ilse) {
+                    record.officer_last_turn = Some(-1.0e9);
+                }
+            }
+            app.update();
+            thread::sleep(Duration::from_millis(5));
+        }
+
+        assert_eq!(
+            grip_of(&mut app, "p009x"),
+            None,
+            "the hand came off, so the arm does"
+        );
+        // …and not merely because they drifted: the pair are still a pace apart,
+        // nowhere near the backstop that would explain this without the event.
+        let apart = body_at(&mut app, "p009x").distance(body_at(&mut app, "k0fb1"));
+        assert!(
+            apart <= hands::GRIP_BREAKS_AT_M,
+            "still well within reach of each other ({apart} m)"
+        );
+        // And the custody itself stands — the dead-man timer ends a grip and
+        // never a custody — so what came off the screen is the hand, not the law.
+        let mut engine = app.world_mut().non_send_mut::<local_engine::LocalEngine>();
+        let sim = engine.world_mut().expect("the engine is live");
+        assert!(sim.custody.holds(&ilse), "she is still in the law's charge");
+        assert!(!sim.custody.is_held(&ilse), "but nobody has hold of her");
     }
 
     /// The seam's acceptance test: the whole plugin, the in-process engine, and

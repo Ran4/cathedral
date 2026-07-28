@@ -42,12 +42,15 @@ const OPEN_OFFER_AHEAD_M: f32 = 1.5;
 /// top of the upper arm, which is where somebody actually grips you — not the
 /// wrist, and not the chest a hand-over aims at (`law_and_order.md` M4c).
 const GRIP_BELOW_SHOULDER_M: f32 = 0.10;
-/// How far the pair may drift before a held arm gives up. Every way a hold ends
-/// *without* a world event — the sim's dead-man timer, a station's four
-/// minutes, an escort who left the city — leaves the two of them standing apart,
-/// and an arm cannot follow past its own length ([`CUSTODY_REACH_M`], with a
-/// pace of slack so an ordinary step never flickers it).
-const GRIP_BREAKS_AT_M: f32 = CUSTODY_REACH_M as f32 + 1.0;
+/// How far the pair may drift before a held arm gives up: an arm cannot follow
+/// past its own length ([`CUSTODY_REACH_M`], with a pace of slack so an ordinary
+/// step never flickers it).
+///
+/// A backstop only. Every ending of a grip says so — `let_go` for the hand,
+/// `release` and `broke_free` for the whole custody — and this catches the pair
+/// a message never reached: a body that stopped being rendered, or two people
+/// simply walking apart between events.
+pub(crate) const GRIP_BREAKS_AT_M: f32 = CUSTODY_REACH_M as f32 + 1.0;
 
 /// A renderer-only prop parented to one hand anchor.
 #[derive(Component, Debug, Clone, PartialEq)]
@@ -93,10 +96,15 @@ pub(crate) enum HandoverFeedback {
     /// a beat. The holder's arm goes to the prisoner's upper arm and **stays**
     /// there, tracking them, for as long as the law has hold.
     TookHold { holder: ActorId, prisoner: ActorId },
-    /// `release` / `broke_free`: every hand comes off at once. The sim's hold is
-    /// refcounted per holder, but both of the events that reach here end the
-    /// custody itself, so there is no half-let-go to present.
+    /// `release` / `broke_free`: every hand comes off at once. Both of the
+    /// events that reach here end the custody itself, so there is no half-let-go
+    /// to present.
     HandsOff { prisoner: ActorId },
+    /// `let_go`: one hand comes off, and the custody usually stands — every
+    /// clock-driven ending of a *grip* is this (the dead-man timer, the station
+    /// cap, arriving at a station), and the sim's hold is refcounted per holder,
+    /// so it drops that holder's arm and leaves any other officer's where it is.
+    HandOff { holder: ActorId },
 }
 
 /// Who has a hand on whom, keyed on the holder — the presentation twin of the
@@ -106,11 +114,11 @@ pub(crate) enum HandoverFeedback {
 /// reconciled from a snapshot, and that is forced: custody is projected to the
 /// host for the **player** only ([`PlayerCustodyState`]), so an officer taking
 /// hold of an NPC exists in no snapshot the mirror ever sees. The arm therefore
-/// learns of a grip from the `grab` world event, and lets go on `release`, on
-/// `broke_free`, or when the two of them are simply too far apart to be holding
-/// each other ([`GRIP_BREAKS_AT_M`]) — which is the backstop for the release
-/// paths the sim takes without saying anything (its dead-man timer, the station
-/// cap, arrival).
+/// learns of a grip from the `grab` world event, and lets go on `let_go` (the
+/// hand alone), on `release` or `broke_free` (the whole custody), or when the
+/// two of them are simply too far apart to be holding each other
+/// ([`GRIP_BREAKS_AT_M`]) — a backstop that an escort never reaches, because
+/// `custody::follow_escorts` keeps the prisoner a pace behind the shoulder.
 #[derive(Resource, Debug, Default)]
 pub(crate) struct GripHolds {
     by_holder: HashMap<ActorId, ActorId>,
@@ -125,6 +133,13 @@ impl GripHolds {
     /// map entirely, so "is anybody being held" stays one `is_empty` call.
     fn hands_off(&mut self, prisoner: &ActorId) {
         self.by_holder.retain(|_, held| held != prisoner);
+    }
+
+    /// One hand off, whoever else still has hold. The twin of the sim's
+    /// [`cathedral_sim::custody::Custody::let_go`], and the map is keyed on the
+    /// holder for exactly this.
+    fn hand_off(&mut self, holder: &ActorId) {
+        self.by_holder.remove(holder);
     }
 
     fn is_empty(&self) -> bool {
@@ -564,6 +579,9 @@ pub(crate) fn apply_handover_feedback(
             }
             HandoverFeedback::HandsOff { prisoner } => {
                 grips.hands_off(prisoner);
+            }
+            HandoverFeedback::HandOff { holder } => {
+                grips.hand_off(holder);
             }
         }
     }

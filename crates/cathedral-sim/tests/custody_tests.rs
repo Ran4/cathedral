@@ -1329,8 +1329,8 @@ fn a_held_actor_follows_their_escort_and_is_committed_at_the_station() {
     assert_eq!(arrival.moved, [actor("tamrd")]);
     assert_eq!(
         arrival.committed,
-        [actor("tamrd")],
-        "arriving is reported, so the engine can say the escort ended"
+        [(actor("tamrd"), Vec::new())],
+        "arriving is reported, with the hands it took off, so the engine can say the escort ended"
     );
     let record = world.custody.get(&actor("tamrd")).unwrap();
     assert_eq!(record.state, Confinement::Committed);
@@ -1553,8 +1553,9 @@ fn a_departing_escort_frees_their_prisoner_audibly_and_with_the_reason() {
         "the freed learn they are free, and why: {inbox:?}"
     );
     // The grip's end is announced to whoever is standing there — the same
-    // witness line every other release path emits (`announce_grip` addresses
-    // bystanders; the prisoner's own news is the reason line above).
+    // witness line every other release path emits (`announce_grip` says it in
+    // the third person to the street and in the second person to the prisoner,
+    // whose *reason* is the separate line above).
     let overheard = world.characters[&actor("wrdn")].inbox();
     assert!(
         overheard.iter().any(|line| line.contains("lets go of")),

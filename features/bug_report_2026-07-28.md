@@ -40,11 +40,11 @@ not five.
 - [F] **medium** `crates/cathedral-sim/src/actions.rs:3388` — `release` never tells the person being released: the second-person branch is unreachable
 - [F] **medium** `crates/cathedral-sim/src/actions.rs:3455` — `struggle`'s attempt counter saturates, so every repeat attempt replays one frozen die
 - [F] **medium** `crates/cathedral-sim/src/actions.rs:3522` — `announce_struggle` excludes the struggler, so an NPC gets no record of their own struggle
-- [ ] **medium** `crates/cathedral-sim/src/engine.rs:3320` — announce_commitment's hand-release loop is always empty (commit cleared holders)
-- [ ] **medium** `crates/cathedral-sim/src/engine.rs:3275` — Engine custody endings emit only `let_go`, which nothing clears the grip on
+- [F] **medium** `crates/cathedral-sim/src/engine.rs:3320` — announce_commitment's hand-release loop is always empty (commit cleared holders)
+- [F] **medium** `crates/cathedral-sim/src/engine.rs:3275` — Engine custody endings emit only `let_go`, which nothing clears the grip on
 - [ ] **medium** `crates/cathedral-sim/src/engine.rs:2742` — ramp_urgency deletes the debug-written `urgency` status in the same poll it is set
 - [ ] **medium** `crates/cathedral-sim/src/scheduler.rs:812` — An actor queued in both the player-reaction and priority lanes takes two turns
-- [ ] **medium** `crates/cathedral-sim/src/custody.rs:414` — commit clears holders before the arrival announcement reads them
+- [F] **medium** `crates/cathedral-sim/src/custody.rs:414` — commit clears holders before the arrival announcement reads them
 - [ ] **medium** `crates/cathedral-sim/src/weather.rs:1073` — Forced weather's 8-hour elapsed cap freezes the wet aftermath forever
 - [ ] **medium** `crates/cathedral-sim/src/nav/mod.rs:590` — offset_route validates only vertices, so lane paths run through walls for up to 10 m
 - [ ] **medium** `crates/cathedral-backends/src/worker.rs:362` — Worker::forget kills the child but never reaps it: a zombie per worker failure
@@ -57,7 +57,8 @@ not five.
 - [ ] **medium** `src/scene.rs:983` — Baldachin's two front columns float 0.54 m above the altar steps
 - [ ] **medium** `src/soundscape.rs:1597` — Daily curfew peal never claims the Scold's cooldown, so a summons rings on top of it
 - [ ] **medium** `src/drive.rs:109` — drive `frame` ignores the camera's 0.65 m eye offset, aiming shots 0.65 m too high
-- [ ] **medium** `src/smart_actors/mod.rs:1300` — `let_go` world event is never projected — the visible custody grip is never released
+- [F] **medium** `src/smart_actors/mod.rs:1300` — `let_go` world event is never projected — the visible custody grip is never released
+- [F] **medium** `crates/cathedral-sim/src/actions.rs:3603` — `announce_grip`'s second-person branch is unreachable, so a prisoner is never told a hand landed on or left their arm *(found while fixing the above; not one of the 46 original findings)*
 - [ ] **low** `crates/cathedral-sim/src/round.rs:6058` — service_stalls never checks custody: a marched-off prisoner still completes a sale
 - [ ] **low** `crates/cathedral-sim/src/round.rs:2032` — A road member left behind by the law is dropped from the party and never enrolled
 - [ ] **low** `crates/cathedral-sim/src/actions.rs:3141` — `seize` with an explicit notice_id discards the second door instead of testing it

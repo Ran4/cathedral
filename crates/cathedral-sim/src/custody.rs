@@ -445,17 +445,21 @@ impl Custody {
     }
 
     /// Arrived: the escort ends and the keeper's threshold begins.
-    pub fn commit(&mut self, prisoner: &ActorId, now: f64) -> bool {
-        let Some(record) = self.held.get_mut(prisoner) else {
-            return false;
-        };
+    ///
+    /// Returns the hands it took off the arm — every one of them, because
+    /// arriving ends the walk — so the caller can say what ended and to whom,
+    /// exactly as [`Self::release`] and [`Self::forget`] hand their record back
+    /// for. A hold that ends in silence looks exactly like one that did not, and
+    /// the holder's arm is drawn until something says it came off. `None` when
+    /// there was nothing here to commit.
+    pub fn commit(&mut self, prisoner: &ActorId, now: f64) -> Option<Vec<ActorId>> {
+        let record = self.held.get_mut(prisoner)?;
         if record.state == Confinement::Committed {
-            return false;
+            return None;
         }
         record.state = Confinement::Committed;
         record.committed_at = Some(now);
-        record.holders.clear();
-        true
+        Some(std::mem::take(&mut record.holders))
     }
 
     /// Let them go entirely. Returns the record — which still names whoever had
@@ -630,7 +634,16 @@ pub fn follow_escorts(world: &mut World, now: f64) -> EscortStep {
         }
     }
 
-    arrived.retain(|prisoner| world.custody.commit(prisoner, now));
+    // Arriving drops every hand, and the hands come back out with the prisoner:
+    // announcing that they came off is the engine's job (it owns the scheduler
+    // the news wakes), and by then there is nothing left on the record to read.
+    let committed: Vec<(ActorId, Vec<ActorId>)> = arrived
+        .into_iter()
+        .filter_map(|prisoner| {
+            let released = world.custody.commit(&prisoner, now)?;
+            Some((prisoner, released))
+        })
+        .collect();
 
     // **Little else in the sim knows about custody, and what does is a guard,
     // not a mover.** `round::decide`'s rung 0 and the `go_to` refusal stop a
@@ -668,10 +681,7 @@ pub fn follow_escorts(world: &mut World, now: f64) -> EscortStep {
         }
     }
 
-    EscortStep {
-        moved,
-        committed: arrived,
-    }
+    EscortStep { moved, committed }
 }
 
 /// A departure's side of custody: tidy the law's map of somebody the round has
@@ -924,8 +934,9 @@ fn cell_standings(world: &World, center: Vec3, count: usize) -> Vec<Vec3> {
 pub struct EscortStep {
     /// Prisoners whose position this tick changed, for the hot channel.
     pub moved: Vec<ActorId>,
-    /// Prisoners who reached their station this tick.
-    pub committed: Vec<ActorId>,
+    /// Prisoners who reached their station this tick, each with the hands the
+    /// arrival took off their arm.
+    pub committed: Vec<(ActorId, Vec<ActorId>)>,
 }
 
 // -------------------------------------------------------------- the struggle

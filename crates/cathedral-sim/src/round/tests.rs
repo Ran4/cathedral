@@ -1632,7 +1632,7 @@ fn an_escort_is_not_marched_to_food_mid_delivery() {
 
     // Committed: the keeper at the threshold is free again, and the same
     // hunger presses at once.
-    assert!(world.custody.commit(&taken, 0.0));
+    assert!(world.custody.commit(&taken, 0.0).is_some());
     world.characters.get_mut(&officer).unwrap().state.intent = None;
     let (_, pressure) = decide(
         &round,

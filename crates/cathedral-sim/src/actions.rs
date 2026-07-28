@@ -3615,7 +3615,14 @@ pub(crate) fn announce_grip(
     prisoner_id: &ActorId,
     taken: bool,
 ) {
-    let witnesses = nearby(world, prisoner_id, HEARING_RADIUS_M);
+    // Earshot of the prisoner, and then the prisoner themself: `nearby` passes
+    // its origin as the exclude argument, so a circle centred on them is the one
+    // circle they are not in — and the second-person lines below were only ever
+    // addressed to them. The hand is somebody else's, so this is the inbox and
+    // not `remember_percept`: a hand landing on your arm is news that reached
+    // you, exactly as `release` puts the one it frees on its own list by name.
+    let mut witnesses = nearby(world, prisoner_id, HEARING_RADIUS_M);
+    witnesses.push(prisoner_id.clone());
     let lines: Vec<(ActorId, String)> = witnesses
         .iter()
         .map(|witness| {
