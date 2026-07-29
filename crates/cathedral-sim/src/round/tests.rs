@@ -1836,6 +1836,93 @@ fn a_seizure_abandons_the_officers_well_and_stall_errands() {
     );
 }
 
+/// The prisoner's side of the same seizure. `abandon_bodily_errands` is only
+/// ever run for the escort, so a buyer taken in charge kept their place at the
+/// pitch while `custody::follow_escorts` walked their body across the city —
+/// and the head of a queue is served unconditionally, so `service_stalls` paid
+/// a spark to a vendor hundreds of metres behind them, handed back a loaf, and
+/// sat them down to eat it on the march to the Stone House. The place goes with
+/// the errand, so the neighbour behind them is served now rather than waiting
+/// out a committal for a turn that can never come.
+#[test]
+fn the_law_takes_a_buyer_out_of_the_stall_queue() {
+    let (mut world, mut round, _vendor, buyer, stock_id) = bread_stall_world();
+    let clock = clock_at(Office::HighWick);
+    let pitch = round.stalls[0].pitch;
+
+    // A second hungry neighbour, queued behind the one the law wants.
+    let next = ActorId::from_raw("nextup");
+    world.add_character(person(
+        "nextup",
+        Vec3::new(2.0, WALK_Y, 1.0),
+        None,
+        Significance::Minor,
+    ));
+    let next_wallet = ItemId::from_raw("w_nextup");
+    world.add_item(Item::stack(next_wallet.clone(), "spark", 5));
+    world
+        .characters
+        .get_mut(&next)
+        .unwrap()
+        .state
+        .holds
+        .push(next_wallet);
+    world.assert_invariants();
+    round.stalls[0].queue.push(next.clone());
+    for id in [&buyer, &next] {
+        round.people.insert(id.clone(), weather_person(pitch));
+        round.people.get_mut(id).unwrap().food = Some(FoodErrand {
+            stall: 0,
+            phase: FoodPhase::Queued,
+        });
+    }
+
+    let station = crate::custody::Station {
+        place_id: PlaceId::from_raw("pl_test"),
+        name: crate::custody::STONE_HOUSE_PLACE_NAME.into(),
+        point: Vec3::new(200.0, WALK_Y, 0.0),
+        stone_house: true,
+    };
+    world
+        .custody
+        .seize(buyer.clone(), ActorId::from_raw("srgnt"), Some(1), station, 0.0);
+
+    service_stalls(&mut round, &mut world, &clock, 0.0, &player());
+    assert!(
+        !round.stalls[0].queue.contains(&buyer),
+        "the law's prisoner loses their place, not merely their turn"
+    );
+    assert!(
+        round.people[&buyer].food.is_none(),
+        "and the errand with it, so the ladder has them back the moment they are released"
+    );
+    assert_eq!(
+        round.stalls[0].serving.as_ref().map(|(id, _)| id.clone()),
+        Some(next.clone()),
+        "the neighbour behind them is served instead of queueing behind a committal"
+    );
+
+    // Past the purchase timer: nothing of the prisoner's ever settles.
+    service_stalls(
+        &mut round,
+        &mut world,
+        &clock,
+        PURCHASE_SECONDS + 0.1,
+        &player(),
+    );
+    assert_eq!(
+        world.wallet_sparks(&buyer),
+        5,
+        "no spark crossed the city to a vendor the prisoner has been marched away from"
+    );
+    assert_eq!(
+        world.items[&stock_id].quantity, 2,
+        "the single loaf off the board is the neighbour's"
+    );
+    assert_eq!(world.wallet_sparks(&next), 3, "the neighbour paid for it");
+    world.assert_invariants();
+}
+
 /// An exchange with the player holds the round: the partner neither sets off
 /// on an errand nor keeps walking one already begun, and the round resumes on
 /// its own once the exchange goes cold.

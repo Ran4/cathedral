@@ -59,7 +59,7 @@ not five.
 - [F] **medium** `src/drive.rs:109` — drive `frame` ignores the camera's 0.65 m eye offset, aiming shots 0.65 m too high
 - [F] **medium** `src/smart_actors/mod.rs:1300` — `let_go` world event is never projected — the visible custody grip is never released
 - [F] **medium** `crates/cathedral-sim/src/actions.rs:3603` — `announce_grip`'s second-person branch is unreachable, so a prisoner is never told a hand landed on or left their arm *(found while fixing the above; not one of the 46 original findings)*
-- [ ] **low** `crates/cathedral-sim/src/round.rs:6058` — service_stalls never checks custody: a marched-off prisoner still completes a sale
+- [F] **low** `crates/cathedral-sim/src/round.rs:6058` — service_stalls never checks custody: a marched-off prisoner still completes a sale
 - [ ] **low** `crates/cathedral-sim/src/round.rs:2032` — A road member left behind by the law is dropped from the party and never enrolled
 - [ ] **low** `crates/cathedral-sim/src/actions.rs:3141` — `seize` with an explicit notice_id discards the second door instead of testing it
 - [ ] **low** `crates/cathedral-sim/src/prompt/mod.rs:989` — Notice cap can drop the wronged actor's own notice while settle_notice is offered

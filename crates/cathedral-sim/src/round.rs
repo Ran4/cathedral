@@ -6031,6 +6031,52 @@ fn service_stalls(
         }
     }
 
+    // The law has the buyer (`law_and_order.md` M4/M5). A queue slot outlives
+    // the seizure — `custody::follow_escorts` walks the prisoner off a pace
+    // behind the officer while the pitch keeps their place — and the head of a
+    // queue is served unconditionally, so without this a prisoner halfway to
+    // the Stone House completes a hand-to-hand sale with a vendor hundreds of
+    // metres behind them and sits down to eat it on the road. The escort's own
+    // errands are stripped by `abandon_bodily_errands` in `run_ladder`; the
+    // prisoner's are nobody's, so they are stripped here.
+    //
+    // Dropped from the queue outright rather than merely passed over — the
+    // stock plan's door when the law takes its buyer (`tick_stock_plans`).
+    // They are not coming back to this pitch on this errand, and a slot its
+    // holder can never use blocks everybody behind them for as long as the law
+    // has them, which for a committal is the rest of the day. Unlike the water
+    // twin there is nothing to let finish first: a draw is one body and a
+    // bucket, a sale is two bodies now hundreds of metres apart. A meal
+    // already in hand keeps its few-second timer, exactly as for the escort.
+    let seized: Vec<ActorId> = round
+        .people
+        .iter()
+        .filter_map(|(id, person)| {
+            (matches!(
+                person.food.as_ref().map(|errand| &errand.phase),
+                Some(FoodPhase::Approaching | FoodPhase::Queued)
+            ) && world.custody.holds(id))
+            .then(|| id.clone())
+        })
+        .collect();
+    for buyer in seized {
+        for stall in &mut round.stalls {
+            stall.queue.retain(|queued| queued != &buyer);
+            if stall
+                .serving
+                .as_ref()
+                .is_some_and(|(served, _)| served == &buyer)
+            {
+                stall.serving = None;
+            }
+        }
+        round
+            .people
+            .get_mut(&buyer)
+            .expect("buyer is enrolled")
+            .food = None;
+    }
+
     // Open = the hours predicate holds *and* the bound vendor is at the pitch —
     // the seller the round delivered to the square (no pin). Computed first, so
     // the mutable pass below is free of the world borrow.
