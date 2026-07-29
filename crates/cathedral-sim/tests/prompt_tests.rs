@@ -339,6 +339,56 @@ fn the_wronged_party_holds_the_settle_verb_without_serving_the_law() {
     assert!(!bystander.contains("settle_notice"));
 }
 
+/// law_and_order.md M3.5: the sheet keeps only the newest `NOTICES_SHEET_MAX`
+/// notices a reader carries — but never at the cost of the one naming *them* as
+/// wronged. `settle_notice` takes a number and this section is where that number
+/// is read off, so a cap that could bury their own word would hand the one
+/// person entitled to forgive the wrong a verb they can only guess the argument
+/// for.
+#[test]
+fn the_wronged_partys_own_notice_keeps_its_seat_past_the_sheet_cap() {
+    let env = prompt_env();
+    let mut world = seed_world();
+    let sven = actor("sv3n1");
+
+    // Eight words on the ward's tongues, the third of them the wrong done to
+    // Sven. He has no lore, so his carry roll is certain and he carries them all.
+    for index in 1..=8 {
+        world.notices.raise(
+            format!("an outland stranger, the {index} of them"),
+            "took a boy's spark".into(),
+            None,
+            None,
+            None,
+            actor("cb947"),
+            Some(actor("k0fb1")),
+            (index == 3).then(|| sven.clone()),
+            None,
+        );
+    }
+
+    let rendered = sheet(&world, "sv3n1", &env);
+    let ids: Vec<u64> = rendered["word_in_the_ward"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|line| line["notice_id"].as_u64().unwrap())
+        .collect();
+    // Still newest first and still four: notice 3 takes its seat from the oldest
+    // of the newcomers it would otherwise have been evicted by.
+    assert_eq!(ids, [8, 7, 6, 3]);
+
+    let wronged = render_prompt(&world, &sven, None, &env).unwrap();
+    assert!(
+        wronged.contains("- notice 3 — an outland stranger, the 3 of them"),
+        "the number the verb takes is on the sheet"
+    );
+    assert!(
+        wronged.contains("settle_notice"),
+        "and the verb is still offered to them"
+    );
+}
+
 /// movement M6: the Night Office's ward mood reaches the turn sheet of the
 /// Minors it was bought for, with its explainer — and nobody else's, which is
 /// what keeps the golden fixtures frozen.

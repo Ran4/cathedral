@@ -62,7 +62,7 @@ not five.
 - [F] **low** `crates/cathedral-sim/src/round.rs:6058` — service_stalls never checks custody: a marched-off prisoner still completes a sale
 - [F] **low** `crates/cathedral-sim/src/round.rs:2032` — A road member left behind by the law is dropped from the party and never enrolled
 - [F] **low** `crates/cathedral-sim/src/actions.rs:3141` — `seize` with an explicit notice_id discards the second door instead of testing it
-- [ ] **low** `crates/cathedral-sim/src/prompt/mod.rs:989` — Notice cap can drop the wronged actor's own notice while settle_notice is offered
+- [F] **low** `crates/cathedral-sim/src/prompt/mod.rs:989` — Notice cap can drop the wronged actor's own notice while settle_notice is offered
 - [ ] **low** `crates/cathedral-sim/src/night.rs:744` — A rejected ward set_round still permanently teaches the Minor the way
 - [ ] **low** `src/smart_actors/hands.rs:628` — One out-of-range holder takes every other officer's hand off the prisoner
 - [ ] **low** `src/city/mod.rs:5067` — Firewood rick stacks its two columns along the log axis instead of across it

@@ -268,9 +268,11 @@ struct Sheet<'a> {
     you_see: YouSee<'a>,
     /// The ward's live notices this actor carries (`law_and_order.md` M3) —
     /// what the ward is saying right now, newest first, capped at
-    /// [`crate::notices::NOTICES_SHEET_MAX`]. A standing truth, so it sits with
-    /// the world sections above the time axis; omitted entirely for the
-    /// (usual) carrier-less case, which keeps the frozen fixtures stable.
+    /// [`crate::notices::NOTICES_SHEET_MAX`] by [`ward_notice_lines`], which
+    /// spends the last seat on their own wrong before a newer word. A standing
+    /// truth, so it sits with the world sections above the time axis; omitted
+    /// entirely for the (usual) carrier-less case, which keeps the frozen
+    /// fixtures stable.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     word_in_the_ward: Vec<NoticeLine>,
     since_your_last_turn: Vec<&'a str>,
@@ -497,7 +499,9 @@ pub fn render_prompt(
     let has_law_verbs = crate::notices::is_law(actor);
     // `settle_notice` reaches one person outside the law cast: whoever a live
     // notice names as wronged, who may forgive their own spark (M3.5). They
-    // always carry that notice, so the number the verb takes is on their sheet.
+    // always carry that notice (`notices::carries`) and it always keeps its seat
+    // past the sheet cap (`ward_notice_lines`), so the number the verb takes is
+    // on their sheet.
     let has_settle_verb = has_law_verbs
         || world
             .notices
@@ -980,18 +984,7 @@ fn build_sheet<'a>(
             description: &strings.you_see_description,
             people,
         },
-        word_in_the_ward: world
-            .notices
-            .live()
-            .iter()
-            .rev()
-            .filter(|notice| crate::notices::carries(world, actor.id(), notice.id))
-            .take(crate::notices::NOTICES_SHEET_MAX)
-            .map(|notice| NoticeLine {
-                notice_id: notice.id,
-                word: notice.line(),
-            })
-            .collect(),
+        word_in_the_ward: ward_notice_lines(world, actor.id()),
         since_your_last_turn,
         recent_history,
         stored_memories: actor.memories(),
@@ -1153,6 +1146,48 @@ fn pocket_note(
         });
     }
     (!parts.is_empty()).then(|| parts.join("; "))
+}
+
+/// The `word_in_the_ward` section: the live notices this actor carries, newest
+/// first and capped at [`crate::notices::NOTICES_SHEET_MAX`] — except that a
+/// notice naming *them* as wronged never loses its seat to a newer one.
+///
+/// That exception is what the verb stands on (`law_and_order.md` M3.5).
+/// `settle_notice` takes a number and the wronged party reads that number off
+/// this section, so a plain newest-first cap could bury their own word behind
+/// four later ones their curiosity roll happened to make them a carrier of —
+/// leaving the turn prompt telling the one person entitled to forgive the wrong
+/// to settle a notice their sheet does not show, which they can only guess at
+/// or let stand. The rendering order is still newest first: the exception picks
+/// which notices get a seat, never where they sit.
+fn ward_notice_lines(world: &World, actor_id: &ActorId) -> Vec<NoticeLine> {
+    let carried: Vec<&crate::notices::WardNotice> = world
+        .notices
+        .live()
+        .iter()
+        .rev()
+        .filter(|notice| crate::notices::carries(world, actor_id, notice.id))
+        .collect();
+    let wronged_here =
+        |notice: &crate::notices::WardNotice| notice.wronged.as_ref() == Some(actor_id);
+    // Their own words claim seats first, then the newest of the rest fill what
+    // is left. Ids, not indices: the cap is chosen in priority order and spent
+    // back in the ward's own order below.
+    let seated: Vec<u64> = carried
+        .iter()
+        .filter(|notice| wronged_here(notice))
+        .chain(carried.iter().filter(|notice| !wronged_here(notice)))
+        .map(|notice| notice.id)
+        .take(crate::notices::NOTICES_SHEET_MAX)
+        .collect();
+    carried
+        .into_iter()
+        .filter(|notice| seated.contains(&notice.id))
+        .map(|notice| NoticeLine {
+            notice_id: notice.id,
+            word: notice.line(),
+        })
+        .collect()
 }
 
 /// The sheet's sentence for where the current walk ends, or `None` while
