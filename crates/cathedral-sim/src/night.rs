@@ -738,6 +738,14 @@ impl NightOffice {
         if world.places.get(&place_id).is_none() {
             return Err(format!("there is no place with id {place_id}"));
         }
+        // Take the edit *first*. `set_round_leg` still refuses an empty round
+        // and a leg that is not on the sheet, and it does not consult
+        // `places_known` — only the self verb does — so nothing is lost by
+        // asking it before teaching, and a refused decision must not leave a
+        // way behind it. `tell_way` is otherwise the only road into somebody
+        // else's `places_known`, and a route nobody ever told them would
+        // outlive the diagnostic by the rest of the game.
+        let line = set_round_leg(world, &person, &leg, &place_id).map_err(|error| error.message)?;
         // The ward decided it, so the ward tells them the way (see the doc
         // comment above): without this the whitelist would reject nearly every
         // edit a ward could make.
@@ -747,8 +755,8 @@ impl NightOffice {
             .expect("checked by ward_minors")
             .state
             .places_known
-            .insert(place_id.clone());
-        set_round_leg(world, &person, &leg, &place_id).map_err(|error| error.message)
+            .insert(place_id);
+        Ok(line)
     }
 }
 

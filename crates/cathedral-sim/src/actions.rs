@@ -2616,7 +2616,7 @@ fn set_round(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Stri
 ///
 /// Split out because the Night Office's **ward** batch edits somebody else's
 /// round — the ward decided it, so the ward lane calls this directly with the
-/// named person (`crate::night`), having first taught them the way. The
+/// named person (`crate::night`) and teaches them the way once it takes. The
 /// place-handle whitelist above is the *self* rule and stays with the verb.
 pub(crate) fn set_round_leg(
     world: &mut World,

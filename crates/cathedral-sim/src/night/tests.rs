@@ -787,6 +787,60 @@ fn a_ward_moves_its_own_peoples_rounds_and_teaches_them_the_way() {
     assert!(world.characters[&ActorId::from_raw("mjr01")].state.round_edit.is_none());
 }
 
+/// A refused edit teaches nothing. The ward only gets to hand out a way as
+/// part of a decision that actually took — a leg that is not on the sheet is no
+/// decision, and `places_known` is otherwise `tell_way`'s alone. A way that
+/// outlived its diagnostic would let the Minor `go_to` a place nobody ever told
+/// them, for the rest of the game.
+#[test]
+fn a_refused_ward_set_round_does_not_teach_the_way() {
+    let mut world = world_with_cast();
+    let mut night = office(all_tiers(), &world, 0.0);
+    let minor = ActorId::from_raw("mnr01");
+    // Tam Rud keeps a one-leg round, so leg 7 names a leg off the end of it.
+    let known = PlaceId::from_raw("pl_aaaa");
+    let unknown = PlaceId::from_raw("pl_bbbb");
+    world
+        .characters
+        .get_mut(&minor)
+        .unwrap()
+        .state
+        .places_known
+        .insert(known.clone());
+
+    let mut events = Vec::new();
+    night.apply_ward(
+        &mut world,
+        PlanningWard::Weigh,
+        concat!(
+            r#"set_round {"person": "mnr01", "leg": 7, "place_id": "pl_bbbb"}"#,
+            "\n",
+            // The same refusal against a way they already held: the rejection
+            // must not un-teach what they legitimately knew either.
+            r#"set_round {"person": "mnr01", "leg": 7, "place_id": "pl_aaaa"}"#,
+        ),
+        &mut events,
+    );
+
+    let state = &world.characters[&minor].state;
+    assert!(state.round_edit.is_none(), "neither leg is on the sheet");
+    assert!(
+        !state.places_known.contains(&unknown),
+        "a refused edit taught them a way to The Hungry Ox"
+    );
+    assert!(
+        state.places_known.contains(&known),
+        "a refused edit took away a way they already held"
+    );
+    assert_eq!(
+        diagnostics(&events)
+            .iter()
+            .filter(|line| line.contains("set_round failed"))
+            .count(),
+        2
+    );
+}
+
 /// The ward speaks for its people; it does not get to rewrite them.
 #[test]
 fn a_ward_may_make_no_more_than_three_edits() {
