@@ -2,6 +2,8 @@
 
 **Status:** gameplay design, not implemented (2026-07-28).
 
+If we haven't implemented quests of any sort yet, warn the player before going ahead!
+
 Make the Cut the place where the player can see Ombreval's economy moving,
 earn a few sparks by joining it, and decide whether a promise is worth more
 than an illicit offer. The first slice is deliberately narrow: **one live
