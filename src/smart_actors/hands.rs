@@ -642,12 +642,17 @@ pub(crate) fn hold_the_seized(
                     aims.insert(holder.clone(), upper_arm_of(held_at));
                 }
                 // Out of reach, or one of them is no longer rendered: either way
-                // there is no arm left to draw.
-                _ => broken.push(prisoner.clone()),
+                // there is no arm left to draw. Only *this* holder's, though —
+                // the sim's hold is refcounted per holder, so a second officer
+                // still at the prisoner's shoulder keeps his hand where it is,
+                // and an entry dropped here never comes back (a grip is only
+                // ever registered by a fresh `grab` event, which the sim will
+                // not send again for a hold it still considers live).
+                _ => broken.push(holder.clone()),
             }
         }
-        for prisoner in broken {
-            grips.hands_off(&prisoner);
+        for holder in broken {
+            grips.hand_off(&holder);
         }
     }
 
@@ -1239,5 +1244,107 @@ mod tests {
         });
         app.update();
         assert_eq!(grip_of(&mut app, "ashe"), None, "the law let go");
+    }
+
+    /// The reach backstop measures one *pair*, and must only end that pair:
+    /// the sim's hold is refcounted per holder (`CustodyRecord::holders`), so
+    /// two officers on one runner is a modelled state, and the one nudged out
+    /// of reach takes his own arm off and nobody else's. Nothing would ever put
+    /// the other back — a grip is only ever registered by a fresh `grab`.
+    #[test]
+    fn one_holder_losing_his_reach_leaves_the_other_hand_on() {
+        let standing = |world_revision: u64, ashe_x: f32| WorldSnapshot {
+            world_revision,
+            player_id: ActorId("player".into()),
+            actors: vec![
+                {
+                    let mut player = actor("player", &[]);
+                    player.control = ActorControl::Player;
+                    player
+                },
+                {
+                    let mut ashe = actor("ashe", &[]);
+                    ashe.position_m = Position::new(ashe_x, 0.91, 0.0).unwrap();
+                    ashe
+                },
+                // Odo never moves: a pace off the runner's shoulder throughout.
+                actor("odo", &[]),
+                {
+                    let mut runner = actor("runner", &[]);
+                    runner.position_m = Position::new(1.0, 0.91, 0.0).unwrap();
+                    runner
+                },
+            ],
+            items: vec![],
+            offers: vec![],
+            road_carts: vec![],
+        };
+        let mut mirror = WorldMirror::default();
+        mirror.replace_snapshot(standing(1, 0.0)).unwrap();
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<Image>()
+            .add_message::<HandoverFeedback>()
+            .init_resource::<GripHolds>()
+            .insert_resource(mirror)
+            .add_systems(
+                Startup,
+                (
+                    setup_item_prop_assets,
+                    crate::smart_actors::body::setup_body_assets,
+                ),
+            )
+            .add_systems(
+                Update,
+                (
+                    reconcile_actor_views,
+                    apply_handover_feedback,
+                    hold_the_seized,
+                )
+                    .chain(),
+            );
+        app.update();
+
+        let grip_of = |app: &mut App, id: &str| -> Option<Vec3> {
+            let world = app.world_mut();
+            world
+                .query::<(&ActorId, &BodyPoseState)>()
+                .iter(world)
+                .find(|(actor_id, _)| actor_id.0 == id)
+                .and_then(|(_, pose)| pose.grip())
+        };
+
+        for holder in ["ashe", "odo"] {
+            app.world_mut().write_message(HandoverFeedback::TookHold {
+                holder: ActorId(holder.into()),
+                prisoner: ActorId("runner".into()),
+            });
+        }
+        app.update();
+        let arm =
+            Vec3::new(1.0, 0.91, 0.0) + Vec3::Y * (body::SHOULDER_ROOT_Y - GRIP_BELOW_SHOULDER_M);
+        assert_eq!(grip_of(&mut app, "ashe"), Some(arm), "both have hold");
+        assert_eq!(grip_of(&mut app, "odo"), Some(arm));
+
+        // The separation pass shoulders Ashe out past his own arm's length.
+        app.world_mut()
+            .resource_mut::<WorldMirror>()
+            .replace_snapshot(standing(2, GRIP_BREAKS_AT_M + 2.0))
+            .unwrap();
+        app.update();
+        assert_eq!(grip_of(&mut app, "ashe"), None, "his reach broke, so his hand");
+        assert_eq!(
+            grip_of(&mut app, "odo"),
+            Some(arm),
+            "but Odo is still at the shoulder, and stays there"
+        );
+
+        // And he keeps it: the register was not emptied behind him, so the next
+        // frame draws the same arm without a single event to renew it.
+        app.update();
+        assert_eq!(grip_of(&mut app, "odo"), Some(arm), "frame after frame");
     }
 }
