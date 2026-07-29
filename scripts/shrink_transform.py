@@ -396,6 +396,14 @@ OVERRIDE_MARK: dict[int, Point] = {
     60: (8.0, 258.0),     # Slate Cistern
     61: (135.0, 188.0),   # Tenter Cistern
     62: (172.0, 120.0),   # Lodge Well
+    # The Stone House. The one override here that is not a re-authored corner:
+    # the gaol is hand-authored in Rust (`city::build_stone_house`) as a room
+    # rather than a plan building, and it was authored in 2026-07-26, after this
+    # shrink — so (44.5, -207.3) is ALREADY in the shrunk frame and must pass
+    # through untouched. It sits mid-floor inside that room's four walls
+    # (x 39..50, z -211.2..-203.2, so 0.1 m south of their exact centre), and
+    # `assets/world/places.json` snaps it to nav node 570 at (44.625, -207.375).
+    70: (44.5, -207.3),   # The Stone House (post-shrink; never scale it)
 }
 
 # --------------------------------------------------------------------------- #
@@ -462,6 +470,7 @@ MARK_CLASS: dict[int, str] = {
     67: "scale",            # Bitter Well
     68: "shambles",         # The Shambles well
     69: "seven_lofts",      # Seven Lofts fire tanks
+    70: "override",         # The Stone House (authored post-shrink; see OVERRIDE_MARK)
 }
 
 # --------------------------------------------------------------------------- #

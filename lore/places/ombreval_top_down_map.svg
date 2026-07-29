@@ -2717,6 +2717,8 @@
 <text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="-219.60" y="-239.20">68</text>
 <circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="-287.50" cy="277.00" r="5.8"><title>69. Seven Lofts fire tanks</title></circle>
 <text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="-287.50" y="277.00">69</text>
+<circle class="place-marker" style="fill: #302a22; stroke: #f4ecd7; stroke-width: 1.3;" cx="207.30" cy="44.50" r="5.8"><title>70. The Stone House</title></circle>
+<text class="place-number" style="fill: #fffaf0; font-family: Arial, sans-serif; font-size: 5.4px; font-weight: bold; text-anchor: middle; dominant-baseline: central;" x="207.30" y="44.50">70</text>
 </g>
 </g>
 <g id="map-information">
@@ -2875,6 +2877,8 @@
 <text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="702" y="534.0">(-239.2, 219.6) · landmark</text>
 <text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="685" y="551.5"><tspan font-weight="bold">69</tspan>  Seven Lofts fire tanks</text>
 <text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="702" y="560.5">(277, 287.5) · landmark</text>
+<text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="685" y="578.0"><tspan font-weight="bold">70</tspan>  The Stone House</text>
+<text class="panel-small" style="font-family: Arial, sans-serif; font-size: 5.8px; fill: #514636;" x="702" y="587.0">(44.5, -207.3) · building</text>
 <rect class="panel" style="fill: #f4ecd7; stroke: #574b39; stroke-width: 1.2;" x="500" y="610" width="350" height="105" rx="5"/>
 <text class="panel-title" style="font-family: Georgia, serif; font-size: 12px; font-weight: bold; fill: #30291f; letter-spacing: 1px;" x="515" y="636">PLAN INVENTORY</text>
 <text class="panel-text" style="font-family: Arial, sans-serif; font-size: 6.7px; fill: #30291f;" x="515" y="657">1,108 total building footprints</text>

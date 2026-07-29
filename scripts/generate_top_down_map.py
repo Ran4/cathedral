@@ -493,6 +493,19 @@ for _name, _anchor, _kind in [
     ("Bitter Well", (101, -401), "landmark"),
     ("The Shambles well", (-340, 315), "landmark"),
     ("Seven Lofts fire tanks", (385, 388), "landmark"),
+    # The civic gaol, in the side court at the foot of the Bellstand watch-bell
+    # tower (50). It is deliberately NOT a building here: `city::build_stone_house`
+    # hand-authors it in Rust as a *room* — four walls and a doorway, walls only
+    # for colliders — so the nav bake leaves the interior walkable, the eight
+    # seeded inmates stand on real graph, and an escort can walk somebody in. A
+    # footprint in `buildings` would render a solid block and undo all of that,
+    # so the plan carries the anchor alone, which is what gives it the `pl_` id
+    # `custody::stone_house` resolves. Authored 2026-07-26, i.e. AFTER the 0.7x
+    # shrink, so it has no pre-shrink coordinate at all: mark 70 is an "override"
+    # in shrink_transform.py and its real anchor is OVERRIDE_MARK[70]. The pair
+    # below is that same post-shrink anchor, repeated only because mark() takes
+    # one — the transform never reads it.
+    ("The Stone House", (44.5, -207.3), "building"),
 ]:
     mark(_name, _anchor, _kind)
 

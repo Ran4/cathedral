@@ -957,6 +957,10 @@
     "62": [
       172.0,
       120.0
+    ],
+    "70": [
+      44.5,
+      -207.3
     ]
   },
   "mark_class": {
@@ -1028,7 +1032,8 @@
     "66": "bellstand_tower",
     "67": "scale",
     "68": "shambles",
-    "69": "seven_lofts"
+    "69": "seven_lofts",
+    "70": "override"
   },
   "actor_cluster": {
     "Bertran of the Ox": "maren"
@@ -3046,6 +3051,18 @@
           287.5
         ],
         "class": "seven_lofts"
+      },
+      "70": {
+        "name": "The Stone House",
+        "old": [
+          44.5,
+          -207.3
+        ],
+        "new": [
+          44.5,
+          -207.3
+        ],
+        "class": "override"
       }
     },
     "roads": {

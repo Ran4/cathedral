@@ -263,6 +263,52 @@ mod tests {
     }
 
     #[test]
+    fn the_stone_house_is_an_anchor_and_not_a_footprint() {
+        // The gaol is the one named place with no plan geometry: `super::super::
+        // build_stone_house` hand-authors it in Rust as a room, so the plan may
+        // carry its anchor and nothing else — a footprint here would render a
+        // solid block and cut the interior out of the walkable graph.
+        //
+        // Mark 70 was hand-added to the JSON before the generator knew about it,
+        // and every re-run of `scripts/generate_top_down_map.py` silently deleted
+        // it again. The generator now emits it (mark table + `MARK_CLASS[70] =
+        // "override"`), and this pins the result to the room it labels rather
+        // than merely to a count, so the next regeneration that loses the gaol
+        // fails here by name.
+        let plan = load();
+        let gaol = plan
+            .named_place_index
+            .iter()
+            .find(|place| place.name == "The Stone House")
+            .expect("the plan must index the gaol; re-run scripts/generate_top_down_map.py");
+
+        assert_eq!(
+            gaol.number, 70,
+            "mark numbers key shrink_transform.py's sidecars"
+        );
+        assert_eq!(gaol.kind, "building");
+        // Inside the four walls build_stone_house erects, which span x 39..50 and
+        // z -211.2..-203.2. `custody::stone_house` walks people to this point.
+        let [x, z] = gaol.anchor;
+        assert!(
+            (39.0..=50.0).contains(&x),
+            "anchor x {x} is outside the room"
+        );
+        assert!(
+            (-211.2..=-203.2).contains(&z),
+            "anchor z {z} is outside the room"
+        );
+
+        assert!(
+            !plan
+                .buildings
+                .iter()
+                .any(|building| building.name.as_deref() == Some("The Stone House")),
+            "the gaol is a Rust-authored room; a plan footprint would fill it in"
+        );
+    }
+
+    #[test]
     fn every_numbered_place_has_a_non_overlapping_simulation_area() {
         let plan = load();
         let map =
