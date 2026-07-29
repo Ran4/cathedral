@@ -2020,15 +2020,26 @@ impl Round {
                                 }
                                 for member in &staying {
                                     // Left behind for good: the cast is fixed
-                                    // and this is a named person with a home
-                                    // leg, so a life in the city is theirs the
-                                    // moment the law is done with them — but
-                                    // the roster, the wallet float and the
-                                    // boundary exchange must stop naming
-                                    // somebody who no longer travels.
+                                    // and this is a named person, so a life in
+                                    // the city is theirs the moment the law is
+                                    // done with them — but the roster, the
+                                    // wallet float and the boundary exchange
+                                    // must stop naming somebody who no longer
+                                    // travels. [`Round::enrol_left_behind`] is
+                                    // what actually hands that life over: the
+                                    // retain below is permanent, and `seed` —
+                                    // one-shot, and long since run — will never
+                                    // come back for them.
                                     let actor =
                                         world.characters.get_mut(member).expect("member exists");
                                     actor.state.leaving_city = false;
+                                    self.enrol_left_behind(
+                                        world,
+                                        nav,
+                                        member,
+                                        party.gate_point,
+                                        now,
+                                    );
                                     self.push_food_log(format!(
                                         "road_left_behind: party {}, trip {}, member {member} \
                                          is in the law's hands and stays",
@@ -2053,6 +2064,133 @@ impl Round {
             }
             self.road_parties.insert(id, party);
         }
+    }
+
+    /// Give somebody the law kept back at the gate a life in the city: enrol
+    /// them in `people` exactly as [`Round::seed`] enrols anyone else it finds
+    /// without a bed. Until this, being left behind meant being dropped —
+    /// `run_ladder`, `decay_needs` and the census all walk `people`, so the
+    /// stranded stood on one paving stone for the rest of the run while their
+    /// sheet went on naming a trading leg the departed cart had taken with it.
+    ///
+    /// It never wants undoing. The roster `retain` above is permanent and
+    /// nothing ever puts a member back, so the party's next trip neither stages
+    /// nor names them: the only enrolment they can ever get is this one, and a
+    /// returning cart finds a townsperson, not a crew member.
+    ///
+    /// Nothing here is invented — the cast is fixed and so is what the seed
+    /// knows about them. The legs are `rounds.json`'s own archetype for the
+    /// occupation their sheet already declares, and the bed that archetype asks
+    /// for is simply skipped, because `homes.json` names no door for a road
+    /// member: a stranded carter is a homeless one, still in the street at the
+    /// Snuffing like every other unhoused person, which is exactly the person
+    /// the watch stops. The leash centre is the gate their own party's evening
+    /// leg told them to stand at — the one point in this city their seed data
+    /// gives them, and a steadier one than wherever the law happened to lay
+    /// hands on them.
+    ///
+    /// They become a [`EconomicClass::Visitor`]: no party float or boundary
+    /// exchange is theirs any more, but neither is the Watch's household
+    /// settlement — they are in the city without being of it, which is the case
+    /// that class was written for. Needs are left where they stand: hunger now
+    /// decays with everyone else's from full, the un-enrolled state `seed`'s
+    /// hunger spread deliberately leaves anybody it does not seed low.
+    fn enrol_left_behind(
+        &mut self,
+        world: &mut World,
+        nav: &NavData,
+        id: &ActorId,
+        gate_point: Vec3,
+        now: f64,
+    ) {
+        let Some(character) = world.characters.get(id) else {
+            return;
+        };
+        let occupation = character.lore().and_then(|lore| lore.occupation_id.clone());
+        let ward = character.lore().map(|lore| lore.planning_ward);
+
+        let (legs, leash_m, curfew_exempt) = match serde_json::from_str::<RoundsDoc>(ROUNDS_JSON) {
+            Ok(rounds) => build_legs(
+                &rounds,
+                &PlaceResolver::new(nav),
+                &self.worksites,
+                id,
+                occupation.as_deref(),
+                None,
+                gate_point,
+            ),
+            // The shape `seed` degrades to when the content will not parse: no
+            // legs, and the wander keeps them near the gate.
+            Err(_) => (Vec::new(), DEFAULT_ROUND_LEASH_M, false),
+        };
+
+        // The wayfinding whitelist `seed` assembles, minus the homes: the coarse
+        // handles, their own ward, and the stations of the day above. Extended
+        // rather than assigned, because a way somebody told them on the trip in
+        // is theirs to keep.
+        let mut known: BTreeSet<PlaceId> =
+            world.places.coarse().map(|entry| entry.id.clone()).collect();
+        if let Some(ward) = ward {
+            known.extend(
+                world
+                    .places
+                    .ward_places(ward.as_str())
+                    .map(|entry| entry.id.clone()),
+            );
+        }
+        for leg in &legs {
+            if let Some(entry) = world.places.named(&leg.label) {
+                known.insert(entry.id.clone());
+            }
+        }
+
+        // Water by `seed`'s rule, so a party that one day carries a fuller
+        // leaves behind somebody with a curb like anyone else of that trade.
+        // No thirst spread: that spread exists to stagger a whole city's first
+        // draw, and this is one person arriving alone.
+        let (source, is_household) = match vessel_of(occupation.as_deref()) {
+            Some(is_household) => (self.nearest_staffed_source(gate_point), is_household),
+            None => (None, false),
+        };
+
+        let state = &mut world.characters.get_mut(id).expect("member exists").state;
+        state.places_known.extend(known);
+        state.daily_round = legs.iter().map(leg_line).collect();
+        state.economic_class = EconomicClass::Visitor;
+        self.people.insert(
+            id.clone(),
+            Townsperson {
+                home: None,
+                base: gate_point,
+                legs,
+                leash_m,
+                curfew_exempt,
+                source,
+                is_household,
+                food: None,
+                phase: Phase::Idle,
+                travel_target: None,
+                travel_for_intent: false,
+                next_decision: now + decision_jitter(id, 0),
+                epoch: 0,
+                evening_seed: None,
+                excused: false,
+            },
+        );
+    }
+
+    /// The staffed water source nearest a point, ties broken by source index so
+    /// an exact distance tie binds the same way every run.
+    fn nearest_staffed_source(&self, base: Vec3) -> Option<usize> {
+        (0..self.sources.len())
+            .filter(|index| self.sources[*index].keeper.is_some())
+            .min_by(|left, right| {
+                let dl = self.sources[*left].draw_point.distance(base);
+                let dr = self.sources[*right].draw_point.distance(base);
+                dl.partial_cmp(&dr)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+                    .then_with(|| left.cmp(right))
+            })
     }
 
     /// The errand view of one enrolled townsperson, for the developer character
@@ -2857,16 +2995,8 @@ impl Round {
             // busy at once rather than all later.
             let (source, is_household) = match vessel_of(occupation.as_deref()) {
                 Some(is_household) if !staffed.is_empty() => {
-                    let nearest = *staffed
-                        .iter()
-                        .min_by(|left, right| {
-                            let dl = self.sources[**left].draw_point.distance(base);
-                            let dr = self.sources[**right].draw_point.distance(base);
-                            dl.partial_cmp(&dr)
-                                .unwrap_or(std::cmp::Ordering::Equal)
-                                // Explicit tie-break by source index for determinism.
-                                .then_with(|| left.cmp(right))
-                        })
+                    let nearest = self
+                        .nearest_staffed_source(base)
                         .expect("staffed is non-empty");
                     let thirst = THIRST_MAX * hash01("water_thirst_seed", id, 0);
                     world

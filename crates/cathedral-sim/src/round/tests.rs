@@ -6121,6 +6121,117 @@ fn a_party_whose_leader_the_law_holds_waits_and_departs_whole_on_release() {
     world.assert_invariants();
 }
 
+/// The life the departure promises is actually handed over. The roster
+/// `retain` is permanent and `seed` is one-shot, so a member the law keeps back
+/// used to be dropped by every system that walks `people`: no legs, no leash
+/// centre, no ladder cadence, a sheet still naming the departed cart's trading
+/// leg, and a paving stone to stand on for the rest of the run. They are
+/// enrolled at the gate instead — homeless, on their own occupation's round —
+/// and the moment custody ends the ladder walks them to the day's leg.
+#[test]
+fn a_member_left_behind_is_enrolled_in_the_round_and_walks_once_released() {
+    let nav = nav();
+    let clock = clock_on(Office::Dayspring, 2);
+    let mut world = road_party_world();
+    world.add_character(person(
+        "srgnt",
+        Vec3::ZERO,
+        Some("bailiff_and_gaoler"),
+        Significance::Minor,
+    ));
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+    let time = clock.at(0.0);
+    let party_id = PartyId::from_raw("brede_wool_gate");
+    let carter = ActorId::from_raw("cbred");
+    let officer = ActorId::from_raw("srgnt");
+    let gate = round.road_parties[&party_id].gate_point;
+    assert!(
+        !round.people.contains_key(&carter),
+        "a crew still on the road belongs to the party, not to the round"
+    );
+
+    round.begin_road_return(&mut world, &party_id, 2, &mut Vec::new());
+    for member in round.road_parties[&party_id].members.clone() {
+        world.characters.get_mut(&member).unwrap().state.position_m = gate;
+    }
+    let station = crate::custody::nearest_station(&world.places, gate).expect("postings");
+    world
+        .custody
+        .seize(carter.clone(), officer.clone(), Some(1), station, 0.0);
+    world.custody.commit(&carter, 0.0);
+    round.tick_road_parties(&mut world, &nav, time, 0.0, &BTreeSet::new());
+    round.tick_road_parties(&mut world, &nav, time, 0.0, &BTreeSet::new());
+    assert_eq!(
+        round.party_state(&party_id).unwrap().phase,
+        PartyPhase::BeyondTheWalls
+    );
+
+    // Enrolled on the seed's own terms for somebody with no bed: the gate their
+    // party's evening leg named is the leash centre, the legs are their
+    // occupation's archetype, and the sheet stops promising a trade at a pitch
+    // the cart took with it.
+    let stranded = round
+        .people
+        .get(&carter)
+        .expect("the law's leftovers are enrolled in the round");
+    assert_eq!(
+        stranded.home, None,
+        "homes.json names no door for a road member, and none is invented"
+    );
+    assert_eq!(stranded.base, gate);
+    let legs = stranded.legs.clone();
+    assert!(
+        !legs.is_empty() && legs.iter().all(|leg| !leg.is_home),
+        "a stranded carter keeps the wharf archetype, minus the bed: {legs:?}"
+    );
+    assert_eq!(
+        world.characters[&carter].state.economic_class,
+        crate::EconomicClass::Visitor,
+        "no party float is theirs, and no household settlement either"
+    );
+    let sheet_round = world.characters[&carter].state.daily_round.clone();
+    assert!(
+        sheet_round
+            .iter()
+            .all(|line| !line.contains("Seven Lofts") && !line.contains("The Wool Gate")),
+        "the sheet stops naming the departed party's legs: {sheet_round:?}"
+    );
+    assert!(
+        !world.characters[&carter].state.places_known.is_empty(),
+        "somebody living here holds the coarse ways"
+    );
+
+    // Rung 0 pins them while the law has them; the ladder takes over the moment
+    // it lets go, and the day's leg is a real walk from the gate.
+    let target = active_leg(&legs, Office::Dayspring, Weekday::of_day(2))
+        .expect("the carter's day has a Dayspring leg")
+        .at;
+    assert!(target.distance(gate) > ROUND_ARRIVE_RADIUS_M);
+    let mut now = 0.0;
+    for _ in 0..20 {
+        now += 0.5;
+        beat(&mut round, &mut world, &nav, &clock, now, 0.5);
+    }
+    assert_eq!(
+        world.characters[&carter].position_m(),
+        gate,
+        "the law's prisoner walks nowhere"
+    );
+
+    world.custody.release(&carter);
+    for _ in 0..120 {
+        now += 0.5;
+        beat(&mut round, &mut world, &nav, &clock, now, 0.5);
+    }
+    let closed = target.distance(gate) - target.distance(world.characters[&carter].position_m());
+    assert!(
+        closed > 1.0,
+        "released, the stranded carter walks their own round's leg (closed {closed} m)"
+    );
+    world.assert_invariants();
+}
+
 /// A stock-errand world with the Brede grain cart bound at Seven Lofts and an
 /// enrolled city buyer for the `betriss_grain` plan: the seller stands at his
 /// pitch, the buyer stands at the party's gate with a long walk ahead. The
