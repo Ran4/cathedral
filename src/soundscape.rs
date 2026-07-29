@@ -1927,7 +1927,7 @@ fn advance_footstep(
 #[derive(Debug, Default)]
 struct NpcTimer {
     next_cough_at: f64,
-    yawn_day: Option<i64>,
+    yawn_evening: Option<i64>,
     yawn_due_at: Option<f64>,
 }
 
@@ -1938,6 +1938,15 @@ struct NpcSoundState {
     /// Body sounds trigger on 45 s+ timers; scanning the whole cast (with a
     /// String clone per actor) every frame bought nothing. 4 Hz is plenty.
     next_scan_at: f64,
+    /// The office the last scan read, and how many evenings have opened since
+    /// the session began — what [`NpcTimer::yawn_evening`] counts in.
+    ///
+    /// Never the day, for the reason [`CivicBellState`] gives: the yawning
+    /// hours run Lamplight to the end of the Snuffing, 18:00 to 02:00, so the
+    /// day number changes *inside* them and a day-keyed "once a day" would
+    /// re-arm at midnight. Edges into the window cannot move while it is open.
+    observed_office: Option<Office>,
+    evening: i64,
 }
 
 const DUSTY_WORK_ZONES: [(Vec2, f32); 4] = [
@@ -1976,9 +1985,19 @@ fn schedule_npc_body_sounds(
         .as_deref()
         .filter(|clock| clock.present)
         .map(|clock| clock.weekday);
+    // A new evening opens the moment the window does. A clock that has gone
+    // quiet is not an edge, so the office last read is kept until it speaks
+    // again rather than counted as having left and returned.
+    if let Some(office) = office {
+        let previous = state.observed_office.replace(office);
+        if evening_hours(Some(office)) && !evening_hours(previous) {
+            state.evening += 1;
+        }
+    }
+    let evening = state.evening;
     // Retain timers for every still-present actor, including somebody who
     // briefly walks or leaves earshot. Otherwise returning to the radius would
-    // reset `yawn_day` and permit several "once per day" yawns.
+    // reset `yawn_evening` and permit several "once an evening" yawns.
     let seen: HashSet<String> = actors.iter().map(|(id, _)| id.0.clone()).collect();
     let mut candidates: Vec<_> = actors
         .iter()
@@ -2044,7 +2063,7 @@ fn schedule_npc_body_sounds(
         }
     }
 
-    if now >= state.next_global_at && matches!(office, Some(Office::Lamplight | Office::Snuffing)) {
+    if now >= state.next_global_at && evening_hours(office) {
         let mut yawn_candidates: Vec<_> = candidates.iter().collect();
         yawn_candidates.sort_by(|(a_id, _, _, a_weariness), (b_id, _, _, b_weariness)| {
             b_weariness
@@ -2056,7 +2075,7 @@ fn schedule_npc_body_sounds(
                 .actors
                 .get_mut(&id.0)
                 .expect("candidate timer was initialized above");
-            if timer.yawn_day == Some(day) {
+            if timer.yawn_evening == Some(evening) {
                 continue;
             }
             let due = *timer.yawn_due_at.get_or_insert_with(|| {
@@ -2070,7 +2089,7 @@ fn schedule_npc_body_sounds(
                     SoundscapeSound::EveningYawn,
                     *position + Vec3::Y * 1.35,
                 );
-                timer.yawn_day = Some(day);
+                timer.yawn_evening = Some(evening);
                 timer.yawn_due_at = None;
                 state.next_global_at = now + NPC_BODY_SOUND_GLOBAL_COOLDOWN_SECONDS;
                 break;
@@ -2086,6 +2105,13 @@ fn status_weariness(statuses: &[(cathedral_sim::StatusKind, f32)]) -> f32 {
         .find_map(|(kind, value)| (*kind == cathedral_sim::StatusKind::Weariness).then_some(*value))
         .unwrap_or(0.0)
         .clamp(0.0, 1.0)
+}
+
+/// The yawning hours: sunset through curfew, 18:00 to 02:00. A clock that has
+/// not spoken yet is no hour at all — an evening the player cannot be told is
+/// happening is not one to yawn in.
+fn evening_hours(office: Option<Office>) -> bool {
+    matches!(office, Some(Office::Lamplight | Office::Snuffing))
 }
 
 fn dusty_worker_outfit(outfit: cathedral_sim::OutfitClass) -> bool {
@@ -4732,6 +4758,78 @@ mod tests {
         fresh.update();
         fresh.update();
         assert_eq!(strokes(&fresh), 0);
+    }
+
+    /// The same midnight the curfew's edge detector was built for, one system
+    /// along. The yawning hours run Lamplight to the end of the Snuffing —
+    /// 18:00 to 02:00 — so the day number rolls over *inside* the window, and a
+    /// yawn keyed on the day re-armed at midnight and was yawned a second time
+    /// before the evening was out.
+    #[test]
+    fn a_body_yawns_once_an_evening_though_the_day_rolls_over_inside_it() {
+        use std::time::Duration;
+
+        /// Everything a yawn reads and nothing else: one body standing at arm's
+        /// length, so the only thing left deciding is the hour. An absent
+        /// `MovementInbox` reads as standing still and an absent `WorldMirror`
+        /// as unwearied, which is the slowest yawn there is — 20 to 150 s.
+        fn yawn_app() -> App {
+            let mut app = App::new();
+            app.init_resource::<Time>()
+                .init_resource::<ScheduledSounds>()
+                .init_resource::<NpcSoundState>()
+                .insert_resource(clock(Office::Waning, Weekday::Second))
+                .add_systems(Update, schedule_npc_body_sounds);
+            app.world_mut().spawn((
+                PlayerController::moving_at(Vec3::ZERO),
+                Transform::from_xyz(0.0, 1.7, 0.0),
+            ));
+            app.world_mut().spawn((
+                ActorId("p001v".to_string()),
+                ActorView,
+                GlobalTransform::from_xyz(2.0, 0.0, 0.0),
+            ));
+            app
+        }
+        fn yawns(app: &App) -> usize {
+            app.world()
+                .resource::<ScheduledSounds>()
+                .0
+                .iter()
+                .filter(|sound| sound.sound == SoundscapeSound::EveningYawn)
+                .count()
+        }
+        /// Five minutes of one office, scanned at the system's own rate — long
+        /// enough that a body owed a yawn has certainly yawned it.
+        fn spend_an_hour_in(app: &mut App, office: Office, day: i64) {
+            let mut hour = clock(office, Weekday::Second);
+            hour.day = day;
+            *app.world_mut().resource_mut::<WorldClockState>() = hour;
+            for _ in 0..30 {
+                app.world_mut()
+                    .resource_mut::<Time>()
+                    .advance_by(Duration::from_secs(10));
+                app.update();
+            }
+        }
+
+        let mut app = yawn_app();
+        spend_an_hour_in(&mut app, Office::Lamplight, 3);
+        assert_eq!(yawns(&app), 1, "the lamps are lit and the body is tired");
+        spend_an_hour_in(&mut app, Office::Snuffing, 3);
+        assert_eq!(yawns(&app), 1, "and it is one evening, not two offices");
+
+        // Midnight, hours into the Snuffing: a new day over the same evening.
+        spend_an_hour_in(&mut app, Office::Snuffing, 4);
+        assert_eq!(yawns(&app), 1, "midnight is not a second evening");
+
+        spend_an_hour_in(&mut app, Office::Watch, 4);
+        spend_an_hour_in(&mut app, Office::Dayspring, 4);
+        assert_eq!(yawns(&app), 1, "nobody yawns their way through the day");
+
+        // Sunset again, and the evening that opens with it is owed one.
+        spend_an_hour_in(&mut app, Office::Lamplight, 4);
+        assert_eq!(yawns(&app), 2);
     }
 
     #[test]
