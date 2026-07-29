@@ -3138,15 +3138,21 @@ fn seize(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, 
         }
         None => None,
     };
+    // Each door is asked about the *named* notice on its own. Testing the name
+    // once, after the two are collapsed, would let the first door that answers
+    // shut the second: an old warrant on another word would shoulder aside the
+    // fresh word the officer says she is acting on, and refuse her a seizure
+    // that naming nothing at all would have allowed.
     let authority = world
         .notices
         .warrant_against(&target_id)
+        .filter(|notice| named.is_none_or(|named| named == notice.id))
         .or_else(|| {
             world
                 .notices
                 .fresh_own_notice(actor_id, &target_id, game_days)
-        })
-        .filter(|notice| named.is_none_or(|named| named == notice.id));
+                .filter(|notice| named.is_none_or(|named| named == notice.id))
+        });
     let Some(notice) = authority else {
         return Err(ActionError::new(
             ActionErrorCode::NoWarrant,

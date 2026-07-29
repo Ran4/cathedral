@@ -373,6 +373,61 @@ fn seize_is_refused_on_another_officers_word_and_on_a_stale_word_of_your_own() {
     assert_eq!(error.code, ActionErrorCode::NoWarrant);
 }
 
+/// The other half of "an explicit `notice_id` must itself pass one of the two
+/// doors": it is tried at **both** of them. An officer who says which word she
+/// is acting on must not be refused because some *other* word against the same
+/// man happens to carry a warrant — the refusal would be false on both counts,
+/// and naming nothing at all would have taken him.
+#[test]
+fn a_named_notice_is_tried_at_the_second_door_as_well_as_the_first() {
+    let mut world = law_world();
+    // An older word, raised by the gate keeper and ripened into a warrant.
+    let old = raise_word(&mut world, "wrdn", "tamrd");
+    apply_action(
+        &mut world,
+        &actor("wrdn"),
+        "summon",
+        &json!({"notice_id": old}),
+    )
+    .expect("the law may summon on its own word");
+    world.current_time = Some(at(500.0));
+    assert_eq!(
+        world.notices.issue_warrants(at(500.0).game_days()),
+        [old],
+        "the Kindling rang on a word still standing"
+    );
+
+    // And the sergeant's own word, put to the ward this minute for something she
+    // watched happen — the one she names when she takes him.
+    let fresh = raise_word(&mut world, "srgnt", "tamrd");
+    assert_ne!(fresh, old);
+    apply_action(
+        &mut world,
+        &actor("srgnt"),
+        "say",
+        &json!({"text": "Stand still. You are coming with me."}),
+    )
+    .expect("an officer may always speak");
+    apply_action(
+        &mut world,
+        &actor("srgnt"),
+        "seize",
+        &json!({"person": "tamrd", "notice_id": fresh}),
+    )
+    .expect("her own eyes, within the hour - the warrant is not the only door");
+    let record = world.custody.get(&actor("tamrd")).expect("taken in charge");
+    assert_eq!(
+        record.notice_id,
+        Some(fresh),
+        "the record names the word the officer said she was acting on"
+    );
+    assert_ne!(
+        record.station.name,
+        custody::STONE_HOUSE_PLACE_NAME,
+        "the gaol is for the warrant she did not invoke"
+    );
+}
+
 /// The cap exists because nothing else in this sim removes a person from the
 /// world and the economy is made of named individuals — gaol the wrong baker and
 /// the bread round stops. The eight the city was already holding never count
