@@ -5079,12 +5079,9 @@ fn build_street_props(
                 _ => {
                     for row in 0..3 {
                         for column in 0..2 {
-                            let log2 = position2
-                                + direction * (column as f32 * 0.3 - 0.15)
-                                + normal * 0.05;
                             add_log(
                                 &mut dark_wood,
-                                Vec3::new(log2.x, 0.14 + row as f32 * 0.24, log2.y),
+                                firewood_log_center(position2, normal, row, column),
                                 0.115,
                                 1.05,
                                 direction,
@@ -7231,6 +7228,21 @@ fn add_log(mesh: &mut MeshData, center: Vec3, radius: f32, length: f32, along: V
     }
 }
 
+/// Where one split log of a firewood rick lies: `base` is the clutter spot
+/// beside the door, `normal` points out of the façade, and the rick is three
+/// courses high by two deep.
+///
+/// The courses step 0.24 m up on a 0.23 m log, and the two columns step 0.3 m
+/// along `normal` about the rick's 0.05 m stand-off from the plinth. The
+/// doorway's along-wall direction is deliberately not a parameter: every log in
+/// the rick is laid along it, so offsetting the second column that way would
+/// only slide a 1.05 m log along its own length and bury three quarters of it
+/// inside its twin.
+fn firewood_log_center(base: Vec2, normal: Vec2, row: usize, column: usize) -> Vec3 {
+    let stacked = base + normal * (0.05 + column as f32 * 0.3 - 0.15);
+    Vec3::new(stacked.x, 0.14 + row as f32 * 0.24, stacked.y)
+}
+
 /// A slumped sack: a low-resolution squashed dome, batched.
 fn add_sack(mesh: &mut MeshData, center: Vec3, radii: Vec3) {
     const SECTORS: usize = 8;
@@ -8681,6 +8693,51 @@ mod tests {
                     (distance - 0.75).abs() < 0.002,
                     "{} collider is {distance:.3} m from its facade",
                     building.id
+                );
+            }
+        }
+    }
+
+    /// A firewood rick is three courses high by two deep, so its six logs stand
+    /// at six distinct places. The logs are laid *along* the wall, which is the
+    /// one axis the second column must not step on: a 0.3 m offset there slides
+    /// a 1.05 m log along its own length and leaves it 71% swallowed by its
+    /// twin. Check the whole arrangement — three heights, two depths, and every
+    /// pair of logs clear of each other in the plane they share.
+    #[test]
+    fn firewood_rick_stacks_across_the_wall_and_not_along_the_logs() {
+        // A doorway on a wall running along x, so the logs lie along x and the
+        // rick steps out into the street along +z.
+        let base = Vec2::new(4.0, -11.0);
+        let normal = Vec2::Y;
+        const LOG_DIAMETER: f32 = 0.23;
+
+        let logs: Vec<Vec3> = (0..3)
+            .flat_map(|row| (0..2).map(move |column| firewood_log_center(base, normal, row, column)))
+            .collect();
+
+        let heights: BTreeSet<String> = logs.iter().map(|log| format!("{:.3}", log.y)).collect();
+        assert_eq!(heights.len(), 3, "expected three courses, got {heights:?}");
+        let depths: BTreeSet<String> = logs.iter().map(|log| format!("{:.3}", log.z)).collect();
+        assert_eq!(depths.len(), 2, "expected two depths, got {depths:?}");
+
+        for log in &logs {
+            assert!(
+                (log.x - base.x).abs() < 1.0e-4,
+                "a log at {log:?} was offset along its own axis, away from x={}",
+                base.x
+            );
+        }
+
+        // Two logs sharing a course must be a diameter apart across the wall,
+        // and two sharing a depth a diameter apart in height; nothing may end
+        // up in the same place twice.
+        for (i, a) in logs.iter().enumerate() {
+            for b in &logs[i + 1..] {
+                let gap = ((a.y - b.y).abs()).max((a.z - b.z).abs());
+                assert!(
+                    gap >= LOG_DIAMETER,
+                    "logs at {a:?} and {b:?} are only {gap:.3} m apart and overlap"
                 );
             }
         }

@@ -969,7 +969,15 @@ fn build_apse_and_altar(
             Vec3::new(6.2, 22.0, 1.4),
             Quat::from_rotation_y(FRAC_PI_2 + theta),
         );
+    }
 
+    // A compound pier on every seam between segments, and one at each end of
+    // the sweep. Twelve segments have thirteen boundaries, so this range is
+    // inclusive where the segments' is not — riding along in the loop above
+    // drops the closing pier at theta=pi, and the arcade then terminates in
+    // stone at one side of the choir and in nothing at the other, the single
+    // asymmetry in an otherwise mirrored hemicycle.
+    for i in 0..=segment_count {
         let boundary_angle = i as f32 * PI / segment_count as f32;
         spawn_compound_column(
             commands,
@@ -1645,6 +1653,69 @@ mod tests {
             stubs.len(),
             &stubs[..stubs.len().min(8)]
         );
+    }
+
+    /// The apse arcade carries a pier on every one of its segment boundaries.
+    /// Twelve wall segments have thirteen of those, and the hemicycle is a
+    /// mirror about the choir's axis, so a loop that stops at the twelfth
+    /// leaves the sweep ending in stone at one side and in nothing at the
+    /// other. Both halves of the invariant are checked: every boundary angle
+    /// has a plinth, and no plinth stands without its reflection in x.
+    #[test]
+    fn apse_arcade_carries_a_column_on_every_segment_boundary() {
+        // `build_apse_and_altar`'s hemicycle: twelve segments of a radius 23 m
+        // arc about z=-82, the piers pulled in to 0.985 of that radius.
+        const SEGMENT_COUNT: usize = 12;
+        const CENTER_Z: f32 = -82.0;
+        const PIER_RADIUS: f32 = 23.0 * 0.985;
+        // The baldachin's columns share the apse's 0.62 scale but are footed on
+        // the predella, so height alone separates the two sets.
+        let plinth_size = Vec3::new(2.7, 0.7, 2.7) * 0.62;
+
+        let mut app = built_cathedral();
+        let world = app.world_mut();
+        let plinths = world
+            .query_filtered::<&Transform, With<Mesh3d>>()
+            .iter(world)
+            .filter(|transform| {
+                transform.scale.distance(plinth_size) < 1.0e-3 && transform.translation.y < 1.0
+            })
+            .map(|transform| transform.translation)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            plinths.len(),
+            SEGMENT_COUNT + 1,
+            "{} segments have {} boundaries, but {} apse columns were spawned",
+            SEGMENT_COUNT,
+            SEGMENT_COUNT + 1,
+            plinths.len()
+        );
+
+        let stands_at = |x: f32, z: f32| {
+            plinths
+                .iter()
+                .any(|plinth| (plinth.x - x).abs() < 1.0e-3 && (plinth.z - z).abs() < 1.0e-3)
+        };
+        for i in 0..=SEGMENT_COUNT {
+            let angle = i as f32 * PI / SEGMENT_COUNT as f32;
+            let (x, z) = (
+                PIER_RADIUS * angle.cos(),
+                CENTER_Z - PIER_RADIUS * angle.sin(),
+            );
+            assert!(
+                stands_at(x, z),
+                "the boundary at {:.1}° has no pier: nothing stands at ({x:.3}, {z:.3})",
+                angle.to_degrees()
+            );
+        }
+        for plinth in &plinths {
+            assert!(
+                stands_at(-plinth.x, plinth.z),
+                "the pier at ({:.3}, {:.3}) has no mirror across the choir's axis",
+                plinth.x,
+                plinth.z
+            );
+        }
     }
 
     /// Every baldachin column stands on stone. `spawn_compound_column` takes the
