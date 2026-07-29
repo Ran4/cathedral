@@ -77,7 +77,9 @@ fn capture_screenshot_on_key(
         .observe(save_to_disk(path));
 }
 
-fn screenshot_key_just_pressed(
+/// Visible to the crate so the chat box can prove, against the real binding,
+/// that a typed acute accent no longer reaches it.
+pub(crate) fn screenshot_key_just_pressed(
     physical_keys: &ButtonInput<KeyCode>,
     logical_keys: &ButtonInput<Key>,
 ) -> bool {

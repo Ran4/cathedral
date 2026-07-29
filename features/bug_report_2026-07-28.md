@@ -68,8 +68,8 @@ not five.
 - [F] **low** `src/city/mod.rs:5067` — Firewood rick stacks its two columns along the log axis instead of across it
 - [F] **low** `src/scene.rs:941` — Apse arcade is missing its final boundary column, leaving the hemicycle asymmetric
 - [F] **low** `src/soundscape.rs:2020` — "Once a day" NPC yawn fires twice per evening: the day rolls inside the Snuffing
-- [ ] **low** `src/screenshot.rs:89` — Dead-key screenshot binding bypasses the chat box's keyboard suppression
-- [ ] **low** `src/weather/mod.rs:201` — smooth_weather spends its one-time snap on the CLEAR default, not the first sim sample
+- [F] **low** `src/screenshot.rs:89` — Dead-key screenshot binding bypasses the chat box's keyboard suppression
+- [F] **low** `src/weather/mod.rs:201` — smooth_weather spends its one-time snap on the CLEAR default, not the first sim sample
 
 ---
 

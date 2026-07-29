@@ -507,9 +507,12 @@ impl Plugin for SmartActorsPlugin {
             .init_resource::<speech::SpeechPresentationState>()
             .add_message::<interaction::PlayerIntent>()
             .add_message::<InjectPlayerTranscript>()
-            // Idempotent when InputPlugin already registered it; needed for the
-            // chat box in headless harnesses that skip Bevy's input plugin.
+            // Idempotent when InputPlugin already registered them; needed for
+            // the chat box in headless harnesses that skip Bevy's input plugin.
+            // The box eats the layout-resolved button map as well as the
+            // physical one, so both have to exist.
             .add_message::<bevy::input::keyboard::KeyboardInput>()
+            .init_resource::<ButtonInput<bevy::input::keyboard::Key>>()
             .add_message::<speech::PresentSpeech>()
             .add_message::<speech::TtsClipReady>()
             .add_message::<speech::TtsClipFailed>()

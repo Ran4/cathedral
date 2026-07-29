@@ -13,12 +13,15 @@
 //!
 //! While the box is open it owns the whole keyboard. Text arrives through the
 //! raw [`KeyboardInput`] message stream (which carries layout-resolved
-//! characters and key repeat), and afterwards `ButtonInput<KeyCode>` is reset
-//! so no other binding — movement, F, V, Z, X, T, B, F5, the Esc menu — can
-//! fire from a keystroke that was meant as text.
+//! characters and key repeat), and afterwards both button maps are reset so no
+//! other binding — movement, F, V, Z, X, T, B, F5, the Esc menu — can fire
+//! from a keystroke that was meant as text.
 
 use bevy::{
-    input::{ButtonState, keyboard::KeyboardInput},
+    input::{
+        ButtonState,
+        keyboard::{Key, KeyboardInput},
+    },
     prelude::*,
     text::TextLayoutInfo,
     ui::ComputedNode,
@@ -287,6 +290,7 @@ pub(super) fn spawn_chat_input(mut commands: Commands, fonts: Option<Res<Cathedr
 pub(super) fn collect_chat_input(
     mut chat: ResMut<ChatInputState>,
     mut keyboard: ResMut<ButtonInput<KeyCode>>,
+    mut logical_keys: ResMut<ButtonInput<Key>>,
     mut keyboard_events: MessageReader<KeyboardInput>,
     menu: Res<ConfigMenuState>,
     inventory: Res<super::inventory_ui::InventoryUiState>,
@@ -317,7 +321,7 @@ pub(super) fn collect_chat_input(
         // The Enter that opened the box must not also submit it: drop the raw
         // events already queued this frame, and eat the whole keyboard.
         keyboard_events.clear();
-        keyboard.reset_all();
+        eat_keyboard(&mut keyboard, &mut logical_keys);
         return;
     }
 
@@ -402,7 +406,18 @@ pub(super) fn collect_chat_input(
             &mut intents,
         );
     }
+    eat_keyboard(&mut keyboard, &mut logical_keys);
+}
+
+/// Hide this frame's keys from everyone downstream. Bevy's keyboard input
+/// system presses *both* button maps from the same event — the physical
+/// `KeyCode` one and the layout-resolved `Key` one — so clearing only the
+/// first still leaves a binding that watches logical keys firing on typed
+/// text. The acute-accent screenshot key is exactly that, and typing "idé"
+/// used to write a PNG per accent.
+fn eat_keyboard(keyboard: &mut ButtonInput<KeyCode>, logical_keys: &mut ButtonInput<Key>) {
     keyboard.reset_all();
+    logical_keys.reset_all();
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -633,6 +648,44 @@ mod tests {
         state.delete_word_back();
         assert_eq!(state.buffer, "");
         assert_eq!(state.cursor, 0);
+    }
+
+    /// The open box owns *both* button maps. Bevy presses the physical and the
+    /// layout-resolved one from the same event, so an accented character typed
+    /// on the sv-SE layout used to reach the acute-accent screenshot binding
+    /// and write a PNG per accent in "idé".
+    #[test]
+    fn an_open_box_hides_typed_keys_from_the_screenshot_binding() {
+        let mut chat = ChatInputState::default();
+        chat.open_empty(false);
+        let mut keyboard = ButtonInput::<KeyCode>::default();
+        keyboard.press(KeyCode::Equal);
+        let mut logical_keys = ButtonInput::<Key>::default();
+        logical_keys.press(Key::Dead(Some('\u{b4}')));
+
+        let mut app = App::new();
+        app.insert_resource(chat)
+            .insert_resource(keyboard)
+            .insert_resource(logical_keys)
+            .insert_resource(ConfigMenuState::default())
+            .insert_resource(crate::smart_actors::inventory_ui::InventoryUiState::default())
+            .insert_resource(SmartActorsConfig::default())
+            .insert_resource(SmartActorRuntime::starting(true))
+            .insert_resource(PlayerSpatialState::default())
+            .insert_resource(InteractionState::default())
+            .insert_resource(SmartActorHudState::default())
+            .add_message::<KeyboardInput>()
+            .add_message::<PlayerIntent>()
+            .add_systems(Update, collect_chat_input);
+
+        app.update();
+
+        let world = app.world();
+        assert!(world.resource::<ChatInputState>().open);
+        assert!(!crate::screenshot::screenshot_key_just_pressed(
+            world.resource::<ButtonInput<KeyCode>>(),
+            world.resource::<ButtonInput<Key>>(),
+        ));
     }
 
     #[test]

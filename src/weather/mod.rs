@@ -197,6 +197,15 @@ fn smooth_weather(
     authoritative: Res<WorldWeatherState>,
     mut visual: ResMut<SmoothedWeather>,
 ) {
+    // The snap is the sim's *first* sample's, not the placeholder's: this runs
+    // from frame 1, long before the bridge has heard an `EngineMessage::Weather`,
+    // and spending it on the clear default would ease a session that opens
+    // mid-downpour up out of a clear sky over the next few seconds. Until the
+    // sim speaks the smoothed values already are the clear default, so nothing
+    // is lost by standing still.
+    if !authoritative.present {
+        return;
+    }
     let target = authoritative.current;
     if !visual.initialized {
         *visual = SmoothedWeather::from_sample(target, true);
@@ -234,6 +243,49 @@ mod tests {
             app.world().resource::<WorldWeatherState>().current,
             WeatherSample::CLEAR
         );
+    }
+
+    /// The opening frames must not spend the one-time snap on the clear
+    /// placeholder: a session that starts mid-downpour has to present as a
+    /// downpour, not ramp into one.
+    #[test]
+    fn the_one_time_snap_lands_on_the_sims_first_sample() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(WeatherPlugin::new(WeatherSettings::default()));
+        app.update();
+        app.update();
+
+        let mut downpour = WeatherSample::CLEAR;
+        downpour.cloud_cover = 0.97;
+        downpour.precipitation = 0.85;
+        downpour.visibility_m = 60.0;
+        downpour.surface_wetness = 0.9;
+        app.world_mut()
+            .resource_mut::<WorldWeatherState>()
+            .receive(downpour, 3.0);
+        app.update();
+
+        let visual = *app.world().resource::<SmoothedWeather>();
+        assert_eq!(visual.cloud_cover, downpour.cloud_cover as f32);
+        assert_eq!(visual.precipitation, downpour.precipitation as f32);
+        assert_eq!(visual.visibility_m, downpour.visibility_m as f32);
+        assert_eq!(visual.surface_wetness, downpour.surface_wetness as f32);
+    }
+
+    /// Before the sim speaks, the projection sits on the clear default rather
+    /// than easing anywhere — and the snap is still unspent.
+    #[test]
+    fn a_silent_sim_leaves_the_projection_on_the_clear_default() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(WeatherPlugin::new(WeatherSettings::default()));
+        app.update();
+
+        let visual = *app.world().resource::<SmoothedWeather>();
+        assert!(!visual.initialized);
+        assert_eq!(visual.cloud_cover, WeatherSample::CLEAR.cloud_cover as f32);
+        assert_eq!(visual.precipitation, 0.0);
     }
 
     #[test]
