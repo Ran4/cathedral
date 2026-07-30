@@ -1889,6 +1889,44 @@ fn add_chimneys(
 
 /// An axis-defined box written straight into a batched mesh: `along` is the
 /// local +X direction in the ground plane, `half` the half-extents.
+/// One box, oriented in the XZ plane by the unit vector `along`.
+///
+/// **The corner ring is emitted in reverse.** This table is written as
+/// `(normal, right, up)` but populated with the two side vectors transposed, so
+/// `right × up == -normal` for all six faces — the opposite of the outward
+/// winding `MeshData::quad` needs. The ring is therefore walked backwards here.
+/// Fixing it the other way, by swapping `right` and `up` to restore
+/// `right × up == normal` (the invariant `add_dressed_stone` states), also swaps
+/// `half_r` and `half_u` and so rotates every face's texture 90° — visible as
+/// cross-grain on the balcony rails, stair stringers and hoist beams this
+/// builds. Reversing the ring keeps U horizontal and V vertical on every face.
+///
+/// This was latent, not visible, and it is worth being exact about that: fixing
+/// it changed the rendered city by under 1/255 mean luminance. Nothing looked
+/// wrong because every city material carries `double_sided: true,
+/// cull_mode: None`, and the *vertex* normal written by `MeshData::quad` was
+/// always the correct outward one — so both faces rasterize and both shade off a
+/// good normal. The winding was simply never consulted.
+///
+/// Nor is the consequence dramatic if culling is ever switched on, which was
+/// measured rather than guessed: forcing `cull_mode: Some(Back)` on the textured
+/// materials moved this frame by 0.33% of pixels at more than 16/255. An
+/// inverted *closed* box does not disappear under culling — its near face is
+/// culled and its far face, now front-facing, draws in place, so you get the
+/// inside of the back wall instead of the outside of the front one. Subtle, and
+/// wrong. (That experiment also showed the city goes x-ray under culling for an
+/// unrelated reason: the wall panels themselves are single-sided. See
+/// `dark_wood`, set `double_sided` because otherwise "half of them face the
+/// wrong way and vanish".)
+///
+/// So this is hygiene, not a bug fix with a screenshot: 43 call sites (chimneys,
+/// door and window modules, balconies, yard stairs, covered passages, arcades,
+/// hoists, street props) now emit meshes that describe what they actually are,
+/// and `add_oriented_box` agrees with the invariant `add_dressed_stone` states
+/// three thousand lines down. Anything that reads geometric facing rather than
+/// the stored normal — culling, a mesh export, tooling that recomputes normals —
+/// gets the right answer now and did not before. Guarded by
+/// `every_oriented_box_face_is_wound_outward`.
 fn add_oriented_box(mesh: &mut MeshData, center: Vec3, half: Vec3, along: Vec2) {
     let ax = Vec3::new(along.x, 0.0, along.y);
     let az = Vec3::new(-along.y, 0.0, along.x);
@@ -1903,19 +1941,19 @@ fn add_oriented_box(mesh: &mut MeshData, center: Vec3, half: Vec3, along: Vec2) 
     ] {
         let face_center = center + normal * half_n;
         let points = [
-            face_center - right * half_r - up * half_u,
-            face_center + right * half_r - up * half_u,
-            face_center + right * half_r + up * half_u,
             face_center - right * half_r + up * half_u,
+            face_center + right * half_r + up * half_u,
+            face_center + right * half_r - up * half_u,
+            face_center - right * half_r - up * half_u,
         ];
         mesh.quad(
             points,
             normal,
             [
-                Vec2::ZERO,
-                Vec2::new(half_r / 3.5, 0.0),
-                Vec2::new(half_r / 3.5, half_u / 3.5),
                 Vec2::new(0.0, half_u / 3.5),
+                Vec2::new(half_r / 3.5, half_u / 3.5),
+                Vec2::new(half_r / 3.5, 0.0),
+                Vec2::ZERO,
             ],
         );
     }
@@ -10681,6 +10719,79 @@ mod tests {
     /// seed here quarries the same 0.92 stone.
     fn heave_bucket_seed(bucket: u32) -> u32 {
         (bucket << 16) | (((4 * bucket) % 13) << 8)
+    }
+
+    /// Every triangle the two box builders emit must face the way its own
+    /// vertex normal claims: `cross(b - a, c - a)` has to point along the stored
+    /// normal, not against it.
+    ///
+    /// This contract has to be a test precisely because it is invisible on
+    /// screen. `add_oriented_box` shipped inverted on all six faces for as long
+    /// as it has existed, across 43 call sites, and nobody noticed — every city
+    /// material is `double_sided: true, cull_mode: None`, and the vertex normal
+    /// was always the correct outward one, so the geometry both drew and shaded
+    /// correctly off a mesh that was inside out. Correcting it moved the
+    /// rendered image by under 1/255 mean luminance.
+    ///
+    /// So what is guarded here is not how the city looks — correcting it moved
+    /// the frame by under 1/255 mean luminance, and under forced backface culling
+    /// by 0.33% of pixels. It is that the mesh should mean what it says, so that
+    /// culling, an export or any tool that recomputes normals gets the right
+    /// answer. A dot product costs nothing and fails loudly; the alternative is
+    /// re-deriving all of this from a screenshot in two years.
+    #[test]
+    fn every_oriented_box_face_is_wound_outward() {
+        fn inverted(mesh: &MeshData) -> Vec<usize> {
+            mesh.indices
+                .chunks(3)
+                .enumerate()
+                .filter(|(_, tri)| {
+                    let point = |i: u32| Vec3::from_array(mesh.positions[i as usize]);
+                    let normal = Vec3::from_array(mesh.normals[tri[0] as usize]);
+                    let (a, b, c) = (point(tri[0]), point(tri[1]), point(tri[2]));
+                    (b - a).cross(c - a).dot(normal) <= 0.0
+                })
+                .map(|(index, _)| index)
+                .collect()
+        }
+
+        // Off-axis, non-cubic and off-origin, so a sign error cannot cancel.
+        let along = Vec2::new(3.0, -1.0).normalize();
+        let mut oriented = MeshData::default();
+        add_oriented_box(
+            &mut oriented,
+            Vec3::new(-7.5, 2.25, 11.0),
+            Vec3::new(0.4, 1.6, 0.9),
+            along,
+        );
+        assert_eq!(oriented.indices.len() / 3, 12, "a box is twelve triangles");
+        assert_eq!(
+            inverted(&oriented),
+            Vec::<usize>::new(),
+            "add_oriented_box emits inside-out triangles; those faces take no sun"
+        );
+
+        let mut dressed = MeshData::default();
+        add_dressed_stone(
+            &mut dressed,
+            Vec3::new(4.0, 0.05, -2.5),
+            Vec3::new(0.15, 0.05, 0.65),
+        );
+        assert_eq!(
+            inverted(&dressed),
+            Vec::<usize>::new(),
+            "add_dressed_stone emits inside-out triangles"
+        );
+
+        // The UVs must stay U-horizontal / V-vertical on the side faces — the
+        // reason the ring is reversed rather than the side vectors swapped.
+        let side = &oriented.uvs[..4];
+        let span_u = side.iter().fold(0.0_f32, |acc, uv| acc.max(uv[0]));
+        let span_v = side.iter().fold(0.0_f32, |acc, uv| acc.max(uv[1]));
+        assert!(
+            (span_u - 0.9 / 3.5).abs() < 1.0e-5 && (span_v - 1.6 / 3.5).abs() < 1.0e-5,
+            "a side face's texture is transposed: U spans {span_u}, V spans {span_v}"
+        );
     }
 
     /// `the_cut_kerb.md` M2 — the drawn stones, not the three functions behind
