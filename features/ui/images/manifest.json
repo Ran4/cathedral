@@ -1,0 +1,307 @@
+{
+ "features/50_cool_suggestions.md": {
+  "file": "cbc340e4a4306fc8.png",
+  "hash": "cbc340e4a4306fc8",
+  "when": "2026-07-30T15:29:08"
+ },
+ "features/adhd-new-cool-features": {
+  "file": "6b8d0859e8fc7f6b.png",
+  "hash": "6b8d0859e8fc7f6b",
+  "when": "2026-07-30T15:29:16"
+ },
+ "features/bread_through_the_bars__add_three_starting_prisoners.md": {
+  "file": "30095b9463bb9654.png",
+  "hash": "30095b9463bb9654",
+  "when": "2026-07-30T15:27:40"
+ },
+ "features/chalking_the_walls.md": {
+  "file": "7f3bff5eb6ac3bd6.png",
+  "hash": "7f3bff5eb6ac3bd6",
+  "when": "2026-07-30T15:27:38"
+ },
+ "features/design_the_cut_game.md": {
+  "file": "7ac78d01be7ad6ef.png",
+  "hash": "7ac78d01be7ad6ef",
+  "when": "2026-07-30T15:27:37"
+ },
+ "features/false_peals__ring_the_bells_manually.md": {
+  "file": "0d174473b6535d2d.png",
+  "hash": "0d174473b6535d2d",
+  "when": "2026-07-30T15:28:13"
+ },
+ "features/food_and_items": {
+  "file": "f00d8d549f01715f.png",
+  "hash": "f00d8d549f01715f",
+  "when": "2026-07-30T15:28:05"
+ },
+ "features/implemented/add_characters.md": {
+  "file": "65777d66a7c499b4.png",
+  "hash": "65777d66a7c499b4",
+  "when": "2026-07-30T15:33:01"
+ },
+ "features/implemented/add_items_described_in_the_lore.md": {
+  "file": "0b88768df6671264.png",
+  "hash": "0b88768df6671264",
+  "when": "2026-07-30T15:30:12"
+ },
+ "features/implemented/add_more_family_lore.md": {
+  "file": "47cb8e755bf2d7df.png",
+  "hash": "47cb8e755bf2d7df",
+  "when": "2026-07-30T15:31:10"
+ },
+ "features/implemented/agent_drive.md": {
+  "file": "83c343547084d3af.png",
+  "hash": "83c343547084d3af",
+  "when": "2026-07-30T15:33:55"
+ },
+ "features/implemented/bug_report_2026-07-28.md": {
+  "file": "8520d1bc3d901ccb.png",
+  "hash": "8520d1bc3d901ccb",
+  "when": "2026-07-30T15:29:50"
+ },
+ "features/implemented/cache_the_static_prompt_prefix.md": {
+  "file": "16ed5c018b10d149.png",
+  "hash": "16ed5c018b10d149",
+  "when": "2026-07-30T15:32:30"
+ },
+ "features/implemented/config_menu.md": {
+  "file": "fe3000c60e6a7344.png",
+  "hash": "fe3000c60e6a7344",
+  "when": "2026-07-30T15:34:00"
+ },
+ "features/implemented/conversation_floor.md": {
+  "file": "163533087a24f6ab.png",
+  "hash": "163533087a24f6ab",
+  "when": "2026-07-30T15:33:53"
+ },
+ "features/implemented/delete_sidecar.md": {
+  "file": "552b691abf531437.png",
+  "hash": "552b691abf531437",
+  "when": "2026-07-30T15:33:31"
+ },
+ "features/implemented/extra_pockets.md": {
+  "file": "eb3ad673b277790d.png",
+  "hash": "eb3ad673b277790d",
+  "when": "2026-07-30T15:32:33"
+ },
+ "features/implemented/gate_idle_cognition_on_novelty.md": {
+  "file": "7017f70cb11f2bc9.png",
+  "hash": "7017f70cb11f2bc9",
+  "when": "2026-07-30T15:32:29"
+ },
+ "features/implemented/gate_idle_cognition_on_proximity.md": {
+  "file": "bf3878d2aee82602.png",
+  "hash": "bf3878d2aee82602",
+  "when": "2026-07-30T15:32:30"
+ },
+ "features/implemented/giving_things.md": {
+  "file": "4d241a692f25c59d.png",
+  "hash": "4d241a692f25c59d",
+  "when": "2026-07-30T15:33:25"
+ },
+ "features/implemented/going_up_to_500_named_characters.md": {
+  "file": "8964c84df4146015.png",
+  "hash": "8964c84df4146015",
+  "when": "2026-07-30T15:33:09"
+ },
+ "features/implemented/handle_the_snuffing.md": {
+  "file": "005cc57e83a24e25.png",
+  "hash": "005cc57e83a24e25",
+  "when": "2026-07-30T15:30:46"
+ },
+ "features/implemented/interesting_houses.md": {
+  "file": "6ccdc9f51ccfa88f.png",
+  "hash": "6ccdc9f51ccfa88f",
+  "when": "2026-07-30T15:31:44"
+ },
+ "features/implemented/lore_fixes_due_to_resizing.md": {
+  "file": "2dabec60b3a819c0.png",
+  "hash": "2dabec60b3a819c0",
+  "when": "2026-07-30T15:30:10"
+ },
+ "features/implemented/lore_wells_and_water.md": {
+  "file": "429280a25770586d.png",
+  "hash": "429280a25770586d",
+  "when": "2026-07-30T15:31:44"
+ },
+ "features/implemented/make_dry_boatmen_consistent_with_lore.md": {
+  "file": "0209e2f0f9213156.png",
+  "hash": "0209e2f0f9213156",
+  "when": "2026-07-30T15:31:41"
+ },
+ "features/implemented/movement": {
+  "file": "9caf6b4e943fac2c.png",
+  "hash": "9caf6b4e943fac2c",
+  "when": "2026-07-30T15:29:43"
+ },
+ "features/implemented/movement.md": {
+  "file": "2ccb5944120f539f.png",
+  "hash": "2ccb5944120f539f",
+  "when": "2026-07-30T15:31:40"
+ },
+ "features/implemented/named_place_soundscapes.md": {
+  "file": "ca435d6278b65004.png",
+  "hash": "ca435d6278b65004",
+  "when": "2026-07-30T15:30:17"
+ },
+ "features/implemented/npc_bodies.md": {
+  "file": "a6cce2b02ec61217.png",
+  "hash": "a6cce2b02ec61217",
+  "when": "2026-07-30T15:30:31"
+ },
+ "features/implemented/npc_knows_where_it_lives__inject_home_into_prompt.md": {
+  "file": "a9d6720681016fa1.png",
+  "hash": "a9d6720681016fa1",
+  "when": "2026-07-30T15:31:04"
+ },
+ "features/implemented/npc_voice_audio.md": {
+  "file": "023bd93ded13b48f.png",
+  "hash": "023bd93ded13b48f",
+  "when": "2026-07-30T15:34:10"
+ },
+ "features/implemented/npcs_stop_walking_when_talking_to_each_other.md": {
+  "file": "100a42d3aca19ae7.png",
+  "hash": "100a42d3aca19ae7",
+  "when": "2026-07-30T15:31:14"
+ },
+ "features/implemented/offer_lapse.md": {
+  "file": "9838f86ac443a450.png",
+  "hash": "9838f86ac443a450",
+  "when": "2026-07-30T15:29:59"
+ },
+ "features/implemented/performance_improvements": {
+  "file": "f8a0077eb17f833b.png",
+  "hash": "f8a0077eb17f833b",
+  "when": "2026-07-30T15:29:42"
+ },
+ "features/implemented/places.md": {
+  "file": "160a89e2ab5a1ac8.png",
+  "hash": "160a89e2ab5a1ac8",
+  "when": "2026-07-30T15:33:22"
+ },
+ "features/implemented/refactor_logging.md": {
+  "file": "3ae5e97bd1fb141b.png",
+  "hash": "3ae5e97bd1fb141b",
+  "when": "2026-07-30T15:33:44"
+ },
+ "features/implemented/small_thing_deduplicate_repeat_recent_history.md": {
+  "file": "a18d0c3162314a65.png",
+  "hash": "a18d0c3162314a65",
+  "when": "2026-07-30T15:31:04"
+ },
+ "features/implemented/smart_actors.md": {
+  "file": "ece416dd5076d80f.png",
+  "hash": "ece416dd5076d80f",
+  "when": "2026-07-30T15:34:27"
+ },
+ "features/implemented/smokey_town.md": {
+  "file": "03105e3bd2c55d7c.png",
+  "hash": "03105e3bd2c55d7c",
+  "when": "2026-07-30T15:30:44"
+ },
+ "features/implemented/sounds.md": {
+  "file": "49206556d2941a58.png",
+  "hash": "49206556d2941a58",
+  "when": "2026-07-30T15:33:30"
+ },
+ "features/implemented/speech_turn_taking.md": {
+  "file": "589690a58b5f57de.png",
+  "hash": "589690a58b5f57de",
+  "when": "2026-07-30T15:34:22"
+ },
+ "features/implemented/stt_improvements_fable_2026-07-11.md": {
+  "file": "5397f647f13ec679.png",
+  "hash": "5397f647f13ec679",
+  "when": "2026-07-30T15:34:15"
+ },
+ "features/implemented/the_four_hundred_marks.md": {
+  "file": "7e53eaec2541afcb.png",
+  "hash": "7e53eaec2541afcb",
+  "when": "2026-07-30T15:32:57"
+ },
+ "features/implemented/the_grail_hail_lore_update.md": {
+  "file": "db5eb70ed332c5f6.png",
+  "hash": "db5eb70ed332c5f6",
+  "when": "2026-07-30T15:33:05"
+ },
+ "features/implemented/things_to_patch_in_the_lore_to_match_families_lore.md": {
+  "file": "f45825ef8e9f46cf.png",
+  "hash": "f45825ef8e9f46cf",
+  "when": "2026-07-30T15:31:48"
+ },
+ "features/implemented/verticality.md": {
+  "file": "62f9ed95ca9c3ff7.png",
+  "hash": "62f9ed95ca9c3ff7",
+  "when": "2026-07-30T15:30:58"
+ },
+ "features/implemented/weather.md": {
+  "file": "8e4ca9dae40be640.png",
+  "hash": "8e4ca9dae40be640",
+  "when": "2026-07-30T15:30:29"
+ },
+ "features/intimacy.md": {
+  "file": "a1a2a4a676d4d06d.png",
+  "hash": "a1a2a4a676d4d06d",
+  "when": "2026-07-30T15:32:54"
+ },
+ "features/its_at_least_2011_now_baby.md": {
+  "file": "1818c2717bf91daf.png",
+  "hash": "1818c2717bf91daf",
+  "when": "2026-07-30T15:28:12"
+ },
+ "features/law_and_order.md": {
+  "file": "e363d8a72899387d.png",
+  "hash": "e363d8a72899387d",
+  "when": "2026-07-30T15:28:11"
+ },
+ "features/lore_ward_politics.md": {
+  "file": "6e5c3cfbe1fbf5d9.png",
+  "hash": "6e5c3cfbe1fbf5d9",
+  "when": "2026-07-30T15:28:40"
+ },
+ "features/make_wells_consistent_with_lore.md": {
+  "file": "6b4cd8b94e031cf7.png",
+  "hash": "6b4cd8b94e031cf7",
+  "when": "2026-07-30T15:28:40"
+ },
+ "features/more_interesting_houses.md": {
+  "file": "2ff438f5142477ec.png",
+  "hash": "2ff438f5142477ec",
+  "when": "2026-07-30T15:28:40"
+ },
+ "features/more_sounds": {
+  "file": "0045b6f2717bf698.png",
+  "hash": "0045b6f2717bf698",
+  "when": "2026-07-30T15:28:39"
+ },
+ "features/prompts": {
+  "file": "69a2a94642667e8e.png",
+  "hash": "69a2a94642667e8e",
+  "when": "2026-07-30T15:28:40"
+ },
+ "features/quicker_response_improvements.md": {
+  "file": "4e1f5f30a6b54ff6.png",
+  "hash": "4e1f5f30a6b54ff6",
+  "when": "2026-07-30T15:29:10"
+ },
+ "features/rats.md": {
+  "file": "0b137013063a01e5.png",
+  "hash": "0b137013063a01e5",
+  "when": "2026-07-30T15:27:41"
+ },
+ "features/rumors.md": {
+  "file": "038c561d64c4ad0e.png",
+  "hash": "038c561d64c4ad0e",
+  "when": "2026-07-30T15:29:16"
+ },
+ "features/scents.md": {
+  "file": "abc9322252bca298.png",
+  "hash": "abc9322252bca298",
+  "when": "2026-07-30T15:29:08"
+ },
+ "features/the_cut_improvements": {
+  "file": "bae0575fc6cd9227.png",
+  "hash": "bae0575fc6cd9227",
+  "when": "2026-07-30T15:27:37"
+ }
+}
