@@ -110,6 +110,10 @@ struct CityMaterials {
     cobbles: Handle<StandardMaterial>,
     paving: Handle<StandardMaterial>,
     dry_cut: Handle<StandardMaterial>,
+    /// The Cut's bank outside the kerb line: the same flags the squares are
+    /// laid in, weathered greyer and duller so the pale cart-worn dust of
+    /// `dry_cut` reads as a lane running between two darker bands.
+    cut_margin: Handle<StandardMaterial>,
     yard: Handle<StandardMaterial>,
     limestone: Handle<StandardMaterial>,
     fieldstone: Handle<StandardMaterial>,
@@ -277,6 +281,7 @@ fn build_city(
             (city_materials.cobbles.clone(), WetResponse::GROUND),
             (city_materials.paving.clone(), WetResponse::PAVING),
             (city_materials.dry_cut.clone(), WetResponse::GROUND),
+            (city_materials.cut_margin.clone(), WetResponse::PAVING),
             (city_materials.yard.clone(), WetResponse::GROUND),
             (city_materials.terracotta.clone(), WetResponse::ROOF),
             (city_materials.slate.clone(), WetResponse::ROOF),
@@ -329,6 +334,7 @@ fn build_city(
     build_named_details(
         &mut commands,
         &city_meshes,
+        &mut meshes,
         &city_materials,
         &plan,
         &mut collision_world,
@@ -458,6 +464,12 @@ fn create_materials(
             "textures/ombreval_dry_cut.png",
             Color::srgb(0.72, 0.68, 0.59),
             0.98,
+        ),
+        cut_margin: textured(
+            materials,
+            "textures/ombreval_paving.png",
+            Color::srgb(0.60, 0.57, 0.50),
+            0.95,
         ),
         yard: textured(
             materials,
@@ -831,6 +843,11 @@ fn build_buildings(
     let mut timber_frames = MeshData::default();
     let mut chimney_anchors = Vec::new();
     let mut rendered = 0;
+    // The Cut margin's ground, for the doorways that open onto its raised
+    // flags (`add_door_module`). Built again here rather than shared with
+    // `build_kerb`'s resource because the two run in no fixed order and the
+    // construction is a one-off pass over the plan.
+    let cut_profile = cut_margin_profile(plan);
 
     for building in &plan.buildings {
         // The fixed Lanthorn shell is built by `scene.rs`, with the authored
@@ -923,6 +940,7 @@ fn build_buildings(
                         &mut frames,
                         &band.polygon,
                         &scoped,
+                        &cut_profile,
                     );
                 }
             }
@@ -933,6 +951,7 @@ fn build_buildings(
                 &mut frames,
                 &building.polygon,
                 &openings,
+                &cut_profile,
             ),
         }
         add_footprint_colliders(
@@ -2151,6 +2170,10 @@ const OPENING_DEPTH: f32 = 0.15;
 /// shutters and door leaves. Purely decorative — the openings themselves were
 /// cut by `add_wall_face_with_holes`. Works on whichever footprint the walls
 /// actually used (a jettied storey's ring, or the cadastral polygon).
+///
+/// `cut_profile` is the Cut margin's ground (`CutMarginProfile`), sampled at
+/// each doorway so a door opening onto the raised flags keeps its threshold
+/// on them — see `add_door_module` for what rides up and why.
 fn add_facade_openings_on(
     windows: &mut MeshData,
     rooms: &mut MeshData,
@@ -2158,6 +2181,7 @@ fn add_facade_openings_on(
     frames: &mut MeshData,
     polygon: &[[f32; 2]],
     openings: &[Vec<FacadeOpening>],
+    cut_profile: &CutMarginProfile,
 ) {
     let orientation = plan::signed_area(polygon).signum();
     for (edge_index, (a, b)) in polygon
@@ -2198,14 +2222,21 @@ fn add_facade_openings_on(
                     opening.hash,
                     shutters,
                 ),
-                OpeningKind::Door => add_door_module(
-                    doors,
-                    frames,
-                    wall_point,
-                    opening.min_y(),
-                    direction,
-                    normal2,
-                ),
+                OpeningKind::Door => {
+                    // Sampled where the threshold slab actually lies — 0.3 m
+                    // out from the wall face — which for a Cut-margin door is
+                    // the outermost flag lane, never a feathered strip end.
+                    let step = wall_point + normal2 * 0.3;
+                    add_door_module(
+                        doors,
+                        frames,
+                        wall_point,
+                        opening.min_y(),
+                        cut_profile.ground_lift(step.x, step.y),
+                        direction,
+                        normal2,
+                    );
+                }
             }
         }
     }
@@ -2406,18 +2437,34 @@ fn add_window_room(
 
 /// The door: leaf recessed behind the face, reveal returns, a proud lintel and
 /// a worn threshold slab at the foot.
+///
+/// `ground_lift` is how far the street's own ground stands above the
+/// building's `base_y` at the doorway — zero everywhere except the Cut's
+/// raised margin (`the_cut_kerb.md` M3), whose flags run right up to the
+/// façade lines at `CUT_MARGIN_Y + CUT_STEP_M` while the buildings behind
+/// them keep `base_y = 0`. The visible module — leaf bottom, reveal, and the
+/// threshold slab — starts at the lifted ground, so the sill stands the same
+/// 0.065 m proud of the flags that it stands proud of the old margin
+/// everywhere else: the gazetteer's *"slightly raised thresholds"*, rather
+/// than a sill buried 0.185 m under the paving and a doorway a cart climbing
+/// the kerb break's ramp would then drop into. The lintel and the wall's own
+/// cut opening stay put — everything below the flag top is occluded by the
+/// slab the flags are drawn as, so only the parts that read had to move.
 fn add_door_module(
     doors: &mut MeshData,
     frames: &mut MeshData,
     wall_point: Vec2,
     base_y: f32,
+    ground_lift: f32,
     direction: Vec2,
     normal2: Vec2,
 ) {
     let normal = Vec3::new(normal2.x, 0.0, normal2.y);
     let width = 1.35;
     let height = 2.5;
-    let center_y = base_y + height * 0.5;
+    let foot_y = base_y + ground_lift;
+    let leaf_height = height - ground_lift;
+    let center_y = foot_y + leaf_height * 0.5;
     add_facade_panel(
         doors,
         wall_point - normal2 * (OPENING_DEPTH - 0.03),
@@ -2425,7 +2472,7 @@ fn add_door_module(
         direction,
         normal,
         width + 0.06,
-        height + 0.04,
+        leaf_height + 0.04,
     );
     add_reveal(
         frames,
@@ -2434,7 +2481,7 @@ fn add_door_module(
         direction,
         normal2,
         width,
-        height,
+        leaf_height,
         OPENING_DEPTH - 0.03,
         true,
     );
@@ -2447,7 +2494,7 @@ fn add_door_module(
     // Threshold: a step slab proud of the wall at ground level.
     add_oriented_box(
         frames,
-        Vec3::new(wall_point.x, base_y + 0.045, wall_point.y) + normal * 0.14,
+        Vec3::new(wall_point.x, foot_y + 0.045, wall_point.y) + normal * 0.14,
         Vec3::new(width * 0.5 + 0.05, 0.05, 0.24),
         direction,
     );
@@ -2819,6 +2866,7 @@ fn spawn_yard_crane(
 fn build_named_details(
     commands: &mut Commands,
     meshes: &CityMeshes,
+    mesh_assets: &mut Assets<Mesh>,
     materials: &CityMaterials,
     plan: &CityPlan,
     collision_world: &mut CollisionWorld,
@@ -2831,6 +2879,7 @@ fn build_named_details(
     build_charnel_and_ilvane_details(commands, meshes, materials);
     build_bridge_supports(commands, meshes, materials, plan, collision_world);
     build_ropewalk(commands, meshes, materials);
+    build_kerb(commands, mesh_assets, materials, plan, collision_world);
     build_osanne_stall(commands, meshes, materials, collision_world);
     build_wharf_cranes(commands, meshes, materials);
 }
@@ -4693,6 +4742,1657 @@ fn build_ropewalk(commands: &mut Commands, meshes: &CityMeshes, materials: &City
     }
 }
 
+/// The Cut's centreline in world X. The street is one straight segment from
+/// `z +325.5` to `z -422.0` and does not bend, which is why it can carry a line
+/// at all.
+const CUT_CENTRE_X: f32 = -213.5;
+/// Half the cartway: the kerb faces stand five metres off the centreline, so
+/// the lane the Bench protects is ten metres — mid-range of the 8–12 m the
+/// gazetteer gives the working cartway.
+const CUT_KERB_OFFSET_M: f32 = 5.0;
+const CUT_KERB_WIDTH_M: f32 = 0.30;
+/// A tenth of a metre, not the quarter the section plate draws. See
+/// `build_kerb`.
+const CUT_KERB_RISE_M: f32 = 0.10;
+/// The housefront lines. Measured off every plan building fronting the street
+/// they are exact to the centimetre for all three reaches, so the margin can be
+/// drawn to them rather than inferred per block.
+const CUT_FACADE_WEST_X: f32 = -225.2;
+const CUT_FACADE_EAST_X: f32 = -201.8;
+/// The margin flags' own seat over their ground: a whisker over the road
+/// ribbon (`y = 0.024`) when everything stood at grade, and since M3 the same
+/// whisker on top of the step — the flags are drawn at `CUT_MARGIN_Y +
+/// CUT_STEP_M`. The square markings sit a whisker over the ribbon still.
+const CUT_MARGIN_Y: f32 = 0.030;
+const CUT_MARKER_TOP_Y: f32 = 0.034;
+/// Nominal kerbstone; the run divides its length into a whole number of these.
+const CUT_KERB_STONE_M: f32 = 1.3;
+/// The three reaches where a kerb was actually laid, north to south:
+/// Chain Bridge quarter to the Tallage, the Tallage to Maren's Green, and
+/// Maren's Green down to the Old Sluice.
+const CUT_LAID_REACHES: [(f32, f32); 3] = [(105.0, 325.5), (-216.3, 23.8), (-422.0, -294.7)];
+/// The two squares the ribbon runs through, where the boundary is a rule the
+/// Bench asserts rather than a stone somebody laid: `tallage` and
+/// `marens_green`, at their own polygon extents.
+const CUT_MARKED_REACHES: [(f32, f32); 2] = [(23.8, 105.0), (-294.7, -216.3)];
+/// Spacing of the flush marker blocks through the squares.
+const CUT_MARKER_PITCH_M: f32 = 6.0;
+/// Width of one lane of margin flagging. The margin is emitted as a handful of
+/// lanes rather than one 6.7 m band so that a street running *along* the back
+/// of it only takes away the ground it actually stands on — see
+/// `cut_margin_strips`.
+const CUT_MARGIN_LANE_M: f32 = 0.85;
+
+/// How high the old bank still stands over the filled channel, at the head of a
+/// blocked water stair. The section plate's 0.40 m: enough for a flight of six
+/// treads to have somewhere to go, low enough that walking through it does not
+/// read as walking through a building — the flight is walk-through stone, like
+/// every solid on this street except the riser and the bollards (M3's two
+/// colliders; see `build_kerb`). Anything else made solid here means re-running
+/// the whole four-step nav chain.
+const CUT_BANK_TOP_Y: f32 = 0.40;
+/// The head tread's width across the flight, and how much each tread below it
+/// loses to the battering cheek walls.
+const CUT_STAIR_WIDTH_M: f32 = 4.4;
+const CUT_STAIR_BATTER_M: f32 = 0.11;
+/// Treads below the head landing. The sixth comes out at 0.057 m — a stone the
+/// fill has all but taken — and two drowned slabs past it finish in the
+/// cartway.
+const CUT_STAIR_TREADS: usize = 6;
+const CUT_STAIR_TREAD_M: f32 = 0.40;
+/// The mooring stone at a stair head: set four and a half times the height of
+/// the kerb it stood among when the channel was filled, because a ring set in
+/// a 0.10 m kerb would be a ring underground. It keeps its absolute height
+/// through M3 — the stone belongs to the *old* bank, like the stair landing it
+/// stands beside (`CUT_BANK_TOP_Y`), so the raised margin has merely caught it
+/// up: a tenth over the stepped kerb's top, its ring still at rope height off
+/// the cartway.
+const CUT_MOORING_STONE_Y: f32 = 0.45;
+/// How far past the edge of the flight the mooring stone's centre stands, and
+/// how long the stone is along the line. Both feed the clearance
+/// `CutProp::kerb_gap` has to leave for it on *either* hand.
+const CUT_MOORING_STANDOFF_M: f32 = 0.8;
+const CUT_MOORING_STONE_HALF_Z: f32 = 0.45;
+const CUT_BOLLARD_Y: f32 = 0.87;
+/// A lawful crossing of the line at a warehouse door: three metres of the same
+/// stone, laid flush, so a cart can cross where the Bench says it may.
+const CUT_KERB_BREAK_M: f32 = 3.0;
+
+/// M3 — the real step. How far the margin's ground stands above the cartway:
+/// the quarter-metre the section plate always drew and §2.2 deliberately did
+/// not ship until something needed it. The margin flags are drawn at
+/// `CUT_MARGIN_Y + CUT_STEP_M`, the kerbstones carry their whole M0–M2 height
+/// stack up by the same amount (their *seat* stays at `y -CUT_KERB_SEAT_M`, so
+/// the stones' cartway faces are the drawn riser), and `CutMarginProfile` puts
+/// the same step under the player's and the puppets' feet.
+pub const CUT_STEP_M: f32 = 0.25;
+/// The riser's collider top: a centimetre *below* the step, for two reasons.
+/// Walking off the margin must never snag — feet on the margin stand at
+/// `CUT_STEP_M` and a collider flush with them would clip the sweep — and the
+/// nav bake does not read height at all (any footprint with `max.y >= 0.01`
+/// blocks a cell outright), so nothing is bought by making it taller. From the
+/// cartway it is a wall the player cannot step up (the controller has no
+/// step-up logic — a hop clears it, which is what a kerb is); from above it is
+/// under everything.
+const CUT_RISER_TOP_M: f32 = CUT_STEP_M - 0.01;
+/// How far behind the kerb line a kerb break's ramp runs before it meets the
+/// flags: exactly **two margin lanes** (`2 × 6.7 m / 8`), so the flag gap the
+/// ramp descends through ends on a lane boundary and no sliver of bare ground
+/// opens beside it. ~14 % grade over the run — steep, but a laid stone pitch a
+/// cart can take, which is what the break is for.
+const CUT_BREAK_RAMP_RUN_M: f32 = 1.675;
+/// Open margin edges (junction mouths, the reach ends at the two squares) are
+/// drawn as honest 0.28 m stone edges, but feet ramp through them over this
+/// distance instead of teleporting the full step in one frame: the profile
+/// feathers the lift near a strip's *open* edges. Open z-ends are the common
+/// case, but a road running *along* the back of the margin (the wall lane
+/// behind the west bank, and the sliver each diagonal junction mouth leaves
+/// where one lane's rect outlives its neighbour's) removes whole lanes and
+/// leaves an open **x-edge** in the middle of the flags — those feather the
+/// same way, by distance to the edge. Deliberately NOT applied across the kerb
+/// line (the riser is a collider there, and a feathered lift would sink feet
+/// into the flags), at the façade line (a wall), or at an edge abutting a
+/// stair trench or ramp gap (their own profiles carry on at their own height).
+const CUT_STEP_FEATHER_M: f32 = 0.45;
+
+/// The deep end of the envelope `the_cut_kerb.md` M2 gives a sounding. It is
+/// also the scale the per-stone disturbance in `cut_kerbstone_top` is taken
+/// against; the rest of the envelope is asserted in
+/// `the_cut_soundings_stay_inside_the_authored_envelope`.
+const CUT_SAG_MAX_M: f32 = 0.25;
+/// The full peak-to-peak scatter a stone that has gone down may show out of the
+/// line it was laid in, at the deepest sounding — so ±0.010 m about the profile.
+/// Ground that moved did not move in a plane, so the drowned stretch reads as
+/// broken masonry rather than as a deliberately flush line, which is what the
+/// *squares* mean and the exact opposite of a sounding.
+///
+/// **Two-sided, not one.** A scatter that only ever lifts is a bias, and a bias
+/// proportional to the sag lifts the bottom of a trough more than its shoulders
+/// — i.e. it fills in the very thing it was added to sell. So it is centred
+/// about the profile. With M3's step under the line the deepest heaved-down
+/// stone still rides `CUT_STEP_M + 0.092 − 0.25 ≈ 0.09 m` proud of the
+/// cartway, so no scatter can take a stone under the road.
+const CUT_KERB_HEAVE_M: f32 = 0.020;
+/// How much darker the same limestone is drawn at the deepest sounding. Not
+/// weathering for its own sake: a kerb standing 0.10 m proud sheds and is swept,
+/// and one lying at street level takes the dust, the traffic and the filled
+/// joints. It is the one cue that survives being sighted at from two hundred
+/// metres, and it means the trough can be read without a true reach beside it to
+/// compare against.
+const CUT_KERB_DROWNED_TINT: f32 = 0.16;
+/// How far below grade a kerbstone is seated. The block's *bottom* is pinned
+/// here, at `y -0.42`, for every stone on the street; the sag moves only its
+/// top, so the block grows and shrinks with the profile instead of pivoting
+/// about `y = 0`. That is what guarantees no stone ever floats and no gap opens
+/// under the line, and it is the seam M3 has to move if it lowers the ground:
+/// the bottom is an absolute, not an offset from the top face.
+const CUT_KERB_SEAT_M: f32 = 0.42;
+/// One authored sounding — a stretch where the line has gone down because the
+/// ground under it is the filled channel of the Serle rather than the old bank.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct CutSounding {
+    /// Deepest point, in world z.
+    z: f32,
+    /// Half the length of the dip; the profile is zero at `z ± half_length_m`.
+    half_length_m: f32,
+    /// How far each line has gone down at `z`. They differ because the channel
+    /// was narrower than the street and did not run down its middle.
+    west_m: f32,
+    east_m: f32,
+}
+
+/// The soundings — `the_cut_kerb.md` M2.
+///
+/// **What the lore fixes, and what it does not.** `lore/wells_and_water.md` is
+/// law on what is under this street and it is explicit: *"No plan of the old
+/// channel was ever drawn."* The soundings are an unwritten oral map the
+/// boat-families sell and the Cut landlords deny, so nothing anywhere in `lore/`
+/// gives a z for the deep line. What it does fix, and what these four agree
+/// with:
+///
+/// - **The Old Sluice** (`z ≈ -427`) is a gate, and a gate stands across the
+///   channel. Water held at a gate scours a pool above it, and that pool is the
+///   deepest hole and the youngest fill on the street — hence the sounding at
+///   `z -362`, the deepest of the four, and deeper on the west. It stops sixty
+///   metres short of the sluice itself: the true arch is the Alders' to sell and
+///   this feature does not publish it.
+/// - **The Chain Bridge** (`z +297.5`) takes its working name from the harbour
+///   chain-house, and a chain closes *navigable* water. The channel was
+///   therefore deep and near mid-stream under it, which is why the sounding at
+///   `z +286` takes both lines almost equally.
+/// - **M1's blocked water stairs.** A flight was built where the channel came
+///   alongside that bank, so the four stairs that fall on a sounding at all
+///   stand on its *shoulder*: `z +160` east opens the north reach's sounding,
+///   `z -100` east and `z -168` west are the two ends of the middle reach's, and
+///   `z -330` west stands on the north lip of the sluice pool. None of them
+///   stands in a trough — see
+///   `the_cut_soundings_leave_the_laid_furniture_standing`.
+///
+/// Between those the channel ran a little east of centre through the middle
+/// reach and crossed back below Maren's Green, which is the whole editorial
+/// claim being made here and the one thing a mason, a landlord or Wyn Alder
+/// could argue with. §7 of the feature doc lists writing it into
+/// `the_dry_boatmen.md` as the follow-up.
+///
+/// **Four, and only in the laid reaches.** The squares are drawn flush, so a
+/// sounding inside one would have nothing to sag; and a fifth would start to
+/// read as noise rather than as three or four specific places. The middle reach
+/// gets the longest and the emptiest, because it is the stretch a player
+/// actually walks and sights down.
+const CUT_SOUNDINGS: [CutSounding; 4] = [
+    // The chain reach: the harbour head, and the deepest water the Serle
+    // carried inside the walls.
+    CutSounding { z: 286.0, half_length_m: 26.0, west_m: 0.18, east_m: 0.19 },
+    // The wool quarter, opening at the one blocked stair on this reach.
+    CutSounding { z: 190.0, half_length_m: 30.0, west_m: 0.16, east_m: 0.21 },
+    // Below the Tallage, bracketed by the middle reach's two stairs. The
+    // longest of the four, because this is the stretch a player walks and
+    // sights down.
+    CutSounding { z: -134.0, half_length_m: 36.0, west_m: 0.17, east_m: 0.22 },
+    // The pool above the sluice gate.
+    CutSounding { z: -362.0, half_length_m: 34.0, west_m: 0.24, east_m: 0.20 },
+];
+
+/// Half the width of one stair's head tread, jittered off that stair's seed so
+/// five flights along a straight street are not five copies of one object.
+///
+/// It lives out here, and is bounded, because `CutProp::kerb_gap` has to open
+/// enough line for the *widest* flight the jitter can produce plus the mooring
+/// stone that stands beside its head — see
+/// `a_cut_water_stair_breaks_the_line_it_descends_through`.
+fn cut_stair_half_head(seed: u32) -> f32 {
+    CUT_STAIR_WIDTH_M * 0.5 * (0.92 + (seed % 15) as f32 * 0.010)
+}
+
+/// The one seed a water stair owns. `add_water_stair`, the margin flagging
+/// (which stops at the flight's cheek walls) and the ground profile under feet
+/// all jitter off the same number, so the three can never disagree about how
+/// wide one flight came out.
+fn cut_stair_seed(bank: CutBank, z: f32) -> u32 {
+    stable_hash(&format!("cut-stair-{:.1}-{z:.1}", bank.kerb_x()))
+}
+
+/// Which side of the Cut a piece of margin furniture stands on. Everything in
+/// `CUT_FURNITURE` is authored as (kind, bank, z), and the bank supplies the
+/// three x values the piece needs: the kerb line it stands on or breaks, the
+/// housefront it stands against, and which way "out of the cartway" points.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CutBank {
+    West,
+    East,
+}
+
+impl CutBank {
+    fn kerb_x(self) -> f32 {
+        match self {
+            CutBank::West => CUT_CENTRE_X - CUT_KERB_OFFSET_M,
+            CutBank::East => CUT_CENTRE_X + CUT_KERB_OFFSET_M,
+        }
+    }
+
+    fn facade_x(self) -> f32 {
+        match self {
+            CutBank::West => CUT_FACADE_WEST_X,
+            CutBank::East => CUT_FACADE_EAST_X,
+        }
+    }
+
+    /// The sign that walks from the cartway out across the margin toward the
+    /// housefronts. Every piece of furniture is written once, in these terms,
+    /// and comes out mirrored on the far bank.
+    fn outward(self) -> f32 {
+        match self {
+            CutBank::West => -1.0,
+            CutBank::East => 1.0,
+        }
+    }
+}
+
+/// One piece of authored margin furniture — `the_cut_kerb.md` M1.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CutProp {
+    /// A flight of stone descending out of the old bank, through the kerb line
+    /// and into the cartway, where the fill takes it. The fossil of the river.
+    WaterStair,
+    /// A short stone post standing in the line, at a square's threshold or
+    /// beside a bridge pier.
+    Bollard,
+    /// Three metres of flush stone where a warehouse door faces the street.
+    KerbBreak,
+    /// A double-leaf timber hatch let into the margin against a housefront.
+    CellarHatch,
+    /// A barred stone vent at the foot of a wall — the cheaper answer to the
+    /// same problem.
+    CellarVent,
+}
+
+impl CutProp {
+    /// How much of the kerb line this piece takes out of the run, if any,
+    /// measured from the piece's own z.
+    ///
+    /// A water stair's gap is wider than the flight and **symmetric about it,
+    /// deliberately**: the mooring stone stands to one side of the head rather
+    /// than astride it, and which side comes off the stair's seed
+    /// (`add_water_stair`'s `mooring_side`), so both sides have to be open. The
+    /// widest the stone's far edge ever reaches is `half_head + 0.8 + 0.45 =
+    /// 3.582 m`, 18 mm inside the 3.6 m the gap opens. Do not narrow one end to
+    /// match the drawing — half the stairs would then be clipped by their own
+    /// kerb.
+    fn kerb_gap(self) -> Option<(f32, f32)> {
+        match self {
+            CutProp::WaterStair => {
+                Some((-CUT_STAIR_WIDTH_M * 0.5 - 1.4, CUT_STAIR_WIDTH_M * 0.5 + 1.4))
+            }
+            CutProp::Bollard => Some((-0.35, 0.35)),
+            CutProp::KerbBreak => Some((-CUT_KERB_BREAK_M * 0.5, CUT_KERB_BREAK_M * 0.5)),
+            CutProp::CellarHatch | CutProp::CellarVent => None,
+        }
+    }
+}
+
+/// Everything hand-placed on the Cut's margins, north to south.
+///
+/// **Hand-placed, not spaced.** The three reaches are different places and a
+/// procedural rhythm would read as wallpaper on all of them at once — which is
+/// the failure M0 already avoided once by *not* filling the street. So:
+///
+/// - **North** (`z +105 … +325`) is the rope, wool and hides quarter and the
+///   busiest of the three. It gets four kerb breaks, every one of them at a
+///   real Cut-facing door in `lore/places/ombreval_buildings.json` — the
+///   `storage` house at `z +137.8`, the `trade` houses at `+141.3`, `+152.9`
+///   and `+215.1` — so a break always sits under the hoist gantry
+///   `build_hoist_gantries` has already rigged over that doorway. It gets one
+///   water stair only: a working quarter builds over its stairs.
+/// - **Middle** (`z -216 … +23.8`) is the emptiest stretch in the game, so the
+///   fossil river carries it: three of the five water stairs are here, spread
+///   over 240 m, with a warehouse pair at the Maren's Green end and almost
+///   nothing else.
+/// - **South** (`z -422 … -294.7`) is poorer and quieter. One stair, two vents,
+///   no kerb breaks at all — the whole reach has two Cut-facing doors,
+///   `omb_f0053` at `z -325.2` and `omb_f0023` at `z -377.7`, and both are
+///   houses rather than warehouses, so nothing here has a cart to bring across
+///   the line. Its emptiness is authored, not an oversight.
+///
+/// Every z here was read off the plan rather than invented: the kerb breaks and
+/// the cellar openings sit at (or deliberately beside) the door midpoints
+/// `plan_facade_openings` puts on each Cut-facing façade edge, the bollards
+/// stand at the two squares' thresholds and either side of the Chain and Tally
+/// bridge crossings, and `the_cut_margin_furniture_stands_on_its_own_street`
+/// checks all of it against the plan on every run.
+const CUT_FURNITURE: [(CutProp, CutBank, f32); 39] = [
+    // --- north reach: the trade quarter ---
+    (CutProp::Bollard, CutBank::West, 305.5),
+    (CutProp::Bollard, CutBank::East, 305.5),
+    (CutProp::Bollard, CutBank::West, 289.5),
+    (CutProp::Bollard, CutBank::East, 289.5),
+    (CutProp::KerbBreak, CutBank::East, 215.1),
+    (CutProp::CellarHatch, CutBank::East, 212.9),
+    (CutProp::WaterStair, CutBank::East, 160.0),
+    (CutProp::KerbBreak, CutBank::West, 152.9),
+    (CutProp::CellarHatch, CutBank::West, 149.0),
+    (CutProp::KerbBreak, CutBank::West, 141.3),
+    (CutProp::CellarHatch, CutBank::East, 141.0),
+    (CutProp::KerbBreak, CutBank::East, 137.8),
+    (CutProp::CellarVent, CutBank::West, 133.8),
+    (CutProp::Bollard, CutBank::West, 106.4),
+    (CutProp::Bollard, CutBank::East, 106.4),
+    // --- the Tallage: no kerb, but the Bench still guards the bridge piers ---
+    (CutProp::Bollard, CutBank::West, 82.5),
+    (CutProp::Bollard, CutBank::East, 82.5),
+    (CutProp::Bollard, CutBank::West, 64.5),
+    (CutProp::Bollard, CutBank::East, 64.5),
+    // --- middle reach: the emptiest stretch, so the river carries it ---
+    (CutProp::Bollard, CutBank::West, 22.4),
+    (CutProp::Bollard, CutBank::East, 22.4),
+    (CutProp::CellarHatch, CutBank::West, -33.6),
+    (CutProp::WaterStair, CutBank::West, -40.0),
+    (CutProp::KerbBreak, CutBank::West, -45.8),
+    (CutProp::WaterStair, CutBank::East, -100.0),
+    (CutProp::CellarVent, CutBank::East, -124.6),
+    (CutProp::CellarHatch, CutBank::West, -155.4),
+    (CutProp::WaterStair, CutBank::West, -168.0),
+    (CutProp::CellarHatch, CutBank::East, -195.6),
+    (CutProp::KerbBreak, CutBank::East, -198.3),
+    (CutProp::CellarHatch, CutBank::West, -199.9),
+    (CutProp::KerbBreak, CutBank::West, -203.1),
+    (CutProp::Bollard, CutBank::West, -215.0),
+    (CutProp::Bollard, CutBank::East, -215.0),
+    // --- south reach: poorer, quieter, rougher ---
+    (CutProp::Bollard, CutBank::West, -296.1),
+    (CutProp::Bollard, CutBank::East, -296.1),
+    (CutProp::CellarVent, CutBank::East, -322.6),
+    (CutProp::WaterStair, CutBank::West, -330.0),
+    (CutProp::CellarVent, CutBank::West, -374.6),
+];
+
+/// How far the line has gone down at `z` on `bank` — the sounding profile.
+///
+/// A raised cosine rather than a straight-sided trough: a settling street has no
+/// edges, and a break of slope in a straightedge reads as a broken stone, not as
+/// ground. Zero everywhere outside a sounding, so the great majority of the 748
+/// m is dead true and the four places that are not can be seen against it. The
+/// soundings do not overlap (asserted in `the_cut_soundings_stay_inside_the
+/// _authored_envelope`); `max` rather than a sum is what keeps a future pair of
+/// them from adding into a hole.
+fn cut_sounding_sag(bank: CutBank, z: f32) -> f32 {
+    let mut sag = 0.0_f32;
+    for sounding in CUT_SOUNDINGS {
+        let along = (z - sounding.z).abs();
+        if along >= sounding.half_length_m {
+            continue;
+        }
+        let depth = match bank {
+            CutBank::West => sounding.west_m,
+            CutBank::East => sounding.east_m,
+        };
+        sag = sag.max(0.5 * depth * (1.0 + (PI * along / sounding.half_length_m).cos()));
+    }
+    sag
+}
+
+/// The top face of the kerbstone centred at `z`, and the height of the block
+/// that carries it — both in the street's *old* datum, before M3's step:
+/// `add_kerbstone_run` draws the stone `CUT_STEP_M` higher.
+///
+/// Three things at once, which is why it is one function and not three: the
+/// nominal 0.10 m ridge with its own per-stone weathering; the sounding, at
+/// its **full authored depth**; and the heave, a two-sided per-stone scatter
+/// about the profile so a drowned stretch reads as broken masonry rather than
+/// as a suspiciously level trace.
+///
+/// M2 shipped this scaled into a six-centimetre budget (`CUT_KERB_DROWNED_Y`,
+/// since deleted), because with everything at grade a stone taken the full
+/// 0.20 m down was a hole under the road plane, not a dip. M3's step is what
+/// M2's notes said it would be: the whole budget. The kerb's true top now
+/// stands `CUT_STEP_M + rise` over the cartway, so the deepest authored
+/// sounding (0.24 m) still leaves its stones ~0.09 m proud of the road — sunk
+/// below the margin flags behind them, whose exposed edge faces are exactly
+/// the claim: the bank stands, the line drowned. Where there is no sounding
+/// there is neither drop nor heave, so the true line keeps its nominal rise
+/// exactly and the tests can read it.
+fn cut_kerbstone_top(bank: CutBank, z: f32, seed: u32) -> (f32, f32) {
+    let rise = CUT_KERB_RISE_M * (0.92 + ((seed >> 8) % 13) as f32 * 0.013);
+    let sag = cut_sounding_sag(bank, z);
+    let drop = (sag / CUT_SAG_MAX_M).clamp(0.0, 1.0);
+    let heave = CUT_KERB_HEAVE_M * 0.5 * drop * (((seed >> 16) % 9) as f32 - 4.0) / 4.0;
+    let top = rise - sag + heave;
+    (top, top + CUT_KERB_SEAT_M)
+}
+
+/// The vertex brush one kerbstone carries: quarried limestone, per-stone, dirtied
+/// in proportion to how far the sounding has taken it down. See
+/// `CUT_KERB_DROWNED_TINT` for why the tone is doing work the geometry cannot.
+fn cut_kerbstone_shade(sag: f32, seed: u32) -> f32 {
+    let quarried = 0.81 + (seed % 14) as f32 * 0.01;
+    quarried * (1.0 - CUT_KERB_DROWNED_TINT * (sag / CUT_SAG_MAX_M).clamp(0.0, 1.0))
+}
+
+/// One stretch of one side of the Cut's kerb line.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct CutKerbRun {
+    /// Always `CUT_CENTRE_X ± CUT_KERB_OFFSET_M` — the line does not wander.
+    /// M2 varies the stones' `y` along the run and nothing else; `x` is the
+    /// invariant the whole feature rests on.
+    x: f32,
+    /// Which line this is. The sounding profile is asked per bank, because the
+    /// channel was narrower than the street.
+    bank: CutBank,
+    z0: f32,
+    z1: f32,
+    /// A laid ridge with its margin behind it, or the flush marking a square
+    /// gets instead.
+    laid: bool,
+}
+
+/// The Cut's kerb line — `features/the_cut_improvements/the_cut_kerb.md` M0.
+///
+/// Two lines of stone five metres off the centreline, and a different ground
+/// outside them. The Cut is the widest surface in Ombreval (20 m bank to bank,
+/// 2.4× the next widest street) and until now the only one with nothing drawn
+/// on it at all. This does not fill it; it divides it, into a cartway the
+/// Bench keeps clear and a margin where the street's life is permitted to
+/// happen.
+///
+/// **The riser is the only collider, and its gaps are load-bearing (M3).**
+/// `scripts/bake_navigation.py::build_walkable` erodes *every* exported
+/// collider footprint by the agent radius (0.35 m) and then keeps only the
+/// largest connected component, and `solid_footprints_in_band(WALK_BAND_LO,
+/// ..)` exports anything at all whose top reaches `y = 0.01`. Two unbroken
+/// 748 m riser walls would therefore sever the margin from the cartway along
+/// the whole street; the margin would become its own component and be
+/// **dropped**, stranding Tam Rud, every housefront door on the Cut, the
+/// ropewalk approach and every stall we ever pitch here. What keeps it in the
+/// main component is the gaps `cut_kerb_plan` already opens: ten junction
+/// mouths (a street's own width each), seven 3 m kerb breaks (2.3 m survive
+/// the erosion — nine cells wide) and five 7.2 m water-stair gaps. The margin
+/// itself is *never* a collider — a raised slab would export as a footprint
+/// and carve the whole margin out of the walkable surface — which is why the
+/// step under feet is `CutMarginProfile`, a pure ground-height function, not a
+/// floor solid. Anything that changes these colliders means re-running the
+/// whole four-step nav chain and re-pinning `shelters.json` by hand.
+///
+/// **The step is real now (M3).** M0–M2 shipped everything at grade because
+/// the player resolved only against `CollisionWorld` and the puppets stood on
+/// the flat nav graph. M3 lifts the margin the section plate's 0.25 m
+/// (`CUT_STEP_M`): the flags are drawn as edged slabs at `CUT_MARGIN_Y +
+/// CUT_STEP_M`, the kerbstones ride up with their seats still buried (their
+/// cartway faces are the drawn riser), the kerb breaks become laid stone
+/// ramps a cart could take, and the water stairs — head landing untouched at
+/// `CUT_BANK_TOP_Y`, treads unchanged — now genuinely descend from the bank
+/// through the open kerb gap into the road. The player and the puppets stand
+/// on it via `CutMarginProfile::ground_lift`. The cambered cartway still
+/// belongs to the hoop game, which will want to pick its own profile.
+///
+/// **Inside the squares the line is marked, not built.** The gazetteer is
+/// specific that on Lowmarket the Cut stays open to through carts down its
+/// middle and that stalls use *marked* margins; so through the Tallage and
+/// Maren's Green the same line is flush blocks at six-metre intervals, with no
+/// ridge and no margin flagging, and crossing from street to square you can see
+/// the law get weaker.
+///
+/// **The line breaks at every side street**, computed from the plan rather than
+/// hand-listed (`cut_side_gaps`): ten junctions open onto the Cut, and a kerb
+/// run straight across a street mouth would bury the last six metres of its
+/// cobbles and read as a mistake. The gaps are where carts cross the line
+/// lawfully; M1's authored kerb breaks at warehouse doors are the same idea
+/// placed by hand. The same pass stops the line at anything the plan stands
+/// *across* the street — which is only the Old Sluice, whose shell the south
+/// reach's nominal end runs sixteen metres into.
+///
+/// Everything here goes through `MeshData`/`spawn_batch`: ~900 kerbstones and
+/// the margin strips are three batched meshes tiled at `BATCH_TILE_M`, not 900
+/// entities. The margin is deliberately *not* added to `CobbleRoadNetwork` and
+/// not rasterized as a puddle surface — the Cut is made ground over a filled
+/// river bed, it drains, and its footsteps are dust rather than cobble; the
+/// margin is the same ground with flags on it, so it keeps the Cut's behaviour
+/// rather than the cobbled city's.
+///
+/// **M1, the margin furniture, is hung off the same line and is walk-through
+/// stone** — with one exception since M3: the bollards, which M1 shipped
+/// drawn-only, now carry the colliders the feature doc always promised them,
+/// riding the riser's own rebake. See `add_bollard` for the argument in full.
+///
+/// **M2, the soundings, moves the kerbstones and nothing else.** Four authored
+/// stretches where the line has gone down because it is standing on the filled
+/// channel rather than on the old bank (`CUT_SOUNDINGS`, and `cut_sounding_sag`
+/// for the profile). M2 had to scale the profile into a six-centimetre budget
+/// because everything stood at grade; M3's step *is* the budget, so the stones
+/// now sink their full authored 0.15–0.25 m below the true line — still proud
+/// of the cartway, drowned against the flags standing behind them — and the
+/// two companion cues stay: the drowned stretch heaves out of true and it
+/// dirties, the consequences a settling kerb actually has. A single leaning
+/// house says nothing in a city where everything leans; 748 m of straightedge
+/// that dips in four places is the one public record of where the river was,
+/// which is exactly why the Cut landlords would rather it had never been laid.
+fn build_kerb(
+    commands: &mut Commands,
+    mesh_assets: &mut Assets<Mesh>,
+    materials: &CityMaterials,
+    plan: &CityPlan,
+    collision_world: &mut CollisionWorld,
+) {
+    let mut kerbstones = MeshData::default();
+    let mut markings = MeshData::default();
+    let mut margin = MeshData::default();
+    let mut furniture = MeshData::default();
+    let mut ironwork = MeshData::default();
+    let mut hatch_leaves = MeshData::default();
+
+    for run in cut_kerb_plan(plan) {
+        if run.laid {
+            add_kerbstone_run(&mut kerbstones, run);
+            // M3: the riser. One thin wall per laid run — the gaps between
+            // runs (junction mouths, kerb breaks, water stairs) are the
+            // crossings the nav bake keeps the margin connected through, so
+            // they are exactly the drawn ones.
+            collision_world.add_box(
+                Vec3::new(run.x - CUT_KERB_WIDTH_M * 0.5, 0.0, run.z0),
+                Vec3::new(run.x + CUT_KERB_WIDTH_M * 0.5, CUT_RISER_TOP_M, run.z1),
+            );
+        } else {
+            add_kerb_marking(&mut markings, run);
+        }
+    }
+    for [x0, z0, x1, z1] in cut_margin_strips(plan) {
+        add_margin_slab(&mut margin, [x0, z0, x1, z1]);
+    }
+    for (prop, bank, z) in CUT_FURNITURE {
+        match prop {
+            CutProp::WaterStair => add_water_stair(&mut furniture, &mut ironwork, bank, z),
+            CutProp::Bollard => add_bollard(&mut furniture, collision_world, bank, z),
+            CutProp::KerbBreak => add_kerb_break(&mut markings, &mut ironwork, bank, z),
+            CutProp::CellarHatch => {
+                add_cellar_hatch(&mut furniture, &mut hatch_leaves, &mut ironwork, bank, z);
+            }
+            CutProp::CellarVent => add_cellar_vent(&mut furniture, &mut ironwork, bank, z),
+        }
+    }
+    // The ground the step puts under feet — see `CutMarginProfile`.
+    commands.insert_resource(cut_margin_profile(plan));
+
+    spawn_batch(
+        commands,
+        mesh_assets,
+        &materials.cut_margin,
+        margin,
+        "The Cut margin",
+    );
+    spawn_batch(
+        commands,
+        mesh_assets,
+        &materials.limestone,
+        kerbstones,
+        "The Cut kerbstone",
+    );
+    spawn_batch(
+        commands,
+        mesh_assets,
+        &materials.limestone,
+        markings,
+        "The Cut kerb marking",
+    );
+    spawn_batch(
+        commands,
+        mesh_assets,
+        &materials.limestone,
+        furniture,
+        "The Cut margin furniture",
+    );
+    spawn_batch(
+        commands,
+        mesh_assets,
+        &materials.dark_wood,
+        hatch_leaves,
+        "The Cut cellar hatches",
+    );
+    spawn_batch(
+        commands,
+        mesh_assets,
+        &materials.iron,
+        ironwork,
+        "The Cut margin ironwork",
+    );
+}
+
+/// Where the authored furniture of one bank takes the ridge out of the line: a
+/// water stair descends *through* it, a kerb break replaces it with flush
+/// stone, a bollard is set into it. Kept separate from `cut_side_gaps` so the
+/// tests can tell a metre lost to the plan from a metre lost on purpose.
+fn cut_furniture_kerb_gaps(bank: CutBank) -> Vec<(f32, f32)> {
+    CUT_FURNITURE
+        .iter()
+        .filter(|(_, at, _)| *at == bank)
+        .filter_map(|(prop, _, z)| prop.kerb_gap().map(|(lo, hi)| (z + lo, z + hi)))
+        .collect()
+}
+
+/// Every stretch of kerb line the Cut carries, both sides, laid and marked,
+/// with the side-street mouths already taken out. Pure geometry over the plan
+/// so the invariants in `mod tests` can read the same authored line the
+/// renderer draws.
+fn cut_kerb_plan(plan: &CityPlan) -> Vec<CutKerbRun> {
+    let mut runs = Vec::new();
+    for bank in [CutBank::West, CutBank::East] {
+        let x = bank.kerb_x();
+        // Against the line itself, not the whole band: a lane running *parallel*
+        // behind the kerb (`south_inner_wall` hugs x -224 for twenty-four
+        // metres) is not a junction and must not open one.
+        let mut gaps = cut_side_gaps(plan, x, x);
+        gaps.extend(cut_furniture_kerb_gaps(bank));
+        for (reaches, laid) in [(&CUT_LAID_REACHES[..], true), (&CUT_MARKED_REACHES[..], false)] {
+            for &(z0, z1) in reaches {
+                runs.extend(
+                    subtract_gaps((z0, z1), &gaps)
+                        .into_iter()
+                        .map(|(z0, z1)| CutKerbRun { x, bank, z0, z1, laid }),
+                );
+            }
+        }
+    }
+    runs
+}
+
+/// The margin flagging behind each laid reach, as `[x0, z0, x1, z1]` rectangles
+/// from the kerb line out to the housefront.
+///
+/// A street that reaches the margin must keep its own cobbles rather than be
+/// flagged over — but only where it actually runs. Asking `cut_side_gaps` about
+/// the whole 6.7 m band at once cannot express that: it answers in z alone, so
+/// *any* road touching the band anywhere across its width deletes the margin
+/// for the full depth. `south_inner_wall` runs **parallel** to the Cut at
+/// `x -224` for twenty-four metres, and that single lane, four metres wide and
+/// five and a half metres behind the kerb, used to strip thirty-six metres of
+/// the north reach's west margin — leaving a laid ridge with identical cartway
+/// dust on both sides, which is the one distinction this feature exists to make.
+///
+/// So the margin is emitted as `CUT_MARGIN_LANE_M`-wide lanes and each lane
+/// asks the question for its own strip of x. A road crossing the Cut still
+/// spans every lane and opens the whole margin at its mouth; a road running
+/// behind the margin only takes the lanes it stands in, and the flags survive
+/// right up to the kerb. The lanes are coplanar, share edges exactly and take
+/// their UVs from world position, so they are invisible as seams; a diagonal
+/// approach gets a margin edge that follows its diagonal instead of a single
+/// square cut at its widest point.
+///
+/// The squares get no margin at all: the Tallage and Maren's Green are already
+/// paved, and their line is a rule, not a pitch boundary somebody laid a floor
+/// for.
+fn cut_margin_strips(plan: &CityPlan) -> Vec<[f32; 4]> {
+    let mut strips = Vec::new();
+    for bank in [CutBank::West, CutBank::East] {
+        let (kerb_x, facade_x) = (bank.kerb_x(), bank.facade_x());
+        let (lo_x, hi_x) = (kerb_x.min(facade_x), kerb_x.max(facade_x));
+        let lanes = ((hi_x - lo_x) / CUT_MARGIN_LANE_M).ceil().max(1.0) as usize;
+        let lane_width = (hi_x - lo_x) / lanes as f32;
+        for lane in 0..lanes {
+            let x0 = lo_x + lane_width * lane as f32;
+            let x1 = x0 + lane_width;
+            let mut gaps = cut_side_gaps(plan, x0, x1);
+            let far = ((x0 - kerb_x) * bank.outward()).max((x1 - kerb_x) * bank.outward());
+            gaps.extend(cut_furniture_flag_gaps(bank, far));
+            for (z0, z1) in CUT_LAID_REACHES {
+                strips.extend(
+                    subtract_gaps((z0, z1), &gaps)
+                        .into_iter()
+                        .map(|(z0, z1)| [x0, z0, x1, z1]),
+                );
+            }
+        }
+    }
+    strips
+}
+
+/// The z ranges the raised margin's own furniture takes out of a lane of
+/// flagging whose *outer* edge stands `far_u` metres beyond the kerb line —
+/// M3, where the flags stopped being a flat texture and started being ground
+/// that has to part around anything that is not at its level.
+///
+/// A **kerb break**'s ramp climbs through the two lanes nearest the line
+/// (`CUT_BREAK_RAMP_RUN_M` is exactly two lanes, so the gap ends on a lane
+/// boundary and no bare sliver opens beside the ramp head). A **water stair**
+/// is a trench down through the raised bank, so every lane out to the head
+/// landing (`u = 3.45`) stops at the flight's cheek walls instead of roofing
+/// the treads at flag height; the gap follows the cheeks' batter lane by lane,
+/// and lanes wholly behind the landing keep their flags — the strip they run
+/// across the trench there is buried inside the landing slab, which stands
+/// proud of them. `cut_margin_profile` asks this same function, so the ground
+/// under feet and the drawn flags can never disagree about where a gap is.
+fn cut_furniture_flag_gaps(bank: CutBank, far_u: f32) -> Vec<(f32, f32)> {
+    let mut gaps = Vec::new();
+    for (prop, at, z) in CUT_FURNITURE {
+        if at != bank {
+            continue;
+        }
+        match prop {
+            CutProp::KerbBreak if far_u <= CUT_BREAK_RAMP_RUN_M + 1.0e-3 => {
+                gaps.push((z - CUT_KERB_BREAK_M * 0.5, z + CUT_KERB_BREAK_M * 0.5));
+            }
+            CutProp::WaterStair if far_u <= 3.45 + 1.0e-3 => {
+                let half_head = cut_stair_half_head(cut_stair_seed(bank, z));
+                // The widest cheek this lane runs beside: index 0 (the full
+                // head width) anywhere along the landing, one more course per
+                // tread below it.
+                let treads_above = if far_u >= 1.15 {
+                    0
+                } else {
+                    (((1.15 - far_u) / CUT_STAIR_TREAD_M) as usize + 1).min(CUT_STAIR_TREADS)
+                };
+                let half = half_head - CUT_STAIR_BATTER_M * treads_above as f32 + 0.34;
+                gaps.push((z - half, z + half));
+            }
+            _ => {}
+        }
+    }
+    gaps
+}
+
+/// The z ranges where something in the plan interrupts one band of the Cut —
+/// a side street's ribbon crossing it, widened by half its own width so the
+/// mouth stays open, or a building standing across the street. Merged and
+/// sorted.
+fn cut_side_gaps(plan: &CityPlan, band_lo_x: f32, band_hi_x: f32) -> Vec<(f32, f32)> {
+    let mut gaps: Vec<(f32, f32)> = Vec::new();
+    // A building that spans the centreline is not a frontage, it is the end of
+    // the street: the Old Sluice's shell reaches from `z -448` to `z -406`,
+    // sixteen metres inside the south reach, and kerb drawn inside a solid is
+    // kerb nobody can ever see. Bridges are excluded by their base height — the
+    // Chain and Tally decks also span the centreline, but they pass *over* the
+    // Cut and the line runs on underneath them.
+    for building in &plan.buildings {
+        if building_verticals(building).0 > 0.1 {
+            continue;
+        }
+        let (mut x0, mut x1) = (f32::MAX, f32::MIN);
+        let (mut z0, mut z1) = (f32::MAX, f32::MIN);
+        for point in &building.polygon {
+            x0 = x0.min(point[0]);
+            x1 = x1.max(point[0]);
+            z0 = z0.min(point[1]);
+            z1 = z1.max(point[1]);
+        }
+        if x0 > CUT_CENTRE_X || x1 < CUT_CENTRE_X || x1 < band_lo_x || x0 > band_hi_x {
+            continue;
+        }
+        gaps.push((z0 - 0.6, z1 + 0.6));
+    }
+    for road in &plan.roads {
+        if road.tier == "cut" {
+            continue;
+        }
+        let half = road.width_m * 0.5;
+        let (lo, hi) = (band_lo_x - half, band_hi_x + half);
+        for pair in road.points.windows(2) {
+            let a = Vec2::from_array(pair[0]);
+            let b = Vec2::from_array(pair[1]);
+            let dx = b.x - a.x;
+            let (mut t0, mut t1) = (0.0_f32, 1.0_f32);
+            if dx.abs() < 1.0e-4 {
+                if a.x < lo || a.x > hi {
+                    continue;
+                }
+            } else {
+                let ta = (lo - a.x) / dx;
+                let tb = (hi - a.x) / dx;
+                t0 = t0.max(ta.min(tb));
+                t1 = t1.min(ta.max(tb));
+                if t0 >= t1 {
+                    continue;
+                }
+            }
+            let za = a.y + (b.y - a.y) * t0;
+            let zb = a.y + (b.y - a.y) * t1;
+            gaps.push((za.min(zb) - half - 0.6, za.max(zb) + half + 0.6));
+        }
+    }
+    gaps.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let mut merged: Vec<(f32, f32)> = Vec::new();
+    for gap in gaps {
+        match merged.last_mut() {
+            Some(last) if gap.0 <= last.1 => last.1 = last.1.max(gap.1),
+            _ => merged.push(gap),
+        }
+    }
+    merged
+}
+
+/// `span` with `gaps` cut out of it; stubs under half a metre are dropped
+/// rather than drawn as an orphan stone.
+fn subtract_gaps(span: (f32, f32), gaps: &[(f32, f32)]) -> Vec<(f32, f32)> {
+    let mut spans = vec![span];
+    for gap in gaps {
+        let mut next = Vec::new();
+        for (lo, hi) in spans {
+            if gap.1 <= lo || gap.0 >= hi {
+                next.push((lo, hi));
+                continue;
+            }
+            if gap.0 > lo {
+                next.push((lo, gap.0));
+            }
+            if gap.1 < hi {
+                next.push((gap.1, hi));
+            }
+        }
+        spans = next;
+    }
+    spans.retain(|(lo, hi)| hi - lo > 0.5);
+    spans
+}
+
+/// The ground the Cut's raised margin (M3) puts under feet, answerable per XZ.
+///
+/// The player resolves height against `CollisionWorld` floors and the puppets
+/// stand on the flat nav graph, so a drawn 0.25 m step is a step both would
+/// glide through — and the margin cannot simply *be* a collider slab, because
+/// `solid_footprints_in_band` exports every solid topping `y ≥ 0.01` and the
+/// nav bake would then carve the whole margin out of the walkable surface,
+/// stranding every Cut-facing door. So the riser alone is collided (a thin
+/// wall the bake erodes into a line, crossed at the kerb breaks, the water
+/// stairs and the junction mouths), and *this* is the floor: a pure function
+/// from XZ to extra ground height, built once from the plan in `build_kerb`,
+/// read by the player controller and by the actor projection.
+///
+/// Three region kinds, first match wins: a water stair's flight (feet follow
+/// the drawn tread tops exactly, so the five stairs become genuinely walkable
+/// stairs), a kerb break's ramp (linear, road to flags over
+/// `CUT_BREAK_RAMP_RUN_M`), and the margin strips themselves (flat
+/// `CUT_STEP_M`, feathered over `CUT_STEP_FEATHER_M` at their open edges — a
+/// junction mouth's z-end, or an x-edge a road along the back of the margin
+/// has stripped the neighbouring lanes from — so crossing one is a quick ramp
+/// rather than a one-frame teleport).
+/// Everywhere else — the cartway, the squares, the rest of the city — it is
+/// zero and the two cheap rejects at the top make it free.
+#[derive(Resource, Default, Clone)]
+pub struct CutMarginProfile {
+    /// The margin strips — `cut_margin_strips`' output split per x-neighbour
+    /// coverage — each knowing which of its edges is *open* (a junction mouth,
+    /// a reach end, or an x-edge whose neighbouring lane a parallel road took;
+    /// feet feather down to grade there) and which abuts flags or a furniture
+    /// gap whose own profile (a stair's treads, a ramp's pitch) carries
+    /// straight on, where a feather would teleport feet a quarter-metre at the
+    /// seam.
+    rects: Vec<CutMarginRect>,
+    /// Kerb-break ramps: `(kerb_x, outward, z0, z1)`.
+    ramps: Vec<(f32, f32, f32, f32)>,
+    /// Water-stair flights: `(kerb_x, outward, z0, z1)`, z spanning the flight
+    /// *and* its cheek walls — the same trench `cut_furniture_flag_gaps` opens
+    /// in the flags, so skirting a stair along the margin follows the trench
+    /// profile through the (walk-through, as everything on this street was
+    /// before M3) cheek rather than falling into a hole between flag edges.
+    stairs: Vec<(f32, f32, f32, f32)>,
+}
+
+/// One flagged rectangle of raised margin, with the feathering decision baked
+/// per edge. See [`CutMarginProfile::rects`].
+///
+/// The z flags are decided per strip end as the strips come out of
+/// `cut_margin_strips`; the x flags need a second pass (`cut_margin_profile`
+/// splits each strip by neighbour coverage), because a lane's rect can outlive
+/// its neighbour's — a road running along the back of the margin deletes the
+/// outer lanes for a stretch and leaves the surviving lane's x-edge as a
+/// 0.28 m stone face standing in open ground, which feet would otherwise
+/// teleport up in one frame exactly as they would at an unfeathered z-end.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct CutMarginRect {
+    x0: f32,
+    z0: f32,
+    x1: f32,
+    z1: f32,
+    feather_lo: bool,
+    feather_hi: bool,
+    /// Feather toward `x0` / `x1`: set only where the neighbouring lane at
+    /// this rect's z-run carries no flags *and* the missing ground is not a
+    /// stair trench or ramp (whose own profiles meet the flags at height) —
+    /// and never on the kerb or façade lines.
+    feather_x_lo: bool,
+    feather_x_hi: bool,
+}
+
+impl CutMarginProfile {
+    pub fn ground_lift(&self, x: f32, z: f32) -> f32 {
+        if !(CUT_FACADE_WEST_X..=CUT_FACADE_EAST_X).contains(&x)
+            || !(CUT_LAID_REACHES[2].0..=CUT_LAID_REACHES[0].1).contains(&z)
+        {
+            return 0.0;
+        }
+        for &(kerb_x, out, z0, z1) in &self.stairs {
+            let u = (x - kerb_x) * out;
+            if (z0..=z1).contains(&z) && (-2.05..=3.45).contains(&u) {
+                return cut_stair_ground(u);
+            }
+        }
+        for &(kerb_x, out, z0, z1) in &self.ramps {
+            let u = (x - kerb_x) * out;
+            if (z0..=z1).contains(&z)
+                && (-CUT_KERB_WIDTH_M * 0.5..=CUT_BREAK_RAMP_RUN_M).contains(&u)
+            {
+                let run = CUT_BREAK_RAMP_RUN_M + CUT_KERB_WIDTH_M * 0.5;
+                return CUT_STEP_M * ((u + CUT_KERB_WIDTH_M * 0.5) / run).clamp(0.0, 1.0);
+            }
+        }
+        let mut lift = 0.0_f32;
+        for rect in &self.rects {
+            if (rect.x0..=rect.x1).contains(&x) && (rect.z0..=rect.z1).contains(&z) {
+                let lo = if rect.feather_lo { z - rect.z0 } else { f32::MAX };
+                let hi = if rect.feather_hi { rect.z1 - z } else { f32::MAX };
+                let x_lo = if rect.feather_x_lo { x - rect.x0 } else { f32::MAX };
+                let x_hi = if rect.feather_x_hi { rect.x1 - x } else { f32::MAX };
+                let inside = lo.min(hi).min(x_lo).min(x_hi);
+                lift = lift.max(CUT_STEP_M * (inside / CUT_STEP_FEATHER_M).clamp(0.0, 1.0));
+            }
+        }
+        lift
+    }
+}
+
+/// The stair flight's ground height at `u` metres outward of the kerb line —
+/// the same piecewise tops `add_water_stair` draws: the landing at
+/// `CUT_BANK_TOP_Y`, six treads walking it down to a riser above grade, the
+/// two drowned slabs, then the cartway. Feet land *on* the drawn stone, so a
+/// player or puppet taking a water stair descends it step by step.
+fn cut_stair_ground(u: f32) -> f32 {
+    if u >= 1.15 {
+        return CUT_BANK_TOP_Y;
+    }
+    let index = ((1.15 - u) / CUT_STAIR_TREAD_M) as usize;
+    if index < CUT_STAIR_TREADS {
+        CUT_BANK_TOP_Y * (1.0 - (index + 1) as f32 / (CUT_STAIR_TREADS + 1) as f32)
+    } else if index < CUT_STAIR_TREADS + 2 {
+        CUT_MARGIN_Y - 0.002 * (index - CUT_STAIR_TREADS) as f32
+    } else {
+        0.0
+    }
+}
+
+/// Build the profile the same way the renderer builds the street, so the two
+/// can never disagree: the strips are `cut_margin_strips`' own output and the
+/// stair spans reuse the seeded head width `add_water_stair` draws.
+fn cut_margin_profile(plan: &CityPlan) -> CutMarginProfile {
+    let mut profile = CutMarginProfile {
+        rects: Vec::new(),
+        ramps: Vec::new(),
+        stairs: Vec::new(),
+    };
+    let mut strips = Vec::new();
+    for [x0, z0, x1, z1] in cut_margin_strips(plan) {
+        // A strip's own bank and its outer edge's distance from the line, so
+        // the abutment question is asked of exactly the gaps this lane was cut
+        // against. A z-end that lands on a furniture gap's edge must not
+        // feather — the stair or ramp profile continues at its own height.
+        let bank = if (x0 + x1) * 0.5 < CUT_CENTRE_X {
+            CutBank::West
+        } else {
+            CutBank::East
+        };
+        let far =
+            ((x0 - bank.kerb_x()) * bank.outward()).max((x1 - bank.kerb_x()) * bank.outward());
+        let gaps = cut_furniture_flag_gaps(bank, far);
+        strips.push(CutMarginRect {
+            x0,
+            z0,
+            x1,
+            z1,
+            feather_lo: !gaps.iter().any(|(_, hi)| (hi - z0).abs() < 0.05),
+            feather_hi: !gaps.iter().any(|(lo, _)| (lo - z1).abs() < 0.05),
+            feather_x_lo: false,
+            feather_x_hi: false,
+        });
+    }
+    // Second pass: the x-edges. A strip's z-ends know whether they are open,
+    // but an x-edge can be open too — a road running along the back of the
+    // margin deletes whole lanes for a stretch, and each diagonal junction
+    // mouth staggers the lanes' ends so one rect outlives its neighbour by a
+    // sliver — and the openness varies *along* the rect. So each strip is
+    // split at the boundaries of its open x-stretches and the flags are baked
+    // per piece; flagging a whole rect instead would feather its edge where
+    // the neighbouring lane is present too, grooving the lift along a lane
+    // boundary the drawn flags cross seamlessly. What the split does not buy
+    // is a true 2D distance field: at the corner where a piece's openness
+    // changes, feet within the feather band pop the remaining lift in one
+    // frame — confined to a 0.45 m corner per open stretch, the same class
+    // of shin-in-stone moment as walking lengthwise out an open z-end.
+    for rect in &strips {
+        let open_lo = cut_open_x_stretches(rect, true, &strips);
+        let open_hi = cut_open_x_stretches(rect, false, &strips);
+        if open_lo.is_empty() && open_hi.is_empty() {
+            profile.rects.push(*rect);
+            continue;
+        }
+        let mut seams = vec![rect.z0, rect.z1];
+        for &(a, b) in open_lo.iter().chain(open_hi.iter()) {
+            seams.push(a);
+            seams.push(b);
+        }
+        seams.sort_by(f32::total_cmp);
+        seams.dedup_by(|a, b| (*a - *b).abs() < 1.0e-3);
+        for pair in seams.windows(2) {
+            let mid = (pair[0] + pair[1]) * 0.5;
+            profile.rects.push(CutMarginRect {
+                z0: pair[0],
+                z1: pair[1],
+                feather_lo: rect.feather_lo && pair[0] == rect.z0,
+                feather_hi: rect.feather_hi && pair[1] == rect.z1,
+                feather_x_lo: open_lo.iter().any(|&(a, b)| (a..b).contains(&mid)),
+                feather_x_hi: open_hi.iter().any(|&(a, b)| (a..b).contains(&mid)),
+                ..*rect
+            });
+        }
+    }
+    for (prop, bank, z) in CUT_FURNITURE {
+        match prop {
+            CutProp::KerbBreak => profile.ramps.push((
+                bank.kerb_x(),
+                bank.outward(),
+                z - CUT_KERB_BREAK_M * 0.5,
+                z + CUT_KERB_BREAK_M * 0.5,
+            )),
+            CutProp::WaterStair => {
+                let half_head = cut_stair_half_head(cut_stair_seed(bank, z));
+                profile.stairs.push((
+                    bank.kerb_x(),
+                    bank.outward(),
+                    z - half_head - 0.34,
+                    z + half_head + 0.34,
+                ));
+            }
+            _ => {}
+        }
+    }
+    profile
+}
+
+/// The z stretches of one x-side of `rect` where the neighbouring lane
+/// carries no flags and nothing of the street's own furniture stands in for
+/// them — the stretches `CutMarginRect::feather_x_lo`/`feather_x_hi` record.
+///
+/// Covered means: another strip adjoins this edge (lanes share their boundary
+/// x exactly, so adjacency is equality up to float noise), or the missing
+/// flags on this bank are a stair trench or a kerb break's ramp — ground
+/// whose own profile meets the flags at its own height, where a feather would
+/// sink feet through drawn stone, the same reasoning as the z-end flags. The
+/// kerb and façade lines are never open: the riser collider stands on one and
+/// the housefronts on the other. Open stretches under half a metre fall to
+/// `subtract_gaps`' stub rule — a sliver that short lives inside its own
+/// rect's z-end feather anyway.
+fn cut_open_x_stretches(
+    rect: &CutMarginRect,
+    lo_side: bool,
+    strips: &[CutMarginRect],
+) -> Vec<(f32, f32)> {
+    let edge_x = if lo_side { rect.x0 } else { rect.x1 };
+    let sealed = [
+        CutBank::West.kerb_x(),
+        CutBank::East.kerb_x(),
+        CUT_FACADE_WEST_X,
+        CUT_FACADE_EAST_X,
+    ];
+    if sealed.iter().any(|line| (edge_x - line).abs() < 0.02) {
+        return Vec::new();
+    }
+    let bank = if edge_x < CUT_CENTRE_X {
+        CutBank::West
+    } else {
+        CutBank::East
+    };
+    let mut covered: Vec<(f32, f32)> = strips
+        .iter()
+        .filter(|other| {
+            let other_edge = if lo_side { other.x1 } else { other.x0 };
+            (other_edge - edge_x).abs() < 0.02
+        })
+        .map(|other| (other.z0, other.z1))
+        .collect();
+    for (prop, at, z) in CUT_FURNITURE {
+        if at != bank {
+            continue;
+        }
+        match prop {
+            CutProp::KerbBreak => {
+                covered.push((z - CUT_KERB_BREAK_M * 0.5, z + CUT_KERB_BREAK_M * 0.5));
+            }
+            CutProp::WaterStair => {
+                let half = cut_stair_half_head(cut_stair_seed(bank, z)) + 0.34;
+                covered.push((z - half, z + half));
+            }
+            _ => {}
+        }
+    }
+    subtract_gaps((rect.z0, rect.z1), &covered)
+}
+
+/// One margin strip as an edged slab: the flag surface at `CUT_MARGIN_Y +
+/// CUT_STEP_M` with real side faces down past the ground. M0 drew the margin
+/// as flat top-only quads, which a raised margin cannot be — its quarter-metre
+/// edges are *seen*: end-on at every junction mouth and reach end, and from
+/// the cartway behind a drowned kerbstone. The top keeps
+/// `FLOOR_TEXTURE_SPAN_METERS` so the flags tile exactly as they did at
+/// grade; the edges run their UVs off world position like every dressed stone.
+/// No bottom face — it is a metre underground.
+fn add_margin_slab(mesh: &mut MeshData, [x0, z0, x1, z1]: [f32; 4]) {
+    let top = CUT_MARGIN_Y + CUT_STEP_M;
+    let bottom = -0.06;
+    let center = Vec3::new((x0 + x1) * 0.5, (top + bottom) * 0.5, (z0 + z1) * 0.5);
+    let half = Vec3::new((x1 - x0) * 0.5, (top - bottom) * 0.5, (z1 - z0) * 0.5);
+    // The top, at the floor span; then the four edges, wound exactly as
+    // `add_dressed_stone` winds its faces (`right × up == normal`).
+    let flat = Vec3::new(center.x, top, center.z);
+    let top_points = [
+        flat - Vec3::Z * half.z - Vec3::X * half.x,
+        flat + Vec3::Z * half.z - Vec3::X * half.x,
+        flat + Vec3::Z * half.z + Vec3::X * half.x,
+        flat - Vec3::Z * half.z + Vec3::X * half.x,
+    ];
+    mesh.quad(
+        top_points,
+        Vec3::Y,
+        top_points.map(|point| {
+            Vec2::new(
+                point.x / FLOOR_TEXTURE_SPAN_METERS,
+                point.z / FLOOR_TEXTURE_SPAN_METERS,
+            )
+        }),
+    );
+    for (normal, right, up) in [
+        (Vec3::X, Vec3::Y, Vec3::Z),
+        (Vec3::NEG_X, Vec3::Z, Vec3::Y),
+        (Vec3::Z, Vec3::X, Vec3::Y),
+        (Vec3::NEG_Z, Vec3::Y, Vec3::X),
+    ] {
+        let face_center = center + normal * half.dot(normal.abs());
+        let (half_r, half_u) = (half.dot(right.abs()), half.dot(up.abs()));
+        let points = [
+            face_center - right * half_r - up * half_u,
+            face_center + right * half_r - up * half_u,
+            face_center + right * half_r + up * half_u,
+            face_center - right * half_r + up * half_u,
+        ];
+        mesh.quad(
+            points,
+            normal,
+            points.map(|point| Vec2::new(point.dot(right) / 2.4, point.dot(up) / 2.4)),
+        );
+    }
+}
+
+/// A laid stretch, cut into individual stones. Kerb is quarried and set by the
+/// piece: a single 240 m extrusion reads as a plastic strip, whereas stones of
+/// slightly different height and weathering read as masonry from any distance
+/// the fog leaves open.
+///
+/// This is also where the soundings are drawn (M2) and the step (M3). Each
+/// stone takes its top from `cut_kerbstone_top` and its tone from
+/// `cut_kerbstone_shade`, both at its own centre, lifted whole by `CUT_STEP_M`
+/// — and every block still bottoms at the same `y -CUT_KERB_SEAT_M` however
+/// far the profile has taken its top: the block grows and shrinks rather than
+/// pivoting about `y = 0`, so a dipping stone stays seated in the ground
+/// instead of hanging over a gap, and its cartway face *is* the drawn riser.
+/// The line itself never moves in `x`.
+fn add_kerbstone_run(mesh: &mut MeshData, run: CutKerbRun) {
+    let length = run.z1 - run.z0;
+    let count = ((length / CUT_KERB_STONE_M).round() as usize).max(1);
+    let pitch = length / count as f32;
+    for index in 0..count {
+        let z0 = run.z0 + pitch * index as f32;
+        let centre_z = z0 + pitch * 0.5;
+        let seed = stable_hash(&format!("cut-kerb-{:.1}-{z0:.2}", run.x));
+        let shade = cut_kerbstone_shade(cut_sounding_sag(run.bank, centre_z), seed);
+        let (top, height) = cut_kerbstone_top(run.bank, centre_z, seed);
+        let (top, height) = (CUT_STEP_M + top, CUT_STEP_M + height);
+        mesh.set_brush([shade; 3]);
+        add_dressed_stone(
+            mesh,
+            Vec3::new(run.x, top - height * 0.5, centre_z),
+            Vec3::new(
+                CUT_KERB_WIDTH_M * 0.5,
+                height * 0.5,
+                (pitch - 0.035).max(0.05) * 0.5,
+            ),
+        );
+    }
+    mesh.reset_brush();
+}
+
+/// A marked stretch: the same line, flush. One block per `CUT_MARKER_PITCH_M`,
+/// snapped to the pitch so the two squares' markings share one grid and the
+/// line reads as continuous with the reaches either end of it.
+fn add_kerb_marking(mesh: &mut MeshData, run: CutKerbRun) {
+    let first = (run.z0 / CUT_MARKER_PITCH_M).ceil() * CUT_MARKER_PITCH_M;
+    let mut z = first;
+    while z <= run.z1 - 0.9 {
+        let seed = stable_hash(&format!("cut-mark-{:.1}-{z:.1}", run.x));
+        mesh.set_brush([0.84 + (seed % 11) as f32 * 0.01; 3]);
+        add_dressed_stone(
+            mesh,
+            Vec3::new(run.x, CUT_MARKER_TOP_Y * 0.5, z + 0.45),
+            Vec3::new(CUT_KERB_WIDTH_M * 0.5, CUT_MARKER_TOP_Y * 0.5, 0.45),
+        );
+        z += CUT_MARKER_PITCH_M;
+    }
+    mesh.reset_brush();
+}
+
+/// An axis-aligned block of masonry, wound so that every face's triangle order
+/// agrees with the normal it carries, and textured from world position.
+///
+/// The general-purpose `add_oriented_box` does neither, and both matter here.
+/// Its faces are wound inside-out and only draw at all because every city
+/// material is `double_sided` with `cull_mode: None` — and *that* is what makes
+/// them dark: double-sided shading flips the normal it lights a back face with,
+/// which nobody notices on a wall seen against the sky but turns a horizontal
+/// top face lit by a low sun black. A kerbstone is nearly all top face. Its
+/// per-face UVs also start at zero, so every one of the nine hundred stones
+/// would sample the same corner of the limestone and the line would strobe;
+/// running the UV off world position instead lets the courses carry along the
+/// street.
+fn add_dressed_stone(mesh: &mut MeshData, center: Vec3, half: Vec3) {
+    const UV_SPAN: f32 = 2.4;
+    // `right × up == normal` for each face, so the emitted winding is outward.
+    for (normal, right, up) in [
+        (Vec3::Y, Vec3::Z, Vec3::X),
+        (Vec3::NEG_Y, Vec3::X, Vec3::Z),
+        (Vec3::X, Vec3::Y, Vec3::Z),
+        (Vec3::NEG_X, Vec3::Z, Vec3::Y),
+        (Vec3::Z, Vec3::X, Vec3::Y),
+        (Vec3::NEG_Z, Vec3::Y, Vec3::X),
+    ] {
+        let face_center = center + normal * half.dot(normal.abs());
+        let (half_r, half_u) = (half.dot(right.abs()), half.dot(up.abs()));
+        let points = [
+            face_center - right * half_r - up * half_u,
+            face_center + right * half_r - up * half_u,
+            face_center + right * half_r + up * half_u,
+            face_center - right * half_r + up * half_u,
+        ];
+        mesh.quad(
+            points,
+            normal,
+            points.map(|point| {
+                Vec2::new(point.dot(right) / UV_SPAN, point.dot(up) / UV_SPAN)
+            }),
+        );
+    }
+}
+
+/// A blocked water stair — `the_cut_kerb.md` M1, and the strongest single
+/// object the margin carries.
+///
+/// The Serle ran where the cartway is. Every warehouse on the bank had steps
+/// down to it, and when the channel was filled the steps were not taken up:
+/// they were left to be buried by the made ground the carts now run on. So the
+/// flight starts high, on the last 0.40 m of true bank still standing at the
+/// housefront side of the margin, drops six treads that each lose a little
+/// width to the battering cheek walls, crosses the kerb line — which is why the
+/// kerb *breaks* here rather than running across the stair's head — and then
+/// dies: the last two slabs come out barely a finger above the cartway and stop
+/// in the middle of nothing.
+///
+/// That is the whole of the argument. A single leaning house tells the player
+/// nothing because houses lean everywhere; a stair walking down into a street
+/// tells them there was water here, and it is the same claim the kerb's sag
+/// (M2) will publish along the whole 748 m.
+///
+/// The mooring ring is set in a **mooring stone** — a raised block in the line,
+/// four and a half kerb heights tall — and not in the kerb face the drawing
+/// shows: when the kerb shipped 0.10 m proud (M0) a face-set ring would have
+/// been a ring underground, and M3's stepped kerb does not change the
+/// arithmetic, because the stone belongs to the *old* bank and keeps its
+/// absolute height while the made ground rises around it (see
+/// `CUT_MOORING_STONE_Y`) — still a head over the stepped line, its ring still
+/// at rope height off the cartway. A mooring ring on a raised stone at the head
+/// of a stair is what the thing actually looked like anyway.
+fn add_water_stair(stone: &mut MeshData, iron: &mut MeshData, bank: CutBank, z: f32) {
+    let (kerb_x, out) = (bank.kerb_x(), bank.outward());
+    let seed = cut_stair_seed(bank, z);
+    // Five stairs cut to one drawing would be five copies of one object seen
+    // along a straight street. The width, the height of the cheeks' coping and
+    // which hand the mooring stone stands on all come off the seed, so no two
+    // of them are the same flight and none of them is a different idea.
+    let half_head = cut_stair_half_head(seed);
+    let coping = 0.30 + ((seed >> 3) % 11) as f32 * 0.008;
+    let mooring_side = if seed & 0x20 == 0 { 1.0 } else { -1.0 };
+
+    // The head landing: the surviving lip of the old bank, two and a bit metres
+    // of it, standing clear of the housefronts by three metres so no door opens
+    // onto a drop.
+    let landing_near = kerb_x + out * 1.15;
+    let landing_far = kerb_x + out * 3.45;
+    stone.set_brush([0.78 + (seed % 9) as f32 * 0.008; 3]);
+    add_dressed_stone(
+        stone,
+        Vec3::new(
+            (landing_near + landing_far) * 0.5,
+            CUT_BANK_TOP_Y * 0.5,
+            z,
+        ),
+        Vec3::new(
+            (landing_far - landing_near).abs() * 0.5,
+            CUT_BANK_TOP_Y * 0.5,
+            half_head,
+        ),
+    );
+
+    // Treads, then the two drowned slabs. `tread_top` walks the bank height
+    // down to zero in `CUT_STAIR_TREADS + 1` equal risers, so the last real
+    // tread is one riser above grade and the fill has already all but taken it.
+    let mut near = landing_near;
+    for index in 0..CUT_STAIR_TREADS {
+        let far = near;
+        near = kerb_x + out * (1.15 - CUT_STAIR_TREAD_M * (index + 1) as f32);
+        let top = CUT_BANK_TOP_Y
+            * (1.0 - (index + 1) as f32 / (CUT_STAIR_TREADS + 1) as f32);
+        let half_z = half_head - CUT_STAIR_BATTER_M * (index + 1) as f32;
+        stone.set_brush([0.74 + ((seed >> index) % 11) as f32 * 0.009; 3]);
+        add_dressed_stone(
+            stone,
+            Vec3::new((near + far) * 0.5, top * 0.5, z),
+            Vec3::new((far - near).abs() * 0.5, top * 0.5, half_z),
+        );
+    }
+    for index in 0..2 {
+        let far = near;
+        near = kerb_x + out * (1.15 - CUT_STAIR_TREAD_M * (CUT_STAIR_TREADS + index + 1) as f32);
+        let top = CUT_MARGIN_Y - 0.002 * index as f32;
+        let half_z = half_head
+            - CUT_STAIR_BATTER_M * (CUT_STAIR_TREADS + index + 1) as f32
+            - 0.25 * index as f32;
+        stone.set_brush([0.58 - 0.05 * index as f32; 3]);
+        add_dressed_stone(
+            stone,
+            Vec3::new((near + far) * 0.5, top * 0.5, z),
+            Vec3::new((far - near).abs() * 0.5, top * 0.5, half_z),
+        );
+    }
+
+    // The cheek walls, one course per tread, battering inward and downward with
+    // the flight. They are what makes a stair read as a stair from thirty metres
+    // rather than as a stack of paving.
+    for side in [-1.0_f32, 1.0] {
+        let mut near = landing_near + out * 2.30;
+        for index in 0..=CUT_STAIR_TREADS {
+            let far = near;
+            near = kerb_x + out * (1.15 - CUT_STAIR_TREAD_M * index as f32);
+            let (top, half_z) = if index == 0 {
+                (CUT_BANK_TOP_Y, half_head)
+            } else {
+                (
+                    CUT_BANK_TOP_Y * (1.0 - index as f32 / (CUT_STAIR_TREADS + 1) as f32),
+                    half_head - CUT_STAIR_BATTER_M * index as f32,
+                )
+            };
+            let crest = top + coping;
+            stone.set_brush([0.70 + ((seed >> (index + 4)) % 13) as f32 * 0.008; 3]);
+            add_dressed_stone(
+                stone,
+                Vec3::new((near + far) * 0.5, crest * 0.5, z + side * (half_z + 0.17)),
+                Vec3::new((far - near).abs() * 0.5, crest * 0.5, 0.17),
+            );
+        }
+    }
+
+    // The mooring stone stands in the line at the head of the flight, inside the
+    // gap `CutProp::kerb_gap` opened for it.
+    let mooring_z = z + mooring_side * (half_head + CUT_MOORING_STANDOFF_M);
+    stone.set_brush([0.72; 3]);
+    add_dressed_stone(
+        stone,
+        Vec3::new(kerb_x, CUT_MOORING_STONE_Y * 0.5, mooring_z),
+        Vec3::new(0.19, CUT_MOORING_STONE_Y * 0.5, CUT_MOORING_STONE_HALF_Z),
+    );
+    stone.reset_brush();
+
+    // Staple and ring on the cartway face, where a rope came up out of the water.
+    let face_x = kerb_x - out * 0.19;
+    add_dressed_stone(
+        iron,
+        Vec3::new(face_x - out * 0.035, 0.34, mooring_z),
+        Vec3::new(0.035, 0.045, 0.05),
+    );
+    add_iron_ring(
+        iron,
+        Vec3::new(face_x - out * 0.075, 0.215, mooring_z),
+        Vec3::X,
+        0.125,
+        0.028,
+    );
+}
+
+/// A ring of iron standing in the plane whose normal is `axis`, drawn as twelve
+/// short bars around the circle. A torus would need its own mesh asset and its
+/// own entity; twelve cubes in a batch cost nothing and, at the two metres this
+/// is ever read from, are a ring.
+fn add_iron_ring(iron: &mut MeshData, center: Vec3, axis: Vec3, radius: f32, bar: f32) {
+    let (u, v) = if axis.x.abs() > 0.5 {
+        (Vec3::Y, Vec3::Z)
+    } else {
+        (Vec3::X, Vec3::Z)
+    };
+    for index in 0..12 {
+        let angle = index as f32 * PI / 6.0;
+        add_dressed_stone(
+            iron,
+            center + (u * angle.cos() + v * angle.sin()) * radius,
+            Vec3::splat(bar),
+        );
+    }
+}
+
+/// A stone post set into the kerb line at a square's threshold or beside a
+/// bridge pier — `the_cut_kerb.md` §3, drafted from the start as the one piece
+/// of margin furniture that would be **collided**.
+///
+/// M1 shipped it drawn-only, deferring the collider to M3 with the reasoning
+/// kept in the feature doc: colliding anything here costs the whole four-step
+/// nav chain, and a single solid post on a street of walk-through stairs and
+/// hatches would have taught "some of this is real", which is worse than
+/// nothing being solid. **M3 is where both arguments expire at once.** The
+/// riser makes the street's stone real under hands and feet — the margin is a
+/// step you climb through a break, not a texture — so a post that stops you is
+/// now consistent rather than an exception; and the riser forces the rebake
+/// regardless, so the bollards ride a chain that is being re-run and re-pinned
+/// anyway. The cost that remains is the one M1 measured and it is unchanged:
+/// each 0.42 m post erodes to a roughly one-metre hole in the walkable grid,
+/// sixteen holes that sever nothing across a 10 m cartway and a 6.7 m margin
+/// (the eroded bollard merely seals its own 0.7 m slot in the riser line,
+/// which was never a crossing). `the_cut_margin_stays_connected_to_its_cartway`
+/// proves the street survives them.
+fn add_bollard(
+    stone: &mut MeshData,
+    collision_world: &mut CollisionWorld,
+    bank: CutBank,
+    z: f32,
+) {
+    let x = bank.kerb_x();
+    let seed = stable_hash(&format!("cut-bollard-{x:.1}-{z:.1}"));
+    stone.set_brush([0.70 + (seed % 12) as f32 * 0.009; 3]);
+    // A plinth, three courses that taper, and a chamfered cap: a turned post
+    // would need a cylinder mesh and therefore its own entity, and this reads
+    // the same from the cartway.
+    let courses = [
+        (0.000, 0.110, 0.210),
+        (0.110, 0.370, 0.155),
+        (0.370, 0.630, 0.135),
+        (0.630, CUT_BOLLARD_Y - 0.09, 0.115),
+        (CUT_BOLLARD_Y - 0.09, CUT_BOLLARD_Y, 0.075),
+    ];
+    for (bottom, top, half) in courses {
+        add_dressed_stone(
+            stone,
+            Vec3::new(x, (bottom + top) * 0.5, z),
+            Vec3::new(half, (top - bottom) * 0.5, half),
+        );
+    }
+    stone.reset_brush();
+    // One box at the plinth's own girth. The plinth is the widest course, so
+    // the collider never pokes out of the drawn stone.
+    collision_world.add_box(
+        Vec3::new(x - 0.21, 0.0, z - 0.21),
+        Vec3::new(x + 0.21, CUT_BOLLARD_Y, z + 0.21),
+    );
+}
+
+/// A lawful crossing of the line: three metres of the same stone laid flush,
+/// where a warehouse door faces the street.
+///
+/// Every one of these is at a door the plan actually puts on a Cut-facing
+/// façade — `plan_facade_openings` sets a building's door at the midpoint of
+/// its `door_edge`, and `build_hoist_gantries` rigs its beam over the same
+/// doorway — so a break is always the ground under a hoist and a doorway, not a
+/// gap somebody spaced along the street. It is drawn in the *marking* batch
+/// rather than the kerbstone one because that is exactly what it is: the same
+/// line, with the ridge taken out of it.
+fn add_kerb_break(markings: &mut MeshData, iron: &mut MeshData, bank: CutBank, z: f32) {
+    let x = bank.kerb_x();
+    let half = CUT_KERB_BREAK_M * 0.5;
+    markings.set_brush([0.80; 3]);
+    add_dressed_stone(
+        markings,
+        Vec3::new(x, CUT_MARKER_TOP_Y * 0.5, z),
+        Vec3::new(CUT_KERB_WIDTH_M * 0.5, CUT_MARKER_TOP_Y * 0.5, half),
+    );
+    markings.reset_brush();
+    // M3: the laid stone pitch behind the sill, climbing the quarter-metre
+    // from the cartway's level up to the flags over the two lanes
+    // `cut_furniture_flag_gaps` keeps clear of flagging. Four slabs rather
+    // than one sloped wedge: `add_dressed_stone` is axis-aligned, the
+    // profile under feet (`CutMarginProfile`) is the true incline, and four
+    // 6 cm courses read as a pitched crossing an iron-shod wheel has been
+    // taking for a hundred years. Each drawn top is the walked line at the
+    // course's *centre* plus the flags' own 3 cm seat, and the walked line
+    // falls ~5.2 cm across one course, so feet seat 0.4–5.6 cm into the
+    // drawn stone — worst at each course's near edge — against the flat
+    // 3 cm the flags give feet everywhere. Invisible at the 6 cm scale of
+    // the risers themselves; a fifth course would buy back two centimetres
+    // nobody would ever see.
+    let out = bank.outward();
+    let run = (CUT_BREAK_RAMP_RUN_M - CUT_KERB_WIDTH_M * 0.5) / 4.0;
+    for course in 0..4 {
+        let near = CUT_KERB_WIDTH_M * 0.5 + run * course as f32;
+        let centre_u = near + run * 0.5;
+        let top = CUT_STEP_M * ((centre_u + CUT_KERB_WIDTH_M * 0.5)
+            / (CUT_BREAK_RAMP_RUN_M + CUT_KERB_WIDTH_M * 0.5))
+            + CUT_MARGIN_Y;
+        markings.set_brush([0.76 + course as f32 * 0.012; 3]);
+        add_dressed_stone(
+            markings,
+            Vec3::new(x + out * centre_u, (top - 0.02) * 0.5, z),
+            Vec3::new(run * 0.5, (top + 0.02) * 0.5, half),
+        );
+    }
+    markings.reset_brush();
+    // Iron over each end, where iron-shod wheels have been crossing the line
+    // for as long as the house behind it has had a door.
+    for side in [-1.0_f32, 1.0] {
+        add_dressed_stone(
+            iron,
+            Vec3::new(x, CUT_MARKER_TOP_Y + 0.006, z + side * (half - 0.22)),
+            Vec3::new(CUT_KERB_WIDTH_M * 0.5 + 0.02, 0.008, 0.22),
+        );
+    }
+}
+
+/// A double-leaf cellar hatch let flush into the margin against a housefront —
+/// the goods door of the undercroft, which on the Cut is the part of the
+/// building that is *older than the street*, because the undercrofts were cut
+/// into the bank before the channel was filled.
+///
+/// Placed a metre out from the façade line and never within reach of the
+/// building's own doorway: `plan_facade_openings` puts that at the midpoint of
+/// the door edge, and every z in `CUT_FURNITURE` is offset clear of it.
+fn add_cellar_hatch(
+    stone: &mut MeshData,
+    leaves: &mut MeshData,
+    iron: &mut MeshData,
+    bank: CutBank,
+    z: f32,
+) {
+    // M3: the hatch rides the margin up wholesale — its surround stays the
+    // same 8 mm proud of the flags it always was, just a quarter-metre higher.
+    let x = bank.facade_x() - bank.outward() * 0.95;
+    stone.set_brush([0.66; 3]);
+    add_dressed_stone(
+        stone,
+        Vec3::new(x, CUT_STEP_M + 0.019, z),
+        Vec3::new(0.95, 0.019, 1.00),
+    );
+    stone.reset_brush();
+    for side in [-1.0_f32, 1.0] {
+        leaves.set_brush([0.62 + side * 0.03; 3]);
+        add_dressed_stone(
+            leaves,
+            Vec3::new(x, CUT_STEP_M + 0.045, z + side * 0.47),
+            Vec3::new(0.72, 0.007, 0.44),
+        );
+        // A strap hinge along the outer edge of each leaf, and the ring the
+        // cellarman lifts it by.
+        add_dressed_stone(
+            iron,
+            Vec3::new(x, CUT_STEP_M + 0.054, z + side * 0.86),
+            Vec3::new(0.60, 0.006, 0.045),
+        );
+        add_iron_ring(
+            iron,
+            Vec3::new(x - bank.outward() * 0.42, CUT_STEP_M + 0.056, z + side * 0.20),
+            Vec3::Y,
+            0.075,
+            0.018,
+        );
+    }
+    leaves.reset_brush();
+}
+
+/// A barred stone vent at the foot of a housefront — the cheap answer where a
+/// hatch was never worth cutting. Half a metre of light and air for a cellar
+/// that is below the old river level and knows it.
+fn add_cellar_vent(stone: &mut MeshData, iron: &mut MeshData, bank: CutBank, z: f32) {
+    // M3: the vent stands on the raised margin, so the whole assembly rides up
+    // by the step — a mouth half-buried in the new flags would be a cellar
+    // that had flooded itself.
+    let out = bank.outward();
+    let x = bank.facade_x() - out * 0.30;
+    stone.set_brush([0.63; 3]);
+    add_dressed_stone(
+        stone,
+        Vec3::new(x, CUT_STEP_M + 0.26, z),
+        Vec3::new(0.28, 0.26, 0.55),
+    );
+    // The mouth: a recessed dark face, then five bars across it.
+    stone.set_brush([0.16; 3]);
+    add_dressed_stone(
+        stone,
+        Vec3::new(x - out * 0.20, CUT_STEP_M + 0.28, z),
+        Vec3::new(0.09, 0.14, 0.36),
+    );
+    stone.reset_brush();
+    for index in 0..5 {
+        let across = (index as f32 / 4.0 - 0.5) * 0.62;
+        add_dressed_stone(
+            iron,
+            Vec3::new(x - out * 0.285, CUT_STEP_M + 0.28, z + across),
+            Vec3::new(0.018, 0.13, 0.021),
+        );
+    }
+}
+
 fn build_osanne_stall(
     commands: &mut Commands,
     meshes: &CityMeshes,
@@ -4977,6 +6677,12 @@ fn build_square_arcades(
 /// meshes (one per material), and none of it collides: the baked navigation
 /// predates these, so they are scenery for the eye, not walls for the feet —
 /// exactly like the NPCs, which never collide with props either.
+///
+/// Each clutter spot stands on the sampled street ground rather than on
+/// `y = 0`: the Cut's raised margin (`CutMarginProfile`, M3) runs its flags
+/// at a quarter-metre, and a rick or sack pair seated at grade there is
+/// two-thirds buried in the paving. One sample per spot, not per piece — a
+/// cluster straddling a feather edge should lean as one thing, not tear.
 fn build_street_props(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
@@ -4990,6 +6696,7 @@ fn build_street_props(
     let mut ochre = MeshData::default();
     let mut russet = MeshData::default();
     let mut placed = 0;
+    let cut_profile = cut_margin_profile(plan);
 
     for building in &plan.buildings {
         let Some(&edge_index) = door_edges.get(&building.id) else {
@@ -5028,7 +6735,8 @@ fn build_street_props(
             let spot_hash = hash.rotate_left(5 + spot as u32 * 7) ^ 0xA5A5_5A5A;
             let along_offset = 1.6 + (spot_hash % 90) as f32 / 100.0;
             let position2 = door + direction * side * along_offset + normal * 0.55;
-            let position = Vec3::new(position2.x, 0.0, position2.y);
+            let lift = cut_profile.ground_lift(position2.x, position2.y);
+            let position = Vec3::new(position2.x, lift, position2.y);
             match spot_hash % 4 {
                 // A barrel, sometimes two.
                 0 => {
@@ -5070,7 +6778,7 @@ fn build_street_props(
                         let sack2 = position2 + direction * offset.x + normal * offset.y;
                         add_sack(
                             cloth,
-                            Vec3::new(sack2.x, squash * 0.8, sack2.y),
+                            Vec3::new(sack2.x, lift + squash * 0.8, sack2.y),
                             Vec3::new(0.30, squash, 0.27),
                         );
                     }
@@ -5081,7 +6789,8 @@ fn build_street_props(
                         for column in 0..2 {
                             add_log(
                                 &mut dark_wood,
-                                firewood_log_center(position2, normal, row, column),
+                                firewood_log_center(position2, normal, row, column)
+                                    + Vec3::Y * lift,
                                 0.115,
                                 1.05,
                                 direction,
@@ -8091,6 +9800,1349 @@ mod tests {
             "{} baked walkable cells are inside a collider, e.g. {:?}",
             violations.len(),
             &violations[..violations.len().min(12)]
+        );
+    }
+
+    /// `the_cut_kerb.md` M3 — the Cut collides **exactly** its riser walls and
+    /// its sixteen bollards, and nothing else it did not always collide.
+    ///
+    /// This is the successor to M0–M2's `the_cut_kerb_adds_nothing_to_the_
+    /// collision_world`, which guarded the opposite invariant while the street
+    /// was drawn-only. Both halves stay load-bearing. The export equality
+    /// forces the four-step nav chain to be re-run whenever these colliders
+    /// move — the committed walkable surface must always be the complement of
+    /// what actually stops the player. The exact accounting keeps the kerb
+    /// line from quietly growing solids the bake would erode into a wall: the
+    /// margin's connection to its cartway hangs entirely on the gaps between
+    /// these boxes (ten junction mouths, seven kerb breaks at 3 m — 2.3 m
+    /// after erosion by the 0.35 m agent radius — and five 7.2 m stair gaps),
+    /// so an unplanned collider here is how the whole margin gets dropped from
+    /// the main component and every Cut-facing door strands.
+    #[test]
+    fn the_cut_collides_exactly_the_riser_and_the_bollards() {
+        let collision = built_collision_world();
+        let built: Vec<Vec<[f32; 2]>> = collision
+            .solid_footprints_in_band(WALK_BAND_LO, WALK_BAND_HI)
+            .into_iter()
+            .map(|poly| poly.into_iter().map(|point| [point.x, point.y]).collect())
+            .collect();
+        let committed: serde_json::Value =
+            serde_json::from_str(include_str!("../../assets/world/collision_footprints.json"))
+                .expect("the committed collision export parses");
+        let committed: Vec<Vec<[f32; 2]>> =
+            serde_json::from_value(committed["footprints"].clone())
+                .expect("the committed collision export has footprints");
+        assert_eq!(
+            built.len(),
+            committed.len(),
+            "the scene now exports {} collider footprints, not the {} the \
+             committed navigation was baked against — re-run the four-step nav \
+             chain",
+            built.len(),
+            committed.len()
+        );
+        assert_eq!(built, committed, "the collider export has drifted");
+
+        // The expected set: one box per laid run, at the kerbstone's own
+        // width, and one 0.42 m box per bollard.
+        let plan = plan::load();
+        let mut expected: Vec<[f32; 4]> = cut_kerb_plan(&plan)
+            .iter()
+            .filter(|run| run.laid)
+            .map(|run| {
+                [
+                    run.x - CUT_KERB_WIDTH_M * 0.5,
+                    run.z0,
+                    run.x + CUT_KERB_WIDTH_M * 0.5,
+                    run.z1,
+                ]
+            })
+            .collect();
+        expected.extend(
+            CUT_FURNITURE
+                .iter()
+                .filter(|(prop, _, _)| *prop == CutProp::Bollard)
+                .map(|(_, bank, z)| {
+                    [bank.kerb_x() - 0.21, z - 0.21, bank.kerb_x() + 0.21, z + 0.21]
+                }),
+        );
+
+        // Every footprint *contained* in either kerb line's half-metre band is
+        // one of the expected boxes, and every expected box is found exactly
+        // once. Containment rather than overlap keeps the Old Sluice out of
+        // the accounting: its fifty-metre shell straddles both lines where the
+        // south reach nominally ends, as it always has.
+        let bbox = |footprint: &Vec<[f32; 2]>| {
+            footprint.iter().fold(
+                [f32::MAX, f32::MAX, f32::MIN, f32::MIN],
+                |[x0, z0, x1, z1], [x, z]| [x0.min(*x), z0.min(*z), x1.max(*x), z1.max(*z)],
+            )
+        };
+        let on_the_line: Vec<[f32; 4]> = built
+            .iter()
+            .map(bbox)
+            .filter(|[x0, _, x1, _]| {
+                [CutBank::West, CutBank::East].iter().any(|bank| {
+                    *x0 >= bank.kerb_x() - 0.5 && *x1 <= bank.kerb_x() + 0.5
+                })
+            })
+            .collect();
+        for want in &expected {
+            let hits = on_the_line
+                .iter()
+                .filter(|have| {
+                    want.iter()
+                        .zip(have.iter())
+                        .all(|(a, b)| (a - b).abs() < 1.0e-3)
+                })
+                .count();
+            assert_eq!(
+                hits, 1,
+                "the collider ({}, {})..({}, {}) the kerb intends is exported \
+                 {hits} times",
+                want[0], want[1], want[2], want[3]
+            );
+        }
+        assert_eq!(
+            on_the_line.len(),
+            expected.len(),
+            "{} colliders stand on the kerb lines but the kerb intends only \
+             {}: something else has grown a solid on the one strip whose gaps \
+             keep the margin connected",
+            on_the_line.len(),
+            expected.len()
+        );
+    }
+
+    /// `the_cut_kerb.md` M3 — after the rebake, the raised margin is still
+    /// *ground*: walkable in the committed bitset along all three laid
+    /// reaches, on both banks, and crossable at every kerb break. The bake
+    /// keeps only the single largest connected component, so a walkable
+    /// margin cell in `navigation.bin` **is** a connected margin cell — if
+    /// the riser had severed the margin, the component would have been
+    /// dropped and these cells would read blocked. This is the proof the
+    /// erosion arithmetic (3 m break − 2 × 0.35 m radius = 2.3 m of surviving
+    /// crossing) actually held on the shipped artifact.
+    #[test]
+    fn the_cut_margin_stays_connected_to_its_cartway() {
+        let plan = plan::load();
+        let nav = cathedral_sim::NavData::from_parts(NAV_JSON, NAV_BIN)
+            .expect("the committed navigation artifact loads");
+        let strips = cut_margin_strips(&plan);
+        let walkable_near = |x: f32, z: f32| {
+            (-1..=1).any(|dx| {
+                (-1..=1).any(|dz| {
+                    nav.is_walkable(f64::from(x) + f64::from(dx) * 0.25, f64::from(z)
+                        + f64::from(dz) * 0.25)
+                })
+            })
+        };
+
+        let mut sampled = 0;
+        for bank in [CutBank::West, CutBank::East] {
+            // Two metres behind the line: clear of the riser's eroded metre,
+            // clear of the housefronts' own erosion.
+            let x = bank.kerb_x() + bank.outward() * 2.0;
+            for (z0, z1) in CUT_LAID_REACHES {
+                let steps = ((z1 - z0) / 3.0).ceil() as usize;
+                for step in 0..=steps {
+                    let z = z0 + (z1 - z0) * step as f32 / steps as f32;
+                    // Only where the margin actually has flags — junction
+                    // mouths, stair trenches and ramp lanes answer for
+                    // themselves.
+                    if !strips
+                        .iter()
+                        .any(|[sx0, sz0, sx1, sz1]| {
+                            *sx0 <= x && x <= *sx1 && *sz0 + 0.5 <= z && z <= *sz1 - 0.5
+                        })
+                    {
+                        continue;
+                    }
+                    sampled += 1;
+                    assert!(
+                        walkable_near(x, z),
+                        "the {bank:?} margin at ({x}, {z}) is not walkable in \
+                         the committed bake — the riser has cut it off"
+                    );
+                }
+            }
+        }
+        assert!(
+            sampled > 250,
+            "only {sampled} margin points were sampled; the strips have \
+             collapsed and the test is vacuous"
+        );
+
+        // The load-bearing crossings themselves: straight through every kerb
+        // break, cartway to flags.
+        for (prop, bank, z) in CUT_FURNITURE {
+            if prop != CutProp::KerbBreak {
+                continue;
+            }
+            for u in [-0.9_f32, 0.0, 0.9] {
+                let x = bank.kerb_x() + bank.outward() * u;
+                assert!(
+                    walkable_near(x, z),
+                    "the kerb break at z {z} on the {bank:?} bank is not \
+                     crossable at u {u} — the load-bearing gap did not survive \
+                     the erosion"
+                );
+            }
+        }
+
+        // And the cartway is still the cartway.
+        for z in [-380.0, -180.0, -60.0, 150.0, 300.0] {
+            assert!(
+                walkable_near(CUT_CENTRE_X, z),
+                "the cartway itself is blocked at z {z}"
+            );
+        }
+    }
+
+    /// `the_cut_kerb.md` M3 — the step under feet agrees with the drawn
+    /// street: flat `CUT_STEP_M` on the flags, the true incline on a kerb
+    /// break's ramp, the tread tops down a water stair, zero on the cartway
+    /// and everywhere else in the city — and **no feather where a stair or
+    /// ramp abuts the flags**, because the feather is for open edges
+    /// (junction mouths, reach ends) and a feather at a furniture seam would
+    /// drop feet a quarter-metre and hand them straight back.
+    #[test]
+    fn the_cut_step_is_under_feet_exactly_where_the_street_is_raised() {
+        let plan = plan::load();
+        let profile = cut_margin_profile(&plan);
+        let west = CutBank::West;
+        let kerb_x = west.kerb_x();
+
+        // Deep in a flagged strip on the dead-true middle stretch.
+        assert_eq!(profile.ground_lift(kerb_x - 3.0, -60.0), CUT_STEP_M);
+        // The cartway, the far side of the city, and a square.
+        assert_eq!(profile.ground_lift(CUT_CENTRE_X, -60.0), 0.0);
+        assert_eq!(profile.ground_lift(0.0, 95.0), 0.0);
+        assert_eq!(profile.ground_lift(CUT_CENTRE_X - 3.0, 60.0), 0.0);
+
+        // The west kerb break at z -45.8: halfway up the ramp is half a step,
+        // within the tolerance of the sill's own width.
+        let mid = profile.ground_lift(kerb_x - (CUT_BREAK_RAMP_RUN_M + 0.15) * 0.5, -45.8);
+        assert!(
+            (mid - CUT_STEP_M * 0.5).abs() < 0.03,
+            "the ramp's midpoint lifts {mid}, not about half the step"
+        );
+
+        // The west water stair at z -40: the head landing under feet is the
+        // drawn landing, and a mid-flight tread is the drawn tread.
+        assert_eq!(profile.ground_lift(kerb_x - 2.0, -40.0), CUT_BANK_TOP_Y);
+        assert_eq!(
+            profile.ground_lift(kerb_x - 0.5, -40.0),
+            cut_stair_ground(0.5)
+        );
+
+        // A step off the stair trench's edge onto the flags is flat flags —
+        // the strip end abutting the trench must not feather.
+        let half_head = cut_stair_half_head(cut_stair_seed(west, -40.0));
+        let beside = -40.0 - half_head - 0.34 - 0.01;
+        assert_eq!(
+            profile.ground_lift(kerb_x - 2.0, beside),
+            CUT_STEP_M,
+            "the flags feather into the stair trench they should meet at height"
+        );
+
+        // The wall lane behind the west bank (`south_inner_wall`, x -224,
+        // z 188..212) deletes the margin's outer lanes for that stretch, so
+        // the surviving lane's x-edge at -221.85 stands open in the middle of
+        // the margin: feet must feather through it exactly as they do at an
+        // open z-end, not teleport the full step crossing a 31 m line.
+        assert_eq!(
+            profile.ground_lift(-222.0, 200.0),
+            0.0,
+            "the wall lane should still bare the outer margin lanes"
+        );
+        let near_edge = profile.ground_lift(-221.70, 200.0);
+        let expected = CUT_STEP_M * (0.15 / CUT_STEP_FEATHER_M);
+        assert!(
+            (near_edge - expected).abs() < 0.02,
+            "0.15 m inside the open x-edge should feather to ~{expected}, not {near_edge}"
+        );
+        assert_eq!(
+            profile.ground_lift(-221.2, 200.0),
+            CUT_STEP_M,
+            "past the feather band the surviving lane is full flags"
+        );
+        // The kerb-side edge never feathers, wall lane or no wall lane: the
+        // riser collider stands there and a feathered lift would sink feet
+        // into the flags.
+        assert_eq!(
+            profile.ground_lift(kerb_x - 0.05, 200.0),
+            CUT_STEP_M,
+            "the kerb line's own edge must stay full height"
+        );
+    }
+
+    /// M3 lifts the whole street's furniture with the ground, and the doors
+    /// are furniture too: the gazetteer has the Cut's housefronts on
+    /// *"slightly raised thresholds"*, and before this contract the margin's
+    /// flags rose a quarter-metre while every Cut-facing sill stayed at
+    /// `y 0.095` — buried 0.185 m under the paving, with the kerb breaks
+    /// lawfully delivering carts into a doorway they would drop into. So:
+    /// every door whose threshold stands on the raised margin must get the
+    /// full step under it (`add_door_module`'s `ground_lift`), never a
+    /// feathered fraction (the drawn flags are flat — a partial lift is a
+    /// sill drawn *inside* the stone), and the sill must come out proud of
+    /// the flag tops by the same 0.065 m it stands proud of grade everywhere
+    /// else in the city.
+    #[test]
+    fn the_cut_facing_doors_keep_their_thresholds_proud_of_the_flags() {
+        let plan = plan::load();
+        let profile = cut_margin_profile(&plan);
+        let doors = door_edges();
+        let mut lifted = 0;
+        for building in &plan.buildings {
+            let Some(&edge_index) = doors.get(&building.id) else {
+                continue;
+            };
+            let polygon = &building.polygon;
+            let a = Vec2::from_array(polygon[edge_index]);
+            let b = Vec2::from_array(polygon[(edge_index + 1) % polygon.len()]);
+            let edge = b - a;
+            let length = edge.length();
+            if length < 0.01 {
+                continue;
+            }
+            let direction = edge / length;
+            let orientation = plan::signed_area(polygon).signum();
+            let mut normal = Vec2::new(edge.y, -edge.x).normalize() * orientation;
+            if point_in_polygon(a + direction * (length * 0.5) + normal * 0.5, polygon) {
+                normal = -normal;
+            }
+            // The door sits at the door edge's midpoint (`plan_facade_openings`)
+            // and the threshold is sampled 0.3 m out from the wall, exactly as
+            // `add_facade_openings_on` samples it.
+            let step = a + direction * (length * 0.5) + normal * 0.3;
+            let lift = profile.ground_lift(step.x, step.y);
+            if lift <= 0.0 {
+                continue;
+            }
+            lifted += 1;
+            assert_eq!(
+                lift, CUT_STEP_M,
+                "{}'s doorway at ({:.1}, {:.1}) gets a partial lift — a sill \
+                 drawn inside the flags",
+                building.id, step.x, step.y
+            );
+            let (base_y, _) = building_verticals(building);
+            // `add_door_module`'s slab: centre `foot_y + 0.045`, half 0.05.
+            let threshold_top = base_y + lift + 0.095;
+            assert!(
+                threshold_top > CUT_MARGIN_Y + CUT_STEP_M,
+                "{}'s threshold top {threshold_top} is not proud of the flags",
+                building.id
+            );
+        }
+        // Counted off the shipped plan: every Cut-facing door inside the three
+        // laid reaches stands dead on a façade line, and for every one of them
+        // the outermost flag lane reaches its wall (a kerb break's ramp and a
+        // stair's trench part the flags nearer the kerb, never against the
+        // housefronts). A change here means a façade or a reach moved —
+        // re-count before amending.
+        assert_eq!(lifted, 22, "the Cut margin should carry 22 doorways");
+    }
+
+    /// `the_cut_kerb.md` §2.4 / §6.2 — a laid ridge never crosses one of the two
+    /// squares the ribbon runs through. Inside the Tallage and Maren's Green the
+    /// boundary is a rule the Bench asserts, so it is drawn flush; a stone there
+    /// would say the line is older and harder than it is.
+    #[test]
+    fn the_cut_kerb_is_never_a_ridge_inside_a_square() {
+        let plan = plan::load();
+        let squares: Vec<&Site> = plan
+            .sites
+            .iter()
+            .filter(|site| site.id == "tallage" || site.id == "marens_green")
+            .collect();
+        assert_eq!(squares.len(), 2, "both squares are still in the plan");
+
+        let runs = cut_kerb_plan(&plan);
+        for run in runs.iter().filter(|run| run.laid) {
+            let steps = ((run.z1 - run.z0) / 0.5).ceil().max(1.0) as usize;
+            for step in 0..=steps {
+                let z = run.z0 + (run.z1 - run.z0) * step as f32 / steps as f32;
+                for square in &squares {
+                    assert!(
+                        !point_in_polygon(Vec2::new(run.x, z), &square.polygon),
+                        "a laid kerbstone at ({}, {z}) stands inside {}",
+                        run.x,
+                        square.id
+                    );
+                }
+            }
+        }
+        assert!(
+            runs.iter().any(|run| !run.laid),
+            "the squares still get a marked line"
+        );
+    }
+
+    /// `the_cut_kerb.md` §3 / §6.3 — both lines stay exactly five metres off the
+    /// centreline for the whole length of every reach. The Cut does not bend, and
+    /// a kerb that wandered would leave the cartway wider in one place than
+    /// another, which is precisely the distinction the feature exists to make.
+    ///
+    /// The offset is measured against the `cut` road **as the plan ships it**,
+    /// not against `CUT_CENTRE_X`: `cut_kerb_plan` builds every run as
+    /// `CUT_CENTRE_X ± CUT_KERB_OFFSET_M`, so comparing the two would only ever
+    /// re-check that addition. What can actually go wrong is the plan moving
+    /// under a hard-coded line — the 0.7× city shrink of 2026-07 rewrote every
+    /// coordinate in the file — and that is what this reads.
+    #[test]
+    fn the_cut_kerb_holds_five_metres_off_the_plans_own_centreline() {
+        let plan = plan::load();
+        let cut = plan
+            .roads
+            .iter()
+            .find(|road| road.tier == "cut")
+            .expect("the plan still has the Cut");
+        assert_eq!(cut.points.len(), 2, "the Cut is still one straight segment");
+        assert_eq!(
+            cut.points[0][0], cut.points[1][0],
+            "the Cut is still parallel to z"
+        );
+        assert_eq!(
+            cut.points[0][0], CUT_CENTRE_X,
+            "the plan moved the Cut's centreline; the kerb is still drawn at {CUT_CENTRE_X}"
+        );
+        assert!(
+            CUT_KERB_OFFSET_M * 2.0 <= cut.width_m,
+            "the ten-metre cartway no longer fits inside the {} m ribbon",
+            cut.width_m
+        );
+
+        // Every authored reach lies inside the ribbon the plan draws, and the
+        // laid reaches plus the marked ones tile it end to end with no third
+        // kind of ground in between.
+        let (ribbon_lo, ribbon_hi) = (
+            cut.points[0][1].min(cut.points[1][1]),
+            cut.points[0][1].max(cut.points[1][1]),
+        );
+        let mut authored: Vec<(f32, f32)> = CUT_LAID_REACHES
+            .iter()
+            .chain(CUT_MARKED_REACHES.iter())
+            .copied()
+            .collect();
+        authored.sort_by(|a, b| a.0.total_cmp(&b.0));
+        assert_eq!(authored[0].0, ribbon_lo, "the reaches start where the Cut does");
+        assert_eq!(
+            authored[authored.len() - 1].1,
+            ribbon_hi,
+            "the reaches end where the Cut does"
+        );
+        for pair in authored.windows(2) {
+            assert_eq!(pair[0].1, pair[1].0, "a gap between authored reaches");
+        }
+
+        // The marked reaches are the two squares, at their own polygon extents.
+        for id in ["tallage", "marens_green"] {
+            let square = plan
+                .sites
+                .iter()
+                .find(|site| site.id == id)
+                .unwrap_or_else(|| panic!("{id} is still in the plan"));
+            let lo = square
+                .polygon
+                .iter()
+                .fold(f32::MAX, |lo, point| lo.min(point[1]));
+            let hi = square
+                .polygon
+                .iter()
+                .fold(f32::MIN, |hi, point| hi.max(point[1]));
+            assert!(
+                CUT_MARKED_REACHES
+                    .iter()
+                    .any(|(z0, z1)| (z0 - lo).abs() < 0.05 && (z1 - hi).abs() < 0.05),
+                "{id} spans z {lo}..{hi}, which is not one of the marked reaches"
+            );
+        }
+
+        let runs = cut_kerb_plan(&plan);
+        assert!(!runs.is_empty(), "the kerb is authored");
+        for run in &runs {
+            assert_eq!(
+                (run.x - cut.points[0][0]).abs(),
+                CUT_KERB_OFFSET_M,
+                "a kerb run wandered to x {}",
+                run.x
+            );
+            assert!(run.z1 > run.z0, "a kerb run runs the wrong way");
+        }
+
+        // Each reach is covered end to end apart from its openings, and every
+        // metre it loses is one `cut_side_gaps` accounts for — a run silently
+        // dropped for any other reason shows up here.
+        for bank in [CutBank::West, CutBank::East] {
+            let x = bank.kerb_x();
+            let mut gaps = cut_side_gaps(&plan, x, x);
+            gaps.extend(cut_furniture_kerb_gaps(bank));
+            for (z0, z1) in CUT_LAID_REACHES {
+                let covered: f32 = runs
+                    .iter()
+                    .filter(|run| run.x == x && run.laid && run.z0 >= z0 - 0.1 && run.z1 <= z1 + 0.1)
+                    .map(|run| run.z1 - run.z0)
+                    .sum();
+                let opened: f32 = gaps
+                    .iter()
+                    .map(|(lo, hi)| (hi.min(z1) - lo.max(z0)).max(0.0))
+                    .sum();
+                let length = z1 - z0;
+                assert!(
+                    covered + opened > length - 2.0,
+                    "the reach {z0}..{z1} at x {x} loses {:.1} m to nothing at all",
+                    length - covered - opened
+                );
+                assert!(
+                    covered > length * 0.7,
+                    "the reach {z0}..{z1} at x {x} is only kerbed for {covered:.1} of {length:.1} m"
+                );
+            }
+        }
+    }
+
+    /// The rest of the sounding envelope from `the_cut_kerb.md` M2 — the
+    /// shallow end and the two lengths. They live here rather than beside
+    /// `CUT_SOUNDINGS` because only the assertions read them; the renderer needs
+    /// `CUT_SAG_MAX_M` alone.
+    const CUT_SAG_MIN_M: f32 = 0.15;
+    const CUT_SOUNDING_MIN_LENGTH_M: f32 = 40.0;
+    const CUT_SOUNDING_MAX_LENGTH_M: f32 = 80.0;
+    /// The most a sounding may have taken the line at a piece of authored M1
+    /// furniture that is *laid* rather than driven — a water stair's mooring
+    /// stone, a kerb break's flush slab. Both are drawn at their own fixed
+    /// height, so a trough under either leaves the mooring stone standing alone
+    /// in a drowned line and the kerb break unreadable against it. Bollards are
+    /// exempt: a post is driven into the ground, not laid on it.
+    const CUT_SAG_AT_LAID_FURNITURE_M: f32 = 0.06;
+
+    /// `the_cut_kerb.md` M2 — the soundings stay inside the envelope the feature
+    /// gives them, and stay in the places the rest of the street can carry.
+    ///
+    /// The envelope is not decoration. Under 0.15 m the dip is not a dip, it is
+    /// per-stone weathering. Over 0.25 m, or shorter than forty metres, it stops
+    /// being a settling street and becomes a step somebody would report as a
+    /// bug. Outside a laid reach it has nothing to sag — the squares are drawn
+    /// flush — and two soundings overlapping would sum into a hole neither of
+    /// them authored.
+    #[test]
+    fn the_cut_soundings_stay_inside_the_authored_envelope() {
+        assert!(
+            (3..=4).contains(&CUT_SOUNDINGS.len()),
+            "M2 authors three or four soundings, not {}",
+            CUT_SOUNDINGS.len()
+        );
+
+        let mut spans: Vec<(f32, f32)> = Vec::new();
+        for sounding in CUT_SOUNDINGS {
+            let length = sounding.half_length_m * 2.0;
+            assert!(
+                (CUT_SOUNDING_MIN_LENGTH_M..=CUT_SOUNDING_MAX_LENGTH_M).contains(&length),
+                "the sounding at z {} is {length} m long",
+                sounding.z
+            );
+            for (side, depth) in [("west", sounding.west_m), ("east", sounding.east_m)] {
+                assert!(
+                    (CUT_SAG_MIN_M..=CUT_SAG_MAX_M).contains(&depth),
+                    "the sounding at z {} takes the {side} line down {depth} m",
+                    sounding.z
+                );
+            }
+            let span = (sounding.z - sounding.half_length_m, sounding.z + sounding.half_length_m);
+            assert!(
+                CUT_LAID_REACHES
+                    .iter()
+                    .any(|(z0, z1)| *z0 <= span.0 && span.1 <= *z1),
+                "the sounding at z {} runs from {} to {}, which is not inside one laid reach",
+                sounding.z,
+                span.0,
+                span.1
+            );
+            for (z0, z1) in CUT_MARKED_REACHES {
+                assert!(
+                    span.1 <= z0 || span.0 >= z1,
+                    "the sounding at z {} reaches into the marked reach {z0}..{z1}, \
+                     where there is no ridge to take down",
+                    sounding.z
+                );
+            }
+            spans.push(span);
+        }
+        spans.sort_by(|a, b| a.0.total_cmp(&b.0));
+        for pair in spans.windows(2) {
+            assert!(
+                pair[0].1 < pair[1].0,
+                "the soundings {:?} and {:?} overlap",
+                pair[0],
+                pair[1]
+            );
+        }
+
+        // The profile itself: zero at and beyond the shoulders, exactly the
+        // authored depth at the deepest point, and monotonic in between, so the
+        // dip has one bottom rather than a rippled floor.
+        for sounding in CUT_SOUNDINGS {
+            for (bank, depth) in [
+                (CutBank::West, sounding.west_m),
+                (CutBank::East, sounding.east_m),
+            ] {
+                assert!(
+                    (cut_sounding_sag(bank, sounding.z) - depth).abs() < 1.0e-5,
+                    "the sounding at z {} does not reach its own depth",
+                    sounding.z
+                );
+                for edge in [
+                    sounding.z - sounding.half_length_m,
+                    sounding.z + sounding.half_length_m,
+                    sounding.z - sounding.half_length_m - 5.0,
+                    sounding.z + sounding.half_length_m + 5.0,
+                ] {
+                    assert_eq!(
+                        cut_sounding_sag(bank, edge),
+                        0.0,
+                        "the sounding at z {} is still {} m down at z {edge}",
+                        sounding.z,
+                        cut_sounding_sag(bank, edge)
+                    );
+                }
+                let steps = 40;
+                let mut previous = 0.0_f32;
+                for step in 0..=steps {
+                    let z = sounding.z - sounding.half_length_m
+                        + sounding.half_length_m * step as f32 / steps as f32;
+                    let sag = cut_sounding_sag(bank, z);
+                    assert!(
+                        sag >= previous - 1.0e-6,
+                        "the sounding at z {} rises again on its way down, at z {z}",
+                        sounding.z
+                    );
+                    previous = sag;
+                }
+            }
+        }
+
+        // And most of the street is dead true — that is the whole reason four
+        // dips can be read at all.
+        let mut sagging = 0.0_f32;
+        let mut sampled = 0.0_f32;
+        for (z0, z1) in CUT_LAID_REACHES {
+            let steps = ((z1 - z0) / 1.0).ceil() as usize;
+            for step in 0..=steps {
+                let z = z0 + (z1 - z0) * step as f32 / steps as f32;
+                sampled += 1.0;
+                if cut_sounding_sag(CutBank::West, z) > 0.005
+                    || cut_sounding_sag(CutBank::East, z) > 0.005
+                {
+                    sagging += 1.0;
+                }
+            }
+        }
+        assert!(
+            sagging / sampled < 0.45,
+            "{:.0}% of the laid line is sagging; the soundings are the exception, \
+             not the profile",
+            100.0 * sagging / sampled
+        );
+    }
+
+    /// `the_cut_kerb.md` M2 — the sag moves the kerbstone and nothing else.
+    ///
+    /// The M0 invariant (§6.3, `|x + 213.5| = 5.0` for the full length of every
+    /// reach) has to survive it: the easiest way to draw a settling line is to
+    /// let the stones wander, and a line that wanders is not a straightedge and
+    /// cannot publish anything. This also pins the heights the drawing depends
+    /// on. Since M3 put the step under the line the profile is drawn at its
+    /// **full authored depth** — the six-centimetre budget (`CUT_KERB_DROWNED_Y`,
+    /// deleted with it) is gone — so the deepest stone must genuinely go the
+    /// 0.15–0.25 m down that M2 could only trace, while `CUT_STEP_M` beneath it
+    /// keeps every stone proud of the cartway rather than a hole in the road.
+    /// The two companion cues stay: the drowned stretch is heaved out of true
+    /// rather than flush, and it is dirtier than the line either side of it.
+    /// Neither may touch a stone the soundings do not reach, or the true line
+    /// stops being a straightedge to read the dips against.
+    #[test]
+    fn the_cut_sag_moves_the_kerbstone_down_and_never_sideways() {
+        let plan = plan::load();
+        let runs = cut_kerb_plan(&plan);
+        let mut lowest = f32::MAX;
+        let mut highest = f32::MIN;
+        let mut deepest_drawn = f32::MAX;
+        let mut dirtiest = f32::MAX;
+        let mut cleanest_in_a_trough = f32::MAX;
+
+        for run in runs.iter().filter(|run| run.laid) {
+            assert_eq!(
+                (run.x - CUT_CENTRE_X).abs(),
+                CUT_KERB_OFFSET_M,
+                "a sagging run wandered to x {}",
+                run.x
+            );
+            assert_eq!(
+                run.x,
+                run.bank.kerb_x(),
+                "a run's bank disagrees with its own x"
+            );
+            let steps = ((run.z1 - run.z0) / 0.65).ceil().max(1.0) as usize;
+            for step in 0..=steps {
+                let z = run.z0 + (run.z1 - run.z0) * step as f32 / steps as f32;
+                let seed = stable_hash(&format!("cut-kerb-{:.1}-{z:.2}", run.x));
+                let (top, height) = cut_kerbstone_top(run.bank, z, seed);
+                assert!(
+                    CUT_STEP_M + top > CUT_MARGIN_Y + 0.02,
+                    "a kerbstone at ({}, {z}) is drawn into the cartway: its \
+                     stepped top {} clears the road by under two centimetres",
+                    run.x,
+                    CUT_STEP_M + top
+                );
+                assert!(
+                    ((top - height) + CUT_KERB_SEAT_M).abs() < 1.0e-5,
+                    "a kerbstone at ({}, {z}) bottoms at {} rather than at the \
+                     seat every stone on the street shares",
+                    run.x,
+                    top - height
+                );
+
+                let sag = cut_sounding_sag(run.bank, z);
+                let shade = cut_kerbstone_shade(sag, seed);
+                if sag == 0.0 {
+                    assert!(
+                        top >= CUT_KERB_RISE_M * 0.91,
+                        "a kerbstone at ({}, {z}) is off the true line at y {top} \
+                         with no sounding under it",
+                        run.x
+                    );
+                    // Against the undirtied brush itself, not against
+                    // `cut_kerbstone_shade(0.0, seed)`: comparing the function
+                    // with itself inside the `sag == 0.0` arm is a tautology
+                    // that a tint applied unconditionally would still satisfy.
+                    assert_eq!(
+                        shade,
+                        0.81 + (seed % 14) as f32 * 0.01,
+                        "a kerbstone at ({}, {z}) is dirtied with no sounding under it",
+                        run.x
+                    );
+                } else {
+                    cleanest_in_a_trough = cleanest_in_a_trough.min(shade);
+                }
+                dirtiest = dirtiest.min(shade);
+                lowest = lowest.min(top);
+                highest = highest.max(top);
+                if sag > 0.0 {
+                    deepest_drawn = deepest_drawn.min(top);
+                }
+            }
+        }
+
+        assert!(
+            cleanest_in_a_trough < 0.81,
+            "no stone in a sounding is dirtied below the cleanest quarried shade"
+        );
+        assert!(
+            dirtiest > 0.6,
+            "a kerbstone is drawn at brush {dirtiest}; the soundings are a dirty \
+             line, not a stain"
+        );
+
+        assert!(
+            (highest - CUT_KERB_RISE_M).abs() < 0.02,
+            "the true line no longer stands its nominal 0.10 m; it tops out at {highest}"
+        );
+        assert_eq!(
+            lowest, deepest_drawn,
+            "the lowest stone on the street is not one the soundings put there"
+        );
+        // M3: the profile is drawn at full depth. The deepest stone must sink
+        // well past anything M2's six-centimetre budget could express — at
+        // least a full CUT_SAG_MIN_M below the true line, less the scatter —
+        // while the step under it keeps the stone proud of the road, so the
+        // trough is a dip in a standing line and never a hole in the cartway.
+        assert!(
+            deepest_drawn < CUT_KERB_RISE_M - CUT_SAG_MIN_M + CUT_KERB_HEAVE_M,
+            "the deepest sounding is drawn at y {deepest_drawn} over the old \
+             grade; the authored profile is not reaching the ground"
+        );
+        assert!(
+            CUT_STEP_M + deepest_drawn > CUT_MARGIN_Y + 0.02,
+            "the deepest sounding takes its stones into the cartway: stepped \
+             top {}",
+            CUT_STEP_M + deepest_drawn
+        );
+
+        // The four soundings must be four depths, not one floor. Sample each
+        // one's deepest point on each bank and require the extremes to differ by
+        // more than the per-stone scatter can account for.
+        let mut drawn: Vec<(f32, f32)> = Vec::new();
+        for sounding in CUT_SOUNDINGS {
+            for (bank, depth) in [
+                (CutBank::West, sounding.west_m),
+                (CutBank::East, sounding.east_m),
+            ] {
+                let (top, _) = cut_kerbstone_top(bank, sounding.z, heave_bucket_seed(4));
+                drawn.push((depth, top));
+            }
+        }
+        drawn.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let (shallowest_depth, shallowest_top) = drawn[0];
+        let (deepest_depth, deepest_top) = drawn[drawn.len() - 1];
+        assert!(
+            shallowest_top - deepest_top > 0.010,
+            "the {shallowest_depth} m sounding is drawn at y {shallowest_top} and \
+             the {deepest_depth} m one at y {deepest_top}; on the ground they are \
+             the same hole"
+        );
+
+        // And most of the street is dead true — that is the whole reason four
+        // dips can be read at all.
+        let mut sagging = 0.0_f32;
+        let mut sampled = 0.0_f32;
+        for (z0, z1) in CUT_LAID_REACHES {
+            let steps = ((z1 - z0) / 1.0).ceil() as usize;
+            for step in 0..=steps {
+                let z = z0 + (z1 - z0) * step as f32 / steps as f32;
+                sampled += 1.0;
+                if cut_sounding_sag(CutBank::West, z) > 0.005
+                    || cut_sounding_sag(CutBank::East, z) > 0.005
+                {
+                    sagging += 1.0;
+                }
+            }
+        }
+        assert!(
+            sagging / sampled < 0.45,
+            "{:.0}% of the laid line is sagging; the soundings are the exception, \
+             not the profile",
+            100.0 * sagging / sampled
+        );
+    }
+
+    /// `the_cut_kerb.md` M2 — the heave is a scatter about the profile, not a
+    /// lift off it.
+    ///
+    /// A one-sided disturbance scaled by the sag is a bias proportional to
+    /// depth, which fills in the bottom of a trough more than its shoulders —
+    /// the trough's centre would be drawn *above* its own lip, on the one
+    /// stretch the milestone wants lowest. So the nine buckets are driven
+    /// directly, with the rest of the seed held constant so only the heave
+    /// moves: the middle bucket must be the profile itself and the outer two
+    /// must sit the same distance either side of it.
+    #[test]
+    fn the_cut_kerb_heave_is_centred_on_the_profile_it_scatters() {
+        let sounding = CUT_SOUNDINGS
+            .iter()
+            .max_by(|a, b| a.west_m.total_cmp(&b.west_m))
+            .expect("the soundings are authored");
+        let tops: Vec<f32> = (0..9u32)
+            .map(|bucket| cut_kerbstone_top(CutBank::West, sounding.z, heave_bucket_seed(bucket)).0)
+            .collect();
+        for pair in tops.windows(2) {
+            assert!(
+                pair[1] > pair[0],
+                "the heave buckets do not run monotonically through the profile: {tops:?}"
+            );
+        }
+        let (low, mid, high) = (tops[0], tops[4], tops[8]);
+        assert!(
+            ((high - mid) - (mid - low)).abs() < 1.0e-6,
+            "the heave is one-sided: {low} / {mid} / {high} about the profile"
+        );
+        assert!(
+            high - low > CUT_KERB_HEAVE_M * 0.5,
+            "the heave has collapsed to {} at the deepest sounding; the drowned \
+             stretch reads as a deliberately flush marking",
+            high - low
+        );
+        assert!(
+            CUT_STEP_M + low > CUT_MARGIN_Y + 0.02,
+            "a stone heaved downward at the deepest sounding is drawn at \
+             stepped top {}, into the cartway",
+            CUT_STEP_M + low
+        );
+        let off = sounding.z + sounding.half_length_m;
+        for bucket in 0..9u32 {
+            assert_eq!(
+                cut_kerbstone_top(CutBank::West, off, heave_bucket_seed(bucket)).0,
+                CUT_KERB_RISE_M * 0.92,
+                "a stone off the soundings is heaved; the true line is not true"
+            );
+        }
+    }
+
+    /// A kerbstone seed that drives `cut_kerbstone_top`'s heave bucket to
+    /// `bucket` while leaving its per-stone rise alone.
+    ///
+    /// The two fields overlap — the rise reads `(seed >> 8) % 13` and the heave
+    /// `(seed >> 16) % 9` — so walking the heave through its nine buckets with a
+    /// naive `bucket << 16` also walks the rise, and the two moving together is
+    /// exactly what the assertions above must not confuse. `256 % 13 == 9`, so
+    /// putting `(4 * bucket) % 13` in the low byte cancels the carry and every
+    /// seed here quarries the same 0.92 stone.
+    fn heave_bucket_seed(bucket: u32) -> u32 {
+        (bucket << 16) | (((4 * bucket) % 13) << 8)
+    }
+
+    /// `the_cut_kerb.md` M2 — the drawn stones, not the three functions behind
+    /// them.
+    ///
+    /// The rest of M2 asserts the profile, and a renderer wired to the wrong
+    /// bank, seated off the wrong face or brushed with the wrong shade would
+    /// leave all of it green. So this drives `add_kerbstone_run` itself into a
+    /// scratch mesh — one run inside the middle reach's sounding on each bank,
+    /// and one on the dead-true stretch north of it — and reads the vertices
+    /// that come out. The two banks are asked for at the same `z` on purpose:
+    /// the middle sounding takes the east line five centimetres further down
+    /// than the west, so a renderer that hard-coded a bank shows up here as two
+    /// identical lines.
+    #[test]
+    fn a_drawn_kerb_run_seats_every_stone_and_carries_the_sounding_under_it() {
+        fn stones(run: CutKerbRun) -> Vec<(f32, f32, f32)> {
+            let mut mesh = MeshData::default();
+            add_kerbstone_run(&mut mesh, run);
+            assert_eq!(
+                mesh.positions.len() % 24,
+                0,
+                "a kerbstone is not a six-faced block"
+            );
+            mesh.positions
+                .chunks(24)
+                .zip(mesh.colors.chunks(24))
+                .map(|(block, colors)| {
+                    let top = block.iter().fold(f32::MIN, |acc, v| acc.max(v[1]));
+                    let bottom = block.iter().fold(f32::MAX, |acc, v| acc.min(v[1]));
+                    for vertex in block {
+                        assert!(
+                            (vertex[0] - run.x).abs() - CUT_KERB_WIDTH_M * 0.5 < 1.0e-4,
+                            "a drawn kerbstone reaches x {} off a line at {}",
+                            vertex[0],
+                            run.x
+                        );
+                    }
+                    assert!(
+                        (bottom + CUT_KERB_SEAT_M).abs() < 1.0e-4,
+                        "a drawn kerbstone bottoms at {bottom}, not at the seat"
+                    );
+                    (top, bottom, colors[0][0])
+                })
+                .collect()
+        }
+
+        let true_line = stones(CutKerbRun {
+            x: CutBank::West.kerb_x(),
+            bank: CutBank::West,
+            z0: -60.0,
+            z1: -30.0,
+            laid: true,
+        });
+        let west = stones(CutKerbRun {
+            x: CutBank::West.kerb_x(),
+            bank: CutBank::West,
+            z0: -145.0,
+            z1: -123.0,
+            laid: true,
+        });
+        let east = stones(CutKerbRun {
+            x: CutBank::East.kerb_x(),
+            bank: CutBank::East,
+            z0: -145.0,
+            z1: -123.0,
+            laid: true,
+        });
+
+        assert!(
+            true_line.len() > 20 && west.len() > 14 && east.len() > 14,
+            "a run came out as {} / {} / {} stones",
+            true_line.len(),
+            west.len(),
+            east.len()
+        );
+
+        let mean = |stones: &[(f32, f32, f32)], pick: fn(&(f32, f32, f32)) -> f32| {
+            stones.iter().map(pick).sum::<f32>() / stones.len() as f32
+        };
+        let (true_top, west_top, east_top) =
+            (mean(&true_line, |s| s.0), mean(&west, |s| s.0), mean(&east, |s| s.0));
+        assert!(
+            true_top - west_top > 0.02,
+            "the drawn line over the middle sounding stands at y {west_top} against \
+             y {true_top} on the true reach; the sounding is not being drawn"
+        );
+        assert!(
+            west_top - east_top > 0.005,
+            "both banks are drawn at the same depth over a sounding that takes them \
+             down 0.17 m and 0.22 m; the renderer is asking for one bank"
+        );
+
+        let (true_shade, east_shade) = (mean(&true_line, |s| s.2), mean(&east, |s| s.2));
+        assert!(
+            true_shade - east_shade > 0.05,
+            "the drowned stone is brushed at {east_shade} against {true_shade} on \
+             the true line; the tint is not reaching the vertices"
+        );
+    }
+
+    /// `the_cut_kerb.md` M2 — a sounding never opens under a piece of M1
+    /// furniture that is *laid* on the line.
+    ///
+    /// A water stair's mooring stone is a kerbstone four and a half times the
+    /// usual height and a kerb break is three metres of the same stone laid
+    /// flush; both are drawn at their own fixed `y`. Take the line down 0.20 m
+    /// under either and the mooring stone is left standing alone in a trough and
+    /// the kerb break stops reading as a break at all. So the soundings are
+    /// authored to put the stairs on their *shoulders* — which is also where a
+    /// landing belongs, on the shelving edge of the channel rather than in the
+    /// scour. Bollards are exempt: a post is driven, not laid.
+    #[test]
+    fn the_cut_soundings_leave_the_laid_furniture_standing() {
+        let mut on_a_shoulder = 0;
+        for (prop, bank, z) in CUT_FURNITURE {
+            let sag = match prop {
+                CutProp::WaterStair | CutProp::KerbBreak => cut_sounding_sag(bank, z),
+                _ => continue,
+            };
+            assert!(
+                sag <= CUT_SAG_AT_LAID_FURNITURE_M,
+                "{prop:?} at z {z} on the {bank:?} bank stands where the line has \
+                 gone down {sag} m"
+            );
+            if prop == CutProp::WaterStair
+                && CUT_SOUNDINGS.iter().any(|sounding| {
+                    let depth = match bank {
+                        CutBank::West => sounding.west_m,
+                        CutBank::East => sounding.east_m,
+                    };
+                    depth > 0.0 && (z - sounding.z).abs() <= sounding.half_length_m + 0.5
+                })
+            {
+                on_a_shoulder += 1;
+            }
+        }
+        assert!(
+            on_a_shoulder >= 3,
+            "only {on_a_shoulder} blocked water stairs stand on a sounding's shoulder; \
+             the stairs are the one in-game witness the soundings agree with"
+        );
+    }
+
+    /// A laid ridge always has margin behind it. The whole claim of M0 is that
+    /// the kerb divides the Cut into two kinds of ground, so a kerbstone with
+    /// cartway dust on *both* sides is worse than no kerbstone at all — and it
+    /// is the easy failure, because the margin and the line answer the "does a
+    /// street cross here" question over different widths. `south_inner_wall`
+    /// running parallel at `x -224` used to strip thirty-six metres of flags
+    /// from behind an unbroken run of the north reach.
+    #[test]
+    fn every_laid_kerbstone_has_flagged_margin_behind_it() {
+        let plan = plan::load();
+        let strips = cut_margin_strips(&plan);
+        let mut bare = Vec::new();
+        for run in cut_kerb_plan(&plan).iter().filter(|run| run.laid) {
+            let behind = if run.x < CUT_CENTRE_X {
+                run.x - 0.45
+            } else {
+                run.x + 0.45
+            };
+            // Sampled a metre inside each end: the margin's lanes follow a
+            // diagonal approach where the ridge's single line meets it square,
+            // so the two disagree by a fraction of a metre at a junction mouth
+            // and nowhere else.
+            let (lo, hi) = (run.z0 + 1.0, run.z1 - 1.0);
+            if hi < lo {
+                continue;
+            }
+            let steps = ((hi - lo) / 1.0).ceil().max(1.0) as usize;
+            for step in 0..=steps {
+                let z = lo + (hi - lo) * step as f32 / steps as f32;
+                let flagged = strips.iter().any(|[x0, z0, x1, z1]| {
+                    *x0 <= behind && behind <= *x1 && *z0 <= z && z <= *z1
+                });
+                if !flagged {
+                    bare.push((behind, z));
+                }
+            }
+        }
+        assert!(
+            bare.is_empty(),
+            "{} sampled metres of laid kerb have no margin behind them, e.g. {:?}",
+            bare.len(),
+            &bare[..bare.len().min(12)]
+        );
+    }
+
+    /// The line breaks where a side street opens onto the Cut, so a junction
+    /// mouth keeps its own cobbles and a cart can turn out of the cartway
+    /// lawfully. `east_cut_to_bell` leaves the Cut eastward at `z -154`, so the
+    /// east line is cut there and the west line is not.
+    #[test]
+    fn the_cut_kerb_opens_at_every_side_street() {
+        let plan = plan::load();
+        let runs = cut_kerb_plan(&plan);
+        let covered = |x: f32, z: f32| {
+            runs.iter()
+                .any(|run| run.x == x && run.z0 <= z && z <= run.z1)
+        };
+        assert!(
+            !covered(CUT_CENTRE_X + CUT_KERB_OFFSET_M, -154.0),
+            "the east line should open for east_cut_to_bell"
+        );
+        assert!(
+            covered(CUT_CENTRE_X - CUT_KERB_OFFSET_M, -154.0),
+            "the west line has no junction at z -154 and should be unbroken"
+        );
+    }
+
+    /// Which of the five authored reaches a z belongs to, or `None` if it is off
+    /// the Cut altogether.
+    fn cut_reach_of(z: f32) -> Option<(f32, f32)> {
+        CUT_LAID_REACHES
+            .iter()
+            .chain(CUT_MARKED_REACHES.iter())
+            .copied()
+            .find(|(z0, z1)| *z0 <= z && z <= *z1)
+    }
+
+    /// `the_cut_kerb.md` M1 — every hand-placed piece of margin furniture stands
+    /// on the Cut, on ground the Cut actually has, and inside no building.
+    ///
+    /// The whole point of hand-placing rather than spacing is that each z was
+    /// read off the plan; the risk that buys is that the plan moves under a
+    /// hard-coded number (the 0.7× city shrink of 2026-07 rewrote every
+    /// coordinate in the file) and a stair ends up inside a wall or hanging over
+    /// a junction mouth with no ground under it.
+    #[test]
+    fn the_cut_margin_furniture_stands_on_its_own_street() {
+        let plan = plan::load();
+        let strips = cut_margin_strips(&plan);
+        let flagged = |x: f32, z: f32| {
+            strips
+                .iter()
+                .any(|[x0, z0, x1, z1]| *x0 <= x && x <= *x1 && *z0 <= z && z <= *z1)
+        };
+        assert!(!CUT_FURNITURE.is_empty(), "the furniture is authored");
+        for (prop, bank, z) in CUT_FURNITURE {
+            let reach = cut_reach_of(z)
+                .unwrap_or_else(|| panic!("{prop:?} at z {z} is off the end of the Cut"));
+            // Sample the ground the piece actually stands on: a stair's head
+            // landing shoulders, a hatch or vent's own footprint, a bollard's
+            // post. (A stair's flight centre is asserted separately below —
+            // since M3 it stands in a trench the flags deliberately part
+            // around, not on flagging.)
+            let samples: Vec<(f32, f32)> = match prop {
+                CutProp::WaterStair => vec![
+                    (bank.kerb_x() + bank.outward() * 3.4, z - 2.1),
+                    (bank.kerb_x() + bank.outward() * 3.4, z + 2.1),
+                ],
+                CutProp::CellarHatch => vec![
+                    (bank.facade_x() - bank.outward() * 0.95, z - 0.95),
+                    (bank.facade_x() - bank.outward() * 0.95, z + 0.95),
+                ],
+                CutProp::CellarVent => vec![(bank.facade_x() - bank.outward() * 0.55, z)],
+                CutProp::Bollard | CutProp::KerbBreak => Vec::new(),
+            };
+            for (x, at) in &samples {
+                assert!(
+                    flagged(*x, *at),
+                    "{prop:?} at z {z} puts a corner on ({x}, {at}), which has no margin under it"
+                );
+            }
+            let mut standing = samples.clone();
+            standing.push((bank.kerb_x(), z));
+            if prop == CutProp::WaterStair {
+                // M3: the flight descends through a trench the flags part
+                // around — flagging *over* the treads would roof the stair at
+                // flag height. Its centre must be open ground, and still on
+                // the street.
+                let flight_centre = (bank.kerb_x() + bank.outward() * 1.3, z);
+                assert!(
+                    !flagged(flight_centre.0, flight_centre.1),
+                    "{prop:?} at z {z}: the flags roof the flight at ({}, {z}) \
+                     instead of parting around its trench",
+                    flight_centre.0
+                );
+                standing.push(flight_centre);
+            }
+            for building in &plan.buildings {
+                for (x, at) in &standing {
+                    assert!(
+                        !point_in_polygon(Vec2::new(*x, *at), &building.polygon),
+                        "{prop:?} at z {z} stands inside {} at ({x}, {at})",
+                        building.id
+                    );
+                }
+            }
+            // Nothing may hang off the end of the reach it was authored into.
+            let overhang = prop.kerb_gap().unwrap_or((0.0, 0.0));
+            assert!(
+                z + overhang.0 > reach.0 - 0.01 && z + overhang.1 < reach.1 + 0.01,
+                "{prop:?} at z {z} straddles the end of the reach {reach:?}"
+            );
+        }
+    }
+
+    /// A kerb break is only lawful because there is a door behind it. Each one
+    /// must sit at the midpoint of a Cut-facing façade edge that `door_edges()`
+    /// actually nominates — the same midpoint `plan_facade_openings` cuts the
+    /// doorway at and `build_hoist_gantries` rigs its beam over.
+    #[test]
+    fn every_cut_kerb_break_is_at_a_real_cut_facing_door() {
+        let plan = plan::load();
+        let doors = door_edges();
+        let mut breaks = 0;
+        for (prop, bank, z) in CUT_FURNITURE {
+            if prop != CutProp::KerbBreak {
+                continue;
+            }
+            breaks += 1;
+            let matched = plan.buildings.iter().any(|building| {
+                let Some(&edge) = doors.get(&building.id) else {
+                    return false;
+                };
+                let a = Vec2::from_array(building.polygon[edge]);
+                let b = Vec2::from_array(building.polygon[(edge + 1) % building.polygon.len()]);
+                let middle = (a + b) * 0.5;
+                (middle.x - bank.facade_x()).abs() < 0.5 && (middle.y - z).abs() < 0.5
+            });
+            assert!(
+                matched,
+                "the kerb break at z {z} on the {bank:?} bank faces no Cut-facing door"
+            );
+        }
+        assert!(breaks >= 5, "the warehouse doors still get their breaks");
+    }
+
+    /// Nothing in the margin may be laid across the doorway it belongs to. A
+    /// cellar hatch is a metre out from the housefront and a vent is against it,
+    /// so both are in reach of the door `plan_facade_openings` cuts at the
+    /// midpoint of the same edge; a hatch under a door is a hatch nobody can
+    /// open and a door nobody can walk out of.
+    #[test]
+    fn cut_cellar_openings_keep_clear_of_the_doors_they_belong_to() {
+        let plan = plan::load();
+        let doors = door_edges();
+        for (prop, bank, z) in CUT_FURNITURE {
+            if !matches!(prop, CutProp::CellarHatch | CutProp::CellarVent) {
+                continue;
+            }
+            for building in &plan.buildings {
+                let Some(&edge) = doors.get(&building.id) else {
+                    continue;
+                };
+                let a = Vec2::from_array(building.polygon[edge]);
+                let b = Vec2::from_array(building.polygon[(edge + 1) % building.polygon.len()]);
+                let middle = (a + b) * 0.5;
+                if (middle.x - bank.facade_x()).abs() > 0.5 {
+                    continue;
+                }
+                assert!(
+                    (middle.y - z).abs() > 1.6,
+                    "{prop:?} at z {z} is laid across {}'s doorway at z {}",
+                    building.id,
+                    middle.y
+                );
+            }
+        }
+    }
+
+    /// The furniture on one bank never asks the kerb for the same metre twice.
+    /// Overlapping gaps would not fail loudly — `subtract_gaps` merges them —
+    /// but a stair and a break sharing stone means one of the two was placed by
+    /// arithmetic rather than by looking.
+    #[test]
+    fn no_two_pieces_of_cut_furniture_share_the_same_kerb() {
+        for bank in [CutBank::West, CutBank::East] {
+            let mut gaps = cut_furniture_kerb_gaps(bank);
+            gaps.sort_by(|a, b| a.0.total_cmp(&b.0));
+            for pair in gaps.windows(2) {
+                assert!(
+                    pair[0].1 < pair[1].0,
+                    "two pieces of {bank:?} furniture overlap at z {:?} / {:?}",
+                    pair[0],
+                    pair[1]
+                );
+            }
+        }
+    }
+
+    /// The three reaches must read as three different places — that is the whole
+    /// reason M1 is hand-placed instead of spaced. North is the trade quarter and
+    /// carries the kerb breaks; the middle is the emptiest stretch in the game
+    /// and carries the fossil river; the south is poorer and gets neither.
+    #[test]
+    fn the_three_reaches_of_the_cut_are_furnished_differently() {
+        let count = |reach: (f32, f32), kind: CutProp| {
+            CUT_FURNITURE
+                .iter()
+                .filter(|(prop, _, z)| *prop == kind && reach.0 <= *z && *z <= reach.1)
+                .count()
+        };
+        let [north, middle, south] = CUT_LAID_REACHES;
+        assert!(
+            count(north, CutProp::KerbBreak) >= 3,
+            "the trade quarter is where the warehouse doors are"
+        );
+        assert_eq!(
+            count(south, CutProp::KerbBreak),
+            0,
+            "the south reach has no warehouse door on it and gets no break"
+        );
+        assert!(
+            count(middle, CutProp::WaterStair) > count(north, CutProp::WaterStair)
+                && count(middle, CutProp::WaterStair) > count(south, CutProp::WaterStair),
+            "the emptiest reach is the one the river has to carry"
+        );
+        assert!(
+            count(south, CutProp::CellarHatch) == 0 && count(south, CutProp::CellarVent) > 0,
+            "the poor end gets vents, not hatches"
+        );
+        assert!(
+            count(middle, CutProp::Bollard) + count(north, CutProp::Bollard)
+                > count(south, CutProp::Bollard),
+            "the south reach is the quiet one"
+        );
+    }
+
+    /// A water stair descends *through* the line, so the line has to be absent
+    /// where it does. A ridge running across the head of a flight would be a
+    /// kerb laid over a stair, which is the opposite of the thing being said.
+    #[test]
+    fn a_cut_water_stair_breaks_the_line_it_descends_through() {
+        let plan = plan::load();
+        let runs = cut_kerb_plan(&plan);
+        let mut stairs = 0;
+        for (prop, bank, z) in CUT_FURNITURE {
+            if prop != CutProp::WaterStair {
+                continue;
+            }
+            stairs += 1;
+            let x = bank.kerb_x();
+            for step in 0..=8 {
+                let at = z - CUT_STAIR_WIDTH_M * 0.5
+                    + CUT_STAIR_WIDTH_M * step as f32 / 8.0;
+                assert!(
+                    !runs
+                        .iter()
+                        .any(|run| run.x == x && run.z0 <= at && at <= run.z1),
+                    "the {bank:?} line still runs across the water stair at z {at}"
+                );
+            }
+        }
+        assert_eq!(stairs, 5, "the Cut carries five blocked water stairs");
+
+        // The gap is symmetric on purpose: which hand the mooring stone stands
+        // on comes off each stair's seed, so the widest flight the jitter can
+        // make must clear the line on *both* sides. At the shipped numbers the
+        // stone's far edge lands 18 mm inside the gap; narrowing either end
+        // would clip whichever stairs drew the other seed bit.
+        let widest = (0..15).map(cut_stair_half_head).fold(0.0_f32, f32::max);
+        let reach = widest + CUT_MOORING_STANDOFF_M + CUT_MOORING_STONE_HALF_Z;
+        let (lo, hi) = CutProp::WaterStair
+            .kerb_gap()
+            .expect("a water stair takes the line out");
+        assert!(
+            -lo >= reach && hi >= reach,
+            "a mooring stone reaching {reach} m from the stair head does not fit \
+             the gap ({lo}, {hi})"
         );
     }
 

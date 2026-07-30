@@ -6,56 +6,56 @@
   {
    "id": "pl_n376",
    "name": "The Lanthorn",
-   "node": 457,
+   "node": 459,
    "kind": "major",
    "ward": "fabric"
   },
   {
    "id": "pl_jgj6",
    "name": "The Great Rose and eye",
-   "node": 459,
+   "node": 461,
    "kind": "landmark",
    "ward": "fabric"
   },
   {
    "id": "pl_rybz",
    "name": "The Gradine",
-   "node": 460,
+   "node": 462,
    "kind": "major",
    "ward": "cinder"
   },
   {
    "id": "pl_z9iw",
    "name": "Dawn Bearer statue",
-   "node": 461,
+   "node": 463,
    "kind": "landmark",
    "ward": "cinder"
   },
   {
    "id": "pl_1nnl",
    "name": "Seraph statue",
-   "node": 463,
+   "node": 465,
    "kind": "landmark",
    "ward": "cloth"
   },
   {
    "id": "pl_t7rg",
    "name": "Skinners' Court",
-   "node": 466,
+   "node": 468,
    "kind": "place",
    "ward": "fabric"
   },
   {
    "id": "pl_hg2m",
    "name": "Ford Well",
-   "node": 467,
+   "node": 469,
    "kind": "landmark",
    "ward": "fabric"
   },
   {
    "id": "pl_q116",
    "name": "Chapter house and Grey Press",
-   "node": 471,
+   "node": 473,
    "kind": "building",
    "ward": "fabric"
   },
@@ -76,42 +76,42 @@
   {
    "id": "pl_35z0",
    "name": "The Tallage",
-   "node": 472,
+   "node": 474,
    "kind": "major",
    "ward": "weigh"
   },
   {
    "id": "pl_w252",
    "name": "Maren's Green",
-   "node": 473,
+   "node": 475,
    "kind": "major",
    "ward": "reed"
   },
   {
    "id": "pl_u2ka",
    "name": "The Bellstand",
-   "node": 474,
+   "node": 476,
    "kind": "major",
    "ward": "bell_and_sluice"
   },
   {
    "id": "pl_xgao",
    "name": "The Cut",
-   "node": 475,
+   "node": 477,
    "kind": "route",
    "ward": "weigh"
   },
   {
    "id": "pl_hbna",
    "name": "The Chain Bridge",
-   "node": 476,
+   "node": 478,
    "kind": "bridge",
    "ward": "cinder"
   },
   {
    "id": "pl_kjqa",
    "name": "The Tally Bridge",
-   "node": 477,
+   "node": 479,
    "kind": "bridge",
    "ward": "weigh"
   },
@@ -125,7 +125,7 @@
   {
    "id": "pl_6wl2",
    "name": "The Cut ropewalk",
-   "node": 478,
+   "node": 480,
    "kind": "place",
    "ward": "cinder"
   },
@@ -139,28 +139,28 @@
   {
    "id": "pl_8so5",
    "name": "Tallage toll-house",
-   "node": 479,
+   "node": 481,
    "kind": "building",
    "ward": "weigh"
   },
   {
    "id": "pl_5vy5",
    "name": "Bonded warehouse",
-   "node": 480,
+   "node": 482,
    "kind": "building",
    "ward": "weigh"
   },
   {
    "id": "pl_r98t",
    "name": "Lise Copp's pawnshop",
-   "node": 482,
+   "node": 484,
    "kind": "building",
    "ward": "weigh"
   },
   {
    "id": "pl_5cbh",
    "name": "Doctor Ferrant's house",
-   "node": 490,
+   "node": 492,
    "kind": "building",
    "ward": "weigh"
   },
@@ -174,14 +174,14 @@
   {
    "id": "pl_nve1",
    "name": "Gaunt Passage",
-   "node": 491,
+   "node": 493,
    "kind": "route",
    "ward": "weigh"
   },
   {
    "id": "pl_6gvy",
    "name": "Bonded weighing yard",
-   "node": 492,
+   "node": 494,
    "kind": "place",
    "ward": "weigh"
   },
@@ -195,42 +195,42 @@
   {
    "id": "pl_1hdu",
    "name": "Saint Maren's churchyard",
-   "node": 493,
+   "node": 495,
    "kind": "place",
    "ward": "reed"
   },
   {
    "id": "pl_3m2u",
    "name": "The charnel door and crypt",
-   "node": 494,
+   "node": 496,
    "kind": "landmark",
    "ward": "reed"
   },
   {
    "id": "pl_3o4k",
    "name": "The Alder Moorings",
-   "node": 495,
+   "node": 497,
    "kind": "place",
    "ward": "reed"
   },
   {
    "id": "pl_8fty",
    "name": "The Eel Bridge",
-   "node": 496,
+   "node": 498,
    "kind": "bridge",
    "ward": "reed"
   },
   {
    "id": "pl_lc5o",
    "name": "The Hungry Ox",
-   "node": 499,
+   "node": 501,
    "kind": "building",
    "ward": "reed"
   },
   {
    "id": "pl_ium4",
    "name": "Tanners' Slip",
-   "node": 506,
+   "node": 508,
    "kind": "route",
    "ward": "reed"
   },
@@ -251,21 +251,21 @@
   {
    "id": "pl_dx9t",
    "name": "Empty brine-rotted cellar",
-   "node": 507,
+   "node": 509,
    "kind": "building",
    "ward": "reed"
   },
   {
    "id": "pl_u20m",
    "name": "The Draper's Reach",
-   "node": 508,
+   "node": 510,
    "kind": "route",
    "ward": "cloth"
   },
   {
    "id": "pl_z2mq",
    "name": "Tenterhook Lane",
-   "node": 509,
+   "node": 511,
    "kind": "route",
    "ward": "cloth"
   },
@@ -279,84 +279,84 @@
   {
    "id": "pl_vg9u",
    "name": "Cinder Row",
-   "node": 510,
+   "node": 512,
    "kind": "route",
    "ward": "cinder"
   },
   {
    "id": "pl_qqyb",
    "name": "Burnt Court",
-   "node": 511,
+   "node": 513,
    "kind": "place",
    "ward": "cinder"
   },
   {
    "id": "pl_7on8",
    "name": "The glaziers' guildhall",
-   "node": 512,
+   "node": 514,
    "kind": "building",
    "ward": "cinder"
   },
   {
    "id": "pl_ebwy",
    "name": "The masons' lodge",
-   "node": 516,
+   "node": 518,
    "kind": "building",
    "ward": "cloth"
   },
   {
    "id": "pl_s8md",
    "name": "Malt Passage",
-   "node": 517,
+   "node": 519,
    "kind": "route",
    "ward": "wallwright"
   },
   {
    "id": "pl_xrfe",
    "name": "Crookneck Lane",
-   "node": 521,
+   "node": 523,
    "kind": "route",
    "ward": "fabric"
   },
   {
    "id": "pl_fj9v",
    "name": "Osanne Vell's stall",
-   "node": 523,
+   "node": 525,
    "kind": "landmark",
    "ward": "wick"
   },
   {
    "id": "pl_12uq",
    "name": "The Ilvane Chapel",
-   "node": 524,
+   "node": 526,
    "kind": "building",
    "ward": "bell_and_sluice"
   },
   {
    "id": "pl_ai7s",
    "name": "The Ilvane anchorhold",
-   "node": 528,
+   "node": 530,
    "kind": "building",
    "ward": "bell_and_sluice"
   },
   {
    "id": "pl_byow",
    "name": "Bellfoot Passage",
-   "node": 531,
+   "node": 533,
    "kind": "route",
    "ward": "bell_and_sluice"
   },
   {
    "id": "pl_5wkc",
    "name": "Bellstand watch-bell tower",
-   "node": 536,
+   "node": 538,
    "kind": "building",
    "ward": "bell_and_sluice"
   },
   {
    "id": "pl_0074",
    "name": "Colm's stone",
-   "node": 537,
+   "node": 539,
    "kind": "landmark",
    "ward": "bell_and_sluice"
   },
@@ -412,14 +412,14 @@
   {
    "id": "pl_6wlc",
    "name": "Outer Serle wharves",
-   "node": 538,
+   "node": 540,
    "kind": "outside",
    "ward": "bell_and_sluice"
   },
   {
    "id": "pl_x1t7",
    "name": "Slate Cistern",
-   "node": 540,
+   "node": 542,
    "kind": "landmark",
    "ward": "wick"
   },
@@ -433,63 +433,63 @@
   {
    "id": "pl_bbf2",
    "name": "Lodge Well",
-   "node": 547,
+   "node": 549,
    "kind": "landmark",
    "ward": "wallwright"
   },
   {
    "id": "pl_xfkr",
    "name": "Three-Curb",
-   "node": 551,
+   "node": 553,
    "kind": "landmark",
    "ward": "cinder"
   },
   {
    "id": "pl_hgvy",
    "name": "Chain Well",
-   "node": 554,
+   "node": 556,
    "kind": "landmark",
    "ward": "weigh"
   },
   {
    "id": "pl_s40i",
    "name": "Reed Cistern",
-   "node": 555,
+   "node": 557,
    "kind": "landmark",
    "ward": "reed"
   },
   {
    "id": "pl_y1vt",
    "name": "Step Cistern",
-   "node": 558,
+   "node": 560,
    "kind": "landmark",
    "ward": "bell_and_sluice"
   },
   {
    "id": "pl_oiii",
    "name": "Bitter Well",
-   "node": 561,
+   "node": 563,
    "kind": "landmark",
    "ward": "bell_and_sluice"
   },
   {
    "id": "pl_0uuf",
    "name": "The Shambles well",
-   "node": 563,
+   "node": 565,
    "kind": "landmark",
    "ward": "cinder"
   },
   {
    "id": "pl_0bhk",
    "name": "Seven Lofts fire tanks",
-   "node": 564,
+   "node": 566,
    "kind": "landmark",
    "ward": "cloth"
   },
   {
    "id": "pl_kcdh",
    "name": "The Stone House",
-   "node": 570,
+   "node": 572,
    "kind": "building",
    "ward": "bell_and_sluice"
   }
@@ -499,7 +499,7 @@
    "id": "pl_yi61",
    "ward": "fabric",
    "name": "Fabric Ward",
-   "node": 3348
+   "node": 3363
   },
   {
    "id": "pl_hdw1",
@@ -511,7 +511,7 @@
    "id": "pl_pt9g",
    "ward": "cloth",
    "name": "Cloth Ward",
-   "node": 716
+   "node": 718
   },
   {
    "id": "pl_q8ap",
@@ -523,25 +523,25 @@
    "id": "pl_6fwt",
    "ward": "cinder",
    "name": "Cinder Ward",
-   "node": 2622
+   "node": 2637
   },
   {
    "id": "pl_p8hu",
    "ward": "weigh",
    "name": "Weigh Ward",
-   "node": 3387
+   "node": 3402
   },
   {
    "id": "pl_7paj",
    "ward": "reed",
    "name": "Reed Ward",
-   "node": 878
+   "node": 890
   },
   {
    "id": "pl_8sky",
    "ward": "bell_and_sluice",
    "name": "Bell and Sluice Wards",
-   "node": 1892
+   "node": 1904
   }
  ]
 }

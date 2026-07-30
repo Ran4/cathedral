@@ -96,6 +96,7 @@ pub(crate) fn reconcile_actor_views(
     mirror: Res<WorldMirror>,
     body_assets: Res<super::body::BodyAssets>,
     fonts: Option<Res<CathedralFonts>>,
+    margin: Option<Res<crate::city::CutMarginProfile>>,
     mut roots: Query<(Entity, &ActorId, &mut Transform), With<ActorView>>,
     mut labels: Query<(Entity, &ActorNameLabel, &mut Text)>,
     indicators: Query<(Entity, &ThinkingIndicator)>,
@@ -132,7 +133,15 @@ pub(crate) fn reconcile_actor_views(
     for (entity, actor_id, mut transform) in &mut roots {
         if let Some(actor) = desired_by_id.get(actor_id) {
             existing_ids.insert(actor_id.clone());
-            let translation: Vec3 = actor.position_m.into();
+            // The sim is flat: its positions ride the nav plane, and the Cut's
+            // raised margin (`the_cut_kerb.md` M3) exists only as a
+            // ground-height function. The projection is where feet meet drawn
+            // ground, so the lift is applied here — the authoritative
+            // position, hearing ranges and every sim distance stay planar.
+            let mut translation: Vec3 = actor.position_m.into();
+            if let Some(profile) = margin.as_ref() {
+                translation.y += profile.ground_lift(translation.x, translation.z);
+            }
             // The render is the only place the player can read the sound
             // witness rule from: if the sim thinks an NPC faces away and the
             // body faces the player, the rule is unlearnable.
@@ -231,6 +240,7 @@ pub(crate) fn drive_npc_bodies(
     mut commands: Commands,
     time: Res<Time>,
     inbox: Res<MovementInbox>,
+    margin: Option<Res<crate::city::CutMarginProfile>>,
     mut movers: Query<(Entity, &ActorId, &mut Transform, Option<&mut NpcMotion>), With<ActorView>>,
 ) {
     let now = time.elapsed_secs_f64();
@@ -254,7 +264,16 @@ pub(crate) fn drive_npc_bodies(
             // reconcile already owns the transform, so leave it be.
             None => {
                 commands.entity(entity).insert(NpcMotion {
-                    previous: transform.translation,
+                    // The samples are flat sim positions, and the interpolated
+                    // pose below gets the margin lift re-applied every frame —
+                    // so the seed pose must be flat too, or a walker starting
+                    // on the raised margin would be lifted twice. The root's
+                    // XZ is reconcile's (authoritative), its y is the sim's.
+                    previous: Vec3::new(
+                        transform.translation.x,
+                        sample.position.y,
+                        transform.translation.z,
+                    ),
                     current: sample.position,
                     prev_yaw: sample.facing_yaw,
                     cur_yaw: sample.facing_yaw,
@@ -272,7 +291,14 @@ pub(crate) fn drive_npc_bodies(
                     motion.seq = sample.seq;
                 }
                 let t = ((now - motion.t0) / MOVEMENT_TICK_SECONDS).clamp(0.0, 1.0) as f32;
-                let translation = motion.previous.lerp(motion.current, t);
+                let mut translation = motion.previous.lerp(motion.current, t);
+                // The motion samples are the sim's, which is flat; the Cut's
+                // raised margin (M3) is applied at presentation, sampled at
+                // the *interpolated* XZ so a walker takes a kerb-break ramp
+                // as a slope rather than a 20 Hz staircase.
+                if let Some(profile) = margin.as_ref() {
+                    translation.y += profile.ground_lift(translation.x, translation.z);
+                }
                 let rotation = Quat::from_rotation_y(lerp_angle(motion.prev_yaw, motion.cur_yaw, t));
                 // An arrived walker keeps its stale sample forever (the sim
                 // sends no "stopped" tick); once t clamps to 1.0 the values
@@ -673,11 +699,12 @@ mod tests {
     }
 
     #[test]
-    fn name_labels_stop_at_eighty_metres() {
+    fn name_labels_stop_at_the_label_radius() {
+        let far = MAX_NAME_LABEL_DISTANCE_M;
         let anchors = HashMap::from([
-            (ActorId("near".into()), Vec3::new(0.0, 0.0, 79.0)),
-            (ActorId("boundary".into()), Vec3::new(0.0, 0.0, 80.0)),
-            (ActorId("far".into()), Vec3::new(0.0, 0.0, 80.01)),
+            (ActorId("near".into()), Vec3::new(0.0, 0.0, far - 1.0)),
+            (ActorId("boundary".into()), Vec3::new(0.0, 0.0, far)),
+            (ActorId("far".into()), Vec3::new(0.0, 0.0, far + 0.01)),
         ]);
 
         let visible = nearest_name_anchor_ids(Vec3::ZERO, &anchors, |_| false);
@@ -690,7 +717,10 @@ mod tests {
     #[test]
     fn stranger_name_labels_stop_after_fifteen_metres() {
         let anchors = HashMap::from([
-            (ActorId("known".into()), Vec3::new(0.0, 0.0, 79.0)),
+            (
+                ActorId("known".into()),
+                Vec3::new(0.0, 0.0, MAX_NAME_LABEL_DISTANCE_M - 1.0),
+            ),
             (ActorId("near".into()), Vec3::new(0.0, 0.0, 14.99)),
             (ActorId("boundary".into()), Vec3::new(0.0, 0.0, 15.0)),
             (ActorId("far".into()), Vec3::new(0.0, 0.0, 15.01)),

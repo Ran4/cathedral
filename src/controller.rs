@@ -710,6 +710,7 @@ fn fixed_player_movement(
     input: Res<ControllerInput>,
     collision_world: Res<CollisionWorld>,
     custody: Res<crate::smart_actors::custody::PlayerCustodyState>,
+    margin: Option<Res<crate::city::CutMarginProfile>>,
     dynamic_barriers: Query<(&DynamicBarrier, &Transform)>,
     player: Single<(&mut PlayerController, &mut PhysicalPosition)>,
     mut dynamic_boxes: Local<Vec<SolidBox>>,
@@ -776,6 +777,31 @@ fn fixed_player_movement(
 
     if !controller.flying {
         controller.grounded = movement.contacts.ground;
+        // The Cut's raised margin (`the_cut_kerb.md` M3) is a *virtual* floor:
+        // a pure XZ→height function, never a collider slab, because the nav
+        // bake exports every solid topping `y ≥ 0.01` and would carve the
+        // whole margin out of the walkable surface — stranding every
+        // Cut-facing door — if the step were made of geometry. So the swept
+        // solve above runs against the real solids (the riser wall, the
+        // bollards), and this clamp then seats a descending player on the
+        // sampled ground exactly the way the ground plane does: only from
+        // above (a jump is never interrupted), and counting as walkable
+        // ground so friction, coyote time and the next jump behave. Flying
+        // skips it, as it skips gravity.
+        if let Some(profile) = margin.as_ref() {
+            let lift = profile.ground_lift(
+                physical_position.current.x,
+                physical_position.current.z,
+            );
+            if lift > 0.0 {
+                let floor = WALK_BAND_LO + lift + PLAYER_HALF_SIZE.y;
+                if physical_position.current.y <= floor && controller.velocity.y <= 0.0 {
+                    physical_position.current.y = floor;
+                    controller.velocity.y = 0.0;
+                    controller.grounded = true;
+                }
+            }
+        }
         if controller.grounded {
             controller.coyote_remaining = COYOTE_SECONDS;
         }
@@ -1525,6 +1551,46 @@ mod tests {
 
         close(result.position.y, 3.0 - 0.5 - COLLISION_SKIN);
         assert!(result.contacts.ceiling);
+    }
+
+    /// `the_cut_kerb.md` M3 — the riser is a one-way step. Its collider tops a
+    /// centimetre below the margin's walking height, so a player on the
+    /// cartway, feet at the walk band's floor, is stopped by the stone — while
+    /// a player whose feet `CutMarginProfile` has seated at `CUT_STEP_M`
+    /// walks off the margin over the same box without snagging. The riser here
+    /// is the real one: the west line's box at its shipped x and top.
+    #[test]
+    fn the_cut_riser_blocks_the_cartway_and_frees_the_margin() {
+        let riser_top = crate::city::CUT_STEP_M - 0.01;
+        let riser = solid(
+            Vec3::new(-218.65, 0.0, -300.0),
+            Vec3::new(-218.35, riser_top, 300.0),
+        );
+
+        let on_road = move_boxes(
+            Vec3::new(-216.0, WALK_BAND_LO + PLAYER_HALF_SIZE.y, -70.0),
+            PLAYER_HALF_SIZE,
+            Vec3::new(-6.0, 0.0, 0.0),
+            &[riser],
+        );
+        close(
+            on_road.position.x,
+            -218.35 + PLAYER_HALF_SIZE.x + COLLISION_SKIN,
+        );
+        assert!(on_road.contacts.blocked_x);
+
+        let off_margin = move_boxes(
+            Vec3::new(
+                -220.0,
+                WALK_BAND_LO + crate::city::CUT_STEP_M + PLAYER_HALF_SIZE.y,
+                -70.0,
+            ),
+            PLAYER_HALF_SIZE,
+            Vec3::new(6.0, 0.0, 0.0),
+            &[riser],
+        );
+        close(off_margin.position.x, -214.0);
+        assert!(!off_margin.contacts.blocked_x);
     }
 
     #[test]

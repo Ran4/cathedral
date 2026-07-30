@@ -462,7 +462,18 @@ the Old Sluice near `z = -427`, centred around `x = -213.5`. It is simultaneousl
 a street, a district, and the former bed of the Serle. Its straightness is
 strange only because the rest of Ombreval bends.
 
-The central cartway stays clear. Buildings along the old banks stand on
+The central cartway stays clear, and is now bounded rather than merely
+understood: a line of kerbstone runs down each side, five metres off the centre,
+and the old banks behind it are flagged and stepped up a hand's depth. Carts
+hold the ten metres between the lines; the margins carry everything else. Where
+a warehouse door faces the street the kerb goes flush for three metres, wide
+enough for a cart to cross lawfully. Through the Tallage and Maren's Green the
+line is not built at all — it continues as flush marker blocks set at intervals,
+because inside a market square the boundary is a rule the Bench asserts and not
+a stone anybody laid, so crossing in from the street you can watch the law get
+weaker.
+
+Buildings along the old banks stand on
 slightly raised thresholds and face the street with warehouse doors, blocked
 water stairs, cellar vents, hoists, awnings, counting rooms, and shallow later
 shops. Overhead bridges compress long views. Encroachment varies, but no

@@ -254,6 +254,18 @@ lot to the masons' lodge in a single afternoon and be done with the family
 forever — which would be the end of the Alders' last real capital, and everyone
 who heard him knows it.
 
+Except that the Bench has now written a little of it down without meaning to.
+The kerb laid down the Cut is the longest straight thing in Ombreval, and where
+it crosses the old channel the made ground has taken it: the line runs true for
+two hundred metres, sinks the depth of a hand over the filled bed, and comes up
+again on the far bank. Nobody drew it, nobody can be sued for it, and that is
+exactly the trouble — a landlord who has spent thirty years saying no man knows
+where the bed was now has three places on his own street where any apprentice
+can lie down, sight along the stone and see. The Alders say nothing about this in
+public and charge the same fee in private, because a dip tells you the channel
+was there and nothing else: not how deep, not where the sills are, not which
+arch is Colm's.
+
 The smallest and most guarded sounding is the **true arch of the Old Sluice**,
 where Colm Attergate drowned in F.301. Wyn Alder will walk any pilgrim there for
 a penny and show them an arch that is not the arch, and tell them it is close

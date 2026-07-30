@@ -22,7 +22,7 @@
           78.0
         ]
       ],
-      "route_node": 457,
+      "route_node": 459,
       "access": "public",
       "capacity": 80,
       "spread_radius_m": 8.0,
@@ -49,7 +49,7 @@
           -158.0
         ]
       ],
-      "route_node": 531,
+      "route_node": 533,
       "capacity": 18,
       "spread_radius_m": 5.0,
       "cover": "stone"
@@ -75,7 +75,7 @@
           303.5
         ]
       ],
-      "route_node": 476,
+      "route_node": 478,
       "capacity": 20,
       "spread_radius_m": 8.0,
       "cover": "timber"
@@ -101,7 +101,7 @@
           80.5
         ]
       ],
-      "route_node": 477,
+      "route_node": 479,
       "capacity": 24,
       "spread_radius_m": 9.0,
       "cover": "timber"
@@ -127,7 +127,7 @@
           -242.1
         ]
       ],
-      "route_node": 496,
+      "route_node": 498,
       "capacity": 14,
       "spread_radius_m": 7.0,
       "cover": "timber"
@@ -153,7 +153,7 @@
           112.0
         ]
       ],
-      "route_node": 519,
+      "route_node": 521,
       "capacity": 15,
       "spread_radius_m": 6.0,
       "cover": "timber"
@@ -179,7 +179,7 @@
           27.1
         ]
       ],
-      "route_node": 491,
+      "route_node": 493,
       "capacity": 12,
       "spread_radius_m": 6.0,
       "cover": "timber"
@@ -205,7 +205,7 @@
           252.4
         ]
       ],
-      "route_node": 600,
+      "route_node": 602,
       "capacity": 5,
       "spread_radius_m": 2.0,
       "cover": "canvas",
@@ -298,7 +298,7 @@
           65.47
         ]
       ],
-      "route_node": 472,
+      "route_node": 474,
       "capacity": 6,
       "spread_radius_m": 2.2,
       "cover": "canvas",
@@ -329,7 +329,7 @@
           -251.6
         ]
       ],
-      "route_node": 473,
+      "route_node": 475,
       "capacity": 5,
       "spread_radius_m": 2.0,
       "cover": "canvas",
@@ -360,7 +360,7 @@
           -254.6
         ]
       ],
-      "route_node": 576,
+      "route_node": 578,
       "capacity": 5,
       "spread_radius_m": 2.0,
       "cover": "canvas",
@@ -495,7 +495,7 @@
           136.03
         ]
       ],
-      "route_node": 460,
+      "route_node": 462,
       "capacity": 5,
       "spread_radius_m": 2.0,
       "cover": "canvas"
@@ -521,7 +521,7 @@
           -321.5
         ]
       ],
-      "route_node": 499,
+      "route_node": 501,
       "capacity": 12,
       "spread_radius_m": 2.2,
       "cover": "tile",
@@ -555,7 +555,7 @@
           -175.23
         ]
       ],
-      "route_node": 474,
+      "route_node": 476,
       "capacity": 12,
       "spread_radius_m": 2.2,
       "cover": "tile",
@@ -589,7 +589,7 @@
           38.0
         ]
       ],
-      "route_node": 467,
+      "route_node": 469,
       "capacity": 6,
       "spread_radius_m": 2.4,
       "cover": "tile"
@@ -615,7 +615,7 @@
           122.8
         ]
       ],
-      "route_node": 547,
+      "route_node": 549,
       "capacity": 6,
       "spread_radius_m": 2.3,
       "cover": "slate"
@@ -641,7 +641,7 @@
           222.6
         ]
       ],
-      "route_node": 563,
+      "route_node": 565,
       "capacity": 6,
       "spread_radius_m": 2.4,
       "cover": "tile"
