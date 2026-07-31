@@ -238,16 +238,27 @@ belongs to `04_stigmergy_fields.md` and should not be built here.
 
 The all-office colonies need no clock work; `key KeyT` twice (60×) reaches the night ones and
 the boil. `sound rat_swarm` exercises the M2 percept path through the real funnel with no boil
-waiting, the moment the catalog row exists:
+waiting, the moment the catalog row exists. Two lessons from the first verification pass are
+baked into the script: every §3 vantage stands at a *larger* z than its anchor, so the view
+must be yaw **0** (yaw 180 faces away from every colony), and at 60× with `seconds_per_day:
+3600` the Snuffing is ~35 wall-seconds out from the Dayspring start, not 8. `weather clear 0`
+keeps `wildlife_suppressed` from thinning the count mid-read.
 
 ```sh
-CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE='wait-online; \
-  tp -294 1.6 226 180; sleep 2; shot shambles_rats; \
-  tp -214 1.6 -249 180; sleep 2; shot green_rats; \
-  key KeyT; key KeyT; sleep 8; key KeyT; \
-  tp -155 1.6 22 180; sleep 2; shot gaunt_rats_night; \
+CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE_TIMEOUT=120 CATHEDRAL_DRIVE='wait-online; \
+  weather clear 0; \
+  tp -294 1.6 226 0; sleep 2; shot shambles_rats; sleep 1.5; shot shambles_rats_b; \
+  tp -214 1.6 -249 0; sleep 2; shot green_rats; sleep 1.5; shot green_rats_b; \
+  key KeyT; key KeyT; sleep 36; key KeyT; \
+  tp -155 1.6 22 0; sleep 2; shot gaunt_rats_night; \
   sound rat_swarm; sleep 3; quit' cargo run
 ```
+
+The paired `_b` shots are the point: a rat is 25 cm of flat dark brown and reads by motion, so
+compare the two frames for displaced bodies rather than squinting at one. Expect the night shot
+to show almost nothing — this build's night ground renders black (a same-vantage Shambles
+day/dusk control proved the invisibility is the lighting, not the vermin layer); the gate and
+the boil are pinned by unit tests instead.
 
 Then check: the two shots show dark darting bodies near the waste piles; a `[vermin] boil: <colony>`
 line appears in `logs/latest_session/logs.jsonl` once per game night; after `sound rat_swarm`,
