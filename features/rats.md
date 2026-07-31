@@ -121,7 +121,7 @@ beside `CATHEDRAL_NO_ACTORS` / `CATHEDRAL_NO_WEATHER` in `src/main.rs:47–60`, 
 | Maren's Green, landing edge | (−214, −255) | 8 | all offices | fish market spoil; flies key 30 |
 | Tanners' Slip | (−296, −229) | 6 | all offices | tanning waste; flies key 32 |
 | Eelback Alley | (−275, −330) | 6 | Snuffing→Kindling | the fish lanes; the alley cat already hunts these roofs |
-| The Old Sluice | (−213, −427) | 6 | Snuffing→Kindling | the Cut's poorest, quietest reach; the dry grate |
+| The Old Sluice | (−213.5, −400) | 6 | Snuffing→Kindling | the Cut's poorest, quietest reach; the dry grate |
 | Gaunt Passage | (−155, 17) | 4 | Snuffing→Kindling | folklore empties the passage after dark — something should actually be in it |
 | Seven Lofts skirts | (252, 234) | 4 | Snuffing→Kindling | grain; lore's "rat ledges", but also *"kept mostly at bay"* — small on purpose |
 | Wickmarket | (−14, 249) | 6 | Snuffing→Kindling | market spoil after close-down |
@@ -129,6 +129,12 @@ beside `CATHEDRAL_NO_ACTORS` / `CATHEDRAL_NO_WEATHER` in `src/main.rs:47–60`, 
 The three all-office colonies are exactly the three authored waste piles: the flies and the
 rats mark the same filth, which is the kind of agreement between subsystems the soundscape
 already practices (its `AREA_MAP_SOURCE` is the sim's own `areas.json`).
+
+The Old Sluice anchor was corrected during M0: this table first read (−213, −427), which is
+inside the sluice's own shell (`areas.json: old_sluice` is solid from `z −448` to `z −406`, so
+it settles no rats at all), and as built the colony stands where the row means — at the dry
+grate, on the Cut's centreline (`CUT_CENTRE_X`) a few metres off the blocked dry arches at
+`z −405.86`.
 
 Numbers: colony radius 8–14 m; sprints 1.8–2.6 m/s for 0.4–1.2 s; pauses 0.5–4 s, weighted
 long; a slight body bob while sprinting. Night gating reuses the clock the way

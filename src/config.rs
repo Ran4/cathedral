@@ -26,6 +26,9 @@ pub struct AppConfig {
     /// Weather is top-level because its host-side presentation controls sit
     /// beside the authoritative simulation settings.
     pub weather: WeatherSettings,
+    /// The rat colonies: host-side presentation with one sim-facing switch,
+    /// on the `weather` precedent.
+    pub vermin: VerminSettings,
     pub smart_actors: SmartActorsConfig,
 }
 
@@ -56,6 +59,30 @@ impl Default for WeatherSettings {
     }
 }
 
+/// The authored rat colonies (`src/city/vermin.rs`). Everything here is
+/// render-side presentation except `swarm_percepts`, which decides whether a
+/// nightly boil may cross into the sim as an unattributed world sound.
+#[derive(Resource, Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct VerminSettings {
+    pub enabled: bool,
+    pub seed: u64,
+    /// Scales the authored per-colony rat counts and nothing else.
+    pub density: f32,
+    pub swarm_percepts: bool,
+}
+
+impl Default for VerminSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            seed: 40,
+            density: 1.0,
+            swarm_percepts: true,
+        }
+    }
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
@@ -65,6 +92,7 @@ impl Default for AppConfig {
             height: 900,
             resizable: true,
             weather: WeatherSettings::default(),
+            vermin: VerminSettings::default(),
             smart_actors: SmartActorsConfig::default(),
         }
     }

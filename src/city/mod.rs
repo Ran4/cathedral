@@ -12,6 +12,7 @@ mod route_boards;
 mod smoke;
 mod surfaces;
 mod trade_props;
+mod vermin;
 pub mod water;
 
 pub(crate) use surfaces::CobbleRoadNetwork;
@@ -58,11 +59,14 @@ impl Plugin for CityPlugin {
             .add_message::<crate::soundscape::SoundscapeCue>()
             .init_resource::<gates::GateRuntime>()
             .init_resource::<trade_props::TradePropRuntime>()
-            .add_systems(Startup, build_city)
+            // The vermin waypoints validate against the collision world the
+            // city build just populated.
+            .add_systems(Startup, (build_city, vermin::spawn_vermin).chain())
             .add_systems(
                 Update,
                 (
                     smoke::animate_chimney_smoke,
+                    (vermin::trigger_vermin_scatter, vermin::animate_vermin).chain(),
                     gates::animate_gate_mechanisms
                         .in_set(crate::soundscape::SoundscapeSet::EmitCues),
                     water::animate_well_mechanisms

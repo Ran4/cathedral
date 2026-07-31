@@ -23,6 +23,15 @@
         quality: "high",
         volumetric_fog: true,
     ),
+    vermin: (
+        enabled: true,
+        seed: 40,
+        // Scales the authored per-colony rat counts and nothing else.
+        density: 1.0,
+        // Whether a nightly boil may cross into the sim as an unattributed
+        // world sound. The ordinary rats never reach the sim regardless.
+        swarm_percepts: true,
+    ),
     smart_actors: (
         enabled: true,
         fake_backend: false,

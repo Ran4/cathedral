@@ -60,8 +60,12 @@ fn main() {
     if std::env::var_os("CATHEDRAL_NO_DOGS").is_some() {
         config.smart_actors.dogs_enabled = false;
     }
+    if std::env::var_os("CATHEDRAL_NO_VERMIN").is_some() {
+        config.vermin.enabled = false;
+    }
     let smart_actors = config.smart_actors.clone();
     let weather = config.weather.clone();
+    let vermin = config.vermin.clone();
     let persisted = PersistedConfig(config.clone());
     let drive = drive::DrivePlugin::from_env();
     // Drive scripts always run windowed and small: fast, WM-friendly, and
@@ -121,6 +125,7 @@ fn main() {
                 }),
         )
         .insert_resource(persisted)
+        .insert_resource(vermin)
         .add_plugins((
             CathedralFontsPlugin,
             ControllerPlugin,
