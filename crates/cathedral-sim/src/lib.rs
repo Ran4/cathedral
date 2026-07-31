@@ -17,6 +17,7 @@ pub mod attention;
 pub mod character;
 pub mod clock;
 pub mod custody;
+pub mod dogs;
 pub mod engine;
 pub mod error;
 pub mod event;
@@ -68,6 +69,7 @@ pub use character::{
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
 };
+pub use dogs::{DOG_SETTLED_MPS, DOG_TROT_MPS, Dog, DogCoat, DogView};
 pub use engine::{ActorMotion, Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage};
 pub use error::{
     ActionError, ActionErrorCode, CommandError, CommandErrorCode, EngineInitError, PromptError,
@@ -77,7 +79,7 @@ pub use event::{DomainEvent, EventType};
 pub use fake::{FakeCognition, fake_night_reply, fake_reply};
 pub use floor::{ConversationFloor, floor_audio_failsafe_seconds, speech_reading_seconds};
 pub use gesture::{DANCE_MAX_SECONDS, GESTURES, GestureKind, GestureSpec, GestureTarget};
-pub use ids::{ActorId, InvalidId, ItemId, PartyId, PlaceId, RequestId, SpeechEventId};
+pub use ids::{ActorId, DogId, InvalidId, ItemId, PartyId, PlaceId, RequestId, SpeechEventId};
 pub use inventory::{
     CompletedTransform, InventoryError, InventoryErrorCode, ItemMatcher, LegacyRestockShare,
     MarketRequestLine, ReservedInput, SaleReceipt, SaleReceiptLine, StockSpec, TransformJob,

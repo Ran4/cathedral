@@ -146,6 +146,14 @@ pub struct World {
     /// rather than through the cold snapshot, because the tether it drives has
     /// to be exact at 20 Hz.
     pub custody: crate::custody::Custody,
+    /// The street dogs ([`crate::dogs`]) — sim-owned wanderers with a position
+    /// and nothing else of a character: no sheet, no inbox, no turns, never in
+    /// `characters_within`. Every nearby sheet renders them under
+    /// `**dogs_nearby**`; their poses ride their own hot channel
+    /// ([`crate::engine::EngineMessage::Dogs`]) and, like a mover's path,
+    /// never touch the public revision. Empty — the default, and the frozen
+    /// fixtures' case — until the engine seeds the authored pack.
+    pub dogs: Vec<crate::dogs::Dog>,
     /// What each ward is saying to itself tonight (movement M6): the Night
     /// Office's ward batch returns a few sentences of mood, and every Minor of
     /// that ward carries it on their sheet until the next night rewrites it.
@@ -196,6 +204,7 @@ impl Default for World {
             notices: crate::notices::Notices::default(),
             custody: crate::custody::Custody::default(),
             spoke_this_turn: None,
+            dogs: Vec::new(),
             ward_moods: BTreeMap::new(),
             events: Vec::new(),
         }
@@ -1336,7 +1345,10 @@ mod tests {
             )
             .unwrap();
         assert!(changed, "the position was applied");
-        assert_eq!(world.characters[&player_id].position_m(), Vec3::new(1.0, 0.0, 0.0));
+        assert_eq!(
+            world.characters[&player_id].position_m(),
+            Vec3::new(1.0, 0.0, 0.0)
+        );
         assert_eq!(
             world.world_revision, revision,
             "a player-only move must not bump the public revision"

@@ -298,7 +298,7 @@ fn build(
         &read("prompts/night.j2")?,
         &read("prompts/strings.toml")?,
     )
-        .map_err(|error| format!("invalid prompt assets: {error}"))?;
+    .map_err(|error| format!("invalid prompt assets: {error}"))?;
 
     let options = BackendsOptions {
         uv_binary: config.uv_binary.clone(),
@@ -383,6 +383,7 @@ fn build(
         // the second lane spends its calls in the hours the player is somewhere
         // quiet, which only exists when there is a player (M6).
         night_office: config.night_office.config(),
+        dogs_enabled: config.dogs_enabled,
         clock: WorldClock::new(
             config.clock.seconds_per_day,
             Office::from_config_name(&config.clock.start_office).unwrap_or_else(|| {

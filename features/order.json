@@ -22,6 +22,7 @@
         {"path": "features/adhd-new-cool-features/"}
     ],
     "finished": [
+        {"path": "features/implemented/dogs.md", "when": "2026-07-31T2030"},
         {"path": "features/implemented/bug_report_2026-07-28.md", "when": "2026-07-29T1727"},
         {"path": "features/implemented/movement/", "when": "2026-07-26T1441"},
         {"path": "features/implemented/performance_improvements/", "when": "2026-07-26T0841"},

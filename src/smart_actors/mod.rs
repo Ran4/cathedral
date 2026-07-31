@@ -9,6 +9,7 @@
 pub mod actors;
 pub mod body;
 pub mod bridge;
+pub mod dogs;
 pub mod local_engine;
 pub mod model;
 pub mod road_carts;
@@ -90,6 +91,9 @@ pub struct SmartActorsConfig {
     /// The world clock: the day/night cycle, the offices, the bell
     /// (features/implemented/movement/01_the_clock.md).
     pub clock: ClockSettings,
+    /// The authored street-dog pack (features/implemented/dogs.md). Costs no tokens; off
+    /// only for ablation (`CATHEDRAL_NO_DOGS` forces it off for one run).
+    pub dogs_enabled: bool,
 }
 
 /// The gates on *idle* NPC turns: proximity, then novelty.
@@ -295,6 +299,7 @@ impl Default for SmartActorsConfig {
             idle_cognition: IdleCognitionSettings::default(),
             night_office: NightOfficeSettings::default(),
             clock: ClockSettings::default(),
+            dogs_enabled: true,
         }
     }
 }
@@ -493,6 +498,7 @@ impl Plugin for SmartActorsPlugin {
             .init_resource::<clock::WorldClockState>()
             .init_resource::<model::MovementInbox>()
             .init_resource::<lamps::CityLamps>()
+            .init_resource::<dogs::DogInbox>()
             .insert_resource(SmartActorRuntime::starting(self.config.fake_backend))
             .init_resource::<area_debug::AreaDebugState>()
             .init_resource::<actor_sheet::InspectedActor>()
@@ -605,6 +611,11 @@ impl Plugin for SmartActorsPlugin {
                     // (`law_and_order.md` M4c).
                     hands::hold_the_seized,
                     road_carts::reconcile_road_carts,
+                    // The dog pack (features/implemented/dogs.md): bodies stood up off the
+                    // hot channel, then swept between its 20 Hz ticks like the
+                    // human movers above.
+                    dogs::sync_dogs,
+                    dogs::drive_dog_bodies,
                 )
                     .chain()
                     .in_set(SmartActorSet::ReconcileMirror),
@@ -644,7 +655,13 @@ impl Plugin for SmartActorsPlugin {
                     // the roots the ReconcileMirror set just placed; it never
                     // touches a root transform. (Nested tuple: the flat chain
                     // would exceed Bevy's 20-system tuple limit.)
-                    (body::track_reflex_signals, body::animate_body_pose).chain(),
+                    (
+                        body::track_reflex_signals,
+                        body::animate_body_pose,
+                        // The dogs' trot/wag — same cosmetics-only contract.
+                        dogs::animate_dog_gait,
+                    )
+                        .chain(),
                     speech::receive_speech_events,
                     speech::receive_tts_clips,
                     speech::receive_tts_pcm_chunks,
@@ -730,6 +747,7 @@ pub struct InjectPlayerTranscript {
 struct HotChannels<'w, 's> {
     movement: ResMut<'w, model::MovementInbox>,
     lamps: ResMut<'w, lamps::CityLamps>,
+    dogs: ResMut<'w, dogs::DogInbox>,
     weather: ResMut<'w, WorldWeatherState>,
     lightning: MessageWriter<'w, WeatherLightning>,
     /// The player's standing with the law (`law_and_order.md` M4). Hot for the
@@ -884,6 +902,7 @@ fn drain_bridge_messages(
                     &mut world_clock,
                     &mut hot.movement,
                     &mut hot.lamps,
+                    &mut hot.dogs,
                     &mut hot.weather,
                     &mut hot.lightning,
                     &mut hot.law,
@@ -985,6 +1004,7 @@ fn process_engine_message(
     world_clock: &mut clock::WorldClockState,
     movement_inbox: &mut model::MovementInbox,
     city_lamps: &mut lamps::CityLamps,
+    dog_inbox: &mut dogs::DogInbox,
     weather: &mut WorldWeatherState,
     lightning: &mut MessageWriter<WeatherLightning>,
     law: &mut custody::PlayerCustodyState,
@@ -1099,6 +1119,31 @@ fn process_engine_message(
                 })
                 .collect();
             city_lamps.revision += 1;
+        }
+        EngineMessage::Dogs { dogs: pack } => {
+            // The dog channel, like `Movement`: whole-pack poses at 20 Hz, no
+            // mirror, no revision. `seq` bumps per received sample so the
+            // interpolation sweeps between successive ticks.
+            for view in pack {
+                let sample = dog_inbox
+                    .0
+                    .entry(view.id.as_str().to_string())
+                    .or_insert_with(|| dogs::DogSample {
+                        name: view.name.clone(),
+                        coat: view.coat,
+                        build: view.build,
+                        position: model::vec3_from_sim(view.position_m),
+                        facing_yaw: view.facing_yaw as f32,
+                        speed: view.speed,
+                        gait_phase: view.gait_phase,
+                        seq: 0,
+                    });
+                sample.position = model::vec3_from_sim(view.position_m);
+                sample.facing_yaw = view.facing_yaw as f32;
+                sample.speed = view.speed;
+                sample.gait_phase = view.gait_phase;
+                sample.seq = sample.seq.wrapping_add(1);
+            }
         }
         EngineMessage::Speech {
             event_id,
@@ -1948,7 +1993,10 @@ fn describe_world_event(
         "spit" if player_acted => {
             let target = target_id
                 .and_then(|target_id| mirror.actor(target_id))
-                .map_or_else(|| "someone".to_string(), |target| target.name_for_player.clone());
+                .map_or_else(
+                    || "someone".to_string(),
+                    |target| target.name_for_player.clone(),
+                );
             Some(format!("You spit the {item} at {target}"))
         }
         "spit" => Some(format!("{actor} spits at someone")),

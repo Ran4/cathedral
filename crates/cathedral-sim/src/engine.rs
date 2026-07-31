@@ -281,6 +281,15 @@ pub struct EngineConfig {
     /// until they ask for a night. `config.ron` turns it on for the game and
     /// `--night-office` for the headless runner.
     pub night_office: NightOfficeConfig,
+    /// Whether the authored street-dog pack is seeded ([`crate::dogs`]).
+    ///
+    /// Defaults to **on** — dogs cost no tokens and no snapshot traffic, so
+    /// unlike the cognition gates there is nothing to protect by default-off —
+    /// but they only exist in a world with a nav graph, which is why every
+    /// nav-less test and the frozen fixtures are unchanged by the default.
+    /// `config.ron: smart_actors.dogs_enabled` and `CATHEDRAL_NO_DOGS` turn
+    /// them off for ablation.
+    pub dogs_enabled: bool,
 }
 
 impl Default for EngineConfig {
@@ -318,6 +327,7 @@ impl Default for EngineConfig {
             shelters: Arc::new(ShelterMap::default()),
             nav: None,
             night_office: NightOfficeConfig::default(),
+            dogs_enabled: true,
         }
     }
 }
@@ -604,6 +614,15 @@ pub enum EngineMessage {
     Lamps {
         lamps: Vec<LampView>,
     },
+    /// The street dogs ([`crate::dogs`]) — the whole pack, republished on the
+    /// movement tick whenever any dog changed pose (and once at the start so
+    /// the host can spawn resting bodies). The `Lamps` shape: ten entries,
+    /// cheaper republished whole than deltaed, and it never bumps
+    /// `world_revision` — the host mirrors it into quadruped puppets and
+    /// nothing else reads it. The prompt reads `World::dogs` directly.
+    Dogs {
+        dogs: Vec<crate::dogs::DogView>,
+    },
     Speech {
         event_id: SpeechEventId,
         speaker_id: ActorId,
@@ -870,6 +889,10 @@ pub struct Engine {
     /// resent exactly when something changed. 0 = never sent; the seed puts the
     /// round at 1, so the first poll always announces the posts.
     lamp_revision_sent: u64,
+    /// Whether the dog pack has been published at least once — the first
+    /// `Dogs` message goes out even if every dog is still resting, so the host
+    /// can spawn the bodies.
+    dogs_published: bool,
     /// Diagnostics raised at construction (the M2 mover seeding), emitted with
     /// the first poll's `Ready` because `Engine::new` has no `out` to push to.
     startup_diagnostics: Vec<String>,
@@ -950,6 +973,13 @@ impl Engine {
         let mut round = Round::new();
         if let Some(nav) = config.nav.as_deref() {
             startup_diagnostics.extend(round.seed(&mut world, nav, now, &config.clock));
+        }
+
+        // The street dogs (`features/implemented/dogs.md`): the authored pack,
+        // seeded only into a walkable world — the frozen fixtures and every
+        // nav-less test keep an empty kennel and identical bytes.
+        if config.dogs_enabled && let Some(nav) = config.nav.as_deref() {
+            world.dogs = crate::dogs::seed_pack(nav);
         }
 
         // The Night Office reads its bedtimes off the seeded round, so it is
@@ -1044,6 +1074,7 @@ impl Engine {
             // poll exactly as it did every poll before the gate.
             next_round_tick_at: now,
             lamp_revision_sent: 0,
+            dogs_published: false,
             startup_diagnostics,
             ready_emitted: false,
             last_law_standing: None,
@@ -2349,6 +2380,7 @@ impl Engine {
             .map(|player| player.position_m());
 
         let mut moved_ids: BTreeSet<ActorId> = BTreeSet::new();
+        let mut dogs_moved = false;
         let mut slices = 0usize;
         while self.movement_now + MOVEMENT_TICK_SECONDS <= now
             && slices < MAX_MOVEMENT_CATCHUP_SLICES
@@ -2356,6 +2388,8 @@ impl Engine {
             for id in self.world.step_movement(MOVEMENT_TICK_SECONDS, &nav, stage) {
                 moved_ids.insert(id);
             }
+            dogs_moved |=
+                crate::dogs::step_dogs(&mut self.world.dogs, MOVEMENT_TICK_SECONDS, &nav);
             self.movement_now += MOVEMENT_TICK_SECONDS;
             slices += 1;
         }
@@ -2374,6 +2408,15 @@ impl Engine {
         }
         for (prisoner, released) in escort.committed {
             self.announce_commitment(now, &prisoner, &released);
+        }
+
+        // The dogs' own hot channel, before the human movers' early-out: a
+        // city where only the dogs are abroad still animates.
+        if !self.world.dogs.is_empty() && (dogs_moved || !self.dogs_published) {
+            self.dogs_published = true;
+            out.push(EngineMessage::Dogs {
+                dogs: self.world.dogs.iter().map(crate::dogs::Dog::view).collect(),
+            });
         }
 
         if moved_ids.is_empty() {

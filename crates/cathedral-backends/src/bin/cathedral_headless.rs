@@ -427,6 +427,9 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
                 enabled: args.night_office,
                 ..NightOfficeConfig::default()
             },
+            // The pack costs nothing here — a transcript line only when a dog
+            // drifts through somebody's you_see — so the default stands.
+            dogs_enabled: true,
         },
         &assets.seed,
         assets.areas,
@@ -993,7 +996,7 @@ impl Assets {
             &read("prompts/night.j2")?,
             &read("prompts/strings.toml")?,
         )
-            .map_err(|error| format!("invalid prompt assets: {error}"))?;
+        .map_err(|error| format!("invalid prompt assets: {error}"))?;
         let nav = load_nav(directory);
         let shelters = Arc::new(
             ShelterMap::from_json_str(&read("world/shelters.json")?)

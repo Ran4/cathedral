@@ -57,6 +57,9 @@ fn main() {
     if std::env::var_os("CATHEDRAL_NO_WEATHER").is_some() {
         config.weather.enabled = false;
     }
+    if std::env::var_os("CATHEDRAL_NO_DOGS").is_some() {
+        config.smart_actors.dogs_enabled = false;
+    }
     let smart_actors = config.smart_actors.clone();
     let weather = config.weather.clone();
     let persisted = PersistedConfig(config.clone());

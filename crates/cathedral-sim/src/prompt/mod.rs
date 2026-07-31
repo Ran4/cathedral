@@ -112,6 +112,10 @@ pub struct PromptStrings {
     /// The parenthesis tying `home` to its wayfinding handle — `(go_to
     /// pl_x9k2)` — so walking home never needs a scan of `places_you_know`.
     pub home_place_label: String,
+    /// The parenthesis after `**dogs_nearby**` — the street dogs
+    /// ([`crate::dogs`]), rendered unconditionally: no `knows` gating, because
+    /// nobody needs an introduction to see a dog.
+    pub dogs_note: String,
     /// The `you_hold` suffix for a unit riding the mouth
     /// (`features/extra_pockets.md`): `- k3f9x wet spark (in your mouth)`.
     pub pocket_mouth_note: String,
@@ -266,6 +270,13 @@ struct Sheet<'a> {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     offered_to_you: Vec<OfferedToYou<'a>>,
     you_see: YouSee<'a>,
+    /// The street dogs within earshot ([`crate::dogs`]), nearest first —
+    /// rendered for *everyone* near one, with no `knows` gating, because a dog
+    /// in the lane is a plain fact about the street. Omitted entirely when no
+    /// dog is near (and in every dog-less world), which keeps the frozen
+    /// fixtures byte-identical.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    dogs_nearby: Vec<DogLine<'a>>,
     /// The ward's live notices this actor carries (`law_and_order.md` M3) —
     /// what the ward is saying right now, newest first, capped at
     /// [`crate::notices::NOTICES_SHEET_MAX`] by [`ward_notice_lines`], which
@@ -447,6 +458,16 @@ struct YouSee<'a> {
     people: Vec<Person<'a>>,
 }
 
+/// One street dog on the sheet (`features/implemented/dogs.md`): the authored
+/// noun phrase, never a name or an id — no verb takes a dog, so there is
+/// nothing to reference one by.
+#[derive(Serialize)]
+struct DogLine<'a> {
+    description: &'a str,
+    distance_m: f64,
+    moving: bool,
+}
+
 fn person<'a>(
     actor: &Character,
     other: &'a Character,
@@ -496,6 +517,9 @@ pub fn render_prompt(
     // …and the ward-mood explainer tracks its section, so a Major, an ambient,
     // and every sheet before the first Night Office keep their exact bytes.
     let has_ward_mood = sheet.the_ward_says.is_some();
+    // The dogs explainer tracks its section too: only a sheet with a dog on it
+    // pays the paragraph, and every dog-less world keeps its exact bytes.
+    let has_dogs = !sheet.dogs_nearby.is_empty();
     let has_law_verbs = crate::notices::is_law(actor);
     // `settle_notice` reaches one person outside the law cast: whoever a live
     // notice names as wronged, who may forgive their own spark (M3.5). They
@@ -546,6 +570,7 @@ pub fn render_prompt(
                 emittable_sounds,
                 has_round,
                 has_ward_mood,
+                has_dogs,
                 has_notices,
                 has_law_verbs,
                 has_settle_verb,
@@ -798,6 +823,33 @@ fn build_sheet<'a>(
         })
         .collect();
 
+    // The street dogs within the same 20 m the people section uses — one
+    // radius for "nearby", not two. Ordered by (distance², id) exactly like
+    // `characters_within`, so the list reads stably turn after turn.
+    let mut dog_matches: Vec<(f64, &crate::dogs::Dog)> = world
+        .dogs
+        .iter()
+        .filter_map(|dog| {
+            let distance_squared = actor.position_m().distance_squared(dog.position_m);
+            (distance_squared <= HEARING_RADIUS_M * HEARING_RADIUS_M)
+                .then_some((distance_squared, dog))
+        })
+        .collect();
+    dog_matches.sort_by(|left, right| {
+        left.0
+            .partial_cmp(&right.0)
+            .expect("positions are finite")
+            .then_with(|| left.1.id.cmp(&right.1.id))
+    });
+    let dogs_nearby: Vec<DogLine<'_>> = dog_matches
+        .into_iter()
+        .map(|(distance_squared, dog)| DogLine {
+            description: &dog.description,
+            distance_m: py_round(distance_squared.sqrt(), 1),
+            moving: dog.is_moving(),
+        })
+        .collect();
+
     let mut sorted_offers: Vec<&Offer> = world.offers.values().collect();
     sorted_offers.sort_by_key(|offer| offer_sort_key(offer));
 
@@ -984,6 +1036,7 @@ fn build_sheet<'a>(
             description: &strings.you_see_description,
             people,
         },
+        dogs_nearby,
         word_in_the_ward: ward_notice_lines(world, actor.id()),
         since_your_last_turn,
         recent_history,
@@ -1359,6 +1412,17 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
         &strings.nobody,
     ));
 
+    // The street dogs — under `you_see`, where the eyes are. Omitted entirely
+    // when none is near, like `you_sell`, so a dog-less sheet never moves a
+    // byte.
+    if !sheet.dogs_nearby.is_empty() {
+        sections.push(bullet_section(
+            &format!("**dogs_nearby** ({})", strings.dogs_note),
+            sheet.dogs_nearby.iter().map(dog_bullet),
+            "",
+        ));
+    }
+
     // The ward's word — omitted entirely for the carrier-less majority, like
     // `you_sell`, so the section never appears on an untouched sheet.
     if !sheet.word_in_the_ward.is_empty() {
@@ -1553,6 +1617,16 @@ fn person_md(person: &Person<'_>) -> String {
     format!("id {}: {}", person.id, person.name)
 }
 
+/// The `dogs_nearby` bullet: `a rangy brindle dog, 6.3 m, moving` — the
+/// person bullet's shape without an id, because no verb takes a dog.
+fn dog_bullet(dog: &DogLine<'_>) -> String {
+    let mut line = format!("{}, {:.1} m", dog.description, dog.distance_m);
+    if dog.moving {
+        line.push_str(", moving");
+    }
+    line
+}
+
 /// The `you_see` bullet: `id cb947: Conny, 2.7 m, moving`. `moving` appears
 /// only when true — standing still is the unmarked case.
 fn person_bullet(person: &Person<'_>) -> String {
@@ -1681,6 +1755,7 @@ mod tests {
             ward_places_note: "set_round may name any of these place_ids".into(),
             walking_to: "You are on your way to %s.".into(),
             following: "You are following %s.".into(),
+            dogs_note: "street dogs within 20 metres, nearest first".into(),
             faction_role_label: "Faction role:".into(),
             illegal_activity_label: "In secret:".into(),
             home_label: "Home:".into(),
@@ -1701,7 +1776,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\n";
         let error = PromptEnv::new("x", "y", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
@@ -1786,6 +1861,7 @@ mod tests {
                 description: "",
                 people: Vec::new(),
             },
+            dogs_nearby: Vec::new(),
             word_in_the_ward: Vec::new(),
             since_your_last_turn: Vec::new(),
             recent_history: Vec::new(),

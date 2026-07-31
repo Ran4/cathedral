@@ -2928,7 +2928,7 @@ const HEAD_STACKS: usize = 20;
 /// at the joint the part rotates around, so pose systems can rotate the part
 /// transform in place (the invariant the whole rig depends on).
 #[derive(Debug, Clone, Copy)]
-struct Ring {
+pub(super) struct Ring {
     y: f32,
     half_width: f32,
     half_depth: f32,
@@ -2938,7 +2938,7 @@ struct Ring {
 }
 
 impl Ring {
-    const fn new(y: f32, half_width: f32, half_depth: f32) -> Self {
+    pub(super) const fn new(y: f32, half_width: f32, half_depth: f32) -> Self {
         Self {
             y,
             half_width,
@@ -2951,14 +2951,14 @@ impl Ring {
 
     /// Shift this section off the part axis — how a foot leans forward over
     /// its ankle, or a chest sits proud of the spine.
-    const fn at(mut self, offset_x: f32, offset_z: f32) -> Self {
+    pub(super) const fn at(mut self, offset_x: f32, offset_z: f32) -> Self {
         self.offset_x = offset_x;
         self.offset_z = offset_z;
         self
     }
 
     /// Square the section off toward a rounded box.
-    const fn boxy(mut self, roundness: f32) -> Self {
+    pub(super) const fn boxy(mut self, roundness: f32) -> Self {
         self.roundness = roundness;
         self
     }
@@ -2984,25 +2984,25 @@ impl Ring {
 /// Which ends of a loft get a flat cap. Ends buried inside a parent part (a
 /// thigh top inside the pelvis) need none; ends the player can see do.
 #[derive(Debug, Clone, Copy)]
-struct Caps {
+pub(super) struct Caps {
     bottom: bool,
     top: bool,
 }
 
 impl Caps {
-    const NONE: Self = Self {
+    pub(super) const NONE: Self = Self {
         bottom: false,
         top: false,
     };
-    const BOTH: Self = Self {
+    pub(super) const BOTH: Self = Self {
         bottom: true,
         top: true,
     };
-    const TOP: Self = Self {
+    pub(super) const TOP: Self = Self {
         bottom: false,
         top: true,
     };
-    const BOTTOM: Self = Self {
+    pub(super) const BOTTOM: Self = Self {
         bottom: true,
         top: false,
     };
@@ -3020,7 +3020,7 @@ impl Caps {
 ///
 /// UVs run the weave at a physical `tile_m` metres per repeat: `u` around the
 /// ring by arc length, `v` along the profile by arc length.
-fn loft(rings: &[Ring], sectors: usize, caps: Caps, tile_m: f32) -> Mesh {
+pub(super) fn loft(rings: &[Ring], sectors: usize, caps: Caps, tile_m: f32) -> Mesh {
     debug_assert!(rings.len() >= 2 && sectors >= 3);
     let stride = (sectors + 1) as u32;
     let mut positions: Vec<[f32; 3]> = Vec::new();
@@ -3118,7 +3118,7 @@ fn mesh_from_parts(
 /// Concatenates meshes into one part (a hand and its thumb, a boot and its
 /// sole). All inputs must carry position/normal/UV and U32 indices, which
 /// everything [`loft`] builds does.
-fn merge_meshes(parts: impl IntoIterator<Item = Mesh>) -> Mesh {
+pub(super) fn merge_meshes(parts: impl IntoIterator<Item = Mesh>) -> Mesh {
     let mut positions: Vec<[f32; 3]> = Vec::new();
     let mut normals: Vec<[f32; 3]> = Vec::new();
     let mut uvs: Vec<[f32; 2]> = Vec::new();

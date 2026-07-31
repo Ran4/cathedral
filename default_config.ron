@@ -67,6 +67,11 @@
             curiosity: true,
             curiosity_scale: 1.0,
         ),
+        // The authored street-dog pack (features/implemented/dogs.md): ten
+        // named dogs wandering their own wards, listed on every nearby sheet
+        // as dogs_nearby. Costs no tokens; CATHEDRAL_NO_DOGS=1 forces it off
+        // for one run without editing this file.
+        dogs_enabled: true,
         // The world clock (movement M0): the day/night cycle, the seven offices,
         // and the town bell. Pure — a projection of the engine's `now`.
         clock: (

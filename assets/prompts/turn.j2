@@ -150,7 +150,12 @@ offered_to_you.
 acceptance require the people to be within 4 metres; offered_to_you already
 contains only offers you can act on at this moment.
 
-Speech from the player (id player) comes from imperfect automatic
+{% if has_dogs %}dogs_nearby lists the street dogs about you. They are nobody's to command and
+no verb touches a dog — they drift the ward on their own errands. Step round
+one, curse one, greet one in passing if your character would; do not mistake
+one for a person or wait on it for an answer.
+
+{% endif %}Speech from the player (id player) comes from imperfect automatic
 speech-to-text and may contain phonetic substitutions, especially for names,
 places, objects, and unusual words. Use the conversation, your knowledge, and
 the visible people and items to silently infer the player's likely meaning. For
