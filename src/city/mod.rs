@@ -66,7 +66,14 @@ impl Plugin for CityPlugin {
                 Update,
                 (
                     smoke::animate_chimney_smoke,
-                    (vermin::trigger_vermin_scatter, vermin::animate_vermin).chain(),
+                    // The boil is announced before it is drawn, so the log line
+                    // and the percept precede the frame that triples the batch.
+                    (
+                        vermin::announce_vermin_boil,
+                        vermin::trigger_vermin_scatter,
+                        vermin::animate_vermin,
+                    )
+                        .chain(),
                     gates::animate_gate_mechanisms
                         .in_set(crate::soundscape::SoundscapeSet::EmitCues),
                     water::animate_well_mechanisms

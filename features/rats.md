@@ -1,7 +1,8 @@
 # Rats in the fish lanes and the slaughter courts
 
-**Status:** design, not implemented (2026-07-30). Coordinates in this file are current
-(post-shrink) world coordinates.
+**Status:** M0 implemented 2026-07-31, M2 implemented 2026-08-01. M1 (the two sounds) is not
+built — the `rat_swarm` asset M2 fires is not generated either. M3 stays parked. Coordinates in
+this file are current (post-shrink) world coordinates.
 
 Put roughly fifty ordinary rats on the ground in eight authored colonies — the Shambles, the
 fish landing, the tanneries, the quiet end of the Cut — scurrying in short darts, pausing, gone
@@ -179,7 +180,7 @@ and `SOUND_DESCRIPTORS` index-match `SoundscapeSound`, both bump 55 → 57; asse
   it from the M0 scatter impulse via the `schedule_urban_nature_sounds` pattern
   (`proximity_entered` + per-colony cooldown, ~45 s), suppressed by `wildlife_suppressed`.
 
-### M2 — the boil
+### M2 — the boil — **implemented 2026-08-01**
 
 Once a game night, one colony surges: `hash(game_day, seed) % colonies` picks it, and from the
 Snuffing (the curfew edge the Scold already rings) to the Kindling its count triples and its
@@ -190,12 +191,36 @@ radius doubles. Purely more of the M0 rats — plus the percept:
   `heard = "[Rats — far too many of them — are pouring through the street here.]"`, and an
   `sfx_prompt` so the player hears it too (playback resolves from the id by convention).
 - A new `EngineCommand::WorldSound { sound_id, position_m }` beside `DebugSound`
-  (`crates/cathedral-sim/src/engine.rs:2035`), same `emit_sound(world, None, …)` funnel — a
+  (`crates/cathedral-sim/src/engine.rs`), same `emit_sound(world, None, …)` funnel — a
   proper name for the non-debug path rather than shipping on the debug verb. The vermin plugin
-  fires it on boil entry and re-arms at most every few game-minutes while the boil holds.
+  fires it on boil entry and re-arms while the boil holds.
 - No sim state, no new verb, no attention change needed: an audible sound already takes the
   priority lane, so an NPC standing in the boil reacts on their next turn, and the coalescing
   counter keeps a long boil from flooding anyone's history.
+
+As built, three things this section did not foresee:
+
+- **The re-arm is half a game-hour, not "a few game-minutes."** That priority lane is not free:
+  `flush_sound` hands the nearest hearer the next turn, so every repeat buys a paid provider
+  call for whoever is standing in the boil. Eight game-hours at five game-minutes is ~96 nudges
+  a night for one person — two and a half times the Night Office's whole daily budget — and a
+  60× drive run showed exactly that (one NPC took 24 of a 28-prompt run; the rest of the cast
+  starved). At 30 game-minutes a whole night costs 16, and the same run spread 19 prompts over
+  eight people. `SWARM_PERCEPT_INTERVAL_MINUTES` in `src/city/vermin.rs`.
+- **The boil complement is baked at startup, beside the ordinary loops**, over the doubled
+  radius and through the same nav+collision validation — a boil is not the frame to run forty
+  walkability probes per rat. A draw that finds no room out there falls back to the colony's own
+  disc (Gaunt Passage's doubled circle is mostly building), so the count really does triple.
+- **"Is this colony drawn" is now one function**, `colony_showing`, shared by `animate_vermin`
+  and `trigger_vermin_scatter`: a boiling colony is out whether or not the darkness gate alone
+  would show it, and the batch and the scatter sweep must never disagree about which rats exist.
+
+Still open: `assets/sounds/rat_swarm.mp3` does not exist (it belongs to the M1 generator pass —
+`uv run --script scripts/generate_sounds.py` will make it from the row's `sfx_prompt`). Until it
+does, a boil logs one `bevy_asset` "Path not found" per emission and plays nothing; the percept,
+the HUD line and the visual are unaffected. And a boiling colony at deep midnight is very nearly
+invisible on screen — dark-brown 25 cm bodies on unlit paving — which is worth a look when M3's
+cats arrive.
 
 **Not done:** a `vermin` sheet field (§2.3 has the reason), any rat item, catching, poison, or
 gameplay consequence. The boil is a sight and a sentence, nothing more.

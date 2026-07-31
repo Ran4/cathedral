@@ -2264,6 +2264,83 @@ fn the_player_cannot_ring_the_bell_and_an_unknown_sound_is_only_diagnosed() {
     }
 }
 
+/// `features/rats.md` M2: the boil's single crossing into the sim. Identical to
+/// the drive-mode bell above in everything but the name — which is the point,
+/// since a shipped feature should not ride in on the debug verb. Nobody poured
+/// the rats, so the percept is unattributed however the hearers are facing, and
+/// it reaches the inboxes of exactly those inside the row's 12 m.
+#[test]
+fn a_boil_pours_rats_into_the_inboxes_in_range() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+
+    let messages = harness.send(EngineCommand::WorldSound {
+        sound_id: "rat_swarm".into(),
+        position_m: PLAYER_SPAWN,
+    });
+    let EngineMessage::Sound {
+        sound_id,
+        actor_id,
+        witness_ids,
+        recipient_ids,
+        text_for_player,
+        ..
+    } = sounds(&messages)[0]
+    else {
+        unreachable!()
+    };
+    let heard = "[Rats — far too many of them — are pouring through the street here.]";
+    assert_eq!(sound_id, "rat_swarm");
+    assert_eq!(*actor_id, None, "a swarm has no author");
+    assert!(witness_ids.is_empty(), "and so nothing witnesses it");
+    assert_eq!(text_for_player.as_deref(), Some(heard));
+
+    // The seeded NPCs stand a few metres off the player's spawn, well inside
+    // the row's 12 m — each one is holding the line for their next turn.
+    let npcs: Vec<ActorId> = recipient_ids
+        .iter()
+        .filter(|id| **id != player())
+        .cloned()
+        .collect();
+    assert!(!npcs.is_empty(), "somebody is standing in the boil");
+    let world = harness.engine.world_mut();
+    for id in &npcs {
+        assert_eq!(world.characters[id].inbox(), [heard.to_string()]);
+    }
+
+    // No new lane, no new verb: an audible sound already takes the priority
+    // one, so whoever is standing in it reacts on their next turn.
+    let nudged = harness
+        .engine
+        .scheduler()
+        .priority_actor_id()
+        .expect("somebody reacts to a boil");
+    assert!(npcs.contains(nudged));
+}
+
+/// A world sound nobody can name is a diagnostic, not a fault — a typo in a
+/// caller must not abort the engine — and the diagnostic says which path asked.
+#[test]
+fn an_unknown_world_sound_is_only_diagnosed() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+
+    let messages = harness.send(EngineCommand::WorldSound {
+        sound_id: "no_such_sound".into(),
+        position_m: PLAYER_SPAWN,
+    });
+    assert!(sounds(&messages).is_empty());
+    assert!(command_results(&messages).is_empty());
+    assert!(
+        messages.iter().any(|message| matches!(
+            message,
+            EngineMessage::Diagnostic(line)
+                if line.contains("world_sound") && line.contains("no_such_sound")
+        )),
+        "{messages:#?}"
+    );
+}
+
 #[test]
 fn a_silent_world_emits_no_sounds_at_all() {
     let mut harness = Builder::default().silent_world().build();
@@ -2277,6 +2354,13 @@ fn a_silent_world_emits_no_sounds_at_all() {
     let messages = harness.send(EngineCommand::DebugSound {
         sound_id: "town_bell".into(),
         position_m: Vec3::new(0.0, 40.0, 140.0),
+    });
+    assert!(sounds(&messages).is_empty());
+
+    // …and a boiling colony is as silent as the bell.
+    let messages = harness.send(EngineCommand::WorldSound {
+        sound_id: "rat_swarm".into(),
+        position_m: PLAYER_SPAWN,
     });
     assert!(sounds(&messages).is_empty());
 }

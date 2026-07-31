@@ -219,6 +219,14 @@ pub enum BridgeCommand {
         sound_id: String,
         position_m: Position,
     },
+    /// A world sound the *game* really does cause: the nightly rat boil
+    /// (`features/rats.md` M2, `src/city/vermin.rs`). The same unattributed
+    /// funnel `DebugSound` reaches, under its own name — a shipped feature is
+    /// not a developer poke. Fire-and-forget: no `CommandResult` ever.
+    WorldSound {
+        sound_id: String,
+        position_m: Position,
+    },
     /// CATHEDRAL_DRIVE `status` action (`features/npc_bodies.md` §8): set a body
     /// carriage status on the named character so a drunk/weary walker can be
     /// eyeballed. A developer poke, not a modelled cause — like `DebugSound`.

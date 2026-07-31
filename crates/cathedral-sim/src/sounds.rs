@@ -403,6 +403,9 @@ mod tests {
                 "spit",
                 "gargle",
                 "soft_report",
+                // The nightly rat boil (`features/rats.md` M2) — a world sound
+                // like the bell, so the emittable list below is unchanged.
+                "rat_swarm",
             ]
         );
         for sound in catalog.sounds() {

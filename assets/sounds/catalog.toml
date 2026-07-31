@@ -168,6 +168,27 @@ heard = "[You heard a soft, unfortunate sound nearby.]"
 sfx_prompt = "A short soft muffled bodily noise followed by a quiet splash on stone, discreet and low, a narrow medieval alley behind it, no music, no voices"
 duration_seconds = 1.5
 
+# The nightly boil (`features/rats.md` M2). Every other rat in the game is
+# render-side texture the sim never hears — fifty of them scurry in eight
+# authored colonies for no tokens at all. This row is the feature's single
+# crossing: once a game night one colony surges, and `src/city/vermin.rs` fires
+# this at the colony's anchor on entry and re-arms it every few game-minutes
+# while the surge holds, on the same unattributed WORLD-sound mechanism the bell
+# and the coin clink use (`emit_sound(world, None, …)`). NOT `actor_emittable`:
+# the world pours the rats, not an LLM `make_sound`, so the emittable-id list
+# the prompt renders is unchanged and the golden fixtures stay byte-stable. No
+# `seen`: a swarm has no author, so it is never attributable however you are
+# facing. The radius is deliberately street-sized — you have to be standing in
+# the boil to hear it, not in the ward.
+[[sounds]]
+sound_id = "rat_swarm"
+sound_class = "body"
+audible_distance = 12.0
+actor_emittable = false
+heard = "[Rats — far too many of them — are pouring through the street here.]"
+sfx_prompt = "A great swarm of rats pouring through a narrow medieval stone alley, dozens of small claws scrabbling over wet cobbles, overlapping high squeaks, bodies brushing past crates and cellar boards, close and dry, outdoors at night, no music, no voices"
+duration_seconds = 6.0
+
 # Looping scene assets. Read only by the generator and Bevy; the sim never sees
 # these (an inbox line per fireplace crackle would be token suicide —
 # design/06 §5). The two water loops are placed on the plan's well and cistern

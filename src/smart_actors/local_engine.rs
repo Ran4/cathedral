@@ -869,6 +869,13 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
             sound_id,
             position_m: to_sim(position_m),
         },
+        BridgeCommand::WorldSound {
+            sound_id,
+            position_m,
+        } => EngineCommand::WorldSound {
+            sound_id,
+            position_m: to_sim(position_m),
+        },
         BridgeCommand::DebugStatus { name, kind, value } => {
             EngineCommand::DebugSetStatus { name, kind, value }
         }

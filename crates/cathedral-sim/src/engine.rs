@@ -439,6 +439,16 @@ pub enum EngineCommand {
         sound_id: String,
         position_m: Vec3,
     },
+    /// A world cause the *game* models, announcing itself: the first is a
+    /// boiling rat colony (`features/rats.md` M2). Identical to
+    /// [`Self::DebugSound`] in every respect but the name, which is the point —
+    /// a shipped feature should not ride in on the debug verb. Unattributed
+    /// (`emit_sound(world, None, …)`), so it is never anybody's act; the inbox
+    /// coalescing counter bounds a cause that repeats.
+    WorldSound {
+        sound_id: String,
+        position_m: Vec3,
+    },
     /// Debug carriage write (`features/npc_bodies.md` §8): set a body status on
     /// the named character to a clamped `0..=1` value. The `cathedral-headless
     /// --status` flag and the drive-mode `status` action both arrive as this;
@@ -1697,7 +1707,12 @@ impl Engine {
             EngineCommand::DebugSound {
                 sound_id,
                 position_m,
-            } => self.debug_sound(now, &sound_id, position_m, out),
+            } => self.world_sound(now, "debug_sound", &sound_id, position_m, out),
+
+            EngineCommand::WorldSound {
+                sound_id,
+                position_m,
+            } => self.world_sound(now, "world_sound", &sound_id, position_m, out),
 
             EngineCommand::DebugSetStatus { name, kind, value } => {
                 self.debug_set_status(now, &name, kind, value, out)
@@ -2060,18 +2075,23 @@ impl Engine {
         self.flush(now, out);
     }
 
-    /// `_handle_debug_sound` (`server.py:1094-1112`) — the drive-mode town bell.
-    /// Any catalog row, no cooldown, no actor: world sounds are never attributed.
-    fn debug_sound(
+    /// `_handle_debug_sound` (`server.py:1094-1112`) — the drive-mode town bell,
+    /// and since `features/rats.md` M2 the boil as well: one funnel for both
+    /// [`EngineCommand::DebugSound`] and [`EngineCommand::WorldSound`], which
+    /// differ only in the name the caller uses and the one a bad id is
+    /// diagnosed under. Any catalog row, no cooldown, no actor: world sounds
+    /// are never attributed.
+    fn world_sound(
         &mut self,
         now: f64,
+        verb: &str,
         sound_id: &str,
         position_m: Vec3,
         out: &mut Vec<EngineMessage>,
     ) {
         let Some(sound) = self.world.sound_catalog.get(sound_id).cloned() else {
             out.push(EngineMessage::Diagnostic(format!(
-                "[smart actors] invalid debug_sound: there is no sound '{sound_id}'"
+                "[smart actors] invalid {verb}: there is no sound '{sound_id}'"
             )));
             return;
         };

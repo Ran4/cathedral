@@ -11,6 +11,14 @@
 //! never by writing a collider into it (`collision_footprints.json` stays
 //! byte-identical). The only mutable state is one scatter impulse per colony:
 //! rats that ignore you are wallpaper; rats that flee you are alive.
+//!
+//! Once a game night one colony *boils* (M2): from the Snuffing to the Kindling
+//! its count triples and its reach doubles — purely more of the same rats, off a
+//! complement baked beside the ordinary loops at startup. That is also the one
+//! and only crossing the whole feature makes into the simulation: an
+//! unattributed `rat_swarm` world sound at the colony's anchor, which an NPC
+//! standing in it hears like the town bell. No sheet field, no verb, no sim
+//! state — a boil is a transient event, which is what the inbox is for.
 
 use bevy::{camera::visibility::NoFrustumCulling, light::NotShadowCaster, prelude::*};
 use cathedral_sim::{NavData, WeatherKind};
@@ -19,7 +27,12 @@ use crate::{
     config::VerminSettings,
     controller::{CollisionWorld, PlayerController},
     mesh_batch::{idle_batch_mesh, write_batch_mesh},
-    smart_actors::{WorldClockState, actors::ActorView},
+    smart_actors::{
+        WorldClockState,
+        actors::ActorView,
+        bridge::{BridgeCommand, BridgeHandle},
+        model::Position,
+    },
     weather::WorldWeatherState,
 };
 
@@ -45,6 +58,35 @@ const RAT_GROUND_Y: f32 = 0.03;
 /// The height colliders are probed at when a waypoint is validated — inside a
 /// wall or crate, above kerbs and thresholds a rat may cross.
 const RAT_PROBE_Y: f32 = 0.15;
+
+/// The Snuffing — the curfew edge the Scold already rings — is where a boil
+/// begins…
+const BOIL_START_FRACTION: f64 = 21.0 / 24.0;
+/// …and the Kindling, the next morning, is where it ends.
+const BOIL_END_FRACTION: f64 = 5.0 / 24.0;
+/// Extra rats baked per ordinary one, so a boiling colony's count triples.
+const BOIL_EXTRA_RATS_PER_RAT: usize = 2;
+/// …and reaches this many times further from its anchor.
+const BOIL_RADIUS_SCALE: f32 = 2.0;
+/// The boil complement draws from its own seed stream, so a colony's ordinary
+/// loops are identical whether it boils tonight or not.
+const BOIL_SEED_STREAM: u64 = 0xb011_0000_0000_0000;
+/// The catalog row the boil crosses into the sim on
+/// (`assets/sounds/catalog.toml`): unattributed, not actor-emittable, 12 m.
+const SWARM_SOUND_ID: &str = "rat_swarm";
+/// Game-minutes between swarm percepts while a boil holds, and the one number
+/// in this file that is a *budget* rather than a look.
+///
+/// A world sound is not only a line in an inbox: `flush_sound` hands the
+/// nearest hearer the priority slot, so every repeat buys a paid turn for
+/// whoever is standing in the boil. A boil runs eight game-hours — 480 game
+/// minutes — so the doc's suggested "every few game-minutes" would be ~96
+/// nudges a night for one person, two and a half times the Night Office's whole
+/// daily budget, and a drive run at 60× shows exactly that: one NPC in the
+/// Wickmarket took 24 of a 28-prompt run and the rest of the cast starved.
+/// Half a game-hour bounds a whole night at 16, and the inbox coalescing
+/// counter (`… (3 times now)`) keeps even those from crowding a history window.
+const SWARM_PERCEPT_INTERVAL_MINUTES: f64 = 30.0;
 
 /// One authored colony. This table is the whole population: no reproduction,
 /// no migration, no procedural placement — the same spirit as the fixed
@@ -154,8 +196,33 @@ struct Colony {
     radius_m: f32,
     all_offices: bool,
     rats: Vec<Rat>,
+    /// The boil complement, baked beside the ordinary rats at startup over the
+    /// doubled radius and kept apart from them so an ordinary frame — every
+    /// frame but one colony's, one night in eight — skips it for free.
+    boil_rats: Vec<Rat>,
     /// Where somebody's foot fell and when — the one piece of mutable state.
     scatter: Option<(Vec2, f32)>,
+}
+
+impl Colony {
+    /// The rats on the ground: the ordinary loops, and while the colony boils
+    /// the complement as well — which is what triples the count.
+    fn showing_rats(&self, showing: Showing) -> impl Iterator<Item = &Rat> {
+        self.rats.iter().chain(
+            matches!(showing, Showing::Boil)
+                .then_some(self.boil_rats.as_slice())
+                .unwrap_or_default(),
+        )
+    }
+
+    /// How far from the anchor this colony's rats can be — the boil doubles it,
+    /// so the distance cull has to be told.
+    fn showing_radius_m(&self, showing: Showing) -> f32 {
+        match showing {
+            Showing::Loops => self.radius_m,
+            Showing::Boil => self.radius_m * BOIL_RADIUS_SCALE,
+        }
+    }
 }
 
 /// The whole city's rats: one entity, one mesh rebuilt per frame.
@@ -165,6 +232,19 @@ pub(super) struct Vermin {
     /// The committed navigation bake, read (like the puddles read it) to keep
     /// every waypoint and every scatter dart on ground the player can walk.
     nav: NavData,
+    /// `vermin.seed`, baked in rather than read back off the config resource,
+    /// so every system that asks which colony boils asks the same number.
+    seed: u64,
+    /// `vermin.swarm_percepts`. With it false the boil is a sight and nothing
+    /// more: no bridge command is ever sent, and the sim never learns of rats.
+    swarm_percepts: bool,
+    /// The last game night whose boil was announced, so the log line the
+    /// feature is verified by lands once a night however many frames it spans.
+    announced_boil_night: Option<i64>,
+    /// Game-minutes (since day zero) at the last swarm percept, which is what
+    /// paces the repeats. Sim time, never wall time: the `T` key's 60× must
+    /// reach the repeat the same way it reaches the boil.
+    last_percept_minutes: Option<f64>,
 }
 
 /// splitmix64's finalizer: the per-rat determinism everything draws from.
@@ -279,16 +359,94 @@ impl Rat {
     }
 }
 
-/// Colony visibility against the sim clock: the three waste-pile colonies run
-/// all offices; the rest are the soundscape's `WarmDayWaste` inverse — out
-/// only while the city is dark. No clock yet (the seconds before the engine
-/// speaks, a headless city test) shows everything: the same information-only
-/// dimming the chimney smoke practices.
-fn colony_active(all_offices: bool, clock: Option<&WorldClockState>) -> bool {
-    all_offices
-        || clock
-            .filter(|clock| clock.present)
-            .is_none_or(|clock| clock.brightness <= 0.30)
+/// What a colony has on the ground this frame.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Showing {
+    /// Its ordinary loops.
+    Loops,
+    /// Its loops and the boil complement: three times the rats over twice the
+    /// ground — one colony, one night.
+    Boil,
+}
+
+/// Whether a colony is out at all, and if so how much of it. The **one**
+/// predicate [`animate_vermin`] and [`trigger_vermin_scatter`] both ask, so the
+/// two can never disagree about which rats exist — a colony that is drawn is a
+/// colony that can be startled, and the batch and the scatter sweep walk the
+/// same population.
+///
+/// The three waste-pile colonies run all offices; the rest are the soundscape's
+/// `WarmDayWaste` inverse — out only while the city is dark. No clock yet (the
+/// seconds before the engine speaks, a headless city test) shows everything:
+/// the same information-only dimming the chimney smoke practices.
+fn colony_showing(
+    all_offices: bool,
+    boiling: bool,
+    clock: Option<&WorldClockState>,
+) -> Option<Showing> {
+    if boiling {
+        // A boil is out whatever the darkness gate would have said. The two
+        // agree today — a boil runs from the Snuffing to the Kindling, which is
+        // dark — and this is the half that must keep meaning what it says if
+        // ever they stop.
+        return Some(Showing::Boil);
+    }
+    let dark = clock
+        .filter(|clock| clock.present)
+        .is_none_or(|clock| clock.brightness <= 0.30);
+    (all_offices || dark).then_some(Showing::Loops)
+}
+
+/// The game night a clock reading falls in, or `None` by day. A night spans
+/// midnight, so 21:00 on day N and 04:00 on day N+1 are both night N — which is
+/// what keeps one boil one boil, rather than two halves picking two colonies.
+///
+/// Without a clock nothing boils, deliberately unlike [`colony_showing`]: a
+/// colony with no clock is only undimmed, while a boil is an event with a date,
+/// and an undated one would announce itself on the first frame of every run.
+fn boil_night(clock: Option<&WorldClockState>) -> Option<i64> {
+    let clock = clock.filter(|clock| clock.present)?;
+    if clock.fraction >= BOIL_START_FRACTION {
+        Some(clock.day)
+    } else if clock.fraction < BOIL_END_FRACTION {
+        Some(clock.day - 1)
+    } else {
+        None
+    }
+}
+
+/// Which colony boils tonight: `hash(night, seed) % colonies`, so the answer is
+/// a pure function every system can recompute instead of a fact one of them has
+/// to own and publish.
+fn boiling_colony(night: i64, seed: u64, colonies: usize) -> Option<usize> {
+    (colonies > 0).then(|| {
+        let hash = mix(seed ^ (night as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15));
+        (hash % colonies as u64) as usize
+    })
+}
+
+/// The colony boiling right now, if any — [`boil_night`] and
+/// [`boiling_colony`] in one, since nobody ever wants only half.
+fn boiling_colony_now(
+    clock: Option<&WorldClockState>,
+    seed: u64,
+    colonies: usize,
+) -> Option<usize> {
+    boiling_colony(boil_night(clock)?, seed, colonies)
+}
+
+/// Sim minutes since day zero — monotone across the midnight a boil spans,
+/// which the clock's own `fraction` is not.
+fn game_minutes(clock: &WorldClockState) -> f64 {
+    (clock.day as f64 + clock.fraction) * 24.0 * 60.0
+}
+
+/// Whether the boil is due to be heard (again): on entry, and at most every
+/// [`SWARM_PERCEPT_INTERVAL_MINUTES`] game-minutes after. A clock that jumps
+/// backwards re-arms rather than falling silent until it has caught up.
+fn percept_due(last_minutes: Option<f64>, minutes: f64) -> bool {
+    last_minutes
+        .is_none_or(|last| !(0.0..SWARM_PERCEPT_INTERVAL_MINUTES).contains(&(minutes - last)))
 }
 
 /// Heavy rain sends the rats under cover with the rest of the animals — the
@@ -325,6 +483,7 @@ pub(super) fn spawn_vermin(
     .expect("the committed navigation bake already validates at startup");
 
     let mut total = 0_usize;
+    let mut boil_total = 0_usize;
     let colonies: Vec<Colony> = COLONIES
         .iter()
         .enumerate()
@@ -339,6 +498,32 @@ pub(super) fn spawn_vermin(
                     bake_rat(&nav, &collision, spec.anchor, spec.radius_m, seed)
                 })
                 .collect();
+            // The boil is baked here, with the rest, rather than the night it
+            // happens: waypoint validation reads the whole `CollisionWorld`,
+            // and the frame the Snuffing lands on is not the frame to do it.
+            let boil_rats: Vec<Rat> = (0..count * BOIL_EXTRA_RATS_PER_RAT)
+                .filter_map(|rat_index| {
+                    let seed = mix(BOIL_SEED_STREAM
+                        .wrapping_add(settings.seed)
+                        .wrapping_add((colony_index as u64) << 32)
+                        .wrapping_add(rat_index as u64));
+                    // Over a doubled radius most of a pinched street — Gaunt
+                    // Passage, the Seven Lofts skirts — is building, and a
+                    // draw can miss the ground forty times running. A boil
+                    // rat that finds no room out there settles in the colony's
+                    // own disc instead, where the ordinary rats have already
+                    // proved there is some: the boil crowds what ground it
+                    // has, rather than turning up short-handed.
+                    bake_rat(
+                        &nav,
+                        &collision,
+                        spec.anchor,
+                        spec.radius_m * BOIL_RADIUS_SCALE,
+                        seed,
+                    )
+                    .or_else(|| bake_rat(&nav, &collision, spec.anchor, spec.radius_m, seed))
+                })
+                .collect();
             if rats.is_empty() && count > 0 {
                 warn!(
                     "[vermin] {} offers no walkable ground around {:?}",
@@ -346,22 +531,29 @@ pub(super) fn spawn_vermin(
                 );
             }
             total += rats.len();
+            boil_total += boil_rats.len();
             Colony {
                 name: spec.name,
                 anchor: spec.anchor,
                 radius_m: spec.radius_m,
                 all_offices: spec.all_offices,
                 rats,
+                boil_rats,
                 scatter: None,
             }
         })
         .collect();
 
     for colony in &colonies {
-        debug!("[vermin] {}: {} rats", colony.name, colony.rats.len());
+        debug!(
+            "[vermin] {}: {} rats (+{} when it boils)",
+            colony.name,
+            colony.rats.len(),
+            colony.boil_rats.len()
+        );
     }
     info!(
-        "[vermin] {total} rats settled across {} colonies",
+        "[vermin] {total} rats settled across {} colonies, and {boil_total} more waiting on a boil",
         colonies.len()
     );
     commands.spawn((
@@ -387,8 +579,75 @@ pub(super) fn spawn_vermin(
         // AABB would lie.
         NoFrustumCulling,
         NotShadowCaster,
-        Vermin { colonies, nav },
+        Vermin {
+            colonies,
+            nav,
+            seed: settings.seed,
+            swarm_percepts: settings.swarm_percepts,
+            announced_boil_night: None,
+            last_percept_minutes: None,
+        },
     ));
+}
+
+/// The boil's bookkeeping half (`features/rats.md` M2): the once-a-night log
+/// line the feature is verified by, and the one crossing the whole feature
+/// makes into the simulation. The drawing half is [`animate_vermin`], which
+/// carries no state at all — it asks [`boiling_colony_now`] the same question
+/// and gets the same answer.
+///
+/// The percept is an unattributed world sound at the colony's anchor, so an NPC
+/// standing in the boil hears it on their next turn exactly as they hear the
+/// town bell; nobody is nudged from across the ward (the catalog row is 12 m),
+/// nothing is attributed (a swarm has no author), and no sim state is created.
+/// With `vermin.swarm_percepts` false, or with no engine at all (a city test,
+/// `CATHEDRAL_NO_ACTORS`), not one command is sent and the boil stays a sight.
+pub(super) fn announce_vermin_boil(
+    clock: Option<Res<WorldClockState>>,
+    handle: Option<Res<BridgeHandle>>,
+    mut vermin: Query<&mut Vermin>,
+) {
+    let clock = clock.as_deref();
+    for mut vermin in &mut vermin {
+        let Some(night) = boil_night(clock) else {
+            continue;
+        };
+        let Some(index) = boiling_colony(night, vermin.seed, vermin.colonies.len()) else {
+            continue;
+        };
+        // Keyed on the night, not on an edge: a clock hovering either side of
+        // the Snuffing re-enters the same night, and re-entering is not news.
+        if vermin.announced_boil_night != Some(night) {
+            info!("[vermin] boil: {}", vermin.colonies[index].name);
+            vermin.announced_boil_night = Some(night);
+            // A fresh boil is heard at once; the interval only paces repeats.
+            vermin.last_percept_minutes = None;
+        }
+        if !vermin.swarm_percepts {
+            continue;
+        }
+        let (Some(handle), Some(clock)) = (handle.as_deref(), clock) else {
+            continue;
+        };
+        let minutes = game_minutes(clock);
+        if !percept_due(vermin.last_percept_minutes, minutes) {
+            continue;
+        }
+        let anchor = vermin.colonies[index].anchor;
+        let Ok(position_m) = Position::try_from(Vec3::new(anchor.x, RAT_GROUND_Y, anchor.y)) else {
+            continue;
+        };
+        // Stamped whether or not the queue takes it: a full bridge is a busy
+        // engine, and retrying a percept at it every frame is the one thing
+        // this interval exists to prevent.
+        vermin.last_percept_minutes = Some(minutes);
+        if let Err(error) = handle.try_send(BridgeCommand::WorldSound {
+            sound_id: SWARM_SOUND_ID.to_string(),
+            position_m,
+        }) {
+            debug!("[vermin] swarm percept not sent: {error}");
+        }
+    }
 }
 
 /// Anyone's feet — the player's or a puppet's — on the ground and inside
@@ -419,35 +678,39 @@ pub(super) fn trigger_vermin_scatter(
         return;
     }
     for mut vermin in &mut vermin {
-        for colony in &mut vermin.colonies {
+        let boiling = boiling_colony_now(clock, vermin.seed, vermin.colonies.len());
+        for (index, colony) in vermin.colonies.iter_mut().enumerate() {
             // A colony nobody can see is a colony nobody can startle; skipping
             // it also spares the `rat.sample()` sweep below.
-            if !colony_active(colony.all_offices, clock) {
+            let Some(showing) = colony_showing(colony.all_offices, boiling == Some(index), clock)
+            else {
                 colony.scatter = None;
                 continue;
-            }
+            };
             if let Some((_, started)) = colony.scatter {
                 if elapsed - started < SCATTER_TOTAL_S {
                     continue;
                 }
                 colony.scatter = None;
             }
+            let reach = colony.showing_radius_m(showing) + SCATTER_REACH_M;
             let near: Vec<Vec2> = movers
                 .iter()
                 .copied()
-                .filter(|mover| mover.distance(colony.anchor) <= colony.radius_m + SCATTER_REACH_M)
+                .filter(|mover| mover.distance(colony.anchor) <= reach)
                 .collect();
             if near.is_empty() {
                 continue;
             }
-            'rats: for rat in &colony.rats {
+            // The boil's rats flee like any other: they are the same rats.
+            let struck = colony.showing_rats(showing).find_map(|rat| {
                 let (position, _, _) = rat.sample(elapsed);
-                for mover in &near {
-                    if mover.distance_squared(position) <= SCATTER_TRIGGER_M * SCATTER_TRIGGER_M {
-                        colony.scatter = Some((*mover, elapsed));
-                        break 'rats;
-                    }
-                }
+                near.iter().copied().find(|mover| {
+                    mover.distance_squared(position) <= SCATTER_TRIGGER_M * SCATTER_TRIGGER_M
+                })
+            });
+            if let Some(mover) = struck {
+                colony.scatter = Some((mover, elapsed));
             }
         }
     }
@@ -533,15 +796,17 @@ pub(super) fn animate_vermin(
         let mut colors = Vec::new();
         let mut indices = Vec::new();
 
-        for colony in &vermin.colonies {
-            if !colony_active(colony.all_offices, clock) {
+        let boiling = boiling_colony_now(clock, vermin.seed, vermin.colonies.len());
+        for (index, colony) in vermin.colonies.iter().enumerate() {
+            let Some(showing) = colony_showing(colony.all_offices, boiling == Some(index), clock)
+            else {
                 continue;
-            }
-            let colony_range = VERMIN_VISIBLE_RANGE_M + colony.radius_m;
+            };
+            let colony_range = VERMIN_VISIBLE_RANGE_M + colony.showing_radius_m(showing);
             if colony.anchor.distance_squared(camera_position.xz()) > colony_range * colony_range {
                 continue;
             }
-            for (rat_index, rat) in colony.rats.iter().enumerate() {
+            for (rat_index, rat) in colony.showing_rats(showing).enumerate() {
                 // Heavy rain thins the colony to a stray third, matching the
                 // animals going quiet in the soundscape.
                 if suppressed && rat_index % 3 != 0 {
@@ -701,9 +966,26 @@ mod tests {
             .init_asset::<crate::materials::WindowGlassMaterial>()
             .init_resource::<CollisionWorld>()
             .add_systems(Startup, (super::super::build_city, spawn_vermin).chain())
-            .add_systems(Update, animate_vermin);
+            .add_systems(Update, (announce_vermin_boil, animate_vermin).chain());
         app.update();
         app
+    }
+
+    /// The seed and density `built_app` runs on: no `VerminSettings` resource
+    /// means the shipped defaults, which is what `config.ron` ships too.
+    fn default_seed() -> u64 {
+        VerminSettings::default().seed
+    }
+
+    /// A clock at `hour` on `day`, dark enough for the night colonies.
+    fn night_clock(day: i64, hour: f64) -> WorldClockState {
+        WorldClockState {
+            present: true,
+            day,
+            fraction: hour / 24.0,
+            brightness: 0.05,
+            ..Default::default()
+        }
     }
 
     fn committed_nav() -> NavData {
@@ -800,7 +1082,8 @@ mod tests {
     }
 
     /// The three waste-pile colonies run all offices; the rest are the
-    /// `WarmDayWaste` inverse, and a missing clock dims nothing.
+    /// `WarmDayWaste` inverse, and a missing clock dims nothing. A boiling
+    /// colony is out whatever the darkness gate would have said.
     #[test]
     fn night_colonies_follow_the_dark() {
         let day = WorldClockState {
@@ -813,19 +1096,38 @@ mod tests {
             brightness: 0.05,
             ..Default::default()
         };
-        assert!(colony_active(true, Some(&day)));
-        assert!(colony_active(true, Some(&night)));
-        assert!(!colony_active(false, Some(&day)));
-        assert!(colony_active(false, Some(&night)));
-        assert!(colony_active(false, None));
-        assert!(colony_active(
-            false,
-            Some(&WorldClockState {
-                present: false,
-                brightness: 1.0,
-                ..Default::default()
-            })
-        ));
+        assert_eq!(
+            colony_showing(true, false, Some(&day)),
+            Some(Showing::Loops)
+        );
+        assert_eq!(
+            colony_showing(true, false, Some(&night)),
+            Some(Showing::Loops)
+        );
+        assert_eq!(colony_showing(false, false, Some(&day)), None);
+        assert_eq!(
+            colony_showing(false, false, Some(&night)),
+            Some(Showing::Loops)
+        );
+        assert_eq!(colony_showing(false, false, None), Some(Showing::Loops));
+        assert_eq!(
+            colony_showing(
+                false,
+                false,
+                Some(&WorldClockState {
+                    present: false,
+                    brightness: 1.0,
+                    ..Default::default()
+                })
+            ),
+            Some(Showing::Loops)
+        );
+        // The boil overrides the gate in both directions.
+        assert_eq!(colony_showing(false, true, Some(&day)), Some(Showing::Boil));
+        assert_eq!(
+            colony_showing(true, true, Some(&night)),
+            Some(Showing::Boil)
+        );
     }
 
     /// With a camera over the Shambles the batch holds exactly the in-range
@@ -865,7 +1167,8 @@ mod tests {
         assert_eq!(vermin_mesh_vertices(&mut app), expected);
 
         // Gaunt Passage is a night colony: empty batch at High Wick, rats
-        // once the city is dark.
+        // once the city is dark. 20:00 is dark and before the Snuffing, so
+        // this reads the clock gate alone, with no boil under it.
         let gaunt = Vec3::new(-155.0, 6.0, 17.0);
         let world = app.world_mut();
         let mut cameras = world.query_filtered::<&mut GlobalTransform, With<Camera3d>>();
@@ -873,12 +1176,7 @@ mod tests {
         app.update();
         assert_eq!(vermin_mesh_vertices(&mut app), IDLE_BATCH_VERTICES);
 
-        app.insert_resource(WorldClockState {
-            present: true,
-            fraction: 23.0 / 24.0,
-            brightness: 0.05,
-            ..Default::default()
-        });
+        app.insert_resource(night_clock(0, 20.0));
         app.update();
         let world = app.world_mut();
         let vermin = world
@@ -995,6 +1293,252 @@ mod tests {
             scatter_offset(&nav, &crated, &rat, position, impulse, 10.8),
             Vec2::ZERO,
             "a dart into a collider is refused, not taken"
+        );
+    }
+
+    /// A boil runs the Snuffing to the Kindling, which straddles midnight — so
+    /// 21:00 on day N and 04:00 on day N+1 must be the *same* night, or one
+    /// boil would become two and pick two colonies at the stroke of twelve.
+    #[test]
+    fn a_boil_night_spans_midnight() {
+        assert_eq!(boil_night(Some(&night_clock(7, 21.0))), Some(7));
+        assert_eq!(boil_night(Some(&night_clock(7, 23.5))), Some(7));
+        assert_eq!(boil_night(Some(&night_clock(8, 0.0))), Some(7));
+        assert_eq!(boil_night(Some(&night_clock(8, 4.0))), Some(7));
+        assert_eq!(boil_night(Some(&night_clock(8, 21.0))), Some(8));
+        // The Kindling closes it; the Snuffing has not yet opened the next.
+        assert_eq!(boil_night(Some(&night_clock(8, 5.0))), None);
+        assert_eq!(boil_night(Some(&night_clock(8, 13.0))), None);
+        assert_eq!(boil_night(Some(&night_clock(8, 20.99))), None);
+        // No clock is no date, and an undated boil would fire on every frame
+        // of the seconds before the engine first speaks.
+        assert_eq!(boil_night(None), None);
+        assert_eq!(
+            boil_night(Some(&WorldClockState {
+                present: false,
+                fraction: 23.0 / 24.0,
+                ..Default::default()
+            })),
+            None
+        );
+    }
+
+    /// The pick is a pure function of (night, seed) — every system may ask it
+    /// instead of one owning it — and over a season it walks the whole table
+    /// rather than favouring a corner of the city.
+    #[test]
+    fn the_boil_walks_the_whole_colony_table() {
+        let seed = default_seed();
+        let count = COLONIES.len();
+        assert_eq!(
+            boiling_colony(3, seed, count),
+            boiling_colony(3, seed, count)
+        );
+        assert_eq!(boiling_colony(0, seed, 0), None, "no colonies, no boil");
+
+        let mut nights_per_colony = vec![0_usize; count];
+        for night in -30..200 {
+            let index = boiling_colony(night, seed, count).expect("the table is not empty");
+            assert!(index < count);
+            nights_per_colony[index] += 1;
+        }
+        for (index, nights) in nights_per_colony.iter().enumerate() {
+            assert!(
+                *nights > 0,
+                "{} never boils in 230 nights",
+                COLONIES[index].name
+            );
+        }
+        // A different seed is a different year of boils.
+        let other: Vec<_> = (0..40)
+            .map(|night| boiling_colony(night, seed ^ 0x5eed, count))
+            .collect();
+        let ours: Vec<_> = (0..40)
+            .map(|night| boiling_colony(night, seed, count))
+            .collect();
+        assert_ne!(ours, other);
+    }
+
+    /// The boil complement is baked with the rest, over twice the radius, and
+    /// answers to §2.1 exactly as the ordinary loops do — a rat is a rat.
+    #[test]
+    fn the_boil_complement_is_walkable_inside_twice_the_reach() {
+        let mut app = built_app();
+        let world = app.world_mut();
+        let vermin = world
+            .query::<&Vermin>()
+            .single(world)
+            .expect("one vermin batch");
+        let collision = world.resource::<CollisionWorld>();
+        for (colony, spec) in vermin.colonies.iter().zip(COLONIES.iter()) {
+            assert_eq!(
+                colony.boil_rats.len(),
+                spec.rats * BOIL_EXTRA_RATS_PER_RAT,
+                "{} settled a short boil",
+                colony.name
+            );
+            // …which, since every colony settles its authored count, is what
+            // makes the count on the ground exactly triple.
+            assert_eq!(
+                colony.boil_rats.len(),
+                colony.rats.len() * BOIL_EXTRA_RATS_PER_RAT,
+                "{} does not triple",
+                colony.name
+            );
+            let reach = colony.radius_m * BOIL_RADIUS_SCALE;
+            for rat in &colony.boil_rats {
+                for leg in &rat.legs {
+                    for point in [leg.from, leg.to] {
+                        assert!(
+                            walkable(&vermin.nav, collision, point),
+                            "{}: boil waypoint {point:?} is off the walkable surface",
+                            colony.name
+                        );
+                        assert!(
+                            point.distance(colony.anchor) <= reach + 0.001,
+                            "{}: boil waypoint {point:?} left the doubled radius",
+                            colony.name
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// The night the Snuffing lands, the chosen colony's batch triples — the
+    /// same technique `the_clock_and_the_cull_gate_the_batch` uses, pointed at
+    /// whichever colony tonight's hash picked.
+    #[test]
+    fn a_boiling_colony_triples_its_batch() {
+        let mut app = built_app();
+        let night = 3_i64;
+        let index = boiling_colony(night, default_seed(), COLONIES.len()).expect("a colony boils");
+        let anchor = COLONIES[index].anchor;
+        app.world_mut().spawn((
+            Camera3d::default(),
+            GlobalTransform::from_translation(Vec3::new(anchor.x, 6.0, anchor.y)),
+        ));
+
+        // 20:00 the same evening: dark, but the boil has not opened yet.
+        app.insert_resource(night_clock(night, 20.0));
+        app.update();
+        let before = vermin_mesh_vertices(&mut app);
+
+        app.insert_resource(night_clock(night, 21.5));
+        app.update();
+        let during = vermin_mesh_vertices(&mut app);
+
+        let world = app.world_mut();
+        let vermin = world
+            .query::<&Vermin>()
+            .single(world)
+            .expect("one vermin batch");
+        let colony = &vermin.colonies[index];
+        assert!(colony.rats.len() >= 4, "{} settled rats", colony.name);
+        // Every other colony is >60 m away, so the difference is this one's.
+        assert_eq!(
+            during - before,
+            colony.boil_rats.len() * 3 * 4,
+            "{} should be pouring",
+            colony.name
+        );
+        assert_eq!(during, before * 3, "three times the rats");
+
+        // …and it is over by the Kindling.
+        app.insert_resource(night_clock(night + 1, 5.5));
+        app.update();
+        assert_eq!(vermin_mesh_vertices(&mut app), before);
+    }
+
+    /// A boiling colony is drawn even where the darkness gate alone would have
+    /// put it away — the predicate the batch and the scatter share says so, and
+    /// this is the case that would silently rot if they ever diverged.
+    #[test]
+    fn a_boil_outranks_the_darkness_gate() {
+        let night = 11_i64;
+        let index = boiling_colony(night, default_seed(), COLONIES.len()).expect("a colony boils");
+        let daylit = WorldClockState {
+            present: true,
+            day: night,
+            fraction: 21.5 / 24.0,
+            brightness: 1.0,
+            ..Default::default()
+        };
+        assert_eq!(
+            colony_showing(COLONIES[index].all_offices, true, Some(&daylit)),
+            Some(Showing::Boil)
+        );
+    }
+
+    /// The `[vermin] boil: <colony>` line the §5 verification greps for lands
+    /// once a game night, not once a frame — checked on the component's own
+    /// state, so no log capture is needed.
+    #[test]
+    fn the_boil_is_announced_once_a_night() {
+        let mut app = built_app();
+        let announced = |app: &mut App| {
+            let world = app.world_mut();
+            world
+                .query::<&Vermin>()
+                .single(world)
+                .expect("one vermin batch")
+                .announced_boil_night
+        };
+
+        app.insert_resource(night_clock(4, 20.0));
+        app.update();
+        assert_eq!(
+            announced(&mut app),
+            None,
+            "nothing boils before the Snuffing"
+        );
+
+        app.insert_resource(night_clock(4, 21.5));
+        app.update();
+        assert_eq!(announced(&mut app), Some(4));
+
+        // Later the same night — including past midnight — is the same boil.
+        for (day, hour) in [(4_i64, 23.0), (5, 1.0), (5, 4.5)] {
+            app.insert_resource(night_clock(day, hour));
+            app.update();
+            assert_eq!(announced(&mut app), Some(4), "still night 4");
+        }
+
+        // The Kindling ends it, and the next Snuffing is news again.
+        app.insert_resource(night_clock(5, 12.0));
+        app.update();
+        assert_eq!(announced(&mut app), Some(4), "the last boil is remembered");
+        app.insert_resource(night_clock(5, 21.5));
+        app.update();
+        assert_eq!(announced(&mut app), Some(5));
+    }
+
+    /// The swarm percept is paced on the sim clock, so the `T` key's 60×
+    /// reaches the repeat the way it reaches the boil — and a clock that jumps
+    /// backwards re-arms instead of going quiet until it has caught up.
+    #[test]
+    fn a_swarm_percept_is_paced_on_the_sim_clock() {
+        assert!(percept_due(None, 0.0), "the first frame of a boil is heard");
+        let start = game_minutes(&night_clock(4, 21.0));
+        assert!(!percept_due(Some(start), start));
+        assert!(!percept_due(
+            Some(start),
+            start + SWARM_PERCEPT_INTERVAL_MINUTES - 0.01
+        ));
+        assert!(percept_due(
+            Some(start),
+            start + SWARM_PERCEPT_INTERVAL_MINUTES
+        ));
+        assert!(
+            percept_due(Some(start), start - 1.0),
+            "a rewound clock re-arms"
+        );
+
+        // Game-minutes are monotone across the midnight a boil spans.
+        assert!(game_minutes(&night_clock(5, 0.5)) > game_minutes(&night_clock(4, 23.5)));
+        assert!(
+            (game_minutes(&night_clock(5, 0.5)) - game_minutes(&night_clock(4, 23.5)) - 60.0).abs()
+                < 1e-6
         );
     }
 

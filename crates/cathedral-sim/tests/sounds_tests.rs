@@ -164,6 +164,28 @@ fn the_town_bell_is_not_actor_emittable() {
     assert_eq!(catalog.get("town_bell").unwrap().seen, None);
 }
 
+/// `features/rats.md` §2.3: the boil is the feature's only crossing, and it
+/// crosses on the bell's mechanism. The row must stay off the emittable list —
+/// that list is rendered into every prompt, so a row that joined it would
+/// rewrite the golden fixtures — and it must never be attributable, because a
+/// swarm has no author to attribute it to. (The list itself is pinned whole in
+/// `sounds.rs::the_shipped_catalog_loads_with_every_row_intact`.)
+#[test]
+fn the_rat_swarm_is_a_world_sound_no_actor_may_pour() {
+    let catalog = catalog();
+    let swarm = catalog
+        .get("rat_swarm")
+        .expect("the boil has a catalog row");
+
+    assert!(!catalog.emittable_sound_ids().contains(&"rat_swarm"));
+    assert_eq!(swarm.seen, None);
+    assert_eq!(swarm.audible_distance, 12.0);
+    assert_eq!(
+        swarm.heard,
+        "[Rats — far too many of them — are pouring through the street here.]"
+    );
+}
+
 // ------------------------------------------------------------ SoundEventTests
 
 /// Test 30 / S1 (`test_sounds.py:95`): one event, and the recipients are exactly
