@@ -503,6 +503,16 @@ pub enum EngineCommand {
     /// code. Same poke as `DebugSetStatus`; a handle matching nobody is a
     /// `Diagnostic`, never a fault.
     DebugOwe { who: String },
+    /// CATHEDRAL_DRIVE `chalk` (`features/chalking_the_walls.md` M2). Puts a
+    /// mark on an anchor by a named hand, so a scripted run can look at a
+    /// forged cross — the case §2.3 is about, and the one no scripted run can
+    /// otherwise reach, because drawing is an LLM's judgement.
+    ///
+    /// Both handles resolve by display name first, then by id, exactly as
+    /// `status` and `seize` do. A handle matching nobody is a `Diagnostic`.
+    DebugChalk { kind: String, anchor: String },
+    /// CATHEDRAL_DRIVE `scrub`: wipe the nearest live mark off a named anchor.
+    DebugScrub { anchor: String },
     /// CATHEDRAL_DRIVE `commit` (`law_and_order.md` M5): finish the escort at
     /// the Stone House, so a scripted run can look at the inside of the gaol —
     /// the booking, the posted fee, the bell, and what walking out costs.
@@ -1771,6 +1781,12 @@ impl Engine {
 
             EngineCommand::DebugOwe { who } => self.debug_owe(now, &who, out),
 
+            EngineCommand::DebugChalk { kind, anchor } => {
+                self.debug_chalk(now, &kind, &anchor, out)
+            }
+
+            EngineCommand::DebugScrub { anchor } => self.debug_scrub(now, &anchor, out),
+
             EngineCommand::DebugSeize { officer, target } => {
                 self.debug_seize(now, &officer, target.as_deref(), out)
             }
@@ -2212,6 +2228,88 @@ impl Engine {
         out.push(EngineMessage::Diagnostic(format!(
             "[smart actors] {name} owes and has not paid; the ward will chalk their door"
         )));
+    }
+
+    /// Resolve a drive-mode anchor handle: a person's name or id names their
+    /// household door, anything else names a registered place.
+    fn resolve_mark_anchor(&self, handle: &str) -> Option<crate::marks::MarkAnchor> {
+        if let Some(id) = self.world.resolve_debug_handle(handle)
+            && self.world.places.home_of(&id).is_some()
+        {
+            return Some(crate::marks::MarkAnchor::Household(id));
+        }
+        self.world
+            .places
+            .named(handle)
+            .map(|entry| crate::marks::MarkAnchor::Place(entry.name.clone()))
+    }
+
+    /// CATHEDRAL_DRIVE `chalk <kind> -> <anchor>`.
+    fn debug_chalk(&mut self, now: f64, kind: &str, handle: &str, out: &mut Vec<EngineMessage>) {
+        let Some(kind) = crate::marks::MarkKind::parse(kind) else {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] invalid chalk: there is no mark kind '{kind}'"
+            )));
+            return;
+        };
+        let Some(anchor) = self.resolve_mark_anchor(handle) else {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] invalid chalk: nothing called '{handle}' has a door or is a \
+                 registered place"
+            )));
+            return;
+        };
+        // Authored as the *player's* hand, because the forged cross is the case
+        // worth eyeballing — and because no reader may branch on it anyway.
+        let author = Some(self.config.player_id.clone());
+        let game_days = self.clock.game_days(now);
+        match crate::marks::draw_or_refresh(&mut self.world, kind, anchor, author, game_days) {
+            Some(drawn) => {
+                let label = self
+                    .world
+                    .marks
+                    .get(drawn.id)
+                    .map(|mark| self.world.mark_catalog.label_for(mark))
+                    .unwrap_or_else(|| kind.to_string());
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[smart actors] the player chalks {label} on {handle} (mark {})",
+                    drawn.id
+                )));
+                self.flush(now, out);
+            }
+            None => out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] invalid chalk: a {kind} does not belong on '{handle}'"
+            ))),
+        }
+    }
+
+    /// CATHEDRAL_DRIVE `scrub <anchor>` — the nearest live mark there.
+    fn debug_scrub(&mut self, now: f64, handle: &str, out: &mut Vec<EngineMessage>) {
+        let Some(anchor) = self.resolve_mark_anchor(handle) else {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] invalid scrub: nothing called '{handle}' has a door or is a \
+                 registered place"
+            )));
+            return;
+        };
+        let found = self
+            .world
+            .marks
+            .iter()
+            .find(|(_, mark)| mark.anchor == anchor)
+            .map(|(id, mark)| (id, self.world.mark_catalog.label_for(mark)));
+        match found {
+            Some((id, label)) => {
+                self.world.marks.remove(id);
+                out.push(EngineMessage::Diagnostic(format!(
+                    "[smart actors] the player scrubs {label} off {handle} (mark {id})"
+                )));
+                self.flush(now, out);
+            }
+            None => out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] invalid scrub: there is no chalk on '{handle}'"
+            ))),
+        }
     }
 
     /// The drive-mode arrest (`law_and_order.md` M4). Resolves both handles the

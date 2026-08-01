@@ -1,6 +1,6 @@
 # Chalking the Walls
 
-**Status:** M0 and M1 done (2026-08-02), M2–M4 not started. Branch `slunga/chalking_the_walls`.
+**Status:** M0, M1 and M2 done (2026-08-02); M3 and M4 not started. Branch `slunga/chalking_the_walls`.
 §2.7's snapshot measurement is done and recorded below; §0 records sixteen corrections to this spec
 found by re-checking every seam against the tree. Milestone state is tracked in §4 — each
 milestone's heading carries its own status and an "As built" note where the build diverged.
@@ -429,7 +429,7 @@ produces *one* refusal per stamp period, not one per poll.
 Done when a single headless run shows the whole arc, and when a test asserts `try_purchase` refuses
 on chalk with the notices collection emptied — i.e. the partition is real, not incidental.
 
-### M2 — the pen and the two verbs
+### M2 — the pen and the two verbs — **DONE 2026-08-02** (drive script unverified, see below)
 
 **The pen.** A `chalk_pen` kind in `assets/world/items.json` (small, pocketable, priced). Stocked in
 one existing stall's `you_sell` via `assets/world/food.json`, *and* one seeded into the player's

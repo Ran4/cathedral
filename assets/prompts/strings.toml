@@ -57,6 +57,10 @@ dogs_note = "street dogs within 20 metres, nearest first"
 # everyone with no gating: there is no literacy state in this city, and a mark
 # means the same plain thing to anyone who looks at it.
 marks_note = "chalk on the walls within 8 metres, nearest first"
+# The parenthesis after `**you_could_chalk**` — the handles draw_mark's `anchor`
+# may name. A verb whose argument the model must guess is a verb that fails all
+# day, so the eligible ones are put in front of it.
+chalkable_note = "what your hand could reach to chalk, nearest first"
 # `you_are`'s walk sentence; `%s` is the destination name.
 walking_to = "You are on your way to %s."
 # `you_are`'s follow sentence; `%s` is the person being followed.

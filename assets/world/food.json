@@ -1,241 +1,981 @@
 {
-  "_doc": "M5 supply-chain content. Embedded with include_str!, so changes require a rebuild.",
-  "schema_version": 2,
-  "trades": {
-    "bread": {
-      "occupations": ["baker"],
-      "listings": [{ "kind": "loaf" }],
-      "restock": []
-    },
-    "provisions": {
-      "occupations": ["food_provisioner", "grocer_and_spicer", "market_seller"],
-      "listings": [
-        { "kind": "herring" },
-        { "kind": "apple" },
-        { "kind": "cheese" },
-        { "kind": "egg" },
-        { "kind": "milk" },
-        { "kind": "honey" },
-        { "kind": "salt" }
-      ],
-      "restock": [
-        { "kind": "herring", "quantity": 6 },
-        { "kind": "apple", "quantity": 6 },
-        { "kind": "cheese", "quantity": 3 },
-        { "kind": "egg", "quantity": 8 },
-        { "kind": "milk", "quantity": 3 },
-        { "kind": "honey", "quantity": 2 },
-        { "kind": "salt", "quantity": 2 }
-      ]
-    },
-    "fish": {
-      "occupations": ["fish_trader", "market_seller"],
-      "listings": [{ "kind": "herring" }, { "kind": "smoked_eel" }],
-      "restock": [
-        { "kind": "herring", "quantity": 10 },
-        { "kind": "smoked_eel", "quantity": 4 }
-      ]
-    },
-    "pot": {
-      "occupations": ["cook", "tavern_worker"],
-      "listings": [{ "kind": "ale" }, { "kind": "pie" }],
-      "restock": [
-        { "kind": "ale", "quantity": 12 },
-        { "kind": "pie", "quantity": 6 }
-      ],
-      "conjure_per_serving": "stew"
-    },
-    "grain": {
-      "occupations": [],
-      "listings": [{ "kind": "grain" }],
-      "restock": []
-    },
-    "flour": {
-      "occupations": [],
-      "listings": [{ "kind": "flour" }],
-      "restock": []
-    },
-    "wool": {
-      "occupations": [],
-      "listings": [{ "kind": "wool" }],
-      "restock": []
-    },
-    "cloth": {
-      "occupations": [],
-      "listings": [
-        { "kind": "cloth", "metadata": { "grade": "kersey" } },
-        { "kind": "cloth", "metadata": { "grade": "broadcloth" } }
-      ],
-      "restock": []
-    },
-    "chandlery": {
-      "occupations": ["chandler"],
-      "listings": [
-        { "kind": "candle" },
-        { "kind": "candle", "metadata": { "fat": "beeswax" } },
-        { "kind": "lamp_oil" },
-        { "kind": "wick" },
-        { "kind": "firewood" }
-      ],
-      "restock": [
-        { "kind": "candle", "quantity": 10 },
-        { "kind": "candle", "metadata": { "fat": "beeswax" }, "quantity": 4 },
-        { "kind": "lamp_oil", "quantity": 6 },
-        { "kind": "wick", "quantity": 6 },
-        { "kind": "firewood", "quantity": 6 }
-      ]
-    },
-    "wares": {
-      "occupations": ["market_seller"],
-      "listings": [
-        { "kind": "bucket" },
-        { "kind": "basket" },
-        { "kind": "rope" },
-        { "kind": "knife" },
-        { "kind": "cup" },
-        { "kind": "bowl" },
-        { "kind": "cook_pot" },
-        { "kind": "blanket" },
-        { "kind": "purse" },
-        { "kind": "dice" },
-        { "kind": "leather" },
-        { "kind": "keepsake", "metadata": { "kind": "wooden button" } }
-      ],
-      "restock": [
-        { "kind": "bucket", "quantity": 2 },
-        { "kind": "basket", "quantity": 3 },
-        { "kind": "rope", "quantity": 3 },
-        { "kind": "knife", "quantity": 2 },
-        { "kind": "cup", "quantity": 4 },
-        { "kind": "bowl", "quantity": 4 },
-        { "kind": "cook_pot", "quantity": 1 },
-        { "kind": "blanket", "quantity": 2 },
-        { "kind": "purse", "quantity": 2 },
-        { "kind": "dice", "quantity": 2 },
-        { "kind": "leather", "quantity": 2 },
-        { "kind": "keepsake", "metadata": { "kind": "wooden button" }, "quantity": 4 }
-      ]
-    },
-    "simples": {
-      "occupations": ["healer"],
-      "listings": [{ "kind": "simples" }, { "kind": "bandage" }],
-      "restock": [
-        { "kind": "simples", "quantity": 4 },
-        { "kind": "bandage", "quantity": 6 }
-      ]
-    },
-    "badges": {
-      "occupations": ["market_seller", "church_attendant"],
-      "listings": [{ "kind": "badge", "metadata": { "kind": "pilgrim" } }],
-      "restock": [{ "kind": "badge", "metadata": { "kind": "pilgrim" }, "quantity": 8 }]
+ "_doc": "M5 supply-chain content. Embedded with include_str!, so changes require a rebuild.",
+ "schema_version": 2,
+ "trades": {
+  "bread": {
+   "occupations": [
+    "baker"
+   ],
+   "listings": [
+    {
+     "kind": "loaf"
     }
+   ],
+   "restock": []
   },
-  "stalls": [
+  "provisions": {
+   "occupations": [
+    "food_provisioner",
+    "grocer_and_spicer",
+    "market_seller"
+   ],
+   "listings": [
     {
-      "name": "The Wickmarket bread stall", "site": "The Wickmarket", "trade": "bread",
-      "pitch_offset": [3.5, 1.5], "preferred_vendor": "davqn",
-      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+     "kind": "herring"
     },
     {
-      "name": "The Wickmarket provisions stall", "site": "The Wickmarket", "trade": "provisions",
-      "pitch_offset": [-3.5, -1.5],
-      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+     "kind": "apple"
     },
     {
-      "name": "The Coswald's Yard stall", "site": "Coswald's Yard", "trade": "fish",
-      "pitch_offset": [0.0, 0.0],
-      "open": { "offices": ["dayspring", "high_wick", "waning"], "weekdays": ["highmarket"] }
+     "kind": "cheese"
     },
     {
-      "name": "The Tallage stall", "site": "The Tallage", "trade": "provisions",
-      "pitch_offset": [0.0, 0.0],
-      "open": { "offices": ["dayspring", "high_wick", "waning"], "weekdays": ["lowmarket"] }
+     "kind": "egg"
     },
     {
-      "name": "The Maren's Green herring stall", "site": "Maren's Green", "trade": "fish",
-      "pitch_offset": [3.5, 1.5],
-      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+     "kind": "milk"
     },
     {
-      "name": "The Maren's Green eel stall", "site": "Maren's Green", "trade": "fish",
-      "pitch_offset": [-3.5, -1.5],
-      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+     "kind": "honey"
     },
     {
-      "name": "The Hungry Ox pot", "site": "The Hungry Ox", "trade": "pot",
-      "pitch_offset": [0.0, 0.0], "preferred_vendor": "g5brt",
-      "open": { "offices": ["kindling", "dayspring", "high_wick", "waning", "lamplight", "snuffing"] }
-    },
-    {
-      "name": "The Bell and Ladle pot", "site": "The Bellstand", "trade": "pot",
-      "pitch_offset": [0.0, 0.0], "preferred_vendor": "gr8tp",
-      "open": { "offices": ["kindling", "dayspring", "high_wick", "waning", "lamplight", "snuffing"] }
-    },
-    {
-      "name": "The Wickmarket chandlery stall", "site": "The Wickmarket", "trade": "chandlery",
-      "pitch_offset": [0.0, 6.5], "preferred_vendor": "dpcrk",
-      "open": { "offices": ["dayspring", "high_wick", "waning"] }
-    },
-    {
-      "name": "The Wickmarket wares stall", "site": "The Wickmarket", "trade": "wares",
-      "pitch_offset": [-6.5, 4.5],
-      "open": { "offices": ["dayspring", "high_wick", "waning"] }
-    },
-    {
-      "name": "The Maren's Green wares stall", "site": "Maren's Green", "trade": "wares",
-      "pitch_offset": [-8.0, 4.0],
-      "open": { "offices": ["dayspring", "high_wick", "waning"] }
-    },
-    {
-      "name": "The Maren's Green simples bench", "site": "Maren's Green", "trade": "simples",
-      "pitch_offset": [-4.0, 10.0],
-      "open": { "offices": ["dayspring", "high_wick", "waning"] }
-    },
-    {
-      "name": "The Gradine badge stall", "site": "The Gradine", "trade": "badges",
-      "pitch_offset": [2.5, 2.5], "preferred_vendor": "p0014",
-      "open": { "offices": ["dayspring", "high_wick", "waning"] }
+     "kind": "salt"
     }
-  ],
-  "counters": [
-    { "id": "brede_grain_seven_lofts", "trade": "grain", "site": "Seven Lofts", "pitch_offset": [-3.0, 1.5], "preferred_actor": "rbrde", "offices": ["dayspring", "high_wick"], "required_doing": "trade", "road_party": "brede_wool_gate", "site_radius_m": 8.0 },
-    { "id": "lantern_grain_seven_lofts", "trade": "grain", "site": "Seven Lofts", "pitch_offset": [3.0, -1.5], "preferred_actor": "rlant", "offices": ["dayspring", "high_wick"], "required_doing": "trade", "road_party": "lantern_stone_gate", "site_radius_m": 8.0 },
-    { "id": "brede_wool_drapers_reach", "trade": "wool", "site": "The Draper's Reach", "pitch_offset": [-2.0, 0.0], "preferred_actor": "rbrde", "offices": ["waning"], "required_doing": "trade", "road_party": "brede_wool_gate", "site_radius_m": 8.0 },
-    { "id": "betriss_grain_seven_lofts", "trade": "grain", "site": "Seven Lofts", "pitch_offset": [0.0, 3.0], "preferred_actor": "p008s", "offices": ["dayspring", "high_wick"], "required_doing": "trade", "site_radius_m": 8.0 },
-    { "id": "bertran_flour_wool_gate", "trade": "flour", "site": "The Wool Gate", "pitch_offset": [2.0, 0.0], "preferred_actor": "e7mil", "offices": ["waning"], "required_doing": "work", "site_radius_m": 8.0 },
-    { "id": "quern_common_oven", "trade": "bread", "site": "Ansel Quern's common oven", "anchor_actor": "danqn", "pitch_offset": [0.0, 0.0], "preferred_actor": "davqn", "offices": ["watch", "kindling"], "required_doing": "work", "worksite_only": true, "site_radius_m": 8.0 },
-    { "id": "averil_bread_wickmarket", "trade": "bread", "site": "The Wickmarket", "pitch_offset": [3.5, 1.5], "preferred_actor": "davqn", "offices": ["dayspring", "high_wick", "waning"], "required_doing": "trade", "site_radius_m": 8.0 },
-    { "id": "ewart_cloth_drapers_reach", "trade": "cloth", "site": "The Draper's Reach", "pitch_offset": [2.0, 0.0], "preferred_actor": "e1skl", "offices": ["waning"], "required_doing": "work", "site_radius_m": 8.0 }
-  ],
-  "counter_groups": [
-    { "id": "arriving_grain_carts", "counters": ["brede_grain_seven_lofts", "lantern_grain_seven_lofts"] }
-  ],
-  "stock_plans": [
-    { "id": "betriss_grain", "buyer": "p008s", "source": { "counter_group": "arriving_grain_carts" }, "targets": [{ "kind": "grain", "desired_quantity": 10 }], "max_spend_sparks": 30 },
-    { "id": "bertran_grain", "buyer": "e7mil", "source": { "counter": "betriss_grain_seven_lofts" }, "targets": [{ "kind": "grain", "desired_quantity": 3 }], "max_spend_sparks": 9 },
-    { "id": "averil_flour", "buyer": "davqn", "source": { "counter": "bertran_flour_wool_gate" }, "targets": [{ "kind": "flour", "desired_quantity": 4 }], "max_spend_sparks": 20 },
-    { "id": "ewart_wool", "buyer": "e1skl", "source": { "counter": "brede_wool_drapers_reach" }, "targets": [{ "kind": "wool", "desired_quantity": 4 }], "max_spend_sparks": 32 },
-    { "id": "brede_broadcloth", "buyer": "rbrde", "source": { "counter": "ewart_cloth_drapers_reach" }, "targets": [{ "kind": "cloth", "metadata": { "grade": "broadcloth" }, "desired_quantity": 1 }], "max_spend_sparks": 40 },
-    { "id": "lantern_kersey", "buyer": "rlant", "source": { "counter": "ewart_cloth_drapers_reach" }, "targets": [{ "kind": "cloth", "metadata": { "grade": "kersey" }, "desired_quantity": 1 }], "max_spend_sparks": 14 }
-  ],
-  "production_plans": [
-    { "producer": "e7mil", "max_jobs_per_day": 2, "transforms": [
-      { "id": "mill_grain", "site": "The Wool Gate", "consumes": [{ "kind": "grain", "quantity": 1 }], "produces": [{ "kind": "flour", "quantity": 3 }], "allowed_offices": ["waning"], "work_minutes": 45, "desired_output_quantity": 6 }
-    ]},
-    { "producer": "davqn", "max_jobs_per_day": 4, "transforms": [
-      { "id": "bake_loaves", "site": "Ansel Quern's common oven", "anchor_actor": "danqn", "consumes": [{ "kind": "flour", "quantity": 1 }], "produces": [{ "kind": "loaf", "quantity": 5 }], "allowed_offices": ["watch", "kindling"], "work_minutes": 45, "desired_output_quantity": 20 }
-    ]},
-    { "producer": "e1skl", "max_jobs_per_day": 2, "transforms": [
-      { "id": "weave_broadcloth", "site": "The Draper's Reach", "consumes": [{ "kind": "wool", "quantity": 3 }], "produces": [{ "kind": "cloth", "metadata": { "grade": "broadcloth" }, "quantity": 1 }], "allowed_offices": ["high_wick", "waning"], "work_minutes": 45, "desired_output_quantity": 1 },
-      { "id": "weave_kersey", "site": "The Draper's Reach", "consumes": [{ "kind": "wool", "quantity": 1 }], "produces": [{ "kind": "cloth", "metadata": { "grade": "kersey" }, "quantity": 1 }], "allowed_offices": ["high_wick", "waning"], "work_minutes": 45, "desired_output_quantity": 1 }
-    ]}
-  ],
-  "working_capital": { "p008s": 30, "e7mil": 24, "davqn": 24, "e1skl": 48 },
-  "historical_stock": [
-    { "owner": "p008s", "kind": "grain", "quantity": 6 },
-    { "owner": "dpcrk", "kind": "candle", "quantity": 6 },
-    { "owner": "dpcrk", "kind": "lamp_oil", "quantity": 4 },
-    { "owner": "g5brt", "kind": "ale", "quantity": 8 },
-    { "owner": "gr8tp", "kind": "ale", "quantity": 8 }
-  ]
+   ],
+   "restock": [
+    {
+     "kind": "herring",
+     "quantity": 6
+    },
+    {
+     "kind": "apple",
+     "quantity": 6
+    },
+    {
+     "kind": "cheese",
+     "quantity": 3
+    },
+    {
+     "kind": "egg",
+     "quantity": 8
+    },
+    {
+     "kind": "milk",
+     "quantity": 3
+    },
+    {
+     "kind": "honey",
+     "quantity": 2
+    },
+    {
+     "kind": "salt",
+     "quantity": 2
+    }
+   ]
+  },
+  "fish": {
+   "occupations": [
+    "fish_trader",
+    "market_seller"
+   ],
+   "listings": [
+    {
+     "kind": "herring"
+    },
+    {
+     "kind": "smoked_eel"
+    }
+   ],
+   "restock": [
+    {
+     "kind": "herring",
+     "quantity": 10
+    },
+    {
+     "kind": "smoked_eel",
+     "quantity": 4
+    }
+   ]
+  },
+  "pot": {
+   "occupations": [
+    "cook",
+    "tavern_worker"
+   ],
+   "listings": [
+    {
+     "kind": "ale"
+    },
+    {
+     "kind": "pie"
+    }
+   ],
+   "restock": [
+    {
+     "kind": "ale",
+     "quantity": 12
+    },
+    {
+     "kind": "pie",
+     "quantity": 6
+    }
+   ],
+   "conjure_per_serving": "stew"
+  },
+  "grain": {
+   "occupations": [],
+   "listings": [
+    {
+     "kind": "grain"
+    }
+   ],
+   "restock": []
+  },
+  "flour": {
+   "occupations": [],
+   "listings": [
+    {
+     "kind": "flour"
+    }
+   ],
+   "restock": []
+  },
+  "wool": {
+   "occupations": [],
+   "listings": [
+    {
+     "kind": "wool"
+    }
+   ],
+   "restock": []
+  },
+  "cloth": {
+   "occupations": [],
+   "listings": [
+    {
+     "kind": "cloth",
+     "metadata": {
+      "grade": "kersey"
+     }
+    },
+    {
+     "kind": "cloth",
+     "metadata": {
+      "grade": "broadcloth"
+     }
+    }
+   ],
+   "restock": []
+  },
+  "chandlery": {
+   "occupations": [
+    "chandler"
+   ],
+   "listings": [
+    {
+     "kind": "candle"
+    },
+    {
+     "kind": "candle",
+     "metadata": {
+      "fat": "beeswax"
+     }
+    },
+    {
+     "kind": "lamp_oil"
+    },
+    {
+     "kind": "wick"
+    },
+    {
+     "kind": "firewood"
+    }
+   ],
+   "restock": [
+    {
+     "kind": "candle",
+     "quantity": 10
+    },
+    {
+     "kind": "candle",
+     "metadata": {
+      "fat": "beeswax"
+     },
+     "quantity": 4
+    },
+    {
+     "kind": "lamp_oil",
+     "quantity": 6
+    },
+    {
+     "kind": "wick",
+     "quantity": 6
+    },
+    {
+     "kind": "firewood",
+     "quantity": 6
+    }
+   ]
+  },
+  "wares": {
+   "occupations": [
+    "market_seller"
+   ],
+   "listings": [
+    {
+     "kind": "bucket"
+    },
+    {
+     "kind": "basket"
+    },
+    {
+     "kind": "rope"
+    },
+    {
+     "kind": "knife"
+    },
+    {
+     "kind": "cup"
+    },
+    {
+     "kind": "bowl"
+    },
+    {
+     "kind": "cook_pot"
+    },
+    {
+     "kind": "blanket"
+    },
+    {
+     "kind": "purse"
+    },
+    {
+     "kind": "dice"
+    },
+    {
+     "kind": "leather"
+    },
+    {
+     "kind": "keepsake",
+     "metadata": {
+      "kind": "wooden button"
+     }
+    },
+    {
+     "kind": "chalk_pen"
+    }
+   ],
+   "restock": [
+    {
+     "kind": "bucket",
+     "quantity": 2
+    },
+    {
+     "kind": "basket",
+     "quantity": 3
+    },
+    {
+     "kind": "rope",
+     "quantity": 3
+    },
+    {
+     "kind": "knife",
+     "quantity": 2
+    },
+    {
+     "kind": "cup",
+     "quantity": 4
+    },
+    {
+     "kind": "bowl",
+     "quantity": 4
+    },
+    {
+     "kind": "cook_pot",
+     "quantity": 1
+    },
+    {
+     "kind": "blanket",
+     "quantity": 2
+    },
+    {
+     "kind": "purse",
+     "quantity": 2
+    },
+    {
+     "kind": "dice",
+     "quantity": 2
+    },
+    {
+     "kind": "leather",
+     "quantity": 2
+    },
+    {
+     "kind": "keepsake",
+     "metadata": {
+      "kind": "wooden button"
+     },
+     "quantity": 4
+    },
+    {
+     "kind": "chalk_pen",
+     "quantity": 3
+    }
+   ]
+  },
+  "simples": {
+   "occupations": [
+    "healer"
+   ],
+   "listings": [
+    {
+     "kind": "simples"
+    },
+    {
+     "kind": "bandage"
+    }
+   ],
+   "restock": [
+    {
+     "kind": "simples",
+     "quantity": 4
+    },
+    {
+     "kind": "bandage",
+     "quantity": 6
+    }
+   ]
+  },
+  "badges": {
+   "occupations": [
+    "market_seller",
+    "church_attendant"
+   ],
+   "listings": [
+    {
+     "kind": "badge",
+     "metadata": {
+      "kind": "pilgrim"
+     }
+    }
+   ],
+   "restock": [
+    {
+     "kind": "badge",
+     "metadata": {
+      "kind": "pilgrim"
+     },
+     "quantity": 8
+    }
+   ]
+  }
+ },
+ "stalls": [
+  {
+   "name": "The Wickmarket bread stall",
+   "site": "The Wickmarket",
+   "trade": "bread",
+   "pitch_offset": [
+    3.5,
+    1.5
+   ],
+   "preferred_vendor": "davqn",
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ]
+   }
+  },
+  {
+   "name": "The Wickmarket provisions stall",
+   "site": "The Wickmarket",
+   "trade": "provisions",
+   "pitch_offset": [
+    -3.5,
+    -1.5
+   ],
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ]
+   }
+  },
+  {
+   "name": "The Coswald's Yard stall",
+   "site": "Coswald's Yard",
+   "trade": "fish",
+   "pitch_offset": [
+    0.0,
+    0.0
+   ],
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ],
+    "weekdays": [
+     "highmarket"
+    ]
+   }
+  },
+  {
+   "name": "The Tallage stall",
+   "site": "The Tallage",
+   "trade": "provisions",
+   "pitch_offset": [
+    0.0,
+    0.0
+   ],
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ],
+    "weekdays": [
+     "lowmarket"
+    ]
+   }
+  },
+  {
+   "name": "The Maren's Green herring stall",
+   "site": "Maren's Green",
+   "trade": "fish",
+   "pitch_offset": [
+    3.5,
+    1.5
+   ],
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ]
+   }
+  },
+  {
+   "name": "The Maren's Green eel stall",
+   "site": "Maren's Green",
+   "trade": "fish",
+   "pitch_offset": [
+    -3.5,
+    -1.5
+   ],
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ]
+   }
+  },
+  {
+   "name": "The Hungry Ox pot",
+   "site": "The Hungry Ox",
+   "trade": "pot",
+   "pitch_offset": [
+    0.0,
+    0.0
+   ],
+   "preferred_vendor": "g5brt",
+   "open": {
+    "offices": [
+     "kindling",
+     "dayspring",
+     "high_wick",
+     "waning",
+     "lamplight",
+     "snuffing"
+    ]
+   }
+  },
+  {
+   "name": "The Bell and Ladle pot",
+   "site": "The Bellstand",
+   "trade": "pot",
+   "pitch_offset": [
+    0.0,
+    0.0
+   ],
+   "preferred_vendor": "gr8tp",
+   "open": {
+    "offices": [
+     "kindling",
+     "dayspring",
+     "high_wick",
+     "waning",
+     "lamplight",
+     "snuffing"
+    ]
+   }
+  },
+  {
+   "name": "The Wickmarket chandlery stall",
+   "site": "The Wickmarket",
+   "trade": "chandlery",
+   "pitch_offset": [
+    0.0,
+    6.5
+   ],
+   "preferred_vendor": "dpcrk",
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ]
+   }
+  },
+  {
+   "name": "The Wickmarket wares stall",
+   "site": "The Wickmarket",
+   "trade": "wares",
+   "pitch_offset": [
+    -6.5,
+    4.5
+   ],
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ]
+   }
+  },
+  {
+   "name": "The Maren's Green wares stall",
+   "site": "Maren's Green",
+   "trade": "wares",
+   "pitch_offset": [
+    -8.0,
+    4.0
+   ],
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ]
+   }
+  },
+  {
+   "name": "The Maren's Green simples bench",
+   "site": "Maren's Green",
+   "trade": "simples",
+   "pitch_offset": [
+    -4.0,
+    10.0
+   ],
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ]
+   }
+  },
+  {
+   "name": "The Gradine badge stall",
+   "site": "The Gradine",
+   "trade": "badges",
+   "pitch_offset": [
+    2.5,
+    2.5
+   ],
+   "preferred_vendor": "p0014",
+   "open": {
+    "offices": [
+     "dayspring",
+     "high_wick",
+     "waning"
+    ]
+   }
+  }
+ ],
+ "counters": [
+  {
+   "id": "brede_grain_seven_lofts",
+   "trade": "grain",
+   "site": "Seven Lofts",
+   "pitch_offset": [
+    -3.0,
+    1.5
+   ],
+   "preferred_actor": "rbrde",
+   "offices": [
+    "dayspring",
+    "high_wick"
+   ],
+   "required_doing": "trade",
+   "road_party": "brede_wool_gate",
+   "site_radius_m": 8.0
+  },
+  {
+   "id": "lantern_grain_seven_lofts",
+   "trade": "grain",
+   "site": "Seven Lofts",
+   "pitch_offset": [
+    3.0,
+    -1.5
+   ],
+   "preferred_actor": "rlant",
+   "offices": [
+    "dayspring",
+    "high_wick"
+   ],
+   "required_doing": "trade",
+   "road_party": "lantern_stone_gate",
+   "site_radius_m": 8.0
+  },
+  {
+   "id": "brede_wool_drapers_reach",
+   "trade": "wool",
+   "site": "The Draper's Reach",
+   "pitch_offset": [
+    -2.0,
+    0.0
+   ],
+   "preferred_actor": "rbrde",
+   "offices": [
+    "waning"
+   ],
+   "required_doing": "trade",
+   "road_party": "brede_wool_gate",
+   "site_radius_m": 8.0
+  },
+  {
+   "id": "betriss_grain_seven_lofts",
+   "trade": "grain",
+   "site": "Seven Lofts",
+   "pitch_offset": [
+    0.0,
+    3.0
+   ],
+   "preferred_actor": "p008s",
+   "offices": [
+    "dayspring",
+    "high_wick"
+   ],
+   "required_doing": "trade",
+   "site_radius_m": 8.0
+  },
+  {
+   "id": "bertran_flour_wool_gate",
+   "trade": "flour",
+   "site": "The Wool Gate",
+   "pitch_offset": [
+    2.0,
+    0.0
+   ],
+   "preferred_actor": "e7mil",
+   "offices": [
+    "waning"
+   ],
+   "required_doing": "work",
+   "site_radius_m": 8.0
+  },
+  {
+   "id": "quern_common_oven",
+   "trade": "bread",
+   "site": "Ansel Quern's common oven",
+   "anchor_actor": "danqn",
+   "pitch_offset": [
+    0.0,
+    0.0
+   ],
+   "preferred_actor": "davqn",
+   "offices": [
+    "watch",
+    "kindling"
+   ],
+   "required_doing": "work",
+   "worksite_only": true,
+   "site_radius_m": 8.0
+  },
+  {
+   "id": "averil_bread_wickmarket",
+   "trade": "bread",
+   "site": "The Wickmarket",
+   "pitch_offset": [
+    3.5,
+    1.5
+   ],
+   "preferred_actor": "davqn",
+   "offices": [
+    "dayspring",
+    "high_wick",
+    "waning"
+   ],
+   "required_doing": "trade",
+   "site_radius_m": 8.0
+  },
+  {
+   "id": "ewart_cloth_drapers_reach",
+   "trade": "cloth",
+   "site": "The Draper's Reach",
+   "pitch_offset": [
+    2.0,
+    0.0
+   ],
+   "preferred_actor": "e1skl",
+   "offices": [
+    "waning"
+   ],
+   "required_doing": "work",
+   "site_radius_m": 8.0
+  }
+ ],
+ "counter_groups": [
+  {
+   "id": "arriving_grain_carts",
+   "counters": [
+    "brede_grain_seven_lofts",
+    "lantern_grain_seven_lofts"
+   ]
+  }
+ ],
+ "stock_plans": [
+  {
+   "id": "betriss_grain",
+   "buyer": "p008s",
+   "source": {
+    "counter_group": "arriving_grain_carts"
+   },
+   "targets": [
+    {
+     "kind": "grain",
+     "desired_quantity": 10
+    }
+   ],
+   "max_spend_sparks": 30
+  },
+  {
+   "id": "bertran_grain",
+   "buyer": "e7mil",
+   "source": {
+    "counter": "betriss_grain_seven_lofts"
+   },
+   "targets": [
+    {
+     "kind": "grain",
+     "desired_quantity": 3
+    }
+   ],
+   "max_spend_sparks": 9
+  },
+  {
+   "id": "averil_flour",
+   "buyer": "davqn",
+   "source": {
+    "counter": "bertran_flour_wool_gate"
+   },
+   "targets": [
+    {
+     "kind": "flour",
+     "desired_quantity": 4
+    }
+   ],
+   "max_spend_sparks": 20
+  },
+  {
+   "id": "ewart_wool",
+   "buyer": "e1skl",
+   "source": {
+    "counter": "brede_wool_drapers_reach"
+   },
+   "targets": [
+    {
+     "kind": "wool",
+     "desired_quantity": 4
+    }
+   ],
+   "max_spend_sparks": 32
+  },
+  {
+   "id": "brede_broadcloth",
+   "buyer": "rbrde",
+   "source": {
+    "counter": "ewart_cloth_drapers_reach"
+   },
+   "targets": [
+    {
+     "kind": "cloth",
+     "metadata": {
+      "grade": "broadcloth"
+     },
+     "desired_quantity": 1
+    }
+   ],
+   "max_spend_sparks": 40
+  },
+  {
+   "id": "lantern_kersey",
+   "buyer": "rlant",
+   "source": {
+    "counter": "ewart_cloth_drapers_reach"
+   },
+   "targets": [
+    {
+     "kind": "cloth",
+     "metadata": {
+      "grade": "kersey"
+     },
+     "desired_quantity": 1
+    }
+   ],
+   "max_spend_sparks": 14
+  }
+ ],
+ "production_plans": [
+  {
+   "producer": "e7mil",
+   "max_jobs_per_day": 2,
+   "transforms": [
+    {
+     "id": "mill_grain",
+     "site": "The Wool Gate",
+     "consumes": [
+      {
+       "kind": "grain",
+       "quantity": 1
+      }
+     ],
+     "produces": [
+      {
+       "kind": "flour",
+       "quantity": 3
+      }
+     ],
+     "allowed_offices": [
+      "waning"
+     ],
+     "work_minutes": 45,
+     "desired_output_quantity": 6
+    }
+   ]
+  },
+  {
+   "producer": "davqn",
+   "max_jobs_per_day": 4,
+   "transforms": [
+    {
+     "id": "bake_loaves",
+     "site": "Ansel Quern's common oven",
+     "anchor_actor": "danqn",
+     "consumes": [
+      {
+       "kind": "flour",
+       "quantity": 1
+      }
+     ],
+     "produces": [
+      {
+       "kind": "loaf",
+       "quantity": 5
+      }
+     ],
+     "allowed_offices": [
+      "watch",
+      "kindling"
+     ],
+     "work_minutes": 45,
+     "desired_output_quantity": 20
+    }
+   ]
+  },
+  {
+   "producer": "e1skl",
+   "max_jobs_per_day": 2,
+   "transforms": [
+    {
+     "id": "weave_broadcloth",
+     "site": "The Draper's Reach",
+     "consumes": [
+      {
+       "kind": "wool",
+       "quantity": 3
+      }
+     ],
+     "produces": [
+      {
+       "kind": "cloth",
+       "metadata": {
+        "grade": "broadcloth"
+       },
+       "quantity": 1
+      }
+     ],
+     "allowed_offices": [
+      "high_wick",
+      "waning"
+     ],
+     "work_minutes": 45,
+     "desired_output_quantity": 1
+    },
+    {
+     "id": "weave_kersey",
+     "site": "The Draper's Reach",
+     "consumes": [
+      {
+       "kind": "wool",
+       "quantity": 1
+      }
+     ],
+     "produces": [
+      {
+       "kind": "cloth",
+       "metadata": {
+        "grade": "kersey"
+       },
+       "quantity": 1
+      }
+     ],
+     "allowed_offices": [
+      "high_wick",
+      "waning"
+     ],
+     "work_minutes": 45,
+     "desired_output_quantity": 1
+    }
+   ]
+  }
+ ],
+ "working_capital": {
+  "p008s": 30,
+  "e7mil": 24,
+  "davqn": 24,
+  "e1skl": 48
+ },
+ "historical_stock": [
+  {
+   "owner": "p008s",
+   "kind": "grain",
+   "quantity": 6
+  },
+  {
+   "owner": "dpcrk",
+   "kind": "candle",
+   "quantity": 6
+  },
+  {
+   "owner": "dpcrk",
+   "kind": "lamp_oil",
+   "quantity": 4
+  },
+  {
+   "owner": "g5brt",
+   "kind": "ale",
+   "quantity": 8
+  },
+  {
+   "owner": "gr8tp",
+   "kind": "ale",
+   "quantity": 8
+  }
+ ]
 }

@@ -129,6 +129,8 @@ fn dispatch(
         "grab" => grab(world, actor_id, args),
         "release" => release(world, actor_id, args),
         "struggle" => struggle(world, actor_id, args),
+        "draw_mark" => draw_mark(world, actor_id, args),
+        "scrub_mark" => scrub_mark(world, actor_id, args),
         // Checked last, after every verb has had its chance to match.
         unknown => Err(ActionError::new(
             ActionErrorCode::UnknownVerb,
@@ -1385,6 +1387,227 @@ fn deliver_pocket_percept(
         .collect();
     deliver(world, lines);
     (hearers, plain_sight)
+}
+
+// ------------------------------------------------------------------- the chalk
+
+/// The item kind a hand writes with (`assets/world/items.json`).
+pub const CHALK_PEN_KIND: &str = "chalk_pen";
+
+/// How near a hand must be to chalk something, or to wipe it off
+/// (`features/chalking_the_walls.md` M2). Arm's length and a bit: you are
+/// touching the wall, not gesturing at it.
+pub const CHALK_REACH_M: f64 = 2.0;
+
+/// Whether this actor is holding something they could write with (§2.6).
+///
+/// The pen gates the **verb**, never the rule: the ward's own hand
+/// (`notices::chalk_the_debtors`) needs no inventory, exactly as `raise_notice`
+/// needs no parchment. Losing the pen mid-scene takes `draw_mark` off the next
+/// sheet; it never erases a mark already drawn.
+pub fn holds_a_chalk_pen(world: &World, actor_id: &ActorId) -> bool {
+    world.characters.get(actor_id).is_some_and(|actor| {
+        actor.holds().iter().any(|item_id| {
+            world
+                .items
+                .get(item_id)
+                .is_some_and(|item| item.kind.as_str() == CHALK_PEN_KIND)
+        })
+    })
+}
+
+/// The anchors within reach of an actor, nearest first — what the sheet's
+/// `**you_could_chalk**` list renders and what `draw_mark`'s `anchor` argument
+/// names.
+///
+/// A verb whose argument the model has to *guess* is a verb that fails all
+/// day, so the eligible handles are put in front of it rather than left to be
+/// invented. Households are spelled by owner id (an id is a handle; the prose
+/// name is the sheet's business), places by their registry name.
+pub fn chalkable_anchors(
+    world: &World,
+    actor_id: &ActorId,
+) -> Vec<(String, crate::marks::MarkAnchor)> {
+    let Some(actor) = world.characters.get(actor_id) else {
+        return Vec::new();
+    };
+    let here = actor.position_m();
+    let mut found: Vec<(f64, String, crate::marks::MarkAnchor)> = Vec::new();
+    for entry in world.places.entries_within(here, CHALK_REACH_M) {
+        let anchor = match world.places.owner_of_home(&entry.id) {
+            Some(owner) => crate::marks::MarkAnchor::Household(owner.clone()),
+            None => crate::marks::MarkAnchor::Place(entry.name.clone()),
+        };
+        let handle = match &anchor {
+            crate::marks::MarkAnchor::Household(owner) => owner.to_string(),
+            crate::marks::MarkAnchor::Place(name) => name.clone(),
+        };
+        found.push((entry.point.distance(here), handle, anchor));
+    }
+    found.sort_by(|left, right| {
+        left.0
+            .partial_cmp(&right.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| left.1.cmp(&right.1))
+    });
+    found
+        .into_iter()
+        .map(|(_, handle, anchor)| (handle, anchor))
+        .collect()
+}
+
+/// `draw_mark` (`features/chalking_the_walls.md` M2): put chalk on a handle
+/// the city already has.
+///
+/// You cannot chalk a blank wall (§2.2) — the `anchor` argument names one of
+/// the handles the sheet just listed, and anything else is `nothing_to_chalk`.
+/// The mark's `about` is derived from the anchor, never passed in, so nobody
+/// can chalk a cross "about" somebody whose door it is not.
+fn draw_mark(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["kind", "anchor"], &[])?;
+    if !holds_a_chalk_pen(world, actor_id) {
+        return Err(ActionError::new(
+            ActionErrorCode::NoPen,
+            "you have nothing to write with",
+        ));
+    }
+    let kind_value = &parsed["kind"];
+    let Some(kind) = kind_value.as_str().and_then(crate::marks::MarkKind::parse) else {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownMarkKind,
+            format!("there is no mark called {}", py_repr(kind_value)),
+        ));
+    };
+    if !world
+        .mark_catalog
+        .spec(kind)
+        .is_some_and(|spec| spec.drawable_by_hand)
+    {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownMarkKind,
+            format!("a {kind} is not something a hand draws"),
+        ));
+    }
+    let anchor_value = &parsed["anchor"];
+    let Some(handle) = anchor_value.as_str() else {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidArguments,
+            "anchor must be a string",
+        ));
+    };
+    let Some((_, anchor)) = chalkable_anchors(world, actor_id)
+        .into_iter()
+        .find(|(candidate, _)| candidate.eq_ignore_ascii_case(handle))
+    else {
+        return Err(ActionError::new(
+            ActionErrorCode::NothingToChalk,
+            format!(
+                "there is nothing called {} within reach to chalk",
+                py_repr(anchor_value)
+            ),
+        ));
+    };
+    if !world.mark_catalog.accepts(kind, &anchor) {
+        return Err(ActionError::new(
+            ActionErrorCode::UnknownMarkKind,
+            format!("a {kind} does not belong there"),
+        ));
+    }
+    if world.marks.find(kind, &anchor).is_some() {
+        return Err(ActionError::new(
+            ActionErrorCode::AlreadyMarked,
+            "that mark is already there",
+        ));
+    }
+    let game_days = world.current_time.map_or(0.0, |time| time.game_days());
+    let Some(drawn) =
+        crate::marks::draw_or_refresh(world, kind, anchor, Some(actor_id.clone()), game_days)
+    else {
+        return Err(ActionError::new(
+            ActionErrorCode::NothingToChalk,
+            "there is nothing there to chalk",
+        ));
+    };
+    let label = world
+        .marks
+        .get(drawn.id)
+        .map(|mark| world.mark_catalog.label_for(mark))
+        .unwrap_or_else(|| kind.to_string());
+
+    // Somebody chalking a neighbour's door in front of you is the whole drama,
+    // so this is the one place in the feature a percept is worth a paid turn
+    // (§2.8). The line is blunt and does not editorialize: whether it becomes
+    // a `raise_notice` is the law's business, unchanged.
+    let seen = format!("chalked {label}");
+    let (hearers, plain_sight) = deliver_pocket_percept(world, actor_id, &seen, &seen);
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .remember_percept(format!("You chalked {label}."));
+    world_event_witnessed(world, "draw_mark", actor_id, None, hearers, plain_sight);
+    world.touch_public_state();
+    Ok(format!(
+        "{} chalks {label}",
+        world.characters[actor_id].name()
+    ))
+}
+
+/// `scrub_mark` (`features/chalking_the_walls.md` M2): a wet sleeve.
+///
+/// No pen needed — wiping chalk off takes nothing but a sleeve — but the mark
+/// must be within [`CHALK_REACH_M`], and the id comes off the `marks_here`
+/// bullets so there is nothing to guess.
+fn scrub_mark(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<String, ActionError> {
+    let parsed = args_object(args, &["mark_id"], &[])?;
+    let id_value = &parsed["mark_id"];
+    let Some(raw) = id_value
+        .as_str()
+        .and_then(|text| text.trim().parse::<u64>().ok())
+        .or_else(|| id_value.as_u64())
+    else {
+        return Err(ActionError::new(
+            ActionErrorCode::InvalidArguments,
+            format!("mark_id must be a mark's number, not {}", py_repr(id_value)),
+        ));
+    };
+    let mark_id = crate::ids::MarkId(raw);
+    let Some(mark) = world.marks.get(mark_id) else {
+        return Err(ActionError::new(
+            ActionErrorCode::NoSuchMark,
+            format!("there is no mark {raw}"),
+        ));
+    };
+    let anchor = mark.anchor.clone();
+    let label = world.mark_catalog.label_for(mark);
+    let Some(site) = crate::marks::anchor_site(world, &anchor) else {
+        return Err(ActionError::new(
+            ActionErrorCode::NoSuchMark,
+            format!("there is no mark {raw}"),
+        ));
+    };
+    let here = world.characters[actor_id].position_m();
+    if site.point.distance(here) > CHALK_REACH_M {
+        return Err(ActionError::new(
+            ActionErrorCode::OutOfRange,
+            "that mark is out of reach",
+        ));
+    }
+    world.marks.remove(mark_id);
+
+    let seen = format!("scrubbed {label} off the wall");
+    let (hearers, plain_sight) = deliver_pocket_percept(world, actor_id, &seen, &seen);
+    world
+        .characters
+        .get_mut(actor_id)
+        .expect("the actor is in the world")
+        .remember_percept(format!("You scrubbed {label} off the wall."));
+    world_event_witnessed(world, "scrub_mark", actor_id, None, hearers, plain_sight);
+    world.touch_public_state();
+    Ok(format!(
+        "{} scrubs {label} off the wall",
+        world.characters[actor_id].name()
+    ))
 }
 
 /// A world event that also records who *saw* it, not merely who was in range —

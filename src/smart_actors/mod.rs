@@ -3921,6 +3921,30 @@ mod tests {
                 .map(|focus| focus.actor_id.0.as_str()),
             Some("cb947")
         );
+        // Select the coin by slot rather than relying on it being the only
+        // thing the player holds. The player is seeded with a chalk pen
+        // (`features/chalking_the_walls.md` M2), so slot 1 is the pen and the
+        // spark this test is about is slot 2 — and the offer path, which is
+        // what is under test here, has no opinion about inventory order.
+        let coin_slot = app
+            .world()
+            .resource::<model::WorldMirror>()
+            .actor(&model::ActorId("player".into()))
+            .and_then(|player| {
+                player
+                    .holds
+                    .iter()
+                    .position(|held| held.0 == "c0prs")
+            })
+            .expect("the player holds the spark by now");
+        let slot_key = [KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3][coin_slot];
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(slot_key);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
         app.world_mut()
             .resource_mut::<ButtonInput<MouseButton>>()
             .press(MouseButton::Right);

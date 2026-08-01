@@ -205,6 +205,14 @@ pub enum BridgeCommand {
     /// judgement above `seize` is an LLM's, which is right, and which is exactly
     /// why a scripted run cannot otherwise reach one. A developer poke, not a
     /// modelled cause — like `DebugStatus`.
+    /// CATHEDRAL_DRIVE `chalk` / `scrub` (`features/chalking_the_walls.md` M2).
+    DebugChalk {
+        kind: String,
+        anchor: String,
+    },
+    DebugScrub {
+        anchor: String,
+    },
     DebugSeize {
         officer: String,
         target: Option<String>,

@@ -878,3 +878,274 @@ fn two_notices_against_one_body_chalk_one_door() {
     cathedral_sim::notices::chalk_the_debtors(&mut world, 5.0);
     assert_eq!(world.marks.len(), 1, "one debtor, one door, one cross");
 }
+
+// --------------------------------------------------------------------------- //
+// M2 — the pen and the two verbs
+// --------------------------------------------------------------------------- //
+
+use cathedral_sim::{Item, ItemId, apply_action};
+use serde_json::json;
+
+/// Put a chalk pen in somebody's hand.
+fn give_a_pen(world: &mut World, who: &str) {
+    let id = ItemId::from_raw(format!("pen_{who}"));
+    world.add_item(Item::new(id.clone(), "chalk_pen"));
+    world
+        .characters
+        .get_mut(&ActorId::from_raw(who))
+        .expect("the actor exists")
+        .state
+        .holds
+        .push(id);
+}
+
+/// A world where `sv3n1` stands at Ede Clove's door with chalk in hand.
+fn world_at_a_door() -> World {
+    let mut world = world_with_places();
+    // 1 m from the door at (10, 0.91, 0) — inside CHALK_REACH_M.
+    world.add_character(character("sv3n1", "Sven", 9.0));
+    give_a_pen(&mut world, "sv3n1");
+    world
+}
+
+/// §2.6: the pen gates the verb.
+#[test]
+fn drawing_without_a_pen_is_refused() {
+    let mut world = world_with_places();
+    world.add_character(character("sv3n1", "Sven", 9.0));
+    let error = apply_action(
+        &mut world,
+        &ActorId::from_raw("sv3n1"),
+        "draw_mark",
+        &json!({"kind": "chalk_cross", "anchor": "debtor"}),
+    )
+    .expect_err("no pen, no mark");
+    assert_eq!(error.code.as_str(), "no_pen");
+    assert!(world.marks.is_empty());
+}
+
+/// …and with one, the mark goes up and is authored to the hand that drew it.
+#[test]
+fn a_hand_with_chalk_marks_a_door_within_reach() {
+    let mut world = world_at_a_door();
+    let line = apply_action(
+        &mut world,
+        &ActorId::from_raw("sv3n1"),
+        "draw_mark",
+        &json!({"kind": "chalk_cross", "anchor": "debtor"}),
+    )
+    .expect("the door is within reach");
+    assert!(line.contains("chalks"), "unexpected line: {line}");
+    assert_eq!(world.marks.len(), 1);
+    let (_, mark) = world.marks.iter().next().expect("the mark is live");
+    assert_eq!(
+        mark.author,
+        Some(ActorId::from_raw("sv3n1")),
+        "the hand is recorded — for the trace, never for a reader"
+    );
+    assert_eq!(
+        mark.about,
+        Some(ActorId::from_raw("debtor")),
+        "`about` is derived from the anchor, never passed in"
+    );
+}
+
+/// §2.2: you cannot chalk a blank wall, and out of reach is out of reach.
+#[test]
+fn there_is_nothing_to_chalk_out_of_arms_reach() {
+    let mut world = world_with_places();
+    world.add_character(character("sv3n1", "Sven", 0.0));
+    give_a_pen(&mut world, "sv3n1");
+    let error = apply_action(
+        &mut world,
+        &ActorId::from_raw("sv3n1"),
+        "draw_mark",
+        // Ede Clove's door is 10 m away.
+        &json!({"kind": "chalk_cross", "anchor": "debtor"}),
+    )
+    .expect_err("a door ten metres off is not within reach");
+    assert_eq!(error.code.as_str(), "nothing_to_chalk");
+}
+
+/// The catalog decides where a kind may hang, not the hand.
+#[test]
+fn a_tally_cannot_be_drawn_on_a_door() {
+    let mut world = world_at_a_door();
+    let error = apply_action(
+        &mut world,
+        &ActorId::from_raw("sv3n1"),
+        "draw_mark",
+        &json!({"kind": "well_tally", "anchor": "debtor"}),
+    )
+    .expect_err("a tally does not belong on a door");
+    assert_eq!(error.code.as_str(), "unknown_kind");
+}
+
+#[test]
+fn an_unknown_kind_and_a_double_mark_are_both_refused() {
+    let mut world = world_at_a_door();
+    let error = apply_action(
+        &mut world,
+        &ActorId::from_raw("sv3n1"),
+        "draw_mark",
+        &json!({"kind": "tallow_smear", "anchor": "debtor"}),
+    )
+    .expect_err("everything is chalk");
+    assert_eq!(error.code.as_str(), "unknown_kind");
+
+    apply_action(
+        &mut world,
+        &ActorId::from_raw("sv3n1"),
+        "draw_mark",
+        &json!({"kind": "chalk_cross", "anchor": "debtor"}),
+    )
+    .expect("the first cross goes up");
+    let error = apply_action(
+        &mut world,
+        &ActorId::from_raw("sv3n1"),
+        "draw_mark",
+        &json!({"kind": "chalk_cross", "anchor": "debtor"}),
+    )
+    .expect_err("the second does not");
+    assert_eq!(error.code.as_str(), "already_marked");
+    assert_eq!(world.marks.len(), 1);
+}
+
+/// Scrubbing needs no pen — a wet sleeve is a wet sleeve — but it does need
+/// the mark to be within reach.
+#[test]
+fn scrubbing_needs_no_pen_but_does_need_reach() {
+    let mut world = world_at_a_door();
+    let id = chalk(
+        &mut world,
+        MarkAnchor::Household(ActorId::from_raw("debtor")),
+    );
+
+    // Somebody with no pen at all, standing at the same door.
+    world.add_character(character("bare1", "Bare Hands", 9.5));
+    let line = apply_action(
+        &mut world,
+        &ActorId::from_raw("bare1"),
+        "scrub_mark",
+        &json!({"mark_id": id.0}),
+    )
+    .expect("a sleeve is enough");
+    assert!(line.contains("scrubs"), "unexpected line: {line}");
+    assert!(world.marks.is_empty(), "the wall is clean");
+}
+
+#[test]
+fn scrubbing_out_of_reach_or_nothing_is_refused() {
+    let mut world = world_at_a_door();
+    let id = chalk(
+        &mut world,
+        MarkAnchor::Household(ActorId::from_raw("debtor")),
+    );
+    world.add_character(character("far01", "Far Off", 30.0));
+    let error = apply_action(
+        &mut world,
+        &ActorId::from_raw("far01"),
+        "scrub_mark",
+        &json!({"mark_id": id.0}),
+    )
+    .expect_err("twenty metres is not arm's reach");
+    assert_eq!(error.code.as_str(), "out_of_range");
+    assert!(
+        world.marks.get(id).is_some(),
+        "and the chalk is still there"
+    );
+
+    let error = apply_action(
+        &mut world,
+        &ActorId::from_raw("sv3n1"),
+        "scrub_mark",
+        &json!({"mark_id": 9999}),
+    )
+    .expect_err("there is no mark 9999");
+    assert_eq!(error.code.as_str(), "no_such_mark");
+}
+
+/// §2.3 through the verb: a forged cross is drawn by a hand and refuses just
+/// as hard. This is the player's whole side of the feature.
+#[test]
+fn a_forged_cross_is_indistinguishable_to_every_reader() {
+    let mut world = world_at_a_door();
+    apply_action(
+        &mut world,
+        &ActorId::from_raw("sv3n1"),
+        "draw_mark",
+        &json!({"kind": "chalk_cross", "anchor": "debtor"}),
+    )
+    .expect("forged");
+    assert!(
+        marks::binding_mark_about(&world, MarkKind::ChalkCross, &ActorId::from_raw("debtor"))
+            .is_some(),
+        "the reader binds on a forged cross exactly as on the ward's own"
+    );
+}
+
+/// The witness seam: chalking a neighbour's door in front of somebody is a
+/// social event, so it is the one place in this feature a percept is worth a
+/// paid turn (§2.8).
+#[test]
+fn chalking_in_front_of_somebody_is_seen_and_named() {
+    let mut world = world_at_a_door();
+    world.add_character(character("watch1", "Watcher", 10.5));
+    apply_action(
+        &mut world,
+        &ActorId::from_raw("sv3n1"),
+        "draw_mark",
+        &json!({"kind": "chalk_cross", "anchor": "debtor"}),
+    )
+    .expect("drawn");
+
+    let seen = world.characters[&ActorId::from_raw("watch1")]
+        .state
+        .inbox
+        .clone();
+    assert_eq!(seen.len(), 1, "the witness is told once, got {seen:?}");
+    assert!(
+        seen[0].contains("chalked"),
+        "the line names the act plainly: {}",
+        seen[0]
+    );
+}
+
+/// The sheet offers the handle rather than making the model invent one, and
+/// the verb only appears when a hand could actually use it.
+#[test]
+fn the_sheet_lists_what_a_hand_could_chalk() {
+    let mut world = world_at_a_door();
+    let env = prompt_env();
+    let sheet =
+        cathedral_sim::prompt::render_prompt(&world, &ActorId::from_raw("sv3n1"), None, &env)
+            .expect("the sheet renders");
+    assert!(
+        sheet.contains("**you_could_chalk**"),
+        "the anchor list is missing:\n{sheet}"
+    );
+    assert!(sheet.contains("draw_mark"), "the verb is missing:\n{sheet}");
+
+    // Take the pen away and the verb goes with it — but nothing already drawn
+    // is erased (§2.6).
+    chalk(
+        &mut world,
+        MarkAnchor::Household(ActorId::from_raw("debtor")),
+    );
+    world
+        .characters
+        .get_mut(&ActorId::from_raw("sv3n1"))
+        .unwrap()
+        .state
+        .holds
+        .clear();
+    let sheet =
+        cathedral_sim::prompt::render_prompt(&world, &ActorId::from_raw("sv3n1"), None, &env)
+            .expect("the sheet renders");
+    assert!(!sheet.contains("draw_mark"), "no pen, no verb:\n{sheet}");
+    assert!(
+        sheet.contains("scrub_mark"),
+        "but a sleeve still scrubs what is within reach:\n{sheet}"
+    );
+    assert_eq!(world.marks.len(), 1, "and the mark itself is untouched");
+}

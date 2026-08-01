@@ -120,6 +120,9 @@ pub struct PromptStrings {
     /// for everyone with no gating at all: there is no literacy state, and a
     /// mark's meaning is plain to anyone over seven who looks at it.
     pub marks_note: String,
+    /// The parenthesis after `**you_could_chalk**` — the handles `draw_mark`
+    /// may name, so the model never has to invent one.
+    pub chalkable_note: String,
     /// The `you_hold` suffix for a unit riding the mouth
     /// (`features/extra_pockets.md`): `- k3f9x wet spark (in your mouth)`.
     pub pocket_mouth_note: String,
@@ -287,6 +290,11 @@ struct Sheet<'a> {
     /// case and every frozen fixture's case.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     marks_here: Vec<MarkLine>,
+    /// The handles `draw_mark`'s `anchor` argument may name — everything
+    /// chalkable within `CHALK_REACH_M`. Omitted when empty, and when the
+    /// actor has no pen the verb is off the sheet anyway.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    you_could_chalk: Vec<String>,
     /// The ward's live notices this actor carries (`law_and_order.md` M3) —
     /// what the ward is saying right now, newest first, capped at
     /// [`crate::notices::NOTICES_SHEET_MAX`] by [`ward_notice_lines`], which
@@ -491,6 +499,9 @@ struct MarkLine {
     site: String,
     distance_m: f64,
     meaning: String,
+    /// Whether a sleeve could reach it — what decides if `scrub_mark` is on
+    /// the sheet at all.
+    in_reach: bool,
 }
 
 fn person<'a>(
@@ -545,6 +556,12 @@ pub fn render_prompt(
     // The dogs explainer tracks its section too: only a sheet with a dog on it
     // pays the paragraph, and every dog-less world keeps its exact bytes.
     let has_dogs = !sheet.dogs_nearby.is_empty();
+    // The pen gates the verb, never the rule (`features/chalking_the_walls.md`
+    // §2.6): the ward's own hand chalks without one. Scrubbing needs no pen —
+    // a wet sleeve is a wet sleeve — only a mark within reach.
+    let has_chalk_verbs =
+        !sheet.you_could_chalk.is_empty() && crate::actions::holds_a_chalk_pen(world, actor_id);
+    let has_scrub_verb = sheet.marks_here.iter().any(|mark| mark.in_reach);
     let has_law_verbs = crate::notices::is_law(actor);
     // `settle_notice` reaches one person outside the law cast: whoever a live
     // notice names as wronged, who may forgive their own spark (M3.5). They
@@ -604,6 +621,8 @@ pub fn render_prompt(
                 gaol_fee => gaol_fee_phrase(),
                 has_pockets,
                 has_frontbutt,
+                has_chalk_verbs,
+                has_scrub_verb,
             })
         })
         .map_err(|error| PromptError::new(format!("the turn template did not render: {error}")))
@@ -911,9 +930,15 @@ fn build_sheet<'a>(
             site,
             distance_m: py_round(near.distance_m, 1),
             meaning: near.meaning,
+            in_reach: near.distance_m <= crate::actions::CHALK_REACH_M,
         }
     })
     .collect();
+
+    let you_could_chalk: Vec<String> = crate::actions::chalkable_anchors(world, actor.id())
+        .into_iter()
+        .map(|(handle, _)| handle)
+        .collect();
 
     let mut sorted_offers: Vec<&Offer> = world.offers.values().collect();
     sorted_offers.sort_by_key(|offer| offer_sort_key(offer));
@@ -1103,6 +1128,7 @@ fn build_sheet<'a>(
         },
         dogs_nearby,
         marks_here,
+        you_could_chalk,
         word_in_the_ward: ward_notice_lines(world, actor.id()),
         since_your_last_turn,
         recent_history,
@@ -1489,6 +1515,14 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
         ));
     }
 
+    if !sheet.you_could_chalk.is_empty() {
+        sections.push(bullet_section(
+            &format!("**you_could_chalk** ({})", strings.chalkable_note),
+            sheet.you_could_chalk.iter().map(|handle| handle.clone()),
+            "",
+        ));
+    }
+
     // The chalk — beside the dogs, where the eyes are, and omitted entirely
     // when the walls are bare so an unchalked sheet never moves a byte.
     if !sheet.marks_here.is_empty() {
@@ -1847,6 +1881,7 @@ mod tests {
             following: "You are following %s.".into(),
             dogs_note: "street dogs within 20 metres, nearest first".into(),
             marks_note: "chalk on the walls within 8 metres, nearest first".into(),
+            chalkable_note: "what your hand could reach to chalk, nearest first".into(),
             faction_role_label: "Faction role:".into(),
             illegal_activity_label: "In secret:".into(),
             home_label: "Home:".into(),
@@ -1867,7 +1902,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nmarks_note = \"mm\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nmarks_note = \"mm\"\nchalkable_note = \"cc\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\n";
         let error = PromptEnv::new("x", "y", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
@@ -1954,6 +1989,7 @@ mod tests {
             },
             dogs_nearby: Vec::new(),
             marks_here: Vec::new(),
+            you_could_chalk: Vec::new(),
             word_in_the_ward: Vec::new(),
             since_your_last_turn: Vec::new(),
             recent_history: Vec::new(),
