@@ -21,7 +21,7 @@
 //! state — a boil is a transient event, which is what the inbox is for.
 
 use bevy::{camera::visibility::NoFrustumCulling, light::NotShadowCaster, prelude::*};
-use cathedral_sim::{NavData, WeatherKind};
+use cathedral_sim::NavData;
 
 use crate::{
     config::VerminSettings,
@@ -33,6 +33,10 @@ use crate::{
         bridge::{BridgeCommand, BridgeHandle},
         model::Position,
     },
+    // Heavy rain thins the *visible* colonies on the very predicate the
+    // soundscape uses to send its birds and its alley cat quiet, rather than on
+    // a second copy of the same two thresholds that could drift from it.
+    soundscape::wildlife_suppressed as rain_suppressed,
     weather::WorldWeatherState,
 };
 
@@ -44,8 +48,14 @@ const VERMIN_VISIBLE_RANGE_M: f32 = 60.0;
 const SCATTER_TRIGGER_M: f32 = 2.5;
 /// Feet above this are not feet on the ground: the developer flying over the
 /// Shambles is not standing in it, and a scatter is a reaction to a footfall.
-/// The player transform is eye height (~1.6 m, the `tp` vantage), so this
-/// clears a standing body and stops well short of any flight or bridge deck.
+///
+/// The height compared is the **body**, not the eye: the player root carries
+/// the body transform (`controller::PLAYER_SPAWN.y` = 0.91 m for a standing
+/// player) and the camera is a child `EYE_OFFSET` above it, and `tp` likewise
+/// names the body — so §5's 1.6 m reading vantages still count as standing.
+/// The margin over 0.91 is what lets a rat be startled from a kerb, a step or
+/// a stall platform; flight and the city's overhead bridge decks are all well
+/// above it.
 const SCATTER_MAX_FOOT_Y: f32 = 2.5;
 /// Rats farther than this from the impulse point ignore it.
 const SCATTER_REACH_M: f32 = 4.0;
@@ -447,18 +457,6 @@ fn game_minutes(clock: &WorldClockState) -> f64 {
 fn percept_due(last_minutes: Option<f64>, minutes: f64) -> bool {
     last_minutes
         .is_none_or(|last| !(0.0..SWARM_PERCEPT_INTERVAL_MINUTES).contains(&(minutes - last)))
-}
-
-/// Heavy rain sends the rats under cover with the rest of the animals — the
-/// same threshold `soundscape::wildlife_suppressed` holds its fauna to.
-fn rain_suppressed(weather: Option<&WorldWeatherState>) -> bool {
-    weather.is_some_and(|weather| {
-        weather.current.precipitation >= 0.62
-            || matches!(
-                weather.current.kind,
-                WeatherKind::Downpour | WeatherKind::Thunderstorm
-            )
-    })
 }
 
 /// Spawns the one vermin batch. Registered after `build_city` so the baked
@@ -893,6 +891,13 @@ fn push_rat(
     let ridge_front = center + ahead * (half_length * 0.55) + Vec3::Y * (height * 0.78);
     let ridge_back = center - ahead * (half_length * 0.72) + Vec3::Y * height;
 
+    // Each panel is traversed so that [`push_quad`]'s computed normal comes out
+    // pointing *off* the body — the far flank walked one way round the cycle,
+    // the near flank the other, the tail from its right. `double_sided` +
+    // `cull_mode: None` would hide getting this wrong (the shader flips the
+    // normal on a back face, so the shading looks right either way), which is
+    // exactly how "every batched box was wound inside out" survived unnoticed
+    // elsewhere in this repo. Pinned by `a_rat_is_wound_with_its_normals_out`.
     push_quad(
         positions,
         normals,
@@ -908,7 +913,7 @@ fn push_rat(
         uvs,
         colors,
         indices,
-        [nose + flank, rump + flank, ridge_back, ridge_front],
+        [rump + flank, nose + flank, ridge_front, ridge_back],
         coat,
     );
 
@@ -921,10 +926,10 @@ fn push_rat(
         colors,
         indices,
         [
-            tail_root - side * 0.012,
             tail_root + side * 0.012,
-            tail_tip + side * 0.004,
+            tail_root - side * 0.012,
             tail_tip - side * 0.004,
+            tail_tip + side * 0.004,
         ],
         tail_color,
     );
@@ -953,12 +958,23 @@ fn push_quad(
 #[cfg(test)]
 mod tests {
     use bevy::asset::AssetPlugin;
+    use cathedral_sim::WeatherKind;
 
     use super::*;
     use crate::mesh_batch::IDLE_BATCH_VERTICES;
 
     fn built_app() -> App {
+        built_app_with(None)
+    }
+
+    /// The city, and the whole vermin chain in the order `CityPlugin` runs it —
+    /// scatter included, so the sweep that arms an impulse is exercised by the
+    /// same frames the batch is.
+    fn built_app_with(settings: Option<VerminSettings>) -> App {
         let mut app = App::new();
+        if let Some(settings) = settings {
+            app.insert_resource(settings);
+        }
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
             .init_asset::<Mesh>()
             .init_asset::<Image>()
@@ -966,7 +982,10 @@ mod tests {
             .init_asset::<crate::materials::WindowGlassMaterial>()
             .init_resource::<CollisionWorld>()
             .add_systems(Startup, (super::super::build_city, spawn_vermin).chain())
-            .add_systems(Update, (announce_vermin_boil, animate_vermin).chain());
+            .add_systems(
+                Update,
+                (announce_vermin_boil, trigger_vermin_scatter, animate_vermin).chain(),
+            );
         app.update();
         app
     }
@@ -994,6 +1013,17 @@ mod tests {
             include_bytes!("../../assets/world/navigation.bin"),
         )
         .expect("the committed navigation bake parses")
+    }
+
+    /// The one colony's scatter impulse, if it is armed.
+    fn scatter_of(app: &mut App, colony: usize) -> Option<(Vec2, f32)> {
+        let world = app.world_mut();
+        world
+            .query::<&Vermin>()
+            .single(world)
+            .expect("one vermin batch")
+            .colonies[colony]
+            .scatter
     }
 
     fn vermin_mesh_vertices(app: &mut App) -> usize {
@@ -1296,6 +1326,164 @@ mod tests {
         );
     }
 
+    /// The sweep that *arms* an impulse, not just the envelope it plays out:
+    /// somebody standing on a rat startles its colony, and the same body
+    /// overhead — developer flight, or one of the city's bridge decks — does
+    /// not. The height compared is the player root's, which carries the body
+    /// (`controller::PLAYER_SPAWN.y`), not the child camera's eye.
+    #[test]
+    fn a_footfall_arms_the_scatter_and_a_flight_over_it_does_not() {
+        let mut app = built_app();
+        let elapsed = app.world().resource::<Time>().elapsed_secs();
+        let standing_on = {
+            let world = app.world_mut();
+            let vermin = world
+                .query::<&Vermin>()
+                .single(world)
+                .expect("one vermin batch");
+            vermin.colonies[0].rats[0].sample(elapsed).0
+        };
+        let player = app
+            .world_mut()
+            .spawn((
+                PlayerController::default(),
+                Transform::from_xyz(standing_on.x, 0.91, standing_on.y),
+            ))
+            .id();
+
+        app.update();
+        assert!(
+            scatter_of(&mut app, 0).is_some(),
+            "a foot on a rat startles the colony"
+        );
+
+        // Lift the same body into flight over the same ground: nothing re-arms.
+        {
+            let world = app.world_mut();
+            let mut vermin = world
+                .query::<&mut Vermin>()
+                .single_mut(world)
+                .expect("one vermin batch");
+            vermin.colonies[0].scatter = None;
+        }
+        app.world_mut()
+            .get_mut::<Transform>(player)
+            .expect("the player is still there")
+            .translation
+            .y = SCATTER_MAX_FOOT_Y + 4.0;
+        app.update();
+        assert_eq!(
+            scatter_of(&mut app, 0),
+            None,
+            "flying over a colony is not standing in it"
+        );
+    }
+
+    /// Heavy rain thins the rats that are *drawn*, not merely the predicate:
+    /// every third one stays out, matching the animals going quiet.
+    #[test]
+    fn heavy_rain_thins_the_drawn_batch() {
+        let mut app = built_app();
+        let shambles = Vec3::new(-294.0, 6.0, 220.0);
+        app.world_mut().spawn((
+            Camera3d::default(),
+            GlobalTransform::from_translation(shambles),
+        ));
+        app.update();
+        let dry = vermin_mesh_vertices(&mut app);
+        assert!(dry > IDLE_BATCH_VERTICES, "the Shambles is in range");
+
+        let mut downpour = WorldWeatherState::default();
+        downpour.current.kind = WeatherKind::Downpour;
+        app.insert_resource(downpour);
+        app.update();
+        let wet = vermin_mesh_vertices(&mut app);
+
+        let world = app.world_mut();
+        let vermin = world
+            .query::<&Vermin>()
+            .single(world)
+            .expect("one vermin batch");
+        let expected: usize = vermin
+            .colonies
+            .iter()
+            .filter(|colony| {
+                colony.anchor.distance(shambles.xz()) <= VERMIN_VISIBLE_RANGE_M + colony.radius_m
+            })
+            .map(|colony| colony.rats.len().div_ceil(3) * 3 * 4)
+            .sum();
+        assert_eq!(wet, expected, "a stray third stays out in a downpour");
+        assert!(wet < dry, "and that is fewer than the dry count");
+    }
+
+    /// §2.5's two dials. `enabled: false` — which is all `CATHEDRAL_NO_VERMIN`
+    /// does — must spawn *nothing*, not an idling batch; `density` scales the
+    /// authored per-colony counts and nothing else.
+    #[test]
+    fn the_ablation_switch_spawns_nothing_and_density_scales_the_counts() {
+        let mut off = built_app_with(Some(VerminSettings {
+            enabled: false,
+            ..Default::default()
+        }));
+        let world = off.world_mut();
+        assert!(
+            world.query::<&Vermin>().iter(world).next().is_none(),
+            "an ablated feature costs no entity and no per-frame rebuild"
+        );
+
+        // Density 0 is not the ablation switch: the batch exists and parks.
+        let mut empty = built_app_with(Some(VerminSettings {
+            density: 0.0,
+            ..Default::default()
+        }));
+        {
+            let world = empty.world_mut();
+            let vermin = world
+                .query::<&Vermin>()
+                .single(world)
+                .expect("one vermin batch");
+            assert!(vermin.colonies.iter().all(|colony| colony.rats.is_empty()));
+            assert!(
+                vermin
+                    .colonies
+                    .iter()
+                    .all(|colony| colony.boil_rats.is_empty())
+            );
+        }
+        assert_eq!(vermin_mesh_vertices(&mut empty), IDLE_BATCH_VERTICES);
+
+        // Doubling keeps every rat a single density already settled (the seed
+        // is keyed on the rat's index, not on the count) and adds more.
+        let counts = |app: &mut App| -> Vec<usize> {
+            let world = app.world_mut();
+            world
+                .query::<&Vermin>()
+                .single(world)
+                .expect("one vermin batch")
+                .colonies
+                .iter()
+                .map(|colony| colony.rats.len())
+                .collect()
+        };
+        let single = counts(&mut built_app());
+        let mut doubled_app = built_app_with(Some(VerminSettings {
+            density: 2.0,
+            ..Default::default()
+        }));
+        let doubled = counts(&mut doubled_app);
+        for (index, (one, two)) in single.iter().zip(doubled.iter()).enumerate() {
+            assert!(
+                two >= one && *two <= one * 2,
+                "{}: {one} at 1.0 but {two} at 2.0",
+                COLONIES[index].name
+            );
+        }
+        assert!(
+            doubled.iter().sum::<usize>() > single.iter().sum::<usize>(),
+            "a denser city has more rats in it"
+        );
+    }
+
     /// A boil runs the Snuffing to the Kindling, which straddles midnight — so
     /// 21:00 on day N and 04:00 on day N+1 must be the *same* night, or one
     /// boil would become two and pick two colonies at the stroke of twelve.
@@ -1542,7 +1730,95 @@ mod tests {
         );
     }
 
-    /// Heavy rain thins the visible count, matching the animals going quiet.
+    /// Every quad of a rat is wound so that its computed normal points off the
+    /// body: the far flank outward, the near flank outward, the tail at the sky.
+    ///
+    /// `double_sided: true` + `cull_mode: None` hides the opposite of this — the
+    /// shader flips the normal on a back face, so an inside-out quad shades
+    /// exactly like a correct one from every angle, and nothing on screen ever
+    /// says otherwise. That is how `bb616d1` ("every batched box was wound
+    /// inside out, and nothing showed it") happened, so the winding is asserted
+    /// off the attribute rather than trusted to the picture. Checked at two
+    /// headings, since the whole tent is built out of `ahead`/`side`.
+    #[test]
+    fn a_rat_is_wound_with_its_normals_out() {
+        let nav = committed_nav();
+        let rat = bake_rat(
+            &nav,
+            &CollisionWorld::default(),
+            Vec2::new(-294.0, 220.0),
+            14.0,
+            7,
+        )
+        .expect("the Shambles is walkable");
+
+        for heading in [Vec2::X, Vec2::Y, Vec2::new(-0.6, 0.8).normalize()] {
+            let (mut positions, mut normals) = (Vec::new(), Vec::new());
+            let (mut uvs, mut colors, mut indices) = (Vec::new(), Vec::new(), Vec::new());
+            push_rat(
+                &mut positions,
+                &mut normals,
+                &mut uvs,
+                &mut colors,
+                &mut indices,
+                &rat,
+                Vec2::ZERO,
+                heading,
+                // Not moving: the bob is out of it, so the numbers below are the
+                // authored geometry and nothing else.
+                false,
+                0.0,
+            );
+            assert_eq!(positions.len(), 12, "two flanks and a tail");
+            assert_eq!(normals.len(), 12);
+
+            // One normal per quad, shared by its four corners and unit length.
+            let quad_normal = |quad: usize| -> Vec3 {
+                let corners = &normals[quad * 4..quad * 4 + 4];
+                for corner in corners {
+                    assert_eq!(*corner, corners[0], "quad {quad} is not flat-shaded");
+                }
+                let normal = Vec3::from_array(corners[0]);
+                assert!(
+                    (normal.length() - 1.0).abs() < 1e-4,
+                    "quad {quad} normal is not unit: {normal:?}"
+                );
+                normal
+            };
+
+            let side = Vec3::new(-heading.y, 0.0, heading.x);
+            let far_flank = quad_normal(0);
+            let near_flank = quad_normal(1);
+            let tail = quad_normal(2);
+
+            // The tent's two panels lean out and up, one to each side. Were
+            // either wound the other way its normal would point *into* the body.
+            assert!(
+                far_flank.dot(side) < -0.7,
+                "the far flank faces out at {heading:?}: {far_flank:?}"
+            );
+            assert!(
+                near_flank.dot(side) > 0.7,
+                "the near flank faces out at {heading:?}: {near_flank:?}"
+            );
+            for (label, panel) in [("far", far_flank), ("near", near_flank)] {
+                assert!(
+                    panel.y > 0.4,
+                    "the {label} flank is a roof, not a wall: {panel:?}"
+                );
+            }
+            // The tail lies almost flat on the ground; up is the only side of it
+            // anything can light.
+            assert!(
+                tail.y > 0.9,
+                "the tail faces the sky at {heading:?}: {tail:?}"
+            );
+        }
+    }
+
+    /// Heavy rain thins the visible count, matching the animals going quiet —
+    /// on `soundscape::wildlife_suppressed` itself, which the vermin layer now
+    /// shares with the birds rather than restating.
     #[test]
     fn heavy_rain_sends_most_rats_under_cover() {
         assert!(!rain_suppressed(None));

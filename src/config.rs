@@ -173,6 +173,42 @@ mod tests {
         assert_eq!(defaults.stt_backend, "cloud");
     }
 
+    /// `features/rats.md` §2.5: the vermin block is `#[serde(default)]` all the
+    /// way down, so a `config.ron` written before the feature existed still
+    /// loads — and one that names a single field keeps the shipped values for
+    /// every other. A player's local config is not regenerated on upgrade, so
+    /// this is the only thing standing between a new block and a settings wipe.
+    #[test]
+    fn a_config_written_before_the_rats_still_loads() {
+        let old: AppConfig =
+            ron::from_str("(fullscreen: false)").expect("a pre-vermin config parses");
+        let shipped = VerminSettings::default();
+        assert_eq!(old.vermin.enabled, shipped.enabled);
+        assert_eq!(old.vermin.seed, shipped.seed);
+        assert_eq!(old.vermin.density, shipped.density);
+        assert_eq!(old.vermin.swarm_percepts, shipped.swarm_percepts);
+
+        let partial: AppConfig = ron::from_str("(vermin: (swarm_percepts: false))")
+            .expect("naming one vermin field parses");
+        assert!(
+            !partial.vermin.swarm_percepts,
+            "the sim-facing switch is the one thing that changed"
+        );
+        assert_eq!(partial.vermin.enabled, shipped.enabled);
+        assert_eq!(partial.vermin.seed, shipped.seed);
+        assert_eq!(partial.vermin.density, shipped.density);
+
+        // …and the committed reference copy agrees with the Rust defaults.
+        let defaults: AppConfig = ron::from_str(
+            &fs::read_to_string(DEFAULT_CONFIG_PATH).expect("the defaults file is committed"),
+        )
+        .expect("default_config.ron parses");
+        assert_eq!(defaults.vermin.enabled, shipped.enabled);
+        assert_eq!(defaults.vermin.seed, shipped.seed);
+        assert_eq!(defaults.vermin.density, shipped.density);
+        assert_eq!(defaults.vermin.swarm_percepts, shipped.swarm_percepts);
+    }
+
     #[test]
     fn saved_settings_round_trip_through_ron() {
         let mut config = AppConfig::default();

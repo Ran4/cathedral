@@ -2243,7 +2243,15 @@ fn update_weather_audio(
     }
 }
 
-fn wildlife_suppressed(weather: Option<&WorldWeatherState>) -> bool {
+/// Heavy rain sends the animals under cover — the one threshold the whole game
+/// asks "have the animals gone quiet?" with.
+///
+/// `pub(crate)` because it is no longer only about sound: `city::vermin` thins
+/// the *visible* rat colonies through this same predicate (`features/rats.md`
+/// §3, "matching the animals going quiet"), so the birds falling silent and the
+/// rats going to ground are one decision, not two that have to be kept in step
+/// by hand. Do not inline it back into either caller.
+pub(crate) fn wildlife_suppressed(weather: Option<&WorldWeatherState>) -> bool {
     weather.is_some_and(|weather| {
         weather.current.precipitation >= 0.62
             || matches!(
