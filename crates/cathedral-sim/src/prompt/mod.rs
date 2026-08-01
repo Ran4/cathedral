@@ -889,6 +889,12 @@ fn build_sheet<'a>(
     .into_iter()
     .map(|near| {
         let site = match &near.occupant {
+            // Your own door first. Nobody's `knows` set contains their own id,
+            // so without this clause the debtor standing at their own chalked
+            // door would be told it belongs to "a stranger (you don't know
+            // their name)" — absurd, and since M1's cross is drawn on exactly
+            // that door, the most likely line this section will ever render.
+            Some(owner) if owner == actor.id() => "on your own door".to_string(),
             Some(owner) => {
                 let whose = world
                     .characters

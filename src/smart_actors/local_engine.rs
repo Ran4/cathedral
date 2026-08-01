@@ -385,6 +385,11 @@ fn build(
         night_office: config.night_office.config(),
         dogs_enabled: config.dogs_enabled,
         marks_enabled: config.marks.enabled,
+        mark_kinds: cathedral_sim::marks::MarkKindSwitches {
+            cross: config.marks.cross,
+            tally: config.marks.tally,
+            ward_sign: config.marks.ward_sign,
+        },
         marks_decay_scale: config.marks.decay_scale,
         clock: WorldClock::new(
             config.clock.seconds_per_day,

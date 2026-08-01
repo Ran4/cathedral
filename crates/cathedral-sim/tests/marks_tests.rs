@@ -11,7 +11,34 @@ use cathedral_sim::math::Vec3;
 use cathedral_sim::nav::NavData;
 use cathedral_sim::places::PlaceRegistry;
 use cathedral_sim::weather::{ShelterMap, WeatherSample};
-use cathedral_sim::{ActorId, Character, CharacterSheet, Control, World};
+use cathedral_sim::{ActorId, Character, CharacterSheet, Control, PromptEnv, World};
+
+#[path = "prompt_support/mod.rs"]
+mod prompt_support;
+
+use prompt_support::{asset, repo_root};
+
+/// The shipped prompt environment — `turn.j2` + `night.j2` + `strings.toml`.
+/// A sheet test that rendered from an inlined template would prove nothing.
+fn prompt_env() -> PromptEnv {
+    PromptEnv::new(
+        &asset("prompts/turn.j2"),
+        &asset("prompts/night.j2"),
+        &asset("prompts/strings.toml"),
+    )
+    .expect("the shipped prompt assets must load")
+}
+
+/// The real baked registry, against the real nav graph — the only thing that
+/// can catch a typo in an authored place name.
+fn real_place_registry() -> PlaceRegistry {
+    let nav_json = std::fs::read_to_string(repo_root().join("assets/world/navigation.json"))
+        .expect("the baked nav graph is readable");
+    let bitset = std::fs::read(repo_root().join("assets/world/navigation.bin"))
+        .expect("the baked bitset is readable");
+    let nav = NavData::from_parts(&nav_json, &bitset).expect("the baked nav graph parses");
+    PlaceRegistry::from_embedded(&nav).expect("the baked registry parses")
+}
 
 /// An LLM character at `x` on the axis, the `sim_tests.rs` shape.
 fn character(actor_id: &str, name: &str, x: f64) -> Character {
@@ -91,7 +118,7 @@ fn world_with_places() -> World {
 fn chalk(world: &mut World, anchor: MarkAnchor) -> cathedral_sim::ids::MarkId {
     marks::draw_or_refresh(world, kind_for(&anchor), anchor, None, 0.0)
         .expect("the anchor resolves")
-        .0
+        .id
 }
 
 fn kind_for(anchor: &MarkAnchor) -> MarkKind {
@@ -360,13 +387,21 @@ fn the_sweep_runs_at_most_once_a_game_minute() {
         "and must not weather"
     );
 
-    // Two game-minutes later it runs, and charges the whole elapsed span.
+    // Two game-minutes later it runs, and charges the whole elapsed span —
+    // but reports *no published change*, because two minutes of a nine-day
+    // half-life does not move the whole-percent value the wire carries. That
+    // distinction is the whole point of the return value; see
+    // `a_drying_mark_does_not_churn_the_snapshot_every_game_minute`.
     let two_minutes = 2.0 / 1440.0;
+    let published = marks::sweep(&mut world, two_minutes);
     assert!(
-        marks::sweep(&mut world, two_minutes),
-        "a minute boundary sweeps"
+        world.marks.get(id).unwrap().strength < 1.0,
+        "it did weather"
     );
-    assert!(world.marks.get(id).unwrap().strength < 1.0, "and weathers");
+    assert!(
+        !published,
+        "…but a change too small for the wire must not be reported as one"
+    );
 }
 
 /// §2.7's cap, enforced through the real drawing path rather than the raw
@@ -404,17 +439,25 @@ fn drawing_past_the_cap_evicts_rather_than_growing() {
 fn drawing_the_same_mark_twice_refreshes_it_in_place() {
     let mut world = world_with_places();
     let anchor = MarkAnchor::Household(ActorId::from_raw("debtor"));
-    let (first, fresh) =
+    let first_draw =
         marks::draw_or_refresh(&mut world, MarkKind::ChalkCross, anchor.clone(), None, 0.0)
             .unwrap();
-    assert!(fresh, "the first stroke is a new mark");
+    let first = first_draw.id;
+    assert!(first_draw.fresh, "the first stroke is a new mark");
+    assert!(
+        first_draw.evicted.is_none(),
+        "nothing was pushed off the walls"
+    );
 
     world.marks.get_mut(first).unwrap().strength = 0.2;
-    let (second, fresh) =
+    let second_draw =
         marks::draw_or_refresh(&mut world, MarkKind::ChalkCross, anchor, None, 1.0).unwrap();
 
-    assert!(!fresh, "the second is a refresh, not a new mark");
-    assert_eq!(first, second, "and keeps the same id");
+    assert!(
+        !second_draw.fresh,
+        "the second is a refresh, not a new mark"
+    );
+    assert_eq!(first, second_draw.id, "and keeps the same id");
     assert_eq!(world.marks.len(), 1, "one live cross per anchor, never two");
     assert_eq!(
         world.marks.get(first).unwrap().strength,
@@ -486,4 +529,164 @@ fn marks_iterate_in_a_stable_order() {
     }
     let seen: Vec<_> = marks.iter().map(|(id, _)| id).collect();
     assert_eq!(seen, ids, "insertion order is id order is iteration order");
+}
+
+/// The snapshot-churn guard. A game-minute of a nine-day half-life multiplies
+/// strength by 0.99995 — a change twelve orders of magnitude above `f64`
+/// epsilon — so a raw `strength != before` test reports "changed" on *every*
+/// sweep. The engine bumps `world_revision` on a true return, which would
+/// re-serialize and re-send the whole 137 KB snapshot every 2.5 real seconds,
+/// forever, because a cross was drying somewhere in the city.
+#[test]
+fn a_drying_mark_does_not_churn_the_snapshot_every_game_minute() {
+    let mut world = world_with_places();
+    let id = chalk(
+        &mut world,
+        MarkAnchor::Household(ActorId::from_raw("debtor")),
+    );
+    world.marks.rewind_sweep_clock(0.0);
+
+    // Sweep a full game-hour, one game-minute at a time, as the engine does.
+    let mut published_changes = 0usize;
+    for minute in 1..=60 {
+        if marks::sweep(&mut world, minute as f64 / 1440.0) {
+            published_changes += 1;
+        }
+    }
+
+    let strength = world.marks.get(id).unwrap().strength;
+    assert!(strength < 1.0, "an hour of drying really did weather it");
+    assert!(
+        published_changes <= 1,
+        "60 game-minutes of drying reported {published_changes} publishable changes; \
+         at most one whole-percent step is possible in an hour of a nine-day half-life, \
+         and every extra one is a full snapshot re-sent for nothing"
+    );
+}
+
+/// …and the other half of that contract: a change the wire *can* see must be
+/// reported, or a mark would visibly stick at one opacity until something else
+/// happened to bump the revision.
+#[test]
+fn a_change_the_wire_can_see_is_reported() {
+    let mut world = world_with_places();
+    let id = chalk(
+        &mut world,
+        MarkAnchor::Household(ActorId::from_raw("debtor")),
+    );
+    world.marks.rewind_sweep_clock(0.0);
+    let half_life = world
+        .mark_catalog
+        .spec(MarkKind::ChalkCross)
+        .unwrap()
+        .half_life_days_dry;
+
+    assert!(
+        marks::sweep(&mut world, half_life),
+        "halving the chalk is 50 whole percent steps and must be published"
+    );
+    assert_eq!(
+        world.public_snapshot(&ActorId::from_raw("player")).marks[0].strength_pct,
+        50,
+        "and the wire carries the quantized value the guard compared"
+    );
+    let _ = id;
+}
+
+/// M0's third done-criterion, which nothing previously covered: a mark 3 m from
+/// an actor must reach the **rendered sheet**, not merely the data layer.
+/// Deleting the `marks_here` section, garbling `mark_bullet` or dropping
+/// `marks_note` used to leave the whole suite green.
+#[test]
+fn a_nearby_mark_renders_into_the_actual_sheet() {
+    let mut world = world_with_places();
+    world.add_character(character("sv3n1", "Sven", 7.0));
+    chalk(
+        &mut world,
+        MarkAnchor::Household(ActorId::from_raw("debtor")),
+    );
+
+    let env = prompt_env();
+    let sheet =
+        cathedral_sim::prompt::render_prompt(&world, &ActorId::from_raw("sv3n1"), None, &env)
+            .expect("the sheet renders");
+
+    assert!(
+        sheet.contains("**marks_here**"),
+        "the section is missing from the rendered sheet:\n{sheet}"
+    );
+    assert!(
+        sheet.contains("chalk on the walls within 8 metres, nearest first"),
+        "the marks_note parenthesis is missing:\n{sheet}"
+    );
+    assert!(
+        sheet.contains("a chalk cross at knee height"),
+        "the label is missing:\n{sheet}"
+    );
+    assert!(
+        sheet.contains("this household owes and has not paid"),
+        "the meaning is missing:\n{sheet}"
+    );
+    assert!(sheet.contains("3.0 m"), "the distance is missing:\n{sheet}");
+    // Sven does not know the debtor, so the door is a stranger's — the
+    // unknown-people rule, applied to chalk.
+    assert!(
+        sheet.contains("a stranger (you don't know their name)'s door"),
+        "an unknown occupant must not be named:\n{sheet}"
+    );
+    assert!(
+        !sheet.contains("Ede Clove"),
+        "the registry's home label leaked a name Sven was never told:\n{sheet}"
+    );
+}
+
+/// The self clause. Nobody's `knows` set contains their own id, so without it
+/// the debtor standing at their own chalked door — the single most likely line
+/// this section will ever render — is told it belongs to a stranger.
+#[test]
+fn your_own_chalked_door_is_yours_and_not_a_strangers() {
+    let mut world = world_with_places();
+    world.add_character(character("debtor", "Ede Clove", 10.5));
+    chalk(
+        &mut world,
+        MarkAnchor::Household(ActorId::from_raw("debtor")),
+    );
+
+    let env = prompt_env();
+    let sheet =
+        cathedral_sim::prompt::render_prompt(&world, &ActorId::from_raw("debtor"), None, &env)
+            .expect("the sheet renders");
+
+    assert!(
+        sheet.contains("on your own door"),
+        "your own door must read as yours:\n{sheet}"
+    );
+    // Scoped to the bullet: `turn.j2`'s own standing prose says "stranger"
+    // several times, so a bare `!contains("stranger")` would fail on the
+    // template rather than on the thing under test.
+    assert!(
+        !sheet.contains("'s door, 0.5 m"),
+        "your own door must not be spelled as anybody else's:\n{sheet}"
+    );
+}
+
+/// A typo in an authored ward-sign place name is otherwise silent: `named()`
+/// is an exact lookup, so the sign simply never appears, with no error and no
+/// log. The M0 test only checked the eight ward *keys*, which a typo in a
+/// *value* sails straight past.
+#[test]
+fn every_authored_ward_sign_place_resolves_against_the_real_registry() {
+    let catalog = cathedral_sim::marks::MarkCatalog::default();
+    let places = real_place_registry();
+    let mut checked = 0usize;
+    for (ward, place) in catalog.ward_sign_places() {
+        assert!(
+            places.named(place).is_some(),
+            "ward {ward}'s authored place of resort {place:?} is not a registered \
+             place name — the sign would never appear, silently. Check the exact \
+             spelling in assets/world/places.json."
+        );
+        checked += 1;
+    }
+    assert_eq!(checked, 8, "one place of resort per ward");
 }

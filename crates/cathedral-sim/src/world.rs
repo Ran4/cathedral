@@ -172,6 +172,11 @@ pub struct World {
     /// turning it off stops new marks and stops the readers; it does not erase
     /// what is already on the walls.
     pub marks_enabled: bool,
+    /// The per-kind switches (`config.ron: smart_actors.marks.cross` / `.tally`
+    /// / `.ward_sign`), so one writer can be silenced without losing the
+    /// medium — which is how you tell whether the well tally or the cross is
+    /// responsible for something you are watching.
+    pub mark_kinds: crate::marks::MarkKindSwitches,
     /// What each ward is saying to itself tonight (movement M6): the Night
     /// Office's ward batch returns a few sentences of mood, and every Minor of
     /// that ward carries it on their sheet until the next night rewrites it.
@@ -226,6 +231,7 @@ impl Default for World {
             marks: crate::marks::Marks::default(),
             mark_catalog: Arc::new(crate::marks::MarkCatalog::default()),
             marks_enabled: true,
+            mark_kinds: crate::marks::MarkKindSwitches::default(),
             ward_moods: BTreeMap::new(),
             events: Vec::new(),
         }
@@ -264,6 +270,14 @@ impl World {
         assert!(!self.items.contains_key(&id), "duplicate item id '{id}'");
         self.items.insert(id, item);
         self.touch_public_state();
+    }
+
+    /// Whether this kind of chalk is live at all — the whole-layer switch and
+    /// the per-kind one together. Every writer and every reader in
+    /// [`crate::marks`] goes through this, so an ablation run is a real
+    /// ablation rather than one that merely stops new marks appearing.
+    pub fn mark_kind_enabled(&self, kind: crate::marks::MarkKind) -> bool {
+        self.marks_enabled && self.mark_kinds.enabled(kind)
     }
 
     pub fn touch_public_state(&mut self) -> i64 {
@@ -951,7 +965,7 @@ impl World {
                     id,
                     kind: mark.kind,
                     point: [site.point.x, site.point.y, site.point.z],
-                    strength_pct: (mark.strength.clamp(0.0, 1.0) * 100.0).round() as u8,
+                    strength_pct: crate::marks::published_strength_pct(mark.strength),
                     strokes: mark.strokes.min(u8::MAX as u32) as u8,
                 })
             })

@@ -41,7 +41,7 @@ number. Each was verified against the tree at `1bb4881`.
 | C7 | the tally reader is "a term added inside [`nearest_staffed_source`'s] comparison. One function." | **Fatal as written.** There are only **two** callers, both enrolment-time, and `Townsperson.source` is written once for an actor's whole life and never reassigned. The per-trip site (`Decision::ApproachWell`, `round.rs:7633`) reads the *already-bound* index and never re-picks. A penalty inside the function is evaluated at world-seed t=0, when no chalk exists — **it would move nobody, ever.** | M4's tally must re-pick at the per-trip site. See §4 M4 as amended. |
 | C8 | `chalk_ward_sign {"place": "<shrine>"}`, "naming a shrine in that ward" | **There are no shrines.** `places.json` has no `kind: "shrine"` and no place whose name contains "shrine"; `PlaceEntry` has no `kind` field at all. Three of the eight wards have nothing devotional to name. | The ward-sign's vocabulary is an authored allow-list in `marks.json` — which is where the spec already says the vocabulary belongs. **Do not re-bake `places.json`**: the bake renumbers nodes and silently rots every pinned index. |
 | C9 | put the refusal stamp on `try_purchase` / guard `nearest_open_stall` | Neither `try_purchase` nor `nearest_open_stall` nor its caller `decide` has a `now` or a clock to compare a deadline against. | Copy the existing `lightning_reflex_until` idiom: prune the stamp set in `round::tick` (which has `now`), and membership-test with `contains_key` at the guard. |
-| C10 | `MARKS_MAX` "start at 256" | Measured: **26,815 bytes of snapshot headroom** (§2.7). 256 marks is 24–29 KiB depending on encoding — it either breaks the 160 KiB bound outright or leaves ~2.7 KiB for everything else forever. | Quantized wire record (`yaw_deg: i16`, `strength_pct: u8`, array point) at ~113 B worst case, and **`MARKS_MAX = 100`** → ~11.3 KiB added, ~15.5 KiB still free for the `chalk_pen` item wave. |
+| C10 | `MARKS_MAX` "start at 256" | Measured: **26,815 bytes of snapshot headroom** (§2.7), and a quantized wire record of **100.1 B/mark**. 256 marks is 25,610 B — which *does* fit, by 1,205 bytes. The spec guessed it would overflow; it does not. What it does is spend 96% of the headroom the project has left. | **`MARKS_MAX = 100`** → 10,010 B added, 16,805 B still free for the `chalk_pen` item wave and whatever comes after. Chosen because it leaves room, not because 256 overflows. |
 | C11 | the 160 KiB assertion is the guard on `MARKS_MAX` | **It will never fire.** That test builds its world from `seed.json` and never runs a round, so it contains zero marks; the printed number stays 137025 whatever `MARKS_MAX` is. | A second assertion in the same test plants `MARKS_MAX` *worst-case* marks and re-encodes. Without it the cap is decorative. |
 
 ### Fact-changing but not design-changing
@@ -179,11 +179,20 @@ from the next sheet; it never retroactively erases a mark.
   longest prompt 13425 bytes for ar5tl
   ```
 
-  So the headroom is **26,815 bytes**, not the "at most 32 KiB" the paragraph above guessed — and
-  the suggested `MARKS_MAX = 256` at ~150 B/mark (~38 KiB) **does not fit**. It is over budget
-  before the first mark is drawn. `MARKS_MAX` is therefore sized from the measured wire record in
-  M0, not from the suggestion, and a canary test fills `World.marks` to `MARKS_MAX` and re-asserts
-  the 160 KiB bound so the number is enforced rather than trusted.
+  So the headroom is **26,815 bytes**, not the "at most 32 KiB" the paragraph above guessed. The
+  suggested `MARKS_MAX = 256` was then measured too, rather than estimated at "~150 B/mark":
+
+  ```
+  public snapshot with 100 marks: 147035 bytes (10010 added, 100.1 B/mark)
+  public snapshot with 256 marks: 162635 bytes (25610 added, 100.0 B/mark)
+  ```
+
+  256 **fits**, by 1,205 bytes — the paragraph above was wrong to predict an overflow. But it
+  spends 96% of the headroom the project has left, so `MARKS_MAX` is **100**: chosen because it
+  leaves 16,805 bytes for the `chalk_pen` item wave and whatever follows, not because 256 breaks
+  anything. A canary in the same test fills `World.marks` to the cap with worst-case records and
+  re-asserts the bound, so the number is enforced rather than trusted — without it the assertion
+  never sees a mark at all, since its world is built from `seed.json` and never runs a round.
 
 ### 2.8 Refusals and percepts do not buy provider calls
 

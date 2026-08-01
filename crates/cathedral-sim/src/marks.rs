@@ -51,9 +51,12 @@ const MARKS_JSON: &str = include_str!("../../../assets/world/marks.json");
 /// (`crates/cathedral-backends/src/world_data.rs`), leaving 26,815 bytes. A
 /// quantized [`PublicMark`](crate::snapshot::PublicMark) measures **100.1
 /// bytes** on the wire at worst case, so a fully chalked city adds 10,010
-/// bytes and leaves 16,805 for everything that comes after. The spec's
-/// suggested 256 does not fit: it is ~25.6 KiB, which spends all but a
-/// kilobyte of the headroom the project has left.
+/// bytes and leaves 16,805 for everything that comes after.
+///
+/// The spec suggested 256. Measured, 256 *does* fit — 162,635 bytes — but
+/// only by 1,205, which is to say it spends 96% of the headroom the project
+/// has left on chalk and leaves the next feature nothing. 100 is the number
+/// because it is the one that leaves room, not because 256 overflows.
 ///
 /// Those are not estimates — `full_roster_prompts_and_public_snapshot_remain_bounded`
 /// fills the walls to this cap and re-asserts the bound, and prints both
@@ -118,6 +121,38 @@ impl MarkKind {
 impl std::fmt::Display for MarkKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.as_str())
+    }
+}
+
+/// The per-kind ablation switches (`config.ron: smart_actors.marks`).
+///
+/// A kind switched off is written by nobody and read by nobody; marks of that
+/// kind already on the walls are left alone and go on weathering, exactly as
+/// the whole-layer switch behaves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MarkKindSwitches {
+    pub cross: bool,
+    pub tally: bool,
+    pub ward_sign: bool,
+}
+
+impl Default for MarkKindSwitches {
+    fn default() -> Self {
+        Self {
+            cross: true,
+            tally: true,
+            ward_sign: true,
+        }
+    }
+}
+
+impl MarkKindSwitches {
+    pub fn enabled(&self, kind: MarkKind) -> bool {
+        match kind {
+            MarkKind::ChalkCross => self.cross,
+            MarkKind::WellTally => self.tally,
+            MarkKind::WardSign => self.ward_sign,
+        }
     }
 }
 
@@ -402,6 +437,21 @@ impl MarkCatalog {
                     message: format!("mark kind {kind} has a non-positive half-life"),
                 });
             }
+            // The two field names differ by three characters, and swapping
+            // them inverts the whole model in silence: rain would *preserve*
+            // chalk, and an arcade would wash it off faster than an open wall,
+            // because `half_life_days` lerps dry → wet on precipitation and
+            // shelter only moves you back toward the dry end.
+            if spec.half_life_days_wet > spec.half_life_days_dry {
+                return Err(MarkCatalogError {
+                    message: format!(
+                        "mark kind {kind} lasts longer wet than dry \
+                         (half_life_days_wet {} > half_life_days_dry {}) — \
+                         the two are swapped",
+                        spec.half_life_days_wet, spec.half_life_days_dry
+                    ),
+                });
+            }
             if spec.sheltered_multiplier < 1.0 {
                 return Err(MarkCatalogError {
                     message: format!(
@@ -411,12 +461,41 @@ impl MarkCatalog {
                     ),
                 });
             }
-            if !(spec.gone_below < spec.faint_below && spec.faint_below <= 1.0) {
+            // `gone_below` must be strictly positive, not merely below
+            // `faint_below`. At zero — the natural way to spell "never remove
+            // this kind" — strength decays exponentially toward 0.0, underflows
+            // to exactly 0.0, and `strength < gone_below` is then `0.0 < 0.0`,
+            // which is false forever: the mark becomes immortal and permanently
+            // faint, holding a slot of `MARKS_MAX` nothing can reclaim.
+            if !(spec.gone_below > 0.0
+                && spec.gone_below < spec.faint_below
+                && spec.faint_below <= 1.0)
+            {
                 return Err(MarkCatalogError {
                     message: format!(
-                        "mark kind {kind} needs gone_below < faint_below <= 1 \
+                        "mark kind {kind} needs 0 < gone_below < faint_below <= 1 \
                          (got {} and {})",
                         spec.gone_below, spec.faint_below
+                    ),
+                });
+            }
+        }
+        // Every kind the Rust enum knows must be authored. A kind with no
+        // catalog entry is worse than useless: `spec()` returns `None`, so the
+        // sweep skips it (it never weathers, never washes off, never frees its
+        // slot) while a fail-open `is_faint` would report it *binding*. A mark
+        // nobody can read would go on refusing sales forever. Catching it at
+        // load is the only place that costs nothing.
+        for kind in [
+            MarkKind::ChalkCross,
+            MarkKind::WellTally,
+            MarkKind::WardSign,
+        ] {
+            if !doc.kinds.contains_key(&kind) {
+                return Err(MarkCatalogError {
+                    message: format!(
+                        "mark kind {kind} is missing from the catalog; every kind \
+                         must be authored or its marks become immortal and unreadable"
                     ),
                 });
             }
@@ -461,13 +540,23 @@ impl MarkCatalog {
     /// Below the catalog's `faint_below`. **The one predicate every reader
     /// must consult** — a faint mark renders but does not rule.
     pub fn is_faint(&self, mark: &Mark) -> bool {
-        self.spec(mark.kind)
-            .is_some_and(|spec| mark.strength < spec.faint_below)
+        match self.spec(mark.kind) {
+            Some(spec) => mark.strength < spec.faint_below,
+            None => true,
+        }
     }
 
     /// Live *and* still ruling: what a reader means by "there is a cross here".
+    ///
+    /// **Fails closed.** A mark whose kind is not in the catalog binds
+    /// nothing. Written the other way round — as `!is_faint` over an
+    /// `is_some_and` — an unauthored kind would report *not faint* and
+    /// therefore *binding*, so a mark nobody can name, label or weather would
+    /// go on refusing sales forever. The catalog loader now rejects a missing
+    /// kind outright, so this is the second of two locks on the same door.
     pub fn is_binding(&self, mark: &Mark) -> bool {
-        !self.is_faint(mark)
+        self.spec(mark.kind)
+            .is_some_and(|spec| mark.strength >= spec.faint_below)
     }
 
     /// The place of resort a ward's sign may name.
@@ -486,14 +575,20 @@ impl MarkCatalog {
     }
 }
 
+/// How a tally reads. Saturates at [`TALLY_STROKES_MAX`] rather than printing
+/// a number nobody would count off a wall, and spells zero honestly: a tally
+/// with no notches is one somebody started and abandoned, and claiming a draw
+/// that never happened would feed the M4 reader a lie.
 fn stroke_count(strokes: u32) -> String {
     match strokes {
-        0 | 1 => "one stroke".to_string(),
+        0 => "no strokes yet".to_string(),
+        1 => "one stroke".to_string(),
         2 => "two strokes".to_string(),
         3 => "three strokes".to_string(),
         4 => "four strokes".to_string(),
         5 => "five strokes".to_string(),
         6 => "six strokes".to_string(),
+        n if n >= TALLY_STROKES_MAX => format!("{TALLY_STROKES_MAX} strokes and more"),
         n => format!("{n} strokes"),
     }
 }
@@ -545,6 +640,20 @@ pub fn half_life_days(spec: &MarkKindSpec, precipitation: f64, sheltered: bool) 
     spec.half_life_days_dry + (spec.half_life_days_wet - spec.half_life_days_dry) * wet
 }
 
+/// The quantized strength [`PublicMark`](crate::snapshot::PublicMark)
+/// publishes — the whole-percent opacity step the renderer can actually see.
+///
+/// Shared by the sweep's change test and by `World::public_snapshot` so the
+/// two cannot drift: if the sweep decided "changed" on a finer grain than the
+/// wire carries, every mark in the city would churn the snapshot chain
+/// forever. A non-finite strength quantizes to 0 rather than panicking.
+pub fn published_strength_pct(strength: f64) -> u8 {
+    if !strength.is_finite() {
+        return 0;
+    }
+    (strength.clamp(0.0, 1.0) * 100.0).round() as u8
+}
+
 /// Weather every mark, drop the ones that have washed off or whose anchor
 /// stopped resolving, and remember when we last did it.
 ///
@@ -572,7 +681,17 @@ pub fn sweep(world: &mut World, game_days: f64) -> bool {
     let precipitation = world
         .current_weather
         .map_or(0.0, |sample| sample.precipitation);
-    let decay_scale = world.marks.decay_scale;
+    // A non-finite or negative scale would make `elapsed` NaN, slip past the
+    // `elapsed <= 0.0` guard below (every comparison with NaN is false), and
+    // poison `strength` for the rest of the run — after which `gone_below`
+    // never fires and the mark is immortal. `config.ron` and
+    // `--marks-decay-scale` both accept a bare `NaN`, so this is reachable
+    // from outside the code.
+    let decay_scale = if world.marks.decay_scale.is_finite() && world.marks.decay_scale > 0.0 {
+        world.marks.decay_scale
+    } else {
+        1.0
+    };
     let doomed: Vec<MarkId> = world
         .marks
         .iter()
@@ -607,9 +726,18 @@ pub fn sweep(world: &mut World, game_days: f64) -> bool {
             continue;
         }
         let half = half_life_days(spec, precipitation, is_sheltered);
-        let before = mark.strength;
+        let before = published_strength_pct(mark.strength);
         mark.strength *= 0.5f64.powf(elapsed / half);
-        if mark.strength != before {
+        // Compare the *published* value, not the raw f64. A game-minute of a
+        // nine-day half-life multiplies strength by 0.99995 — a change twelve
+        // orders of magnitude above f64 epsilon — so `strength != before`
+        // would be true on literally every sweep. That returns `changed` every
+        // game-minute for as long as one mark exists anywhere in the city, and
+        // the engine bumps `world_revision` on a true return: a full 137 KB
+        // snapshot re-serialized and re-sent every 2.5 real seconds, forever,
+        // because a cross was drying somewhere. The renderer can only see
+        // whole percent steps, so those are what "changed" has to mean.
+        if published_strength_pct(mark.strength) != before {
             changed = true;
         }
         if mark.strength < spec.gone_below {
@@ -643,6 +771,13 @@ pub struct NearbyMark {
 /// Every live mark whose anchor site is within `radius_m` of `point`, nearest
 /// first, ties broken by id so a replay renders the same sheet.
 pub fn marks_within(world: &World, point: Vec3, radius_m: f64) -> Vec<NearbyMark> {
+    // Ablated (`CATHEDRAL_NO_MARKS`) this is empty: the switch has to reach
+    // the *readers*, not only the writer, or an ablation run would still
+    // render every mark on the walls and still refuse sales because of them —
+    // which is not an ablation of anything.
+    if !world.marks_enabled {
+        return Vec::new();
+    }
     let mut found: Vec<NearbyMark> = world
         .marks
         .iter()
@@ -679,6 +814,9 @@ pub fn marks_within(world: &World, point: Vec3, radius_m: f64) -> Vec<NearbyMark
 /// Reads `world.marks` and nothing else — in particular never
 /// `world.notices`, which is what makes scrubbing real rather than cosmetic.
 pub fn binding_mark_about(world: &World, kind: MarkKind, who: &ActorId) -> Option<MarkId> {
+    if !world.mark_kind_enabled(kind) {
+        return None;
+    }
     world
         .marks
         .iter()
@@ -694,16 +832,15 @@ pub fn binding_mark_about(world: &World, kind: MarkKind, who: &ActorId) -> Optio
 /// idempotent by (kind, anchor), so a beat that runs every day leaves one
 /// mark and not a wall of them.
 ///
-/// `author` is `None` for the ward's own hand. Returns the id and whether it
-/// was newly drawn (`false` = an existing mark was refreshed).
+/// `author` is `None` for the ward's own hand.
 pub fn draw_or_refresh(
     world: &mut World,
     kind: MarkKind,
     anchor: MarkAnchor,
     author: Option<ActorId>,
     game_days: f64,
-) -> Option<(MarkId, bool)> {
-    if !world.marks_enabled || !world.mark_catalog.accepts(kind, &anchor) {
+) -> Option<Drawn> {
+    if !world.mark_kind_enabled(kind) || !world.mark_catalog.accepts(kind, &anchor) {
         return None;
     }
     let site = anchor_site(world, &anchor)?;
@@ -712,7 +849,11 @@ pub fn draw_or_refresh(
             mark.strength = 1.0;
             mark.last_decayed_game_days = game_days;
         }
-        return Some((id, false));
+        return Some(Drawn {
+            id,
+            fresh: false,
+            evicted: None,
+        });
     }
     let mark = Mark {
         kind,
@@ -724,8 +865,25 @@ pub fn draw_or_refresh(
         strength: 1.0,
         strokes: 1,
     };
-    let (id, _evicted) = world.marks.insert(mark);
-    Some((id, true))
+    let (id, evicted) = world.marks.insert(mark);
+    Some(Drawn {
+        id,
+        fresh: true,
+        evicted,
+    })
+}
+
+/// What a draw did. `evicted` is §2.7's cap in action: at [`MARKS_MAX`] the
+/// faintest mark makes way, and the caller is expected to say so — a mark
+/// vanishing from the world with no diagnostic anywhere is exactly the kind of
+/// silent state loss the cap exists to make legible.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Drawn {
+    pub id: MarkId,
+    /// `false` when an existing mark was refreshed rather than a new one made.
+    pub fresh: bool,
+    /// The mark the cap pushed off the walls to make room, if any.
+    pub evicted: Option<MarkId>,
 }
 
 #[cfg(test)]
@@ -765,21 +923,143 @@ mod tests {
     }
 
     #[test]
-    fn strength_halves_over_exactly_one_half_life() {
+    fn the_dry_half_life_is_the_authored_one() {
+        // Deliberately NOT `0.5f64.powf(half / half) == 0.5`: that is an
+        // identity about `f64::powf` for any half-life whatsoever, reads like
+        // a decay test, and passes with the entire weathering deleted. The
+        // exponential itself is pinned end-to-end against a real `World` in
+        // `tests/marks_tests.rs::chalk_halves_over_one_dry_half_life`; what is
+        // worth asserting *here* is that dry air uses the dry number.
         let spec = spec();
-        let half = half_life_days(&spec, 0.0, false);
-        assert_eq!(half, spec.half_life_days_dry);
-        let strength = 0.5f64.powf(half / half);
+        assert_eq!(half_life_days(&spec, 0.0, false), spec.half_life_days_dry);
+        // The wet end is a lerp, so it lands within a float epsilon rather
+        // than exactly on the authored number.
         assert!(
-            (strength - 0.5).abs() < 1e-12,
-            "one dry half-life should halve the chalk, got {strength}"
+            (half_life_days(&spec, 1.0, false) - spec.half_life_days_wet).abs() < 1e-9,
+            "full rain should reach the authored wet half-life"
         );
-        // Two half-lives quarter it, which is the property the sweep relies on
-        // when it charges several minutes at once.
-        let two = 0.5f64.powf((2.0 * half) / half);
+    }
+
+    #[test]
+    fn the_published_strength_survives_a_poisoned_one() {
+        assert_eq!(published_strength_pct(1.0), 100);
+        assert_eq!(published_strength_pct(0.0), 0);
+        assert_eq!(published_strength_pct(0.335), 34);
+        assert_eq!(published_strength_pct(f64::NAN), 0);
+        assert_eq!(published_strength_pct(f64::INFINITY), 0);
+        assert_eq!(published_strength_pct(-5.0), 0);
+        assert_eq!(published_strength_pct(5.0), 100);
+    }
+
+    #[test]
+    fn a_catalog_missing_a_kind_is_refused() {
+        let json = r#"{
+          "schema_version": 1,
+          "kinds": {
+            "chalk_cross": {
+              "label": "x", "meaning": "y", "faint_label": "z",
+              "anchors": ["household"],
+              "half_life_days_dry": 9.0, "half_life_days_wet": 0.4,
+              "sheltered_multiplier": 6.0,
+              "faint_below": 0.35, "gone_below": 0.05,
+              "drawable_by_hand": true
+            }
+          }
+        }"#;
+        let error = MarkCatalog::from_json(json).expect_err("a partial catalog is refused");
         assert!(
-            (two - 0.25).abs() < 1e-12,
-            "two half-lives should quarter it, got {two}"
+            error.message.contains("missing from the catalog"),
+            "unhelpful message: {}",
+            error.message
+        );
+    }
+
+    #[test]
+    fn an_unauthored_kind_binds_nothing() {
+        // The second lock. `is_binding` must not be `!is_faint` over an
+        // `is_some_and`, or a mark nobody can name would refuse sales forever.
+        let orphan = Mark {
+            kind: MarkKind::WardSign,
+            anchor: MarkAnchor::Place("anywhere".into()),
+            about: None,
+            author: None,
+            drawn_game_days: 0.0,
+            last_decayed_game_days: 0.0,
+            strength: 1.0,
+            strokes: 1,
+        };
+        assert!(
+            MarkCatalog::default().is_binding(&orphan),
+            "sanity: an authored kind at full strength does bind"
+        );
+        let partial = MarkCatalog {
+            kinds: BTreeMap::new(),
+        };
+        assert!(
+            !partial.is_binding(&orphan),
+            "an unauthored kind binds nothing"
+        );
+        assert!(partial.is_faint(&orphan), "and reads as faint, not fresh");
+    }
+
+    #[test]
+    fn a_swapped_half_life_pair_is_refused() {
+        let json = r#"{
+          "schema_version": 1,
+          "kinds": {
+            "chalk_cross": {
+              "label": "x", "meaning": "y", "faint_label": "z",
+              "anchors": ["household"],
+              "half_life_days_dry": 9.0, "half_life_days_wet": 90.0,
+              "sheltered_multiplier": 6.0,
+              "faint_below": 0.35, "gone_below": 0.05,
+              "drawable_by_hand": true
+            }
+          }
+        }"#;
+        let error = MarkCatalog::from_json(json).expect_err("a swapped pair is refused");
+        assert!(
+            error.message.contains("lasts longer wet than dry"),
+            "unhelpful message: {}",
+            error.message
+        );
+    }
+
+    #[test]
+    fn a_zero_gone_below_is_refused() {
+        let json = r#"{
+          "schema_version": 1,
+          "kinds": {
+            "chalk_cross": {
+              "label": "x", "meaning": "y", "faint_label": "z",
+              "anchors": ["household"],
+              "half_life_days_dry": 9.0, "half_life_days_wet": 0.4,
+              "sheltered_multiplier": 6.0,
+              "faint_below": 0.35, "gone_below": 0.0,
+              "drawable_by_hand": true
+            }
+          }
+        }"#;
+        let error = MarkCatalog::from_json(json).expect_err("gone_below 0 is refused");
+        assert!(
+            error.message.contains("0 < gone_below"),
+            "unhelpful message: {}",
+            error.message
+        );
+    }
+
+    #[test]
+    fn a_tally_never_claims_a_draw_that_did_not_happen() {
+        assert_eq!(stroke_count(0), "no strokes yet");
+        assert_eq!(stroke_count(1), "one stroke");
+        assert_eq!(
+            stroke_count(TALLY_STROKES_MAX),
+            format!("{TALLY_STROKES_MAX} strokes and more")
+        );
+        assert_eq!(
+            stroke_count(u32::MAX),
+            format!("{TALLY_STROKES_MAX} strokes and more"),
+            "a wall never reads out a 10-digit number"
         );
     }
 

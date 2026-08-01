@@ -298,6 +298,9 @@ pub struct EngineConfig {
     /// `config.ron: smart_actors.marks.enabled` and `CATHEDRAL_NO_MARKS` turn
     /// them off for ablation.
     pub marks_enabled: bool,
+    /// The per-kind chalk switches, so one writer can be silenced without
+    /// losing the medium ([`crate::marks::MarkKindSwitches`]).
+    pub mark_kinds: crate::marks::MarkKindSwitches,
     /// Multiplies elapsed time in the chalk decay. `1.0` in the game; a test
     /// or a drive run raises it to weather a wall in seconds instead of days.
     pub marks_decay_scale: f64,
@@ -340,6 +343,7 @@ impl Default for EngineConfig {
             night_office: NightOfficeConfig::default(),
             dogs_enabled: true,
             marks_enabled: true,
+            mark_kinds: crate::marks::MarkKindSwitches::default(),
             marks_decay_scale: 1.0,
         }
     }
@@ -1009,6 +1013,7 @@ impl Engine {
         // walls start bare and stay bare until a hand writes — so this is only
         // the ablation switch and the decay dial reaching the world.
         world.marks_enabled = config.marks_enabled;
+        world.mark_kinds = config.mark_kinds;
         world.marks.decay_scale = config.marks_decay_scale;
 
         // The Night Office reads its bedtimes off the seeded round, so it is

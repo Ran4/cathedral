@@ -442,6 +442,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             // default stands here too. `--marks-decay-scale` weathers a wall
             // in a short run instead of over nine game days.
             marks_enabled: true,
+            mark_kinds: cathedral_sim::marks::MarkKindSwitches::default(),
             marks_decay_scale: args.marks_decay_scale,
         },
         &assets.seed,
