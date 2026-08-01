@@ -18,8 +18,8 @@ use bevy::{
 };
 
 /// Vertices in the stand-in triangle an idle batch holds. Live batches are
-/// built from quads, so a real frame is always a multiple of four and never
-/// collides with this count.
+/// built from quads and whole lofted bodies — four vertices at the least —
+/// so a real frame never collides with this count.
 pub const IDLE_BATCH_VERTICES: usize = 3;
 
 /// A batch mesh carrying one frame of quads, or the idle triangle when the

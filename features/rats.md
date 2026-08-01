@@ -73,9 +73,13 @@ per-rat system, deterministic forever. The only mutable state is one small
 
 **Not camera-facing billboards.** Smoke can billboard because it is amorphous; a ground
 creature seen from one of the city's many overhead bridges (or in developer flight) must not
-turn to face down. Each rat is an oriented tent of two quads — a body ridge ~0.28 m long,
-~0.09 m high, rotated to its heading — plus a single tail quad. Flat dark-brown vertex colour,
-no texture: at 25 cm and 2 m/s the rat reads by **motion**, not by texel.
+turn to face down. Each rat is a small lofted body rotated to its heading (~95 vertices,
+written into the batch per frame like everything else): a smooth-shaded hull from pointed
+muzzle over arched haunches to the rump, pricked ears, dark eye beads, four stub legs
+scurrying in diagonal pairs, and a full-length naked tail — whipped by the gait at a sprint,
+lying in a per-rat S-curve at rest, with an occasional sniffing lift of the nose while
+paused. Per-vertex colour, no texture: a per-rat brown-to-grey coat over a lighter belly and
+pink-grey bare parts; at 25 cm the rest reads by **motion**, not by texel.
 
 ### 2.3 An ordinary rat never reaches the sim
 

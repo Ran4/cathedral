@@ -41,8 +41,8 @@ use crate::{
 };
 
 /// Rats past this range are skipped entirely: a 25 cm body is sub-pixel long
-/// before the smoke's 450 m, so the frame cost is a few dozen quads near the
-/// player and the idle triangle everywhere else.
+/// before the smoke's 450 m, so the frame cost is a handful of small lofted
+/// bodies near the player and the idle triangle everywhere else.
 const VERMIN_VISIBLE_RANGE_M: f32 = 60.0;
 /// A player or puppet inside this range of a rat kicks its colony's scatter.
 const SCATTER_TRIGGER_M: f32 = 2.5;
@@ -557,8 +557,10 @@ pub(super) fn spawn_vermin(
     commands.spawn((
         Name::new("Vermin colonies"),
         Mesh3d(meshes.add(idle_batch_mesh())),
-        // Flat dark-brown vertex colour, no texture: at 25 cm and 2 m/s the
-        // rat reads by motion, not by texel.
+        // Per-vertex colour, no texture: the brown-to-grey coat, the lighter
+        // belly and the naked pink-grey tail are painted into the batch, and
+        // at 25 cm and 2 m/s the rest reads by silhouette and motion, not by
+        // texel.
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::WHITE,
             // A deliberate deviation from §2.2's "alpha-tested", which was
@@ -767,9 +769,9 @@ fn scatter_offset(
 }
 
 /// Rewrites the shared vermin mesh: every visible rat placed on its loop (or
-/// its scatter dart), an oriented tent of two quads and a tail — deliberately
-/// not camera-facing billboards, because a ground creature seen from a bridge
-/// or in developer flight must not turn to face down.
+/// its scatter dart) as a small lofted body oriented to its heading —
+/// deliberately not camera-facing billboards, because a ground creature seen
+/// from a bridge or in developer flight must not turn to face down.
 pub(super) fn animate_vermin(
     time: Res<Time>,
     clock: Option<Res<WorldClockState>>,
@@ -852,8 +854,58 @@ pub(super) fn animate_vermin(
     }
 }
 
-/// One rat: a body ridge ~0.28 m long and ~0.09 m high as a two-quad tent
-/// rotated to its heading, plus a single tail quad trailing low behind.
+// ---------------------------------------------------------------------------
+// The rat itself: one lofted hull and a few authored quads, written straight
+// into the batch each frame like a smoke puff. There is no per-rat mesh asset
+// to place, so the gait is free to reshape the body — stretch it into a
+// sprint, beat the legs, whip the tail — without a rig.
+// ---------------------------------------------------------------------------
+
+/// Cross-sections around the body hull. Six smooth-shaded sectors read as a
+/// rounded barrel at rat scale, and the flat face they leave under the belly
+/// sits close over the ground like a crouch.
+const BODY_SECTORS: usize = 6;
+/// Stations along the body hull, nose tip to tail root.
+const BODY_STATIONS: usize = 8;
+/// The tail is a triangular tube — the cheapest closed form that reads from
+/// street level and from a bridge overhead alike.
+const TAIL_SECTORS: usize = 3;
+const TAIL_STATIONS: usize = 5;
+
+/// The body hull for the 0.28 m reference rat, `(along, half_width,
+/// half_height, spine_height)` in metres; `Rat::length_m` scales the whole
+/// frame. The profile is the rat silhouette itself: a pointed muzzle, a low
+/// head, the back arched over the haunches, the rump falling away to the tail
+/// root. The two end stations are a few millimetres wide and left open rather
+/// than capped — at 25 cm a 4 mm hole never covers a pixel, and the tail tube
+/// plugs the rump's.
+const BODY_PROFILE: [(f32, f32, f32, f32); BODY_STATIONS] = [
+    (0.140, 0.004, 0.004, 0.030),  // nose tip
+    (0.116, 0.012, 0.011, 0.034),  // muzzle
+    (0.086, 0.024, 0.022, 0.044),  // head — the eyes and ears sit here
+    (0.044, 0.032, 0.030, 0.051),  // shoulders
+    (-0.006, 0.038, 0.036, 0.055), // mid-back
+    (-0.068, 0.042, 0.040, 0.058), // haunches, the arch's peak
+    (-0.116, 0.028, 0.026, 0.044), // rump
+    (-0.140, 0.010, 0.009, 0.031), // tail root
+];
+
+/// Vertices one rat writes into the batch: the hull, the tail tube, two ears,
+/// two eyes and four legs. The gait bends the body but never its topology, so
+/// the counting tests multiply by this whatever the clock says.
+const RAT_VERTICES: usize =
+    BODY_STATIONS * BODY_SECTORS + TAIL_STATIONS * TAIL_SECTORS + 2 * 4 + 2 * 4 + 4 * 4;
+
+fn mixf(from: f32, to: f32, t: f32) -> f32 {
+    from + (to - from) * t
+}
+
+/// One rat: a smooth-shaded loft from nose tip to tail root — pointed muzzle,
+/// back arched over the haunches — with pricked ears, dark eye beads, four
+/// stub legs scurrying in diagonal pairs, and a full-length naked tail.
+/// Sprinting stretches the body long and low, beats the legs and whips the
+/// tail; a paused rat sits on a still S-curved tail, nothing moving but an
+/// occasional sniffing lift of the nose.
 #[allow(clippy::too_many_arguments)]
 fn push_rat(
     positions: &mut Vec<[f32; 3]>,
@@ -867,72 +919,260 @@ fn push_rat(
     moving: bool,
     elapsed: f32,
 ) {
+    use std::f32::consts::{PI, TAU};
+
+    let first_vertex = positions.len();
+    let scale = rat.length_m / 0.28;
     let center = Vec3::new(position.x, RAT_GROUND_Y, position.y);
     let ahead = Vec3::new(heading.x, 0.0, heading.y);
     let side = Vec3::new(-heading.y, 0.0, heading.x);
-    let half_length = rat.length_m * 0.5;
-    let half_width = 0.05 * (rat.length_m / 0.28);
-    // A slight body bob while sprinting — the scurry gait, nothing more.
-    let bob = if moving {
-        1.0 + 0.16 * (elapsed * 21.0 + rat.phase * 7.0).sin()
+
+    // One clock drives the whole gait — the legs' beat, a bob riding two to a
+    // stride, the tail's whip — phased per rat so a colony never marches.
+    let gait = elapsed * 21.0 + rat.phase * 7.0;
+    let (stretch, squat, bob) = if moving {
+        // A sprinting rat runs long and low.
+        (1.08, 0.94, 0.006 * (gait * 2.0).sin() * scale)
     } else {
-        1.0
+        (1.0, 1.0, 0.0)
     };
-    let height = 0.09 * bob;
+    // The sniff: a paused rat now and then lifts its nose and works it. A slow
+    // per-rat sine gates a faster one, so the twitch comes in bouts with still
+    // stretches between — wallpaper until it moves.
+    let sniff = if moving {
+        0.0
+    } else {
+        let bout = (elapsed * 0.6 + unit(rat.seed, 50) * TAU).sin();
+        ((bout - 0.35) * 4.0).clamp(0.0, 1.0) * (elapsed * 9.0 + rat.phase * 3.0).sin()
+    };
+    // How much of the sniff's nose-lift a station at `along` inherits.
+    let lift = |along: f32| sniff * 0.008 * ((along - 0.05) / 0.09).clamp(0.0, 1.0);
+    let station = |along: f32, height: f32| {
+        center
+            + ahead * (along * stretch * scale)
+            + Vec3::Y * ((height * squat + lift(along)) * scale + bob)
+    };
 
+    // Coat: per-rat brightness (`tint`) over a per-rat brown-to-grey blend —
+    // kept dark: full sun on a mid vertex colour reads as bone, and a rat is
+    // vermin, not a lab mouse. Per vertex the spine darkens and the belly
+    // lightens, the shading that makes a rounded back read as a body rather
+    // than a lump.
     let tint = rat.tint;
-    let coat = [0.105 * tint, 0.082 * tint, 0.064 * tint, 1.0];
-    let tail_color = [0.125 * tint, 0.094 * tint, 0.082 * tint, 1.0];
-
-    let nose = center + ahead * half_length;
-    let rump = center - ahead * half_length;
-    let flank = side * half_width;
-    // The ridge sits back of the nose and high over the hindquarters.
-    let ridge_front = center + ahead * (half_length * 0.55) + Vec3::Y * (height * 0.78);
-    let ridge_back = center - ahead * (half_length * 0.72) + Vec3::Y * height;
-
-    // Each panel is traversed so that [`push_quad`]'s computed normal comes out
-    // pointing *off* the body — the far flank walked one way round the cycle,
-    // the near flank the other, the tail from its right. `double_sided` +
-    // `cull_mode: None` would hide getting this wrong (the shader flips the
-    // normal on a back face, so the shading looks right either way), which is
-    // exactly how "every batched box was wound inside out" survived unnoticed
-    // elsewhere in this repo. Pinned by `a_rat_is_wound_with_its_normals_out`.
-    push_quad(
-        positions,
-        normals,
-        uvs,
-        colors,
-        indices,
-        [nose - flank, rump - flank, ridge_back, ridge_front],
-        coat,
-    );
-    push_quad(
-        positions,
-        normals,
-        uvs,
-        colors,
-        indices,
-        [rump + flank, nose + flank, ridge_front, ridge_back],
-        coat,
-    );
-
-    let tail_root = rump + Vec3::Y * 0.024;
-    let tail_tip = rump - ahead * (rat.length_m * 0.46) + Vec3::Y * 0.006;
-    push_quad(
-        positions,
-        normals,
-        uvs,
-        colors,
-        indices,
+    let grey = unit(rat.seed, 34);
+    let coat = [
+        mixf(0.062, 0.050, grey) * tint,
+        mixf(0.048, 0.048, grey) * tint,
+        mixf(0.036, 0.046, grey) * tint,
+    ];
+    let body_color = |up_factor: f32| {
+        let back = up_factor.max(0.0) * 0.30;
+        let belly = ((-up_factor) * 1.3 - 0.15).clamp(0.0, 1.0) * 0.6;
         [
-            tail_root + side * 0.012,
-            tail_root - side * 0.012,
-            tail_tip - side * 0.004,
-            tail_tip + side * 0.004,
-        ],
-        tail_color,
-    );
+            coat[0] * (1.0 + 0.75 * belly) * (1.0 - back),
+            coat[1] * (1.0 + 0.85 * belly) * (1.0 - back),
+            coat[2] * (1.0 + belly) * (1.0 - back),
+            1.0,
+        ]
+    };
+    // The naked parts in the pink-grey of bare skin; the eyes a wet dark bead
+    // outside the tint, so a pale rat never gets pale eyes.
+    let naked = [0.115 * tint, 0.082 * tint, 0.072 * tint, 1.0];
+    let feet = [0.095 * tint, 0.070 * tint, 0.062 * tint, 1.0];
+    let ear_color = [
+        (coat[0] + naked[0]) * 0.5,
+        (coat[1] + naked[1]) * 0.5,
+        (coat[2] + naked[2]) * 0.5,
+        1.0,
+    ];
+    let eye = [0.015, 0.011, 0.010, 1.0];
+
+    // -- The body hull ------------------------------------------------------
+    // Smooth-shaded rings stitched into a tube. A ring normal is the ellipse's
+    // own, tilted along the spine by the taper (`radial - ahead * slope`), so
+    // the nose cone lights like a cone and not like a cylinder butt.
+    let hull_first = positions.len() as u32;
+    for (index, &(along, half_width, half_height, spine)) in BODY_PROFILE.iter().enumerate() {
+        let fore = BODY_PROFILE[index.saturating_sub(1)];
+        let aft = BODY_PROFILE[(index + 1).min(BODY_STATIONS - 1)];
+        let mean = |ring: (f32, f32, f32, f32)| (ring.1 + ring.2) * 0.5;
+        let slope = (mean(fore) - mean(aft)) / (fore.0 - aft.0).max(1e-4);
+        let ring_center = station(along, spine);
+        for sector in 0..BODY_SECTORS {
+            let theta = sector as f32 / BODY_SECTORS as f32 * TAU;
+            let (sin, cos) = theta.sin_cos();
+            let point = ring_center
+                + side * (cos * half_width * scale)
+                + Vec3::Y * (sin * half_height * squat * scale);
+            let radial =
+                (side * (cos * half_height) + Vec3::Y * (sin * half_width)).normalize_or(Vec3::Y);
+            let normal = (radial - ahead * slope).normalize_or(radial);
+            positions.push(point.to_array());
+            normals.push(normal.to_array());
+            uvs.push([
+                sector as f32 / BODY_SECTORS as f32,
+                index as f32 / (BODY_STATIONS - 1) as f32,
+            ]);
+            colors.push(body_color(sin));
+        }
+    }
+    stitch_tube(indices, hull_first, BODY_STATIONS, BODY_SECTORS);
+
+    // -- The tail -----------------------------------------------------------
+    // The other half of a rat: the body's length again, drooping from the
+    // root to drag its tip on the ground — whipped side to side on the gait
+    // clock at a sprint, lying in a per-rat S-curve at rest.
+    let tail_first = positions.len() as u32;
+    let tail_length = rat.length_m * 0.9;
+    let swirl = unit(rat.seed, 51) * TAU;
+    let root_height = BODY_PROFILE[BODY_STATIONS - 1].3;
+    for index in 0..TAIL_STATIONS {
+        let fraction = index as f32 / (TAIL_STATIONS - 1) as f32;
+        let lateral = if moving {
+            (gait * 0.5 - fraction * 4.0).sin() * 0.020 * fraction
+        } else {
+            (swirl + fraction * 3.2).sin() * 0.014 * fraction
+        };
+        let droop = fraction * fraction * (3.0 - 2.0 * fraction);
+        let height = mixf(root_height * squat * scale + bob, 0.006 * scale, droop);
+        let ring_center = center
+            + ahead * (-(0.140 * stretch) * scale - fraction * tail_length)
+            + side * (lateral * scale)
+            + Vec3::Y * height;
+        let radius = mixf(0.0055, 0.0018, fraction) * scale;
+        for sector in 0..TAIL_SECTORS {
+            // A vertex at the top, a flat face resting toward the ground.
+            let theta = PI * 0.5 + sector as f32 / TAIL_SECTORS as f32 * TAU;
+            let (sin, cos) = theta.sin_cos();
+            let point = ring_center + side * (cos * radius) + Vec3::Y * (sin * radius);
+            positions.push(point.to_array());
+            normals.push((side * cos + Vec3::Y * sin).to_array());
+            uvs.push([sector as f32 / TAIL_SECTORS as f32, fraction]);
+            colors.push(naked);
+        }
+    }
+    stitch_tube(indices, tail_first, TAIL_STATIONS, TAIL_SECTORS);
+
+    // -- Ears ---------------------------------------------------------------
+    // Two flaps pricked up and out from the crown, raked a little back. The
+    // corner order mirrors between the sides so both computed normals face
+    // the sky, not one sky and one street.
+    for sign in [1.0_f32, -1.0] {
+        let base = station(0.068, 0.056) + side * (sign * 0.013 * scale);
+        let out = side * (sign * 0.75) + Vec3::Y * 0.66;
+        let tip = base + out * (0.020 * scale) - ahead * (0.005 * scale);
+        let half = ahead * (0.008 * scale);
+        let corners = if sign > 0.0 {
+            [
+                base + half,
+                base - half,
+                tip - half * 0.55,
+                tip + half * 0.55,
+            ]
+        } else {
+            [
+                base - half,
+                base + half,
+                tip + half * 0.55,
+                tip - half * 0.55,
+            ]
+        };
+        push_quad(positions, normals, uvs, colors, indices, corners, ear_color);
+    }
+
+    // -- Eyes ---------------------------------------------------------------
+    // Two dark beads just proud of the head's flanks — sub-pixel past a few
+    // metres, alive when a scatter sends one darting past your boot.
+    for sign in [1.0_f32, -1.0] {
+        let bead = station(0.094, 0.047) + side * (sign * 0.0208 * scale);
+        let across = ahead * (0.0032 * scale);
+        let up = Vec3::Y * (0.0024 * scale);
+        let corners = if sign > 0.0 {
+            [
+                bead - across - up,
+                bead + across - up,
+                bead + across + up,
+                bead - across + up,
+            ]
+        } else {
+            [
+                bead + across - up,
+                bead - across - up,
+                bead - across + up,
+                bead + across + up,
+            ]
+        };
+        push_quad(positions, normals, uvs, colors, indices, corners, eye);
+    }
+
+    // -- Legs ---------------------------------------------------------------
+    // Four stubs from hip to ground. Sprinting they scurry in diagonal pairs
+    // on the gait clock, lifting through the forward swing; paused they
+    // stand, the front pair planted a little ahead like a rat about to bolt.
+    let legs: [(f32, f32, f32, f32); 4] = [
+        (0.050, 0.024, 0.030, 0.0),   // front right
+        (0.050, -0.024, 0.030, PI),   // front left
+        (-0.075, 0.030, 0.032, PI),   // rear right — diagonal with front left
+        (-0.075, -0.030, 0.032, 0.0), // rear left
+    ];
+    for (along, flank, hip_height, phase) in legs {
+        let sign = flank.signum();
+        let beat = (gait + phase).sin();
+        let (swing, foot_lift) = if moving {
+            (beat * 0.030, beat.max(0.0) * 0.010)
+        } else if along > 0.0 {
+            (0.008, 0.0)
+        } else {
+            (-0.006, 0.0)
+        };
+        let hip = center
+            + ahead * (along * stretch * scale)
+            + side * (flank * scale)
+            + Vec3::Y * (hip_height * squat * scale + bob);
+        let foot = center
+            + ahead * ((along * stretch + swing) * scale)
+            + side * ((flank + sign * 0.007) * scale)
+            + Vec3::Y * (foot_lift * scale);
+        let half_hip = ahead * (0.005 * scale);
+        let half_foot = ahead * (0.0035 * scale);
+        let corners = if sign > 0.0 {
+            [
+                hip + half_hip,
+                hip - half_hip,
+                foot - half_foot,
+                foot + half_foot,
+            ]
+        } else {
+            [
+                hip - half_hip,
+                hip + half_hip,
+                foot + half_foot,
+                foot - half_foot,
+            ]
+        };
+        push_quad(positions, normals, uvs, colors, indices, corners, feet);
+    }
+
+    // The promise the counting tests spend: whatever the gait is doing, a rat
+    // is always exactly this many vertices.
+    debug_assert_eq!(positions.len() - first_vertex, RAT_VERTICES);
+}
+
+/// Stitches consecutive rings of `sectors` vertices into a closed tube, wound
+/// so every face's computed normal agrees with the outward ring normals —
+/// the invariant `a_rat_is_wound_with_its_normals_out` pins, since the
+/// double-sided material would shade an inside-out tube identically.
+fn stitch_tube(indices: &mut Vec<u32>, first: u32, stations: usize, sectors: usize) {
+    for station in 0..stations - 1 {
+        for sector in 0..sectors {
+            let next = (sector + 1) % sectors;
+            let a = first + (station * sectors + sector) as u32;
+            let b = first + (station * sectors + next) as u32;
+            let c = first + ((station + 1) * sectors + sector) as u32;
+            let d = first + ((station + 1) * sectors + next) as u32;
+            indices.extend_from_slice(&[a, d, c, a, b, d]);
+        }
+    }
 }
 
 fn push_quad(
@@ -1191,7 +1431,7 @@ mod tests {
                     && colony.anchor.distance(shambles.xz())
                         <= VERMIN_VISIBLE_RANGE_M + colony.radius_m
             })
-            .map(|colony| colony.rats.len() * 3 * 4)
+            .map(|colony| colony.rats.len() * RAT_VERTICES)
             .sum();
         assert!(expected > 0, "the Shambles colony is in range by day");
         assert_eq!(vermin_mesh_vertices(&mut app), expected);
@@ -1219,7 +1459,7 @@ mod tests {
             .filter(|colony| {
                 colony.anchor.distance(gaunt.xz()) <= VERMIN_VISIBLE_RANGE_M + colony.radius_m
             })
-            .map(|colony| colony.rats.len() * 3 * 4)
+            .map(|colony| colony.rats.len() * RAT_VERTICES)
             .sum();
         assert!(expected_night > 0, "Gaunt Passage wakes at night");
         assert_eq!(vermin_mesh_vertices(&mut app), expected_night);
@@ -1410,7 +1650,7 @@ mod tests {
             .filter(|colony| {
                 colony.anchor.distance(shambles.xz()) <= VERMIN_VISIBLE_RANGE_M + colony.radius_m
             })
-            .map(|colony| colony.rats.len().div_ceil(3) * 3 * 4)
+            .map(|colony| colony.rats.len().div_ceil(3) * RAT_VERTICES)
             .sum();
         assert_eq!(wet, expected, "a stray third stays out in a downpour");
         assert!(wet < dry, "and that is fewer than the dry count");
@@ -1626,7 +1866,7 @@ mod tests {
         // Every other colony is >60 m away, so the difference is this one's.
         assert_eq!(
             during - before,
-            colony.boil_rats.len() * 3 * 4,
+            colony.boil_rats.len() * RAT_VERTICES,
             "{} should be pouring",
             colony.name
         );
@@ -1730,16 +1970,17 @@ mod tests {
         );
     }
 
-    /// Every quad of a rat is wound so that its computed normal points off the
-    /// body: the far flank outward, the near flank outward, the tail at the sky.
+    /// Every face of a rat is wound so its computed normal agrees with the
+    /// authored outward normals — the hull's off the body, the flanks off
+    /// their own sides, the crown of the arch at the sky.
     ///
     /// `double_sided: true` + `cull_mode: None` hides the opposite of this — the
-    /// shader flips the normal on a back face, so an inside-out quad shades
+    /// shader flips the normal on a back face, so an inside-out hull shades
     /// exactly like a correct one from every angle, and nothing on screen ever
     /// says otherwise. That is how `bb616d1` ("every batched box was wound
     /// inside out, and nothing showed it") happened, so the winding is asserted
-    /// off the attribute rather than trusted to the picture. Checked at two
-    /// headings, since the whole tent is built out of `ahead`/`side`.
+    /// off the attributes rather than trusted to the picture. Checked at three
+    /// headings, since the whole body is built out of `ahead`/`side`.
     #[test]
     fn a_rat_is_wound_with_its_normals_out() {
         let nav = committed_nav();
@@ -1764,56 +2005,155 @@ mod tests {
                 &rat,
                 Vec2::ZERO,
                 heading,
-                // Not moving: the bob is out of it, so the numbers below are the
-                // authored geometry and nothing else.
                 false,
                 0.0,
             );
-            assert_eq!(positions.len(), 12, "two flanks and a tail");
-            assert_eq!(normals.len(), 12);
+            assert_eq!(positions.len(), RAT_VERTICES);
+            assert_eq!(normals.len(), RAT_VERTICES);
+            assert_eq!(colors.len(), RAT_VERTICES);
 
-            // One normal per quad, shared by its four corners and unit length.
-            let quad_normal = |quad: usize| -> Vec3 {
-                let corners = &normals[quad * 4..quad * 4 + 4];
-                for corner in corners {
-                    assert_eq!(*corner, corners[0], "quad {quad} is not flat-shaded");
-                }
-                let normal = Vec3::from_array(corners[0]);
+            // Winding against lighting: each face's computed normal must agree
+            // with the stored normals of its own corners, or the face is wound
+            // inside out however right it looks under the material.
+            for triangle in indices.chunks(3) {
+                let [a, b, c] = [
+                    triangle[0] as usize,
+                    triangle[1] as usize,
+                    triangle[2] as usize,
+                ];
+                let edge = |from: usize, to: usize| {
+                    Vec3::from_array(positions[to]) - Vec3::from_array(positions[from])
+                };
+                let face = edge(a, b).cross(edge(a, c));
                 assert!(
-                    (normal.length() - 1.0).abs() < 1e-4,
-                    "quad {quad} normal is not unit: {normal:?}"
+                    face.length() > 1e-10,
+                    "triangle {a},{b},{c} is degenerate at {heading:?}"
                 );
-                normal
-            };
-
-            let side = Vec3::new(-heading.y, 0.0, heading.x);
-            let far_flank = quad_normal(0);
-            let near_flank = quad_normal(1);
-            let tail = quad_normal(2);
-
-            // The tent's two panels lean out and up, one to each side. Were
-            // either wound the other way its normal would point *into* the body.
-            assert!(
-                far_flank.dot(side) < -0.7,
-                "the far flank faces out at {heading:?}: {far_flank:?}"
-            );
-            assert!(
-                near_flank.dot(side) > 0.7,
-                "the near flank faces out at {heading:?}: {near_flank:?}"
-            );
-            for (label, panel) in [("far", far_flank), ("near", near_flank)] {
+                let stored = Vec3::from_array(normals[a])
+                    + Vec3::from_array(normals[b])
+                    + Vec3::from_array(normals[c]);
                 assert!(
-                    panel.y > 0.4,
-                    "the {label} flank is a roof, not a wall: {panel:?}"
+                    face.normalize().dot(stored.normalize()) > 0.1,
+                    "triangle {a},{b},{c} is wound against its normals at {heading:?}"
                 );
             }
-            // The tail lies almost flat on the ground; up is the only side of it
-            // anything can light.
+
+            // And the stored normals themselves point out, not in: the widest
+            // vertex of each flank looks off its own side, the highest point
+            // of the arch looks at the sky.
+            let side = Vec3::new(-heading.y, 0.0, heading.x);
+            let extreme = |towards: Vec3| {
+                (0..positions.len())
+                    .max_by(|a, b| {
+                        let reach = |v: &usize| Vec3::from_array(positions[*v]).dot(towards);
+                        reach(a).total_cmp(&reach(b))
+                    })
+                    .expect("a rat has vertices")
+            };
+            for (label, towards) in [("right flank", side), ("left flank", -side)] {
+                let normal = Vec3::from_array(normals[extreme(towards)]);
+                assert!(
+                    normal.dot(towards) > 0.5,
+                    "the {label} faces out at {heading:?}: {normal:?}"
+                );
+            }
+            let crown = Vec3::from_array(normals[extreme(Vec3::Y)]);
             assert!(
-                tail.y > 0.9,
-                "the tail faces the sky at {heading:?}: {tail:?}"
+                crown.y > 0.5,
+                "the arch's crown faces the sky at {heading:?}: {crown:?}"
             );
         }
+    }
+
+    /// The gait reshapes a rat but never its topology: sprinting or paused,
+    /// every frame writes exactly [`RAT_VERTICES`] vertices over the same
+    /// indices — which is what entitles the batch-counting tests to multiply —
+    /// while a sprint actually moves the body between instants, the feet stay
+    /// on the ground plane, and the full-length tail keeps the whole animal
+    /// about twice its body length nose to tip.
+    #[test]
+    fn the_gait_bends_a_rat_but_never_its_topology() {
+        let nav = committed_nav();
+        let rat = bake_rat(
+            &nav,
+            &CollisionWorld::default(),
+            Vec2::new(-294.0, 220.0),
+            14.0,
+            7,
+        )
+        .expect("the Shambles is walkable");
+
+        let build = |moving: bool, elapsed: f32| {
+            let (mut positions, mut normals) = (Vec::new(), Vec::new());
+            let (mut uvs, mut colors, mut indices) = (Vec::new(), Vec::new(), Vec::new());
+            push_rat(
+                &mut positions,
+                &mut normals,
+                &mut uvs,
+                &mut colors,
+                &mut indices,
+                &rat,
+                Vec2::ZERO,
+                Vec2::X,
+                moving,
+                elapsed,
+            );
+            (positions, indices)
+        };
+
+        let (paused, paused_indices) = build(false, 0.0);
+        let (sprint, sprint_indices) = build(true, 0.35);
+        let (sprint_later, _) = build(true, 0.55);
+        assert_eq!(paused.len(), RAT_VERTICES);
+        assert_eq!(sprint.len(), RAT_VERTICES);
+        assert_eq!(
+            paused_indices, sprint_indices,
+            "the gait never re-plumbs the mesh"
+        );
+        assert!(
+            paused_indices
+                .iter()
+                .all(|index| (*index as usize) < RAT_VERTICES),
+            "every index points into the rat"
+        );
+        assert_ne!(sprint, sprint_later, "a sprinting rat is never a statue");
+
+        for (label, vertices) in [("paused", &paused), ("sprinting", &sprint)] {
+            let low = vertices.iter().map(|v| v[1]).fold(f32::INFINITY, f32::min);
+            let high = vertices
+                .iter()
+                .map(|v| v[1])
+                .fold(f32::NEG_INFINITY, f32::max);
+            assert!(
+                low >= RAT_GROUND_Y - 1e-4,
+                "a {label} rat digs under the street: {low}"
+            );
+            assert!(
+                low <= RAT_GROUND_Y + 0.002,
+                "a {label} rat's feet reach the ground: {low}"
+            );
+            assert!(
+                high <= RAT_GROUND_Y + 0.13,
+                "a {label} rat is taller than a rat: {high}"
+            );
+        }
+
+        // Nose to tail tip along the heading (`Vec2::X`): the body plus the
+        // 0.9-length tail, so a rat that lost its tail would fail here.
+        let reach = |vertices: &Vec<[f32; 3]>| {
+            let max = vertices
+                .iter()
+                .map(|v| v[0])
+                .fold(f32::NEG_INFINITY, f32::max);
+            let min = vertices.iter().map(|v| v[0]).fold(f32::INFINITY, f32::min);
+            max - min
+        };
+        let length = rat.length_m;
+        assert!(
+            (1.6 * length..=2.1 * length).contains(&reach(&paused)),
+            "the tail is the other half of a rat: {} of {length}",
+            reach(&paused)
+        );
     }
 
     /// Heavy rain thins the visible count, matching the animals going quiet —
