@@ -601,6 +601,18 @@ fn a_change_the_wire_can_see_is_reported() {
 fn a_nearby_mark_renders_into_the_actual_sheet() {
     let mut world = world_with_places();
     world.add_character(character("sv3n1", "Sven", 7.0));
+    // The debtor must be a *live character* Sven has not met, not merely a
+    // registered home owner. If they are only an owner, `world.characters.get`
+    // returns `None` and the sheet falls back to "a stranger" whether or not
+    // the `knows` gate is there at all — so deleting the gate would leave this
+    // test green and the one line that can leak a real name untested.
+    world.add_character(character("debtor", "Ede Clove", 10.5));
+    assert!(
+        !world.characters[&ActorId::from_raw("sv3n1")]
+            .knows()
+            .contains(&ActorId::from_raw("debtor")),
+        "the premise: Sven has never met Ede Clove"
+    );
     chalk(
         &mut world,
         MarkAnchor::Household(ActorId::from_raw("debtor")),
