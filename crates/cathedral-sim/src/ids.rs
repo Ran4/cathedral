@@ -107,6 +107,22 @@ id_newtype!(DogId, "a street dog");
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RequestId(pub u64);
 
+/// One chalk mark ([`crate::marks`]). Counter-allocated like a ward notice's
+/// id rather than made by `id_newtype!`, which mints *string* handles: nobody
+/// authors a mark, so there is no name to spell. `transparent` keeps it a bare
+/// number on the wire, which is 100 marks' worth of snapshot headroom.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+)]
+#[serde(transparent)]
+pub struct MarkId(pub u64);
+
+impl fmt::Display for MarkId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// A speech event's id (`speech-{sequence}`), typed to stop string-parsing drift.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(transparent)]

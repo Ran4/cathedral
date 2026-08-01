@@ -11,8 +11,9 @@ use crate::{
     appearance::AppearanceSnapshot,
     character::{BodySlot, Control, StatusKind},
     gesture::GestureKind,
-    ids::{ActorId, ItemId},
+    ids::{ActorId, ItemId, MarkId},
     item::ItemKind,
+    marks::MarkKind,
     math::Vec3,
 };
 
@@ -29,6 +30,47 @@ pub struct PublicSnapshot {
     /// Presentation-only carts derived from road-party topology and live cargo.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub road_carts: Vec<crate::round::RoadCart>,
+    /// The chalk on the walls (`features/chalking_the_walls.md`), sorted by id.
+    /// Skipped when empty — the universal case, and every frozen fixture's
+    /// case — so a city nobody has chalked serializes byte-identically to
+    /// before the feature existed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub marks: Vec<PublicMark>,
+}
+
+/// One chalk mark, as the *renderer* needs it and no more.
+///
+/// The label and the meaning are deliberately absent: the host reads those
+/// out of the same `assets/world/marks.json` the sim compiles in, so no prose
+/// crosses the wire. `author` is absent because no reader may branch on it,
+/// and `about` because the render has no use for it.
+///
+/// **`strength` is quantized on purpose.** A raw `f64` strength serializes at
+/// full 17-significant-digit precision (`0.9330329915368074`) — 18 bytes for
+/// precision an opacity ramp cannot use. Rounding an `f64` does not help
+/// (`0.001`-rounded still prints `1.5709999999999997`); integer quantization
+/// is the only encoding that is short by construction. At ≤102 bytes a mark,
+/// [`MARKS_MAX`](crate::marks::MARKS_MAX) fits the snapshot's measured
+/// 26,815-byte headroom several times over.
+///
+/// There is deliberately **no orientation here.** The sim does not know which
+/// way a door faces: a [`PlaceEntry`](crate::places::PlaceEntry) carries a
+/// walkable point and nothing else, and homes carry less. The host owns the
+/// city geometry and the collision world, so it is the half of the seam that
+/// can actually answer "which wall, facing where" — and a made-up yaw crossing
+/// the wire would be a lie the renderer then had to honour.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct PublicMark {
+    pub id: MarkId,
+    pub kind: MarkKind,
+    /// The anchor site in metres. A plain array, not `vec3_serde`: the object
+    /// form costs 12 bytes a mark to name axes the host never reads by name.
+    pub point: [f64; 3],
+    /// `strength * 100`, rounded — the opacity ramp. Whether a mark counts as
+    /// half-washed is the catalog's `faint_below` applied to this, host-side.
+    pub strength_pct: u8,
+    /// Tally notches; `1` for every other kind.
+    pub strokes: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

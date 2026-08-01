@@ -53,6 +53,10 @@ ward_places_note = "set_round may name any of these place_ids"
 # The parenthesis after `**dogs_nearby**` — the street dogs, listed for
 # everyone with no `knows` gating: nobody needs an introduction to see a dog.
 dogs_note = "street dogs within 20 metres, nearest first"
+# The parenthesis after `**marks_here**` — chalk on the walls, listed for
+# everyone with no gating: there is no literacy state in this city, and a mark
+# means the same plain thing to anyone who looks at it.
+marks_note = "chalk on the walls within 8 metres, nearest first"
 # `you_are`'s walk sentence; `%s` is the destination name.
 walking_to = "You are on your way to %s."
 # `you_are`'s follow sentence; `%s` is the person being followed.

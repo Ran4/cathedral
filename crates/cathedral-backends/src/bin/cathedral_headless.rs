@@ -220,6 +220,13 @@ struct Args {
     /// is the turn-free way to see a whole night pass.
     #[arg(long)]
     night_office: bool,
+
+    /// Multiply the chalk decay (`features/chalking_the_walls.md`). A cross
+    /// weathers over nine game days at `1.0`, which no `-t 12` run will ever
+    /// see; `--marks-decay-scale 200` washes one off inside a short run so the
+    /// re-chalk and the wash-off are both observable in one transcript.
+    #[arg(long, default_value_t = 1.0)]
+    marks_decay_scale: f64,
 }
 
 fn main() -> ExitCode {
@@ -430,6 +437,12 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             // The pack costs nothing here — a transcript line only when a dog
             // drifts through somebody's you_see — so the default stands.
             dogs_enabled: true,
+            // The chalk costs nothing either — the walls start bare, and a
+            // mark reaches a sheet only when a hand has drawn one — so the
+            // default stands here too. `--marks-decay-scale` weathers a wall
+            // in a short run instead of over nine game days.
+            marks_enabled: true,
+            marks_decay_scale: args.marks_decay_scale,
         },
         &assets.seed,
         assets.areas,

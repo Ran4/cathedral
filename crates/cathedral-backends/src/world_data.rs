@@ -428,12 +428,64 @@ mod tests {
         let snapshot = world.public_snapshot(&ActorId::from_raw("player"));
         assert_eq!(snapshot.actors.len(), cast_counts(&root).0 + 1);
         let encoded = serde_json::to_vec(&snapshot).unwrap();
+        // Printed unconditionally, not only on failure: the remaining headroom
+        // under the bound is what sizes anything new we put in the snapshot
+        // (`MARKS_MAX`, the next item wave), and a number you have to induce a
+        // failure to read is a number nobody reads.
+        eprintln!(
+            "public snapshot: {} bytes of the 160 KiB bound ({} bytes headroom); \
+             longest prompt {} bytes for {}",
+            encoded.len(),
+            160 * 1024 - encoded.len() as i64,
+            longest.0,
+            longest.1
+        );
         assert!(
             encoded.len() <= 160 * 1024,
             "public snapshot is {} bytes, over 160 KiB \
              (bound raised from 128 KiB when the lore-item wave seeded ~65 held \
              goal items — apples, knives, blankets, kindling)",
             encoded.len()
+        );
+
+        // …and the same bound with the walls fully chalked
+        // (`features/chalking_the_walls.md` §2.7). This second assertion is
+        // the one that actually guards `MARKS_MAX`: the world above is built
+        // from `seed.json` and never runs a round, so it holds *zero* marks
+        // and the number printed above would stay 137025 no matter how large
+        // the cap grew. Worst case on purpose — the longest kind name, a
+        // six-digit id from a long session's monotonic counter, the far corner
+        // of the map, and a saturated tally.
+        let mut chalked = world.public_snapshot(&ActorId::from_raw("player"));
+        assert!(
+            chalked.marks.is_empty(),
+            "the seeded world should start with bare walls"
+        );
+        chalked.marks = (0..cathedral_sim::marks::MARKS_MAX)
+            .map(|index| cathedral_sim::snapshot::PublicMark {
+                id: cathedral_sim::ids::MarkId(999_000 + index as u64),
+                kind: cathedral_sim::marks::MarkKind::ChalkCross,
+                point: [-213.375, 0.91, -480.375],
+                strength_pct: 100,
+                strokes: cathedral_sim::marks::TALLY_STROKES_MAX as u8,
+            })
+            .collect();
+        let chalked_encoded = serde_json::to_vec(&chalked).unwrap();
+        let added = chalked_encoded.len() - encoded.len();
+        eprintln!(
+            "public snapshot with {} marks: {} bytes ({} added, {:.1} B/mark)",
+            cathedral_sim::marks::MARKS_MAX,
+            chalked_encoded.len(),
+            added,
+            added as f64 / cathedral_sim::marks::MARKS_MAX as f64
+        );
+        assert!(
+            chalked_encoded.len() <= 160 * 1024,
+            "a fully chalked city serializes to {} bytes, over 160 KiB — \
+             MARKS_MAX ({}) is too large for the remaining headroom. Shrink the \
+             cap or shrink PublicMark; do not raise the bound.",
+            chalked_encoded.len(),
+            cathedral_sim::marks::MARKS_MAX
         );
     }
 

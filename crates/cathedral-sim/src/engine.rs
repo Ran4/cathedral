@@ -290,6 +290,17 @@ pub struct EngineConfig {
     /// `config.ron: smart_actors.dogs_enabled` and `CATHEDRAL_NO_DOGS` turn
     /// them off for ablation.
     pub dogs_enabled: bool,
+    /// Whether hands may chalk the walls ([`crate::marks`]).
+    ///
+    /// Defaults to **on**, like the dogs and for the same reason: marks cost
+    /// no tokens, and the layer is inert until something writes one — every
+    /// nav-less test and every frozen fixture keeps a bare wall either way.
+    /// `config.ron: smart_actors.marks.enabled` and `CATHEDRAL_NO_MARKS` turn
+    /// them off for ablation.
+    pub marks_enabled: bool,
+    /// Multiplies elapsed time in the chalk decay. `1.0` in the game; a test
+    /// or a drive run raises it to weather a wall in seconds instead of days.
+    pub marks_decay_scale: f64,
 }
 
 impl Default for EngineConfig {
@@ -328,6 +339,8 @@ impl Default for EngineConfig {
             nav: None,
             night_office: NightOfficeConfig::default(),
             dogs_enabled: true,
+            marks_enabled: true,
+            marks_decay_scale: 1.0,
         }
     }
 }
@@ -992,6 +1005,12 @@ impl Engine {
             world.dogs = crate::dogs::seed_pack(nav);
         }
 
+        // The chalk (`features/chalking_the_walls.md`). Nothing to seed — the
+        // walls start bare and stay bare until a hand writes — so this is only
+        // the ablation switch and the decay dial reaching the world.
+        world.marks_enabled = config.marks_enabled;
+        world.marks.decay_scale = config.marks_decay_scale;
+
         // The Night Office reads its bedtimes off the seeded round, so it is
         // built here and not a line earlier (M6). Off by default, and then this
         // is two map lookups and a `None`.
@@ -1155,6 +1174,14 @@ impl Engine {
         // nothing else was ever tracked.
         self.issue_warrants(now);
         notices::confront(&mut self.world);
+        // Weather the chalk on the same clock, and on the same principle: the
+        // sim itself has none. Gated inside to once a game-minute — strength
+        // moves in days and this runs at ~60 Hz — and it bumps the revision
+        // only when something actually moved, so a bare wall never churns the
+        // snapshot chain.
+        if crate::marks::sweep(&mut self.world, self.clock.game_days(now)) {
+            self.world.touch_public_state();
+        }
         // …and the law's hands, whose every clock is a way custody ends: the
         // dead-man timer, the station's four minutes, walking off, and the
         // officer closing on a broken leash (M4).

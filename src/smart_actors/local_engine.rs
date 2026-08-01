@@ -384,6 +384,8 @@ fn build(
         // quiet, which only exists when there is a player (M6).
         night_office: config.night_office.config(),
         dogs_enabled: config.dogs_enabled,
+        marks_enabled: config.marks.enabled,
+        marks_decay_scale: config.marks.decay_scale,
         clock: WorldClock::new(
             config.clock.seconds_per_day,
             Office::from_config_name(&config.clock.start_office).unwrap_or_else(|| {
