@@ -1,8 +1,9 @@
 # Chalking the Walls
 
-**Status:** in progress (started 2026-08-02, branch `slunga/chalking_the_walls`). §2.7's snapshot
-measurement is done and recorded below — it invalidates the suggested `MARKS_MAX`. Milestone state
-is tracked in §4; each milestone's heading carries its own status once it lands.
+**Status:** M0 and M1 done (2026-08-02), M2–M4 not started. Branch `slunga/chalking_the_walls`.
+§2.7's snapshot measurement is done and recorded below; §0 records sixteen corrections to this spec
+found by re-checking every seam against the tree. Milestone state is tracked in §4 — each
+milestone's heading carries its own status and an "As built" note where the build diverged.
 
 Every file, function and line reference below was checked against `develop` on 2026-08-01; where the
 reference is approximate the text says so. Coordinates, if any appear, are current (post-shrink)
@@ -337,9 +338,58 @@ Done when:
 - A test that plants a mark 3 m from a fixture actor and asserts the rendered sheet contains the
   bullet, with the distance and the meaning.
 
-### M1 — the cross, the gate, and the ward's own hand
+### M1 — the cross, the gate, and the ward's own hand — **DONE 2026-08-02**
 
 The first writer and the first reader, and the answer to §2.1.
+
+**As built.** The writer is `notices::chalk_the_debtors(&mut World, game_days) -> Vec<String>`, a free
+fn called from `engine.rs` beside `notices::confront` — *not* inside `Notices::expire`, which has no
+path to `World` (C4). It is gated to one beat a game day by `Marks::take_daily_beat`; without that
+gate it would run at ~60 Hz and re-chalk a scrubbed cross before the player straightened up, making
+scrubbing pointless. "Not settled" needed no code at all: `settle` removes the notice from `live`,
+so the beat simply stops finding it (C3).
+
+The reader is two lines in `try_purchase` calling `marks::binding_mark_about`, which reads
+`World.marks` and never `World.notices`. The caller re-asks the same predicate to write the
+distinguishable inbox line (no nudge), the `refused_on_chalk;` food-log trace, and the
+`chalk_refused_until` stamp — `try_purchase` has neither `now` nor a clock, and both the stamp and
+the trace want one (C9). The stamp is pruned in `round::tick` beside `lightning_reflex_until` and
+tested with a bare `contains_key` in `nearest_open_stall`.
+
+Beyond the spec: the refusal is **idempotent per stamp period**, not merely per selection. The
+`nearest_open_stall` guard stops the ladder re-queueing them, but a buyer already standing in a
+queue when the cross went up would otherwise get a second line; §4 M1 asks for "one refusal per
+stamp period", and that is now what it is regardless of route.
+
+**`--owe <NAME>`** is a new headless stand-in, on the `--status` / `seize` precedent: a cross needs
+an aged unsettled restitution notice, and raising one is an LLM's judgement, so an offline run could
+not otherwise reach the door at all. It raises the same notice `raise_notice` raises, back-dated
+past the age gate; everything downstream is the real code.
+
+**What the headless run does and does not show.** It shows the writer:
+
+```
+$ cargo run -p cathedral-backends --bin cathedral-headless -- --fake -t 8 --owe "Clemence Skell"
+[smart actors] Clemence Skell owes and has not paid; the ward will chalk their door
+[marks] the ward chalks a cross on fc7sk's door
+```
+
+It does **not** show the refusal, and that is not the feature's fault: in a `--watch-clock` run the
+census reports `stalls 1/13 open, queued 0, serving 0` across three game days, so *no* stall sale
+happens with or without chalk. The refusal is instead pinned by
+`a_chalk_refusal_is_one_scene_and_not_a_loop`, which drives the real `service_stalls` and asserts
+the inbox line, the trace line, the `nearest_open_stall` guard, and then hammers twenty more passes
+to prove there is no barrage. The spec's "a single headless run shows the whole arc" is therefore
+half-met, deliberately, and the other half is met through the same production functions.
+
+An accused with no registered home is skipped with a diagnostic rather than silently — "the cross
+never appeared" and "the cross appeared and washed off" look identical from outside and have
+completely different causes. That diagnostic found the first test name I picked (`Sibbe Clove`) was
+unhoused, in about ten seconds.
+
+9 tests: 5 in `round/tests.rs` (the partition both ways, the faint cross, the forged cross, ablation)
+and 9 more in `marks_tests.rs` for the writer (age gate, idempotence, re-chalk after a scrub, the
+settle clause, no-door, the per-kind switch, two notices one door), plus 2 for the refusal loop.
 
 **Writer.** In `notices.rs`, at the existing age check: a restitution notice with an `accused`, not
 settled, whose `raised_game_days` is more than `CROSS_AFTER_GAME_DAYS` (suggest 2.0) old, puts a

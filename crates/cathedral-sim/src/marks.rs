@@ -247,6 +247,10 @@ pub struct Marks {
     /// Multiplies elapsed time in the decay. `1.0` in the game; a test or
     /// `config.ron` raises it to weather a wall in seconds.
     pub decay_scale: f64,
+    /// The last game-day the ward's chalking beat ran, so a writer that is
+    /// *called* every poll only *draws* once a day. See
+    /// [`take_daily_beat`](Self::take_daily_beat).
+    last_beat_game_days: f64,
 }
 
 impl Default for Marks {
@@ -256,6 +260,7 @@ impl Default for Marks {
             next_id: 0,
             last_sweep_game_days: f64::NEG_INFINITY,
             decay_scale: 1.0,
+            last_beat_game_days: f64::NEG_INFINITY,
         }
     }
 }
@@ -321,6 +326,30 @@ impl Marks {
 
     pub fn remove(&mut self, id: MarkId) -> Option<Mark> {
         self.live.remove(&id)
+    }
+
+    /// True at most once per game day — the ward's chalking beat.
+    ///
+    /// The engine polls at ~60 Hz, and the cross writer runs on every one of
+    /// those polls. Without this gate it would refresh every live cross back
+    /// to full strength 60 times a second, which would make scrubbing a cross
+    /// *completely* pointless: the sergeant would redraw it before the player
+    /// straightened up. Gated, a scrub buys exactly what the spec says it
+    /// should — a day.
+    pub fn take_daily_beat(&mut self, game_days: f64) -> bool {
+        if self.last_beat_game_days.is_finite()
+            && game_days.floor() <= self.last_beat_game_days.floor()
+        {
+            return false;
+        }
+        self.last_beat_game_days = game_days;
+        true
+    }
+
+    /// Test seam: pretend the beat last ran `game_days` ago.
+    #[doc(hidden)]
+    pub fn rewind_beat_clock(&mut self, game_days: f64) {
+        self.last_beat_game_days = game_days;
     }
 
     /// Test and host seam: force the next [`sweep`] to run and to charge

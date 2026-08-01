@@ -702,3 +702,179 @@ fn every_authored_ward_sign_place_resolves_against_the_real_registry() {
     }
     assert_eq!(checked, 8, "one place of resort per ward");
 }
+
+// --------------------------------------------------------------------------- //
+// M1 — the ward's own hand
+// --------------------------------------------------------------------------- //
+
+fn raise_against(world: &mut World, accused: &str, raised_game_days: f64) {
+    world.notices.raise(
+        "a body".into(),
+        "owes and has not paid".into(),
+        None,
+        None,
+        Some(raised_game_days),
+        ActorId::from_raw("sergeant"),
+        Some(ActorId::from_raw(accused)),
+        None,
+        None,
+    );
+}
+
+fn cross_on(world: &World, who: &str) -> Option<cathedral_sim::ids::MarkId> {
+    world
+        .marks
+        .find(
+            MarkKind::ChalkCross,
+            &MarkAnchor::Household(ActorId::from_raw(who)),
+        )
+        .map(|(id, _)| id)
+}
+
+/// The writer's age gate: a wrong settled promptly never reaches the wall.
+#[test]
+fn a_fresh_notice_chalks_nobodys_door() {
+    let mut world = world_with_places();
+    raise_against(&mut world, "debtor", 0.0);
+
+    // One game-hour later — well inside CROSS_AFTER_GAME_DAYS.
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 1.0 / 24.0);
+    assert!(
+        cross_on(&world, "debtor").is_none(),
+        "two game days have not passed; nothing is chalked yet"
+    );
+
+    cathedral_sim::notices::chalk_the_debtors(
+        &mut world,
+        cathedral_sim::notices::CROSS_AFTER_GAME_DAYS + 0.5,
+    );
+    assert!(
+        cross_on(&world, "debtor").is_some(),
+        "past the age gate the ward chalks the door"
+    );
+}
+
+/// Idempotent: the beat runs every game day for as long as the word stands,
+/// and leaves one cross, never a wall of them.
+#[test]
+fn the_wards_beat_leaves_one_cross_however_often_it_runs() {
+    let mut world = world_with_places();
+    raise_against(&mut world, "debtor", 0.0);
+    for day in 3..12 {
+        cathedral_sim::notices::chalk_the_debtors(&mut world, day as f64);
+    }
+    assert_eq!(
+        world.marks.len(),
+        1,
+        "one live cross per debtor, never a second"
+    );
+}
+
+/// The re-chalk, which is what makes scrubbing *buy a day* rather than an
+/// amnesty: a cross scrubbed at night is back on the door by the next beat.
+#[test]
+fn a_scrubbed_cross_comes_back_on_the_next_days_beat() {
+    let mut world = world_with_places();
+    raise_against(&mut world, "debtor", 0.0);
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 3.0);
+    let scrubbed = cross_on(&world, "debtor").expect("chalked");
+    world.marks.remove(scrubbed);
+    assert!(cross_on(&world, "debtor").is_none(), "scrubbed clean");
+
+    // Same game day: the beat has already run, so the wall stays bare — the
+    // scrub really did buy something.
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 3.4);
+    assert!(
+        cross_on(&world, "debtor").is_none(),
+        "the beat is once a day; scrubbing buys the rest of that day"
+    );
+
+    // Next day the sergeant comes round again.
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 4.0);
+    assert!(
+        cross_on(&world, "debtor").is_some(),
+        "and no longer than that: the ward repairs its own database"
+    );
+}
+
+/// A faint cross is restored to full strength by the beat rather than left to
+/// finish washing off — the same idempotent call, no special case.
+#[test]
+fn the_beat_restores_a_half_washed_cross() {
+    let mut world = world_with_places();
+    raise_against(&mut world, "debtor", 0.0);
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 3.0);
+    let id = cross_on(&world, "debtor").expect("chalked");
+    world.marks.get_mut(id).unwrap().strength = 0.1;
+
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 4.0);
+    assert_eq!(
+        world.marks.get(id).unwrap().strength,
+        1.0,
+        "the sergeant goes over it again"
+    );
+}
+
+/// §4 M1's settling clause: settling stops the re-chalk but does **not** erase
+/// the cross. A settled debt whose mark is still up for two dry days is
+/// correct — the database heals slowly.
+#[test]
+fn settling_stops_the_re_chalk_without_scrubbing_the_door() {
+    let mut world = world_with_places();
+    raise_against(&mut world, "debtor", 0.0);
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 3.0);
+    let id = cross_on(&world, "debtor").expect("chalked");
+
+    let notice_id = world.notices.live()[0].id;
+    world.notices.settle(notice_id);
+    assert!(
+        world.notices.live().is_empty(),
+        "the word is off the tongues"
+    );
+
+    world.marks.get_mut(id).unwrap().strength = 0.4;
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 5.0);
+    assert_eq!(
+        world.marks.get(id).unwrap().strength,
+        0.4,
+        "settling stops the beat — it does not restore the chalk"
+    );
+    assert!(
+        cross_on(&world, "debtor").is_some(),
+        "…and it does not scrub it either; the chalk weathers off on its own"
+    );
+}
+
+/// An unhoused accused has no door. Not a fault — there is simply nothing to
+/// chalk, and the beat must not panic on it.
+#[test]
+fn an_accused_with_no_door_is_skipped_quietly() {
+    let mut world = world_with_places();
+    raise_against(&mut world, "vagrant", 0.0);
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 5.0);
+    assert!(
+        world.marks.is_empty(),
+        "no home, no door, no cross, no panic"
+    );
+}
+
+/// The per-kind switch has to reach the writer, or `marks.cross: false` would
+/// silence nothing.
+#[test]
+fn the_cross_switch_silences_the_wards_hand() {
+    let mut world = world_with_places();
+    world.mark_kinds.cross = false;
+    raise_against(&mut world, "debtor", 0.0);
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 5.0);
+    assert!(world.marks.is_empty(), "the cross writer is switched off");
+}
+
+/// Two live notices naming the same person are still one door and one cross.
+#[test]
+fn two_notices_against_one_body_chalk_one_door() {
+    let mut world = world_with_places();
+    raise_against(&mut world, "debtor", 0.0);
+    raise_against(&mut world, "debtor", 0.1);
+    cathedral_sim::notices::chalk_the_debtors(&mut world, 5.0);
+    assert_eq!(world.marks.len(), 1, "one debtor, one door, one cross");
+}

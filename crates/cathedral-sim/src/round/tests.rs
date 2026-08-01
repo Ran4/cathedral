@@ -7455,3 +7455,238 @@ fn exposed_stall_pauses_and_resumes_without_changing_stock() {
     assert!(world.shelters.is_sheltered(Vec3::ZERO));
     assert!(stall_weather_open(&world, &round.stalls[0]));
 }
+
+// --------------------------------------------------------------------------- //
+// Chalking the Walls M1 — the cross at the counter
+// --------------------------------------------------------------------------- //
+
+/// Register a home for `who` so a `MarkAnchor::Household` resolves, and chalk
+/// a cross on it by the ward's own hand.
+fn chalk_the_door(world: &mut World, who: &ActorId) -> crate::ids::MarkId {
+    let point = world
+        .characters
+        .get(who)
+        .expect("the buyer exists")
+        .position_m();
+    world.places.add_home(who, "Test Body", point);
+    crate::marks::draw_or_refresh(
+        world,
+        crate::marks::MarkKind::ChalkCross,
+        crate::marks::MarkAnchor::Household(who.clone()),
+        None,
+        0.0,
+    )
+    .expect("the door resolves")
+    .id
+}
+
+/// **The partition test** (`features/chalking_the_walls.md` §2.1, §6). The
+/// refusal must read the chalk and *only* the chalk. `World.notices` is empty
+/// here — emphatically so — and the sale is still refused. If this test were
+/// hard to write, the partition would already be broken.
+#[test]
+fn a_chalked_buyer_is_refused_at_the_counter_with_no_notice_anywhere() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_some(),
+        "the buyer can afford a loaf before anybody chalks anything"
+    );
+
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    chalk_the_door(&mut world, &buyer);
+    assert!(
+        world.notices.live().is_empty(),
+        "the premise: not one notice exists in this world"
+    );
+
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_none(),
+        "the cross alone refuses the sale — no notice is consulted, and none exists"
+    );
+}
+
+/// The other half of §2.1: a *notice* with no chalk refuses nothing. Together
+/// these two prove the readers were repointed rather than doubled up.
+#[test]
+fn an_unchalked_buyer_sells_even_while_the_ward_is_talking_about_them() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    world.notices.raise(
+        "a buyer".into(),
+        "owes and has not paid".into(),
+        None,
+        None,
+        Some(0.0),
+        buyer.clone(),
+        Some(buyer.clone()),
+        None,
+        None,
+    );
+    assert!(!world.notices.live().is_empty(), "the premise: a live notice");
+
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_some(),
+        "a notice is not chalk: the counter reads the wall, not the gossip"
+    );
+}
+
+/// §3: below `faint_below` a mark is a fact about the past, not a rule. A
+/// half-washed cross must let the sale through — that is what makes weathering
+/// (and therefore scrubbing) mean anything.
+#[test]
+fn a_half_washed_cross_no_longer_refuses_anybody() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    let mark = chalk_the_door(&mut world, &buyer);
+    let faint = world
+        .mark_catalog
+        .spec(crate::marks::MarkKind::ChalkCross)
+        .expect("the cross is authored")
+        .faint_below;
+    world.marks.get_mut(mark).expect("the cross is live").strength = faint - 0.01;
+
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_some(),
+        "chalk you can barely see stops ruling"
+    );
+}
+
+/// §2.3: no reader may branch on `author`. A cross the *player* forged refuses
+/// exactly as hard as the ward's own, because nothing that reads a mark ever
+/// asks who drew it.
+#[test]
+fn a_forged_cross_refuses_exactly_as_hard_as_the_wards_own() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    let point = world.characters[&buyer].position_m();
+    world.places.add_home(&buyer, "Test Body", point);
+    crate::marks::draw_or_refresh(
+        &mut world,
+        crate::marks::MarkKind::ChalkCross,
+        crate::marks::MarkAnchor::Household(buyer.clone()),
+        // A forger, not the ward.
+        Some(ActorId::from_raw("player")),
+        0.0,
+    )
+    .expect("the door resolves");
+
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_none(),
+        "a forged cross must refuse the sale exactly as the ward's own does"
+    );
+}
+
+/// The ablation switch must reach this reader too, or `CATHEDRAL_NO_MARKS`
+/// would still refuse sales on chalk it claims not to be simulating.
+#[test]
+fn ablated_chalk_refuses_nobody() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    chalk_the_door(&mut world, &buyer);
+    world.marks_enabled = false;
+
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_some(),
+        "an ablated layer must not go on refusing sales"
+    );
+}
+
+/// The whole M1 arc through the real `service_stalls`, and the hazard the spec
+/// warns about: a refused buyer who still has coin, at a stall that still has
+/// bread, re-selects on every `next_decision`. Without the stamp that is an
+/// infinite loop with one inbox line a lap.
+#[test]
+fn a_chalk_refusal_is_one_scene_and_not_a_loop() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    let clock = clock_at(Office::HighWick);
+    let pitch = round.stalls[0].pitch;
+    round.people.insert(buyer.clone(), weather_person(pitch));
+    round.people.get_mut(&buyer).unwrap().food = Some(FoodErrand {
+        stall: 0,
+        phase: FoodPhase::Queued,
+    });
+    round.stalls[0].serving = Some((buyer.clone(), 0.0));
+    chalk_the_door(&mut world, &buyer);
+
+    service_stalls(&mut round, &mut world, &clock, PURCHASE_SECONDS + 0.1, &player());
+
+    // One line, naming the reason — the bare `None` arm could never say why.
+    let inbox = world.characters[&buyer].state.inbox.clone();
+    assert_eq!(inbox.len(), 1, "exactly one refusal line, got {inbox:?}");
+    assert!(
+        inbox[0].contains("chalk cross on your door"),
+        "the line must name the reason: {}",
+        inbox[0]
+    );
+
+    // …and a trace line the food log can be grepped for.
+    assert!(
+        round
+            .food_log
+            .iter()
+            .any(|line| line.starts_with("refused_on_chalk;")),
+        "a chalk refusal must be distinguishable in --trace-food from \
+         'spent it mid-queue', which the bare None arm never was: {:?}",
+        round.food_log
+    );
+
+    // The stamp now keeps them away from every board, so the ladder cannot
+    // march them straight back into the same queue.
+    assert!(
+        nearest_open_stall(
+            &round,
+            &world,
+            &buyer,
+            pitch,
+            Office::HighWick,
+            Weekday::Highmarket,
+            false,
+        )
+        .is_none(),
+        "a refused buyer must not re-select a stall while the stamp stands"
+    );
+
+    // Re-running the whole service pass many times adds no further lines: the
+    // refusal is a scene, not a treadmill.
+    for tick in 1..20 {
+        round.people.get_mut(&buyer).unwrap().food = Some(FoodErrand {
+            stall: 0,
+            phase: FoodPhase::Queued,
+        });
+        round.stalls[0].serving = Some((buyer.clone(), tick as f64));
+        service_stalls(
+            &mut round,
+            &mut world,
+            &clock,
+            tick as f64 + PURCHASE_SECONDS + 0.1,
+            &player(),
+        );
+    }
+    assert_eq!(
+        world.characters[&buyer].state.inbox.len(),
+        1,
+        "still one line after twenty passes — no inbox barrage, no paid turns"
+    );
+}
+
+/// …and the stamp really does expire, so a scrubbed cross lets them eat again
+/// rather than starving them for good.
+#[test]
+fn the_refusal_stamp_lifts_on_its_own() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    let clock = clock_at(Office::HighWick);
+    let pitch = round.stalls[0].pitch;
+    round.people.insert(buyer.clone(), weather_person(pitch));
+    round.people.get_mut(&buyer).unwrap().food = Some(FoodErrand {
+        stall: 0,
+        phase: FoodPhase::Queued,
+    });
+    round.stalls[0].serving = Some((buyer.clone(), 0.0));
+    chalk_the_door(&mut world, &buyer);
+    service_stalls(&mut round, &mut world, &clock, PURCHASE_SECONDS + 0.1, &player());
+    assert!(!round.chalk_refused_until.is_empty(), "stamped");
+
+    // The tick's own prune, half a game day later.
+    let later = PURCHASE_SECONDS + 0.1 + CHALK_REFUSAL_GAME_DAYS * clock.seconds_per_day() + 1.0;
+    round.chalk_refused_until.retain(|_, until| later < *until);
+    assert!(
+        round.chalk_refused_until.is_empty(),
+        "the stamp is a pause, not a ban"
+    );
+}

@@ -491,6 +491,18 @@ pub enum EngineCommand {
         officer: String,
         target: Option<String>,
     },
+    /// The stand-in for a debt (`features/chalking_the_walls.md` M1). A cross
+    /// is chalked by the ward on an *aged, unsettled restitution notice*, and
+    /// raising one of those is an LLM's judgement — so a scripted or offline
+    /// run cannot otherwise reach the thing M1 builds: the door, the counter,
+    /// the refusal.
+    ///
+    /// This raises exactly the notice `raise_notice` raises, back-dated past
+    /// [`crate::notices::CROSS_AFTER_GAME_DAYS`] so the next beat chalks it.
+    /// Everything downstream — the beat, the gate, the stamp — is the real
+    /// code. Same poke as `DebugSetStatus`; a handle matching nobody is a
+    /// `Diagnostic`, never a fault.
+    DebugOwe { who: String },
     /// CATHEDRAL_DRIVE `commit` (`law_and_order.md` M5): finish the escort at
     /// the Stone House, so a scripted run can look at the inside of the gaol —
     /// the booking, the posted fee, the bell, and what walking out costs.
@@ -1179,6 +1191,13 @@ impl Engine {
         // nothing else was ever tracked.
         self.issue_warrants(now);
         notices::confront(&mut self.world);
+        // …and the ward's other hand (`features/chalking_the_walls.md` M1):
+        // a cross on the door of anyone who owes and has not paid. Gated to
+        // one beat a game day inside, so all but one of the ~60 polls a second
+        // costs a single `is_empty` check.
+        for line in notices::chalk_the_debtors(&mut self.world, self.clock.game_days(now)) {
+            out.push(EngineMessage::Diagnostic(line));
+        }
         // Weather the chalk on the same clock, and on the same principle: the
         // sim itself has none. Gated inside to once a game-minute — strength
         // moves in days and this runs at ~60 Hz — and it bumps the revision
@@ -1750,6 +1769,8 @@ impl Engine {
                 self.debug_set_status(now, &name, kind, value, out)
             }
 
+            EngineCommand::DebugOwe { who } => self.debug_owe(now, &who, out),
+
             EngineCommand::DebugSeize { officer, target } => {
                 self.debug_seize(now, &officer, target.as_deref(), out)
             }
@@ -2158,6 +2179,39 @@ impl Engine {
                 "[smart actors] invalid debug_status: no character with the name or id '{who}'"
             )));
         }
+    }
+
+    /// Back-date a restitution notice against somebody so the ward's chalking
+    /// beat has something to find (`features/chalking_the_walls.md` M1).
+    fn debug_owe(&mut self, now: f64, who: &str, out: &mut Vec<EngineMessage>) {
+        let Some(id) = self.world.resolve_debug_handle(who) else {
+            out.push(EngineMessage::Diagnostic(format!(
+                "[smart actors] invalid debug_owe: no character with the name or id '{who}'"
+            )));
+            return;
+        };
+        let name = self
+            .world
+            .characters
+            .get(&id)
+            .map_or_else(|| id.to_string(), |character| character.name().to_string());
+        // Back-dated past the age gate, so the very next beat chalks the door
+        // rather than making a scripted run wait out two game days.
+        let raised = self.clock.game_days(now) - crate::notices::CROSS_AFTER_GAME_DAYS - 0.5;
+        self.world.notices.raise(
+            format!("{name}"),
+            "owes for goods taken and has not paid".into(),
+            None,
+            None,
+            Some(raised),
+            id.clone(),
+            Some(id.clone()),
+            None,
+            None,
+        );
+        out.push(EngineMessage::Diagnostic(format!(
+            "[smart actors] {name} owes and has not paid; the ward will chalk their door"
+        )));
     }
 
     /// The drive-mode arrest (`law_and_order.md` M4). Resolves both handles the

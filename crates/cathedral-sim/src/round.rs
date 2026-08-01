@@ -166,6 +166,12 @@ const LAMP_SQUARES: &[&str] = &[
 /// is a market square, not a hearth, and is deliberately not one of them.)
 const TAVERNS: &[&str] = &["The Hungry Ox", "The Bellstand"];
 
+/// How long a chalk-refused buyer stays away from the boards, as a fraction of
+/// a game day (`features/chalking_the_walls.md` M1). Half a day: long enough
+/// that one refusal is one scene rather than a loop, short enough that a cross
+/// scrubbed in the morning lets them eat by evening.
+const CHALK_REFUSAL_GAME_DAYS: f64 = 0.5;
+
 /// The share of the ambient cast whose evening the nightly code roll moves to a
 /// tavern hearth (movement M6). Deliberately small: the payoff is that the
 /// streets are not identical two nights running, not that the taverns are full.
@@ -1041,6 +1047,18 @@ pub struct Round {
     /// nearby strike. This remains a mechanical reaction: it never enters an
     /// inbox or spends a cognition turn.
     lightning_reflex_until: BTreeMap<ActorId, f64>,
+    /// Real-clock deadline after a chalk refusal at a stall counter
+    /// (`features/chalking_the_walls.md` M1), so a refused buyer stops
+    /// re-queueing at the same board.
+    ///
+    /// Without it the loop is guaranteed, not hypothetical: the ladder's only
+    /// selection filter is affordability, and a chalk-refused buyer still has
+    /// the coin and the stall still has the bread — so they would rejoin the
+    /// queue on every `next_decision`, forever, one inbox line a lap. Shaped
+    /// like [`Self::lightning_reflex_until`] because the guard that reads it
+    /// (`nearest_open_stall`) has no `now`: pruned at the top of the tick,
+    /// tested with a bare `contains_key`.
+    chalk_refused_until: BTreeMap<ActorId, f64>,
     /// Game-days at the last tick, so thirst decays by the game clock (and speeds
     /// up with the debug time-scale), not by wall-clock.
     last_game_days: f64,
@@ -5424,6 +5442,7 @@ pub fn tick(
         return nudges;
     }
     round.lightning_reflex_until.retain(|_, until| now < *until);
+    round.chalk_refused_until.retain(|_, until| now < *until);
     // Before anything reads a leg: a `set_round` recorded since the last tick
     // is part of the day this tick runs, not the next one.
     apply_round_edits(round, world, now);
@@ -6331,8 +6350,56 @@ fn service_stalls(
                 ));
             }
             None => {
-                // Could not pay (spent it mid-queue) or nothing affordable is
-                // left: a graceful no-sale, the buyer leaves and re-evaluates.
+                // Could not pay (spent it mid-queue), nothing affordable is
+                // left, or — since M1 — the cross on their door: a graceful
+                // no-sale, the buyer leaves and re-evaluates.
+                //
+                // The chalk case is re-asked here rather than threaded out of
+                // `try_purchase` because that function has no `now` and no
+                // clock, and both the stamp and the trace want one. It is the
+                // same predicate over the same authoritative source, so the
+                // two answers cannot disagree.
+                let chalked = crate::marks::binding_mark_about(
+                    world,
+                    crate::marks::MarkKind::ChalkCross,
+                    &buyer,
+                );
+                // …and only once per stamp period. The `nearest_open_stall`
+                // guard already keeps the ladder from re-queueing them, but
+                // this is the belt to that pair of braces: whatever route puts
+                // a stamped buyer back at a counter — a queue they were
+                // already standing in, a stall bound before the refusal — it
+                // is the same refusal, not a new one, and it must not write a
+                // second line or take a second turn's worth of attention.
+                let already_refused = round.chalk_refused_until.contains_key(&buyer);
+                if let Some(mark_id) = chalked.filter(|_| !already_refused) {
+                    let stall_name = round.stalls[s].name.clone();
+                    // An inbox line, and deliberately **no nudge**: a refusal
+                    // is not worth a paid turn (§2.8). They will mention it on
+                    // whatever turn they were going to take anyway.
+                    if let Some(character) = world.characters.get_mut(&buyer) {
+                        character.notify_percept(format!(
+                            "You reached the counter at {stall_name} and were refused: \
+                             there is a chalk cross on your door, and the vendor \
+                             will not sell to a household that owes."
+                        ));
+                    }
+                    // …and a trace line beside the sale traces, so `--trace-food`
+                    // distinguishes a chalk refusal from "spent it mid-queue",
+                    // which the bare `None` arm never could.
+                    round.push_food_log(format!(
+                        "refused_on_chalk; stall {stall_name}, buyer {buyer}, mark {mark_id}"
+                    ));
+                    // The anti-re-queue stamp. Without it they rejoin this very
+                    // queue on the next `next_decision` and are refused again,
+                    // forever, one inbox line a lap.
+                    let until = now + CHALK_REFUSAL_GAME_DAYS * clock.seconds_per_day();
+                    round
+                        .chalk_refused_until
+                        .entry(buyer.clone())
+                        .and_modify(|deadline| *deadline = deadline.max(until))
+                        .or_insert(until);
+                }
                 round.people.get_mut(&buyer).expect("buyer exists").food = None;
                 if let Some(character) = world.characters.get_mut(&buyer) {
                     character.state.movement = None;
@@ -6396,6 +6463,22 @@ fn service_stalls(
 /// spark is all they hold — Ilse's exact arithmetic). Returns `None` for a
 /// no-sale (nothing affordable, or the vendor's board is bare).
 fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId) -> Option<Sale> {
+    // The chalk at the counter (`features/chalking_the_walls.md` M1). A buyer
+    // with a live, still-binding cross on their door is refused here, at the
+    // head of the queue, and not at stall selection — a buyer who walks across
+    // the square, queues, reaches the counter and is *then* turned away is a
+    // scene the player can stand next to and watch. A buyer who silently never
+    // sets out is nothing.
+    //
+    // This reads `world.marks` and **never `world.notices`**. That partition is
+    // the whole feature: if the refusal consulted the notice instead, scrubbing
+    // the cross would change nothing and forging one would be placebo. The
+    // notice's only role is to be the reason a hand chalked, once, on the
+    // ward's daily beat (`notices::chalk_the_debtors`).
+    if crate::marks::binding_mark_about(world, crate::marks::MarkKind::ChalkCross, buyer).is_some()
+    {
+        return None;
+    }
     let vendor = round.stalls[s].vendor.clone()?;
     let trade_key = round.stalls[s].trade.clone();
     let trade = round.food_trades.get(&trade_key)?.clone();
@@ -6575,6 +6658,14 @@ fn nearest_open_stall(
         .iter()
         .any(|stall| stall.vendor.as_ref() == Some(id))
     {
+        return None;
+    }
+    // Somebody turned away from a counter for the cross on their door is not
+    // going straight back to the board (M1). The stamp expires on its own, so
+    // this is a pause and not a ban — and it is the only thing standing
+    // between a chalked buyer and an infinite re-queue, since the filters
+    // below only ever reject the *poor*.
+    if round.chalk_refused_until.contains_key(id) {
         return None;
     }
     let sparks = world.spendable_sparks(id);

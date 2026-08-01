@@ -221,6 +221,18 @@ struct Args {
     #[arg(long)]
     night_office: bool,
 
+    /// mark somebody as owing, so the ward chalks their door, repeatable:
+    /// `--owe "Ede Clove"` (`features/chalking_the_walls.md` M1)
+    ///
+    /// A cross is chalked off an aged, unsettled restitution notice, and
+    /// raising one is an LLM's judgement — so an offline run cannot otherwise
+    /// reach the door, the counter or the refusal. This raises the same notice
+    /// `raise_notice` does, back-dated past the age gate; everything after it
+    /// is the real code. NAME resolves by display name first, then by actor
+    /// id. A handle matching nobody is a stderr diagnostic, not a fault.
+    #[arg(long, value_name = "NAME")]
+    owe: Vec<String>,
+
     /// Multiply the chalk decay (`features/chalking_the_walls.md`). A cross
     /// weathers over nine game days at `1.0`, which no `-t 12` run will ever
     /// see; `--marks-decay-scale 200` washes one off inside a short run so the
@@ -491,6 +503,11 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
     for spec in &args.status {
         let (name, kind, value) = parse_status_flag(spec)?;
         runner.pump(vec![EngineCommand::DebugSetStatus { name, kind, value }]);
+    }
+    // The debt stand-in, through the same command path the rest of the pokes
+    // use, and before the ticks so the first beat of the run finds it.
+    for who in &args.owe {
+        runner.pump(vec![EngineCommand::DebugOwe { who: who.clone() }]);
     }
     if args.watch_clock > 0.0 {
         runner.watch_clock(args.watch_clock, clock.seconds_per_day())?;

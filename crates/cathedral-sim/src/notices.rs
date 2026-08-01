@@ -59,6 +59,7 @@ use crate::{
     character::{Character, Control},
     clock::Office,
     ids::{ActorId, ItemId},
+    marks::{MarkAnchor, MarkKind},
     world::World,
 };
 
@@ -460,8 +461,7 @@ pub fn carrier_ids(world: &World, notice_id: u64, except: &ActorId) -> Vec<Actor
 /// the wronged party named on it, whether or not they serve the law. It is the
 /// boy's own spark; forgiving it is his to do.
 pub fn may_settle(world: &World, actor_id: &ActorId, notice: &WardNotice) -> bool {
-    notice.wronged.as_ref() == Some(actor_id)
-        || world.characters.get(actor_id).is_some_and(is_law)
+    notice.wronged.as_ref() == Some(actor_id) || world.characters.get(actor_id).is_some_and(is_law)
 }
 
 /// The live notices a transfer from `giver` to `acceptor` *might* be answering:
@@ -563,6 +563,96 @@ pub fn confront(world: &mut World) {
         }
         world.notices.live[index].served.insert(officer_id);
     }
+}
+
+/// How long a restitution notice stands before the ward chalks the door
+/// (`features/chalking_the_walls.md` M1). Two game days: long enough that a
+/// wrong settled promptly never reaches the wall at all, short enough that an
+/// ignored one does.
+pub const CROSS_AFTER_GAME_DAYS: f64 = 2.0;
+
+/// The ward's own hand: a cross on the door of anyone who owes and has not
+/// paid (`features/chalking_the_walls.md` M1).
+///
+/// Diegetically this is the sergeant's beat, and mechanically it is one
+/// idempotent call a game day — which is exactly what makes scrubbing a cross
+/// *buy a day* rather than an amnesty. Ticked by the engine every poll beside
+/// [`confront`]; the beat gate inside makes all but one of those polls free.
+///
+/// Three things it deliberately does **not** do:
+///
+/// * It needs no inventory. A system writer chalks with the ward's authority,
+///   exactly as `raise_notice` needs no parchment; only the player's
+///   `draw_mark` verb wants a pen.
+/// * It never erases. Settling a notice removes it from
+///   [`Notices::live`](Notices::live), so the beat simply stops finding it and
+///   the chalk weathers off on its own schedule. A settled debt whose mark is
+///   still up for two dry days is correct, and is the "the database heals
+///   slowly" texture the feature is for.
+/// * It writes to nobody's inbox. Being chalked is not a percept — the debtor
+///   finds out when a stall turns them away, which is a scene, not a
+///   notification.
+pub fn chalk_the_debtors(world: &mut World, game_days: f64) -> Vec<String> {
+    let mut diagnostics = Vec::new();
+    if world.notices.live.is_empty() || !world.mark_kind_enabled(MarkKind::ChalkCross) {
+        return diagnostics;
+    }
+    if !world.marks.take_daily_beat(game_days) {
+        return diagnostics;
+    }
+    // Collected first: drawing needs `&mut World` and the scan borrows the
+    // notices out of it. A `BTreeSet` because two live notices can name the
+    // same accused, and one debtor's door wants one cross.
+    let debtors: BTreeSet<ActorId> = world
+        .notices
+        .live
+        .iter()
+        .filter(|notice| {
+            notice
+                .raised_game_days
+                .is_some_and(|raised| game_days - raised > CROSS_AFTER_GAME_DAYS)
+        })
+        .filter_map(|notice| notice.accused.clone())
+        .collect();
+
+    for accused in debtors {
+        // `draw_or_refresh` is idempotent by (kind, anchor), so this is both
+        // the first chalking and every re-chalk after it: one live cross per
+        // debtor, never a second, and a scrubbed or half-washed one comes back
+        // to full strength on the next beat.
+        let Some(drawn) = crate::marks::draw_or_refresh(
+            world,
+            MarkKind::ChalkCross,
+            MarkAnchor::Household(accused.clone()),
+            // The ward's own hand. Note that no reader may ever branch on
+            // this — a forged cross refuses a stall exactly as hard.
+            None,
+            game_days,
+        ) else {
+            // Unhoused, or the home no longer resolves. Not a fault — there is
+            // simply no door to chalk — but say so, because "the cross never
+            // appeared" and "the cross appeared and washed off" look identical
+            // from outside and have completely different causes.
+            diagnostics.push(format!(
+                "[marks] {accused} owes, but has no door to chalk (no home in the \
+                 wayfinding registry)"
+            ));
+            continue;
+        };
+        if drawn.fresh {
+            diagnostics.push(format!(
+                "[marks] the ward chalks a cross on {accused}'s door"
+            ));
+        }
+        if let Some(evicted) = drawn.evicted {
+            diagnostics.push(format!(
+                "[marks] the walls are full ({} marks): mark {evicted} made way for the \
+                 ward's cross on {accused}",
+                crate::marks::MARKS_MAX,
+            ));
+        }
+    }
+    diagnostics
 }
 
 #[cfg(test)]
@@ -671,7 +761,12 @@ mod tests {
         let mut notices = Notices::default();
         let oldest = raise(&mut notices, None, Some("thief"));
         let second = raise(&mut notices, None, Some("thief"));
-        notices.summon(oldest, ActorId::from_raw("srgnt"), Office::Waning, Some(1.0));
+        notices.summon(
+            oldest,
+            ActorId::from_raw("srgnt"),
+            Office::Waning,
+            Some(1.0),
+        );
         assert_eq!(notices.issue_warrants(1.0), [oldest]);
 
         for _ in 0..(NOTICES_MAX_LIVE - 1) {
@@ -679,7 +774,10 @@ mod tests {
         }
         assert_eq!(notices.live().len(), NOTICES_MAX_LIVE);
         assert!(notices.get(oldest).is_some(), "the warrant survived");
-        assert!(notices.get(second).is_none(), "the oldest word went instead");
+        assert!(
+            notices.get(second).is_none(),
+            "the oldest word went instead"
+        );
 
         // Warrant every live notice, and there is nothing left to evict.
         let ids: Vec<u64> = notices.live().iter().map(|notice| notice.id).collect();
@@ -725,18 +823,29 @@ mod tests {
             "there is no re-summoning, and no un-summoning"
         );
 
-        assert!(notices.issue_warrants(3.74).is_empty(), "the bell is not yet");
+        assert!(
+            notices.issue_warrants(3.74).is_empty(),
+            "the bell is not yet"
+        );
         assert_eq!(notices.issue_warrants(3.75), [id]);
         assert_eq!(notices.get(id).unwrap().rung(), Rung::Warranted);
         assert!(
             notices.issue_warrants(4.0).is_empty(),
             "a warrant issues once"
         );
-        assert!(notices.warrant_against(&ActorId::from_raw("thief")).is_some());
+        assert!(
+            notices
+                .warrant_against(&ActorId::from_raw("thief"))
+                .is_some()
+        );
 
         // Settling is the one discharge, and it takes the warrant with it.
         notices.settle(id);
-        assert!(notices.warrant_against(&ActorId::from_raw("thief")).is_none());
+        assert!(
+            notices
+                .warrant_against(&ActorId::from_raw("thief"))
+                .is_none()
+        );
     }
 
     /// Every rung change re-arms the face-to-face percept: an officer already
@@ -805,7 +914,9 @@ mod tests {
             "somebody else's word is not your own eyes"
         );
         assert!(
-            notices.fresh_own_notice(&srgnt, &thief, Some(6.0)).is_none(),
+            notices
+                .fresh_own_notice(&srgnt, &thief, Some(6.0))
+                .is_none(),
             "yesterday's word needs the warrant like everything else"
         );
     }
@@ -857,12 +968,13 @@ mod tests {
         raise(&mut world.notices, None, Some("thief"));
 
         confront(&mut world);
-        let inbox_of = |world: &World, id: &str| {
-            world.characters[&ActorId::from_raw(id)].inbox().to_vec()
-        };
+        let inbox_of =
+            |world: &World, id: &str| world.characters[&ActorId::from_raw(id)].inbox().to_vec();
         assert_eq!(
             inbox_of(&world, "srgnt"),
-            ["the one the ward's word names is within reach of you right now: a stranger — a wrong"]
+            [
+                "the one the ward's word names is within reach of you right now: a stranger — a wrong"
+            ]
         );
         assert!(inbox_of(&world, "baker").is_empty(), "not law, not told");
         assert!(inbox_of(&world, "faroff").is_empty(), "out of hearing");
