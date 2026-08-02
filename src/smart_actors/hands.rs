@@ -892,6 +892,7 @@ mod tests {
                 items,
                 offers,
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
         mirror
@@ -1048,6 +1049,7 @@ mod tests {
             ],
             offers,
             road_carts: vec![],
+            marks: Vec::new(),
         };
         let offer = vec![OfferSnapshot {
             item_id: ItemId("fish".into()),
@@ -1159,6 +1161,7 @@ mod tests {
             items: vec![],
             offers: vec![],
             road_carts: vec![],
+            marks: Vec::new(),
         };
         let mut mirror = WorldMirror::default();
         mirror.replace_snapshot(standing(1, 1.0)).unwrap();
@@ -1278,6 +1281,7 @@ mod tests {
             items: vec![],
             offers: vec![],
             road_carts: vec![],
+            marks: Vec::new(),
         };
         let mut mirror = WorldMirror::default();
         mirror.replace_snapshot(standing(1, 0.0)).unwrap();

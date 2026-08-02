@@ -944,6 +944,7 @@ mod tests {
                 items,
                 offers: vec![],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
         mirror

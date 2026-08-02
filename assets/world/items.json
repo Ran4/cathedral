@@ -1,159 +1,706 @@
 {
-  "schema_version": 1,
-  "kinds": [
-    { "kind": "spark", "display": "spark", "display_plural": "sparks",
-      "visual_key": "copper_coin", "stackable": true, "size": "palmable" },
-    { "kind": "loaf", "display": "loaf", "display_plural": "loaves",
-      "visual_key": "loaf", "stackable": true, "edible": { "satiety": 150 },
-      "price_sparks": { "": 2 } },
-    { "kind": "grain", "display": "grain measure", "display_plural": "grain measures",
-      "visual_key": "grain_sack", "stackable": true, "size": "bulky", "price_sparks": { "": 3 } },
-    { "kind": "flour", "display": "sack of flour", "display_plural": "sacks of flour",
-      "visual_key": "flour_sack", "stackable": true, "size": "bulky", "price_sparks": { "": 5 } },
-    { "kind": "wool", "display": "bundle of raw wool", "display_plural": "bundles of raw wool",
-      "visual_key": "wool_bale", "stackable": true, "size": "bulky", "price_sparks": { "": 8 } },
-    { "kind": "cloth", "display": "bolt of cloth", "display_plural": "bolts of cloth",
-      "visual_key": "cloth_bolt", "stackable": true, "size": "bulky",
-      "metadata": { "grade": ["kersey", "broadcloth"] },
-      "price_sparks": { "grade=kersey": 14, "grade=broadcloth": 40 } },
-    { "kind": "herring", "display": "herring", "display_plural": "herrings",
-      "visual_key": "fish", "stackable": true, "size": "palmable", "edible": { "satiety": 70 },
-      "price_sparks": { "": 1 } },
-    { "kind": "smoked_eel", "display": "smoked eel", "display_plural": "smoked eels",
-      "visual_key": "fish", "stackable": true, "size": "palmable", "edible": { "satiety": 100 },
-      "price_sparks": { "": 3 } },
-    { "kind": "stew", "display": "bowl of stew", "display_plural": "bowls of stew",
-      "visual_key": "stew", "stackable": false, "edible": { "satiety": 170 },
-      "price_sparks": { "": 2 } },
-
-    { "kind": "ale", "display": "pot of ale", "display_plural": "pots of ale",
-      "visual_key": "ale_pot", "stackable": true, "size": "palmable", "edible": { "satiety": 25, "thirst": 160 },
-      "price_sparks": { "": 1 } },
-    { "kind": "water", "display": "pail of water", "display_plural": "pails of water",
-      "visual_key": "water_pail", "stackable": true, "edible": { "satiety": 0, "thirst": 255 },
-      "price_sparks": { "": 1 } },
-    { "kind": "milk", "display": "can of milk", "display_plural": "cans of milk",
-      "visual_key": "milk_can", "stackable": true, "size": "palmable", "edible": { "satiety": 40, "thirst": 120 },
-      "price_sparks": { "": 1 } },
-    { "kind": "apple", "display": "apple", "display_plural": "apples",
-      "visual_key": "apple", "stackable": true, "size": "palmable", "edible": { "satiety": 40 },
-      "metadata": { "condition": ["bruised"] },
-      "price_sparks": { "": 1 } },
-    { "kind": "cheese", "display": "cheese", "display_plural": "cheeses",
-      "visual_key": "cheese", "stackable": true, "size": "palmable", "edible": { "satiety": 90 },
-      "price_sparks": { "": 2 } },
-    { "kind": "egg", "display": "egg", "display_plural": "eggs",
-      "visual_key": "egg", "stackable": true, "size": "palmable", "edible": { "satiety": 25 },
-      "price_sparks": { "": 1 } },
-    { "kind": "pie", "display": "hot pie", "display_plural": "hot pies",
-      "visual_key": "pie", "stackable": true, "size": "palmable", "edible": { "satiety": 120 },
-      "price_sparks": { "": 2 } },
-    { "kind": "meat", "display": "cut of meat", "display_plural": "cuts of meat",
-      "visual_key": "meat_cut", "stackable": true, "edible": { "satiety": 130 },
-      "metadata": { "cure": ["salted"] },
-      "price_sparks": { "": 4, "cure=salted": 5 } },
-    { "kind": "honey", "display": "comb of honey", "display_plural": "combs of honey",
-      "visual_key": "honeycomb", "stackable": true, "size": "palmable", "edible": { "satiety": 50 },
-      "price_sparks": { "": 3 } },
-    { "kind": "salt", "display": "measure of salt", "display_plural": "measures of salt",
-      "visual_key": "salt_sack", "stackable": true, "price_sparks": { "": 2 } },
-    { "kind": "dough", "display": "round of dough", "display_plural": "rounds of dough",
-      "visual_key": "dough", "stackable": true, "price_sparks": { "": 1 } },
-    { "kind": "simples", "display": "bundle of simples", "display_plural": "bundles of simples",
-      "visual_key": "herb_bundle", "stackable": true, "price_sparks": { "": 2 } },
-
-    { "kind": "candle", "display": "candle", "display_plural": "candles",
-      "visual_key": "candle", "stackable": true, "size": "palmable",
-      "metadata": { "dye": ["green"], "fat": ["tallow", "beeswax"] },
-      "price_sparks": { "": 1, "fat=beeswax": 4 } },
-    { "kind": "lamp", "display": "lamp", "display_plural": "lamps",
-      "visual_key": "lamp", "stackable": true, "price_sparks": { "": 5 } },
-    { "kind": "lamp_oil", "display": "flask of lamp oil", "display_plural": "flasks of lamp oil",
-      "visual_key": "oil_flask", "stackable": true, "price_sparks": { "": 2 } },
-    { "kind": "wick", "display": "coil of wick", "display_plural": "coils of wick",
-      "visual_key": "wick_coil", "stackable": true, "price_sparks": { "": 1 } },
-    { "kind": "firewood", "display": "bundle of firewood", "display_plural": "bundles of firewood",
-      "visual_key": "firewood", "stackable": true, "size": "bulky", "price_sparks": { "": 1 } },
-
-    { "kind": "bucket", "display": "bucket", "display_plural": "buckets",
-      "visual_key": "bucket", "stackable": true, "size": "bulky", "price_sparks": { "": 3 } },
-    { "kind": "basket", "display": "basket", "display_plural": "baskets",
-      "visual_key": "basket", "stackable": true, "size": "bulky", "price_sparks": { "": 2 } },
-    { "kind": "rope", "display": "length of rope", "display_plural": "lengths of rope",
-      "visual_key": "rope_coil", "stackable": true, "price_sparks": { "": 3 } },
-    { "kind": "knife", "display": "knife", "display_plural": "knives",
-      "visual_key": "knife", "stackable": true, "size": "palmable", "price_sparks": { "": 4 } },
-    { "kind": "key", "display": "key", "display_plural": "keys",
-      "visual_key": "key", "stackable": true, "size": "palmable" },
-    { "kind": "badge", "display": "badge", "display_plural": "badges",
-      "visual_key": "badge", "stackable": true, "size": "palmable",
-      "metadata": { "authenticity": ["counterfeit"], "kind": ["pilgrim", "watch", "weighday"] },
-      "price_sparks": { "": 1 } },
-    { "kind": "bandage", "display": "clean bandage", "display_plural": "clean bandages",
-      "visual_key": "bandage", "stackable": true, "size": "palmable", "price_sparks": { "": 1 } },
-
-    { "kind": "letter", "display": "sealed letter", "display_plural": "sealed letters",
-      "visual_key": "letter", "stackable": false, "size": "palmable" },
-    { "kind": "ledger", "display": "ledger", "display_plural": "ledgers",
-      "visual_key": "book", "stackable": false },
-    { "kind": "contraband_page", "display": "contraband page", "display_plural": "contraband pages",
-      "visual_key": "page", "stackable": false, "size": "palmable" },
-    { "kind": "edict_sheet", "display": "edict sheet", "display_plural": "edict sheets",
-      "visual_key": "page", "stackable": true, "size": "palmable" },
-    { "kind": "deed", "display": "deed", "display_plural": "deeds",
-      "visual_key": "page", "stackable": false, "size": "palmable" },
-    { "kind": "sealed_packet", "display": "sealed packet", "display_plural": "sealed packets",
-      "visual_key": "packet", "stackable": false, "size": "palmable" },
-    { "kind": "tally_stick", "display": "tally stick", "display_plural": "tally sticks",
-      "visual_key": "tally_stick", "stackable": true, "size": "palmable" },
-    { "kind": "writing_kit", "display": "writing kit", "display_plural": "writing kits",
-      "visual_key": "writing_kit", "stackable": true, "price_sparks": { "": 6 } },
-
-    { "kind": "coat", "display": "coat", "display_plural": "coats",
-      "visual_key": "coat", "stackable": true,
-      "metadata": { "cut": ["grey"] },
-      "price_sparks": { "": 12 } },
-    { "kind": "shoes", "display": "pair of shoes", "display_plural": "pairs of shoes",
-      "visual_key": "shoes", "stackable": true, "price_sparks": { "": 6 } },
-    { "kind": "cap", "display": "cap", "display_plural": "caps",
-      "visual_key": "cap", "stackable": true, "price_sparks": { "": 2 } },
-    { "kind": "blanket", "display": "blanket", "display_plural": "blankets",
-      "visual_key": "blanket", "stackable": true, "size": "bulky", "price_sparks": { "": 3 } },
-
-    { "kind": "hide", "display": "hide", "display_plural": "hides",
-      "visual_key": "hide", "stackable": true, "size": "bulky", "price_sparks": { "": 4 } },
-    { "kind": "leather", "display": "side of leather", "display_plural": "sides of leather",
-      "visual_key": "leather", "stackable": true, "size": "bulky", "price_sparks": { "": 6 } },
-    { "kind": "wax", "display": "block of wax", "display_plural": "blocks of wax",
-      "visual_key": "wax_block", "stackable": true, "price_sparks": { "": 6 } },
-    { "kind": "tallow", "display": "block of tallow", "display_plural": "blocks of tallow",
-      "visual_key": "tallow_block", "stackable": true, "price_sparks": { "": 2 } },
-
-    { "kind": "cook_pot", "display": "cook-pot", "display_plural": "cook-pots",
-      "visual_key": "cook_pot", "stackable": true, "size": "bulky", "price_sparks": { "": 8 } },
-    { "kind": "bowl", "display": "bowl", "display_plural": "bowls",
-      "visual_key": "bowl", "stackable": true, "price_sparks": { "": 1 } },
-    { "kind": "cup", "display": "cup", "display_plural": "cups",
-      "visual_key": "cup", "stackable": true, "size": "palmable", "price_sparks": { "": 1 } },
-    { "kind": "purse", "display": "purse", "display_plural": "purses",
-      "visual_key": "purse", "stackable": true, "size": "palmable", "price_sparks": { "": 2 } },
-    { "kind": "dice", "display": "pair of dice", "display_plural": "pairs of dice",
-      "visual_key": "dice", "stackable": true, "size": "palmable",
-      "metadata": { "marking": ["marked"] },
-      "price_sparks": { "": 1 } },
-    { "kind": "keepsake", "display": "keepsake", "display_plural": "keepsakes",
-      "visual_key": "keepsake", "stackable": true, "size": "palmable",
-      "metadata": { "kind": ["brass button", "wooden button", "green bead", "blue cord",
-                             "nutshell string", "clay bird", "goose feather", "reed whistle"] },
-      "price_sparks": { "": 1 } },
-
-    { "kind": "holy_water", "display": "phial of holy water", "display_plural": "phials of holy water",
-      "visual_key": "generic", "stackable": true, "size": "palmable",
-      "edible": { "satiety": 0, "thirst": 20 },
-      "price_sparks": { "": 2 } },
-    { "kind": "poop", "display": "turd", "display_plural": "turds",
-      "visual_key": "generic", "stackable": true, "size": "palmable" },
-
-    { "kind": "generic", "display": "thing", "visual_key": "generic", "stackable": true }
-  ]
+ "schema_version": 1,
+ "kinds": [
+  {
+   "kind": "spark",
+   "display": "spark",
+   "display_plural": "sparks",
+   "visual_key": "copper_coin",
+   "stackable": true,
+   "size": "palmable"
+  },
+  {
+   "kind": "loaf",
+   "display": "loaf",
+   "display_plural": "loaves",
+   "visual_key": "loaf",
+   "stackable": true,
+   "edible": {
+    "satiety": 150
+   },
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "grain",
+   "display": "grain measure",
+   "display_plural": "grain measures",
+   "visual_key": "grain_sack",
+   "stackable": true,
+   "size": "bulky",
+   "price_sparks": {
+    "": 3
+   }
+  },
+  {
+   "kind": "flour",
+   "display": "sack of flour",
+   "display_plural": "sacks of flour",
+   "visual_key": "flour_sack",
+   "stackable": true,
+   "size": "bulky",
+   "price_sparks": {
+    "": 5
+   }
+  },
+  {
+   "kind": "wool",
+   "display": "bundle of raw wool",
+   "display_plural": "bundles of raw wool",
+   "visual_key": "wool_bale",
+   "stackable": true,
+   "size": "bulky",
+   "price_sparks": {
+    "": 8
+   }
+  },
+  {
+   "kind": "cloth",
+   "display": "bolt of cloth",
+   "display_plural": "bolts of cloth",
+   "visual_key": "cloth_bolt",
+   "stackable": true,
+   "size": "bulky",
+   "metadata": {
+    "grade": [
+     "kersey",
+     "broadcloth"
+    ]
+   },
+   "price_sparks": {
+    "grade=kersey": 14,
+    "grade=broadcloth": 40
+   }
+  },
+  {
+   "kind": "herring",
+   "display": "herring",
+   "display_plural": "herrings",
+   "visual_key": "fish",
+   "stackable": true,
+   "size": "palmable",
+   "edible": {
+    "satiety": 70
+   },
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "smoked_eel",
+   "display": "smoked eel",
+   "display_plural": "smoked eels",
+   "visual_key": "fish",
+   "stackable": true,
+   "size": "palmable",
+   "edible": {
+    "satiety": 100
+   },
+   "price_sparks": {
+    "": 3
+   }
+  },
+  {
+   "kind": "stew",
+   "display": "bowl of stew",
+   "display_plural": "bowls of stew",
+   "visual_key": "stew",
+   "stackable": false,
+   "edible": {
+    "satiety": 170
+   },
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "ale",
+   "display": "pot of ale",
+   "display_plural": "pots of ale",
+   "visual_key": "ale_pot",
+   "stackable": true,
+   "size": "palmable",
+   "edible": {
+    "satiety": 25,
+    "thirst": 160
+   },
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "water",
+   "display": "pail of water",
+   "display_plural": "pails of water",
+   "visual_key": "water_pail",
+   "stackable": true,
+   "edible": {
+    "satiety": 0,
+    "thirst": 255
+   },
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "milk",
+   "display": "can of milk",
+   "display_plural": "cans of milk",
+   "visual_key": "milk_can",
+   "stackable": true,
+   "size": "palmable",
+   "edible": {
+    "satiety": 40,
+    "thirst": 120
+   },
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "apple",
+   "display": "apple",
+   "display_plural": "apples",
+   "visual_key": "apple",
+   "stackable": true,
+   "size": "palmable",
+   "edible": {
+    "satiety": 40
+   },
+   "metadata": {
+    "condition": [
+     "bruised"
+    ]
+   },
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "cheese",
+   "display": "cheese",
+   "display_plural": "cheeses",
+   "visual_key": "cheese",
+   "stackable": true,
+   "size": "palmable",
+   "edible": {
+    "satiety": 90
+   },
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "egg",
+   "display": "egg",
+   "display_plural": "eggs",
+   "visual_key": "egg",
+   "stackable": true,
+   "size": "palmable",
+   "edible": {
+    "satiety": 25
+   },
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "pie",
+   "display": "hot pie",
+   "display_plural": "hot pies",
+   "visual_key": "pie",
+   "stackable": true,
+   "size": "palmable",
+   "edible": {
+    "satiety": 120
+   },
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "meat",
+   "display": "cut of meat",
+   "display_plural": "cuts of meat",
+   "visual_key": "meat_cut",
+   "stackable": true,
+   "edible": {
+    "satiety": 130
+   },
+   "metadata": {
+    "cure": [
+     "salted"
+    ]
+   },
+   "price_sparks": {
+    "": 4,
+    "cure=salted": 5
+   }
+  },
+  {
+   "kind": "honey",
+   "display": "comb of honey",
+   "display_plural": "combs of honey",
+   "visual_key": "honeycomb",
+   "stackable": true,
+   "size": "palmable",
+   "edible": {
+    "satiety": 50
+   },
+   "price_sparks": {
+    "": 3
+   }
+  },
+  {
+   "kind": "salt",
+   "display": "measure of salt",
+   "display_plural": "measures of salt",
+   "visual_key": "salt_sack",
+   "stackable": true,
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "dough",
+   "display": "round of dough",
+   "display_plural": "rounds of dough",
+   "visual_key": "dough",
+   "stackable": true,
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "simples",
+   "display": "bundle of simples",
+   "display_plural": "bundles of simples",
+   "visual_key": "herb_bundle",
+   "stackable": true,
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "candle",
+   "display": "candle",
+   "display_plural": "candles",
+   "visual_key": "candle",
+   "stackable": true,
+   "size": "palmable",
+   "metadata": {
+    "dye": [
+     "green"
+    ],
+    "fat": [
+     "tallow",
+     "beeswax"
+    ]
+   },
+   "price_sparks": {
+    "": 1,
+    "fat=beeswax": 4
+   }
+  },
+  {
+   "kind": "lamp",
+   "display": "lamp",
+   "display_plural": "lamps",
+   "visual_key": "lamp",
+   "stackable": true,
+   "price_sparks": {
+    "": 5
+   }
+  },
+  {
+   "kind": "lamp_oil",
+   "display": "flask of lamp oil",
+   "display_plural": "flasks of lamp oil",
+   "visual_key": "oil_flask",
+   "stackable": true,
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "wick",
+   "display": "coil of wick",
+   "display_plural": "coils of wick",
+   "visual_key": "wick_coil",
+   "stackable": true,
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "firewood",
+   "display": "bundle of firewood",
+   "display_plural": "bundles of firewood",
+   "visual_key": "firewood",
+   "stackable": true,
+   "size": "bulky",
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "bucket",
+   "display": "bucket",
+   "display_plural": "buckets",
+   "visual_key": "bucket",
+   "stackable": true,
+   "size": "bulky",
+   "price_sparks": {
+    "": 3
+   }
+  },
+  {
+   "kind": "basket",
+   "display": "basket",
+   "display_plural": "baskets",
+   "visual_key": "basket",
+   "stackable": true,
+   "size": "bulky",
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "rope",
+   "display": "length of rope",
+   "display_plural": "lengths of rope",
+   "visual_key": "rope_coil",
+   "stackable": true,
+   "price_sparks": {
+    "": 3
+   }
+  },
+  {
+   "kind": "knife",
+   "display": "knife",
+   "display_plural": "knives",
+   "visual_key": "knife",
+   "stackable": true,
+   "size": "palmable",
+   "price_sparks": {
+    "": 4
+   }
+  },
+  {
+   "kind": "key",
+   "display": "key",
+   "display_plural": "keys",
+   "visual_key": "key",
+   "stackable": true,
+   "size": "palmable"
+  },
+  {
+   "kind": "badge",
+   "display": "badge",
+   "display_plural": "badges",
+   "visual_key": "badge",
+   "stackable": true,
+   "size": "palmable",
+   "metadata": {
+    "authenticity": [
+     "counterfeit"
+    ],
+    "kind": [
+     "pilgrim",
+     "watch",
+     "weighday"
+    ]
+   },
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "bandage",
+   "display": "clean bandage",
+   "display_plural": "clean bandages",
+   "visual_key": "bandage",
+   "stackable": true,
+   "size": "palmable",
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "letter",
+   "display": "sealed letter",
+   "display_plural": "sealed letters",
+   "visual_key": "letter",
+   "stackable": false,
+   "size": "palmable"
+  },
+  {
+   "kind": "ledger",
+   "display": "ledger",
+   "display_plural": "ledgers",
+   "visual_key": "book",
+   "stackable": false
+  },
+  {
+   "kind": "contraband_page",
+   "display": "contraband page",
+   "display_plural": "contraband pages",
+   "visual_key": "page",
+   "stackable": false,
+   "size": "palmable"
+  },
+  {
+   "kind": "edict_sheet",
+   "display": "edict sheet",
+   "display_plural": "edict sheets",
+   "visual_key": "page",
+   "stackable": true,
+   "size": "palmable"
+  },
+  {
+   "kind": "deed",
+   "display": "deed",
+   "display_plural": "deeds",
+   "visual_key": "page",
+   "stackable": false,
+   "size": "palmable"
+  },
+  {
+   "kind": "sealed_packet",
+   "display": "sealed packet",
+   "display_plural": "sealed packets",
+   "visual_key": "packet",
+   "stackable": false,
+   "size": "palmable"
+  },
+  {
+   "kind": "tally_stick",
+   "display": "tally stick",
+   "display_plural": "tally sticks",
+   "visual_key": "tally_stick",
+   "stackable": true,
+   "size": "palmable"
+  },
+  {
+   "kind": "writing_kit",
+   "display": "writing kit",
+   "display_plural": "writing kits",
+   "visual_key": "writing_kit",
+   "stackable": true,
+   "price_sparks": {
+    "": 6
+   }
+  },
+  {
+   "kind": "coat",
+   "display": "coat",
+   "display_plural": "coats",
+   "visual_key": "coat",
+   "stackable": true,
+   "metadata": {
+    "cut": [
+     "grey"
+    ]
+   },
+   "price_sparks": {
+    "": 12
+   }
+  },
+  {
+   "kind": "shoes",
+   "display": "pair of shoes",
+   "display_plural": "pairs of shoes",
+   "visual_key": "shoes",
+   "stackable": true,
+   "price_sparks": {
+    "": 6
+   }
+  },
+  {
+   "kind": "cap",
+   "display": "cap",
+   "display_plural": "caps",
+   "visual_key": "cap",
+   "stackable": true,
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "blanket",
+   "display": "blanket",
+   "display_plural": "blankets",
+   "visual_key": "blanket",
+   "stackable": true,
+   "size": "bulky",
+   "price_sparks": {
+    "": 3
+   }
+  },
+  {
+   "kind": "hide",
+   "display": "hide",
+   "display_plural": "hides",
+   "visual_key": "hide",
+   "stackable": true,
+   "size": "bulky",
+   "price_sparks": {
+    "": 4
+   }
+  },
+  {
+   "kind": "leather",
+   "display": "side of leather",
+   "display_plural": "sides of leather",
+   "visual_key": "leather",
+   "stackable": true,
+   "size": "bulky",
+   "price_sparks": {
+    "": 6
+   }
+  },
+  {
+   "kind": "wax",
+   "display": "block of wax",
+   "display_plural": "blocks of wax",
+   "visual_key": "wax_block",
+   "stackable": true,
+   "price_sparks": {
+    "": 6
+   }
+  },
+  {
+   "kind": "tallow",
+   "display": "block of tallow",
+   "display_plural": "blocks of tallow",
+   "visual_key": "tallow_block",
+   "stackable": true,
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "cook_pot",
+   "display": "cook-pot",
+   "display_plural": "cook-pots",
+   "visual_key": "cook_pot",
+   "stackable": true,
+   "size": "bulky",
+   "price_sparks": {
+    "": 8
+   }
+  },
+  {
+   "kind": "bowl",
+   "display": "bowl",
+   "display_plural": "bowls",
+   "visual_key": "bowl",
+   "stackable": true,
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "cup",
+   "display": "cup",
+   "display_plural": "cups",
+   "visual_key": "cup",
+   "stackable": true,
+   "size": "palmable",
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "purse",
+   "display": "purse",
+   "display_plural": "purses",
+   "visual_key": "purse",
+   "stackable": true,
+   "size": "palmable",
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "dice",
+   "display": "pair of dice",
+   "display_plural": "pairs of dice",
+   "visual_key": "dice",
+   "stackable": true,
+   "size": "palmable",
+   "metadata": {
+    "marking": [
+     "marked"
+    ]
+   },
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "keepsake",
+   "display": "keepsake",
+   "display_plural": "keepsakes",
+   "visual_key": "keepsake",
+   "stackable": true,
+   "size": "palmable",
+   "metadata": {
+    "kind": [
+     "brass button",
+     "wooden button",
+     "green bead",
+     "blue cord",
+     "nutshell string",
+     "clay bird",
+     "goose feather",
+     "reed whistle"
+    ]
+   },
+   "price_sparks": {
+    "": 1
+   }
+  },
+  {
+   "kind": "holy_water",
+   "display": "phial of holy water",
+   "display_plural": "phials of holy water",
+   "visual_key": "generic",
+   "stackable": true,
+   "size": "palmable",
+   "edible": {
+    "satiety": 0,
+    "thirst": 20
+   },
+   "price_sparks": {
+    "": 2
+   }
+  },
+  {
+   "kind": "poop",
+   "display": "turd",
+   "display_plural": "turds",
+   "visual_key": "generic",
+   "stackable": true,
+   "size": "palmable"
+  },
+  {
+   "kind": "generic",
+   "display": "thing",
+   "visual_key": "generic",
+   "stackable": true
+  },
+  {
+   "kind": "chalk_pen",
+   "display": "chalk pen",
+   "display_plural": "chalk pens",
+   "visual_key": "writing_kit",
+   "stackable": true,
+   "size": "palmable",
+   "price_sparks": {
+    "": 1
+   }
+  }
+ ]
 }

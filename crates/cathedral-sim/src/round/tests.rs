@@ -409,9 +409,17 @@ fn every_baked_nav_pin_still_resolves_to_the_point_it_was_baked_against() {
         assert!(!houses.is_empty(), "{name} houses somebody");
         let count = houses.len() as f64;
         let centre = Vec3::new(
-            houses.iter().map(|h| h["point"][0].as_f64().unwrap()).sum::<f64>() / count,
+            houses
+                .iter()
+                .map(|h| h["point"][0].as_f64().unwrap())
+                .sum::<f64>()
+                / count,
             WALK_Y,
-            houses.iter().map(|h| h["point"][1].as_f64().unwrap()).sum::<f64>() / count,
+            houses
+                .iter()
+                .map(|h| h["point"][1].as_f64().unwrap())
+                .sum::<f64>()
+                / count,
         );
         let drift = nav.node_point(node).distance(centre);
         assert!(
@@ -1315,7 +1323,12 @@ fn the_law_cast_is_stationed_where_people_are() {
 /// A character the city is already holding (`law_and_order.md` M5b) — the
 /// `prisoner` circumstance the eight authored inmates carry, and nothing else.
 fn prisoner(id: &str, position: Vec3) -> Character {
-    let mut character = person(id, position, Some("domestic_servant"), Significance::Ambient);
+    let mut character = person(
+        id,
+        position,
+        Some("domestic_servant"),
+        Significance::Ambient,
+    );
     character
         .sheet
         .lore
@@ -1368,14 +1381,12 @@ fn the_confined_are_seeded_into_the_stone_house() {
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
 
-    let held: Vec<&str> = world
-        .custody
-        .iter()
-        .map(|(id, _)| id.as_str())
-        .collect();
+    let held: Vec<&str> = world.custody.iter().map(|(id, _)| id.as_str()).collect();
     assert_eq!(
         held,
-        ["p0055", "p0056", "p0057", "p0059", "p005a", "p005c", "p005f", "p00b0"]
+        [
+            "p0055", "p0056", "p0057", "p0059", "p005a", "p005c", "p005f", "p00b0"
+        ]
     );
     assert!(
         !world.custody.holds(&ActorId::from_raw("free1")),
@@ -1387,12 +1398,20 @@ fn the_confined_are_seeded_into_the_stone_house() {
         .named(crate::custody::STONE_HOUSE_PLACE_NAME)
         .expect("M5a put the Stone House in the registry")
         .clone();
-    for id in ["p0055", "p0056", "p0057", "p0059", "p005a", "p005c", "p005f", "p00b0"] {
+    for id in [
+        "p0055", "p0056", "p0057", "p0059", "p005a", "p005c", "p005f", "p00b0",
+    ] {
         let id = ActorId::from_raw(id);
         let record = world.custody.get(&id).expect("held");
-        assert!(world.custody.is_confined(&id), "{id} is committed, not merely in charge");
+        assert!(
+            world.custody.is_confined(&id),
+            "{id} is committed, not merely in charge"
+        );
         assert!(record.authored, "{id} was here before the run began");
-        assert!(record.station.stone_house, "{id} is in the gaol, not at a gate arch");
+        assert!(
+            record.station.stone_house,
+            "{id} is in the gaol, not at a gate arch"
+        );
         assert_eq!(record.station.place_id, stone_house.id);
         assert!(record.officer.is_none(), "nobody arrested {id}");
         assert!(record.notice_id.is_none(), "no word of ours put {id} here");
@@ -1409,8 +1428,7 @@ fn the_confined_are_seeded_into_the_stone_house() {
         // prisoner seeded past `COMMITTED_ROAM_M` is judged to have walked out
         // on the very first poll, so a wide enough ring would have let the
         // lore's own inmates out of the gaol the instant the game started.
-        let from_the_door =
-            f64::hypot(at.x - stone_house.point.x, at.z - stone_house.point.z);
+        let from_the_door = f64::hypot(at.x - stone_house.point.x, at.z - stone_house.point.z);
         assert!(
             from_the_door <= crate::custody::COMMITTED_ROAM_M * 0.5,
             "{id} is in the room and staying in it: {from_the_door} m"
@@ -1437,7 +1455,10 @@ fn a_confined_inmate_stays_put_through_thirst_a_leg_and_the_curfew() {
 
     let mut round = Round::new();
     round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
-    assert!(world.custody.holds(&held), "M5a's place resolved and they are in it");
+    assert!(
+        world.custody.holds(&held),
+        "M5a's place resolved and they are in it"
+    );
     let cell = world.characters[&held].position_m();
     // They are enrolled like anybody else — the legs are waiting for the day
     // they are let out; the guard is what keeps them off their feet meanwhile.
@@ -1449,13 +1470,7 @@ fn a_confined_inmate_stays_put_through_thirst_a_leg_and_the_curfew() {
         ("a round leg", Office::HighWick),
         ("the curfew", Office::Snuffing),
     ] {
-        world
-            .characters
-            .get_mut(&held)
-            .unwrap()
-            .state
-            .needs
-            .thirst = THIRST_PARCHED - 1.0;
+        world.characters.get_mut(&held).unwrap().state.needs.thirst = THIRST_PARCHED - 1.0;
         round.people.get_mut(&held).unwrap().next_decision = 0.0;
         round.people.get_mut(&held).unwrap().phase = Phase::Idle;
         run_ladder(
@@ -1472,7 +1487,10 @@ fn a_confined_inmate_stays_put_through_thirst_a_leg_and_the_curfew() {
             character.state.movement.is_none(),
             "{what} did not put a route under a confined body"
         );
-        assert!(character.state.intent.is_none(), "{what} laid no errand either");
+        assert!(
+            character.state.intent.is_none(),
+            "{what} laid no errand either"
+        );
         assert_eq!(character.position_m(), cell, "{what} did not move them");
     }
 }
@@ -1507,7 +1525,10 @@ fn the_confined_are_fed_and_watered_because_they_cannot_go_and_get_it() {
     let mut round = Round::new();
     let clock = clock_at(Office::Dayspring);
     round.seed(&mut world, &nav, 0.0, &clock);
-    assert!(world.custody.holds(&held), "M5a's place resolved and they are in it");
+    assert!(
+        world.custody.holds(&held),
+        "M5a's place resolved and they are in it"
+    );
 
     for who in [&held, &free] {
         let needs = &mut world.characters.get_mut(who).unwrap().state.needs;
@@ -1883,9 +1904,13 @@ fn the_law_takes_a_buyer_out_of_the_stall_queue() {
         point: Vec3::new(200.0, WALK_Y, 0.0),
         stone_house: true,
     };
-    world
-        .custody
-        .seize(buyer.clone(), ActorId::from_raw("srgnt"), Some(1), station, 0.0);
+    world.custody.seize(
+        buyer.clone(),
+        ActorId::from_raw("srgnt"),
+        Some(1),
+        station,
+        0.0,
+    );
 
     service_stalls(&mut round, &mut world, &clock, 0.0, &player());
     assert!(
@@ -5759,9 +5784,13 @@ fn set_route_refuses_a_body_in_the_laws_hands() {
         point: Vec3::ZERO,
         stone_house: false,
     };
-    world
-        .custody
-        .seize(taken.clone(), ActorId::from_raw("srgnt"), Some(1), station, 0.0);
+    world.custody.seize(
+        taken.clone(),
+        ActorId::from_raw("srgnt"),
+        Some(1),
+        station,
+        0.0,
+    );
 
     let path = vec![Vec3::new(10.0, WALK_Y, 0.0)];
     set_route(&mut world, &taken, path.clone());
@@ -5814,9 +5843,13 @@ fn a_committed_road_party_member_never_creeps_off_their_threshold() {
         crate::custody::nearest_station(&world.places, world.characters[&carter].position_m())
             .expect("the baked city has postings");
     assert_eq!(station.name, "The Wool Gate");
-    world
-        .custody
-        .seize(carter.clone(), leader.clone(), Some(1), station.clone(), 0.0);
+    world.custody.seize(
+        carter.clone(),
+        leader.clone(),
+        Some(1),
+        station.clone(),
+        0.0,
+    );
     world.custody.commit(&carter, 0.0);
     {
         let actor = world.characters.get_mut(&carter).expect("carter exists");
@@ -6117,7 +6150,11 @@ fn a_party_whose_leader_the_law_holds_waits_and_departs_whole_on_release() {
         round.party_state(&party_id).unwrap().phase,
         PartyPhase::BeyondTheWalls
     );
-    assert_eq!(round.road_parties[&party_id].members.len(), 3, "nobody was left behind");
+    assert_eq!(
+        round.road_parties[&party_id].members.len(),
+        3,
+        "nobody was left behind"
+    );
     world.assert_invariants();
 }
 
@@ -6284,7 +6321,13 @@ fn a_pressing_diversion_pauses_the_stock_travel_deadline() {
         .lightning_reflex_until
         .insert(buyer.clone(), deadline + 500.0);
     round.tick_stock_plans(&mut world, &nav, clock.at(10.0), 10.0, &quiet);
-    round.tick_stock_plans(&mut world, &nav, clock.at(deadline + 100.0), deadline + 100.0, &quiet);
+    round.tick_stock_plans(
+        &mut world,
+        &nav,
+        clock.at(deadline + 100.0),
+        deadline + 100.0,
+        &quiet,
+    );
     assert!(
         round.market_errands.contains_key(&buyer),
         "a held errand never expires, however long the hold"
@@ -6385,11 +6428,9 @@ fn the_road_return_ends_a_live_intent_with_the_why_percept() {
     };
     world.characters.get_mut(&leader).unwrap().state.intent = errand("somewhere");
     world.characters.get_mut(&carter).unwrap().state.intent = errand("elsewhere");
-    let station = crate::custody::nearest_station(
-        &world.places,
-        world.characters[&carter].position_m(),
-    )
-    .expect("postings");
+    let station =
+        crate::custody::nearest_station(&world.places, world.characters[&carter].position_m())
+            .expect("postings");
     world
         .custody
         .seize(carter.clone(), officer.clone(), Some(1), station, 0.0);
@@ -7223,7 +7264,12 @@ fn an_interrupted_follow_waits_out_the_answers_beat() {
     let chaser = ActorId::from_raw("chaser");
     let mut world = base_world();
     world.add_character(person("chaser", start, Some("mason"), Significance::Minor));
-    world.add_character(person("quarry", quarry_at, Some("baker"), Significance::Minor));
+    world.add_character(person(
+        "quarry",
+        quarry_at,
+        Some("baker"),
+        Significance::Minor,
+    ));
     let mut round = Round::default();
     round.people.insert(chaser.clone(), weather_person(start));
     // A live follow already under way (the stamped deadline marks it un-fresh),
@@ -7454,4 +7500,471 @@ fn exposed_stall_pauses_and_resumes_without_changing_stock() {
     world.current_weather = Some(test_weather(WeatherKind::Thunderstorm, 0.9));
     assert!(world.shelters.is_sheltered(Vec3::ZERO));
     assert!(stall_weather_open(&world, &round.stalls[0]));
+}
+
+// --------------------------------------------------------------------------- //
+// Chalking the Walls M1 — the cross at the counter
+// --------------------------------------------------------------------------- //
+
+/// Register a home for `who` so a `MarkAnchor::Household` resolves, and chalk
+/// a cross on it by the ward's own hand.
+fn chalk_the_door(world: &mut World, who: &ActorId) -> crate::ids::MarkId {
+    let point = world
+        .characters
+        .get(who)
+        .expect("the buyer exists")
+        .position_m();
+    world.places.add_home(who, "Test Body", point);
+    crate::marks::draw_or_refresh(
+        world,
+        crate::marks::MarkKind::ChalkCross,
+        crate::marks::MarkAnchor::Household(who.clone()),
+        None,
+        0.0,
+    )
+    .expect("the door resolves")
+    .id
+}
+
+/// **The partition test** (`features/implemented/chalking_the_walls.md` §2.1, §6). The
+/// refusal must read the chalk and *only* the chalk. `World.notices` is empty
+/// here — emphatically so — and the sale is still refused. If this test were
+/// hard to write, the partition would already be broken.
+#[test]
+fn a_chalked_buyer_is_refused_at_the_counter_with_no_notice_anywhere() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_some(),
+        "the buyer can afford a loaf before anybody chalks anything"
+    );
+
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    chalk_the_door(&mut world, &buyer);
+    assert!(
+        world.notices.live().is_empty(),
+        "the premise: not one notice exists in this world"
+    );
+
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_none(),
+        "the cross alone refuses the sale — no notice is consulted, and none exists"
+    );
+}
+
+/// The other half of §2.1: a *notice* with no chalk refuses nothing. Together
+/// these two prove the readers were repointed rather than doubled up.
+#[test]
+fn an_unchalked_buyer_sells_even_while_the_ward_is_talking_about_them() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    world.notices.raise(
+        "a buyer".into(),
+        "owes and has not paid".into(),
+        None,
+        None,
+        Some(0.0),
+        buyer.clone(),
+        Some(buyer.clone()),
+        None,
+        None,
+    );
+    assert!(
+        !world.notices.live().is_empty(),
+        "the premise: a live notice"
+    );
+
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_some(),
+        "a notice is not chalk: the counter reads the wall, not the gossip"
+    );
+}
+
+/// §3: below `faint_below` a mark is a fact about the past, not a rule. A
+/// half-washed cross must let the sale through — that is what makes weathering
+/// (and therefore scrubbing) mean anything.
+#[test]
+fn a_half_washed_cross_no_longer_refuses_anybody() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    let mark = chalk_the_door(&mut world, &buyer);
+    let faint = world
+        .mark_catalog
+        .spec(crate::marks::MarkKind::ChalkCross)
+        .expect("the cross is authored")
+        .faint_below;
+    world
+        .marks
+        .get_mut(mark)
+        .expect("the cross is live")
+        .strength = faint - 0.01;
+
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_some(),
+        "chalk you can barely see stops ruling"
+    );
+}
+
+/// §2.3: no reader may branch on `author`. A cross the *player* forged refuses
+/// exactly as hard as the ward's own, because nothing that reads a mark ever
+/// asks who drew it.
+#[test]
+fn a_forged_cross_refuses_exactly_as_hard_as_the_wards_own() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    let point = world.characters[&buyer].position_m();
+    world.places.add_home(&buyer, "Test Body", point);
+    crate::marks::draw_or_refresh(
+        &mut world,
+        crate::marks::MarkKind::ChalkCross,
+        crate::marks::MarkAnchor::Household(buyer.clone()),
+        // A forger, not the ward.
+        Some(ActorId::from_raw("player")),
+        0.0,
+    )
+    .expect("the door resolves");
+
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_none(),
+        "a forged cross must refuse the sale exactly as the ward's own does"
+    );
+}
+
+/// The ablation switch must reach this reader too, or `CATHEDRAL_NO_MARKS`
+/// would still refuse sales on chalk it claims not to be simulating.
+#[test]
+fn ablated_chalk_refuses_nobody() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    chalk_the_door(&mut world, &buyer);
+    world.marks_enabled = false;
+
+    assert!(
+        try_purchase(&mut round, &mut world, 0, &buyer).is_some(),
+        "an ablated layer must not go on refusing sales"
+    );
+}
+
+/// The whole M1 arc through the real `service_stalls`, and the hazard the spec
+/// warns about: a refused buyer who still has coin, at a stall that still has
+/// bread, re-selects on every `next_decision`. Without the stamp that is an
+/// infinite loop with one inbox line a lap.
+#[test]
+fn a_chalk_refusal_is_one_scene_and_not_a_loop() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    let clock = clock_at(Office::HighWick);
+    let pitch = round.stalls[0].pitch;
+    round.people.insert(buyer.clone(), weather_person(pitch));
+    round.people.get_mut(&buyer).unwrap().food = Some(FoodErrand {
+        stall: 0,
+        phase: FoodPhase::Queued,
+    });
+    round.stalls[0].serving = Some((buyer.clone(), 0.0));
+    chalk_the_door(&mut world, &buyer);
+
+    service_stalls(
+        &mut round,
+        &mut world,
+        &clock,
+        PURCHASE_SECONDS + 0.1,
+        &player(),
+    );
+
+    // One line, naming the reason — the bare `None` arm could never say why.
+    let inbox = world.characters[&buyer].state.inbox.clone();
+    assert_eq!(inbox.len(), 1, "exactly one refusal line, got {inbox:?}");
+    assert!(
+        inbox[0].contains("chalk cross on your door"),
+        "the line must name the reason: {}",
+        inbox[0]
+    );
+
+    // …and a trace line the food log can be grepped for.
+    assert!(
+        round
+            .food_log
+            .iter()
+            .any(|line| line.starts_with("refused_on_chalk;")),
+        "a chalk refusal must be distinguishable in --trace-food from \
+         'spent it mid-queue', which the bare None arm never was: {:?}",
+        round.food_log
+    );
+
+    // The stamp now keeps them away from every board, so the ladder cannot
+    // march them straight back into the same queue.
+    assert!(
+        nearest_open_stall(
+            &round,
+            &world,
+            &buyer,
+            pitch,
+            Office::HighWick,
+            Weekday::Highmarket,
+            false,
+        )
+        .is_none(),
+        "a refused buyer must not re-select a stall while the stamp stands"
+    );
+
+    // Re-running the whole service pass many times adds no further lines: the
+    // refusal is a scene, not a treadmill.
+    for tick in 1..20 {
+        round.people.get_mut(&buyer).unwrap().food = Some(FoodErrand {
+            stall: 0,
+            phase: FoodPhase::Queued,
+        });
+        round.stalls[0].serving = Some((buyer.clone(), tick as f64));
+        service_stalls(
+            &mut round,
+            &mut world,
+            &clock,
+            tick as f64 + PURCHASE_SECONDS + 0.1,
+            &player(),
+        );
+    }
+    assert_eq!(
+        world.characters[&buyer].state.inbox.len(),
+        1,
+        "still one line after twenty passes — no inbox barrage, no paid turns"
+    );
+}
+
+/// …and the stamp really does expire, so a scrubbed cross lets them eat again
+/// rather than starving them for good.
+#[test]
+fn the_refusal_stamp_lifts_on_its_own() {
+    let (mut world, mut round, _vendor, buyer, _stock_id) = bread_stall_world();
+    let clock = clock_at(Office::HighWick);
+    let pitch = round.stalls[0].pitch;
+    round.people.insert(buyer.clone(), weather_person(pitch));
+    round.people.get_mut(&buyer).unwrap().food = Some(FoodErrand {
+        stall: 0,
+        phase: FoodPhase::Queued,
+    });
+    round.stalls[0].serving = Some((buyer.clone(), 0.0));
+    chalk_the_door(&mut world, &buyer);
+    service_stalls(
+        &mut round,
+        &mut world,
+        &clock,
+        PURCHASE_SECONDS + 0.1,
+        &player(),
+    );
+    assert!(!round.chalk_refused_until.is_empty(), "stamped");
+
+    // The tick's own prune, half a game day later.
+    let later = PURCHASE_SECONDS + 0.1 + CHALK_REFUSAL_GAME_DAYS * clock.seconds_per_day() + 1.0;
+    round.chalk_refused_until.retain(|_, until| later < *until);
+    assert!(
+        round.chalk_refused_until.is_empty(),
+        "the stamp is a pause, not a ban"
+    );
+}
+
+// --------------------------------------------------------------------------- //
+// Chalking the Walls M4 — the tally moves a queue
+// --------------------------------------------------------------------------- //
+
+/// **The C7 regression.** The spec proposed putting the tally penalty inside
+/// `Round::nearest_staffed_source`. That function has two callers and both are
+/// enrolment-time — `Townsperson.source` is written once, in a struct literal,
+/// for an actor's whole life — so a penalty there is evaluated at world-seed
+/// t=0, when no chalk exists, and moves nobody ever.
+///
+/// This pins the fix: `tallied_source` re-picks per trip, and chalk laid *after*
+/// enrolment really does send the next drawer elsewhere.
+#[test]
+fn a_notched_well_sends_the_next_drawer_to_the_neighbour() {
+    let mut world = World::new();
+    let mut round = Round::new();
+    // Two staffed curbs. `near` is 10 m from the drawer, `far` is 25 m — so
+    // with no chalk anywhere the near one wins by a wide margin.
+    round.sources.push(WaterSource {
+        name: "Chain Well".into(),
+        draw_point: Vec3::new(10.0, WALK_Y, 0.0),
+        draw_sound: "draw_water",
+        keeper: Some(ActorId::from_raw("keep1")),
+        queue: Vec::new(),
+        serving: None,
+        keeper_next_sound: 0.0,
+    });
+    round.sources.push(WaterSource {
+        name: "Ford Well".into(),
+        draw_point: Vec3::new(25.0, WALK_Y, 0.0),
+        draw_sound: "draw_water",
+        keeper: Some(ActorId::from_raw("keep2")),
+        queue: Vec::new(),
+        serving: None,
+        keeper_next_sound: 0.0,
+    });
+    // The registry the anchors resolve through.
+    let nav = nav();
+    world.places = crate::places::PlaceRegistry::from_json(
+        r#"{"schema_version":1,"places":[
+            {"id":"pl_w1","name":"Chain Well","node":0,"kind":"landmark","ward":"weigh"},
+            {"id":"pl_w2","name":"Ford Well","node":1,"kind":"landmark","ward":"fabric"}
+        ],"wards":[]}"#,
+        &nav,
+    )
+    .expect("the two-well registry parses");
+
+    let here = Vec3::new(0.0, WALK_Y, 0.0);
+    assert_eq!(
+        tallied_source(&round, &world, here),
+        Some(0),
+        "with bare curbs the near well wins — identical to nearest_staffed_source"
+    );
+
+    // Three strokes on the near curb is 18 m of extra walk: 10 + 18 = 28 > 25.
+    let (id, _) = {
+        let drawn = crate::marks::draw_or_refresh(
+            &mut world,
+            crate::marks::MarkKind::WellTally,
+            crate::marks::MarkAnchor::Place("Chain Well".into()),
+            None,
+            0.0,
+        )
+        .expect("the well is a registered place");
+        (drawn.id, drawn.fresh)
+    };
+    world.marks.get_mut(id).expect("the tally is live").strokes = 3;
+
+    assert_eq!(
+        tallied_source(&round, &world, here),
+        Some(1),
+        "a busy well loses its next drawer to the neighbour"
+    );
+
+    // Overnight the chalk half-washes; a faint tally rules nothing, so the
+    // near well recovers its queue.
+    let faint = world
+        .mark_catalog
+        .spec(crate::marks::MarkKind::WellTally)
+        .expect("authored")
+        .faint_below;
+    world.marks.get_mut(id).expect("live").strength = faint - 0.01;
+    assert_eq!(
+        tallied_source(&round, &world, here),
+        Some(0),
+        "and recovers it when the chalk washes off"
+    );
+}
+
+/// Ties still break by source index, so an exact tie binds identically every
+/// run — the property the spec asks to be kept.
+#[test]
+fn an_exact_tie_still_binds_by_source_index() {
+    let mut world = World::new();
+    let mut round = Round::new();
+    for (name, x) in [("Chain Well", 10.0), ("Ford Well", -10.0)] {
+        round.sources.push(WaterSource {
+            name: name.into(),
+            draw_point: Vec3::new(x, WALK_Y, 0.0),
+            draw_sound: "draw_water",
+            keeper: Some(ActorId::from_raw("keep")),
+            queue: Vec::new(),
+            serving: None,
+            keeper_next_sound: 0.0,
+        });
+    }
+    let nav = nav();
+    world.places = crate::places::PlaceRegistry::from_json(
+        r#"{"schema_version":1,"places":[
+            {"id":"pl_w1","name":"Chain Well","node":0,"kind":"landmark","ward":"weigh"},
+            {"id":"pl_w2","name":"Ford Well","node":1,"kind":"landmark","ward":"fabric"}
+        ],"wards":[]}"#,
+        &nav,
+    )
+    .expect("parses");
+    assert_eq!(
+        tallied_source(&round, &world, Vec3::new(0.0, WALK_Y, 0.0)),
+        Some(0),
+        "equidistant curbs bind to the lower source index, every run"
+    );
+}
+
+/// M4's ward-sign reader: a chalked place of resort draws its own ward's
+/// evening crowd away from the taverns. The comparison is against the *same*
+/// roll with the sign suppressed, which is what the spec's done-criterion asks
+/// for — an absolute count would prove nothing, since the roll is a pure hash
+/// and most people stay home either way.
+#[test]
+fn a_chalked_ward_sign_pulls_that_wards_evening_crowd() {
+    let evenings = |chalked: bool| -> Vec<String> {
+        let nav = nav();
+        let mut world = base_world();
+        let ids: Vec<ActorId> = HOUSED_AMBIENT_IDS
+            .iter()
+            .enumerate()
+            .map(|(index, id)| {
+                world.add_character(person(
+                    id,
+                    Vec3::new(index as f64, WALK_Y, 95.0),
+                    Some("mason"),
+                    Significance::Ambient,
+                ));
+                ActorId::from_raw(*id)
+            })
+            .collect();
+        let mut round = Round::new();
+        round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+        if chalked {
+            // Every ward's authored place, so whichever wards these bodies
+            // belong to have a sign to be drawn to.
+            let places: Vec<String> = world
+                .mark_catalog
+                .ward_sign_places()
+                .map(|(_, place)| place.to_string())
+                .collect();
+            for place in places {
+                crate::marks::draw_or_refresh(
+                    &mut world,
+                    crate::marks::MarkKind::WardSign,
+                    crate::marks::MarkAnchor::Place(place),
+                    None,
+                    0.0,
+                );
+            }
+        }
+        round.reroll_ambient_evenings(&mut world, 0);
+        // Where each mover's evening leg now points.
+        ids.iter()
+            .filter_map(|id| {
+                round
+                    .people
+                    .get(id)
+                    .and_then(|person| person.evening_seed.as_ref().map(|(index, _)| *index))
+                    .and_then(|index| round.people[id].legs.get(index))
+                    .map(|leg| leg.label.clone())
+            })
+            .collect()
+    };
+
+    let bare = evenings(false);
+    let chalked = evenings(true);
+    assert!(!bare.is_empty(), "somebody's evening moved on a bare night");
+    assert_eq!(
+        bare.len(),
+        chalked.len(),
+        "the same people move either way — the sign changes WHERE, not WHETHER"
+    );
+
+    let signs: Vec<String> = {
+        let world = base_world();
+        world
+            .mark_catalog
+            .ward_sign_places()
+            .map(|(_, place)| place.to_string())
+            .collect()
+    };
+    let to_a_sign = |destinations: &[String]| -> usize {
+        destinations
+            .iter()
+            .filter(|label| signs.iter().any(|place| place == *label))
+            .count()
+    };
+    assert_eq!(
+        to_a_sign(&bare),
+        0,
+        "with no chalk anywhere, nobody walks to a place of resort: {bare:?}"
+    );
+    assert!(
+        to_a_sign(&chalked) > 0,
+        "a chalked sign must pull somebody off the tavern road: {chalked:?}"
+    );
 }

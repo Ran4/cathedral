@@ -98,7 +98,12 @@ fn world_with_cast() -> World {
     let mut world = World::new();
     world.add_character(player());
 
-    let mut major = character("mjr01", "Corin Copp", Significance::Major, PlanningWard::Weigh);
+    let mut major = character(
+        "mjr01",
+        "Corin Copp",
+        Significance::Major,
+        PlanningWard::Weigh,
+    );
     major.state.daily_round = vec![
         "at Dayspring: work at The Tallage".to_string(),
         "at Lamplight: home to sleep".to_string(),
@@ -178,15 +183,7 @@ fn beat(
     let mut events = Vec::new();
     night.ring(now, world, round, clock, &mut events);
     let mut completions = cognition.drain_completions();
-    events.extend(night.poll(
-        now,
-        world,
-        clock,
-        &mut completions,
-        gate,
-        cognition,
-        env,
-    ));
+    events.extend(night.poll(now, world, clock, &mut completions, gate, cognition, env));
     events
 }
 
@@ -637,11 +634,23 @@ fn a_reflection_may_settle_memory_goal_and_one_leg_but_may_not_act() {
     assert!(actor.inbox().is_empty());
 
     let refused = diagnostics(&events);
-    assert!(refused.iter().any(|line| line.contains("say is not a night verb")));
-    assert!(refused.iter().any(|line| line.contains("go_to is not a night verb")));
+    assert!(
+        refused
+            .iter()
+            .any(|line| line.contains("say is not a night verb"))
+    );
+    assert!(
+        refused
+            .iter()
+            .any(|line| line.contains("go_to is not a night verb"))
+    );
     // Nobody heard a thing.
     for other in world.characters.values() {
-        assert!(other.inbox().is_empty(), "{} heard a private thought", other.name());
+        assert!(
+            other.inbox().is_empty(),
+            "{} heard a private thought",
+            other.name()
+        );
     }
 }
 
@@ -707,12 +716,18 @@ fn a_ward_mood_is_carried_by_that_wards_minors_alone() {
         &mut events,
     );
     assert_eq!(
-        world.ward_moods.get(&PlanningWard::Weigh).map(String::as_str),
+        world
+            .ward_moods
+            .get(&PlanningWard::Weigh)
+            .map(String::as_str),
         Some("The rain has not let up and people are short with one another.")
     );
 
     let sheet = |id: &str| render_night_prompt(&world, &ActorId::from_raw(id), &env).unwrap();
-    assert!(sheet("mnr01").contains("**the_ward_says**"), "the ward's own Minor");
+    assert!(
+        sheet("mnr01").contains("**the_ward_says**"),
+        "the ward's own Minor"
+    );
     assert!(
         !sheet("mjr01").contains("**the_ward_says**"),
         "a Major reflects for themselves"
@@ -753,7 +768,10 @@ fn a_ward_moves_its_own_peoples_rounds_and_teaches_them_the_way() {
     let mut night = office(all_tiers(), &world, 0.0);
     let minor = ActorId::from_raw("mnr01");
     assert!(
-        !world.characters[&minor].state.places_known.contains(&PlaceId::from_raw("pl_bbbb")),
+        !world.characters[&minor]
+            .state
+            .places_known
+            .contains(&PlaceId::from_raw("pl_bbbb")),
         "the Minor starts knowing no ways"
     );
 
@@ -780,11 +798,24 @@ fn a_ward_moves_its_own_peoples_rounds_and_teaches_them_the_way() {
         })
     );
     assert!(
-        world.characters[&minor].state.places_known.contains(&PlaceId::from_raw("pl_bbbb")),
+        world.characters[&minor]
+            .state
+            .places_known
+            .contains(&PlaceId::from_raw("pl_bbbb")),
         "the ward told them the way as part of deciding it"
     );
-    assert!(world.characters[&ActorId::from_raw("mnr02")].state.round_edit.is_none());
-    assert!(world.characters[&ActorId::from_raw("mjr01")].state.round_edit.is_none());
+    assert!(
+        world.characters[&ActorId::from_raw("mnr02")]
+            .state
+            .round_edit
+            .is_none()
+    );
+    assert!(
+        world.characters[&ActorId::from_raw("mjr01")]
+            .state
+            .round_edit
+            .is_none()
+    );
 }
 
 /// A refused edit teaches nothing. The ward only gets to hand out a way as
@@ -848,7 +879,7 @@ fn a_ward_may_make_no_more_than_three_edits() {
     let mut night = office(all_tiers(), &world, 0.0);
     let reply = [r#"set_round {"person": "mnr01", "leg": 1, "place_id": "pl_aaaa"}"#;
         WARD_EDITS_MAX + 2]
-    .join("\n");
+        .join("\n");
 
     let mut events = Vec::new();
     night.apply_ward(&mut world, PlanningWard::Weigh, &reply, &mut events);
@@ -914,7 +945,10 @@ fn the_ward_prompt_carries_its_people_their_goals_and_their_places() {
 
     assert!(prompt.contains("**the_ward** — the Weigh Ward"));
     assert!(prompt.contains("mnr01 — Tam Rud, Baker — set on: Find work for the winter"));
-    assert!(!prompt.contains("mjr01"), "a Major is not the ward's to speak for");
+    assert!(
+        !prompt.contains("mjr01"),
+        "a Major is not the ward's to speak for"
+    );
     assert!(!prompt.contains("mnr02"), "nor another ward's Minor");
     assert!(prompt.contains("pl_aaaa The Tallage"));
     assert!(prompt.contains("ward_mood"));
@@ -966,7 +1000,10 @@ fn the_offline_fake_moves_a_leg_it_read_off_the_night_sheet() {
 
     let major = &world.characters[&ActorId::from_raw("mjr01")];
     assert!(
-        major.memories().iter().any(|memory| memory.contains("Corin Copp")),
+        major
+            .memories()
+            .iter()
+            .any(|memory| memory.contains("Corin Copp")),
         "the fake settled a memory it read off the sheet"
     );
     assert_eq!(

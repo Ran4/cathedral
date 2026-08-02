@@ -123,14 +123,26 @@ pub enum PlayerIntent {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum PendingKind {
     Recording,
-    Offer { item_id: ItemId, target_id: ActorId, quantity: Option<u32> },
-    Accept { item_id: ItemId },
-    Decline { item_id: ItemId },
-    Retract { item_id: ItemId },
+    Offer {
+        item_id: ItemId,
+        target_id: ActorId,
+        quantity: Option<u32>,
+    },
+    Accept {
+        item_id: ItemId,
+    },
+    Decline {
+        item_id: ItemId,
+    },
+    Retract {
+        item_id: ItemId,
+    },
     /// Every body-pocket verb that names an item (`features/extra_pockets.md`).
     /// They all move the same thing — a stack-unit between the open and a
     /// cavity — so one kind covers the lot; the label is only for the toast.
-    BodySlot { item_id: ItemId },
+    BodySlot {
+        item_id: ItemId,
+    },
     /// `expel` names no item: whatever is down there comes out.
     Expel,
     DebugSay,
@@ -440,6 +452,7 @@ pub fn reconcile_interaction_state(
     runtime: Res<SmartActorRuntime>,
     players: Query<&GlobalTransform, With<PlayerController>>,
     focus: Res<ActorFocus>,
+    mark_focus: Option<Res<crate::city::MarkFocus>>,
     mut state: ResMut<InteractionState>,
     mut hud: ResMut<SmartActorHudState>,
 ) {
@@ -508,7 +521,8 @@ pub fn reconcile_interaction_state(
         });
 
     hud.focus_hint = if runtime.interactions_enabled() {
-        focus_hint(&mirror, &focus, state.selected_item.as_ref(), coin_count)
+        let hint = focus_hint(&mirror, &focus, state.selected_item.as_ref(), coin_count);
+        merge_mark_hint(hint, mark_focus.as_deref())
     } else {
         String::new()
     };
@@ -623,7 +637,8 @@ pub fn collect_item_interaction_input(
         // The coin purse hands over the picked count; every other item is whole.
         // Quantity is decided before the dedup guard so re-offering the purse at a
         // different count is not mistaken for a repeat of the one in flight.
-        let quantity = selected_coin_stack(&mirror, Some(&item_id)).map(|stack| state.coin_count(stack));
+        let quantity =
+            selected_coin_stack(&mirror, Some(&item_id)).map(|stack| state.coin_count(stack));
         if !player_holds_item
             || target.actor_id == player_id
             || target.body_distance_m > ITEM_INTERACTION_RADIUS_M
@@ -1136,6 +1151,17 @@ fn inventory_text(
     format!("INVENTORY    {slots}")
 }
 
+/// Chalk reads out only when the crosshair is not already resting on a person:
+/// a body standing in front of a marked door is the more interesting thing to
+/// be told about, and two lines in one slot would fight.
+fn merge_mark_hint(actor_hint: String, mark: Option<&crate::city::MarkFocus>) -> String {
+    if !actor_hint.is_empty() {
+        return actor_hint;
+    }
+    mark.and_then(|mark| mark.read_line.clone())
+        .unwrap_or_default()
+}
+
 fn focus_hint(
     mirror: &WorldMirror,
     focus: &ActorFocus,
@@ -1354,6 +1380,7 @@ mod tests {
                     },
                 ],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
         mirror
@@ -1413,13 +1440,17 @@ mod tests {
                 ],
                 offers: vec![],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
         let holds = [ItemId("spk".into()), ItemId("one".into())];
         let text = inventory_text(&mirror, &holds, None, None);
         // A stack above 1 shows a ×N count; a single item shows none.
         assert!(text.contains("spark ×3"), "{text}");
-        assert!(text.contains("herring") && !text.contains("herring ×"), "{text}");
+        assert!(
+            text.contains("herring") && !text.contains("herring ×"),
+            "{text}"
+        );
 
         // Selecting the coin stack surfaces the offer count picker inline.
         let picker = inventory_text(&mirror, &holds, Some(&ItemId("spk".into())), Some(2));
@@ -1712,12 +1743,19 @@ mod tests {
                 ],
                 offers: vec![],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
 
         // Only the spark stack is a purse; the loaf never gets a picker.
-        assert_eq!(selected_coin_stack(&mirror, Some(&ItemId("purse".into()))), Some(3));
-        assert_eq!(selected_coin_stack(&mirror, Some(&ItemId("loaf".into()))), None);
+        assert_eq!(
+            selected_coin_stack(&mirror, Some(&ItemId("purse".into()))),
+            Some(3)
+        );
+        assert_eq!(
+            selected_coin_stack(&mirror, Some(&ItemId("loaf".into()))),
+            None
+        );
 
         // The count clamps into [1, stack]: a fresh 0 reads as one coin, and it
         // never exceeds the purse.
@@ -1887,5 +1925,50 @@ mod tests {
                 .is_empty()
         );
         assert_eq!(app.world().resource::<WorldMirror>().offers().len(), 2);
+    }
+}
+
+#[cfg(test)]
+mod mark_hint_tests {
+    use super::*;
+
+    fn mark_focus(line: &str) -> crate::city::MarkFocus {
+        crate::city::MarkFocus {
+            read_line: Some(line.to_string()),
+            mark_id: Some(1),
+            distance_m: 1.0,
+        }
+    }
+
+    #[test]
+    fn chalk_reads_out_when_nobody_is_under_the_crosshair() {
+        assert_eq!(
+            merge_mark_hint(
+                String::new(),
+                Some(&mark_focus("a chalk cross — they owe."))
+            ),
+            "a chalk cross — they owe."
+        );
+    }
+
+    #[test]
+    fn a_person_under_the_crosshair_wins_the_slot() {
+        assert_eq!(
+            merge_mark_hint(
+                "Ede Clove".to_string(),
+                Some(&mark_focus("a chalk cross — they owe."))
+            ),
+            "Ede Clove",
+            "two lines in one slot would fight; the body wins"
+        );
+    }
+
+    #[test]
+    fn no_chalk_and_nobody_is_an_empty_slot() {
+        assert_eq!(merge_mark_hint(String::new(), None), "");
+        assert_eq!(
+            merge_mark_hint(String::new(), Some(&crate::city::MarkFocus::default())),
+            ""
+        );
     }
 }

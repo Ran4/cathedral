@@ -141,6 +141,12 @@ eaten or sold until you retrieve_item it, and a mouth leaves it wet.
 A mouthful of drink can be swallowed, spat at someone within reach, or gargled;
 what you swallow whole and cannot digest passes through you in its own time.
 
+{% endif %}{% if has_chalk_verbs %}You are carrying chalk. The city writes on itself: a cross on a door means that
+household owes and has not paid, and a stall will refuse them. Anyone can read a
+mark and anyone can wipe one off, and nothing that reads a mark asks who drew
+it — so chalking a neighbour's door is a real accusation, and scrubbing one is a
+real favour. you_could_chalk lists what is within reach of your hand.
+
 {% endif %}since_your_last_turn is history, in order — it can already be out of date (an
 offer you heard about may be gone, taken by someone else). you_hold, you_offer
 and offered_to_you are the current truth: you can only accept offers listed in
@@ -211,6 +217,8 @@ swallow {"item_id": "c0prs"}                         # Swallow what is in your m
 spit {"item_id": "c0prs", "target": "4bfk4"}         # Spit what is in your mouth at someone within 4 metres
 gargle {"item_id": "c0prs"}                          # Gargle a mouthful of drink; you still have it afterwards
 expel {}                                             # Void whatever you carry privily below, where you stand
+{% endif %}{% if has_chalk_verbs %}draw_mark {"kind": "chalk_cross", "anchor": "<one of you_could_chalk>"}  # Chalk a mark on something within reach; needs chalk in hand, and everyone nearby sees you do it
+{% endif %}{% if has_scrub_verb %}scrub_mark {"mark_id": 3}                             # Wipe one of marks_here off the wall with your sleeve; everyone nearby sees that too
 {% endif %}{% if has_law_verbs %}raise_notice {"about": "an outland stranger in a grey hood", "deed": "took a boy's spark and gave no badge", "where": "the tenter-frames", "accused": "4bfk4", "wronged": "e3cob", "taken": "w0k3r"}  # Law only: put a wrong on the ward's tongues; "where"/"accused"/"wronged"/"taken" optional
 {% endif %}{% if has_settle_verb %}settle_notice {"notice_id": 3}                       # Declare one word_in_the_ward notice answered; it stops going around
 {% endif %}{% if has_law_verbs %}summon {"notice_id": 3}                              # Law only: call the accused to answer that word by the next bell

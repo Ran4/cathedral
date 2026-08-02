@@ -94,6 +94,45 @@ pub struct SmartActorsConfig {
     /// The authored street-dog pack (features/implemented/dogs.md). Costs no tokens; off
     /// only for ablation (`CATHEDRAL_NO_DOGS` forces it off for one run).
     pub dogs_enabled: bool,
+    /// The chalk on the walls (features/implemented/chalking_the_walls.md). Costs no
+    /// tokens: marks are written by code, read by code, and reach an LLM only
+    /// as one line on a turn that was going to happen anyway.
+    pub marks: MarksSettings,
+}
+
+/// Chalk marks: the ablation switch, the per-kind switches, and the decay dial
+/// (`features/implemented/chalking_the_walls.md` §2.9).
+#[derive(Resource, Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct MarksSettings {
+    /// The whole layer. `CATHEDRAL_NO_MARKS=1` forces this off for one run.
+    /// Turning it off stops new chalk and stops the readers; it does not
+    /// scrub what is already on the walls.
+    pub enabled: bool,
+    /// The debtor's cross on a household door, and the stall refusal that
+    /// reads it.
+    pub cross: bool,
+    /// The stroke-per-draw tally at a water source, and the well choice that
+    /// reads it.
+    pub tally: bool,
+    /// The Night Office's ward-sign, and the ambient evening roll that reads
+    /// it.
+    pub ward_sign: bool,
+    /// Multiplies elapsed time in the decay. `1.0` is the authored nine-day
+    /// dry half-life; raise it to weather a wall inside a drive run.
+    pub decay_scale: f64,
+}
+
+impl Default for MarksSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            cross: true,
+            tally: true,
+            ward_sign: true,
+            decay_scale: 1.0,
+        }
+    }
 }
 
 /// The gates on *idle* NPC turns: proximity, then novelty.
@@ -300,6 +339,7 @@ impl Default for SmartActorsConfig {
             night_office: NightOfficeSettings::default(),
             clock: ClockSettings::default(),
             dogs_enabled: true,
+            marks: MarksSettings::default(),
         }
     }
 }
@@ -2494,6 +2534,7 @@ mod tests {
                 items: vec![],
                 offers: vec![],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
         let mut runtime = SmartActorRuntime::starting(false);
@@ -2640,6 +2681,7 @@ mod tests {
                 }],
                 offers: vec![],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
         (mirror, player, giver, other, coin)
@@ -3881,6 +3923,30 @@ mod tests {
                 .map(|focus| focus.actor_id.0.as_str()),
             Some("cb947")
         );
+        // Select the coin by slot rather than relying on it being the only
+        // thing the player holds. The player is seeded with a chalk pen
+        // (`features/implemented/chalking_the_walls.md` M2), so slot 1 is the pen and the
+        // spark this test is about is slot 2 — and the offer path, which is
+        // what is under test here, has no opinion about inventory order.
+        let coin_slot = app
+            .world()
+            .resource::<model::WorldMirror>()
+            .actor(&model::ActorId("player".into()))
+            .and_then(|player| {
+                player
+                    .holds
+                    .iter()
+                    .position(|held| held.0 == "c0prs")
+            })
+            .expect("the player holds the spark by now");
+        let slot_key = [KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3][coin_slot];
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(slot_key);
+        app.update();
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .reset_all();
         app.world_mut()
             .resource_mut::<ButtonInput<MouseButton>>()
             .press(MouseButton::Right);

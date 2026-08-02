@@ -185,7 +185,10 @@ enum Action {
     /// Hold a key down for a duration (e.g. `hold KeyW 20` walks forward for
     /// 20 s). The scheduler waits out the hold like a `sleep`, so the next
     /// action fires after release.
-    Hold { key: KeyCode, seconds: f64 },
+    Hold {
+        key: KeyCode,
+        seconds: f64,
+    },
     /// Inject text as a raw `KeyboardInput` message, the stream the chat box
     /// reads. `;` cannot appear in the text — it separates script actions.
     Type(String),
@@ -221,12 +224,26 @@ enum Action {
         officer: String,
         target: Option<String>,
     },
+    /// `chalk <kind> -> <anchor>` (`features/implemented/chalking_the_walls.md` M2): put a
+    /// mark on a door or a place by the player's hand. Drawing is otherwise an
+    /// LLM's judgement, so this is the only way a scripted run reaches the
+    /// forged cross §2.3 is about.
+    Chalk {
+        kind: String,
+        anchor: String,
+    },
+    /// `scrub <anchor>`: wipe the nearest live mark off that anchor.
+    Scrub {
+        anchor: String,
+    },
     /// Finish the escort at the Stone House (`features/law_and_order.md` M5).
     /// `seize` alone only ever shows the walk, and the cell is the half of M5
     /// worth looking at: the booking, the posted fee, the bell you are told you
     /// go at, and what walking out of it costs. Goes through the same
     /// `Custody::commit` and arrival announcement a real arrival does.
-    Commit { target: Option<String> },
+    Commit {
+        target: Option<String>,
+    },
     /// Force the sim-owned weather authority, or clear back to its timeline.
     Weather {
         kind: Option<WeatherKind>,
@@ -275,6 +292,8 @@ impl Action {
                 Some(target) => format!("seize {officer} -> {target}"),
                 None => format!("seize {officer}"),
             },
+            Self::Chalk { kind, anchor } => format!("chalk {kind} -> {anchor}"),
+            Self::Scrub { anchor } => format!("scrub {anchor}"),
             Self::Commit { target } => match target {
                 Some(target) => format!("commit {target}"),
                 None => "commit".into(),
@@ -377,6 +396,16 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
         "bell" => parse_bell(argument, statement),
         "status" => parse_status(argument, statement),
         "seize" => parse_seize(argument, statement),
+        "chalk" => parse_chalk(argument, statement),
+        "scrub" => {
+            if argument.is_empty() {
+                Err(format!("`scrub` needs an anchor handle in `{statement}`"))
+            } else {
+                Ok(Action::Scrub {
+                    anchor: argument.to_string(),
+                })
+            }
+        }
         "commit" => Ok(Action::Commit {
             target: (!argument.is_empty()).then(|| argument.to_string()),
         }),
@@ -424,6 +453,27 @@ fn parse_statement(statement: &str) -> Result<Action, String> {
 /// two by whitespace alone. `status` gets away with splitting on it because its
 /// trailing tokens are a known kind and a number; here they are neither, so the
 /// separator is explicit rather than guessed.
+/// `chalk <kind> -> <anchor handle>`. The explicit `->` for the same reason
+/// `seize` has one: both handles may contain spaces, so a bare split would
+/// read `chalk chalk_cross Ede Clove` as three tokens and guess wrong.
+fn parse_chalk(argument: &str, statement: &str) -> Result<Action, String> {
+    let Some((kind, anchor)) = argument.split_once("->") else {
+        return Err(format!(
+            "`chalk` needs `<kind> -> <anchor>`, e.g. `chalk chalk_cross -> Ede Clove`, got `{statement}`"
+        ));
+    };
+    let (kind, anchor) = (kind.trim(), anchor.trim());
+    if kind.is_empty() || anchor.is_empty() {
+        return Err(format!(
+            "`chalk` needs a kind before the `->` and an anchor after it in `{statement}`"
+        ));
+    }
+    Ok(Action::Chalk {
+        kind: kind.to_string(),
+        anchor: anchor.to_string(),
+    })
+}
+
 fn parse_seize(argument: &str, statement: &str) -> Result<Action, String> {
     let (officer, target) = match argument.split_once("->") {
         Some((officer, target)) => (officer.trim(), Some(target.trim())),
@@ -604,7 +654,10 @@ fn keycode_from_name(name: &str) -> Option<KeyCode> {
 #[derive(Debug, Clone, PartialEq)]
 enum Directive {
     PressKey(KeyCode),
-    Hold { key: KeyCode, until: f64 },
+    Hold {
+        key: KeyCode,
+        until: f64,
+    },
     Type(String),
     Click(String),
     Shot(String),
@@ -618,6 +671,13 @@ enum Directive {
     Seize {
         officer: String,
         target: Option<String>,
+    },
+    Chalk {
+        kind: String,
+        anchor: String,
+    },
+    Scrub {
+        anchor: String,
     },
     Commit {
         target: Option<String>,
@@ -744,6 +804,8 @@ impl Scheduler {
             Action::Bell(pattern) => Some(Directive::Bell(pattern)),
             Action::Status { name, kind, value } => Some(Directive::Status { name, kind, value }),
             Action::Seize { officer, target } => Some(Directive::Seize { officer, target }),
+            Action::Chalk { kind, anchor } => Some(Directive::Chalk { kind, anchor }),
+            Action::Scrub { anchor } => Some(Directive::Scrub { anchor }),
             Action::Commit { target } => Some(Directive::Commit { target }),
             Action::Weather { kind, intensity } => Some(Directive::Weather { kind, intensity }),
             Action::Tp {
@@ -977,6 +1039,35 @@ fn run_drive_script(
                 "[drive] {now:.1}s warning: `commit` needs smart actors"
             )),
         },
+        Some(Directive::Chalk { kind, anchor }) => match bridge.as_deref() {
+            Some(bridge) => {
+                if let Err(error) = bridge.try_send(BridgeCommand::DebugChalk {
+                    kind: kind.clone(),
+                    anchor: anchor.clone(),
+                }) {
+                    drive_log(&format!(
+                        "[drive] {now:.1}s warning: chalk not sent: {error}"
+                    ));
+                }
+            }
+            None => drive_log(&format!(
+                "[drive] {now:.1}s warning: `chalk` needs smart actors"
+            )),
+        },
+        Some(Directive::Scrub { anchor }) => match bridge.as_deref() {
+            Some(bridge) => {
+                if let Err(error) = bridge.try_send(BridgeCommand::DebugScrub {
+                    anchor: anchor.clone(),
+                }) {
+                    drive_log(&format!(
+                        "[drive] {now:.1}s warning: scrub not sent: {error}"
+                    ));
+                }
+            }
+            None => drive_log(&format!(
+                "[drive] {now:.1}s warning: `scrub` needs smart actors"
+            )),
+        },
         Some(Directive::Seize { officer, target }) => match bridge.as_deref() {
             // The same host→engine path `status` takes: a bridge command the
             // engine applies to the sim (`EngineCommand::DebugSeize`).
@@ -1129,8 +1220,8 @@ mod tests {
     #[test]
     fn frame_stands_in_front_of_the_actor_and_looks_back() {
         // An actor at the origin facing +X (yaw 0 faces −Z, so −90° turns to +X).
-        let actor = Transform::from_xyz(0.0, 0.91, 0.0)
-            .with_rotation(Quat::from_rotation_y(-FRAC_PI_2));
+        let actor =
+            Transform::from_xyz(0.0, 0.91, 0.0).with_rotation(Quat::from_rotation_y(-FRAC_PI_2));
         let (position, yaw, pitch) = frame_view(&actor, 3.0, 0.0);
 
         // Dead ahead of them: 3 m along their facing, and low enough that the
@@ -1165,8 +1256,8 @@ mod tests {
     /// actually taken from.
     #[test]
     fn a_framed_shot_lands_the_real_camera_at_eye_height_looking_at_the_actor() {
-        let actor = Transform::from_xyz(0.0, 0.91, 0.0)
-            .with_rotation(Quat::from_rotation_y(-FRAC_PI_2));
+        let actor =
+            Transform::from_xyz(0.0, 0.91, 0.0).with_rotation(Quat::from_rotation_y(-FRAC_PI_2));
         let (position, yaw_degrees, pitch_degrees) =
             frame_view(&actor, FRAME_DEFAULT_DISTANCE_M, 0.0);
 

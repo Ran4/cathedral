@@ -154,6 +154,29 @@ pub struct World {
     /// never touch the public revision. Empty — the default, and the frozen
     /// fixtures' case — until the engine seeds the authored pack.
     pub dogs: Vec<crate::dogs::Dog>,
+    /// The chalk on the walls ([`crate::marks`]) — the one piece of world
+    /// state the player can rewrite with a wet sleeve.
+    ///
+    /// Unlike [`notices`](Self::notices), marks *are* published: they are what
+    /// the render draws. But unlike the dogs' poses they are slow, so they
+    /// ride the cold public snapshot and bump the revision rather than taking
+    /// a hot channel. Empty — the default, and every frozen fixture's case —
+    /// until a hand chalks something.
+    pub marks: crate::marks::Marks,
+    /// What each kind of mark means and how it weathers, authored in
+    /// `assets/world/marks.json` and embedded at build time. An `Arc` because
+    /// the decay sweep needs it while holding `marks` mutably.
+    pub mark_catalog: Arc<crate::marks::MarkCatalog>,
+    /// Whether hands may chalk at all (`config.ron:
+    /// smart_actors.marks.enabled`, `CATHEDRAL_NO_MARKS`). Ablation only —
+    /// turning it off stops new marks and stops the readers; it does not erase
+    /// what is already on the walls.
+    pub marks_enabled: bool,
+    /// The per-kind switches (`config.ron: smart_actors.marks.cross` / `.tally`
+    /// / `.ward_sign`), so one writer can be silenced without losing the
+    /// medium — which is how you tell whether the well tally or the cross is
+    /// responsible for something you are watching.
+    pub mark_kinds: crate::marks::MarkKindSwitches,
     /// What each ward is saying to itself tonight (movement M6): the Night
     /// Office's ward batch returns a few sentences of mood, and every Minor of
     /// that ward carries it on their sheet until the next night rewrites it.
@@ -205,6 +228,10 @@ impl Default for World {
             custody: crate::custody::Custody::default(),
             spoke_this_turn: None,
             dogs: Vec::new(),
+            marks: crate::marks::Marks::default(),
+            mark_catalog: Arc::new(crate::marks::MarkCatalog::default()),
+            marks_enabled: true,
+            mark_kinds: crate::marks::MarkKindSwitches::default(),
             ward_moods: BTreeMap::new(),
             events: Vec::new(),
         }
@@ -243,6 +270,14 @@ impl World {
         assert!(!self.items.contains_key(&id), "duplicate item id '{id}'");
         self.items.insert(id, item);
         self.touch_public_state();
+    }
+
+    /// Whether this kind of chalk is live at all — the whole-layer switch and
+    /// the per-kind one together. Every writer and every reader in
+    /// [`crate::marks`] goes through this, so an ablation run is a real
+    /// ablation rather than one that merely stops new marks appearing.
+    pub fn mark_kind_enabled(&self, kind: crate::marks::MarkKind) -> bool {
+        self.marks_enabled && self.mark_kinds.enabled(kind)
     }
 
     pub fn touch_public_state(&mut self) -> i64 {
@@ -918,6 +953,23 @@ impl World {
                 .cmp(&right.created_seq)
                 .then_with(|| left.item_id.cmp(&right.item_id))
         });
+        // The chalk. Marks whose anchor no longer resolves are simply absent —
+        // the same silence the decay sweep gives them, so a home that rebinds
+        // between two snapshots never publishes a mark hanging in mid-air.
+        let marks = self
+            .marks
+            .iter()
+            .filter_map(|(id, mark)| {
+                let site = crate::marks::anchor_site(self, &mark.anchor)?;
+                Some(crate::snapshot::PublicMark {
+                    id,
+                    kind: mark.kind,
+                    point: [site.point.x, site.point.y, site.point.z],
+                    strength_pct: crate::marks::published_strength_pct(mark.strength),
+                    strokes: mark.strokes.min(u8::MAX as u32) as u8,
+                })
+            })
+            .collect();
         PublicSnapshot {
             world_revision: self.world_revision,
             player_id: player_id.clone(),
@@ -925,6 +977,7 @@ impl World {
             items,
             offers,
             road_carts: Vec::new(),
+            marks,
         }
     }
 

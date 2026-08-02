@@ -60,6 +60,9 @@ fn main() {
     if std::env::var_os("CATHEDRAL_NO_DOGS").is_some() {
         config.smart_actors.dogs_enabled = false;
     }
+    if std::env::var_os("CATHEDRAL_NO_MARKS").is_some() {
+        config.smart_actors.marks.enabled = false;
+    }
     if std::env::var_os("CATHEDRAL_NO_VERMIN").is_some() {
         config.vermin.enabled = false;
     }

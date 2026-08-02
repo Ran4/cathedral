@@ -71,6 +71,20 @@ pub enum ActionErrorCode {
     /// `seize` with neither a live warrant nor a wrong this officer put to the
     /// ward within the hour — the lore's two doors, and nothing else.
     NoWarrant,
+    /// `draw_mark` without a chalk pen in hand
+    /// (`features/implemented/chalking_the_walls.md` §2.6). The pen gates the verb; the
+    /// ward's own hand needs none.
+    NoPen,
+    /// `draw_mark` with nothing chalkable within reach. You cannot chalk a
+    /// blank wall (§2.2) — a mark hangs on a handle the city already has.
+    NothingToChalk,
+    /// `draw_mark` with a `kind` outside the catalog, or one the catalog will
+    /// not let a hand draw.
+    UnknownMarkKind,
+    /// `draw_mark` where that kind already hangs on that anchor.
+    AlreadyMarked,
+    /// `scrub_mark` naming a mark that is not there.
+    NoSuchMark,
 }
 
 impl ActionErrorCode {
@@ -110,6 +124,11 @@ impl ActionErrorCode {
             Self::InCustody => "in_custody",
             Self::CustodyFull => "custody_full",
             Self::NoWarrant => "no_warrant",
+            Self::NoPen => "no_pen",
+            Self::NothingToChalk => "nothing_to_chalk",
+            Self::UnknownMarkKind => "unknown_kind",
+            Self::AlreadyMarked => "already_marked",
+            Self::NoSuchMark => "no_such_mark",
         }
     }
 }
@@ -393,6 +412,17 @@ impl From<ActionErrorCode> for CommandErrorCode {
             ActionErrorCode::InCustody => Self::InCustody,
             ActionErrorCode::CustodyFull => Self::CustodyFull,
             ActionErrorCode::NoWarrant => Self::NoWarrant,
+            // The chalk verbs' refusals (`features/implemented/chalking_the_walls.md` M2).
+            // They collapse onto `InvalidAction` on the command side: the
+            // player has no `draw_mark` command to be refused — the M3 hold
+            // interaction resolves its own anchor before issuing anything — so
+            // these only ever reach a *sheet*, where the verb's own message
+            // carries the detail.
+            ActionErrorCode::NoPen
+            | ActionErrorCode::NothingToChalk
+            | ActionErrorCode::UnknownMarkKind
+            | ActionErrorCode::AlreadyMarked
+            | ActionErrorCode::NoSuchMark => Self::InvalidAction,
         }
     }
 }

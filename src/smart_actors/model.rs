@@ -28,6 +28,10 @@ pub const MAX_ID_CHARS: usize = 128;
 const MAX_ACTORS: usize = 1_024;
 const MAX_ITEMS: usize = 4_096;
 const MAX_OFFERS: usize = 4_096;
+/// The second gate on the sim's own `marks::MARKS_MAX`. The sim caps the set
+/// already; this is the projection refusing to trust it, exactly as
+/// `MAX_ACTORS` does not trust the roster.
+const MAX_MARKS: usize = 256;
 const MAX_LABEL_CHARS: usize = 256;
 /// A stack's metadata is a handful of short catalog-declared descriptors; a
 /// projection carrying more is malformed.
@@ -241,6 +245,24 @@ pub struct RoadCartSnapshot {
     pub load: Vec<cathedral_sim::CartLoadKind>,
 }
 
+/// One chalk mark, as the renderer reads it (`features/implemented/chalking_the_walls.md`
+/// M3). The sim's quantized wire record, in Bevy's units.
+///
+/// Deliberately no orientation: the sim does not know which way a door faces
+/// (a place entry is a walkable point and nothing more), so the *host* — which
+/// owns the collision world and the city plan — works out which surface a mark
+/// lies on and which way it points.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MarkSnapshot {
+    pub id: u64,
+    pub kind: cathedral_sim::marks::MarkKind,
+    pub point: Position,
+    /// `strength * 100` — the opacity ramp, and what decides "half-washed".
+    pub strength_pct: u8,
+    pub strokes: u8,
+}
+
 /// Complete public semantic state, as the engine last published it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -252,6 +274,8 @@ pub struct WorldSnapshot {
     pub offers: Vec<OfferSnapshot>,
     #[serde(default)]
     pub road_carts: Vec<RoadCartSnapshot>,
+    #[serde(default)]
+    pub marks: Vec<MarkSnapshot>,
 }
 
 // ------------------------------------------------- the sim → renderer boundary
@@ -369,6 +393,21 @@ impl From<&cathedral_sim::PublicSnapshot> for WorldSnapshot {
                     load: cart.load.clone(),
                 })
                 .collect(),
+            marks: snapshot
+                .marks
+                .iter()
+                .map(|mark| MarkSnapshot {
+                    id: mark.id.0,
+                    kind: mark.kind,
+                    point: Position {
+                        x: mark.point[0] as f32,
+                        y: mark.point[1] as f32,
+                        z: mark.point[2] as f32,
+                    },
+                    strength_pct: mark.strength_pct,
+                    strokes: mark.strokes,
+                })
+                .collect(),
         }
     }
 }
@@ -436,6 +475,10 @@ pub enum SnapshotError {
     InvalidOfferSequence(ItemId),
     InvalidRoadPartyId(String),
     DuplicateRoadCart(String),
+    /// Two marks with the same id in one snapshot.
+    DuplicateMark(u64),
+    /// A mark whose anchor point is not a finite position.
+    InvalidMarkPosition(u64),
     UnknownRoadCartLeader(ActorId),
 }
 
@@ -535,6 +578,10 @@ impl fmt::Display for SnapshotError {
             }
             Self::InvalidRoadPartyId(id) => write!(formatter, "invalid road party id {id:?}"),
             Self::DuplicateRoadCart(id) => write!(formatter, "duplicate road cart {id:?}"),
+            Self::DuplicateMark(id) => write!(formatter, "duplicate mark {id}"),
+            Self::InvalidMarkPosition(id) => {
+                write!(formatter, "mark {id} has a non-finite position")
+            }
             Self::UnknownRoadCartLeader(id) => {
                 write!(formatter, "road cart leader {:?} is not present", id.0)
             }
@@ -561,6 +608,7 @@ pub struct WorldMirror {
     item_indices: HashMap<ItemId, usize>,
     offers: Vec<OfferSnapshot>,
     road_carts: Vec<RoadCartSnapshot>,
+    marks: Vec<MarkSnapshot>,
 }
 
 impl WorldMirror {
@@ -589,6 +637,17 @@ impl WorldMirror {
 
     pub fn road_carts(&self) -> impl ExactSizeIterator<Item = &RoadCartSnapshot> {
         self.road_carts.iter()
+    }
+
+    /// Test seam: plant marks without a whole snapshot round trip.
+    #[cfg(test)]
+    pub fn debug_set_marks(&mut self, marks: Vec<MarkSnapshot>) {
+        self.marks = marks;
+    }
+
+    /// The chalk on the walls (`features/implemented/chalking_the_walls.md` M3).
+    pub fn marks(&self) -> impl ExactSizeIterator<Item = &MarkSnapshot> {
+        self.marks.iter()
     }
 
     pub fn actor(&self, id: &ActorId) -> Option<&ActorSnapshot> {
@@ -625,6 +684,7 @@ impl WorldMirror {
         self.item_indices = validated.item_indices;
         self.offers = validated.snapshot.offers;
         self.road_carts = validated.snapshot.road_carts;
+        self.marks = validated.snapshot.marks;
         Ok(revision)
     }
 }
@@ -744,6 +804,19 @@ impl ValidatedSnapshot {
                         owner_id: item.id.0.clone(),
                     });
                 }
+            }
+        }
+
+        if snapshot.marks.len() > MAX_MARKS {
+            return Err(SnapshotError::LimitExceeded("marks"));
+        }
+        let mut mark_ids = std::collections::BTreeSet::new();
+        for mark in &snapshot.marks {
+            if !mark.point.is_finite() {
+                return Err(SnapshotError::InvalidMarkPosition(mark.id));
+            }
+            if !mark_ids.insert(mark.id) {
+                return Err(SnapshotError::DuplicateMark(mark.id));
             }
         }
 
@@ -949,6 +1022,7 @@ mod tests {
                 created_seq: 4,
             }],
             road_carts: Vec::new(),
+            marks: Vec::new(),
         }
     }
 

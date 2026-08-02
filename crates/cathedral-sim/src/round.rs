@@ -166,6 +166,17 @@ const LAMP_SQUARES: &[&str] = &[
 /// is a market square, not a hearth, and is deliberately not one of them.)
 const TAVERNS: &[&str] = &["The Hungry Ox", "The Bellstand"];
 
+/// What one tally stroke is worth, in metres of extra walk
+/// (`features/implemented/chalking_the_walls.md` M4). A busy well pushes its next drawer
+/// toward the neighbour; overnight the chalk washes off and the well recovers.
+const TALLY_METRES_PER_STROKE: f64 = 6.0;
+
+/// How long a chalk-refused buyer stays away from the boards, as a fraction of
+/// a game day (`features/implemented/chalking_the_walls.md` M1). Half a day: long enough
+/// that one refusal is one scene rather than a loop, short enough that a cross
+/// scrubbed in the morning lets them eat by evening.
+const CHALK_REFUSAL_GAME_DAYS: f64 = 0.5;
+
 /// The share of the ambient cast whose evening the nightly code roll moves to a
 /// tavern hearth (movement M6). Deliberately small: the payoff is that the
 /// streets are not identical two nights running, not that the taverns are full.
@@ -1041,6 +1052,18 @@ pub struct Round {
     /// nearby strike. This remains a mechanical reaction: it never enters an
     /// inbox or spends a cognition turn.
     lightning_reflex_until: BTreeMap<ActorId, f64>,
+    /// Real-clock deadline after a chalk refusal at a stall counter
+    /// (`features/implemented/chalking_the_walls.md` M1), so a refused buyer stops
+    /// re-queueing at the same board.
+    ///
+    /// Without it the loop is guaranteed, not hypothetical: the ladder's only
+    /// selection filter is affordability, and a chalk-refused buyer still has
+    /// the coin and the stall still has the bread — so they would rejoin the
+    /// queue on every `next_decision`, forever, one inbox line a lap. Shaped
+    /// like [`Self::lightning_reflex_until`] because the guard that reads it
+    /// (`nearest_open_stall`) has no `now`: pruned at the top of the tick,
+    /// tested with a bare `contains_key`.
+    chalk_refused_until: BTreeMap<ActorId, f64>,
     /// Game-days at the last tick, so thirst decays by the game clock (and speeds
     /// up with the debug time-scale), not by wall-clock.
     last_game_days: f64,
@@ -1294,14 +1317,38 @@ impl Round {
             })
             .collect();
 
+        // The chalked places of resort (`features/implemented/chalking_the_walls.md` M4),
+        // by ward: a ward-sign draws its own ward's evening crowd. Gathered
+        // once for the whole roll rather than per walker — the set is at most
+        // eight and does not change inside the loop.
+        let ward_signs: BTreeMap<String, (String, Vec3, f64)> = world
+            .marks
+            .iter()
+            .filter(|(_, mark)| {
+                mark.kind == crate::marks::MarkKind::WardSign && world.mark_catalog.is_binding(mark)
+            })
+            .filter_map(|(_, mark)| {
+                let crate::marks::MarkAnchor::Place(name) = &mark.anchor else {
+                    return None;
+                };
+                let entry = world.places.named(name)?;
+                let ward = entry.ward.clone()?;
+                Some((ward, (entry.name.clone(), entry.point, mark.strength)))
+            })
+            .collect();
+
         let ids: Vec<ActorId> = self.people.keys().cloned().collect();
         let mut moved = 0usize;
         for id in ids {
-            let ambient = world
+            let lore = world
                 .characters
                 .get(&id)
-                .and_then(|character| character.lore())
-                .is_some_and(|profile| profile.significance == Significance::Ambient);
+                .and_then(|character| character.lore());
+            let ambient = lore.is_some_and(|profile| profile.significance == Significance::Ambient);
+            // The walker's own ward is already in hand — the loop fetches the
+            // profile to test `significance` anyway — so the sign lookup costs
+            // nothing extra.
+            let own_ward = lore.map(|profile| profile.planning_ward.as_str().to_string());
             if !ambient {
                 continue;
             }
@@ -1327,14 +1374,41 @@ impl Round {
                 .legs
                 .iter()
                 .position(|leg| leg.from == Office::Lamplight && leg.is_home);
+            // The destinations this walker could be drawn to tonight: every
+            // tavern at weight 1.0, plus their own ward's chalked place of
+            // resort at `1.0 + 2.0 * strength` — a fresh sign is worth three
+            // taverns, a half-washed one barely more than one.
+            let mut destinations: Vec<(String, Vec3, f64)> = taverns
+                .iter()
+                .map(|(label, point)| (label.clone(), *point, 1.0))
+                .collect();
+            if let Some(ward) = own_ward.as_deref()
+                && let Some((label, point, strength)) = ward_signs.get(ward)
+            {
+                destinations.push((label.clone(), *point, 1.0 + 2.0 * strength));
+            }
+
             if let Some(index) = evening
-                && !taverns.is_empty()
+                && !destinations.is_empty()
                 // `as u64` on a negative day wraps, which is all a hash salt
                 // needs; the roll only has to be stable and vary by night.
                 && hash01("night_evening", &id, day as u64) < AMBIENT_TAVERN_FRACTION
             {
-                let pick = (hash01("night_tavern", &id, day as u64) * taverns.len() as f64) as usize;
-                let (label, point) = taverns[pick.min(taverns.len() - 1)].clone();
+                // Weighted pick from the same pure hash of (id, day) — never a
+                // fresh draw. The engine polls at 60 Hz (see `attention.rs`),
+                // so a roll that was not a pure function of the night would
+                // re-decide sixty times a second.
+                let total: f64 = destinations.iter().map(|(_, _, weight)| weight).sum();
+                let mut cursor = hash01("night_tavern", &id, day as u64) * total;
+                let mut chosen = destinations.len() - 1;
+                for (index, (_, _, weight)) in destinations.iter().enumerate() {
+                    if cursor < *weight {
+                        chosen = index;
+                        break;
+                    }
+                    cursor -= weight;
+                }
+                let (label, point, _) = destinations[chosen].clone();
                 person.evening_seed = Some((index, person.legs[index].clone()));
                 let leg = &mut person.legs[index];
                 leg.at = point;
@@ -1887,12 +1961,8 @@ impl Round {
                         }
                         if position.distance(party.gate_point) > PLACE_ARRIVE_RADIUS_M {
                             if !walking
-                                && let Some(path) = route_path_to_point(
-                                    nav,
-                                    member,
-                                    position,
-                                    party.gate_point,
-                                )
+                                && let Some(path) =
+                                    route_path_to_point(nav, member, position, party.gate_point)
                             {
                                 set_route(world, member, path);
                             }
@@ -1961,11 +2031,7 @@ impl Round {
                                 .distance(party.gate_point)
                                 <= PLACE_ARRIVE_RADIUS_M
                         });
-                    if at_gate
-                        && free
-                            .iter()
-                            .all(|member| !in_conversation.contains(*member))
-                    {
+                    if at_gate && free.iter().all(|member| !in_conversation.contains(*member)) {
                         party.state.phase = PartyPhase::DeparturePending;
                         public_state_changed = true;
                         self.push_food_log(road_transition_trace(
@@ -2128,8 +2194,11 @@ impl Round {
         // handles, their own ward, and the stations of the day above. Extended
         // rather than assigned, because a way somebody told them on the trip in
         // is theirs to keep.
-        let mut known: BTreeSet<PlaceId> =
-            world.places.coarse().map(|entry| entry.id.clone()).collect();
+        let mut known: BTreeSet<PlaceId> = world
+            .places
+            .coarse()
+            .map(|entry| entry.id.clone())
+            .collect();
         if let Some(ward) = ward {
             known.extend(
                 world
@@ -3753,11 +3822,7 @@ impl Round {
         if stall_errand {
             for stall in &mut self.stalls {
                 stall.queue.retain(|queued| queued != id);
-                if stall
-                    .serving
-                    .as_ref()
-                    .is_some_and(|(actor, _)| actor == id)
-                {
+                if stall.serving.as_ref().is_some_and(|(actor, _)| actor == id) {
                     stall.serving = None;
                 }
             }
@@ -5424,6 +5489,7 @@ pub fn tick(
         return nudges;
     }
     round.lightning_reflex_until.retain(|_, until| now < *until);
+    round.chalk_refused_until.retain(|_, until| now < *until);
     // Before anything reads a leg: a `set_round` recorded since the last tick
     // is part of the day this tick runs, not the next one.
     apply_round_edits(round, world, now);
@@ -6247,9 +6313,7 @@ fn service_stalls(
             // weather closes the bare board mid-count, finish that one hurried
             // exchange instead of deleting it; only the waiting queue is sent
             // away. Ordinary office/vendor closure retains its old behavior.
-            if weather_paused
-                && let Some((buyer, _)) = round.stalls[s].serving.take()
-            {
+            if weather_paused && let Some((buyer, _)) = round.stalls[s].serving.take() {
                 if round.stalls[s].queue.first() == Some(&buyer) {
                     round.stalls[s].queue.remove(0);
                 } else {
@@ -6331,8 +6395,56 @@ fn service_stalls(
                 ));
             }
             None => {
-                // Could not pay (spent it mid-queue) or nothing affordable is
-                // left: a graceful no-sale, the buyer leaves and re-evaluates.
+                // Could not pay (spent it mid-queue), nothing affordable is
+                // left, or — since M1 — the cross on their door: a graceful
+                // no-sale, the buyer leaves and re-evaluates.
+                //
+                // The chalk case is re-asked here rather than threaded out of
+                // `try_purchase` because that function has no `now` and no
+                // clock, and both the stamp and the trace want one. It is the
+                // same predicate over the same authoritative source, so the
+                // two answers cannot disagree.
+                let chalked = crate::marks::binding_mark_about(
+                    world,
+                    crate::marks::MarkKind::ChalkCross,
+                    &buyer,
+                );
+                // …and only once per stamp period. The `nearest_open_stall`
+                // guard already keeps the ladder from re-queueing them, but
+                // this is the belt to that pair of braces: whatever route puts
+                // a stamped buyer back at a counter — a queue they were
+                // already standing in, a stall bound before the refusal — it
+                // is the same refusal, not a new one, and it must not write a
+                // second line or take a second turn's worth of attention.
+                let already_refused = round.chalk_refused_until.contains_key(&buyer);
+                if let Some(mark_id) = chalked.filter(|_| !already_refused) {
+                    let stall_name = round.stalls[s].name.clone();
+                    // An inbox line, and deliberately **no nudge**: a refusal
+                    // is not worth a paid turn (§2.8). They will mention it on
+                    // whatever turn they were going to take anyway.
+                    if let Some(character) = world.characters.get_mut(&buyer) {
+                        character.notify_percept(format!(
+                            "You reached the counter at {stall_name} and were refused: \
+                             there is a chalk cross on your door, and the vendor \
+                             will not sell to a household that owes."
+                        ));
+                    }
+                    // …and a trace line beside the sale traces, so `--trace-food`
+                    // distinguishes a chalk refusal from "spent it mid-queue",
+                    // which the bare `None` arm never could.
+                    round.push_food_log(format!(
+                        "refused_on_chalk; stall {stall_name}, buyer {buyer}, mark {mark_id}"
+                    ));
+                    // The anti-re-queue stamp. Without it they rejoin this very
+                    // queue on the next `next_decision` and are refused again,
+                    // forever, one inbox line a lap.
+                    let until = now + CHALK_REFUSAL_GAME_DAYS * clock.seconds_per_day();
+                    round
+                        .chalk_refused_until
+                        .entry(buyer.clone())
+                        .and_modify(|deadline| *deadline = deadline.max(until))
+                        .or_insert(until);
+                }
                 round.people.get_mut(&buyer).expect("buyer exists").food = None;
                 if let Some(character) = world.characters.get_mut(&buyer) {
                     character.state.movement = None;
@@ -6396,6 +6508,22 @@ fn service_stalls(
 /// spark is all they hold — Ilse's exact arithmetic). Returns `None` for a
 /// no-sale (nothing affordable, or the vendor's board is bare).
 fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId) -> Option<Sale> {
+    // The chalk at the counter (`features/implemented/chalking_the_walls.md` M1). A buyer
+    // with a live, still-binding cross on their door is refused here, at the
+    // head of the queue, and not at stall selection — a buyer who walks across
+    // the square, queues, reaches the counter and is *then* turned away is a
+    // scene the player can stand next to and watch. A buyer who silently never
+    // sets out is nothing.
+    //
+    // This reads `world.marks` and **never `world.notices`**. That partition is
+    // the whole feature: if the refusal consulted the notice instead, scrubbing
+    // the cross would change nothing and forging one would be placebo. The
+    // notice's only role is to be the reason a hand chalked, once, on the
+    // ward's daily beat (`notices::chalk_the_debtors`).
+    if crate::marks::binding_mark_about(world, crate::marks::MarkKind::ChalkCross, buyer).is_some()
+    {
+        return None;
+    }
     let vendor = round.stalls[s].vendor.clone()?;
     let trade_key = round.stalls[s].trade.clone();
     let trade = round.food_trades.get(&trade_key)?.clone();
@@ -6554,6 +6682,79 @@ fn stall_weather_open(world: &World, stall: &FoodStall) -> bool {
     !severe || world.shelters.is_sheltered(stall.pitch)
 }
 
+/// Add a stroke to the tally on a source's curb, creating it at one.
+///
+/// Saturates at [`TALLY_STROKES_MAX`]: a well everybody used all day reads
+/// "very busy", not an unbounded number, and the reader's penalty stays
+/// bounded with it.
+fn notch_the_tally(round: &Round, world: &mut World, source_index: usize, game_days: f64) {
+    if !world.mark_kind_enabled(crate::marks::MarkKind::WellTally) {
+        return;
+    }
+    let Some(source) = round.sources.get(source_index) else {
+        return;
+    };
+    let anchor = crate::marks::MarkAnchor::Place(source.name.clone());
+    let Some(drawn) = crate::marks::draw_or_refresh(
+        world,
+        crate::marks::MarkKind::WellTally,
+        anchor,
+        // The well's own hand: no author, and no reader may ask anyway.
+        None,
+        game_days,
+    ) else {
+        return;
+    };
+    if let Some(mark) = world.marks.get_mut(drawn.id) {
+        // A refresh returns strength to full, which is right — the chalk is
+        // being written on right now — but the *count* is what a reader wants.
+        mark.strokes = if drawn.fresh {
+            1
+        } else {
+            (mark.strokes + 1).min(crate::marks::TALLY_STROKES_MAX)
+        };
+    }
+}
+
+/// The staffed source nearest `base`, with each candidate's distance charged
+/// [`TALLY_METRES_PER_STROKE`] for every stroke chalked on its curb.
+///
+/// **This is a per-trip re-pick, and it has to be.** The spec proposed adding
+/// the penalty inside `Round::nearest_staffed_source`, but that function has
+/// only two callers and both are enrolment-time: `Townsperson.source` is
+/// written once, in a struct literal, for an actor's whole life, and the
+/// per-trip site reads the already-bound index. A penalty inside it would be
+/// evaluated at world-seed t=0, when no chalk exists, and would therefore move
+/// nobody, ever (`features/implemented/chalking_the_walls.md` §0 C7).
+///
+/// Ties still break by source index, so an exact tie binds identically every
+/// run — and with no chalk anywhere this returns exactly what
+/// `nearest_staffed_source` would.
+fn tallied_source(round: &Round, world: &World, base: Vec3) -> Option<usize> {
+    let charge = |index: usize| -> f64 {
+        let Some(source) = round.sources.get(index) else {
+            return 0.0;
+        };
+        let anchor = crate::marks::MarkAnchor::Place(source.name.clone());
+        world
+            .marks
+            .find(crate::marks::MarkKind::WellTally, &anchor)
+            .filter(|(_, mark)| world.mark_catalog.is_binding(mark))
+            .map_or(0.0, |(_, mark)| {
+                f64::from(mark.strokes) * TALLY_METRES_PER_STROKE
+            })
+    };
+    (0..round.sources.len())
+        .filter(|index| round.sources[*index].keeper.is_some())
+        .min_by(|left, right| {
+            let dl = round.sources[*left].draw_point.distance(base) + charge(*left);
+            let dr = round.sources[*right].draw_point.distance(base) + charge(*right);
+            dl.partial_cmp(&dr)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| left.cmp(right))
+        })
+}
+
 /// The nearest open, staffed, affordable stall within [`STALL_SEEK_RADIUS_M`] of
 /// `position` — rung 3 (famished) and rung 7 (hungry, `short` too) join it. `None`
 /// keeps a famished worker at their post (or the hearth) rather than marching a
@@ -6575,6 +6776,14 @@ fn nearest_open_stall(
         .iter()
         .any(|stall| stall.vendor.as_ref() == Some(id))
     {
+        return None;
+    }
+    // Somebody turned away from a counter for the cross on their door is not
+    // going straight back to the board (M1). The stamp expires on its own, so
+    // this is a pause and not a ban — and it is the only thing standing
+    // between a chalked buyer and an infinite re-queue, since the filters
+    // below only ever reject the *poor*.
+    if round.chalk_refused_until.contains_key(id) {
         return None;
     }
     let sparks = world.spendable_sparks(id);
@@ -6732,11 +6941,12 @@ fn service_sources(
     in_conversation: &BTreeSet<ActorId>,
 ) {
     let time = clock.at(now);
-    let mut finished: Vec<ActorId> = Vec::new();
+    // (drawer, source index) so the tally knows which curb was used.
+    let mut finished: Vec<(ActorId, usize)> = Vec::new();
     let mut started: Vec<ActorId> = Vec::new();
     let mut emissions: Vec<(&'static str, Vec3)> = Vec::new();
 
-    for source in &mut round.sources {
+    for (source_index, source) in round.sources.iter_mut().enumerate() {
         source.queue.retain(|actor| world.is_present(actor));
         if source
             .serving
@@ -6754,7 +6964,7 @@ fn service_sources(
             } else {
                 source.queue.retain(|id| id != &drawer);
             }
-            finished.push(drawer);
+            finished.push((drawer, source_index));
         }
         if source.serving.is_none()
             && source.keeper.is_some()
@@ -6786,10 +6996,15 @@ fn service_sources(
             character.remember_percept(line);
         }
     }
-    for drawer in finished {
+    for (drawer, source_index) in finished {
         if let Some(character) = world.characters.get_mut(&drawer) {
             character.state.needs.thirst = THIRST_MAX; // a full vessel
         }
+        // One stroke on the curb for one draw (`features/implemented/chalking_the_walls.md`
+        // M4). Nobody is told and nobody spends a turn: this is the well
+        // keeping its own count, in chalk, where the next thirsty body can
+        // read it.
+        notch_the_tally(round, world, source_index, clock.game_days(now));
         // Mid-exchange (with the player or a neighbour): stand at the curb
         // instead of walking off; the ladder takes over once it goes cold. The
         // same stand for anybody the law took while they queued — the delivery
@@ -7219,9 +7434,10 @@ fn choose_weather_shelter(
             .iter()
             .filter(|(actor_id, intent)| {
                 intent.shelter == index
-                    && world.characters.get(*actor_id).is_none_or(|actor| {
-                        !shelter.contains(actor.position_m())
-                    })
+                    && world
+                        .characters
+                        .get(*actor_id)
+                        .is_none_or(|actor| !shelter.contains(actor.position_m()))
             })
             .count();
         if occupants_here + occupants_en_route >= shelter.capacity {
@@ -7631,9 +7847,22 @@ fn apply_decision(
             silent_eat(world, id, &item_id);
         }
         Decision::ApproachWell => {
-            let source = round.people[id]
+            let bound = round.people[id]
                 .source
                 .expect("a well decision has a source");
+            // Re-pick for *this trip* against the chalk (M4). The bound source
+            // is the fallback, so a world with no tallies anywhere behaves
+            // exactly as before. Written back onto the person because
+            // `enqueue`, the arrival and the queue all read `person.source`
+            // again later — walking to one curb and queueing at another would
+            // be worse than not re-picking at all.
+            let base = world.characters[id].position_m();
+            let source = tallied_source(round, world, base).unwrap_or(bound);
+            if source != bound
+                && let Some(person) = round.people.get_mut(id)
+            {
+                person.source = Some(source);
+            }
             let draw_point = round.sources[source].draw_point;
             let position = world.characters[id].position_m();
             match route_path(nav, id, position, draw_point) {
@@ -8148,8 +8377,9 @@ fn round_edit_refusal(
             label == site && required.is_none_or(|doing| leg.doing == doing)
         })
     };
-    let removes =
-        |site: &str, required: Option<Arrival>| bound(site, required, false) && !bound(site, required, true);
+    let removes = |site: &str, required: Option<Arrival>| {
+        bound(site, required, false) && !bound(site, required, true)
+    };
 
     // A live production site: the active job's spec names where the work
     // happens, and the reserved inputs are only ever released by finishing it

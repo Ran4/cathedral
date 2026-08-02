@@ -198,6 +198,13 @@ pub enum BridgeCommand {
     /// The player has started pulling against the hands on them, and (once)
     /// that they got free. Two commands across a whole struggle, never a
     /// stream: there is exactly one LLM turn in flight across the entire cast.
+    /// The player finished a press-and-hold over a mark
+    /// (`features/implemented/chalking_the_walls.md` M3). Goes through the same
+    /// `scrub_mark` the LLM verb does, so what the hand does on screen and
+    /// what a character does on a sheet are one code path.
+    PlayerScrubMark {
+        mark_id: u64,
+    },
     PlayerStruggling,
     PlayerBrokeFree,
     /// CATHEDRAL_DRIVE `seize` action (`law_and_order.md` M4): stage an arrest so
@@ -205,6 +212,14 @@ pub enum BridgeCommand {
     /// judgement above `seize` is an LLM's, which is right, and which is exactly
     /// why a scripted run cannot otherwise reach one. A developer poke, not a
     /// modelled cause — like `DebugStatus`.
+    /// CATHEDRAL_DRIVE `chalk` / `scrub` (`features/implemented/chalking_the_walls.md` M2).
+    DebugChalk {
+        kind: String,
+        anchor: String,
+    },
+    DebugScrub {
+        anchor: String,
+    },
     DebugSeize {
         officer: String,
         target: Option<String>,

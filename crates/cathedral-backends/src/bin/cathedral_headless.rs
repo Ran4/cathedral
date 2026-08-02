@@ -220,6 +220,25 @@ struct Args {
     /// is the turn-free way to see a whole night pass.
     #[arg(long)]
     night_office: bool,
+
+    /// mark somebody as owing, so the ward chalks their door, repeatable:
+    /// `--owe "Ede Clove"` (`features/implemented/chalking_the_walls.md` M1)
+    ///
+    /// A cross is chalked off an aged, unsettled restitution notice, and
+    /// raising one is an LLM's judgement — so an offline run cannot otherwise
+    /// reach the door, the counter or the refusal. This raises the same notice
+    /// `raise_notice` does, back-dated past the age gate; everything after it
+    /// is the real code. NAME resolves by display name first, then by actor
+    /// id. A handle matching nobody is a stderr diagnostic, not a fault.
+    #[arg(long, value_name = "NAME")]
+    owe: Vec<String>,
+
+    /// Multiply the chalk decay (`features/implemented/chalking_the_walls.md`). A cross
+    /// weathers over nine game days at `1.0`, which no `-t 12` run will ever
+    /// see; `--marks-decay-scale 200` washes one off inside a short run so the
+    /// re-chalk and the wash-off are both observable in one transcript.
+    #[arg(long, default_value_t = 1.0)]
+    marks_decay_scale: f64,
 }
 
 fn main() -> ExitCode {
@@ -430,6 +449,13 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             // The pack costs nothing here — a transcript line only when a dog
             // drifts through somebody's you_see — so the default stands.
             dogs_enabled: true,
+            // The chalk costs nothing either — the walls start bare, and a
+            // mark reaches a sheet only when a hand has drawn one — so the
+            // default stands here too. `--marks-decay-scale` weathers a wall
+            // in a short run instead of over nine game days.
+            marks_enabled: true,
+            mark_kinds: cathedral_sim::marks::MarkKindSwitches::default(),
+            marks_decay_scale: args.marks_decay_scale,
         },
         &assets.seed,
         assets.areas,
@@ -477,6 +503,11 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
     for spec in &args.status {
         let (name, kind, value) = parse_status_flag(spec)?;
         runner.pump(vec![EngineCommand::DebugSetStatus { name, kind, value }]);
+    }
+    // The debt stand-in, through the same command path the rest of the pokes
+    // use, and before the ticks so the first beat of the run finds it.
+    for who in &args.owe {
+        runner.pump(vec![EngineCommand::DebugOwe { who: who.clone() }]);
     }
     if args.watch_clock > 0.0 {
         runner.watch_clock(args.watch_clock, clock.seconds_per_day())?;

@@ -113,18 +113,25 @@ impl PlaceRegistry {
 
     /// Parse and validate a registry document (tests hand in compact ones).
     pub fn from_json(json: &str, nav: &NavData) -> Result<Self, PlaceError> {
-        let doc: PlacesDoc = serde_json::from_str(json)
-            .map_err(|error| PlaceError { message: format!("invalid places.json: {error}") })?;
+        let doc: PlacesDoc = serde_json::from_str(json).map_err(|error| PlaceError {
+            message: format!("invalid places.json: {error}"),
+        })?;
         if doc.schema_version != 1 {
             return Err(PlaceError {
-                message: format!("unsupported places schema {}; expected 1", doc.schema_version),
+                message: format!(
+                    "unsupported places schema {}; expected 1",
+                    doc.schema_version
+                ),
             });
         }
         let mut registry = Self::default();
         for place in doc.places {
             if place.node >= nav.node_count() {
                 return Err(PlaceError {
-                    message: format!("place {:?} refers to node {} beyond the graph", place.name, place.node),
+                    message: format!(
+                        "place {:?} refers to node {} beyond the graph",
+                        place.name, place.node
+                    ),
                 });
             }
             registry.insert(PlaceEntry {
@@ -138,7 +145,10 @@ impl PlaceRegistry {
         for ward in doc.wards {
             if ward.node >= nav.node_count() {
                 return Err(PlaceError {
-                    message: format!("ward {:?} refers to node {} beyond the graph", ward.ward, ward.node),
+                    message: format!(
+                        "ward {:?} refers to node {} beyond the graph",
+                        ward.ward, ward.node
+                    ),
                 });
             }
             registry.insert(PlaceEntry {
@@ -252,6 +262,30 @@ impl PlaceRegistry {
             .filter(move |entry| entry.ward.as_deref() == Some(ward))
     }
 
+    /// Every registered entry within `max_m` of `point` in the walk (XZ)
+    /// plane, homes included, in registration order.
+    ///
+    /// [`nearest`](Self::nearest) answers "which one place is this", which is
+    /// the wrong question for a hand that could chalk any of several things it
+    /// can reach.
+    pub fn entries_within(&self, point: Vec3, max_m: f64) -> impl Iterator<Item = &PlaceEntry> {
+        self.entries.iter().filter(move |entry| {
+            let dx = entry.point.x - point.x;
+            let dz = entry.point.z - point.z;
+            dx * dx + dz * dz <= max_m * max_m
+        })
+    }
+
+    /// Whose home this entry is, if it is a home at all. The inverse of
+    /// [`home_of`](Self::home_of), for a caller holding an entry rather than
+    /// an owner.
+    pub fn owner_of_home(&self, id: &PlaceId) -> Option<&ActorId> {
+        self.home_by_owner
+            .iter()
+            .find(|(_, index)| self.entries[**index].id == *id)
+            .map(|(owner, _)| owner)
+    }
+
     /// The nearest registered place to `point` in the walk (XZ) plane — homes
     /// included — within `max_m`. Best-name lookup for the developer sheet's
     /// walk destinations, which end at a snapped nav node rather than the
@@ -330,7 +364,10 @@ mod tests {
         assert!(!registry.named("The Well").unwrap().coarse);
         let coarse: Vec<&str> = registry.coarse().map(|entry| entry.name.as_str()).collect();
         assert_eq!(coarse, ["The Square", "Reed Ward"]);
-        let ward: Vec<&str> = registry.ward_places("reed").map(|e| e.name.as_str()).collect();
+        let ward: Vec<&str> = registry
+            .ward_places("reed")
+            .map(|e| e.name.as_str())
+            .collect();
         assert_eq!(ward, ["The Square", "The Well"]);
 
         let owner = ActorId::from_raw("tam4r");
@@ -348,12 +385,24 @@ mod tests {
     #[test]
     fn nearest_snaps_to_the_closest_entry_within_the_radius_ignoring_y() {
         let mut registry = PlaceRegistry::default();
-        registry.add_home(&ActorId::from_raw("tam4r"), "Tam Rud", Vec3::new(0.0, 0.0, 0.0));
-        registry.add_home(&ActorId::from_raw("ulla9"), "Ulla Brant", Vec3::new(10.0, 0.0, 0.0));
+        registry.add_home(
+            &ActorId::from_raw("tam4r"),
+            "Tam Rud",
+            Vec3::new(0.0, 0.0, 0.0),
+        );
+        registry.add_home(
+            &ActorId::from_raw("ulla9"),
+            "Ulla Brant",
+            Vec3::new(10.0, 0.0, 0.0),
+        );
         // The closest entry wins; a large y offset must not count (walk plane).
-        let near = registry.nearest(Vec3::new(4.0, 30.0, 0.0), 15.0).expect("in range");
+        let near = registry
+            .nearest(Vec3::new(4.0, 30.0, 0.0), 15.0)
+            .expect("in range");
         assert_eq!(near.name, "Tam Rud's house");
-        let other = registry.nearest(Vec3::new(8.0, 0.0, 0.0), 15.0).expect("in range");
+        let other = registry
+            .nearest(Vec3::new(8.0, 0.0, 0.0), 15.0)
+            .expect("in range");
         assert_eq!(other.name, "Ulla Brant's house");
         // Beyond the radius resolves to nothing.
         assert!(registry.nearest(Vec3::new(100.0, 0.0, 0.0), 15.0).is_none());

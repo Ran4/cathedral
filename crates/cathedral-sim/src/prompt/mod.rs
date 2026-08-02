@@ -116,6 +116,13 @@ pub struct PromptStrings {
     /// ([`crate::dogs`]), rendered unconditionally: no `knows` gating, because
     /// nobody needs an introduction to see a dog.
     pub dogs_note: String,
+    /// The parenthesis after `**marks_here**` — the chalk on the walls, listed
+    /// for everyone with no gating at all: there is no literacy state, and a
+    /// mark's meaning is plain to anyone over seven who looks at it.
+    pub marks_note: String,
+    /// The parenthesis after `**you_could_chalk**` — the handles `draw_mark`
+    /// may name, so the model never has to invent one.
+    pub chalkable_note: String,
     /// The `you_hold` suffix for a unit riding the mouth
     /// (`features/extra_pockets.md`): `- k3f9x wet spark (in your mouth)`.
     pub pocket_mouth_note: String,
@@ -277,6 +284,17 @@ struct Sheet<'a> {
     /// fixtures byte-identical.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     dogs_nearby: Vec<DogLine<'a>>,
+    /// The chalk within sight (`features/implemented/chalking_the_walls.md`). A standing
+    /// fact about the street like the dogs, so it sits beside them; and like
+    /// them it is omitted entirely when there is none, which is the universal
+    /// case and every frozen fixture's case.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    marks_here: Vec<MarkLine>,
+    /// The handles `draw_mark`'s `anchor` argument may name — everything
+    /// chalkable within `CHALK_REACH_M`. Omitted when empty, and when the
+    /// actor has no pen the verb is off the sheet anyway.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    you_could_chalk: Vec<String>,
     /// The ward's live notices this actor carries (`law_and_order.md` M3) —
     /// what the ward is saying right now, newest first, capped at
     /// [`crate::notices::NOTICES_SHEET_MAX`] by [`ward_notice_lines`], which
@@ -468,6 +486,24 @@ struct DogLine<'a> {
     moving: bool,
 }
 
+/// A `marks_here` bullet's parts. Owned, not borrowed: the label is composed
+/// (a tally's stroke count goes into it) and the site is spelled through the
+/// same unknown-people rule the rest of the sheet uses, so neither outlives
+/// the world borrow the way a dog's authored description does.
+#[derive(Serialize)]
+struct MarkLine {
+    id: String,
+    label: String,
+    /// `on Ede Clove's door`, `at Chain Well` — already carrying its
+    /// preposition, because a household reads differently from a place.
+    site: String,
+    distance_m: f64,
+    meaning: String,
+    /// Whether a sleeve could reach it — what decides if `scrub_mark` is on
+    /// the sheet at all.
+    in_reach: bool,
+}
+
 fn person<'a>(
     actor: &Character,
     other: &'a Character,
@@ -520,6 +556,12 @@ pub fn render_prompt(
     // The dogs explainer tracks its section too: only a sheet with a dog on it
     // pays the paragraph, and every dog-less world keeps its exact bytes.
     let has_dogs = !sheet.dogs_nearby.is_empty();
+    // The pen gates the verb, never the rule (`features/implemented/chalking_the_walls.md`
+    // §2.6): the ward's own hand chalks without one. Scrubbing needs no pen —
+    // a wet sleeve is a wet sleeve — only a mark within reach.
+    let has_chalk_verbs =
+        !sheet.you_could_chalk.is_empty() && crate::actions::holds_a_chalk_pen(world, actor_id);
+    let has_scrub_verb = sheet.marks_here.iter().any(|mark| mark.in_reach);
     let has_law_verbs = crate::notices::is_law(actor);
     // `settle_notice` reaches one person outside the law cast: whoever a live
     // notice names as wronged, who may forgive their own spark (M3.5). They
@@ -539,10 +581,9 @@ pub fn render_prompt(
     // a body that has one.
     let has_pockets = !actor.pockets().is_empty()
         || actor.holds().iter().any(|item_id| {
-            world
-                .items
-                .get(item_id)
-                .is_some_and(|item| world.item_catalog.size(item) == crate::item::ItemSize::Palmable)
+            world.items.get(item_id).is_some_and(|item| {
+                world.item_catalog.size(item) == crate::item::ItemSize::Palmable
+            })
         });
     let has_frontbutt = actor.has_body_slot(crate::character::BodySlot::Frontbutt);
     // `grab` is rendered only to somebody who actually has a person in charge —
@@ -579,6 +620,8 @@ pub fn render_prompt(
                 gaol_fee => gaol_fee_phrase(),
                 has_pockets,
                 has_frontbutt,
+                has_chalk_verbs,
+                has_scrub_verb,
             })
         })
         .map_err(|error| PromptError::new(format!("the turn template did not render: {error}")))
@@ -609,6 +652,7 @@ pub fn render_night_prompt(
                 sheet_md,
                 is_ward => false,
                 legs => sheet.your_round.len(),
+                ward_sign_place => "",
             })
         })
         .map_err(|error| PromptError::new(format!("the night template did not render: {error}")))
@@ -628,6 +672,16 @@ pub fn render_ward_prompt(
     env: &PromptEnv,
 ) -> Result<String, PromptError> {
     let sheet_md = ward_markdown(world, ward, &env.strings);
+    // The one place this ward may chalk a sign (`features/implemented/chalking_the_walls.md`
+    // M4), authored per ward in `assets/world/marks.json`. Empty when the kind
+    // is switched off or the ward has none — the template's own `{% if %}`
+    // then drops the verb, so the ward is never offered a verb it cannot use.
+    let ward_sign_place = world
+        .mark_kind_enabled(crate::marks::MarkKind::WardSign)
+        .then(|| world.mark_catalog.ward_sign_place(ward.as_str()))
+        .flatten()
+        .unwrap_or_default()
+        .to_string();
     env.environment
         .get_template(NIGHT_TEMPLATE)
         .and_then(|template| {
@@ -635,6 +689,7 @@ pub fn render_ward_prompt(
                 sheet_md,
                 is_ward => true,
                 legs => 0,
+                ward_sign_place,
             })
         })
         .map_err(|error| PromptError::new(format!("the night template did not render: {error}")))
@@ -850,6 +905,52 @@ fn build_sheet<'a>(
         })
         .collect();
 
+    // The chalk within sight. `marks_within` already sorts nearest-first with
+    // an id tie-break, so a replay renders the same bullets in the same order.
+    // The occupant of a chalked household is spelled through the sheet's own
+    // unknown-people rule — a cross on a stranger's door names the stranger
+    // exactly as `you_see` would, and never leaks a name the actor has not
+    // been told.
+    let marks_here: Vec<MarkLine> = crate::marks::marks_within(
+        world,
+        actor.position_m(),
+        crate::marks::MARK_NOTICE_RADIUS_M,
+    )
+    .into_iter()
+    .map(|near| {
+        let site = match &near.occupant {
+            // Your own door first. Nobody's `knows` set contains their own id,
+            // so without this clause the debtor standing at their own chalked
+            // door would be told it belongs to "a stranger (you don't know
+            // their name)" — absurd, and since M1's cross is drawn on exactly
+            // that door, the most likely line this section will ever render.
+            Some(owner) if owner == actor.id() => "on your own door".to_string(),
+            Some(owner) => {
+                let whose = world
+                    .characters
+                    .get(owner)
+                    .filter(|_| actor.knows().contains(owner))
+                    .map_or(strings.unknown_person_name.as_str(), |other| other.name());
+                format!("on {whose}'s door")
+            }
+            None => format!("at {}", near.site_label),
+        };
+        MarkLine {
+            id: near.id.to_string(),
+            label: near.label,
+            site,
+            distance_m: py_round(near.distance_m, 1),
+            meaning: near.meaning,
+            in_reach: near.distance_m <= crate::actions::CHALK_REACH_M,
+        }
+    })
+    .collect();
+
+    let you_could_chalk: Vec<String> = crate::actions::chalkable_anchors(world, actor.id())
+        .into_iter()
+        .map(|(handle, _)| handle)
+        .collect();
+
     let mut sorted_offers: Vec<&Offer> = world.offers.values().collect();
     sorted_offers.sort_by_key(|offer| offer_sort_key(offer));
 
@@ -1037,6 +1138,8 @@ fn build_sheet<'a>(
             people,
         },
         dogs_nearby,
+        marks_here,
+        you_could_chalk,
         word_in_the_ward: ward_notice_lines(world, actor.id()),
         since_your_last_turn,
         recent_history,
@@ -1423,6 +1526,24 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
         ));
     }
 
+    if !sheet.you_could_chalk.is_empty() {
+        sections.push(bullet_section(
+            &format!("**you_could_chalk** ({})", strings.chalkable_note),
+            sheet.you_could_chalk.iter().map(|handle| handle.clone()),
+            "",
+        ));
+    }
+
+    // The chalk — beside the dogs, where the eyes are, and omitted entirely
+    // when the walls are bare so an unchalked sheet never moves a byte.
+    if !sheet.marks_here.is_empty() {
+        sections.push(bullet_section(
+            &format!("**marks_here** ({})", strings.marks_note),
+            sheet.marks_here.iter().map(mark_bullet),
+            "",
+        ));
+    }
+
     // The ward's word — omitted entirely for the carrier-less majority, like
     // `you_sell`, so the section never appears on an untouched sheet.
     if !sheet.word_in_the_ward.is_empty() {
@@ -1627,6 +1748,20 @@ fn dog_bullet(dog: &DogLine<'_>) -> String {
     line
 }
 
+/// The `marks_here` bullet:
+/// `mark 3: a chalk cross at knee height, on Ede Clove's door, 3.1 m — this
+/// household owes and has not paid`.
+///
+/// The id leads, unlike a dog's line, because `scrub_mark` takes one and the
+/// sheet is the only place the model can read it off — the same reason the
+/// ward's notices are numbered.
+fn mark_bullet(mark: &MarkLine) -> String {
+    format!(
+        "mark {}: {}, {}, {:.1} m — {}",
+        mark.id, mark.label, mark.site, mark.distance_m, mark.meaning
+    )
+}
+
 /// The `you_see` bullet: `id cb947: Conny, 2.7 m, moving`. `moving` appears
 /// only when true — standing still is the unmarked case.
 fn person_bullet(person: &Person<'_>) -> String {
@@ -1756,6 +1891,8 @@ mod tests {
             walking_to: "You are on your way to %s.".into(),
             following: "You are following %s.".into(),
             dogs_note: "street dogs within 20 metres, nearest first".into(),
+            marks_note: "chalk on the walls within 8 metres, nearest first".into(),
+            chalkable_note: "what your hand could reach to chalk, nearest first".into(),
             faction_role_label: "Faction role:".into(),
             illegal_activity_label: "In secret:".into(),
             home_label: "Home:".into(),
@@ -1776,7 +1913,7 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nmarks_note = \"mm\"\nchalkable_note = \"cc\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\n";
         let error = PromptEnv::new("x", "y", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
@@ -1862,6 +1999,8 @@ mod tests {
                 people: Vec::new(),
             },
             dogs_nearby: Vec::new(),
+            marks_here: Vec::new(),
+            you_could_chalk: Vec::new(),
             word_in_the_ward: Vec::new(),
             since_your_last_turn: Vec::new(),
             recent_history: Vec::new(),

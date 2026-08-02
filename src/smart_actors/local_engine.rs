@@ -384,6 +384,13 @@ fn build(
         // quiet, which only exists when there is a player (M6).
         night_office: config.night_office.config(),
         dogs_enabled: config.dogs_enabled,
+        marks_enabled: config.marks.enabled,
+        mark_kinds: cathedral_sim::marks::MarkKindSwitches {
+            cross: config.marks.cross,
+            tally: config.marks.tally,
+            ward_sign: config.marks.ward_sign,
+        },
+        marks_decay_scale: config.marks.decay_scale,
         clock: WorldClock::new(
             config.clock.seconds_per_day,
             Office::from_config_name(&config.clock.start_office).unwrap_or_else(|| {
@@ -858,6 +865,9 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
         },
         BridgeCommand::PlayerStruggling => EngineCommand::PlayerStruggling,
         BridgeCommand::PlayerBrokeFree => EngineCommand::PlayerBrokeFree,
+        BridgeCommand::DebugChalk { kind, anchor } => EngineCommand::DebugChalk { kind, anchor },
+        BridgeCommand::PlayerScrubMark { mark_id } => EngineCommand::PlayerScrubMark { mark_id },
+        BridgeCommand::DebugScrub { anchor } => EngineCommand::DebugScrub { anchor },
         BridgeCommand::DebugSeize { officer, target } => {
             EngineCommand::DebugSeize { officer, target }
         }

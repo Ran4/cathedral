@@ -64,6 +64,33 @@ Actions (each fires ~0.5 s after the previous):
 
   `key Quote` turns flying back off after the `tp` — **flying is not custody**,
   so a still-flying player is never tethered and never walks out of anything.
+- `chalk <kind> -> <anchor handle>` / `scrub <anchor handle>` — put chalk on
+  the city, or wipe it off (`features/implemented/chalking_the_walls.md` M2). The explicit
+  `->` for the same reason `seize` has one: both handles may contain spaces.
+  Kinds are `chalk_cross`, `well_tally`, `ward_sign`; the anchor resolves as a
+  person's household door first (by display name, then by actor id), then as a
+  registered place name (`chalk well_tally -> Ford Well`). `scrub` wipes the
+  nearest live mark on that anchor. Both are authored to the *player's* hand,
+  which is the case worth eyeballing — a forged cross refuses a stall exactly
+  as hard as the ward's own, because nothing that reads a mark asks who drew
+  it. Each prints `[smart actors] the player chalks <label> on <anchor>`.
+
+  Drawing is otherwise an LLM's judgement and the ward's own cross needs an
+  aged unsettled notice, so without these a scripted run cannot reach a mark at
+  all. A chalked square, in daylight:
+
+  ```sh
+  CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE='wait-online; \
+    key KeyT; key KeyT; key KeyT; weather clear; \
+    chalk ward_sign -> The Wickmarket; sleep 30; \
+    tp -17.375 1.46 247.3 180 -45; sleep 1; shot chalked; \
+    scrub The Wickmarket; sleep 1; shot scrubbed; quit' cargo run
+  ```
+
+  Three `key KeyT` presses and a `sleep 30` are what get you out of the dawn
+  half-dark; a mark in a narrow lane at Dayspring is genuinely unphotographable.
+  A mark is 34 cm across, so shoot from **1–2 m**, not from across the square.
+
 - `status <name-or-id> <kind> <value>` — set a carriage body status so a
   drunk/weary walk can be eyeballed, e.g. `status Ilse drunkenness 0.8` or
   `status p006v weariness 1`. The target is resolved by display name first (may

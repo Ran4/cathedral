@@ -1,0 +1,58 @@
+{
+ "schema_version": 1,
+ "_doc": "Chalk marks (features/implemented/chalking_the_walls.md). One medium, three signs. Embedded into the sim with include_str! (crates/cathedral-sim/src/marks.rs) exactly as items.json and places.json are, so both hosts get it with no wiring. Every string and every number a mark carries lives here: nothing about a mark's meaning or its weathering is spelled in Rust.",
+
+ "_decay_doc": "strength *= 0.5 ^ (elapsed_game_days / half_life), where half_life lerps from half_life_days_dry at precipitation 0 to half_life_days_wet at precipitation 1. A sheltered anchor divides the precipitation it feels by sheltered_multiplier, so a mark under an arcade outlasts one on an open wall by days. Below faint_below a mark still renders (qualified 'half-washed') but stops applying its rule: a faint mark is a fact about the past. Below gone_below it is removed, silently — chalk washing off is not news.",
+
+ "kinds": {
+  "chalk_cross": {
+   "label": "a chalk cross at knee height",
+   "meaning": "this household owes and has not paid",
+   "faint_label": "a half-washed chalk cross at knee height",
+   "anchors": ["household"],
+   "half_life_days_dry": 9.0,
+   "half_life_days_wet": 0.4,
+   "sheltered_multiplier": 6.0,
+   "faint_below": 0.35,
+   "gone_below": 0.05,
+   "drawable_by_hand": true
+  },
+
+  "well_tally": {
+   "label": "tally strokes",
+   "meaning": "this many have drawn here today",
+   "faint_label": "half-washed tally strokes",
+   "anchors": ["place"],
+   "half_life_days_dry": 1.6,
+   "half_life_days_wet": 0.25,
+   "sheltered_multiplier": 6.0,
+   "faint_below": 0.35,
+   "gone_below": 0.05,
+   "drawable_by_hand": true
+  },
+
+  "ward_sign": {
+   "label": "a ward-sign",
+   "meaning": "the ward is called here this evening",
+   "faint_label": "a half-washed ward-sign",
+   "anchors": ["place"],
+   "half_life_days_dry": 3.0,
+   "half_life_days_wet": 0.5,
+   "sheltered_multiplier": 6.0,
+   "faint_below": 0.35,
+   "gone_below": 0.05,
+   "drawable_by_hand": true,
+   "_places_doc": "The spec called this a shrine-sign, but places.json has no shrine kind and no place named one, and three wards have nothing devotional at all (features/implemented/chalking_the_walls.md C8). So the vocabulary is authored here, where the spec already says the vocabulary belongs, rather than re-baking places.json — that bake renumbers nav nodes and silently rots every pinned index. One place of resort per ward: five are devotional or monumental, three are the ward's own yard or market, which is where those wards actually gather of an evening.",
+   "places": {
+    "fabric": "The Great Rose and eye",
+    "cinder": "Dawn Bearer statue",
+    "cloth": "Seraph statue",
+    "reed": "Saint Maren's churchyard",
+    "bell_and_sluice": "The Ilvane Chapel",
+    "weigh": "Bonded weighing yard",
+    "wallwright": "Coswald's Yard",
+    "wick": "The Wickmarket"
+   }
+  }
+ }
+}
