@@ -1226,3 +1226,64 @@ fn a_tally_saturates_and_reads_honestly() {
     let label = catalog.label_for(world.marks.get(id).unwrap());
     assert!(label.contains("and more"), "saturates: {label}");
 }
+
+/// **The M3 regression.** Chalk that never bumps `world_revision` is chalk the
+/// renderer never hears about: the host only rebuilds its batch when the
+/// revision moves. Every LLM verb bumped it by hand, so the two *verbs* were
+/// fine — and the ward's beat, the well's tally, the Night Office's sign and
+/// the drive action, which all reach the world through `draw_or_refresh`, drew
+/// marks that were in the snapshot and invisible on screen.
+///
+/// Found by standing at a well in the game and seeing bare stone.
+#[test]
+fn every_way_of_drawing_a_mark_tells_the_host() {
+    let mut world = world_with_places();
+
+    let before = world
+        .public_snapshot(&ActorId::from_raw("player"))
+        .world_revision;
+    let drawn = marks::draw_or_refresh(
+        &mut world,
+        MarkKind::WellTally,
+        MarkAnchor::Place("Chain Well".into()),
+        None,
+        0.0,
+    )
+    .expect("drawn");
+    let after_draw = world
+        .public_snapshot(&ActorId::from_raw("player"))
+        .world_revision;
+    assert!(
+        after_draw > before,
+        "drawing must bump the revision, or the renderer never rebuilds"
+    );
+
+    // A refresh moves the published strength, so it counts too.
+    world.marks.get_mut(drawn.id).unwrap().strength = 0.3;
+    marks::draw_or_refresh(
+        &mut world,
+        MarkKind::WellTally,
+        MarkAnchor::Place("Chain Well".into()),
+        None,
+        1.0,
+    )
+    .expect("refreshed");
+    let after_refresh = world
+        .public_snapshot(&ActorId::from_raw("player"))
+        .world_revision;
+    assert!(after_refresh > after_draw, "a re-chalk is a visible change");
+
+    // …and so does wiping it off.
+    marks::scrub(&mut world, drawn.id).expect("scrubbed");
+    let after_scrub = world
+        .public_snapshot(&ActorId::from_raw("player"))
+        .world_revision;
+    assert!(after_scrub > after_refresh, "a scrub is a visible change");
+    assert!(
+        world
+            .public_snapshot(&ActorId::from_raw("player"))
+            .marks
+            .is_empty(),
+        "and the wall really is bare"
+    );
+}

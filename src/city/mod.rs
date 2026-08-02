@@ -6,6 +6,8 @@
 //! inventing a second procedural grid here.
 
 mod gates;
+mod marks;
+pub use marks::MarkFocus;
 mod monuments;
 mod plan;
 mod route_boards;
@@ -58,14 +60,29 @@ impl Plugin for CityPlugin {
         app.add_plugins(MaterialPlugin::<WindowGlassMaterial>::default())
             .add_message::<crate::soundscape::SoundscapeCue>()
             .init_resource::<gates::GateRuntime>()
+            .init_resource::<marks::MarkFocus>()
+            .init_resource::<marks::ChalkHold>()
+            .init_resource::<marks::MarkCatalogRes>()
             .init_resource::<trade_props::TradePropRuntime>()
             // The vermin waypoints validate against the collision world the
             // city build just populated.
-            .add_systems(Startup, (build_city, vermin::spawn_vermin).chain())
+            .add_systems(
+                Startup,
+                (build_city, vermin::spawn_vermin, marks::spawn_marks).chain(),
+            )
             .add_systems(
                 Update,
                 (
                     smoke::animate_chimney_smoke,
+                    // The chalk is slow state: this rebuilds the batch only
+                    // when the sim's world revision has moved, so an unchalked
+                    // city costs one integer comparison a frame.
+                    (
+                        marks::sync_marks,
+                        marks::update_mark_focus,
+                        marks::chalk_hold,
+                    )
+                        .chain(),
                     // The boil is announced before it is drawn, so the log line
                     // and the percept precede the frame that triples the batch.
                     (

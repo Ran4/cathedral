@@ -878,6 +878,13 @@ pub fn draw_or_refresh(
             mark.strength = 1.0;
             mark.last_decayed_game_days = game_days;
         }
+        // A refresh moves the published strength, so it is a snapshot change
+        // like any other. The bump lives *here*, not at each call site: the
+        // ward's beat, the well's tally, the Night Office's sign and the drive
+        // action all reach the world through this one function, and three of
+        // the four would otherwise have drawn chalk the renderer never heard
+        // about.
+        world.touch_public_state();
         return Some(Drawn {
             id,
             fresh: false,
@@ -895,11 +902,23 @@ pub fn draw_or_refresh(
         strokes: 1,
     };
     let (id, evicted) = world.marks.insert(mark);
+    world.touch_public_state();
     Some(Drawn {
         id,
         fresh: true,
         evicted,
     })
+}
+
+/// Wipe a mark off the wall, and tell the host.
+///
+/// The one removal path, for the same reason [`draw_or_refresh`] is the one
+/// drawing path: a scrub that forgot to bump the revision would leave the
+/// chalk on screen after it was gone from the world.
+pub fn scrub(world: &mut World, id: MarkId) -> Option<Mark> {
+    let removed = world.marks.remove(id)?;
+    world.touch_public_state();
+    Some(removed)
 }
 
 /// What a draw did. `evicted` is §2.7's cap in action: at [`MARKS_MAX`] the

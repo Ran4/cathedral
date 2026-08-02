@@ -2534,6 +2534,7 @@ mod tests {
                 items: vec![],
                 offers: vec![],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
         let mut runtime = SmartActorRuntime::starting(false);
@@ -2680,6 +2681,7 @@ mod tests {
                 }],
                 offers: vec![],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
         (mirror, player, giver, other, coin)

@@ -1593,7 +1593,7 @@ fn scrub_mark(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Str
             "that mark is out of reach",
         ));
     }
-    world.marks.remove(mark_id);
+    crate::marks::scrub(world, mark_id);
 
     let seen = format!("scrubbed {label} off the wall");
     let (hearers, plain_sight) = deliver_pocket_percept(world, actor_id, &seen, &seen);

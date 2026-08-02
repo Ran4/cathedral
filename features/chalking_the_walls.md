@@ -1,7 +1,7 @@
 # Chalking the Walls
 
-**Status:** M0, M1, M2 and M4 done (2026-08-02). **M3 (the Bevy render) is not started** — the
-whole feature is live in the sim and invisible on screen. See §4 M3 for what is already mapped. Branch `slunga/chalking_the_walls`.
+**Status:** M0–M4 all done (2026-08-02). The whole feature is live: written by code, read by code,
+drawn on the walls, and tamperable by hand. Branch `slunga/chalking_the_walls`.
 §2.7's snapshot measurement is done and recorded below; §0 records sixteen corrections to this spec
 found by re-checking every seam against the tree. Milestone state is tracked in §4 — each
 milestone's heading carries its own status and an "As built" note where the build diverged.
@@ -464,10 +464,51 @@ matching nothing is logged and skipped — not a fault. Each prints an evidence 
 Done when a headless run and a drive run each show a forged cross refusing a stall, and the golden
 fixtures move **only** in the conditional blocks (regenerate deliberately — see §5).
 
-### M3 — chalk you can see — **NOT STARTED**
+### M3 — chalk you can see — **DONE 2026-08-02**
 
-Everything below is still the plan, and the recon behind it is done — see §0 C15 for the two traps
-that will otherwise cost an afternoon each:
+**As built.** `src/city/marks.rs`: one entity, one batched mesh, `NotShadowCaster`, rebuilt only when
+the world revision moves — marks are slow state, so unlike the vermin this does not rebuild per
+frame. Registered in `CityPlugin` beside the vermin.
+
+Two decisions that read as shortcuts and are not:
+
+* **A mark is geometry, not a texture on a quad.** A cross is two crossed bars, a tally is one bar
+  per notch, a ward-sign is a chevron. No art asset, reads at a distance where an alpha-masked glyph
+  would be a smudge, and the stroke count is *legible* — four notches are four bars, so the wall and
+  the sheet's "four strokes" agree.
+* **It is laid on the surface, never billboarded.** The sim publishes no orientation and cannot
+  (§0 C15), so the host probes the collision world outward from the anchor and lays the mark on the
+  nearest wall. Nothing within reach means no wall, and it lies flat on the paving — which is not a
+  fallback but the right answer for a tally on a well's kerb.
+
+Both traps in §0 C15 were real and are handled: the HUD read-line got its **own** focus resource
+(`MarkFocus`) rather than reusing `update_actor_focus`, and the press-and-hold copies the custody
+strain meter's accumulator-and-latch, since nothing else in the tree holds a key.
+
+**Two bugs the screenshots caught that no test would have.** Standing at a well and seeing bare
+stone is what found them:
+
+1. `draw_or_refresh` never bumped `world_revision`. The two LLM verbs bumped it by hand, so *they*
+   worked — but the ward's beat, the well's tally, the Night Office's sign and the drive action all
+   reach the world through that one function, and drew chalk the renderer never heard about. The
+   bump now lives inside `draw_or_refresh` and a new `marks::scrub`, so it is structural rather than
+   remembered.
+2. The rebuild guard compared `built_revision` (`None` = never built) against the mirror's revision
+   (`None` = no snapshot yet) and matched, so the batch never built at all. It now carries an
+   explicit `built` flag.
+
+Both are pinned by regression tests, and the module has 11 more covering placement on a wall, flat
+placement with no wall, the glyph vertex counts per kind, the alpha ramp, and the no-op frame.
+
+**Verified on screen.** `logs/` screenshots: a ward-sign chalked on the Wickmarket cobbles in
+daylight, then the same view after `scrub` showing bare stone.
+
+**Not verified on screen:** the HUD read-line text. Its composition and its merge rule are unit
+tested (`aiming_at_a_mark_reads_out_its_meaning`, `mark_hint_tests`), but no screenshot shows the
+string — the focus-hint slot rendered nothing in a drive run even with an NPC dead centre, so that
+appears to be pre-existing HUD behaviour rather than this wiring. Worth one look by hand.
+
+The plan, and the two traps §0 C15 warned about:
 
 * **The look-at HUD line cannot reuse the existing focus system.** `src/smart_actors/targeting.rs`
   is a complete crosshair→HUD pipeline, but `update_actor_focus` only ever queries entities carrying

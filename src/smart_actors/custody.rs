@@ -502,6 +502,7 @@ mod tests {
                 items: vec![],
                 offers: vec![],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .expect("the test snapshot is well formed");
         mirror

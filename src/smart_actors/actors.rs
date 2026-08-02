@@ -873,6 +873,7 @@ mod tests {
                 items: vec![],
                 offers: vec![],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
 
@@ -992,6 +993,7 @@ mod tests {
                 items: vec![],
                 offers: vec![],
                 road_carts: vec![],
+                marks: Vec::new(),
             })
             .unwrap();
 

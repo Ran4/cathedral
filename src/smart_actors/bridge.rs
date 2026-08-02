@@ -198,6 +198,13 @@ pub enum BridgeCommand {
     /// The player has started pulling against the hands on them, and (once)
     /// that they got free. Two commands across a whole struggle, never a
     /// stream: there is exactly one LLM turn in flight across the entire cast.
+    /// The player finished a press-and-hold over a mark
+    /// (`features/chalking_the_walls.md` M3). Goes through the same
+    /// `scrub_mark` the LLM verb does, so what the hand does on screen and
+    /// what a character does on a sheet are one code path.
+    PlayerScrubMark {
+        mark_id: u64,
+    },
     PlayerStruggling,
     PlayerBrokeFree,
     /// CATHEDRAL_DRIVE `seize` action (`law_and_order.md` M4): stage an arrest so

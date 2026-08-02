@@ -35,7 +35,9 @@ use crate::{
         CuriosityConfig, IdleCognitionMode, IdleGate, Novelty, STAGE_PARTNER_MEMORY_SECONDS,
         StageConfig, WarmExchanges, on_stage,
     },
-    character::{BodySlot, Control, GutEntry, IntentTarget, PocketedUnit, StatusKind, TravelIntent},
+    character::{
+        BodySlot, Control, GutEntry, IntentTarget, PocketedUnit, StatusKind, TravelIntent,
+    },
     clock::{Office, Weekday, WorldClock, stroke_times},
     custody,
     error::{CommandError, CommandErrorCode, EngineInitError},
@@ -502,7 +504,9 @@ pub enum EngineCommand {
     /// Everything downstream — the beat, the gate, the stamp — is the real
     /// code. Same poke as `DebugSetStatus`; a handle matching nobody is a
     /// `Diagnostic`, never a fault.
-    DebugOwe { who: String },
+    DebugOwe {
+        who: String,
+    },
     /// CATHEDRAL_DRIVE `chalk` (`features/chalking_the_walls.md` M2). Puts a
     /// mark on an anchor by a named hand, so a scripted run can look at a
     /// forged cross — the case §2.3 is about, and the one no scripted run can
@@ -510,14 +514,32 @@ pub enum EngineCommand {
     ///
     /// Both handles resolve by display name first, then by id, exactly as
     /// `status` and `seize` do. A handle matching nobody is a `Diagnostic`.
-    DebugChalk { kind: String, anchor: String },
+    DebugChalk {
+        kind: String,
+        anchor: String,
+    },
     /// CATHEDRAL_DRIVE `scrub`: wipe the nearest live mark off a named anchor.
-    DebugScrub { anchor: String },
+    DebugScrub {
+        anchor: String,
+    },
+    /// The player's press-and-hold over a mark
+    /// (`features/chalking_the_walls.md` M3).
+    ///
+    /// Goes through the same [`crate::actions::apply_action`] `scrub_mark` an
+    /// LLM's turn does, so the reach check, the witness percept and the nudge
+    /// are the verb's and not a second implementation of them. The player has
+    /// no sheet and takes no turns, which is exactly why this is a command
+    /// rather than a verb call from a reply.
+    PlayerScrubMark {
+        mark_id: u64,
+    },
     /// CATHEDRAL_DRIVE `commit` (`law_and_order.md` M5): finish the escort at
     /// the Stone House, so a scripted run can look at the inside of the gaol —
     /// the booking, the posted fee, the bell, and what walking out costs.
     /// `target` defaults to the player.
-    DebugCommit { target: Option<String> },
+    DebugCommit {
+        target: Option<String>,
+    },
     /// Advance the debug time scale to the next of 1× / 10× / 60× (the `T` key).
     /// Fire-and-forget: the host learns the new scale from the next
     /// [`EngineMessage::Clock`], so there is no `CommandResult`.
@@ -1027,7 +1049,9 @@ impl Engine {
         // The street dogs (`features/implemented/dogs.md`): the authored pack,
         // seeded only into a walkable world — the frozen fixtures and every
         // nav-less test keep an empty kennel and identical bytes.
-        if config.dogs_enabled && let Some(nav) = config.nav.as_deref() {
+        if config.dogs_enabled
+            && let Some(nav) = config.nav.as_deref()
+        {
             world.dogs = crate::dogs::seed_pack(nav);
         }
 
@@ -1787,13 +1811,33 @@ impl Engine {
 
             EngineCommand::DebugScrub { anchor } => self.debug_scrub(now, &anchor, out),
 
+            EngineCommand::PlayerScrubMark { mark_id } => {
+                let player = self.config.player_id.clone();
+                match crate::actions::apply_action(
+                    &mut self.world,
+                    &player,
+                    "scrub_mark",
+                    &serde_json::json!({ "mark_id": mark_id }),
+                ) {
+                    Ok(line) => {
+                        out.push(EngineMessage::Diagnostic(format!("[marks] {line}")));
+                        self.flush(now, out);
+                    }
+                    // Out of reach, or somebody else scrubbed it first: the
+                    // hold simply produced nothing, which is what releasing
+                    // early does too.
+                    Err(error) => out.push(EngineMessage::Diagnostic(format!(
+                        "[marks] scrub refused: {}",
+                        error.message
+                    ))),
+                }
+            }
+
             EngineCommand::DebugSeize { officer, target } => {
                 self.debug_seize(now, &officer, target.as_deref(), out)
             }
 
-            EngineCommand::DebugCommit { target } => {
-                self.debug_commit(now, target.as_deref(), out)
-            }
+            EngineCommand::DebugCommit { target } => self.debug_commit(now, target.as_deref(), out),
 
             // Continuity-preserving (see `WorldClock::with_scale`): time speeds
             // up without jumping. The next poll's `Clock` message carries the new
@@ -2300,7 +2344,7 @@ impl Engine {
             .map(|(id, mark)| (id, self.world.mark_catalog.label_for(mark)));
         match found {
             Some((id, label)) => {
-                self.world.marks.remove(id);
+                crate::marks::scrub(&mut self.world, id);
                 out.push(EngineMessage::Diagnostic(format!(
                     "[smart actors] the player scrubs {label} off {handle} (mark {id})"
                 )));
@@ -2440,10 +2484,15 @@ impl Engine {
         // have; the player's feet are never the sim's, so a drive script has to
         // `tp` them here itself, and one committed elsewhere is judged to have
         // walked out on the next poll — which is the mechanic working.
-        let officer = self.world.custody.get(&target_id).and_then(|record| record.officer.clone());
-        for who in officer.iter().chain(
-            (target_id != self.config.player_id).then_some(&target_id),
-        ) {
+        let officer = self
+            .world
+            .custody
+            .get(&target_id)
+            .and_then(|record| record.officer.clone());
+        for who in officer
+            .iter()
+            .chain((target_id != self.config.player_id).then_some(&target_id))
+        {
             if let Some(character) = self.world.characters.get_mut(who) {
                 character.state.position_m = gaol.point;
                 character.state.movement = None;
@@ -2592,8 +2641,7 @@ impl Engine {
             for id in self.world.step_movement(MOVEMENT_TICK_SECONDS, &nav, stage) {
                 moved_ids.insert(id);
             }
-            dogs_moved |=
-                crate::dogs::step_dogs(&mut self.world.dogs, MOVEMENT_TICK_SECONDS, &nav);
+            dogs_moved |= crate::dogs::step_dogs(&mut self.world.dogs, MOVEMENT_TICK_SECONDS, &nav);
             self.movement_now += MOVEMENT_TICK_SECONDS;
             slices += 1;
         }
@@ -2846,9 +2894,7 @@ impl Engine {
                         .get(&unit.item_id)
                         .is_some_and(|item| item.kind.as_str() == POOP_KIND)
                 {
-                    let _ = self
-                        .world
-                        .consume_item_quantity(actor_id, &unit.item_id, 1);
+                    let _ = self.world.consume_item_quantity(actor_id, &unit.item_id, 1);
                 }
             }
 
@@ -2913,14 +2959,17 @@ impl Engine {
     /// economy). A pocketed unit is committed, so each one leaves its slot for
     /// exactly as long as the restamp takes.
     fn stain_lower_slot(&mut self, actor_id: &ActorId) {
-        let carries_a_stool = self.world.characters[actor_id].pockets().iter().any(|unit| {
-            unit.slot == BodySlot::Butt
-                && self
-                    .world
-                    .items
-                    .get(&unit.item_id)
-                    .is_some_and(|item| item.kind.as_str() == POOP_KIND)
-        });
+        let carries_a_stool = self.world.characters[actor_id]
+            .pockets()
+            .iter()
+            .any(|unit| {
+                unit.slot == BodySlot::Butt
+                    && self
+                        .world
+                        .items
+                        .get(&unit.item_id)
+                        .is_some_and(|item| item.kind.as_str() == POOP_KIND)
+            });
         if !carries_a_stool {
             return;
         }
@@ -2932,7 +2981,10 @@ impl Engine {
                     unit.slot == BodySlot::Butt
                         && self.world.items.get(&unit.item_id).is_some_and(|item| {
                             item.kind.as_str() != POOP_KIND
-                                && item.metadata.get(CONDITION_METADATA_KEY).map(String::as_str)
+                                && item
+                                    .metadata
+                                    .get(CONDITION_METADATA_KEY)
+                                    .map(String::as_str)
                                     != Some(CONDITION_POOPSTAINED)
                         })
                 });
@@ -2978,12 +3030,15 @@ impl Engine {
 
     /// Pass two: the pressure. Returns whether the public snapshot changed.
     fn ramp_urgency(&mut self, actor_id: &ActorId, game_days: f64) -> bool {
-        let carries_a_stool = self.world.characters[actor_id].pockets().iter().any(|unit| {
-            self.world
-                .items
-                .get(&unit.item_id)
-                .is_some_and(|item| item.kind.as_str() == POOP_KIND)
-        });
+        let carries_a_stool = self.world.characters[actor_id]
+            .pockets()
+            .iter()
+            .any(|unit| {
+                self.world
+                    .items
+                    .get(&unit.item_id)
+                    .is_some_and(|item| item.kind.as_str() == POOP_KIND)
+            });
         let Some(actor) = self.world.characters.get_mut(actor_id) else {
             return false;
         };
@@ -3208,7 +3263,12 @@ impl Engine {
                 notices::carrier_ids(&self.world, notice_id, &raiser)
                     .into_iter()
                     .filter(|carrier| Some(carrier) != accused.as_ref())
-                    .map(|carrier| (carrier, format!("the bell has rung and the word is now a warrant: {line}")))
+                    .map(|carrier| {
+                        (
+                            carrier,
+                            format!("the bell has rung and the word is now a warrant: {line}"),
+                        )
+                    })
                     .collect();
             // The raiser is a carrier of their own word only by way of `except`;
             // tell them too, since it is their summons that just hardened.
@@ -3360,10 +3420,8 @@ impl Engine {
             //     player's door.
             if record.state == custody::Confinement::Committed {
                 let at = prisoner_character.position_m();
-                let strayed = f64::hypot(
-                    at.x - record.station.point.x,
-                    at.z - record.station.point.z,
-                );
+                let strayed =
+                    f64::hypot(at.x - record.station.point.x, at.z - record.station.point.z);
                 if strayed > custody::COMMITTED_ROAM_M {
                     walked_out.push(prisoner.clone());
                     continue;
@@ -3379,7 +3437,9 @@ impl Engine {
             if record.state != custody::Confinement::InCharge {
                 continue;
             }
-            let separation = officer.position_m().distance(prisoner_character.position_m());
+            let separation = officer
+                .position_m()
+                .distance(prisoner_character.position_m());
             // 3. Gone. A gap this wide is almost always the player's doing —
             //    8 m/s against 1.8 needs no cleverness at all, and the word
             //    against you does not go anywhere — but the sim does not
@@ -3388,7 +3448,10 @@ impl Engine {
             //    that names a culprit it never established would lie to one
             //    party or the other. The arrangement is simply over; say that.
             if separation > OFFER_LAPSE_RADIUS_M {
-                freed.push((prisoner.clone(), "you were parted and the arrangement lapsed"));
+                freed.push((
+                    prisoner.clone(),
+                    "you were parted and the arrangement lapsed",
+                ));
                 continue;
             }
             // 4. Cross the leash and the officer closes, on their own two feet.
@@ -3448,11 +3511,8 @@ impl Engine {
                     record.station.name
                 ));
             }
-            let raised = actions::raise_escape_notice(
-                &mut self.world,
-                &prisoner,
-                keeper.as_slice(),
-            );
+            let raised =
+                actions::raise_escape_notice(&mut self.world, &prisoner, keeper.as_slice());
             if let Some(keeper) = keeper.clone() {
                 if let Some(keeper_character) = self.world.characters.get_mut(&keeper) {
                     keeper_character.notify_percept(format!(
@@ -3780,7 +3840,8 @@ impl Engine {
         // the grab is a *reflex* the officer never decided on, so this is their
         // first chance to say anything about the hand they just put out.
         actions::announce_grip(&mut self.world, holder_id, &player_id, true);
-        self.scheduler.prioritize(&self.world, holder_id, false, now);
+        self.scheduler
+            .prioritize(&self.world, holder_id, false, now);
         self.world.touch_public_state();
     }
 
