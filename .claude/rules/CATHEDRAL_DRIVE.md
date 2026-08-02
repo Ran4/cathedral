@@ -75,9 +75,13 @@ Actions (each fires ~0.5 s after the previous):
   as hard as the ward's own, because nothing that reads a mark asks who drew
   it. Each prints `[smart actors] the player chalks <label> on <anchor>`.
 
-  Drawing is otherwise an LLM's judgement and the ward's own cross needs an
-  aged unsettled notice, so without these a scripted run cannot reach a mark at
-  all. A chalked square, in daylight:
+  These reach any anchor in the city from anywhere, with no preconditions. To
+  drive the *player's* own hand instead — the pen, the reach check, the sign
+  picker and the HUD prompt — stand within 2 m of a door or a named place and
+  `hold KeyC 2` (`key KeyG` steps to the next legal sign, where there is one);
+  that goes through `draw_mark` and can be refused, which is the point of it.
+  Otherwise drawing is an LLM's judgement and the ward's own cross needs an aged
+  unsettled notice. A chalked square, in daylight:
 
   ```sh
   CATHEDRAL_FAKE_BACKEND=1 CATHEDRAL_DRIVE='wait-online; \

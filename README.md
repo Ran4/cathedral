@@ -186,6 +186,14 @@ engine, world rules, HUD, and interaction paths.
   shows microphone, download/load, transcription, failure, and ready states
 - `X` - cycle NPC voice audio through available OpenAI cloud, local Pocket TTS,
   and off modes
+- Hold `C` - chalk the wall, or scrub chalk off it
+  (`features/implemented/chalking_the_walls.md`). Within arm's reach of a door
+  or a named place the focus line says what your hand would draw there and on
+  what; hold the key for 1.4 s to draw it, and release early to abort. Aimed at
+  a mark that is already up, the same hold wipes it off instead - which needs no
+  chalk in hand, only a wet sleeve
+- `G` - step to the next sign within reach, where more than one is legal (a well
+  takes both a tally and a ward-sign; a front door takes only a cross)
 - Mouse wheel / `1`–`9` - select an inventory item
 - Right click - offer the selected item to the focused actor
 - `Y` / `N` - accept or decline the active incoming offer

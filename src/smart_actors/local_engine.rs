@@ -867,6 +867,9 @@ fn translate(command: BridgeCommand) -> Option<EngineCommand> {
         BridgeCommand::PlayerBrokeFree => EngineCommand::PlayerBrokeFree,
         BridgeCommand::DebugChalk { kind, anchor } => EngineCommand::DebugChalk { kind, anchor },
         BridgeCommand::PlayerScrubMark { mark_id } => EngineCommand::PlayerScrubMark { mark_id },
+        BridgeCommand::PlayerDrawMark { kind, anchor } => {
+            EngineCommand::PlayerDrawMark { kind, anchor }
+        }
         BridgeCommand::DebugScrub { anchor } => EngineCommand::DebugScrub { anchor },
         BridgeCommand::DebugSeize { officer, target } => {
             EngineCommand::DebugSeize { officer, target }

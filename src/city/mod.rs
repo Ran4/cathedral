@@ -7,7 +7,7 @@
 
 mod gates;
 mod marks;
-pub use marks::MarkFocus;
+pub use marks::{ChalkPrompt, ChalkStanding, ChalkableAnchor, MarkFocus};
 mod monuments;
 mod plan;
 mod route_boards;
@@ -62,6 +62,9 @@ impl Plugin for CityPlugin {
             .init_resource::<gates::GateRuntime>()
             .init_resource::<marks::MarkFocus>()
             .init_resource::<marks::ChalkHold>()
+            .init_resource::<marks::ChalkStanding>()
+            .init_resource::<marks::ChalkChoice>()
+            .init_resource::<marks::ChalkPrompt>()
             .init_resource::<marks::MarkCatalogRes>()
             .init_resource::<trade_props::TradePropRuntime>()
             // The vermin waypoints validate against the collision world the
@@ -80,7 +83,11 @@ impl Plugin for CityPlugin {
                     (
                         marks::sync_marks,
                         marks::update_mark_focus,
+                        marks::cycle_chalk_kind,
                         marks::chalk_hold,
+                        // Last, so the meter the HUD shows is this frame's and
+                        // not the one before it.
+                        marks::update_chalk_prompt,
                     )
                         .chain(),
                     // The boil is announced before it is drawn, so the log line

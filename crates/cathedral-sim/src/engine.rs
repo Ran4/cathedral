@@ -533,6 +533,21 @@ pub enum EngineCommand {
     PlayerScrubMark {
         mark_id: u64,
     },
+    /// The player finished a press-and-hold with the pen against an anchor
+    /// (`features/implemented/chalking_the_walls.md` M3), the writing half of
+    /// [`Self::PlayerScrubMark`] and gated exactly as it is.
+    ///
+    /// `anchor` is a handle out of [`crate::actions::chalkable_anchors`] — the
+    /// same string an LLM's `draw_mark` spells — because the host has no places
+    /// registry and cannot invent one. It goes through `draw_mark` itself, so
+    /// the pen, the reach, the anchor's slot, the already-there refusal, the
+    /// witness percept and the nudge are the verb's and not a second
+    /// implementation of them. Nothing here is a developer poke: unlike
+    /// [`Self::DebugChalk`], every precondition holds.
+    PlayerDrawMark {
+        kind: crate::marks::MarkKind,
+        anchor: String,
+    },
     /// CATHEDRAL_DRIVE `commit` (`law_and_order.md` M5): finish the escort at
     /// the Stone House, so a scripted run can look at the inside of the gaol —
     /// the booking, the posted fee, the bell, and what walking out costs.
@@ -807,8 +822,46 @@ pub enum EngineMessage {
         /// The law's hands, while they are on you.
         custody: Option<PlayerCustody>,
     },
+    /// What the player's own hand could chalk where they are standing
+    /// (`features/implemented/chalking_the_walls.md` M3), on the **hot**
+    /// channel and for the same reasons [`Self::LawStanding`] is: it is a fact
+    /// about the player, not carriage state, and bumping `world_revision`
+    /// because somebody walked past a door would rebuild the mark batch for
+    /// nothing. Republished only when it changes — for a player standing in the
+    /// middle of a square, never.
+    ///
+    /// The host cannot work this out for itself: a [`crate::places::PlaceEntry`]
+    /// never crosses the seam, so which door is within arm's reach is knowledge
+    /// only the sim has. It is the mirror image of a mark's *orientation*, which
+    /// only the host has.
+    ChalkStanding {
+        /// Whether the player is holding anything to write with. The anchors are
+        /// listed either way, because "a door you could chalk, if you had chalk"
+        /// is worth saying and costs nothing.
+        pen: bool,
+        /// Everything within [`crate::actions::CHALK_REACH_M`], nearest first.
+        anchors: Vec<ChalkableHere>,
+    },
     /// A former `[smart actors] …` stderr line; the host logs it.
     Diagnostic(String),
+}
+
+/// One thing the player is standing close enough to chalk.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChalkableHere {
+    /// The handle [`EngineCommand::PlayerDrawMark`] names it by — an owner's
+    /// actor id for a door, the registry name for a place. Opaque to the host,
+    /// which only ever hands it back.
+    pub handle: String,
+    /// How the HUD says it, with the unknown-people rule already applied — the
+    /// same reason [`PlayerCustody::officer_name`] is prose and not an id. A
+    /// door whose owner the player has never met is a stranger's door.
+    pub label: String,
+    /// The signs a hand could still draw here: drawable by hand, accepted by
+    /// this anchor, and not already up. Never empty — an anchor with nothing
+    /// left to draw is dropped from the list instead, so the HUD never offers a
+    /// hold that can only come back refused.
+    pub kinds: Vec<crate::marks::MarkKind>,
 }
 
 /// One live word against the player, as the HUD reads it.
@@ -972,6 +1025,9 @@ pub struct Engine {
     /// resends exactly when the player's standing changes — which, for a player
     /// who has not annoyed anybody, is never.
     last_law_standing: Option<EngineMessage>,
+    /// The last [`EngineMessage::ChalkStanding`] published, on the same terms:
+    /// walking a whole street sends nothing until a door comes within reach.
+    last_chalk_standing: Option<EngineMessage>,
 }
 
 impl Engine {
@@ -1158,6 +1214,7 @@ impl Engine {
             startup_diagnostics,
             ready_emitted: false,
             last_law_standing: None,
+            last_chalk_standing: None,
         })
     }
 
@@ -1496,6 +1553,7 @@ impl Engine {
         // only when it changes.
         self.publish_clock(now, &mut out);
         self.publish_law_standing(&mut out);
+        self.publish_chalk_standing(&mut out);
         out
     }
 
@@ -1828,6 +1886,29 @@ impl Engine {
                     // early does too.
                     Err(error) => out.push(EngineMessage::Diagnostic(format!(
                         "[marks] scrub refused: {}",
+                        error.message
+                    ))),
+                }
+            }
+
+            EngineCommand::PlayerDrawMark { kind, anchor } => {
+                let player = self.config.player_id.clone();
+                match crate::actions::apply_action(
+                    &mut self.world,
+                    &player,
+                    "draw_mark",
+                    &serde_json::json!({ "kind": kind.as_str(), "anchor": anchor }),
+                ) {
+                    Ok(line) => {
+                        out.push(EngineMessage::Diagnostic(format!("[marks] {line}")));
+                        self.flush(now, out);
+                    }
+                    // The pen pocketed, a step taken, or somebody chalked the
+                    // same sign a moment ago: the hold produced nothing, which
+                    // is what releasing early does too. The next
+                    // `ChalkStanding` tells the HUD why.
+                    Err(error) => out.push(EngineMessage::Diagnostic(format!(
+                        "[marks] chalk refused: {}",
                         error.message
                     ))),
                 }
@@ -4003,6 +4084,64 @@ impl Engine {
         let message = EngineMessage::LawStanding { notices, custody };
         if self.last_law_standing.as_ref() != Some(&message) {
             self.last_law_standing = Some(message.clone());
+            out.push(message);
+        }
+    }
+
+    /// What the player's hand could chalk from where it is standing, on the hot
+    /// channel — republished only when it changes, which for a player crossing
+    /// open ground is never.
+    ///
+    /// This exists because the seam runs the other way from the renderer's: the
+    /// host owns the geometry and works out which *wall* a mark lies on, and the
+    /// sim owns the places registry and is the only half that can answer which
+    /// *door* is within arm's reach. Neither can do the other's half.
+    fn publish_chalk_standing(&mut self, out: &mut Vec<EngineMessage>) {
+        let player_id = &self.config.player_id;
+        let known = |owner: &ActorId| {
+            self.world
+                .characters
+                .get(player_id)
+                .is_some_and(|player| player.knows().contains(owner))
+        };
+        let anchors: Vec<ChalkableHere> = crate::actions::chalkable_anchors(&self.world, player_id)
+            .into_iter()
+            .filter_map(|(handle, anchor)| {
+                let kinds = crate::actions::drawable_kinds_at(&self.world, &anchor);
+                if kinds.is_empty() {
+                    return None;
+                }
+                let label = match &anchor {
+                    crate::marks::MarkAnchor::Place(name) => name.clone(),
+                    crate::marks::MarkAnchor::Household(owner) if owner == player_id => {
+                        "your own door".to_string()
+                    }
+                    // The unknown-people rule, spelled here for the same reason
+                    // `officer_name` spells it: the HUD must never leak a name
+                    // the player has not been told.
+                    crate::marks::MarkAnchor::Household(owner) => self
+                        .world
+                        .characters
+                        .get(owner)
+                        .filter(|_| known(owner))
+                        .map_or_else(
+                            || format!("a stranger's door (id {owner})"),
+                            |neighbour| format!("{}'s door", neighbour.name()),
+                        ),
+                };
+                Some(ChalkableHere {
+                    handle,
+                    label,
+                    kinds,
+                })
+            })
+            .collect();
+        let message = EngineMessage::ChalkStanding {
+            pen: crate::actions::holds_a_chalk_pen(&self.world, player_id),
+            anchors,
+        };
+        if self.last_chalk_standing.as_ref() != Some(&message) {
+            self.last_chalk_standing = Some(message.clone());
             out.push(message);
         }
     }

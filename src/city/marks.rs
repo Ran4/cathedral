@@ -98,6 +98,14 @@ pub struct MarkFocus {
 /// nothing drawn and nothing scrubbed.
 const CHALK_HOLD_SECONDS: f32 = 1.4;
 
+/// The key held to draw or to scrub.
+const CHALK_KEY: KeyCode = KeyCode::KeyC;
+
+/// The key that steps to the next sign within reach. Only ever does anything
+/// where more than one is legal — at a well, which takes both a tally and a
+/// ward-sign, and never at a door, which takes only a cross.
+const CHALK_CYCLE_KEY: KeyCode = KeyCode::KeyG;
+
 /// The player's half-finished stroke.
 #[derive(Resource, Debug, Default)]
 pub struct ChalkHold {
@@ -113,7 +121,85 @@ pub struct ChalkHold {
 pub enum ChalkIntent {
     /// Scrub the mark the crosshair was resting on.
     Scrub(u64),
+    /// Chalk `kind` on the anchor `handle` names — the sim's own handle,
+    /// carried through untouched, because the host has no places registry to
+    /// resolve it against.
+    Draw { kind: MarkKind, handle: String },
 }
+
+/// What the player's hand could chalk from where it is standing: a projection
+/// of [`cathedral_sim::EngineMessage::ChalkStanding`] and nothing more.
+///
+/// Deliberately not computed here, though the host owns the geometry. Which
+/// *wall* a mark lies on is a question only the host can answer; which *door*
+/// is within arm's reach is one only the sim can, because a place entry never
+/// crosses the seam. The two halves each keep their own.
+#[derive(Resource, Debug, Default, Clone, PartialEq)]
+pub struct ChalkStanding {
+    /// Whether the player is holding anything to write with.
+    pub pen: bool,
+    /// Everything within the sim's chalk reach, nearest first.
+    pub anchors: Vec<ChalkableAnchor>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ChalkableAnchor {
+    /// The sim's handle for it, handed straight back with the command.
+    pub handle: String,
+    /// How the HUD names it, unknown-people rule already applied sim-side.
+    pub label: String,
+    /// The signs still drawable here, never empty.
+    pub kinds: Vec<MarkKind>,
+}
+
+impl ChalkStanding {
+    /// The anchors' kinds laid end to end: what the cycle key steps through.
+    fn option_count(&self) -> usize {
+        self.anchors.iter().map(|anchor| anchor.kinds.len()).sum()
+    }
+
+    /// The `index`th (anchor, sign) pair, nearest anchor first. An iterator
+    /// rather than a built `Vec` because this is read every frame and the
+    /// answer is almost always "nothing within reach".
+    fn option(&self, index: usize) -> Option<(&ChalkableAnchor, MarkKind)> {
+        let mut index = index;
+        for anchor in &self.anchors {
+            match anchor.kinds.get(index) {
+                Some(kind) => return Some((anchor, *kind)),
+                None => index -= anchor.kinds.len(),
+            }
+        }
+        None
+    }
+}
+
+/// Which sign within reach the next hold would draw.
+///
+/// A free-running counter taken modulo the option count at every read, so a
+/// list that changes size under it can never index out of bounds — and reset
+/// whenever the sim republishes what is in reach, which makes the default at
+/// every new door the nearest anchor's first sign rather than whatever was
+/// picked two streets ago.
+#[derive(Resource, Debug, Default)]
+pub struct ChalkChoice {
+    step: usize,
+}
+
+impl ChalkChoice {
+    fn selected<'a>(&self, standing: &'a ChalkStanding) -> Option<(&'a ChalkableAnchor, MarkKind)> {
+        let count = standing.option_count();
+        if count == 0 {
+            return None;
+        }
+        standing.option(self.step % count)
+    }
+}
+
+/// The line the HUD shows about chalk: what this hold would do, or how far
+/// through it is. Composed here rather than in `interaction.rs` because the
+/// catalog's prose lives on this side.
+#[derive(Resource, Debug, Default, Clone, PartialEq)]
+pub struct ChalkPrompt(pub String);
 
 /// The embedded mark catalog, so the host can spell a label and a meaning
 /// without either crossing the wire per mark.
@@ -436,21 +522,63 @@ fn compute_mark_focus(
     }
 }
 
-/// The press-and-hold that scrubs a mark.
+/// Step to the next sign within reach, and start again from the nearest one
+/// whenever the sim says what is in reach has changed.
+pub(super) fn cycle_chalk_kind(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    standing: Res<ChalkStanding>,
+    mut choice: ResMut<ChalkChoice>,
+) {
+    if standing.is_changed() {
+        choice.step = 0;
+    }
+    if keyboard.just_pressed(CHALK_CYCLE_KEY) && standing.option_count() > 1 {
+        choice.step = choice.step.wrapping_add(1);
+    }
+}
+
+/// What a hold begun right now would do.
+///
+/// Scrubbing wins over drawing whenever the crosshair is actually resting on
+/// chalk: standing at a marked door with a pen, the thing you are pointing at
+/// is the more specific answer, and a door already carrying its only legal sign
+/// offers no draw anyway.
+fn intent_now(
+    focus: &MarkFocus,
+    standing: &ChalkStanding,
+    choice: &ChalkChoice,
+) -> Option<ChalkIntent> {
+    if let Some(mark_id) = focus.mark_id {
+        return Some(ChalkIntent::Scrub(mark_id));
+    }
+    if !standing.pen {
+        return None;
+    }
+    let (anchor, kind) = choice.selected(standing)?;
+    Some(ChalkIntent::Draw {
+        kind,
+        handle: anchor.handle.clone(),
+    })
+}
+
+/// The press-and-hold that draws a mark, or scrubs one.
 ///
 /// Copied wholesale from the custody strain meter (`smart_actors/custody.rs`),
 /// which is the only accumulator-with-a-latch in the tree: `+dt/fill` while
 /// held, a hard reset when not, and one command at completion. The *intent* is
 /// captured when the hold begins, so drifting the crosshair off the mark
-/// half-way through cancels rather than quietly scrubbing a different one.
+/// half-way through — or stepping out of reach of the door — cancels rather
+/// than quietly doing something else.
 pub(super) fn chalk_hold(
     time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
     focus: Res<MarkFocus>,
+    standing: Res<ChalkStanding>,
+    choice: Res<ChalkChoice>,
     mut hold: ResMut<ChalkHold>,
     handle: Option<Res<crate::smart_actors::bridge::BridgeHandle>>,
 ) {
-    let held = keyboard.pressed(KeyCode::KeyC);
+    let held = keyboard.pressed(CHALK_KEY);
     if !held {
         if hold.progress != 0.0 || hold.intent.is_some() {
             // Released early: nothing drawn, nothing scrubbed.
@@ -460,10 +588,10 @@ pub(super) fn chalk_hold(
         return;
     }
     if hold.intent.is_none() {
-        let Some(mark_id) = focus.mark_id else {
+        let Some(intent) = intent_now(&focus, &standing, &choice) else {
             return;
         };
-        hold.intent = Some(ChalkIntent::Scrub(mark_id));
+        hold.intent = Some(intent);
         hold.progress = 0.0;
     }
     hold.progress = (hold.progress + time.delta_secs() / CHALK_HOLD_SECONDS).min(1.0);
@@ -472,14 +600,90 @@ pub(super) fn chalk_hold(
     }
     let intent = hold.intent.take();
     hold.progress = 0.0;
-    let (Some(handle), Some(ChalkIntent::Scrub(mark_id))) = (handle, intent) else {
+    let (Some(handle), Some(intent)) = (handle, intent) else {
         return;
     };
-    if let Err(error) =
-        handle.try_send(crate::smart_actors::bridge::BridgeCommand::PlayerScrubMark { mark_id })
-    {
-        debug!("[marks] scrub not sent: {error}");
+    // Both go back to the sim as commands and are refused there if the world
+    // moved under the hold — the pen pocketed, the mark already gone. Nothing
+    // about a mark is decided on this side.
+    let command = match intent {
+        ChalkIntent::Scrub(mark_id) => {
+            crate::smart_actors::bridge::BridgeCommand::PlayerScrubMark { mark_id }
+        }
+        ChalkIntent::Draw { kind, handle } => {
+            crate::smart_actors::bridge::BridgeCommand::PlayerDrawMark {
+                kind,
+                anchor: handle,
+            }
+        }
+    };
+    if let Err(error) = handle.try_send(command) {
+        debug!("[marks] chalk not sent: {error}");
     }
+}
+
+/// Compose the chalk line the HUD shows, under whatever the crosshair is
+/// already reading out.
+pub(super) fn update_chalk_prompt(
+    catalog: Res<MarkCatalogRes>,
+    focus: Res<MarkFocus>,
+    standing: Res<ChalkStanding>,
+    choice: Res<ChalkChoice>,
+    hold: Res<ChalkHold>,
+    mut prompt: ResMut<ChalkPrompt>,
+) {
+    let next = chalk_prompt_line(&catalog.0, &focus, &standing, &choice, &hold);
+    if prompt.0 != next {
+        prompt.0 = next;
+    }
+}
+
+fn chalk_prompt_line(
+    catalog: &cathedral_sim::marks::MarkCatalog,
+    focus: &MarkFocus,
+    standing: &ChalkStanding,
+    choice: &ChalkChoice,
+    hold: &ChalkHold,
+) -> String {
+    // The same ten-cell meter the custody strain bar draws, because this is the
+    // same gesture: a key held down until something happens.
+    let meter = || {
+        let filled = (hold.progress.clamp(0.0, 1.0) * 10.0).round() as usize;
+        format!("[{}{}]", "#".repeat(filled), "-".repeat(10 - filled))
+    };
+    // A sign's prose is the catalog's, never spelled here — the same rule the
+    // read-line follows.
+    let sign = |kind: MarkKind| {
+        catalog
+            .spec(kind)
+            .map_or_else(|| kind.as_str().to_string(), |spec| spec.label.clone())
+    };
+    match &hold.intent {
+        Some(ChalkIntent::Scrub(_)) => return format!("Scrubbing  {}", meter()),
+        Some(ChalkIntent::Draw { kind, .. }) => {
+            return format!("Chalking {}  {}", sign(*kind), meter());
+        }
+        None => {}
+    }
+    if focus.mark_id.is_some() {
+        return "Hold C to scrub it off".to_string();
+    }
+    let Some((anchor, kind)) = choice.selected(standing) else {
+        return String::new();
+    };
+    if !standing.pen {
+        return format!("{} — nothing in hand to chalk with", anchor.label);
+    }
+    let another = if standing.option_count() > 1 {
+        "    G for another sign"
+    } else {
+        ""
+    };
+    format!(
+        "Hold C to chalk {} on {}{another}",
+        sign(kind),
+        anchor.label
+    )
 }
 
 #[cfg(test)]
@@ -670,6 +874,212 @@ mod tests {
         );
     }
 
+    // ----------------------------------------------------------- the hand
+
+    fn anchor(handle: &str, label: &str, kinds: &[MarkKind]) -> ChalkableAnchor {
+        ChalkableAnchor {
+            handle: handle.to_string(),
+            label: label.to_string(),
+            kinds: kinds.to_vec(),
+        }
+    }
+
+    fn at_a_well() -> ChalkStanding {
+        ChalkStanding {
+            pen: true,
+            anchors: vec![
+                anchor(
+                    "Chain Well",
+                    "Chain Well",
+                    &[MarkKind::WellTally, MarkKind::WardSign],
+                ),
+                anchor("k0fb1", "Ilse's door", &[MarkKind::ChalkCross]),
+            ],
+        }
+    }
+
+    fn focused_on_a_mark() -> MarkFocus {
+        MarkFocus {
+            read_line: Some("a chalk cross — they owe.".into()),
+            mark_id: Some(7),
+            distance_m: 1.0,
+        }
+    }
+
+    /// The cycle key walks every sign of every anchor in reach, nearest anchor
+    /// first, and wraps — a free-running counter taken modulo the count, so it
+    /// can never index past a list that shrank under it.
+    #[test]
+    fn the_cycle_key_steps_through_every_sign_within_reach() {
+        let standing = at_a_well();
+        let picked: Vec<_> = (0..5)
+            .map(|step| {
+                let choice = ChalkChoice { step };
+                let (anchor, kind) = choice.selected(&standing).expect("something is in reach");
+                (anchor.handle.clone(), kind)
+            })
+            .collect();
+        assert_eq!(
+            picked,
+            vec![
+                ("Chain Well".to_string(), MarkKind::WellTally),
+                ("Chain Well".to_string(), MarkKind::WardSign),
+                ("k0fb1".to_string(), MarkKind::ChalkCross),
+                ("Chain Well".to_string(), MarkKind::WellTally),
+                ("Chain Well".to_string(), MarkKind::WardSign),
+            ]
+        );
+        assert_eq!(
+            ChalkChoice { step: 3 }.selected(&ChalkStanding::default()),
+            None,
+            "nothing in reach picks nothing, whatever the counter says"
+        );
+    }
+
+    /// Scrubbing wins over drawing whenever the crosshair is actually resting
+    /// on chalk: the thing you are pointing at is the more specific answer.
+    #[test]
+    fn what_a_hold_would_do_depends_on_the_crosshair_and_the_pen() {
+        let standing = at_a_well();
+        let choice = ChalkChoice::default();
+        assert_eq!(
+            intent_now(&focused_on_a_mark(), &standing, &choice),
+            Some(ChalkIntent::Scrub(7))
+        );
+        assert_eq!(
+            intent_now(&MarkFocus::default(), &standing, &choice),
+            Some(ChalkIntent::Draw {
+                kind: MarkKind::WellTally,
+                handle: "Chain Well".into(),
+            })
+        );
+
+        // No pen is no drawing — but it is still no obstacle to scrubbing, which
+        // takes nothing but a wet sleeve.
+        let empty_handed = ChalkStanding {
+            pen: false,
+            ..at_a_well()
+        };
+        assert_eq!(
+            intent_now(&MarkFocus::default(), &empty_handed, &choice),
+            None
+        );
+        assert_eq!(
+            intent_now(&focused_on_a_mark(), &empty_handed, &choice),
+            Some(ChalkIntent::Scrub(7))
+        );
+        assert_eq!(
+            intent_now(&MarkFocus::default(), &ChalkStanding::default(), &choice),
+            None,
+            "a blank wall is not chalkable — §2.2"
+        );
+    }
+
+    /// The line the player actually reads. Every sign's prose comes out of the
+    /// catalog, never spelled here.
+    #[test]
+    fn the_prompt_says_what_the_hold_would_do() {
+        let catalog = MarkCatalog::default();
+        let standing = at_a_well();
+        let idle = ChalkHold::default();
+
+        let line = chalk_prompt_line(
+            &catalog,
+            &MarkFocus::default(),
+            &standing,
+            &ChalkChoice::default(),
+            &idle,
+        );
+        assert!(line.starts_with("Hold C to chalk"), "unexpected: {line}");
+        assert!(
+            line.contains("tally strokes"),
+            "the catalog's own words: {line}"
+        );
+        assert!(line.contains("Chain Well"), "and what it goes on: {line}");
+        assert!(
+            line.contains('G'),
+            "two signs are legal here, so say how to reach the other: {line}"
+        );
+
+        // At a door only the cross is legal, so there is nothing to cycle to.
+        let at_a_door = ChalkStanding {
+            pen: true,
+            anchors: vec![anchor("k0fb1", "Ilse's door", &[MarkKind::ChalkCross])],
+        };
+        let line = chalk_prompt_line(
+            &catalog,
+            &MarkFocus::default(),
+            &at_a_door,
+            &ChalkChoice::default(),
+            &idle,
+        );
+        assert!(line.contains("Ilse's door"), "unexpected: {line}");
+        assert!(
+            !line.contains('G'),
+            "one sign, no picker to advertise: {line}"
+        );
+
+        // The crosshair on chalk offers the sleeve instead.
+        assert_eq!(
+            chalk_prompt_line(
+                &catalog,
+                &focused_on_a_mark(),
+                &ChalkStanding::default(),
+                &ChalkChoice::default(),
+                &idle
+            ),
+            "Hold C to scrub it off"
+        );
+
+        // Mid-hold it becomes a meter, and says which of the two acts is under
+        // way — the custody strain bar's shape, because it is the same gesture.
+        let halfway = ChalkHold {
+            progress: 0.5,
+            intent: Some(ChalkIntent::Draw {
+                kind: MarkKind::WardSign,
+                handle: "Chain Well".into(),
+            }),
+        };
+        let line = chalk_prompt_line(
+            &catalog,
+            &MarkFocus::default(),
+            &standing,
+            &ChalkChoice::default(),
+            &halfway,
+        );
+        assert_eq!(line, "Chalking a ward-sign  [#####-----]");
+
+        // …and nothing in reach with nothing under the crosshair says nothing.
+        assert_eq!(
+            chalk_prompt_line(
+                &catalog,
+                &MarkFocus::default(),
+                &ChalkStanding::default(),
+                &ChalkChoice::default(),
+                &idle
+            ),
+            ""
+        );
+    }
+
+    /// A door within reach and no pen is worth saying out loud: the player is
+    /// otherwise left holding a key that does nothing, with no reason given.
+    #[test]
+    fn an_empty_hand_is_told_why_nothing_happens() {
+        let standing = ChalkStanding {
+            pen: false,
+            anchors: vec![anchor("k0fb1", "Ilse's door", &[MarkKind::ChalkCross])],
+        };
+        let line = chalk_prompt_line(
+            &MarkCatalog::default(),
+            &MarkFocus::default(),
+            &standing,
+            &ChalkChoice::default(),
+            &ChalkHold::default(),
+        );
+        assert_eq!(line, "Ilse's door — nothing in hand to chalk with");
+    }
+
     /// A half-washed mark says so, out of the catalog's own `faint_label`.
     #[test]
     fn a_faint_mark_reads_as_half_washed() {
@@ -777,6 +1187,99 @@ mod system_tests {
         let mut app = app_with(vec![mark], CollisionWorld::default());
         app.update();
         assert_eq!(batch_vertices(&app), 16, "four notches, four quads");
+    }
+
+    /// The picker steps on the key — and starts again from the nearest sign
+    /// whenever the sim republishes what is in reach, so walking up to a new
+    /// door always defaults to the obvious thing rather than to whatever was
+    /// chosen two streets ago.
+    #[test]
+    fn the_picker_steps_on_the_key_and_resets_when_the_reach_moves() {
+        let mut app = App::new();
+        app.init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ChalkChoice>()
+            .insert_resource(ChalkStanding {
+                pen: true,
+                anchors: vec![ChalkableAnchor {
+                    handle: "Chain Well".into(),
+                    label: "Chain Well".into(),
+                    kinds: vec![MarkKind::WellTally, MarkKind::WardSign],
+                }],
+            })
+            .add_systems(Update, cycle_chalk_kind);
+        // The first update sees the freshly inserted standing as changed.
+        app.update();
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(CHALK_CYCLE_KEY);
+        app.update();
+        assert_eq!(app.world().resource::<ChalkChoice>().step, 1);
+
+        // Held rather than pressed again: one step per press.
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .clear();
+        app.update();
+        assert_eq!(app.world().resource::<ChalkChoice>().step, 1);
+
+        // A new door within reach starts the choice over.
+        app.world_mut().resource_mut::<ChalkStanding>().pen = false;
+        app.update();
+        assert_eq!(app.world().resource::<ChalkChoice>().step, 0);
+    }
+
+    /// The accumulator's contract, now that it has two things it can be
+    /// accumulating towards: the intent is latched when the hold *starts* and
+    /// thrown away whole on an early release.
+    #[test]
+    fn releasing_early_draws_nothing() {
+        let mut app = App::new();
+        // No `TimePlugin`: it would rewrite `Time` from the real clock every
+        // update, and this test needs a delta it chose.
+        app.init_resource::<Time>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<MarkFocus>()
+            .init_resource::<ChalkChoice>()
+            .init_resource::<ChalkHold>()
+            .insert_resource(ChalkStanding {
+                pen: true,
+                anchors: vec![ChalkableAnchor {
+                    handle: "k0fb1".into(),
+                    label: "Ilse's door".into(),
+                    kinds: vec![MarkKind::ChalkCross],
+                }],
+            })
+            .add_systems(Update, chalk_hold);
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(CHALK_KEY);
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_millis(300));
+        app.update();
+        let hold = app.world().resource::<ChalkHold>();
+        assert_eq!(
+            hold.intent,
+            Some(ChalkIntent::Draw {
+                kind: MarkKind::ChalkCross,
+                handle: "k0fb1".into(),
+            }),
+            "the act is decided when the hold begins"
+        );
+        assert!(
+            hold.progress > 0.0 && hold.progress < 1.0,
+            "and it is under way"
+        );
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .release(CHALK_KEY);
+        app.update();
+        let hold = app.world().resource::<ChalkHold>();
+        assert_eq!(hold.intent, None, "released early: nothing drawn");
+        assert_eq!(hold.progress, 0.0);
     }
 
     /// The whole point of the revision gate: a frame that changed nothing must

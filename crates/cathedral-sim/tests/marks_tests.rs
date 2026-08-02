@@ -1287,3 +1287,57 @@ fn every_way_of_drawing_a_mark_tells_the_host() {
         "and the wall really is bare"
     );
 }
+
+// --------------------------------------------------------------------------- //
+// M3 — the player's own hand
+// --------------------------------------------------------------------------- //
+
+/// What the player's HUD is offered, and the reason it is computed here rather
+/// than host-side: only this half knows a door from a well.
+///
+/// The filter has to be all three clauses. Drawable-by-hand alone would offer a
+/// sign no hand draws; the anchor slot alone would offer a well-tally on a
+/// front door; and leaving out "not already there" would offer a hold whose
+/// only possible outcome is `already_marked`.
+#[test]
+fn a_hand_is_offered_only_the_signs_that_anchor_would_take() {
+    let mut world = world_with_places();
+    let door = MarkAnchor::Household(ActorId::from_raw("debtor"));
+    let well = MarkAnchor::Place("Chain Well".into());
+
+    assert_eq!(
+        cathedral_sim::actions::drawable_kinds_at(&world, &door),
+        vec![MarkKind::ChalkCross],
+        "a door takes a cross and nothing else"
+    );
+    assert_eq!(
+        cathedral_sim::actions::drawable_kinds_at(&world, &well),
+        vec![MarkKind::WellTally, MarkKind::WardSign],
+        "a place takes both of the place signs"
+    );
+
+    // Chalk one of them and it drops out of the offer, because drawing it again
+    // could only ever be refused.
+    chalk(&mut world, well.clone());
+    assert_eq!(
+        cathedral_sim::actions::drawable_kinds_at(&world, &well),
+        vec![MarkKind::WardSign],
+        "the tally is already up"
+    );
+}
+
+/// The handle the sheet lists, the handle the verb resolves and the handle the
+/// player's hand sends are one string — spelled once, in one function.
+#[test]
+fn an_anchor_is_spelled_the_same_way_everywhere() {
+    let world = world_at_a_door();
+    let listed = cathedral_sim::actions::chalkable_anchors(&world, &ActorId::from_raw("sv3n1"));
+    let (handle, anchor) = listed.first().expect("the door is within reach");
+    assert_eq!(handle, &cathedral_sim::actions::anchor_handle(anchor));
+    assert_eq!(handle, "debtor", "a household is spelled by its owner's id");
+    assert_eq!(
+        cathedral_sim::actions::anchor_handle(&MarkAnchor::Place("Chain Well".into())),
+        "Chain Well",
+        "and a place by its registry name"
+    );
+}

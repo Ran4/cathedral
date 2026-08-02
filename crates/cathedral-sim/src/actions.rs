@@ -1438,11 +1438,7 @@ pub fn chalkable_anchors(
             Some(owner) => crate::marks::MarkAnchor::Household(owner.clone()),
             None => crate::marks::MarkAnchor::Place(entry.name.clone()),
         };
-        let handle = match &anchor {
-            crate::marks::MarkAnchor::Household(owner) => owner.to_string(),
-            crate::marks::MarkAnchor::Place(name) => name.clone(),
-        };
-        found.push((entry.point.distance(here), handle, anchor));
+        found.push((entry.point.distance(here), anchor_handle(&anchor), anchor));
     }
     found.sort_by(|left, right| {
         left.0
@@ -1453,6 +1449,44 @@ pub fn chalkable_anchors(
     found
         .into_iter()
         .map(|(_, handle, anchor)| (handle, anchor))
+        .collect()
+}
+
+/// How an anchor is spelled as a `draw_mark` argument: a household by its
+/// owner's id, a place by its registry name.
+///
+/// One function rather than a `match` at each site, because the handle the
+/// sheet lists and the handle the verb resolves have to be the same string —
+/// and because the player's hand ([`crate::EngineCommand::PlayerDrawMark`])
+/// now spells one too.
+pub fn anchor_handle(anchor: &crate::marks::MarkAnchor) -> String {
+    match anchor {
+        crate::marks::MarkAnchor::Household(owner) => owner.to_string(),
+        crate::marks::MarkAnchor::Place(name) => name.clone(),
+    }
+}
+
+/// Which kinds a hand could still draw on this anchor: drawable by hand at all,
+/// accepted by that anchor's slot, and not already there.
+///
+/// The last clause is what keeps the player's HUD honest — offering a hold that
+/// can only come back `already_marked` is worse than offering nothing. An LLM
+/// gets the same three refusals out of [`draw_mark`] instead, because a sheet
+/// that listed only the *legal* kinds per anchor would be a paragraph where one
+/// line does.
+pub fn drawable_kinds_at(
+    world: &World,
+    anchor: &crate::marks::MarkAnchor,
+) -> Vec<crate::marks::MarkKind> {
+    world
+        .mark_catalog
+        .kinds()
+        .filter(|(kind, spec)| {
+            spec.drawable_by_hand
+                && world.mark_catalog.accepts(*kind, anchor)
+                && world.marks.find(*kind, anchor).is_none()
+        })
+        .map(|(kind, _)| kind)
         .collect()
 }
 

@@ -539,6 +539,10 @@ impl Plugin for SmartActorsPlugin {
             .init_resource::<model::MovementInbox>()
             .init_resource::<lamps::CityLamps>()
             .init_resource::<dogs::DogInbox>()
+            // Owned by `CityPlugin`, which draws from it, but the drain writes
+            // it — and a headless test app that runs the drain without the city
+            // must not panic for the want of a resource it never reads.
+            .init_resource::<crate::city::ChalkStanding>()
             .insert_resource(SmartActorRuntime::starting(self.config.fake_backend))
             .init_resource::<area_debug::AreaDebugState>()
             .init_resource::<actor_sheet::InspectedActor>()
@@ -793,6 +797,9 @@ struct HotChannels<'w, 's> {
     /// The player's standing with the law (`law_and_order.md` M4). Hot for the
     /// same reason movement is: the tether it drives is clamped every frame.
     law: ResMut<'w, custody::PlayerCustodyState>,
+    /// What the player's hand could chalk (`chalking_the_walls.md` M3). Hot
+    /// because it changes with every step taken near a door.
+    chalk: ResMut<'w, crate::city::ChalkStanding>,
     time: Res<'w, Time>,
     drain_timer: Local<'s, DrainTimer>,
 }
@@ -946,6 +953,7 @@ fn drain_bridge_messages(
                     &mut hot.weather,
                     &mut hot.lightning,
                     &mut hot.law,
+                    &mut hot.chalk,
                     hot.time.elapsed_secs_f64(),
                 );
                 // Do not open the default input device before the engine
@@ -1048,6 +1056,10 @@ fn process_engine_message(
     weather: &mut WorldWeatherState,
     lightning: &mut MessageWriter<WeatherLightning>,
     law: &mut custody::PlayerCustodyState,
+    // The `ResMut` wrapper for the same reason the mirror keeps one: the sign
+    // picker resets on this resource's change flag, so it must be flagged when
+    // what is within reach moves and not merely when a message arrives.
+    chalk: &mut ResMut<crate::city::ChalkStanding>,
     received_at_seconds: f64,
 ) {
     match message {
@@ -1450,6 +1462,27 @@ fn process_engine_message(
                     booked_as: custody.booked_as,
                 }),
             );
+        }
+        EngineMessage::ChalkStanding { pen, anchors } => {
+            // Pure projection, like `LawStanding`: the hold this feeds sends a
+            // command back rather than deciding anything locally. Assigned only
+            // when it differs so the resource's change flag — which resets the
+            // sign picker — means "what is within reach moved", not "a message
+            // arrived".
+            let next = crate::city::ChalkStanding {
+                pen,
+                anchors: anchors
+                    .into_iter()
+                    .map(|anchor| crate::city::ChalkableAnchor {
+                        handle: anchor.handle,
+                        label: anchor.label,
+                        kinds: anchor.kinds,
+                    })
+                    .collect(),
+            };
+            if **chalk != next {
+                **chalk = next;
+            }
         }
         EngineMessage::Gesture {
             event_id: _,

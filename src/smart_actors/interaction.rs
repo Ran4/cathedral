@@ -453,6 +453,7 @@ pub fn reconcile_interaction_state(
     players: Query<&GlobalTransform, With<PlayerController>>,
     focus: Res<ActorFocus>,
     mark_focus: Option<Res<crate::city::MarkFocus>>,
+    chalk_prompt: Option<Res<crate::city::ChalkPrompt>>,
     mut state: ResMut<InteractionState>,
     mut hud: ResMut<SmartActorHudState>,
 ) {
@@ -522,7 +523,7 @@ pub fn reconcile_interaction_state(
 
     hud.focus_hint = if runtime.interactions_enabled() {
         let hint = focus_hint(&mirror, &focus, state.selected_item.as_ref(), coin_count);
-        merge_mark_hint(hint, mark_focus.as_deref())
+        merge_mark_hint(hint, mark_focus.as_deref(), chalk_prompt.as_deref())
     } else {
         String::new()
     };
@@ -1154,12 +1155,28 @@ fn inventory_text(
 /// Chalk reads out only when the crosshair is not already resting on a person:
 /// a body standing in front of a marked door is the more interesting thing to
 /// be told about, and two lines in one slot would fight.
-fn merge_mark_hint(actor_hint: String, mark: Option<&crate::city::MarkFocus>) -> String {
+///
+/// What a mark *means* and what your hand could do about it are two different
+/// sentences, so they are joined rather than made to compete: the read-line
+/// first, the affordance after it.
+fn merge_mark_hint(
+    actor_hint: String,
+    mark: Option<&crate::city::MarkFocus>,
+    chalk: Option<&crate::city::ChalkPrompt>,
+) -> String {
     if !actor_hint.is_empty() {
         return actor_hint;
     }
-    mark.and_then(|mark| mark.read_line.clone())
-        .unwrap_or_default()
+    let read = mark
+        .and_then(|mark| mark.read_line.clone())
+        .unwrap_or_default();
+    let prompt = chalk.map(|chalk| chalk.0.as_str()).unwrap_or_default();
+    match (read.is_empty(), prompt.is_empty()) {
+        (true, true) => String::new(),
+        (true, false) => prompt.to_string(),
+        (false, true) => read,
+        (false, false) => format!("{read}    {prompt}"),
+    }
 }
 
 fn focus_hint(
@@ -1940,12 +1957,17 @@ mod mark_hint_tests {
         }
     }
 
+    fn prompt(line: &str) -> crate::city::ChalkPrompt {
+        crate::city::ChalkPrompt(line.to_string())
+    }
+
     #[test]
     fn chalk_reads_out_when_nobody_is_under_the_crosshair() {
         assert_eq!(
             merge_mark_hint(
                 String::new(),
-                Some(&mark_focus("a chalk cross — they owe."))
+                Some(&mark_focus("a chalk cross — they owe.")),
+                None
             ),
             "a chalk cross — they owe."
         );
@@ -1956,7 +1978,8 @@ mod mark_hint_tests {
         assert_eq!(
             merge_mark_hint(
                 "Ede Clove".to_string(),
-                Some(&mark_focus("a chalk cross — they owe."))
+                Some(&mark_focus("a chalk cross — they owe.")),
+                Some(&prompt("Hold C to scrub it off"))
             ),
             "Ede Clove",
             "two lines in one slot would fight; the body wins"
@@ -1965,10 +1988,40 @@ mod mark_hint_tests {
 
     #[test]
     fn no_chalk_and_nobody_is_an_empty_slot() {
-        assert_eq!(merge_mark_hint(String::new(), None), "");
+        assert_eq!(merge_mark_hint(String::new(), None, None), "");
         assert_eq!(
-            merge_mark_hint(String::new(), Some(&crate::city::MarkFocus::default())),
+            merge_mark_hint(
+                String::new(),
+                Some(&crate::city::MarkFocus::default()),
+                Some(&prompt(""))
+            ),
             ""
+        );
+    }
+
+    /// What a mark means and what your hand could do about it are two
+    /// sentences, so they are joined rather than made to compete.
+    #[test]
+    fn the_meaning_and_the_affordance_share_the_line() {
+        assert_eq!(
+            merge_mark_hint(
+                String::new(),
+                Some(&mark_focus("a chalk cross — they owe.")),
+                Some(&prompt("Hold C to scrub it off"))
+            ),
+            "a chalk cross — they owe.    Hold C to scrub it off"
+        );
+        // …and with no chalk under the crosshair, the affordance stands alone —
+        // the case of walking up to a bare door with a pen in hand.
+        assert_eq!(
+            merge_mark_hint(
+                String::new(),
+                None,
+                Some(&prompt(
+                    "Hold C to chalk a chalk cross at knee height on Ilse's door"
+                ))
+            ),
+            "Hold C to chalk a chalk cross at knee height on Ilse's door"
         );
     }
 }

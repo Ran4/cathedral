@@ -3567,3 +3567,154 @@ fn arriving_at_a_station_says_every_hand_came_off() {
         "one event per hand, naming whose it was"
     );
 }
+
+// --------------------------------------------------------------------------- //
+// The player's own chalk (`features/implemented/chalking_the_walls.md` M3)
+// --------------------------------------------------------------------------- //
+
+use cathedral_sim::{Item, marks::MarkKind};
+
+fn chalk_standing(messages: &[EngineMessage]) -> Option<(bool, Vec<cathedral_sim::engine::ChalkableHere>)> {
+    messages.iter().find_map(|message| match message {
+        EngineMessage::ChalkStanding { pen, anchors } => Some((*pen, anchors.clone())),
+        _ => None,
+    })
+}
+
+/// Put a door at the player's feet and chalk in their hand.
+fn stand_the_player_at_a_door(harness: &mut Harness) {
+    let world = harness.engine.world_mut();
+    // Ilse the player knows; Conny they are made not to, one metre further off.
+    world
+        .places
+        .add_home(&ActorId::from_raw("k0fb1"), "Ilse", PLAYER_SPAWN);
+    world.places.add_home(
+        &ActorId::from_raw("cb947"),
+        "Conny",
+        Vec3::new(PLAYER_SPAWN.x + 1.0, PLAYER_SPAWN.y, PLAYER_SPAWN.z),
+    );
+    world
+        .characters
+        .get_mut(&player())
+        .expect("the seeded player")
+        .state
+        .knows
+        .remove(&ActorId::from_raw("cb947"));
+    world.add_item(Item::new(ItemId::from_raw("pen1"), "chalk_pen"));
+    world
+        .characters
+        .get_mut(&player())
+        .expect("the seeded player")
+        .state
+        .holds
+        .push(ItemId::from_raw("pen1"));
+}
+
+/// The channel the player's HUD reads: what is within arm's reach, what could
+/// still go on it, and what it is called — the last of those under the
+/// unknown-people rule, because a HUD that names a neighbour the player has
+/// never met leaks what the sheet is careful never to say.
+#[test]
+fn the_chalk_standing_names_what_is_within_reach_and_who_it_belongs_to() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    stand_the_player_at_a_door(&mut harness);
+
+    let (pen, anchors) = chalk_standing(&harness.poll()).expect("a door came within reach");
+    assert!(pen, "the pen is in hand");
+    assert_eq!(anchors.len(), 2, "both doors are in reach: {anchors:?}");
+
+    assert_eq!(anchors[0].handle, "k0fb1", "nearest door first");
+    assert_eq!(anchors[0].label, "Ilse's door");
+    assert_eq!(
+        anchors[0].kinds,
+        vec![MarkKind::ChalkCross],
+        "a door takes a cross and nothing else"
+    );
+    assert_eq!(
+        anchors[1].label, "a stranger's door (id cb947)",
+        "and a door whose owner the player has never met stays anonymous"
+    );
+}
+
+/// The hold itself: it goes through `draw_mark`, so the mark is real, it is
+/// authored to the player, and the anchor drops out of the very poll that drew
+/// it — the HUD can never offer a second cross on the same door.
+#[test]
+fn the_players_hold_chalks_the_door_and_the_offer_goes_with_it() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    stand_the_player_at_a_door(&mut harness);
+    harness.poll();
+
+    let messages = harness.send(EngineCommand::PlayerDrawMark {
+        kind: MarkKind::ChalkCross,
+        anchor: "k0fb1".into(),
+    });
+
+    let marks: Vec<_> = harness.engine.world().marks.iter().collect();
+    assert_eq!(marks.len(), 1, "one cross went up");
+    assert_eq!(
+        marks[0].1.author,
+        Some(player()),
+        "authored to the hand that drew it, like any other"
+    );
+    assert!(
+        messages.iter().any(|message| matches!(
+            message,
+            EngineMessage::Diagnostic(line) if line.contains("[marks]") && line.contains("chalks")
+        )),
+        "the act is logged: {messages:?}"
+    );
+
+    let (_, anchors) = chalk_standing(&messages).expect("the offer changed in the same poll");
+    assert_eq!(
+        anchors.len(),
+        1,
+        "the chalked door has nothing left to draw and drops off: {anchors:?}"
+    );
+    assert_eq!(anchors[0].handle, "cb947");
+
+    // …and standing still says nothing more at all.
+    assert!(
+        chalk_standing(&harness.poll()).is_none(),
+        "a quiet poll republishes nothing"
+    );
+}
+
+/// The pen gates the player's hand exactly as it gates an LLM's: the door is
+/// still announced (so the HUD can say why nothing happens), and the hold is
+/// refused rather than silently dropped.
+#[test]
+fn chalking_with_no_pen_is_announced_and_refused() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    stand_the_player_at_a_door(&mut harness);
+    harness.poll();
+
+    let world = harness.engine.world_mut();
+    world
+        .characters
+        .get_mut(&player())
+        .expect("the seeded player")
+        .state
+        .holds
+        .clear();
+
+    let (pen, anchors) = chalk_standing(&harness.poll()).expect("losing the pen is a change");
+    assert!(!pen, "nothing to write with");
+    assert_eq!(anchors.len(), 2, "the doors are still there to be told about");
+
+    let messages = harness.send(EngineCommand::PlayerDrawMark {
+        kind: MarkKind::ChalkCross,
+        anchor: "k0fb1".into(),
+    });
+    assert!(harness.engine.world().marks.is_empty(), "no pen, no mark");
+    assert!(
+        messages.iter().any(|message| matches!(
+            message,
+            EngineMessage::Diagnostic(line) if line.contains("chalk refused")
+        )),
+        "and the refusal is logged rather than swallowed: {messages:?}"
+    );
+}

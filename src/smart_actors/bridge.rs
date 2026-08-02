@@ -205,6 +205,13 @@ pub enum BridgeCommand {
     PlayerScrubMark {
         mark_id: u64,
     },
+    /// …and the writing half of it. `anchor` is the sim's own handle out of
+    /// [`cathedral_sim::EngineMessage::ChalkStanding`], carried back untouched:
+    /// the host has no places registry and never resolves one itself.
+    PlayerDrawMark {
+        kind: cathedral_sim::marks::MarkKind,
+        anchor: String,
+    },
     PlayerStruggling,
     PlayerBrokeFree,
     /// CATHEDRAL_DRIVE `seize` action (`law_and_order.md` M4): stage an arrest so

@@ -536,6 +536,16 @@ impl MarkCatalog {
         self.kinds.get(&kind)
     }
 
+    /// Every kind the catalog actually carries, in the enum's own order.
+    ///
+    /// A caller that wants "all the signs" has to ask the catalog rather than
+    /// matching on [`MarkKind`]: a variant whose spec `marks.json` omits is not
+    /// a sign this city knows, and `spec()` already returns `None` for it
+    /// everywhere else.
+    pub fn kinds(&self) -> impl Iterator<Item = (MarkKind, &MarkKindSpec)> {
+        self.kinds.iter().map(|(kind, spec)| (*kind, spec))
+    }
+
     /// Whether a kind may hang on an anchor at all — the `already_marked`
     /// check's sibling, and the reason `draw_mark` cannot put a well-tally on
     /// somebody's front door.

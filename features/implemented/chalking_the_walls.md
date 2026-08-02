@@ -508,6 +508,71 @@ tested (`aiming_at_a_mark_reads_out_its_meaning`, `mark_hint_tests`), but no scr
 string — the focus-hint slot rendered nothing in a drive run even with an NPC dead centre, so that
 appears to be pre-existing HUD behaviour rather than this wiring. Worth one look by hand.
 
+### M3b — the player's own hand — **DONE 2026-08-02**
+
+M3 above shipped **half** of its own last bullet. "Player draw and scrub as press-and-hold
+interactions" built the scrub and quietly dropped the draw: `ChalkIntent` carried one variant, there
+was no draw command on the bridge at all, and the pen the player is seeded with
+(`assets/world/seed.json`, `chalk1`) had no verb attached to it on this side. Holding the pen, the
+only things the game offered you to do with it were the `extra_pockets` slot verbs — the player
+could put their chalk in their mouth but not on a wall. This closes it.
+
+**The seam runs both ways, and that is the whole design.** M3's note says the sim cannot publish a
+mark's orientation because a `PlaceEntry` is a walkable point and the host owns the geometry. The
+mirror image is just as true and is what this milestone needed: the host cannot work out *which door
+is within arm's reach*, because no place entry ever crosses the seam. So drawing is not decided
+here. A second change-gated hot channel, `EngineMessage::ChalkStanding`, publishes what the player's
+hand could chalk — `{handle, label, kinds}` per anchor, nearest first — and the host hands the
+handle straight back in `EngineCommand::PlayerDrawMark`. `LawStanding` is the precedent for all of
+it, including the prose: the anchor's `label` applies the unknown-people rule sim-side exactly as
+`PlayerCustody::officer_name` does, so a door whose owner the player has never met reads "a
+stranger's door (id cb947)" and the HUD cannot leak a name the sheet is careful never to say.
+
+Four things worth stating:
+
+* **The command goes through `draw_mark` itself**, as `PlayerScrubMark` goes through `scrub_mark`.
+  The pen, the reach, the anchor's slot, the already-there refusal, the witness percept and the
+  priority nudge are the verb's. A forged cross is refused, and witnessed, on exactly the terms the
+  ward's own is — which is the property §2.2 asks for and the one a second code path would lose.
+* **`kinds` is filtered to what would actually succeed**, by a new
+  `actions::drawable_kinds_at` — drawable by hand, accepted by that anchor's slot, and not already
+  up. An offer whose only possible outcome is `already_marked` is worse than no offer, and it is
+  what makes the picker at a well collapse from two signs to one the instant you draw the first.
+  LLMs still get the three refusals out of the verb instead: a sheet that listed the legal kinds per
+  anchor would be a paragraph where one line does.
+* **The sign picker (`G`) is a free-running counter taken modulo the option count**, reset whenever
+  the sim republishes what is in reach. It therefore cannot index past a list that shrank under it,
+  and walking up to a new door always defaults to the nearest anchor's first sign rather than to
+  whatever was chosen two streets ago.
+* **Scrubbing wins over drawing** whenever the crosshair is resting on chalk. What you are pointing
+  at is the more specific answer, and a door already carrying its only legal sign offers no draw
+  anyway, so the two almost never contend.
+
+The hold, the accumulator and the abort are M3's, unchanged; `intent_now` is the only new decision
+and it is a pure function. The prompt is composed host-side because the catalog's prose lives there
+(`spec.label`), and joined to the read-line rather than made to compete with it — what a mark
+*means* and what your hand could do about it are two sentences.
+
+**Verified on screen**, which also settles M3's open item above: the focus-hint slot renders fine.
+`logs/`: `chalk_prompt.png` — "Hold C to chalk tally strokes on The Wickmarket    G for another
+sign" standing on the Wickmarket cobbles; `chalk_prompt_cycled.png` — the same line after one `G`,
+now offering the ward-sign; `chalked.png` — the chevron on the stones and the offer fallen back to
+the tally. Then, aimed at it: `scrub_prompt.png` — "a ward-sign — the ward is called here this
+evening.    Hold C to scrub it off", the read-line and the affordance sharing the line; and
+`scrubbed.png` — bare stone.
+
+```
+[marks] Player chalks a ward-sign
+[marks] Player scrubs a ward-sign off the wall
+```
+
+Tests: three in `engine_tests.rs` (the standing names what is in reach and who it belongs to, both
+sides of the unknown-people rule; the hold draws and the offer drops out of the same poll; no pen is
+announced *and* refused), two in `marks_tests.rs` (the three-clause filter, and that the handle is
+spelled the same way at all three sites), and six host-side in `city/marks.rs` and
+`interaction.rs` covering the picker, the precedence, the prompt in each of its states, and the
+early release.
+
 The plan, and the two traps §0 C15 warned about:
 
 * **The look-at HUD line cannot reuse the existing focus system.** `src/smart_actors/targeting.rs`
