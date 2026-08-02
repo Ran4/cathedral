@@ -430,7 +430,7 @@ produces *one* refusal per stamp period, not one per poll.
 Done when a single headless run shows the whole arc, and when a test asserts `try_purchase` refuses
 on chalk with the notices collection emptied — i.e. the partition is real, not incidental.
 
-### M2 — the pen and the two verbs — **DONE 2026-08-02** (drive script unverified, see below)
+### M2 — the pen and the two verbs — **DONE 2026-08-02**
 
 **The pen.** A `chalk_pen` kind in `assets/world/items.json` (small, pocketable, priced). Stocked in
 one existing stall's `you_sell` via `assets/world/food.json`, *and* one seeded into the player's
@@ -526,9 +526,13 @@ strength_pct, strokes}` (~100 B each, cap 100), skipped when empty, and the revi
 a mark's *published* value changes. `PublicMark` deliberately carries **no orientation** — the sim
 does not know which way a door faces, and the host owns the geometry that does.
 
-Also unverified until M3 lands: the M2 drive actions (`chalk` / `scrub`). They compile and are
-type-checked end to end, but no windowed run has exercised them, because until there is something on
-screen there is nothing for a screenshot to show.
+The M2 drive actions were verified here rather than in M2, because until something was on screen
+there was nothing for a screenshot to show. Both work end to end:
+
+```
+[smart actors] the player chalks a ward-sign on The Wickmarket (mark 1)
+[smart actors] the player scrubs a ward-sign off The Wickmarket (mark 1)
+```
 
 Bevy side. `src/city/marks.rs`, registered in `CityPlugin` beside the vermin and smoke systems
 (`src/city/mod.rs`, near line 65).

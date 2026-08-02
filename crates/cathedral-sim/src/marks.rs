@@ -1,5 +1,5 @@
 //! Chalk on the walls — stigmergy the city can read
-//! (`features/chalking_the_walls.md`).
+//! (`features/implemented/chalking_the_walls.md`).
 //!
 //! A mark is the environment used as a database. Rule-driven hands chalk it
 //! (a cross on a debtor's door, a tally at a well, a ward-sign at a place of

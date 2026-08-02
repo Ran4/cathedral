@@ -30,7 +30,7 @@ pub struct PublicSnapshot {
     /// Presentation-only carts derived from road-party topology and live cargo.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub road_carts: Vec<crate::round::RoadCart>,
-    /// The chalk on the walls (`features/chalking_the_walls.md`), sorted by id.
+    /// The chalk on the walls (`features/implemented/chalking_the_walls.md`), sorted by id.
     /// Skipped when empty — the universal case, and every frozen fixture's
     /// case — so a city nobody has chalked serializes byte-identically to
     /// before the feature existed.

@@ -1,4 +1,4 @@
-//! Chalk on the walls, M0 — the medium (`features/chalking_the_walls.md` §4).
+//! Chalk on the walls, M0 — the medium (`features/implemented/chalking_the_walls.md` §4).
 //!
 //! The unit tests in `marks.rs` pin the catalog and the decay *curve*. These
 //! pin the parts that need a real `World`: weathering under real weather and

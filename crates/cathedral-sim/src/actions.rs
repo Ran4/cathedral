@@ -1395,7 +1395,7 @@ fn deliver_pocket_percept(
 pub const CHALK_PEN_KIND: &str = "chalk_pen";
 
 /// How near a hand must be to chalk something, or to wipe it off
-/// (`features/chalking_the_walls.md` M2). Arm's length and a bit: you are
+/// (`features/implemented/chalking_the_walls.md` M2). Arm's length and a bit: you are
 /// touching the wall, not gesturing at it.
 pub const CHALK_REACH_M: f64 = 2.0;
 
@@ -1456,7 +1456,7 @@ pub fn chalkable_anchors(
         .collect()
 }
 
-/// `draw_mark` (`features/chalking_the_walls.md` M2): put chalk on a handle
+/// `draw_mark` (`features/implemented/chalking_the_walls.md` M2): put chalk on a handle
 /// the city already has.
 ///
 /// You cannot chalk a blank wall (§2.2) — the `anchor` argument names one of
@@ -1553,7 +1553,7 @@ fn draw_mark(world: &mut World, actor_id: &ActorId, args: &Value) -> Result<Stri
     ))
 }
 
-/// `scrub_mark` (`features/chalking_the_walls.md` M2): a wet sleeve.
+/// `scrub_mark` (`features/implemented/chalking_the_walls.md` M2): a wet sleeve.
 ///
 /// No pen needed — wiping chalk off takes nothing but a sleeve — but the mark
 /// must be within [`CHALK_REACH_M`], and the id comes off the `marks_here`

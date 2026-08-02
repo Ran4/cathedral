@@ -199,7 +199,7 @@ pub enum BridgeCommand {
     /// that they got free. Two commands across a whole struggle, never a
     /// stream: there is exactly one LLM turn in flight across the entire cast.
     /// The player finished a press-and-hold over a mark
-    /// (`features/chalking_the_walls.md` M3). Goes through the same
+    /// (`features/implemented/chalking_the_walls.md` M3). Goes through the same
     /// `scrub_mark` the LLM verb does, so what the hand does on screen and
     /// what a character does on a sheet are one code path.
     PlayerScrubMark {
@@ -212,7 +212,7 @@ pub enum BridgeCommand {
     /// judgement above `seize` is an LLM's, which is right, and which is exactly
     /// why a scripted run cannot otherwise reach one. A developer poke, not a
     /// modelled cause — like `DebugStatus`.
-    /// CATHEDRAL_DRIVE `chalk` / `scrub` (`features/chalking_the_walls.md` M2).
+    /// CATHEDRAL_DRIVE `chalk` / `scrub` (`features/implemented/chalking_the_walls.md` M2).
     DebugChalk {
         kind: String,
         anchor: String,

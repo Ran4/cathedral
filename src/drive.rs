@@ -224,7 +224,7 @@ enum Action {
         officer: String,
         target: Option<String>,
     },
-    /// `chalk <kind> -> <anchor>` (`features/chalking_the_walls.md` M2): put a
+    /// `chalk <kind> -> <anchor>` (`features/implemented/chalking_the_walls.md` M2): put a
     /// mark on a door or a place by the player's hand. Drawing is otherwise an
     /// LLM's judgement, so this is the only way a scripted run reaches the
     /// forged cross §2.3 is about.

@@ -1,4 +1,4 @@
-//! Chalk you can see (`features/chalking_the_walls.md` M3).
+//! Chalk you can see (`features/implemented/chalking_the_walls.md` M3).
 //!
 //! The sim owns every mark and publishes a point, a kind, a strength and a
 //! stroke count. It does **not** publish an orientation, and cannot: a

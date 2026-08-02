@@ -7526,7 +7526,7 @@ fn chalk_the_door(world: &mut World, who: &ActorId) -> crate::ids::MarkId {
     .id
 }
 
-/// **The partition test** (`features/chalking_the_walls.md` §2.1, §6). The
+/// **The partition test** (`features/implemented/chalking_the_walls.md` §2.1, §6). The
 /// refusal must read the chalk and *only* the chalk. `World.notices` is empty
 /// here — emphatically so — and the sale is still refused. If this test were
 /// hard to write, the partition would already be broken.

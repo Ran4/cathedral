@@ -449,7 +449,7 @@ mod tests {
         );
 
         // …and the same bound with the walls fully chalked
-        // (`features/chalking_the_walls.md` §2.7). This second assertion is
+        // (`features/implemented/chalking_the_walls.md` §2.7). This second assertion is
         // the one that actually guards `MARKS_MAX`: the world above is built
         // from `seed.json` and never runs a round, so it holds *zero* marks
         // and the number printed above would stay 137025 no matter how large

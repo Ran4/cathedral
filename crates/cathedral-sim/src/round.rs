@@ -167,12 +167,12 @@ const LAMP_SQUARES: &[&str] = &[
 const TAVERNS: &[&str] = &["The Hungry Ox", "The Bellstand"];
 
 /// What one tally stroke is worth, in metres of extra walk
-/// (`features/chalking_the_walls.md` M4). A busy well pushes its next drawer
+/// (`features/implemented/chalking_the_walls.md` M4). A busy well pushes its next drawer
 /// toward the neighbour; overnight the chalk washes off and the well recovers.
 const TALLY_METRES_PER_STROKE: f64 = 6.0;
 
 /// How long a chalk-refused buyer stays away from the boards, as a fraction of
-/// a game day (`features/chalking_the_walls.md` M1). Half a day: long enough
+/// a game day (`features/implemented/chalking_the_walls.md` M1). Half a day: long enough
 /// that one refusal is one scene rather than a loop, short enough that a cross
 /// scrubbed in the morning lets them eat by evening.
 const CHALK_REFUSAL_GAME_DAYS: f64 = 0.5;
@@ -1053,7 +1053,7 @@ pub struct Round {
     /// inbox or spends a cognition turn.
     lightning_reflex_until: BTreeMap<ActorId, f64>,
     /// Real-clock deadline after a chalk refusal at a stall counter
-    /// (`features/chalking_the_walls.md` M1), so a refused buyer stops
+    /// (`features/implemented/chalking_the_walls.md` M1), so a refused buyer stops
     /// re-queueing at the same board.
     ///
     /// Without it the loop is guaranteed, not hypothetical: the ladder's only
@@ -1317,7 +1317,7 @@ impl Round {
             })
             .collect();
 
-        // The chalked places of resort (`features/chalking_the_walls.md` M4),
+        // The chalked places of resort (`features/implemented/chalking_the_walls.md` M4),
         // by ward: a ward-sign draws its own ward's evening crowd. Gathered
         // once for the whole roll rather than per walker — the set is at most
         // eight and does not change inside the loop.
@@ -6508,7 +6508,7 @@ fn service_stalls(
 /// spark is all they hold — Ilse's exact arithmetic). Returns `None` for a
 /// no-sale (nothing affordable, or the vendor's board is bare).
 fn try_purchase(round: &mut Round, world: &mut World, s: usize, buyer: &ActorId) -> Option<Sale> {
-    // The chalk at the counter (`features/chalking_the_walls.md` M1). A buyer
+    // The chalk at the counter (`features/implemented/chalking_the_walls.md` M1). A buyer
     // with a live, still-binding cross on their door is refused here, at the
     // head of the queue, and not at stall selection — a buyer who walks across
     // the square, queues, reaches the counter and is *then* turned away is a
@@ -6725,7 +6725,7 @@ fn notch_the_tally(round: &Round, world: &mut World, source_index: usize, game_d
 /// written once, in a struct literal, for an actor's whole life, and the
 /// per-trip site reads the already-bound index. A penalty inside it would be
 /// evaluated at world-seed t=0, when no chalk exists, and would therefore move
-/// nobody, ever (`features/chalking_the_walls.md` §0 C7).
+/// nobody, ever (`features/implemented/chalking_the_walls.md` §0 C7).
 ///
 /// Ties still break by source index, so an exact tie binds identically every
 /// run — and with no chalk anywhere this returns exactly what
@@ -7000,7 +7000,7 @@ fn service_sources(
         if let Some(character) = world.characters.get_mut(&drawer) {
             character.state.needs.thirst = THIRST_MAX; // a full vessel
         }
-        // One stroke on the curb for one draw (`features/chalking_the_walls.md`
+        // One stroke on the curb for one draw (`features/implemented/chalking_the_walls.md`
         // M4). Nobody is told and nobody spends a turn: this is the well
         // keeping its own count, in chalk, where the next thirsty body can
         // read it.

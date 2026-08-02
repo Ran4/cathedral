@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "_doc": "Chalk marks (features/chalking_the_walls.md). One medium, three signs. Embedded into the sim with include_str! (crates/cathedral-sim/src/marks.rs) exactly as items.json and places.json are, so both hosts get it with no wiring. Every string and every number a mark carries lives here: nothing about a mark's meaning or its weathering is spelled in Rust.",
+ "_doc": "Chalk marks (features/implemented/chalking_the_walls.md). One medium, three signs. Embedded into the sim with include_str! (crates/cathedral-sim/src/marks.rs) exactly as items.json and places.json are, so both hosts get it with no wiring. Every string and every number a mark carries lives here: nothing about a mark's meaning or its weathering is spelled in Rust.",
 
  "_decay_doc": "strength *= 0.5 ^ (elapsed_game_days / half_life), where half_life lerps from half_life_days_dry at precipitation 0 to half_life_days_wet at precipitation 1. A sheltered anchor divides the precipitation it feels by sheltered_multiplier, so a mark under an arcade outlasts one on an open wall by days. Below faint_below a mark still renders (qualified 'half-washed') but stops applying its rule: a faint mark is a fact about the past. Below gone_below it is removed, silently — chalk washing off is not news.",
 
@@ -42,7 +42,7 @@
    "faint_below": 0.35,
    "gone_below": 0.05,
    "drawable_by_hand": true,
-   "_places_doc": "The spec called this a shrine-sign, but places.json has no shrine kind and no place named one, and three wards have nothing devotional at all (features/chalking_the_walls.md C8). So the vocabulary is authored here, where the spec already says the vocabulary belongs, rather than re-baking places.json — that bake renumbers nav nodes and silently rots every pinned index. One place of resort per ward: five are devotional or monumental, three are the ward's own yard or market, which is where those wards actually gather of an evening.",
+   "_places_doc": "The spec called this a shrine-sign, but places.json has no shrine kind and no place named one, and three wards have nothing devotional at all (features/implemented/chalking_the_walls.md C8). So the vocabulary is authored here, where the spec already says the vocabulary belongs, rather than re-baking places.json — that bake renumbers nav nodes and silently rots every pinned index. One place of resort per ward: five are devotional or monumental, three are the ward's own yard or market, which is where those wards actually gather of an evening.",
    "places": {
     "fabric": "The Great Rose and eye",
     "cinder": "Dawn Bearer statue",

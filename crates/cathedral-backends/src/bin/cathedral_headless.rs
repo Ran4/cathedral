@@ -222,7 +222,7 @@ struct Args {
     night_office: bool,
 
     /// mark somebody as owing, so the ward chalks their door, repeatable:
-    /// `--owe "Ede Clove"` (`features/chalking_the_walls.md` M1)
+    /// `--owe "Ede Clove"` (`features/implemented/chalking_the_walls.md` M1)
     ///
     /// A cross is chalked off an aged, unsettled restitution notice, and
     /// raising one is an LLM's judgement — so an offline run cannot otherwise
@@ -233,7 +233,7 @@ struct Args {
     #[arg(long, value_name = "NAME")]
     owe: Vec<String>,
 
-    /// Multiply the chalk decay (`features/chalking_the_walls.md`). A cross
+    /// Multiply the chalk decay (`features/implemented/chalking_the_walls.md`). A cross
     /// weathers over nine game days at `1.0`, which no `-t 12` run will ever
     /// see; `--marks-decay-scale 200` washes one off inside a short run so the
     /// re-chalk and the wash-off are both observable in one transcript.

@@ -245,7 +245,7 @@ pub struct RoadCartSnapshot {
     pub load: Vec<cathedral_sim::CartLoadKind>,
 }
 
-/// One chalk mark, as the renderer reads it (`features/chalking_the_walls.md`
+/// One chalk mark, as the renderer reads it (`features/implemented/chalking_the_walls.md`
 /// M3). The sim's quantized wire record, in Bevy's units.
 ///
 /// Deliberately no orientation: the sim does not know which way a door faces
@@ -645,7 +645,7 @@ impl WorldMirror {
         self.marks = marks;
     }
 
-    /// The chalk on the walls (`features/chalking_the_walls.md` M3).
+    /// The chalk on the walls (`features/implemented/chalking_the_walls.md` M3).
     pub fn marks(&self) -> impl ExactSizeIterator<Item = &MarkSnapshot> {
         self.marks.iter()
     }

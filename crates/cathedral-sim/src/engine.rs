@@ -493,7 +493,7 @@ pub enum EngineCommand {
         officer: String,
         target: Option<String>,
     },
-    /// The stand-in for a debt (`features/chalking_the_walls.md` M1). A cross
+    /// The stand-in for a debt (`features/implemented/chalking_the_walls.md` M1). A cross
     /// is chalked by the ward on an *aged, unsettled restitution notice*, and
     /// raising one of those is an LLM's judgement — so a scripted or offline
     /// run cannot otherwise reach the thing M1 builds: the door, the counter,
@@ -507,7 +507,7 @@ pub enum EngineCommand {
     DebugOwe {
         who: String,
     },
-    /// CATHEDRAL_DRIVE `chalk` (`features/chalking_the_walls.md` M2). Puts a
+    /// CATHEDRAL_DRIVE `chalk` (`features/implemented/chalking_the_walls.md` M2). Puts a
     /// mark on an anchor by a named hand, so a scripted run can look at a
     /// forged cross — the case §2.3 is about, and the one no scripted run can
     /// otherwise reach, because drawing is an LLM's judgement.
@@ -523,7 +523,7 @@ pub enum EngineCommand {
         anchor: String,
     },
     /// The player's press-and-hold over a mark
-    /// (`features/chalking_the_walls.md` M3).
+    /// (`features/implemented/chalking_the_walls.md` M3).
     ///
     /// Goes through the same [`crate::actions::apply_action`] `scrub_mark` an
     /// LLM's turn does, so the reach check, the witness percept and the nudge
@@ -1055,7 +1055,7 @@ impl Engine {
             world.dogs = crate::dogs::seed_pack(nav);
         }
 
-        // The chalk (`features/chalking_the_walls.md`). Nothing to seed — the
+        // The chalk (`features/implemented/chalking_the_walls.md`). Nothing to seed — the
         // walls start bare and stay bare until a hand writes — so this is only
         // the ablation switch and the decay dial reaching the world.
         world.marks_enabled = config.marks_enabled;
@@ -1225,7 +1225,7 @@ impl Engine {
         // nothing else was ever tracked.
         self.issue_warrants(now);
         notices::confront(&mut self.world);
-        // …and the ward's other hand (`features/chalking_the_walls.md` M1):
+        // …and the ward's other hand (`features/implemented/chalking_the_walls.md` M1):
         // a cross on the door of anyone who owes and has not paid. Gated to
         // one beat a game day inside, so all but one of the ~60 polls a second
         // costs a single `is_empty` check.
@@ -2242,7 +2242,7 @@ impl Engine {
     }
 
     /// Back-date a restitution notice against somebody so the ward's chalking
-    /// beat has something to find (`features/chalking_the_walls.md` M1).
+    /// beat has something to find (`features/implemented/chalking_the_walls.md` M1).
     fn debug_owe(&mut self, now: f64, who: &str, out: &mut Vec<EngineMessage>) {
         let Some(id) = self.world.resolve_debug_handle(who) else {
             out.push(EngineMessage::Diagnostic(format!(

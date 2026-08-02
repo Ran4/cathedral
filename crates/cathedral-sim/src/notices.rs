@@ -566,13 +566,13 @@ pub fn confront(world: &mut World) {
 }
 
 /// How long a restitution notice stands before the ward chalks the door
-/// (`features/chalking_the_walls.md` M1). Two game days: long enough that a
+/// (`features/implemented/chalking_the_walls.md` M1). Two game days: long enough that a
 /// wrong settled promptly never reaches the wall at all, short enough that an
 /// ignored one does.
 pub const CROSS_AFTER_GAME_DAYS: f64 = 2.0;
 
 /// The ward's own hand: a cross on the door of anyone who owes and has not
-/// paid (`features/chalking_the_walls.md` M1).
+/// paid (`features/implemented/chalking_the_walls.md` M1).
 ///
 /// Diegetically this is the sergeant's beat, and mechanically it is one
 /// idempotent call a game day — which is exactly what makes scrubbing a cross

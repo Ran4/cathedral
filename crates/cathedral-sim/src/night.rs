@@ -683,7 +683,7 @@ impl NightOffice {
                         ))),
                     }
                 }
-                // The ward's sign (`features/chalking_the_walls.md` M4): one
+                // The ward's sign (`features/implemented/chalking_the_walls.md` M4): one
                 // new match arm, not a new key on a struct and not a second
                 // prompt — no extra tokens beyond the line itself. The place
                 // is authored per ward in `assets/world/marks.json`, because

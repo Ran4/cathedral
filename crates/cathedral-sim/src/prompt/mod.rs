@@ -284,7 +284,7 @@ struct Sheet<'a> {
     /// fixtures byte-identical.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     dogs_nearby: Vec<DogLine<'a>>,
-    /// The chalk within sight (`features/chalking_the_walls.md`). A standing
+    /// The chalk within sight (`features/implemented/chalking_the_walls.md`). A standing
     /// fact about the street like the dogs, so it sits beside them; and like
     /// them it is omitted entirely when there is none, which is the universal
     /// case and every frozen fixture's case.
@@ -556,7 +556,7 @@ pub fn render_prompt(
     // The dogs explainer tracks its section too: only a sheet with a dog on it
     // pays the paragraph, and every dog-less world keeps its exact bytes.
     let has_dogs = !sheet.dogs_nearby.is_empty();
-    // The pen gates the verb, never the rule (`features/chalking_the_walls.md`
+    // The pen gates the verb, never the rule (`features/implemented/chalking_the_walls.md`
     // §2.6): the ward's own hand chalks without one. Scrubbing needs no pen —
     // a wet sleeve is a wet sleeve — only a mark within reach.
     let has_chalk_verbs =
@@ -672,7 +672,7 @@ pub fn render_ward_prompt(
     env: &PromptEnv,
 ) -> Result<String, PromptError> {
     let sheet_md = ward_markdown(world, ward, &env.strings);
-    // The one place this ward may chalk a sign (`features/chalking_the_walls.md`
+    // The one place this ward may chalk a sign (`features/implemented/chalking_the_walls.md`
     // M4), authored per ward in `assets/world/marks.json`. Empty when the kind
     // is switched off or the ward has none — the template's own `{% if %}`
     // then drops the verb, so the ward is never offered a verb it cannot use.

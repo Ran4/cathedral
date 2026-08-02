@@ -72,7 +72,7 @@ pub enum ActionErrorCode {
     /// ward within the hour — the lore's two doors, and nothing else.
     NoWarrant,
     /// `draw_mark` without a chalk pen in hand
-    /// (`features/chalking_the_walls.md` §2.6). The pen gates the verb; the
+    /// (`features/implemented/chalking_the_walls.md` §2.6). The pen gates the verb; the
     /// ward's own hand needs none.
     NoPen,
     /// `draw_mark` with nothing chalkable within reach. You cannot chalk a
@@ -412,7 +412,7 @@ impl From<ActionErrorCode> for CommandErrorCode {
             ActionErrorCode::InCustody => Self::InCustody,
             ActionErrorCode::CustodyFull => Self::CustodyFull,
             ActionErrorCode::NoWarrant => Self::NoWarrant,
-            // The chalk verbs' refusals (`features/chalking_the_walls.md` M2).
+            // The chalk verbs' refusals (`features/implemented/chalking_the_walls.md` M2).
             // They collapse onto `InvalidAction` on the command side: the
             // player has no `draw_mark` command to be refused — the M3 hold
             // interaction resolves its own anchor before issuing anything — so

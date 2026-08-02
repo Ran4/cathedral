@@ -94,14 +94,14 @@ pub struct SmartActorsConfig {
     /// The authored street-dog pack (features/implemented/dogs.md). Costs no tokens; off
     /// only for ablation (`CATHEDRAL_NO_DOGS` forces it off for one run).
     pub dogs_enabled: bool,
-    /// The chalk on the walls (features/chalking_the_walls.md). Costs no
+    /// The chalk on the walls (features/implemented/chalking_the_walls.md). Costs no
     /// tokens: marks are written by code, read by code, and reach an LLM only
     /// as one line on a turn that was going to happen anyway.
     pub marks: MarksSettings,
 }
 
 /// Chalk marks: the ablation switch, the per-kind switches, and the decay dial
-/// (`features/chalking_the_walls.md` §2.9).
+/// (`features/implemented/chalking_the_walls.md` §2.9).
 #[derive(Resource, Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct MarksSettings {
@@ -3925,7 +3925,7 @@ mod tests {
         );
         // Select the coin by slot rather than relying on it being the only
         // thing the player holds. The player is seeded with a chalk pen
-        // (`features/chalking_the_walls.md` M2), so slot 1 is the pen and the
+        // (`features/implemented/chalking_the_walls.md` M2), so slot 1 is the pen and the
         // spark this test is about is slot 2 — and the offer path, which is
         // what is under test here, has no opinion about inventory order.
         let coin_slot = app
