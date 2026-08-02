@@ -1,6 +1,7 @@
 # Chalking the Walls
 
-**Status:** M0, M1 and M2 done (2026-08-02); M3 and M4 not started. Branch `slunga/chalking_the_walls`.
+**Status:** M0, M1, M2 and M4 done (2026-08-02). **M3 (the Bevy render) is not started** — the
+whole feature is live in the sim and invisible on screen. See §4 M3 for what is already mapped. Branch `slunga/chalking_the_walls`.
 §2.7's snapshot measurement is done and recorded below; §0 records sixteen corrections to this spec
 found by re-checking every seam against the tree. Milestone state is tracked in §4 — each
 milestone's heading carries its own status and an "As built" note where the build diverged.
@@ -463,7 +464,30 @@ matching nothing is logged and skipped — not a fault. Each prints an evidence 
 Done when a headless run and a drive run each show a forged cross refusing a stall, and the golden
 fixtures move **only** in the conditional blocks (regenerate deliberately — see §5).
 
-### M3 — chalk you can see
+### M3 — chalk you can see — **NOT STARTED**
+
+Everything below is still the plan, and the recon behind it is done — see §0 C15 for the two traps
+that will otherwise cost an afternoon each:
+
+* **The look-at HUD line cannot reuse the existing focus system.** `src/smart_actors/targeting.rs`
+  is a complete crosshair→HUD pipeline, but `update_actor_focus` only ever queries entities carrying
+  an `ActorId`. A mark has none, and giving it a fake one would poison `focus_hint`, the offer path,
+  gaze and the actor sheet. M3 needs a *second* focus system; `nearest_visible_target` and
+  `ray_aabb_distance` are pure and already unit-tested, so copying them is cheap.
+* **No press-and-hold input pattern exists anywhere in the tree.** Every keyboard site is
+  `just_pressed`. The nearest thing — and a good one — is the custody strain meter
+  (`src/smart_actors/custody.rs`), which is an `f32` accumulator with `+dt/fill` while held,
+  `-dt*DRAIN/fill` while not, a `bool` latch so the *start* of a hold sends exactly one command, and
+  a fire at `>= 1.0`. It even ships a 10-segment progress bar to copy.
+
+The sim half is already done and waiting: `PublicSnapshot.marks` carries `{id, kind, point,
+strength_pct, strokes}` (~100 B each, cap 100), skipped when empty, and the revision bumps only when
+a mark's *published* value changes. `PublicMark` deliberately carries **no orientation** — the sim
+does not know which way a door faces, and the host owns the geometry that does.
+
+Also unverified until M3 lands: the M2 drive actions (`chalk` / `scrub`). They compile and are
+type-checked end to end, but no windowed run has exercised them, because until there is something on
+screen there is nothing for a screenshot to show.
 
 Bevy side. `src/city/marks.rs`, registered in `CityPlugin` beside the vermin and smoke systems
 (`src/city/mod.rs`, near line 65).
@@ -500,9 +524,41 @@ engine-message→HUD path using the existing pair `ready_fake_plugin_app()`
 (`src/smart_actors/local_engine.rs:191`): plant a mark in the world, pump a frame, assert the HUD
 read-line says the meaning.
 
-### M4 — the tally and the ward-sign
+### M4 — the tally and the ward-sign — **DONE 2026-08-02**
 
 The two remaining writers, each with its own cheap reader.
+
+**As built — and the tally reader is NOT where the spec put it.** §0 C7 has the detail; the short
+version is that the spec's "a term added inside `nearest_staffed_source`'s comparison, one function"
+would have moved nobody, ever. That function has two callers and both are enrolment-time;
+`Townsperson.source` is written once, in a struct literal, for an actor's whole life, and the
+per-trip site reads the already-bound index. A penalty inside it is evaluated at world-seed t=0,
+when no chalk exists.
+
+So the reader is a new `tallied_source`, called at `Decision::ApproachWell` — the per-trip site —
+and it **writes the re-picked index back onto the person**, because `enqueue`, the arrival and the
+queue all read `person.source` again later. Walking to one curb and queueing at another would be
+worse than not re-picking at all. Ties still break by source index, and with no chalk anywhere it
+returns exactly what `nearest_staffed_source` returns.
+
+`a_notched_well_sends_the_next_drawer_to_the_neighbour` is the regression: three strokes on a curb
+10 m away (10 + 18 = 28 m) loses the drawer to one 25 m away, and the near well recovers its queue
+when the chalk half-washes. Mutation-verified — zeroing the penalty fails it.
+
+**The ward-sign** is the one new `match` arm the spec promised, beside `ward_mood`. But a verb the
+ward is never *told about* is a verb no LLM will ever use, so `night.j2` gained the instruction and
+the example line, both gated on `{% if ward_sign_place %}` — a ward whose kind is switched off is
+never offered a verb it cannot use. The place is authored per ward in `marks.json` (C8) and the arm
+refuses any other, logging it exactly as `ward_mood` logs a bad argument.
+
+The reader extends `reroll_ambient_evenings` to a weighted list — each tavern 1.0, the walker's own
+ward's chalked sign `1.0 + 2.0 * strength` — picked from the *same* pure `hash01("night_tavern", id,
+day)`, never a fresh draw. The walker's ward was already in hand: the loop fetches `lore()` to test
+`significance`, and `planning_ward` rides the same profile.
+
+`a_chalked_ward_sign_pulls_that_wards_evening_crowd` compares the same roll with and without the
+sign: the same people move either way — the sign changes *where*, not *whether* — and on a bare
+night nobody walks to a place of resort at all. Mutation-verified.
 
 **Well tally.** When a draw completes in `round.rs`, notch the `WellTally` on that source's
 `MarkAnchor::Place` (create at one stroke, else `strokes += 1`, capped at `TALLY_STROKES_MAX`,
