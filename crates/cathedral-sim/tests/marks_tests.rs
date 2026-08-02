@@ -1149,3 +1149,80 @@ fn the_sheet_lists_what_a_hand_could_chalk() {
     );
     assert_eq!(world.marks.len(), 1, "and the mark itself is untouched");
 }
+
+// --------------------------------------------------------------------------- //
+// M4 — the ward-sign's vocabulary
+// --------------------------------------------------------------------------- //
+
+/// The ward-sign hangs on a place, never a door, and the catalog says which
+/// place each ward may name.
+#[test]
+fn a_ward_sign_hangs_only_where_the_catalog_says() {
+    let catalog = cathedral_sim::marks::MarkCatalog::default();
+    let household = MarkAnchor::Household(ActorId::from_raw("debtor"));
+    assert!(!catalog.accepts(MarkKind::WardSign, &household));
+    assert!(catalog.accepts(
+        MarkKind::WardSign,
+        &MarkAnchor::Place("The Wickmarket".into())
+    ));
+    assert_eq!(catalog.ward_sign_place("wick"), Some("The Wickmarket"));
+    assert_eq!(catalog.ward_sign_place("no_such_ward"), None);
+}
+
+/// The per-kind switches reach the tally and the sign as well as the cross.
+#[test]
+fn the_tally_and_ward_sign_switches_silence_their_own_kinds() {
+    let mut world = world_with_places();
+    world.mark_kinds.tally = false;
+    assert!(
+        marks::draw_or_refresh(
+            &mut world,
+            MarkKind::WellTally,
+            MarkAnchor::Place("Chain Well".into()),
+            None,
+            0.0,
+        )
+        .is_none(),
+        "the tally writer is switched off"
+    );
+    world.mark_kinds.tally = true;
+    assert!(
+        marks::draw_or_refresh(
+            &mut world,
+            MarkKind::WellTally,
+            MarkAnchor::Place("Chain Well".into()),
+            None,
+            0.0,
+        )
+        .is_some(),
+        "and on again"
+    );
+}
+
+/// A tally saturates rather than running away, and reads honestly at every
+/// count — the M4 reader turns `strokes` straight into metres of extra walk,
+/// so an unbounded count would be an unbounded penalty.
+#[test]
+fn a_tally_saturates_and_reads_honestly() {
+    let mut world = world_with_places();
+    let id = chalk(&mut world, MarkAnchor::Place("Chain Well".into()));
+    let catalog = world.mark_catalog.clone();
+
+    world.marks.get_mut(id).unwrap().strokes = 1;
+    assert!(
+        catalog
+            .label_for(world.marks.get(id).unwrap())
+            .contains("one stroke")
+    );
+
+    world.marks.get_mut(id).unwrap().strokes = 4;
+    assert!(
+        catalog
+            .label_for(world.marks.get(id).unwrap())
+            .contains("four strokes")
+    );
+
+    world.marks.get_mut(id).unwrap().strokes = cathedral_sim::marks::TALLY_STROKES_MAX;
+    let label = catalog.label_for(world.marks.get(id).unwrap());
+    assert!(label.contains("and more"), "saturates: {label}");
+}

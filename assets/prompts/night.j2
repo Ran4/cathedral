@@ -25,7 +25,14 @@ Read your_people together with the_word and last_night, and return two things:
    from their_places. Most nights need none at all, and none is the ordinary
    answer.
 
-Use ONLY the verbs below, spelled exactly as shown. There are no other verbs
+{% if ward_sign_place %}3. Optionally, ONE chalk_ward_sign. Somebody in the ward chalks a sign at the
+   ward's own place of resort, and tomorrow evening a few more of the ordinary
+   cast drift there instead of to a tavern. Use it when the ward's night gives a
+   reason for people to gather — a wake, a grievance, something worth standing
+   about — and name the place exactly as {{ ward_sign_place }} spells it. Most
+   nights need none.
+
+{% endif %}Use ONLY the verbs below, spelled exactly as shown. There are no other verbs
 here: you cannot speak, walk, give, remember or set a goal — a ward has no hands
 and no memory of its own.
 
@@ -34,7 +41,8 @@ Possible actions (format: `VERB ARGS`), examples:
 ```
 ward_mood {"mood": "The rain has not let up and the tenter-frames stand empty. People are short with one another, and there is talk about who was seen at the sluice."}
 set_round {"person": "4bfk4", "leg": 2, "place_id": "pl_x2vw"}  # Move that person's leg 2 to that place
-wait {}                                                        # The ward is as it was; change nothing
+{% if ward_sign_place %}chalk_ward_sign {"place": "{{ ward_sign_place }}"}  # Chalk a sign at this ward's place of resort; a few more people gather there tomorrow evening
+{% endif %}wait {}                                                        # The ward is as it was; change nothing
 ```
 
 Output like this, and only like this (skip the backticks, and everything after # is a comment):

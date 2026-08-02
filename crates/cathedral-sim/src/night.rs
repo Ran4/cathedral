@@ -683,6 +683,55 @@ impl NightOffice {
                         ))),
                     }
                 }
+                // The ward's sign (`features/chalking_the_walls.md` M4): one
+                // new match arm, not a new key on a struct and not a second
+                // prompt — no extra tokens beyond the line itself. The place
+                // is authored per ward in `assets/world/marks.json`, because
+                // `places.json` has no shrines and three wards have nothing
+                // devotional to name (§0 C8); naming any other place is a
+                // logged skip, exactly as `ward_mood` handles a bad argument.
+                "chalk_ward_sign" => {
+                    let want = args.get("place").and_then(Value::as_str).map(str::trim);
+                    // Owned: `draw_or_refresh` needs `&mut world` and the
+                    // catalog lives inside it.
+                    let authored = world
+                        .mark_catalog
+                        .ward_sign_place(ward.as_str())
+                        .map(str::to_string);
+                    match (want.filter(|place| !place.is_empty()), authored.as_deref()) {
+                        (Some(place), Some(authored)) if place.eq_ignore_ascii_case(authored) => {
+                            let game_days = world.current_time.map_or(0.0, |time| time.game_days());
+                            match crate::marks::draw_or_refresh(
+                                world,
+                                crate::marks::MarkKind::WardSign,
+                                crate::marks::MarkAnchor::Place(authored.to_string()),
+                                None,
+                                game_days,
+                            ) {
+                                Some(_) => done.push(format!("chalk_ward_sign {authored}")),
+                                None => events.push(SchedulerEvent::Diagnostic(format!(
+                                    "[night] {} ward: chalk_ward_sign could not chalk {authored}",
+                                    ward.as_str()
+                                ))),
+                            }
+                        }
+                        (Some(place), Some(authored)) => {
+                            events.push(SchedulerEvent::Diagnostic(format!(
+                                "[night] {} ward: chalk_ward_sign named {place:?}; this ward's \
+                                 place of resort is {authored:?}",
+                                ward.as_str()
+                            )));
+                        }
+                        (_, None) => events.push(SchedulerEvent::Diagnostic(format!(
+                            "[night] {} ward: chalk_ward_sign has no authored place",
+                            ward.as_str()
+                        ))),
+                        (None, _) => events.push(SchedulerEvent::Diagnostic(format!(
+                            "[night] {} ward: chalk_ward_sign needs a non-empty \"place\"",
+                            ward.as_str()
+                        ))),
+                    }
+                }
                 "set_round" if edits >= WARD_EDITS_MAX => {
                     events.push(SchedulerEvent::Diagnostic(format!(
                         "[night] {} ward: more than {WARD_EDITS_MAX} set_round edits; ignored",

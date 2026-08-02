@@ -581,10 +581,9 @@ pub fn render_prompt(
     // a body that has one.
     let has_pockets = !actor.pockets().is_empty()
         || actor.holds().iter().any(|item_id| {
-            world
-                .items
-                .get(item_id)
-                .is_some_and(|item| world.item_catalog.size(item) == crate::item::ItemSize::Palmable)
+            world.items.get(item_id).is_some_and(|item| {
+                world.item_catalog.size(item) == crate::item::ItemSize::Palmable
+            })
         });
     let has_frontbutt = actor.has_body_slot(crate::character::BodySlot::Frontbutt);
     // `grab` is rendered only to somebody who actually has a person in charge —
@@ -653,6 +652,7 @@ pub fn render_night_prompt(
                 sheet_md,
                 is_ward => false,
                 legs => sheet.your_round.len(),
+                ward_sign_place => "",
             })
         })
         .map_err(|error| PromptError::new(format!("the night template did not render: {error}")))
@@ -672,6 +672,16 @@ pub fn render_ward_prompt(
     env: &PromptEnv,
 ) -> Result<String, PromptError> {
     let sheet_md = ward_markdown(world, ward, &env.strings);
+    // The one place this ward may chalk a sign (`features/chalking_the_walls.md`
+    // M4), authored per ward in `assets/world/marks.json`. Empty when the kind
+    // is switched off or the ward has none — the template's own `{% if %}`
+    // then drops the verb, so the ward is never offered a verb it cannot use.
+    let ward_sign_place = world
+        .mark_kind_enabled(crate::marks::MarkKind::WardSign)
+        .then(|| world.mark_catalog.ward_sign_place(ward.as_str()))
+        .flatten()
+        .unwrap_or_default()
+        .to_string();
     env.environment
         .get_template(NIGHT_TEMPLATE)
         .and_then(|template| {
@@ -679,6 +689,7 @@ pub fn render_ward_prompt(
                 sheet_md,
                 is_ward => true,
                 legs => 0,
+                ward_sign_place,
             })
         })
         .map_err(|error| PromptError::new(format!("the night template did not render: {error}")))
