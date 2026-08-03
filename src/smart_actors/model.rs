@@ -615,10 +615,6 @@ impl WorldMirror {
     /// The revision the ECS is currently projecting. `interaction.rs` carries it
     /// on every command so a result that lands after the world moved on can be
     /// recognized as stale.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "queried by tests and future consumers")
-    )]
     pub fn revision(&self) -> Option<u64> {
         self.revision
     }
