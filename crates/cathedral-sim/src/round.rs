@@ -4537,9 +4537,33 @@ impl Round {
                 };
                 if binding != errand.selected {
                     selection_changed = true;
+                    // A seller who merely steps off the pitch clears `selected`
+                    // without resetting the visit (07_the_supply_chain.md:
+                    // "rebinding resumes it with the same spent budget"), and
+                    // that survival must include the walk's own clock: nulling
+                    // the deadline here and re-stamping it on return handed a
+                    // fresh travel budget to every flicker of the seller's
+                    // presence, so a genuinely stuck walk toward an oscillating
+                    // seller churned all day without ever tripping
+                    // `TravelExpired`. Only a truly different selection —
+                    // another cart of the group, a new session — starts a new
+                    // walk with a new budget; the same binding going absent and
+                    // coming back keeps the deadline it had, held (below) for
+                    // exactly the span the buyer stood waiting.
+                    let same_binding_paused = match (&binding, &errand.selected) {
+                        // Going absent: reaching here with a prior selection and
+                        // no binding means `binding_still_viable` vouched for it
+                        // above, else the visit would already have ended.
+                        (None, Some(_)) => true,
+                        // Coming back: the very key the walk was laid toward.
+                        (Some(next), None) => errand.bindings_seen.last() == Some(next),
+                        _ => false,
+                    };
+                    if !same_binding_paused {
+                        errand.travel_deadline_real = None;
+                        errand.deadline_hold_began_real = None;
+                    }
                     errand.selected = binding.clone();
-                    errand.travel_deadline_real = None;
-                    errand.deadline_hold_began_real = None;
                     if let Some(binding) = &binding
                         && !errand.bindings_seen.contains(binding)
                     {
@@ -4576,6 +4600,12 @@ impl Round {
                         .expect("errand exists");
                     let changed = errand.phase != MarketErrandPhase::WaitingForOpen;
                     errand.phase = MarketErrandPhase::WaitingForOpen;
+                    // The wait is the seller's doing, not the walk's: freeze
+                    // the travel clock for as long as the source is absent.
+                    // Re-armed every tick because the release above pays each
+                    // held slice out incrementally; the sum is the whole span
+                    // stood waiting.
+                    errand.deadline_hold_began_real.get_or_insert(now);
                     changed
                 };
                 if selection_changed || phase_changed {

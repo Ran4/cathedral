@@ -6392,6 +6392,76 @@ fn a_conversation_pauses_the_stock_travel_deadline() {
     world.assert_invariants();
 }
 
+/// `07_the_supply_chain.md`: a seller who temporarily steps outside the
+/// counter radius clears `selected` but does not reset or end the visit —
+/// and that survival must include the walk's own clock. The flip used to null
+/// `travel_deadline_real` and the rebind re-stamped a whole fresh budget, so
+/// a genuinely stuck walk toward a seller who flickers on and off the pitch
+/// churned between walking and waiting all day without ever tripping
+/// `TravelExpired`. Now the same binding going absent and coming back keeps
+/// the deadline it had, moved forward by exactly the span the buyer stood
+/// waiting — and a walk that still never arrives still ends the visit.
+#[test]
+fn a_sellers_brief_excursion_never_rearms_the_stock_travel_deadline() {
+    let (nav, clock, mut world, mut round, buyer) = grain_errand_fixture();
+    let quiet = BTreeSet::new();
+    let seller = ActorId::from_raw("rbrde");
+    let pitch = round.counters["brede_grain_seven_lofts"].pitch;
+    let away = pitch + Vec3::new(round.counters["brede_grain_seven_lofts"].radius_m + 5.0, 0.0, 0.0);
+
+    round.tick_stock_plans(&mut world, &nav, clock.at(0.0), 0.0, &quiet);
+    let deadline = round.market_errands[&buyer]
+        .travel_deadline_real
+        .expect("the walk stamps its deadline");
+    assert!(world.characters[&buyer].is_walking(), "the errand walks");
+
+    // The seller steps off the pitch: the spec's documented pause — selection
+    // cleared, the buyer stands and waits, the visit stays open.
+    world.characters.get_mut(&seller).unwrap().state.position_m = away;
+    round.tick_stock_plans(&mut world, &nav, clock.at(10.0), 10.0, &quiet);
+    let errand = &round.market_errands[&buyer];
+    assert_eq!(errand.selected, None, "the excursion clears the selection");
+    assert_eq!(errand.phase, MarketErrandPhase::WaitingForOpen);
+    assert_eq!(
+        errand.travel_deadline_real,
+        Some(deadline),
+        "the flicker does not touch the walk's clock"
+    );
+
+    // The seller returns: the walk resumes with the budget it had, pushed by
+    // exactly the ten seconds stood waiting — not re-stamped from now.
+    world.characters.get_mut(&seller).unwrap().state.position_m = pitch;
+    round.tick_stock_plans(&mut world, &nav, clock.at(20.0), 20.0, &quiet);
+    let resumed = round.market_errands[&buyer]
+        .travel_deadline_real
+        .expect("walking again");
+    assert!(
+        (resumed - (deadline + 10.0)).abs() < 1e-6,
+        "the deadline moved by exactly the absent span, not a fresh budget"
+    );
+
+    // A second flicker buys nothing more than its own span either.
+    world.characters.get_mut(&seller).unwrap().state.position_m = away;
+    round.tick_stock_plans(&mut world, &nav, clock.at(30.0), 30.0, &quiet);
+    world.characters.get_mut(&seller).unwrap().state.position_m = pitch;
+    round.tick_stock_plans(&mut world, &nav, clock.at(40.0), 40.0, &quiet);
+    let twice = round.market_errands[&buyer]
+        .travel_deadline_real
+        .expect("still walking");
+    assert!((twice - (deadline + 20.0)).abs() < 1e-6);
+
+    // Still meaningful: with the seller present and the walk simply never
+    // arriving, the backstop the flickers used to push out forever now fires.
+    let late = twice + 1.0;
+    round.tick_stock_plans(&mut world, &nav, clock.at(late), late, &quiet);
+    assert!(!round.market_errands.contains_key(&buyer));
+    assert_eq!(
+        round.closed_market_visits["betriss_grain"].end_reason,
+        MarketVisitEnd::TravelExpired
+    );
+    world.assert_invariants();
+}
+
 /// The road's recall ends a live `go_to` through [`end_intent`], so the mind
 /// that issued it is told why the body gave up — silent abandonment leaves it
 /// believing an untruth (05_the_llm_seam.md §2). The one exception is a member
