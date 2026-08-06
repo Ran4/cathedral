@@ -6462,6 +6462,94 @@ fn a_sellers_brief_excursion_never_rearms_the_stock_travel_deadline() {
     world.assert_invariants();
 }
 
+/// The errand ledger is keyed by buyer, but the loader only makes plan *ids*
+/// unique — two stock plans may share a buyer, and the tick's plan-specific
+/// guards used to run before the ownership check. A second plan on the same
+/// buyer, already satisfied and iterating first, would find the buyer's live
+/// errand and finish it `TargetsSatisfied` — closing another plan's visit
+/// against targets that plan never had — and the resume fixup would hand a
+/// hold marker to whichever plan reached it first. Ownership is now checked
+/// before anything plan-specific touches the errand.
+#[test]
+fn a_plan_never_finishes_an_errand_another_plan_owns() {
+    let (nav, clock, mut world, mut round, buyer) = grain_errand_fixture();
+    let quiet = BTreeSet::new();
+
+    // A second plan on the same buyer, wanting one loaf the buyer already
+    // holds — satisfied from its first tick — spliced in *first* so its
+    // iteration precedes the grain plan's every time.
+    let loaf = ItemId::from_raw("fs_interloper_loaf");
+    world.add_item(Item::stack(loaf.clone(), "loaf", 1));
+    world
+        .characters
+        .get_mut(&buyer)
+        .unwrap()
+        .state
+        .holds
+        .push(loaf);
+    round.stock_plans.insert(
+        0,
+        StockPlanSpec {
+            id: "betriss_loaf".into(),
+            buyer: buyer.clone(),
+            source: StockSource::Counter("brede_grain_seven_lofts".into()),
+            targets: vec![StockTargetSpec {
+                kind: "loaf".into(),
+                metadata: BTreeMap::new(),
+                desired_quantity: 1,
+            }],
+            max_spend_sparks: 1,
+        },
+    );
+
+    round.tick_stock_plans(&mut world, &nav, clock.at(0.0), 0.0, &quiet);
+    let errand = round
+        .market_errands
+        .get(&buyer)
+        .expect("the grain plan opens its walk despite the satisfied bystander");
+    assert_eq!(errand.plan_id, "betriss_grain");
+    let deadline = errand
+        .travel_deadline_real
+        .expect("the walk stamps its deadline");
+
+    // The next tick is where the old ordering bit: the loaf plan, satisfied,
+    // reached `finish_market_errand` before ever asking whose errand it was.
+    round.tick_stock_plans(&mut world, &nav, clock.at(5.0), 5.0, &quiet);
+    assert!(
+        round.market_errands.contains_key(&buyer),
+        "the loaf plan's satisfaction must not close the grain plan's errand"
+    );
+    assert!(
+        !round.closed_market_visits.contains_key("betriss_grain"),
+        "no visit of the grain plan's ends on the loaf plan's account"
+    );
+
+    // Hold the buyer, then resume: the hold marker and the pushed-forward
+    // deadline are the grain plan's bookkeeping, and the loaf plan's earlier
+    // iteration consumes neither.
+    round.lightning_reflex_until.insert(buyer.clone(), 15.0);
+    round.tick_stock_plans(&mut world, &nav, clock.at(10.0), 10.0, &quiet);
+    let held = round
+        .market_errands
+        .get(&buyer)
+        .expect("a held errand stays open");
+    assert_eq!(
+        held.deadline_hold_began_real,
+        Some(10.0),
+        "the hold marker waits for its owner"
+    );
+    round.tick_stock_plans(&mut world, &nav, clock.at(20.0), 20.0, &quiet);
+    let resumed = &round.market_errands[&buyer];
+    assert_eq!(resumed.plan_id, "betriss_grain");
+    assert_eq!(resumed.deadline_hold_began_real, None);
+    let extended = resumed.travel_deadline_real.expect("still walking");
+    assert!(
+        (extended - (deadline + 10.0)).abs() < 1e-6,
+        "the deadline moved by exactly the held span, applied by its owner"
+    );
+    world.assert_invariants();
+}
+
 /// The road's recall ends a live `go_to` through [`end_intent`], so the mind
 /// that issued it is told why the body gave up — silent abandonment leaves it
 /// believing an untruth (05_the_llm_seam.md §2). The one exception is a member

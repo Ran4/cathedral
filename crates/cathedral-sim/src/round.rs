@@ -4407,6 +4407,20 @@ impl Round {
                 self.finish_market_errand(world, &plan.buyer, MarketVisitEnd::SourceIneligible);
                 continue;
             }
+            // The errand ledger is keyed by buyer, and nothing above promises
+            // one plan per buyer — the loader checks plan ids for uniqueness,
+            // not buyers. Everything past the buyer-level checks above is the
+            // errand-owner's own business: its satisfaction, its hold
+            // markers, its travel deadline. A plan whose buyer is out on some
+            // other plan's errand waits its turn here rather than finishing a
+            // visit it never opened or consuming bookkeeping it does not own.
+            if self
+                .market_errands
+                .get(&plan.buyer)
+                .is_some_and(|errand| errand.plan_id != plan.id)
+            {
+                continue;
+            }
             if in_conversation.contains(&plan.buyer) {
                 self.hold_stock_travel_deadline(&plan.buyer, now);
                 continue;
@@ -4468,13 +4482,6 @@ impl Round {
                 && let Some(deadline) = &mut errand.travel_deadline_real
             {
                 *deadline += now - began;
-            }
-            if self
-                .market_errands
-                .get(&plan.buyer)
-                .is_some_and(|errand| errand.plan_id != plan.id)
-            {
-                continue;
             }
             let binding = self.source_binding(world, &plan.source, time);
             if !self.market_errands.contains_key(&plan.buyer) {
