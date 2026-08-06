@@ -83,6 +83,38 @@ impl Default for VerminSettings {
     }
 }
 
+/// The supported ceiling for `vermin.density`. Past ~4× the authored counts
+/// the colonies read as a carpet, and the startup bake's cost scales with the
+/// value — a typo'd `1e20` would saturate the spawn code's float-to-`usize`
+/// cast and hang startup on an effectively unbounded number of path bakes.
+pub const VERMIN_DENSITY_MAX: f32 = 4.0;
+
+impl VerminSettings {
+    /// Normalize `density` to a finite value in `0.0..=VERMIN_DENSITY_MAX`,
+    /// returning what to log when the configured value was unusable.
+    ///
+    /// `config.ron` is player-editable and loaded before the scene spawns, so
+    /// a wild value (`1e20`, `-3`, `inf` — RON accepts the non-finite
+    /// spellings) must degrade to the nearest supported one with a precise
+    /// diagnostic; refusing to start would leave the game unbootable until
+    /// the file is fixed outside it.
+    pub fn sanitize(&mut self) -> Option<String> {
+        let configured = self.density;
+        self.density = if configured.is_finite() {
+            configured.clamp(0.0, VERMIN_DENSITY_MAX)
+        } else {
+            Self::default().density
+        };
+        // Bit comparison, so a configured NaN counts as changed.
+        (self.density.to_bits() != configured.to_bits()).then(|| {
+            format!(
+                "vermin.density {configured} is outside the supported 0..={VERMIN_DENSITY_MAX}; using {}",
+                self.density
+            )
+        })
+    }
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
@@ -113,8 +145,13 @@ pub fn load_config_from_paths(
 ) -> AppConfig {
     for path in [config_path.as_ref(), default_config_path.as_ref()] {
         match fs::read_to_string(path) {
-            Ok(source) => match ron::from_str(&source) {
-                Ok(config) => return config,
+            Ok(source) => match ron::from_str::<AppConfig>(&source) {
+                Ok(mut config) => {
+                    if let Some(warning) = config.vermin.sanitize() {
+                        eprintln!("{}: {warning}.", path.display());
+                    }
+                    return config;
+                }
                 Err(error) => eprintln!("Could not parse {}: {error}.", path.display()),
             },
             Err(error) => eprintln!("Could not read {}: {error}.", path.display()),
@@ -207,6 +244,53 @@ mod tests {
         assert_eq!(defaults.vermin.seed, shipped.seed);
         assert_eq!(defaults.vermin.density, shipped.density);
         assert_eq!(defaults.vermin.swarm_percepts, shipped.swarm_percepts);
+    }
+
+    /// LE-05: `config.ron` is player-editable and loaded before the scene
+    /// spawns, so a wild `vermin.density` — a typo like `1e20`, a negative, or
+    /// the non-finite spellings RON accepts — must normalize to the supported
+    /// range with a warning rather than saturate the spawn code's
+    /// float-to-`usize` cast and hang startup.
+    #[test]
+    fn a_wild_vermin_density_is_normalized_not_obeyed() {
+        let sanitized = |source: &str| -> (f32, bool) {
+            let mut config: AppConfig =
+                ron::from_str(source).expect("the test vermin block parses");
+            let warned = config.vermin.sanitize().is_some();
+            (config.vermin.density, warned)
+        };
+
+        // In range — both boundaries included — passes through, silently.
+        assert_eq!(sanitized("(vermin: (density: 0.0))"), (0.0, false));
+        assert_eq!(
+            sanitized("(vermin: (density: 4.0))"),
+            (VERMIN_DENSITY_MAX, false)
+        );
+
+        // A typo'd huge-but-finite value clamps to the ceiling; a negative
+        // clamps to zero. Both are worth a precise line on stderr.
+        assert_eq!(
+            sanitized("(vermin: (density: 1e20))"),
+            (VERMIN_DENSITY_MAX, true)
+        );
+        assert_eq!(sanitized("(vermin: (density: -3.0))"), (0.0, true));
+
+        // The non-finite spellings fall back to the shipped default: there is
+        // no nearest supported value to clamp a NaN to.
+        let shipped = VerminSettings::default().density;
+        assert_eq!(sanitized("(vermin: (density: inf))"), (shipped, true));
+        assert_eq!(sanitized("(vermin: (density: NaN))"), (shipped, true));
+
+        // And the production load path applies it, so no caller sees the raw
+        // configured value.
+        let path = std::env::temp_dir().join(format!(
+            "cathedral_wild_density_config_{}.ron",
+            std::process::id()
+        ));
+        fs::write(&path, "(vermin: (density: 1e20))").expect("the test config writes");
+        let loaded = load_config_from_paths(&path, "does_not_exist.ron");
+        fs::remove_file(&path).ok();
+        assert_eq!(loaded.vermin.density, VERMIN_DENSITY_MAX);
     }
 
     #[test]

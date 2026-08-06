@@ -81,6 +81,12 @@ const BOIL_RADIUS_SCALE: f32 = 2.0;
 /// The boil complement draws from its own seed stream, so a colony's ordinary
 /// loops are identical whether it boils tonight or not.
 const BOIL_SEED_STREAM: u64 = 0xb011_0000_0000_0000;
+/// Hard ceiling on one colony's ordinary count — defence in depth behind the
+/// config sanitizer (`config::VERMIN_DENSITY_MAX`), for a `VerminSettings`
+/// built by hand rather than loaded: an order of magnitude above anything a
+/// sanitized config can ask for, and small enough that the startup bake stays
+/// bounded however wild the density is.
+const MAX_RATS_PER_COLONY: usize = 256;
 /// The catalog row the boil crosses into the sim on
 /// (`assets/sounds/catalog.toml`): unattributed, not actor-emittable, 12 m.
 const SWARM_SOUND_ID: &str = "rat_swarm";
@@ -459,6 +465,18 @@ fn percept_due(last_minutes: Option<f64>, minutes: f64) -> bool {
         .is_none_or(|last| !(0.0..SWARM_PERCEPT_INTERVAL_MINUTES).contains(&(minutes - last)))
 }
 
+/// One colony's `(ordinary, boil)` counts at this density.
+///
+/// `load_config` already clamps the player's file (LE-05), but this system
+/// takes whatever `VerminSettings` was inserted — so the arithmetic itself
+/// must stay bounded: the float-to-`usize` cast saturates (`NaN` to zero) and
+/// lands on [`MAX_RATS_PER_COLONY`] rather than a `usize::MAX` bake loop, and
+/// the boil multiply saturates rather than overflowing.
+fn colony_counts(rats: usize, density: f32) -> (usize, usize) {
+    let count = ((rats as f32 * density).round().max(0.0) as usize).min(MAX_RATS_PER_COLONY);
+    (count, count.saturating_mul(BOIL_EXTRA_RATS_PER_RAT))
+}
+
 /// Spawns the one vermin batch. Registered after `build_city` so the baked
 /// waypoints validate against the fully populated `CollisionWorld`; with
 /// `vermin.enabled: false` (or `CATHEDRAL_NO_VERMIN`) nothing spawns and the
@@ -486,7 +504,7 @@ pub(super) fn spawn_vermin(
         .iter()
         .enumerate()
         .map(|(colony_index, spec)| {
-            let count = (spec.rats as f32 * settings.density).round().max(0.0) as usize;
+            let (count, boil_count) = colony_counts(spec.rats, settings.density);
             let rats: Vec<Rat> = (0..count)
                 .filter_map(|rat_index| {
                     let seed = mix(settings
@@ -499,7 +517,7 @@ pub(super) fn spawn_vermin(
             // The boil is baked here, with the rest, rather than the night it
             // happens: waypoint validation reads the whole `CollisionWorld`,
             // and the frame the Snuffing lands on is not the frame to do it.
-            let boil_rats: Vec<Rat> = (0..count * BOIL_EXTRA_RATS_PER_RAT)
+            let boil_rats: Vec<Rat> = (0..boil_count)
                 .filter_map(|rat_index| {
                     let seed = mix(BOIL_SEED_STREAM
                         .wrapping_add(settings.seed)
@@ -1721,6 +1739,35 @@ mod tests {
         assert!(
             doubled.iter().sum::<usize>() > single.iter().sum::<usize>(),
             "a denser city has more rats in it"
+        );
+    }
+
+    /// LE-05 defence in depth: the config sanitizer only guards the loaded
+    /// file, so the count arithmetic itself must stay bounded for any
+    /// `VerminSettings` — a huge finite density saturates the cast onto the
+    /// per-colony cap instead of a `usize::MAX` bake loop, the boil multiply
+    /// cannot overflow, and non-finite or negative values settle nothing.
+    #[test]
+    fn a_wild_density_cannot_unbound_the_bake() {
+        let capped = (
+            MAX_RATS_PER_COLONY,
+            MAX_RATS_PER_COLONY * BOIL_EXTRA_RATS_PER_RAT,
+        );
+        assert_eq!(colony_counts(10, 1e20), capped);
+        assert_eq!(colony_counts(10, f32::INFINITY), capped);
+        assert_eq!(colony_counts(10, f32::MAX), capped);
+        // NaN and negatives read as an empty colony, not a panic or a wrap.
+        assert_eq!(colony_counts(10, f32::NAN), (0, 0));
+        assert_eq!(colony_counts(10, f32::NEG_INFINITY), (0, 0));
+        assert_eq!(colony_counts(10, -5.0), (0, 0));
+        // And the sane path is untouched: rounding, not truncation, and the
+        // supported ceiling (`config::VERMIN_DENSITY_MAX`) sits well under
+        // the cap.
+        assert_eq!(colony_counts(10, 1.0), (10, 20));
+        assert_eq!(colony_counts(10, 0.26), (3, 6));
+        assert_eq!(
+            colony_counts(10, crate::config::VERMIN_DENSITY_MAX),
+            (40, 80)
         );
     }
 
