@@ -402,6 +402,18 @@ pub struct MarkKindSpec {
     _places_doc: Option<String>,
 }
 
+impl MarkKindSpec {
+    /// Whether a mark at this *published* strength reads — and rules — as
+    /// faint. The one threshold comparison, in wire units: the sim's
+    /// [`MarkCatalog::is_faint`] / [`MarkCatalog::is_binding`] and the host's
+    /// wall label all come through here, so a raw strength the quantizer
+    /// rounds up to the boundary (0.349 → 35%) can never be faint to the
+    /// prompt while the wall still shows it fresh.
+    pub fn faint_at_pct(&self, strength_pct: u8) -> bool {
+        f64::from(strength_pct) / 100.0 < self.faint_below
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct MarksDoc {
@@ -578,9 +590,16 @@ impl MarkCatalog {
 
     /// Below the catalog's `faint_below`. **The one predicate every reader
     /// must consult** — a faint mark renders but does not rule.
+    ///
+    /// Judged on the *published* percent, not the raw strength: the wall's
+    /// label is the same threshold applied to
+    /// [`PublicMark::strength_pct`](crate::snapshot::PublicMark) host-side,
+    /// and comparing the raw `f64` here would let a strength in
+    /// `0.345..0.35` be faint to the prompt for hours while the wire said
+    /// 35% and the wall still read it fresh.
     pub fn is_faint(&self, mark: &Mark) -> bool {
         match self.spec(mark.kind) {
-            Some(spec) => mark.strength < spec.faint_below,
+            Some(spec) => spec.faint_at_pct(published_strength_pct(mark.strength)),
             None => true,
         }
     }
@@ -595,7 +614,7 @@ impl MarkCatalog {
     /// kind outright, so this is the second of two locks on the same door.
     pub fn is_binding(&self, mark: &Mark) -> bool {
         self.spec(mark.kind)
-            .is_some_and(|spec| mark.strength >= spec.faint_below)
+            .is_some_and(|spec| !spec.faint_at_pct(published_strength_pct(mark.strength)))
     }
 
     /// The place of resort a ward's sign may name.
@@ -682,10 +701,12 @@ pub fn half_life_days(spec: &MarkKindSpec, precipitation: f64, sheltered: bool) 
 /// The quantized strength [`PublicMark`](crate::snapshot::PublicMark)
 /// publishes — the whole-percent opacity step the renderer can actually see.
 ///
-/// Shared by the sweep's change test and by `World::public_snapshot` so the
-/// two cannot drift: if the sweep decided "changed" on a finer grain than the
-/// wire carries, every mark in the city would churn the snapshot chain
-/// forever. A non-finite strength quantizes to 0 rather than panicking.
+/// Shared by the sweep's change test, by `World::public_snapshot` *and* by
+/// the faint/binding predicates so none of the three can drift: if the sweep
+/// decided "changed" on a finer grain than the wire carries, every mark in
+/// the city would churn the snapshot chain forever, and a rule that flipped
+/// between two published percents would flip with no snapshot to show for
+/// it. A non-finite strength quantizes to 0 rather than panicking.
 pub fn published_strength_pct(strength: f64) -> u8 {
     if !strength.is_finite() {
         return 0;
@@ -1007,6 +1028,59 @@ mod tests {
         assert_eq!(published_strength_pct(f64::INFINITY), 0);
         assert_eq!(published_strength_pct(-5.0), 0);
         assert_eq!(published_strength_pct(5.0), 100);
+    }
+
+    /// The faint boundary reads the same through every door. The predicates,
+    /// the published percent and the host's wall label all judge
+    /// `faint_below` on the *quantized* strength, so a raw strength the wire
+    /// rounds up to the boundary (0.349 → 35%) cannot be faint to the prompt
+    /// while the wall still shows it fresh — the disagreement used to last
+    /// ~4.4 dry game-hours per mark.
+    #[test]
+    fn the_faint_boundary_agrees_with_the_wire() {
+        let catalog = MarkCatalog::default();
+        let spec = spec();
+        assert_eq!(spec.faint_below, 0.35, "the boundary these cases probe");
+        for (strength, expect_faint) in [
+            (0.3449, true),  // 34% on the wire — faint everywhere
+            (0.345, false),  // rounds up to 35% — binding everywhere
+            (0.349, false),  // the old disagreement: raw-faint, wire-fresh
+            (0.35, false),   // 35% exactly
+        ] {
+            let mark = Mark {
+                kind: MarkKind::ChalkCross,
+                anchor: MarkAnchor::Household(ActorId::from_raw("p001v")),
+                about: None,
+                author: None,
+                drawn_game_days: 0.0,
+                last_decayed_game_days: 0.0,
+                strength,
+                strokes: 1,
+            };
+            assert_eq!(
+                catalog.is_faint(&mark),
+                expect_faint,
+                "is_faint at strength {strength}"
+            );
+            assert_eq!(
+                catalog.is_binding(&mark),
+                !expect_faint,
+                "is_binding is the exact complement at strength {strength}"
+            );
+            // The host's side of the seam: `faint_below` applied to the
+            // published percent, exactly as `compute_mark_focus` does.
+            assert_eq!(
+                spec.faint_at_pct(published_strength_pct(strength)),
+                expect_faint,
+                "the wire-derived state at strength {strength}"
+            );
+            let label = catalog.label_for(&mark);
+            assert_eq!(
+                label.contains("half-washed"),
+                expect_faint,
+                "the sim label at strength {strength}: {label}"
+            );
+        }
     }
 
     #[test]

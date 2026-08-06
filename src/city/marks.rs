@@ -505,7 +505,7 @@ fn compute_mark_focus(
     let Some(spec) = catalog.spec(mark.kind) else {
         return MarkFocus::default();
     };
-    let faint = f64::from(mark.strength_pct) / 100.0 < spec.faint_below;
+    let faint = spec.faint_at_pct(mark.strength_pct);
     let label = if faint {
         &spec.faint_label
     } else {
@@ -1100,6 +1100,40 @@ mod tests {
             .read_line
             .expect("still visible");
         assert!(line.contains("half-washed"), "a faint mark says so: {line}");
+    }
+
+    /// The wall flips to the faint label exactly at the catalog's boundary on
+    /// the *published* percent — the same `faint_at_pct` the sim's rule
+    /// readers judge by, so the wall and the prompt agree about a mark that
+    /// quantized right onto the threshold.
+    #[test]
+    fn the_wall_label_flips_at_the_published_boundary() {
+        let catalog = MarkCatalog::default();
+        let mut collision = CollisionWorld::default();
+        collision.add_box(Vec3::new(-5.0, 0.0, 2.0), Vec3::new(5.0, 4.0, 2.5));
+        let camera = GlobalTransform::from(
+            Transform::from_xyz(0.0, 0.91 + MARK_HEIGHT_M, 0.0).looking_to(Vec3::Z, Vec3::Y),
+        );
+        // 35% is what a raw strength of 0.345..0.35 publishes; the sim calls
+        // all of it binding, so the wall must read it fresh — and half-washed
+        // one percent below.
+        for (pct, half_washed) in [(35, false), (34, true)] {
+            let mut mirror = WorldMirror::default();
+            mirror.debug_set_marks(vec![mark(
+                MarkKind::ChalkCross,
+                Vec3::new(0.0, 0.91, 0.0),
+                pct,
+                1,
+            )]);
+            let line = compute_mark_focus(&catalog, Some(&mirror), &collision, Some(&camera))
+                .read_line
+                .expect("still visible");
+            assert_eq!(
+                line.contains("half-washed"),
+                half_washed,
+                "at {pct}%: {line}"
+            );
+        }
     }
 }
 

@@ -67,7 +67,9 @@ pub struct PublicMark {
     /// form costs 12 bytes a mark to name axes the host never reads by name.
     pub point: [f64; 3],
     /// `strength * 100`, rounded — the opacity ramp. Whether a mark counts as
-    /// half-washed is the catalog's `faint_below` applied to this, host-side.
+    /// half-washed is `MarkKindSpec::faint_at_pct` applied to this, host-side
+    /// — the same predicate the sim's own rule readers judge by, so the wall
+    /// and the prompt cannot disagree about a boundary value.
     pub strength_pct: u8,
     /// Tally notches; `1` for every other kind.
     pub strokes: u8,
