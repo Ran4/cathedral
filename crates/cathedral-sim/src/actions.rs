@@ -1405,6 +1405,11 @@ pub const CHALK_REACH_M: f64 = 2.0;
 /// (`notices::chalk_the_debtors`) needs no inventory, exactly as `raise_notice`
 /// needs no parchment. Losing the pen mid-scene takes `draw_mark` off the next
 /// sheet; it never erases a mark already drawn.
+///
+/// Committed units do not count: a pocketed pen — or one riding an offer or a
+/// transform — is a reservation, not a pen in hand, so the stack must have an
+/// uncommitted unit left. Retrieval-first, the same rule every other consuming
+/// verb honours.
 pub fn holds_a_chalk_pen(world: &World, actor_id: &ActorId) -> bool {
     world.characters.get(actor_id).is_some_and(|actor| {
         actor.holds().iter().any(|item_id| {
@@ -1412,6 +1417,7 @@ pub fn holds_a_chalk_pen(world: &World, actor_id: &ActorId) -> bool {
                 .items
                 .get(item_id)
                 .is_some_and(|item| item.kind.as_str() == CHALK_PEN_KIND)
+                && world.uncommitted_quantity(item_id) > 0
         })
     })
 }
@@ -5770,6 +5776,66 @@ mod tests {
         assert!(world.characters[&carrier].pockets().is_empty());
         assert_eq!(condition_of(&world, &wet_id).as_deref(), Some("wet"));
         assert_eq!(world.uncommitted_quantity(&wet_id), 1);
+        world.assert_invariants();
+    }
+
+    /// A pocketed pen is a commitment, not a pen in hand (LE-08): the pen gate
+    /// follows `uncommitted_quantity`, so hiding your only pen takes
+    /// `draw_mark` away — while a stack with a free unit left keeps it.
+    /// Retrieval restores everything, like every other retrieval-first verb.
+    #[test]
+    fn a_pocketed_chalk_pen_is_not_a_pen_in_hand_until_retrieved() {
+        let mut world = pocket_world();
+        let carrier = ActorId::from_raw("carry");
+        world.add_item(Item::stack(ItemId::from_raw("penstk"), "chalk_pen", 2));
+        world
+            .characters
+            .get_mut(&carrier)
+            .unwrap()
+            .state
+            .holds
+            .push(ItemId::from_raw("penstk"));
+        assert!(holds_a_chalk_pen(&world, &carrier));
+
+        // One of two units pocketed: the free unit still writes. (No stool in
+        // the slot, so nothing is stamped and the stack never forks.)
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "penstk", "slot": "butt"}),
+        )
+        .unwrap();
+        assert_eq!(world.uncommitted_quantity(&ItemId::from_raw("penstk")), 1);
+        assert!(holds_a_chalk_pen(&world, &carrier));
+
+        // Both units pocketed: the stack stays in `holds`, but every unit is
+        // a reservation — nothing to write with until one comes back out.
+        apply_action(
+            &mut world,
+            &carrier,
+            "pocket_item",
+            &json!({"item_id": "penstk", "slot": "butt"}),
+        )
+        .unwrap();
+        assert!(!holds_a_chalk_pen(&world, &carrier));
+        let error = apply_action(
+            &mut world,
+            &carrier,
+            "draw_mark",
+            &json!({"kind": "chalk_cross", "anchor": "anywhere"}),
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ActionErrorCode::NoPen);
+
+        apply_action(
+            &mut world,
+            &carrier,
+            "retrieve_item",
+            &json!({"item_id": "penstk"}),
+        )
+        .unwrap();
+        assert!(holds_a_chalk_pen(&world, &carrier));
         world.assert_invariants();
     }
 
