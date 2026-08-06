@@ -76,6 +76,14 @@ const MARK_READ_RADIUS_M: f32 = 4.0;
 /// past it.
 const MARK_AIM_TOLERANCE_M: f32 = 0.4;
 
+/// How far beyond the nearest static hit a focused mark may still sit. The
+/// glyph floats [`MARK_SURFACE_OFFSET_M`] off its own wall, so a square look
+/// at a mark lands the wall hit millimetres *behind* it — but oblique views
+/// wobble both distances, and without slack a mark mounted on the very
+/// surface the ray struck would flicker. Kept well under any real wall's
+/// thickness, so chalk across one can never bleed through.
+const MARK_OCCLUSION_EPSILON_M: f32 = 0.05;
+
 /// What the crosshair is resting on, if it is resting on chalk.
 ///
 /// A separate focus from [`crate::smart_actors::targeting::ActorFocus`] on
@@ -490,6 +498,12 @@ fn compute_mark_focus(
     };
     let origin = camera.translation();
     let forward = camera.forward().as_vec3();
+    // The nearest static obstruction along the crosshair, computed once per
+    // frame exactly as actor targeting does (`smart_actors/targeting.rs`).
+    // Chalk across a wall must neither read out nor scrub — the focus is
+    // where the hold's intent comes from, so this one gate covers both the
+    // information and the sleeve.
+    let wall = collision.nearest_ray_hit(origin, forward, MARK_READ_RADIUS_M);
     let mut best: Option<(f32, &MarkSnapshot, Vec3)> = None;
     for mark in mirror.marks() {
         let Some(placement) = place(collision, mark) else {
@@ -502,6 +516,9 @@ fn compute_mark_focus(
         }
         let off_axis = (to_mark - forward * along).length();
         if off_axis > MARK_AIM_TOLERANCE_M {
+            continue;
+        }
+        if wall.is_some_and(|wall| wall + MARK_OCCLUSION_EPSILON_M < along) {
             continue;
         }
         if best.is_none_or(|(best_along, _, _)| along < best_along) {
@@ -936,6 +953,58 @@ mod tests {
 
         // Past reading range: nothing at all.
         assert_eq!(from(4.1), MarkFocus::default());
+    }
+
+    /// Chalk across a wall is not chalk you are looking at: a mark aligned
+    /// behind an intervening collider must neither read out nor offer the
+    /// scrub hold, while the same geometry with the blocker gone does both.
+    /// The unblocked half also pins the epsilon: the aim ray strikes the
+    /// mark's *own* façade only [`MARK_SURFACE_OFFSET_M`] behind the glyph,
+    /// and a mark mounted on the hit surface itself must stay actionable.
+    #[test]
+    fn a_wall_between_the_crosshair_and_a_mark_blocks_read_and_scrub() {
+        let catalog = MarkCatalog::default();
+        let mut mirror = WorldMirror::default();
+        mirror.debug_set_marks(vec![mark(
+            MarkKind::ChalkCross,
+            Vec3::new(0.0, 0.91, 0.0),
+            100,
+            1,
+        )]);
+        // The mark's own façade: the glyph lands on it at z≈1.994.
+        let facade = |collision: &mut CollisionWorld| {
+            collision.add_box(Vec3::new(-5.0, 0.0, 2.0), Vec3::new(5.0, 4.0, 2.5));
+        };
+        // Within arm's reach, aimed square at the glyph — from a step aside,
+        // so the sight line crosses (0.5, ·, ≈1.0) where the screen will sit.
+        let camera = GlobalTransform::from(
+            Transform::from_xyz(0.8, 0.91 + MARK_HEIGHT_M, 0.4).looking_at(
+                Vec3::new(0.0, 0.91 + MARK_HEIGHT_M, 2.0 - MARK_SURFACE_OFFSET_M),
+                Vec3::Y,
+            ),
+        );
+        let standing = ChalkStanding::default();
+        let choice = ChalkChoice::default();
+
+        // A thin screen between camera and mark. Its footprint dodges all
+        // eight of `place`'s probe azimuths, so the mark still belongs to its
+        // own façade and the screen only *occludes*.
+        let mut blocked = CollisionWorld::default();
+        facade(&mut blocked);
+        blocked.add_box(Vec3::new(0.3, 0.0, 0.95), Vec3::new(0.7, 4.0, 1.05));
+        let focus = compute_mark_focus(&catalog, Some(&mirror), &blocked, Some(&camera));
+        assert_eq!(focus, MarkFocus::default(), "chalk across a wall is silent");
+        assert_eq!(intent_now(&focus, &standing, &choice), None);
+
+        // The same geometry with the screen gone: the read line, and the hold.
+        let mut open = CollisionWorld::default();
+        facade(&mut open);
+        let focus = compute_mark_focus(&catalog, Some(&mirror), &open, Some(&camera));
+        assert!(focus.read_line.is_some(), "unblocked, the mark reads");
+        assert_eq!(
+            intent_now(&focus, &standing, &choice),
+            Some(ChalkIntent::Scrub(1))
+        );
     }
 
     // ----------------------------------------------------------- the hand
