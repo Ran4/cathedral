@@ -643,8 +643,10 @@ impl NavData {
     /// Is every point of the stretch `a` → `b` on walkable ground? Sampled a
     /// grid cell apart, which is the resolution the bitset is baked at — and it
     /// is baked eroded by the agent radius, so nothing a body would collide with
-    /// hides between two samples.
-    fn segment_walkable(&self, a: Vec3, b: Vec3) -> bool {
+    /// hides between two samples. Crate-visible for the off-graph strides other
+    /// movers take (the dogs' drift): two walkable endpoints say nothing about
+    /// the ground between them.
+    pub(crate) fn segment_walkable(&self, a: Vec3, b: Vec3) -> bool {
         let span = Vec3::new(b.x - a.x, 0.0, b.z - a.z);
         let length = span.length();
         if length < 1e-9 {

@@ -341,7 +341,8 @@ pub fn step_dogs(dogs: &mut [Dog], dt: f64, nav: &NavData) -> bool {
 
 /// A drift: a hashed walkable point within the leash, routed over the street
 /// graph, the exact target appended as the final off-graph stride (the
-/// `route_path_to_point` idea without the lane offset — dogs hold no lane).
+/// `route_path_to_point` idea without the lane offset — dogs hold no lane) —
+/// but only when the bitset vouches for the whole stride, not just its ends.
 /// `None` when a few tries all land on stone.
 fn drift_path(nav: &NavData, dog: &Dog) -> Option<Vec<Vec3>> {
     let target = (0..6).find_map(|attempt| {
@@ -375,12 +376,19 @@ fn drift_path(nav: &NavData, dog: &Dog) -> Option<Vec<Vec3>> {
     {
         path.remove(0);
     }
-    // The graph ends at a node; the sniff-worthy spot is a stride off it.
+    // The graph ends at a node; the sniff-worthy spot is a stride off it. That
+    // stride is a straight line no graph edge vouches for, and a walkable
+    // target says nothing about a wall or canal edge between the node and it —
+    // so walk the stretch across the bitset first, and let a blocked stride
+    // end the drift at the node instead.
     if !path
         .last()
         .is_some_and(|point| planar_close(*point, target))
     {
-        path.push(target);
+        let from = path.last().copied().unwrap_or(dog.position_m);
+        if nav.segment_walkable(from, target) {
+            path.push(target);
+        }
     }
     if path.is_empty() { None } else { Some(path) }
 }
@@ -429,5 +437,93 @@ mod tests {
             assert!((0.0..1.0).contains(&roll));
             assert_eq!(roll, dog_hash01("dog_rest", &id, epoch));
         }
+    }
+
+    /// The final off-graph stride is a straight line no graph edge vouches
+    /// for: a walkable target across an unwalkable band used to be appended
+    /// anyway, and the dog cut straight through. Every sampled point of a
+    /// drift must be walkable, not merely its waypoints.
+    #[test]
+    fn a_drift_never_strides_through_stone() {
+        // Two shores of walkable ground with a 3 m unwalkable band between
+        // them: a pocket around the dog — deliberately smaller than the 3 m
+        // minimum drift radius, so no hashed target can land in it — holding
+        // the only graph node, and open ground from x = 6 on. Every accepted
+        // target therefore lies across the band with both endpoints walkable:
+        // exactly the layout where the old append cut through.
+        let (w, h) = (40usize, 40usize);
+        let (x0, z0, cell) = (-20.0, -20.0, 1.0);
+        let mut bitset = vec![0u8; (w * h).div_ceil(8)];
+        for row in 0..h {
+            for col in 0..w {
+                let cx = x0 + (col as f64 + 0.5) * cell;
+                let cz = z0 + (row as f64 + 0.5) * cell;
+                let walkable = cx >= 6.0 || ((cx - 0.5).abs() <= 2.0 && (cz - 0.5).abs() <= 1.0);
+                if walkable {
+                    let idx = row * w + col;
+                    bitset[idx >> 3] |= 1 << (7 - (idx & 7));
+                }
+            }
+        }
+        let nav_json = format!(
+            r#"{{
+              "schema_version": 1,
+              "grid": {{"x0": {x0}, "z0": {z0}, "cell_m": {cell}, "w": {w}, "h": {h},
+                        "agent_radius_m": 0.35, "bitset_file": "x.bin",
+                        "bitset_bits": {bits}, "bitset_sha256": ""}},
+              "nodes": [[2.5, 0.5]],
+              "edges": [],
+              "places": [],
+              "sites": [],
+              "doors": [],
+              "reference": {{"forecourt": 0}}
+            }}"#,
+            bits = w * h
+        );
+        let nav = NavData::from_parts(&nav_json, &bitset).expect("the two-shore nav validates");
+        // The trap is live: both shores walkable, the band between them not.
+        assert!(nav.is_walkable(10.0, 0.5), "the far shore must tempt");
+        assert!(!nav.is_walkable(4.5, 0.5), "the band must bar the way");
+
+        let mut dog = Dog {
+            id: DogId::from_raw("dog_test"),
+            name: "Test".to_string(),
+            description: "a test dog".to_string(),
+            coat: DogCoat::Brindle,
+            build: 1.0,
+            base: Vec3::new(0.5, WALK_Y, 0.5),
+            leash_m: 12.0,
+            position_m: Vec3::new(0.5, WALK_Y, 0.5),
+            facing_yaw: 0.0,
+            speed: 0.0,
+            gait_phase: 0.0,
+            path: Vec::new(),
+            rest_s: 0.0,
+            epoch: 0,
+        };
+        let mut drifts = 0;
+        for epoch in 0..64 {
+            dog.epoch = epoch;
+            let Some(path) = drift_path(&nav, &dog) else {
+                continue;
+            };
+            drifts += 1;
+            // Every quarter-metre of every leg, from where the dog stands.
+            let mut from = dog.position_m;
+            for &to in &path {
+                let steps = (to.distance(from) / 0.25).ceil().max(1.0) as usize;
+                for s in 0..=steps {
+                    let t = s as f64 / steps as f64;
+                    let x = from.x + (to.x - from.x) * t;
+                    let z = from.z + (to.z - from.z) * t;
+                    assert!(
+                        nav.is_walkable(x, z),
+                        "epoch {epoch}: the drift strides over stone at ({x:.2}, {z:.2})"
+                    );
+                }
+                from = to;
+            }
+        }
+        assert!(drifts > 0, "the fixture never tempted a single drift");
     }
 }
