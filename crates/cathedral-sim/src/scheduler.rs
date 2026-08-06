@@ -89,6 +89,25 @@ pub enum SchedulerEvent {
     },
 }
 
+/// Which lane selected a turn. Carried on the flight because a failure owes
+/// each lane a different courtesy: a protected reaction goes back to the head
+/// of the player's lane, an ordinary handoff to the head of its own — off
+/// stage that lane is the only thing that ever selects its occupant, so a
+/// consumed slot is a conversation ended by a network blip — and an idle turn
+/// goes back to nobody, because the rotation that produced it comes around
+/// again on its own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TurnLane {
+    /// Player speech selected this turn. Its completed reply may ignore a
+    /// background-only conversation-floor hold, but never speech the player
+    /// can hear or the player's own microphone hold.
+    PlayerReaction,
+    /// An addressed `say` or a sound nudge selected this turn.
+    Handoff,
+    /// The gated round robin selected this turn.
+    Idle,
+}
+
 /// The one outstanding request.
 #[derive(Debug, Clone, PartialEq)]
 struct InFlight {
@@ -97,10 +116,7 @@ struct InFlight {
     /// act on a later visit by the same stable actor id.
     presence_epoch: u64,
     request_id: RequestId,
-    /// Player speech selected this turn. Its completed reply may ignore a
-    /// background-only conversation-floor hold, but never speech the player can
-    /// hear or the player's own microphone hold.
-    player_reaction: bool,
+    lane: TurnLane,
     /// The inbox as it was *before* the prompt drained it — restored on failure.
     drained_events: Vec<String>,
     /// The percepts the prompt showed as `since_your_last_turn`: they graduate
@@ -258,7 +274,7 @@ impl NpcScheduler {
     pub fn in_flight_is_player_reaction(&self) -> bool {
         self.in_flight
             .as_ref()
-            .is_some_and(|flight| flight.player_reaction)
+            .is_some_and(|flight| flight.lane == TurnLane::PlayerReaction)
     }
 
     /// Who has been handed the next selection slot, if anyone. Protected player
@@ -533,9 +549,7 @@ impl NpcScheduler {
     ) {
         let backoff = self.backoff_after_failure();
         self.next_turn_at = now + backoff;
-        if flight.player_reaction {
-            self.requeue_player_reaction_front(&flight.actor_id);
-        }
+        self.requeue_unspent_turn(&flight.actor_id, flight.lane);
 
         let actor = world
             .characters
@@ -708,7 +722,7 @@ impl NpcScheduler {
         // consumed — BEFORE the validity check: a skipped actor still burns its
         // turn, and so do a failed render and a refused submit. Intentional
         // (scheduler.md risk 8).
-        let Some((actor_id, player_reaction)) = self.select_next_actor(idle) else {
+        let Some((actor_id, lane)) = self.select_next_actor(idle) else {
             // Nobody may think right now: the stage is empty, or the player is
             // mid-utterance. `next_turn_at` is deliberately left where it is —
             // in the past — so the first poll after someone walks into the
@@ -747,9 +761,7 @@ impl NpcScheduler {
                 // line then pushes one past the bound — re-cap it so repeated
                 // prompt failures cannot grow it without limit.
                 actor.rebound_percepts();
-                if player_reaction {
-                    self.requeue_player_reaction_front(&actor_id);
-                }
+                self.requeue_unspent_turn(&actor_id, lane);
                 self.next_turn_at = now + self.minimum_delay_seconds.max(1.0);
                 events.push(SchedulerEvent::Diagnostic(format!(
                     "[smart actors] prompt for {actor_name} failed: {error}"
@@ -773,7 +785,7 @@ impl NpcScheduler {
                     actor_id: actor_id.clone(),
                     presence_epoch,
                     request_id,
-                    player_reaction,
+                    lane,
                     drained_events,
                     presented,
                     prompt,
@@ -795,9 +807,7 @@ impl NpcScheduler {
                 // Same restore-and-append as the provider-failure path: re-cap so
                 // a run of busy rejections cannot grow the buffers past the bound.
                 actor.rebound_percepts();
-                if player_reaction {
-                    self.requeue_player_reaction_front(&actor_id);
-                }
+                self.requeue_unspent_turn(&actor_id, lane);
                 self.next_turn_at = now + self.minimum_delay_seconds.max(1.0);
                 events.push(SchedulerEvent::Diagnostic(format!(
                     "[smart actors] could not queue {actor_name}'s turn: {busy}"
@@ -819,10 +829,10 @@ impl NpcScheduler {
     /// `None` means no turn is owed at all — the lane that would have supplied
     /// one is empty or closed. It is the poll that buys nothing, and not
     /// spending it is the whole feature.
-    fn select_next_actor(&mut self, idle: IdleGate<'_>) -> Option<(ActorId, bool)> {
+    fn select_next_actor(&mut self, idle: IdleGate<'_>) -> Option<(ActorId, TurnLane)> {
         // Ungated, always: the player spoke, so someone answers.
         if let Some(actor_id) = self.player_reactions.pop_front() {
-            return Some((actor_id, true));
+            return Some((actor_id, TurnLane::PlayerReaction));
         }
         // The player is still composing. The lane he needs is the one above,
         // and the ordinary slot's occupant — an NPC handoff, a sound nudge — is
@@ -835,9 +845,10 @@ impl NpcScheduler {
         // them. This is also the only way an ambient NPC ever thinks, and it
         // must stay that way.
         if let Some(actor_id) = self.priority_handoffs.pop_front() {
-            return Some((actor_id, false));
+            return Some((actor_id, TurnLane::Handoff));
         }
-        self.next_idle_actor(idle).map(|actor_id| (actor_id, false))
+        self.next_idle_actor(idle)
+            .map(|actor_id| (actor_id, TurnLane::Idle))
     }
 
     /// Scan the rotation forward for the first actor the gate admits, bounded by
@@ -859,14 +870,29 @@ impl NpcScheduler {
         None
     }
 
+    /// Put a turn that never reached the model back at the head of the lane
+    /// that selected it, so the retry outranks whatever queued behind it while
+    /// the prompt was out.
+    ///
+    /// An idle turn goes back to nobody: the rotation that produced it comes
+    /// around again on its own, and a failure must not buy it a seat in a
+    /// lane it was never in.
+    fn requeue_unspent_turn(&mut self, actor_id: &ActorId, lane: TurnLane) {
+        match lane {
+            TurnLane::PlayerReaction => self.requeue_player_reaction_front(actor_id),
+            TurnLane::Handoff => self.requeue_handoff_front(actor_id),
+            TurnLane::Idle => {}
+        }
+    }
+
     /// Put a player reaction that never reached the model back at the head of
     /// its lane.
     ///
-    /// Cross-lane like the two `prioritize`s, and for a reason only this path
-    /// has: the actor was *off* both queues while their prompt was out, so an
-    /// ordinary handoff could queue them in the meantime. The retry renders
-    /// after it and drains it, so leaving that slot standing would owe them a
-    /// second, contentless turn.
+    /// Cross-lane like the two `prioritize`s, and for a reason only the
+    /// requeues have: the actor was *off* both queues while their prompt was
+    /// out, so an ordinary handoff could queue them in the meantime. The retry
+    /// renders after it and drains it, so leaving that slot standing would owe
+    /// them a second, contentless turn.
     fn requeue_player_reaction_front(&mut self, actor_id: &ActorId) {
         self.priority_handoffs.retain(|queued| queued != actor_id);
         if let Some(index) = self
@@ -877,6 +903,26 @@ impl NpcScheduler {
             self.player_reactions.remove(index);
         }
         self.player_reactions.push_front(actor_id.clone());
+    }
+
+    /// Put an ordinary handoff that never reached the model back at the head
+    /// of its lane.
+    ///
+    /// Off stage this lane is the only way its occupant is ever selected — the
+    /// idle rotation never admits them — so a slot consumed by a provider
+    /// blip, a failed render or a busy worker used to leave the restored
+    /// percept in an inbox nothing would ever read again: one transient
+    /// failure ended an off-stage exchange outright. The cross-lane rule runs
+    /// the other way from the requeue above, exactly as in
+    /// `prioritize_player_reaction`: a player reaction queued while this
+    /// prompt was out *absorbs* the retry, because the one turn it owes drains
+    /// the restored inbox too.
+    fn requeue_handoff_front(&mut self, actor_id: &ActorId) {
+        if self.player_reactions.contains(actor_id) {
+            return;
+        }
+        self.priority_handoffs.retain(|queued| queued != actor_id);
+        self.priority_handoffs.push_front(actor_id.clone());
     }
 }
 
@@ -1214,7 +1260,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             scheduler.select_next_actor(IdleGate::All),
-            Some((ActorId::from_raw("road"), false))
+            Some((ActorId::from_raw("road"), TurnLane::Idle))
         );
     }
 
@@ -1329,7 +1375,7 @@ mod tests {
         for _ in 0..3 {
             assert_eq!(
                 scheduler.select_next_actor(gate),
-                Some((ActorId::from_raw("tre"), false))
+                Some((ActorId::from_raw("tre"), TurnLane::Idle))
             );
         }
         // An empty stage buys nothing, so it costs nothing.
@@ -1338,7 +1384,7 @@ mod tests {
         // Ungated, the rotation resumes where the gated scan left it.
         assert_eq!(
             scheduler.select_next_actor(IdleGate::All),
-            Some((ActorId::from_raw("one"), false))
+            Some((ActorId::from_raw("one"), TurnLane::Idle))
         );
     }
 
@@ -1359,7 +1405,7 @@ mod tests {
         let empty = BTreeSet::new();
         assert_eq!(
             scheduler.select_next_actor(IdleGate::Stage(&empty)),
-            Some((ActorId::from_raw("offrr"), false))
+            Some((ActorId::from_raw("offrr"), TurnLane::Handoff))
         );
         // Once answered, the empty stage buys nothing again.
         assert_eq!(scheduler.select_next_actor(IdleGate::Stage(&empty)), None);
@@ -1383,12 +1429,12 @@ mod tests {
         assert!(scheduler.prioritize_player_reaction(&world, &ActorId::from_raw("major"), 0.0));
         assert_eq!(
             scheduler.select_next_actor(IdleGate::Suppressed),
-            Some((ActorId::from_raw("major"), true))
+            Some((ActorId::from_raw("major"), TurnLane::PlayerReaction))
         );
         // The nudge was only deferred, never dropped.
         assert_eq!(
             scheduler.select_next_actor(IdleGate::All),
-            Some((ActorId::from_raw("ambnt"), false))
+            Some((ActorId::from_raw("ambnt"), TurnLane::Handoff))
         );
     }
 
@@ -1410,7 +1456,7 @@ mod tests {
         assert!(scheduler.prioritize_player_reaction(&world, &major, 1.0));
         assert_eq!(
             scheduler.select_next_actor(IdleGate::All),
-            Some((major.clone(), true)),
+            Some((major.clone(), TurnLane::PlayerReaction)),
             "the player's lane still wins the promotion"
         );
         assert_eq!(
@@ -1428,7 +1474,7 @@ mod tests {
         );
         assert_eq!(
             scheduler.select_next_actor(IdleGate::All),
-            Some((major.clone(), true))
+            Some((major.clone(), TurnLane::PlayerReaction))
         );
         assert_eq!(scheduler.select_next_actor(IdleGate::All), None);
 
@@ -1438,7 +1484,18 @@ mod tests {
         scheduler.requeue_player_reaction_front(&major);
         assert_eq!(
             scheduler.select_next_actor(IdleGate::All),
-            Some((major.clone(), true))
+            Some((major.clone(), TurnLane::PlayerReaction))
+        );
+        assert_eq!(scheduler.select_next_actor(IdleGate::All), None);
+
+        // The mirror window: her *ordinary* prompt is out when the player
+        // speaks to her. The protected slot absorbs the failed handoff's
+        // retry rather than letting it stand beside it.
+        assert!(scheduler.prioritize_player_reaction(&world, &major, 4.0));
+        scheduler.requeue_handoff_front(&major);
+        assert_eq!(
+            scheduler.select_next_actor(IdleGate::All),
+            Some((major.clone(), TurnLane::PlayerReaction))
         );
         assert_eq!(scheduler.select_next_actor(IdleGate::All), None);
     }
@@ -1481,5 +1538,83 @@ mod tests {
             cognition.requests[0].1,
             Some(Significance::Ambient.output_token_budget())
         );
+    }
+
+    /// An off-stage NPC is selected exclusively through the handoff lane — the
+    /// gated rotation never admits them — so a provider blip on that one turn
+    /// used to consume the slot for good: the restored percept sat in an inbox
+    /// nothing would ever read, and the far-ward exchange died silently.
+    #[test]
+    fn an_off_stage_handoff_survives_a_provider_failure() {
+        let mut world = World::new();
+        let ambient = ActorId::from_raw("ambnt");
+        world.add_character(lore_character("ambnt", Significance::Ambient));
+        world
+            .characters
+            .get_mut(&ambient)
+            .unwrap()
+            .notify_percept("Bertram says to you: the cart is stuck");
+        let mut scheduler = NpcScheduler::new(stage_turn_order(&world), 0.0, 60.0, 0.0);
+        scheduler.start(0.0);
+
+        // An addressed `say` reached them across the city: the ordinary lane,
+        // not the protected one.
+        assert!(scheduler.prioritize(&world, &ambient, true, 0.0));
+
+        let env = PromptEnv::new(
+            include_str!("../../../assets/prompts/turn.j2"),
+            include_str!("../../../assets/prompts/night.j2"),
+            include_str!("../../../assets/prompts/strings.toml"),
+        )
+        .unwrap();
+        let mut cognition = BudgetCognition::default();
+        let empty = BTreeSet::new();
+        scheduler.poll(
+            0.0,
+            &mut world,
+            &mut Vec::new(),
+            &mut Vec::new(),
+            false,
+            IdleGate::Stage(&empty),
+            &mut cognition,
+            &env,
+        );
+        assert_eq!(scheduler.in_flight_actor_id(), Some(&ambient));
+
+        // The provider fails — a network blip, not a turn.
+        let mut completions = vec![Completion {
+            request_id: RequestId(0),
+            result: Err(CognitionError::new("TimeoutError")),
+            duration_seconds: 0.1,
+        }];
+        scheduler.poll(
+            1.0,
+            &mut world,
+            &mut Vec::new(),
+            &mut completions,
+            false,
+            IdleGate::Stage(&empty),
+            &mut cognition,
+            &env,
+        );
+        assert_eq!(scheduler.in_flight_actor_id(), None);
+        assert_eq!(scheduler.priority_actor_id(), Some(&ambient));
+
+        // Past the backoff, the same empty stage: the retry goes out, and its
+        // prompt still carries the percept the failed one restored.
+        scheduler.poll(
+            2.0,
+            &mut world,
+            &mut Vec::new(),
+            &mut Vec::new(),
+            false,
+            IdleGate::Stage(&empty),
+            &mut cognition,
+            &env,
+        );
+        assert_eq!(scheduler.in_flight_actor_id(), Some(&ambient));
+        assert_eq!(cognition.requests.len(), 2);
+        assert!(cognition.requests[1].0.contains("the cart is stuck"));
+        assert!(cognition.requests[1].0.contains(SYSTEM_PROVIDER_FAILED));
     }
 }
