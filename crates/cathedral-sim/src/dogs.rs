@@ -289,6 +289,12 @@ pub fn step_dogs(dogs: &mut [Dog], dt: f64, nav: &NavData) -> bool {
     let mut any_moved = false;
     for dog in dogs.iter_mut() {
         if dog.path.is_empty() {
+            // The stop is itself a pose change: the host latches the last
+            // sample's speed, so a dog arriving with a positive speed must be
+            // published once at zero or it trots in place through its rest.
+            if dog.speed != 0.0 {
+                any_moved = true;
+            }
             dog.speed = 0.0;
             dog.rest_s -= dt;
             if dog.rest_s > 0.0 {
@@ -525,5 +531,63 @@ mod tests {
             }
         }
         assert!(drifts > 0, "the fixture never tempted a single drift");
+    }
+
+    /// The tick after a dog consumed its last waypoint zeroes its speed, but
+    /// used to report nothing dirty — the engine never republished, the host
+    /// kept the arrival sample's positive speed latched, and the dog trotted
+    /// in place for its whole rest. The stop must go out once; the rest after
+    /// it stays quiet.
+    #[test]
+    fn a_stop_is_published_once_and_the_rest_is_quiet() {
+        // An all-walkable pocket: the resting branch never consults the nav
+        // (rest_s stays positive throughout), but `step_dogs` wants one.
+        let (w, h) = (8usize, 8usize);
+        let bitset = vec![0xffu8; (w * h).div_ceil(8)];
+        let nav_json = format!(
+            r#"{{
+              "schema_version": 1,
+              "grid": {{"x0": -4.0, "z0": -4.0, "cell_m": 1.0, "w": {w}, "h": {h},
+                        "agent_radius_m": 0.35, "bitset_file": "x.bin",
+                        "bitset_bits": {bits}, "bitset_sha256": ""}},
+              "nodes": [[0.5, 0.5]],
+              "edges": [],
+              "places": [],
+              "sites": [],
+              "doors": [],
+              "reference": {{"forecourt": 0}}
+            }}"#,
+            bits = w * h
+        );
+        let nav = NavData::from_parts(&nav_json, &bitset).expect("the pocket nav validates");
+
+        // A dog exactly as arrival leaves it: path consumed, the last tick's
+        // positive speed still on it, the pre-rolled rest ahead.
+        let mut dogs = vec![Dog {
+            id: DogId::from_raw("dog_test"),
+            name: "Test".to_string(),
+            description: "a test dog".to_string(),
+            coat: DogCoat::Brindle,
+            build: 1.0,
+            base: Vec3::new(0.5, WALK_Y, 0.5),
+            leash_m: 12.0,
+            position_m: Vec3::new(0.5, WALK_Y, 0.5),
+            facing_yaw: 0.0,
+            speed: DOG_TROT_MPS,
+            gait_phase: 0.0,
+            path: Vec::new(),
+            rest_s: 1.0,
+            epoch: 0,
+        }];
+
+        assert!(
+            step_dogs(&mut dogs, 0.05, &nav),
+            "the settle to zero speed must mark the tick dirty"
+        );
+        assert_eq!(dogs[0].speed, 0.0, "the dog must actually stop");
+        assert!(
+            !step_dogs(&mut dogs, 0.05, &nav),
+            "the rest itself is not news — the channel stays edge-triggered"
+        );
     }
 }
