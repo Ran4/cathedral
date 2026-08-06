@@ -1459,9 +1459,13 @@ impl Engine {
             &self.clock,
             &mut night_events,
         );
-        // `wants_slot` first, so the stage question — a `characters_within`
+        // `could_submit` first, so the stage question — a `characters_within`
         // scan — is asked on the handful of polls a night owes a reflection,
-        // not on every frame of every run.
+        // not on every frame of every run. It has to be that form and not
+        // `wants_slot`: on the poll where a reflection's reply is in
+        // `completions` the flight is still out *here*, `wants_slot` says no,
+        // and the submit that follows the harvest inside `poll` would read a
+        // stage stamped empty that nobody scanned.
         //
         // And only under `Stage`: choosing `All` is the host declaring that it
         // has no player neighborhood worth reasoning about (the headless
@@ -1473,7 +1477,7 @@ impl Engine {
             floor_busy,
             player_composing: self.speech_router.player_composing(),
             stage_occupied: self.config.idle_mode == IdleCognitionMode::Stage
-                && self.night.wants_slot(now)
+                && self.night.could_submit(now, &completions)
                 && stage_occupied(
                     &self.world,
                     &self.config.player_id,

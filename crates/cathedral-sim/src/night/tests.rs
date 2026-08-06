@@ -583,6 +583,102 @@ fn reflections_are_paced_by_the_game_clock_not_by_the_frame() {
     );
 }
 
+/// Rule 2 on the poll that completes a reflection. The engine gates the stage
+/// scan on the slot question to keep the lane cheap, but the flight is still
+/// out while the gate is built — so that question must count a reply already
+/// riding the vec as landed. Asked with [`NightOffice::wants_slot`] instead,
+/// the completion poll stamps the stage empty unscanned, harvests, and submits
+/// the next reflection straight past whoever is standing with the player.
+#[test]
+fn a_reflection_that_lands_after_the_pace_deadline_still_yields_to_the_stage() {
+    let mut world = world_with_cast();
+    let mut round = Round::new();
+    let clock = clock();
+    let mut night = office(all_tiers(), &world, 0.0);
+    let mut cognition = FakeCognition::new();
+    let env = env();
+    let player_id = ActorId::from_raw("player");
+
+    // The curfew rings with nobody near the player: one reflection goes out.
+    let dusk = at_office(&clock, Office::Snuffing) + 1.0;
+    beat(
+        &mut night,
+        &mut world,
+        &mut round,
+        &clock,
+        dusk,
+        open(),
+        &mut cognition,
+        &env,
+    );
+    assert_eq!(cognition.prompts().len(), 1);
+
+    // While it is out, Tam Rud walks up to the player…
+    world
+        .characters
+        .get_mut(&ActorId::from_raw("mnr01"))
+        .unwrap()
+        .state
+        .position_m = Vec3::new(500.5, 0.0, 500.0);
+    let stage = StageConfig::default();
+    assert!(stage_occupied(&world, &player_id, None, &stage));
+
+    // …and the reply lands on a poll past the pace deadline — any provider at
+    // 60×, a slow one at 1×.
+    let landing = dusk + super::pace_seconds(&clock) * 1.1;
+    let mut completions = cognition.drain_completions();
+    assert!(
+        !night.wants_slot(landing),
+        "the flight is still out, so the lazy slot question says no"
+    );
+    assert!(
+        night.could_submit(landing, &completions),
+        "but this poll harvests it and can submit, so the stage must be asked"
+    );
+
+    // The gate, built exactly as the engine builds it: the scan gated on
+    // `could_submit`.
+    let gate = NightGate {
+        stage_occupied: night.could_submit(landing, &completions)
+            && stage_occupied(&world, &player_id, None, &stage),
+        ..open()
+    };
+    night.poll(
+        landing,
+        &mut world,
+        &clock,
+        &mut completions,
+        gate,
+        &mut cognition,
+        &env,
+    );
+    assert_eq!(
+        cognition.prompts().len(),
+        1,
+        "the completion poll harvested, but spent nothing through an occupied stage"
+    );
+    assert_eq!(night.owed(), 2, "the next reflection waits, not lost");
+
+    // The stage empties, and the night resumes.
+    world
+        .characters
+        .get_mut(&ActorId::from_raw("mnr01"))
+        .unwrap()
+        .state
+        .position_m = Vec3::new(0.0, 0.0, 0.0);
+    beat(
+        &mut night,
+        &mut world,
+        &mut round,
+        &clock,
+        landing + 0.1,
+        open(),
+        &mut cognition,
+        &env,
+    );
+    assert_eq!(cognition.prompts().len(), 2);
+}
+
 /// Off is off: no bedtimes resolved, no queue, no seed diagnostic.
 #[test]
 fn the_lane_is_inert_until_the_host_asks_for_it() {

@@ -324,12 +324,9 @@ impl NightOffice {
 
     /// Whether the lane would spend the slot right now, if the gate let it.
     ///
-    /// The engine asks *before* computing [`NightGate`], because the stage
-    /// question is a `characters_within` scan and the lane is idle on almost
-    /// every poll of almost every run. Paying for that scan every frame, for a
-    /// night that is not happening, is exactly the kind of cost this whole
-    /// feature exists not to pay. Call [`Self::ring`] first, so a bedtime that
-    /// rang this very poll is already in the queue when this is asked.
+    /// The state as it stands: this is the question [`Self::poll`] asks *after*
+    /// the harvest. The engine's gate wants [`Self::could_submit`] instead —
+    /// asked here, a flight whose reply has already landed still counts as out.
     pub fn wants_slot(&self, now: f64) -> bool {
         self.enabled()
             && self.in_flight.is_none()
@@ -337,12 +334,38 @@ impl NightOffice {
             && now >= self.next_attempt_at
     }
 
+    /// Whether *this poll* could end in a submit — [`Self::wants_slot`], but
+    /// counting a flight whose reply is already sitting in `completions` as
+    /// landed, because [`Self::poll`] harvests it before it asks the slot
+    /// question again.
+    ///
+    /// The engine asks *before* computing [`NightGate`], because the stage
+    /// question is a `characters_within` scan and the lane is idle on almost
+    /// every poll of almost every run. Paying for that scan every frame, for a
+    /// night that is not happening, is exactly the kind of cost this whole
+    /// feature exists not to pay. But it must be this form and not
+    /// [`Self::wants_slot`]: on the poll where a reflection lands the flight is
+    /// still out while the gate is built, that form says no, and the submit
+    /// that follows the harvest would then read a stage stamped empty without
+    /// anyone having looked — Rule 2, bypassed on exactly the polls that
+    /// complete a reflection. Call [`Self::ring`] first, so a bedtime that rang
+    /// this very poll is already in the queue when this is asked.
+    pub fn could_submit(&self, now: f64, completions: &[Completion]) -> bool {
+        let slot_free = match &self.in_flight {
+            None => true,
+            Some(flight) => completions
+                .iter()
+                .any(|completion| completion.request_id == flight.request_id),
+        };
+        self.enabled() && slot_free && !self.queue.is_empty() && now >= self.next_attempt_at
+    }
+
     /// Enqueue the reflections the bells crossed since the last poll, and run
     /// the ambient code roll. A *span* is tested rather than an instant, so a
     /// whole office passing inside one frame at 60× still rings exactly once.
     ///
     /// Separate from [`Self::poll`] only so the engine can ring, then ask
-    /// [`Self::wants_slot`], then answer the stage question at most once a
+    /// [`Self::could_submit`], then answer the stage question at most once a
     /// night instead of sixty times a second.
     pub fn ring(
         &mut self,
