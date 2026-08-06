@@ -310,8 +310,10 @@ pub struct BridgeHandle {
 
 impl BridgeHandle {
     /// The endpoint the authority hands to the ECS. `commands` is the producer
-    /// half of [`super::local_engine`]'s inbox.
-    pub(super) fn new(commands: Sender<BridgeCommand>, runtime_dir: PathBuf) -> Self {
+    /// half of [`super::local_engine`]'s inbox. Crate-visible so tests outside
+    /// `smart_actors` (vermin's swarm-percept regression) can stand a receiver
+    /// on the far end of the real endpoint.
+    pub(crate) fn new(commands: Sender<BridgeCommand>, runtime_dir: PathBuf) -> Self {
         Self {
             commands,
             runtime_dir,

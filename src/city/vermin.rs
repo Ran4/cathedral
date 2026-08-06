@@ -690,6 +690,18 @@ pub(super) fn announce_vermin_boil(
         let Some(index) = boiling_colony(night, vermin.seed, vermin.colonies.len()) else {
             continue;
         };
+        // A colony with nothing on the ground has no swarm to hear: density 0
+        // — a visual dial, "the authored counts and nothing else" — bakes
+        // every record empty, and an anchor the bake could not settle leaves
+        // one empty at any density. Neither may log a boil nor cross into the
+        // sim, where the percept buys whoever hears it a paid turn (LE-04).
+        if vermin.colonies[index]
+            .showing_rats(Showing::Boil)
+            .next()
+            .is_none()
+        {
+            continue;
+        }
         // Keyed on the night, not on an edge: a clock hovering either side of
         // the Snuffing re-enters the same night, and re-entering is not news.
         if vermin.announced_boil_night != Some(night) {
@@ -2174,6 +2186,93 @@ mod tests {
             (game_minutes(&night_clock(5, 0.5)) - game_minutes(&night_clock(4, 23.5)) - 60.0).abs()
                 < 1e-6
         );
+    }
+
+    /// LE-04: `density` is a visual dial — "the authored counts and nothing
+    /// else" — so a colony record it left empty must boil in silence: no
+    /// `[vermin] boil:` line, and above all no `rat_swarm` crossing into the
+    /// sim, where every percept buys whoever hears it a paid turn. Asserted
+    /// against a real bridge receiver, the very endpoint the game wires.
+    #[test]
+    fn an_empty_colony_boils_unannounced_and_unheard() {
+        use crossbeam_channel::{Receiver, bounded};
+
+        let announced = |app: &mut App| {
+            let world = app.world_mut();
+            world
+                .query::<&Vermin>()
+                .single(world)
+                .expect("one vermin batch")
+                .announced_boil_night
+        };
+        let drain = |commands: &Receiver<BridgeCommand>| -> Vec<BridgeCommand> {
+            commands.try_iter().collect()
+        };
+
+        // Density 0 empties every colony but keeps all the authored records.
+        let (sender, commands) = bounded(8);
+        let mut empty = built_app_with(Some(VerminSettings {
+            density: 0.0,
+            ..Default::default()
+        }));
+        empty.insert_resource(BridgeHandle::new(
+            sender,
+            std::path::PathBuf::from("/tmp"),
+        ));
+        empty.insert_resource(night_clock(4, 21.5));
+        empty.update();
+        assert_eq!(announced(&mut empty), None, "a boil of nobody is not news");
+        assert!(
+            drain(&commands).is_empty(),
+            "density 0 must never reach the bridge"
+        );
+
+        // The same guard at full density, for a lone colony whose ground
+        // settled nobody: its night is silent, and a later populated pick
+        // still announces and is heard.
+        let (sender, commands) = bounded(8);
+        let mut app = built_app();
+        app.insert_resource(BridgeHandle::new(
+            sender,
+            std::path::PathBuf::from("/tmp"),
+        ));
+        let night = 4_i64;
+        let index = boiling_colony(night, default_seed(), COLONIES.len()).expect("a colony boils");
+        {
+            let world = app.world_mut();
+            let mut vermin = world
+                .query::<&mut Vermin>()
+                .single_mut(world)
+                .expect("one vermin batch");
+            let colony = &mut vermin.colonies[index];
+            colony.rats.clear();
+            colony.boil_rats.clear();
+        }
+        app.insert_resource(night_clock(night, 21.5));
+        app.update();
+        assert_eq!(
+            announced(&mut app),
+            None,
+            "an uninhabited colony's night is silent"
+        );
+        assert!(drain(&commands).is_empty());
+
+        let other_night = (night + 1..night + 40)
+            .find(|&n| boiling_colony(n, default_seed(), COLONIES.len()) != Some(index))
+            .expect("some other colony boils inside a season");
+        app.insert_resource(night_clock(other_night, 21.5));
+        app.update();
+        assert_eq!(
+            announced(&mut app),
+            Some(other_night),
+            "a populated colony still announces"
+        );
+        let sent = drain(&commands);
+        assert_eq!(sent.len(), 1, "…and is heard exactly once on entry");
+        assert!(matches!(
+            &sent[0],
+            BridgeCommand::WorldSound { sound_id, .. } if sound_id == SWARM_SOUND_ID
+        ));
     }
 
     /// Every face of a rat is wound so its computed normal agrees with the
