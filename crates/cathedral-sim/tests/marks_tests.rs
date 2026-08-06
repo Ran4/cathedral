@@ -1326,6 +1326,97 @@ fn a_hand_is_offered_only_the_signs_that_anchor_would_take() {
     );
 }
 
+/// The ablation switches reach the *offer*, not only the writer: a kind
+/// switched off in `config.ron` is written by nobody (`draw_or_refresh`
+/// refuses it), so it must never surface as a Hold-C choice — every hold it
+/// invited could only come back refused.
+#[test]
+fn a_switched_off_kind_is_offered_to_no_hand() {
+    let mut world = world_with_places();
+    let door = MarkAnchor::Household(ActorId::from_raw("debtor"));
+    let well = MarkAnchor::Place("Chain Well".into());
+
+    world.mark_kinds.cross = false;
+    assert!(
+        cathedral_sim::actions::drawable_kinds_at(&world, &door).is_empty(),
+        "a door has nothing left to offer with the cross off"
+    );
+    assert_eq!(
+        cathedral_sim::actions::drawable_kinds_at(&world, &well),
+        vec![MarkKind::WellTally, MarkKind::WardSign],
+        "the place signs are untouched — the positive control"
+    );
+
+    world.mark_kinds = Default::default();
+    world.mark_kinds.tally = false;
+    assert_eq!(
+        cathedral_sim::actions::drawable_kinds_at(&world, &well),
+        vec![MarkKind::WardSign],
+        "the tally drops out alone"
+    );
+
+    world.mark_kinds = Default::default();
+    world.mark_kinds.ward_sign = false;
+    assert_eq!(
+        cathedral_sim::actions::drawable_kinds_at(&world, &well),
+        vec![MarkKind::WellTally],
+        "and the sign drops out alone"
+    );
+
+    world.mark_kinds = Default::default();
+    world.marks_enabled = false;
+    assert!(
+        cathedral_sim::actions::drawable_kinds_at(&world, &door).is_empty()
+            && cathedral_sim::actions::drawable_kinds_at(&world, &well).is_empty(),
+        "the whole-layer switch empties every offer"
+    );
+}
+
+/// …and the sheet's half of the same rule: an anchor no enabled kind may hang
+/// on is not a handle, so the `**you_could_chalk**` section and the
+/// `draw_mark` verb go dark with the switch rather than inviting attempts
+/// that cost a paid turn each and can only be refused.
+#[test]
+fn the_sheet_offers_no_handle_a_switch_has_darkened() {
+    let mut world = world_at_a_door();
+    let env = prompt_env();
+
+    world.mark_kinds.cross = false;
+    let sheet =
+        cathedral_sim::prompt::render_prompt(&world, &ActorId::from_raw("sv3n1"), None, &env)
+            .expect("the sheet renders");
+    assert!(
+        !sheet.contains("**you_could_chalk**"),
+        "the only kind a door takes is off, so the door is no handle:\n{sheet}"
+    );
+    assert!(
+        !sheet.contains("draw_mark"),
+        "and the verb goes with it:\n{sheet}"
+    );
+
+    // The positive control: a hand at the well still sees the place signs.
+    world.add_character(character("w1ll0", "Willo", 1.0));
+    give_a_pen(&mut world, "w1ll0");
+    let sheet =
+        cathedral_sim::prompt::render_prompt(&world, &ActorId::from_raw("w1ll0"), None, &env)
+            .expect("the sheet renders");
+    assert!(
+        sheet.contains("**you_could_chalk**") && sheet.contains("Chain Well"),
+        "the still-enabled place signs keep the well on offer:\n{sheet}"
+    );
+
+    // The whole layer off: no handles for anyone, anywhere.
+    world.mark_kinds = Default::default();
+    world.marks_enabled = false;
+    let sheet =
+        cathedral_sim::prompt::render_prompt(&world, &ActorId::from_raw("w1ll0"), None, &env)
+            .expect("the sheet renders");
+    assert!(
+        !sheet.contains("**you_could_chalk**") && !sheet.contains("draw_mark"),
+        "the whole-layer switch empties the sheet too:\n{sheet}"
+    );
+}
+
 /// The handle the sheet lists, the handle the verb resolves and the handle the
 /// player's hand sends are one string — spelled once, in one function.
 #[test]

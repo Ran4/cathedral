@@ -946,8 +946,14 @@ fn build_sheet<'a>(
     })
     .collect();
 
+    // An anchor is a handle only while at least one enabled kind could hang
+    // on it (`actions::hand_could_chalk_at`): a kind switched off in
+    // `config.ron` is written by nobody, so listing its anchors here would
+    // invite `draw_mark` attempts that can only be refused — a paid turn
+    // apiece, for chalk the ablation says does not exist.
     let you_could_chalk: Vec<String> = crate::actions::chalkable_anchors(world, actor.id())
         .into_iter()
+        .filter(|(_, anchor)| crate::actions::hand_could_chalk_at(world, anchor))
         .map(|(handle, _)| handle)
         .collect();
 

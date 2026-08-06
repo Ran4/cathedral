@@ -1472,14 +1472,17 @@ pub fn anchor_handle(anchor: &crate::marks::MarkAnchor) -> String {
     }
 }
 
-/// Which kinds a hand could still draw on this anchor: drawable by hand at all,
-/// accepted by that anchor's slot, and not already there.
+/// Which kinds a hand could still draw on this anchor: switched on at all,
+/// drawable by hand, accepted by that anchor's slot, and not already there.
 ///
 /// The last clause is what keeps the player's HUD honest — offering a hold that
 /// can only come back `already_marked` is worse than offering nothing. An LLM
-/// gets the same three refusals out of [`draw_mark`] instead, because a sheet
+/// gets the same refusals out of [`draw_mark`] instead, because a sheet
 /// that listed only the *legal* kinds per anchor would be a paragraph where one
-/// line does.
+/// line does. The first clause is the ablation switch
+/// ([`World::mark_kind_enabled`]): a kind `config.ron` has turned off is
+/// written by nobody, so dangling it in front of the player's hand would only
+/// invite holds [`crate::marks::draw_or_refresh`] refuses.
 pub fn drawable_kinds_at(
     world: &World,
     anchor: &crate::marks::MarkAnchor,
@@ -1488,12 +1491,30 @@ pub fn drawable_kinds_at(
         .mark_catalog
         .kinds()
         .filter(|(kind, spec)| {
-            spec.drawable_by_hand
+            world.mark_kind_enabled(*kind)
+                && spec.drawable_by_hand
                 && world.mark_catalog.accepts(*kind, anchor)
                 && world.marks.find(*kind, anchor).is_none()
         })
         .map(|(kind, _)| kind)
         .collect()
+}
+
+/// Whether any enabled, hand-drawable kind may hang on this anchor at all —
+/// the sheet's gate for a `**you_could_chalk**` handle.
+///
+/// Deliberately without [`drawable_kinds_at`]'s already-there clause: an
+/// anchor whose only legal kind is already drawn still renders (the model
+/// gets `already_marked` out of [`draw_mark`], an answer inside the fiction),
+/// but a kind switched off in `config.ron` is an ablation, and an ablated
+/// kind must not be advertised anywhere — every attempt it invited would be
+/// refused, at a paid turn apiece.
+pub fn hand_could_chalk_at(world: &World, anchor: &crate::marks::MarkAnchor) -> bool {
+    world.mark_catalog.kinds().any(|(kind, spec)| {
+        world.mark_kind_enabled(kind)
+            && spec.drawable_by_hand
+            && world.mark_catalog.accepts(kind, anchor)
+    })
 }
 
 /// `draw_mark` (`features/implemented/chalking_the_walls.md` M2): put chalk on a handle

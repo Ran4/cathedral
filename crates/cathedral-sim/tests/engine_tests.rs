@@ -3637,6 +3637,41 @@ fn the_chalk_standing_names_what_is_within_reach_and_who_it_belongs_to() {
     );
 }
 
+/// The ablation switches reach the hot channel: a kind `config.ron` has turned
+/// off is written by nobody, so it must never surface as a Hold-C choice — and
+/// with the whole layer off the standing empties outright, pen or no pen.
+#[test]
+fn a_switched_off_kind_never_reaches_the_chalk_standing() {
+    let mut harness = Builder::default().build();
+    harness.ready();
+    stand_the_player_at_a_door(&mut harness);
+    let (_, anchors) = chalk_standing(&harness.poll()).expect("a door came within reach");
+    assert_eq!(anchors.len(), 2, "sanity: both doors offer the cross");
+
+    // A door takes a cross and nothing else, so switching the cross off must
+    // empty the offer entirely rather than list an anchor with no kinds.
+    harness.engine.world_mut().mark_kinds.cross = false;
+    let (pen, anchors) = chalk_standing(&harness.poll()).expect("the switch is a change");
+    assert!(pen, "the pen is still in hand");
+    assert!(
+        anchors.is_empty(),
+        "no enabled kind hangs on a door, so no anchor is offered: {anchors:?}"
+    );
+
+    // Back on, the offer returns — the channel reads the live switch.
+    harness.engine.world_mut().mark_kinds.cross = true;
+    let (_, anchors) = chalk_standing(&harness.poll()).expect("and back is a change too");
+    assert_eq!(anchors.len(), 2, "the doors come back with the switch");
+
+    // The whole-layer switch empties it the same way.
+    harness.engine.world_mut().marks_enabled = false;
+    let (_, anchors) = chalk_standing(&harness.poll()).expect("the layer going dark is a change");
+    assert!(
+        anchors.is_empty(),
+        "the whole-layer switch offers nothing: {anchors:?}"
+    );
+}
+
 /// The hold itself: it goes through `draw_mark`, so the mark is real, it is
 /// authored to the player, and the anchor drops out of the very poll that drew
 /// it — the HUD can never offer a second cross on the same door.
