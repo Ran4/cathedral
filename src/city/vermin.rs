@@ -282,8 +282,43 @@ fn walkable(nav: &NavData, collision: &CollisionWorld, point: Vec2) -> bool {
         && !collision.contains_point(Vec3::new(point.x, RAT_PROBE_Y, point.y))
 }
 
+/// Whether the straight line `from → to` is clear along its whole length, not
+/// merely at its far end: [`Rat::sample`] lerps the sprint and a scatter dart
+/// slides out and back along its offset, so a thin crate or wall standing
+/// *between* two walkable endpoints is something a rat would otherwise pass
+/// straight through. The walkable bitset is sampled half a nav cell apart
+/// (nothing wider than a clipped cell corner can hide between samples at that
+/// pitch); the colliders are swept once as a ray at the endpoint probe height
+/// — one pass over the `CollisionWorld` per segment instead of one per
+/// sample, which is what keeps the startup bake cheap. `from` is the caller's
+/// to vouch for: it is always a point already accepted.
+fn segment_clear(nav: &NavData, collision: &CollisionWorld, from: Vec2, to: Vec2) -> bool {
+    if !walkable(nav, collision, to) {
+        return false;
+    }
+    let length = from.distance(to);
+    if length < 1e-4 {
+        return true;
+    }
+    let samples = (f64::from(length) / (nav.grid().cell_m * 0.5)).ceil() as usize;
+    if (1..samples).any(|index| {
+        let point = from.lerp(to, index as f32 / samples as f32);
+        !nav.is_walkable(f64::from(point.x), f64::from(point.y))
+    }) {
+        return false;
+    }
+    collision
+        .nearest_ray_hit(
+            Vec3::new(from.x, RAT_PROBE_Y, from.y),
+            Vec3::new(to.x - from.x, 0.0, to.y - from.y),
+            length,
+        )
+        .is_none()
+}
+
 /// Bakes one rat's loop: a home draw inside the colony disc, then a random
-/// walk of sprint-sized steps, every point validated against nav + collision.
+/// walk of sprint-sized steps, every sprint validated against nav + collision
+/// along its whole line ([`segment_clear`]), the closing leg home included.
 /// A rat whose colony offers no walkable ground at all is skipped, not forced.
 fn bake_rat(
     nav: &NavData,
@@ -313,11 +348,33 @@ fn bake_rat(
             let speed = 1.8 + 0.8 * unit(seed, stream + 3000);
             let sprint_s = 0.4 + 0.8 * unit(seed, stream + 6000);
             let candidate = previous + Vec2::from_angle(angle) * (speed * sprint_s);
-            (candidate.distance(anchor) <= radius_m && walkable(nav, collision, candidate))
-                .then_some(candidate)
+            (candidate.distance(anchor) <= radius_m
+                && segment_clear(nav, collision, previous, candidate))
+            .then_some(candidate)
         });
-        // A cornered rat darts home rather than through a wall.
-        waypoints.push(step.unwrap_or(home));
+        // A cornered rat darts home rather than through a wall — and when even
+        // the line home is cut, it sits where it is instead of taking it.
+        waypoints.push(step.unwrap_or_else(|| {
+            if segment_clear(nav, collision, previous, home) {
+                home
+            } else {
+                previous
+            }
+        }));
+    }
+    // The loop closes with a sprint from the last waypoint back to `home` that
+    // no draw above ever examined; drop trailing waypoints until that closing
+    // line is as clear as every other leg. (A single-point loop is legal: one
+    // degenerate leg, a rat that sits at home.)
+    while waypoints.len() > 1
+        && !segment_clear(
+            nav,
+            collision,
+            *waypoints.last().expect("the loop starts at home"),
+            home,
+        )
+    {
+        waypoints.pop();
     }
 
     let mut legs = Vec::with_capacity(waypoints.len());
@@ -776,10 +833,12 @@ fn scatter_offset(
     let jitter = (unit(rat.seed, 41) - 0.5) * 0.9;
     let direction = Vec2::from_angle(jitter).rotate(away);
     let reach = SCATTER_FLEE_M * (0.75 + 0.5 * unit(rat.seed, 42)) * envelope;
-    // A dart that would carry into a wall or a crate pulls up short instead.
+    // A dart that would carry into — or through — a wall or a crate pulls up
+    // short instead. The rat slides out and back along this whole line as the
+    // envelope rises and falls, so the line must be clear, not just its peak.
     for fraction in [1.0, 0.5, 0.25] {
         let offset = direction * reach * fraction;
-        if walkable(nav, collision, position + offset) {
+        if segment_clear(nav, collision, position, position + offset) {
             return offset;
         }
     }
@@ -1299,9 +1358,11 @@ mod tests {
     }
 
     /// The binding decision in §2.1: rats are confined by reading the world.
-    /// Every baked waypoint stands on the player's walkable surface and inside
-    /// no collider — and the colony table actually settles its population,
-    /// which is the canary for an anchor drifting off walkable ground.
+    /// Every baked sprint — sampled sub-cell along its whole line, not merely
+    /// at its endpoints, because `Rat::sample` lerps the lot (LE-03) — stays
+    /// on the player's walkable surface and inside no collider; and the colony
+    /// table actually settles its population, which is the canary for an
+    /// anchor drifting off walkable ground.
     #[test]
     fn every_waypoint_is_walkable_and_uncollided() {
         let mut app = built_app();
@@ -1311,6 +1372,7 @@ mod tests {
             .single(world)
             .expect("the city spawns exactly one vermin batch");
         let collision = world.resource::<CollisionWorld>();
+        let pitch = vermin.nav.grid().cell_m * 0.5;
         let mut total = 0;
         for colony in &vermin.colonies {
             assert!(
@@ -1323,12 +1385,18 @@ mod tests {
                 assert!(!rat.legs.is_empty());
                 assert!(rat.period > 0.0);
                 for leg in &rat.legs {
-                    for point in [leg.from, leg.to] {
+                    let samples = (f64::from(leg.from.distance(leg.to)) / pitch)
+                        .ceil()
+                        .max(1.0) as usize;
+                    for index in 0..=samples {
+                        let point = leg.from.lerp(leg.to, index as f32 / samples as f32);
                         assert!(
                             walkable(&vermin.nav, collision, point),
-                            "{}: waypoint {point:?} is off the walkable surface",
+                            "{}: sprint point {point:?} is off the walkable surface",
                             colony.name
                         );
+                    }
+                    for point in [leg.from, leg.to] {
                         assert!(
                             point.distance(colony.anchor) <= colony.radius_m + 0.001,
                             "{}: waypoint {point:?} left the colony",
@@ -1582,6 +1650,97 @@ mod tests {
             Vec2::ZERO,
             "a dart into a collider is refused, not taken"
         );
+    }
+
+    /// LE-03: endpoints are not trajectories. `Rat::sample` lerps the whole
+    /// sprint and a scatter dart slides along its whole offset, so a thin
+    /// solid standing *between* two walkable endpoints — invisible to an
+    /// endpoint-only check — must refuse the leg and pull the dart up short.
+    #[test]
+    fn a_thin_obstacle_between_endpoints_refuses_the_sprint_and_the_dart() {
+        let nav = committed_nav();
+        let open = CollisionWorld::default();
+        let anchor = Vec2::new(-294.0, 220.0);
+        let rat = bake_rat(&nav, &open, anchor, 14.0, 41).expect("the Shambles is walkable");
+        let pitch = nav.grid().cell_m * 0.5;
+
+        // A 12 cm crate over the longest sprint's midpoint: both endpoints
+        // stay clear, the line between them does not.
+        let leg = rat
+            .legs
+            .iter()
+            .max_by(|a, b| {
+                a.from
+                    .distance_squared(a.to)
+                    .total_cmp(&b.from.distance_squared(b.to))
+            })
+            .expect("a baked rat has legs");
+        let length = leg.from.distance(leg.to);
+        assert!(length > 0.5, "an open bake sprints: {length}");
+        let mid = leg.from.lerp(leg.to, 0.5);
+        let mut crated = CollisionWorld::default();
+        crated.add_box(
+            Vec3::new(mid.x - 0.06, 0.0, mid.y - 0.06),
+            Vec3::new(mid.x + 0.06, 1.0, mid.y + 0.06),
+        );
+        assert!(
+            walkable(&nav, &crated, leg.from) && walkable(&nav, &crated, leg.to),
+            "the crate must cut only the line, never an endpoint"
+        );
+        assert!(
+            !segment_clear(&nav, &crated, leg.from, leg.to),
+            "a sprint through the crate is refused"
+        );
+
+        // Re-baked against the crate, no accepted sprint crosses it: every
+        // sub-cell sample of every leg stays outside.
+        let rebaked = bake_rat(&nav, &crated, anchor, 14.0, 41).expect("still walkable");
+        for leg in &rebaked.legs {
+            let samples = (f64::from(leg.from.distance(leg.to)) / pitch)
+                .ceil()
+                .max(1.0) as usize;
+            for index in 0..=samples {
+                let point = leg.from.lerp(leg.to, index as f32 / samples as f32);
+                assert!(
+                    !crated.contains_point(Vec3::new(point.x, RAT_PROBE_Y, point.y)),
+                    "a re-baked sprint cuts the crate at {point:?}"
+                );
+            }
+        }
+
+        // The same trick at a dart's midpoint: the full dart's line crosses
+        // the crate with its endpoint clear, so an endpoint check would take
+        // it straight through — the taken dart must stop short of the crate.
+        let (position, _, _) = rat.sample(0.0);
+        let impulse = Some((position + Vec2::new(0.4, 0.0), 10.0));
+        let open_dart = scatter_offset(&nav, &open, &rat, position, impulse, 10.8);
+        assert!(
+            open_dart.length() > 0.2,
+            "open ground lets the rat run: {open_dart:?}"
+        );
+        let dart_mid = position + open_dart * 0.5;
+        let mut dart_crated = CollisionWorld::default();
+        dart_crated.add_box(
+            Vec3::new(dart_mid.x - 0.06, 0.0, dart_mid.y - 0.06),
+            Vec3::new(dart_mid.x + 0.06, 1.0, dart_mid.y + 0.06),
+        );
+        assert!(
+            walkable(&nav, &dart_crated, position + open_dart),
+            "the full dart's endpoint is clear — only the line is cut"
+        );
+        let short = scatter_offset(&nav, &dart_crated, &rat, position, impulse, 10.8);
+        assert!(
+            short.length() < open_dart.length() * 0.5,
+            "the dart pulls up before the crate: {short:?} vs {open_dart:?}"
+        );
+        let samples = (f64::from(short.length()) / pitch).ceil().max(1.0) as usize;
+        for index in 0..=samples {
+            let point = position.lerp(position + short, index as f32 / samples as f32);
+            assert!(
+                !dart_crated.contains_point(Vec3::new(point.x, RAT_PROBE_Y, point.y)),
+                "the taken dart cuts the crate at {point:?}"
+            );
+        }
     }
 
     /// The sweep that *arms* an impulse, not just the envelope it plays out:
