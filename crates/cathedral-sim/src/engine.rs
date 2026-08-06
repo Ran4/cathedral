@@ -1942,7 +1942,8 @@ impl Engine {
             }
 
             EngineCommand::ClearWeatherOverride => {
-                self.weather.clear_override();
+                let game_days = self.clock.game_days(now);
+                self.weather.clear_override(game_days);
                 self.update_weather(now, false, out);
             }
 

@@ -316,6 +316,18 @@ struct ForcedWeather {
     revision: u64,
 }
 
+/// What a cleared override leaves underfoot.  Entering an override inherits
+/// the water of the sky it replaces; this is the same courtesy going the other
+/// way.  The schedule treats it as one more ended shower, so a forced storm's
+/// streets dry on the ordinary integral instead of snapping dry the instant
+/// the override goes.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct WeatherResidue {
+    cleared_at_days: f64,
+    wetness: f64,
+    standing_water: f64,
+}
+
 /// A stable scheduled lightning event.  `game_instant_days` uses the same
 /// absolute fractional-day axis passed to [`WeatherTimeline::sample`].
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -333,6 +345,7 @@ pub struct WeatherTimeline {
     config: WeatherConfig,
     climate: WeatherClimate,
     forced: Option<ForcedWeather>,
+    residue: Option<WeatherResidue>,
     next_override_revision: u64,
 }
 
@@ -358,6 +371,7 @@ impl WeatherTimeline {
             config,
             climate: WeatherClimate::default(),
             forced,
+            residue: None,
             next_override_revision: u64::MAX / 2 + 1,
         }
     }
@@ -396,19 +410,41 @@ impl WeatherTimeline {
             initial_standing_water: inherited.standing_water,
             revision,
         });
+        // The inherited sample above already read any earlier clear's residue,
+        // so from here it rides in `initial_wetness` and must not be counted
+        // a second time when this override is itself cleared.
+        self.residue = None;
     }
 
-    pub fn clear_override(&mut self) {
+    pub fn clear_override(&mut self, game_instant_days: f64) {
+        // The override goes, but what it laid down must not go with it.  Its
+        // final sample is handed on: to the config's standing sky as inherited
+        // water, exactly as `set_override` meters out what *it* replaced, or
+        // to the schedule as a residue that dries like any ended shower.
+        let aftermath = self
+            .forced
+            .filter(|_| game_instant_days.is_finite())
+            .map(|forced| forced_sample(forced, game_instant_days));
         self.forced = match (self.config.enabled, self.config.mode) {
             (true, WeatherMode::Forced(kind)) => Some(ForcedWeather {
                 kind,
                 intensity: None,
-                began_at_days: None,
-                initial_wetness: 0.0,
-                initial_standing_water: 0.0,
+                began_at_days: aftermath.is_some().then_some(game_instant_days),
+                initial_wetness: aftermath.map_or(0.0, |sample| sample.surface_wetness),
+                initial_standing_water: aftermath.map_or(0.0, |sample| sample.standing_water),
                 revision: self.next_override_revision,
             }),
-            _ => None,
+            _ => {
+                if let Some(sample) = aftermath {
+                    self.residue = (sample.surface_wetness > 0.0 || sample.standing_water > 0.0)
+                        .then_some(WeatherResidue {
+                            cleared_at_days: game_instant_days,
+                            wetness: sample.surface_wetness,
+                            standing_water: sample.standing_water,
+                        });
+                }
+                None
+            }
         };
         self.next_override_revision = self
             .next_override_revision
@@ -788,6 +824,19 @@ impl WeatherTimeline {
                 }
             })
             .collect();
+        // A cleared override's aftermath joins the sweep as one more ended
+        // shower: the same quadrature dries it, and it falls out of reckoning
+        // at the window's edge exactly as a scheduled shower does.
+        if let Some(residue) = self.residue
+            && time >= residue.cleared_at_days
+            && time - residue.cleared_at_days <= WETNESS_WINDOW_DAYS as f64
+        {
+            showers.push(Shower {
+                ended_hours: residue.cleared_at_days * HOURS_PER_DAY,
+                saturated: residue.wetness,
+                ponded: residue.standing_water,
+            });
+        }
         if showers.is_empty() {
             return (0.0, 0.0);
         }
@@ -1956,8 +2005,25 @@ mod tests {
             assert_eq!(first.kind, kind);
             assert_valid(first);
         }
-        timeline.clear_override();
-        assert_eq!(timeline.sample(20.25), scheduled);
+        timeline.clear_override(20.25);
+        // The schedule's own sky is back at once; only the water the overrides
+        // laid down is handed over rather than snapped away, and it ages out
+        // of the wetness window like any shower's aftermath.
+        let released = timeline.sample(20.25);
+        assert_eq!(
+            WeatherSample {
+                surface_wetness: scheduled.surface_wetness,
+                standing_water: scheduled.standing_water,
+                ..released
+            },
+            scheduled
+        );
+        assert!(released.surface_wetness >= scheduled.surface_wetness);
+        let beyond = 20.25 + WETNESS_WINDOW_DAYS as f64 + 1.0;
+        assert_eq!(
+            timeline.sample(beyond),
+            WeatherTimeline::default().sample(beyond)
+        );
     }
 
     #[test]
@@ -1987,7 +2053,7 @@ mod tests {
         assert_eq!(timeline.sample(3.0), WeatherSample::CLEAR);
         timeline.set_override(WeatherKind::Rain, None, 3.0);
         assert_eq!(timeline.sample(3.01).kind, WeatherKind::Rain);
-        timeline.clear_override();
+        timeline.clear_override(3.01);
         assert_eq!(timeline.sample(3.01), WeatherSample::CLEAR);
     }
 
@@ -2046,6 +2112,47 @@ mod tests {
         // half a game day, the last of the damp inside a day and a half.
         assert!(timeline.sample(cleared + 0.5).standing_water < 0.001);
         assert!(timeline.sample(cleared + 1.5).surface_wetness < 0.001);
+    }
+
+    #[test]
+    fn clearing_the_override_hands_the_wet_aftermath_to_the_schedule() {
+        // The second door out of a forced storm: not `weather clear` but
+        // `weather timeline`.  The schedule the override releases must inherit
+        // the streets the storm soaked and dry them like any shower's
+        // aftermath — they used to snap bone-dry the instant the override
+        // went.  Day 13 before the Prime bell is a stretch the seeded schedule
+        // keeps rain-free and dry, so everything wet below is the storm's.
+        // Three quarters of a forced hour: soaked through, yet shy of the
+        // sweep's 0.999_999 saturation clamp, so the handover below is exact.
+        let mut timeline = WeatherTimeline::default();
+        timeline.set_override(WeatherKind::Downpour, Some(0.9), 13.0);
+        let cleared = 13.03;
+        let soaked = timeline.sample(cleared);
+        assert!(soaked.surface_wetness > 0.8, "{soaked:?}");
+        assert!(soaked.standing_water > 0.4, "{soaked:?}");
+
+        timeline.clear_override(cleared);
+        let handed_back = timeline.sample(cleared);
+        assert_eq!(handed_back.precipitation, 0.0);
+        assert!(
+            handed_back.surface_wetness >= soaked.surface_wetness,
+            "clearing dropped the streets from {:.3} to {:.3}",
+            soaked.surface_wetness,
+            handed_back.surface_wetness
+        );
+        assert!(handed_back.standing_water >= soaked.standing_water);
+        let drying = timeline.sample(13.20);
+        assert!(drying.surface_wetness < handed_back.surface_wetness);
+        assert!(drying.surface_wetness > 0.05);
+        assert!(drying.standing_water < handed_back.standing_water);
+        // And the schedule is eventually its pure self again, bit for bit:
+        // past the wetness window the residue ages out exactly as a scheduled
+        // shower would.
+        let beyond = cleared + WETNESS_WINDOW_DAYS as f64 + 1.0;
+        assert_eq!(
+            timeline.sample(beyond),
+            WeatherTimeline::default().sample(beyond)
+        );
     }
 
     #[test]
