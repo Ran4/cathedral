@@ -26,7 +26,7 @@
 //! frame.
 
 use bevy::{camera::visibility::NoFrustumCulling, light::NotShadowCaster, prelude::*};
-use cathedral_sim::marks::MarkKind;
+use cathedral_sim::{actions::CHALK_REACH_M, marks::MarkKind};
 
 use crate::{
     controller::CollisionWorld,
@@ -91,6 +91,17 @@ pub struct MarkFocus {
     pub mark_id: Option<u64>,
     /// How far the player is standing from it.
     pub distance_m: f32,
+}
+
+impl MarkFocus {
+    /// The mark a hold could actually scrub: the id, but only within the sim's
+    /// own [`CHALK_REACH_M`]. Reading carries to [`MARK_READ_RADIUS_M`], twice
+    /// as far — the authoritative `scrub_mark` refuses past arm's length, so
+    /// offering the hold out there would be promising a refusal.
+    fn scrub_target(&self) -> Option<u64> {
+        let mark_id = self.mark_id?;
+        (f64::from(self.distance_m) <= CHALK_REACH_M).then_some(mark_id)
+    }
 }
 
 /// How long the player must hold the key to finish a mark, in real seconds.
@@ -548,7 +559,7 @@ fn intent_now(
     standing: &ChalkStanding,
     choice: &ChalkChoice,
 ) -> Option<ChalkIntent> {
-    if let Some(mark_id) = focus.mark_id {
+    if let Some(mark_id) = focus.scrub_target() {
         return Some(ChalkIntent::Scrub(mark_id));
     }
     if !standing.pen {
@@ -665,7 +676,7 @@ fn chalk_prompt_line(
         }
         None => {}
     }
-    if focus.mark_id.is_some() {
+    if focus.scrub_target().is_some() {
         return "Hold C to scrub it off".to_string();
     }
     let Some((anchor, kind)) = choice.selected(standing) else {
@@ -872,6 +883,59 @@ mod tests {
                 .is_none(),
             "chalk behind you is not chalk you are looking at"
         );
+    }
+
+    /// Reading carries to [`MARK_READ_RADIUS_M`]; the sleeve only to the sim's
+    /// [`CHALK_REACH_M`]. In between, the HUD must still read the mark out but
+    /// never offer a hold the authoritative `scrub_mark` is bound to refuse.
+    #[test]
+    fn a_mark_read_from_beyond_arms_reach_offers_no_scrub() {
+        let catalog = MarkCatalog::default();
+        let mut collision = CollisionWorld::default();
+        collision.add_box(Vec3::new(-5.0, 0.0, 2.0), Vec3::new(5.0, 4.0, 2.5));
+        let mut mirror = WorldMirror::default();
+        mirror.debug_set_marks(vec![mark(
+            MarkKind::ChalkCross,
+            Vec3::new(0.0, 0.91, 0.0),
+            100,
+            1,
+        )]);
+        // The glyph sits on the façade at z≈2.0; stand back off it by `d`.
+        let from = |d: f32| {
+            let camera = GlobalTransform::from(
+                Transform::from_xyz(0.0, 0.91 + MARK_HEIGHT_M, 2.0 - d)
+                    .looking_to(Vec3::Z, Vec3::Y),
+            );
+            compute_mark_focus(&catalog, Some(&mirror), &collision, Some(&camera))
+        };
+        let standing = ChalkStanding::default();
+        let choice = ChalkChoice::default();
+        let idle = ChalkHold::default();
+
+        // Within arm's reach: read it out, and offer the hold.
+        let near = from(1.9);
+        assert!(near.read_line.is_some());
+        assert_eq!(
+            intent_now(&near, &standing, &choice),
+            Some(ChalkIntent::Scrub(1))
+        );
+        assert_eq!(
+            chalk_prompt_line(&catalog, &near, &standing, &choice, &idle),
+            "Hold C to scrub it off"
+        );
+
+        // Readable but out of reach: the meaning, and no hold — completing it
+        // could only ever end in an out-of-range refusal.
+        let mid = from(3.0);
+        assert!(mid.read_line.is_some(), "reading carries past arm's reach");
+        assert_eq!(intent_now(&mid, &standing, &choice), None);
+        assert_eq!(
+            chalk_prompt_line(&catalog, &mid, &standing, &choice, &idle),
+            ""
+        );
+
+        // Past reading range: nothing at all.
+        assert_eq!(from(4.1), MarkFocus::default());
     }
 
     // ----------------------------------------------------------- the hand
