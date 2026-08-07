@@ -6,6 +6,43 @@ The game runs windowed 1280x720, executes the actions (~0.5 s apart),
 prints a `[drive] 3.2s key Escape` evidence line per action to stdout,
 and exits on its own — no `pkill` needed.
 
+**Add `CATHEDRAL_HEADLESS=1` to every drive run you start on someone else's
+desktop** — which is to say, all of them. The window is created but never
+mapped: it renders the real frame, `shot` captures it as usual, and nothing
+appears on screen, takes the keyboard focus, confines the pointer or makes a
+sound. Everything below behaves identically; there is no second code path.
+
+```sh
+CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 \
+  CATHEDRAL_DRIVE='wait-online; tp 0 40 200 180 -12; sleep 2; shot skyline; quit' cargo run
+```
+
+What headless changes, and why:
+
+- The window is unmapped, so X refuses to confine the cursor to it. One
+  `Unable to grab cursor: … not viewable` ERROR at startup (and one per menu
+  that recaptures) is that refusal, and is the mechanism working — the game's
+  own `grab_mode` stays `Locked`, so `Enter`, `E` and the menus gate on input
+  exactly as they do windowed.
+- Winit's X11 backend reports *raw* mouse motion to unfocused clients too, so
+  `mouse_look` ignores motion while the window is hidden. Without that, the
+  camera would be swung around by whatever the real mouse is doing in another
+  window and a `shot` would face somewhere nobody chose.
+- Audio is dropped (no `AudioPlugin`), because a run you cannot see is one you
+  do not want to hear. That also silences the soundscape's playback systems and
+  their `[soundscape] bed in: …` lines, and turns the handful of ungated sound
+  loads into `Could not find an asset loader matching: … sounds/*.wav` errors —
+  both expected. For a run that is *about* sound, add
+  `CATHEDRAL_HEADLESS_AUDIO=1` to keep the lot.
+- The app ticks `Continuous` rather than dropping to the unfocused 60 Hz, so a
+  headless run keeps a played one's pace.
+
+The rendered frame is the GPU's, not a software fallback, and screenshots come
+out at the same physical size as a visible drive window (the logical 1280x720
+times the display's scale factor — 1493x840 here; `CATHEDRAL_DRIVE_RES` still
+sets the logical size). A headless run needs an X display to connect to (`DISPLAY`
+must be set); it just never puts anything on it.
+
 Actions (each fires ~0.5 s after the previous):
 
 - `key <KeyCode>` — press a key, e.g. `key Escape`, `key KeyZ`, `key F5`.
@@ -141,10 +178,14 @@ hour-gated bed (the Wickmarket at Lamplight, Maren's Green at the Kindling) or
 the daily curfew without waiting out a real hour.
 
 `CATHEDRAL_SHOT=<name> cargo run` is shorthand for a single
-`sleep 2; shot <name>; quit`. For runs without network/API keys set
+`sleep 2; shot <name>; quit` — pair it with `CATHEDRAL_HEADLESS=1` and one
+command gets you a screenshot with nothing on screen at all. For runs without
+network/API keys set
 `smart_actors.fake_backend: true` in config.ron — or export
 `CATHEDRAL_FAKE_BACKEND=1`, which forces it without editing the file.
-Other perf/dev env levers: `CATHEDRAL_PERF=1` (frame-time recording +
+Other perf/dev env levers: `CATHEDRAL_HEADLESS=1` (never map the window; see
+the top of this file) and its `CATHEDRAL_HEADLESS_AUDIO=1` companion,
+`CATHEDRAL_PERF=1` (frame-time recording +
 vsync off; see `features/performance_improvements/findings.md`),
 `CATHEDRAL_DRIVE_RES=1920x1080` (drive window resolution — a drive window asks
 to be non-resizable, which on a tiling WM does not always get you the size you

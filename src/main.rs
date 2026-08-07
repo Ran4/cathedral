@@ -19,6 +19,7 @@ mod weather;
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, MonitorSelection, WindowMode, WindowResolution};
+use bevy::winit::{UpdateMode, WinitSettings};
 use city::CityPlugin;
 use config::{PersistedConfig, load_config};
 use controller::ControllerPlugin;
@@ -71,9 +72,13 @@ fn main() {
     let vermin = config.vermin.clone();
     let persisted = PersistedConfig(config.clone());
     let drive = drive::DrivePlugin::from_env();
+    // A headless run renders, drives and screenshots exactly as usual — the
+    // window is simply never mapped, so nothing appears on screen and nothing
+    // takes the keyboard focus away from whatever the player is doing.
+    let headless = std::env::var_os("CATHEDRAL_HEADLESS").is_some();
     // Drive scripts always run windowed and small: fast, WM-friendly, and
     // independent of whatever config.ron says.
-    let (resolution, mode) = if drive.is_some() {
+    let (resolution, mode) = if drive.is_some() || headless {
         // CATHEDRAL_DRIVE_RES=1920x1080 measures at play resolution; the
         // default stays small and WM-friendly.
         let resolution = std::env::var("CATHEDRAL_DRIVE_RES")
@@ -91,58 +96,93 @@ fn main() {
         )
     };
     let mut app = App::new();
+    let mut plugins = DefaultPlugins
+        .set(LogPlugin {
+            // Mirror the console log stream into the session's
+            // `logs.jsonl` (see `session_log`).
+            custom_layer: session_log::custom_layer,
+            ..default()
+        })
+        .set(WindowPlugin {
+            primary_window: Some(Window {
+                title: config.title,
+                resolution,
+                // A drive window should keep the size it asked for:
+                // screenshots get compared frame to frame, and a tiling WM will
+                // happily stretch a resizable window to whatever cell it has
+                // free, changing aspect and FOV between runs. Asking for a
+                // fixed size is a hint, not a guarantee — some WMs still pick
+                // the size — but it does stop it varying run to run.
+                resizable: config.resizable && drive.is_none() && !headless,
+                // An unmapped window still renders and still fills a swapchain,
+                // so `shot` captures the real frame.
+                visible: !headless,
+                mode,
+                ..default()
+            }),
+            primary_cursor_options: Some(CursorOptions {
+                visible: false,
+                // Left `Locked` even headless, deliberately: chat, the
+                // interaction prompt and mouse-look all read this as "gameplay
+                // owns the input", so releasing it would make a headless run
+                // answer `Enter` and `E` differently from the windowed one it
+                // stands in for. X refuses to confine the pointer to an
+                // unmapped window anyway — hence the one harmless "not
+                // viewable" line at startup, and hence `mouse_look`'s own guard.
+                grab_mode: CursorGrabMode::Locked,
+                ..default()
+            }),
+            ..default()
+        });
+    // A run you cannot see is one you almost certainly do not want to hear
+    // either: the city keeps its own ambience going for as long as it lives.
+    // The codebase already supports running without the audio output (that is
+    // how the headless tests run), so drop the plugin outright rather than
+    // chase every fade that re-sets a sink's volume. `CATHEDRAL_HEADLESS_AUDIO=1`
+    // keeps the sound for the runs that are *about* the soundscape.
+    let muted = headless && std::env::var_os("CATHEDRAL_HEADLESS_AUDIO").is_none();
+    if muted {
+        plugins = plugins.disable::<bevy::audio::AudioPlugin>();
+    }
     app
         // The procedural atmosphere normally fills the background. This warm,
         // hazy blue is also a useful fallback on GPUs without atmosphere
         // compute-shader support.
         .insert_resource(ClearColor(Color::srgb(0.52, 0.67, 0.76)))
-        .add_plugins(
-            DefaultPlugins
-                .set(LogPlugin {
-                    // Mirror the console log stream into the session's
-                    // `logs.jsonl` (see `session_log`).
-                    custom_layer: session_log::custom_layer,
-                    ..default()
-                })
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: config.title,
-                        resolution,
-                        // A drive window should keep the size it asked for:
-                        // screenshots get compared frame to frame, and a
-                        // tiling WM will happily stretch a resizable window to
-                        // whatever cell it has free, changing aspect and FOV
-                        // between runs. Asking for a fixed size is a hint, not
-                        // a guarantee — some WMs still pick the size — but it
-                        // does stop it varying run to run.
-                        resizable: config.resizable && drive.is_none(),
-                        mode,
-                        ..default()
-                    }),
-                    primary_cursor_options: Some(CursorOptions {
-                        visible: false,
-                        grab_mode: CursorGrabMode::Locked,
-                        ..default()
-                    }),
-                    ..default()
-                }),
-        )
+        .add_plugins(plugins)
         .insert_resource(persisted)
-        .insert_resource(vermin)
-        .add_plugins((
-            CathedralFontsPlugin,
-            ControllerPlugin,
-            CathedralPlugin,
-            SoundscapePlugin,
-            CityPlugin,
-            HudPlugin,
-            CathedralScreenshotPlugin,
-            NavDebugPlugin,
-            MapPlugin,
-            WeatherPlugin::new(weather.clone()),
-            perf::PerfPlugin,
-        ))
-        .add_plugins(SmartActorsPlugin::with_weather(smart_actors, weather));
+        .insert_resource(vermin);
+    if muted {
+        // `AudioPlugin` is what registers this asset type, and the sound-effect
+        // path asks the asset server for one whether or not anything can play
+        // it — an unregistered handle allocation is a panic, not a no-op. The
+        // headless test harness registers it by hand for the same reason
+        // (`smart_actors::tests`); a muted run is that same app with a window.
+        app.init_asset::<bevy::audio::AudioSource>();
+    }
+    if headless {
+        // An unmapped window is never focused, and the default unfocused mode
+        // throttles the app to a reactive 60 Hz. A headless run stands in for a
+        // played one, so let it tick like the window it cannot show.
+        app.insert_resource(WinitSettings {
+            focused_mode: UpdateMode::Continuous,
+            unfocused_mode: UpdateMode::Continuous,
+        });
+    }
+    app.add_plugins((
+        CathedralFontsPlugin,
+        ControllerPlugin,
+        CathedralPlugin,
+        SoundscapePlugin,
+        CityPlugin,
+        HudPlugin,
+        CathedralScreenshotPlugin,
+        NavDebugPlugin,
+        MapPlugin,
+        WeatherPlugin::new(weather.clone()),
+        perf::PerfPlugin,
+    ))
+    .add_plugins(SmartActorsPlugin::with_weather(smart_actors, weather));
     if let Some(drive) = drive {
         app.add_plugins(drive);
     }

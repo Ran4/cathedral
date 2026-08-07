@@ -683,11 +683,20 @@ fn collect_input(
 
 fn mouse_look(
     mouse_motion: Res<AccumulatedMouseMotion>,
-    cursor: Single<&CursorOptions, With<PrimaryWindow>>,
+    window: Single<(&Window, &CursorOptions), With<PrimaryWindow>>,
     player: Single<(&mut PlayerController, &mut Transform), Without<PlayerCamera>>,
     mut camera: Single<&mut Transform, (With<PlayerCamera>, Without<PlayerController>)>,
 ) {
-    if cursor.grab_mode == CursorGrabMode::None || mouse_motion.delta == Vec2::ZERO {
+    let (window, cursor) = window.into_inner();
+    // `CATHEDRAL_HEADLESS=1` leaves the window unmapped. Winit's X11 backend
+    // reports raw device motion to *every* client, focused or not, so without
+    // this an off-screen run would have its camera swung around by whatever the
+    // player is doing with the real mouse in another window — and a scripted
+    // `shot` would face somewhere nobody chose.
+    if !window.visible
+        || cursor.grab_mode == CursorGrabMode::None
+        || mouse_motion.delta == Vec2::ZERO
+    {
         return;
     }
 
@@ -1843,6 +1852,60 @@ mod tests {
         assert!(
             position.distance(anchor) > CUSTODY_TETHER_M as f32,
             "geometry beating the anchor is correct; being pinned inside it is not"
+        );
+    }
+
+    /// `CATHEDRAL_HEADLESS=1` leaves the window unmapped, and winit's X11
+    /// backend hands raw device motion to unfocused clients all the same. The
+    /// cursor stays `Locked` there on purpose (chat and the interaction prompt
+    /// read it as "gameplay owns the input"), so the hidden-window guard is the
+    /// only thing standing between a scripted `shot` and a camera swung around
+    /// by whatever the real mouse is doing in somebody else's window.
+    #[test]
+    fn a_hidden_window_does_not_let_the_real_mouse_steer_the_camera() {
+        fn run(visible: bool) -> (f32, f32) {
+            let mut app = App::new();
+            let mut motion = AccumulatedMouseMotion::default();
+            motion.delta = Vec2::new(120.0, 45.0);
+            app.insert_resource(motion);
+            app.world_mut().spawn((
+                PrimaryWindow,
+                Window {
+                    visible,
+                    ..default()
+                },
+                CursorOptions {
+                    grab_mode: CursorGrabMode::Locked,
+                    ..default()
+                },
+            ));
+            app.world_mut()
+                .spawn((PlayerController::default(), Transform::default()));
+            app.world_mut()
+                .spawn((PlayerCamera, Transform::default()));
+            app.add_systems(Update, mouse_look);
+            app.update();
+
+            let world = app.world_mut();
+            let controller = world
+                .query::<&PlayerController>()
+                .single(world)
+                .expect("the player exists");
+            (controller.yaw, controller.pitch)
+        }
+
+        let rest = PlayerController::default();
+        let hidden = run(false);
+        assert_eq!(
+            hidden,
+            (rest.yaw, rest.pitch),
+            "a headless run must hold the aim a script gave it"
+        );
+
+        let (yaw, pitch) = run(true);
+        assert!(
+            yaw != rest.yaw && pitch != rest.pitch,
+            "and a window somebody is looking at must still turn: got {yaw}, {pitch}"
         );
     }
 

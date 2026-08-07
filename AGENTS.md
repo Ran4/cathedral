@@ -77,6 +77,15 @@ diagnostics (and, with `-v`, the prompts and raw replies) go to stderr.
 To verify a change in a running game, see .claude/rules/CATHEDRAL_DRIVE.md (do NOT use xdotool/XTEST (winit
 never sees synthetic core events).
 
+Run those scripts with **`CATHEDRAL_HEADLESS=1`**: the window is created but never mapped, so the game renders
+and screenshots exactly as usual while nothing appears on screen, takes the focus, grabs the pointer or makes
+a sound. Somebody is usually working at that desktop.
+
+```sh
+CATHEDRAL_HEADLESS=1 CATHEDRAL_FAKE_BACKEND=1 \
+  CATHEDRAL_DRIVE='wait-online; tp 0 40 200 180 -12; sleep 2; shot skyline; quit' cargo run
+```
+
 ## Logs
 
 Automatically written:
