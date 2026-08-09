@@ -5572,7 +5572,7 @@ struct Sale {
 /// Two beds, one question. The authored cast's is bound by id in
 /// `scripts/bake_homes.py`'s `homes.json`, and ~100 of them deliberately have
 /// none. A **generated** citizen has no bake to be in, so
-/// `features/give_the_crowd_somewhere_to_be.md` M4 hands them one of the city's
+/// `features/implemented/give_the_crowd_somewhere_to_be.md` M4 hands them one of the city's
 /// 1,101 doors at world build and carries the point on their profile
 /// ([`crate::lore::LoreProfile::home_point_m`]) — the same field that carries
 /// the sentence they say about it.

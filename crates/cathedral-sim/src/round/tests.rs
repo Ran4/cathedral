@@ -8143,7 +8143,7 @@ fn a_chalked_ward_sign_pulls_that_wards_evening_crowd() {
     );
 }
 
-/// `features/give_the_crowd_somewhere_to_be.md` M2, first claim: a generated
+/// `features/implemented/give_the_crowd_somewhere_to_be.md` M2, first claim: a generated
 /// citizen with no trade at all reaches [`build_legs`] with `occupation: None`,
 /// finds no archetype and no workplace, and is enrolled with **no legs** and the
 /// default leash — which is what leaves the ladder nothing to do but the social
@@ -8542,7 +8542,7 @@ fn a_generated_idler_past_the_leash_is_walked_back() {
     );
 }
 
-/// `features/give_the_crowd_somewhere_to_be.md` M4, the enrolment half: every
+/// `features/implemented/give_the_crowd_somewhere_to_be.md` M4, the enrolment half: every
 /// generated citizen reaches [`Round::seed`] with a door on their profile, is
 /// enrolled at it, has it filed in the wayfinding registry as a place they hold
 /// a handle to — and none of that touches the cast, whose beds still come from

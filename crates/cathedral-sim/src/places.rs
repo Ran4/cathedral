@@ -106,7 +106,7 @@ pub struct PlaceRegistry {
     /// The same binding read the other way — a home's id → whose it is. Kept
     /// rather than searched because [`Self::owner_of_home`] is asked once per
     /// reachable anchor on every chalk poll, and a crowd
-    /// (`features/give_the_crowd_somewhere_to_be.md` M4) files 20,000 homes for
+    /// (`features/implemented/give_the_crowd_somewhere_to_be.md` M4) files 20,000 homes for
     /// that scan to walk.
     owner_by_home: HashMap<PlaceId, ActorId>,
 }

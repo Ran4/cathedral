@@ -186,7 +186,7 @@ pub struct LoreProfile {
     /// [`crate::places::PlaceRegistry::add_home`] files their handle at.
     ///
     /// Only a **generated** citizen ever carries one
-    /// (`features/give_the_crowd_somewhere_to_be.md` M4). The authored cast's
+    /// (`features/implemented/give_the_crowd_somewhere_to_be.md` M4). The authored cast's
     /// bed is bound by `scripts/bake_homes.py` into `assets/world/homes.json`
     /// and looked up by id, so the cast has no use for this field and never
     /// sets it; a crowd has no bake, so the door [`crate::crowd`] picks travels

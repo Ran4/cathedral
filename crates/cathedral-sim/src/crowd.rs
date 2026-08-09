@@ -228,7 +228,7 @@ const NEARBY_M: f64 = 120.0;
 /// entry in [`SUPPORTS`] carries `pauper`. Housing them would have put "Home: a
 /// house in the Reed Ward" on the same prompt as "You sleep under whatever
 /// overhang is dry" — the drift the risk ledger of
-/// `features/give_the_crowd_somewhere_to_be.md` names, arrived at by accident.
+/// `features/implemented/give_the_crowd_somewhere_to_be.md` names, arrived at by accident.
 /// They still get a ward, taken from the ground they stand on rather than from
 /// a draw, because a person with no bed is of wherever they sleep rough; and
 /// their own support line already says how they sleep, which is what the bake's
@@ -752,7 +752,7 @@ const TRADES: &[Trade] = &[
 /// independently, because a citizen whose sheet says `alms_dependent` and whose
 /// description says they live off piece-work is a citizen who cannot answer
 /// "how do you eat?" twice the same way — the drift the risk ledger of
-/// `features/give_the_crowd_somewhere_to_be.md` names.
+/// `features/implemented/give_the_crowd_somewhere_to_be.md` names.
 ///
 /// Every entry carries at least one of [`crate::lore::SUPPORT_CIRCUMSTANCES`],
 /// which is what `validate` requires of a no-trade sheet and what the test
@@ -1185,7 +1185,7 @@ mod tests {
     }
 
     /// The people leaning on the walls are the ones who speak to you first —
-    /// the numbers `features/give_the_crowd_somewhere_to_be.md` M2 claims,
+    /// the numbers `features/implemented/give_the_crowd_somewhere_to_be.md` M2 claims,
     /// measured against the crowd this file actually mints.
     #[test]
     fn the_loiterers_are_the_curious_ones() {

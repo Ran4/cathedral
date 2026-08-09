@@ -1073,7 +1073,7 @@ impl Assets {
                 let points = cathedral_sim::spread_over_walkable(nav, count as usize);
                 let sheets = cathedral_sim::extra_ambient_sheets(nav, &points, 0);
                 // The no-trade cohort, counted out loud
-                // (`features/give_the_crowd_somewhere_to_be.md` M2): roughly a
+                // (`features/implemented/give_the_crowd_somewhere_to_be.md` M2): roughly a
                 // quarter of any crowd has no occupation at all, and every one
                 // of them must carry a circumstance saying how they eat — the
                 // same pairing the lore loader demands of an authored

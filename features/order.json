@@ -1,9 +1,6 @@
 {
     "order": [
         {
-            "path": "features/give_the_crowd_somewhere_to_be.md"
-        },
-        {
             "path": "features/the_cut_improvements/"
         },
         {
@@ -59,6 +56,10 @@
         }
     ],
     "finished": [
+        {
+            "path": "features/implemented/give_the_crowd_somewhere_to_be.md",
+            "when": "2026-08-10T0130"
+        },
         {
             "path": "features/implemented/chalking_the_walls.md",
             "when": "2026-08-02T1030"
