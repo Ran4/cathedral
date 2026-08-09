@@ -682,6 +682,7 @@ pub(super) fn announce_vermin_boil(
     handle: Option<Res<BridgeHandle>>,
     mut vermin: Query<&mut Vermin>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Vermin);
     let clock = clock.as_deref();
     for mut vermin in &mut vermin {
         let Some(night) = boil_night(clock) else {
@@ -749,6 +750,7 @@ pub(super) fn trigger_vermin_scatter(
     actors: Query<&GlobalTransform, With<ActorView>>,
     mut vermin: Query<&mut Vermin>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Vermin);
     let elapsed = time.elapsed_secs();
     let clock = clock.as_deref();
     // Only somebody standing on the ground is a footfall: a player in
@@ -870,6 +872,7 @@ pub(super) fn animate_vermin(
     vermin: Query<(&Vermin, &Mesh3d)>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Vermin);
     let Ok(camera) = camera.single() else {
         return;
     };

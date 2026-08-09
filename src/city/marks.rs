@@ -294,6 +294,7 @@ pub(super) fn sync_marks(
     mut marks: Query<(&mut Marks, &Mesh3d)>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Marks);
     let Some(mirror) = mirror else {
         return;
     };

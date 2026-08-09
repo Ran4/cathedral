@@ -561,7 +561,11 @@ pub(super) fn compose_environment(
         // threshold never flickers the component (and its pipeline state) on
         // and off frame to frame.
         let warming = time.elapsed_secs() < VOLUMETRIC_WARMUP_SECONDS;
-        let wants_volumetric = settings.volumetric_fog
+        // Ablation lever (the `CATHEDRAL_NO_*` family): a 64-step raymarch over
+        // two city-scale volumes is one of the render costs Bevy's diagnostics
+        // do not price, so the way to price it is a run without it.
+        let wants_volumetric = std::env::var_os("CATHEDRAL_NO_VOLUMETRIC_FOG").is_none()
+            && settings.volumetric_fog
             && WeatherQuality::from_name(&settings.quality) != WeatherQuality::Low
             && (warming
                 || if has_volumetric {

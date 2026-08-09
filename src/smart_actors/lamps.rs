@@ -61,6 +61,7 @@ pub fn sync_lamp_props(
     mut assets: Local<Option<LampAssets>>,
     mut synced: Local<u64>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Lamps);
     if lamps.revision == *synced || lamps.lamps.is_empty() {
         return;
     }

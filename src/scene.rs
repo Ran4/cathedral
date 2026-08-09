@@ -55,6 +55,12 @@ fn gate_interior_shadow_lights(
     mut spots: Query<(&InteriorShadowLight, &GlobalTransform, &mut SpotLight)>,
     mut points: Query<(&InteriorShadowLight, &GlobalTransform, &mut PointLight)>,
 ) {
+    if shadows_disabled() {
+        // The ablation lever spawned these dark; re-enabling them on approach
+        // would quietly put the interior's twenty shadow views back into a run
+        // whose whole purpose is to be without them.
+        return;
+    }
     let Ok(camera) = cameras.single() else { return };
     let camera_position = camera.translation();
     let gate = |gate: &InteriorShadowLight,
@@ -1200,7 +1206,17 @@ fn build_west_end(
     );
 }
 
+/// Ablation lever, the `CATHEDRAL_NO_*` family's render-side member: drops
+/// every shadow map in the scene. The sun's four cascades re-draw the whole
+/// visible city each frame and are not instrumented by Bevy's render
+/// diagnostics, so the only way to price them is to run without them.
+/// Attribution only — the game looks wrong like this.
+pub(crate) fn shadows_disabled() -> bool {
+    std::env::var_os("CATHEDRAL_NO_SHADOWS").is_some()
+}
+
 fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &CathedralMaterials) {
+    let shadows = !shadows_disabled();
     commands.spawn((
         Sun,
         DirectionalLight {
@@ -1208,7 +1224,7 @@ fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &Ca
             // afternoon key light and a cooler sky fill.
             color: Color::WHITE,
             illuminance: lux::RAW_SUNLIGHT,
-            shadow_maps_enabled: true,
+            shadow_maps_enabled: shadows,
             ..default()
         },
         Transform::from_xyz(-420.0, 560.0, 300.0).looking_at(Vec3::new(0.0, 0.0, 40.0), Vec3::Y),
@@ -1234,7 +1250,7 @@ fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &Ca
             radius: 2.5,
             inner_angle: 0.18,
             outer_angle: 0.43,
-            shadow_maps_enabled: true,
+            shadow_maps_enabled: shadows,
             ..default()
         },
         InteriorShadowLight {
@@ -1250,7 +1266,7 @@ fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &Ca
             radius: 1.2,
             inner_angle: 0.35,
             outer_angle: 0.72,
-            shadow_maps_enabled: true,
+            shadow_maps_enabled: shadows,
             ..default()
         },
         InteriorShadowLight {
@@ -1282,7 +1298,7 @@ fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &Ca
                 intensity: 55_000.0,
                 range: 23.0,
                 radius: 0.45,
-                shadow_maps_enabled: index % 2 == 0,
+                shadow_maps_enabled: shadows && index % 2 == 0,
                 ..default()
             },
             Transform::from_xyz(0.0, 17.2, z),

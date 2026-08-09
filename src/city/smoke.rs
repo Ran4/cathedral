@@ -191,6 +191,7 @@ pub(super) fn animate_chimney_smoke(
     smoke: Query<(&ChimneySmoke, &Mesh3d)>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Smoke);
     let Ok(camera) = camera.single() else {
         return;
     };

@@ -1642,6 +1642,7 @@ pub(crate) fn drive_gesture_pose(
     mut triggers: MessageReader<PresentGesture>,
     mut poses: Query<(&ActorId, &mut BodyPoseState)>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::BodyPose);
     let now = time.elapsed_secs_f64();
     for trigger in triggers.read() {
         // The looping dance is driven from the snapshot below; a one-shot maps
@@ -2564,6 +2565,7 @@ pub(crate) fn animate_body_pose(
     mut frame: Local<u64>,
     mut timer: Local<PoseTimer>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::BodyPose);
     let started = Instant::now();
     *frame = frame.wrapping_add(1);
     let Ok(camera) = cameras.single() else {

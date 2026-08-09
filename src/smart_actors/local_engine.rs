@@ -470,6 +470,7 @@ pub fn pump_local_engine(
     mut engine: NonSendMut<LocalEngine>,
     mut timer: Local<PumpTimer>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::EnginePump);
     let started = std::time::Instant::now();
     engine.pump(time.elapsed_secs_f64());
     // The whole sim runs inside this call on the main thread; the same rolling

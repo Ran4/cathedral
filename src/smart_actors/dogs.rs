@@ -341,6 +341,7 @@ pub fn sync_dogs(
     existing: Query<&StreetDog>,
     mut assets: Local<Option<DogAssets>>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Dogs);
     if !inbox.is_changed() || inbox.0.is_empty() {
         return;
     }
@@ -468,6 +469,7 @@ pub fn drive_dog_bodies(
     margin: Option<Res<crate::city::CutMarginProfile>>,
     mut dogs: Query<(Entity, &StreetDog, &mut Transform, Option<&mut DogMotion>)>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Dogs);
     let now = time.elapsed_secs_f64();
     for (entity, dog, mut transform, motion) in &mut dogs {
         let Some(sample) = inbox.0.get(&dog.id) else {
@@ -529,6 +531,7 @@ pub fn animate_dog_gait(
     mut dogs: Query<(&DogRig, &mut DogGait, Option<&DogMotion>)>,
     mut parts: Query<&mut Transform, With<Mesh3d>>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Dogs);
     let now = time.elapsed_secs();
     let dt = time.delta_secs();
     for (rig, mut gait, motion) in &mut dogs {

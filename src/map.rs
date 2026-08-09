@@ -349,6 +349,7 @@ fn sync_map_state(
     mut minimap: Query<&mut Visibility, (With<MinimapRoot>, Without<FullscreenMapRoot>)>,
     cursor: Option<Single<&mut CursorOptions, With<PrimaryWindow>>>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Map);
     let open = map_state.fullscreen_open;
     // The fullscreen map shows only when open; the corner minimap hides then, so
     // the two never stack.

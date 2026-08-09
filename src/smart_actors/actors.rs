@@ -106,6 +106,7 @@ pub(crate) fn reconcile_actor_views(
         Without<ActorOutfit>,
     >,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::ActorViews);
     // Snapshots replace the mirror at most ~10×/s (revision bumps); between
     // them nothing below can produce a different result, and running anyway
     // costs two N-entry maps plus a whole-cast Transform pass per frame.
@@ -243,6 +244,7 @@ pub(crate) fn drive_npc_bodies(
     margin: Option<Res<crate::city::CutMarginProfile>>,
     mut movers: Query<(Entity, &ActorId, &mut Transform, Option<&mut NpcMotion>), With<ActorView>>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::ActorViews);
     let now = time.elapsed_secs_f64();
     for (entity, actor_id, mut transform, motion) in &mut movers {
         let Some(sample) = inbox.0.get(actor_id) else {

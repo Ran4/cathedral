@@ -1498,6 +1498,7 @@ fn ingest_soundscape_cues(
     mut wells: ResMut<WellSoundState>,
     mut work: ResMut<WorkSoundState>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Soundscape);
     let now = time.elapsed_secs_f64();
     for cue in cues.read().copied() {
         match cue {
@@ -1967,6 +1968,7 @@ fn schedule_npc_body_sounds(
     mut state: ResMut<NpcSoundState>,
     mut scheduled: ResMut<ScheduledSounds>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Soundscape);
     let Ok(player) = player.single() else { return };
     let now = time.elapsed_secs_f64();
     if now < state.next_scan_at {
@@ -2207,6 +2209,7 @@ fn update_weather_audio(
     mut state: ResMut<WeatherAudioState>,
     mut loops: Query<(&mut PlayingWeatherLoop, Option<&mut AudioSink>)>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Soundscape);
     let mix = player
         .single()
         .ok()
@@ -2352,6 +2355,7 @@ fn schedule_urban_nature_sounds(
     mut state: ResMut<UrbanNatureState>,
     mut scheduled: ResMut<ScheduledSounds>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Soundscape);
     let now = time.elapsed_secs_f64();
     state.observe_office_bell(now, clock.as_deref());
     let Ok(player) = player.single() else { return };
@@ -2481,6 +2485,7 @@ fn update_cart_sounds(
     mut scheduled: ResMut<ScheduledSounds>,
     mut cues: MessageWriter<SoundscapeCue>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Soundscape);
     let now = time.elapsed_secs_f64();
     let dt = time.delta_secs().max(1.0 / 240.0);
     let mirrored_loads: HashMap<&str, &[CartLoadKind]> = mirror
@@ -2589,6 +2594,7 @@ fn spawn_due_sounds(
     assets: Res<SoundscapeAssets>,
     mut scheduled: ResMut<ScheduledSounds>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Soundscape);
     let now = time.elapsed_secs_f64();
     let busy = activity.as_deref().is_some_and(|activity| activity.busy);
     let mut due = Vec::new();
@@ -3554,6 +3560,7 @@ fn update_virtualized_loops(
         Without<PlayerController>,
     >,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Soundscape);
     let now = time.elapsed_secs_f64();
     let dt = time.delta_secs();
     let busy = activity.as_deref().is_some_and(|activity| activity.busy);
@@ -3932,6 +3939,7 @@ fn update_playing_one_shots(
         Option<&mut SpatialAudioSink>,
     )>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Soundscape);
     let now = time.elapsed_secs_f64();
     let dt = time.delta_secs();
     let busy = activity.as_deref().is_some_and(|activity| activity.busy);

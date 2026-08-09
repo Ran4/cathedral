@@ -879,6 +879,7 @@ fn drain_bridge_messages(
     // here gives the same monotonic, gap-free stream the envelope did.
     mut message_seq: Local<u64>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::BridgeDrain);
     let drain_started = std::time::Instant::now();
     // Resource insertions/removals are deferred. Track what this drain pass
     // has queued so several buffered engine messages cannot spawn several
