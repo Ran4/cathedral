@@ -1,6 +1,9 @@
 {
     "order": [
         {
+            "path": "features/give_the_crowd_somewhere_to_be.md"
+        },
+        {
             "path": "features/the_cut_improvements/"
         },
         {
