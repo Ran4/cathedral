@@ -25,9 +25,6 @@
             "path": "features/its_at_least_2011_now_baby.md"
         },
         {
-            "path": "features/law_and_order.md"
-        },
-        {
             "path": "features/lore_ward_politics.md"
         },
         {
@@ -70,6 +67,10 @@
         {
             "path": "features/implemented/bug_report_2026-07-28.md",
             "when": "2026-07-29T1727"
+        },
+        {
+            "path": "features/implemented/law_and_order.md",
+            "when": "2026-07-26T2359"
         },
         {
             "path": "features/implemented/movement/",

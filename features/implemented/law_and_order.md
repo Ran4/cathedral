@@ -1,3 +1,7 @@
+Status: M0–M5 implemented (M0–M3 2026-07-24, M3.5–M5 2026-07-26). The court is
+deliberately out of scope and is the one thing left — `custody.rs` carries the
+`TODO(the bench)` where *"committed to await a hearing"* would slot in.
+
 # Law and order
 
 What the city does when someone is wronged. Motivated by a real playtest
@@ -154,6 +158,8 @@ What the LLM *should* be able to do about it, in cost order:
 4. **Not now:** warrants, arrest, gaol time, trials. The gaol cast exists in
    lore when we ever want it (npc bench + "the stone" + Ede Clove the stone
    keeper), but a working notice/restitution loop is the 80%.
+   *(Written before M4/M5. Warrants, arrest and gaol time all shipped
+   2026-07-26; trials are still out — see the `TODO(the bench)`.)*
 
 Also worth fixing regardless of the above: the **false-sale memory** from
 theft 1. One sharpened line in the prompt's memory guidance — record payment
@@ -755,14 +761,15 @@ is somebody you got put there.
 - **M4d — the struggle. DONE 2026-07-26.** The player's strain meter and its
   modifiers, the NPC's `struggle` verb and its one deterministic roll, the two
   percepts and their priority turns, the escape notice both paths raise.
-- **M4e — committed.** The keeper at the threshold, the posted fee, surety, the
-  4-minute cap at a station — for whoever is standing there, cast or player.
+- **M4e — committed. DONE 2026-07-26.** The keeper at the threshold, the posted
+  fee, surety, the 4-minute cap at a station — for whoever is standing there,
+  cast or player.
 
 ### What is built, as of 2026-07-26
 
-**M4a–M4d are done.** M4e is half built and M5 is untouched; both are described
-under *What is left*. What follows is the handover — where each piece lives, and
-the three places the implementation departs from the design above.
+**M4a–M4d are done**; M4e followed the same day and is described under *What is
+left*. What follows is the handover — where each piece lives, and the four places
+the implementation departs from the design above.
 
 **`crates/cathedral-sim/src/notices.rs`** — the ladder above rung 2.
 `WardNotice` gained `summons: Option<Summons>` and `warrant: bool`, and a
@@ -1440,9 +1447,9 @@ hearing"* would slot in, and it is deliberately a whole second system.
   carry their own word. Bribery now expresses itself by omission: the sergeant
   takes the purse and simply does not call the verb.
 - **M4** — taking hold (Problem 5, designed 2026-07-26, revised against the code
-  2026-07-26). **M4a–M4d DONE 2026-07-26; M4e half built — see "What is built,
-  as of 2026-07-26" under M4 for the handover, the three departures from this
-  design, and what remains.** The floor under refusal: summons → warrant →
+  2026-07-26). **M4a–M4e DONE 2026-07-26 — see "What is built, as of 2026-07-26"
+  under M4 for the handover and the four departures from this design.** The floor
+  under refusal: summons → warrant →
   `seize` into custody → an escort to the *nearest* station → a real grab with a
   ~5 s struggle-out if you break the 8 m leash. Custody is a state and the grab
   only enforces it, so complying is simply walking there beside an LLM sergeant
@@ -1468,7 +1475,9 @@ hearing"* would slot in, and it is deliberately a whole second system.
   plus a `struggle` verb, with no host code at all. It needs a city-wide
   confinement cap so a bad-tempered sergeant cannot gaol the bread supply.
 - **M5** — the Stone House (designed 2026-07-26, revised against the code
-  2026-07-26, not started). The gaol already
+  2026-07-26). **M5a–M5d DONE 2026-07-26 — see "What is built, as of 2026-07-26"
+  under M5 for the handover, the six review findings that were fixed, and the four
+  departures from this design.** The gaol already
   has a cast: eight `prisoner`-circumstance characters whose sheets say they are
   held on Stone House rations, currently spawned walking free because there is
   nowhere to hold them. Jail is not a lockout here — it is the one room in the

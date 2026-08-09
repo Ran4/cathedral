@@ -2957,9 +2957,9 @@ fn build_named_details(
     build_wharf_cranes(commands, meshes, materials);
 }
 
-/// The Stone House (`features/law_and_order.md` M5a) — the civic gaol, in the
-/// side court behind the Bellstand square and at the foot of the watch-bell
-/// tower.
+/// The Stone House (`features/implemented/law_and_order.md` M5a) — the civic
+/// gaol, in the side court behind the Bellstand square and at the foot of the
+/// watch-bell tower.
 ///
 /// The name is older than the building. `lore/core_lore/secular_government.md`
 /// puts the first Stone House by the River Gate; it was condemned in the

@@ -1,4 +1,4 @@
-//! Custody (`features/law_and_order.md` M4): the floor under refusal.
+//! Custody (`features/implemented/law_and_order.md` M4): the floor under refusal.
 //!
 //! **Custody is a state; the grab is only its enforcement.** `seize` does not
 //! take hold of anybody — it puts them in charge of an officer and names a
@@ -815,7 +815,7 @@ pub const PRISONER_CIRCUMSTANCE: &str = "prisoner";
 const INMATE_SPACING_M: f64 = 1.45;
 
 /// Seed the eight the city was already holding when the run began
-/// (`features/law_and_order.md` M5b), and return them in roster order.
+/// (`features/implemented/law_and_order.md` M5b), and return them in roster order.
 ///
 /// Eight characters carry the `prisoner` circumstance and their sheets are not
 /// ambiguous about it — *"you are **now held** from Bell-and-Sluice streets…

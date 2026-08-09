@@ -213,9 +213,9 @@ enum Action {
         kind: StatusKind,
         value: f64,
     },
-    /// Stage an arrest (`features/law_and_order.md` M4): the named officer takes
-    /// somebody — the player unless a second handle is given — in charge for the
-    /// nearest station. The stand-in for a judgement that is deliberately an
+    /// Stage an arrest (`features/implemented/law_and_order.md` M4): the named
+    /// officer takes somebody — the player unless a second handle is given — in
+    /// charge for the nearest station. The stand-in for a judgement that is deliberately an
     /// LLM's, and which a scripted run therefore cannot reach: without it the
     /// tether, the grab reflex and the strain meter cannot be looked at at all.
     /// It goes through the same code a real `seize` does, minus that verb's four
@@ -236,7 +236,7 @@ enum Action {
     Scrub {
         anchor: String,
     },
-    /// Finish the escort at the Stone House (`features/law_and_order.md` M5).
+    /// Finish the escort at the Stone House (`features/implemented/law_and_order.md` M5).
     /// `seize` alone only ever shows the walk, and the cell is the half of M5
     /// worth looking at: the booking, the posted fee, the bell you are told you
     /// go at, and what walking out of it costs. Goes through the same

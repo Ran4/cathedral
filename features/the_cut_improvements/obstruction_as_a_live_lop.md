@@ -20,7 +20,7 @@ Related, and deliberately kept separate:
   actually needs the lane. Shares the ground-item cost (§3, tier 2).
 - `features/design_the_cut_game.md` — the same mechanic pointed the other way:
   the game *is* an obstruction.
-- `features/law_and_order.md` M3–M4 — the notice ladder this rides on.
+- `features/implemented/law_and_order.md` M3–M4 — the notice ladder this rides on.
 
 ---
 

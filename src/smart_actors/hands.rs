@@ -11,9 +11,9 @@
 //! one), and the flights are keyed on world events the sim already emitted.
 //!
 //! One reach here is not a hand-over at all: custody's grip
-//! (`features/law_and_order.md` M4c). It borrows the same extended arm, but it
-//! is a *state* rather than a beat — the hand stays on the prisoner's upper arm,
-//! tracking them, until the law lets go.
+//! (`features/implemented/law_and_order.md` M4c). It borrows the same extended
+//! arm, but it is a *state* rather than a beat — the hand stays on the
+//! prisoner's upper arm, tracking them, until the law lets go.
 
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::{FRAC_PI_2, PI};

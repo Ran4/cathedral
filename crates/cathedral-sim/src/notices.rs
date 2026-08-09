@@ -1,4 +1,4 @@
-//! Ward notices (`features/law_and_order.md` M3): the gossip network the sim
+//! Ward notices (`features/implemented/law_and_order.md` M3): the gossip network the sim
 //! already implies, made a world fact with a decay clock.
 //!
 //! A notice is a wrong on the ward's tongues — "an outland stranger took a

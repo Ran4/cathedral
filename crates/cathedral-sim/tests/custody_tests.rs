@@ -1,4 +1,4 @@
-//! Custody (`features/law_and_order.md` M4) — the sim-side half of the
+//! Custody (`features/implemented/law_and_order.md` M4) — the sim-side half of the
 //! milestone's test list, headless and with no host anywhere in it.
 //!
 //! The through-line of every test here is M4's own claim: **custody is a state

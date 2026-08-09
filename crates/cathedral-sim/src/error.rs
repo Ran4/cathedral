@@ -63,7 +63,7 @@ pub enum ActionErrorCode {
     /// `expel` with empty lower slots.
     NothingToExpel,
     /// A verb the law's hands make impossible: a confined actor's `go_to`, or a
-    /// prisoner's own errand (`features/law_and_order.md` M4b′/M5).
+    /// prisoner's own errand (`features/implemented/law_and_order.md` M4b′/M5).
     InCustody,
     /// `seize` past the city-wide confinement cap
     /// ([`crate::custody::CUSTODY_MAX_ARRESTS`]).

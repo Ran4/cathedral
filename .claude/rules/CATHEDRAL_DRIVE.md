@@ -67,7 +67,7 @@ Actions (each fires ~0.5 s after the previous):
   edge into the Snuffing, once a day); this action is the stand-in for the
   funeral and proclamation transactions the sim does not model yet.
 - `seize <officer>` / `seize <officer> -> <target>` — stage an arrest
-  (`features/law_and_order.md` M4): the named officer takes somebody in charge
+  (`features/implemented/law_and_order.md` M4): the named officer takes somebody in charge
   for the nearest station, defaulting to the player. Both handles resolve by
   display name first (may contain spaces) then by actor id, exactly as `status`
   does — hence the explicit `->`, since `seize Havise Ashe` is one handle and
@@ -81,7 +81,7 @@ Actions (each fires ~0.5 s after the previous):
   seizing from across the city would show nothing at all. A handle matching
   nobody is logged and skipped — not a fault.
 - `commit [<name-or-id>]` — finish the escort at the Stone House
-  (`features/law_and_order.md` M5), defaulting to the player. `seize` alone only
+  (`features/implemented/law_and_order.md` M5), defaulting to the player. `seize` alone only
   ever shows the walk, and custody commits on *arrival*, so without this a
   scripted run can never see the inside of the gaol — not the booking, not the
   posted fee, not the bell you are told you go at, and not what walking out of

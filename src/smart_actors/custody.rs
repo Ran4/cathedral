@@ -1,4 +1,4 @@
-//! The player half of custody (`features/law_and_order.md` M4c/M4d).
+//! The player half of custody (`features/implemented/law_and_order.md` M4c/M4d).
 //!
 //! Everything hard about M4 is hard because of the player specifically: they run
 //! at 12 m/s against every officer's 1.8, and the host — not the sim — owns
