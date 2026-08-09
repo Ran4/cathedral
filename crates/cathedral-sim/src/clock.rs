@@ -75,6 +75,23 @@ impl Office {
         hour / 24.0
     }
 
+    /// How long this office lasts, in fractional days — the gap to the next
+    /// bell, the Snuffing's wrapping round midnight to the Watch. Derived from
+    /// [`start_fraction`](Self::start_fraction) rather than tabled again, so the
+    /// two can never disagree. Offices are **not** equal: the Kindling is two
+    /// game hours and the Dayspring and the Snuffing are five.
+    pub fn span_days(self) -> f64 {
+        let start = self.start_fraction();
+        // `ordinal` is 1-based and `ALL` is in bell order, so `ALL[ordinal % 7]`
+        // is the next office and the Snuffing wraps round to the Watch.
+        let next = Office::ALL[(self.ordinal() as usize) % Office::ALL.len()].start_fraction();
+        if next > start {
+            next - start
+        } else {
+            next + 1.0 - start
+        }
+    }
+
     /// How many strokes this office rings — its ordinal, 1 through 7.
     pub fn ordinal(self) -> u8 {
         match self {
@@ -255,6 +272,32 @@ impl WorldTime {
     /// [`WorldClock::game_days`] returns, and the one `WardNotice` stamps.
     pub fn game_days(&self) -> f64 {
         self.day as f64 + self.fraction
+    }
+
+    /// The same clock read `days` of **game** time earlier: the instant somebody
+    /// who is running late is still living in
+    /// (`give_the_crowd_somewhere_to_be.md` M5).
+    ///
+    /// Pure arithmetic on [`game_days`](Self::game_days), so it crosses midnight
+    /// and the week's end on its own — an hour before the Watch really is
+    /// yesterday's Snuffing, on yesterday's weekday, and a leg that is
+    /// `only_on` a market day stays yesterday's business until the shift has
+    /// been walked off. A zero, negative or NaN `days` is no lag at all and
+    /// returns the instant unchanged, which is what keeps the authored cast
+    /// byte-identical.
+    pub fn earlier_by_days(&self, days: f64) -> WorldTime {
+        if !(days > 0.0) {
+            return *self;
+        }
+        let total = self.game_days() - days;
+        let whole = total.floor();
+        let day = whole as i64;
+        WorldTime {
+            day,
+            fraction: total - whole,
+            office: office_at(total - whole),
+            weekday: Weekday::of_day(day),
+        }
     }
 
     /// The next office bell to ring after this instant, and the absolute
@@ -676,6 +719,69 @@ mod tests {
         let strokes: Vec<f64> = stroke_times(Office::Snuffing, 100.0).collect();
         assert_eq!(strokes, vec![100.0, 103.0, 106.0, 109.0, 112.0, 115.0, 118.0]);
         assert_eq!(stroke_times(Office::Watch, 5.0).count(), 1);
+    }
+
+    #[test]
+    fn an_office_lasts_until_the_next_bell_and_the_snuffing_wraps_midnight() {
+        // The seven spans are the gaps in the bell table, in game hours, and
+        // they sum to the whole day — which is the property that matters to
+        // anything measured as "a share of an office"
+        // (`give_the_crowd_somewhere_to_be.md` M5).
+        let hours = |office: Office| office.span_days() * 24.0;
+        approx(hours(Office::Watch), 3.0);
+        approx(hours(Office::Kindling), 2.0);
+        approx(hours(Office::Dayspring), 5.0);
+        approx(hours(Office::HighWick), 3.0);
+        approx(hours(Office::Waning), 3.0);
+        approx(hours(Office::Lamplight), 3.0);
+        approx(hours(Office::Snuffing), 5.0);
+        let day: f64 = Office::ALL.iter().map(|office| office.span_days()).sum();
+        approx(day, 1.0);
+        // And every span really does end on the next bell.
+        for office in Office::ALL {
+            let end = office.start_fraction() + office.span_days();
+            let inside = office_at((end - 1e-6).rem_euclid(1.0));
+            let after = office_at(end.rem_euclid(1.0));
+            assert_eq!(inside, office, "{office:?} ends before its own bell");
+            assert_ne!(after, office, "{office:?} runs past the next bell");
+        }
+    }
+
+    #[test]
+    fn reading_the_clock_earlier_walks_back_through_midnight_and_the_week() {
+        let clock = WorldClock::new(DAY, Office::Watch, 0, 0.05);
+        // 02:30 on day 0, read three quarters of an hour earlier: 01:45, which
+        // is still the *Snuffing* — the one office that wraps midnight — on the
+        // same calendar day.
+        let half_past_two = clock.at(30.0 * 60.0);
+        assert_eq!(half_past_two.office, Office::Watch);
+        assert_eq!(half_past_two.weekday, Weekday::Bellday);
+        let earlier = half_past_two.earlier_by_days(0.75 / 24.0);
+        assert_eq!(earlier.office, Office::Snuffing);
+        assert_eq!(earlier.day, 0);
+        approx(earlier.fraction, 1.75 / 24.0);
+
+        // And across midnight proper: 00:30 on day 3 is 23:45 on day 2, a day
+        // earlier in the week — so a leg that is `only_on` yesterday's market
+        // stays yesterday's business until the lag has been walked off.
+        let after_midnight = WorldClock::new(DAY, Office::Watch, 3, 0.05).at(-1.5 * 3600.0);
+        assert_eq!(after_midnight.day, 3);
+        approx(after_midnight.fraction, 0.5 / 24.0);
+        let earlier = after_midnight.earlier_by_days(0.75 / 24.0);
+        assert_eq!(earlier.day, 2);
+        assert_eq!(earlier.weekday, Weekday::of_day(2));
+        assert_eq!(earlier.office, Office::Snuffing);
+        approx(earlier.fraction, 23.75 / 24.0);
+
+        // Nothing at all for a zero, a negative or a NaN — the identity that
+        // keeps the authored cast's clock the city's.
+        for no_lag in [0.0, -1.0, f64::NAN] {
+            assert_eq!(
+                half_past_two.earlier_by_days(no_lag),
+                half_past_two,
+                "a lag of {no_lag} moved the clock"
+            );
+        }
     }
 
     #[test]

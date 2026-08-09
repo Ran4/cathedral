@@ -213,6 +213,17 @@ struct Args {
     #[arg(long)]
     census_by_area: bool,
 
+    /// how many `--census-by-area` samples a watched game day takes (default 16).
+    ///
+    /// Sixteen is one sample every 1.5 game hours, which reads a *day* well and
+    /// an *office crossing* not at all: a tide that sets off over 45 game
+    /// minutes and walks itself off in 40 lands inside one sample. Raise it to
+    /// watch a bell — `--census-per-day 96` is a sample every quarter of a game
+    /// hour, which is what `give_the_crowd_somewhere_to_be.md` M5 was measured
+    /// with. Costs one O(enrolled) count per sample and nothing else.
+    #[arg(long, default_value_t = 16.0)]
+    census_per_day: f64,
+
     /// watch the food & items M2 hunger census: a `[food]` line counting who is
     /// fed, hungry or famished, the mean gauge, and the coin held. Pairs with
     /// `--watch-clock 1` to see hunger climb through the morning and collapse at
@@ -494,6 +505,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         trace_positions: args.trace_positions,
         trace_water: args.trace_water,
         census_by_area: args.census_by_area,
+        census_per_day: args.census_per_day,
         trace_food: args.trace_food,
     };
     // One player utterance before the run, so an offline cast can be poked into
@@ -570,6 +582,8 @@ struct Runner {
     trace_water: bool,
     /// `--census-by-area`: echo a behavioural census as each office rings.
     census_by_area: bool,
+    /// `--census-per-day`: how many census samples a watched game day takes.
+    census_per_day: f64,
     /// `--trace-food`: echo the M2 hunger census.
     trace_food: bool,
 }
@@ -628,7 +642,12 @@ impl Runner {
         );
         // The census samples *within* each office, not at the bell — right when a
         // bell rings the whole cast has just re-routed and everyone is walking.
-        let census_interval = (real_seconds / (16.0 * game_days).max(1.0)).max(step);
+        let samples = if self.census_per_day.is_finite() && self.census_per_day >= 1.0 {
+            self.census_per_day
+        } else {
+            16.0
+        };
+        let census_interval = (real_seconds / (samples * game_days).max(1.0)).max(step);
         let mut next_water = self.now;
         let mut next_census = self.now + census_interval;
         let mut next_food = self.now;
@@ -1423,6 +1442,7 @@ mod tests {
             trace_positions: false,
             trace_water: false,
             census_by_area: false,
+            census_per_day: 16.0,
             trace_food: false,
         };
 

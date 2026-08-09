@@ -129,6 +129,23 @@ fn warm(id: &ActorId) -> BTreeSet<ActorId> {
     BTreeSet::from([id.clone()])
 }
 
+/// The instant `office` rings on `weekday` — what the rung tests used to hand
+/// [`decide`] as two arguments. `day` is chosen to actually *fall* on that
+/// weekday (day 0 is a Bellday), so anything reading back across midnight —
+/// M5's office lag — sees a consistent date rather than an invented one.
+fn at_office(office: Office, weekday: Weekday) -> WorldTime {
+    let day = Weekday::ALL
+        .iter()
+        .position(|of_week| *of_week == weekday)
+        .expect("a weekday is one of the seven") as i64;
+    WorldTime {
+        day,
+        fraction: office.start_fraction(),
+        office,
+        weekday,
+    }
+}
+
 /// [`decide`] without the pressure line, for the rung tests that only care
 /// where the ladder points.
 fn decide_only(
@@ -140,7 +157,7 @@ fn decide_only(
     office: Office,
     weekday: Weekday,
 ) -> Decision {
-    decide(round, world, nav, id, epoch, office, weekday).0
+    decide(round, world, nav, id, epoch, at_office(office, weekday)).0
 }
 
 // --------------------------------------------------------------------------- //
@@ -1610,8 +1627,7 @@ fn an_escort_is_not_marched_to_food_mid_delivery() {
         &nav,
         &officer,
         0,
-        Office::HighWick,
-        Weekday::Bellday,
+        at_office(Office::HighWick, Weekday::Bellday),
     );
     assert_eq!(
         pressure,
@@ -1641,8 +1657,7 @@ fn an_escort_is_not_marched_to_food_mid_delivery() {
         &nav,
         &officer,
         0,
-        Office::HighWick,
-        Weekday::Bellday,
+        at_office(Office::HighWick, Weekday::Bellday),
     );
     assert_eq!(pressure, None, "no pressure line marches an escort off");
     match decision {
@@ -1663,8 +1678,7 @@ fn an_escort_is_not_marched_to_food_mid_delivery() {
         &nav,
         &officer,
         0,
-        Office::HighWick,
-        Weekday::Bellday,
+        at_office(Office::HighWick, Weekday::Bellday),
     );
     assert_eq!(
         pressure,
@@ -2215,8 +2229,7 @@ fn only_the_pressing_rungs_carry_a_pressure_line() {
         &nav,
         &servant,
         0,
-        Office::Kindling,
-        Weekday::Bellday,
+        at_office(Office::Kindling, Weekday::Bellday),
     );
     assert!(matches!(decision, Decision::ApproachWell));
     assert_eq!(pressure, Some(PARCHED_PRESSURE));
@@ -2227,8 +2240,7 @@ fn only_the_pressing_rungs_carry_a_pressure_line() {
         &nav,
         &servant,
         0,
-        Office::Snuffing,
-        Weekday::Bellday,
+        at_office(Office::Snuffing, Weekday::Bellday),
     );
     assert!(matches!(decision, Decision::Travel(_)));
     assert_eq!(pressure, Some(CURFEW_PRESSURE));
@@ -2246,8 +2258,7 @@ fn only_the_pressing_rungs_carry_a_pressure_line() {
         &nav,
         &servant,
         0,
-        Office::Kindling,
-        Weekday::Bellday,
+        at_office(Office::Kindling, Weekday::Bellday),
     );
     assert!(matches!(decision, Decision::ApproachWell));
     assert_eq!(pressure, None, "rung 6 defers to a conversation");
@@ -2306,8 +2317,7 @@ fn a_famished_holder_eats_at_his_own_door_through_the_curfew() {
         &nav,
         &id,
         0,
-        Office::Snuffing,
-        Weekday::Bellday,
+        at_office(Office::Snuffing, Weekday::Bellday),
     );
     assert!(
         matches!(street, Decision::Travel(target) if target.distance(home) < 1.0),
@@ -2911,6 +2921,7 @@ fn household_vessels_queue_ahead_of_trade_vessels() {
         next_decision: 0.0,
         epoch: 0,
         evening_seed: None,
+        leg_lag_share: 0.0,
         excused: false,
     };
     for (id, household) in [
@@ -2958,6 +2969,7 @@ fn a_full_vessel_is_delivered_by_kind() {
         next_decision: 0.0,
         epoch: 0,
         evening_seed: None,
+        leg_lag_share: 0.0,
         excused: false,
     };
     // Household: water for the home, even while the round leg says the shop.
@@ -4010,6 +4022,7 @@ fn errand_debug_reduces_the_phase_the_well_and_the_walk() {
             next_decision: 0.0,
             epoch: 0,
             evening_seed: None,
+            leg_lag_share: 0.0,
             excused: false,
         },
     );
@@ -4443,8 +4456,7 @@ fn famished_diverts_home_only_while_the_hearth_is_serving() {
         &nav,
         &merc,
         0,
-        Office::Dayspring,
-        Weekday::of_day(1),
+        at_office(Office::Dayspring, Weekday::of_day(1)),
     );
     assert_ne!(
         dawn_pressure,
@@ -4464,8 +4476,7 @@ fn famished_diverts_home_only_while_the_hearth_is_serving() {
         &nav,
         &merc,
         0,
-        Office::HighWick,
-        Weekday::of_day(1),
+        at_office(Office::HighWick, Weekday::of_day(1)),
     );
     assert!(
         matches!(noon, Decision::Travel(t) if t == home),
@@ -4818,6 +4829,7 @@ fn bind_vendors_keeps_you_sell_when_a_vendor_moves_to_a_lower_index_stall() {
                 next_decision: 0.0,
                 epoch: 0,
                 evening_seed: None,
+                leg_lag_share: 0.0,
                 excused: false,
             },
         );
@@ -5301,6 +5313,7 @@ fn carry_home_only_when_actually_heading_home() {
         next_decision: 0.0,
         epoch: 0,
         evening_seed: None,
+        leg_lag_share: 0.0,
         excused: false,
     };
     round.people.insert(buyer.clone(), person);
@@ -6946,6 +6959,7 @@ fn active_production_fixture(work_minutes: u32) -> (World, Round, ActorId, World
             next_decision: 0.0,
             epoch: 0,
             evening_seed: None,
+            leg_lag_share: 0.0,
             excused: false,
         },
     );
@@ -7254,6 +7268,7 @@ fn weather_person(position: Vec3) -> Townsperson {
         next_decision: 0.0,
         epoch: 0,
         evening_seed: None,
+        leg_lag_share: 0.0,
         excused: false,
     }
 }
@@ -7596,8 +7611,7 @@ fn nearby_lightning_causes_a_short_reflex_without_breaking_conversation() {
                 &nav,
                 &actor,
                 0,
-                Office::HighWick,
-                Weekday::Bellday,
+                at_office(Office::HighWick, Weekday::Bellday),
             )
             .0,
             Decision::WeatherPause
@@ -8394,6 +8408,7 @@ fn a_generated_citizen_censuses_at_a_post_as_wide_as_their_leash() {
                 next_decision: 0.0,
                 epoch: 0,
                 evening_seed: None,
+                leg_lag_share: 0.0,
                 excused: false,
             },
         );
@@ -8471,6 +8486,7 @@ fn a_generated_idler_past_the_leash_is_walked_back() {
                 next_decision: 0.0,
                 epoch: 0,
                 evening_seed: None,
+                leg_lag_share: 0.0,
                 excused: false,
             },
         );
@@ -8699,4 +8715,280 @@ fn a_generated_tradesman_now_has_a_leg_home_and_a_loiterer_still_has_none() {
         walk_home > trades / 2,
         "only {walk_home} of {trades} tradesmen walk home; before M4 it was 0"
     );
+}
+
+/// `give_the_crowd_somewhere_to_be.md` M5: the office lag is drawn per person
+/// over `0..`[`CROWD_LEG_LAG_MAX_SHARE`] of an office, deterministically and
+/// once — the same citizen dawdles the same amount in every run and every save
+/// — and it spreads across the whole band, which is the whole mechanism: a bell
+/// that used to set a trade off inside one ladder poll now sets it off over the
+/// first quarter of the office.
+#[test]
+fn a_generated_citizens_office_lag_is_drawn_across_the_whole_band() {
+    let mut low = 0usize;
+    let mut high = 0usize;
+    let mut sum = 0.0;
+    const N: u32 = 2_000;
+    for index in 0..N {
+        let id = ActorId::from_raw(format!("x{index:05}"));
+        let share = crowd_leg_lag_share(&id);
+        assert!(
+            (0.0..CROWD_LEG_LAG_MAX_SHARE).contains(&share),
+            "{id} drew {share}, outside 0..{CROWD_LEG_LAG_MAX_SHARE}"
+        );
+        assert_eq!(
+            share,
+            crowd_leg_lag_share(&id),
+            "{id}'s lag must not wander"
+        );
+        if share < CROWD_LEG_LAG_MAX_SHARE / 2.0 {
+            low += 1
+        } else {
+            high += 1
+        }
+        sum += share;
+    }
+    assert!(
+        low > N as usize / 3 && high > N as usize / 3,
+        "the band is lopsided: {low} under the midpoint, {high} over"
+    );
+    let mean = sum / f64::from(N);
+    assert!(
+        (mean - CROWD_LEG_LAG_MAX_SHARE / 2.0).abs() < 0.01,
+        "mean lag {mean:.4} of an office is not the band's middle"
+    );
+}
+
+/// M5's binding rule, the same one M1–M4 carry: **nothing changes at
+/// `extra_ambient_npcs: 0`**. Every authored person enrols with a lag of
+/// exactly zero, whether or not a crowd is in the world beside them, and a zero
+/// lag reads the city's own clock — [`Townsperson::leg_time`] is the identity,
+/// so not one authored leg crosses a moment later than it did before M5.
+#[test]
+fn the_crowd_dawdles_after_the_bell_and_the_cast_keeps_the_citys_own() {
+    let nav = nav();
+    let stands = crate::crowd::spread_over_walkable(&nav, 128);
+    let authored: Vec<(&str, &str)> = vec![
+        ("cast0", "mason"),
+        ("cast1", "domestic_servant"),
+        ("cast2", "baker"),
+        ("cast3", "carter"),
+    ];
+    let mut world = base_world();
+    for (index, (id, occupation)) in authored.iter().enumerate() {
+        world.add_character(person(
+            id,
+            stands[index],
+            Some(occupation),
+            Significance::Ambient,
+        ));
+    }
+    for sheet in crate::crowd::extra_ambient_sheets(&nav, &stands[8..], 8) {
+        world.add_character(Character::from_sheet(sheet));
+    }
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    let clock = clock_at(Office::Dayspring);
+    let noon = clock.at(0.0);
+    for (id, _) in &authored {
+        let person = &round.people[&ActorId::from_raw(*id)];
+        assert_eq!(person.leg_lag_share, 0.0, "{id} enrolled with a lag");
+        assert_eq!(
+            person.leg_time(noon),
+            noon,
+            "{id}'s round reads a clock of its own"
+        );
+    }
+    // Everyone authored, whichever branch of the enrolment they came down —
+    // the well keepers have their own.
+    assert!(
+        round
+            .people
+            .iter()
+            .filter(|(id, _)| !id.as_str().starts_with('x'))
+            .all(|(_, person)| person.leg_lag_share == 0.0),
+        "an authored person enrolled with an office lag"
+    );
+
+    let mut generated = 0usize;
+    let mut dawdlers = 0usize;
+    for (id, person) in &round.people {
+        if !id.as_str().starts_with('x') {
+            continue;
+        }
+        generated += 1;
+        assert_eq!(
+            person.leg_lag_share,
+            crowd_leg_lag_share(id),
+            "{id} enrolled on a lag no rule drew"
+        );
+        if person.leg_time(noon) != noon {
+            dawdlers += 1;
+        }
+    }
+    assert!(
+        generated > 100,
+        "only {generated} generated citizens enrolled"
+    );
+    assert!(
+        dawdlers > generated / 2,
+        "only {dawdlers} of {generated} read a lagged clock"
+    );
+}
+
+/// The behaviour itself, at the one call site that has it: across an office
+/// bell a generated citizen keeps walking the leg they are on, and once their
+/// own share of the office has passed they cross to the new one. Nobody is
+/// stuck — the crossing happens inside the office it belongs to, which is what
+/// [`CROWD_LEG_LAG_MAX_SHARE`] being a quarter buys — and the authored cast,
+/// same legs, same bell, crosses on the stroke exactly as it always did.
+#[test]
+fn a_generated_citizen_holds_the_old_leg_across_the_bell_and_then_crosses() {
+    let nav = nav();
+    let stands = crate::crowd::spread_over_walkable(&nav, 64);
+    let morning = stands[0];
+    let noon = stands
+        .iter()
+        .copied()
+        .find(|point| point.distance(morning) > 60.0)
+        .expect("the graph has a stand a street away");
+
+    let mut world = base_world();
+    world.add_character(generated_person("x99999", morning, Some("mason")));
+    world.add_character(person(
+        "cast0",
+        morning,
+        Some("mason"),
+        Significance::Ambient,
+    ));
+
+    let legs = vec![
+        RoundLeg {
+            from: Office::Dayspring,
+            at: morning,
+            label: "The masons' lodge".to_string(),
+            doing: Arrival::Work,
+            only_on: None,
+            is_home: false,
+        },
+        RoundLeg {
+            from: Office::HighWick,
+            at: noon,
+            label: "The Wickmarket".to_string(),
+            doing: Arrival::Work,
+            only_on: None,
+            is_home: false,
+        },
+    ];
+    // A fifth of High Wick's three game hours: 36 game minutes of dawdle.
+    const SHARE: f64 = 0.2;
+    let mut round = Round::default();
+    for (id, share) in [("x99999", SHARE), ("cast0", 0.0)] {
+        round.people.insert(
+            ActorId::from_raw(id),
+            Townsperson {
+                home: None,
+                base: morning,
+                legs: legs.clone(),
+                leash_m: 25.0,
+                curfew_exempt: false,
+                source: None,
+                is_household: false,
+                food: None,
+                phase: Phase::Idle,
+                travel_target: None,
+                travel_for_intent: false,
+                next_decision: 0.0,
+                epoch: 0,
+                evening_seed: None,
+                leg_lag_share: share,
+                excused: false,
+            },
+        );
+    }
+
+    let hold = SHARE * Office::HighWick.span_days();
+    let at = |past_the_bell: f64| WorldTime {
+        day: 0,
+        fraction: Office::HighWick.start_fraction() + past_the_bell,
+        office: Office::HighWick,
+        weekday: Weekday::Bellday,
+    };
+    let sets_off = |id: &str, time: WorldTime| -> bool {
+        matches!(
+            decide(&round, &world, &nav, &ActorId::from_raw(id), 0, time).0,
+            Decision::Travel(target) if target == noon
+        )
+    };
+
+    // On the stroke, and right up to the end of their own hold, the laggard is
+    // still the lodge's; the cast is the Wickmarket's from the first moment.
+    for past in [0.0, hold * 0.5, hold * 0.99] {
+        assert!(
+            !sets_off("x99999", at(past)),
+            "the laggard set off {past} days after the bell, inside a {hold}-day hold"
+        );
+        assert!(
+            sets_off("cast0", at(past)),
+            "the cast held back {past} days after the bell"
+        );
+    }
+    // And then they go — well inside High Wick, so the leg is never stale.
+    for past in [hold * 1.01, hold * 2.0, Office::HighWick.span_days() * 0.99] {
+        assert!(
+            sets_off("x99999", at(past)),
+            "the laggard was still holding the old leg {past} days after the bell"
+        );
+    }
+}
+
+/// The bound that makes "nobody is stuck" a property rather than a hope: the
+/// longest hold there is ([`CROWD_LEG_LAG_MAX_SHARE`] of the longest office) is
+/// shorter than the *shortest* office, so a laggard is at most one bell behind
+/// and can never hold a leg two offices stale. Checked against the bell table
+/// rather than assumed, because both ends of it are editable.
+#[test]
+fn an_office_lag_is_always_walked_off_inside_its_own_office() {
+    let longest = Office::ALL
+        .iter()
+        .map(|office| office.span_days())
+        .fold(0.0f64, f64::max);
+    let shortest = Office::ALL
+        .iter()
+        .map(|office| office.span_days())
+        .fold(f64::INFINITY, f64::min);
+    let hold = CROWD_LEG_LAG_MAX_SHARE * longest;
+    assert!(
+        hold < shortest,
+        "the longest hold ({:.0} game min) outlasts the shortest office ({:.0} game min)",
+        hold * 24.0 * 60.0,
+        shortest * 24.0 * 60.0
+    );
+    // Stated the way the ladder meets it: from any instant in any office, the
+    // clock a generated citizen reads is either this office or the one before
+    // it — never two back, and never the same office's *next* leg early.
+    let steps = 64;
+    for office in Office::ALL {
+        let previous = Office::ALL[(office.ordinal() as usize + 5) % Office::ALL.len()];
+        for step in 0..steps {
+            let fraction =
+                office.start_fraction() + office.span_days() * f64::from(step) / f64::from(steps);
+            let now = WorldTime {
+                day: 3,
+                fraction: fraction.rem_euclid(1.0),
+                office,
+                weekday: Weekday::of_day(3),
+            };
+            for index in 0..64u32 {
+                let id = ActorId::from_raw(format!("x{index:05}"));
+                let share = crowd_leg_lag_share(&id);
+                let read = now.earlier_by_days(share * office.span_days()).office;
+                assert!(
+                    read == office || read == previous,
+                    "{id} at {fraction} of the day reads {read:?}, neither {office:?} nor {previous:?}"
+                );
+            }
+        }
+    }
 }

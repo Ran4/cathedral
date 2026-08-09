@@ -90,6 +90,18 @@ the authored 10 m default — a workplace with forty strangers at it should read
 The census reads their post as wide as their own leash, and a legless one who has drifted past it walks back;
 neither applies to the cast, so `extra_ambient_npcs: 0` is byte-for-byte the city it always was.
 
+And they **keep their own time**. A bell is not an event that fires anyone's legs — each person re-reads the
+schedule on their own ladder poll, 1–6 s apart — so before this the whole trade set off inside 1% of the
+office and walked one corridor shoulder to shoulder. A generated citizen now holds the leg they are on for
+their own drawn share of the office, 0 to 25% of it (`round.rs` `leg_lag_share`, `Townsperson::leg_time`),
+which is a **quarter of an office in game time** and therefore the same dawdle at every `seconds_per_day` and
+under the `T` key's 60×. A quarter of the longest office (75 game min) is less than the shortest office
+(120), so nobody is ever more than one bell behind; the curfew is deliberately *not* lagged, and catches the
+tail. Measured at 2,000: the morning tide out of the lanes goes from 1,071 people leaving home in one
+15-minute sample to 260 spread over 80, and the evening one from 584 to 208 over 47 — a trickle down a street
+over an hour instead of a column down it in a quarter of one. The cast's lag is 0.0, which reads the city's
+own clock unchanged.
+
 They cost no tokens by existing — the stage cap and the single in-flight cognition slot bound the spend
 however many people are about — but they do change who is *nearest*, and therefore who the idle rotation
 picks. What they cost is frames: measured at 1280x720, p50 frame time 7.2 ms at 0, 16.8 ms at 2000, 36 ms at

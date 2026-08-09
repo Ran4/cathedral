@@ -1,7 +1,10 @@
-Status: M1, M2, M3 and M4 implemented 2026-08-09; M5 not started (written
+Status: **complete** — M1–M4 implemented 2026-08-09, M5 2026-08-10 (written
 2026-08-09). The knob it fixes — `config.ron: smart_actors.extra_ambient_npcs`,
 0..=20000 — shipped the same day; see `crates/cathedral-sim/src/crowd.rs` and
-the AGENTS.md section "The crowd knob".
+the AGENTS.md section "The crowd knob". Each milestone's own section carries
+what it actually did, including where it deviated from the plan below it; the
+open ends the feature deliberately does not close are under "What this does not
+fix".
 
 # Give the crowd somewhere to be
 
@@ -674,6 +677,144 @@ at the Lamplight, which today is empty and should not be.
 ---
 
 ## M5 — Smear the tide
+
+**Implemented 2026-08-10** (the same night M1–M4 shipped) in
+`crates/cathedral-sim/src/round.rs` (the field, the draw and the two call sites)
+and `crates/cathedral-sim/src/clock.rs` (the two primitives it needed), with
+nine things worth recording:
+
+- **The lag is game time, not real seconds, and that is the load-bearing
+  decision.** The spec's `leg_lag_seconds` would have had to be drawn against
+  `seconds_per_day` — but a *real*-seconds hold is also multiplied by the debug
+  time-scale, so the `T` key's 60× (and `--watch-clock`, and a headless run at
+  `--seconds-per-day 120`) would turn a two-minute dawdle into a hold of game
+  *days*, and the same number would mean a different thing at every clock speed
+  the game ships with. So the field is `leg_lag_share: f64` — **a share of the
+  office**, dimensionless — and the hold is `share × Office::span_days()`,
+  which is a quarter of an office at 3600 s/day, at 300, and at 60×. It scales
+  with `seconds_per_day` by construction rather than by reading it.
+- **Offices are not equal, so a share is not a constant.** New
+  `Office::span_days()`, derived from the existing bell table rather than tabled
+  again: Watch 3 h, Kindling 2, Dayspring 5, High Wick 3, Waning 3, Lamplight 3,
+  Snuffing 5. A quarter of the longest office is 75 game minutes and the
+  shortest office is 120, which is the invariant that makes "nobody is stuck" a
+  property: **the hold can never reach back past a whole office**, so a laggard
+  is at most one bell behind and never holds a leg two offices stale.
+  (`round::tests::an_office_lag_is_always_walked_off_inside_its_own_office`
+  checks it against the table, both ends of which are editable.)
+- **No state, no bookkeeping, no crossing event.** The other primitive is
+  `WorldTime::earlier_by_days` — pure arithmetic on `game_days()` — and
+  `Townsperson::leg_time(time)` is the whole mechanism: *this person's* clock is
+  the city's minus their own hold. There is therefore no "the office changed"
+  event to miss, nothing to restore on load, nothing to reset at the day
+  boundary, and no way to hold a leg that no longer exists (`active_leg` is
+  total over any (office, weekday), and the first poll after `Round::seed`
+  simply reads an earlier office of the same day). Midnight and the week's end
+  come for free: an hour before the Watch really is the previous day's Snuffing,
+  on the previous weekday, so an `only_on` market leg stays yesterday's business
+  until the hold has been walked off.
+- **Two call sites, not one.** The spec said one; the ladder's rung 9 is the
+  behaviour, and the **census had to follow it** or the milestone would report
+  itself as a regression: a citizen standing at the post they have not left yet,
+  read against the leg they have not taken up, censuses as loose `in_street`.
+  Both are the identity for the cast. The other four `active_leg` calls are
+  deliberately left on the city's clock: road parties are authored people with
+  no `Townsperson`, `actor_on_leg_at` serves counters and stalls (which only the
+  cast staffs), and `should_carry`/`delivery_point` are a fed buyer's and a
+  finished drawer's *destination* — where they will be, which the lag does not
+  change. The one small incoherence is a lagged drawer delivering to the new
+  post while their feet are still on the old leg; ~9% of any crowd draws water,
+  minus M2's quarter, and it is one walk.
+- **The curfew is not lagged, on purpose, and it is what bounds the tail.** The
+  Snuffing bell is the watch's, not the citizen's, so rung 5 stays on the city's
+  clock and catches whatever the lag leaves out. It is never asked to: the
+  evening tide is the *Lamplight* home leg, three game hours before curfew, and
+  the longest hold in a three-hour office is 45 game minutes. Measured: the two
+  runs' `home` counts close from 106 apart at 19:56 to **22 apart at the
+  Snuffing bell** (1,089 against 1,067 of 2,514), so at curfew M5 leaves about
+  twenty more people still on their way home than before it — and every one of
+  them is *already walking to the door the curfew would send them to*, so the
+  rung fires on a body that is going where it was going anyway. Nobody is left
+  out past curfew and nobody is yanked back.
+- **`decide` now takes a `WorldTime` instead of an `Office` and a `Weekday`.**
+  One argument fewer, and it is what lets rung 9 ask "how far into this office
+  are we?" without the whole ladder reading a shifted clock — the curfew, the
+  meal offices, the lamp window and every stall's hours stay the city's for
+  everyone. The 11 test call sites went through a new `at_office(office,
+  weekday)` helper, which picks a `day` that actually falls on that weekday.
+- **The tide, measured.** `--fake --extra-ambient 2000 --watch-clock 1
+  --seconds-per-day 3600 --census-by-area --census-per-day 96 --start-office
+  watch` — a sample every 15.6 game minutes, against the shipped 16-a-day, which
+  reads a *day* well and an *office crossing* not at all (a tide that sets off
+  over 45 game minutes lands inside one sample). Hence a new
+  **`--census-per-day`** flag on `cathedral-headless`: measurement only, default
+  16, one O(enrolled) count per sample.
+
+  | | before | after |
+  |---|---:|---:|
+  | Dayspring: people leaving home per sample, peak | **1,071** | **260** |
+  | …the width of that at half its peak | 16 game min | **80 game min** |
+  | …biggest one-sample step in `walking` | +1,078 | **+251** |
+  | Lamplight: people arriving home per sample, peak | **584** | **208** |
+  | …the width of that at half its peak | 16 game min | **47 game min** |
+  | …biggest one-sample step in `walking` | −550 | **−218** |
+  | `walking` 38 game min after the Lamplight bell | 1,522 | **1,841** |
+
+  The morning tide runs from the bell to 75 game minutes after it — which is
+  `CROWD_LEG_LAG_MAX_SHARE` × Dayspring's five hours to the minute, read off a
+  15.6-minute sample — and the evening one measures 47 against the 45 the same
+  rule predicts for a three-hour office. So the *width* of the smear is the
+  constant, visible in the data, and not a number anybody tuned. **The
+  peak *level* of `walking` barely moves** (2,430 → 2,388), and that is worth
+  saying plainly: at 2,000 the crowd is in near-constant motion from the wander
+  rung — 15–40 m of leash is a lot of milling — so the *level* is dominated by
+  people going nowhere and the tide only shows in its **slope**. The spec asked
+  for a lower, wider peak in `walking`; what the census actually shows is a
+  four-times-gentler *edge* on it, and the peak itself in the flux.
+- **Nothing changed at `extra_ambient_npcs: 0`**: a whole game day of
+  `--census-by-area` at `--extra-ambient 0` is byte-identical before and after —
+  the entire stdout *and* stderr, md5 for md5 — checked twice, against two
+  independently built binaries. Neither the pump nor the seed moved either:
+  2,000 for a game day 4.27 s → 4.26 s of user CPU, startup at 20,000 5.52 s →
+  5.51 s (M4 measured 5.53), and a game day at 20,000 **465 s → 470 s** against
+  M4's recorded 583 — +1.1%, which is at the edge of this machine's run-to-run
+  spread and is in any case not like-for-like: after M5 the same crowd takes the
+  same walks at *different* times, so the two runs are not doing identical work.
+  The per-poll cost added is one multiply, one compare and a four-field struct.
+- **Drive evidence, and its limits — the same limits M3 and M4 both recorded.**
+  20,000 citizens, the same camera down Cinder Row M4 used (`tp -91 1.7 135
+  180`), the same script and the same opening bell (the game opens *at*
+  Dayspring, so the run starts inside the smear window), with
+  `CROWD_LEG_LAG_MAX_SHARE` set to 0.0 for the "before" build — which is exactly
+  the pre-M5 ladder, since a zero lag makes `leg_time` the identity:
+  `logs/session_775_2026-08-10_01_27_00/screenshots/m5_before_cinder_row_t*.png`
+  against `logs/session_774_2026-08-10_01_22_47/screenshots/m5_after_cinder_row_t*.png`.
+  At **07:09** the before lane is a knot — seven name plates stacked on one
+  clump of bodies mid-lane — and the after lane is the same number of people
+  strung out along it with gaps between them. At **07:22** the before lane has
+  *emptied* (three figures, the tide gone through) and the after lane is still
+  being walked. That is the milestone in one pair of frames. The caveat is real
+  though: at 20,000 the frame time throttles the game clock to about a third of
+  real time, so a 200-second drive run only reaches 07:23 — the first 22 game
+  minutes of a 75-minute smear. It is the right 22 minutes, but the census
+  above is the evidence and the photographs are the illustration.
+
+Tests added (6 — the two clock primitives are pinned separately from the crowd
+that uses them):
+`clock::tests::an_office_lasts_until_the_next_bell_and_the_snuffing_wraps_midnight`,
+`clock::tests::reading_the_clock_earlier_walks_back_through_midnight_and_the_week`,
+`round::tests::a_generated_citizens_office_lag_is_drawn_across_the_whole_band`,
+`round::tests::the_crowd_dawdles_after_the_bell_and_the_cast_keeps_the_citys_own`,
+`round::tests::a_generated_citizen_holds_the_old_leg_across_the_bell_and_then_crosses`,
+`round::tests::an_office_lag_is_always_walked_off_inside_its_own_office`.
+`cargo test --workspace`: **1485 passed, 4 ignored**, up exactly six from the
+1479 baseline. No existing test changed an assertion; eleven changed their
+*call* into `decide`, which now takes a `WorldTime`.
+
+Two nominal deviations from the spec's text, both above: the field is
+`leg_lag_share` rather than `leg_lag_seconds` (it is a share of an office, in
+game time), and it is read at two `active_leg` call sites rather than one (the
+ladder's and the census's).
 
 There is no "the bell fires the legs" event to stagger, which is worth stating
 because it is the natural first guess. `active_leg(legs, office, weekday)`

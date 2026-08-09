@@ -40,7 +40,7 @@ use crate::{
     WALLET_SEED_SPREAD, WATER_DRAW_SECONDS, WELL_ARRIVE_RADIUS_M,
     WELL_KEEPER_SOUND_INTERVAL_SECONDS, WELL_QUEUE_SHORT,
     character::{Character, EconomicClass, IntentTarget, Movement, RoundEdit, VendorListing},
-    clock::{Office, Weekday, WorldClock},
+    clock::{Office, Weekday, WorldClock, WorldTime},
     event::DomainEvent,
     homes::{HOMES_JSON, HomesDoc},
     ids::{ActorId, ItemId, PartyId, PlaceId},
@@ -113,6 +113,24 @@ const DEFAULT_ROUND_LEASH_M: f64 = 10.0;
 /// leak, and the test that guards this pins *which rule* drew the number.)
 const CROWD_LEASH_MIN_M: f64 = 15.0;
 const CROWD_LEASH_MAX_M: f64 = 40.0;
+/// The longest a **generated** citizen may dawdle after an office bell before
+/// taking up the new leg, as a share of that office
+/// (`give_the_crowd_somewhere_to_be.md` M5). Each citizen draws their own share
+/// of it once, so a bell sets the crowd off over the first quarter of the
+/// office instead of inside one ladder poll of it.
+///
+/// There is no "the bell fires the legs" event to stagger: [`active_leg`] is
+/// evaluated on each person's own ladder poll, jittered
+/// [`LADDER_DECISION_MIN_SECONDS`]..=[`LADDER_DECISION_MAX_SECONDS`], so at the
+/// shipped `seconds_per_day: 3600` a whole trade sets off inside ~1% of the
+/// office and walks the same corridor shoulder to shoulder.
+///
+/// A quarter of the *office*, and offices are 2 to 5 game hours
+/// ([`Office::span_days`]), so the hold is never more than 75 game minutes —
+/// comfortably less than the shortest office, which is what guarantees a
+/// laggard is at most **one** bell behind and never holds a leg two offices
+/// stale.
+const CROWD_LEG_LAG_MAX_SHARE: f64 = 0.25;
 /// Hashed offsets [`wander_target`] tries before a mill becomes a stand. Four
 /// for the authored cast (unchanged — see that function), eight for a generated
 /// citizen, whose leash is up to four times the default and whose draws
@@ -928,6 +946,12 @@ struct Townsperson {
     /// the whole Major and Minor cast, and the ambients whose day names no
     /// evening leg.
     evening_seed: Option<(usize, RoundLeg)>,
+    /// How long this person dawdles after an office bell before taking up the
+    /// new leg, as a share of the office (M5). **0.0 for the whole authored
+    /// cast**, which is what keeps their timings byte-identical: [`Townsperson::leg_time`]
+    /// returns the instant untouched at zero, so at `extra_ambient_npcs: 0`
+    /// nothing in this file reads a different clock than it did before.
+    leg_lag_share: f64,
     /// A pressing rung (curfew, parched) came due while they were held in a
     /// conversation, and the pressure has been injected as a `system:` percept:
     /// they have had their one turn to excuse themselves, and the next pressing
@@ -955,6 +979,42 @@ impl Townsperson {
     fn draws_water(&self) -> bool {
         self.source.is_some()
     }
+
+    /// The instant *this person's* daily round is living in — now, minus their
+    /// own office lag (M5). The one place [`Townsperson::leg_lag_share`] is
+    /// read, and the whole of the milestone's mechanism: a generated citizen
+    /// holds the previous leg for their share of the office and then crosses,
+    /// so the trade sets off over minutes rather than over one ladder poll.
+    ///
+    /// The lag is a share of the office and therefore in **game** time, not
+    /// real seconds: the office is a game-clock span, and a real-seconds hold
+    /// would mean something different at every `seconds_per_day` and would be
+    /// multiplied by the debug time-scale (the `T` key, `--watch-clock`) until
+    /// a laggard held a leg for game *days*. Expressed this way the hold is a
+    /// quarter of an office at every clock speed there is.
+    ///
+    /// No state and no bookkeeping: it is a pure function of the clock, so
+    /// there is no "the office changed" event to miss, nothing to restore on
+    /// load, nothing to reset at the day boundary, and no way to be stuck
+    /// holding a leg that no longer exists — [`active_leg`] is total over any
+    /// (office, weekday) and the very first poll after [`Round::seed`] simply
+    /// reads an earlier office of the same day.
+    fn leg_time(&self, time: WorldTime) -> WorldTime {
+        time.earlier_by_days(self.leg_lag_share * time.office.span_days())
+    }
+}
+
+/// One generated citizen's office lag, drawn once and for life over
+/// `0..`[`CROWD_LEG_LAG_MAX_SHARE`] — the same `hash01` idiom as the leash, so
+/// the same crowd dawdles the same way in every run and every save.
+///
+/// Drawn per person rather than per person *and* office: a share of the office
+/// already makes the hold a function of both (a quarter of the Dayspring is
+/// 75 game minutes and a quarter of the Kindling is 30), and a fixed share
+/// reads as a person with their own rhythm — always a little late, or always
+/// prompt — rather than as noise.
+fn crowd_leg_lag_share(id: &ActorId) -> f64 {
+    hash01("crowd_leg_lag", id, 0) * CROWD_LEG_LAG_MAX_SHARE
 }
 
 /// One enrolled townsperson's errand, reduced for the developer character
@@ -2284,6 +2344,9 @@ impl Round {
                 next_decision: now + decision_jitter(id, 0),
                 epoch: 0,
                 evening_seed: None,
+                // A road party is authored people, named and returning: they
+                // keep the city's bell like the rest of the cast.
+                leg_lag_share: 0.0,
                 excused: false,
             },
         );
@@ -2664,7 +2727,13 @@ impl Round {
                 true => person.leash_m.max(CENSUS_POST_RADIUS_M),
                 false => CENSUS_POST_RADIUS_M,
             };
-            if let Some(leg) = active_leg(&person.legs, time.office, time.weekday)
+            // Their *own* clock, not the city's (M5): a generated citizen who
+            // has not set off yet is standing at the post they are still
+            // keeping, and censusing them against the leg they have not taken
+            // up would report them as loose in the street. `leg_time` is the
+            // instant unchanged for the whole authored cast.
+            let leg_time = person.leg_time(time);
+            if let Some(leg) = active_leg(&person.legs, leg_time.office, leg_time.weekday)
                 && position.distance(leg.at) <= post_radius
             {
                 if leg.is_home || leg.doing == Arrival::Sleep {
@@ -3114,6 +3183,8 @@ impl Round {
                         next_decision: now + decision_jitter(id, 0),
                         epoch: 0,
                         evening_seed: None,
+                        // A well keeper is authored, so their bell is the city's.
+                        leg_lag_share: 0.0,
                         excused: false,
                     },
                 );
@@ -3206,6 +3277,15 @@ impl Round {
                     next_decision: now + decision_jitter(id, 0),
                     epoch: 0,
                     evening_seed: None,
+                    // M5 — smear the tide. Written here and nowhere else, beside
+                    // the leash and on the same condition: the authored cast
+                    // keeps the city's own bell (0.0, no lag, no shifted clock,
+                    // byte-identical timings), and a generated citizen gets
+                    // their own quarter-office of dawdle.
+                    leg_lag_share: match generated {
+                        true => crowd_leg_lag_share(id),
+                        false => 0.0,
+                    },
                     excused: false,
                 },
             );
@@ -4552,17 +4632,9 @@ impl Round {
                         person.phase,
                         Phase::Approaching | Phase::Queued | Phase::Drawing | Phase::Returning
                     );
-                let pressing = decide(
-                    self,
-                    world,
-                    nav,
-                    &plan.buyer,
-                    person.epoch,
-                    time.office,
-                    time.weekday,
-                )
-                .1
-                .is_some();
+                let pressing = decide(self, world, nav, &plan.buyer, person.epoch, time)
+                    .1
+                    .is_some();
                 let lightning_reflex = self
                     .lightning_reflex_until
                     .get(&plan.buyer)
@@ -7398,7 +7470,7 @@ fn run_ladder(
             _ => continue,
         }
 
-        let (decision, pressure) = decide(round, world, nav, &id, epoch, time.office, time.weekday);
+        let (decision, pressure) = decide(round, world, nav, &id, epoch, time);
 
         // A live stock visit is the resumable rung immediately above the
         // ordinary round and convenient hunger. It keeps its route through
@@ -7736,9 +7808,14 @@ fn decide(
     nav: &NavData,
     id: &ActorId,
     epoch: u64,
-    office: Office,
-    weekday: Weekday,
+    time: WorldTime,
 ) -> (Decision, Option<&'static str>) {
+    // The city's own clock — the curfew, the meal offices, the lamp window and
+    // every stall's hours are the city's, and stay the city's for everyone. Only
+    // the round leg (rung 9) is read on the person's own, lagged clock (M5).
+    let WorldTime {
+        office, weekday, ..
+    } = time;
     // Rung 0 — the law's hands (`law_and_order.md` M4b′/M5). Above every rung
     // there is, the body's needs included: an inmate whose thirst drops must not
     // set off for the nearest cistern and walk straight through the gaol wall,
@@ -7997,10 +8074,26 @@ fn decide(
     // Rung 9 — the round: be where the current leg says. Skipped at night for the
     // non-exempt (curfew already sent the housed home; the homeless linger rather
     // than march to a workshop at 2 a.m.).
+    //
+    // M5 — smear the tide. This is the one call that reads the person's own
+    // clock instead of the city's: a generated citizen holds the leg they are on
+    // for their share of the office ([`Townsperson::leg_time`]) and then crosses,
+    // so a bell empties a workshop over the first quarter of the next office
+    // rather than inside one ladder poll. `leg_time` is the identity for the
+    // authored cast, whose lag is 0.0, so nothing here moves at
+    // `extra_ambient_npcs: 0`.
+    //
+    // The `night` skip above it is deliberately *not* lagged: the Snuffing bell
+    // is the watch's, not the citizen's, so the curfew rung (5) is a hard
+    // backstop that catches whatever tail the lag leaves out — and since the
+    // evening tide is the Lamplight home leg, three game hours before curfew,
+    // the longest hold there is (45 game minutes of a 3-hour office) is walked
+    // off long before anyone is yanked back.
+    let leg_time = person.leg_time(time);
     let leg = if night && !person.curfew_exempt {
         None
     } else {
-        active_leg(&person.legs, office, weekday)
+        active_leg(&person.legs, leg_time.office, leg_time.weekday)
     };
     if let Some(leg) = leg {
         let radius = if leg.is_home {
