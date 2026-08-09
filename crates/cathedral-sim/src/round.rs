@@ -2780,14 +2780,23 @@ impl Round {
         // pinned there so a queue has someone to form on. Keepers are enrolled
         // like everyone else below, but with the well as their round's one post,
         // so their own day never drags them off the curb.
+        //
+        // The generated crowd (`crate::crowd`) is excluded. This is the one
+        // place in the sim that hands out an authored job on nothing but "who
+        // is standing nearest", and with `extra_ambient_npcs` turned up the
+        // nearest ambient body to every curb in the city is a stranger minted
+        // at load. Keeping the curbs to the cast is what stops a crowd knob
+        // from quietly rewriting the water round.
         let mut keepers: BTreeMap<ActorId, usize> = BTreeMap::new();
         for index in 0..self.sources.len() {
             let draw_point = self.sources[index].draw_point;
             let keeper = townsfolk
                 .iter()
                 .filter(|id| {
+                    let character = &world.characters[*id];
                     !keepers.contains_key(*id)
-                        && world.characters[*id].significance() == Significance::Ambient
+                        && character.significance() == Significance::Ambient
+                        && !character.lore().is_some_and(|lore| lore.generated)
                 })
                 .filter_map(|id| {
                     let distance = world.characters[id].position_m().distance(draw_point);

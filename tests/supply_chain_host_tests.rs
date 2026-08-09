@@ -58,6 +58,7 @@ mod smart_actors {
         pub stt_streaming: bool,
         pub stt_trailing_silence_ms: u32,
         pub clock: ClockSettings,
+        pub extra_ambient_npcs: u32,
     }
 
     impl Default for SmartActorsConfig {
@@ -69,6 +70,7 @@ mod smart_actors {
                 stt_streaming: true,
                 stt_trailing_silence_ms: 400,
                 clock: ClockSettings::default(),
+                extra_ambient_npcs: 0,
             }
         }
     }

@@ -178,6 +178,18 @@ pub struct LoreProfile {
     /// child may be cheap and forward, a major canon expensive and aloof.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub curiosity: Option<f64>,
+    /// True only for a body minted by [`crate::crowd`] to fill the streets
+    /// (`config.ron: smart_actors.extra_ambient_npcs`). No character file can
+    /// set it — [`LoreCharacterSheet`] has no such field — so it means exactly
+    /// "not authored, not canon, replaceable".
+    ///
+    /// It is read where the sim would otherwise hand an authored job to
+    /// whichever ambient body happened to be standing nearest (the well
+    /// keepers, `crate::round::Round::seed`): a crowd is meant to fill the
+    /// streets, not to take the cast's work off them. Nothing else branches on
+    /// it, and nothing in a prompt ever mentions it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub generated: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -416,6 +428,7 @@ impl LoreCharacterSheet {
                 core_character_description: self.core_character_description,
                 extended_character_description: self.extended_character_description,
                 curiosity: self.curiosity,
+                generated: false,
             }),
             presence: Presence::InCity,
             presence_epoch: 0,
@@ -424,7 +437,10 @@ impl LoreCharacterSheet {
     }
 }
 
-fn default_voice_key(gender: &str, id: &ActorId) -> String {
+/// The three-voice pool, assigned deterministically to anyone whose sheet does
+/// not name a voice. Shared with [`crate::crowd`] so a generated citizen is
+/// given a voice by the same rule as an authored one.
+pub(crate) fn default_voice_key(gender: &str, id: &ActorId) -> String {
     if gender.eq_ignore_ascii_case("f") {
         return "ilse".to_string();
     }

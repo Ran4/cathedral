@@ -94,6 +94,16 @@ struct Args {
     #[arg(long)]
     know_everybody: bool,
 
+    /// add N generated ambient citizens spread over the walkable city (0..=20000)
+    ///
+    /// The terminal twin of `config.ron: smart_actors.extra_ambient_npcs` — the
+    /// way to see what a crowd costs the *simulation* (enrolment, the round,
+    /// perception, the snapshot) with no renderer in the way. Needs a nav
+    /// graph under `--assets`; without one there is nowhere walkable to stand
+    /// anybody and the count is refused.
+    #[arg(long, default_value_t = 0, value_name = "N")]
+    extra_ambient: u32,
+
     /// gate idle turns on the player's neighborhood, as the game does
     ///
     /// Off by default: the terminal's player never moves, so an ungated
@@ -357,7 +367,7 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             .unwrap_or_else(|| Path::new("."))
             .join("lore")
     });
-    let assets = Assets::load(&args.assets, &lore, args.know_everybody)?;
+    let assets = Assets::load(&args.assets, &lore, args.know_everybody, args.extra_ambient)?;
 
     // Fake cognition needs no provider and no key; a real run needs both, and a
     // scheduler with nothing to call would simply never take a turn.
@@ -1006,7 +1016,12 @@ struct Assets {
 }
 
 impl Assets {
-    fn load(directory: &Path, lore_directory: &Path, know_everybody: bool) -> Result<Self, String> {
+    fn load(
+        directory: &Path,
+        lore_directory: &Path,
+        know_everybody: bool,
+        extra_ambient: u32,
+    ) -> Result<Self, String> {
         let read = |relative: &str| -> Result<String, String> {
             let path = directory.join(relative);
             fs::read_to_string(&path)
@@ -1029,6 +1044,24 @@ impl Assets {
         )
         .map_err(|error| format!("invalid prompt assets: {error}"))?;
         let nav = load_nav(directory);
+        // The generated crowd (`--extra-ambient`), placed on the same walkable
+        // ground the game places it on. No graph, nowhere to stand: refused
+        // out loud rather than heaped on the origin.
+        let seed = match (extra_ambient, nav.as_deref()) {
+            (0, _) => seed,
+            (count, Some(nav)) => {
+                let count = count.min(cathedral_sim::MAX_EXTRA_AMBIENT_NPCS);
+                let points = cathedral_sim::spread_over_walkable(nav, count as usize);
+                let sheets = cathedral_sim::extra_ambient_sheets(&points, 0);
+                eprintln!("[crowd] {} generated ambient citizens", sheets.len());
+                seed.with_extra_ambient(sheets)
+                    .map_err(|error| format!("invalid generated crowd: {error}"))?
+            }
+            (count, None) => {
+                eprintln!("warning: --extra-ambient {count} needs a navigation graph; no crowd");
+                seed
+            }
+        };
         let shelters = Arc::new(
             ShelterMap::from_json_str(&read("world/shelters.json")?)
                 .map_err(|error| format!("invalid world shelters: {error}"))?,
@@ -1234,7 +1267,7 @@ mod tests {
 
     #[test]
     fn the_shipped_assets_load() {
-        let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"), false)
+        let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"), false, 0)
             .expect("the shipped assets load");
         assert_eq!(assets.player_spawn().0, Vec3::new(0.0, 0.91, 95.0));
 
@@ -1313,7 +1346,7 @@ mod tests {
             content_parts: true,
         });
 
-        let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"), false)
+        let assets = Assets::load(Path::new("../../assets"), Path::new("../../lore"), false, 0)
             .expect("the shipped assets");
         let (player_spawn, player_yaw) = assets.player_spawn();
         let handle = BackendsHandle::start(config, None).expect("the backends start");

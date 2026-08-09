@@ -105,14 +105,18 @@ impl WorldSeed {
         Ok(seed)
     }
 
+    /// Sets rather than vectors: `extra_ambient_npcs` can put twenty thousand
+    /// sheets through here, and a linear duplicate scan per sheet is a quarter
+    /// of a billion id comparisons on the loading screen. The messages, and
+    /// which of a duplicate pair is named in them, are unchanged.
     pub fn validate(&self) -> Result<(), SeedError> {
         let catalog = ItemCatalog::embedded();
-        let mut item_ids: Vec<&ItemId> = Vec::with_capacity(self.items.len());
+        let mut item_ids: std::collections::BTreeSet<&ItemId> = std::collections::BTreeSet::new();
         for item in &self.items {
             if !item.id.is_valid() {
                 return Err(SeedError::new(format!("invalid item id '{}'", item.id)));
             }
-            if item_ids.contains(&&item.id) {
+            if item_ids.contains(&item.id) {
                 return Err(SeedError::new(format!("duplicate item id '{}'", item.id)));
             }
             // The kind must be catalog-known and the metadata catalog-declared —
@@ -120,10 +124,11 @@ impl WorldSeed {
             if let Err(message) = catalog.validate_seed_item(&Item::from(item)) {
                 return Err(SeedError::new(message));
             }
-            item_ids.push(&item.id);
+            item_ids.insert(&item.id);
         }
 
-        let mut character_ids: Vec<&ActorId> = Vec::with_capacity(self.characters.len());
+        let mut character_ids: std::collections::BTreeSet<&ActorId> =
+            std::collections::BTreeSet::new();
         let mut holders: Vec<(&ItemId, &ActorId)> = Vec::new();
         for character in &self.characters {
             if !character.id.is_valid() {
@@ -132,13 +137,13 @@ impl WorldSeed {
                     character.id
                 )));
             }
-            if character_ids.contains(&&character.id) {
+            if character_ids.contains(&character.id) {
                 return Err(SeedError::new(format!(
                     "duplicate character id '{}'",
                     character.id
                 )));
             }
-            character_ids.push(&character.id);
+            character_ids.insert(&character.id);
 
             if !character.facing_yaw.is_finite() {
                 return Err(SeedError::new(format!(
@@ -147,7 +152,7 @@ impl WorldSeed {
                 )));
             }
             for item_id in &character.holds {
-                if !item_ids.contains(&item_id) {
+                if !item_ids.contains(item_id) {
                     return Err(SeedError::new(format!(
                         "character '{}' holds missing item '{item_id}'",
                         character.id
@@ -272,6 +277,27 @@ impl WorldSeed {
         let mut characters = cast.into_character_sheets();
         characters.append(&mut self.characters);
         self.characters = characters;
+        self.validate()?;
+        Ok(self)
+    }
+
+    /// Append the generated crowd (`config.ron: smart_actors.extra_ambient_npcs`).
+    ///
+    /// Last, deliberately: the roster is insertion order and insertion order is
+    /// turn order, so the authored cast keeps the head of the rotation and a
+    /// world built with `extra_ambient_npcs: 0` is byte-identical to one built
+    /// before the knob existed. Composing after
+    /// [`Self::with_lore_cast_knowledge`] is also what keeps the crowd
+    /// *strangers*: that method extends every player's `knows` with the public
+    /// cast, and nobody here is in it.
+    pub fn with_extra_ambient(
+        mut self,
+        sheets: Vec<crate::character::CharacterSheet>,
+    ) -> Result<Self, SeedError> {
+        if sheets.is_empty() {
+            return Ok(self);
+        }
+        self.characters.extend(sheets);
         self.validate()?;
         Ok(self)
     }

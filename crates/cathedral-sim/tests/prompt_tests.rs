@@ -280,6 +280,7 @@ fn the_sheet_carries_the_wards_word_and_only_the_law_gets_the_verb() {
         core_character_description: String::new(),
         extended_character_description: String::new(),
         curiosity: None,
+        generated: false,
     });
     let law = render_prompt(&world, &sven, None, &env).unwrap();
     assert!(law.contains("raise_notice {\"about\""), "the verb line is listed");
@@ -429,6 +430,7 @@ fn the_turn_sheet_carries_the_ward_mood_for_a_minor_of_that_ward() {
         core_character_description: String::new(),
         extended_character_description: String::new(),
         curiosity: None,
+        generated: false,
     };
     // A Major of that ward reflects for themselves, so the batch is not theirs.
     world.characters.get_mut(&sven).unwrap().sheet.lore = Some(profile.clone());
@@ -915,6 +917,7 @@ fn lore_profiles_are_structured_but_extended_lore_is_not_paid_every_turn() {
         core_character_description: "The prompt uses back_story for this.".into(),
         extended_character_description: "SECRET EXTENDED DETAIL".into(),
         curiosity: None,
+        generated: false,
     });
 
     let rendered = render_prompt(&world, &actor("sv3n1"), None, &env).unwrap();
@@ -990,6 +993,7 @@ fn the_home_line_carries_its_wayfinding_handle_when_registered() {
             core_character_description: String::new(),
             extended_character_description: String::new(),
             curiosity: None,
+            generated: false,
         });
     }
 
@@ -1156,6 +1160,7 @@ fn the_hunger_condition_computes_and_clears_when_the_actor_eats() {
         core_character_description: String::new(),
         extended_character_description: String::new(),
         curiosity: None,
+        generated: false,
     });
 
     // Seed hungry: below FAMISHED, the sheet computes `famished` after the

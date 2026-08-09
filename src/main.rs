@@ -68,6 +68,18 @@ fn main() {
     if std::env::var_os("CATHEDRAL_NO_VERMIN").is_some() {
         config.vermin.enabled = false;
     }
+    // The crowd knob, for one run. A value that will not parse is worth a word
+    // rather than a silent fallback to config.ron: the whole point of typing it
+    // on the command line is that you are watching what it does.
+    if let Some(value) = std::env::var_os("CATHEDRAL_EXTRA_NPCS") {
+        match value.to_string_lossy().trim().parse::<u32>() {
+            Ok(count) => config.smart_actors.extra_ambient_npcs = count,
+            Err(error) => eprintln!(
+                "CATHEDRAL_EXTRA_NPCS={} is not a count ({error}); using config.ron",
+                value.to_string_lossy()
+            ),
+        }
+    }
     let smart_actors = config.smart_actors.clone();
     let weather = config.weather.clone();
     let vermin = config.vermin.clone();

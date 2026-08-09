@@ -98,6 +98,21 @@ pub struct SmartActorsConfig {
     /// tokens: marks are written by code, read by code, and reach an LLM only
     /// as one line on a turn that was going to happen anyway.
     pub marks: MarksSettings,
+    /// How many *generated* ambient citizens to spread over the walkable city
+    /// on top of the ~500 authored ones (`crates/cathedral-sim/src/crowd.rs`).
+    /// `0` — the default — is the shipped city, unchanged down to the roster
+    /// order. Clamped to [`cathedral_sim::MAX_EXTRA_AMBIENT_NPCS`];
+    /// `CATHEDRAL_EXTRA_NPCS=n` sets it for one run without editing the file.
+    ///
+    /// These are not cast members: six-character ids, no authored sheet, no
+    /// bed in `homes.json`, strangers to the player, and barred from the one
+    /// civic post the round hands to whoever is nearest (see
+    /// [`cathedral_sim::LoreProfile::generated`]). They cost no tokens by
+    /// existing — the stage cap and the single in-flight cognition slot bound
+    /// the spend however many people are standing about — but they do change
+    /// *who* is nearest, and past a few thousand they are a frame-rate
+    /// experiment rather than a setting.
+    pub extra_ambient_npcs: u32,
 }
 
 /// Chalk marks: the ablation switch, the per-kind switches, and the decay dial
@@ -340,11 +355,30 @@ impl Default for SmartActorsConfig {
             clock: ClockSettings::default(),
             dogs_enabled: true,
             marks: MarksSettings::default(),
+            extra_ambient_npcs: 0,
         }
     }
 }
 
 impl SmartActorsConfig {
+    /// The crowd size actually built, with a garbage `config.ron` reported
+    /// rather than obeyed. Returns the clamped count and, when it had to
+    /// clamp, the line to log — the caller owns the logger.
+    pub(crate) fn extra_ambient_npcs(&self) -> (u32, Option<String>) {
+        if self.extra_ambient_npcs <= cathedral_sim::MAX_EXTRA_AMBIENT_NPCS {
+            return (self.extra_ambient_npcs, None);
+        }
+        (
+            cathedral_sim::MAX_EXTRA_AMBIENT_NPCS,
+            Some(format!(
+                "extra_ambient_npcs is {}, above the {} ceiling; building {} instead",
+                self.extra_ambient_npcs,
+                cathedral_sim::MAX_EXTRA_AMBIENT_NPCS,
+                cathedral_sim::MAX_EXTRA_AMBIENT_NPCS
+            )),
+        )
+    }
+
     fn initial_stt_backend(&self) -> bridge::TranscriptionBackend {
         if self.stt_backend.eq_ignore_ascii_case("local") {
             bridge::TranscriptionBackend::Local
@@ -2517,6 +2551,46 @@ mod tests {
     };
 
     use super::*;
+
+    /// A player-editable `config.ron` reaches the crowd generator directly, so
+    /// a fat-fingered zero must be reported and cut rather than obeyed —
+    /// 200,000 sheets is a loading screen that never ends.
+    #[test]
+    fn a_crowd_above_the_ceiling_is_reported_and_cut() {
+        let with = |count: u32| SmartActorsConfig {
+            extra_ambient_npcs: count,
+            ..SmartActorsConfig::default()
+        };
+        assert_eq!(with(0).extra_ambient_npcs(), (0, None));
+        assert_eq!(with(2_000).extra_ambient_npcs(), (2_000, None));
+        // The ceiling itself is allowed through, silently.
+        let ceiling = cathedral_sim::MAX_EXTRA_AMBIENT_NPCS;
+        assert_eq!(with(ceiling).extra_ambient_npcs(), (ceiling, None));
+
+        let (count, complaint) = with(200_000).extra_ambient_npcs();
+        assert_eq!(count, ceiling);
+        let complaint = complaint.expect("a cut crowd is worth a line");
+        assert!(complaint.contains("200000"), "{complaint}");
+        assert!(complaint.contains(&ceiling.to_string()), "{complaint}");
+    }
+
+    /// The projection's sanity ceilings are what a snapshot of a *full* crowd
+    /// has to pass. They were sized for the authored cast, and a fixed 1,024
+    /// rejected every snapshot at `extra_ambient_npcs: 2000` with "snapshot
+    /// contains too many actors" — a city that rendered its buildings and none
+    /// of its people. Tied to the sim's own ceiling here so they cannot drift
+    /// apart again.
+    #[test]
+    fn the_projection_admits_a_full_crowd() {
+        let crowd = cathedral_sim::MAX_EXTRA_AMBIENT_NPCS as usize;
+        assert!(
+            model::max_actors() > crowd,
+            "a full crowd plus the authored cast must fit"
+        );
+        // One purse a head is seeded by the round, so the item ceiling has to
+        // clear the crowd too, not merely the cast.
+        assert!(model::max_items() > crowd);
+    }
 
     #[test]
     fn audio_activity_tracks_live_voice_and_open_chat() {

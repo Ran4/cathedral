@@ -110,5 +110,14 @@
             // Ring the town bell for the player as each office comes round.
             ring_the_offices: true,
         ),
+        // Generated ambient citizens spread over the walkable city, on top of
+        // the ~500 authored ones (crates/cathedral-sim/src/crowd.rs). 0..=20000.
+        // They are strangers — no authored sheet, no bed, no civic post — and
+        // they cost no tokens by existing: the stage cap and the single
+        // in-flight cognition slot bound the spend whoever is standing about.
+        // What they do cost is frames; past a few thousand this is an
+        // experiment rather than a setting. CATHEDRAL_EXTRA_NPCS=n sets it for
+        // one run without editing this file.
+        extra_ambient_npcs: 0,
     ),
 )

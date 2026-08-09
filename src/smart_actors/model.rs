@@ -33,9 +33,34 @@ use serde::{Deserialize, Deserializer, Serialize, de};
 
 /// Maximum id length the projection accepts.
 pub const MAX_ID_CHARS: usize = 128;
-const MAX_ACTORS: usize = 1_024;
-const MAX_ITEMS: usize = 4_096;
+/// Sanity ceilings on a projection, expressed as *the authored world, plus
+/// whatever the crowd knob is allowed to add* — not as round numbers. They
+/// exist to refuse a snapshot the sim could not honestly have produced, so
+/// each one has to move when the sim's honest maximum does: at
+/// `extra_ambient_npcs: 20000` the roster is twenty-odd times the shipped
+/// cast, and a fixed 1,024 would reject every snapshot of that world with
+/// "malformed snapshot: snapshot contains too many actors" — a city that
+/// renders its buildings and none of its people.
+const AUTHORED_ACTORS_HEADROOM: usize = 2_048;
+const MAX_ACTORS: usize = AUTHORED_ACTORS_HEADROOM + CROWD_MAX;
+/// Two stacks a head is generous: the round seeds one purse each, and a
+/// citizen may be carrying one thing besides it.
+const MAX_ITEMS: usize = 8_192 + 2 * CROWD_MAX;
 const MAX_OFFERS: usize = 4_096;
+/// The sim's own ceiling on generated citizens
+/// (`config.ron: smart_actors.extra_ambient_npcs`), so the two cannot drift.
+const CROWD_MAX: usize = cathedral_sim::MAX_EXTRA_AMBIENT_NPCS as usize;
+
+/// The two crowd-sensitive ceilings, for the test that guards them.
+#[cfg(test)]
+pub(super) fn max_actors() -> usize {
+    MAX_ACTORS
+}
+
+#[cfg(test)]
+pub(super) fn max_items() -> usize {
+    MAX_ITEMS
+}
 /// The second gate on the sim's own `marks::MARKS_MAX`. The sim caps the set
 /// already; this is the projection refusing to trust it, exactly as
 /// `MAX_ACTORS` does not trust the roster.

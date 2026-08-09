@@ -54,6 +54,21 @@ deterministic offline mode also used by the integration tests.
 The two local speech models still run as `uv` subprocesses; `prompt_playgound/` is now nothing but those two
 workers and their `.env`.
 
+### The crowd knob
+
+`config.ron: smart_actors.extra_ambient_npcs` (0..=20000, default 0, `CATHEDRAL_EXTRA_NPCS=n` for one run)
+generates that many extra ambient citizens and spreads them over the walkable graph
+(`crates/cathedral-sim/src/crowd.rs`). They are **not cast**: six-character ids (`x00000`…, so they cannot
+shadow a five-character lore id), no authored sheet, no bed in `homes.json`, strangers to the player, and
+barred from the one civic post the round hands to whoever is standing nearest — the well curbs stay the
+cast's. Everything else about them is ordinary: an occupation, a ward, a daily round, a purse, a walk.
+
+They cost no tokens by existing — the stage cap and the single in-flight cognition slot bound the spend
+however many people are about — but they do change who is *nearest*, and therefore who the idle rotation
+picks. What they cost is frames: measured at 1280x720, p50 frame time 7.2 ms at 0, 16.8 ms at 2000, 36 ms at
+5000, 204 ms at 20000. Past ~2000 the dominant cost is the engine pump (the sim), not the puppets.
+`cargo run -p cathedral-backends --bin cathedral-headless -- --extra-ambient n` measures that half alone.
+
 ### Running the sim without Bevy
 
 The whole cast plays out headlessly, which is the fastest way to change the

@@ -268,6 +268,41 @@ type Built = (
     PromptLog,
 );
 
+/// Fill the streets: `config.ron: smart_actors.extra_ambient_npcs` generated
+/// ambient citizens appended to the authored cast.
+///
+/// Off by default and *provably* off — a zero count returns the seed it was
+/// handed, unvalidated and unallocated, so a stock run costs exactly what it
+/// cost before the knob existed. Without a nav graph nobody walks anyway and
+/// there is no walkable ground to stand a crowd on, so the count is refused
+/// out loud rather than dropping twenty thousand people onto the origin.
+fn with_extra_ambient(
+    seed: WorldSeed,
+    config: &SmartActorsConfig,
+    nav: Option<&NavData>,
+) -> Result<WorldSeed, String> {
+    let (count, complaint) = config.extra_ambient_npcs();
+    if let Some(complaint) = complaint {
+        warn!("{complaint}");
+    }
+    if count == 0 {
+        return Ok(seed);
+    }
+    let Some(nav) = nav else {
+        warn!("extra_ambient_npcs is {count}, but the navigation graph did not load; no crowd");
+        return Ok(seed);
+    };
+    let points = cathedral_sim::spread_over_walkable(nav, count as usize);
+    let sheets = cathedral_sim::extra_ambient_sheets(&points, 0);
+    info!(
+        "[smart actors] crowd: {} generated ambient citizens over {} nav nodes",
+        sheets.len(),
+        nav.node_count()
+    );
+    seed.with_extra_ambient(sheets)
+        .map_err(|error| format!("invalid generated crowd: {error}"))
+}
+
 /// Load the assets, start the backends, and decide what this run can actually
 /// do.
 ///
@@ -288,7 +323,22 @@ fn build(
         std::fs::read_to_string(&path)
             .map_err(|error| format!("could not read {}: {error}", path.display()))
     };
+    // The walkable graph the engine steps its movers on. A parse failure is not
+    // fatal: the engine keeps `nav: None`, nobody walks, and the rest of the cast
+    // is none the wiser — exactly the frozen-fixture default (engine.rs). Only
+    // handing it a `Some` turns movement on (features/implemented/movement/02_navigation.md).
+    //
+    // Loaded before the seed because the generated crowd is placed *on* it: a
+    // citizen with nowhere walkable to stand is a citizen inside a wall.
+    let nav = match NavData::from_parts(NAV_JSON, NAV_BIN) {
+        Ok(nav) => Some(Arc::new(nav)),
+        Err(error) => {
+            warn!("navigation graph did not load; NPCs will not walk: {error}");
+            None
+        }
+    };
     let seed = load_world_seed(&assets, &lore)?;
+    let seed = with_extra_ambient(seed, config, nav.as_deref())?;
     let areas = AreaMap::from_json_str(&read("world/areas.json")?)
         .map_err(|error| format!("invalid world areas: {error}"))?;
     let catalog = SoundCatalog::from_toml_str(&read("sounds/catalog.toml")?)
@@ -327,17 +377,6 @@ fn build(
     let prompt_log = backends
         .prompt_log(crate::session_log::paths().map(|session| session.root.join("prompts")));
 
-    // The walkable graph the engine steps its movers on. A parse failure is not
-    // fatal: the engine keeps `nav: None`, nobody walks, and the rest of the cast
-    // is none the wiser — exactly the frozen-fixture default (engine.rs). Only
-    // handing it a `Some` turns movement on (features/implemented/movement/02_navigation.md).
-    let nav = match NavData::from_parts(NAV_JSON, NAV_BIN) {
-        Ok(nav) => Some(Arc::new(nav)),
-        Err(error) => {
-            warn!("navigation graph did not load; NPCs will not walk: {error}");
-            None
-        }
-    };
     let shelters = Arc::new(
         ShelterMap::from_json_str(SHELTERS_JSON)
             .map_err(|error| format!("invalid world shelters: {error}"))?,

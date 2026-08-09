@@ -1104,6 +1104,7 @@ mod tests {
             core_character_description: "You work carefully.".into(),
             extended_character_description: String::new(),
             curiosity: None,
+            generated: false,
         }
     }
 

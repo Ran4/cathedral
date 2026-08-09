@@ -5330,6 +5330,7 @@ mod tests {
             core_character_description: String::new(),
             extended_character_description: String::new(),
             curiosity,
+            generated: false,
         });
         person
     }

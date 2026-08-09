@@ -192,6 +192,13 @@ to be non-resizable, which on a tiling WM does not always get you the size you
 asked for but does stop it changing between runs; check the PNG's dimensions
 before comparing two shots pixel for pixel),
 `CATHEDRAL_NO_ACTORS=1` / `CATHEDRAL_NO_WEATHER=1` (ablation),
+`CATHEDRAL_EXTRA_NPCS=n` (`config.ron: smart_actors.extra_ambient_npcs` for one
+run — n generated ambient citizens spread over the walkable city, 0..=20000, on
+top of the ~500 authored ones; 0 is the shipped city. Measured on this machine
+at 1280x720: p50 frame 7.2 ms at 0, 9.4 at 500, 16.8 at 2000, 36 at 5000 and
+204 at 20000, where the engine pump — the sim, not the puppets — is 179 ms of
+it. `cathedral-headless --extra-ambient n` is the same knob with no renderer in
+the way),
 `CATHEDRAL_BODY_LINEUP=1` (stand a rank of 14 puppets — 7 outfit classes × 2
 builds, every headgear — on the open paving at (0, 100), in the authored rest
 pose and untouched by the sim, for A/B-ing the NPC model itself; view it with

@@ -246,6 +246,32 @@ mod tests {
         assert_eq!(defaults.vermin.swarm_percepts, shipped.swarm_percepts);
     }
 
+    /// The crowd knob is the newest block-less field, so it gets the same
+    /// guarantee the vermin block has: a `config.ron` written before it existed
+    /// still loads, and loads the shipped city (nobody generated) rather than
+    /// a wall of strangers.
+    #[test]
+    fn a_config_written_before_the_crowd_knob_still_loads_an_empty_city() {
+        let old: AppConfig =
+            ron::from_str("(fullscreen: false)").expect("a pre-crowd config parses");
+        assert_eq!(old.smart_actors.extra_ambient_npcs, 0);
+
+        let asked: AppConfig = ron::from_str("(smart_actors: (extra_ambient_npcs: 2000))")
+            .expect("naming only the crowd field parses");
+        assert_eq!(asked.smart_actors.extra_ambient_npcs, 2000);
+        // …and naming it leaves every neighbouring setting alone.
+        assert_eq!(
+            asked.smart_actors.stt_backend,
+            AppConfig::default().smart_actors.stt_backend
+        );
+
+        let defaults: AppConfig = ron::from_str(
+            &fs::read_to_string(DEFAULT_CONFIG_PATH).expect("the defaults file is committed"),
+        )
+        .expect("default_config.ron parses");
+        assert_eq!(defaults.smart_actors.extra_ambient_npcs, 0);
+    }
+
     /// LE-05: `config.ron` is player-editable and loaded before the scene
     /// spawns, so a wild `vermin.density` — a typo like `1e20`, a negative, or
     /// the non-finite spellings RON accepts — must normalize to the supported

@@ -1266,6 +1266,7 @@ mod tests {
             core_character_description: "You lay stone.".into(),
             extended_character_description: String::new(),
             curiosity: None,
+            generated: false,
         }
     }
 

@@ -16,6 +16,7 @@ pub mod areas;
 pub mod attention;
 pub mod character;
 pub mod clock;
+pub mod crowd;
 pub mod custody;
 pub mod dogs;
 pub mod engine;
@@ -70,6 +71,7 @@ pub use character::{
 pub use clock::{
     BELL_STROKE_INTERVAL_SECONDS, Office, Weekday, WorldClock, WorldTime, stroke_times,
 };
+pub use crowd::{MAX_EXTRA_AMBIENT_NPCS, extra_ambient_sheets, spread_over_walkable};
 pub use dogs::{DOG_SETTLED_MPS, DOG_TROT_MPS, Dog, DogCoat, DogView};
 pub use engine::{ActorMotion, Capabilities, Engine, EngineCommand, EngineConfig, EngineMessage};
 pub use error::{

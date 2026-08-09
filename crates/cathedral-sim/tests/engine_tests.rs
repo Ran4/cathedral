@@ -1357,6 +1357,7 @@ fn a_transfer_from_the_accused_hands_the_acceptor_the_priority_slot() {
         core_character_description: String::new(),
         extended_character_description: String::new(),
         curiosity: None,
+        generated: false,
     });
     harness.engine.world_mut().notices.raise(
         "a fisherman in a wet apron".into(),

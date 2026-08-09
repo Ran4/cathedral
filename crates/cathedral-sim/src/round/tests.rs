@@ -62,6 +62,7 @@ fn person(
         core_character_description: String::new(),
         extended_character_description: String::new(),
         curiosity: None,
+        generated: false,
     });
     Character::from_sheet(CharacterSheet {
         pockets: Vec::new(),
