@@ -1,7 +1,7 @@
 //! Ordered speech presentation and dynamic spatial WAV/streaming PCM playback.
 
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -147,10 +147,20 @@ impl StreamingPcmSource {
     }
 
     fn push(&self, samples: &[i16]) {
+        // Convert *before* taking the lock. The consumer of this mutex is
+        // rodio's real-time callback thread, and one streamed chunk can carry
+        // ~96 000 samples (`tts_local.rs`'s `MAX_CHUNK_BASE64_CHARS`): holding
+        // the lock across that conversion is a straight priority inversion —
+        // the audio thread parks on a futex the main thread owns, and the main
+        // thread then parks waiting to get it back. What is left inside the
+        // critical section is one grow-and-copy, which `extend` does in a
+        // single `reserve` because the source is exactly sized.
+        let converted: Vec<f32> = samples
+            .iter()
+            .map(|sample| f32::from(*sample) / 32768.0)
+            .collect();
         if let Ok(mut buffer) = self.buffer.lock() {
-            buffer
-                .samples
-                .extend(samples.iter().map(|sample| f32::from(*sample) / 32768.0));
+            buffer.samples.extend(converted);
         }
     }
 
@@ -161,21 +171,49 @@ impl StreamingPcmSource {
     }
 }
 
+/// How many samples one lock buys the audio callback. At 24 kHz that is a
+/// ~21 ms block, so the shared mutex is taken ~47 times a second instead of
+/// 24 000 — small enough that a refill never starves the producer for long,
+/// large enough that the two threads almost never meet.
+const PCM_DRAIN_BLOCK: usize = 512;
+
 pub(super) struct StreamingPcmDecoder {
     buffer: Arc<Mutex<PcmBuffer>>,
     sample_rate: u32,
+    /// Samples already taken out of the shared buffer, newest last, served
+    /// from `drained_cursor` onward without touching the lock.
+    drained: Vec<f32>,
+    drained_cursor: usize,
 }
 
 impl Iterator for StreamingPcmDecoder {
     type Item = f32;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // Locking once per sample put this real-time callback thread on the
+        // same mutex 24 000 times a second, every one of them a chance to
+        // collide with a chunk arriving on the main thread. Refilling in
+        // blocks keeps the observable sequence identical — the same samples in
+        // the same order — while the lock is taken once per block instead.
+        if self.drained_cursor < self.drained.len() {
+            let sample = self.drained[self.drained_cursor];
+            self.drained_cursor += 1;
+            return Some(sample);
+        }
+        self.drained.clear();
+        self.drained_cursor = 0;
         let Ok(mut buffer) = self.buffer.lock() else {
             return None;
         };
-        if let Some(sample) = buffer.samples.pop_front() {
+        let take = buffer.samples.len().min(PCM_DRAIN_BLOCK);
+        self.drained.extend(buffer.samples.drain(..take));
+        let finished = buffer.finished;
+        drop(buffer);
+
+        if let Some(sample) = self.drained.first().copied() {
+            self.drained_cursor = 1;
             Some(sample)
-        } else if buffer.finished {
+        } else if finished {
             None
         } else {
             // Never block the audio callback. Streaming TTS should run faster
@@ -211,6 +249,8 @@ impl Decodable for StreamingPcmSource {
         StreamingPcmDecoder {
             buffer: self.buffer.clone(),
             sample_rate: self.sample_rate,
+            drained: Vec::with_capacity(PCM_DRAIN_BLOCK),
+            drained_cursor: 0,
         }
     }
 }
@@ -416,14 +456,18 @@ fn spawn_speech_bubble(
 pub fn update_speech_bubbles(
     mut commands: Commands,
     time: Res<Time>,
-    state: Res<SpeechPresentationState>,
+    mut state: ResMut<SpeechPresentationState>,
     cameras: Query<(&Camera, &GlobalTransform), With<crate::controller::PlayerCamera>>,
     anchors: Query<(&SpeechAnchor, &GlobalTransform)>,
-    bubbles: Query<(Entity, &SpeechBubble)>,
-    mut stacks: Query<(&mut SpeechBubbleStack, &mut Node, &mut Visibility)>,
+    bubbles: Query<(Entity, &SpeechBubble, &ChildOf)>,
+    mut stacks: Query<(Entity, &mut SpeechBubbleStack, &mut Node, &mut Visibility)>,
 ) {
     let now = time.elapsed_secs_f64();
-    for (entity, bubble) in &bubbles {
+    // Which stacks still hold a line once this frame's expiries are taken out.
+    // The despawns below are queued rather than applied, so a stack's occupancy
+    // has to be worked out here instead of read back from the world.
+    let mut occupied: HashSet<Entity> = HashSet::new();
+    for (entity, bubble, parent) in &bubbles {
         let audio_is_live = state
             .audio_order
             .iter()
@@ -434,7 +478,33 @@ pub fn update_speech_bubbles(
                 .is_some_and(|voice| voice.event_id == bubble.event_id);
         if now >= bubble.expires_at && !audio_is_live {
             commands.entity(entity).despawn();
+        } else {
+            occupied.insert(parent.parent());
         }
+    }
+
+    // An emptied stack draws nothing, but it is still a UI root that gets
+    // sorted, laid out and re-propagated every frame — and nothing removed one
+    // short of an engine disconnect, so they accumulated all session, one per
+    // NPC who had ever spoken within earshot. Reaping walks the query rather
+    // than `bubble_stacks` so a stack that outlived its bookkeeping goes too.
+    let mut reaped: Vec<Entity> = Vec::new();
+    for (entity, _, _, _) in &stacks {
+        if !occupied.contains(&entity) {
+            commands.entity(entity).despawn();
+            reaped.push(entity);
+        }
+    }
+    if !reaped.is_empty() {
+        state
+            .bubble_stacks
+            .retain(|_, entity| !reaped.contains(entity));
+    }
+    if occupied.is_empty() {
+        // Nothing left to place. Bailing here is what keeps the whole-cast
+        // anchor map below off the frames — the overwhelming majority — where
+        // nobody within earshot is mid-line.
+        return;
     }
 
     let anchor_positions: HashMap<&ActorId, Vec3> = anchors
@@ -442,23 +512,42 @@ pub fn update_speech_bubbles(
         .map(|(anchor, transform)| (&anchor.0, transform.translation()))
         .collect();
     let camera = cameras.single().ok();
-    for (mut stack, mut node, mut visibility) in &mut stacks {
-        if let Some(position) = anchor_positions.get(&stack.speaker_id) {
-            stack.world_position = *position;
+    for (entity, mut stack, mut node, mut visibility) in &mut stacks {
+        if !occupied.contains(&entity) {
+            continue; // Reaped above; do not dirty a node on its way out.
+        }
+        // Every write here is compare-guarded: a `Mut` deref marks the stack's
+        // `Node` dirty, and a dirty node forces taffy to re-run this root's
+        // layout — including the text measure of every bubble hanging off it.
+        let anchored = anchor_positions.get(&stack.speaker_id).copied();
+        if let Some(position) = anchored
+            && stack.world_position != position
+        {
+            stack.world_position = position;
         }
         let Some((camera, camera_transform)) = camera else {
-            *visibility = Visibility::Hidden;
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
+            }
             continue;
         };
         let Ok(viewport_position) =
             camera.world_to_viewport(camera_transform, stack.world_position)
         else {
-            *visibility = Visibility::Hidden;
+            if *visibility != Visibility::Hidden {
+                *visibility = Visibility::Hidden;
+            }
             continue;
         };
-        node.left = px(viewport_position.x);
-        node.top = px(viewport_position.y);
-        *visibility = Visibility::Inherited;
+        let left = px(viewport_position.x);
+        let top = px(viewport_position.y);
+        if node.left != left || node.top != top {
+            node.left = left;
+            node.top = top;
+        }
+        if *visibility != Visibility::Inherited {
+            *visibility = Visibility::Inherited;
+        }
     }
 }
 
@@ -1123,6 +1212,12 @@ mod tests {
         bubbles.iter(world).count()
     }
 
+    fn stack_count(app: &mut App) -> usize {
+        let world = app.world_mut();
+        let mut stacks = world.query_filtered::<Entity, With<SpeechBubbleStack>>();
+        stacks.iter(world).count()
+    }
+
     #[test]
     fn projected_dialogue_uses_a_padded_neutral_text_backdrop() {
         const DIALOGUE: &str = "I have no phone, stranger—only a smith's hands and an empty purse.";
@@ -1262,6 +1357,83 @@ mod tests {
             .insert(GlobalTransform::from_translation(Vec3::new(9.0, 1.35, 6.0)));
         app.update();
         assert_eq!(stack_position(&app), Vec3::new(9.0, 1.35, 6.0));
+    }
+
+    /// A stack outliving its last line was a UI root the game kept sorting,
+    /// laying out and propagating for the rest of the session — one for every
+    /// NPC who had ever spoken near the player. It goes with its last bubble,
+    /// and a later line from the same speaker simply builds a fresh one.
+    #[test]
+    fn an_emptied_bubble_stack_is_reaped_and_rebuilt_on_the_next_line() {
+        let mut app = speech_test_app();
+        app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO))
+            .add_systems(Update, update_speech_bubbles.after(receive_speech_events));
+        app.world_mut()
+            .resource_mut::<Time<Virtual>>()
+            .set_max_delta(Duration::from_secs(20));
+
+        app.world_mut()
+            .write_message(npc_speech(1, "sven", "a first line"));
+        app.update();
+        assert_eq!(stack_count(&mut app), 1);
+        let first_stack = app.world().resource::<SpeechPresentationState>().bubble_stacks
+            [&ActorId("sven".into())];
+
+        // Past the line's reading time with no audio holding it: the bubble
+        // goes, and the stack behind it goes in the same frame.
+        *app.world_mut().resource_mut::<TimeUpdateStrategy>() =
+            TimeUpdateStrategy::ManualDuration(Duration::from_secs(15));
+        app.update();
+        assert_eq!(bubble_count(&mut app), 0);
+        assert_eq!(stack_count(&mut app), 0);
+        assert!(
+            app.world()
+                .resource::<SpeechPresentationState>()
+                .bubble_stacks
+                .is_empty(),
+            "the bookkeeping map must not keep a despawned entity"
+        );
+
+        *app.world_mut().resource_mut::<TimeUpdateStrategy>() =
+            TimeUpdateStrategy::ManualDuration(Duration::ZERO);
+        app.world_mut()
+            .write_message(npc_speech(2, "sven", "and a second"));
+        app.update();
+        assert_eq!(bubble_count(&mut app), 1);
+        assert_eq!(stack_count(&mut app), 1);
+        let second_stack = app.world().resource::<SpeechPresentationState>().bubble_stacks
+            [&ActorId("sven".into())];
+        assert_ne!(first_stack, second_stack, "a fresh stack, not a revived one");
+    }
+
+    /// The audio callback used to take the shared PCM mutex once per sample —
+    /// 24 000 chances a second to collide with a chunk landing on the main
+    /// thread. Draining in blocks must not change a single sample it yields.
+    #[test]
+    fn the_pcm_decoder_yields_the_same_stream_it_did_sample_by_sample() {
+        let source = StreamingPcmSource::new(24_000);
+        let mut decoder = source.decoder();
+
+        // Underrun before anything has been pushed: silence, never a stop.
+        assert_eq!(decoder.next(), Some(0.0));
+
+        // More than one block, so the refill boundary is actually crossed.
+        let pushed: Vec<i16> = (0..(PCM_DRAIN_BLOCK as i16 + 7)).collect();
+        source.push(&pushed);
+        for expected in &pushed {
+            assert_eq!(decoder.next(), Some(f32::from(*expected) / 32768.0));
+        }
+
+        // Drained but still open: silence again rather than an end of stream.
+        assert_eq!(decoder.next(), Some(0.0));
+
+        // A tail landing just before the stream closes is still served in full,
+        // and only then does the stream end — and it stays ended.
+        source.push(&[9_i16]);
+        source.finish();
+        assert_eq!(decoder.next(), Some(9.0 / 32768.0));
+        assert_eq!(decoder.next(), None);
+        assert_eq!(decoder.next(), None);
     }
 
     #[test]

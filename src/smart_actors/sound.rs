@@ -12,6 +12,8 @@
 //! one into sound, which is what keeps the city's headless tests free of the
 //! audio plugins.
 
+use std::collections::HashMap;
+
 use bevy::{
     audio::{AudioPlayer, AudioSource, PlaybackSettings, SpatialScale},
     prelude::*,
@@ -54,19 +56,32 @@ pub(super) fn valid_sound_id(sound_id: &str) -> bool {
             .all(|byte| byte.is_ascii_lowercase() || byte == b'_')
 }
 
+/// `loaded` is the one strong handle per clip that keeps a repeat cheap.
+///
+/// Every one-shot carries `PlaybackSettings::DESPAWN`, so bevy retires the
+/// entity the moment its sink drains — taking the last handle to the clip with
+/// it, which unloads the asset. The next occurrence of the same sound then
+/// re-reads the file: a seventeen-stroke knell opens `town_bell.mp3` seventeen
+/// times, and each fresh load builds a decoder before anything can be heard.
+/// Holding one handle per id keeps the source resident for the session, which
+/// is what `SoundscapeAssets` already does for the ambience beds. A missing
+/// asset still only skips playback, exactly as the module doc says.
 pub(super) fn play_sound_effects(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     time: Res<Time>,
     mut effects: MessageReader<PlaySoundEffect>,
+    mut loaded: Local<HashMap<String, Handle<AudioSource>>>,
 ) {
     for effect in effects.read() {
         if !valid_sound_id(&effect.sound_id) {
             continue;
         }
         let radius = effect.audible_distance.clamp(1.0, 10_000.0);
-        let source: Handle<AudioSource> =
-            asset_server.load(format!("sounds/{}.mp3", effect.sound_id));
+        let source: Handle<AudioSource> = loaded
+            .entry(effect.sound_id.clone())
+            .or_insert_with(|| asset_server.load(format!("sounds/{}.mp3", effect.sound_id)))
+            .clone();
         commands.spawn((
             Name::new(format!("Sound effect: {}", effect.sound_id)),
             SoundEffect {

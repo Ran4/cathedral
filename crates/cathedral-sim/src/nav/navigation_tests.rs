@@ -376,3 +376,84 @@ fn lanes_clear_the_walls_between_their_vertices() {
         "the lanes have collapsed onto the centreline: mean shift {mean_shift_m:.3} m"
     );
 }
+
+/// The uniform node index answers exactly what the brute-force sweep answers —
+/// the same node, ties included — everywhere a query can land.
+///
+/// This is the contract that lets `nearest_node` stop sweeping ~4,000 nodes
+/// twice per route. It is not "close enough": `route_between` snaps both its
+/// endpoints through it, so a single disagreement would put a walker on a
+/// different street. The probe set is deliberately adversarial — every node's
+/// own coordinate (where ties are dense, since a welded graph stacks nodes at
+/// crossings), a lattice across the whole city, and points well outside the
+/// indexed box, which must fall back to the sweep rather than answer wrongly.
+#[test]
+fn the_node_index_agrees_with_the_sweep_everywhere() {
+    let nav = nav();
+    assert!(
+        nav.node_index.is_some(),
+        "the committed graph is indexable; without the index this test proves nothing"
+    );
+
+    let mut probes: Vec<(f64, f64)> = Vec::new();
+    // Every third node, since the sweep this is checked against is itself
+    // O(nodes) and the pair is quadratic.
+    for node in (0..nav.node_count()).step_by(3) {
+        let [x, z] = nav.node_xz(node);
+        probes.push((x, z));
+        // Just off a node, in each quadrant: the near-tie cases.
+        for (dx, dz) in [(0.13, 0.0), (-0.7, 0.7), (3.0, -3.0)] {
+            probes.push((x + dx, z + dz));
+        }
+    }
+    let index = nav.node_index.as_ref().expect("checked above");
+    for row in 0..=24 {
+        for col in 0..=24 {
+            let x = index.x0 + col as f64 * index.cell_m * index.cols as f64 / 24.0;
+            let z = index.z0 + row as f64 * index.cell_m * index.rows as f64 / 24.0;
+            probes.push((x, z));
+        }
+    }
+    for (x, z) in [
+        (-9_000.0, 0.0),
+        (0.0, -9_000.0),
+        (9_000.0, 9_000.0),
+        (f64::NAN, 0.0),
+        (0.0, f64::INFINITY),
+    ] {
+        probes.push((x, z));
+    }
+
+    for (x, z) in probes {
+        assert_eq!(
+            nav.nearest_node(x, z),
+            nav.nearest_node_by_sweep(x, z),
+            "the index and the sweep disagree at ({x}, {z})"
+        );
+    }
+}
+
+/// A* reuses one working set across every search, so a route must not depend on
+/// what was routed before it. A search that finds its goal returns from the
+/// middle of the loop and leaves the rest of its frontier in the shared heap,
+/// which is exactly the state the next search must not inherit.
+#[test]
+fn reusing_the_astar_working_set_changes_no_route() {
+    let nav = nav();
+    let nodes: Vec<usize> = nav.places().iter().map(|p| p.node).collect();
+    let forecourt = nav.forecourt();
+    let expected: Vec<Option<Route>> = nodes
+        .iter()
+        .map(|&node| nav.route_nodes(forecourt, node))
+        .collect();
+
+    for (&node, expected) in nodes.iter().zip(&expected) {
+        // Interleave unrelated work: the same route backwards, one refused
+        // before the search starts (the avoided node *is* the goal), and one
+        // refused for a goal off the end of the graph.
+        let _ = nav.route_nodes(node, forecourt);
+        let _ = nav.route_nodes_avoiding(forecourt, node, Some(node));
+        let _ = nav.route_nodes(forecourt, nav.node_count() + 1);
+        assert_eq!(&nav.route_nodes(forecourt, node), expected);
+    }
+}

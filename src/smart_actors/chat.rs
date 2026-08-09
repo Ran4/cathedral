@@ -514,12 +514,24 @@ pub(super) fn update_chat_input_ui(
     let Ok((mut caret, mut color)) = carets.single_mut() else {
         return;
     };
-    color.0 = if caret_visible { hud::TEXT } else { Color::NONE };
+    // Compare before writing, as `panel.display` above does. The caret only
+    // moves on a keystroke and only changes colour on a blink edge, but a
+    // `Mut` deref marks its `Node` dirty, and a dirty node forces taffy to
+    // recompute the whole chat panel — re-running the measure closure over the
+    // input line's text — on every frame the box is open.
+    let caret_color = if caret_visible { hud::TEXT } else { Color::NONE };
+    if color.0 != caret_color {
+        color.0 = caret_color;
+    }
     if let Ok((layout, computed)) = lines.single()
         && let Some((x, line_index)) = caret_offset(layout, computed, &before)
     {
-        caret.left = px(x - 1.0);
-        caret.top = px(line_index as f32 * LINE_HEIGHT + 1.0);
+        let left = px(x - 1.0);
+        let top = px(line_index as f32 * LINE_HEIGHT + 1.0);
+        if caret.left != left || caret.top != top {
+            caret.left = left;
+            caret.top = top;
+        }
     }
 }
 

@@ -13,7 +13,7 @@
 
 use bevy::{camera::visibility::NoFrustumCulling, light::NotShadowCaster, prelude::*};
 
-use crate::mesh_batch::{idle_batch_mesh, write_batch_mesh};
+use crate::mesh_batch::{BatchScratch, idle_batch_mesh, write_batch_mesh_reusing};
 
 /// One stack in this many smokes; the rest are cold hearths.
 const SMOKE_GATE: u32 = 4;
@@ -181,6 +181,19 @@ pub(super) fn build_chimney_smoke(
     count
 }
 
+/// One live puff, on its way to the batch. Named at module scope rather than
+/// inside the animator so the sort buffer can be held across frames: sizing it
+/// to the whole *unculled* census re-allocated ~158 KB every frame even for a
+/// doused midnight city that draws nothing at all.
+pub(super) struct Puff {
+    center: Vec3,
+    half: f32,
+    alpha: f32,
+    tint: [f32; 3],
+    cell: [f32; 2],
+    distance_sq: f32,
+}
+
 /// Rewrites the shared smoke mesh: every live puff placed on its plume's arc,
 /// billboarded toward the camera, sorted back-to-front so the blend holds.
 pub(super) fn animate_chimney_smoke(
@@ -190,6 +203,10 @@ pub(super) fn animate_chimney_smoke(
     camera: Query<&GlobalTransform, With<Camera3d>>,
     smoke: Query<(&ChimneySmoke, &Mesh3d)>,
     mut meshes: ResMut<Assets<Mesh>>,
+    // Both buffers settle on the high-water mark of what is actually drawn and
+    // are never allocated again; the batch write hands `scratch` back empty.
+    mut puffs: Local<Vec<Puff>>,
+    mut scratch: Local<BatchScratch>,
 ) {
     let _span = crate::perf::span(crate::perf::Probe::Smoke);
     let Ok(camera) = camera.single() else {
@@ -210,17 +227,8 @@ pub(super) fn animate_chimney_smoke(
         .filter(|clock| clock.present)
         .map(|clock| (clock.fraction, clock.scale / clock.seconds_per_day.max(1.0)));
 
-    struct Puff {
-        center: Vec3,
-        half: f32,
-        alpha: f32,
-        tint: [f32; 3],
-        cell: [f32; 2],
-        distance_sq: f32,
-    }
-
     for (smoke, mesh_handle) in &smoke {
-        let mut puffs = Vec::with_capacity(smoke.plumes.len() * PUFFS_PER_PLUME);
+        puffs.clear();
         for plume in &smoke.plumes {
             // The distance fog is opaque well before SMOKE_VISIBLE_RANGE_M;
             // a plume past it contributes a couple of invisible pixels for
@@ -293,18 +301,14 @@ pub(super) fn animate_chimney_smoke(
         }
         puffs.sort_unstable_by(|a, b| b.distance_sq.total_cmp(&a.distance_sq));
 
-        let mut positions = Vec::with_capacity(puffs.len() * 4);
-        let mut normals = Vec::with_capacity(puffs.len() * 4);
-        let mut uvs = Vec::with_capacity(puffs.len() * 4);
-        let mut colors = Vec::with_capacity(puffs.len() * 4);
-        let mut indices = Vec::with_capacity(puffs.len() * 6);
-        for puff in &puffs {
+        let batch = &mut *scratch;
+        for puff in puffs.iter() {
             let to_camera = (camera_position - puff.center).normalize_or(Vec3::Z);
             let right_dir = Vec3::Y.cross(to_camera).normalize_or(Vec3::X);
             let up_dir = to_camera.cross(right_dir).normalize_or(Vec3::Y);
             let right = right_dir * puff.half;
             let up = up_dir * puff.half;
-            let first = positions.len() as u32;
+            let first = batch.positions.len() as u32;
             let [u, v] = puff.cell;
             for (corner, uv) in [
                 (puff.center - right - up, [u, v + 0.5]),
@@ -312,24 +316,20 @@ pub(super) fn animate_chimney_smoke(
                 (puff.center + right + up, [u + 0.5, v]),
                 (puff.center - right + up, [u, v]),
             ] {
-                positions.push(corner.to_array());
-                normals.push(to_camera.to_array());
-                uvs.push(uv);
-                colors.push([puff.tint[0], puff.tint[1], puff.tint[2], puff.alpha]);
+                batch.positions.push(corner.to_array());
+                batch.normals.push(to_camera.to_array());
+                batch.uvs.push(uv);
+                batch
+                    .colors
+                    .push([puff.tint[0], puff.tint[1], puff.tint[2], puff.alpha]);
             }
-            indices.extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
+            batch
+                .indices
+                .extend_from_slice(&[first, first + 1, first + 2, first, first + 2, first + 3]);
         }
         // Past the Snuffing the whole city is cold and this frame has no
         // quads at all; the batch parks on its idle triangle until dawn.
-        write_batch_mesh(
-            &mut meshes,
-            &mesh_handle.0,
-            positions,
-            normals,
-            uvs,
-            colors,
-            indices,
-        );
+        write_batch_mesh_reusing(&mut meshes, &mesh_handle.0, batch);
     }
 }
 

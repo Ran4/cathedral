@@ -86,6 +86,13 @@ pub fn reconcile_road_carts(
         .road_carts()
         .map(|cart| (cart.party_id.as_str(), cart))
         .collect();
+    // Road parties are on the roads for a small fraction of a session, and the
+    // only real cost in here is the whole-cast transform map below — five
+    // hundred `ActorId` string hashes for a city that has no cart in it. With
+    // nothing to place and nothing to despawn there is nothing to do at all.
+    if desired.is_empty() && carts.is_empty() {
+        return;
+    }
     let leader_transforms: HashMap<&ActorId, &Transform> = leaders.iter().collect();
     let mut existing = HashSet::new();
     for (entity, view, mut transform) in &mut carts {
@@ -102,7 +109,14 @@ pub fn reconcile_road_carts(
             continue;
         }
         existing.insert(view.party_id.clone());
-        *transform = cart_transform(leader);
+        // A cart standing at a gate wants the same transform it already has,
+        // and writing it through the `Mut` anyway would re-flag the root every
+        // frame — which re-propagates and re-extracts the whole cart, bed,
+        // rails, four wheels and every cargo prop hanging off it.
+        let next = cart_transform(leader);
+        if *transform != next {
+            *transform = next;
+        }
     }
     for cart in desired.values() {
         if existing.contains(&cart.party_id) {

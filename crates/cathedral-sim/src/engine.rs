@@ -2915,7 +2915,29 @@ impl Engine {
     ///    outranks the ramp until it is given back with a `0`.
     fn digest(&mut self, now: f64) {
         let game_days = self.clock.game_days(now);
-        let actor_ids: Vec<ActorId> = self.world.characters.keys().cloned().collect();
+        // Only the handful of people either pass could possibly touch, not the
+        // whole cast. This runs on *every* poll, and an `ActorId` is a `String`,
+        // so collecting all 519 keys cost 519 allocations a frame for a pass
+        // whose clock moves in game days. The predicate is the exact union of
+        // the two passes' own early-outs: an empty gut and no pocket is
+        // `form_gut_contents`' first `return false`, and `ramp_urgency` on
+        // somebody with nothing in a pocket, no debug override, no ramp anchor
+        // and no `urgency` key already set writes nothing and returns false.
+        // Skipping those is therefore indistinguishable from running them, and
+        // the survivors keep `characters`' id order, which fixes who acts first.
+        let actor_ids: Vec<ActorId> = self
+            .world
+            .characters
+            .iter()
+            .filter(|(_, character)| {
+                !character.state.gut.is_empty()
+                    || !character.state.pockets.is_empty()
+                    || character.state.debug_urgency.is_some()
+                    || character.state.urgency_since_game_days.is_some()
+                    || character.state.statuses.contains_key(&StatusKind::Urgency)
+            })
+            .map(|(actor_id, _)| actor_id.clone())
+            .collect();
         let mut changed = false;
         for actor_id in &actor_ids {
             changed |= self.form_gut_contents(actor_id, game_days);

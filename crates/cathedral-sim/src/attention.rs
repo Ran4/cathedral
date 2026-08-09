@@ -236,14 +236,17 @@ pub fn on_stage(
     // engine (`a_garbage_radius_empties_the_stage_instead_of_panicking`).
     #[allow(clippy::manual_clamp)]
     let radius_m = config.radius_m.max(0.0).min(MAX_STAGE_RADIUS_M);
-    for actor_id in world.characters_within(player.position_m(), radius_m, Some(player_id)) {
+    // Borrowed, not owned: a busy square puts twenty people inside the radius
+    // and at most `max_actors` of them are kept, so cloning the whole scan
+    // would allocate for everyone the cap then throws away.
+    for actor_id in world.characters_within_refs(player.position_m(), radius_m, Some(player_id)) {
         if stage.len() >= config.max_actors {
             break;
         }
         // The player is already excluded; this drops any other non-LLM body, and
         // a nearby partner simply re-inserts as a no-op.
-        if is_llm(world, &actor_id) {
-            stage.insert(actor_id);
+        if is_llm(world, actor_id) {
+            stage.insert(actor_id.clone());
         }
     }
     stage
@@ -472,8 +475,11 @@ pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
         return hasher.finish();
     };
 
-    let seen: BTreeSet<ActorId> = world
-        .characters_within(actor.position_m(), HEARING_RADIUS_M, Some(actor_id))
+    // Borrowed ids: this runs for every actor on stage on every poll, and the
+    // set is thrown away at the end of it. `&ActorId` orders exactly as
+    // `ActorId` does, so the tree is the same tree.
+    let seen: BTreeSet<&ActorId> = world
+        .characters_within_refs(actor.position_m(), HEARING_RADIUS_M, Some(actor_id))
         .into_iter()
         .collect();
     for other_id in &seen {
@@ -483,7 +489,7 @@ pub fn context_hash(world: &World, actor_id: &ActorId) -> u64 {
         // `Movement`, so he is always settled and always counted — unchanged.
         if world
             .characters
-            .get(other_id)
+            .get(*other_id)
             .is_some_and(|other| other.is_settled())
         {
             other_id.as_str().hash(&mut hasher);

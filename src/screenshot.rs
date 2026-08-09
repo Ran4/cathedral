@@ -1,10 +1,11 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use bevy::{
     input::keyboard::Key,
     log::{error, info, warn},
     prelude::*,
-    render::view::screenshot::{Screenshot, save_to_disk},
+    render::view::screenshot::{Screenshot, ScreenshotCaptured},
+    tasks::AsyncComputeTaskPool,
 };
 
 use crate::session_log;
@@ -74,7 +75,45 @@ fn capture_screenshot_on_key(
     info!("Capturing screenshot to {}", path.display());
     commands
         .spawn(Screenshot::primary_window())
-        .observe(save_to_disk(path));
+        .observe(encode_and_save_off_thread(path));
+}
+
+/// Encode and write the captured frame away from the main thread.
+///
+/// Bevy's own `save_to_disk` does the whole job inside the observer, and
+/// observers run in the main world: a full-frame `Image` clone, an RGB repack,
+/// a PNG deflate over more than a million pixels and a blocking file write, all
+/// on the frame the capture completes. At the sizes this game renders that is
+/// a tenth of a second of stall in return for a key press — a hitch the player
+/// feels, and one that silently lands in the worst-frame numbers of every
+/// `CATHEDRAL_PERF` run that takes a screenshot. Here only the pixel handoff
+/// stays on the main thread; the encode and the write happen on the async
+/// compute pool.
+///
+/// The task is detached, so a capture requested in the last instant before the
+/// app exits could still lose its file. F5 is pressed mid-play, so nobody
+/// stands in that window.
+fn encode_and_save_off_thread(path: PathBuf) -> impl FnMut(On<ScreenshotCaptured>) {
+    move |captured| {
+        // The observer only borrows the event, so the pixels have to be copied
+        // out before the worker can own them.
+        let image = captured.image.clone();
+        let path = path.clone();
+        AsyncComputeTaskPool::get()
+            .spawn(async move {
+                match image.try_into_dynamic() {
+                    // Drop the alpha channel: with HDR enabled it carries
+                    // brightness rather than opacity, so keeping it would make
+                    // the saved PNG look nothing like the frame.
+                    Ok(dynamic) => match dynamic.to_rgb8().save(&path) {
+                        Ok(()) => info!("Screenshot saved to {}", path.display()),
+                        Err(error) => error!("Cannot save screenshot, IO error: {error}"),
+                    },
+                    Err(error) => error!("Cannot encode screenshot: {error}"),
+                }
+            })
+            .detach();
+    }
 }
 
 /// Visible to the crate so the chat box can prove, against the real binding,

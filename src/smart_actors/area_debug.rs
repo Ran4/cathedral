@@ -160,23 +160,28 @@ pub(super) fn update_area_debug_ui(
     let Ok((mut player_text, mut player_visibility)) = player_label.single_mut() else {
         return;
     };
+    // Every write below goes through a compare. The layer is off almost all of
+    // the time, and re-flagging `Visibility` on the 90-odd box labels each
+    // frame re-ran their visibility propagation and re-queued them for UI
+    // extraction for nothing — the same defect the name labels had before the
+    // 2026-07 pass.
     if !state.enabled {
         state.visible_area_ids.clear();
-        *player_visibility = Visibility::Hidden;
+        player_visibility.set_if_neq(Visibility::Hidden);
         hide_box_labels(&mut box_labels);
         return;
     }
-    *player_visibility = Visibility::Inherited;
+    player_visibility.set_if_neq(Visibility::Inherited);
 
     let Some(map) = engine.area_map() else {
         state.visible_area_ids.clear();
-        player_text.0 = "AREA DEBUG  ·  area map unavailable".to_string();
+        set_text(&mut player_text, "AREA DEBUG  ·  area map unavailable");
         hide_box_labels(&mut box_labels);
         return;
     };
     let Ok(player) = players.single() else {
         state.visible_area_ids.clear();
-        player_text.0 = "AREA DEBUG  ·  player transform unavailable".to_string();
+        set_text(&mut player_text, "AREA DEBUG  ·  player transform unavailable");
         hide_box_labels(&mut box_labels);
         return;
     };
@@ -190,7 +195,10 @@ pub(super) fn update_area_debug_ui(
     let description = map
         .location_description(sim_position)
         .unwrap_or_else(|| "No areas are defined".to_string());
-    player_text.0 = format!("AREA DEBUG  ·  Player: {description}");
+    set_text(
+        &mut player_text,
+        &format!("AREA DEBUG  ·  Player: {description}"),
+    );
 
     let Ok((camera, camera_transform)) = cameras.single() else {
         hide_box_labels(&mut box_labels);
@@ -202,11 +210,11 @@ pub(super) fn update_area_debug_ui(
     };
     for (label, mut node, mut visibility) in &mut box_labels {
         if !state.visible_area_ids.contains(&label.area_id) {
-            *visibility = Visibility::Hidden;
+            visibility.set_if_neq(Visibility::Hidden);
             continue;
         }
         let Ok(viewport) = camera.world_to_viewport(camera_transform, label.anchor_m) else {
-            *visibility = Visibility::Hidden;
+            visibility.set_if_neq(Visibility::Hidden);
             continue;
         };
         if viewport.x < 0.0
@@ -214,12 +222,24 @@ pub(super) fn update_area_debug_ui(
             || viewport.x > viewport_size.x
             || viewport.y > viewport_size.y
         {
-            *visibility = Visibility::Hidden;
+            visibility.set_if_neq(Visibility::Hidden);
             continue;
         }
-        node.left = px(viewport.x - BOX_LABEL_WIDTH_PX * 0.5);
-        node.top = px(viewport.y - BOX_LABEL_Y_OFFSET_PX);
-        *visibility = Visibility::Inherited;
+        let left = px(viewport.x - BOX_LABEL_WIDTH_PX * 0.5);
+        let top = px(viewport.y - BOX_LABEL_Y_OFFSET_PX);
+        if node.left != left || node.top != top {
+            node.left = left;
+            node.top = top;
+        }
+        visibility.set_if_neq(Visibility::Inherited);
+    }
+}
+
+/// Writes a label only when the text actually differs: an unconditional write
+/// re-runs the text measure and re-shapes the glyphs every frame.
+fn set_text(text: &mut Mut<Text>, value: &str) {
+    if text.0 != value {
+        text.0 = value.to_string();
     }
 }
 
@@ -228,12 +248,13 @@ pub(super) fn update_actor_status_visibility(
     state: Res<AreaDebugState>,
     mut status_panel: Query<&mut Visibility, With<SmartActorStatusPanel>>,
 ) {
+    let wanted = if state.enabled {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    };
     for mut visibility in &mut status_panel {
-        *visibility = if state.enabled {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
+        visibility.set_if_neq(wanted);
     }
 }
 
@@ -275,7 +296,7 @@ fn visible_area_ids(map: &AreaMap, position: SimVec3) -> BTreeSet<String> {
 
 fn hide_box_labels(labels: &mut BoxLabelQuery) {
     for (_, _, mut visibility) in labels {
-        *visibility = Visibility::Hidden;
+        visibility.set_if_neq(Visibility::Hidden);
     }
 }
 

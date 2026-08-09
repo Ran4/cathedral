@@ -1337,6 +1337,17 @@ impl Round {
             })
             .collect();
 
+        // The tavern half of tonight's draw is the same for everybody, so it is
+        // built once for the whole roll and each walker's own ward sign is
+        // pushed onto the end and popped off again. The order is load-bearing:
+        // the weighted pick below walks `destinations` by index, so the sign
+        // has to stay *last* or every ambient's evening silently re-rolls.
+        let mut destinations: Vec<(String, Vec3, f64)> = taverns
+            .iter()
+            .map(|(label, point)| (label.clone(), *point, 1.0))
+            .collect();
+        let tavern_count = destinations.len();
+
         let ids: Vec<ActorId> = self.people.keys().cloned().collect();
         let mut moved = 0usize;
         for id in ids {
@@ -1345,13 +1356,14 @@ impl Round {
                 .get(&id)
                 .and_then(|character| character.lore());
             let ambient = lore.is_some_and(|profile| profile.significance == Significance::Ambient);
-            // The walker's own ward is already in hand — the loop fetches the
-            // profile to test `significance` anyway — so the sign lookup costs
-            // nothing extra.
-            let own_ward = lore.map(|profile| profile.planning_ward.as_str().to_string());
             if !ambient {
                 continue;
             }
+            // The walker's own ward is already in hand — the loop fetches the
+            // profile to test `significance` anyway — so the sign lookup costs
+            // nothing extra. Borrowed, and read only after the `ambient` guard:
+            // ~170 of the enrolled cast are not ambient and never reach it.
+            let own_ward = lore.map(|profile| profile.planning_ward.as_str());
             let Some(person) = self.people.get_mut(&id) else {
                 continue;
             };
@@ -1374,52 +1386,54 @@ impl Round {
                 .legs
                 .iter()
                 .position(|leg| leg.from == Office::Lamplight && leg.is_home);
-            // The destinations this walker could be drawn to tonight: every
-            // tavern at weight 1.0, plus their own ward's chalked place of
-            // resort at `1.0 + 2.0 * strength` — a fresh sign is worth three
-            // taverns, a half-washed one barely more than one.
-            let mut destinations: Vec<(String, Vec3, f64)> = taverns
-                .iter()
-                .map(|(label, point)| (label.clone(), *point, 1.0))
-                .collect();
-            if let Some(ward) = own_ward.as_deref()
-                && let Some((label, point, strength)) = ward_signs.get(ward)
-            {
-                destinations.push((label.clone(), *point, 1.0 + 2.0 * strength));
-            }
-
+            // The roll before the shortlist, not after: six ambients in seven
+            // stay at their own hearth, and building a destination list for
+            // them was the bulk of the whole pass. Both terms are pure, so
+            // which one is asked first cannot change who moves.
             if let Some(index) = evening
-                && !destinations.is_empty()
                 // `as u64` on a negative day wraps, which is all a hash salt
                 // needs; the roll only has to be stable and vary by night.
                 && hash01("night_evening", &id, day as u64) < AMBIENT_TAVERN_FRACTION
             {
-                // Weighted pick from the same pure hash of (id, day) — never a
-                // fresh draw. The engine polls at 60 Hz (see `attention.rs`),
-                // so a roll that was not a pure function of the night would
-                // re-decide sixty times a second.
-                let total: f64 = destinations.iter().map(|(_, _, weight)| weight).sum();
-                let mut cursor = hash01("night_tavern", &id, day as u64) * total;
-                let mut chosen = destinations.len() - 1;
-                for (index, (_, _, weight)) in destinations.iter().enumerate() {
-                    if cursor < *weight {
-                        chosen = index;
-                        break;
-                    }
-                    cursor -= weight;
+                // The destinations this walker could be drawn to tonight: every
+                // tavern at weight 1.0, plus their own ward's chalked place of
+                // resort at `1.0 + 2.0 * strength` — a fresh sign is worth three
+                // taverns, a half-washed one barely more than one.
+                if let Some(ward) = own_ward
+                    && let Some((label, point, strength)) = ward_signs.get(ward)
+                {
+                    destinations.push((label.clone(), *point, 1.0 + 2.0 * strength));
                 }
-                let (label, point, _) = destinations[chosen].clone();
-                person.evening_seed = Some((index, person.legs[index].clone()));
-                let leg = &mut person.legs[index];
-                leg.at = point;
-                leg.label = label;
-                // Their ease, not their bed: the curfew rung owns where they
-                // actually sleep, and "sleep at The Hungry Ox" would be a
-                // promise the ladder does not keep.
-                leg.doing = Arrival::Idle;
-                leg.is_home = false;
-                moved += 1;
-                changed = true;
+                if !destinations.is_empty() {
+                    // Weighted pick from the same pure hash of (id, day) — never
+                    // a fresh draw. The engine polls at 60 Hz (see
+                    // `attention.rs`), so a roll that was not a pure function of
+                    // the night would re-decide sixty times a second.
+                    let total: f64 = destinations.iter().map(|(_, _, weight)| weight).sum();
+                    let mut cursor = hash01("night_tavern", &id, day as u64) * total;
+                    let mut chosen = destinations.len() - 1;
+                    for (index, (_, _, weight)) in destinations.iter().enumerate() {
+                        if cursor < *weight {
+                            chosen = index;
+                            break;
+                        }
+                        cursor -= weight;
+                    }
+                    let (label, point, _) = destinations[chosen].clone();
+                    person.evening_seed = Some((index, person.legs[index].clone()));
+                    let leg = &mut person.legs[index];
+                    leg.at = point;
+                    leg.label = label;
+                    // Their ease, not their bed: the curfew rung owns where they
+                    // actually sleep, and "sleep at The Hungry Ox" would be a
+                    // promise the ladder does not keep.
+                    leg.doing = Arrival::Idle;
+                    leg.is_home = false;
+                    moved += 1;
+                    changed = true;
+                }
+                // Hand the shared list back the way it was lent.
+                destinations.truncate(tavern_count);
             }
 
             if changed {
@@ -6158,7 +6172,22 @@ fn resolve_food_arrivals(round: &mut Round, world: &mut World) {
     if round.stalls.is_empty() {
         return;
     }
-    let ids: Vec<ActorId> = round.people.keys().cloned().collect();
+    // Only the walkers this pass can act on. An `ActorId` is a `String`, so
+    // collecting the whole enrolled roster cost ~450 allocations on every 20 Hz
+    // tick to reach the handful actually on their way to a pitch; the loop
+    // below re-reads the errand anyway, so the filter is the pass's own first
+    // two early-outs moved one step earlier.
+    let ids: Vec<ActorId> = round
+        .people
+        .iter()
+        .filter(|(_, person)| {
+            person
+                .food
+                .as_ref()
+                .is_some_and(|errand| matches!(errand.phase, FoodPhase::Approaching))
+        })
+        .map(|(id, _)| id.clone())
+        .collect();
     for id in ids {
         if !world.is_present(&id) {
             continue;
@@ -6823,7 +6852,13 @@ fn nearest_open_stall(
     if round.chalk_refused_until.contains_key(id) {
         return None;
     }
-    let sparks = world.spendable_sparks(id);
+    // Counting the purse means a whole-cast pocket walk per spark stack
+    // (`World::uncommitted_quantity`), and the code's own note above says the
+    // whole cast is famished by dawn — but most of them are nowhere near a
+    // board, and the distance filter below throws every stall out before the
+    // money is ever the question. So it is counted on the first stall that gets
+    // as far as asking, and not at all for the rest.
+    let mut purse: Option<u32> = None;
     let mut best: Option<(f64, usize)> = None;
     for (s, stall) in round.stalls.iter().enumerate() {
         if !stall.open.is_open(office, weekday) || !stall_weather_open(world, stall) {
@@ -6845,6 +6880,7 @@ fn nearest_open_stall(
         if distance > STALL_SEEK_RADIUS_M {
             continue;
         }
+        let sparks = *purse.get_or_insert_with(|| world.spendable_sparks(id));
         if !stall_has_affordable(round, world, stall, sparks) {
             continue;
         }
@@ -6876,13 +6912,18 @@ fn stall_has_affordable(round: &Round, world: &World, stall: &FoodStall, sparks:
     };
     world.characters[vendor].holds().iter().any(|id| {
         world.items.get(id).is_some_and(|item| {
-            world.uncommitted_quantity(id) > 0
-                && trade.listings.iter().any(|matcher| matcher.matches(item))
+            // Cheapest question first, dearest last. All four are pure, so the
+            // order cannot change the answer — but `uncommitted_quantity` walks
+            // every character's pockets, and asking it of every stack on the
+            // board paid for that walk ten times over to reject stacks the
+            // listing does not even name.
+            trade.listings.iter().any(|matcher| matcher.matches(item))
                 && world.item_catalog.is_edible(item)
                 && world
                     .item_catalog
                     .price_sparks(item)
                     .is_some_and(|price| price <= sparks)
+                && world.uncommitted_quantity(id) > 0
         })
     })
 }
@@ -6890,7 +6931,22 @@ fn stall_has_affordable(round: &Round, world: &World, stall: &FoodStall, sparks:
 /// Move arrivals through the state machine: an approacher who reached the curb
 /// joins the queue; a returner or traveller who reached their anchor falls idle.
 fn resolve_arrivals(round: &mut Round, world: &mut World) {
-    let ids: Vec<ActorId> = round.people.keys().cloned().collect();
+    // Only the phases the `match` below has an arm for. Cloning all ~450 ids
+    // on every 20 Hz tick to reach the few people mid-walk was pure allocator
+    // churn; the pass writes nothing for anyone else, and nothing it does write
+    // is another person's phase, so the shortlist cannot go stale inside the
+    // loop.
+    let ids: Vec<ActorId> = round
+        .people
+        .iter()
+        .filter(|(_, person)| {
+            matches!(
+                person.phase,
+                Phase::Approaching | Phase::Returning | Phase::Travelling
+            )
+        })
+        .map(|(id, _)| id.clone())
+        .collect();
     for id in ids {
         if !world.is_present(&id) {
             continue;
@@ -8173,11 +8229,14 @@ fn held_meal_waits_for_home(
 /// name and that has stopped moving.
 fn nearest_known_settled(world: &World, id: &ActorId, position: Vec3) -> Option<Vec3> {
     let me = world.characters.get(id)?;
-    for neighbour_id in world.characters_within(position, SOCIAL_PULL_RADIUS_M, Some(id)) {
-        let neighbour = &world.characters[&neighbour_id];
+    // Borrowed ids: this answers on the first neighbour who qualifies, or not at
+    // all, and a ladder tick can ask it for dozens of walkers at once — cloning
+    // the whole crowd around each of them was the bulk of the call.
+    for neighbour_id in world.characters_within_refs(position, SOCIAL_PULL_RADIUS_M, Some(id)) {
+        let neighbour = &world.characters[neighbour_id];
         if neighbour.control().is_llm()
             && neighbour.is_settled()
-            && me.knows().contains(&neighbour_id)
+            && me.knows().contains(neighbour_id)
         {
             return Some(neighbour.position_m());
         }

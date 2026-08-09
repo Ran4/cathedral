@@ -120,9 +120,15 @@ struct MinimapRoot;
 #[derive(Component)]
 struct MapClickArea;
 
-/// A "you are here" marker container (one on each map).
+/// A "you are here" marker container (one on each map). `on_fullscreen` says
+/// which of the two it belongs to, because only one map is ever on screen and
+/// moving the other one's marker is pure waste: the write dirties its `Node`,
+/// which forces taffy to recompute that whole map's subtree on every frame the
+/// player walks — for a panel nobody can see.
 #[derive(Component)]
-struct PlayerMapMarker;
+struct PlayerMapMarker {
+    on_fullscreen: bool,
+}
 
 /// Adds the minimap and the `M`-toggled fullscreen map with click-to-teleport.
 pub struct MapPlugin;
@@ -135,7 +141,11 @@ impl Plugin for MapPlugin {
                 Update,
                 (
                     (toggle_fullscreen_map, handle_map_teleport_click, sync_map_state).chain(),
-                    update_map_markers,
+                    // `update_map_markers` only touches the marker of the map
+                    // that is up, so it has to read this frame's toggle — an
+                    // unordered run could place the opening map's marker a
+                    // frame late.
+                    update_map_markers.after(toggle_fullscreen_map),
                 ),
             );
     }
@@ -237,16 +247,17 @@ fn spawn_map_image(parent: &mut ChildSpawnerCommands, image: Handle<Image>, clic
     if clickable {
         image_node.insert((MapClickArea, RelativeCursorPosition::default()));
     }
-    image_node.with_children(spawn_marker);
+    // `clickable` is the fullscreen map: the two flags always move together.
+    image_node.with_children(|marker| spawn_marker(marker, clickable));
 }
 
 /// The "you are here" marker: a round dot with an arrow "prow" pointing in the
-/// player's facing direction. Positioned and rotated each frame.
-fn spawn_marker(parent: &mut ChildSpawnerCommands) {
+/// player's facing direction. Positioned and rotated each frame its map is up.
+fn spawn_marker(parent: &mut ChildSpawnerCommands, on_fullscreen: bool) {
     parent
         .spawn((
             Name::new("Player map marker"),
-            PlayerMapMarker,
+            PlayerMapMarker { on_fullscreen },
             Node {
                 position_type: PositionType::Absolute,
                 left: percent(50),
@@ -375,10 +386,13 @@ fn sync_map_state(
     }
 }
 
-/// Positions and rotates every map marker from the player's pose.
+/// Positions and rotates the marker of whichever map is currently up, from the
+/// player's pose. Runs after `toggle_fullscreen_map` so the map that opens this
+/// frame gets its marker placed before the frame is laid out and drawn.
 fn update_map_markers(
+    map_state: Res<MapState>,
     player: Option<Single<(&PlayerController, &Transform)>>,
-    mut markers: Query<(&mut Node, &mut UiTransform), With<PlayerMapMarker>>,
+    mut markers: Query<(&PlayerMapMarker, &mut Node, &mut UiTransform)>,
 ) {
     let Some(player) = player else {
         return;
@@ -390,9 +404,14 @@ fn update_map_markers(
     let left = percent(uv.x * 100.0);
     let top = percent(uv.y * 100.0);
     let translation = Val2::percent(-50.0, -50.0);
-    for (mut node, mut ui_transform) in &mut markers {
+    for (marker, mut node, mut ui_transform) in &mut markers {
+        // Exactly one of the two maps is on screen; the other's marker is not
+        // worth dirtying, and its map's layout not worth recomputing.
+        if marker.on_fullscreen != map_state.fullscreen_open {
+            continue;
+        }
         // A stationary player repeats the same values; writing them anyway
-        // would dirty UI layout for both maps every frame.
+        // would dirty UI layout for the shown map every frame.
         if node.left != left || node.top != top {
             node.left = left;
             node.top = top;

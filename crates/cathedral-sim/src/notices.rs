@@ -56,7 +56,7 @@ use std::{
 use crate::{
     HEARING_RADIUS_M,
     attention::curiosity_of,
-    character::{Character, Control},
+    character::{Character, Control, Presence},
     clock::Office,
     ids::{ActorId, ItemId},
     marks::{MarkAnchor, MarkKind},
@@ -529,6 +529,20 @@ pub fn confront(world: &mut World) {
     // (notice index, officer, line) triples collected first: the mutation
     // below needs the world's characters, and the served-set the notices.
     let mut due: Vec<(usize, ActorId, String)> = Vec::new();
+    // The neighbourhood scan, with the law filter applied *inside* it rather
+    // than after. `characters_within` allocates a vector, sorts it and clones
+    // an id per neighbour — for the whole crowd around the accused — and this
+    // runs every poll for as long as a word stands, which can be the rest of
+    // the session. Only law-cast carriers can ever be served, and there are a
+    // couple of dozen of them in the whole city, so testing that inside the
+    // scan leaves a list that is empty on almost every poll and never
+    // allocates. The tests are ordered cheapest first — the distance before
+    // the served-set probe and `is_law`, both of which compare strings — so
+    // the pass over the cast costs no more than the one it replaces. All four
+    // are pure filters, so the order cannot change the set. What comes out is
+    // ordered the way `characters_within` would have ordered that same subset:
+    // distance, then id.
+    let radius_squared = HEARING_RADIUS_M * HEARING_RADIUS_M;
     for (index, notice) in world.notices.live.iter().enumerate() {
         let Some(accused) = &notice.accused else {
             continue;
@@ -540,16 +554,35 @@ pub fn confront(world: &mut World) {
             continue;
         }
         let position = accused_character.position_m();
-        for officer_id in world.characters_within(position, HEARING_RADIUS_M, Some(accused)) {
-            if notice.served.contains(&officer_id) {
+        // Empty on almost every poll, so it never allocates at all.
+        let mut in_range: Vec<(f64, &ActorId)> = Vec::new();
+        for officer in world.characters.values() {
+            if officer.state.presence != Presence::InCity {
                 continue;
             }
-            if !world.characters.get(&officer_id).is_some_and(is_law) {
+            let distance_squared = position.distance_squared(officer.position_m());
+            if distance_squared > radius_squared {
                 continue;
             }
+            if officer.id() == accused {
+                continue;
+            }
+            if notice.served.contains(officer.id()) || !is_law(officer) {
+                continue;
+            }
+            in_range.push((distance_squared, officer.id()));
+        }
+        // No NaN can be stored, so the partial order is total here.
+        in_range.sort_by(|left, right| {
+            left.0
+                .partial_cmp(&right.0)
+                .expect("positions are finite")
+                .then_with(|| left.1.cmp(right.1))
+        });
+        for (_, officer_id) in &in_range {
             due.push((
                 index,
-                officer_id,
+                (*officer_id).clone(),
                 format!(
                     "the one the ward's word names is within reach of you right now: {}",
                     notice.line()

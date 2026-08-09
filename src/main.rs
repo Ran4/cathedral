@@ -16,6 +16,7 @@ mod soundscape;
 mod ui;
 mod weather;
 
+use bevy::app::{TaskPoolOptions, TaskPoolPlugin, TaskPoolThreadAssignmentPolicy};
 use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, MonitorSelection, WindowMode, WindowResolution};
@@ -97,6 +98,7 @@ fn main() {
     };
     let mut app = App::new();
     let mut plugins = DefaultPlugins
+        .set(compute_thread_pool())
         .set(LogPlugin {
             // Mirror the console log stream into the session's
             // `logs.jsonl` (see `session_log`).
@@ -187,6 +189,43 @@ fn main() {
         app.add_plugins(drive);
     }
     app.run();
+}
+
+/// How many threads the ECS scheduler gets.
+///
+/// Bevy's default takes the whole machine — here 12 compute threads plus 4
+/// async-compute and 4 IO, on 20 cores. That is the right answer on an idle
+/// machine and the wrong one on a shared desktop: a frame is not finished until
+/// its *slowest* system is, so every extra worker is another chance that one of
+/// them is sitting on a run queue behind somebody's compiler when the frame
+/// wants to end. Fewer, busier threads finish a frame later on average and much
+/// more predictably, and predictability is what stutter is about.
+///
+/// `CATHEDRAL_THREADS=<n>` overrides it; 0 restores Bevy's own default. The
+/// measured curve is in `features/implemented/performance_improvements/`.
+fn compute_thread_pool() -> TaskPoolPlugin {
+    let Some(threads) = std::env::var("CATHEDRAL_THREADS")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|threads| *threads > 0)
+    else {
+        return TaskPoolPlugin::default();
+    };
+    // `TaskPoolThreadAssignmentPolicy` has no `Default` in Bevy 0.19 (the two
+    // callbacks are `Option<Arc<dyn Fn…>>`), so every field is named. Only the
+    // compute pool is overridden: IO and async-compute are already capped at 4
+    // each and are not where a frame's systems run.
+    let mut options = TaskPoolOptions::default();
+    options.compute = TaskPoolThreadAssignmentPolicy {
+        min_threads: threads,
+        max_threads: threads,
+        percent: 1.0,
+        on_thread_spawn: None,
+        on_thread_destroy: None,
+    };
+    TaskPoolPlugin {
+        task_pool_options: options,
+    }
 }
 
 fn window_mode(fullscreen: bool) -> WindowMode {

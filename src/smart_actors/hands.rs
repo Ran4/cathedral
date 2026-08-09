@@ -23,7 +23,7 @@ use cathedral_sim::custody::CUSTODY_REACH_M;
 
 use super::body::{self, BodyPoseState, BodySide, HandAnchor, OneShotGesture};
 use super::custody::PlayerCustodyState;
-use super::model::{ActorControl, ActorId, ActorSnapshot, ItemId, WorldMirror};
+use super::model::{ActorControl, ActorId, ActorSnapshot, ItemId, OfferSnapshot, WorldMirror};
 use crate::controller::{PhysicalPosition, PlayerController};
 
 /// How long a hand-over prop flies giver-hand → recipient-hand (§6: ~0.3 s).
@@ -327,25 +327,47 @@ fn pocketed_units(actor: &ActorSnapshot, item_id: &ItemId) -> u32 {
         .min(u32::MAX as usize) as u32
 }
 
+/// Every giver's oldest standing offer, in one pass over the offer table.
+///
+/// Both the hand assignment and the offer arm want exactly this one offer, and
+/// each used to scan the whole table for it per actor — `O(cast × offers)` of
+/// `ActorId` string comparison, every frame of every hand-over. The tie-break
+/// is the identical one those scans used (`created_seq`, then item id), and
+/// `min_by` keeps the first of an exact tie, which is what the strict `is_lt`
+/// below does too: same question, same winner.
+fn earliest_offers(mirror: &WorldMirror) -> HashMap<&ActorId, &OfferSnapshot> {
+    let mut earliest: HashMap<&ActorId, &OfferSnapshot> =
+        HashMap::with_capacity(mirror.offers().len());
+    for offer in mirror.offers() {
+        let standing = earliest.entry(&offer.giver_id).or_insert(offer);
+        if offer
+            .created_seq
+            .cmp(&standing.created_seq)
+            .then_with(|| offer.item_id.0.cmp(&standing.item_id.0))
+            .is_lt()
+        {
+            *standing = offer;
+        }
+    }
+    earliest
+}
+
 /// What each hand of one actor should hold, from the authoritative snapshot:
-/// the oldest standing offer's item in the RIGHT hand (the rest of several
-/// simultaneous offers exist only in text — accepted loss, §6), and the first
-/// held non-currency item that is not that offer in the LEFT. Spark stacks
+/// this actor's oldest standing offer — `standing`, out of [`earliest_offers`]
+/// — in the RIGHT hand (the rest of several simultaneous offers exist only in
+/// text: accepted loss, §6), and the first held non-currency item that is not
+/// that offer in the LEFT. Spark stacks
 /// never render as carry — the whole cast holds a wallet, and nobody walks
 /// around with their purse in their fist. A stack whose every unit is pocketed
 /// is out of sight by definition (`features/extra_pockets.md`: "others see
 /// nothing while an item is pocketed"), so it renders no carry prop either; a
 /// partially-pocketed stack still has units in the open and does.
-fn desired_hand_props(mirror: &WorldMirror, actor: &ActorSnapshot) -> (HandContent, HandContent) {
-    let offered = mirror
-        .offers()
-        .filter(|offer| offer.giver_id == actor.id)
-        .min_by(|a, b| {
-            a.created_seq
-                .cmp(&b.created_seq)
-                .then_with(|| a.item_id.0.cmp(&b.item_id.0))
-        })
-        .map(|offer| offer.item_id.clone());
+fn desired_hand_props(
+    mirror: &WorldMirror,
+    actor: &ActorSnapshot,
+    standing: Option<&OfferSnapshot>,
+) -> (HandContent, HandContent) {
+    let offered = standing.map(|offer| offer.item_id.clone());
     let right = offered.as_ref().and_then(|item_id| {
         mirror
             .item(item_id)
@@ -393,15 +415,12 @@ fn prop_disposition(
 
 /// Where the extended offer arm aims for one giver: the recipient's mirror
 /// position, or a point ahead of the giver for an open "to anyone" offer.
-fn offer_aim_point(mirror: &WorldMirror, actor: &ActorSnapshot) -> Option<Vec3> {
-    let offer = mirror
-        .offers()
-        .filter(|offer| offer.giver_id == actor.id)
-        .min_by(|a, b| {
-            a.created_seq
-                .cmp(&b.created_seq)
-                .then_with(|| a.item_id.0.cmp(&b.item_id.0))
-        })?;
+fn offer_aim_point(
+    mirror: &WorldMirror,
+    actor: &ActorSnapshot,
+    standing: Option<&OfferSnapshot>,
+) -> Option<Vec3> {
+    let offer = standing?;
     match offer.target_id.as_ref().and_then(|id| mirror.actor(id)) {
         Some(target) => Some(target.position_m.into()),
         None => {
@@ -441,10 +460,7 @@ pub(crate) fn reconcile_hand_props(
         .iter()
         .map(|flight| (flight.to_actor.clone(), flight.item_id.clone()))
         .collect();
-    let anchor_by_hand: HashMap<(ActorId, BodySide), Entity> = anchors
-        .iter()
-        .map(|(entity, anchor)| ((anchor.actor.clone(), anchor.side), entity))
-        .collect();
+    let standing_offers = earliest_offers(&mirror);
 
     let mut desired: HashMap<(ActorId, BodySide), (ItemId, String)> = HashMap::new();
     let mut activity: HashMap<ActorId, (bool, Option<Vec3>)> = HashMap::new();
@@ -452,7 +468,8 @@ pub(crate) fn reconcile_hand_props(
         .actors()
         .filter(|actor| actor.control == ActorControl::Llm)
     {
-        let (left, right) = desired_hand_props(&mirror, actor);
+        let standing = standing_offers.get(&actor.id).copied();
+        let (left, right) = desired_hand_props(&mirror, actor, standing);
         // The carry arm starts posing while the flight is inbound; only the
         // prop itself waits for the landing.
         let carrying = left.is_some();
@@ -463,7 +480,7 @@ pub(crate) fn reconcile_hand_props(
         }
         let offer_at = right
             .is_some()
-            .then(|| offer_aim_point(&mirror, actor))
+            .then(|| offer_aim_point(&mirror, actor, standing))
             .flatten();
         if let Some((item_id, visual_key)) = right {
             desired.insert((actor.id.clone(), BodySide::Right), (item_id, visual_key));
@@ -495,11 +512,22 @@ pub(crate) fn reconcile_hand_props(
         }
     }
 
+    // The hand-anchor index is read only by this loop, which is empty on almost
+    // every run: a snapshot that moved nothing spawns nothing. Built up front
+    // it cost a thousand `ActorId` clones — two per body — for a lookup nobody
+    // made, so it is built on the first prop that actually needs it.
+    let mut anchor_by_hand: Option<HashMap<(ActorId, BodySide), Entity>> = None;
     for ((actor, side), (item_id, visual_key)) in desired {
         if existing.contains_key(&(actor.clone(), side)) {
             continue;
         }
-        let Some(anchor) = anchor_by_hand.get(&(actor.clone(), side)).copied() else {
+        let index = anchor_by_hand.get_or_insert_with(|| {
+            anchors
+                .iter()
+                .map(|(entity, anchor)| ((anchor.actor.clone(), anchor.side), entity))
+                .collect()
+        });
+        let Some(anchor) = index.get(&(actor.clone(), side)).copied() else {
             continue; // no body (the player), or the rig is not spawned yet
         };
         let root = spawn_prop_root(
@@ -898,6 +926,15 @@ mod tests {
         mirror
     }
 
+    /// What one actor's hands should hold. The reconcile indexes the offer
+    /// table once for the whole cast and hands each actor its own standing
+    /// offer; a test looking at a single actor builds the same index and reads
+    /// the same entry out of it, so the two agree by construction.
+    fn hand_props(mirror: &WorldMirror, actor: &ActorSnapshot) -> (HandContent, HandContent) {
+        let standing = earliest_offers(mirror);
+        desired_hand_props(mirror, actor, standing.get(&actor.id).copied())
+    }
+
     /// §6's hand assignment: the offered item sits in the RIGHT hand, the
     /// carry falls to the first held item that is neither the offer nor a
     /// spark wallet.
@@ -918,7 +955,7 @@ mod tests {
             }],
         );
         let snapshot = mirror.actor(&ActorId("ilse".into())).unwrap().clone();
-        let (left, right) = desired_hand_props(&mirror, &snapshot);
+        let (left, right) = hand_props(&mirror, &snapshot);
         assert_eq!(right, Some((ItemId("fish".into()), "fish".into())));
         assert_eq!(
             left,
@@ -938,7 +975,7 @@ mod tests {
             vec![],
         );
         let snapshot = hidden.actor(&ActorId("ilse".into())).unwrap().clone();
-        let (left, right) = desired_hand_props(&hidden, &snapshot);
+        let (left, right) = hand_props(&hidden, &snapshot);
         assert_eq!(left, None, "a pocketed loaf is out of sight");
         assert_eq!(right, None);
 
@@ -948,7 +985,7 @@ mod tests {
             vec![],
         );
         let snapshot = partial.actor(&ActorId("ilse".into())).unwrap().clone();
-        let (left, _) = desired_hand_props(&partial, &snapshot);
+        let (left, _) = hand_props(&partial, &snapshot);
         assert_eq!(
             left,
             Some((ItemId("herrings".into()), "fish".into())),
@@ -965,7 +1002,7 @@ mod tests {
             vec![],
         );
         let snapshot = mirror.actor(&ActorId("anyone".into())).unwrap().clone();
-        let (left, right) = desired_hand_props(&mirror, &snapshot);
+        let (left, right) = hand_props(&mirror, &snapshot);
         assert_eq!(left, None);
         assert_eq!(right, None);
     }
@@ -986,7 +1023,7 @@ mod tests {
             vec![offer("loaf", 9), offer("fish", 4)],
         );
         let snapshot = mirror.actor(&ActorId("ilse".into())).unwrap().clone();
-        let (left, right) = desired_hand_props(&mirror, &snapshot);
+        let (left, right) = hand_props(&mirror, &snapshot);
         assert_eq!(
             right,
             Some((ItemId("fish".into()), "fish".into())),
@@ -997,6 +1034,50 @@ mod tests {
             Some((ItemId("loaf".into()), "loaf".into())),
             "the newer offer's item stays an ordinary carry"
         );
+    }
+
+    /// The reconcile indexes the offer table once instead of scanning it per
+    /// actor, so the index has to answer per giver and settle an exact
+    /// `created_seq` tie exactly as the per-actor `min_by` did: on the item id.
+    #[test]
+    fn the_offer_index_answers_per_giver_and_breaks_ties_on_the_item() {
+        let offer = |giver: &str, item: &str, seq: u64| OfferSnapshot {
+            item_id: ItemId(item.into()),
+            giver_id: ActorId(giver.into()),
+            target_id: None,
+            created_seq: seq,
+        };
+        let mirror = mirror_with(
+            vec![
+                actor("ilse", &["apple", "loaf", "pear"]),
+                actor("odo", &["fish"]),
+            ],
+            vec![
+                item("apple", "apple", "apple"),
+                item("loaf", "loaf", "loaf"),
+                item("pear", "pear", "apple"),
+                item("fish", "herring", "fish"),
+            ],
+            vec![
+                offer("ilse", "pear", 7),
+                offer("ilse", "loaf", 4),
+                offer("odo", "fish", 9),
+                offer("ilse", "apple", 4),
+            ],
+        );
+        let index = earliest_offers(&mirror);
+        assert_eq!(index.len(), 2, "one standing offer per giver, not per offer");
+        let standing = |giver: &str| {
+            index
+                .get(&ActorId(giver.into()))
+                .map(|offer| offer.item_id.0.clone())
+        };
+        assert_eq!(
+            standing("ilse").as_deref(),
+            Some("apple"),
+            "the oldest sequence wins, and an exact tie goes to the lower item id"
+        );
+        assert_eq!(standing("odo").as_deref(), Some("fish"));
     }
 
     /// The fan's Create/Keep/Replace contract, kept for the in-hand prop.

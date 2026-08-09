@@ -16,7 +16,7 @@ use bevy::{
 
 use crate::{
     controller::PlayerCamera,
-    mesh_batch::{batch_mesh, idle_batch_mesh, write_batch_mesh},
+    mesh_batch::{BatchScratch, batch_mesh, idle_batch_mesh, write_batch_mesh_reusing},
     scene::Sun,
     smart_actors::WorldClockState,
 };
@@ -561,10 +561,7 @@ pub(super) fn compose_environment(
         // threshold never flickers the component (and its pipeline state) on
         // and off frame to frame.
         let warming = time.elapsed_secs() < VOLUMETRIC_WARMUP_SECONDS;
-        // Ablation lever (the `CATHEDRAL_NO_*` family): a 64-step raymarch over
-        // two city-scale volumes is one of the render costs Bevy's diagnostics
-        // do not price, so the way to price it is a run without it.
-        let wants_volumetric = std::env::var_os("CATHEDRAL_NO_VOLUMETRIC_FOG").is_none()
+        let wants_volumetric = !volumetric_fog_disabled()
             && settings.volumetric_fog
             && WeatherQuality::from_name(&settings.quality) != WeatherQuality::Low
             && (warming
@@ -615,6 +612,19 @@ pub(super) fn compose_environment(
             );
         }
     }
+}
+
+/// Ablation lever (the `CATHEDRAL_NO_*` family): a 64-step raymarch over two
+/// city-scale volumes is one of the render costs Bevy's diagnostics do not
+/// price, so the way to price it is a run without it.
+///
+/// Answered once and remembered, the same way `scene::shadows_disabled` is:
+/// `compose_environment` asks per camera per frame, and `var_os` takes the
+/// environment lock and allocates an `OsString` to say the same thing each
+/// time. The lever is a launch decision, so there is nothing later to notice.
+fn volumetric_fog_disabled() -> bool {
+    static DISABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *DISABLED.get_or_init(|| std::env::var_os("CATHEDRAL_NO_VOLUMETRIC_FOG").is_some())
 }
 
 fn solar_direction(fraction: f32) -> Vec3 {
@@ -733,26 +743,41 @@ pub(super) fn animate_precipitation(
     mut meshes: ResMut<Assets<Mesh>>,
     mut rain_visibility: Query<&mut Visibility, (With<RainBatch>, Without<RainImpactBatch>)>,
     mut impact_visibility: Query<&mut Visibility, (With<RainImpactBatch>, Without<RainBatch>)>,
+    // The two batches are rewritten every frame it rains; holding their vertex
+    // buffers keeps ~475 KB of allocation and the same again of `free` — one
+    // buffer of it over glibc's mmap threshold — out of every one of those
+    // frames. `write_batch_mesh_reusing` hands them back empty.
+    mut rain_scratch: Local<BatchScratch>,
+    mut splash_scratch: Local<BatchScratch>,
 ) {
     let Some(state) = state else { return };
     let intensity = weather.precipitation.clamp(0.0, 1.0);
     let active = ((state.capacity as f32) * intensity.powf(0.72)).round() as usize;
+    // Compare before writing, as the cloud sheets and the fog volumes three
+    // functions away already do: a dry sky would otherwise re-flag both batches
+    // every frame for a visibility they have held since the shower ended.
+    let rain_wanted = if active > 0 {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    };
     for mut visibility in &mut rain_visibility {
-        *visibility = if active > 0 {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
+        if *visibility != rain_wanted {
+            *visibility = rain_wanted;
+        }
     }
     let has_aftereffects = (weather.surface_wetness > 0.25 && intensity > 0.12)
         || weather.standing_water > 0.03
         || intensity > 0.72;
+    let impacts_wanted = if active > 20 || has_aftereffects {
+        Visibility::Inherited
+    } else {
+        Visibility::Hidden
+    };
     for mut visibility in &mut impact_visibility {
-        *visibility = if active > 20 || has_aftereffects {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
+        if *visibility != impacts_wanted {
+            *visibility = impacts_wanted;
+        }
     }
     let Ok(camera) = camera.single() else { return };
     let camera_position = camera.translation();
@@ -765,16 +790,8 @@ pub(super) fn animate_precipitation(
     let anchor_x = (camera_position.x / 4.0).floor() * 4.0;
     let anchor_z = (camera_position.z / 4.0).floor() * 4.0;
 
-    let mut positions = Vec::with_capacity(active * 4);
-    let mut normals = Vec::with_capacity(active * 4);
-    let mut uvs = Vec::with_capacity(active * 4);
-    let mut colors = Vec::with_capacity(active * 4);
-    let mut indices = Vec::with_capacity(active * 6);
-    let mut splash_positions = Vec::with_capacity(active / state.splash_stride * 4);
-    let mut splash_normals = Vec::with_capacity(active / state.splash_stride * 4);
-    let mut splash_uvs = Vec::with_capacity(active / state.splash_stride * 4);
-    let mut splash_colors = Vec::with_capacity(active / state.splash_stride * 4);
-    let mut splash_indices = Vec::with_capacity(active / state.splash_stride * 6);
+    let rain = &mut *rain_scratch;
+    let splash = &mut *splash_scratch;
 
     for index in 0..active {
         let seed = mix64(index as u64 ^ 0x12f4_98ab_73c1);
@@ -799,11 +816,11 @@ pub(super) fn animate_precipitation(
         let bottom = Vec3::new(x, bottom_y, z) + slant;
         let half_width = 0.006 + intensity * 0.010;
         push_quad(
-            &mut positions,
-            &mut normals,
-            &mut uvs,
-            &mut colors,
-            &mut indices,
+            &mut rain.positions,
+            &mut rain.normals,
+            &mut rain.uvs,
+            &mut rain.colors,
+            &mut rain.indices,
             [
                 bottom - horizontal_right * half_width,
                 bottom + horizontal_right * half_width,
@@ -818,11 +835,11 @@ pub(super) fn animate_precipitation(
             let radius = 0.035 + intensity * 0.10;
             let center = Vec3::new(x, impact + 0.025, z);
             push_quad(
-                &mut splash_positions,
-                &mut splash_normals,
-                &mut splash_uvs,
-                &mut splash_colors,
-                &mut splash_indices,
+                &mut splash.positions,
+                &mut splash.normals,
+                &mut splash.uvs,
+                &mut splash.colors,
+                &mut splash.indices,
                 [
                     center + Vec3::new(-radius, 0.0, -radius),
                     center + Vec3::new(radius, 0.0, -radius),
@@ -841,30 +858,14 @@ pub(super) fn animate_precipitation(
         horizontal_right,
         elapsed,
         weather.as_ref(),
-        &mut splash_positions,
-        &mut splash_normals,
-        &mut splash_uvs,
-        &mut splash_colors,
-        &mut splash_indices,
+        &mut splash.positions,
+        &mut splash.normals,
+        &mut splash.uvs,
+        &mut splash.colors,
+        &mut splash.indices,
     );
-    write_batch_mesh(
-        &mut meshes,
-        &state.rain,
-        positions,
-        normals,
-        uvs,
-        colors,
-        indices,
-    );
-    write_batch_mesh(
-        &mut meshes,
-        &state.impacts,
-        splash_positions,
-        splash_normals,
-        splash_uvs,
-        splash_colors,
-        splash_indices,
-    );
+    write_batch_mesh_reusing(&mut meshes, &state.rain, rain);
+    write_batch_mesh_reusing(&mut meshes, &state.impacts, splash);
 }
 
 #[allow(

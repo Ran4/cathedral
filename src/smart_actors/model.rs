@@ -15,12 +15,20 @@
 //! and shape-checked before it reaches the ECS or a UI node.
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     error::Error,
     fmt,
 };
 
-use bevy::prelude::{Component, Resource, Vec3};
+use bevy::{
+    // Bevy's own maps for the id indices, not std's: they default to
+    // `FixedHasher` (foldhash) where std hashes every key with SipHash. These
+    // maps are rebuilt on world revisions and looked into by a dozen systems
+    // every frame, and nothing in them is adversarial — the ids are the sim's
+    // own seeded handles, never LLM-authored text.
+    platform::collections::{HashMap as IdMap, HashSet as IdSet},
+    prelude::{Component, Resource, Vec3},
+};
 use serde::{Deserialize, Deserializer, Serialize, de};
 
 /// Maximum id length the projection accepts.
@@ -603,9 +611,9 @@ pub struct WorldMirror {
     revision: Option<u64>,
     player_id: Option<ActorId>,
     actors: Vec<ActorSnapshot>,
-    actor_indices: HashMap<ActorId, usize>,
+    actor_indices: IdMap<ActorId, usize>,
     items: Vec<ItemSnapshot>,
-    item_indices: HashMap<ItemId, usize>,
+    item_indices: IdMap<ItemId, usize>,
     offers: Vec<OfferSnapshot>,
     road_carts: Vec<RoadCartSnapshot>,
     marks: Vec<MarkSnapshot>,
@@ -669,15 +677,30 @@ impl WorldMirror {
 
     /// Atomically validates and replaces the entire semantic projection.
     pub fn replace_snapshot(&mut self, snapshot: WorldSnapshot) -> Result<u64, SnapshotError> {
-        let validated = ValidatedSnapshot::new(snapshot)?;
+        let validated = ValidatedSnapshot::new(
+            snapshot,
+            PreviousIndices {
+                actors: &self.actors,
+                actor_indices: &self.actor_indices,
+                items: &self.items,
+                item_indices: &self.item_indices,
+            },
+        )?;
 
         let revision = validated.snapshot.world_revision;
         self.revision = Some(revision);
         self.player_id = Some(validated.snapshot.player_id);
         self.actors = validated.snapshot.actors;
-        self.actor_indices = validated.actor_indices;
+        // A `None` here means the incoming ids were the ones already indexed,
+        // in the same order, so the map standing in the mirror is exactly the
+        // map this snapshot would have rebuilt — see [`PreviousIndices`].
+        if let Some(actor_indices) = validated.actor_indices {
+            self.actor_indices = actor_indices;
+        }
         self.items = validated.snapshot.items;
-        self.item_indices = validated.item_indices;
+        if let Some(item_indices) = validated.item_indices {
+            self.item_indices = item_indices;
+        }
         self.offers = validated.snapshot.offers;
         self.road_carts = validated.snapshot.road_carts;
         self.marks = validated.snapshot.marks;
@@ -685,14 +708,61 @@ impl WorldMirror {
     }
 }
 
+/// What the projection standing in the mirror lends the next one.
+///
+/// The cast is fixed and hand-authored, and the sim sorts both vectors by id, so
+/// consecutive revisions almost always carry the same actors — and usually the
+/// same items — in the same order. Rebuilding the index maps then clones every
+/// id `String` a second time only to arrive at the map already held, which at
+/// ~514 actors is the single largest cost of a revision bump. So validation
+/// compares the incoming ids against these first and, when they match index for
+/// index, hands back `None` and the mirror keeps the map it has.
+///
+/// The `actor_indices.len() == actors.len()` half of that comparison is what
+/// makes skipping the duplicate-id check sound: a map shorter than the vector it
+/// indexes is the only way a duplicate could have survived, and the previous
+/// snapshot was validated the same way this one is.
+struct PreviousIndices<'a> {
+    actors: &'a [ActorSnapshot],
+    actor_indices: &'a IdMap<ActorId, usize>,
+    items: &'a [ItemSnapshot],
+    item_indices: &'a IdMap<ItemId, usize>,
+}
+
+/// The index maps a validation pass hands back: the actors' and then the items',
+/// each `None` where the map already in the mirror survived.
+type RebuiltIndices = (Option<IdMap<ActorId, usize>>, Option<IdMap<ItemId, usize>>);
+
 struct ValidatedSnapshot {
     snapshot: WorldSnapshot,
-    actor_indices: HashMap<ActorId, usize>,
-    item_indices: HashMap<ItemId, usize>,
+    /// `None` when the mirror's existing map is still exactly right.
+    actor_indices: Option<IdMap<ActorId, usize>>,
+    item_indices: Option<IdMap<ItemId, usize>>,
 }
 
 impl ValidatedSnapshot {
-    fn new(snapshot: WorldSnapshot) -> Result<Self, SnapshotError> {
+    fn new(snapshot: WorldSnapshot, previous: PreviousIndices<'_>) -> Result<Self, SnapshotError> {
+        // Validation *borrows* the snapshot rather than taking it apart: the
+        // sets and maps it builds hold `&ActorId`/`&ItemId` into it instead of
+        // cloned ids, one entry per held stack across the whole cast. That is
+        // why it is a separate function — every one of those borrows has to be
+        // dead before the snapshot can be moved into `Self`.
+        let (actor_indices, item_indices) = Self::validate(&snapshot, previous)?;
+        Ok(Self {
+            snapshot,
+            actor_indices,
+            item_indices,
+        })
+    }
+
+    /// Every invariant the mirror refuses to take the snapshot's word for.
+    ///
+    /// Returns the index maps to install, each `None` when the previous
+    /// projection's map is still correct (see [`PreviousIndices`]).
+    fn validate(
+        snapshot: &WorldSnapshot,
+        previous: PreviousIndices<'_>,
+    ) -> Result<RebuiltIndices, SnapshotError> {
         if snapshot.actors.len() > MAX_ACTORS {
             return Err(SnapshotError::LimitExceeded("actors"));
         }
@@ -706,7 +776,15 @@ impl ValidatedSnapshot {
             return Err(SnapshotError::InvalidActorId(snapshot.player_id.clone()));
         }
 
-        let mut actor_indices = HashMap::with_capacity(snapshot.actors.len());
+        // A map is reusable only if the ids it was built from are the ids
+        // arriving now, in the same order (see [`PreviousIndices`]).
+        let reuse_actor_indices = previous.actor_indices.len() == previous.actors.len()
+            && previous.actors.len() == snapshot.actors.len()
+            && std::iter::zip(previous.actors, &snapshot.actors)
+                .all(|(indexed, arriving)| indexed.id == arriving.id);
+        let mut rebuilt_actor_indices: Option<IdMap<ActorId, usize>> =
+            (!reuse_actor_indices).then(|| IdMap::with_capacity(snapshot.actors.len()));
+
         for (index, actor) in snapshot.actors.iter().enumerate() {
             if !valid_id(&actor.id.0) {
                 return Err(SnapshotError::InvalidActorId(actor.id.clone()));
@@ -748,17 +826,32 @@ impl ValidatedSnapshot {
             {
                 return Err(SnapshotError::InvalidStatus(actor.id.clone()));
             }
-            if actor_indices.insert(actor.id.clone(), index).is_some() {
+            // Only the rebuild can meet a duplicate: reuse is granted only
+            // against a list that was itself indexed without one.
+            if let Some(indices) = rebuilt_actor_indices.as_mut()
+                && indices.insert(actor.id.clone(), index).is_some()
+            {
                 return Err(SnapshotError::DuplicateActor(actor.id.clone()));
             }
         }
+        let actor_indices = rebuilt_actor_indices
+            .as_ref()
+            .unwrap_or(previous.actor_indices);
 
-        let mut item_indices = HashMap::with_capacity(snapshot.items.len());
+        let reuse_item_indices = previous.item_indices.len() == previous.items.len()
+            && previous.items.len() == snapshot.items.len()
+            && std::iter::zip(previous.items, &snapshot.items)
+                .all(|(indexed, arriving)| indexed.id == arriving.id);
+        let mut rebuilt_item_indices: Option<IdMap<ItemId, usize>> =
+            (!reuse_item_indices).then(|| IdMap::with_capacity(snapshot.items.len()));
+
         for (index, item) in snapshot.items.iter().enumerate() {
             if !valid_id(&item.id.0) {
                 return Err(SnapshotError::InvalidItemId(item.id.clone()));
             }
-            if item_indices.insert(item.id.clone(), index).is_some() {
+            if let Some(indices) = rebuilt_item_indices.as_mut()
+                && indices.insert(item.id.clone(), index).is_some()
+            {
                 return Err(SnapshotError::DuplicateItem(item.id.clone()));
             }
             if item.quantity < 1 {
@@ -802,11 +895,14 @@ impl ValidatedSnapshot {
                 }
             }
         }
+        let item_indices = rebuilt_item_indices
+            .as_ref()
+            .unwrap_or(previous.item_indices);
 
         if snapshot.marks.len() > MAX_MARKS {
             return Err(SnapshotError::LimitExceeded("marks"));
         }
-        let mut mark_ids = std::collections::BTreeSet::new();
+        let mut mark_ids = BTreeSet::new();
         for mark in &snapshot.marks {
             if !mark.point.is_finite() {
                 return Err(SnapshotError::InvalidMarkPosition(mark.id));
@@ -819,12 +915,12 @@ impl ValidatedSnapshot {
         let Some(player_index) = actor_indices.get(&snapshot.player_id).copied() else {
             return Err(SnapshotError::UnknownPlayer(snapshot.player_id.clone()));
         };
-        let mut cart_parties = std::collections::BTreeSet::new();
+        let mut cart_parties = BTreeSet::new();
         for cart in &snapshot.road_carts {
             if !valid_id(&cart.party_id) {
                 return Err(SnapshotError::InvalidRoadPartyId(cart.party_id.clone()));
             }
-            if !cart_parties.insert(cart.party_id.clone()) {
+            if !cart_parties.insert(cart.party_id.as_str()) {
                 return Err(SnapshotError::DuplicateRoadCart(cart.party_id.clone()));
             }
             if !actor_indices.contains_key(&cart.leader_id) {
@@ -847,9 +943,16 @@ impl ValidatedSnapshot {
             });
         }
 
-        let mut owners: HashMap<ItemId, ActorId> = HashMap::new();
+        // Every held stack in the city lands in `owners`, and every id it would
+        // otherwise copy is already sitting in the snapshot being validated —
+        // so it borrows. The two per-actor scratch collections are hoisted and
+        // cleared for the same reason: a fresh table per actor is ~500
+        // allocations a revision for checks that are a handful of entries wide.
+        let mut owners: IdMap<&ItemId, &ActorId> = IdMap::with_capacity(snapshot.items.len());
+        let mut held_by_actor: IdSet<&ItemId> = IdSet::default();
+        let mut per_slot: HashMap<cathedral_sim::BodySlot, usize> = HashMap::new();
         for actor in &snapshot.actors {
-            let mut held_by_actor = std::collections::HashSet::with_capacity(actor.holds.len());
+            held_by_actor.clear();
             for item_id in &actor.holds {
                 if !valid_id(&item_id.0) {
                     return Err(SnapshotError::InvalidItemId(item_id.clone()));
@@ -860,16 +963,16 @@ impl ValidatedSnapshot {
                         item_id: item_id.clone(),
                     });
                 }
-                if !held_by_actor.insert(item_id.clone()) {
+                if !held_by_actor.insert(item_id) {
                     return Err(SnapshotError::DuplicateHeldItem {
                         actor_id: actor.id.clone(),
                         item_id: item_id.clone(),
                     });
                 }
-                if let Some(first_owner) = owners.insert(item_id.clone(), actor.id.clone()) {
+                if let Some(first_owner) = owners.insert(item_id, &actor.id) {
                     return Err(SnapshotError::MultipleOwners {
                         item_id: item_id.clone(),
-                        first_owner,
+                        first_owner: first_owner.clone(),
                         second_owner: actor.id.clone(),
                     });
                 }
@@ -878,7 +981,7 @@ impl ValidatedSnapshot {
             // still holds (`features/extra_pockets.md`), so every entry must
             // name one of the ids just collected — and no cavity may carry
             // more than the slot model's two units.
-            let mut per_slot: HashMap<cathedral_sim::BodySlot, usize> = HashMap::new();
+            per_slot.clear();
             for (slot, item_id) in &actor.pockets {
                 if !held_by_actor.contains(item_id) {
                     return Err(SnapshotError::PocketedItemNotHeld {
@@ -905,7 +1008,7 @@ impl ValidatedSnapshot {
             return Err(SnapshotError::UnownedItem(item.id.clone()));
         }
 
-        let mut offered_items = std::collections::HashSet::with_capacity(snapshot.offers.len());
+        let mut offered_items: IdSet<&ItemId> = IdSet::with_capacity(snapshot.offers.len());
         for offer in &snapshot.offers {
             if !valid_id(&offer.item_id.0) {
                 return Err(SnapshotError::InvalidItemId(offer.item_id.clone()));
@@ -918,7 +1021,7 @@ impl ValidatedSnapshot {
             {
                 return Err(SnapshotError::InvalidActorId(target_id.clone()));
             }
-            if !offered_items.insert(offer.item_id.clone()) {
+            if !offered_items.insert(&offer.item_id) {
                 return Err(SnapshotError::DuplicateOffer(offer.item_id.clone()));
             }
             if !item_indices.contains_key(&offer.item_id) {
@@ -938,7 +1041,7 @@ impl ValidatedSnapshot {
                     });
                 }
             }
-            if owners.get(&offer.item_id) != Some(&offer.giver_id) {
+            if owners.get(&offer.item_id).copied() != Some(&offer.giver_id) {
                 return Err(SnapshotError::OfferGiverDoesNotOwnItem {
                     item_id: offer.item_id.clone(),
                     giver_id: offer.giver_id.clone(),
@@ -949,11 +1052,7 @@ impl ValidatedSnapshot {
             }
         }
 
-        Ok(Self {
-            snapshot,
-            actor_indices,
-            item_indices,
-        })
+        Ok((rebuilt_actor_indices, rebuilt_item_indices))
     }
 }
 
@@ -1107,6 +1206,134 @@ mod tests {
             Err(SnapshotError::UnownedItem(_))
         ));
         // The good projection stands.
+        assert_eq!(mirror.revision(), Some(1));
+    }
+
+    /// The index maps are kept across a revision whose ids did not move, which
+    /// is the common case and the whole point of `PreviousIndices`. What must
+    /// survive that is the *lookup*: `actor()` has to answer with the new
+    /// snapshot's contents, not the ones the map was first built beside.
+    #[test]
+    fn a_kept_index_map_still_resolves_to_the_new_snapshots_contents() {
+        let mut mirror = WorldMirror::default();
+        mirror.replace_snapshot(snapshot(1)).unwrap();
+
+        let mut moved = snapshot(2);
+        moved.actors[0].position_m = Position::new(9.0, 8.0, 7.0).unwrap();
+        moved.items[0].quantity = 3;
+        mirror.replace_snapshot(moved).unwrap();
+
+        assert_eq!(
+            mirror.actor(&ActorId("npc".into())).unwrap().position_m,
+            Position::new(9.0, 8.0, 7.0).unwrap()
+        );
+        assert_eq!(mirror.item(&ItemId("fish".into())).unwrap().quantity, 3);
+        assert!(mirror.actor(&ActorId("player".into())).is_some());
+    }
+
+    /// …and when the roster *does* move, the map is rebuilt rather than kept:
+    /// a stale index would point `actor()` at somebody else entirely. The sim
+    /// sorts its snapshot by id, so an arrival shifts everyone after it.
+    #[test]
+    fn a_changed_roster_reindexes_instead_of_keeping_a_stale_map() {
+        let mut mirror = WorldMirror::default();
+        mirror.replace_snapshot(snapshot(1)).unwrap();
+
+        let mut arrived = snapshot(2);
+        // Sorted by id, "carter" lands ahead of both "npc" and "player".
+        arrived.actors.insert(0, actor("carter", ActorControl::Llm, &["cart"]));
+        arrived.items.insert(0, item("cart"));
+        mirror.replace_snapshot(arrived).unwrap();
+
+        let carter = mirror.actor(&ActorId("carter".into())).unwrap();
+        assert_eq!(carter.holds, vec![ItemId("cart".into())]);
+        assert_eq!(
+            mirror.actor(&ActorId("npc".into())).unwrap().holds[0],
+            ItemId("fish".into())
+        );
+        assert_eq!(mirror.item(&ItemId("fish".into())).unwrap().name, "fish");
+        assert_eq!(mirror.item(&ItemId("cart".into())).unwrap().name, "cart");
+    }
+
+    /// The sharpest case the reuse check has to refuse, and the one a length
+    /// comparison alone would wave through: the same cast and the same stacks,
+    /// same count, in a different order. The sim publishes both vectors out of
+    /// a `BTreeMap`, so a bare reorder should never arrive — which is precisely
+    /// why nothing downstream would notice if one did, and `actor()` would
+    /// quietly hand back somebody else's body.
+    #[test]
+    fn a_reordered_roster_of_the_same_length_is_reindexed() {
+        let mut mirror = WorldMirror::default();
+        let mut first = snapshot(1);
+        first.actors.insert(0, actor("carter", ActorControl::Llm, &["cart"]));
+        first.items.insert(0, item("cart"));
+        mirror.replace_snapshot(first).unwrap();
+
+        let mut swapped = snapshot(2);
+        swapped.actors.insert(0, actor("carter", ActorControl::Llm, &["cart"]));
+        // Carter and the fishmonger trade places, and so do their stacks.
+        swapped.actors.swap(0, 1);
+        swapped.items.insert(0, item("cart"));
+        swapped.items.swap(0, 1);
+        mirror.replace_snapshot(swapped).unwrap();
+
+        assert_eq!(
+            mirror.actor(&ActorId("carter".into())).unwrap().holds,
+            vec![ItemId("cart".into())]
+        );
+        assert_eq!(
+            mirror.actor(&ActorId("npc".into())).unwrap().holds,
+            vec![ItemId("fish".into())]
+        );
+        assert_eq!(mirror.item(&ItemId("cart".into())).unwrap().name, "cart");
+        assert_eq!(mirror.item(&ItemId("fish".into())).unwrap().name, "fish");
+    }
+
+    /// The reuse itself, which no observable behaviour can show: an unchanged
+    /// roster must hand back `None` for both maps. Without this the whole
+    /// change could silently become churn — a full rebuild every revision plus
+    /// the comparison that failed to avoid it — and every other test would
+    /// still pass.
+    #[test]
+    fn an_unchanged_roster_hands_back_no_rebuilt_maps() {
+        let mut mirror = WorldMirror::default();
+        mirror.replace_snapshot(snapshot(1)).unwrap();
+
+        let (actor_indices, item_indices) = ValidatedSnapshot::validate(
+            &snapshot(2),
+            PreviousIndices {
+                actors: &mirror.actors,
+                actor_indices: &mirror.actor_indices,
+                items: &mirror.items,
+                item_indices: &mirror.item_indices,
+            },
+        )
+        .expect("the second snapshot is the first one's twin");
+        assert!(actor_indices.is_none());
+        assert!(item_indices.is_none());
+    }
+
+    /// A duplicate id is still caught on the pass that indexes it. (Reuse is
+    /// only ever granted against a list that was itself indexed without one, so
+    /// this is the only pass where a duplicate can exist.)
+    #[test]
+    fn duplicate_ids_are_still_rejected_when_the_roster_changes() {
+        let mut mirror = WorldMirror::default();
+        mirror.replace_snapshot(snapshot(1)).unwrap();
+
+        let mut twice = snapshot(2);
+        twice.actors.push(actor("npc", ActorControl::Llm, &[]));
+        assert!(matches!(
+            mirror.replace_snapshot(twice),
+            Err(SnapshotError::DuplicateActor(_))
+        ));
+
+        let mut same_item_twice = snapshot(3);
+        same_item_twice.items.push(item("fish"));
+        assert!(matches!(
+            mirror.replace_snapshot(same_item_twice),
+            Err(SnapshotError::DuplicateItem(_))
+        ));
         assert_eq!(mirror.revision(), Some(1));
     }
 

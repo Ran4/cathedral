@@ -18,6 +18,7 @@
 //!          └───┴───┴───┴───┴───┴───┴───┘
 
 use std::f32::consts::{FRAC_PI_2, PI};
+use std::time::Duration;
 
 use bevy::{
     anti_alias::smaa::Smaa,
@@ -38,6 +39,25 @@ use crate::smart_actors::{ConfigMenuState, InventoryUiState};
 use crate::smart_actors::model::ActorId;
 
 const FIXED_HZ: f64 = 120.0;
+/// The most wall-clock time one frame may hand to the fixed-step accumulator.
+///
+/// `run_fixed_main_schedule` deposits the whole virtual delta and then steps
+/// until it is spent, so at [`FIXED_HZ`] bevy's 250 ms default means any single
+/// stall — a pipeline compile, a mid-play asset load, a teleport's tile prep —
+/// is followed by a frame that replays *thirty* collision solves. Every hitch
+/// then arrives as two, which is the shape of stutter a player actually
+/// notices. Clamping the source caps the recovery frame at thirteen steps
+/// (twelve for the ceiling itself, one more for the sub-step remainder the
+/// previous frame left behind).
+///
+/// The lever is `Time<Virtual>`, which is also what every `Res<Time>` reader
+/// sees, so this is a ceiling on how far the *whole world* may jump in one
+/// frame — not only the collision solve. That is why it is set where it is:
+/// 100 ms sits far above any frame this scene really draws (the worst measured
+/// is ~45 ms), so a frame the player is actually watching never meets it and
+/// nothing ever reads as slow motion. It only engages after a genuine freeze,
+/// and then the world advances 100 ms instead of the stall's full length.
+const MAX_FRAME_CATCHUP: Duration = Duration::from_millis(100);
 // Begin on the open west approach, facing the actor cluster. At 17–19 m the
 // whole initial cast is inside the settled 20 m hearing radius immediately.
 const PLAYER_SPAWN: Vec3 = Vec3::new(0.0, 0.91, 95.0);
@@ -106,6 +126,9 @@ impl Plugin for ControllerPlugin {
             .init_resource::<ControllerInput>()
             .add_message::<TeleportPlayer>()
             .insert_resource(Time::<Fixed>::from_hz(FIXED_HZ))
+            // The fixed clock is only as well behaved as the virtual clock that
+            // feeds it; see [`MAX_FRAME_CATCHUP`].
+            .insert_resource(Time::<Virtual>::from_max_delta(MAX_FRAME_CATCHUP))
             .add_systems(Startup, (spawn_player, initially_capture_cursor))
             .add_systems(Update, attach_sky_probe_once_rendering)
             .add_systems(FixedUpdate, fixed_player_movement)
@@ -724,6 +747,8 @@ fn fixed_player_movement(
     player: Single<(&mut PlayerController, &mut PhysicalPosition)>,
     mut dynamic_boxes: Local<Vec<SolidBox>>,
 ) {
+
+    let _span = crate::perf::span(crate::perf::Probe::Controller);
     let dt = fixed_time.delta_secs();
     let (mut controller, mut physical_position) = player.into_inner();
     physical_position.previous = physical_position.current;
@@ -1421,6 +1446,30 @@ mod tests {
             (actual - expected).abs() < 1.0e-4,
             "expected {expected}, got {actual}"
         );
+    }
+
+    /// The catch-up ceiling is the whole reason a hitch no longer arrives as
+    /// two. `run_fixed_main_schedule` deposits one virtual delta and then steps
+    /// until it is spent, so bevy's 250 ms default is thirty collision solves
+    /// at [`FIXED_HZ`] — a second hitch, self-inflicted, on the recovery frame.
+    #[test]
+    fn one_stalled_frame_cannot_replay_thirty_fixed_solves() {
+        let mut fixed = Time::<Fixed>::from_hz(FIXED_HZ);
+        let timestep = fixed.timestep();
+        // The worst a clamped frame can offer: the ceiling itself, landing on
+        // top of the sub-step remainder the previous frame left behind.
+        fixed.accumulate_overstep(MAX_FRAME_CATCHUP + timestep);
+
+        let mut steps = 0;
+        while fixed.overstep() >= timestep {
+            fixed.discard_overstep(timestep);
+            steps += 1;
+        }
+
+        assert!(steps <= 13, "a single hitch would replay {steps} solves");
+        // And the ceiling stays clear of frames the player really sees, so a
+        // slow frame is never turned into slow motion.
+        assert!(MAX_FRAME_CATCHUP >= Duration::from_millis(60));
     }
 
     #[test]

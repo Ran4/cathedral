@@ -638,11 +638,16 @@ pub(super) fn update_actor_sheet(
     };
 
     if !debug.is_enabled() {
-        inspected.actor_id = None;
-        *panel_visibility = Visibility::Hidden;
+        // The layer is off almost always, so the clear and the hide are both
+        // compare-guarded: an unconditional write re-flags the panel every
+        // frame of every run and re-propagates its whole subtree.
+        if inspected.actor_id.is_some() {
+            inspected.actor_id = None;
+        }
+        panel_visibility.set_if_neq(Visibility::Hidden);
         return;
     }
-    *panel_visibility = Visibility::Inherited;
+    panel_visibility.set_if_neq(Visibility::Inherited);
 
     inspected.actor_id = next_subject(
         inspected.actor_id.take(),
@@ -665,23 +670,35 @@ pub(super) fn update_actor_sheet(
         })
     });
 
+    // The sheet is ~1 KB of monospace that changes about once a game minute,
+    // so the writes compare first. Assigning `Text` unconditionally re-runs
+    // the measure, re-shapes the whole block through cosmic-text and
+    // re-extracts every glyph — every frame the layer is up, which is exactly
+    // when somebody is watching the frame time.
     match sheet {
         Some(sheet) => {
-            name_text.0 = identity_line(&sheet);
-            body_text.0 = format_body(&sheet);
+            set_text(&mut name_text, &identity_line(&sheet));
+            set_text(&mut body_text, &format_body(&sheet));
         }
         // A subject was pinned but no longer resolves — it left the world, or the
         // cast is not online yet. Keep the panel up with a clear reason.
         None if inspected.actor_id.is_some() => {
-            name_text.0 = "(subject unavailable)".to_string();
-            body_text.0 = String::new();
+            set_text(&mut name_text, "(subject unavailable)");
+            set_text(&mut body_text, "");
         }
         None => {
             // The "CHARACTER DEBUG" mode label above already titles the panel;
             // keep the big name line empty until there is a subject to name.
-            name_text.0 = String::new();
-            body_text.0 = EMPTY_HINT.to_string();
+            set_text(&mut name_text, "");
+            set_text(&mut body_text, EMPTY_HINT);
         }
+    }
+}
+
+/// Writes a line only when it differs from the one already standing.
+fn set_text(text: &mut Mut<Text>, value: &str) {
+    if text.0 != value {
+        text.0 = value.to_string();
     }
 }
 

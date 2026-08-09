@@ -697,19 +697,29 @@ pub(super) fn update_inventory_ui(
             text.0 = line;
         }
     }
+    // Compare first: the hover tint changes only when the pointer crosses a
+    // tile, but an unconditional write re-flags `BackgroundColor` on every
+    // tile and menu entry, and so re-extracts the whole panel, every frame the
+    // screen is open.
     for (interaction, mut background) in &mut tiles {
-        background.0 = if *interaction == Interaction::None {
+        let wanted = if *interaction == Interaction::None {
             TILE_BG
         } else {
             TILE_BG_HOVER
         };
+        if background.0 != wanted {
+            background.0 = wanted;
+        }
     }
     for (interaction, mut background) in &mut entries {
-        background.0 = if *interaction == Interaction::None {
+        let wanted = if *interaction == Interaction::None {
             Color::NONE
         } else {
             ENTRY_BG_HOVER
         };
+        if background.0 != wanted {
+            background.0 = wanted;
+        }
     }
 }
 

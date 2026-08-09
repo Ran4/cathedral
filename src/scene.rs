@@ -43,12 +43,30 @@ impl Plugin for CathedralPlugin {
 /// always "in frustum"): the cathedral's 2 spot + 3 point casters cost 20
 /// auxiliary render-graph views ≈ 5 ms of render-thread CPU per frame, paid
 /// even at the far end of the city. Shadows only read when the interior is
-/// on screen, so switch them off beyond a per-light distance (small
-/// hysteresis so the boundary never flickers).
+/// on screen, so switch them off beyond a per-light distance (small hysteresis
+/// so the boundary never flickers).
+///
+/// **Each light keeps its own gate.** Flipping all five together on the union
+/// of their distances was tried on 2026-08-09, on the theory that the shadow
+/// atlas' texture descriptor changes shape with the caster count and that
+/// crossing the gates one at a time therefore reallocates it up to five times
+/// per approach. That is true, and it is still much the cheaper side of the
+/// trade: the union leaves all five casting — twenty auxiliary shadow views —
+/// across the whole 175–250 m shell around the cathedral, which is where the
+/// player spends most of their time. Measured over the standard route it cost
+/// **+4 ms on the median frame** and took frames over budget from 13% to 24%,
+/// while a run with `CATHEDRAL_NO_SHADOWS=1` showed the two revisions
+/// identical — so all of it was this. The reallocations are rare and the shell
+/// is not; per-light gates win.
 #[derive(Component)]
 struct InteriorShadowLight {
     enable_within_m: f32,
 }
+
+/// How much further than [`InteriorShadowLight::enable_within_m`] the player has
+/// to retreat before a light stops casting again. Small on purpose: every metre
+/// of it is a metre of the expensive shell above.
+const INTERIOR_SHADOW_HYSTERESIS_M: f32 = 15.0;
 
 fn gate_interior_shadow_lights(
     cameras: Query<&GlobalTransform, With<PlayerCamera>>,
@@ -63,22 +81,23 @@ fn gate_interior_shadow_lights(
     }
     let Ok(camera) = cameras.single() else { return };
     let camera_position = camera.translation();
-    let gate = |gate: &InteriorShadowLight,
-                    transform: &GlobalTransform,
-                    enabled: bool|
-     -> Option<bool> {
+
+    let gate = |gate: &InteriorShadowLight, transform: &GlobalTransform, enabled: bool| {
         let distance = transform.translation().distance(camera_position);
-        let threshold = gate.enable_within_m + if enabled { 15.0 } else { 0.0 };
-        let next = distance < threshold;
-        (next != enabled).then_some(next)
+        let threshold = gate.enable_within_m + if enabled { INTERIOR_SHADOW_HYSTERESIS_M } else { 0.0 };
+        distance < threshold
     };
+    // Only ever written when it differs, so the steady state leaves the lights
+    // alone and never touches the atlas descriptor.
     for (light_gate, transform, mut light) in &mut spots {
-        if let Some(next) = gate(light_gate, transform, light.shadow_maps_enabled) {
+        let next = gate(light_gate, transform, light.shadow_maps_enabled);
+        if light.shadow_maps_enabled != next {
             light.shadow_maps_enabled = next;
         }
     }
     for (light_gate, transform, mut light) in &mut points {
-        if let Some(next) = gate(light_gate, transform, light.shadow_maps_enabled) {
+        let next = gate(light_gate, transform, light.shadow_maps_enabled);
+        if light.shadow_maps_enabled != next {
             light.shadow_maps_enabled = next;
         }
     }
@@ -1211,8 +1230,14 @@ fn build_west_end(
 /// visible city each frame and are not instrumented by Bevy's render
 /// diagnostics, so the only way to price them is to run without them.
 /// Attribution only — the game looks wrong like this.
+///
+/// Answered once and remembered: `gate_interior_shadow_lights` asks every
+/// frame, and `var_os` takes the environment lock and allocates an `OsString`
+/// to say the same thing each time. The lever is a launch decision, so there
+/// is nothing later to notice.
 pub(crate) fn shadows_disabled() -> bool {
-    std::env::var_os("CATHEDRAL_NO_SHADOWS").is_some()
+    static DISABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *DISABLED.get_or_init(|| std::env::var_os("CATHEDRAL_NO_SHADOWS").is_some())
 }
 
 fn build_lighting(commands: &mut Commands, mesh: &CathedralMeshes, material: &CathedralMaterials) {

@@ -148,18 +148,27 @@ impl Plugin for PerfPlugin {
         app.add_plugins((
             FrameTimeDiagnosticsPlugin::default(),
             EntityCountDiagnosticsPlugin::default(),
-            RenderDiagnosticsPlugin,
-        ))
-        .insert_resource(PerfRecorder::new(mode == "vsync"))
-        .init_resource::<FrameStart>()
-        .add_systems(Startup, apply_present_mode)
-        // `First` and `Last` bracket the whole ECS main schedule, and schedule
-        // boundaries are hard barriers, so the difference between this and the
-        // frame's own delta is everything the ECS did *not* do: render extract,
-        // the render graph, and the wait on present. Splitting a spike across
-        // that line is the first question worth asking about it.
-        .add_systems(First, stamp_frame_start)
-        .add_systems(Last, record_frame);
+        ));
+        // `RenderDiagnosticsPlugin` writes GPU timestamp queries around every
+        // pass and reads them back. That is not free, and it is exactly the
+        // kind of cost that lands in the render half of the frame — the half
+        // this tooling is pointing at. `CATHEDRAL_PERF=plain` measures frames
+        // without it, so the instrument can be told apart from what it
+        // measures. Anything that only shows up under `=1` is the instrument.
+        if mode != "plain" {
+            app.add_plugins(RenderDiagnosticsPlugin);
+        }
+        app.insert_resource(PerfRecorder::new(mode == "vsync"))
+            .init_resource::<FrameStart>()
+            .add_systems(Startup, apply_present_mode)
+            // `First` and `Last` bracket the whole ECS main schedule, and
+            // schedule boundaries are hard barriers, so the difference between
+            // this and the frame's own delta is everything the ECS did *not*
+            // do: render extract, the render graph, and the wait on present.
+            // Splitting a spike across that line is the first question worth
+            // asking about it.
+            .add_systems(First, stamp_frame_start)
+            .add_systems(Last, record_frame);
     }
 }
 

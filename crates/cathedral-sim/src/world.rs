@@ -442,6 +442,45 @@ impl World {
         radius: f64,
         exclude: Option<&ActorId>,
     ) -> Vec<ActorId> {
+        self.neighbours_by_distance(origin, radius, exclude)
+            .into_iter()
+            .map(|(_, id)| id.clone())
+            .collect()
+    }
+
+    /// [`characters_within`] without the clones: the same set, the same order,
+    /// borrowed from the world.
+    ///
+    /// An `ActorId` is a `String`, so the owning form costs one heap allocation
+    /// per neighbour — and the two callers that pay it most (the novelty gate's
+    /// [`crate::attention::context_hash`], run for every actor on stage every
+    /// poll, and [`crate::attention::on_stage`], which keeps at most
+    /// `max_actors` of what it scans) only ever *test* the ids they get back.
+    /// Both forms are one `map` over the same scan below, so they can never
+    /// drift apart and neither pays for the other's shape.
+    ///
+    /// [`characters_within`]: World::characters_within
+    pub fn characters_within_refs(
+        &self,
+        origin: Vec3,
+        radius: f64,
+        exclude: Option<&ActorId>,
+    ) -> Vec<&ActorId> {
+        self.neighbours_by_distance(origin, radius, exclude)
+            .into_iter()
+            .map(|(_, id)| id)
+            .collect()
+    }
+
+    /// The one scan and the one comparator behind both public forms: everyone
+    /// in inclusive range, paired with their squared distance, ordered by
+    /// distance then id.
+    fn neighbours_by_distance(
+        &self,
+        origin: Vec3,
+        radius: f64,
+        exclude: Option<&ActorId>,
+    ) -> Vec<(f64, &ActorId)> {
         assert!(
             radius.is_finite() && radius >= 0.0,
             "radius must be a finite non-negative number"
@@ -464,7 +503,7 @@ impl World {
                 .expect("positions are finite")
                 .then_with(|| left.1.cmp(right.1))
         });
-        matches.into_iter().map(|(_, id)| id.clone()).collect()
+        matches
     }
 
     /// Assign the next sequence to `event`, buffer it, and return the sequence.
@@ -634,10 +673,18 @@ impl World {
         // Start-of-tick positions of everyone near the stage, for the
         // separation pass: frozen at tick start, so the push is
         // order-independent and deterministic.
-        let neighbours: Vec<(ActorId, Vec3)> = match stage {
+        //
+        // A neighbour is remembered by its *rank* in `characters` rather than by
+        // its id, because an `ActorId` is a `String` and this list is rebuilt
+        // from scratch on every 20 Hz slice — up to eight of them in one poll
+        // after a hitch, which is exactly when nothing should be allocating.
+        // The walk below is over the same unmodified `BTreeMap` in the same
+        // order, so the rank identifies the same body the id did.
+        let neighbours: Vec<(usize, Vec3)> = match stage {
             Some(centre) => self
                 .characters
-                .iter()
+                .values()
+                .enumerate()
                 .filter(|(_, character)| {
                     character.state.presence == Presence::InCity
                         && planar_within(
@@ -646,13 +693,13 @@ impl World {
                             DEFAULT_STAGE_RADIUS_M + AVOID_PERSONAL_RADIUS_M,
                         )
                 })
-                .map(|(id, character)| (id.clone(), character.position_m()))
+                .map(|(rank, character)| (rank, character.position_m()))
                 .collect(),
             None => Vec::new(),
         };
 
         let mut moved: Vec<ActorId> = Vec::new();
-        for (id, character) in self.characters.iter_mut() {
+        for (rank, (id, character)) in self.characters.iter_mut().enumerate() {
             if character.state.presence != Presence::InCity || character.state.movement.is_none() {
                 continue;
             }
@@ -837,8 +884,8 @@ impl World {
             {
                 let mut push = Vec3::ZERO;
                 let mut counted = 0usize;
-                for (other_id, other_pos) in &neighbours {
-                    if other_id == id {
+                for (other_rank, other_pos) in &neighbours {
+                    if *other_rank == rank {
                         continue;
                     }
                     let away = Vec3::new(new_pos.x - other_pos.x, 0.0, new_pos.z - other_pos.z);
@@ -913,11 +960,28 @@ impl World {
                 }
             })
             .collect();
+        // Who holds what, answered for the whole item table in one pass over the
+        // cast. [`World::owner_of`] is a linear scan of every character, so
+        // asking it per item made the snapshot O(items × cast) — with ~650
+        // stacks against a 519-strong cast that is the single most expensive
+        // thing a poll can do, and it lands on exactly the frames a revision
+        // bumps. The map is the same shape [`World::assert_invariants`] builds,
+        // and it is filled in `characters` (id) order with `or_insert`, so a
+        // stack that somehow had two holders resolves to the same one
+        // `owner_of` would have returned. Items are still walked in
+        // `self.items` order, which is the snapshot's "sorted by id" contract.
+        let mut owners: BTreeMap<&ItemId, &ActorId> = BTreeMap::new();
+        for actor in self.characters.values() {
+            for item_id in actor.holds() {
+                owners.entry(item_id).or_insert(actor.id());
+            }
+        }
         let items = self
             .items
             .values()
             .filter(|item| {
-                self.owner_of(&item.id)
+                owners
+                    .get(&item.id)
                     .is_some_and(|owner| self.is_present(owner))
             })
             .map(|item| ItemSnapshot {
@@ -1331,6 +1395,38 @@ mod tests {
                 ActorId::from_raw("z")
             ]
         );
+    }
+
+    /// The borrowing sibling is the *same* answer, not a similar one.
+    ///
+    /// `characters_within`'s distance-then-id order fixes `recipient_ids` in
+    /// every event and the nearest witness the scheduler nudges, and callers
+    /// now pick whichever form allocates less — so the two must never be able
+    /// to drift apart, including on the tie, the exclusion and the boundary.
+    #[test]
+    fn the_borrowed_neighbourhood_is_the_owned_one() {
+        let mut world = World::new();
+        world.add_character(character("origin", 0.0));
+        world.add_character(character("z", 2.0));
+        world.add_character(character("b", 1.0));
+        world.add_character(character("a", -1.0));
+        world.add_character(character("far", HEARING_RADIUS_M + 1e-6));
+        let mut absent = character("gone", 0.5);
+        absent.state.presence = Presence::BeyondTheWalls;
+        world.add_character(absent);
+
+        let origin = ActorId::from_raw("origin");
+        for exclude in [None, Some(&origin)] {
+            for radius in [0.0, 1.0, HEARING_RADIUS_M, 1_000.0] {
+                let owned = world.characters_within(Vec3::ZERO, radius, exclude);
+                let borrowed: Vec<ActorId> = world
+                    .characters_within_refs(Vec3::ZERO, radius, exclude)
+                    .into_iter()
+                    .cloned()
+                    .collect();
+                assert_eq!(owned, borrowed, "radius {radius}, exclude {exclude:?}");
+            }
+        }
     }
 
     #[test]

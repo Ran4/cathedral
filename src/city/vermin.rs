@@ -26,7 +26,7 @@ use cathedral_sim::NavData;
 use crate::{
     config::VerminSettings,
     controller::{CollisionWorld, PlayerController},
-    mesh_batch::{idle_batch_mesh, write_batch_mesh},
+    mesh_batch::{BatchScratch, idle_batch_mesh, write_batch_mesh_reusing},
     smart_actors::{
         WorldClockState,
         actors::ActorView,
@@ -749,6 +749,11 @@ pub(super) fn trigger_vermin_scatter(
     player: Query<&Transform, With<PlayerController>>,
     actors: Query<&GlobalTransform, With<ActorView>>,
     mut vermin: Query<&mut Vermin>,
+    // Both settle on the cast's size after the first frame and are never
+    // allocated again; a startle reflex runs every frame, so the two `Vec`s
+    // this used to build per frame were pure allocator traffic.
+    mut movers: Local<Vec<Vec2>>,
+    mut near: Local<Vec<Vec2>>,
 ) {
     let _span = crate::perf::span(crate::perf::Probe::Vermin);
     let elapsed = time.elapsed_secs();
@@ -756,13 +761,15 @@ pub(super) fn trigger_vermin_scatter(
     // Only somebody standing on the ground is a footfall: a player in
     // developer flight, or crossing one of the city's overhead bridges, passes
     // over a colony without ever putting a foot near it.
-    let movers: Vec<Vec2> = player
-        .iter()
-        .map(|transform| transform.translation)
-        .chain(actors.iter().map(|transform| transform.translation()))
-        .filter(|translation| translation.y <= SCATTER_MAX_FOOT_Y)
-        .map(|translation| translation.xz())
-        .collect();
+    movers.clear();
+    movers.extend(
+        player
+            .iter()
+            .map(|transform| transform.translation)
+            .chain(actors.iter().map(|transform| transform.translation()))
+            .filter(|translation| translation.y <= SCATTER_MAX_FOOT_Y)
+            .map(|translation| translation.xz()),
+    );
     if movers.is_empty() {
         return;
     }
@@ -783,11 +790,13 @@ pub(super) fn trigger_vermin_scatter(
                 colony.scatter = None;
             }
             let reach = colony.showing_radius_m(showing) + SCATTER_REACH_M;
-            let near: Vec<Vec2> = movers
-                .iter()
-                .copied()
-                .filter(|mover| mover.distance(colony.anchor) <= reach)
-                .collect();
+            near.clear();
+            near.extend(
+                movers
+                    .iter()
+                    .copied()
+                    .filter(|mover| mover.distance(colony.anchor) <= reach),
+            );
             if near.is_empty() {
                 continue;
             }
@@ -871,6 +880,10 @@ pub(super) fn animate_vermin(
     camera: Query<&GlobalTransform, With<Camera3d>>,
     vermin: Query<(&Vermin, &Mesh3d)>,
     mut meshes: ResMut<Assets<Mesh>>,
+    // Held across frames: a boiling colony's batch is the same size every frame
+    // it boils, so growing five fresh `Vec`s to it each time was work with no
+    // answer attached. The batch write hands them back empty.
+    mut scratch: Local<BatchScratch>,
 ) {
     let _span = crate::perf::span(crate::perf::Probe::Vermin);
     let Ok(camera) = camera.single() else {
@@ -882,12 +895,7 @@ pub(super) fn animate_vermin(
     let suppressed = rain_suppressed(weather.as_deref());
 
     for (vermin, mesh_handle) in &vermin {
-        let mut positions = Vec::new();
-        let mut normals = Vec::new();
-        let mut uvs = Vec::new();
-        let mut colors = Vec::new();
-        let mut indices = Vec::new();
-
+        let batch = &mut *scratch;
         let boiling = boiling_colony_now(clock, vermin.seed, vermin.colonies.len());
         for (index, colony) in vermin.colonies.iter().enumerate() {
             let Some(showing) = colony_showing(colony.all_offices, boiling == Some(index), clock)
@@ -921,11 +929,11 @@ pub(super) fn animate_vermin(
                     loop_heading
                 };
                 push_rat(
-                    &mut positions,
-                    &mut normals,
-                    &mut uvs,
-                    &mut colors,
-                    &mut indices,
+                    &mut batch.positions,
+                    &mut batch.normals,
+                    &mut batch.uvs,
+                    &mut batch.colors,
+                    &mut batch.indices,
                     rat,
                     position,
                     heading,
@@ -934,15 +942,7 @@ pub(super) fn animate_vermin(
                 );
             }
         }
-        write_batch_mesh(
-            &mut meshes,
-            &mesh_handle.0,
-            positions,
-            normals,
-            uvs,
-            colors,
-            indices,
-        );
+        write_batch_mesh_reusing(&mut meshes, &mesh_handle.0, batch);
     }
 }
 

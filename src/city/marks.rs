@@ -25,13 +25,15 @@
 //! *slow*: the batch is rebuilt only when the world revision moves, not every
 //! frame.
 
+use std::collections::{HashMap, HashSet};
+
 use bevy::{camera::visibility::NoFrustumCulling, light::NotShadowCaster, prelude::*};
 use cathedral_sim::{actions::CHALK_REACH_M, marks::MarkKind};
 
 use crate::{
     controller::CollisionWorld,
     mesh_batch::{idle_batch_mesh, write_batch_mesh},
-    smart_actors::model::{MarkSnapshot, WorldMirror},
+    smart_actors::model::{MarkSnapshot, Position, WorldMirror},
 };
 
 /// How high up the wall a mark sits, above the walkable point the sim gave.
@@ -75,6 +77,25 @@ const MARK_READ_RADIUS_M: f32 = 4.0;
 /// at. Roughly the mark's own size, so you have to point at it rather than
 /// past it.
 const MARK_AIM_TOLERANCE_M: f32 = 0.4;
+
+/// The furthest [`place`] can ever carry a glyph from the anchor the sim
+/// published: up the wall to chalk height, then out to the far end of the
+/// probe, plus the millimetres it floats off the surface it found. Nothing
+/// `place` can return sits further from `mark.point` than this.
+const MARK_PLACEMENT_SLACK_M: f32 = MARK_HEIGHT_M + MARK_WALL_PROBE_M + MARK_SURFACE_OFFSET_M;
+
+/// How near the camera a mark's *anchor* has to be for the mark itself to have
+/// any chance of being the one you are looking at.
+///
+/// [`place`] fires eight rays through the whole collision world, so the focus
+/// sweep must not pay for it on chalk that is streets away — and it does not
+/// have to, because the anchor alone settles the question: a survivor of the
+/// tests below is at most `√(MARK_READ_RADIUS_M² + MARK_AIM_TOLERANCE_M²)` from
+/// the camera, and its anchor at most [`MARK_PLACEMENT_SLACK_M`] further again.
+/// Summing the two rather than taking the hypotenuse keeps the bound plainly
+/// conservative; the whole point is that no mark the old sweep would have
+/// picked can fall outside it.
+const MARK_FOCUS_CULL_M: f32 = MARK_READ_RADIUS_M + MARK_AIM_TOLERANCE_M + MARK_PLACEMENT_SLACK_M;
 
 /// How far beyond the nearest static hit a focused mark may still sit. The
 /// glyph floats [`MARK_SURFACE_OFFSET_M`] off its own wall, so a square look
@@ -245,6 +266,17 @@ pub(super) struct Marks {
     /// never draws its chalk at all — including every test harness, and the
     /// game itself in the window between spawn and the first snapshot.
     built: bool,
+    /// Where each live mark's glyph ended up, keyed by the sim's mark id.
+    ///
+    /// The revision moves for reasons that have nothing to do with chalk — a
+    /// sale, a step, the mark sweep itself — several times a second during
+    /// ordinary trade, and each bump used to re-probe every mark in the city:
+    /// eight rays through the whole collision world apiece. Neither half of
+    /// that answer can change under a cached entry. A mark's anchor is fixed
+    /// when it is drawn (it is stored beside the placement all the same, and a
+    /// differing one is treated as a miss), and the collision world is built
+    /// once in `build_city` and never written again.
+    placements: HashMap<u64, (Position, Placement)>,
 }
 
 /// Where a mark ended up once the geometry was consulted: a point on a real
@@ -314,8 +346,16 @@ pub(super) fn sync_marks(
     let mut colors = Vec::new();
     let mut indices = Vec::new();
 
+    // A scrubbed or washed-out mark never comes back, so its cached placement
+    // must not outlive it. The count comparison keeps the sweep off every
+    // ordinary rebuild: only a rebuild that lost a mark builds the id set.
+    if state.placements.len() > mirror.marks().len() {
+        let live: HashSet<u64> = mirror.marks().map(|mark| mark.id).collect();
+        state.placements.retain(|id, _| live.contains(id));
+    }
+
     for mark in mirror.marks() {
-        let Some(placement) = place(&collision, mark) else {
+        let Some(placement) = cached_placement(&mut state.placements, &collision, mark) else {
             continue;
         };
         let alpha = f32::from(mark.strength_pct) / 100.0;
@@ -340,6 +380,23 @@ pub(super) fn sync_marks(
         colors,
         indices,
     );
+}
+
+/// [`place`], answered from the batch's own memory whenever it has been asked
+/// before about this mark at this anchor.
+fn cached_placement(
+    cache: &mut HashMap<u64, (Position, Placement)>,
+    collision: &CollisionWorld,
+    mark: &MarkSnapshot,
+) -> Option<Placement> {
+    if let Some((anchor, placement)) = cache.get(&mark.id).copied()
+        && anchor == mark.point
+    {
+        return Some(placement);
+    }
+    let placement = place(collision, mark)?;
+    cache.insert(mark.id, (mark.point, placement));
+    Some(placement)
 }
 
 /// Find the surface a mark belongs on.
@@ -507,6 +564,17 @@ fn compute_mark_focus(
     let wall = collision.nearest_ray_hit(origin, forward, MARK_READ_RADIUS_M);
     let mut best: Option<(f32, &MarkSnapshot, Vec3)> = None;
     for mark in mirror.marks() {
+        // Reject on the anchor before probing for the wall: `place` is eight
+        // rays through every collider in the city, and this sweep runs every
+        // frame over every mark the sim has published. A mark whose anchor is
+        // further off than [`MARK_FOCUS_CULL_M`] cannot survive the aim tests
+        // below however its glyph ended up sitting, so it never has to be
+        // placed at all. (A non-finite anchor fails the comparison and falls
+        // through to `place`, which drops it exactly as before.)
+        let anchor = Vec3::new(mark.point.x, mark.point.y, mark.point.z);
+        if anchor.distance_squared(origin) > MARK_FOCUS_CULL_M * MARK_FOCUS_CULL_M {
+            continue;
+        }
         let Some(placement) = place(collision, mark) else {
             continue;
         };
@@ -786,6 +854,32 @@ mod tests {
         );
     }
 
+    /// The batch remembers where it put each mark, because the world revision
+    /// moves for reasons that have nothing to do with chalk. The memory is
+    /// keyed on the anchor as well as the id, so it can never answer for a
+    /// point it was not asked about.
+    #[test]
+    fn a_placement_is_remembered_per_mark_and_anchor() {
+        let mut collision = CollisionWorld::default();
+        collision.add_box(Vec3::new(-5.0, 0.0, 1.0), Vec3::new(5.0, 4.0, 1.5));
+        let mut cache = HashMap::new();
+        let first = mark(MarkKind::ChalkCross, Vec3::new(0.0, 0.91, 0.0), 100, 1);
+
+        let placed = cached_placement(&mut cache, &collision, &first).expect("places");
+        assert_eq!(placed, place(&collision, &first).expect("places"));
+        assert_eq!(cache.len(), 1);
+        // Asked again it answers from memory: a bare collision world would lay
+        // the mark flat on the paving if the probes were fired a second time.
+        assert_eq!(
+            cached_placement(&mut cache, &CollisionWorld::default(), &first),
+            Some(placed)
+        );
+        // The same id at a different anchor is a miss, never a stale hit.
+        let moved = mark(MarkKind::ChalkCross, Vec3::new(0.0, 0.91, 30.0), 100, 1);
+        let replaced = cached_placement(&mut cache, &collision, &moved).expect("places");
+        assert_ne!(replaced, placed);
+    }
+
     #[test]
     fn a_non_finite_anchor_is_dropped_rather_than_drawn() {
         let collision = CollisionWorld::default();
@@ -954,6 +1048,47 @@ mod tests {
 
         // Past reading range: nothing at all.
         assert_eq!(from(4.1), MarkFocus::default());
+    }
+
+    /// The focus sweep rejects a mark on its anchor before probing for its
+    /// wall, and [`MARK_PLACEMENT_SLACK_M`] is what keeps that cheap rejection
+    /// honest: a placement pulls the glyph toward whatever surface it found, so
+    /// an anchor *outside* the reading radius can still carry a glyph well
+    /// inside it. Culling on the bare radius would silently lose exactly this
+    /// mark.
+    #[test]
+    fn a_mark_placed_nearer_than_its_anchor_still_reads() {
+        let catalog = MarkCatalog::default();
+        let mut collision = CollisionWorld::default();
+        // A 2 cm screen at z≈2.0, thin enough that the glyph lands on the face
+        // the *camera* also strikes rather than behind it.
+        collision.add_box(Vec3::new(-5.0, 0.0, 2.0), Vec3::new(5.0, 4.0, 2.02));
+
+        let mut mirror = WorldMirror::default();
+        // 4.6 m out — past MARK_READ_RADIUS_M — but the wall probe carries the
+        // glyph back to z≈2.03, an arm's length from the camera.
+        mirror.debug_set_marks(vec![mark(
+            MarkKind::ChalkCross,
+            Vec3::new(0.0, 0.91, 4.6),
+            100,
+            1,
+        )]);
+        let camera = GlobalTransform::from(
+            Transform::from_xyz(0.0, 0.91 + MARK_HEIGHT_M, 0.0).looking_to(Vec3::Z, Vec3::Y),
+        );
+
+        let placed = place(&collision, mirror.marks().next().expect("one mark")).expect("places");
+        assert!(
+            placed.origin.z < MARK_READ_RADIUS_M,
+            "the glyph lands inside the reading radius: {}",
+            placed.origin.z
+        );
+        let focus = compute_mark_focus(&catalog, Some(&mirror), &collision, Some(&camera));
+        assert_eq!(
+            focus.mark_id,
+            Some(1),
+            "a mark whose anchor is out of range but whose glyph is not must still read"
+        );
     }
 
     /// Chalk across a wall is not chalk you are looking at: a mark aligned

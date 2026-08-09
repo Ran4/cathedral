@@ -25,6 +25,11 @@ const MAX_STRANGER_NAME_LABEL_DISTANCE_M: f32 = 15.0;
 const NAME_LABEL_BACKGROUND_ALPHA: f32 = 0.78;
 const NAME_LABEL_SHADOW_ALPHA: f32 = 0.75;
 const MAX_VISIBLE_NAME_LABELS: usize = 20;
+/// Draw order for the two label layers. These were the labels' own `ZIndex`es
+/// while each was a UI root; they moved to the layers so the sorted root list
+/// puts the whole group exactly where the individual labels used to sit.
+const NAME_LABEL_Z_INDEX: i32 = 4;
+const THINKING_INDICATOR_Z_INDEX: i32 = 5;
 const THINKING_INDICATOR_WIDTH_PX: f32 = 38.0;
 const THINKING_INDICATOR_HEAD_OFFSET_PX: f32 = 68.0;
 const THINKING_DOT_STEP_SECONDS: f32 = 0.32;
@@ -69,6 +74,68 @@ pub(crate) struct ActorNameLabel(ActorId);
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ThinkingIndicator(ActorId);
 
+/// The single parent every [`ActorNameLabel`] hangs from.
+#[derive(Component, Debug)]
+pub(crate) struct NameLabelLayer;
+
+/// The single parent every [`ThinkingIndicator`] hangs from.
+#[derive(Component, Debug)]
+pub(crate) struct ThinkingIndicatorLayer;
+
+/// The one full-viewport, invisible container a whole class of actor labels
+/// hangs from, created on first use and remembered in `slot`.
+///
+/// Bevy prices its UI *per root*, and none of that price respects
+/// `Visibility`: `propagate_ui_target_cameras` re-inserts two `Propagate`
+/// components on every root every frame (which then re-flags `Inherited` on
+/// every root again), `ui_stack_system` re-sorts the whole root list, and
+/// `ui_layout_system` runs a separate taffy root layout *and* a recursive
+/// geometry walk per root. One root per actor made that a ~1,000-root bill
+/// every frame for labels that are hidden almost all of the time.
+///
+/// Hanging them off two layers leaves two roots and changes nothing else. The
+/// layer is absolutely positioned at the origin and sized to the viewport, so
+/// an absolutely positioned child resolves its `left`/`top` against exactly
+/// the rect it used to resolve them against as a root; and the layer carries
+/// the `ZIndex` its children used to carry, so the group lands in the same
+/// place in the sorted root list as before, relative to every other UI root.
+fn label_layer(
+    commands: &mut Commands,
+    slot: &mut Option<Entity>,
+    marker: impl Bundle,
+    name: &'static str,
+    z_index: i32,
+) -> Entity {
+    if let Some(entity) = *slot {
+        return entity;
+    }
+    let entity = commands
+        .spawn((
+            marker,
+            Name::new(name),
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                ..default()
+            },
+            // The layer covers the whole screen, and `bevy_ui`'s picking
+            // backend treats a node with no `Pickable` as blocking everything
+            // beneath it, so without this it would swallow every pointer hit
+            // in the game. (`Interaction`, which the menus actually read, comes
+            // from `ui_focus_system` and keys on `FocusPolicy`, which `Node`
+            // requires and which defaults to `Pass` — so the buttons are safe
+            // either way. This keeps the backend honest too.)
+            Pickable::IGNORE,
+            ZIndex(z_index),
+        ))
+        .id();
+    *slot = Some(entity);
+    entity
+}
+
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ActorOutfit(pub(super) ActorId);
 
@@ -105,6 +172,13 @@ pub(crate) fn reconcile_actor_views(
         (&super::body::ActorFace, &mut MeshMaterial3d<StandardMaterial>),
         Without<ActorOutfit>,
     >,
+    // The two UI layers the labels hang from. They are created on the frame
+    // the first actor appears rather than at startup, because this module
+    // owns no `Startup` system of its own; `Commands::spawn` reserves the
+    // entity immediately, so the children queued right after it in this same
+    // frame attach cleanly.
+    mut name_layer: Local<Option<Entity>>,
+    mut indicator_layer: Local<Option<Entity>>,
 ) {
     let _span = crate::perf::span(crate::perf::Probe::ActorViews);
     // Snapshots replace the mirror at most ~10×/s (revision bumps); between
@@ -165,9 +239,31 @@ pub(crate) fn reconcile_actor_views(
     }
 
     for actor in actor_snapshots {
-        if !existing_ids.contains(&actor.id) {
-            spawn_actor(&mut commands, &body_assets, name_font.clone(), actor);
+        if existing_ids.contains(&actor.id) {
+            continue;
         }
+        let names = label_layer(
+            &mut commands,
+            &mut name_layer,
+            NameLabelLayer,
+            "Actor name labels",
+            NAME_LABEL_Z_INDEX,
+        );
+        let indicators = label_layer(
+            &mut commands,
+            &mut indicator_layer,
+            ThinkingIndicatorLayer,
+            "Actor thinking indicators",
+            THINKING_INDICATOR_Z_INDEX,
+        );
+        spawn_actor(
+            &mut commands,
+            &body_assets,
+            name_font.clone(),
+            actor,
+            names,
+            indicators,
+        );
     }
 
     for (entity, label, mut text) in &mut labels {
@@ -332,6 +428,8 @@ fn spawn_actor(
     body_assets: &super::body::BodyAssets,
     name_font: FontSource,
     actor: &super::model::ActorSnapshot,
+    name_layer: Entity,
+    indicator_layer: Entity,
 ) {
     let actor_id = actor.id.clone();
     let nameplate_text = actor_nameplate_text(actor);
@@ -377,7 +475,10 @@ fn spawn_actor(
 
     // UI text is projected from the world anchor each frame. Unlike Text2d it
     // is rendered by the existing 3D + UI feature set and always faces the eye.
+    // It hangs from the shared layer rather than standing as its own UI root —
+    // see `label_layer` for what a root costs per frame.
     commands.spawn((
+        ChildOf(name_layer),
         Name::new(format!("Actor name: {nameplate_text}")),
         ActorNameLabel(actor_id.clone()),
         Text::new(nameplate_text),
@@ -402,11 +503,14 @@ fn spawn_actor(
             0.040,
             NAME_LABEL_BACKGROUND_ALPHA,
         )),
-        ZIndex(4),
+        // No `ZIndex` of its own: the layer carries the group's order now, and
+        // every sibling here is equal, which is exactly what a shared `ZIndex`
+        // gave them while they were roots.
         Visibility::Hidden,
     ));
 
     commands.spawn((
+        ChildOf(indicator_layer),
         Name::new(format!(
             "Actor thinking indicator: {}",
             actor.name_for_player
@@ -430,7 +534,6 @@ fn spawn_actor(
             ..default()
         },
         BackgroundColor(Color::srgba(0.96, 0.90, 0.72, 0.94)),
-        ZIndex(5),
         Visibility::Hidden,
     ));
 }
@@ -463,19 +566,26 @@ pub(crate) fn position_actor_name_labels(
     let camera_position = camera_transform.translation();
     let mut nearest: Vec<(&ActorId, Vec3, bool, f32)> = Vec::new();
     for (anchor, transform) in &anchors {
+        let position = transform.translation();
+        let distance_squared = camera_position.distance_squared(position);
+        // The wider of the two radii is a strict superset of the narrower one,
+        // so the free distance test comes first and the mirror lookup and the
+        // strangerhood string test are paid only by the couple of dozen
+        // anchors that could possibly qualify — not by the whole cast, most of
+        // which is hundreds of metres away. Same visible set either way.
+        if distance_squared > MAX_NAME_LABEL_DISTANCE_M * MAX_NAME_LABEL_DISTANCE_M {
+            continue;
+        }
         let stranger = mirror
             .actor(&anchor.0)
             .is_some_and(actor_is_stranger_to_player);
-        let maximum_distance = if stranger {
-            MAX_STRANGER_NAME_LABEL_DISTANCE_M
-        } else {
-            MAX_NAME_LABEL_DISTANCE_M
-        };
-        let position = transform.translation();
-        let distance_squared = camera_position.distance_squared(position);
-        if distance_squared <= maximum_distance * maximum_distance {
-            nearest.push((&anchor.0, position, stranger, distance_squared));
+        if stranger
+            && distance_squared
+                > MAX_STRANGER_NAME_LABEL_DISTANCE_M * MAX_STRANGER_NAME_LABEL_DISTANCE_M
+        {
+            continue;
         }
+        nearest.push((&anchor.0, position, stranger, distance_squared));
     }
     nearest.sort_unstable_by(|left, right| {
         left.3.total_cmp(&right.3).then_with(|| left.0.cmp(right.0))
@@ -641,14 +751,19 @@ fn nearest_name_anchor_ids(
     let mut nearest: Vec<_> = anchor_positions
         .iter()
         .filter_map(|(actor_id, position)| {
-            let maximum_distance = if is_stranger(actor_id) {
-                MAX_STRANGER_NAME_LABEL_DISTANCE_M
-            } else {
-                MAX_NAME_LABEL_DISTANCE_M
-            };
             let distance_squared = camera_position.distance_squared(*position);
-            (distance_squared <= maximum_distance * maximum_distance)
-                .then_some((actor_id, distance_squared))
+            // Same order as the system: cull on the wider radius first, then
+            // ask whether this is a stranger and apply the tighter cut.
+            if distance_squared > MAX_NAME_LABEL_DISTANCE_M * MAX_NAME_LABEL_DISTANCE_M {
+                return None;
+            }
+            if is_stranger(actor_id)
+                && distance_squared
+                    > MAX_STRANGER_NAME_LABEL_DISTANCE_M * MAX_STRANGER_NAME_LABEL_DISTANCE_M
+            {
+                return None;
+            }
+            Some((actor_id, distance_squared))
         })
         .collect();
     nearest.sort_unstable_by(|left, right| {
@@ -1053,5 +1168,127 @@ mod tests {
             .find(|(id, _)| id.0 == "sv3n1")
             .expect("Sven actor view should remain present");
         assert_eq!(sven.1.translation, Vec3::new(-1.8, 0.91, 114.0));
+    }
+
+    /// Every label hangs from one of two shared layers, and never stands as a
+    /// UI root of its own. Bevy's per-frame UI bill is priced per root and
+    /// ignores `Visibility`, so a root per actor was ~1,000 root layouts,
+    /// root sorts and `Propagate` re-inserts a frame for labels that are
+    /// almost always hidden.
+    #[test]
+    fn actor_labels_hang_from_two_shared_layers_rather_than_a_root_each() {
+        let actor = |id: &str, z: f32| ActorSnapshot {
+            id: ActorId(id.into()),
+            name_for_player: id.into(),
+            control: ActorControl::Llm,
+            position_m: Position::new(0.0, 0.91, z).unwrap(),
+            facing_yaw: 0.0,
+            appearance: Default::default(),
+            holds: vec![],
+            active_gesture: None,
+            statuses: Vec::new(),
+            pockets: Vec::new(),
+        };
+        // The projection refuses a snapshot whose named player is not in its own
+        // cast (`SnapshotError::UnknownPlayer`), so every revision carries one —
+        // exactly as the sibling tests above do.
+        let snapshot = |world_revision: u64, mut actors: Vec<ActorSnapshot>| {
+            actors.push(ActorSnapshot {
+                id: ActorId("player".into()),
+                name_for_player: "You".into(),
+                control: ActorControl::Player,
+                position_m: Position::new(0.0, 0.91, 95.0).unwrap(),
+                facing_yaw: 0.0,
+                appearance: Default::default(),
+                holds: vec![],
+                active_gesture: None,
+                statuses: Vec::new(),
+                pockets: Vec::new(),
+            });
+            WorldSnapshot {
+                world_revision,
+                player_id: ActorId("player".into()),
+                actors,
+                items: vec![],
+                offers: vec![],
+                road_carts: vec![],
+                marks: Vec::new(),
+            }
+        };
+
+        let mut mirror = WorldMirror::default();
+        mirror
+            .replace_snapshot(snapshot(1, vec![actor("cb947", 112.0), actor("sv3n1", 114.0)]))
+            .unwrap();
+
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<Image>()
+            .insert_resource(mirror)
+            .add_systems(Startup, super::super::body::setup_body_assets)
+            .add_systems(Update, reconcile_actor_views);
+        app.update();
+
+        // A later arrival joins the layers already standing — the layers are
+        // created once, not once per spawning frame.
+        app.world_mut()
+            .resource_mut::<WorldMirror>()
+            .replace_snapshot(snapshot(
+                2,
+                vec![
+                    actor("cb947", 112.0),
+                    actor("sv3n1", 114.0),
+                    actor("k0fb1", 116.0),
+                ],
+            ))
+            .unwrap();
+        app.update();
+
+        let world = app.world_mut();
+        let name_layer = world
+            .query_filtered::<Entity, With<NameLabelLayer>>()
+            .single(world)
+            .expect("exactly one name-label layer");
+        let indicator_layer = world
+            .query_filtered::<Entity, With<ThinkingIndicatorLayer>>()
+            .single(world)
+            .expect("exactly one thinking-indicator layer");
+        assert_ne!(name_layer, indicator_layer);
+
+        let labels: Vec<_> = world
+            .query::<(&ActorNameLabel, &ChildOf)>()
+            .iter(world)
+            .map(|(_, parent)| parent.parent())
+            .collect();
+        assert_eq!(labels.len(), 3);
+        assert!(labels.iter().all(|parent| *parent == name_layer));
+
+        let indicators: Vec<_> = world
+            .query::<(&ThinkingIndicator, &ChildOf)>()
+            .iter(world)
+            .map(|(_, parent)| parent.parent())
+            .collect();
+        assert_eq!(indicators.len(), 3);
+        assert!(indicators.iter().all(|parent| *parent == indicator_layer));
+
+        // The layers inherit the draw order the labels used to carry, and must
+        // not swallow the clicks of every UI element beneath them: a
+        // full-screen node with no `Pickable` blocks the whole picking stack.
+        for (entity, z_index) in [
+            (name_layer, NAME_LABEL_Z_INDEX),
+            (indicator_layer, THINKING_INDICATOR_Z_INDEX),
+        ] {
+            assert_eq!(world.get::<ZIndex>(entity).map(|z| z.0), Some(z_index));
+            assert_eq!(world.get::<Pickable>(entity), Some(&Pickable::IGNORE));
+            let node = world.get::<Node>(entity).expect("the layer is a UI node");
+            assert_eq!(node.position_type, PositionType::Absolute);
+            assert_eq!(node.left, Val::Px(0.0));
+            assert_eq!(node.top, Val::Px(0.0));
+            assert_eq!(node.width, Val::Percent(100.0));
+            assert_eq!(node.height, Val::Percent(100.0));
+            assert!(world.get::<ChildOf>(entity).is_none(), "the layer is the root");
+        }
     }
 }

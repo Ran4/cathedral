@@ -649,7 +649,7 @@ impl LocalEngine {
                 answer,
                 duration_seconds,
                 error,
-            } => self.prompt_log.record(&PromptExchange {
+            } => self.prompt_log.record(PromptExchange {
                 actor_id: actor_id.as_str().to_string(),
                 actor_name,
                 prompt,
@@ -661,8 +661,15 @@ impl LocalEngine {
                 // The sim already bakes `[smart actors] ` into the payload, so
                 // stderr prints the line as-is — prefixing again would both
                 // double it and make stderr disagree with `logs.jsonl`.
-                eprintln!("{line}");
+                //
+                // The `logs.jsonl` record is written here (it only touches a
+                // buffer) and the stderr print is handed off: this runs inside
+                // the engine pump, on the main thread, and `std::io::Stderr` is
+                // unbuffered, so a terminal that is slow to drain would block
+                // the middle of a frame. A poll that emits seven diagnostics
+                // pays that seven times over.
                 crate::session_log::log_line("engine", "INFO", &line);
+                crate::session_log::print_line(line);
             }
             message => self.send(BridgeEvent::Message(Box::new(message))),
         }

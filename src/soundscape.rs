@@ -491,7 +491,21 @@ impl Plugin for SoundscapePlugin {
                     update_virtualized_loops,
                     update_playing_one_shots,
                 )
-                    .chain(),
+                    // The order is the contract — the schedulers push into
+                    // `ScheduledSounds` in a fixed sequence and `spawn_due_sounds`
+                    // drains it — but the global joins a plain `.chain()` mints on
+                    // top of it are not. Four of the thirteen own a `Commands`, so
+                    // a plain chain stops the whole Update schedule three times a
+                    // frame, whether or not anything was queued.
+                    //
+                    // Nothing here reads an entity a predecessor spawned in the
+                    // same run: a one-shot is spawned already at its final volume
+                    // and a loop at silence (both re-read by
+                    // `update_playing_one_shots` / `update_virtualized_loops` from
+                    // the next frame on, which is what their fades expect), and no
+                    // scheduler queries an audio entity at all. So the order is
+                    // kept and the barriers go.
+                    .chain_ignore_deferred(),
             );
     }
 }
@@ -2000,35 +2014,58 @@ fn schedule_npc_body_sounds(
     // Retain timers for every still-present actor, including somebody who
     // briefly walks or leaves earshot. Otherwise returning to the radius would
     // reset `yawn_evening` and permit several "once an evening" yawns.
-    let seen: HashSet<String> = actors.iter().map(|(id, _)| id.0.clone()).collect();
+    // Borrowed keys, not owned ones: the ids live in the components the query
+    // is already holding for the length of this scan, and cloning one String
+    // per actor built ~510 heap allocations four times a second for a set that
+    // is thrown away at the end of the same function.
+    let seen: HashSet<&str> = actors.iter().map(|(id, _)| id.0.as_str()).collect();
     let mut candidates: Vec<_> = actors
         .iter()
         .filter_map(|(id, transform)| {
             let position = transform.translation();
+            // Cheap first, and short-circuit: only a handful of the cast are
+            // ever within earshot and standing still, and the mirror lookup
+            // below hashes the actor's id. Running it for all ~510 to then
+            // discard the answer was the bulk of this scan.
+            //
+            // Written as `!close` rather than as the inverted comparison, so a
+            // body whose transform has gone non-finite is still dropped here.
+            // `NaN <= r` is false and `NaN > r` is false too, so the two forms
+            // disagree on exactly that body — and letting it through would put
+            // a yawn at a NaN position, which is a spatial sink with no place.
             let close = position.distance_squared(player.translation) <= 70.0_f32.powi(2);
+            if !close {
+                return None;
+            }
             let stationary = movement
                 .as_deref()
                 .and_then(|inbox| inbox.0.get(id))
                 .is_none_or(|sample| sample.speed < 0.35);
+            if !stationary {
+                return None;
+            }
             let snapshot = mirror.as_deref().and_then(|mirror| mirror.actor(id));
             let dusty_worker =
                 snapshot.is_some_and(|actor| dusty_worker_outfit(actor.appearance.outfit));
             let weariness = snapshot.map_or(0.0, |actor| status_weariness(&actor.statuses));
-            (close && stationary).then_some((id, position, dusty_worker, weariness))
+            Some((id, position, dusty_worker, weariness))
         })
         .collect();
     candidates.sort_by(|(a, _, _, _), (b, _, _, _)| a.0.cmp(&b.0));
 
     for (id, _, _, _) in &candidates {
-        state
-            .actors
-            .entry(id.0.clone())
-            .or_insert_with(|| NpcTimer {
+        // `entry` would want the key by value and so clone the id on every
+        // scan; a timer that already exists is the overwhelmingly common case
+        // and needs no allocation at all.
+        if !state.actors.contains_key(id.0.as_str()) {
+            let timer = NpcTimer {
                 next_cough_at: now
                     + 45.0
                     + unit(stable_hash(&format!("cough:{}:{day}", id.0))) * 150.0,
                 ..default()
-            });
+            };
+            state.actors.insert(id.0.clone(), timer);
+        }
     }
 
     if now >= state.next_global_at {
@@ -2098,7 +2135,7 @@ fn schedule_npc_body_sounds(
             }
         }
     }
-    state.actors.retain(|id, _| seen.contains(id));
+    state.actors.retain(|id, _| seen.contains(id.as_str()));
 }
 
 fn status_weariness(statuses: &[(cathedral_sim::StatusKind, f32)]) -> f32 {

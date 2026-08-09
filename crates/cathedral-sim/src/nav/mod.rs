@@ -20,7 +20,10 @@
 //!
 //! Design: `features/implemented/movement/02_navigation.md`.
 
-use std::collections::{BinaryHeap, HashMap};
+use std::{
+    cell::RefCell,
+    collections::{BinaryHeap, HashMap},
+};
 
 use serde::Deserialize;
 
@@ -216,6 +219,9 @@ pub struct NavData {
     place_by_name: HashMap<String, usize>,
     door_by_building: HashMap<String, usize>,
     forecourt: usize,
+    /// Derived from `nodes` alone, so two `NavData` built from the same graph
+    /// still compare equal.
+    node_index: Option<NodeIndex>,
 }
 
 impl NavData {
@@ -321,6 +327,7 @@ impl NavData {
 
         check_node(doc.reference.forecourt, "reference.forecourt")?;
 
+        let node_index = NodeIndex::build(&doc.nodes);
         Ok(Self {
             grid,
             bitset: bitset.to_vec(),
@@ -332,6 +339,7 @@ impl NavData {
             place_by_name,
             door_by_building,
             forecourt: doc.reference.forecourt,
+            node_index,
         })
     }
 
@@ -397,10 +405,28 @@ impl NavData {
         (self.bitset[idx >> 3] >> (7 - (idx & 7))) & 1 == 1
     }
 
-    /// The graph node nearest a world point, by straight-line distance. Brute
-    /// force over the node set; the movement layer will add a spatial index, but
-    /// reachability queries do not need one.
+    /// The graph node nearest a world point, by straight-line distance.
+    ///
+    /// Answered through the uniform-grid [`NodeIndex`] the movement layer was
+    /// owed: `route_between` snaps both its endpoints this way, and a sweep of
+    /// all ~4,000 nodes twice per route was a real share of the burst every
+    /// office crossing sets off (the whole enrolled cast re-routes at a bell).
+    /// The index falls back to the sweep for a point outside the node bounding
+    /// box, or for a graph the index cannot be built over.
+    ///
+    /// Both paths answer with the *same* node, ties included: the winner is the
+    /// smallest `(distance², index)` pair, which is exactly what a sweep in
+    /// index order with a strict `<` picks.
     pub fn nearest_node(&self, x: f64, z: f64) -> Option<usize> {
+        if let Some(index) = &self.node_index
+            && let Some(node) = index.nearest(&self.nodes, x, z)
+        {
+            return Some(node);
+        }
+        self.nearest_node_by_sweep(x, z)
+    }
+
+    fn nearest_node_by_sweep(&self, x: f64, z: f64) -> Option<usize> {
         let mut best = None;
         let mut best_d2 = f64::INFINITY;
         for (i, &[nx, nz]) in self.nodes.iter().enumerate() {
@@ -476,42 +502,56 @@ impl NavData {
         let goal_xz = self.nodes[goal];
         let heuristic = |node: usize| distance(self.nodes[node], goal_xz);
 
-        let mut g: Vec<f64> = vec![f64::INFINITY; self.nodes.len()];
-        let mut came: Vec<usize> = vec![usize::MAX; self.nodes.len()];
-        g[start] = 0.0;
-        let mut heap = BinaryHeap::new();
-        heap.push(HeapEntry {
-            cost: heuristic(start),
-            node: start,
-        });
-        while let Some(HeapEntry { node, .. }) = heap.pop() {
-            if node == goal {
-                let mut path = vec![goal];
-                let mut cur = goal;
-                while cur != start {
-                    cur = came[cur];
-                    path.push(cur);
+        // The working set is reused across searches rather than freshly
+        // allocated and filled: two `Vec`s the length of the node set is 64 KB
+        // of malloc and memset before A* expands a single edge, and the whole
+        // enrolled cast re-routes together whenever the office bell changes
+        // which leg of their round they are on. A generation stamp stands in
+        // for the refill — an entry not stamped with *this* search's number
+        // reads as infinity — so a route costs only the nodes it touches.
+        ASTAR_SCRATCH.with_borrow_mut(|scratch| {
+            let generation = scratch.begin(self.nodes.len());
+            scratch.g[start] = 0.0;
+            scratch.stamp[start] = generation;
+            scratch.heap.push(HeapEntry {
+                cost: heuristic(start),
+                node: start,
+            });
+            while let Some(HeapEntry { node, .. }) = scratch.heap.pop() {
+                if node == goal {
+                    let mut path = vec![goal];
+                    let mut cur = goal;
+                    while cur != start {
+                        cur = scratch.came[cur];
+                        path.push(cur);
+                    }
+                    path.reverse();
+                    return Some(self.route_from_nodes(path));
                 }
-                path.reverse();
-                return Some(self.route_from_nodes(path));
+                let base = scratch.g[node];
+                for edge in &self.adjacency[node] {
+                    if avoid == Some(edge.to) {
+                        continue;
+                    }
+                    let tentative = base + edge.cost;
+                    let known = if scratch.stamp[edge.to] == generation {
+                        scratch.g[edge.to]
+                    } else {
+                        f64::INFINITY
+                    };
+                    if tentative < known {
+                        scratch.stamp[edge.to] = generation;
+                        scratch.g[edge.to] = tentative;
+                        scratch.came[edge.to] = node;
+                        scratch.heap.push(HeapEntry {
+                            cost: tentative + heuristic(edge.to),
+                            node: edge.to,
+                        });
+                    }
+                }
             }
-            let base = g[node];
-            for edge in &self.adjacency[node] {
-                if avoid == Some(edge.to) {
-                    continue;
-                }
-                let tentative = base + edge.cost;
-                if tentative < g[edge.to] {
-                    g[edge.to] = tentative;
-                    came[edge.to] = node;
-                    heap.push(HeapEntry {
-                        cost: tentative + heuristic(edge.to),
-                        node: edge.to,
-                    });
-                }
-            }
-        }
-        None
+            None
+        })
     }
 
     /// Route between two world points, snapping each to the nearest graph node.
@@ -721,6 +761,238 @@ fn planar_dir(from: Vec3, to: Vec3) -> Option<Vec3> {
     let d = Vec3::new(to.x - from.x, 0.0, to.z - from.z);
     let length = d.length();
     if length < 1e-9 { None } else { Some(d / length) }
+}
+
+// --------------------------------------------------------------------------- //
+// The A* working set, reused between searches
+// --------------------------------------------------------------------------- //
+thread_local! {
+    /// One working set per thread. The sim is pumped from a single thread, so
+    /// in the game this is one allocation for the whole run; a test harness
+    /// that routes from several threads simply gets one each.
+    static ASTAR_SCRATCH: RefCell<AStarScratch> = RefCell::new(AStarScratch::new());
+}
+
+/// Reusable `g` / `came` arrays for [`NavData::route_nodes_avoiding`], kept
+/// current by a generation stamp instead of being refilled.
+struct AStarScratch {
+    /// Which search last wrote `g[node]` and `came[node]`. Anything not equal
+    /// to the current generation has not been reached by *this* search.
+    stamp: Vec<u32>,
+    generation: u32,
+    g: Vec<f64>,
+    came: Vec<usize>,
+    heap: BinaryHeap<HeapEntry>,
+}
+
+impl AStarScratch {
+    fn new() -> Self {
+        Self {
+            stamp: Vec::new(),
+            generation: 0,
+            g: Vec::new(),
+            came: Vec::new(),
+            heap: BinaryHeap::new(),
+        }
+    }
+
+    /// Ready the buffers for a search over `nodes` nodes and hand back the
+    /// stamp that identifies it. The heap is emptied here rather than on the
+    /// way out, because a search that finds its goal returns from the middle of
+    /// the loop and leaves the rest of the frontier behind it.
+    fn begin(&mut self, nodes: usize) -> u32 {
+        if self.stamp.len() != nodes {
+            self.stamp = vec![0; nodes];
+            self.g = vec![f64::INFINITY; nodes];
+            self.came = vec![usize::MAX; nodes];
+            self.generation = 0;
+        }
+        self.heap.clear();
+        // Generation 0 is "written by no search", so wrapping past it has to
+        // clear the stamps that would otherwise read as current.
+        self.generation = self.generation.wrapping_add(1);
+        if self.generation == 0 {
+            self.stamp.fill(0);
+            self.generation = 1;
+        }
+        self.generation
+    }
+}
+
+// --------------------------------------------------------------------------- //
+// The node index behind `nearest_node`
+// --------------------------------------------------------------------------- //
+/// A uniform grid over the graph's nodes, in compressed-row form: the cells in
+/// `starts` window into `members`, which holds node indices.
+///
+/// Deliberately its own grid and not [`NavGrid`]: the walkable bitset is a
+/// 0.25 m raster of the whole city (millions of cells), where this wants a few
+/// hundred buckets of ~8 nodes each.
+#[derive(Debug, Clone, PartialEq)]
+struct NodeIndex {
+    x0: f64,
+    z0: f64,
+    cell_m: f64,
+    cols: usize,
+    rows: usize,
+    starts: Vec<u32>,
+    members: Vec<u32>,
+}
+
+impl NodeIndex {
+    /// `None` for a graph the ring search below could not answer over: no
+    /// nodes at all, or a coordinate that is not finite (where the "everything
+    /// unscanned is at least this far away" bound stops meaning anything).
+    fn build(points: &[[f64; 2]]) -> Option<Self> {
+        if points.is_empty() || points.len() > u32::MAX as usize {
+            return None;
+        }
+        let (mut x0, mut x1) = (f64::INFINITY, f64::NEG_INFINITY);
+        let (mut z0, mut z1) = (f64::INFINITY, f64::NEG_INFINITY);
+        for &[x, z] in points {
+            if !x.is_finite() || !z.is_finite() {
+                return None;
+            }
+            x0 = x0.min(x);
+            x1 = x1.max(x);
+            z0 = z0.min(z);
+            z1 = z1.max(z);
+        }
+        // About one node a cell: the ring search then reads a couple of dozen
+        // candidates for a query anywhere in the city, and the table itself is
+        // the same order of size as the node array.
+        let span = (x1 - x0).max(z1 - z0).max(1.0);
+        let cell_m = (span / (points.len() as f64).sqrt()).max(1.0);
+        let cols = ((x1 - x0) / cell_m).floor() as usize + 1;
+        let rows = ((z1 - z0) / cell_m).floor() as usize + 1;
+        if cols == 0 || rows == 0 || cols.checked_mul(rows).is_none() {
+            return None;
+        }
+
+        let cell_of = |x: f64, z: f64| -> usize {
+            let col = (((x - x0) / cell_m).floor() as usize).min(cols - 1);
+            let row = (((z - z0) / cell_m).floor() as usize).min(rows - 1);
+            row * cols + col
+        };
+        let mut starts = vec![0u32; cols * rows + 1];
+        for &[x, z] in points {
+            starts[cell_of(x, z) + 1] += 1;
+        }
+        for cell in 1..starts.len() {
+            starts[cell] += starts[cell - 1];
+        }
+        let mut cursor = starts.clone();
+        let mut members = vec![0u32; points.len()];
+        for (node, &[x, z]) in points.iter().enumerate() {
+            let cell = cell_of(x, z);
+            members[cursor[cell] as usize] = node as u32;
+            cursor[cell] += 1;
+        }
+        Some(Self {
+            x0,
+            z0,
+            cell_m,
+            cols,
+            rows,
+            starts,
+            members,
+        })
+    }
+
+    /// The nearest node to `(x, z)`, or `None` when the point lies outside the
+    /// indexed box and the caller must sweep instead.
+    ///
+    /// Rings of cells are scanned outward from the query's own cell. Having
+    /// scanned every cell within `ring` cells, nothing left can be closer than
+    /// `ring * cell_m` — the query point sits inside its own cell, so each of
+    /// the block's four sides is at least that far off — and the search stops
+    /// as soon as the best hit is *strictly* inside that bound, which also
+    /// rules out an unscanned node tying with it.
+    fn nearest(&self, points: &[[f64; 2]], x: f64, z: f64) -> Option<usize> {
+        if !x.is_finite() || !z.is_finite() {
+            return None;
+        }
+        let col = (x - self.x0) / self.cell_m;
+        let row = (z - self.z0) / self.cell_m;
+        if !(col >= 0.0 && row >= 0.0) {
+            return None;
+        }
+        let (col, row) = (col.floor() as usize, row.floor() as usize);
+        if col >= self.cols || row >= self.rows {
+            return None;
+        }
+
+        let mut best: Option<(f64, usize)> = None;
+        let visit = |cell_row: usize, cell_col: usize, best: &mut Option<(f64, usize)>| {
+            let cell = cell_row * self.cols + cell_col;
+            for &member in &self.members[self.starts[cell] as usize..self.starts[cell + 1] as usize]
+            {
+                let node = member as usize;
+                let [nx, nz] = points[node];
+                let d2 = (nx - x) * (nx - x) + (nz - z) * (nz - z);
+                // Smallest `(d², index)` — the pair a sweep in index order with
+                // a strict `<` settles on.
+                let better = match *best {
+                    None => true,
+                    Some((best_d2, best_node)) => {
+                        d2 < best_d2 || (d2 == best_d2 && node < best_node)
+                    }
+                };
+                if better {
+                    *best = Some((d2, node));
+                }
+            }
+        };
+
+        for ring in 0..=self.cols.max(self.rows) {
+            let low_col = col.saturating_sub(ring);
+            let high_col = (col + ring).min(self.cols - 1);
+            let low_row = row.saturating_sub(ring);
+            let high_row = (row + ring).min(self.rows - 1);
+            if ring == 0 {
+                visit(row, col, &mut best);
+            } else {
+                // The ring's two full rows (each present only when it is on the
+                // grid at all), then its two columns over the rows between them.
+                if row >= ring {
+                    for cell_col in low_col..=high_col {
+                        visit(low_row, cell_col, &mut best);
+                    }
+                }
+                if row + ring < self.rows {
+                    for cell_col in low_col..=high_col {
+                        visit(high_row, cell_col, &mut best);
+                    }
+                }
+                let inner_low = (row + 1).saturating_sub(ring);
+                let inner_high = (row + ring - 1).min(self.rows - 1);
+                for cell_row in inner_low..=inner_high {
+                    if col >= ring {
+                        visit(cell_row, low_col, &mut best);
+                    }
+                    if col + ring < self.cols {
+                        visit(cell_row, high_col, &mut best);
+                    }
+                }
+            }
+            if let Some((best_d2, _)) = best {
+                // Shaved by a hair before it is believed. The "nothing left is
+                // closer than `ring * cell_m`" argument is exact arithmetic,
+                // but the cell a node was filed under and the cell the query
+                // lands in are both a rounded `floor(quotient)`, which can put
+                // a node a couple of hundred attometres inside the bound. A
+                // relative shave a million times that is still far too small to
+                // cost a ring in practice, and it makes the disagreement with
+                // the sweep impossible rather than merely improbable — the
+                // sweep is what walkers' streets are chosen by.
+                let covered = ring as f64 * self.cell_m * (1.0 - 1e-9);
+                if best_d2 < covered * covered {
+                    break;
+                }
+            }
+        }
+        best.map(|(_, node)| node)
+    }
 }
 
 /// Min-heap entry for Dijkstra / A* — ordered by ascending cost.

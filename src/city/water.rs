@@ -216,6 +216,7 @@ pub(super) fn animate_well_mechanisms(
     mut animation: Local<WellAnimationState>,
     mut parts: Query<(&WellMechanismPart, &mut Transform)>,
 ) {
+    let _span = crate::perf::span(crate::perf::Probe::Water);
     let dt = time.delta_secs();
     let ford_active = activity
         .as_deref()

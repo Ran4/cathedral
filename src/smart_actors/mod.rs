@@ -593,7 +593,32 @@ impl Plugin for SmartActorsPlugin {
                     SmartActorSet::CollectInput,
                     SmartActorSet::Present,
                 )
-                    .chain()
+                    // The *order* is the contract; the stop-the-world join
+                    // between the sets is not. A plain `.chain()` makes Bevy
+                    // mint an `ApplyDeferred` on every edge whose upstream owns
+                    // a `Commands` — and `ApplyDeferred` is exclusive, so it
+                    // also halts the heavy Bevy work that shares PostUpdate
+                    // (visibility, light frusta, UI layout) for as long as the
+                    // slowest of our systems takes. `chain_ignore_deferred`
+                    // keeps every ordering edge and drops the barrier.
+                    //
+                    // Almost nothing across a set boundary reads an entity a
+                    // previous set queued through `Commands`. The drain's only
+                    // deferred write is inserting/removing the microphone
+                    // service resource, which every reader takes as an `Option`
+                    // and which is read for the first time a frame later either
+                    // way (the worker takes far longer than a frame to open a
+                    // device); every other hand-off between the sets is a
+                    // resource or a component written in place, which is never
+                    // deferred. The one exception is the pack: `sync_dogs`
+                    // spawns a dog's rig and `drive_dog_bodies` gives it its
+                    // `DogMotion`, both of which `dogs::animate_dog_gait` in
+                    // `Present` now first sees a frame later — which costs a
+                    // freshly spawned dog one frame in its rest pose, at the
+                    // one moment of its life it is standing still anyway. The
+                    // syncs that DO carry data are named and kept inside
+                    // `ReconcileMirror` and `Present` below.
+                    .chain_ignore_deferred()
                     .after(TransformSystems::Propagate),
             )
             .add_systems(
@@ -634,34 +659,60 @@ impl Plugin for SmartActorsPlugin {
             .add_systems(
                 PostUpdate,
                 (
-                    actors::reconcile_actor_views,
-                    // Feedback first (the giver's in-hand prop must still exist
-                    // to launch a hand-over flight from), then the hand-prop
-                    // reconcile that would retire it (npc_bodies M2).
-                    hands::apply_handover_feedback,
-                    hands::reconcile_hand_props,
-                    // The deliberate body (npc_bodies M4): start one-shot poses
-                    // from gesture triggers and keep the looping-dance flag in
-                    // step with the snapshot, on the roots reconcile just placed.
-                    body::drive_gesture_pose,
-                    interaction::reconcile_interaction_state,
-                    // After reconcile, so it overrides the stale snapshot position
-                    // reconcile writes for a mover between revisions with the live
-                    // interpolated pose off the hot channel.
-                    actors::drive_npc_bodies,
-                    // …and after that in turn: a custody grip aims at where the
-                    // prisoner is *this* frame, which for anyone being walked to
-                    // a station is the hot channel's position, not the mirror's
-                    // (`law_and_order.md` M4c).
-                    hands::hold_the_seized,
-                    road_carts::reconcile_road_carts,
-                    // The dog pack (features/implemented/dogs.md): bodies stood up off the
-                    // hot channel, then swept between its 20 Hz ticks like the
-                    // human movers above.
-                    dogs::sync_dogs,
-                    dogs::drive_dog_bodies,
+                    // The only two edges in this set that carry queued
+                    // `Commands` rather than mere order, and therefore the only
+                    // `ApplyDeferred`s left in it. Reconcile spawns the bodies —
+                    // hand anchors, pose state, name labels — that both hand
+                    // systems then look up by entity; and
+                    // `apply_handover_feedback` spawns the hand-over flight that
+                    // `reconcile_hand_props` *must* see in the same frame, since
+                    // a flight it cannot see is a prop it re-mints into the
+                    // receiving hand, doubling the item for the flight's 0.3 s.
+                    (
+                        actors::reconcile_actor_views,
+                        // Feedback first (the giver's in-hand prop must still exist
+                        // to launch a hand-over flight from), then the hand-prop
+                        // reconcile that would retire it (npc_bodies M2).
+                        hands::apply_handover_feedback,
+                        hands::reconcile_hand_props,
+                    )
+                        .chain(),
+                    // From here down the ordering is about which write to a
+                    // *transform* or a resource wins the frame, not about seeing
+                    // a predecessor's commands: everything below queries bodies
+                    // the reconcile above already published through the sync
+                    // point, and the one place a system here does read an entity
+                    // a predecessor in this same run spawned — the pack, below —
+                    // is spelled out where it happens. `chain_ignore_deferred`
+                    // keeps the order exactly and drops four more global
+                    // barriers.
+                    (
+                        // The deliberate body (npc_bodies M4): start one-shot poses
+                        // from gesture triggers and keep the looping-dance flag in
+                        // step with the snapshot, on the roots reconcile just placed.
+                        body::drive_gesture_pose,
+                        interaction::reconcile_interaction_state,
+                        // After reconcile, so it overrides the stale snapshot position
+                        // reconcile writes for a mover between revisions with the live
+                        // interpolated pose off the hot channel.
+                        actors::drive_npc_bodies,
+                        // …and after that in turn: a custody grip aims at where the
+                        // prisoner is *this* frame, which for anyone being walked to
+                        // a station is the hot channel's position, not the mirror's
+                        // (`law_and_order.md` M4c).
+                        hands::hold_the_seized,
+                        road_carts::reconcile_road_carts,
+                        // The dog pack (features/implemented/dogs.md): bodies stood up off the
+                        // hot channel, then swept between its 20 Hz ticks like the
+                        // human movers above. A dog is spawned already standing at
+                        // its own sample, so the sweep picking it up a frame later
+                        // moves nothing.
+                        dogs::sync_dogs,
+                        dogs::drive_dog_bodies,
+                    )
+                        .chain_ignore_deferred(),
                 )
-                    .chain()
+                    .chain_ignore_deferred()
                     .in_set(SmartActorSet::ReconcileMirror),
             )
             .add_systems(
@@ -681,55 +732,105 @@ impl Plugin for SmartActorsPlugin {
                     collect_injected_transcripts,
                     forward_player_intents,
                 )
-                    .chain()
+                    // Order matters (the readers of `PlayerIntent` run last),
+                    // but not one of these nine owns a `Commands`: they trade in
+                    // resources, messages and the bridge channel only. A plain
+                    // `.chain()` here would still mint a barrier, because it
+                    // would be the first non-ignored edge downstream of the
+                    // drain and the reconcile and would cash in *their* postponed
+                    // commands mid-set. Anything added here that does defer must
+                    // re-examine this line.
+                    .chain_ignore_deferred()
                     .in_set(SmartActorSet::CollectInput),
             )
             .add_systems(
                 PostUpdate,
                 (
-                    actors::position_actor_name_labels,
-                    actors::update_thinking_indicators,
-                    // Hand-over props mid-flight between two hands (M2).
-                    hands::animate_handover_flights,
-                    // The reflex bookkeeping (npc_bodies M3) feeds the pose
-                    // pipeline (M1) that runs right after it: who is talking
-                    // until when and what recently made a sound, fed from the
-                    // same presentation messages the bubbles and speakers
-                    // consume — then the cosmetic part-level animation over
-                    // the roots the ReconcileMirror set just placed; it never
-                    // touches a root transform. (Nested tuple: the flat chain
-                    // would exceed Bevy's 20-system tuple limit.)
+                    // Everything that *writes* the presentation: labels, props,
+                    // poses, the speech intake and the two teardowns. The order
+                    // between them is the contract, but not one of them reads an
+                    // entity another spawns or despawns in the same run, so the
+                    // whole block keeps its sequence without an `ApplyDeferred`
+                    // per `Commands` user in it.
                     (
-                        body::track_reflex_signals,
-                        body::animate_body_pose,
-                        // The dogs' trot/wag — same cosmetics-only contract.
-                        dogs::animate_dog_gait,
+                        actors::position_actor_name_labels,
+                        actors::update_thinking_indicators,
+                        // Hand-over props mid-flight between two hands (M2).
+                        // Its spawns and despawns are read next frame, by
+                        // `hands::reconcile_hand_props`.
+                        hands::animate_handover_flights,
+                        // The reflex bookkeeping (npc_bodies M3) feeds the pose
+                        // pipeline (M1) that runs right after it: who is talking
+                        // until when and what recently made a sound, fed from the
+                        // same presentation messages the bubbles and speakers
+                        // consume — then the cosmetic part-level animation over
+                        // the roots the ReconcileMirror set just placed; it never
+                        // touches a root transform. (Nested tuple: the flat chain
+                        // would exceed Bevy's 20-system tuple limit.)
+                        (
+                            body::track_reflex_signals,
+                            body::animate_body_pose,
+                            // The dogs' trot/wag — same cosmetics-only contract.
+                            dogs::animate_dog_gait,
+                        )
+                            .chain_ignore_deferred(),
+                        speech::receive_speech_events,
+                        speech::receive_tts_clips,
+                        speech::receive_tts_pcm_chunks,
+                        speech::receive_tts_stream_ends,
+                        speech::receive_tts_failures,
+                        // Teardown order only — both take the voice apart through
+                        // the same resource, and both despawn with `try_despawn`,
+                        // so neither needs the other's commands applied. They
+                        // stay on *this* side of the sync below because
+                        // `update_speech_bubbles` despawns bubbles outright: with
+                        // the teardown's sweep applied first, an expiring bubble
+                        // it has already taken is simply gone from the query
+                        // rather than despawned twice. The price is that a line
+                        // spoken in the same drain as the engine's death is not
+                        // in `clear_speech_presentation`'s sweep — its bubble
+                        // hangs until it expires and the reaper takes the stack.
+                        (
+                            speech::clear_speech_presentation,
+                            speech::stop_npc_speech_for_capture,
+                        )
+                            .chain_ignore_deferred(),
                     )
-                        .chain(),
-                    speech::receive_speech_events,
-                    speech::receive_tts_clips,
-                    speech::receive_tts_pcm_chunks,
-                    speech::receive_tts_stream_ends,
-                    speech::receive_tts_failures,
+                        .chain_ignore_deferred(),
+                    // The one real sync point left in `Present`, and it earns it
+                    // twice over. `update_audio_activity` counts the `NpcVoice`
+                    // entities the two teardowns above have just despawned, and
+                    // would otherwise leave the soundscape ducked for a frame
+                    // after a voice was cut. And `update_speech_bubbles` reaps
+                    // every stack with no live bubble left in it — so a stack
+                    // whose old line expires on the same frame a new one is
+                    // spoken must see the new bubble, or it despawns the stack
+                    // with the fresh line queued inside it and that line is never
+                    // drawn at all. (`start_ready_audio` runs in Update, while
+                    // the teardown pair above owns voice teardown; keeping this
+                    // boundary here makes both edges visible before the later
+                    // presentation and audio consumers.)
                     (
-                        speech::clear_speech_presentation,
-                        speech::stop_npc_speech_for_capture,
-                        // `start_ready_audio` runs in Update, while the two
-                        // systems above own voice teardown. Keeping this here
-                        // makes both edges visible before later presentation
-                        // and audio consumers.
                         update_audio_activity,
+                        speech::update_speech_bubbles,
+                        speech::update_subtitle_hud,
+                        sound::play_sound_effects,
+                        sound::expire_stalled_sound_effects,
+                        area_debug::update_area_debug_ui,
+                        area_debug::update_actor_status_visibility,
+                        actor_sheet::update_actor_sheet,
+                        chat::update_chat_input_ui,
+                        hud::update_smart_actor_hud,
                     )
-                        .chain(),
-                    speech::update_speech_bubbles,
-                    speech::update_subtitle_hud,
-                    sound::play_sound_effects,
-                    sound::expire_stalled_sound_effects,
-                    area_debug::update_area_debug_ui,
-                    area_debug::update_actor_status_visibility,
-                    actor_sheet::update_actor_sheet,
-                    chat::update_chat_input_ui,
-                    hud::update_smart_actor_hud,
+                        // The readers, in order, and again with no barrier
+                        // between them: a sound effect is spawned already at its
+                        // final volume and a stalled one is only ever reaped a
+                        // frame after it stalled, so nothing here needs a
+                        // predecessor's commands. `Present` is the last set of
+                        // the frame; what it queues is applied by the schedule's
+                        // own apply at the end of PostUpdate, before anything
+                        // renders or ticks again.
+                        .chain_ignore_deferred(),
                 )
                     .chain()
                     .in_set(SmartActorSet::Present),
@@ -760,7 +861,13 @@ impl Plugin for SmartActorsPlugin {
                 PostUpdate,
                 area_debug::draw_area_boxes
                     .in_set(SmartActorSet::Present)
-                    .after(area_debug::update_area_debug_ui),
+                    // It draws the boxes the debug UI has just decided on — an
+                    // order, not a command hand-off. A plain `.after` would be
+                    // the one non-ignored edge left at the tail of `Present` and
+                    // would cash in the whole set's postponed commands right
+                    // there, putting a global barrier back on the last system of
+                    // the frame.
+                    .after_ignore_deferred(area_debug::update_area_debug_ui),
             );
         }
     }
@@ -787,6 +894,14 @@ pub struct InjectPlayerTranscript {
 
 /// The engine's two render-only "hot" channels, bundled so `drain_bridge_messages`
 /// stays under Bevy's 16-parameter system limit.
+///
+/// **Every `ResMut` in here is wrapper-only.** Hand one to
+/// [`process_engine_message`] as `&mut ResMut<_>`, never as `&mut _`: the
+/// coercion Rust would perform for the bare form goes through `DerefMut` and
+/// stamps the changed tick for *every* message, in *every* arm, and `Clock` and
+/// `Weather` arrive on every poll. Bare, these resources are flagged changed
+/// forever and every `is_changed()` gate that reads them is dead code. Deref
+/// inside the arm that genuinely writes.
 #[derive(SystemParam)]
 struct HotChannels<'w, 's> {
     movement: ResMut<'w, model::MovementInbox>,
@@ -1051,12 +1166,20 @@ fn process_engine_message(
     interaction: &mut interaction::InteractionState,
     presentation: &mut BridgePresentationWriters,
     world_clock: &mut clock::WorldClockState,
-    movement_inbox: &mut model::MovementInbox,
-    city_lamps: &mut lamps::CityLamps,
-    dog_inbox: &mut dogs::DogInbox,
-    weather: &mut WorldWeatherState,
+    // Every one of the five hot channels below takes the `ResMut` wrapper for
+    // the mirror's reason, and the whole of [`HotChannels`] is wrapper-only by
+    // rule: `&mut hot.movement` deref-coerces through `DerefMut`, which stamps
+    // the changed tick for *every* message in *every* arm, and `Clock` and
+    // `Weather` arrive on every poll. Taken bare, these five are permanently
+    // flagged and the two live gates that read them — `law_standing_hud`
+    // (custody.rs) and `sync_dogs` (dogs.rs) — never skip a frame. Deref
+    // explicitly, inside the arm that actually writes.
+    movement_inbox: &mut ResMut<model::MovementInbox>,
+    city_lamps: &mut ResMut<lamps::CityLamps>,
+    dog_inbox: &mut ResMut<dogs::DogInbox>,
+    weather: &mut ResMut<WorldWeatherState>,
     lightning: &mut MessageWriter<WeatherLightning>,
-    law: &mut custody::PlayerCustodyState,
+    law: &mut ResMut<custody::PlayerCustodyState>,
     // The `ResMut` wrapper for the same reason the mirror keeps one: the sign
     // picker resets on this resource's change flag, so it must be flagged when
     // what is within reach moves and not merely when a message arrives.
@@ -1073,12 +1196,24 @@ fn process_engine_message(
             // unrenderable — a sim bug, not a lost message, and there is no
             // resync left to ask for. The handshake simply never completes and
             // the HUD keeps saying so.
-            if accept_snapshot(&mut **mirror, runtime, hud, movement_inbox, &snapshot) {
+            if accept_snapshot(
+                &mut **mirror,
+                runtime,
+                hud,
+                &mut **movement_inbox,
+                &snapshot,
+            ) {
                 apply_ready_capabilities(runtime, hud, capabilities);
             }
         }
         EngineMessage::Snapshot(snapshot) => {
-            accept_snapshot(&mut **mirror, runtime, hud, movement_inbox, &snapshot);
+            accept_snapshot(
+                &mut **mirror,
+                runtime,
+                hud,
+                &mut **movement_inbox,
+                &snapshot,
+            );
         }
         EngineMessage::Clock {
             day,
@@ -1127,7 +1262,7 @@ fn process_engine_message(
             };
         }
         EngineMessage::Weather(sample) => {
-            weather.receive(sample, received_at_seconds);
+            (**weather).receive(sample, received_at_seconds);
         }
         EngineMessage::Lightning(strike) => {
             lightning.write(WeatherLightning(strike));
@@ -1143,7 +1278,7 @@ fn process_engine_message(
             // between successive ticks.
             for motion in moved {
                 let actor_id = model::actor_id_from_sim(&motion.actor_id);
-                let sample = movement_inbox.0.entry(actor_id).or_default();
+                let sample = (**movement_inbox).0.entry(actor_id).or_default();
                 sample.position = model::vec3_from_sim(motion.position_m);
                 sample.facing_yaw = motion.facing_yaw as f32;
                 sample.speed = motion.speed;
@@ -1163,6 +1298,7 @@ fn process_engine_message(
                 "INFO",
                 &format!("[lamps] {lit}/{} lit", set.len()),
             );
+            let city_lamps = &mut **city_lamps;
             city_lamps.lamps = set
                 .into_iter()
                 .map(|lamp| lamps::LampState {
@@ -1177,6 +1313,7 @@ fn process_engine_message(
             // The dog channel, like `Movement`: whole-pack poses at 20 Hz, no
             // mirror, no revision. `seq` bumps per received sample so the
             // interpolation sweeps between successive ticks.
+            let dog_inbox = &mut **dog_inbox;
             for view in pack {
                 let sample = dog_inbox
                     .0
@@ -1357,9 +1494,15 @@ fn process_engine_message(
             // stand-in teleports her beside the target inside this very poll,
             // so at this instant hers is the one position neither channel here
             // has heard about yet. The target's, nobody has touched.
+            // Both channels are read through the immutable deref: flagging
+            // either here would claim a mover moved when only a message
+            // arrived.
             if kind == "seize"
-                && let Some(position) =
-                    live_position(target.as_ref().unwrap_or(&actor), &**mirror, movement_inbox)
+                && let Some(position) = live_position(
+                    target.as_ref().unwrap_or(&actor),
+                    &**mirror,
+                    &**movement_inbox,
+                )
             {
                 presentation
                     .soundscape
@@ -1440,9 +1583,11 @@ fn process_engine_message(
         EngineMessage::LawStanding { notices, custody } => {
             // Purely a projection: the sim decides, and every host-side answer
             // (the tether, the reflex, the strain meter) goes back to it as a
-            // command rather than being applied locally.
+            // command rather than being applied locally. This is the one arm
+            // that writes the standing, so it is the one arm that may flag it —
+            // `law_standing_hud` redraws the line on exactly that flag.
             custody::apply_law_standing(
-                law,
+                &mut **law,
                 &notices,
                 custody.map(|custody| custody::CustodyView {
                     holder_ids: custody
@@ -2906,6 +3051,63 @@ mod tests {
         assert!(app.world().resource::<SmartActorRuntime>().ready);
         app.update();
         app
+    }
+
+    /// The hot channels reach [`process_engine_message`] as their `ResMut`
+    /// wrapper and never bare, so an ordinary poll — a `Clock` and a `Weather`,
+    /// which arrive on every single one — leaves the change ticks of the
+    /// channels it says nothing about alone.
+    ///
+    /// Two gates hang off those ticks: `custody::law_standing_hud` skips the
+    /// frame unless the standing moved, and `dogs::sync_dogs` unless the pack
+    /// did. Handed bare `&mut`s, Rust coerces through `DerefMut` and stamps
+    /// every channel on every message, so both gates were dead code that never
+    /// skipped a frame in the game's life. Unflagged frames existing at all is
+    /// the pin; how many is the engine's business, not this test's.
+    #[test]
+    fn an_ordinary_poll_leaves_the_law_and_the_pack_unflagged() {
+        #[derive(Resource, Default)]
+        struct FlaggedFrames {
+            frames: u32,
+            law: u32,
+            dogs: u32,
+        }
+
+        fn count_flags(
+            law: Res<custody::PlayerCustodyState>,
+            dogs: Res<dogs::DogInbox>,
+            mut counts: ResMut<FlaggedFrames>,
+        ) {
+            counts.frames += 1;
+            counts.law += u32::from(law.is_changed());
+            counts.dogs += u32::from(dogs.is_changed());
+        }
+
+        let mut app = ready_fake_plugin_app();
+        app.init_resource::<FlaggedFrames>()
+            .add_systems(Last, count_flags);
+        // Enough real time for several engine polls — every one of them carries
+        // a `Clock` and a `Weather`, which is exactly the traffic that used to
+        // flag everything.
+        for _ in 0..30 {
+            app.update();
+            thread::sleep(Duration::from_millis(2));
+        }
+
+        let counts = app.world().resource::<FlaggedFrames>();
+        assert!(counts.frames >= 30, "the probe ran on every frame");
+        assert!(
+            counts.law < counts.frames,
+            "the player's standing was flagged on all {} frames — some message \
+             that does not write it is stamping it",
+            counts.frames,
+        );
+        assert!(
+            counts.dogs < counts.frames,
+            "the pack was flagged on all {} frames — some message that does not \
+             write it is stamping it",
+            counts.frames,
+        );
     }
 
     /// The rejection notice through the real plugin: Ilse holds her coin out to

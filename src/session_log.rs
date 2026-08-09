@@ -13,7 +13,7 @@
 
 use std::{
     fs::{self, File},
-    io::{self, BufWriter, Write},
+    io::{self, Write},
     path::{Path, PathBuf},
     sync::{Mutex, OnceLock},
     time::{SystemTime, UNIX_EPOCH},
@@ -21,6 +21,7 @@ use std::{
 
 use bevy::app::App;
 use bevy::log::{BoxedLayer, tracing, tracing_subscriber};
+use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, bounded, unbounded};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -29,7 +30,32 @@ const LOGS_DIRECTORY: &str = "logs";
 const LATEST_LINK_NAME: &str = "latest_session";
 
 static SESSION: OnceLock<SessionPaths> = OnceLock::new();
-static WRITER: OnceLock<Mutex<BufWriter<File>>> = OnceLock::new();
+static WRITER: OnceLock<Sink> = OnceLock::new();
+
+/// `logs.jsonl`, split so that no producer ever holds a lock across a write
+/// syscall.
+///
+/// Records are appended to `staging` by whoever emitted them — the game's main
+/// thread through the tracing layer, the engine pump, the perf recorder, the
+/// speech workers' stderr forwarders — and appending to a `Vec<u8>` cannot
+/// block on a disk. A flusher then takes `out`, swaps the staged bytes out from
+/// under the *shorter* lock, and writes them while still holding `out`: that is
+/// what keeps the file in the order the records were staged, which
+/// `.claude/rules/LOGS_FOLDER.md` promises is chronological.
+struct Sink {
+    staging: Mutex<Vec<u8>>,
+    out: Mutex<Out>,
+    /// Wakes the flusher ahead of its interval. Capacity one: a nudge that
+    /// finds one already pending has nothing to add.
+    nudge: Sender<()>,
+}
+
+struct Out {
+    file: File,
+    /// The buffer the previous flush emptied, swapped back in so the staging
+    /// area's allocation is not rebuilt every interval.
+    scratch: Vec<u8>,
+}
 
 #[derive(Debug)]
 pub struct SessionPaths {
@@ -79,8 +105,16 @@ pub fn init() {
         .open(root.join("logs.jsonl"))
     {
         Ok(file) => {
-            let _ = WRITER.set(Mutex::new(BufWriter::new(file)));
-            spawn_flusher();
+            let (nudge, wake) = bounded(1);
+            let _ = WRITER.set(Sink {
+                staging: Mutex::new(Vec::new()),
+                out: Mutex::new(Out {
+                    file,
+                    scratch: Vec::new(),
+                }),
+                nudge,
+            });
+            spawn_flusher(wake);
         }
         Err(error) => eprintln!("[session] could not open logs.jsonl: {error}"),
     }
@@ -117,7 +151,7 @@ fn write_record(
     message: &str,
     extra: Map<String, Value>,
 ) {
-    let Some(writer) = WRITER.get() else { return };
+    let Some(sink) = WRITER.get() else { return };
     let epoch_ms = now_epoch_milliseconds();
     let stamp = timestamp_from_unix_seconds(epoch_ms / 1_000);
 
@@ -137,55 +171,175 @@ fn write_record(
         record.insert("fields".into(), Value::Object(extra));
     }
 
-    let Ok(mut writer) = writer.lock() else {
-        return;
-    };
-    // Buffered on the emitting thread; a background ticker (plus an atexit
-    // hook) flushes within FLUSH_INTERVAL. Failures still flush per line so
-    // an abort right after an ERROR loses nothing, and the rare-but-load-
-    // bearing sources — drive evidence, the session marker — keep the old
-    // line-durability contract (a parsed logs.jsonl is complete on its own).
-    // Only the chatty INFO streams (game, engine, speech workers) stop paying
-    // one write+flush syscall pair per line on the main thread.
-    if serde_json::to_writer(&mut *writer, &Value::Object(record)).is_ok() {
-        let _ = writer.write_all(b"\n");
-        if level != "INFO" || source == "drive" || source == "session" {
-            let _ = writer.flush();
+    let staged = {
+        let Ok(mut staging) = sink.staging.lock() else {
+            return;
+        };
+        // Serializing into the staging buffer cannot touch the disk, so the
+        // lock is held for a memcpy and nothing else. A half-serialized record
+        // is rolled back rather than left in the file: `logs.jsonl` is parsed a
+        // line at a time.
+        let whole_records = staging.len();
+        if serde_json::to_writer(&mut *staging, &Value::Object(record)).is_ok() {
+            staging.push(b'\n');
+        } else {
+            staging.truncate(whole_records);
+            return;
         }
+        staging.len()
+    };
+    // The rare-but-load-bearing sources — drive evidence, the session marker —
+    // keep the old line-durability contract (a parsed logs.jsonl is complete
+    // on its own) and pay for it on the spot. Everything else, WARN and ERROR
+    // included, wakes the flusher instead: it writes within microseconds, so an
+    // abort has to land inside *that* window to lose anything, and no frame
+    // ever waits on the disk to say something went wrong.
+    if source == "drive" || source == "session" {
+        flush_now();
+    } else if staged >= STAGING_HIGH_WATER {
+        // Never reached while the flusher is alive — it drains within an
+        // interval, and a whole megabyte of records in one interval is not a
+        // run anybody is playing. It is reached when the flusher's thread
+        // failed to spawn, and it is what the `BufWriter` used to do for free:
+        // a full buffer wrote itself out. Without a ceiling, staging would hold
+        // the entire session's log in memory and `logs.jsonl` would stay empty
+        // until exit.
+        flush_now();
+    } else if level != "INFO" {
+        let _ = sink.nudge.try_send(());
     }
 }
 
-/// Flush cadence for buffered INFO lines. Short enough that tailing
+/// The staging buffer's ceiling: past this, whoever is logging writes it out
+/// itself rather than let the backlog grow unbounded.
+const STAGING_HIGH_WATER: usize = 1024 * 1024;
+
+/// Flush cadence for staged INFO lines. Short enough that tailing
 /// `logs.jsonl` still feels live; long enough that logging bursts cost the
 /// main thread no syscalls.
 const FLUSH_INTERVAL: std::time::Duration = std::time::Duration::from_millis(250);
 
 fn flush_now() {
-    if let Some(writer) = WRITER.get()
-        && let Ok(mut writer) = writer.lock()
-    {
-        let _ = writer.flush();
+    if let Some(sink) = WRITER.get() {
+        flush_sink(sink);
     }
+}
+
+fn flush_sink(sink: &Sink) {
+    // `out` first, and held across the write: two flushers that each swapped
+    // the staging buffer and then raced to the file would interleave their
+    // halves. Producers never take this lock, so they never wait on the write.
+    let Ok(mut out) = sink.out.lock() else { return };
+    let Out { file, scratch } = &mut *out;
+    scratch.clear();
+    {
+        let Ok(mut staging) = sink.staging.lock() else {
+            return;
+        };
+        if staging.is_empty() {
+            return;
+        }
+        std::mem::swap(&mut *staging, scratch);
+    }
+    let _ = file.write_all(scratch.as_slice());
 }
 
 extern "C" fn flush_at_exit() {
     flush_now();
 }
 
-fn spawn_flusher() {
+fn spawn_flusher(wake: Receiver<()>) {
     let _ = std::thread::Builder::new()
         .name("cathedral-log-flush".into())
-        .spawn(|| {
+        .spawn(move || {
             loop {
-                std::thread::sleep(FLUSH_INTERVAL);
+                // A nudge (a WARN or an ERROR) writes it out at once; otherwise
+                // the interval does. The sender lives in a static, so the
+                // disconnected arm is unreachable — but it would busy-loop.
+                if matches!(
+                    wake.recv_timeout(FLUSH_INTERVAL),
+                    Err(RecvTimeoutError::Disconnected)
+                ) {
+                    return;
+                }
                 flush_now();
             }
         });
     // A normal `main` return and `std::process::exit` both run atexit
-    // handlers; only a hard abort can now lose more than the last interval of
-    // INFO lines (levels above INFO still flush inline).
+    // handlers; only a hard abort can now lose staged lines.
     unsafe {
         libc::atexit(flush_at_exit);
+    }
+}
+
+// ------------------------------------------------------------------- stderr
+
+/// Diagnostic lines that reach stderr without their author paying for the
+/// syscall.
+///
+/// `std::io::Stderr` is unbuffered, and the actor engine's diagnostics are
+/// emitted from the engine pump — on the game's main thread, in the middle of a
+/// frame — where a terminal that is slow to drain (a tmux pane with a long
+/// scrollback, a pipe whose reader has stalled) can block the write for as long
+/// as it likes. The bytes and their order are unchanged; only the thread that
+/// writes them is, and it does nothing else, so a line still lands within
+/// microseconds of being handed over.
+enum StderrJob {
+    Line(String),
+    /// Replies when every line queued before it has been written.
+    Barrier(Sender<()>),
+}
+
+fn stderr_writer() -> &'static Sender<StderrJob> {
+    static STDERR: OnceLock<Sender<StderrJob>> = OnceLock::new();
+    STDERR.get_or_init(|| {
+        let (sender, lines) = unbounded::<StderrJob>();
+        let spawned = std::thread::Builder::new()
+            .name("cathedral-stderr".into())
+            .spawn(move || {
+                let mut stderr = io::stderr();
+                for job in lines {
+                    match job {
+                        StderrJob::Line(line) => {
+                            // One `write_all` for the whole line: `eprintln!`
+                            // splits the newline into a second syscall.
+                            let mut bytes = line.into_bytes();
+                            bytes.push(b'\n');
+                            let _ = stderr.write_all(&bytes);
+                        }
+                        StderrJob::Barrier(done) => {
+                            let _ = done.send(());
+                        }
+                    }
+                }
+            });
+        if spawned.is_ok() {
+            // A `OnceLock` static never drops, and the drive watchdog leaves
+            // via `std::process::exit`; atexit covers both, so only a hard
+            // abort can lose a queued line.
+            unsafe {
+                libc::atexit(drain_stderr_at_exit);
+            }
+        }
+        sender
+    })
+}
+
+/// Print one line to stderr, from a thread that can afford to wait for it.
+pub fn print_line(line: String) {
+    if let Err(undelivered) = stderr_writer().send(StderrJob::Line(line))
+        && let StderrJob::Line(line) = undelivered.into_inner()
+    {
+        // No writer thread to hand it to: a blocked frame beats a lost
+        // diagnostic.
+        eprintln!("{line}");
+    }
+}
+
+extern "C" fn drain_stderr_at_exit() {
+    let (done, wait) = bounded(1);
+    if stderr_writer().send(StderrJob::Barrier(done)).is_ok() {
+        let _ = wait.recv_timeout(std::time::Duration::from_secs(5));
     }
 }
 
@@ -573,6 +727,47 @@ mod tests {
         );
 
         fs::remove_dir_all(logs_root).expect("temporary logs root should be removable");
+    }
+
+    /// The staged bytes reach the file once, in order, and the recycled scratch
+    /// buffer does not re-emit the previous flush — `logs.jsonl` is documented
+    /// as one record per line, chronological.
+    #[test]
+    fn flushing_writes_each_staged_record_exactly_once_and_in_order() {
+        let path = temporary_meta_path("staging").with_extension("jsonl");
+        let (nudge, _wake) = bounded(1);
+        let sink = Sink {
+            staging: Mutex::new(Vec::new()),
+            out: Mutex::new(Out {
+                file: File::options()
+                    .create(true)
+                    .append(true)
+                    .open(&path)
+                    .expect("a log file"),
+                scratch: Vec::new(),
+            }),
+            nudge,
+        };
+        let stage = |line: &str| {
+            sink.staging
+                .lock()
+                .expect("staging")
+                .extend_from_slice(line.as_bytes());
+        };
+
+        stage("one\n");
+        stage("two\n");
+        flush_sink(&sink);
+        // Nothing staged since: a flush is a no-op, not a repeat of the last.
+        flush_sink(&sink);
+        stage("three\n");
+        flush_sink(&sink);
+
+        assert_eq!(
+            fs::read_to_string(&path).expect("the log is readable"),
+            "one\ntwo\nthree\n"
+        );
+        fs::remove_file(path).expect("temporary log should be removable");
     }
 
     #[test]

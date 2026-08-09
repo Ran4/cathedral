@@ -27,6 +27,7 @@
 //! resolution path" (`server.py:1594-1602`) holds again.
 
 use std::{
+    io::Read,
     path::{Path, PathBuf},
     sync::Arc,
     thread::JoinHandle,
@@ -35,7 +36,7 @@ use std::{
 use cathedral_sim::{
     SpeechError, SttBackendKind, SttSubmitError, Transcription, TranscriptionJobId,
 };
-use crossbeam_channel::{Sender, TrySendError, bounded};
+use crossbeam_channel::{Sender, TrySendError, bounded, unbounded};
 
 use crate::{
     config::SpeechSettings,
@@ -50,10 +51,68 @@ use crate::{
 /// `server.py:585-587` — the batch queue.
 pub const STT_QUEUE_CAPACITY: usize = 4;
 
+/// How much of a recording [`SttEngine::recording_seconds`] reads before it
+/// gives up on the short road. The microphone's own header is 44 bytes; a page
+/// leaves room for any `LIST`/`fact` chunk a future encoder might put in front
+/// of `data`, and is four orders of magnitude smaller than the 2.9 MB a full
+/// 15 s float32 utterance weighs.
+const HEADER_PROBE_BYTES: usize = 4096;
+
 struct Job {
     id: TranscriptionJobId,
     path: PathBuf,
     kind: SttBackendKind,
+}
+
+/// What the recording-disposal thread does next.
+///
+/// The unlink is queued rather than performed by the caller because
+/// [`Transcription::discard_recording`] is called from inside `Engine::poll`,
+/// which the game pumps on its main thread — on the very frame the player's
+/// utterance resolves, which is the one frame he is already waiting on.
+enum Discard {
+    /// Delete this recording, whatever is left of it.
+    File(PathBuf),
+    /// Replies when every deletion queued before it has happened. Tests only —
+    /// the game never waits for a recording to be gone, it only requires that
+    /// it goes.
+    #[cfg(test)]
+    Barrier(Sender<()>),
+}
+
+/// The unlink of `_resolve_transcription` (`server.py:1594-1602`): a missing
+/// file is the normal case (the batch worker usually got there first), and a
+/// file that will not go away is logged rather than raised.
+fn remove_recording(path: &Path) {
+    match std::fs::remove_file(path) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        // `server.py:1599-1602` printed and carried on: a recording that will
+        // not go away is not worth losing the utterance over.
+        Err(error) => crate::worker::log(
+            "stt",
+            &format!("[smart actors] could not remove recording: {error}"),
+        ),
+    }
+}
+
+/// Read as much of `buffer` as the file holds, restarting on a short read.
+///
+/// `Read::read` may return fewer bytes than asked for even when more are there,
+/// and a RIFF chunk table split across two reads would look truncated — which
+/// [`crate::wav::wav_duration_seconds`] would report as "malformed" rather than
+/// as "read more".
+fn read_prefix(file: &mut std::fs::File, buffer: &mut [u8]) -> std::io::Result<usize> {
+    let mut filled = 0;
+    while filled < buffer.len() {
+        match file.read(&mut buffer[filled..]) {
+            Ok(0) => break,
+            Ok(count) => filled += count,
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(filled)
 }
 
 /// The [`Transcription`] the engine listens through.
@@ -62,6 +121,11 @@ pub struct SttEngine {
     local: Option<Arc<CanaryTranscriber>>,
     realtime: Option<RealtimeSttHandle>,
     jobs: Sender<Job>,
+    /// Recordings the router has finished with, on their way to a thread that
+    /// can afford to block on the unlink. Deliberately *not* the batch queue:
+    /// that one is four deep on purpose, and a deletion taking one of its slots
+    /// would refuse a real utterance as `overloaded`.
+    discards: Sender<Discard>,
     /// Where a bare basename resolves to (D28). `None` in the headless runner,
     /// which has no microphone.
     session_dir: Option<PathBuf>,
@@ -117,11 +181,28 @@ impl SttEngine {
                 .expect("a transcription thread")
         };
 
+        let (discards, disposals) = unbounded::<Discard>();
+        std::thread::Builder::new()
+            .name("cathedral-stt-discard".to_string())
+            .spawn(move || {
+                for job in disposals {
+                    match job {
+                        Discard::File(path) => remove_recording(&path),
+                        #[cfg(test)]
+                        Discard::Barrier(done) => {
+                            let _ = done.send(());
+                        }
+                    }
+                }
+            })
+            .expect("a recording-disposal thread");
+
         Self {
             cloud: Some(cloud),
             local: Some(local),
             realtime,
             jobs,
+            discards,
             session_dir,
             worker: Some(worker),
         }
@@ -143,6 +224,21 @@ impl SttEngine {
             .as_deref()
             .ok_or_else(|| SpeechError::new("there is no runtime directory for recordings"))?;
         Ok(safe_session_path(directory, basename)?)
+    }
+
+    /// Block until every recording handed to
+    /// [`Transcription::discard_recording`] so far is gone.
+    ///
+    /// Not on the trait: the game has nothing to wait for — the file goes when
+    /// it goes, and `SessionDir` takes whatever is left with it — but a test
+    /// that looks at the directory afterwards needs a point to synchronize on
+    /// that is not a sleep.
+    #[cfg(test)]
+    fn wait_for_discards(&self) {
+        let (done, wait) = bounded(1);
+        if self.discards.send(Discard::Barrier(done)).is_ok() {
+            let _ = wait.recv();
+        }
     }
 }
 
@@ -206,10 +302,28 @@ impl Transcription for SttEngine {
     /// The header walk of `_wav_duration_seconds` (`server.py:181-215`), on the
     /// bytes the microphone wrote. Unreadable, missing, malformed — all `None`,
     /// which the probe prints as `audio=?`.
+    ///
+    /// It reads the *header*, not the recording. This is called from inside
+    /// `Engine::poll`, which the game pumps on its main thread on the frame the
+    /// player's utterance resolves, and a capped 15 s float32 recording is
+    /// nearly 3 MB — a visible hitch to copy in full for the sake of a chunk
+    /// table in the first few dozen bytes. A prefix that turns out not to reach
+    /// the `data` header still falls back to the whole file, so an exotic chunk
+    /// layout answers exactly what it always did.
     fn recording_seconds(&self, wav_path: &Path) -> Option<f64> {
         let path = self.resolve(wav_path.to_path_buf()).ok()?;
-        let bytes = std::fs::read(&path).ok()?;
-        wav_duration_seconds(&bytes)
+        let mut file = std::fs::File::open(&path).ok()?;
+        let mut header = [0u8; HEADER_PROBE_BYTES];
+        let read = read_prefix(&mut file, &mut header).ok()?;
+        if let Some(seconds) = wav_duration_seconds(&header[..read]) {
+            return Some(seconds);
+        }
+        if read < header.len() {
+            // The prefix *was* the whole file: there is nothing more to read,
+            // and `None` is the honest answer.
+            return None;
+        }
+        wav_duration_seconds(&std::fs::read(&path).ok()?)
     }
 
     /// The recording goes when the utterance resolves, on every road it may have
@@ -217,19 +331,25 @@ impl Transcription for SttEngine {
     /// finishes with it, so this is usually a no-op — but a realtime transcript
     /// resolves an utterance the batch pipeline never saw, and that file is the
     /// player's recorded voice sitting in a RAM-backed `/tmp`.
+    ///
+    /// The unlink itself is queued: this runs on the game's main thread on the
+    /// frame the player is waiting for his reply, and `unlink(2)` on a busy
+    /// journalled filesystem can block behind a journal commit. The file still
+    /// goes, and still goes in order — the queue is FIFO and nothing else
+    /// deletes recordings — and `SessionDir` removes whatever a crash leaves
+    /// behind when the process ends.
     fn discard_recording(&mut self, wav_path: &Path) {
         let Ok(path) = self.resolve(wav_path.to_path_buf()) else {
             return;
         };
-        match std::fs::remove_file(&path) {
-            Ok(()) => {}
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            // `server.py:1599-1602` printed and carried on: a recording that will
-            // not go away is not worth losing the utterance over.
-            Err(error) => crate::worker::log(
-                "stt",
-                &format!("[smart actors] could not remove recording: {error}"),
-            ),
+        if let Err(undelivered) = self.discards.send(Discard::File(path)) {
+            // No disposal thread left to hand it to: better a blocked frame
+            // than the player's voice staying on disk.
+            match undelivered.into_inner() {
+                Discard::File(path) => remove_recording(&path),
+                #[cfg(test)]
+                Discard::Barrier(_) => {}
+            }
         }
     }
 }
@@ -247,6 +367,11 @@ impl Drop for SttEngine {
         }
         let (dead, _) = bounded(0);
         drop(std::mem::replace(&mut self.jobs, dead));
+        // The disposal thread ends with its queue too. Not joined either: what
+        // it still owes is a handful of unlinks inside a directory `SessionDir`
+        // is about to remove wholesale.
+        let (dead, _) = bounded(0);
+        drop(std::mem::replace(&mut self.discards, dead));
         self.worker.take();
     }
 }
@@ -346,6 +471,10 @@ mod tests {
     /// say when it is done with it — otherwise every utterance of a normal cloud
     /// session (where realtime *is* the default road) stays on disk. And the
     /// probe wants to know how long the recording was: the sim cannot open it.
+    ///
+    /// The unlink happens on the disposal thread now, so the assertions wait on
+    /// the queue rather than on the call — the contract is still "gone", it is
+    /// simply not gone *by the time the caller's frame ends*.
     #[test]
     fn the_router_can_measure_and_discard_a_recording_it_never_submitted() {
         let session = std::env::temp_dir().join(format!(
@@ -386,10 +515,66 @@ mod tests {
         assert!((seconds - 0.5).abs() < 1e-9, "{seconds}");
 
         stt.discard_recording(Path::new("player-recording-9.wav"));
+        stt.wait_for_discards();
         assert!(!path.exists(), "the player's voice does not stay in /tmp");
         // Idempotent: the batch worker usually deleted it first.
         stt.discard_recording(Path::new("player-recording-9.wav"));
+        stt.wait_for_discards();
         assert_eq!(stt.recording_seconds(&path), None, "gone is not an error");
+
+        std::fs::remove_dir_all(&session).ok();
+    }
+
+    /// The probe reads a header, not a recording — but a `data` chunk that a
+    /// fat leading chunk has pushed past that prefix must still measure, or an
+    /// encoder that writes a `LIST` block first would silently turn every
+    /// utterance into `audio=?`.
+    #[test]
+    fn a_header_beyond_the_probe_window_still_measures() {
+        let session = std::env::temp_dir().join(format!(
+            "cathedral-stt-header-{}",
+            crate::session_dir::SessionDir::new_session_id()
+        ));
+        std::fs::create_dir_all(&session).expect("session dir");
+
+        // A `LIST` chunk exactly as long as the prefix: the `fmt ` and `data`
+        // headers both land past it.
+        let filler = HEADER_PROBE_BYTES;
+        let data_bytes: u32 = 12_000 * 4;
+        let mut wav = Vec::new();
+        wav.extend_from_slice(b"RIFF");
+        wav.extend_from_slice(&(4 + 8 + filler as u32 + 24 + 8 + data_bytes).to_le_bytes());
+        wav.extend_from_slice(b"WAVE");
+        wav.extend_from_slice(b"LIST");
+        wav.extend_from_slice(&(filler as u32).to_le_bytes());
+        wav.extend(std::iter::repeat_n(0u8, filler));
+        wav.extend_from_slice(b"fmt ");
+        wav.extend_from_slice(&16u32.to_le_bytes());
+        wav.extend_from_slice(&3u16.to_le_bytes());
+        wav.extend_from_slice(&1u16.to_le_bytes());
+        wav.extend_from_slice(&24_000u32.to_le_bytes());
+        wav.extend_from_slice(&96_000u32.to_le_bytes());
+        wav.extend_from_slice(&4u16.to_le_bytes());
+        wav.extend_from_slice(&32u16.to_le_bytes());
+        wav.extend_from_slice(b"data");
+        wav.extend_from_slice(&data_bytes.to_le_bytes());
+        wav.extend(std::iter::repeat_n(0u8, data_bytes as usize));
+        std::fs::write(session.join("player-recording-8.wav"), &wav).expect("a recording");
+
+        // …and a file too short to hold a chunk table at all is still the
+        // `None` the probe prints as `audio=?`.
+        recording(&session, "player-recording-7.wav");
+
+        let runtime = BackendRuntime::new().expect("runtime");
+        let (sender, _events) = backend_channel();
+        let speech = settings(&[], PathBuf::from("/nonexistent"), "uv");
+        let stt = SttEngine::new(runtime, &speech, Some(session.clone()), sender);
+
+        let seconds = stt
+            .recording_seconds(Path::new("player-recording-8.wav"))
+            .expect("the walk continues past the prefix it started with");
+        assert!((seconds - 0.5).abs() < 1e-9, "{seconds}");
+        assert_eq!(stt.recording_seconds(Path::new("player-recording-7.wav")), None);
 
         std::fs::remove_dir_all(&session).ok();
     }

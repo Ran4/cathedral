@@ -20,16 +20,26 @@ use std::{
 use cathedral_sim::{SchedulerEvent, py_round};
 use serde::Serialize;
 
-/// The archive's filesystem work rides one shared writer thread: `record` is
-/// called from the engine pump on the game's main thread, and a slow disk or a
-/// dirty-page flush must never lengthen a frame. The channel's FIFO preserves
-/// the filename contract's ordering; failures still print, from the writer.
+/// The archive's work rides one shared writer thread: `record` is called from
+/// the engine pump on the game's main thread, and neither a slow disk nor the
+/// rendering of a 15 KB document may lengthen a frame. The channel's FIFO
+/// preserves the filename contract's ordering; failures still print, from the
+/// writer.
+///
+/// The job carries the *exchange*, not the rendered pair, so the two copies of
+/// the prompt that `markdown` builds and the third that `serde_json`'s escaping
+/// makes are all built over there. Only the stamp and the index stay on the
+/// caller: they are what makes the filename contract ordered, and a name picked
+/// on a background thread would race the next turn's.
 enum WriteJob {
     Pair {
         directory: PathBuf,
         base: String,
-        json: String,
-        markdown: String,
+        exchange: PromptExchange,
+        /// `meta.model` and `meta.timestamp` — the two fields that are the
+        /// log's rather than the exchange's.
+        model: Option<String>,
+        timestamp: String,
     },
     /// Replies when every job queued before it has been written.
     Flush(crossbeam_channel::Sender<()>),
@@ -47,14 +57,16 @@ fn writer() -> &'static crossbeam_channel::Sender<WriteJob> {
                         WriteJob::Pair {
                             directory,
                             base,
-                            json,
-                            markdown,
-                        } => {
-                            if let Err(error) = write_pair_files(&directory, &base, json, markdown)
-                            {
-                                eprintln!("[smart actors] prompt log write failed: {error}");
-                            }
-                        }
+                            exchange,
+                            model,
+                            timestamp,
+                        } => render_and_write(
+                            &directory,
+                            &base,
+                            &exchange,
+                            model.as_deref(),
+                            timestamp,
+                        ),
                         WriteJob::Flush(done) => {
                             let _ = done.send(());
                         }
@@ -203,7 +215,10 @@ impl PromptLog {
 
     /// Archive one exchange. Write failures are swallowed (after a stderr line):
     /// a logging problem must never break the turn loop (`prompt_log.py:96-100`).
-    pub fn record(&mut self, exchange: &PromptExchange) {
+    ///
+    /// Takes the exchange by value: it is ~15 KB of prompt and answer that only
+    /// the writer thread reads, and the caller is the engine pump.
+    pub fn record(&mut self, exchange: PromptExchange) {
         let Some(directory) = self.directory.clone() else {
             return;
         };
@@ -222,36 +237,12 @@ impl PromptLog {
             safe(&exchange.actor_name),
         );
 
-        let meta = Meta {
-            actor_id: &exchange.actor_id,
-            actor_name: &exchange.actor_name,
-            model: self.model.as_deref(),
-            duration_seconds: py_round(exchange.duration_seconds, 3),
-            timestamp: moment.iso_seconds(),
-            error: exchange.error.as_deref(),
-        };
-
-        let markdown = markdown(exchange, &meta);
-        let record = Record {
-            prompt: &exchange.prompt,
-            answer: exchange.answer.as_deref(),
-            meta,
-        };
-        // `ensure_ascii=False, indent=2` + a trailing newline: raw UTF-8, like
-        // the markdown character sheet inside the prompt itself.
-        let mut json = match serde_json::to_string_pretty(&record) {
-            Ok(json) => json,
-            Err(error) => {
-                eprintln!("[smart actors] prompt log write failed: {error}");
-                return;
-            }
-        };
-        json.push('\n');
         let _ = writer().send(WriteJob::Pair {
             directory,
             base,
-            json,
-            markdown,
+            model: self.model.clone(),
+            timestamp: moment.iso_seconds(),
+            exchange,
         });
     }
 
@@ -269,8 +260,49 @@ impl PromptLog {
     /// non-exchange events are ignored.
     pub fn record_scheduler_event(&mut self, event: &SchedulerEvent) {
         if let Some(exchange) = PromptExchange::from_scheduler_event(event) {
-            self.record(&exchange);
+            self.record(exchange);
         }
+    }
+}
+
+/// Render the pair and put it on disk — all of it on the writer thread.
+///
+/// A serialization failure writes *neither* file, exactly as it did when this
+/// ran on the caller: half an archived turn is worse than none, and the `.json`
+/// is what outside tooling reads.
+fn render_and_write(
+    directory: &Path,
+    base: &str,
+    exchange: &PromptExchange,
+    model: Option<&str>,
+    timestamp: String,
+) {
+    let meta = Meta {
+        actor_id: &exchange.actor_id,
+        actor_name: &exchange.actor_name,
+        model,
+        duration_seconds: py_round(exchange.duration_seconds, 3),
+        timestamp,
+        error: exchange.error.as_deref(),
+    };
+    let markdown = markdown(exchange, &meta);
+    let record = Record {
+        prompt: &exchange.prompt,
+        answer: exchange.answer.as_deref(),
+        meta,
+    };
+    // `ensure_ascii=False, indent=2` + a trailing newline: raw UTF-8, like the
+    // markdown character sheet inside the prompt itself.
+    let mut json = match serde_json::to_string_pretty(&record) {
+        Ok(json) => json,
+        Err(error) => {
+            eprintln!("[smart actors] prompt log write failed: {error}");
+            return;
+        }
+    };
+    json.push('\n');
+    if let Err(error) = write_pair_files(directory, base, json, markdown) {
+        eprintln!("[smart actors] prompt log write failed: {error}");
     }
 }
 
@@ -499,7 +531,7 @@ mod tests {
 
         /// `PromptLogTests.record` with its default arguments.
         fn record(&mut self) {
-            self.log.record(&exchange());
+            self.log.record(exchange());
             self.log.flush();
         }
 
@@ -577,7 +609,7 @@ mod tests {
     #[test]
     fn the_json_keeps_python_key_order_and_raw_utf8() {
         let mut fixture = Fixture::new("key-order");
-        fixture.log.record(&PromptExchange {
+        fixture.log.record(PromptExchange {
             prompt: "Ilse sa: \"Hej då\"".to_string(),
             ..exchange()
         });
@@ -631,7 +663,7 @@ mod tests {
     #[test]
     fn a_failed_exchange_keeps_the_prompt_and_records_the_error() {
         let mut fixture = Fixture::new("failed");
-        fixture.log.record(&PromptExchange {
+        fixture.log.record(PromptExchange {
             answer: None,
             error: Some("TimeoutError('provider')".to_string()),
             ..exchange()
@@ -659,7 +691,7 @@ mod tests {
     #[test]
     fn hostile_name_components_are_sanitized() {
         let mut fixture = Fixture::new("hostile");
-        fixture.log.record(&PromptExchange {
+        fixture.log.record(PromptExchange {
             actor_id: "../evil".to_string(),
             actor_name: "Olof Skötkonung".to_string(),
             ..exchange()
@@ -677,7 +709,7 @@ mod tests {
     fn without_a_directory_the_log_is_disabled() {
         let mut log = PromptLog::new(None, None);
         assert!(!log.enabled());
-        log.record(&exchange()); // must not panic, must not write anywhere
+        log.record(exchange()); // must not panic, must not write anywhere
     }
 
     #[test]
@@ -691,7 +723,7 @@ mod tests {
         fs::write(&blocker, "not a directory").expect("blocker file");
 
         let mut log = PromptLog::new(Some(blocker.join("prompts")), Some("m".to_string()));
-        log.record(&exchange()); // swallowed
+        log.record(exchange()); // swallowed
 
         fs::remove_file(&blocker).ok();
     }
@@ -713,7 +745,7 @@ mod tests {
     #[test]
     fn a_whole_duration_keeps_its_decimal_point() {
         let mut fixture = Fixture::new("whole-duration");
-        fixture.log.record(&PromptExchange {
+        fixture.log.record(PromptExchange {
             duration_seconds: 2.0,
             ..exchange()
         });
@@ -768,7 +800,7 @@ mod tests {
     #[test]
     fn the_archive_is_byte_identical_to_python() {
         let mut fixture = Fixture::new("golden");
-        fixture.log.record(&PromptExchange {
+        fixture.log.record(PromptExchange {
             prompt: "Ilse sa: \"Hej då\"".to_string(),
             ..exchange()
         });
@@ -818,7 +850,7 @@ mod tests {
                 second: 31,
             }),
         );
-        failed.record(&PromptExchange {
+        failed.record(PromptExchange {
             actor_id: "../evil".to_string(),
             actor_name: "Olof Skötkonung".to_string(),
             prompt: "p\n\n".to_string(),
