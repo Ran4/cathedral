@@ -1,7 +1,7 @@
-Status: not started (written 2026-08-09). The knob it fixes —
-`config.ron: smart_actors.extra_ambient_npcs`, 0..=20000 — shipped the same
-day; see `crates/cathedral-sim/src/crowd.rs` and the AGENTS.md section "The
-crowd knob".
+Status: M1 implemented 2026-08-09; M2–M5 not started (written 2026-08-09). The
+knob it fixes — `config.ron: smart_actors.extra_ambient_npcs`, 0..=20000 —
+shipped the same day; see `crates/cathedral-sim/src/crowd.rs` and the AGENTS.md
+section "The crowd knob".
 
 # Give the crowd somewhere to be
 
@@ -100,6 +100,37 @@ Three rules hold across all of them:
 ---
 
 ## M1 — Spread on the ground, not along the graph
+
+**Implemented 2026-08-09** in `crates/cathedral-sim/src/crowd.rs`, as written
+below with two things worth recording:
+
+- The eight draws are salted apart by adding the attempt index to each of the
+  two existing salts, rather than by mixing it into the hashed index — mixing
+  it in would have made citizen *n*'s second draw identical to citizen *n+1*'s
+  first. The offset is now built by a private `spread_point`, so
+  `spread_over_walkable` still only owns *which* node a citizen belongs to.
+- The fallback rate is **1.4%**, not the "well under 1%" estimated above (28 of
+  2,000 against the shipped graph). The estimate treated the draws as
+  independent samples of a 53.6%-walkable grid; they are not — a node walled in
+  on several sides rejects all eight together. 1.4% still stand on their node,
+  exactly as the whole crowd used to.
+
+Measured over 2,000 points against the shipped graph: every point walkable,
+1,843 of 2,000 more than 3 m off their anchor node (before: **0**, since 1.6 m
+is never more than 3), none beyond 12 m. Test:
+`crowd::tests::the_crowd_stands_off_its_nodes_and_all_of_it_on_walkable_ground`,
+which loads the committed `navigation.json`/`.bin` the way `round/tests.rs`
+does. Nothing is gated on `generated` because nothing had to be:
+`spread_over_walkable` has exactly two call sites
+(`src/smart_actors/local_engine.rs`, `cathedral_headless.rs`) and both return
+before it at `extra_ambient_npcs: 0`.
+
+Drive evidence at 20,000 — `logs/session_753_2026-08-09_20_44_50/screenshots/`
+(before) against `logs/session_754_2026-08-09_20_45_41/screenshots/`
+(`*_coswalds_above.png` is the pair to look at: the yard's paving goes from
+empty-with-a-chain-of-bodies-down-the-road to occupied). The narrow-lane pair
+(`*_cinder_row.png`) barely moves, which is correct — a 4.6 m lane has no width
+to spread into, so there the 12 m only pushes people *along* it.
 
 Replace the 1.6 m jitter with a real radius and a walkability rejection test —
 the idiom `round.rs:8270 wander_target` already uses for the same problem.

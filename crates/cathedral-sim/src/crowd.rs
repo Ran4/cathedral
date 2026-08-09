@@ -36,12 +36,30 @@ use crate::{
 /// experiment and starts being a typo.
 pub const MAX_EXTRA_AMBIENT_NPCS: u32 = 20_000;
 
-/// How far off their nav node a generated citizen may stand. The routed lanes
-/// are 4.6 m at their pinch, so this keeps a crowd off the walls while still
-/// breaking up the "beads on a string" look of one body per graph node. Every
-/// jittered point is re-tested against the walkable bitset, so the number is a
-/// budget, never a promise.
-const SPREAD_JITTER_M: f64 = 1.6;
+/// How far off their nav node a generated citizen may stand.
+///
+/// The graph is the welded *through-route* skeleton: 3,972 nodes over a
+/// walkable bitset of 322,670 m², i.e. 81 m² of ground per node. Standing the
+/// crowd within a lane's half-width of a node therefore stood all of it in the
+/// middle of the roads everybody routes down, which is what a traffic jam is.
+/// A 12 m disc is 452 m² against that 81, so consecutive discs overlap and the
+/// coverage is continuous — the yards, the widenings, the alley dead ends and
+/// the strips beside the walls all fall inside one.
+///
+/// Anchored to a node rather than sampled uniformly over the bitset, and that
+/// is the load-bearing part: [`NavData::route_between`] snaps both endpoints to
+/// the *nearest node*, so a body dropped in a walkable pocket the graph never
+/// enters would walk through a wall on its first errand. Twelve metres bounds
+/// the offset to ground the graph plausibly reaches and leaves the sealed
+/// pockets empty, which is the right answer rather than a limitation.
+const SPREAD_RADIUS_M: f64 = 12.0;
+
+/// Draws inside that disc before a citizen simply stands on their node. Eight
+/// is enough that 1.4% of a crowd falls back (measured over 2,000 against the
+/// shipped graph), and each one is a single bitset lookup — but the whole
+/// thing runs once, at seed time. It must never migrate into the pump, which
+/// at 20,000 is already 179 ms of a 204 ms frame.
+const SPREAD_ATTEMPTS: usize = 8;
 
 /// Walkable spawn points for a crowd of `count`, spread over the whole graph.
 ///
@@ -49,7 +67,9 @@ const SPREAD_JITTER_M: f64 = 1.6;
 /// Consecutive indices are pushed apart by striding the node list with a
 /// coprime step rather than walking it in order: filling nodes 0..n in
 /// sequence would lay the first thousand citizens down in one quarter of the
-/// city and leave the rest of it empty until the count got high enough.
+/// city and leave the rest of it empty until the count got high enough. The
+/// stride picks *which* 12 m of city each citizen belongs to;
+/// [`spread_point`] picks where in it they stand.
 pub fn spread_over_walkable(nav: &NavData, count: usize) -> Vec<Vec3> {
     let nodes = nav.node_count();
     if nodes == 0 || count == 0 {
@@ -59,21 +79,31 @@ pub fn spread_over_walkable(nav: &NavData, count: usize) -> Vec<Vec3> {
     let mut points = Vec::with_capacity(count);
     for index in 0..count {
         let node = index.wrapping_mul(stride) % nodes;
-        let centre = nav.node_point(node);
-        // The jitter is polar so the offsets do not favour the diagonals, and
-        // it falls back to the node itself the moment it would put somebody
-        // through a wall.
-        let angle = unit(index as u64, 0x9E37_79B9) * std::f64::consts::TAU;
-        let radius = unit(index as u64, 0x85EB_CA6B).sqrt() * SPREAD_JITTER_M;
-        let x = centre.x + radius * angle.cos();
-        let z = centre.z + radius * angle.sin();
-        points.push(if nav.is_walkable(x, z) {
-            Vec3::new(x, centre.y, z)
-        } else {
-            centre
-        });
+        points.push(spread_point(nav, index as u64, nav.node_point(node)));
     }
     points
+}
+
+/// One citizen's stand, within [`SPREAD_RADIUS_M`] of their anchor node.
+///
+/// The rejection sample `round.rs wander_target` already uses for the same
+/// problem, with the same shape: polar so the offsets do not favour the
+/// diagonals, the radius through a square root so they do not favour the
+/// centre either, and the first draw the bitset accepts wins. Each attempt is
+/// salted apart, so eight attempts are eight different points rather than one
+/// point tested eight times. Returns the node itself — where the whole crowd
+/// stood before this — when the disc is all wall.
+fn spread_point(nav: &NavData, seed: u64, centre: Vec3) -> Vec3 {
+    for attempt in 0..SPREAD_ATTEMPTS as u64 {
+        let angle = unit(seed, 0x9E37_79B9_u64.wrapping_add(attempt)) * std::f64::consts::TAU;
+        let radius = unit(seed, 0x85EB_CA6B_u64.wrapping_add(attempt)).sqrt() * SPREAD_RADIUS_M;
+        let x = centre.x + radius * angle.cos();
+        let z = centre.z + radius * angle.sin();
+        if nav.is_walkable(x, z) {
+            return Vec3::new(x, centre.y, z);
+        }
+    }
+    centre
 }
 
 /// A step that visits every node exactly once per pass around the list. Odd
@@ -391,6 +421,16 @@ mod tests {
     use crate::GOAL_NONE;
     use std::collections::BTreeSet;
 
+    const NAV_JSON: &str = include_str!("../../../assets/world/navigation.json");
+    const NAV_BIN: &[u8] = include_bytes!("../../../assets/world/navigation.bin");
+
+    /// The shipped graph, loaded exactly as the host loads it. The spread is
+    /// only as good as the ground it is tested against: a hand-built nav is an
+    /// open plain, where every draw lands and every claim below is free.
+    fn shipped_nav() -> NavData {
+        NavData::from_parts(NAV_JSON, NAV_BIN).expect("the committed nav loads")
+    }
+
     fn points(count: usize) -> Vec<Vec3> {
         (0..count)
             .map(|i| Vec3::new(i as f64, 0.91, 0.0))
@@ -454,6 +494,52 @@ mod tests {
         assert!(bodies.len() >= 10, "only {} distinct silhouettes", bodies.len());
         let goals: BTreeSet<&str> = sheets.iter().map(|sheet| sheet.goal.as_str()).collect();
         assert_eq!(goals.len(), CONCERNS.len());
+    }
+
+    /// The M1 claim, against the real city: a crowd stands on the *width* of
+    /// the open ground, not on the ribbon down the middle of it — and never
+    /// inside a wall, because every offset is rejection-tested.
+    #[test]
+    fn the_crowd_stands_off_its_nodes_and_all_of_it_on_walkable_ground() {
+        let nav = shipped_nav();
+        let nodes = nav.node_count();
+        let stride = coprime_stride(nodes);
+        let points = spread_over_walkable(&nav, 2_000);
+        assert_eq!(points.len(), 2_000);
+
+        let mut off_node = 0;
+        let mut on_node = 0;
+        for (index, point) in points.iter().enumerate() {
+            assert!(
+                nav.is_walkable(point.x, point.z),
+                "citizen {index} stands at ({}, {}), which is not walkable",
+                point.x,
+                point.z
+            );
+            let anchor = nav.node_point(index.wrapping_mul(stride) % nodes);
+            let offset = ((point.x - anchor.x).powi(2) + (point.z - anchor.z).powi(2)).sqrt();
+            assert!(
+                offset <= SPREAD_RADIUS_M + 1e-9,
+                "citizen {index} is {offset:.2} m off their anchor node"
+            );
+            if offset > 3.0 {
+                off_node += 1;
+            }
+            // The fallback: every draw was wall, so they stand on the node.
+            if offset == 0.0 {
+                on_node += 1;
+            }
+        }
+        // 1,843 of 2,000 as measured; the old 1.6 m jitter put it at zero by
+        // construction, since 1.6 m is never more than 3.
+        assert!(
+            off_node > 1_000,
+            "only {off_node} of 2000 stand more than 3 m off their node"
+        );
+        // Eight draws inside a disc anchored on walkable ground rarely all
+        // fail; when they do it is a node walled in on every side, and the
+        // citizen stands on it as the whole crowd used to. 28 of 2,000.
+        assert!(on_node < 100, "{on_node} of 2000 fell back to their node");
     }
 
     #[test]
