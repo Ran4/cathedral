@@ -1,4 +1,4 @@
-Status: M1, M2 and M3 implemented 2026-08-09; M4–M5 not started (written
+Status: M1, M2, M3 and M4 implemented 2026-08-09; M5 not started (written
 2026-08-09). The knob it fixes — `config.ron: smart_actors.extra_ambient_npcs`,
 0..=20000 — shipped the same day; see `crates/cathedral-sim/src/crowd.rs` and
 the AGENTS.md section "The crowd knob".
@@ -434,6 +434,189 @@ on its node.
 ---
 
 ## M4 — A door to call home
+
+**Implemented 2026-08-09** in `crates/cathedral-sim/src/crowd.rs` (the door),
+`round.rs` (the enrolment), `homes.rs` (the ward map) and `lore.rs` (the
+carrier), with ten things worth recording:
+
+- **The pauper quarter gets no door, and that is the bake's rule.**
+  `scripts/bake_homes.py HOMELESS_CIRCUMSTANCES` refuses a bed to anybody
+  carrying `pauper`, `unhoused` or `insecure_lodging` — it is why 101 of the
+  cast have a `bedless` entry instead of a house — and **every** entry in M2's
+  `SUPPORTS` bank carries `pauper`. Housing the no-trade quarter therefore put
+  "Home: a house in the Reed Ward" on the same prompt as "You sleep under
+  whatever overhang is dry", which is exactly the risk ledger's "prompt content
+  drifts from behaviour", arrived at by accident. Caught by reading a minted
+  sheet, not by a test. So the doors go to the three quarters with a trade, the
+  pauper quarter stays the people the watch finds in the street at curfew, and
+  M2's `a_generated_citizen_with_no_trade_is_enrolled_with_no_legs` keeps both
+  of the assertions M4 first moved (`home.is_none()`, `base == spawn`). Their
+  support line already says how they sleep, which is what the bake's `bedless`
+  framing exists to say for the cast, so they need no second sentence.
+- **The door is the *nearest free* one, not a drawn one.** `crowd.rs
+  assign_doorsteps`: each stand in turn takes the closest door whose occupancy
+  is under `housed.div_ceil(doors)` — one to a house at 1,000, fourteen at
+  20,000. Nearest rather than dealt round-robin for two reasons, and the second
+  is the load-bearing one: a citizen should live where M1 stood them, *and*
+  twenty thousand cross-city commutes would be twenty thousand long routes
+  through a pump that is already the bottleneck. Measured on the shipped graph:
+  median walk from stand to door **8–12 m**, p90 ~40 m, max ~300 m for the
+  handful stood where no building is (the moorings, the outer roads). The whole
+  mint, including the 17-million-distance-test assignment, is **57 ms at
+  20,000** (3.9 ms at 1,000), once, at world build.
+- **Every door, not only the residential ones.** The sim has no building-use
+  data — `lore/places/ombreval_buildings.json` is authoring input for
+  `bake_homes.py` and is not embedded — so the crowd lodges behind workshops and
+  stores as readily as houses. That is what makes 1,101 doors and ~14 to a
+  house at the ceiling; the 478 residential ones alone would be 31, and "no new
+  authored content" forbids baking a residential list just for this.
+- **The ward comes from the ground, and so does the citizen.** The spec asked
+  only that the *prose* be derived from the door's ward. Doing only that would
+  have produced "…, of Reed Ward streets. Home: a house in the Cinder Ward" on
+  the same prompt line for seven citizens in eight, since `ambient_sheet` drew
+  the ward out of the air. So `planning_ward` is the door's now — and, for the
+  bedless, the ward of the ground they were stood on — which makes the district,
+  the home sentence and the ward's places in `places_you_know` one fact instead
+  of three. The side effect is honest: the crowd's wards are now
+  *building-weighted* rather than uniform, so the Bell and Sluice Wards get
+  their real 43% share.
+- **The ward map is the bake's own, read sideways.** There are no ward polygons
+  in the sim. `homes::ward_marks` takes the 413 baked homes — each one a door the
+  bake already labelled with its building's district — and a point's ward is the
+  nearest of them. Measured against the authored district of all 913 doors whose
+  building has one: **95.7%** agreement, against 82.9% for the nearest of the
+  eight ward anchors and 79.2% for the nearest named place. The 92 homes in the
+  "Outer wards" are dropped from the map rather than guessed at.
+- **The prose is `bake_homes.py`'s, word for word.** "a house in the Cinder
+  Ward, near the Shambles well" — same `NEARBY_M = 120`, same
+  `{route: off, gate: by, bridge: by, else: near}` preposition table, same
+  "toward X" past 120 m, so a generated citizen and an authored one describe
+  their door in one voice. 2,000 citizens produce 30+ distinct landmark clauses.
+- **The point travels on `LoreProfile.home_point_m`.** The cast's bed is bound
+  by id in `homes.json`; a generated citizen is in no bake, so the door chosen
+  at world build rides on the one profile field that already means "not
+  authored". `Round::seed`'s new `home_point` helper asks for it first, gated on
+  `lore.generated`, and falls through to the bake otherwise —
+  `#[serde(skip_serializing_if)]`, so no authored sheet, save or frozen fixture
+  moves a byte.
+- **`free_id` is linear, measured before shipping.** 413 homes 192 µs, 2,000
+  1.15 ms, 20,000 **11.7 ms** — 0.58 µs a home, flat. The birthday arithmetic
+  says so too (36⁴ ids, ~119 total collisions expected at 20,000), but the risk
+  ledger asked for the measurement and this is it.
+- **The real quadratic was somewhere else, and is now gone.** `Round::seed`
+  assembled each person's whitelist with `registry.coarse()` and
+  `registry.ward_places()`, both full scans of the registry. That was 514 × 491
+  before; with 15,000 homes filed *before* the enrolment loop it would have been
+  20,514 × 15,078, twice. Both are hoisted out of the loop (homes carry no ward
+  and are never coarse, so the lists are identical). Net at 20,000, with the
+  door assignment and 15,000 `add_home`s added on top: headless startup **7.12 s
+  → 5.53 s**, RSS 340 MB → 376 MB. `PlaceRegistry::owner_of_home` also went from
+  an O(entries) scan to a map lookup, because `chalkable_anchors` calls it once
+  per reachable anchor on every player poll.
+- **The pump got faster, not slower.** The feared cost — an evening roll per
+  ambient per night — is real but tiny; what dominates is that a housed crowd
+  *stops walking* at curfew instead of wandering (and re-routing) all night.
+  `--fake --watch-clock 1 --seconds-per-day 300`, user CPU for the whole run
+  (`--watch-clock` runs the clock as fast as the pump allows, so the run's CPU
+  time *is* the pump's):
+
+  | | before | after |
+  |---|---:|---:|
+  | 2,000, one game day (best of 3) | 7.11 s | **5.71 s** |
+  | 20,000, one game day | 1020 s | **583 s** |
+
+  `settle_households` was measured while the lid was off, since nobody had:
+  2.6 ms at 500 residents, 27 ms at 2,000, **2.97 s at 20,000** — superlinear,
+  and *not* M4's doing (the crowd has been `EconomicClass::Resident` since the
+  knob shipped, and this pass counts residents, not homes). Its `world.clone()`
+  is only 36 ms of that, so the cost is in the per-resident wallet reads and the
+  staged credit/debit, not the clone. Once a game day against a 583 s game day,
+  so 0.5% and not urgent — but it is a real superlinear pass and it should be
+  looked at before anyone tries to make 20,000 playable.
+
+**The tide, `--census-by-area`.** `--fake --extra-ambient N --watch-clock 1
+--seconds-per-day 300`, the `home` column at each office:
+
+| office | 2,000 before | 2,000 after | 20,000 before | 20,000 after |
+|---|---:|---:|---:|---:|
+| Dayspring (open) | 26 | 437 | 28 | 3,836 |
+| Dayspring (settled) | 17 | **35** | 18 | **190** |
+| High Wick | 23 → 27 | 655 → 759 | 22 → 37 | 5,721 → 6,497 |
+| the Waning | 10 → 9 | 197 → 140 | 11 → 37 | 1,690 → 1,154 |
+| Lamplight | 33 | 974 | 46 | 8,656 |
+| the Snuffing | 70 → 101 | 1,021 → 1,098 | 57 → 74 | 8,980 → 9,453 |
+| the Watch | — | 1,105 → 1,126 | 77 → 83 | 9,628 → 9,782 |
+| the Kindling | 13 | 63 | 13 | 573 |
+
+At 20,000 the city goes from **190 in bed once the morning has settled to 9,782
+at the Watch** — 48% of it, which is the 75% who have a door, most of the way
+home — against a flat 11–83 all day before. The High Wick bump is the famished
+rung finding a hearth that is now theirs: before M4 a generated citizen had no
+home to be fed at and worked through dinner. The Kindling column is the tide
+turning: 9,782 → 573 inside one office.
+
+Two counts move the *other* way, and both are the milestone working rather than
+a regression. `at_post` **falls** (20,000: 38–353 before, 38–119 after) because
+before M4 the homeless crowd stood at its workplace all night and censused as at
+post; the two columns diverge only after dark, which is the tell. And
+`in_street` — people standing where their last leg dropped them — is *unchanged*
+at 20,000 (736–1,452 before, 736–878 after), because after M4 the people left in
+the street at curfew are exactly the paupers, which is precisely who the bake
+means to leave there.
+
+**Nothing changed at `extra_ambient_npcs: 0`**: a whole game day of
+`--census-by-area` at `--extra-ambient 0` is **byte-identical** before and after
+— in fact the entire stdout is — and the seed diagnostic still reads `413
+housed, 491 places in the registry`. At 2,000 it now reads `1,914 housed, 1,992
+places`, i.e. 413 cast + the 1,501 of 2,000 who are not paupers (the `[crowd]`
+line reports 499 with no trade), which is the "truthful `housed`" the spec
+asked for.
+
+**What M4 does to the loiterers: nothing, and that is the point.** M3's rung 10½
+recalls a generated citizen *with no legs at all* past their leash. The no-trade
+quarter has no door, so `base` is still M1's stand, the leash is still centred
+there, rung 10½ still fires for exactly the same people, and the curfew and the
+evening roll still pass them by. The three quarters with a trade get all of it —
+and the evening roll works for them and only them anyway, since it needs a
+`Lamplight`+`is_home` leg and only an archetype writes one. So the crowd's
+*evenings* belong to the tradesmen and the standing population simply stands.
+
+**`places_known` stays a handful**, as hoped: the widest generated whitelist is
+**30** handles (15 coarse + up to 14 ward places + their own house), and the
+growth from M4 is exactly one, because `home_of` inserts one id and the crowd
+knows nobody whose house could be added.
+
+Tests added (6): `homes::tests::the_ward_marks_cover_the_baked_homes_and_come_out_in_one_order`,
+`crowd::tests::every_generated_citizen_with_a_trade_gets_a_door_and_no_door_is_overfilled`,
+`crowd::tests::a_housed_citizen_can_say_which_ward_they_live_in`,
+`crowd::tests::a_crowd_on_a_graph_with_no_doors_is_bedless_as_it_always_was`,
+`round::tests::the_crowd_is_housed_at_its_own_doors_and_the_cast_keeps_its_bake`,
+`round::tests::a_generated_tradesman_now_has_a_leg_home_and_a_loiterer_still_has_none`.
+`cargo test --workspace`: **1479 passed, 4 ignored**, up exactly six from the
+1473 baseline. One existing test changed:
+`the_same_index_is_always_the_same_person` no longer claims a tail slice mints
+identical *houses* — the occupancy cap is a property of the whole crowd, so a
+two-person crowd finds 1,101 doors free where a sixty-four-person one had
+claimed forty — and it now pins the identity (name, goal, body, stand) instead.
+
+**Drive evidence, and its limits.** At 2,000 the photograph cannot carry the
+claim, and says so: the crowd is one person per 161 m² of walkable ground, so a
+lane holds two or three of them at any hour
+(`logs/session_773_2026-08-09_23_56_13/screenshots/m4_2000_cinder_row_highwick.png`
+against `m4_2000_cinder_row_lamplight.png`). At 20,000 the same camera down
+Cinder Row (`tp -91 1.7 135 180`) shows the difference in kind rather than in
+count: `logs/session_772_2026-08-09_23_48_42/screenshots/m4_20000_cinder_row_highwick.png`
+at 12:05 is a lane being *walked down* — a column of bodies moving through it —
+and `m4_20000_cinder_row_lamplight.png` at 18:22 is a lane being *stood in*,
+bodies at the doorways a metre from the camera. Each frame's clock is legible in
+the HUD. The Lamplight in a 4.6 m lane is close to unphotographable — the same
+complaint M3's record makes — so the census above is the evidence and the
+photographs are the illustration.
+
+One nominal deviation from the spec's verification text: there is no
+`--trace-round` flag on `cathedral-headless`; the census is `--census-by-area`.
+
+---
 
 The payoff milestone, and the invasive one. The city has **1,101 doors**
 against 1,032 buildings, and `nav::Door` is exactly the right anchor:

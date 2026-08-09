@@ -48,7 +48,7 @@ use crate::{
         ItemMatcher, MarketRequestLine, ReservedInput, SaleReceipt, StockSpec, TransformJob,
     },
     item::Item,
-    lore::Significance,
+    lore::{PlanningWard, Significance},
     math::Vec3,
     nav::{NavData, WALK_Y},
     perception::identify_ids,
@@ -2933,12 +2933,14 @@ impl Round {
                 PlaceRegistry::default()
             }
         };
-        if let Some((_, homes)) = &content {
-            for id in &townsfolk {
-                if let Some(entry) = homes.homes.get(id.as_str()) {
-                    let point = Vec3::new(entry.point[0], WALK_Y, entry.point[1]);
-                    registry.add_home(id, world.characters[id].name(), point);
-                }
+        // Both kinds of bed at once (M4): the cast's, bound by id in the bake,
+        // and a generated citizen's door, which `crate::crowd` chose at world
+        // build and carried here on their profile. `home_of` is the one lookup
+        // the rest of the seed asks, so the two have to land in the same map.
+        let homes = content.as_ref().map(|(_, homes)| homes);
+        for id in &townsfolk {
+            if let Some(point) = home_point(&world.characters[id], homes) {
+                registry.add_home(id, world.characters[id].name(), point);
             }
         }
 
@@ -3004,6 +3006,26 @@ impl Round {
             ));
         }
 
+        // The two whitelist scans, hoisted out of the enrolment loop. Both used
+        // to walk the whole registry once per person, which cost nothing while
+        // the registry was 491 entries and the roster 514 — and became 20,000 ×
+        // 20,078, twice, the moment M4 filed a home for every generated citizen.
+        // Neither scan can see a home (they are registered with no ward and
+        // `coarse: false`), so lifting them out changes only how often they run.
+        let coarse_places: Vec<PlaceId> = registry.coarse().map(|entry| entry.id.clone()).collect();
+        let ward_places: HashMap<&'static str, Vec<PlaceId>> = PlanningWard::ALL
+            .iter()
+            .map(|ward| {
+                (
+                    ward.as_str(),
+                    registry
+                        .ward_places(ward.as_str())
+                        .map(|entry| entry.id.clone())
+                        .collect(),
+                )
+            })
+            .collect();
+
         let mut enrolled = 0usize;
         let mut housed = 0usize;
         let mut drawers = 0usize;
@@ -3013,10 +3035,7 @@ impl Round {
             let occupation = character.lore().and_then(|lore| lore.occupation_id.clone());
             let generated = character.lore().is_some_and(|lore| lore.generated);
 
-            let home = content
-                .as_ref()
-                .and_then(|(_, homes)| homes.homes.get(id.as_str()))
-                .map(|entry| Vec3::new(entry.point[0], WALK_Y, entry.point[1]));
+            let home = home_point(character, homes);
             if home.is_some() {
                 housed += 1;
             }
@@ -3030,14 +3049,11 @@ impl Round {
             // kind of day touches — the keeper's well, the worker's legs. It
             // is also, quietly, characterisation: which ids someone holds is
             // who they are.
-            let mut known: BTreeSet<PlaceId> =
-                registry.coarse().map(|entry| entry.id.clone()).collect();
-            if let Some(ward) = character.lore().map(|lore| lore.planning_ward) {
-                known.extend(
-                    registry
-                        .ward_places(ward.as_str())
-                        .map(|entry| entry.id.clone()),
-                );
+            let mut known: BTreeSet<PlaceId> = coarse_places.iter().cloned().collect();
+            if let Some(ward) = character.lore().map(|lore| lore.planning_ward)
+                && let Some(places) = ward_places.get(ward.as_str())
+            {
+                known.extend(places.iter().cloned());
             }
             if let Some(entry) = registry.home_of(id) {
                 known.insert(entry.id.clone());
@@ -5477,6 +5493,31 @@ struct Sale {
     bought_id: ItemId,
     pitch: Vec3,
     receipt: SaleReceipt,
+}
+
+/// Where this person's bed is, if they have one.
+///
+/// Two beds, one question. The authored cast's is bound by id in
+/// `scripts/bake_homes.py`'s `homes.json`, and ~100 of them deliberately have
+/// none. A **generated** citizen has no bake to be in, so
+/// `features/give_the_crowd_somewhere_to_be.md` M4 hands them one of the city's
+/// 1,101 doors at world build and carries the point on their profile
+/// ([`crate::lore::LoreProfile::home_point_m`]) — the same field that carries
+/// the sentence they say about it.
+///
+/// The generated branch is gated on `lore.generated`, which no authored sheet
+/// can set, so at `extra_ambient_npcs: 0` this is byte for byte the bake lookup
+/// it replaced.
+fn home_point(character: &Character, homes: Option<&HomesDoc>) -> Option<Vec3> {
+    if let Some(lore) = character.lore()
+        && lore.generated
+    {
+        return lore.home_point_m.map(|[x, z]| Vec3::new(x, WALK_Y, z));
+    }
+    homes?
+        .homes
+        .get(character.id().as_str())
+        .map(|entry| Vec3::new(entry.point[0], WALK_Y, entry.point[1]))
 }
 
 /// Build a townsperson's resolved legs from their route override (the 19 authored

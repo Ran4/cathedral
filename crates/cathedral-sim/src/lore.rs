@@ -181,6 +181,20 @@ pub struct LoreProfile {
     /// seen yet (and for non-lore fixtures, which have no profile at all).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub home: Option<String>,
+    /// Where that home actually *is*, as `[x, z]` in world metres — the door
+    /// the round walks them to at the Snuffing, and the point
+    /// [`crate::places::PlaceRegistry::add_home`] files their handle at.
+    ///
+    /// Only a **generated** citizen ever carries one
+    /// (`features/give_the_crowd_somewhere_to_be.md` M4). The authored cast's
+    /// bed is bound by `scripts/bake_homes.py` into `assets/world/homes.json`
+    /// and looked up by id, so the cast has no use for this field and never
+    /// sets it; a crowd has no bake, so the door [`crate::crowd`] picks travels
+    /// with the citizen on the one profile that already carries `generated`.
+    /// `None` everywhere else and skipped when serialising, so no authored
+    /// sheet, save or frozen fixture moves a byte.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub home_point_m: Option<[f64; 2]>,
     pub core_character_description: String,
     pub extended_character_description: String,
     /// How readily this person speaks *first* — the authored override on the
@@ -438,6 +452,9 @@ impl LoreCharacterSheet {
                 circumstances: self.circumstances,
                 conditions: self.conditions,
                 home,
+                // The cast's bed is bound by id in `assets/world/homes.json`
+                // and looked up there; only a generated citizen carries a point.
+                home_point_m: None,
                 core_character_description: self.core_character_description,
                 extended_character_description: self.extended_character_description,
                 curiosity: self.curiosity,

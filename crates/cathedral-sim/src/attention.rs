@@ -1263,6 +1263,7 @@ mod tests {
             circumstances: Vec::new(),
             conditions: Vec::new(),
             home: None,
+            home_point_m: None,
             core_character_description: "You lay stone.".into(),
             extended_character_description: String::new(),
             curiosity: None,

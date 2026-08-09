@@ -5327,6 +5327,7 @@ mod tests {
             circumstances: Vec::new(),
             conditions: Vec::new(),
             home: None,
+            home_point_m: None,
             core_character_description: String::new(),
             extended_character_description: String::new(),
             curiosity,

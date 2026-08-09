@@ -59,15 +59,30 @@ workers and their `.env`.
 `config.ron: smart_actors.extra_ambient_npcs` (0..=20000, default 0, `CATHEDRAL_EXTRA_NPCS=n` for one run)
 generates that many extra ambient citizens and spreads them over the walkable graph
 (`crates/cathedral-sim/src/crowd.rs`). They are **not cast**: six-character ids (`x00000`…, so they cannot
-shadow a five-character lore id), no authored sheet, no bed in `homes.json`, strangers to the player, and
+shadow a five-character lore id), no authored sheet, no entry in `homes.json`, strangers to the player, and
 barred from the one civic post the round hands to whoever is standing nearest — the well curbs stay the
-cast's. Everything else about them is ordinary: a ward, a purse, a walk, and for three in four of them an
-occupation and the daily round that comes with it. The fourth quarter has **no trade at all** — the
+cast's. Everything else about them is ordinary: a purse, a walk, a ward, and for three in four of them an
+occupation, a door and the daily round that comes with them. The fourth quarter has **no trade at all** — the
 `no_fixed_trade/` shape, `occupation_id`/`title`/`rank` all null and a support circumstance (`pauper`,
 `alms_dependent`, `unhoused`, …) saying how they eat instead. With no occupation the round finds no
 archetype and gives them no legs, so they loiter near where they were stood rather than commuting; they
 read as poor at thirty metres, they are about twice as likely to speak to you first, and they draw no
 water. The city's standing population, not its traffic.
+
+**Everyone with a trade gets a door.** No bake can reach a generated id, so each of them is given the nearest
+of the city's 1,101 `nav::Door`s whose occupancy is under the cap (the housed crowd divided by the doors —
+one to a house at 1,000, fourteen at 20,000), and that door is their `Townsperson.home`, their entry in the
+wayfinding registry, and the ward they say they are of. Nearest, so they live where they were stood: median
+8–12 m from stand to door, and the tide they join is their own lane's rather than a march across the city.
+Everything domestic then follows with no further code — the archetype's `"home"` leg stops being dropped, the
+curfew sends them in, the hearth feeds them at High Wick, and the ambient evening roll starts choosing their
+nights. At 20,000 the census goes from 190 in bed once the morning has settled to 9,782 at the Watch, against
+a flat 11–83 all day before. They can also *say* where they live: the home sentence is `bake_homes.py`'s own
+register ("a house in the Cinder Ward, near the Shambles well"), derived from the door, and their
+`planning_ward` is the door's too, so the two lines of their `you` line cannot disagree. The **pauper
+quarter gets no door**, by the same rule the bake applies to the ~100 bedless of the cast: every no-trade
+citizen carries `pauper`, and a house would contradict the sheet that says they sleep under an overhang.
+Their ward comes from the ground they stand on instead.
 
 A generated citizen also mills on a **wider leash than the cast**: 15–40 m, drawn per person off their id
 (`round.rs crowd_leash_m`, written only in `Round::seed`'s enrolment branch behind `lore.generated`), against
@@ -79,7 +94,11 @@ They cost no tokens by existing — the stage cap and the single in-flight cogni
 however many people are about — but they do change who is *nearest*, and therefore who the idle rotation
 picks. What they cost is frames: measured at 1280x720, p50 frame time 7.2 ms at 0, 16.8 ms at 2000, 36 ms at
 5000, 204 ms at 20000. Past ~2000 the dominant cost is the engine pump (the sim), not the puppets.
-`cargo run -p cathedral-backends --bin cathedral-headless -- --extra-ambient n` measures that half alone.
+`cargo run -p cathedral-backends --bin cathedral-headless -- --extra-ambient n` measures that half alone —
+`--watch-clock N` runs the clock as fast as the pump allows, so the run's own CPU time *is* the pump's. Housing
+them (M4) made that half markedly cheaper, because a city that goes to bed stops re-routing all night: one
+game day at 20,000 went 1020 s → 583 s, and at 2,000 7.1 s → 5.7 s. Startup at 20,000 is ~5.5 s; on top of
+that `settle_households` costs ~3 s **per game day** at that count — a pre-existing pass nobody has optimised.
 
 ### Running the sim without Bevy
 

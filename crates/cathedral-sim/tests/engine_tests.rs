@@ -1354,6 +1354,7 @@ fn a_transfer_from_the_accused_hands_the_acceptor_the_priority_slot() {
         circumstances: Vec::new(),
         conditions: Vec::new(),
         home: None,
+        home_point_m: None,
         core_character_description: String::new(),
         extended_character_description: String::new(),
         curiosity: None,

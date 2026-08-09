@@ -73,6 +73,7 @@ fn character(id: &str, name: &str, significance: Significance, ward: PlanningWar
             circumstances: Vec::new(),
             conditions: Vec::new(),
             home: None,
+            home_point_m: None,
             core_character_description: "You bake.".into(),
             extended_character_description: String::new(),
             curiosity: None,

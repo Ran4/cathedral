@@ -103,6 +103,12 @@ pub struct PlaceRegistry {
     by_name: HashMap<String, usize>,
     /// Housed character → their home's entry.
     home_by_owner: HashMap<ActorId, usize>,
+    /// The same binding read the other way — a home's id → whose it is. Kept
+    /// rather than searched because [`Self::owner_of_home`] is asked once per
+    /// reachable anchor on every chalk poll, and a crowd
+    /// (`features/give_the_crowd_somewhere_to_be.md` M4) files 20,000 homes for
+    /// that scan to walk.
+    owner_by_home: HashMap<PlaceId, ActorId>,
 }
 
 impl PlaceRegistry {
@@ -187,6 +193,7 @@ impl PlaceRegistry {
         let index = self.entries.len();
         self.by_id.insert(id.clone(), index);
         self.home_by_owner.insert(owner.clone(), index);
+        self.owner_by_home.insert(id.clone(), owner.clone());
         self.entries.push(PlaceEntry {
             id: id.clone(),
             name: format!("{owner_name}'s house"),
@@ -280,10 +287,7 @@ impl PlaceRegistry {
     /// [`home_of`](Self::home_of), for a caller holding an entry rather than
     /// an owner.
     pub fn owner_of_home(&self, id: &PlaceId) -> Option<&ActorId> {
-        self.home_by_owner
-            .iter()
-            .find(|(_, index)| self.entries[**index].id == *id)
-            .map(|(owner, _)| owner)
+        self.owner_by_home.get(id)
     }
 
     /// The nearest registered place to `point` in the walk (XZ) plane — homes

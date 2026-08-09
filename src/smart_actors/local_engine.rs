@@ -293,7 +293,7 @@ fn with_extra_ambient(
         return Ok(seed);
     };
     let points = cathedral_sim::spread_over_walkable(nav, count as usize);
-    let sheets = cathedral_sim::extra_ambient_sheets(&points, 0);
+    let sheets = cathedral_sim::extra_ambient_sheets(nav, &points, 0);
     info!(
         "[smart actors] crowd: {} generated ambient citizens over {} nav nodes",
         sheets.len(),

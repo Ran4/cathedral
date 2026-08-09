@@ -59,6 +59,7 @@ fn person(
         circumstances: Vec::new(),
         conditions: Vec::new(),
         home: None,
+        home_point_m: None,
         core_character_description: String::new(),
         extended_character_description: String::new(),
         curiosity: None,
@@ -8139,7 +8140,7 @@ fn a_chalked_ward_sign_pulls_that_wards_evening_crowd() {
 fn a_generated_citizen_with_no_trade_is_enrolled_with_no_legs() {
     let nav = nav();
     let stands = crate::crowd::spread_over_walkable(&nav, 64);
-    let sheets = crate::crowd::extra_ambient_sheets(&stands, 0);
+    let sheets = crate::crowd::extra_ambient_sheets(&nav, &stands, 0);
     let no_trade: Vec<ActorId> = sheets
         .iter()
         .filter(|sheet| {
@@ -8188,7 +8189,11 @@ fn a_generated_citizen_with_no_trade_is_enrolled_with_no_legs() {
             person.leash_m
         );
         assert!(!person.curfew_exempt);
-        assert!(person.home.is_none(), "no bed is baked for a generated id");
+        // M4 left this pair standing, deliberately. A no-trade citizen carries
+        // `pauper`, and `bake_homes.py` refuses a bed to anybody who does — so
+        // the crowd's doors go to the three quarters with a trade, and this
+        // cohort is still the people the watch finds in the street at curfew.
+        assert!(person.home.is_none(), "no door goes to a generated pauper");
         // The base the wander leash is measured from is their spawn — the
         // 12 m stand M1 gave them, which is the point of standing them there.
         assert_eq!(person.base, world.characters[id].position_m());
@@ -8293,7 +8298,7 @@ fn the_crowd_takes_the_wide_leash_and_the_cast_keeps_its_own() {
             ));
         }
         if with_crowd {
-            for sheet in crate::crowd::extra_ambient_sheets(&stands[8..], 8) {
+            for sheet in crate::crowd::extra_ambient_sheets(&nav, &stands[8..], 8) {
                 world.add_character(Character::from_sheet(sheet));
             }
         }
@@ -8518,5 +8523,180 @@ fn a_generated_idler_past_the_leash_is_walked_back() {
     assert!(
         !matches!(home_bird, Decision::Travel(_)),
         "a citizen on their own patch is not recalled, got {home_bird:?}"
+    );
+}
+
+/// `features/give_the_crowd_somewhere_to_be.md` M4, the enrolment half: every
+/// generated citizen reaches [`Round::seed`] with a door on their profile, is
+/// enrolled at it, has it filed in the wayfinding registry as a place they hold
+/// a handle to — and none of that touches the cast, whose beds still come from
+/// `homes.json` and are the same with a crowd in the world and without one.
+#[test]
+fn the_crowd_is_housed_at_its_own_doors_and_the_cast_keeps_its_bake() {
+    let nav = nav();
+    let stands = crate::crowd::spread_over_walkable(&nav, 96);
+    // Two of the cast by ids the bake really binds — "cast0" is in no bake, so
+    // it could not tell an untouched home from a missing one.
+    let authored = [("sv3n1", "mason"), ("a2gpk", "baker")];
+
+    let seed_world = |with_crowd: bool| {
+        let mut world = base_world();
+        for (index, (id, occupation)) in authored.iter().enumerate() {
+            world.add_character(person(
+                id,
+                stands[index],
+                Some(occupation),
+                Significance::Ambient,
+            ));
+        }
+        if with_crowd {
+            for sheet in crate::crowd::extra_ambient_sheets(&nav, &stands[8..], 8) {
+                world.add_character(Character::from_sheet(sheet));
+            }
+        }
+        let mut round = Round::new();
+        let diagnostics = round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+        (world, round, diagnostics)
+    };
+
+    let (quiet_world, quiet, _) = seed_world(false);
+    let (world, round, diagnostics) = seed_world(true);
+
+    let mut doors: BTreeSet<String> = BTreeSet::new();
+    let mut generated = 0usize;
+    let mut bedless = 0usize;
+    let mut widest_whitelist = 0usize;
+    for (id, person) in &round.people {
+        if !id.as_str().starts_with('x') {
+            continue;
+        }
+        generated += 1;
+        let lore = world.characters[id].lore().expect("a generated profile");
+        widest_whitelist = widest_whitelist.max(world.characters[id].state.places_known.len());
+        // The pauper quarter gets no door, on `bake_homes.py`'s own rule, and
+        // must reach the round with nothing about them changed.
+        let Some([x, z]) = lore.home_point_m else {
+            assert!(lore.occupation_id.is_none(), "{id} has a trade and no door");
+            assert!(person.home.is_none());
+            assert_eq!(person.base, world.characters[id].position_m());
+            assert!(world.places.home_of(id).is_none());
+            bedless += 1;
+            continue;
+        };
+        let home = person
+            .home
+            .expect("a door on the profile is a door in the round");
+        assert_eq!(home, Vec3::new(x, WALK_Y, z), "{id} sleeps somewhere else");
+        // `base` is home for the housed, so the patch they mill over is theirs.
+        assert_eq!(person.base, home);
+
+        // The handle: filed in the registry, and held by its owner, so
+        // `places_you_know` can say "go_to" their own door.
+        let entry = world
+            .places
+            .home_of(id)
+            .unwrap_or_else(|| panic!("{id}'s house is not in the registry"));
+        assert_eq!(entry.point, home);
+        assert!(
+            world.characters[id].state.places_known.contains(&entry.id),
+            "{id} does not hold a handle to their own house"
+        );
+        assert_eq!(world.places.owner_of_home(&entry.id), Some(id));
+
+        // ~66 housed citizens over 1,101 doors is a cap of one, so no two of
+        // them can share an address — the cap, checked where it bites hardest.
+        assert!(
+            doors.insert(format!("{x:.4},{z:.4}")),
+            "{id} was given a door somebody else already has"
+        );
+    }
+    assert!(
+        generated > 80,
+        "only {generated} generated citizens enrolled"
+    );
+    assert!(
+        bedless > 10 && bedless < generated / 2,
+        "{bedless} of {generated} are bedless paupers"
+    );
+    // The whitelist stays a handful: the coarse handles, their own ward's
+    // places, their own house and their day's stations. A crowd knows nobody,
+    // so no friends' houses join it — and `places_you_know` is rendered into
+    // every prompt.
+    println!("widest generated whitelist: {widest_whitelist} place handles");
+    assert!(
+        widest_whitelist <= 40,
+        "a generated citizen holds {widest_whitelist} place handles"
+    );
+
+    // The cast: the same bed, with a crowd and without, and it is the bake's.
+    for (id, _) in &authored {
+        let id = ActorId::from_raw(*id);
+        let alone = quiet.people[&id].home.expect("the bake binds this id");
+        assert_eq!(alone, round.people[&id].home.expect("still housed"));
+        assert_eq!(
+            quiet_world.places.home_of(&id).map(|entry| entry.point),
+            world.places.home_of(&id).map(|entry| entry.point),
+        );
+    }
+
+    // …and the seed diagnostic finally counts them, which it did not before M4.
+    let housed = round
+        .people
+        .values()
+        .filter(|person| person.home.is_some())
+        .count();
+    assert!(
+        diagnostics
+            .iter()
+            .any(|line| line.contains(&format!("{housed} housed"))),
+        "no line reports {housed} housed: {diagnostics:?}"
+    );
+}
+
+/// The payoff, pinned where it actually happens: with a bed, `build_legs` stops
+/// dropping the archetype's `"home"` leg, so a generated tradesman has an
+/// evening leg that walks them into a residential lane. The no-trade cohort
+/// still has no legs at all — having no trade is having no archetype — but
+/// their bed is not idle either: it is what the curfew rung and the nightly
+/// ambient evening roll both open on.
+#[test]
+fn a_generated_tradesman_now_has_a_leg_home_and_a_loiterer_still_has_none() {
+    let nav = nav();
+    let stands = crate::crowd::spread_over_walkable(&nav, 64);
+    let sheets = crate::crowd::extra_ambient_sheets(&nav, &stands, 0);
+    let mut world = base_world();
+    for sheet in sheets {
+        world.add_character(Character::from_sheet(sheet));
+    }
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    let mut walk_home = 0usize;
+    let mut trades = 0usize;
+    for (id, person) in &round.people {
+        let lore = world.characters[id].lore().expect("a generated profile");
+        let bed = person.legs.iter().find(|leg| leg.is_home);
+        if lore.occupation_id.is_none() {
+            assert!(
+                person.legs.is_empty(),
+                "{id} has no trade and should still have no legs"
+            );
+            assert!(person.home.is_none(), "{id} is a pauper and gets no door");
+            continue;
+        }
+        let home = person.home.expect("M4 houses everybody with a trade");
+        trades += 1;
+        if let Some(bed) = bed {
+            assert_eq!(bed.at, home, "{id}'s home leg goes somewhere else");
+            // Sleeping or merely at their ease — the archetypes differ, and a
+            // night trade's bed leg is `Idle`; what matters is that it is theirs.
+            assert!(matches!(bed.doing, Arrival::Sleep | Arrival::Idle));
+            walk_home += 1;
+        }
+    }
+    assert!(trades > 20, "only {trades} generated tradesmen");
+    assert!(
+        walk_home > trades / 2,
+        "only {walk_home} of {trades} tradesmen walk home; before M4 it was 0"
     );
 }

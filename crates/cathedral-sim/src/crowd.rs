@@ -30,10 +30,11 @@
 use crate::{
     appearance::AppearanceSnapshot,
     character::{CharacterSheet, Control, EconomicClass, Presence},
+    homes,
     ids::ActorId,
     lore::{LoreProfile, PlanningWard, Significance, default_voice_key},
     math::Vec3,
-    nav::NavData,
+    nav::{NavData, Place},
 };
 
 /// The ceiling on `config.ron: smart_actors.extra_ambient_npcs`. Not a
@@ -164,12 +165,282 @@ fn gcd(mut a: usize, mut b: usize) -> usize {
 /// owns who each of them turns out to be. Ids run `x00000` upward from
 /// `first_index`, so a host that generates in one pass gets a contiguous
 /// block and a test can mint two people without minting nineteen thousand.
-pub fn extra_ambient_sheets(points: &[Vec3], first_index: u32) -> Vec<CharacterSheet> {
+///
+/// The graph is needed for the *doors* (M4): a citizen who is not a pauper is
+/// given the nearest free one as their home, and it is the door — not a draw —
+/// that decides which ward they are of and how they answer "where do you
+/// live?". Because the occupancy cap makes the assignment a property of the
+/// whole crowd, `first_index` shifts the *names*, not the doors: minting a tail
+/// slice on its own gives those people the same identities and a different set
+/// of houses.
+pub fn extra_ambient_sheets(
+    nav: &NavData,
+    points: &[Vec3],
+    first_index: u32,
+) -> Vec<CharacterSheet> {
+    let doors = doorsteps(nav);
+    let lodgings = lodgings(&doors, points, first_index);
     points
         .iter()
         .enumerate()
-        .map(|(offset, point)| ambient_sheet(first_index + offset as u32, *point))
+        .map(|(offset, point)| {
+            ambient_sheet(
+                first_index + offset as u32,
+                *point,
+                lodgings.get(offset).and_then(Option::as_ref),
+            )
+        })
         .collect()
+}
+
+// --------------------------------------------------------------------------- //
+// M4 — a door to call home
+// --------------------------------------------------------------------------- //
+/// One of the city's 1,101 doors, resolved into everything a resident of it
+/// needs: the walkable node a metre outside the threshold, the ward they will
+/// say they are of, and the sentence they will say it with.
+struct Doorstep {
+    point: Vec3,
+    ward: PlanningWard,
+    place_description: String,
+}
+
+/// Where a generated citizen belongs once the graph has been consulted: the
+/// ward they are *of*, and — for the three quarters of them who are not paupers
+/// — the door they sleep behind.
+struct Lodging<'a> {
+    ward: PlanningWard,
+    door: Option<&'a Doorstep>,
+}
+
+/// How far a door may be from a named place and still be *near* it rather than
+/// merely *toward* it. `scripts/bake_homes.py NEARBY_M`, so a generated
+/// citizen's home reads in exactly the register the cast's baked one does.
+const NEARBY_M: f64 = 120.0;
+
+/// One lodging per stand, in stand order — or nothing at all on a graph with no
+/// doors, where the whole M4 layer stands down and a citizen is the person
+/// `extra_ambient_npcs` minted before it.
+///
+/// **The no-trade quarter gets no door**, and that is the bake's rule rather
+/// than a new one: `scripts/bake_homes.py HOMELESS_CIRCUMSTANCES` refuses a bed
+/// to anyone carrying `pauper`, `unhoused` or `insecure_lodging`, and every
+/// entry in [`SUPPORTS`] carries `pauper`. Housing them would have put "Home: a
+/// house in the Reed Ward" on the same prompt as "You sleep under whatever
+/// overhang is dry" — the drift the risk ledger of
+/// `features/give_the_crowd_somewhere_to_be.md` names, arrived at by accident.
+/// They still get a ward, taken from the ground they stand on rather than from
+/// a draw, because a person with no bed is of wherever they sleep rough; and
+/// their own support line already says how they sleep, which is what the bake's
+/// `bedless` framing exists to say for the cast.
+fn lodgings<'a>(
+    doors: &'a [Doorstep],
+    points: &[Vec3],
+    first_index: u32,
+) -> Vec<Option<Lodging<'a>>> {
+    if doors.is_empty() {
+        return points.iter().map(|_| None).collect();
+    }
+    let seeking: Vec<usize> = (0..points.len())
+        .filter(|offset| !holds_no_trade(first_index + *offset as u32))
+        .collect();
+    let assignment = assign_doorsteps(doors, points, &seeking);
+    let wards = ward_map();
+    points
+        .iter()
+        .enumerate()
+        .map(|(offset, point)| match assignment[offset] {
+            Some(door) => Some(Lodging {
+                ward: doors[door].ward,
+                door: Some(&doors[door]),
+            }),
+            None => nearest_ward(&wards, *point).map(|ward| Lodging { ward, door: None }),
+        })
+        .collect()
+}
+
+/// Whether this index draws the `no_fixed_trade/` shape (M2). Lifted out of
+/// [`ambient_sheet`] because M4 has to know before it deals the doors, and the
+/// two must never disagree about who is a pauper.
+fn holds_no_trade(index: u32) -> bool {
+    unit(u64::from(index), 0x5EED_000C) < NO_TRADE_SHARE
+}
+
+/// Every door in the graph, in the graph's own order, each already labelled.
+///
+/// Every door, not only the residential ones: the sim has no building-use data
+/// (`lore/places/ombreval_buildings.json` is authoring input and is not
+/// embedded), so a generated citizen may be lodged behind a workshop or a store
+/// as readily as a house. At 1,101 doors that is the ~18-to-a-house the
+/// milestone was costed at; the 478 residential ones alone would be 42.
+///
+/// Empty when the graph has no doors — every hand-built test nav — which simply
+/// leaves the crowd bedless exactly as it was before M4.
+fn doorsteps(nav: &NavData) -> Vec<Doorstep> {
+    let wards = ward_map();
+    if wards.is_empty() {
+        return Vec::new();
+    }
+    nav.doors()
+        .iter()
+        .filter_map(|door| {
+            let point = nav.node_point(door.node);
+            let ward = nearest_ward(&wards, point)?;
+            let landmark = nearest_place(nav, point);
+            let place_description = match landmark {
+                Some((place, distance)) => format!(
+                    "a house in the {}, {}",
+                    district_of_ward(ward),
+                    location_phrase(place, distance)
+                ),
+                None => format!("a house in the {}", district_of_ward(ward)),
+            };
+            Some(Doorstep {
+                point,
+                ward,
+                place_description,
+            })
+        })
+        .collect()
+}
+
+/// Which door is whose: for each stand in `seeking`, in order, the **nearest
+/// door that is not already full**. One slot per point, `None` for anybody not
+/// seeking a door at all.
+///
+/// Nearest, so a citizen lives where M1 stood them and the tide they join in
+/// the morning is their own lane's rather than a march across the city — which
+/// is also what keeps the routes short enough that twenty thousand of them do
+/// not drown the pump. Capped, so they spread instead of piling onto whichever
+/// door happens to sit under the busiest patch of graph: the cap is the *housed*
+/// crowd divided by the doors, rounded up, so 1,000 citizens are about one to a
+/// house and 20,000 are fourteen. Ties break to the earlier door, and the whole
+/// thing is a pure function of `(graph, points)`, so the same crowd lives at the
+/// same addresses in every run.
+///
+/// Measured on the shipped graph: a median walk of 8–12 m from stand to door,
+/// p90 of ~40 m, and a tail out to ~300 m for the handful stood on ground with
+/// no building near it at all (the moorings, the outer roads).
+fn assign_doorsteps(doors: &[Doorstep], points: &[Vec3], seeking: &[usize]) -> Vec<Option<usize>> {
+    let mut assignment = vec![None; points.len()];
+    if doors.is_empty() || seeking.is_empty() {
+        return assignment;
+    }
+    let cap = seeking.len().div_ceil(doors.len()).max(1);
+    // The search is O(seeking × doors) — 17 million distance tests at 20,000,
+    // once, at world build. It is quick only because it walks this flat little
+    // array of coordinates rather than the `Doorstep`s themselves, which carry
+    // a `String` each and would miss the cache on every step.
+    let coordinates: Vec<(f64, f64)> = doors.iter().map(|d| (d.point.x, d.point.z)).collect();
+    let mut occupancy = vec![0usize; doors.len()];
+    for &offset in seeking {
+        let point = points[offset];
+        let mut best: Option<(f64, usize)> = None;
+        for (index, (x, z)) in coordinates.iter().enumerate() {
+            if occupancy[index] >= cap {
+                continue;
+            }
+            let dx = x - point.x;
+            let dz = z - point.z;
+            let distance = dx * dx + dz * dz;
+            if best.is_none_or(|(closest, _)| distance < closest) {
+                best = Some((distance, index));
+            }
+        }
+        // `cap * doors >= seeking` by construction, so a free door always exists.
+        let (_, index) = best.expect("the cap leaves room for every citizen");
+        occupancy[index] += 1;
+        assignment[offset] = Some(index);
+    }
+    assignment
+}
+
+/// The city's ward map: every baked home's door with the ward its building
+/// belongs to, dropping the 92 in the "Outer wards", which are nobody's ward and
+/// are better left out than guessed at. See [`homes::ward_marks`] for why this
+/// is the best ward map the sim has and how well it agrees with the authored one.
+fn ward_map() -> Vec<([f64; 2], PlanningWard)> {
+    homes::ward_marks()
+        .iter()
+        .filter_map(|(point, district)| Some((*point, ward_of_district(district)?)))
+        .collect()
+}
+
+/// The ward whose nearest baked door this point falls closest to.
+fn nearest_ward(wards: &[([f64; 2], PlanningWard)], point: Vec3) -> Option<PlanningWard> {
+    let mut best: Option<(f64, PlanningWard)> = None;
+    for ([x, z], ward) in wards {
+        let dx = x - point.x;
+        let dz = z - point.z;
+        let distance = dx * dx + dz * dz;
+        if best.is_none_or(|(closest, _)| distance < closest) {
+            best = Some((distance, *ward));
+        }
+    }
+    best.map(|(_, ward)| ward)
+}
+
+/// The nearest named place on the graph, and how far off it is.
+fn nearest_place(nav: &NavData, point: Vec3) -> Option<(&Place, f64)> {
+    let mut best: Option<(f64, &Place)> = None;
+    for place in nav.places() {
+        let at = nav.node_point(place.node);
+        let dx = at.x - point.x;
+        let dz = at.z - point.z;
+        let distance = dx * dx + dz * dz;
+        if best.is_none_or(|(closest, _)| distance < closest) {
+            best = Some((distance, place));
+        }
+    }
+    best.map(|(distance, place)| (place, distance.sqrt()))
+}
+
+/// How a resident hangs their door on the nearest named place — "near the
+/// Shambles well", "off Cinder Row", "by the Wool Gate", or, out where nothing
+/// is named, "toward" whatever is closest. `scripts/bake_homes.py
+/// location_phrase`, word for word, because the cast's homes are already
+/// spoken this way and the crowd's must not sound like a different city.
+fn location_phrase(place: &Place, distance: f64) -> String {
+    let spoken = place
+        .name
+        .strip_prefix("The ")
+        .map_or_else(|| place.name.clone(), |rest| format!("the {rest}"));
+    if distance > NEARBY_M {
+        return format!("toward {spoken}");
+    }
+    let preposition = match place.kind.as_str() {
+        "route" => "off",
+        "gate" | "bridge" => "by",
+        _ => "near",
+    };
+    format!("{preposition} {spoken}")
+}
+
+/// A building district as the bake spells it → the planning ward it belongs to.
+/// The inverse of `scripts/bake_homes.py WARD_TO_DISTRICTS`; anything outside
+/// the eight wards ("Outer wards", "City wall", "Parish reserve") is nobody's
+/// ward and is dropped from the map rather than guessed at.
+fn ward_of_district(district: &str) -> Option<PlanningWard> {
+    Some(match district {
+        "Fabric Ward" => PlanningWard::Fabric,
+        "Wick Ward" => PlanningWard::Wick,
+        "Cloth Ward" => PlanningWard::Cloth,
+        "Wallwright Ward" => PlanningWard::Wallwright,
+        "Cinder Ward" => PlanningWard::Cinder,
+        "Weigh Ward" => PlanningWard::Weigh,
+        "Reed Ward" => PlanningWard::Reed,
+        "Bell and Sluice Wards" | "Bell Ward" | "Sluice Ward" => PlanningWard::BellAndSluice,
+        _ => return None,
+    })
+}
+
+/// The ward as a home is addressed — the bake's own spelling, which is the
+/// plural "Bell and Sluice Wards" where [`ward_name`] says the singular.
+fn district_of_ward(ward: PlanningWard) -> &'static str {
+    match ward {
+        PlanningWard::BellAndSluice => "Bell and Sluice Wards",
+        other => ward_name(other),
+    }
 }
 
 /// What a generated citizen lives on. Two shapes, because the authored roster
@@ -182,7 +453,7 @@ enum Living {
     NoTrade(&'static Support),
 }
 
-fn ambient_sheet(index: u32, position: Vec3) -> CharacterSheet {
+fn ambient_sheet(index: u32, position: Vec3, lodging: Option<&Lodging>) -> CharacterSheet {
     let seed = u64::from(index);
     let id = ActorId::from_raw(format!("x{index:05}"));
     let female = hash(seed, 0x5EED_0001).is_multiple_of(2);
@@ -192,13 +463,23 @@ fn ambient_sheet(index: u32, position: Vec3) -> CharacterSheet {
         pick(if female { WOMEN } else { MEN }, seed, 0x5EED_0002),
         pick(BYNAMES, seed, 0x5EED_0003)
     );
-    let ward = PlanningWard::ALL[(hash(seed, 0x5EED_0005) % 8) as usize];
+    // M4: a citizen is *of* the ward their door stands in — or, for the pauper
+    // quarter who get no door, of the ward they were stood in. Either way it is
+    // the ground and not a draw, so the two halves of "where are you from?" —
+    // the district on their `you` line and the house on the line under it —
+    // agree by construction, which is the drift the risk ledger names. Without
+    // a graph to hang a door on (a nav with no doors, every hand-built test
+    // one) the old draw still stands them somewhere.
+    let ward = match lodging {
+        Some(lodging) => lodging.ward,
+        None => PlanningWard::ALL[(hash(seed, 0x5EED_0005) % 8) as usize],
+    };
     let district = format!("{} streets", ward_name(ward));
 
     // The one branch in this file. Everything downstream of it — the round, the
     // outfit, the curiosity, the prompt — already knows what to do with a
     // person who has no trade, because the authored cast contains ten of them.
-    let living = if unit(seed, 0x5EED_000C) < NO_TRADE_SHARE {
+    let living = if holds_no_trade(index) {
         Living::NoTrade(pick(SUPPORTS, seed, 0x5EED_000D))
     } else {
         Living::Trade(pick(TRADES, seed, 0x5EED_0004))
@@ -292,9 +573,21 @@ fn ambient_sheet(index: u32, position: Vec3) -> CharacterSheet {
             children: Vec::new(),
             circumstances,
             conditions: Vec::new(),
-            // No bed: `homes.json` is baked per authored id, and the round
-            // already carries ~100 bedless people through a night without one.
-            home: None,
+            // M4 — a door to call home. `homes.json` is baked per authored id,
+            // so a generated citizen's bed cannot come from it; theirs is a
+            // door off the graph, carried on the profile in both the forms the
+            // sim wants it. The spoken one is what the prompt's `Home:` line
+            // renders, in the bake's own register; the point is what
+            // `Round::seed` walks them to and files their handle at. Both
+            // `None` for the pauper quarter, who get no door for the same
+            // reason ~100 of the cast get no bake entry, and both `None` in a
+            // world with no doors, which is every hand-built nav.
+            home: lodging
+                .and_then(|lodging| lodging.door)
+                .map(|door| door.place_description.clone()),
+            home_point_m: lodging
+                .and_then(|lodging| lodging.door)
+                .map(|door| [door.point.x, door.point.z]),
             core_character_description: description,
             extended_character_description: String::new(),
             // Derived, like the whole authored cast's. A generated citizen is
@@ -654,20 +947,48 @@ mod tests {
 
     /// The shipped graph, loaded exactly as the host loads it. The spread is
     /// only as good as the ground it is tested against: a hand-built nav is an
-    /// open plain, where every draw lands and every claim below is free.
-    fn shipped_nav() -> NavData {
-        NavData::from_parts(NAV_JSON, NAV_BIN).expect("the committed nav loads")
+    /// open plain, where every draw lands and every claim below is free — and
+    /// since M4 it is also the only graph with doors on it. Parsed once for the
+    /// whole module; several tests below mint thousands of people.
+    fn shipped_nav() -> &'static NavData {
+        static NAV: std::sync::OnceLock<NavData> = std::sync::OnceLock::new();
+        NAV.get_or_init(|| NavData::from_parts(NAV_JSON, NAV_BIN).expect("the committed nav loads"))
     }
 
-    fn points(count: usize) -> Vec<Vec3> {
-        (0..count)
-            .map(|i| Vec3::new(i as f64, 0.91, 0.0))
-            .collect()
+    /// A crowd of `count`, stood and housed on the shipped graph exactly as a
+    /// host stands one.
+    fn crowd(count: usize) -> Vec<CharacterSheet> {
+        let nav = shipped_nav();
+        extra_ambient_sheets(nav, &spread_over_walkable(nav, count), 0)
+    }
+
+    /// A graph with walkable ground and **no doors** — the shape every
+    /// hand-built test nav has, and the one M4 has to degrade to without
+    /// changing anything else about a citizen.
+    fn doorless_nav() -> NavData {
+        let (w, h) = (60usize, 10usize);
+        let bitset = vec![0xFF_u8; (w * h).div_ceil(8)];
+        let json = format!(
+            r#"{{
+              "schema_version": 1,
+              "grid": {{"x0": -5.0, "z0": -5.0, "cell_m": 1.0, "w": {w}, "h": {h},
+                        "agent_radius_m": 0.35, "bitset_file": "x.bin",
+                        "bitset_bits": {bits}, "bitset_sha256": ""}},
+              "nodes": [[0.0, 0.0], [10.0, 0.0], [20.0, 0.0], [30.0, 0.0]],
+              "edges": [[0, 1, 2.0], [1, 2, 2.0], [2, 3, 2.0]],
+              "places": [{{"name": "a", "node": 0, "kind": "place"}}],
+              "sites": [],
+              "doors": [],
+              "reference": {{"forecourt": 0}}
+            }}"#,
+            bits = w * h
+        );
+        NavData::from_parts(&json, &bitset).expect("the hand-built nav validates")
     }
 
     #[test]
     fn ids_are_six_characters_and_cannot_shadow_a_lore_id() {
-        let sheets = extra_ambient_sheets(&points(3), 0);
+        let sheets = crowd(3);
         let ids: Vec<&str> = sheets.iter().map(|sheet| sheet.id.as_str()).collect();
         assert_eq!(ids, ["x00000", "x00001", "x00002"]);
         // Lore ids are exactly five characters, so no generated id can collide
@@ -681,19 +1002,33 @@ mod tests {
 
     #[test]
     fn the_same_index_is_always_the_same_person() {
-        let once = extra_ambient_sheets(&points(64), 0);
-        let twice = extra_ambient_sheets(&points(64), 0);
+        let nav = shipped_nav();
+        let stands = spread_over_walkable(nav, 64);
+        let once = extra_ambient_sheets(nav, &stands, 0);
+        let twice = extra_ambient_sheets(nav, &stands, 0);
         assert_eq!(once, twice);
-        // …and the block is a function of the index, not of the batch: minting
-        // two people starting at 40 gives exactly the 41st and 42nd citizens.
-        let tail = extra_ambient_sheets(&points(64)[40..42], 40);
-        assert_eq!(tail, once[40..42]);
+        // Who somebody *is* is still a pure function of their index: mint the
+        // last two on their own and the same names, trades and bodies come
+        // back. Their *houses* are not, and cannot be — M4's occupancy cap is a
+        // property of the whole crowd, and a crowd of two finds 1,101 doors free
+        // where the crowd of sixty-four had already claimed forty of them.
+        let tail = extra_ambient_sheets(nav, &stands[40..42], 40);
+        for (alone, together) in tail.iter().zip(&once[40..42]) {
+            assert_eq!(alone.id, together.id);
+            assert_eq!(alone.name, together.name);
+            assert_eq!(alone.goal, together.goal);
+            assert_eq!(alone.appearance, together.appearance);
+            assert_eq!(alone.position_m, together.position_m);
+        }
     }
 
     #[test]
     fn every_generated_citizen_is_an_ambient_with_a_goal() {
-        for sheet in extra_ambient_sheets(&points(200), 0) {
-            let lore = sheet.lore.as_ref().expect("a generated citizen has a profile");
+        for sheet in crowd(200) {
+            let lore = sheet
+                .lore
+                .as_ref()
+                .expect("a generated citizen has a profile");
             assert_eq!(lore.significance, Significance::Ambient);
             assert!(lore.generated, "{} must be flagged generated", sheet.id);
             // Both authored shapes and nothing between them: a trade with its
@@ -711,7 +1046,24 @@ mod tests {
                 sheet.id
             );
             assert!(lore.rank.is_none());
-            assert!(lore.home.is_none(), "generated citizens have no baked bed");
+            // M4: no bake can reach a generated id, so a bed is a door off the
+            // graph — and the two halves of it, the sentence and the point, are
+            // either both there or neither. The pauper quarter has neither, on
+            // the bake's own rule.
+            assert_eq!(lore.home.is_some(), lore.home_point_m.is_some());
+            assert_eq!(
+                lore.home.is_some(),
+                lore.occupation_id.is_some(),
+                "{} is housed and a pauper, or bedless with a trade",
+                sheet.id
+            );
+            if let Some(home) = lore.home.as_deref() {
+                assert!(
+                    home.starts_with("a house in the ") && home.contains(" Ward"),
+                    "{} lives at {home:?}",
+                    sheet.id
+                );
+            }
             assert_ne!(sheet.goal, GOAL_NONE);
             assert!(sheet.facing_yaw.is_finite());
             assert!(sheet.voice_key.is_some());
@@ -723,7 +1075,7 @@ mod tests {
     /// person — the failure mode a crowd this size actually shows the player.
     #[test]
     fn a_crowd_is_not_one_person_repeated() {
-        let sheets = extra_ambient_sheets(&points(500), 0);
+        let sheets = crowd(500);
         let names: BTreeSet<&str> = sheets.iter().map(|sheet| sheet.name.as_str()).collect();
         assert!(names.len() > 400, "only {} distinct names in 500", names.len());
         let bodies: BTreeSet<String> = sheets
@@ -744,7 +1096,7 @@ mod tests {
     /// carries the pairing the loader demands of an authored no-trade sheet.
     #[test]
     fn a_quarter_of_the_crowd_has_no_trade_and_says_how_it_eats() {
-        let sheets = extra_ambient_sheets(&points(4_000), 0);
+        let sheets = crowd(4_000);
         let no_trade: Vec<&CharacterSheet> = sheets
             .iter()
             .filter(|sheet| {
@@ -837,7 +1189,7 @@ mod tests {
     /// measured against the crowd this file actually mints.
     #[test]
     fn the_loiterers_are_the_curious_ones() {
-        let sheets = extra_ambient_sheets(&points(2_000), 0);
+        let sheets = crowd(2_000);
         let curiosity = |sheet: &CharacterSheet| {
             crate::attention::curiosity_from_lore(
                 sheet
@@ -913,7 +1265,7 @@ mod tests {
         let nav = shipped_nav();
         let nodes = nav.node_count();
         let stride = coprime_stride(nodes);
-        let points = spread_over_walkable(&nav, 2_000);
+        let points = spread_over_walkable(nav, 2_000);
         assert_eq!(points.len(), 2_000);
 
         let mut off_node = 0;
@@ -949,6 +1301,161 @@ mod tests {
         // fail; when they do it is a node walled in on every side, and the
         // citizen stands on it as the whole crowd used to. 28 of 2,000.
         assert!(on_node < 100, "{on_node} of 2000 fell back to their node");
+    }
+
+    /// M4's first claim, against the real city: **everybody with a trade gets a
+    /// door**, no door takes more than its share, the door is near enough to be
+    /// theirs, and the same crowd lives at the same addresses in every run. The
+    /// pauper quarter is deliberately absent from all of it: the bake refuses a
+    /// bed to anybody carrying `pauper`, and every generated pauper does.
+    #[test]
+    fn every_generated_citizen_with_a_trade_gets_a_door_and_no_door_is_overfilled() {
+        let nav = shipped_nav();
+        let doors = doorsteps(nav);
+        assert_eq!(
+            doors.len(),
+            nav.doors().len(),
+            "every door in the graph should be somewhere to live"
+        );
+
+        for count in [1_000usize, 4_000] {
+            let stands = spread_over_walkable(nav, count);
+            let seeking: Vec<usize> = (0..count).filter(|i| !holds_no_trade(*i as u32)).collect();
+            let assignment = assign_doorsteps(&doors, &stands, &seeking);
+            assert_eq!(assignment.len(), count);
+            assert_eq!(
+                assignment.iter().filter(|door| door.is_some()).count(),
+                seeking.len(),
+                "{count}: exactly the tradesmen are housed"
+            );
+            assert_eq!(
+                assignment,
+                assign_doorsteps(&doors, &stands, &seeking),
+                "{count}: the same crowd must live at the same addresses"
+            );
+
+            let cap = seeking.len().div_ceil(doors.len()).max(1);
+            let mut occupancy = vec![0usize; doors.len()];
+            let mut walk: Vec<f64> = Vec::new();
+            for (citizen, door) in assignment.iter().enumerate() {
+                let Some(door) = *door else { continue };
+                occupancy[door] += 1;
+                walk.push(doors[door].point.distance(stands[citizen]));
+            }
+            let fullest = occupancy.iter().copied().max().unwrap_or(0);
+            assert!(
+                fullest <= cap,
+                "{count}: {fullest} citizens share one door, over the cap of {cap}"
+            );
+            // …and the cap is not doing the work alone: they are *spread*, so a
+            // good share of the doors are lived at rather than a handful
+            // stuffed full.
+            let lived_in = occupancy.iter().filter(|&&at| at > 0).count();
+            assert!(
+                lived_in > doors.len() / 2,
+                "{count}: only {lived_in} of {} doors are anybody's",
+                doors.len()
+            );
+
+            // Near enough to be theirs. Measured: a median of 8–12 m and a p90
+            // around 40; the tail is people stood where no building is (the
+            // moorings, the outer roads), who really do walk a long way home.
+            walk.sort_by(f64::total_cmp);
+            let median = walk[walk.len() / 2];
+            let p90 = walk[walk.len() * 9 / 10];
+            assert!(
+                median < 20.0,
+                "{count}: the median walk home is {median:.1} m"
+            );
+            assert!(p90 < 80.0, "{count}: the p90 walk home is {p90:.1} m");
+        }
+    }
+
+    /// The prose half of the same door, and the reason it exists: a citizen who
+    /// walks home every night has to be able to *say* where that is, in the
+    /// register the cast's baked homes already speak in — and the ward they
+    /// name has to be the ward they are of, or the two lines of their own `you`
+    /// line contradict each other.
+    #[test]
+    fn a_housed_citizen_can_say_which_ward_they_live_in() {
+        let sheets = crowd(2_000);
+        let mut wards_seen: BTreeSet<PlanningWard> = BTreeSet::new();
+        let mut phrases: BTreeSet<&str> = BTreeSet::new();
+        let mut bedless = 0usize;
+        for sheet in &sheets {
+            let lore = sheet
+                .lore
+                .as_ref()
+                .expect("a generated citizen has a profile");
+            wards_seen.insert(lore.planning_ward);
+            // The pauper quarter has no door, but they are still *of* somewhere
+            // — the ward they were stood in, not a draw — so their district
+            // line is as truthful as a housed citizen's.
+            let Some(home) = lore.home.as_deref() else {
+                assert!(lore.occupation_id.is_none() && lore.home_point_m.is_none());
+                assert!(lore.district.starts_with(ward_name(lore.planning_ward)));
+                bedless += 1;
+                continue;
+            };
+            let district = district_of_ward(lore.planning_ward);
+            assert!(
+                home.starts_with(&format!("a house in the {district}")),
+                "{} is of the {district} but lives at {home:?}",
+                sheet.id
+            );
+            // The district on the `you` line is the same ward, so "of the Reed
+            // Ward streets. Home: a house in the Cinder Ward" cannot happen.
+            assert!(
+                lore.district.starts_with(ward_name(lore.planning_ward)),
+                "{} is of {:?} and lives in the {district}",
+                sheet.id,
+                lore.district
+            );
+            assert!(lore.home_point_m.is_some());
+            if let Some((_, phrase)) = home.split_once(", ") {
+                phrases.insert(phrase);
+            }
+        }
+        assert_eq!(wards_seen.len(), 8, "the crowd lives in {wards_seen:?}");
+        // A quarter, near enough — the same share M2 pins, seen from M4's side.
+        assert!(
+            (400..600).contains(&bedless),
+            "{bedless} of 2,000 are bedless paupers"
+        );
+        // The landmark clause is a real clause and not one repeated sentence.
+        assert!(
+            phrases.len() > 30,
+            "only {} distinct landmark phrases in 2,000 homes",
+            phrases.len()
+        );
+        assert!(
+            phrases.iter().any(|phrase| phrase.starts_with("near ")),
+            "nobody lives near anything: {phrases:?}"
+        );
+    }
+
+    /// A graph with no doors on it is every hand-built test nav, and the sim
+    /// still has to mint a citizen for it: bedless, in a drawn ward, exactly the
+    /// person `extra_ambient_npcs` produced before M4.
+    #[test]
+    fn a_crowd_on_a_graph_with_no_doors_is_bedless_as_it_always_was() {
+        let nav = doorless_nav();
+        let stands = spread_over_walkable(&nav, 16);
+        let sheets = extra_ambient_sheets(&nav, &stands, 0);
+        assert_eq!(sheets.len(), 16);
+        for sheet in &sheets {
+            let lore = sheet
+                .lore
+                .as_ref()
+                .expect("a generated citizen has a profile");
+            assert!(
+                lore.home.is_none(),
+                "{} found a door on a doorless graph",
+                sheet.id
+            );
+            assert!(lore.home_point_m.is_none());
+            assert_ne!(sheet.goal, GOAL_NONE);
+        }
     }
 
     #[test]
