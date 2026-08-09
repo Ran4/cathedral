@@ -683,7 +683,7 @@ pub fn curiosity_of(world: &World, actor_id: &ActorId) -> f64 {
         .map_or(CURIOSITY_WITHOUT_LORE, curiosity_from_lore)
 }
 
-fn curiosity_from_lore(profile: &LoreProfile) -> f64 {
+pub(crate) fn curiosity_from_lore(profile: &LoreProfile) -> f64 {
     // The authored number is the last word, and it is precisely what licenses the
     // caricature below. A derivation from age and trade is a fine *default* and a
     // terrible *verdict*: it will say that every guard is aloof and every child

@@ -94,7 +94,7 @@ pub use item::{
 };
 pub use lore::{
     CONTROLLED_CIRCUMSTANCES, LoreCast, LoreCharacterSheet, LoreError, LoreProfile,
-    LoreSpawnLocation, NO_FIXED_TRADE_FOLDER, PlanningWard, Significance,
+    LoreSpawnLocation, NO_FIXED_TRADE_FOLDER, PlanningWard, SUPPORT_CIRCUMSTANCES, Significance,
 };
 pub use math::{Vec3, vec3, vec3_from_json, vec3_to_json};
 pub use nav::{

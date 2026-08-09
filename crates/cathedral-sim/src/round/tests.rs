@@ -8127,3 +8127,81 @@ fn a_chalked_ward_sign_pulls_that_wards_evening_crowd() {
         "a chalked sign must pull somebody off the tavern road: {chalked:?}"
     );
 }
+
+/// `features/give_the_crowd_somewhere_to_be.md` M2, first claim: a generated
+/// citizen with no trade at all reaches [`build_legs`] with `occupation: None`,
+/// finds no archetype and no workplace, and is enrolled with **no legs** and the
+/// default leash — which is what leaves the ladder nothing to do but the social
+/// pull and the wander, around wherever they were stood. Their tradesman
+/// neighbour, minted by the same function on the same graph, does get legs, so
+/// this pins the difference and not merely the absence.
+#[test]
+fn a_generated_citizen_with_no_trade_is_enrolled_with_no_legs() {
+    let nav = nav();
+    let stands = crate::crowd::spread_over_walkable(&nav, 64);
+    let sheets = crate::crowd::extra_ambient_sheets(&stands, 0);
+    let no_trade: Vec<ActorId> = sheets
+        .iter()
+        .filter(|sheet| {
+            sheet
+                .lore
+                .as_ref()
+                .is_some_and(|lore| lore.occupation_id.is_none())
+        })
+        .map(|sheet| sheet.id.clone())
+        .collect();
+    let trades: Vec<ActorId> = sheets
+        .iter()
+        .filter(|sheet| {
+            sheet
+                .lore
+                .as_ref()
+                .is_some_and(|lore| lore.occupation_id.is_some())
+        })
+        .map(|sheet| sheet.id.clone())
+        .collect();
+    assert!(
+        !no_trade.is_empty() && !trades.is_empty(),
+        "a crowd of 64 holds both kinds"
+    );
+
+    let mut world = base_world();
+    for sheet in sheets {
+        world.add_character(Character::from_sheet(sheet));
+    }
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+
+    for id in &no_trade {
+        let person = &round.people[id];
+        assert!(
+            person.legs.is_empty(),
+            "{id} has no trade and should have no legs: {:?}",
+            person.legs.iter().map(|leg| &leg.label).collect::<Vec<_>>()
+        );
+        assert_eq!(person.leash_m, DEFAULT_ROUND_LEASH_M);
+        assert!(!person.curfew_exempt);
+        assert!(person.home.is_none(), "no bed is baked for a generated id");
+        // The base the wander leash is measured from is their spawn — the
+        // 12 m stand M1 gave them, which is the point of standing them there.
+        assert_eq!(person.base, world.characters[id].position_m());
+        // A trade is also what binds a drawer to a well curb, so this cohort
+        // stays out of the queues `--trace-water` measures.
+        assert!(person.source.is_none());
+        assert!(
+            world.characters[id].state.daily_round.is_empty(),
+            "{id} should have no round to recite in their prompt"
+        );
+    }
+
+    // The control: the same generator, the same graph, a trade — and legs.
+    let with_legs = trades
+        .iter()
+        .filter(|id| !round.people[*id].legs.is_empty())
+        .count();
+    assert!(
+        with_legs > trades.len() / 2,
+        "only {with_legs} of {} tradesmen were given a round",
+        trades.len()
+    );
+}

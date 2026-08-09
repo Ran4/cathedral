@@ -1,7 +1,7 @@
-Status: M1 implemented 2026-08-09; M2–M5 not started (written 2026-08-09). The
-knob it fixes — `config.ron: smart_actors.extra_ambient_npcs`, 0..=20000 —
-shipped the same day; see `crates/cathedral-sim/src/crowd.rs` and the AGENTS.md
-section "The crowd knob".
+Status: M1 and M2 implemented 2026-08-09; M3–M5 not started (written
+2026-08-09). The knob it fixes — `config.ron: smart_actors.extra_ambient_npcs`,
+0..=20000 — shipped the same day; see `crates/cathedral-sim/src/crowd.rs` and
+the AGENTS.md section "The crowd knob".
 
 # Give the crowd somewhere to be
 
@@ -168,6 +168,95 @@ residential lane and one in `Coswald's Yard` — both empty today.
 ---
 
 ## M2 — A cohort with no trade at all
+
+**Implemented 2026-08-09** in `crates/cathedral-sim/src/crowd.rs`
+(`NO_TRADE_SHARE = 0.25`, one branch in `ambient_sheet`), with five things
+worth recording:
+
+- **The support circumstances and the prose are one bank, not two.** `SUPPORTS`
+  pairs each set of circumstances with the sentence that says the same thing in
+  the second person, because two banks drawn independently produce a citizen
+  whose sheet says `alms_dependent` and whose description says they live off
+  piece-work — the "prompt content drifts from behaviour" row of the risk
+  ledger, arrived at by construction. Ten entries; `retired` and `widow` carry
+  their own minimum age (58 and 34), because nobody is retired at sixteen.
+  `widow`/`widower` is written once and re-spelled for men.
+- **The validator's own list is now a named constant.** `lore.rs` had
+  `"alms_dependent" | "dependent" | "pauper" | "prisoner"` inline in
+  `LoreCharacterSheet::validate`; it is `SUPPORT_CIRCUMSTANCES` now, and the
+  crowd's test asserts against *that* rather than a copy, so the generated
+  no-trade shape cannot drift from the authored one. `prisoner` is deliberately
+  never minted: `custody.rs` seeds anybody carrying it into the Stone House.
+- **Three banks, not the two budgeted.** `NO_TRADE_OPENINGS` and the support
+  lines were the estimate; `NO_TRADE_CONCERNS` is the third, because two of
+  `CONCERNS`' twelve entries presume a trade ("your employer is late", "a strap
+  on your load has frayed"). Its ten goals are all textually distinct from the
+  twelve, so `a_crowd_is_not_one_person_repeated` still counts a clean sum. Two
+  existing lines were also reworded where they collided with having no work
+  ("…and then get back to work"; "Your working years are behind you" against
+  the concern that wants a day's work).
+- **A fourth consequence the spec did not claim: they draw no water.**
+  `vessel_of(None)` is `None`, so the no-trade quarter is bound to no well. At
+  `--extra-ambient 400` the drawer count is 97 against 69 for the cast alone —
+  28 generated drawers where the pre-M2 crowd would have produced ~37 (3 of 32
+  trades draw). It does not fix the unbounded queues under "What this does not
+  fix", but it takes a quarter of every future crowd out of them.
+- **The `[crowd]` diagnostic now counts the cohort out loud** — the
+  `cathedral-headless` line reports the share and, deliberately, the number of
+  no-trade citizens *without* a support circumstance, which is a zero that
+  deserves printing rather than assuming.
+
+**Measured.** `cathedral-headless --fake --extra-ambient 400`:
+`[crowd] 400 generated ambient citizens; 95 with no trade at all (23.8%), 0 of
+those with no support circumstance` — 1.2 points under target at n=400, and
+25.0% ± <2 points over 4,000 in the unit test.
+
+Curiosity, measured over 2,000 rather than assumed: the no-trade cohort spans
+**0.162..=0.322, mean 0.232**; the trades **0.082..=0.192, mean 0.118**. The
+spec's ≈0.30 is the *top* of the no-trade band and not its middle (0.082 + 0.10
++ 0.10 + 0.02 is the entry carrying begs *and* unhoused; under 25 the age term
+takes it to 0.322). The floor, 0.162, is the retired pauper. The two bands
+**overlap** — a young milk seller out-talks a retired pauper, which is correct —
+so the test pins the means and the floors, not a separation.
+
+**The leash claim is only two-thirds true, and that is not M2's doing.**
+`--fake --extra-ambient 400 --watch-clock 1 --seconds-per-day 300
+--trace-positions`, displacement from spawn at the Snuffing:
+
+| | n | median | p90 | max | within 10 m |
+|---|---:|---:|---:|---:|---:|
+| no trade | 95 | **6.7 m** | 61 m | 122 m | 58 (61%) |
+| a trade | 305 | **98.3 m** | 133 m | 164 m | 1 (0.3%) |
+
+The qualitative claim is overwhelming — the median loiterer ends the day inside
+the leash and the median tradesman a hundred metres away — but the spec's
+"*must* still be within `DEFAULT_ROUND_LEASH_M`" does not hold for 39% of them.
+Traced individually, those are a slow monotone creep (~0.7 m per poll, no plateau),
+not an errand: `nearest_known_settled` requires `me.knows()` and the crowd knows
+nobody, so rung 11 never fires for them, and rung 12's `wander_target` already
+`clamp_to_leash`es every target to 10 m of `person.base`. Every *aim* is inside
+the leash; the *walking* leaks, because `route_path` snaps both endpoints to the
+nearest nav node and M1 now stands people up to 12 m off the graph — so a target
+8 m away can route out of the lane and back, and `Decision::Stay` does not
+cancel a walk in progress. Identical numbers with `--weather clear`, so the
+shelter rung is not involved. **This is pre-existing and belongs to M3**, which
+widens the leash and will amplify it; it is exactly the "far half of a wide
+leash" row already in the ledger, seen from the other side.
+
+Drive evidence at 2,000: `logs/session_755_2026-08-09_21_08_24/screenshots/`
+(`m2_2000_coswalds_ground.png`, `m2_2000_cinder_row.png`) — people standing
+about a yard and filling a lane in dark, patched Poor outfits rather than
+threading it in a queue.
+
+Tests added: `crowd::tests::a_quarter_of_the_crowd_has_no_trade_and_says_how_it_eats`,
+`crowd::tests::the_loiterers_are_the_curious_ones`,
+`round::tests::a_generated_citizen_with_no_trade_is_enrolled_with_no_legs`
+(the last one pins the `build_legs` claim directly: no legs, `DEFAULT_ROUND_LEASH_M`,
+no water source, an empty `daily_round`, against a tradesman neighbour who does
+get legs). `cargo test --workspace`: **1469 passed, 4 ignored**, up exactly the
+three added from the 1466 baseline. `every_generated_citizen_is_an_ambient_with_a_trade_and_a_goal`
+was renamed (it no longer asserts a trade) and now checks the two authored
+shapes and nothing between them.
 
 Roughly **a quarter of the crowd gets no occupation**: `occupation_id: None`,
 `title: None`, `rank: None`, plus one support circumstance from the loader's own

@@ -116,6 +116,20 @@ pub const CONTROLLED_CIRCUMSTANCES: &[&str] = &[
     "widower",
 ];
 
+/// The subset of [`CONTROLLED_CIRCUMSTANCES`] that answers *how do you eat*.
+///
+/// `lore/characters/AGENTS.md` lets `occupation_id`, `title` and `rank` all be
+/// null "only for genuine dependants or people with no present or former
+/// trade", and requires those sheets to explain their material support. This is
+/// that requirement in the loader's vocabulary: a sheet with no trade must
+/// carry one of these, or it has not answered the question.
+///
+/// Named rather than inlined in the validator because the generated crowd
+/// (`crate::crowd`) mints the same shape and must satisfy the same rule — a
+/// list in two places would drift, and the drift would be a cohort of citizens
+/// with no trade and no way to say how they live.
+pub const SUPPORT_CIRCUMSTANCES: &[&str] = &["alms_dependent", "dependent", "pauper", "prisoner"];
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoreError {
     pub message: String,
@@ -289,12 +303,11 @@ impl LoreCharacterSheet {
             (Some(occupation), Some(title))
                 if !occupation.trim().is_empty() && !title.trim().is_empty() => {}
             (None, None) if self.rank.is_none() => {
-                if !self.circumstances.iter().any(|circumstance| {
-                    matches!(
-                        circumstance.as_str(),
-                        "alms_dependent" | "dependent" | "pauper" | "prisoner"
-                    )
-                }) {
+                if !self
+                    .circumstances
+                    .iter()
+                    .any(|circumstance| SUPPORT_CIRCUMSTANCES.contains(&circumstance.as_str()))
+                {
                     return Err(LoreError::new(format!(
                         "character '{}' has no fixed trade and needs a support circumstance",
                         self.id

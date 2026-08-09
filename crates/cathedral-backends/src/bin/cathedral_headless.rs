@@ -1053,7 +1053,40 @@ impl Assets {
                 let count = count.min(cathedral_sim::MAX_EXTRA_AMBIENT_NPCS);
                 let points = cathedral_sim::spread_over_walkable(nav, count as usize);
                 let sheets = cathedral_sim::extra_ambient_sheets(&points, 0);
-                eprintln!("[crowd] {} generated ambient citizens", sheets.len());
+                // The no-trade cohort, counted out loud
+                // (`features/give_the_crowd_somewhere_to_be.md` M2): roughly a
+                // quarter of any crowd has no occupation at all, and every one
+                // of them must carry a circumstance saying how they eat — the
+                // same pairing the lore loader demands of an authored
+                // `no_fixed_trade/` sheet. The unsupported count is a zero that
+                // deserves to be printed rather than assumed.
+                let no_trade: Vec<&cathedral_sim::CharacterSheet> = sheets
+                    .iter()
+                    .filter(|sheet| {
+                        sheet
+                            .lore
+                            .as_ref()
+                            .is_some_and(|lore| lore.occupation_id.is_none())
+                    })
+                    .collect();
+                let unsupported = no_trade
+                    .iter()
+                    .filter(|sheet| {
+                        !sheet.lore.as_ref().is_some_and(|lore| {
+                            lore.circumstances.iter().any(|circumstance| {
+                                cathedral_sim::SUPPORT_CIRCUMSTANCES
+                                    .contains(&circumstance.as_str())
+                            })
+                        })
+                    })
+                    .count();
+                eprintln!(
+                    "[crowd] {} generated ambient citizens; {} with no trade at all ({:.1}%), \
+                     {unsupported} of those with no support circumstance",
+                    sheets.len(),
+                    no_trade.len(),
+                    100.0 * no_trade.len() as f64 / sheets.len().max(1) as f64,
+                );
                 seed.with_extra_ambient(sheets)
                     .map_err(|error| format!("invalid generated crowd: {error}"))?
             }

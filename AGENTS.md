@@ -61,7 +61,13 @@ generates that many extra ambient citizens and spreads them over the walkable gr
 (`crates/cathedral-sim/src/crowd.rs`). They are **not cast**: six-character ids (`x00000`…, so they cannot
 shadow a five-character lore id), no authored sheet, no bed in `homes.json`, strangers to the player, and
 barred from the one civic post the round hands to whoever is standing nearest — the well curbs stay the
-cast's. Everything else about them is ordinary: an occupation, a ward, a daily round, a purse, a walk.
+cast's. Everything else about them is ordinary: a ward, a purse, a walk, and for three in four of them an
+occupation and the daily round that comes with it. The fourth quarter has **no trade at all** — the
+`no_fixed_trade/` shape, `occupation_id`/`title`/`rank` all null and a support circumstance (`pauper`,
+`alms_dependent`, `unhoused`, …) saying how they eat instead. With no occupation the round finds no
+archetype and gives them no legs, so they loiter near where they were stood rather than commuting; they
+read as poor at thirty metres, they are about twice as likely to speak to you first, and they draw no
+water. The city's standing population, not its traffic.
 
 They cost no tokens by existing — the stage cap and the single in-flight cognition slot bound the spend
 however many people are about — but they do change who is *nearest*, and therefore who the idle rotation
