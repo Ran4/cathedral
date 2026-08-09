@@ -97,7 +97,34 @@ const FOLLOW_REPATH_EPSILON_M: f64 = 1.5;
 const HOME_ARRIVE_RADIUS_M: f64 = 3.0;
 /// Leg leash when a route/template does not name one.
 const DEFAULT_ROUND_LEASH_M: f64 = 10.0;
+/// A **generated** citizen's leash, drawn per person over this band
+/// (`give_the_crowd_somewhere_to_be.md` M3) instead of the flat
+/// [`DEFAULT_ROUND_LEASH_M`], which was calibrated for a handful of people per
+/// anchor and is the reason a workplace with forty of them reads as a scrum.
+/// A band rather than a second constant so the clump has a soft edge instead of
+/// a larger hard one: some of the crowd keeps to the corner, some of it is half
+/// a street away, and there is no ring where everybody stops.
+///
+/// Only ever written in [`Round::seed`]'s enrolment branch behind
+/// `LoreProfile::generated`, so the authored cast keeps exactly the leash
+/// [`build_legs`] gave it — the route's own, the archetype's, or
+/// [`DEFAULT_ROUND_LEASH_M`]. (Authored leashes run 0 to 24 m in
+/// `rounds.json`, so this band overlaps them: a 16 m leash is not evidence of a
+/// leak, and the test that guards this pins *which rule* drew the number.)
+const CROWD_LEASH_MIN_M: f64 = 15.0;
+const CROWD_LEASH_MAX_M: f64 = 40.0;
+/// Hashed offsets [`wander_target`] tries before a mill becomes a stand. Four
+/// for the authored cast (unchanged — see that function), eight for a generated
+/// citizen, whose leash is up to four times the default and whose draws
+/// therefore land on stone more often. Each attempt is one bitset lookup and only the
+/// *rejected* ones cost anything, so the extra four are free in every sense
+/// that matters to the pump.
+const WANDER_ATTEMPTS: u64 = 4;
+const CROWD_WANDER_ATTEMPTS: u64 = 8;
 /// Census: how close counts as "at your post" / "at home".
+///
+/// For a generated citizen this is a *floor*, not the reach — see
+/// [`Round::census`]: their post is as wide as their own leash.
 const CENSUS_POST_RADIUS_M: f64 = 9.0;
 const CENSUS_HOME_RADIUS_M: f64 = 5.0;
 /// The `--trace-food` log is bounded here: the game host never drains it, so it
@@ -2616,8 +2643,29 @@ impl Round {
             // seller milling a few metres across the Wickmarket is still at the
             // Wickmarket. Check this before "walking", so a wander on the spot does
             // not read as a journey.
+            //
+            // How wide "near" is, is the person's own reach (M3): a generated
+            // citizen holds a 15..=40 m leash, and somebody milling 25 m across
+            // a market they are leashed to is at their post by construction —
+            // read at the flat 9 m they would census as absent and the city
+            // would look like one that never turns up for work. So the radius
+            // is `max(leash, CENSUS_POST_RADIUS_M)`, not `min`: the *narrower*
+            // of the two would collapse every wide leash back onto the 9 m the
+            // milestone exists to widen. It is a floor, so a keeper's 4 m leash
+            // still censuses at 9 m.
+            //
+            // Gated on `generated`, and knowingly asymmetric: `rounds.json`
+            // authors leashes up to 24 m, so the same argument says the cast
+            // should be read this way too, and today a mason milling 12 m
+            // across his lodge censuses as "in the street". Fixing that would
+            // change the census at `extra_ambient_npcs: 0`, which this feature
+            // may not do. It is the census's own bug and wants its own change.
+            let post_radius = match character.lore().is_some_and(|lore| lore.generated) {
+                true => person.leash_m.max(CENSUS_POST_RADIUS_M),
+                false => CENSUS_POST_RADIUS_M,
+            };
             if let Some(leg) = active_leg(&person.legs, time.office, time.weekday)
-                && position.distance(leg.at) <= CENSUS_POST_RADIUS_M
+                && position.distance(leg.at) <= post_radius
             {
                 if leg.is_home || leg.doing == Arrival::Sleep {
                     census.at_home += 1;
@@ -2963,6 +3011,7 @@ impl Round {
             let character = &world.characters[id];
             let spawn = character.position_m();
             let occupation = character.lore().and_then(|lore| lore.occupation_id.clone());
+            let generated = character.lore().is_some_and(|lore| lore.generated);
 
             let home = content
                 .as_ref()
@@ -3070,6 +3119,19 @@ impl Round {
                     )
                 })
                 .unwrap_or((Vec::new(), DEFAULT_ROUND_LEASH_M, false));
+
+            // M3 — a leash sized for a crowd. The one place it is written, and
+            // the only thing about it that is conditional: a generated citizen
+            // mills over 15..=40 m of their anchor instead of the ten a person
+            // with no archetype gets. `build_legs` above has already handed out the
+            // authored value (the route's own, the archetype's, or the
+            // default), so at `extra_ambient_npcs: 0` this line never runs and
+            // nothing the fixtures pin can move.
+            let leash_m = if generated {
+                crowd_leash_m(id)
+            } else {
+                leash_m
+            };
 
             // The day's own stations — the workplace and every named leg — are
             // ways this person necessarily knows.
@@ -5494,6 +5556,14 @@ fn build_legs(
     (legs, leash_m, curfew_exempt)
 }
 
+/// One generated citizen's leash, drawn once and for life over
+/// [`CROWD_LEASH_MIN_M`]..=[`CROWD_LEASH_MAX_M`] — the same `hash01` idiom as
+/// every other per-person constant in this file, so the same crowd is the same
+/// crowd in every run and every save.
+fn crowd_leash_m(id: &ActorId) -> f64 {
+    CROWD_LEASH_MIN_M + hash01("crowd_leash", id, 0) * (CROWD_LEASH_MAX_M - CROWD_LEASH_MIN_M)
+}
+
 /// The active leg at a given office and weekday: among the eligible legs (begun
 /// by `office`, allowed today), the one with the greatest `from`, later
 /// array-position winning a tie — so a market-day leg placed after the generic
@@ -7913,6 +7983,43 @@ fn decide(
     // social pull and the wander would march a working mason all the way back to
     // his own door. With no active leg (a homeless idler), fall back to base.
     let anchor = leg.map_or(person.base, |leg| leg.at);
+    let generated = character.lore().is_some_and(|lore| lore.generated);
+
+    // Rung 10½ — the leash is a leash (M3). Every *aim* below is already inside
+    // it (`clamp_to_leash`, and `wander_target` draws inside it), but the
+    // *walking* leaks: [`route_path`] snaps both endpoints to the nearest nav
+    // node, and M1 stands the crowd up to 12 m off the graph, so a target 8 m
+    // away can route out of the lane and back — and a `Wander`/`Stay` never
+    // diverts a walk already under way. Measured before this rung at
+    // `--extra-ambient 400`: the median legless generated citizen ended the day
+    // 6.7 m from where they were stood, but p90 was 61 m and the worst 122 m,
+    // and 39% finished outside their leash. A wider leash multiplies that, so
+    // M3 **bounds** the leak rather than leaving it: one distance check per
+    // poll, and anybody who has drifted off their patch walks back onto it.
+    //
+    // Bounded, not fixed. The snapping itself is untouched — the honest repair
+    // is for a wander to walk to its own target rather than to the nearest node
+    // of it, and the only tool for that ([`route_path_to_point`]) appends an
+    // unvalidated final stride that would put a body through a wall corner
+    // across a 40 m leash. That is a navigation change with its own risks and
+    // its own verification, and it does not belong inside a milestone about how
+    // far people stand from their post.
+    //
+    // Deliberately narrowed to citizens with **no legs at all** — the cohort the
+    // leak was measured on. A generated tradesman is already recalled by rung 9
+    // while their leg is live, and at night rung 9 stands down on purpose ("the
+    // homeless linger rather than march to a workshop at 2 a.m."); recalling
+    // them to their spawn point every Snuffing would invent the nightly tide M4
+    // is for.
+    //
+    // The walk back always exists, which is why this cannot pin anybody where
+    // it found them: a drifter is standing on a nav node (route endpoints are
+    // nodes), and M1 stands every base within 12 m of *its* node, so a body
+    // more than 15 m — the narrowest leash — from base is never on base's own
+    // nearest node, and [`route_path`] therefore returns a real path.
+    if generated && person.legs.is_empty() && position.distance(person.base) > person.leash_m {
+        return (Decision::Travel(person.base), None);
+    }
 
     // Rung 11 — the social pull: drift toward a known, settled neighbour.
     if let Some(friend) = nearest_known_settled(world, id, position) {
@@ -7923,8 +8030,13 @@ fn decide(
     }
     // Rung 12 — wander: mill near the post, but not every time — people mostly
     // stand and work.
+    let attempts = if generated {
+        CROWD_WANDER_ATTEMPTS
+    } else {
+        WANDER_ATTEMPTS
+    };
     if hash01("round_wander_gate", id, epoch) < 0.35
-        && let Some(target) = wander_target(nav, id, epoch, anchor, person.leash_m)
+        && let Some(target) = wander_target(nav, id, epoch, anchor, person.leash_m, attempts)
     {
         return (Decision::Wander(target), None);
     }
@@ -8267,21 +8379,28 @@ fn drift_target(base: Vec3, position: Vec3, friend: Vec3, leash_m: f64) -> Vec3 
 
 /// A deterministic walkable point within `leash_m` of base, or `None` if a few
 /// hashed tries all land on stone.
+///
+/// `attempts` is [`WANDER_ATTEMPTS`] for the authored cast and
+/// [`CROWD_WANDER_ATTEMPTS`] for a generated citizen (M3). Measured over 2,000
+/// crowd stands on the shipped graph × 12 epochs each, the give-up rate at four
+/// draws is 2.7% at a 10 m leash and 3.8% at 30 m; eight draws take that to 0.4%
+/// and 0.3%. The far half of a wide leash was the worry, and it turns out to be
+/// a mild one — the share of accepted targets beyond half the leash moves 44.6%
+/// → 46.3% at 30 m, because a rejected draw redraws the *radius* too rather than
+/// retrying the same one. The cast keeps its four regardless: a fifth draw would
+/// turn ~2% of its wander polls from standing into walking, and nothing may
+/// change at `extra_ambient_npcs: 0`.
 fn wander_target(
     nav: &NavData,
     id: &ActorId,
     epoch: u64,
     base: Vec3,
     leash_m: f64,
+    attempts: u64,
 ) -> Option<Vec3> {
-    for attempt in 0..4 {
-        let angle =
-            hash01("round_wander_angle", id, epoch ^ (attempt as u64)) * std::f64::consts::TAU;
-        let radius = hash01(
-            "round_wander_radius",
-            id,
-            epoch.wrapping_add(attempt as u64),
-        ) * leash_m;
+    for attempt in 0..attempts {
+        let angle = hash01("round_wander_angle", id, epoch ^ attempt) * std::f64::consts::TAU;
+        let radius = hash01("round_wander_radius", id, epoch.wrapping_add(attempt)) * leash_m;
         let target = Vec3::new(
             base.x + angle.cos() * radius,
             WALK_Y,

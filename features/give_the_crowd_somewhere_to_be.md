@@ -1,4 +1,4 @@
-Status: M1 and M2 implemented 2026-08-09; M3–M5 not started (written
+Status: M1, M2 and M3 implemented 2026-08-09; M4–M5 not started (written
 2026-08-09). The knob it fixes — `config.ron: smart_actors.extra_ambient_npcs`,
 0..=20000 — shipped the same day; see `crates/cathedral-sim/src/crowd.rs` and
 the AGENTS.md section "The crowd knob".
@@ -299,6 +299,110 @@ while a tradesman must not be.
 ---
 
 ## M3 — A leash sized for a crowd
+
+**Implemented 2026-08-09** in `crates/cathedral-sim/src/round.rs`, as written
+below, with seven things worth recording:
+
+- **The leash.** `crowd_leash_m(id)` = 15 m + `hash01("crowd_leash", id, 0)` ×
+  25 m, drawn once and written in exactly one place — `Round::seed`'s enrolment
+  branch, behind `lore.generated`, after `build_legs` has already handed out the
+  authored value. Mean over 2,000 ids: 27.6 m against the band's middle of 27.5,
+  both halves populated.
+- **The cast's leash is not "10".** `rounds.json` authors 0, 6, 8, 10, 12, 15,
+  16, 20 and 24 m, so the crowd band *overlaps* the authored range and "this
+  person has a 16 m leash" is not evidence of a leak. The test therefore pins
+  which rule produced the number, not its size: authored leashes are whole
+  metres and a drawn one is a hash fraction.
+- **The census reads a generated citizen's own leash**, `max(leash,
+  CENSUS_POST_RADIUS_M)` — *not* the `min` the spec offered as an alternative,
+  which is the flat 9 m written a longer way and would collapse every wide leash
+  back onto the radius this milestone exists to widen. Somebody milling 25 m
+  across a market they are leashed to is at their post by construction.
+  Knowingly asymmetric: the same argument says a mason on his archetype's 20 m
+  leash should be read that way too, and today he censuses as "in the street" —
+  but fixing that changes the numbers at `extra_ambient_npcs: 0`, which this
+  feature may not do. Noted in the code as the census's own bug.
+- **The feared collapse did not happen, and the radius still earned its place.**
+  `--fake --extra-ambient 1000 --watch-clock 1 --census-by-area`, mean `at_post`
+  over a game day: **12.7 before** (min 8, max 19) → **12.5** with the leash but
+  the flat 9 m census (min 7, max 19) → **19.3 after** (min 14, max 23). So the
+  wide leash on its own costs nothing measurable, and reading the leash finds
+  seven people a sample who were at their post all along. At a slower clock
+  (`--seconds-per-day 900`, where a crowd has time to arrive rather than
+  spending the whole compressed day in transit) the same three runs read
+  **17.8** (13..22) → **17.7** (13..21) → **25.7** (16..36). Either way the
+  `at_home` count is identical across all three, which is the check that the
+  radius change touched nothing it should not.
+- **The 4-attempt wander cap was a mild worry, measured.** Over 2,000 crowd
+  stands on the shipped graph × 12 epochs each, the give-up rate at four draws is
+  2.7% at a 10 m leash and **3.8% at 30 m** — not the much higher rate the spec
+  assumed, because a rejected draw redraws the *radius* as well as the angle, so
+  the surviving distribution is barely biased inward (share of accepted targets
+  beyond half the leash: 44.6% at four draws, 46.3% at eight). Raised to **8 for
+  generated citizens only** (give-up 0.3%): raising it for the cast would turn
+  ~2% of its wander polls from standing into walking, and nothing may change at
+  0.
+- **The M2 leak is bounded, not fixed, and that is a decision.** New rung 10½:
+  a generated citizen *with no legs at all* who is further from base than their
+  own leash walks back to it. One distance check per poll, gated on `generated`,
+  and it cannot pin anybody — a drifter is standing on a nav node, M1 stands
+  every base within 12 m of its own node, so base's nearest node is never the one
+  they are on and the route back always exists. Deliberately not the honest fix
+  (a wander that walks to its own target rather than to the nearest node of it):
+  the only tool for that, `route_path_to_point`, appends an unvalidated final
+  stride that would put a body through a wall corner across a 40 m leash. That is
+  a navigation change with its own risks, and it does not belong in a milestone
+  about how far people stand from their post. Deliberately narrowed to the
+  legless, too — a generated tradesman is already recalled by rung 9 while their
+  leg is live, and at night rung 9 stands down on purpose, so recalling them
+  would invent M4's nightly tide a milestone early.
+- **Displacement, re-measured exactly as M2 measured it** (`--fake
+  --extra-ambient 400 --watch-clock 1 --seconds-per-day 300 --trace-positions`,
+  distance from the seeded stand at the end of the day):
+
+  | | n | median | p90 | max | within own leash |
+  |---|---:|---:|---:|---:|---:|
+  | no trade, before (flat 10 m) | 95 | 6.7 m | 61 m | 122 m | 58 (61%) |
+  | no trade, after (15–40 m) | 95 | **12.0 m** | **29.9 m** | **102 m** | **88 (93%)** |
+  | a trade, either | 304 | 98.3 m | 132 m | 164 m | — |
+
+  The median doubles because the leash doubled — that is the milestone working —
+  while the tail halves and the fraction of people the leash actually holds goes
+  61% → 93%. The seven who still finish outside it were traced poll by poll:
+  each is one long walk out (for some, out and back again) rather than the slow
+  monotone creep M2 described, taken in the hours `--trace-food` shows the crowd
+  famished — i.e. the bread round, which outranks the leash by design. Inferred
+  from the shape of the walk and the hunger census, not from a per-actor market
+  receipt. The tradesmen's three numbers are unchanged to the decimetre, which
+  is the "nothing else moved" control.
+
+**Nothing changed at `extra_ambient_npcs: 0`**: a whole game day of
+`--census-by-area` at `--extra-ambient 0` is **byte-identical** before and after.
+`cargo test --workspace`: **1473 passed, 4 ignored**, up exactly the four added
+from the 1469 baseline. Tests:
+`round::tests::a_generated_citizens_leash_is_drawn_across_the_whole_band`,
+`round::tests::the_crowd_takes_the_wide_leash_and_the_cast_keeps_its_own`,
+`round::tests::a_generated_citizen_censuses_at_a_post_as_wide_as_their_leash`,
+`round::tests::a_generated_idler_past_the_leash_is_walked_back`. One existing
+assertion moved: M2's `a_generated_citizen_with_no_trade_is_enrolled_with_no_legs`
+pinned `DEFAULT_ROUND_LEASH_M` for a generated citizen and now pins the band.
+
+**The drive shot is the weakest evidence here, and honestly so.** The Wickmarket
+at High Wick, 2,000 extra citizens, before/after with the same script, camera and
+clock: `logs/session_763_2026-08-09_21_54_59/screenshots/m3_before_wick_noon_*.png`
+against `logs/session_762_2026-08-09_21_53_00/screenshots/m3_after_wick_noon_*.png`,
+plus a straight-down pair (`session_765`/`session_764`, `*_wick_topdown.png`).
+The two frames are near-indistinguishable, because **there is no scrum at the
+Wickmarket to loosen at 2,000**: counted off a headless run at the same count
+(`--extra-ambient 2000 --watch-clock 1 --seconds-per-day 300 --trace-positions`,
+positions as High Wick closes), 37 generated citizens stand within 10 m of *any*
+of the 23 anchors and the busiest holds five — with the caveat that a 300 s day
+leaves a crowd walking most of it, which is itself why so few are ever at a post.
+The scrum the milestone was written against is a
+20,000 phenomenon; at the counts anyone plays at, what M3 changes is measurable
+in the census and the displacement table above and not in a photograph.
+
+---
 
 `DEFAULT_ROUND_LEASH_M = 10.0` was calibrated for a cast of ~500 spread over
 23 anchors, i.e. a handful of people per post. It is the reason a workplace

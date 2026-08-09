@@ -8179,7 +8179,14 @@ fn a_generated_citizen_with_no_trade_is_enrolled_with_no_legs() {
             "{id} has no trade and should have no legs: {:?}",
             person.legs.iter().map(|leg| &leg.label).collect::<Vec<_>>()
         );
-        assert_eq!(person.leash_m, DEFAULT_ROUND_LEASH_M);
+        // M3 moved this one line: `build_legs` still returns the default for
+        // them (no archetype, no route), but the enrolment branch then draws a
+        // generated citizen their own leash over the crowd band.
+        assert!(
+            (CROWD_LEASH_MIN_M..=CROWD_LEASH_MAX_M).contains(&person.leash_m),
+            "{id} should mill on a crowd leash, not the cast's ten: {}",
+            person.leash_m
+        );
         assert!(!person.curfew_exempt);
         assert!(person.home.is_none(), "no bed is baked for a generated id");
         // The base the wander leash is measured from is their spawn — the
@@ -8203,5 +8210,313 @@ fn a_generated_citizen_with_no_trade_is_enrolled_with_no_legs() {
         with_legs > trades.len() / 2,
         "only {with_legs} of {} tradesmen were given a round",
         trades.len()
+    );
+}
+
+/// A generated citizen with the same shape [`crate::crowd`] mints, but stood
+/// where a test wants them: `generated` set, a trade or none, no bed.
+fn generated_person(id: &str, position: Vec3, occupation: Option<&str>) -> Character {
+    let mut character = person(id, position, Some("mason"), Significance::Ambient);
+    let lore = character
+        .sheet
+        .lore
+        .as_mut()
+        .expect("the helper built a profile");
+    lore.generated = true;
+    lore.occupation_id = occupation.map(|occupation| occupation.to_string());
+    character
+}
+
+/// `give_the_crowd_somewhere_to_be.md` M3: the crowd's leash is drawn per
+/// person over 15..=40 m, deterministically and once — the same citizen mills
+/// across the same patch in every run and every save — and it spreads across
+/// the whole band rather than clustering, which is the point of a band (a soft
+/// edge to the clump instead of a second, larger hard one).
+#[test]
+fn a_generated_citizens_leash_is_drawn_across_the_whole_band() {
+    let mut low = 0usize;
+    let mut high = 0usize;
+    let mut sum = 0.0;
+    const N: u32 = 2_000;
+    for index in 0..N {
+        let id = ActorId::from_raw(format!("x{index:05}"));
+        let leash = crowd_leash_m(&id);
+        assert!(
+            (CROWD_LEASH_MIN_M..=CROWD_LEASH_MAX_M).contains(&leash),
+            "{id} drew {leash} m, outside {CROWD_LEASH_MIN_M}..={CROWD_LEASH_MAX_M}"
+        );
+        assert_eq!(leash, crowd_leash_m(&id), "{id}'s leash must not wander");
+        let midpoint = (CROWD_LEASH_MIN_M + CROWD_LEASH_MAX_M) / 2.0;
+        if leash < midpoint {
+            low += 1
+        } else {
+            high += 1
+        }
+        sum += leash;
+    }
+    // Both halves populated and the mean near the middle: a band, not a
+    // constant with a jitter.
+    assert!(
+        low > N as usize / 3 && high > N as usize / 3,
+        "the band is lopsided: {low} under the midpoint, {high} over"
+    );
+    let mean = sum / f64::from(N);
+    assert!(
+        (mean - 27.5).abs() < 1.0,
+        "mean leash {mean:.2} m is not the band's middle"
+    );
+}
+
+/// M3's binding rule: **nothing changes at `extra_ambient_npcs: 0`**. Seeding
+/// the same authored people with a crowd in the world and without one must give
+/// them the same leash to the metre — the wide one belongs to the generated
+/// citizens beside them, who all draw inside the band.
+#[test]
+fn the_crowd_takes_the_wide_leash_and_the_cast_keeps_its_own() {
+    let nav = nav();
+    let stands = crate::crowd::spread_over_walkable(&nav, 128);
+    let authored: Vec<(&str, &str)> = vec![
+        ("cast0", "mason"),
+        ("cast1", "domestic_servant"),
+        ("cast2", "baker"),
+        ("cast3", "carter"),
+    ];
+
+    let seed_world = |with_crowd: bool| {
+        let mut world = base_world();
+        for (index, (id, occupation)) in authored.iter().enumerate() {
+            world.add_character(person(
+                id,
+                stands[index],
+                Some(occupation),
+                Significance::Ambient,
+            ));
+        }
+        if with_crowd {
+            for sheet in crate::crowd::extra_ambient_sheets(&stands[8..], 8) {
+                world.add_character(Character::from_sheet(sheet));
+            }
+        }
+        let mut round = Round::new();
+        round.seed(&mut world, &nav, 0.0, &clock_at(Office::Dayspring));
+        round
+    };
+
+    let alone = seed_world(false);
+    let crowded = seed_world(true);
+    for (id, _) in &authored {
+        let id = ActorId::from_raw(*id);
+        let quiet = alone.people[&id].leash_m;
+        assert_eq!(
+            quiet, crowded.people[&id].leash_m,
+            "{id}'s leash moved when a crowd arrived"
+        );
+        // Authored leashes are whole metres, written by hand in `rounds.json`
+        // (6, 8, 10, 12, 16, 20, 24…); a drawn one is a hash fraction and lands
+        // on an integer with probability nil. So this pins *which* rule gave
+        // them the number, not merely its size — the crowd band overlaps the
+        // authored range, and an archetype's 16 m is not evidence of a leak.
+        assert_eq!(
+            quiet.fract(),
+            0.0,
+            "{id}'s {quiet} m leash looks drawn, not authored"
+        );
+    }
+    let mut generated = 0usize;
+    for (id, townsperson) in &crowded.people {
+        if !id.as_str().starts_with('x') {
+            continue;
+        }
+        generated += 1;
+        assert!(
+            (CROWD_LEASH_MIN_M..=CROWD_LEASH_MAX_M).contains(&townsperson.leash_m),
+            "{id} enrolled on {} m",
+            townsperson.leash_m
+        );
+    }
+    assert!(
+        generated > 100,
+        "only {generated} generated citizens enrolled"
+    );
+}
+
+/// M3's census decision, written down: a generated citizen's post is as wide as
+/// their own leash (`max(leash, CENSUS_POST_RADIUS_M)`), because somebody
+/// milling 20 m across a market they are leashed to is at their post by
+/// construction — read at the flat 9 m, `--census-by-area` would report a city
+/// that never turns up for work. The authored cast beside them is still read at
+/// the flat radius, so the same 20 m stand censuses as *not* at post.
+#[test]
+fn a_generated_citizen_censuses_at_a_post_as_wide_as_their_leash() {
+    let nav = nav();
+    let stands = crate::crowd::spread_over_walkable(&nav, 8);
+    let anchor = stands[0];
+    let stood_off = Vec3::new(anchor.x + 20.0, WALK_Y, anchor.z);
+
+    let mut world = base_world();
+    world.add_character(generated_person("x99999", stood_off, Some("mason")));
+    world.add_character(person(
+        "cast0",
+        stood_off,
+        Some("mason"),
+        Significance::Ambient,
+    ));
+
+    let leg = RoundLeg {
+        from: Office::Dayspring,
+        at: anchor,
+        label: "The Wickmarket".to_string(),
+        doing: Arrival::Work,
+        only_on: None,
+        is_home: false,
+    };
+    let mut round = Round::default();
+    for (id, leash) in [("x99999", 30.0), ("cast0", DEFAULT_ROUND_LEASH_M)] {
+        round.people.insert(
+            ActorId::from_raw(id),
+            Townsperson {
+                home: None,
+                base: anchor,
+                legs: vec![leg.clone()],
+                leash_m: leash,
+                curfew_exempt: false,
+                source: None,
+                is_household: false,
+                food: None,
+                phase: Phase::Idle,
+                travel_target: None,
+                travel_for_intent: false,
+                next_decision: 0.0,
+                epoch: 0,
+                evening_seed: None,
+                excused: false,
+            },
+        );
+    }
+
+    let census = round.census(&world, &clock_at(Office::Dayspring), 0.0);
+    assert_eq!(
+        census.at_post, 1,
+        "exactly the generated citizen is at their post: {census:?}"
+    );
+    assert_eq!(census.by_place.get("The Wickmarket"), Some(&1));
+    // …and the same body on the cast's ten-metre leash is not, which is the
+    // "nothing changes at 0" half of the decision.
+    assert_eq!(census.in_street, 1, "{census:?}");
+}
+
+/// M3 bounds the walk the leash never bounded. A generated citizen with no legs
+/// who has drifted past their leash — `route_path` snaps both endpoints to nav
+/// nodes, so a wander aimed 8 m away can deliver them 30 m off — is walked back
+/// to base on their next poll. The authored cast is deliberately untouched:
+/// the same body, the same drift, `generated: false`, and the ladder does what
+/// it always did.
+#[test]
+fn a_generated_idler_past_the_leash_is_walked_back() {
+    let nav = nav();
+    let stands = crate::crowd::spread_over_walkable(&nav, 64);
+    let base = stands[0];
+    // A walkable stand well past any leash in the band, so the drift is real
+    // ground and not a point inside a wall.
+    let far = stands
+        .iter()
+        .copied()
+        .find(|point| {
+            let distance = point.distance(base);
+            (60.0..200.0).contains(&distance)
+        })
+        .expect("the graph has a stand a street away");
+
+    let idler = |id: &str, position: Vec3, generated: bool| -> Character {
+        if generated {
+            generated_person(id, position, None)
+        } else {
+            let mut character = person(id, position, Some("mason"), Significance::Ambient);
+            character
+                .sheet
+                .lore
+                .as_mut()
+                .expect("the helper built a profile")
+                .occupation_id = None;
+            character
+        }
+    };
+    let mut world = base_world();
+    world.add_character(idler("x99999", far, true));
+    world.add_character(idler("cast0", far, false));
+    world.add_character(idler("x99998", base, true));
+
+    let mut round = Round::default();
+    for id in ["x99999", "cast0", "x99998"] {
+        let position = world.characters[&ActorId::from_raw(id)].position_m();
+        round.people.insert(
+            ActorId::from_raw(id),
+            Townsperson {
+                home: None,
+                base,
+                legs: Vec::new(),
+                leash_m: 25.0,
+                curfew_exempt: false,
+                source: None,
+                is_household: false,
+                food: None,
+                phase: Phase::Idle,
+                travel_target: None,
+                travel_for_intent: false,
+                next_decision: 0.0,
+                epoch: 0,
+                evening_seed: None,
+                excused: false,
+            },
+        );
+        assert!(
+            position.distance(base) > 25.0 || id == "x99998",
+            "{id} is meant to start off the leash"
+        );
+    }
+
+    let drifted = decide_only(
+        &round,
+        &world,
+        &nav,
+        &ActorId::from_raw("x99999"),
+        0,
+        Office::Dayspring,
+        Weekday::Bellday,
+    );
+    assert!(
+        matches!(drifted, Decision::Travel(target) if target == base),
+        "a generated idler off the leash walks back to base, got {drifted:?}"
+    );
+
+    // The cast, identically placed, is left exactly as it was: the rung is
+    // gated on `generated`, so nothing at `extra_ambient_npcs: 0` moves.
+    let cast = decide_only(
+        &round,
+        &world,
+        &nav,
+        &ActorId::from_raw("cast0"),
+        0,
+        Office::Dayspring,
+        Weekday::Bellday,
+    );
+    assert!(
+        !matches!(cast, Decision::Travel(target) if target == base),
+        "the authored ladder must not gain a recall rung, got {cast:?}"
+    );
+
+    // And inside the leash the rung is silent — it recalls, it does not pin.
+    let home_bird = decide_only(
+        &round,
+        &world,
+        &nav,
+        &ActorId::from_raw("x99998"),
+        0,
+        Office::Dayspring,
+        Weekday::Bellday,
+    );
+    assert!(
+        !matches!(home_bird, Decision::Travel(_)),
+        "a citizen on their own patch is not recalled, got {home_bird:?}"
     );
 }

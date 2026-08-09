@@ -69,6 +69,12 @@ archetype and gives them no legs, so they loiter near where they were stood rath
 read as poor at thirty metres, they are about twice as likely to speak to you first, and they draw no
 water. The city's standing population, not its traffic.
 
+A generated citizen also mills on a **wider leash than the cast**: 15–40 m, drawn per person off their id
+(`round.rs crowd_leash_m`, written only in `Round::seed`'s enrolment branch behind `lore.generated`), against
+the authored 10 m default — a workplace with forty strangers at it should read as a busy corner, not a scrum.
+The census reads their post as wide as their own leash, and a legless one who has drifted past it walks back;
+neither applies to the cast, so `extra_ambient_npcs: 0` is byte-for-byte the city it always was.
+
 They cost no tokens by existing — the stage cap and the single in-flight cognition slot bound the spend
 however many people are about — but they do change who is *nearest*, and therefore who the idle rotation
 picks. What they cost is frames: measured at 1280x720, p50 frame time 7.2 ms at 0, 16.8 ms at 2000, 36 ms at
