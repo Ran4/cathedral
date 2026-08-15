@@ -210,6 +210,25 @@ mod tests {
         assert_eq!(defaults.stt_backend, "cloud");
     }
 
+    /// The other direction of the same worry: `smart_actors.dogs_enabled` was
+    /// removed (2026-08-15, the pack is always on), and every `config.ron`
+    /// already on disk still names it. Nothing here denies unknown fields, so
+    /// the line is ignored rather than taking the player's whole file down with
+    /// it — a parse error would silently revert their backends, resolution and
+    /// clock to the shipped defaults.
+    #[test]
+    fn a_config_still_naming_dogs_enabled_loads() {
+        let old: AppConfig = ron::from_str(
+            "(width: 1280, smart_actors: (dogs_enabled: false, stt_backend: \"local\"))",
+        )
+        .expect("a config naming the removed switch parses");
+        assert_eq!(old.width, 1280);
+        assert_eq!(
+            old.smart_actors.stt_backend, "local",
+            "the settings either side of the dead line survive it"
+        );
+    }
+
     /// `features/rats.md` §2.5: the vermin block is `#[serde(default)]` all the
     /// way down, so a `config.ron` written before the feature existed still
     /// loads — and one that names a single field keeps the shipped values for

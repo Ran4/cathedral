@@ -91,9 +91,6 @@ pub struct SmartActorsConfig {
     /// The world clock: the day/night cycle, the offices, the bell
     /// (features/implemented/movement/01_the_clock.md).
     pub clock: ClockSettings,
-    /// The authored street-dog pack (features/implemented/dogs.md). Costs no tokens; off
-    /// only for ablation (`CATHEDRAL_NO_DOGS` forces it off for one run).
-    pub dogs_enabled: bool,
     /// The chalk on the walls (features/implemented/chalking_the_walls.md). Costs no
     /// tokens: marks are written by code, read by code, and reach an LLM only
     /// as one line on a turn that was going to happen anyway.
@@ -353,7 +350,6 @@ impl Default for SmartActorsConfig {
             idle_cognition: IdleCognitionSettings::default(),
             night_office: NightOfficeSettings::default(),
             clock: ClockSettings::default(),
-            dogs_enabled: true,
             marks: MarksSettings::default(),
             extra_ambient_npcs: 0,
         }

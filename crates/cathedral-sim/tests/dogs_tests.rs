@@ -187,10 +187,6 @@ fn dogs_ride_their_own_hot_channel_without_touching_the_revision() {
     )
     .expect("the seeded world has a player");
 
-    assert!(
-        EngineConfig::default().dogs_enabled,
-        "dogs are on by default"
-    );
     assert_eq!(engine.world().dogs.len(), 10, "the pack seeded off the nav");
 
     // The first poll carries `Ready` and the pack's opening publication.
@@ -225,11 +221,12 @@ fn dogs_ride_their_own_hot_channel_without_touching_the_revision() {
         );
     }
 
-    // Ablation: the same engine with the pack off seeds an empty kennel.
+    // The pack has no switch — it is always on. The one thing it still needs is
+    // somewhere walkable to stand, so a nav-less engine seeds an empty kennel,
+    // which is why the frozen fixtures are untouched by the feature.
     let off = Engine::new(
         EngineConfig {
-            nav: Some(nav),
-            dogs_enabled: false,
+            nav: None,
             ..EngineConfig::default()
         },
         &cathedral_sim::WorldSeed::from_json_str(&prompt_support::demo_seed())
@@ -247,7 +244,10 @@ fn dogs_ride_their_own_hot_channel_without_touching_the_revision() {
         0.0,
     )
     .expect("the seeded world has a player");
-    assert!(off.world().dogs.is_empty(), "CATHEDRAL_NO_DOGS' seam");
+    assert!(
+        off.world().dogs.is_empty(),
+        "no nav graph, nowhere to stand, no pack"
+    );
 }
 
 /// The player's own record never lists dogs anywhere a person would go — the

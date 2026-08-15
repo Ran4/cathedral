@@ -59,9 +59,6 @@ fn main() {
     if std::env::var_os("CATHEDRAL_NO_WEATHER").is_some() {
         config.weather.enabled = false;
     }
-    if std::env::var_os("CATHEDRAL_NO_DOGS").is_some() {
-        config.smart_actors.dogs_enabled = false;
-    }
     if std::env::var_os("CATHEDRAL_NO_MARKS").is_some() {
         config.smart_actors.marks.enabled = false;
     }

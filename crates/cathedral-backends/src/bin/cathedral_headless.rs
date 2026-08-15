@@ -467,9 +467,8 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
                 enabled: args.night_office,
                 ..NightOfficeConfig::default()
             },
-            // The pack costs nothing here — a transcript line only when a dog
-            // drifts through somebody's you_see — so the default stands.
-            dogs_enabled: true,
+            // The pack is always on and costs nothing here — a transcript line
+            // only when a dog drifts through somebody's you_see.
             // The chalk costs nothing either — the walls start bare, and a
             // mark reaches a sheet only when a hand has drawn one — so the
             // default stands here too. `--marks-decay-scale` weathers a wall

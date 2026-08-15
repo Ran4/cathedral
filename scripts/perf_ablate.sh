@@ -28,9 +28,9 @@ run() { # run <label> [env assignments...]
 
 run full
 run no_vermin   CATHEDRAL_NO_VERMIN=1
-run no_dogs     CATHEDRAL_NO_DOGS=1
+# (No no_dogs arm: the street-dog pack is always on and has no lever.)
 run no_marks    CATHEDRAL_NO_MARKS=1
 run no_actors   CATHEDRAL_NO_ACTORS=1
 run no_weather  CATHEDRAL_NO_WEATHER=1
-run bare        CATHEDRAL_NO_VERMIN=1 CATHEDRAL_NO_DOGS=1 CATHEDRAL_NO_MARKS=1 \
+run bare        CATHEDRAL_NO_VERMIN=1 CATHEDRAL_NO_MARKS=1 \
                 CATHEDRAL_NO_ACTORS=1 CATHEDRAL_NO_WEATHER=1

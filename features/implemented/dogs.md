@@ -58,18 +58,19 @@ name label, no collider (`features/rats.md` §2.1 —
 
 ## Levers
 
-- `config.ron: smart_actors.dogs_enabled` (default on) — `EngineConfig::
-  dogs_enabled`; seeding also requires a nav graph, which is why every
-  nav-less test and fixture is untouched by the default.
-- `CATHEDRAL_NO_DOGS=1` — one-run ablation beside `CATHEDRAL_NO_ACTORS`/
-  `CATHEDRAL_NO_WEATHER`.
+None. The pack is always on (2026-08-15: `config.ron:
+smart_actors.dogs_enabled`, `EngineConfig::dogs_enabled` and
+`CATHEDRAL_NO_DOGS=1` were all removed — dogs cost no tokens and no snapshot
+traffic, so there was nothing for a switch to protect). Seeding still requires
+a nav graph, which is why every nav-less test and fixture is untouched by the
+feature.
 
 ## Verifying
 
 `cargo test -p cathedral-sim --test dogs_tests` pins the wander (walkable,
 deterministic, revision-free), the sheet (nearest first, moving flag, absent
-past 20 m), the markdown + explainer gating, the hot channel and the ablation
-seam. Live:
+past 20 m), the markdown + explainer gating, the hot channel and the nav-less
+empty kennel. Live:
 
 ```sh
 cargo run -p cathedral-backends --bin cathedral-headless -- --fake -t 120 -v 2>&1 | grep -A 2 dogs_nearby

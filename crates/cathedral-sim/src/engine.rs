@@ -283,15 +283,6 @@ pub struct EngineConfig {
     /// until they ask for a night. `config.ron` turns it on for the game and
     /// `--night-office` for the headless runner.
     pub night_office: NightOfficeConfig,
-    /// Whether the authored street-dog pack is seeded ([`crate::dogs`]).
-    ///
-    /// Defaults to **on** — dogs cost no tokens and no snapshot traffic, so
-    /// unlike the cognition gates there is nothing to protect by default-off —
-    /// but they only exist in a world with a nav graph, which is why every
-    /// nav-less test and the frozen fixtures are unchanged by the default.
-    /// `config.ron: smart_actors.dogs_enabled` and `CATHEDRAL_NO_DOGS` turn
-    /// them off for ablation.
-    pub dogs_enabled: bool,
     /// Whether hands may chalk the walls ([`crate::marks`]).
     ///
     /// Defaults to **on**, like the dogs and for the same reason: marks cost
@@ -343,7 +334,6 @@ impl Default for EngineConfig {
             shelters: Arc::new(ShelterMap::default()),
             nav: None,
             night_office: NightOfficeConfig::default(),
-            dogs_enabled: true,
             marks_enabled: true,
             mark_kinds: crate::marks::MarkKindSwitches::default(),
             marks_decay_scale: 1.0,
@@ -1103,11 +1093,11 @@ impl Engine {
         }
 
         // The street dogs (`features/implemented/dogs.md`): the authored pack,
-        // seeded only into a walkable world — the frozen fixtures and every
-        // nav-less test keep an empty kennel and identical bytes.
-        if config.dogs_enabled
-            && let Some(nav) = config.nav.as_deref()
-        {
+        // always on — they cost no tokens and no snapshot traffic, so there is
+        // nothing a switch would protect — and seeded only into a walkable
+        // world, which is why the frozen fixtures and every nav-less test keep
+        // an empty kennel and identical bytes.
+        if let Some(nav) = config.nav.as_deref() {
             world.dogs = crate::dogs::seed_pack(nav);
         }
 

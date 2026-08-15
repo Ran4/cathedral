@@ -422,7 +422,6 @@ fn build(
         // the second lane spends its calls in the hours the player is somewhere
         // quiet, which only exists when there is a player (M6).
         night_office: config.night_office.config(),
-        dogs_enabled: config.dogs_enabled,
         marks_enabled: config.marks.enabled,
         mark_kinds: cathedral_sim::marks::MarkKindSwitches {
             cross: config.marks.cross,
