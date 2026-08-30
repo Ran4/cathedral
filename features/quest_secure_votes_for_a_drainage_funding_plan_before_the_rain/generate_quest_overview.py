@@ -399,7 +399,7 @@ REPLACEMENTS = [
     ("One curfew decision and one complete Stone House route through surety or escape.",
      "One night-route decision and one Stone House route through surety or escape."),
     ("Canonical Drain Question and wards: lore/core_lore/ward_politics.md; civic rules: secular_government.md; water work: lore/wells_and_water.md. Existing gameplay seams: cathedral-sim AGENTS.md and features/implemented/{law_and_order,chalking_the_walls,movement}. New bounded layers draw on features/{lore_ward_politics,rumors,false_peals__ring_the_bells_manually}.md.",
-     "Canon: lore/core_lore/ward_politics.md, lore/core_lore/secular_government.md and lore/wells_and_water.md. Runtime: crates/cathedral-sim/AGENTS.md. Related specs: features/lore_ward_politics.md, features/rumors.md and features/implemented/."),
+     "Canon: lore/core_lore/ward_politics.md, lore/core_lore/secular_government.md and lore/wells_and_water.md. Runtime: crates/cathedral-sim/AGENTS.md. Related specs: features/lore_ward_politics.md, features/knowledge_and_rumor/ and features/implemented/."),
     ("This quest does not add combat, a health tree, full procedural interiors, romance, free-form generated quests, magical powers, a 20,000-person crowd target, or solution to the Second Sun. False peals and the Cut game remain optional sequence breaks until the civic loop proves fun.",
      "This quest does not add combat, a health tree, full procedural interiors, romance, free-form generated quests, magical powers, a 20,000-person crowd target, or a solution to the Second Sun. Their presence or absence elsewhere in Cathedralbevy is outside this specification. False peals and the Cut game remain optional quest routes until the core civic loop proves fun."),
 ]

@@ -884,7 +884,7 @@ If this is not fun and legible at four voters, do not author the remaining twelv
 - `lore/wells_and_water.md` — water infrastructure, labor, queues, repairs and shortages.
 - `lore/the_dry_boatmen.md` — Reed Postern, dry carry, the tun and Reed interests.
 - `features/lore_ward_politics.md` — open gameplay layer this quest concretizes.
-- `features/rumors.md` — preferred bounded rumor propagation.
+- `features/knowledge_and_rumor/` — the shared knowledge layer (facts + rumour propagation); was `features/rumors.md`. As of 2026-08-30 it also owns quest receipts, the player's casebook and the journal, which this spec currently proposes for itself.
 - `features/false_peals__ring_the_bells_manually.md` — optional high-risk sequence break.
 - `features/implemented/law_and_order.md` — notices, custody, surety and escape.
 - `features/implemented/chalking_the_walls.md` — authoritative forged/scrubbed marks.

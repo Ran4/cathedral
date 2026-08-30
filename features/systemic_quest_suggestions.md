@@ -46,6 +46,8 @@ the baker and player materially responsible.
 
 ## 02 — The bale that gained forty pounds
 
+> **Promoted 2026-08-30** → `features/quest_the_bale_that_gained_forty_pounds/` (spec, ten worked playthroughs with storyboards, and a four-page implementation summary). The text below is the original idea, kept as written.
+
 **Playable hook.** At High Wick, Hugh Crake's road party reaches the Wool Gate with a corded bale of broadcloth
 that the Tallage weighed and sealed only hours earlier. The gate beam says it is forty pounds heavier than the
 manifest. Officers call it smuggling, turn the cart around before a gathering crowd and impound the load until a
@@ -360,10 +362,11 @@ If not, it may still be a good story, but it is not doing enough work for the ga
 ## Related features
 
 - `features/keys_and_locked_places.md`
-- `features/rumors.md`
+- `features/knowledge_and_rumor/` (was `features/rumors.md`)
 - `features/false_peals__ring_the_bells_manually.md`
 - `features/more_interesting_houses.md`
 - `features/implemented/law_and_order.md`
 - `features/implemented/chalking_the_walls.md`
 - `features/quest_secure_votes_for_a_drainage_funding_plan_before_the_rain/`
+- `features/quest_the_bale_that_gained_forty_pounds/` (§02, promoted)
 - `features/quest_ring_a_dead_womans_name_at_marenstide/`

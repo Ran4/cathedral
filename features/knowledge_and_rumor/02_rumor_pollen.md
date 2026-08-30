@@ -1,3 +1,15 @@
+Was `features/rumors.md` until 2026-08-30, when it became the transport half of
+`features/knowledge_and_rumor/`. The pitch below is unchanged and still the design; what changed is
+its status. It is no longer an independent nice-to-have — three quest specs need a knowledge layer,
+and this is half of it. `01_facts.md` is the other half: the proposition a Pollen token carries.
+
+One amendment to the sketch below: a Pollen token no longer carries an inline
+`{kind, subject, place, day}`. It carries a **`FactId` plus a garble seed**, and the fields it
+garbles are the fact's. That is what lets authored quest knowledge — sealed, non-decaying, never
+garbled — ride the same rails as gossip without being gossip.
+
+---
+
 # Rumor Pollen
 
 *News that travels at walking speed for zero marginal LLM calls — deepened

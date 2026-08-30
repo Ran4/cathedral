@@ -184,7 +184,7 @@ they exist.
 | Earning money | Nothing. Sparks move only through two-sided offers an NPC chooses to make; there is no wage, workplace, employment or payout path anywhere in the sim. | Either a base-game wage seam, or — as specified here — a small set of **authored quest errands that pay a coded amount on a receipt**. The quest owns the errands; a general hire/wage economy is explicitly out of scope and stays a base-game feature. |
 | Player curfew | The Snuffing changes NPC rounds and the bench sergeants go to bed at it; there is no player-curfew offence or watch-witnessed detection. | Watch-witnessed proximity detection before any route promises curfew consequences. Until then, night play is atmosphere, not a route. |
 | A named-person bell | **Most of it already ships.** `src/soundscape.rs` has `BellPattern::NameKnell { years }`, documented there as *Maren Smallvoice: one slow stroke per year of the life*, with `MAX_KNELL_YEARS` = 120, a 300 m radius taken from `lore/second_sun/design/06` §2, and an evidence line a drive script can assert a stroke count from; `CATHEDRAL_DRIVE`'s `bell knell <years>` rings it today. What is absent is the **sim** side: no action rings it, and no percept carries a name. | One sim-side action that fires the existing pattern with the dead woman's age, chalks a one-slot lintel mark, and emits a percept carrying the name. Genuinely small. |
-| Bounded rumor | A design exists (`features/rumors.md`); no runtime propagation. | Preferred for the day-five turn. A temporary authored quest fact queue is acceptable through M3 and must be designed for deletion. |
+| Bounded rumor | `features/knowledge_and_rumor/` (was `features/rumors.md`), SPEC ONLY. | **Status changed 2026-08-30:** facts and propagation now ship as one shared feature and all three quest specs depend on it, so the temporary authored quest fact queue is no longer needed — use `Fact`/`holds()` and delete the interim plan. |
 
 ### Explicit non-goals
 
@@ -785,7 +785,7 @@ If step 2 to step 6 is not compelling at one witness, do not author the other fi
 - `features/implemented/law_and_order.md` — notices, custody, the Stone House, surety's absence.
 - `features/implemented/chalking_the_walls.md` — marks, forgery, scrubbing, the two-day ward cross.
 - `features/implemented/food_and_items/` — the spark standard, offers, stacks.
-- `features/rumors.md` — the preferred bounded propagation for the day-five turn.
+- `features/knowledge_and_rumor/` — the shared knowledge layer (facts + rumour propagation); was `features/rumors.md`.
 - `features/quest_secure_votes_for_a_drainage_funding_plan_before_the_rain/README.md` — the sibling quest, and
   the spec shape this one follows.
 - `crates/cathedral-sim/AGENTS.md` — the sim boundary, prompts, actions and scheduling.
