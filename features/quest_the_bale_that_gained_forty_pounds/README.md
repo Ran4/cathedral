@@ -1,5 +1,12 @@
 Status: SPEC ONLY — unimplemented (2026-08-30)
 
+STALE WHERE IT TOUCHES KNOWLEDGE (2026-08-30): `features/knowledge_and_rumor/` is being built
+end-to-end **first**, on its own, and this spec will be rewritten against the API that actually
+ships. Wherever the text below describes what the knowledge layer owns, when this quest may
+start, or a casebook/receipt store of its own, `features/knowledge_and_rumor/README.md` wins.
+Do not reconcile this file now.
+
+
 # Quest: the bale that gained forty pounds
 
 Working title: **Forty Pounds Over**
