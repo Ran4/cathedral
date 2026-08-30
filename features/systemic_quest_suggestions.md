@@ -1,4 +1,4 @@
-Status: IDEA BANK — not implementation-ready (2026-08-27)
+Status: IDEA BANK — not implementation-ready (2026-08-30)
 
 # Systemic quest suggestions
 
@@ -44,15 +44,48 @@ baking elsewhere before the office closes.
 sleeping place. A forgery preserves those benefits immediately, but a later fire can expose it and make both
 the baker and player materially responsible.
 
-## 02 — The bale weighed twice
+## 02 — The bale that gained forty pounds
 
-**Authored situation.** A Cloth merchant claims the same bale is effectively charged at two civic checkpoints.
+**Playable hook.** At High Wick, Hugh Crake's road party reaches the Wool Gate with a corded bale of broadcloth
+that the Tallage weighed and sealed only hours earlier. The gate beam says it is forty pounds heavier than the
+manifest. Officers call it smuggling, turn the cart around before a gathering crowd and impound the load until a
+public opening at the next Dayspring. Six loom households have lawful bolts inside and will not be paid while it
+remains evidence; Hugh will also owe for a missed Brede departure. The player meets a blocked cart, frightened
+oxen and porters pulling at the same rope — forty pounds that plainly came from somewhere — rather than a
+merchant explaining a fee rule.
 
-**Systemic approaches.** Accompany the shipment, record its custody, arrange a neutral weighing, discover
-deliberate load-splitting, alter the manifest, or persuade one office to recognize the other's seal.
+**The authored truth.** Clemence Hobbe has woven one forty-pound bolt from fleece bought outside Ewart Skell's
+putting-out system: her first chance to sell work in her own name. Renn Crake promised to put it on Hugh's
+returning cart, then found the Tallage had already sealed the bale. Desperate to honor the promise and cover his
+own freight debts, Renn diverted the cart, opened the bale with warehouse access, inserted Clemence's bolt and
+imitated the seal. Hugh did not authorize it. The accusation against him is false, but a crime did occur; clearing
+him can expose both the weaver's bid for independence and the broker whose family keys are already in debt. These
+are authored facts, not a randomized culprit, but the player may reveal, conceal, legalize or exploit them.
 
-**Persistent aftermath.** A checkpoint may disappear, inspections may increase, cloth prices may change, a
-smuggling loophole may open, or Cloth and Weigh may acquire a lasting procedural grudge.
+**Systemic play.** The cart's route is the investigation: Tallage, Tally Bridge stores, Wickmarket, the Draper's
+Reach and Wool Gate. Walk its custody chain, catch a porter before he goes home, compare cut cord and copied wax,
+count Ewart's remaining bolts, enter the warehouse with a borrowed or stolen key, accompany the impounded bale,
+or put Clemence, Renn and Hugh in one room where their stories cannot all stand. A lawful player can stage a
+neutral reweigh with Bertran Hobbe's proved weights, pay the omitted duty and amend the manifest before witnesses.
+A social player can make Renn confess without naming Clemence, persuade Ewart to buy the independent bolt, or
+turn the six unpaid households into a public crowd. A covert player can remove the bolt, replace the false seal,
+alter the custody copy or route the cart through another gate. A predatory player can sell the truth to Ewart,
+take Renn's warehouse key as the price of silence, or leave Hugh carrying the crime in return for Clemence's
+future loyalty. Evidence remains with objects, places and people; it never becomes a glowing clue list.
+
+**Pressure and recoverable failure.** The public opening occurs whether the player is ready or not. Witnesses
+keep their schedules, Renn may run when accused, and Hugh must choose at the Waning between abandoning the cargo
+and missing the road. Arriving late changes the problem rather than ending it: once the bolt is found, play can
+continue through a surety hearing, escape, debt bargain or attempt to prove who broke custody. A forged seal may
+fool an officer now and fail later before the porter who saw the player borrow wax.
+
+**Persistent aftermath.** A lawful amendment may let innocent owners recover goods and give Clemence a direct
+customer; Ewart can retaliate by cutting prices, denying wool or trying to absorb her workshop. Full exposure
+clears Hugh but may cost Renn his trade, keys or freedom, changing who brokers cargo each week. A cover-up creates
+a real smuggling route and possibly a copied warehouse key, while leaving everyone vulnerable to an audit.
+Discrediting the Tallage makes freight slower and dearer; sacrificing Hugh can stop the Brede cart and constrict
+raw-wool supply. The answer remains visible in carts, stock, wages, access, relationships and who stands at the
+weigh-beam, not merely in a completed-quest entry.
 
 ## 03 — The keeper who stopped coming
 
