@@ -116,7 +116,7 @@ pub const MOONSHOT: ProviderSpec = ProviderSpec {
     name: "moonshot",
     base_url: "https://api.moonshot.ai/v1",
     key_env: "MOONSHOT_API_KEY",
-    default_model: "kimi-k2.5",
+    default_model: "kimi-k3",
     temperature: Some(0.6),
     thinking_disabled: true,
 };
@@ -754,7 +754,7 @@ mod tests {
         let config = BackendsConfig::resolve(&env(&[("MOONSHOT_API_KEY", "sk-m")]), &options());
         let settings = config.llm.expect("configured");
         assert_eq!(settings.provider, Provider::Moonshot);
-        assert_eq!(settings.model, "kimi-k2.5");
+        assert_eq!(settings.model, "kimi-k3");
         assert_eq!(settings.base_url, "https://api.moonshot.ai/v1");
         assert_eq!(settings.api_key, "sk-m");
         assert_eq!(settings.timeout_seconds, 45.0);
@@ -783,13 +783,13 @@ mod tests {
             &env(&[("MOONSHOT_API_KEY", "sk-m"), ("LLM_MODEL", "   ")]),
             &options(),
         );
-        assert_eq!(config.model_name().as_deref(), Some("kimi-k2.5"));
+        assert_eq!(config.model_name().as_deref(), Some("kimi-k3"));
 
         let config = BackendsConfig::resolve(
-            &env(&[("MOONSHOT_API_KEY", "sk-m"), ("LLM_MODEL", "kimi-k3")]),
+            &env(&[("MOONSHOT_API_KEY", "sk-m"), ("LLM_MODEL", "kimi-k2.6")]),
             &options(),
         );
-        assert_eq!(config.model_name().as_deref(), Some("kimi-k3"));
+        assert_eq!(config.model_name().as_deref(), Some("kimi-k2.6"));
     }
 
     #[test]

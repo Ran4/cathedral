@@ -1390,7 +1390,7 @@ mod tests {
         let mut config = BackendsConfig::load(&BackendsOptions::default());
         config.llm = Ok(LlmSettings {
             provider: Provider::Moonshot,
-            model: "kimi-k2.5".to_string(),
+            model: "kimi-k3".to_string(),
             base_url,
             api_key: "sk-test".to_string(),
             timeout_seconds: 5.0,

@@ -270,10 +270,10 @@ mod tests {
                 fake_mode: false,
             },
         );
-        assert_eq!(configured.model_name().as_deref(), Some("kimi-k2.5"));
+        assert_eq!(configured.model_name().as_deref(), Some("kimi-k3"));
         let handle = BackendsHandle::start(configured, None).expect("started");
         assert!(handle.capabilities().llm);
-        assert_eq!(handle.cognition().model_name(), Some("kimi-k2.5"));
+        assert_eq!(handle.cognition().model_name(), Some("kimi-k3"));
     }
 
     #[test]

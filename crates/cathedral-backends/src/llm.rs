@@ -23,7 +23,8 @@
 //! sheet so that the block is a prefix shared by every actor's every turn. What
 //! each provider then does with that prefix differs, and only one of them pays:
 //!
-//! * **moonshot** (`kimi-k2.5`) does real prefix caching. A live 8-turn run
+//! * **moonshot** (`kimi-k3` today; measured on `kimi-k2.5`, since retired
+//!   upstream) does real prefix caching. A live 8-turn run
 //!   reports 63% of input tokens served from cache (`cached_tokens`, which it
 //!   sends both top-level and under `prompt_tokens_details`).
 //! * **openai** (`gpt-5.6-luna`) does **not**, whatever the docs say about
@@ -80,10 +81,22 @@ use crate::{
     runtime::BackendRuntime,
 };
 
-/// USD per 1M tokens (input, output) — `llm_client.py:33-38`, as of July 2026.
+/// USD per 1M tokens (input, output) — `llm_client.py:33-38`, as of July 2026,
+/// re-checked against both providers' published rates on 2026-09-04.
 /// Cache-hit discounts are not modeled, so a run cost is an upper bound.
-pub const PRICING: [(&str, (f64, f64)); 2] =
-    [("kimi-k2.5", (0.60, 3.00)), ("gpt-5.6-luna", (1.00, 6.00))];
+///
+/// One unpriced model makes the *whole* run cost `None`
+/// (`an_unpriced_model_makes_the_run_cost_unknown`), so every model the
+/// provider will actually serve wants a row here, not only the default.
+/// `kimi-k2.5` keeps its row for the prompt archive's sake: the logs under
+/// `logs/*/prompts/` name it, and the provider has retired it.
+pub const PRICING: [(&str, (f64, f64)); 5] = [
+    ("kimi-k3", (3.00, 15.00)),
+    ("kimi-k2.6", (0.95, 4.00)),
+    ("kimi-k2.7-code", (0.95, 4.00)),
+    ("kimi-k2.5", (0.60, 3.00)),
+    ("gpt-5.6-luna", (1.00, 6.00)),
+];
 
 /// The price row for a model, or `None` for one we have no price for.
 pub fn pricing_for(model: &str) -> Option<(f64, f64)> {
@@ -853,7 +866,7 @@ mod tests {
             Some("Bearer sk-test")
         );
         let body: Value = request.json();
-        assert_eq!(body["model"], "kimi-k2.5");
+        assert_eq!(body["model"], "kimi-k3");
         assert_eq!(body["temperature"], 0.6);
         assert_eq!(
             body["thinking"],
@@ -1098,7 +1111,7 @@ mod tests {
             Ok(settings(Provider::Moonshot, &server.base_url())),
             sender,
         );
-        assert_eq!(cognition.model_name(), Some("kimi-k2.5"));
+        assert_eq!(cognition.model_name(), Some("kimi-k3"));
         assert_eq!(
             cognition.run_cost_usd(),
             None,
@@ -1114,16 +1127,16 @@ mod tests {
 
         let usage = cognition.usage();
         assert_eq!(
-            usage.per_model()["kimi-k2.5"],
+            usage.per_model()["kimi-k3"],
             ModelUsage {
                 prompt_tokens: 2000,
                 cached_prompt_tokens: 0,
                 completion_tokens: 200,
             }
         );
-        // (2000 * 0.60 + 200 * 3.00) / 1e6
+        // (2000 * 3.00 + 200 * 15.00) / 1e6
         let cost = cognition.run_cost_usd().expect("priced");
-        assert!((cost - 0.0018).abs() < 1e-12, "{cost}");
+        assert!((cost - 0.009).abs() < 1e-12, "{cost}");
     }
 
     /// The evidence that `turn.j2`'s static prefix is being reused. moonshot
@@ -1166,7 +1179,7 @@ mod tests {
         }
 
         let usage = cognition.usage();
-        let model = usage.per_model()["kimi-k2.5"];
+        let model = usage.per_model()["kimi-k3"];
         assert_eq!(model.prompt_tokens, 6000);
         assert_eq!(
             model.cached_prompt_tokens, 3584,
@@ -1327,7 +1340,7 @@ mod tests {
         let moonshot = Provider::Moonshot.spec();
         assert_eq!(moonshot.base_url, "https://api.moonshot.ai/v1");
         assert_eq!(moonshot.key_env, "MOONSHOT_API_KEY");
-        assert_eq!(moonshot.default_model, "kimi-k2.5");
+        assert_eq!(moonshot.default_model, "kimi-k3");
         assert_eq!(moonshot.temperature, Some(0.6));
         assert!(moonshot.thinking_disabled);
 
@@ -1337,6 +1350,9 @@ mod tests {
         assert_eq!(openai.temperature, None);
         assert!(!openai.thinking_disabled);
 
+        assert_eq!(pricing_for("kimi-k3"), Some((3.00, 15.00)));
+        assert_eq!(pricing_for("kimi-k2.6"), Some((0.95, 4.00)));
+        // Retired upstream; priced so the prompt archive still costs out.
         assert_eq!(pricing_for("kimi-k2.5"), Some((0.60, 3.00)));
         assert_eq!(pricing_for("gpt-5.6-luna"), Some((1.00, 6.00)));
         assert_eq!(pricing_for("kimi-k9"), None);
