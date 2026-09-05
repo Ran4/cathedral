@@ -1,0 +1,1 @@
+say {"target": "player", "text": "The salt contract is not my business, friend. I deal in meat, not salt. If you want to know who holds it and what it's worth, you'd best ask at the Tallage itself, or find a porter who works the gate there. They'd know better than a butcher."}

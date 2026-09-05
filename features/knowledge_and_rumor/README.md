@@ -1,4 +1,4 @@
-Status: SPEC ONLY — unimplemented (2026-08-30). **Ships end-to-end before any quest.**
+Status: M0 measured (2026-09-03, GO — see m0_evidence/NOTES.md); M1 implemented (2026-09-05). M2–M5 pending.
 
 # Knowledge and rumour
 
@@ -336,3 +336,43 @@ exactly — is the regression guard on the whole of it.
   prompts already paid for), bells as amplifiers, and **walk the chain** — which is no longer a
   child. It is M3, because garbling without a way to check is the game lying to the player, and
   players correctly read that as a bug.
+
+## M0 — the mouth test (2026-09-03)
+
+> **M0b (2026-09-04) supersedes the two frozen artifacts below with `v6_both`** — the hop ladder split into seven rungs and the referral exemplars replaced by descriptions, measured at the shipping position on both providers (110 more calls): threshold 1 held 5/5 on both, threshold 3 held 0, the exemplar leak is gone on openai (3/7 → 0/7), and the "let it lie" softening was tested and **declined**. **Threshold 2 did not improve on openai (3/8 against 4/8) and stays failed** — risk 2 is handed to M3's garbling with a stated re-measurement.
+> Record: `m0_evidence/NOTES.md` § "M0b — measured repairs"; `strings_draft.toml` is now 24 keys and `ignorance_rule.txt` carries the repaired paragraph, both re-verified to round-trip to `m0_evidence/prose/v6_both/`.
+
+**GO.** Confabulation — risk 1, the load-bearing one — is answered by evidence. The full record,
+including every reply and every rejected wording, is in **`m0_evidence/`**; `NOTES.md` there is the
+justification for the strings this feature ships. `scripts/m0/` was the throwaway harness and is gone.
+
+Three candidate wordings of the block header, the block note, the ignorance rule, the hop ladder and
+the unknown-subject template were rendered into 22 hand-authored sheets built on the golden prompt
+fixtures, and fired at live providers: **88 calls, 88 ok, 0 failed** (`moonshot`/kimi-k3 and
+`openai`/gpt-5.6-luna). **`v2_structural` won and is frozen.**
+
+| threshold | risk | result |
+|---|---|---|
+| A non-holder asked point-blank refuses **and** names a next mouth (≥ 4/5) | 1 — go/no-go | **15 of 15** across two providers and two prompt positions |
+| Invented names, days, places or numbers | 1 | **0 in 43 replies** from the frozen wording; 0 invented person names in the whole round |
+| Eight holders in one ward produce materially distinct sentences (≥ 6/8) | 2 | **7/8 on moonshot, 4/8 on openai — FAILS on one provider of two** |
+| `raise_word` unused when no occasion is given | 4 | **0 uses**, every variant, both providers |
+
+M0's output is two frozen artifacts, both byte-for-byte the measured text:
+
+- **`m0_evidence/strings_draft.toml`** — the `PromptStrings` keys M1 copies into
+  `assets/prompts/strings.toml` (18 at M0; **24 after M0b**, see the note at the top of this
+  section), values verified to round-trip to the frozen prose directory byte for byte.
+- **`m0_evidence/ignorance_rule.txt`** — the **unconditional** `turn.j2` paragraph, which goes
+  immediately before "Use ONLY the verbs listed below" (`turn.j2:194`) and is *not* wrapped in an
+  `{% if %}`: the sheets it has to work on are the ones with no `what_you_know` block at all. It was
+  re-fired in that exact position to measure it there, not assumed.
+
+**Two things M0 changes about the milestones below.** First, **risk 2 is not closed by prose** — the
+anti-parroting result held on one provider and failed on the other, so the hop-rung split (give hops
+2, 3 and 4 their own rungs; M0's ladder collapsed them into one, and six of eight holders received
+one of only two rendered lines) and **M3's garbling** are load-bearing rather than nice-to-have, and
+Q4 must be re-measured on both providers after each. Second, **the ignorance rule competes with
+`raise_word`**: both providers declined the verb on a live occasion with this paragraph on the sheet,
+so M4 owns that interaction as well as the closed-topic check. Neither is a reason to hold M0, and
+the spec's `who_keeps_that_word` fallback was **not** invoked.

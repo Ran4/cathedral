@@ -1,0 +1,2 @@
+say {"target": "player", "text": "Nine sparks, friend. It was walking yesterday."}
+say {"target": "fr5as", "text": "Rohese. The slate is full. Grigor has owed me for a side since the Waning, and now they say he is in the Stone House. I will have the nine sparks in hand, or the mutton stays on the hook."}

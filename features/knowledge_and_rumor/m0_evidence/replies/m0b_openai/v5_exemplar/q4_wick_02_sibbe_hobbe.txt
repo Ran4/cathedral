@@ -1,0 +1,1 @@
+say {"target":"player","text":"So they say. Grigor Ashe was taken here two days past, and lies in the Stone House."}

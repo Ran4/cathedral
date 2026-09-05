@@ -1,0 +1,1 @@
+say {"target":"player","text":"I heard it third-hand, and could not say whose word began it: Grigor Ashe was taken at the Wickmarket two days past and lies in the Stone House."}

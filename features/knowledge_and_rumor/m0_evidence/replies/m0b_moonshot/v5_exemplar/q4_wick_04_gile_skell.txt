@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, so they say. Mouth to mouth it goes that Grigor Ashe was taken right here at the Wickmarket, two days past, and lies in the Stone House. Whose word it was to begin with I couldn't tell you."}

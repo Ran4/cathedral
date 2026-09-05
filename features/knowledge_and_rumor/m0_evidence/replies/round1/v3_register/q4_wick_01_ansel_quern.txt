@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, it's true enough. Took him right here in the Wickmarket, two days past, and they say he lies in the Stone House now. Half the quarter saw it — I was at my oven, but the whole market was talking of nothing else by midday."}

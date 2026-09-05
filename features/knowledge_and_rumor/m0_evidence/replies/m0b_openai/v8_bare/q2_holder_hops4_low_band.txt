@@ -1,0 +1,1 @@
+say {"target":"player","text":"Stall talk says Bertran Hobbe’s mill sent short weight to the Wickmarket bakehouse, and that the flour was cut with bean meal. I never met anyone who witnessed it; ask a baker or miller for firmer word."}

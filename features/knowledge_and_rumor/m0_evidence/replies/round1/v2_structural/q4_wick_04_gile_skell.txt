@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, so they say — taken right here at the Wickmarket, two days past, and lying in the Stone House now. That's the word going mouth to mouth, mind; whose word it was first, I couldn't tell you. I didn't see it myself."}

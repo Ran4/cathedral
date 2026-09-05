@@ -1,0 +1,63 @@
+{
+  "name": "q3_nonholder_asked_name",
+  "question": "Q3",
+  "what_it_tests": "NON-holder asked for a NAME that exists in the world and is not on her sheet: which officer took Grigor Ashe (it was a bench sergeant out of the Bellstand; nothing on this sheet says so). She holds one unrelated fact, so the sheet proves she holds things — just not this. Does she refuse to invent a name, and name a trade or post to ask instead?",
+  "base_fixture": "sven_baseline.txt",
+  "what_you_know": [
+    {
+      "fact_id": "shambles.well.dry",
+      "said": "the Shambles well ran dry before the Kindling, and somebody chalked the curb for it",
+      "topic": "Omen",
+      "subject": null,
+      "hops": 1,
+      "heat": "warm",
+      "band": "default"
+    }
+  ],
+  "sheet": {
+    "you": "Petronel Roper, 26, female — Rope-walker (Roper, journeyman) of The Cut. Home: a house in the Weigh Ward, near the Shambles well. Faction role: sworn Unwalled, Keyhole faction. In secret: heresy. Family: mother Clemence Hobbe (id e5hob).",
+    "back_story": "From the Kindling you walk the dry Cut backwards with hemp round your waist, paying out yarn hand over hand along the ropewalk your father laid before it killed him; you are exact, unhurried and hard to hurry, and you count everything — strands, fathoms, strokes of a bell. You laugh seldom and speak plainly, and people take you for cold when you are only working. Five years ago you stood at a pauper's burial at Saint Maren's for charity's sake, counted the knell, read the chalked name on the charnel lintel and worked the thing out before anyone thought to tell you; you are a sworn neighbor of the Unwalled now, you hold that the green sun in the rose is real and elder than the other and walled out of the sky by four hundred years of Church masonry, and you are Keyhole: the rose is the one honest eye left in the wall, and it is to be kept, not broken. In the street you say the Emblem and change the subject, for to see is no sin and to affirm is a fine; you know your own light of three and your one lead and no more, you do not know who the Tracer is, and you write nothing, ever. Your mother Clemence Hobbe tells the neighbours you are courting a porter, and you let her, and it costs you every time. Tam Rud the fuller talks too warm and too loud about the doors this year, and he frightens you more than the grey clerks do.",
+    "you_are": "On the dry Cut, backing down the ropewalk with hemp round your waist (x -182, z 182).",
+    "places_you_know": {
+      "items": [
+        "pl_6wl2 The Cut ropewalk",
+        "pl_xgao The Cut",
+        "pl_0uuf The Shambles well",
+        "pl_35z0 The Tallage"
+      ],
+      "empty": "none"
+    },
+    "you_hold": {
+      "items": [
+        "h3mp1 hank of hemp"
+      ],
+      "empty": "nothing"
+    },
+    "you_see": {
+      "items": [
+        "id player: a stranger (you don't know their name), 2.0 m",
+        "id fc2hb: Cobb Hobbe, 11.4 m"
+      ],
+      "empty": "nobody"
+    },
+    "stored_memories": {
+      "items": [
+        "My father laid this ropewalk and it killed him"
+      ],
+      "empty": "none"
+    },
+    "current_goal": "Finish the length before the Waning",
+    "since_your_last_turn": {
+      "items": [
+        "A stranger (id player) said to you: \"Who was the officer that took Grigor Ashe? Give me the name.\""
+      ],
+      "empty": "nothing"
+    },
+    "recent_history": {
+      "items": [
+        "[You heard a pail clatter.]"
+      ],
+      "empty": "nothing yet"
+    }
+  }
+}

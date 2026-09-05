@@ -29,6 +29,7 @@ mod homes;
 pub mod ids;
 pub mod inventory;
 pub mod item;
+pub mod knowledge;
 pub mod lore;
 pub mod marks;
 pub mod math;
@@ -82,7 +83,10 @@ pub use event::{DomainEvent, EventType};
 pub use fake::{FakeCognition, fake_night_reply, fake_reply};
 pub use floor::{ConversationFloor, floor_audio_failsafe_seconds, speech_reading_seconds};
 pub use gesture::{DANCE_MAX_SECONDS, GESTURES, GestureKind, GestureSpec, GestureTarget};
-pub use ids::{ActorId, DogId, InvalidId, ItemId, PartyId, PlaceId, RequestId, SpeechEventId};
+pub use ids::{
+    ActorId, AreaId, AreaKey, DogId, FactId, FactKey, InvalidId, ItemId, PartyId, PlaceId,
+    RequestId, SpeechEventId,
+};
 pub use inventory::{
     CompletedTransform, InventoryError, InventoryErrorCode, ItemMatcher, LegacyRestockShare,
     MarketRequestLine, ReservedInput, SaleReceipt, SaleReceiptLine, StockSpec, TransformJob,

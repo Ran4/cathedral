@@ -1,0 +1,3 @@
+say {"target": "player", "text": "Nine sparks, and it will not be nine tomorrow. Good mutton, killed before the light."}
+say {"target": "fr5as", "text": "On the Ashe slate, Rohese? Grigor has owed me for a side since the Waning, and now they say he lies in the Stone House. Who pays his slate while he is there?"}
+remember {"memory": "Rohese Ashe wants a mutton side on the Ashe slate, coin to come with the household on Bellday"}

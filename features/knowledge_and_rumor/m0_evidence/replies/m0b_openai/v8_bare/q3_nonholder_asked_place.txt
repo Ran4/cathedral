@@ -1,0 +1,1 @@
+say {"target":"player","text":"I don't know where they took Grigor Ashe. Ask the city watch; that is their business."}

@@ -47,8 +47,10 @@ const REPLY_DANCE: &str = concat!(
 /// Rules, in order (any parse failure falls through to the no-op):
 /// 1. Ilse, asked her name → she introduces herself.
 /// 2. Ilse, asked to offer her coin → she says so and offers `c0prs`.
-/// 3. anyone asked to wave → they greet the player and wave at them.
-/// 4. anyone else → a no-op turn.
+/// 3. anyone **asked a question** who holds something → they say their first
+///    `what_you_know` bullet back, verbatim (`features/knowledge_and_rumor/`).
+/// 4. anyone asked to dance or wave → they say so and do it.
+/// 5. anyone else → a no-op turn.
 pub fn fake_reply(prompt: &str) -> String {
     let Some(name) = sheet_name(prompt) else {
         return REPLY_NOOP.to_string();
@@ -60,6 +62,20 @@ pub fn fake_reply(prompt: &str) -> String {
     }
     if name == "Ilse" && history.contains("offer") && history.contains("coin") {
         return REPLY_OFFER_COIN.to_string();
+    }
+    // A holder who is asked something says the thing they hold, in the exact
+    // words the sheet gave them. Read off the *rendered* block, which is the
+    // only reason a phrase hook is allowed to exist in this file: a renderer
+    // that stops emitting the block breaks the offline knowledge run, and a
+    // test says so. Cannot disturb any existing transcript — before M1 no
+    // prompt carried the block, and after M1 only a holder's does.
+    if history.contains('?')
+        && let Some(word) = known_bullets(prompt).next()
+    {
+        return format!(
+            r#"say {{"target": "player", "text": {}}}"#,
+            serde_json::to_string(word).unwrap_or_else(|_| "\"\"".to_string())
+        );
     }
     if history.contains("dance") {
         return REPLY_DANCE.to_string();
@@ -137,6 +153,23 @@ fn first_place_id(prompt: &str) -> Option<&str> {
 /// Whether the sheet numbered any round legs — `- leg 1 — at Dayspring: …`.
 fn has_round_legs(prompt: &str) -> bool {
     section_bullets(prompt, "**your_round**").any(|line| line.starts_with("leg "))
+}
+
+/// The `- ` bullets under `**what_you_know**` (`features/knowledge_and_rumor/`).
+///
+/// Unlike every other section it puts its instruction paragraph between the
+/// header and the bullets, so [`section_bullets`]' immediate `take_while` sees
+/// the blank line and stops. Bounded by the next section header, so it cannot
+/// run on into the ward's word.
+fn known_bullets(prompt: &str) -> impl Iterator<Item = &str> {
+    let mut lines = prompt.lines();
+    let found = lines
+        .find(|line| line.starts_with("**what_you_know**"))
+        .is_some_and(|line| line.ends_with(':'));
+    lines
+        .take_while(move |line| found && !line.starts_with("**"))
+        .filter_map(|line| line.strip_prefix("- "))
+        .map(str::trim)
 }
 
 /// The `- ` bullets under one markdown section header, empty when the section

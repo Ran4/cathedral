@@ -1,0 +1,2 @@
+say {"target": "player", "text": "Aye, it's true. I was standing in my own doorway when they took him — he did not say one word, and the sergeant had his arm up behind his back."}
+remember {"memory": "A stranger asked me about Grigor Ashe's arrest at the Wickmarket."}

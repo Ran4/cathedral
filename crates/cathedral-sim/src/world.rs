@@ -187,6 +187,24 @@ pub struct World {
     /// public snapshot: the player is meant to hear the mood in what people
     /// say, not read it off a panel.
     pub ward_moods: BTreeMap<crate::lore::PlanningWard, String>,
+    /// What this city knows and is saying (`features/knowledge_and_rumor/`).
+    /// World state exactly as [`notices`](Self::notices) is: the prompt renders
+    /// it, the round will write it, and it is **never** part of the public
+    /// snapshot and never a `world_revision` bump.
+    pub knowledge: crate::knowledge::Knowledge,
+    /// The authored fact rows, embedded like [`item_catalog`](Self::item_catalog).
+    /// Installed into [`knowledge`](Self::knowledge) by `FactCatalog::seed`,
+    /// which `Engine::new` calls once; a bare `World` has the catalog and an
+    /// empty store.
+    pub fact_catalog: Arc<crate::knowledge::FactCatalog>,
+    /// How far each kind of news travels, and which hedge rung it renders on.
+    pub salience: Arc<crate::knowledge::SalienceTable>,
+    /// The ablation switch. Gates **readers and writers both**, like
+    /// [`marks_enabled`](Self::marks_enabled), so a run with it off is a city
+    /// with no knowledge layer rather than one that accumulates state nobody
+    /// reads. `config.ron: smart_actors.knowledge.enabled`, and
+    /// `CATHEDRAL_NO_KNOWLEDGE=1` for one run.
+    pub knowledge_enabled: bool,
     /// Who has spoken so far in the reply currently being applied, cleared by
     /// the scheduler before each one.
     ///
@@ -233,6 +251,10 @@ impl Default for World {
             marks_enabled: true,
             mark_kinds: crate::marks::MarkKindSwitches::default(),
             ward_moods: BTreeMap::new(),
+            knowledge: crate::knowledge::Knowledge::default(),
+            fact_catalog: Arc::new(crate::knowledge::FactCatalog::default()),
+            salience: Arc::new(crate::knowledge::SalienceTable::default()),
+            knowledge_enabled: true,
             events: Vec::new(),
         }
     }
@@ -283,6 +305,27 @@ impl World {
     pub fn touch_public_state(&mut self) -> i64 {
         self.world_revision += 1;
         self.world_revision
+    }
+
+    /// Seed a character's standing intention the way world creation does
+    /// (`CharacterState::from_sheet`, `goal: sheet.goal.clone()`).
+    ///
+    /// A **seed**, not an override: their own `set_goal` must win afterwards, or
+    /// they stop being a character. `None` is the crate's own
+    /// [`GOAL_NONE`](crate::GOAL_NONE) sentinel, which is what "no goal" is
+    /// spelled as everywhere else.
+    ///
+    /// Deliberately **no memories parameter** — a seeded memory is erasable by
+    /// `forget` on the actor's first turn, so a quest whose hinge is a memory
+    /// becomes unwinnable with no error raised. Anything quest-critical is a
+    /// one-person fact with an `own` line instead
+    /// (`features/knowledge_and_rumor/`): re-derived every turn, un-`forget`-able
+    /// and invalidatable by the sim. A no-op for an id the world does not have;
+    /// the caller reports it.
+    pub fn arm_actor(&mut self, id: &ActorId, goal: Option<String>) {
+        if let Some(character) = self.characters.get_mut(id) {
+            character.state.goal = goal.unwrap_or_else(|| crate::GOAL_NONE.to_string());
+        }
     }
 
     /// The one physical-presence predicate used at every world-facing seam.

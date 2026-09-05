@@ -1,0 +1,1 @@
+say {"target": "player", "text": "A Brede cart? I haven't seen one, friend. I'm just here getting this ridge piece up. You might ask Bertran over there, or check at the Stone Gate if it came through this morning."}

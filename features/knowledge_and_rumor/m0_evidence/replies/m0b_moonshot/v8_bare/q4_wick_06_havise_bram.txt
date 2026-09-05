@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, so it's said. Grigor Ashe was taken at the Wickmarket two days past, and lies in the Stone House — though I had it down a line of mouths, and whoever saw it with their own eyes is a stranger to me. If it's the watch's business you're after, the Stone House is where to ask."}

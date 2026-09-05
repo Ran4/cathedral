@@ -1,0 +1,33 @@
+# v2_structural — the hop ladder as a named register rather than a turn of
+# phrase. Every bullet is `<how you have it>: <what you have>`, so the model is
+# told which mouth it is speaking with before it is told what to say. That is
+# this variant's whole bet: a hedge the model can see the shape of is one it can
+# keep, and one it cannot quietly upgrade into first-hand detail.
+#
+# No count ever reaches the model — {hops} is deliberately unused. A person
+# knows a thing is third-hand; nobody counts the mouths.
+#
+# Bands are hedge erosion (02_rumor_pollen.md): the top band drops a rung early
+# (at one hop it is said flat, further out it is "they say"), the low band keeps
+# every rung it has and names the chain out loud.
+
+[default]
+hops0_own = "First hand, in your own words: {own}"
+hops0     = "You saw this yourself: {said}"
+hops1     = "They say — and the one who told you was there: {said}"
+hops2     = "Third-hand, mouth to mouth, and you could not say whose word it was to begin with: {said}"
+cold      = "You heard something of the sort a while back and it has gone dim: {said}"
+
+[top_band]
+hops0_own = "First hand, in your own words: {own}"
+hops0     = "You saw this yourself: {said}"
+hops1     = "Flatly, as a thing that happened: {said}"
+hops2     = "They say: {said}"
+cold      = "Old talk now, but you know how it went: {said}"
+
+[low_band]
+hops0_own = "First hand, in your own words: {own}"
+hops0     = "You saw this yourself: {said}"
+hops1     = "They say — and you have it from the one mouth only: {said}"
+hops2     = "You had it from somebody who had it from somebody, and it is trade-talk: {said}"
+cold      = "Somebody mentioned it once, long since, and you would not swear to a word of it: {said}"

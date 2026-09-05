@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, so they say. Grigor Ashe was taken here at the Wickmarket two days past, and lies in the Stone House — that's the word as it came to me, third-hand, and I couldn't tell you whose tongue it started on. If you want the rights of it, ask at the Stone House gate; the watch there will know more than market gossip."}

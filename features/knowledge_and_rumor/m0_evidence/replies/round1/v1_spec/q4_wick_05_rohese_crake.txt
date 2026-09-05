@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, it's true enough. They took Grigor Ashe right here at the Wickmarket, two days past. He's in the Stone House now, or so they say."}

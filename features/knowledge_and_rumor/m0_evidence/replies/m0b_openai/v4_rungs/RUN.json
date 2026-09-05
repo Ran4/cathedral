@@ -1,0 +1,96 @@
+{
+  "command": [
+    "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+    "--provider",
+    "openai",
+    "--one-shot",
+    "/tmp/claude-1000/-home-ran-src-rust-cathedralbevy/1466f9de-a546-499e-9aff-c9565c5c3b2a/scratchpad/fire/v4_rungs/<sheet>"
+  ],
+  "note": "built with `cargo build -q -p cathedral-backends --bin cathedral-headless`, then the binary called directly \u2014 four concurrent `cargo run`s serialise on the target lock. --one-shot sends the file verbatim as the whole prompt.",
+  "provider": "openai",
+  "model": "gpt-5.6-luna",
+  "sheets_dir": "/tmp/claude-1000/-home-ran-src-rust-cathedralbevy/1466f9de-a546-499e-9aff-c9565c5c3b2a/scratchpad/fire/v4_rungs",
+  "concurrency": 4,
+  "wall_seconds": 5.599,
+  "git_commit": "f56a2c306ec1523fc569c7c2de232b8c90d4d4ef",
+  "counts": {
+    "total": 8,
+    "ok": 8,
+    "failed": 0,
+    "skipped": 0
+  },
+  "calls": [
+    {
+      "sheet": "q4_wick_01_ansel_quern.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 2.976,
+      "reply_bytes": 169,
+      "reply": "q4_wick_01_ansel_quern.txt",
+      "stderr": "q4_wick_01_ansel_quern.err"
+    },
+    {
+      "sheet": "q4_wick_02_sibbe_hobbe.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 2.374,
+      "reply_bytes": 143,
+      "reply": "q4_wick_02_sibbe_hobbe.txt",
+      "stderr": "q4_wick_02_sibbe_hobbe.err"
+    },
+    {
+      "sheet": "q4_wick_03_osanne_vell.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 3.238,
+      "reply_bytes": 157,
+      "reply": "q4_wick_03_osanne_vell.txt",
+      "stderr": "q4_wick_03_osanne_vell.err"
+    },
+    {
+      "sheet": "q4_wick_04_gile_skell.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.335,
+      "reply_bytes": 167,
+      "reply": "q4_wick_04_gile_skell.txt",
+      "stderr": "q4_wick_04_gile_skell.err"
+    },
+    {
+      "sheet": "q4_wick_05_rohese_crake.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 2.381,
+      "reply_bytes": 183,
+      "reply": "q4_wick_05_rohese_crake.txt",
+      "stderr": "q4_wick_05_rohese_crake.err"
+    },
+    {
+      "sheet": "q4_wick_06_havise_bram.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 2.175,
+      "reply_bytes": 171,
+      "reply": "q4_wick_06_havise_bram.txt",
+      "stderr": "q4_wick_06_havise_bram.err"
+    },
+    {
+      "sheet": "q4_wick_07_petronel_clove.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 2.344,
+      "reply_bytes": 193,
+      "reply": "q4_wick_07_petronel_clove.txt",
+      "stderr": "q4_wick_07_petronel_clove.err"
+    },
+    {
+      "sheet": "q4_wick_08_ede_kett.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 1.239,
+      "reply_bytes": 117,
+      "reply": "q4_wick_08_ede_kett.txt",
+      "stderr": "q4_wick_08_ede_kett.err"
+    }
+  ]
+}

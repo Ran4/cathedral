@@ -260,6 +260,22 @@ struct Args {
     /// re-chalk and the wash-off are both observable in one transcript.
     #[arg(long, default_value_t = 1.0)]
     marks_decay_scale: f64,
+
+    /// load an extra authored fact pack (repeatable): --facts quest/pack.json
+    ///
+    /// The seam a quest uses instead of editing assets/world/facts.json. Read
+    /// here and passed to the engine as text; the sim never touches the disk.
+    #[arg(long, value_name = "FILE")]
+    facts: Vec<PathBuf>,
+
+    /// print one line per (holder, fact) after the world loads, each carrying
+    /// the sentence that holder reads
+    ///
+    /// The whole of what `features/knowledge_and_rumor/` M1 built, in one
+    /// command and with no provider: the own/said split, the hop rung, and the
+    /// unknown-people rule where a holder has not been told the subject's name.
+    #[arg(long)]
+    trace_knowledge: bool,
 }
 
 fn main() -> ExitCode {
@@ -421,6 +437,16 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             args.weather
         )
     })?;
+    // A quest's own fact rows (`features/knowledge_and_rumor/`). Read here
+    // because the sim never touches the filesystem — it takes the JSON as text.
+    let fact_packs = args
+        .facts
+        .iter()
+        .map(|path| {
+            std::fs::read_to_string(path)
+                .map_err(|error| format!("cannot read --facts {}: {error}", path.display()))
+        })
+        .collect::<Result<Vec<String>, String>>()?;
     let engine = Engine::new(
         EngineConfig {
             player_id: ActorId::from_raw(PLAYER_ID),
@@ -476,6 +502,12 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             marks_enabled: true,
             mark_kinds: cathedral_sim::marks::MarkKindSwitches::default(),
             marks_decay_scale: args.marks_decay_scale,
+            // The knowledge layer (`features/knowledge_and_rumor/`), on by
+            // default and inert until something is seeded. The same env lever
+            // the game reads, so a cost guard can ablate this binary without a
+            // second flag.
+            knowledge_enabled: std::env::var_os("CATHEDRAL_NO_KNOWLEDGE").is_none(),
+            fact_packs,
         },
         &assets.seed,
         assets.areas,
@@ -507,6 +539,23 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         census_per_day: args.census_per_day,
         trace_food: args.trace_food,
     };
+    // What the city knows, before anybody has taken a turn
+    // (`features/knowledge_and_rumor/`). Deterministic and provider-free: the
+    // store was seeded at construction, and every line is rendered through the
+    // same `render_line` a sheet uses, so this *is* the sheet's own words.
+    if args.trace_knowledge {
+        // The store is seeded at construction, but `world.current_time` is
+        // published by the *first poll's* `ring_offices` — so a trace taken
+        // before the tick loop would render `{day}` as "a long while back" on a
+        // fact dated today, which is not what any sheet in this run will say.
+        // Publish exactly the value that first poll will (the same clock, at the
+        // same `now`); it overwrites this unconditionally, and the bell catch-up
+        // reads `last_clock_now`, not this field, so nothing is skipped.
+        runner.engine.world_mut().current_time = Some(clock.at(runner.now));
+        for line in runner.engine.knowledge_lines() {
+            println!("{line}");
+        }
+    }
     // One player utterance before the run, so an offline cast can be poked into
     // reacting (a wave, a reply) with no microphone in the loop.
     if let Some(text) = args.say.clone() {

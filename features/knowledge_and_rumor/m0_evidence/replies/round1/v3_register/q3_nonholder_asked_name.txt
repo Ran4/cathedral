@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I don't know any officer, nor any Grigor Ashe. I'm at my work, stranger — if it's names you're after, ask at the Tallage or the ward post, not a rope-walker's back."}

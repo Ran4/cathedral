@@ -1,0 +1,1 @@
+say {"target": "player", "text": "So they say. Taken right here at the Wickmarket, two days past, and lying in the Stone House now — that's what I heard, third-hand mind you. Careful what you ask about it, friend."}

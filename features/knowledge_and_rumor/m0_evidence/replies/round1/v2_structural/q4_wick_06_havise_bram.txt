@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, that's the word going 'round the market. They say Grigor Ashe was taken here two days past and lies in the Stone House now. I couldn't tell you whose word started it, but it's all anyone's whispering."}

@@ -1,0 +1,35 @@
+# v1_spec — the hop→phrasing ladder, taken from README.md's "Prompt surface"
+# table, with the band column from 02_rumor_pollen.md's "Hedge erosion".
+#
+#   hops 0, with an own line -> first person, in the holder's own words
+#   hops 0, without          -> "you saw" / "you were there when"
+#   hops 1                   -> "they say"
+#   hops 2+                  -> "you had it third-hand"
+#   cold (any hop count)     -> "you heard something of the sort, a while back"
+#
+# The band shortens that ladder rather than adding to it: a top-band telling
+# (Bed, Blood) has lost its hedges by the time it is repeated — flat at one hop,
+# "they say" at four — and a low-band one (Talk, Craft) keeps them the whole way.
+# No hop number is ever shown to the model: {hops} is deliberately unused, so a
+# person speaks of a distance and never counts it.
+
+[default]
+hops0_own = "{own}"
+hops0     = "you saw it yourself: {said}"
+hops1     = "they say {said}"
+hops2     = "you had it third-hand: {said}"
+cold      = "you heard something of the sort, a while back: {said}"
+
+[top_band]
+hops0_own = "{own}"
+hops0     = "you saw it yourself: {said}"
+hops1     = "{said}"
+hops2     = "they say {said}"
+cold      = "you heard it a while back, said as a thing that happened: {said}"
+
+[low_band]
+hops0_own = "{own}"
+hops0     = "you saw it yourself: {said}"
+hops1     = "they say {said}"
+hops2     = "you had it from somebody who had it from somebody else: {said}"
+cold      = "you heard something of the sort, a while back, and not from anybody who was there: {said}"

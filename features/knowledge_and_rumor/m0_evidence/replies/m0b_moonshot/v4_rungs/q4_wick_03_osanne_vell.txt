@@ -1,0 +1,2 @@
+say {"target": "player", "text": "Aye, it's true. I saw it from my own doorway. They took him, and he said not one word."}
+remember {"memory": "A stranger (player) asked me about Grigor Ashe's arrest at the Wickmarket. I confirmed I saw it."}

@@ -1,0 +1,1 @@
+say {"target":"player","text":"I've heard it third-hand, yes—that Grigor Ashe was taken at the Wickmarket two days past and lies in the Stone House. Ask the Stone House warders if you need it confirmed."}

@@ -1,0 +1,1 @@
+say {"target": "player", "text": "So they say. I heard it third-hand myself, but the talk is he was taken right here two days past. They say he's in the Stone House now."}

@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Grigor Ashe? I don't know the name, love, and I couldn't tell you street nor stair of it. I've been at these tubs since first light — ask the porters up by the Bonded warehouse, they see everything that moves through the ward."}

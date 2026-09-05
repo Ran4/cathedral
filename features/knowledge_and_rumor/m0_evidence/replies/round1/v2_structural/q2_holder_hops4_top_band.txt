@@ -1,0 +1,1 @@
+say {"target": "player", "text": "They say Rohese Sedge goes in at Doctor Ferrant's door after the Snuffing, and it is not for physic. That is the whole of what I have heard, mind — if you want the truth of it, ask nearer his door than mine."}

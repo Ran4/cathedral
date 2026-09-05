@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I don't know anything about a cut cord or a bale going over a beam. I work hides here at my bench. If it's cargo or cart business you're after, you'd want someone from the Weigh Ward, not me."}

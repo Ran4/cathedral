@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, that's the word going round — Grigor Ashe was taken right here at the Wickmarket, two days past, and lies in the Stone House now. Mind, I wasn't standing there myself when it happened; I had it from one who had it from the one who was. But it's all over the market."}

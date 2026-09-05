@@ -1,0 +1,181 @@
+# M0's frozen output, as repaired and re-measured by M0b: the `PromptStrings`
+# keys M1 adds to `assets/prompts/strings.toml`. Copy the keys below into that
+# file and add one `pub <key>: String` field per key to `PromptStrings`
+# (prompt/mod.rs:60), in this order, after `chalkable_note` and before the three
+# `pocket_*_note`s. **24 keys**: 2 block strings, 21 hedge rungs, 1 role phrasing.
+#
+# EVERY VALUE HERE IS THE MEASURED TEXT, BYTE FOR BYTE. It is `v6_both`, the
+# shipping variant of M0b (2026-09-04; see NOTES.md "M0b — measured repairs"):
+# `v2_structural`, the winner of M0's three-way A/B (66 live replies,
+# moonshot/kimi-k3, 2026-09-03), with two measured repairs — the hop ladder
+# split into seven rungs (R1) and the referral exemplars replaced by
+# descriptions (R2, which lives in `ignorance_rule.txt`, not here). M0b fired
+# 110 live replies on top of M0's 88, at the shipping prompt position, on both
+# providers (moonshot/kimi-k3 and openai/gpt-5.6-luna). Every value in this
+# file has reached both providers at least once; the three whose sample is
+# n = 1 per provider are labelled below.
+#
+# The only edits are mechanical: the harness used Python `{said}` / `{own}` /
+# `{trade}` / `{ward}` placeholders and this file uses `strings.toml`'s own
+# `%s`, per `accept_with` and `walking_to`. Values verified to round-trip to
+# `prose/v6_both/` byte for byte (NOTES.md, "The freeze (M0b)").
+# **Do not reword anything here.** A changed string is an unmeasured string; if
+# a change is wanted, re-fire the sheets NOTES.md names for it first — it costs
+# cents.
+#
+# The unconditional ignorance-rule paragraph is NOT here: it is `turn.j2` prose,
+# frozen separately in `ignorance_rule.txt`.
+
+
+# --- the `what_you_know` block ------------------------------------------------
+
+# The parenthesis after `**what_you_know**` — the facts this actor holds, first
+# hand or at some number of removes. Named like `notices_note` for the block it
+# sits beside; `bullet_section` supplies the trailing colon, so this value does
+# not carry one. Unchanged from M0.
+know_note = "what you have been told or saw yourself of the city's doings, in the words you have it in; this is the whole of it"
+
+# The block's instruction paragraph, rendered BETWEEN the header and the
+# bullets — the notice block's know-don't-announce discipline, plus the "what is
+# here is all that is here" clause that kept every fact-adjacent invention out
+# of this variant's replies. A multi-line value, which the rest of this file
+# has no precedent for: the line breaks are load-bearing, because the measured
+# prompt had them at exactly these columns. Unchanged from M0: M0b tested a
+# softened "let it lie" (R3, `v7_letitlie`) against this frozen text at the
+# shipping position on both providers and it measured no gain and one invented
+# number — the frozen clause stays.
+know_discipline = """
+These are things you know, not lines to deliver. Say one when it bears on what
+is in front of you, or when somebody asks about it, and otherwise let it lie —
+a person who repeats everything they have heard is a person nobody tells
+anything. Say it as it stands here: what you saw yourself you may state
+flatly, and what came to you through other mouths you pass on as that, with
+the same doubt still in it. Do not sharpen it: a day, a street, a name or a
+number you were not given is one you do not have. And what is here is all that
+is here — a thing standing right beside one of these, in the same trade or the
+same quarter or the same afternoon, you still do not know."""
+
+
+# --- the hop x band hedge ladder ----------------------------------------------
+#
+# One bullet per held fact: `<how you have it>: <what you have>`. The model is
+# told which mouth it is speaking with before it is told what to say — that is
+# this variant's whole bet.
+#
+# `%s` is the fact text: the actor's own first-person line for the `hops0_own`
+# rung, and the `said` string for every other rung. Exactly one `%s` per value,
+# so one `replacen("%s", …, 1)` renders it.
+#
+# RUNG SELECTION (M0b's rig; copy it exactly — this is the shape that was
+# measured). SEVEN rungs per band now, not five:
+#
+#     if cold           -> *_cold          (heat wins over hops, checked FIRST)
+#     else if hops == 0 -> *_hops0_own if the fact carries an `own` line
+#                          else *_hops0
+#     else if hops == 1 -> *_hops1
+#     else if hops == 2 -> *_hops2
+#     else if hops == 3 -> *_hops3
+#     else              -> *_hops4         (four removes or more)
+#
+# So `*_hops4` is every telling at four removes or more, and `*_cold` is the
+# faded register at ANY hop count. M0's ladder sent every telling at two
+# removes or more to one `*_hops2` line, so of M0's eight holders of one fact
+# six received one of only two rendered lines; the split renders six distinct
+# lines for the same eight (04 and 05 still share, both being authored at two
+# removes). The `hops0_own` rung renders the own line ALONE — no wrapper.
+#
+# BAND is the salience band (`02_rumor_pollen.md`, "Hedge erosion"): `default`
+# is the middle, `top` drops a rung early (at one hop a scandal is said flat)
+# and keeps shedding (at four removes it is simply what is known), `low` keeps
+# every rung and names the chain out loud all the way out. The erosion
+# relationship survived the split and is now legible at three and four removes
+# on both providers: read the three `hops4` rungs against each other.
+#
+# THE BAND STRINGS ARE 21 DISTINCT MEASURED VALUES, NOT ONE LADDER SHIFTED BY
+# BAND. `top_hops2` is "They say: %s", not `default_hops1`; `low_hops1`,
+# `low_hops2`, `top_cold` and `low_cold` are their own wordings. A six-key
+# layout that renders a band by stepping the default ladder up or down (as
+# `plan/M1.md`'s D18 table does) is not a transcription of the measured text:
+# it would put "the one who told you was there" — a one-remove claim — in front
+# of a top-band telling at four removes, which is a provenance lie the prompt
+# itself would be making. Transcribe all 21.
+#
+# THE HOP COUNT NEVER REACHES THE MODEL, in any band, and this is deliberate: a
+# number in front of a model is a number it says back, and "I had it at four
+# hops" is not a sentence a person utters. No rung says "second-hand",
+# "third-hand" or "fourth-hand" either — an ordinal of removes is the count in
+# words, and M0's retired `default_hops2` ("Third-hand, mouth to mouth…") was
+# the one such rung: it was wrong at three and four removes by construction and
+# came back as "third-hand" from 4 of 8 openai holders. Under the split, 0 of 24
+# openai holder replies and 0 of 24 moonshot ones coined "third-hand". (Moonshot
+# volunteered a WRONG ordinal three times — "second-hand" for two or three
+# removes — which the old rung never did; recorded in NOTES.md as flag F1, and
+# accepted.) Do not add a count.
+
+# The middle band. `default_hops2`, `default_hops3` and `default_hops4` are new
+# in M0b; each reached both providers through holders 04/05, 06 and 07 of the
+# eight-holder set, in three variants (n = 6, 3, 3 per provider).
+know_hedge_default_hops0_own = "First hand, in your own words: %s"
+know_hedge_default_hops0     = "You saw this yourself: %s"
+know_hedge_default_hops1     = "They say — and the one who told you was there: %s"
+know_hedge_default_hops2     = "The one who told you was not there either — they had it from the one who was: %s"
+know_hedge_default_hops3     = "It came to you down a line of mouths, and whoever at the end of it actually saw anything is a stranger to you: %s"
+know_hedge_default_hops4     = "This has been through a great many mouths before it reached yours, worn smooth in the telling, and nobody can now say who started it: %s"
+know_hedge_default_cold      = "You heard something of the sort a while back and it has gone dim: %s"
+
+# The top band — `Bed`, `Blood`. A rung is dropped: at one hop it is stated
+# flat, past that it becomes "they say", and by four removes it is simply
+# known. `top_hops3` and `top_hops4` are new in M0b, each measured at n = 1 per
+# provider under this prose (plus one more fire each under `v8_bare`'s
+# different rule text). `top_hops3`: clean on both. `top_hops4`: clean on
+# openai; on moonshot the reply referred the asker to places the sheet does not
+# carry — "the Doctor's lane", "ask at the Snuffing itself" — the one shape in
+# 110 replies where the rule's referral clause completed from sense (it recurs
+# in `v8_bare`'s two moonshot top-band fires; never on openai; never in a
+# threshold reply). A held scandal with no next mouth on the sheet is the case
+# to watch in M1's headless check.
+know_hedge_top_hops0_own = "First hand, in your own words: %s"
+know_hedge_top_hops0     = "You saw this yourself: %s"
+know_hedge_top_hops1     = "Flatly, as a thing that happened: %s"
+know_hedge_top_hops2     = "They say: %s"
+know_hedge_top_hops3     = "It is the common word now, and nobody bothers to say where they had it: %s"
+know_hedge_top_hops4     = "This is simply what is known in this city now, whoever said it first: %s"
+know_hedge_top_cold      = "Old talk now, but you know how it went: %s"
+
+# The low band — `Talk`, `Craft`. Every rung kept, and the chain named aloud.
+# `low_hops3` and `low_hops4` are new in M0b, each measured at n = 1 per
+# provider under this prose (plus one more fire each under `v8_bare`).
+# `low_hops4` is clean on both. `low_hops3` is the weakest rung of the 21:
+# openai thinned it to a bare "I was told" (a three-remove telling less hedged
+# than the same band at four), moonshot hedged it three times but called it
+# "second-hand". It ships with that on the record; M3 (hedge erosion)
+# re-measures it.
+know_hedge_low_hops0_own = "First hand, in your own words: %s"
+know_hedge_low_hops0     = "You saw this yourself: %s"
+know_hedge_low_hops1     = "They say — and you have it from the one mouth only: %s"
+know_hedge_low_hops2     = "You had it from somebody who had it from somebody, and it is trade-talk: %s"
+know_hedge_low_hops3     = "Passed to you at a remove you cannot account for, the sort of small news that gets carried because there is nothing else to carry: %s"
+know_hedge_low_hops4     = "Stall talk, handed along so often that its edges are gone, and you have never met anyone who was there: %s"
+know_hedge_low_cold      = "Somebody mentioned it once, long since, and you would not swear to a word of it: %s"
+
+
+# --- an unknown person as a fact's subject ------------------------------------
+
+# The role phrasing for a fact whose subject is outside the reader's `knows`
+# set. `unknown_person_name` (line 11) is the no-role fallback and stays as it
+# is; this is its role-bearing twin, and a fact's subject gets this one whenever
+# a trade and a ward are both known. Unchanged from M0.
+#
+# TWO `%s`, in this order: the trade, then the ward. Render with two sequential
+# `replacen("%s", …, 1)` calls — the only key in the file that needs more than
+# one.
+#
+# `"a {trade}, of {ward}"` was tried and rejected: the placeholder lands
+# mid-sentence in a hedged bullet and the comma reads as a stumble. The shipped
+# form copies `unknown_person_name`'s own idiom, and the parenthesis is a second
+# guard on the exact invention the two unknown-subject scenarios probe. It
+# worked as one: openai answered "Ask a carter of the Weigh Ward" off this
+# rendering in M0, and in M0b two of its five referrals again pointed at the
+# sheet's own unknown subject ("a carter of the Weigh Ward", "a cargo broker in
+# the Weigh Ward").
+unknown_person_role = "a %s of %s (you don't know their name)"

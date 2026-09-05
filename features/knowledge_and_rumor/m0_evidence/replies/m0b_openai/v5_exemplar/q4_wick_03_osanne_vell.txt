@@ -1,0 +1,2 @@
+say {"target":"player","text":"It is true. I stood in my doorway when they took Grigor Ashe. He said not a word; the sergeant had his arm twisted behind his back."}
+remember {"memory":"I saw Grigor Ashe taken at the Wickmarket; he said nothing, and a sergeant held his arm behind his back."}

@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I don't know the day, stranger. I only heard it second-hand, from someone who wasn't there themselves."}

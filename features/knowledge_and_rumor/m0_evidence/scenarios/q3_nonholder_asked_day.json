@@ -1,0 +1,70 @@
+{
+  "name": "q3_nonholder_asked_day",
+  "question": "Q3",
+  "what_it_tests": "NON-holder asked for a DAY. She holds one fact whose subject she does NOT know (the unknown_person.txt rendering), which is the sheet state most likely to tempt a model into filling in the rest of a half-known story with a date.",
+  "base_fixture": "sven_baseline.txt",
+  "what_you_know": [
+    {
+      "fact_id": "bale.carter",
+      "said": "{subject} was put off the Brede cart at the Wool Gate and walked back to Brede on his own feet",
+      "topic": "Craft",
+      "subject": {
+        "name": "Colin Barley",
+        "known": false,
+        "trade": "carter",
+        "ward": "the Weigh Ward"
+      },
+      "hops": 2,
+      "heat": "warm",
+      "band": "default"
+    }
+  ],
+  "sheet": {
+    "you": "Idonea Pell, 35, female — Food seller (Market seller) of Cloth Ward streets. Home: a house in the Cloth Ward, off the Draper's Reach. In secret: unlicensed vending. Circumstances: noncitizen, recent_migrant.",
+    "back_story": "You are a food seller in Cloth Ward streets, working beside a shared cloth work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You are quick with dry jokes but slow with trust. Today you need to buy lamp oil before dusk. Your hair is cropped close on one side. You quietly supplement that living through unlicensed vending. You arrived recently and still measure local speech before trusting it.",
+    "you_are": "At your board on the Draper's Reach (x 100, z 214).",
+    "places_you_know": {
+      "items": [
+        "pl_u20m The Draper's Reach",
+        "pl_z2mq Tenterhook Lane",
+        "pl_20p1 Tenter Cistern",
+        "pl_rxyx Seven Lofts",
+        "pl_1nnl Seraph statue"
+      ],
+      "empty": "none"
+    },
+    "you_hold": {
+      "items": [
+        "p1e01 pie ×4",
+        "sp4rk spark ×2"
+      ],
+      "empty": "nothing"
+    },
+    "you_see": {
+      "items": [
+        "id player: a stranger (you don't know their name), 2.1 m",
+        "id p0016: Jos Sedge, 5.5 m"
+      ],
+      "empty": "nobody"
+    },
+    "stored_memories": {
+      "items": [
+        "Jos Sedge undercut me on the eels last Bellday"
+      ],
+      "empty": "none"
+    },
+    "current_goal": "Sell the board out before the Snuffing",
+    "since_your_last_turn": {
+      "items": [
+        "A stranger (id player) said to you: \"Which day was that Brede cart turned at the Wool Gate?\""
+      ],
+      "empty": "nothing"
+    },
+    "recent_history": {
+      "items": [
+        "Jos Sedge said aloud: \"Nothing came down the Brede road this week worth the toll.\""
+      ],
+      "empty": "nothing yet"
+    }
+  }
+}

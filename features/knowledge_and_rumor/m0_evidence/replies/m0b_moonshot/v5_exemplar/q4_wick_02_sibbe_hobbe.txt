@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, it's true. Taken right here at the Wickmarket, two days past. They say he's in the Stone House now."}

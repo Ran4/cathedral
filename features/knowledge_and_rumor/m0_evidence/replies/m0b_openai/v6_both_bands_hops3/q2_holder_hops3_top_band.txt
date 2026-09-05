@@ -1,0 +1,1 @@
+say {"target":"player","text":"I don't know what lies between them. The common word is only that Rohese Sedge visits Doctor Ferrant after the Snuffing, and not for physic. Doctor Ferrant is the one to ask."}

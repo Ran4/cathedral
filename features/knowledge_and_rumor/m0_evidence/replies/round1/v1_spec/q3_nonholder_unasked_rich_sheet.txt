@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I deal in goods, not in the day's clamour. If you've something to pledge or redeem, step to the counter. Otherwise, the bridge gossip is free."}

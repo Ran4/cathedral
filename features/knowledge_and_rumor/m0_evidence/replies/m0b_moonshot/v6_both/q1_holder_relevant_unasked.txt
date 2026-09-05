@@ -1,0 +1,5 @@
+say {"target": "player", "text": "Nine sparks, friend, and cheap at that. It was walking yesterday."}
+say {"target": "fr5as", "text": "The slate, aye. Though the slate's older than the side, Rohese — Grigor's name has been on it since the Waning, and no coin up yet."}
+remember {"memory": "Rohese Ashe took a side of mutton on the Ashe slate today, coin promised on Bellday"}
+forget {"memory": "Grigor Ashe has owed me for a side of mutton since the Waning"}
+remember {"memory": "The Ashe slate owes me: Grigor's side since the Waning, and now Rohese's side today, coin promised on Bellday"}

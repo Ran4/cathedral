@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, it's true enough. Saw it with my own eyes, or near enough — they took him right here on the Wickmarket, two days past. Now he lies in the Stone House, and good riddance or bad luck to him, depending on what he did to earn it."}

@@ -1,0 +1,1 @@
+say {"target":"player","text":"I don't know which day. Ask a carter of the Weigh Ward; that tale came to me third-hand."}

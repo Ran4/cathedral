@@ -1,0 +1,2 @@
+say {"target": "player", "text": "Good day. Nine sparks for the side, and it will not be nine tomorrow."}
+say {"target": "fr5as", "text": "Rohese. The Ashe slate is two years cold, as you know — Grigor's side from the Waning was never paid for. I put nothing more on it. Coin in hand, or no mutton."}

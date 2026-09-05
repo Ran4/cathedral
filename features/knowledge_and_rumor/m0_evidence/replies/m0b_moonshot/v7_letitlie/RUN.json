@@ -1,0 +1,33 @@
+{
+  "command": [
+    "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+    "--provider",
+    "moonshot",
+    "--one-shot",
+    "/tmp/claude-1000/-home-ran-src-rust-cathedralbevy/1466f9de-a546-499e-9aff-c9565c5c3b2a/scratchpad/fire/v7_letitlie/<sheet>"
+  ],
+  "note": "built with `cargo build -q -p cathedral-backends --bin cathedral-headless`, then the binary called directly \u2014 four concurrent `cargo run`s serialise on the target lock. --one-shot sends the file verbatim as the whole prompt.",
+  "provider": "moonshot",
+  "model": "kimi-k3",
+  "sheets_dir": "/tmp/claude-1000/-home-ran-src-rust-cathedralbevy/1466f9de-a546-499e-9aff-c9565c5c3b2a/scratchpad/fire/v7_letitlie",
+  "concurrency": 1,
+  "wall_seconds": 4.828,
+  "git_commit": "f56a2c306ec1523fc569c7c2de232b8c90d4d4ef",
+  "counts": {
+    "total": 1,
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "calls": [
+    {
+      "sheet": "q1_holder_relevant_unasked.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.824,
+      "reply_bytes": 303,
+      "reply": "q1_holder_relevant_unasked.txt",
+      "stderr": "q1_holder_relevant_unasked.err"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, it's true. I was standing in my own doorway when they took him — he did not say one word, and the sergeant had his arm up behind his back. A hard sight on a market morning."}

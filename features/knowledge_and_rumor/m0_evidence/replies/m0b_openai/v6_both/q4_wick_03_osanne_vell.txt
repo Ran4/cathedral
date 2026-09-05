@@ -1,0 +1,1 @@
+say {"target":"player","text":"It is. I stood in my doorway when they took Grigor Ashe; he said not a word, and the sergeant had his arm twisted behind him."}

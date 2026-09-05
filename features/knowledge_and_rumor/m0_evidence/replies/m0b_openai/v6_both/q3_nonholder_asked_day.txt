@@ -1,0 +1,1 @@
+say {"target":"player","text":"I don't know which day. It came by word from a carter of the Weigh Ward; ask there."}

@@ -82,3 +82,70 @@ home_place_label = "go_to"
 pocket_mouth_note = "in your mouth"
 pocket_butt_note = "carried privily, behind"
 pocket_frontbutt_note = "carried privily, before"
+
+# ── what a person knows (the knowledge layer; its spec is under features/) ───
+# Frozen by M0b (m0_evidence/strings_draft.toml, 2026-09-04), byte for byte.
+# The parenthesis after `**what_you_know**`; `bullet_section` supplies the
+# trailing colon, so this value does not carry one.
+know_note = "what you have been told or saw yourself of the city's doings, in the words you have it in; this is the whole of it"
+
+# The block's instruction paragraph, rendered BETWEEN the header and the
+# bullets. The line breaks are load-bearing: the measured prompt had them at
+# exactly these columns.
+know_discipline = """
+These are things you know, not lines to deliver. Say one when it bears on what
+is in front of you, or when somebody asks about it, and otherwise let it lie —
+a person who repeats everything they have heard is a person nobody tells
+anything. Say it as it stands here: what you saw yourself you may state
+flatly, and what came to you through other mouths you pass on as that, with
+the same doubt still in it. Do not sharpen it: a day, a street, a name or a
+number you were not given is one you do not have. And what is here is all that
+is here — a thing standing right beside one of these, in the same trade or the
+same quarter or the same afternoon, you still do not know."""
+
+# The removes x band hedge ladder: one bullet per held telling, `<how you have it>:
+# <what you have>`. `%s` is the fact text — the actor's own first-person line
+# for the `hops0_own` rung (rendered ALONE, no wrapper), the `said` sentence for
+# every other rung. Twenty-one distinct measured values, not one ladder shifted
+# by band. No rung names a count or an ordinal, and none may.
+know_hedge_default_hops0_own = "First hand, in your own words: %s"
+know_hedge_default_hops0     = "You saw this yourself: %s"
+know_hedge_default_hops1     = "They say — and the one who told you was there: %s"
+know_hedge_default_hops2     = "The one who told you was not there either — they had it from the one who was: %s"
+know_hedge_default_hops3     = "It came to you down a line of mouths, and whoever at the end of it actually saw anything is a stranger to you: %s"
+know_hedge_default_hops4     = "This has been through a great many mouths before it reached yours, worn smooth in the telling, and nobody can now say who started it: %s"
+know_hedge_default_cold      = "You heard something of the sort a while back and it has gone dim: %s"
+
+know_hedge_top_hops0_own = "First hand, in your own words: %s"
+know_hedge_top_hops0     = "You saw this yourself: %s"
+know_hedge_top_hops1     = "Flatly, as a thing that happened: %s"
+know_hedge_top_hops2     = "They say: %s"
+know_hedge_top_hops3     = "It is the common word now, and nobody bothers to say where they had it: %s"
+know_hedge_top_hops4     = "This is simply what is known in this city now, whoever said it first: %s"
+know_hedge_top_cold      = "Old talk now, but you know how it went: %s"
+
+know_hedge_low_hops0_own = "First hand, in your own words: %s"
+know_hedge_low_hops0     = "You saw this yourself: %s"
+know_hedge_low_hops1     = "They say — and you have it from the one mouth only: %s"
+know_hedge_low_hops2     = "You had it from somebody who had it from somebody, and it is trade-talk: %s"
+know_hedge_low_hops3     = "Passed to you at a remove you cannot account for, the sort of small news that gets carried because there is nothing else to carry: %s"
+know_hedge_low_hops4     = "Stall talk, handed along so often that its edges are gone, and you have never met anyone who was there: %s"
+know_hedge_low_cold      = "Somebody mentioned it once, long since, and you would not swear to a word of it: %s"
+
+# A fact's subject the reader has never been told the name of. TWO `%s`, in
+# this order: the trade (occupation_display, first letter lowered), then the
+# ward (prompt::ward_label, "the Wick Ward"). `unknown_person_name` (line 11)
+# is the no-role fallback. No comma between the two: the comma form was tried
+# and rejected in M0.
+unknown_person_role = "a %s of %s (you don't know their name)"
+
+# ── M1's own fragments — UNMEASURED, rendered inside the measured sentences ──
+# `{day}` in a said/own template. No digit ever reaches a sheet: `day_days_past`'s
+# `%s` is filled with the count in words (two..seven); eight days and beyond,
+# every undated fact and every clock-less world render `day_long_ago`.
+day_today     = "today"
+day_yesterday = "yesterday"
+day_days_past = "%s days past"
+day_long_ago  = "a long while back"
+# `{place}` when the area key no longer resolves.
+place_unknown = "somewhere in the city"

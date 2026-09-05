@@ -1,0 +1,2 @@
+say {"target": "player", "text": "I don't know anything about that. I just carry the salt."}
+raise_word {"topic": "law", "said": "the toll notary takes a cut off every salt cart"}

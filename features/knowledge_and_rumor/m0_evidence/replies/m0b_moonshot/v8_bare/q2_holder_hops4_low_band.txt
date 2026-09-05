@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Stall talk, and stale at that. They say Hobbe's mill sent short weight to the Wickmarket bakehouse, and the flour cut with bean meal. I've never met a soul who saw it weighed. If it's weight you're after, bring it to my beam and I'll give you a figure you can swear to."}

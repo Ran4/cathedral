@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Trade-talk only, mind — I've not weighed that sack myself. Word is Bertran Hobbe's mill sent short weight to the Wickmarket bakehouse, and the flour cut with bean meal besides. If you've a sack of it in doubt, bring it to my beam and I'll call it true in front of the square — that's the only answer worth having."}

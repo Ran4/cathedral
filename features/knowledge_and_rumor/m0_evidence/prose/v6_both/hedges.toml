@@ -1,0 +1,65 @@
+# v4_rungs — v2_structural's ladder with hops 2, 3 and 4 given their OWN rungs.
+#
+# R1 of M0b. M0's frozen ladder was 5 rungs x 3 bands and collapsed every
+# telling at two removes or more into one `hops2` line, so of the eight q4_wick
+# holders four (hops 2, 2, 3, 4) received a BYTE-IDENTICAL knowledge line and two
+# more (hops 1, 1) received another: six of eight holders got one of two lines.
+# The parroting numbers M0 measured are therefore a floor on both providers, and
+# this file is the structural half of the repair (M3's garbling is the other).
+#
+# 7 rungs x 3 bands = 21 keys. Unchanged from v2_structural, byte for byte:
+# hops0_own, hops0, hops1 and cold in all three bands, plus top_band.hops2
+# ("They say") and low_band.hops2 (the somebody-who-had-it-from-somebody line) —
+# both of those are already the right rung for two removes in their own band and
+# both were measured. New: default.hops2, and hops3 + hops4 in all three bands.
+#
+# Every rung is a different SHAPE, not the same shape with a stronger adjective:
+# one names who was and was not there, one names the line the telling came down,
+# one names what the telling has become. That is what has to differ, because the
+# thing being defeated is a model with one sentence of room reciting the rendered
+# line back.
+#
+# Two constraints held from v2_structural, and both are load-bearing:
+#
+#   * No count ever reaches the model. {hops} is unused (as in v2), and no rung
+#     says "second-hand", "third-hand" or "fourth-hand" either — an ordinal of
+#     removes IS the count in words, it is the phrase v3_register got parroted
+#     back four times, and M0 measured that no reply of 88 ever mentioned a
+#     count while the number stayed out of the prompt. A person knows a thing
+#     came a long way; nobody counts the mouths.
+#   * Exactly one placeholder per rung ({said}, or {own} on the first-person
+#     rung) and nothing else interpolated.
+#
+# Bands are hedge erosion (02_rumor_pollen.md): the top band sheds a rung early
+# and keeps shedding — at four removes a scandal is stated as simply known — while
+# the low band keeps every hedge it has and names the chain out loud all the way
+# out. Read the three hops4 rungs against each other: "simply what is known in
+# this city now" (top), "nobody can now say who started it" (default), "you have never met
+# anyone who was there" (low).
+
+[default]
+hops0_own = "First hand, in your own words: {own}"
+hops0     = "You saw this yourself: {said}"
+hops1     = "They say — and the one who told you was there: {said}"
+hops2     = "The one who told you was not there either — they had it from the one who was: {said}"
+hops3     = "It came to you down a line of mouths, and whoever at the end of it actually saw anything is a stranger to you: {said}"
+hops4     = "This has been through a great many mouths before it reached yours, worn smooth in the telling, and nobody can now say who started it: {said}"
+cold      = "You heard something of the sort a while back and it has gone dim: {said}"
+
+[top_band]
+hops0_own = "First hand, in your own words: {own}"
+hops0     = "You saw this yourself: {said}"
+hops1     = "Flatly, as a thing that happened: {said}"
+hops2     = "They say: {said}"
+hops3     = "It is the common word now, and nobody bothers to say where they had it: {said}"
+hops4     = "This is simply what is known in this city now, whoever said it first: {said}"
+cold      = "Old talk now, but you know how it went: {said}"
+
+[low_band]
+hops0_own = "First hand, in your own words: {own}"
+hops0     = "You saw this yourself: {said}"
+hops1     = "They say — and you have it from the one mouth only: {said}"
+hops2     = "You had it from somebody who had it from somebody, and it is trade-talk: {said}"
+hops3     = "Passed to you at a remove you cannot account for, the sort of small news that gets carried because there is nothing else to carry: {said}"
+hops4     = "Stall talk, handed along so often that its edges are gone, and you have never met anyone who was there: {said}"
+cold      = "Somebody mentioned it once, long since, and you would not swear to a word of it: {said}"

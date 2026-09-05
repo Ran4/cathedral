@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I don't know any officer, nor any Grigor Ashe. If someone was taken, the grey clerks at the Tallage would keep the writ — I only keep the ropewalk."}

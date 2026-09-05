@@ -429,6 +429,11 @@ fn build(
             ward_sign: config.marks.ward_sign,
         },
         marks_decay_scale: config.marks.decay_scale,
+        // What the city knows (`features/knowledge_and_rumor/`). No packs from
+        // the game host: a quest plants its own rows through
+        // `EngineConfig::fact_packs`, which only the headless runner fills today.
+        knowledge_enabled: config.knowledge.enabled,
+        fact_packs: Vec::new(),
         clock: WorldClock::new(
             config.clock.seconds_per_day,
             Office::from_config_name(&config.clock.start_office).unwrap_or_else(|| {

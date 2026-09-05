@@ -1,0 +1,2 @@
+say {"target": "player", "text": "Nine sparks, friend. Fresh killed and hung proper."}
+say {"target": "fr5as", "text": "Rohese, you know I am good for the Ashe slate, but I have carried a side for Grigor since the Waning. I will set this one against that debt, and we are square."}

@@ -1,0 +1,1 @@
+say {"target":"player","text":"Aye, so I was told—but the teller wasn't there either. They said Grigor Ashe was taken here two days past and lies in the Stone House."}

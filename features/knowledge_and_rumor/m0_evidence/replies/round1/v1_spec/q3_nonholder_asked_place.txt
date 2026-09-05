@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Grigor Ashe? I don't know any Grigor Ashe, stranger. I know my tubs and my linen, that's all. If someone's been taken, you'd do better asking at the Tally Bridge or the Shambles well — I hear nothing here but the water."}

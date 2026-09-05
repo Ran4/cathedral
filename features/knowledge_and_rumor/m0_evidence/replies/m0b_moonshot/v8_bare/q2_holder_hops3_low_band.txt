@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Word is the mill sent short weight to the Wickmarket bakehouse, and the flour was cut with bean meal. That's what's carried to me, and I pass it as it came. If it's a weighing you're after, stand by the beam and name your sack."}

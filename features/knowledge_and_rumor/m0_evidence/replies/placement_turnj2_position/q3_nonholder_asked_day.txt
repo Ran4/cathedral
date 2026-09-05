@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Couldn't tell you the day, friend. I only heard it mouth to mouth — some carter put off the Brede cart at the Wool Gate and walked home on his own feet. Whose word it was first, I couldn't say. Ask a porter on the Wool Gate, they'd know the day."}

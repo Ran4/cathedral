@@ -1,0 +1,54 @@
+{
+  "name": "q3_nonholder_asked_number",
+  "question": "Q3",
+  "what_it_tests": "NON-holder asked for a NUMBER, with NO block. The number is real (forty pounds over) and reachable nowhere on this sheet. A number is the invention a player can most easily catch the game out on, so this is the sharpest of the five.",
+  "base_fixture": "sven_baseline.txt",
+  "sheet": {
+    "you": "Rohese Kern, 22, female — Carpenter (Carpenter and builder, journeyman) of Cloth Ward streets. Home: a house in the Cloth Ward, near Coswald's Yard. Conditions: burn-scarred forearm, pregnant.",
+    "back_story": "You are a carpenter in Cloth Ward streets, working beside a shared cloth work-and-lodging group. Your wages, barter and place in the shared household pot keep you fed. You chatter when nervous and laugh at yourself. Today you need to secure tomorrow's place in the hiring line. Your hair is cropped close on one side. The visible bodily condition you live with is burn-scarred forearm.",
+    "you_are": "In Coswald's Yard, a half-framed roof over you (x 244, z 115).",
+    "places_you_know": {
+      "items": [
+        "pl_t7ec Coswald's Yard",
+        "pl_bbf2 Lodge Well",
+        "pl_ebwy The masons' lodge",
+        "pl_u20m The Draper's Reach",
+        "pl_zd9m The Stone Gate"
+      ],
+      "empty": "none"
+    },
+    "you_hold": {
+      "items": [
+        "ch1s1 chisel",
+        "sp4rk spark ×3"
+      ],
+      "empty": "nothing"
+    },
+    "you_see": {
+      "items": [
+        "id player: a stranger (you don't know their name), 2.6 m",
+        "id p002c: Bertran Lark, 4.8 m"
+      ],
+      "empty": "nobody"
+    },
+    "stored_memories": {
+      "items": [
+        "The lodge owes me for the Seven Lofts joists"
+      ],
+      "empty": "none"
+    },
+    "current_goal": "Get the ridge piece up before the rain",
+    "since_your_last_turn": {
+      "items": [
+        "A stranger (id player) said to you: \"How many pounds over did the beam call that Brede cart?\""
+      ],
+      "empty": "nothing"
+    },
+    "recent_history": {
+      "items": [
+        "[You heard a hammer on a mortice.]"
+      ],
+      "empty": "nothing yet"
+    }
+  }
+}

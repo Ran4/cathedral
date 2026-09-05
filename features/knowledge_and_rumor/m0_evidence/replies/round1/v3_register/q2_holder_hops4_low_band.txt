@@ -1,0 +1,1 @@
+say {"target": "player", "text": "What I know, I've heard, not seen — and I'll say it plain as it came to me: Hobbe's mill sent short weight to the Wickmarket bakehouse, and the flour was cut with bean meal. That's the talk, passed mouth to mouth. If you want it proven, bring a sack to my beam and I'll weigh it true — that's the only answer I give that I'll swear to."}

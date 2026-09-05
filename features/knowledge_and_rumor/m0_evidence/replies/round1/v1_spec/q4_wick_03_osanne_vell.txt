@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Hush now, dear. Speak softer if you must speak of such things. I heard they took him, yes, but not here at my stall. What business is it of yours, if I may ask?"}

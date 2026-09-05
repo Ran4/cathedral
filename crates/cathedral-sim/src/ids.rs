@@ -102,6 +102,8 @@ id_newtype!(ItemId, "an item");
 id_newtype!(PlaceId, "a place the wayfinding registry names");
 id_newtype!(PartyId, "a road party");
 id_newtype!(DogId, "a street dog");
+id_newtype!(FactId, "a proposition the city repeats");
+id_newtype!(AreaId, "a named area");
 
 /// Correlates a cognition submission with its completion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -116,6 +118,19 @@ pub struct RequestId(pub u64);
 )]
 #[serde(transparent)]
 pub struct MarkId(pub u64);
+
+/// A dense handle for one live fact ([`crate::knowledge`]). Counter-allocated
+/// like [`MarkId`] rather than made by `id_newtype!`: nobody authors it, it is
+/// never rendered, and it is never serialised. `Copy`, so a `BTreeMap` keyed on
+/// `(PlanningWard, FactKey)` can be `range`d instead of filtered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct FactKey(pub u32);
+
+/// A dense handle for one entry of [`crate::areas::AreaMap::areas`], by index.
+/// Interned so a [`crate::knowledge::FactView`] costs two bytes for a place
+/// instead of a `String`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct AreaKey(pub u16);
 
 impl fmt::Display for MarkId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

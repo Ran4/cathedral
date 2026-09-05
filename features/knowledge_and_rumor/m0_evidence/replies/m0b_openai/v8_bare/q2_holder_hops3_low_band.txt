@@ -1,0 +1,1 @@
+say {"target":"player","text":"I was told Bertran Hobbe's mill sent short weight to the Wickmarket bakehouse, and that the flour was cut with bean meal. I cannot vouch for more than that."}

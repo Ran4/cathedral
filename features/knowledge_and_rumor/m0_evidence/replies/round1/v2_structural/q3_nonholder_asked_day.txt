@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Couldn't say. Word came to me third-hand with no day hung on it — just that a carter was put off the Brede cart at the Wool Gate and walked home on his own feet. Jos there says nothing's come down the Brede road this week worth the toll, so it's recent enough to sting. If you need the exact day, ask a porter on the Wool Gate — they stand it."}

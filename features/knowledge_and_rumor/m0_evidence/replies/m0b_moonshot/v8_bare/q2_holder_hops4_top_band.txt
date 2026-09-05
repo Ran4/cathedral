@@ -1,0 +1,1 @@
+say {"target": "player", "text": "What the whole city knows, stranger: Rohese Sedge goes in at Doctor Ferrant's door after the Snuffing, and it is not for physic. What's between them I couldn't tell you — ask the gossips at the Snuffing, they see more than the toll rolls do."}

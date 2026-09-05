@@ -1,0 +1,2 @@
+say {"target": "player", "text": "What I know is only what they say — that Rohese Sedge goes in at Doctor Ferrant's door after the Snuffing, and not for physic. Make of that what you will; I weigh goods, not gossip. Now, have you aught for the beam, or are you only here to chatter?"}
+```

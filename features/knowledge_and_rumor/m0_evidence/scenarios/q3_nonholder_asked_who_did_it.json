@@ -1,0 +1,70 @@
+{
+  "name": "q3_nonholder_asked_who_did_it",
+  "question": "Q3",
+  "what_it_tests": "NON-holder asked WHO DID IT — the agency question, which is the one an investigation actually turns on and the one a model is most willing to answer out of thin air. He holds one fact about a stranger, adjacent to the bale but not the answer. Does he refuse, and point at a trade or a post that would know?",
+  "base_fixture": "sven_baseline.txt",
+  "what_you_know": [
+    {
+      "fact_id": "bale.promise",
+      "said": "{subject} promised a weaver's bolt a place on the Brede cart, and took a penny for the word",
+      "topic": "Talk",
+      "subject": {
+        "name": "Renn Crake",
+        "known": false,
+        "trade": "cargo broker",
+        "ward": "the Weigh Ward"
+      },
+      "hops": 2,
+      "heat": "warm",
+      "band": "default"
+    }
+  ],
+  "sheet": {
+    "you": "Gile Thorn, 56, male — Hide carrier (Leather worker, warden) of Cloth Ward streets. Home: a house in the Cloth Ward, near Seven Lofts. Family: children: Segwin Thorn (id p0061), Noll Thorn (id p006l). Circumstances: widower.",
+    "back_story": "You are a hide carrier in Cloth Ward streets, working beside the Thorn household. Your wages, barter and place in the shared household pot keep you fed. You speak softly but refuse to be talked over. Today you need to find the owner of a missing hen. A tiny clay bird rides in your pocket.",
+    "you_are": "At your bench near Seven Lofts, the hides stacked behind you (x 252, z 234).",
+    "places_you_know": {
+      "items": [
+        "pl_rxyx Seven Lofts",
+        "pl_0bhk Seven Lofts fire tanks",
+        "pl_u20m The Draper's Reach",
+        "pl_z2mq Tenterhook Lane",
+        "pl_ebwy The masons' lodge"
+      ],
+      "empty": "none"
+    },
+    "you_hold": {
+      "items": [
+        "h1de1 hide",
+        "aw1l1 awl"
+      ],
+      "empty": "nothing"
+    },
+    "you_see": {
+      "items": [
+        "id player: a stranger (you don't know their name), 2.4 m",
+        "id p002e: Ansel Pell, 6.9 m"
+      ],
+      "empty": "nobody"
+    },
+    "stored_memories": {
+      "items": [
+        "Ansel Pell's tanks froze in the Waning and I lost a hide to it"
+      ],
+      "empty": "none"
+    },
+    "current_goal": "Finish the belt order",
+    "since_your_last_turn": {
+      "items": [
+        "A stranger (id player) said to you: \"Somebody cut the cord on that bale before it went over the beam. Who did it?\""
+      ],
+      "empty": "nothing"
+    },
+    "recent_history": {
+      "items": [
+        "[You heard a dog somewhere behind you.]"
+      ],
+      "empty": "nothing yet"
+    }
+  }
+}

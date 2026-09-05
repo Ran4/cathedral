@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, it's true enough. They took him right here two days past, and now he lies in the Stone House. Did you know him, or are you just after the gossip?"}

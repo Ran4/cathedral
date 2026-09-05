@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Short weight, and cut with bean meal besides. I had it at second hand, mind — but if it's Hobbe's flour you're weighing, you'll want a warden's beam and a sworn tally, not a miller's word. Bring it here and I'll weigh it aloud, grain by grain, and any man may stand and hear it."}

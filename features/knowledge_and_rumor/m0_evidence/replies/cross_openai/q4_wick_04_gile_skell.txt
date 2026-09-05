@@ -1,0 +1,1 @@
+say {"target":"player","text":"So it is said—Grigor Ashe was taken at the Wickmarket two days past and lies in the Stone House. But it reached me third-hand; I cannot vouch for it."}

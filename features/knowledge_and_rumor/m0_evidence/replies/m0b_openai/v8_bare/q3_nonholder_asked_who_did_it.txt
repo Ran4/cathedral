@@ -1,0 +1,1 @@
+say {"target":"player","text":"I don't know who cut it; I saw nothing of that bale. Ask the cargo broker in the Weigh Ward—such freight is their business."}

@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, so they say. Taken here two days past, and lies in the Stone House now. Third-hand, mind — I couldn't tell you whose word it began with. I only sell my wares."}

@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Cut the cord? I know nothing of that. My work is hides and leather, not bales and beams. If it's sabotage you're sniffing after, you'd do better asking the porters at the gate or the wardens who walk the walls. I keep to my bench."}

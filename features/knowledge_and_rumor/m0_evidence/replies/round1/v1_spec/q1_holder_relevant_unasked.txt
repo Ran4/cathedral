@@ -1,0 +1,3 @@
+say {"target": "player", "text": "Nine sparks, master, and cheap at the price. It'll not be nine tomorrow."}
+say {"target": "fr5as", "text": "Mistress Ashe, the slate is full. Grigor's mark for a side has stood since the Waning, and now they say he's in the Stone House. I'll take coin today, or the meat stays on the hook."}
+remember {"memory": "Rohese Ashe asked to put a side of mutton on the Ashe slate; I refused until the old debt is paid."}

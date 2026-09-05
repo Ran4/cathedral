@@ -1,0 +1,1 @@
+say {"target":"player","text":"That is what I have heard, though only third-hand: Grigor Ashe was taken at the Wickmarket two days past and lies in the Stone House. I cannot vouch for more."}

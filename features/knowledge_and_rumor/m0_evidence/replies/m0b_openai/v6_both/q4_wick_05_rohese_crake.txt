@@ -1,0 +1,1 @@
+say {"target":"player","text":"I was told Grigor Ashe was taken at the Wickmarket two days past and lies in the Stone House. The one who told me was not there either."}

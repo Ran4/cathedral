@@ -1,0 +1,1 @@
+say {"target": "player", "text": "That I couldn't tell you, love. I only had it third-hand — some carter put off the Brede cart at the Wool Gate, walked home on his own feet. When it was, I never heard."}

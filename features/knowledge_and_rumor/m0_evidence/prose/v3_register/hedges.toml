@@ -1,0 +1,38 @@
+# v3_register — the hop → phrasing ladder, as words to be lifted into the mouth
+# rather than a rule to be applied. Every value is a phrase a person could say
+# out loud ("they say …", "I had it third-hand"), because a handed phrase is
+# obeyed and a stated principle is skimmed.
+#
+# Bands are the hedge-erosion column (02_rumor_pollen.md, "Hedge erosion"):
+# [default] is README.md's un-banded ladder; [top_band] is Bed/Blood, where the
+# hedges go early — one hop out it is already said flat, as a thing that
+# happened; [low_band] is Talk/Craft, a stall grievance that keeps its hedges as
+# far as it ever travels.
+#
+# {hops} is deliberately never used: a number in front of a model is a number it
+# will say back, and no hop count has any business in a mouth.
+#
+# Nothing is prefixed at hops 0 with an own line: the first person is the whole
+# register, and a "you were there —" in front of "I was at my own door" swaps
+# person mid-sentence.
+
+[default]
+hops0_own = "{own}"
+hops0     = "you saw it yourself — {said}"
+hops1     = "they say {said}"
+hops2     = "you had it third-hand — {said}"
+cold      = "you heard something of the sort, a while back — {said}"
+
+[top_band]
+hops0_own = "{own}"
+hops0     = "you saw it yourself — {said}"
+hops1     = "{said}"
+hops2     = "they say {said}"
+cold      = "you heard it a while back, and it stuck — {said}"
+
+[low_band]
+hops0_own = "{own}"
+hops0     = "you saw it yourself — {said}"
+hops1     = "they say {said}"
+hops2     = "you had it from somebody who had it from somebody else — {said}"
+cold      = "you heard something of the sort a long while back, and most of it is gone — {said}"

@@ -1,0 +1,42 @@
+{
+  "command": [
+    "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+    "--provider",
+    "moonshot",
+    "--one-shot",
+    "/tmp/claude-1000/-home-ran-src-rust-cathedralbevy/1466f9de-a546-499e-9aff-c9565c5c3b2a/scratchpad/fire_bands/<sheet>"
+  ],
+  "note": "built with `cargo build -q -p cathedral-backends --bin cathedral-headless`, then the binary called directly \u2014 four concurrent `cargo run`s serialise on the target lock. --one-shot sends the file verbatim as the whole prompt.",
+  "provider": "moonshot",
+  "model": "kimi-k3",
+  "sheets_dir": "/tmp/claude-1000/-home-ran-src-rust-cathedralbevy/1466f9de-a546-499e-9aff-c9565c5c3b2a/scratchpad/fire_bands",
+  "concurrency": 2,
+  "wall_seconds": 7.292,
+  "git_commit": "f56a2c306ec1523fc569c7c2de232b8c90d4d4ef",
+  "counts": {
+    "total": 2,
+    "ok": 2,
+    "failed": 0,
+    "skipped": 0
+  },
+  "calls": [
+    {
+      "sheet": "q2_holder_hops4_low_band.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 7.282,
+      "reply_bytes": 386,
+      "reply": "q2_holder_hops4_low_band.txt",
+      "stderr": "q2_holder_hops4_low_band.err"
+    },
+    {
+      "sheet": "q2_holder_hops4_top_band.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.898,
+      "reply_bytes": 359,
+      "reply": "q2_holder_hops4_top_band.txt",
+      "stderr": "q2_holder_hops4_top_band.err"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+# PLACEHOLDER hop -> phrasing ladder. Every band needs all five keys:
+#   hops0_own  hops 0, and the holder has an authored first-person line
+#   hops0      hops 0, no first-person line ("you saw" / "you were there when")
+#   hops1      one hop ("they say")
+#   hops2      two or more hops ("you had it third-hand")
+#   cold       any hop count, cooled ("you heard something of the sort")
+#
+# Placeholders available in a value: {said} {own} {hops} {subject} {topic}
+# — plus anything a scenario fact declares in its own "vars".
+#
+# Bands are the hedge-erosion column (02_rumor_pollen.md, "Hedge erosion"):
+# a scenario fact's "band" picks one. [default] is the un-banded ladder from
+# README.md's "Prompt surface" table; [top_band] is Bed/Blood (a scandal loses
+# its hedges early); [low_band] is Talk/Craft (a squabble keeps them).
+
+[default]
+hops0_own = "PH-D-0-OWN {own}"
+hops0     = "PH-D-0 {said}"
+hops1     = "PH-D-1 {said}"
+hops2     = "PH-D-2+ ({hops} hops) {said}"
+cold      = "PH-D-COLD {said}"
+
+[top_band]
+hops0_own = "PH-T-0-OWN {own}"
+hops0     = "PH-T-0 {said}"
+hops1     = "PH-T-1 {said}"
+hops2     = "PH-T-2+ ({hops} hops) {said}"
+cold      = "PH-T-COLD {said}"
+
+[low_band]
+hops0_own = "PH-L-0-OWN {own}"
+hops0     = "PH-L-0 {said}"
+hops1     = "PH-L-1 {said}"
+hops2     = "PH-L-2+ ({hops} hops) {said}"
+cold      = "PH-L-COLD {said}"

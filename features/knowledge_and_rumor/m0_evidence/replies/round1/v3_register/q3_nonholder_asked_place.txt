@@ -1,0 +1,3 @@
+```
+say {"target": "player", "text": "Grigor Ashe? I don't know the name, love, and I couldn't tell you street nor door. If anyone's taken anywhere, the watch at the Tallage would know — or ask Warin Underbridge the carter when he passes, he hears everything off the wharves."}
+```

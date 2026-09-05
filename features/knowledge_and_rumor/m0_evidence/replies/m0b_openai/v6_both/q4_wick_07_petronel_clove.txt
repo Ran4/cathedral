@@ -1,0 +1,1 @@
+say {"target":"player","text":"It has come through many mouths that Grigor Ashe was taken at the Wickmarket two days past and lies in the Stone House. I cannot say who began it."}

@@ -1,0 +1,1 @@
+say {"target": "player", "text": "That's the talk of the whole ward, isn't it? They say Rohese Sedge goes in at Doctor Ferrant's door after the Snuffing, and not for physic. But I keep my head in the toll rolls, not in other folks' doorways — if you want the truth of it, ask at the Snuffing itself or find one of the gossips who watch the Doctor's lane."}

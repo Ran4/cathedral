@@ -1,0 +1,85 @@
+WHERE IT GOES: immediately before turn.j2's "Use ONLY the verbs listed below,
+spelled exactly as shown (lowercase English)." paragraph (turn.j2:194), with one
+blank line between — measured in exactly that position, see the note below.
+
+WHY UNCONDITIONAL: it is not the block's paragraph. It renders on every sheet,
+holder or not, because the sheets it has to work on are the ones with no
+what_you_know block at all — a non-holder asked point-blank is the go/no-go
+case, and a rule that appeared only when the block did would be absent from it.
+Do NOT wrap it in {% if %}. Its first sentence names the block by name and says
+what its absence means, which is what makes it read correctly on a blockless
+sheet; that clause is also the spec's `what_you_do_not_know` counter-block
+bought for free, and it must not be trimmed.
+
+Wrapped at <= 80 columns, matching turn.j2's own prose band (mode 78, range
+76-82). BYTE-FOR-BYTE THE MEASURED TEXT — do not rewrap and do not reword. This
+is v6_both, M0b's shipping variant (2026-09-04): v2_structural's paragraph, the
+winner of M0's three-way A/B, with exactly two lines changed — the bracketed
+exemplars in the first two bullets replaced by descriptions of the same two
+moves (repair R2). 22 lines, 1386 bytes (v2_structural's was 1379). Every other
+clause is M0's frozen text. A changed string is an unmeasured string.
+
+WHY THE TWO BULLETS CHANGED: v2_structural's exemplars were lifted into speech
+on both providers — "ask a porter, they stand on that gate" came back in 4 of
+22 moonshot replies (once byte-identical) and openai lifted the weigher one
+("Ask the weigher at the Stone Gate"). A city where every stranger sends you
+to the porters is the parroting risk in the refusal channel. M0b measured the
+describe form (this text) against the drop form (v8_bare: "- name the trade
+that would know;" / "- name the post whose business it is;") on both providers
+at this position: the describe form kept the go/no-go at 5/5 on both and lifted
+0 exemplars in 55 openai replies (baseline 3 of 7); the drop form regrew a
+"…is their business" ritual in 4 of 5 openai refusals and, on moonshot, brought
+back v1_spec's dead-end refusal on asked_day (refuses, refers nobody). One
+moonshot reply of 55 lifted the NEW clause ("they handle that sort of thing all
+day", the tanner on asked_who_did_it); expect the occasional lift, it is the
+cheaper failure. Alternating exemplars were not tried: this is one static
+string, so alternation would mean two quotable half-lines per bullet, not none.
+
+PLACEMENT WAS MEASURED, NOT ASSUMED. M0's round 1 rendered this paragraph lower
+down, just before the "Output like this, and only like this" block, and re-fired
+the frozen bytes at THIS position on six sheets (replies/placement_turnj2_position/,
+moonshot). M0b then fired every variant at this position only, on both
+providers (sheets/<variant>_turnj2/, the move asserted per sheet: same bytes,
+different place). Result for this text: the go/no-go 5/5 on moonshot and 5/5
+on openai (every referral handle verified on its own sheet, two of the five
+sheets carrying no block at all), 0 invented names, days, places or numbers in
+its 15 + 15 diagnostic replies, and 0 uses of raise_word with no occasion.
+
+THE "LET IT LIE" RE-CHECK (R3) IS CLOSED — the block-note clause is NOT this
+paragraph's, but M0's note about it is resolved here for whoever reads only
+this file: M0's one Q1 miss (the butcher refused credit off a debt memory and
+never said the arrest he held) came out repaired at this position with no byte
+changed, so the wording was suspected innocent. M0b fired the frozen clause and
+a softened one (v7_letitlie) at this position on both providers. The softened
+clause missed on both and invented a number on moonshot ("two years cold");
+the frozen clause is now pass / fail / pass in three n = 1 fires on moonshot
+and miss / miss / miss on openai, where replies are one refusal clause long.
+The wording is not the cause; the miss belongs to M1's relevance selection
+(NOTES.md, finding 1). Nothing in the block note changed.
+
+Copy exactly the lines between the two markers, and not the markers.
+
+>>> BEGIN turn.j2 PARAGRAPH >>>
+what_you_know is the whole of what you have been told, or saw for yourself, of
+what has happened in this city — all of it, and there is no more of it further
+down your sheet or anywhere in your head. A sheet with no what_you_know on it
+means nobody has told you anything and you saw nothing yourself: that empty
+place is itself an answer, and a plain one to give.
+
+So when you are asked about a thing that is not there, you do not know it, and
+saying so is no failure. Say so plainly, in your own manner, and then send the
+asker on — do one of these, not none of them:
+
+- name the trade that would know it, whoever handles that sort of thing all day;
+- name the post whose business it is, or the officer who keeps such things;
+- name where it happened, or who was standing there.
+
+Having nobody to send them to is an answer too; say that. But never fill a gap
+in somebody else's story with a name, a day, a street or a number — not out of
+your sheet, not out of what would make sense — and do not slip one past as a
+guess, a likelihood or a maybe: whatever you say aloud in this city is carried
+on by whoever heard you, and a guess repeated twice is what the ward believes.
+Being wrong about a thing you were told is ordinary here; making one up is not.
+None of this binds your own trade, your own day, your own household or your own
+opinions: speak of those as freely as ever.
+<<< END turn.j2 PARAGRAPH <<<

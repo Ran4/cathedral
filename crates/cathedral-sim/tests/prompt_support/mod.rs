@@ -100,6 +100,29 @@ pub fn md_section(prompt: &str, label: &str) -> Option<Vec<String>> {
     )
 }
 
+/// The `what_you_know` bullets of a rendered prompt — `None` when the section
+/// is absent, which is the knowing-nothing majority's case.
+///
+/// [`md_section`] cannot read this block: its `take_while(starts_with("- "))`
+/// stops at the blank line the header is followed by, because the block puts its
+/// instruction paragraph between the header and the bullets. Scanning stops at
+/// the next section label, so the ignorance rule's own bullets in `turn.j2`
+/// (which render *above* the sheet) can never be mistaken for held facts.
+pub fn known_bullets(prompt: &str) -> Option<Vec<String>> {
+    let mut lines = prompt.lines();
+    lines.find(|line| line.starts_with("**what_you_know**"))?;
+    let mut bullets = Vec::new();
+    for line in lines {
+        if line.starts_with("**") {
+            break;
+        }
+        if let Some(bullet) = line.strip_prefix("- ") {
+            bullets.push(bullet.to_string());
+        }
+    }
+    Some(bullets)
+}
+
 /// Whitespace-normalized prompt — the Python footer assertions compare against
 /// `" ".join(rendered.split())`.
 pub fn compact(prompt: &str) -> String {

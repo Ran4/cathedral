@@ -1,0 +1,1 @@
+say {"target":"player","text":"It came to me down a line of mouths, but yes—the word is that Grigor Ashe was taken at the Wickmarket two days past and lies in the Stone House."}

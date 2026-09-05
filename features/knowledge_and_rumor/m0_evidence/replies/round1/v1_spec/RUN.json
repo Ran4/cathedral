@@ -1,0 +1,446 @@
+{
+  "command": [
+    "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+    "--provider",
+    "moonshot",
+    "--one-shot",
+    "features/knowledge_and_rumor/m0_evidence/sheets/v1_spec/<sheet>"
+  ],
+  "note": "built with `cargo build -q -p cathedral-backends --bin cathedral-headless`, then the binary called directly \u2014 four concurrent `cargo run`s serialise on the target lock. --one-shot sends the file verbatim as the whole prompt.",
+  "provider": "moonshot",
+  "model": "kimi-k3",
+  "sheets_dir": "features/knowledge_and_rumor/m0_evidence/sheets/v1_spec",
+  "concurrency": 4,
+  "wall_seconds": 35.08,
+  "git_commit": "6910fdf762c754f60cc0230bd4186d0f0137f3d6",
+  "counts": {
+    "total": 22,
+    "ok": 22,
+    "failed": 0,
+    "skipped": 0
+  },
+  "calls": [
+    {
+      "sheet": "q1_holder_relevant_unasked.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 6.294,
+      "reply_bytes": 448,
+      "reply": "q1_holder_relevant_unasked.txt",
+      "stderr": "q1_holder_relevant_unasked.err"
+    },
+    {
+      "sheet": "q1q3_holder_asked_adjacent.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.268,
+      "reply_bytes": 277,
+      "reply": "q1q3_holder_asked_adjacent.txt",
+      "stderr": "q1q3_holder_asked_adjacent.err"
+    },
+    {
+      "sheet": "q2_holder_asked_straight.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.96,
+      "reply_bytes": 264,
+      "reply": "q2_holder_asked_straight.txt",
+      "stderr": "q2_holder_asked_straight.err"
+    },
+    {
+      "sheet": "q2_holder_cold_asked.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 9.456,
+      "reply_bytes": 489,
+      "reply": "q2_holder_cold_asked.txt",
+      "stderr": "q2_holder_cold_asked.err"
+    },
+    {
+      "sheet": "q2_holder_hops4_low_band.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 5.114,
+      "reply_bytes": 317,
+      "reply": "q2_holder_hops4_low_band.txt",
+      "stderr": "q2_holder_hops4_low_band.err"
+    },
+    {
+      "sheet": "q2_holder_hops4_top_band.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 6.69,
+      "reply_bytes": 291,
+      "reply": "q2_holder_hops4_top_band.txt",
+      "stderr": "q2_holder_hops4_top_band.err"
+    },
+    {
+      "sheet": "q3_nonholder_asked_day.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.587,
+      "reply_bytes": 207,
+      "reply": "q3_nonholder_asked_day.txt",
+      "stderr": "q3_nonholder_asked_day.err"
+    },
+    {
+      "sheet": "q3_nonholder_asked_name.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 3.869,
+      "reply_bytes": 186,
+      "reply": "q3_nonholder_asked_name.txt",
+      "stderr": "q3_nonholder_asked_name.err"
+    },
+    {
+      "sheet": "q3_nonholder_asked_number.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 9.41,
+      "reply_bytes": 554,
+      "reply": "q3_nonholder_asked_number.txt",
+      "stderr": "q3_nonholder_asked_number.err"
+    },
+    {
+      "sheet": "q3_nonholder_asked_place.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.541,
+      "reply_bytes": 258,
+      "reply": "q3_nonholder_asked_place.txt",
+      "stderr": "q3_nonholder_asked_place.err"
+    },
+    {
+      "sheet": "q3_nonholder_asked_who_did_it.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.167,
+      "reply_bytes": 228,
+      "reply": "q3_nonholder_asked_who_did_it.txt",
+      "stderr": "q3_nonholder_asked_who_did_it.err"
+    },
+    {
+      "sheet": "q3_nonholder_unasked_rich_sheet.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.394,
+      "reply_bytes": 179,
+      "reply": "q3_nonholder_unasked_rich_sheet.txt",
+      "stderr": "q3_nonholder_unasked_rich_sheet.err"
+    },
+    {
+      "sheet": "q4_wick_01_ansel_quern.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 5.415,
+      "reply_bytes": 199,
+      "reply": "q4_wick_01_ansel_quern.txt",
+      "stderr": "q4_wick_01_ansel_quern.err"
+    },
+    {
+      "sheet": "q4_wick_02_sibbe_hobbe.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 3.556,
+      "reply_bytes": 151,
+      "reply": "q4_wick_02_sibbe_hobbe.txt",
+      "stderr": "q4_wick_02_sibbe_hobbe.err"
+    },
+    {
+      "sheet": "q4_wick_03_osanne_vell.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.456,
+      "reply_bytes": 197,
+      "reply": "q4_wick_03_osanne_vell.txt",
+      "stderr": "q4_wick_03_osanne_vell.err"
+    },
+    {
+      "sheet": "q4_wick_04_gile_skell.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 5.433,
+      "reply_bytes": 218,
+      "reply": "q4_wick_04_gile_skell.txt",
+      "stderr": "q4_wick_04_gile_skell.err"
+    },
+    {
+      "sheet": "q4_wick_05_rohese_crake.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 4.166,
+      "reply_bytes": 171,
+      "reply": "q4_wick_05_rohese_crake.txt",
+      "stderr": "q4_wick_05_rohese_crake.err"
+    },
+    {
+      "sheet": "q4_wick_06_havise_bram.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 7.274,
+      "reply_bytes": 219,
+      "reply": "q4_wick_06_havise_bram.txt",
+      "stderr": "q4_wick_06_havise_bram.err"
+    },
+    {
+      "sheet": "q4_wick_07_petronel_clove.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 5.112,
+      "reply_bytes": 151,
+      "reply": "q4_wick_07_petronel_clove.txt",
+      "stderr": "q4_wick_07_petronel_clove.err"
+    },
+    {
+      "sheet": "q4_wick_08_ede_kett.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 5.057,
+      "reply_bytes": 142,
+      "reply": "q4_wick_08_ede_kett.txt",
+      "stderr": "q4_wick_08_ede_kett.err"
+    },
+    {
+      "sheet": "q5_raise_word_no_occasion.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 9.325,
+      "reply_bytes": 40,
+      "reply": "q5_raise_word_no_occasion.txt",
+      "stderr": "q5_raise_word_no_occasion.err"
+    },
+    {
+      "sheet": "q5_raise_word_with_occasion.txt",
+      "status": "ok",
+      "attempts": 1,
+      "seconds": 7.763,
+      "reply_bytes": 180,
+      "reply": "q5_raise_word_with_occasion.txt",
+      "stderr": "q5_raise_word_with_occasion.err"
+    }
+  ],
+  "previous_runs": [
+    {
+      "command": [
+        "/home/ran/src/rust/cathedralbevy/target/debug/cathedral-headless",
+        "--provider",
+        "moonshot",
+        "--one-shot",
+        "features/knowledge_and_rumor/m0_evidence/sheets/v1_spec/<sheet>"
+      ],
+      "note": "built with `cargo build -q -p cathedral-backends --bin cathedral-headless`, then the binary called directly \u2014 four concurrent `cargo run`s serialise on the target lock. --one-shot sends the file verbatim as the whole prompt.",
+      "provider": "moonshot",
+      "model": "kimi-k2.5",
+      "sheets_dir": "features/knowledge_and_rumor/m0_evidence/sheets/v1_spec",
+      "concurrency": 4,
+      "wall_seconds": 3.279,
+      "git_commit": "6910fdf762c754f60cc0230bd4186d0f0137f3d6",
+      "counts": {
+        "total": 22,
+        "ok": 0,
+        "failed": 22,
+        "skipped": 0
+      },
+      "calls": [
+        {
+          "sheet": "q1_holder_relevant_unasked.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.231,
+          "reply_bytes": 0,
+          "reply": "q1_holder_relevant_unasked.txt",
+          "stderr": "q1_holder_relevant_unasked.err"
+        },
+        {
+          "sheet": "q1q3_holder_asked_adjacent.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.306,
+          "reply_bytes": 0,
+          "reply": "q1q3_holder_asked_adjacent.txt",
+          "stderr": "q1q3_holder_asked_adjacent.err"
+        },
+        {
+          "sheet": "q2_holder_asked_straight.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.604,
+          "reply_bytes": 0,
+          "reply": "q2_holder_asked_straight.txt",
+          "stderr": "q2_holder_asked_straight.err"
+        },
+        {
+          "sheet": "q2_holder_cold_asked.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.222,
+          "reply_bytes": 0,
+          "reply": "q2_holder_cold_asked.txt",
+          "stderr": "q2_holder_cold_asked.err"
+        },
+        {
+          "sheet": "q2_holder_hops4_low_band.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.436,
+          "reply_bytes": 0,
+          "reply": "q2_holder_hops4_low_band.txt",
+          "stderr": "q2_holder_hops4_low_band.err"
+        },
+        {
+          "sheet": "q2_holder_hops4_top_band.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.233,
+          "reply_bytes": 0,
+          "reply": "q2_holder_hops4_top_band.txt",
+          "stderr": "q2_holder_hops4_top_band.err"
+        },
+        {
+          "sheet": "q3_nonholder_asked_day.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.233,
+          "reply_bytes": 0,
+          "reply": "q3_nonholder_asked_day.txt",
+          "stderr": "q3_nonholder_asked_day.err"
+        },
+        {
+          "sheet": "q3_nonholder_asked_name.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.251,
+          "reply_bytes": 0,
+          "reply": "q3_nonholder_asked_name.txt",
+          "stderr": "q3_nonholder_asked_name.err"
+        },
+        {
+          "sheet": "q3_nonholder_asked_number.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.25,
+          "reply_bytes": 0,
+          "reply": "q3_nonholder_asked_number.txt",
+          "stderr": "q3_nonholder_asked_number.err"
+        },
+        {
+          "sheet": "q3_nonholder_asked_place.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.251,
+          "reply_bytes": 0,
+          "reply": "q3_nonholder_asked_place.txt",
+          "stderr": "q3_nonholder_asked_place.err"
+        },
+        {
+          "sheet": "q3_nonholder_asked_who_did_it.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.23,
+          "reply_bytes": 0,
+          "reply": "q3_nonholder_asked_who_did_it.txt",
+          "stderr": "q3_nonholder_asked_who_did_it.err"
+        },
+        {
+          "sheet": "q3_nonholder_unasked_rich_sheet.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.269,
+          "reply_bytes": 0,
+          "reply": "q3_nonholder_unasked_rich_sheet.txt",
+          "stderr": "q3_nonholder_unasked_rich_sheet.err"
+        },
+        {
+          "sheet": "q4_wick_01_ansel_quern.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.249,
+          "reply_bytes": 0,
+          "reply": "q4_wick_01_ansel_quern.txt",
+          "stderr": "q4_wick_01_ansel_quern.err"
+        },
+        {
+          "sheet": "q4_wick_02_sibbe_hobbe.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.253,
+          "reply_bytes": 0,
+          "reply": "q4_wick_02_sibbe_hobbe.txt",
+          "stderr": "q4_wick_02_sibbe_hobbe.err"
+        },
+        {
+          "sheet": "q4_wick_03_osanne_vell.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.242,
+          "reply_bytes": 0,
+          "reply": "q4_wick_03_osanne_vell.txt",
+          "stderr": "q4_wick_03_osanne_vell.err"
+        },
+        {
+          "sheet": "q4_wick_04_gile_skell.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.227,
+          "reply_bytes": 0,
+          "reply": "q4_wick_04_gile_skell.txt",
+          "stderr": "q4_wick_04_gile_skell.err"
+        },
+        {
+          "sheet": "q4_wick_05_rohese_crake.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.288,
+          "reply_bytes": 0,
+          "reply": "q4_wick_05_rohese_crake.txt",
+          "stderr": "q4_wick_05_rohese_crake.err"
+        },
+        {
+          "sheet": "q4_wick_06_havise_bram.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.288,
+          "reply_bytes": 0,
+          "reply": "q4_wick_06_havise_bram.txt",
+          "stderr": "q4_wick_06_havise_bram.err"
+        },
+        {
+          "sheet": "q4_wick_07_petronel_clove.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.236,
+          "reply_bytes": 0,
+          "reply": "q4_wick_07_petronel_clove.txt",
+          "stderr": "q4_wick_07_petronel_clove.err"
+        },
+        {
+          "sheet": "q4_wick_08_ede_kett.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.243,
+          "reply_bytes": 0,
+          "reply": "q4_wick_08_ede_kett.txt",
+          "stderr": "q4_wick_08_ede_kett.err"
+        },
+        {
+          "sheet": "q5_raise_word_no_occasion.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.225,
+          "reply_bytes": 0,
+          "reply": "q5_raise_word_no_occasion.txt",
+          "stderr": "q5_raise_word_no_occasion.err"
+        },
+        {
+          "sheet": "q5_raise_word_with_occasion.txt",
+          "status": "failed",
+          "attempts": 2,
+          "seconds": 0.243,
+          "reply_bytes": 0,
+          "reply": "q5_raise_word_with_occasion.txt",
+          "stderr": "q5_raise_word_with_occasion.err"
+        }
+      ]
+    }
+  ]
+}

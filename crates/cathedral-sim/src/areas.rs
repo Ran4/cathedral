@@ -9,7 +9,10 @@ use std::{collections::BTreeSet, f64::consts::TAU, fmt};
 
 use serde::{Deserialize, Serialize};
 
-use crate::math::{Vec3, vec3_serde};
+use crate::{
+    ids::AreaKey,
+    math::{Vec3, vec3_serde},
+};
 
 const SUPPORTED_SCHEMA_VERSION: u32 = 1;
 const COMPASS_SECTORS: [&str; 16] = [
@@ -284,6 +287,28 @@ impl AreaMap {
             ));
         }
         Ok(())
+    }
+
+    /// The dense handle for an authored area id — the index into [`Self::areas`],
+    /// which is JSON order and therefore stable across runs and goldens
+    /// ([`AreaMap::validate`] rejects a duplicate id, so the index is an
+    /// identity).
+    ///
+    /// Takes `&str` rather than an [`AreaId`](crate::ids::AreaId) so that id,
+    /// `String` and `&str` callers all reach it.
+    pub fn key_of_id(&self, id: &str) -> Option<AreaKey> {
+        let index = self.areas.iter().position(|area| area.id == id)?;
+        u16::try_from(index).ok().map(AreaKey)
+    }
+
+    /// The spoken label behind a handle — `"The Wickmarket"`. `None` for a
+    /// handle from another map, and for every handle at all in the empty default
+    /// map, so a hermetic world renders a place it cannot resolve as
+    /// `place_unknown` rather than inventing one.
+    pub fn label_of_key(&self, key: AreaKey) -> Option<&str> {
+        self.areas
+            .get(usize::from(key.0))
+            .map(|area| area.label.as_str())
     }
 
     /// The containing logical area, if any.

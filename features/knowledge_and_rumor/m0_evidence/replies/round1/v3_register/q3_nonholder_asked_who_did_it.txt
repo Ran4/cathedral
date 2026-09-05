@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I don't know who cut the cord. I wasn't there when it happened. You should ask the wardens or someone who was present."}

@@ -1,0 +1,2 @@
+say {"target": "player", "text": "Aye, I was on the Cut that week — I heard tell of it, same as anyone with ears. A Brede cart got turned back at the Wool Gate, and the beam called it forty pound over. Forty! Somebody's packhorse arithmetic, that."}
+say {"target": "player", "text": "And I'll tell you what else I heard, third-hand mind — some cargo broker out of the Weigh Ward took a penny off a weaver, promised his bolt a place on that very Brede cart. Never got the man's name. You want the truth of it, ask at the Wool Gate what the beam said — they'll have it exact."}

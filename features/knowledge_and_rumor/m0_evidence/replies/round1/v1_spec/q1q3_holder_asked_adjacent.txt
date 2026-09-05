@@ -1,0 +1,1 @@
+say {"target": "player", "text": "The Tallage is not my ward, friend. I am a butcher, not a salter. If you want the worth of contracts, you must ask the tallymen there. I can tell you the worth of a good side of mutton, though: nine sparks, and it will not be nine tomorrow."}

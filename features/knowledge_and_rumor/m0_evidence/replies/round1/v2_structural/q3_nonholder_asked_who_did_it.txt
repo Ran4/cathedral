@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I know nothing of any bale, friend. That is porters' work at the Weigh Ward, not hide work. Ask the men who stand the beam."}

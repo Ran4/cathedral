@@ -1,0 +1,87 @@
+M0b — what was fired, where it landed, and what each directory is FOR.
+Written by the firing agent. Nothing here is a score: the replies are unjudged,
+and two independent scorers own the verdicts.
+
+Prose under ../prose/{v4_rungs,v5_exemplar,v6_both,v7_letitlie}/, one axis moved
+each — see ../prose/M0B_VARIANTS.txt for the wording and the provenance.
+
+All sheets were fired at the SHIPPING PROMPT POSITION: the ignorance-rule
+paragraph sits immediately before turn.j2's "Use ONLY the verbs listed below",
+not at the harness's low position where M0 round 1 measured it. The moved sheets
+are kept beside the unmoved ones as ../sheets/<variant>_turnj2/, and the move is
+asserted per sheet by scripts/m0b/move_rule.py: the excised paragraph is
+byte-for-byte the variant's own ignorance_rule.txt, and the whole sheet's byte
+length is unchanged by the move. Those two assertions passed on 4 x 22 sheets.
+
+    directory                         sheets  what it is for
+    m0b_<provider>/v4_rungs/               8  R1 alone (the 7x3 ladder)
+    m0b_<provider>/v5_exemplar/            8  R2 alone (the referral exemplars)
+    m0b_<provider>/v6_both/               15  R1+R2, the shipping candidate:
+                                              the 8 q4_wick parroting sheets,
+                                              the 5 q3 go/no-go sheets,
+                                              q1 (R3's frozen arm),
+                                              q5 (raise_word occasion)
+    m0b_<provider>/v7_letitlie/            1  q1 only — R3's softened arm; the
+                                              v6_both q1 reply is its control,
+                                              same position, same everything else
+    m0b_<provider>/v6_both_bands/          2  NOT one of the four thresholds. A
+                                              sanity fire, see below.
+
+<provider> is m0b_moonshot (kimi-k3, the LLM_MODEL override is mandatory —
+the repo's kimi-k2.5 default 404s at the provider) and m0b_openai (gpt-5.6-luna,
+no override). Byte-identical sheets to both, so a difference between the two
+directories is the model and nothing else.
+
+64 calls for the specified matrix + 4 for the band sanity fire = 68. Every call
+ok on attempt 1, 0 failures, 0 retries; per-call wall times and the exact command
+are in each directory's RUN.json. All 68 replies are non-empty and all 68 are
+accepted by a port of the game's own parse_reply (scripts/m0b/parse_check.py):
+0 that the game's parser would reject.
+
+------------------------------------------------------- the band sanity fire
+
+All eight q4_wick scenarios are band `default`, so the specified matrix exercises
+only the DEFAULT band's new rungs (default.hops2 / hops3 / hops4 all reached a
+provider, at q4_wick_04/05, _06 and _07). R1 also authors four rungs in the other
+two bands — top_band.hops3/hops4 and low_band.hops3/hops4 — and the matrix as
+specified fires none of them. Since M1 may only transcribe measured text, the two
+scenarios that DO render a new band rung were fired as well, at v6_both, on both
+providers:
+
+    q2_holder_hops4_top_band   renders top_band.hops4
+                               ("This is simply what is known in this city now…")
+    q2_holder_hops4_low_band   renders low_band.hops4
+                               ("Stall talk, handed along so often that its edges
+                                 are gone, and you have never met anyone who was
+                                 there…")
+
+These are the same two scenarios M0 round 1 used for the erosion pair; under
+v2_structural they rendered top_band.hops2 / low_band.hops2 instead, so
+replies/round1/v2_structural/ holds the before for the same two asks.
+
+top_band.hops3 and low_band.hops3 remain unfired: no scenario in the set is
+authored at hops 3 in either of those bands, and inventing one would have added a
+sheet the M0 record does not cover. Worth naming in the M0b verdict as the one
+piece of R1 text no provider has yet seen.
+
+------------------------------------------- correction, 2026-09-04 (verdict step)
+
+The paragraph above is stale. After it was written the firing agent authored
+../scenarios/q2_holder_hops3_top_band.json and q2_holder_hops3_low_band.json —
+byte-identical to their hops-4 twins but for the rendered rung (2 changed lines
+per pair) — and fired them at v6_both on both providers:
+
+    m0b_<provider>/v6_both_bands_hops3/     2  top_band.hops3 and low_band.hops3
+
+So every one of R1's 21 hedge keys has now reached both providers at least once
+(the two hops-3 rungs at n = 1 each). It also fired a fifth variant, not listed
+above, on the 15-sheet diagnostic set plus the four band sheets:
+
+    m0b_<provider>/v8_bare/                19  R1 + the exemplars DROPPED
+                                              (see ../prose/M0B_VARIANTS.txt)
+
+Total calls: 55 per provider, 110 in all, every one ok on attempt 1; all 110
+accepted by the parse_reply port. The sheets behind these two fires lived only
+in the firing scratchpad; they were copied into ../sheets/ unaltered
+(v6_both{,_turnj2}/q2_holder_hops3_*.txt, v8_bare/, v8_bare_turnj2/) before it
+went. The verdict is in ../NOTES.md, "M0b — measured repairs (2026-09-04)".

@@ -387,7 +387,7 @@ mod tests {
             &fs::read_to_string(root.join("assets/world/areas.json")).unwrap(),
         )
         .unwrap();
-        let world = build_world(
+        let mut world = build_world(
             &seed,
             WorldConfig {
                 area_map: areas,
@@ -395,6 +395,27 @@ mod tests {
                 ..WorldConfig::default()
             },
         );
+        // `build_world` does not seed facts — `Engine::new` does — so the bound
+        // would otherwise never cover a fact-holder's sheet, and the shipped
+        // catalog's five holdings would never be resolved against the real cast
+        // and the real `areas.json` anywhere in the tree
+        // (`features/knowledge_and_rumor/`, M1 step 17a).
+        let catalog = std::sync::Arc::clone(&world.fact_catalog);
+        let diagnostics = catalog.seed(&mut world);
+        assert!(
+            diagnostics.is_empty(),
+            "the shipped fact catalog did not resolve: {diagnostics:?}"
+        );
+        assert_eq!(world.knowledge.len(), 2, "the shipped catalog installs two");
+        // Seeded rows live on the fact, not in the carrier store, so the count
+        // goes through `holdings_of` — which is the one reader every consumer
+        // uses and therefore the one worth pinning.
+        let holdings: usize = world
+            .roster
+            .iter()
+            .map(|id| cathedral_sim::knowledge::holdings_of(&world, id).len())
+            .sum();
+        assert_eq!(holdings, 5, "the shipped catalog seeds five holdings");
         let env = PromptEnv::new(
             &fs::read_to_string(root.join("assets/prompts/turn.j2")).unwrap(),
             &fs::read_to_string(root.join("assets/prompts/night.j2")).unwrap(),
@@ -487,6 +508,37 @@ mod tests {
             chalked_encoded.len(),
             cathedral_sim::marks::MARKS_MAX
         );
+    }
+
+    /// The unknown-people rule is only real if no authored sentence carries a
+    /// name to somebody who has not been told it. `{subject}` is the whole of
+    /// how a person reaches a `said` template; a literal display name in one
+    /// would leak past `render_line` entirely. `own` values are exempt: they
+    /// render only to the witness whose words they are, and M0's own fixtures
+    /// name people in them.
+    #[test]
+    fn no_authored_said_bakes_a_cast_name() {
+        let root = root();
+        let seed = load_world_seed(&root.join("assets"), &root.join("lore")).unwrap();
+        // Full names only. Ten of the 519 are mononyms and eight of those are
+        // under five letters ("Nan", "Sef", "Tib"), which substring-match
+        // ordinary words; the failure worth catching is an author writing
+        // "Grigor Ashe" into a template, and that always has the space.
+        let names: Vec<&str> = seed
+            .characters
+            .iter()
+            .map(|character| character.name.as_str())
+            .filter(|name| name.contains(' '))
+            .collect();
+        for spec in cathedral_sim::knowledge::FactCatalog::default().specs() {
+            for name in &names {
+                assert!(
+                    !spec.said.contains(name),
+                    "fact {} bakes the name '{name}' into said; use {{subject}}",
+                    spec.id
+                );
+            }
+        }
     }
 
     fn area_for_district(district: &str) -> &'static str {

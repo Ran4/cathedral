@@ -62,6 +62,9 @@ fn main() {
     if std::env::var_os("CATHEDRAL_NO_MARKS").is_some() {
         config.smart_actors.marks.enabled = false;
     }
+    if std::env::var_os("CATHEDRAL_NO_KNOWLEDGE").is_some() {
+        config.smart_actors.knowledge.enabled = false;
+    }
     if std::env::var_os("CATHEDRAL_NO_VERMIN").is_some() {
         config.vermin.enabled = false;
     }

@@ -1,0 +1,1 @@
+say {"target":"player","text":"It is true. I was at my own door when they took Grigor Ashe. He said not a word; the sergeant had his arm twisted behind his back."}

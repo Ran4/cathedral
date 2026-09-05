@@ -95,6 +95,10 @@ pub struct SmartActorsConfig {
     /// tokens: marks are written by code, read by code, and reach an LLM only
     /// as one line on a turn that was going to happen anyway.
     pub marks: MarksSettings,
+    /// What the city knows and is saying (features/knowledge_and_rumor/).
+    /// Costs no tokens: facts are seeded and read by code, and reach an LLM
+    /// only as up to three lines on a turn that was going to happen anyway.
+    pub knowledge: KnowledgeSettings,
     /// How many *generated* ambient citizens to spread over the walkable city
     /// on top of the ~500 authored ones (`crates/cathedral-sim/src/crowd.rs`).
     /// `0` — the default — is the shipped city, unchanged down to the roster
@@ -144,6 +148,23 @@ impl Default for MarksSettings {
             ward_sign: true,
             decay_scale: 1.0,
         }
+    }
+}
+
+/// What the city knows: the one ablation switch
+/// (`features/knowledge_and_rumor/`, D49).
+#[derive(Resource, Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct KnowledgeSettings {
+    /// The whole layer. `CATHEDRAL_NO_KNOWLEDGE=1` forces this off for one run.
+    /// It gates **readers and writers both**, so a run with it off is a city
+    /// with no knowledge layer rather than one accumulating state nobody reads.
+    pub enabled: bool,
+}
+
+impl Default for KnowledgeSettings {
+    fn default() -> Self {
+        Self { enabled: true }
     }
 }
 
@@ -351,6 +372,7 @@ impl Default for SmartActorsConfig {
             night_office: NightOfficeSettings::default(),
             clock: ClockSettings::default(),
             marks: MarksSettings::default(),
+            knowledge: KnowledgeSettings::default(),
             extra_ambient_npcs: 0,
         }
     }

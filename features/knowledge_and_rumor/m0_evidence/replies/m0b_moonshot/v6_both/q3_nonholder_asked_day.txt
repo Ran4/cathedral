@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I couldn't tell you the day, friend. I only heard it second-hand myself, and no day was given with it. If it's the cart's business you're after, ask a carter at the Wool Gate — they keep their own tally of who comes and goes."}

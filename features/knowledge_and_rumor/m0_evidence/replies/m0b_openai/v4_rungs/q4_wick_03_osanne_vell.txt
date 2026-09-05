@@ -1,0 +1,1 @@
+say {"target":"player","text":"Aye. I saw them take Grigor Ashe from the Wickmarket. He said not a word; the sergeant had his arm twisted behind his back."}

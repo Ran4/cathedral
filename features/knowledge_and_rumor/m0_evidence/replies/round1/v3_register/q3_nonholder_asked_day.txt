@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I never had a day for it, friend. I had it third-hand from a carter — no name, no date. Just that he was put off the Brede cart at the Wool Gate and walked back on his own feet. If you need the day, the gate guards or the Weigh Ward folk would know better than me."}

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "_doc": "How far each kind of news travels (features/knowledge_and_rumor/02_rumor_pollen.md). The topic tag is on the fact; the number is here, and it is the designer's whole tuning surface. base 1.00 IS the cadence target this feature was built to — it is not a new quantity. Set every base and every multiplier to 1.0 and this file is arithmetically the identity: the roll becomes curiosity x heat again, which is the model before salience existed, and M2's pre-salience numbers must reproduce exactly. `hedge_band` is authored per topic rather than derived from `base` for exactly that reason: flattening must move numbers and never move prose.",
+
+  "_ear_doc": "One multiplier from named occupation sets, following notices.rs LAW_OCCUPATIONS, attention.rs RESERVED_TRADES and round.rs TRADE_OCCUPATIONS — a fourth of a kind, not a new pattern. Occupation ids are the spellings in lore/core_lore/occupations.json, which are also the directory names under lore/characters/.",
+
+  "topics": {
+    "bed":      { "base": 1.00, "hedge_band": "top" },
+    "blood":    { "base": 1.00, "hedge_band": "top" },
+    "law":      { "base": 0.80, "hedge_band": "default" },
+    "omen":     { "base": 0.80, "hedge_band": "default" },
+    "stranger": { "base": 0.80, "hedge_band": "default" },
+    "coin":     { "base": 0.45, "hedge_band": "default" },
+    "bread":    { "base": 0.35, "hedge_band": "default" },
+    "craft":    { "base": 0.20, "hedge_band": "low" },
+    "talk":     { "base": 0.15, "hedge_band": "low" }
+  },
+
+  "ears": {
+    "bed": {
+      "_why": "The trades that are inside other people's rooms. domestic_servant is the commonest occupation in the cast (45 of 519). The people who change the sheets know.",
+      "occupations": ["domestic_servant", "laundress", "tavern_worker", "sex_worker",
+                      "water_and_bath_worker"],
+      "multiplier": 1.6
+    },
+    "law": {
+      "_why": "notices::LAW_OCCUPATIONS verbatim (notices.rs:71) — the same instinct notices::carries already encodes absolutely, here in a weaker form, because a fact is not a notice.",
+      "occupations": ["bailiff_and_gaoler", "court_officer", "civic_officer", "custody_clerk",
+                      "watchman_and_keeper", "militia_and_soldier", "revenue_worker"],
+      "multiplier": 1.6
+    },
+    "coin": {
+      "_why": "It is their day.",
+      "occupations": ["market_seller", "merchant", "grocer_and_spicer", "baker", "fish_trader",
+                      "revenue_worker"],
+      "multiplier": 1.5
+    },
+    "bread": {
+      "occupations": ["market_seller", "merchant", "grocer_and_spicer", "baker", "fish_trader",
+                      "revenue_worker"],
+      "multiplier": 1.5
+    }
+  },
+
+  "craft": {
+    "_why": "A spoiled batch is everything to a cooper and nothing to anybody else. own_trade is matched against the fact's subject's own occupation_id at mint.",
+    "own_trade": 2.0,
+    "other_trade": 0.6
+  },
+
+  "_no_trade_why": "The no-trade quarter — occupation_id null, a support circumstance instead. They already have no round, loiter where they were stood and are twice as likely to speak first (AGENTS.md, the crowd knob); this row makes them hear everything as well. `The beggars know everything before anyone` stops being a mechanism to build and becomes a number in a file.",
+  "no_trade": 1.4,
+
+  "_household_why": "Anyone behind the subject's own door, or their kin. The last people to hear a scandal are the ones who live with it — which also makes telling them a scene.",
+  "household": 0.15
+}

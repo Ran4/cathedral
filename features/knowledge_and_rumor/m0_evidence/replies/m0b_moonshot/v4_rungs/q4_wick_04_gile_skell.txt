@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, so they say — though the one who told me wasn't there themselves, they had it from the one who was. Grigor Ashe, taken right here at the Wickmarket, two days past. Lies in the Stone House now, by all accounts."}

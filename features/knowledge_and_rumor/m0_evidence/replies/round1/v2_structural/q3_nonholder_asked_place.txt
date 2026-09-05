@@ -1,0 +1,1 @@
+say {"target": "player", "text": "I don't know a Grigor Ashe, love, and I couldn't say where anyone was took. Ask the porters up by the gate — they see all the comings and goings."}

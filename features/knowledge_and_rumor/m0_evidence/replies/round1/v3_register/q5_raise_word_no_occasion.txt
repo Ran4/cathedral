@@ -1,0 +1,2 @@
+say {"target": "ft3tb", "text": "Aye. Two more."}
+go_to {"place_id": "pl_nve1"}

@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, I was on the Cut that week, elbow-deep in woad as ever. The cart? I heard a Brede cart got turned at the Wool Gate — beam called it forty pound over. That's all I know of it, and that's hearsay, mind. If it's the weighing you're after, ask a porter on that gate, they stand there day and night."}

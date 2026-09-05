@@ -1,0 +1,3 @@
+```
+say {"target": "player", "text": "No, not at the Wickmarket. They took him at his own door — I was there and saw it with what's left of my eyes. He didn't say one word, and the sergeant had his arm up behind his back. Now, who's asking, and why does it matter to you?"}
+```

@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Brede cart? I don't know of any Brede cart, stranger. I'm just a carpenter trying to get this ridge piece up before the rain comes. If you're asking about weights and measures, you'd want the masons at the lodge or the carters at the Stone Gate."}

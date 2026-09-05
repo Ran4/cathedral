@@ -1,0 +1,1 @@
+say {"target":"player","text":"That is the word going round, but I cannot vouch for it: Grigor Ashe was said to have been taken here two days past and lies in the Stone House."}

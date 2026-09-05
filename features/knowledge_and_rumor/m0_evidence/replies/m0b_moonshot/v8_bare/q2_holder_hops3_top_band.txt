@@ -1,0 +1,1 @@
+say {"target": "player", "text": "What the whole ward's saying, no more: Rohese Sedge goes in at Doctor Ferrant's door after the Snuffing, and it's not for physic. What passes between them behind that door, I've not been told and won't invent. If it's the doctor's business you want, ask at his surgery; if it's hers, the Sedge household. I've a beam to mind."}

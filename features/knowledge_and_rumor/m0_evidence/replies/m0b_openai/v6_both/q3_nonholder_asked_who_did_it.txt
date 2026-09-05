@@ -1,0 +1,1 @@
+say {"target":"player","text":"I don't know who cut it. Ask a cargo broker in the Weigh Ward; they handle the bales and their loading."}

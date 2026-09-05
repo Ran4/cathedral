@@ -1,0 +1,3 @@
+```
+say {"target": "player", "text": "Pounds? No, no, love, you've got it backwards—or I've got it sideways, which happens before breakfast. The beam called for the Brede cart, sure enough, but we measure that in feet and inches, not pounds. It's the span that matters, see? Twelve foot of good oak, and the cart's just the beast that brings it. You looking to hire on for the lift, or just checking the tally?"} # Correct the confusion between weight and measure while staying friendly, and suss out if this stranger is here about the hiring line
+```

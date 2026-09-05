@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Salt contract? Friend, I am a butcher, not a salter. I know meat and tallow, not the Tallage's ledgers. You would do better to ask the clerks at the Tallage itself, or perhaps a merchant in the Wickmarket who deals in such bulk."}

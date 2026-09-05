@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Aye, it's true enough. They took him at the Wickmarket two days past, and he lies in the Stone House now. A hard end for a man who still owes me for a side of mutton since the Waning."}

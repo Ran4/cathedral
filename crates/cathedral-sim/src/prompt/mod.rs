@@ -33,7 +33,7 @@ use crate::{
     HEARING_RADIUS_M, ITEM_INTERACTION_RADIUS_M, PLACE_ARRIVE_RADIUS_M, WALK_DESTINATION_SNAP_M,
     character::{Character, IntentTarget},
     error::PromptError,
-    ids::{ActorId, ItemId, PlaceId},
+    ids::{ActorId, FactKey, ItemId, PlaceId},
     lore::PlanningWard,
     offer::Offer,
     world::World,
@@ -130,6 +130,122 @@ pub struct PromptStrings {
     pub pocket_butt_note: String,
     /// The same for the frontbutt slot.
     pub pocket_frontbutt_note: String,
+    /// The parenthesis after `**what_you_know**` — what this actor has
+    /// been told or saw for themselves. Named like `notices_note` for the block it
+    /// sits beside; the block's own renderer supplies the trailing colon.
+    pub know_note: String,
+    /// The block's instruction paragraph, rendered **between** the header
+    /// and the bullets: know-don't-announce, plus the "what is here is all that is
+    /// here" clause that kept every fact-adjacent invention out of the measured
+    /// variant's replies. The line breaks are load-bearing — the measured prompt
+    /// had them at exactly these columns.
+    pub know_discipline: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_default_hops0_own: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_default_hops0: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_default_hops1: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_default_hops2: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_default_hops3: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_default_hops4: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_default_cold: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_top_hops0_own: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_top_hops0: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_top_hops1: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_top_hops2: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_top_hops3: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_top_hops4: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_top_cold: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_low_hops0_own: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_low_hops0: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_low_hops1: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_low_hops2: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_low_hops3: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_low_hops4: String,
+    /// One rung of the frozen hop × band hedge ladder, `%s` standing for the
+    /// telling. Twenty-one distinct measured values, **not** one ladder shifted by
+    /// band, and no rung names a count or an ordinal.
+    pub know_hedge_low_cold: String,
+    /// A fact's subject whose name the reader has never been told.
+    /// **Two** `%s`, in this order: the trade (`occupation_display`, first letter
+    /// lowered), then the ward (`ward_label`, "the Wick Ward"). Rendered by two
+    /// sequential `replacen`s; [`Self::unknown_person_name`] is the no-role
+    /// fallback. The comma form ("a carter, of the Weigh Ward") was tried and
+    /// rejected: the placeholder lands mid-sentence in a hedged bullet.
+    pub unknown_person_role: String,
+    /// `{day}` for the day the reader is standing in. Unmeasured — it
+    /// renders inside the measured sentences.
+    pub day_today: String,
+    /// `{day}` for the day before. Unmeasured.
+    pub day_yesterday: String,
+    /// `{day}` for two to seven days back, `%s` filled with the count **in
+    /// words**: a digit never reaches a sheet, because a number in front of a model
+    /// is a number it says back. Unmeasured.
+    pub day_days_past: String,
+    /// `{day}` for eight days and beyond, for an undated fact, and for
+    /// every clock-less world. Unmeasured.
+    pub day_long_ago: String,
+    /// `{place}` when the area handle no longer resolves — a hermetic
+    /// world, or a handle from another map. Unmeasured.
+    pub place_unknown: String,
 }
 
 impl PromptStrings {
@@ -193,6 +309,87 @@ impl PromptEnv {
             return Err(PromptError::new(
                 "prompt strings: following must contain the '%s' person placeholder",
             ));
+        }
+        // The hedge ladder and the day phrase are patterns like `accept_with`,
+        // and validated by **count**, not by presence: the rung is substituted
+        // exactly once (`knowledge::render_line`), so a second `%s` in a rung
+        // would reach a sheet unfilled, and a rung with none would swallow the
+        // telling silently — a bullet reading `They say:` and nothing else.
+        let hedges: [(&str, &String); 21] = [
+            (
+                "know_hedge_default_hops0_own",
+                &strings.know_hedge_default_hops0_own,
+            ),
+            (
+                "know_hedge_default_hops0",
+                &strings.know_hedge_default_hops0,
+            ),
+            (
+                "know_hedge_default_hops1",
+                &strings.know_hedge_default_hops1,
+            ),
+            (
+                "know_hedge_default_hops2",
+                &strings.know_hedge_default_hops2,
+            ),
+            (
+                "know_hedge_default_hops3",
+                &strings.know_hedge_default_hops3,
+            ),
+            (
+                "know_hedge_default_hops4",
+                &strings.know_hedge_default_hops4,
+            ),
+            ("know_hedge_default_cold", &strings.know_hedge_default_cold),
+            (
+                "know_hedge_top_hops0_own",
+                &strings.know_hedge_top_hops0_own,
+            ),
+            ("know_hedge_top_hops0", &strings.know_hedge_top_hops0),
+            ("know_hedge_top_hops1", &strings.know_hedge_top_hops1),
+            ("know_hedge_top_hops2", &strings.know_hedge_top_hops2),
+            ("know_hedge_top_hops3", &strings.know_hedge_top_hops3),
+            ("know_hedge_top_hops4", &strings.know_hedge_top_hops4),
+            ("know_hedge_top_cold", &strings.know_hedge_top_cold),
+            (
+                "know_hedge_low_hops0_own",
+                &strings.know_hedge_low_hops0_own,
+            ),
+            ("know_hedge_low_hops0", &strings.know_hedge_low_hops0),
+            ("know_hedge_low_hops1", &strings.know_hedge_low_hops1),
+            ("know_hedge_low_hops2", &strings.know_hedge_low_hops2),
+            ("know_hedge_low_hops3", &strings.know_hedge_low_hops3),
+            ("know_hedge_low_hops4", &strings.know_hedge_low_hops4),
+            ("know_hedge_low_cold", &strings.know_hedge_low_cold),
+        ];
+        for (key, value) in hedges
+            .into_iter()
+            .chain([("day_days_past", &strings.day_days_past)])
+        {
+            if value.matches("%s").count() != 1 {
+                return Err(PromptError::new(format!(
+                    "prompt strings: {key} must contain exactly one '%s' (the telling)"
+                )));
+            }
+        }
+        if strings.unknown_person_role.matches("%s").count() != 2 {
+            return Err(PromptError::new(
+                "prompt strings: unknown_person_role must contain exactly two '%s' (the trade, then the ward)",
+            ));
+        }
+        for (key, value) in [
+            ("know_note", &strings.know_note),
+            ("know_discipline", &strings.know_discipline),
+            ("day_today", &strings.day_today),
+            ("day_yesterday", &strings.day_yesterday),
+            ("day_long_ago", &strings.day_long_ago),
+            ("place_unknown", &strings.place_unknown),
+        ] {
+            if value.contains("%s") {
+                return Err(PromptError::new(format!(
+                    "prompt strings: {key} must not contain '%s'"
+                )));
+            }
         }
 
         let mut environment = Environment::new();
@@ -290,6 +487,15 @@ struct Sheet<'a> {
     /// case and every frozen fixture's case.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     marks_here: Vec<MarkLine>,
+    /// What this actor has been told, or saw for themselves, of the city's
+    /// doings (`features/knowledge_and_rumor/`). Relevance-seated first, then
+    /// heat, capped at [`crate::knowledge::KNOWN_SHEET_MAX`] (3, smaller than
+    /// `NOTICES_SHEET_MAX`'s 4 as the spec requires). A standing truth, so it
+    /// sits with the chalk and the ward's word above the time axis; omitted
+    /// entirely when empty, which is the knowing-nothing majority's case and
+    /// every frozen fixture's case, so the block costs the bless nothing.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    what_you_know: Vec<KnownLine>,
     /// The handles `draw_mark`'s `anchor` argument may name — everything
     /// chalkable within `CHALK_REACH_M`. Omitted when empty, and when the
     /// actor has no pen the verb is off the sheet anyway.
@@ -429,6 +635,17 @@ struct PlaceRef<'a> {
 #[derive(Serialize)]
 struct NoticeLine {
     notice_id: u64,
+    word: String,
+}
+
+/// One `what_you_know` bullet: the sentence and nothing else.
+///
+/// No `fact_id`, no hop count, no number — no verb names a fact, so a handle
+/// here could only be misused, and a count in front of a model is a count it
+/// says back. The hedge the sentence is wrapped in is the only thing that says
+/// how the holder has it.
+#[derive(Serialize)]
+struct KnownLine {
     word: String,
 }
 
@@ -803,7 +1020,7 @@ pub(crate) fn ward_minors(
 /// The ward as its people name it — the `snake_case` planning key turned back
 /// into the words on the wayfinding registry's ward anchor ("Cinder Ward"), or
 /// the key itself if the registry has no anchor for it (a nav-less world).
-fn ward_label(ward: PlanningWard) -> String {
+pub(crate) fn ward_label(ward: PlanningWard) -> String {
     match ward {
         PlanningWard::Fabric => "the Fabric Ward".to_string(),
         PlanningWard::Wick => "the Wick Ward".to_string(),
@@ -1039,6 +1256,17 @@ fn build_sheet<'a>(
     let events: &[String] = since.unwrap_or(actor.inbox());
     let since_your_last_turn = fallback(events, &strings.nothing);
     let recent_history = fallback(actor.recent_history(), &strings.nothing_yet);
+    // The two inboxes the relevance limb reads are these post-`fallback` ones,
+    // so an empty inbox contributes the `nothing` word and nothing else — and
+    // M4's re-heat builds them the same way, which is what makes "the same set"
+    // true by construction rather than by care.
+    let what_you_know = what_you_know_lines(
+        world,
+        actor,
+        &since_your_last_turn,
+        &recent_history,
+        strings,
+    );
 
     let position = actor.position_m();
     let location_description = world
@@ -1145,6 +1373,7 @@ fn build_sheet<'a>(
         },
         dogs_nearby,
         marks_here,
+        what_you_know,
         you_could_chalk,
         word_in_the_ward: ward_notice_lines(world, actor.id()),
         since_your_last_turn,
@@ -1352,6 +1581,89 @@ fn ward_notice_lines(world: &World, actor_id: &ActorId) -> Vec<NoticeLine> {
         .collect()
 }
 
+/// The `what_you_know` section: relevance first, heat second, and the
+/// self-subject filter before both.
+///
+/// "The hottest thing this actor carries" is a gossip rule and the wrong rule
+/// for an interrogation: ask about the bale while the ward is loud about an
+/// arrest and the one fact you came for is off the sheet. So a fact whose id
+/// segments, subject name or place label appears in `since` or `recent` is
+/// seated first whatever its heat, including a faded one
+/// ([`crate::knowledge::relevance_seated`], which M4's re-heat calls with the
+/// same two vectors so the thing warmed is exactly the thing seated); heat fills
+/// what is left, tie-broken by fewest hops then `fact.id` — a total order, so
+/// the sheet is stable across runs and goldens.
+///
+/// The two-pass shape is the one [`ward_notice_lines`] uses: ids claim seats in
+/// priority order, then the rendering walks them in that order and caps at
+/// [`crate::knowledge::KNOWN_SHEET_MAX`].
+fn what_you_know_lines(
+    world: &World,
+    actor: &Character,
+    since: &[&str],
+    recent: &[&str],
+    strings: &PromptStrings,
+) -> Vec<KnownLine> {
+    if !world.knowledge_enabled {
+        return Vec::new();
+    }
+    let reader = actor.id();
+    let now = world.current_time.map(|time| time.game_days());
+    let seated_keys = crate::knowledge::relevance_seated(world, actor, since, recent);
+
+    // Seeded and carried rows together, ascending `FactKey`, each paired with
+    // its fact — and dropped where the fact is about the reader and gives them
+    // no `own` line: nobody is told about themselves in the third person.
+    // `render_line` independently returns `None` for the same case, so the two
+    // cannot come to disagree.
+    let rows: Vec<(FactKey, crate::knowledge::Held)> = crate::knowledge::holdings_of(world, reader)
+        .into_iter()
+        .filter(|(key, _)| {
+            // Kept unless the fact is about the reader and gives them no
+            // `own` line.
+            world
+                .knowledge
+                .fact(*key)
+                .is_some_and(|fact| !fact.is_about(reader) || fact.own.contains_key(reader))
+        })
+        .collect();
+
+    let mut rest: Vec<(FactKey, crate::knowledge::Held)> =
+        rows.iter()
+            .filter(|(key, _)| !seated_keys.contains(key))
+            .filter(|(key, held)| {
+                world.knowledge.fact(*key).is_some_and(|fact| {
+                    crate::knowledge::volunteers(world, fact, reader, held, now)
+                })
+            })
+            .cloned()
+            .collect();
+    // Quantised heat descending, then fewest hops, then the fact's own id: a
+    // total order, so no f32 tie is decided by noise and a replay renders the
+    // same bullets in the same order.
+    rest.sort_by(|left, right| {
+        let heat_of = |held: &crate::knowledge::Held| crate::knowledge::heat_pct(held.heat(now));
+        let id_of = |key: &FactKey| world.knowledge.fact(*key).map(|fact| &fact.id);
+        heat_of(&right.1)
+            .cmp(&heat_of(&left.1))
+            .then_with(|| left.1.hops.cmp(&right.1.hops))
+            .then_with(|| id_of(&left.0).cmp(&id_of(&right.0)))
+    });
+
+    let seated = seated_keys
+        .into_iter()
+        .filter_map(|key| rows.iter().find(|(row, _)| *row == key).cloned());
+    seated
+        .chain(rest)
+        // `filter_map` before `take`, so a `None` render cannot eat a seat.
+        .filter_map(|(key, held)| {
+            crate::knowledge::render_line(world, reader, key, &held, strings, now)
+        })
+        .map(|word| KnownLine { word })
+        .take(crate::knowledge::KNOWN_SHEET_MAX)
+        .collect()
+}
+
 /// The sheet's sentence for where the current walk ends, or `None` while
 /// standing. The name is resolved exactly as the arrival will speak of it:
 /// the actor's own `go_to` when the walk serves it (compared by endpoint —
@@ -1548,6 +1860,24 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
             sheet.marks_here.iter().map(mark_bullet),
             "",
         ));
+    }
+
+    // What this actor knows — a standing truth, so it sits beside the chalk and
+    // the ward's word rather than in the time axis, and it is omitted entirely
+    // for the knowing-nothing majority so no other sheet moves a byte. Its own
+    // renderer, because the note paragraph sits between the header and the
+    // bullets: `bullet_section` cannot express that, and the layout below is the
+    // one M0b measured (`m0_evidence/sheets/v6_both_turnj2/*.txt`).
+    if !sheet.what_you_know.is_empty() {
+        let mut section = format!(
+            "**what_you_know** ({}):\n\n{}\n",
+            strings.know_note, strings.know_discipline
+        );
+        for line in &sheet.what_you_know {
+            section.push_str("\n- ");
+            section.push_str(&line.word);
+        }
+        sections.push(section);
     }
 
     // The ward's word — omitted entirely for the carrier-less majority, like
@@ -1906,6 +2236,43 @@ mod tests {
             pocket_mouth_note: "in your mouth".into(),
             pocket_butt_note: "carried privily, behind".into(),
             pocket_frontbutt_note: "carried privily, before".into(),
+            know_note: r#"what you have been told or saw yourself of the city's doings, in the words you have it in; this is the whole of it"#.into(),
+            know_discipline: r#"These are things you know, not lines to deliver. Say one when it bears on what
+is in front of you, or when somebody asks about it, and otherwise let it lie —
+a person who repeats everything they have heard is a person nobody tells
+anything. Say it as it stands here: what you saw yourself you may state
+flatly, and what came to you through other mouths you pass on as that, with
+the same doubt still in it. Do not sharpen it: a day, a street, a name or a
+number you were not given is one you do not have. And what is here is all that
+is here — a thing standing right beside one of these, in the same trade or the
+same quarter or the same afternoon, you still do not know."#.into(),
+            know_hedge_default_hops0_own: r#"First hand, in your own words: %s"#.into(),
+            know_hedge_default_hops0: r#"You saw this yourself: %s"#.into(),
+            know_hedge_default_hops1: r#"They say — and the one who told you was there: %s"#.into(),
+            know_hedge_default_hops2: r#"The one who told you was not there either — they had it from the one who was: %s"#.into(),
+            know_hedge_default_hops3: r#"It came to you down a line of mouths, and whoever at the end of it actually saw anything is a stranger to you: %s"#.into(),
+            know_hedge_default_hops4: r#"This has been through a great many mouths before it reached yours, worn smooth in the telling, and nobody can now say who started it: %s"#.into(),
+            know_hedge_default_cold: r#"You heard something of the sort a while back and it has gone dim: %s"#.into(),
+            know_hedge_top_hops0_own: r#"First hand, in your own words: %s"#.into(),
+            know_hedge_top_hops0: r#"You saw this yourself: %s"#.into(),
+            know_hedge_top_hops1: r#"Flatly, as a thing that happened: %s"#.into(),
+            know_hedge_top_hops2: r#"They say: %s"#.into(),
+            know_hedge_top_hops3: r#"It is the common word now, and nobody bothers to say where they had it: %s"#.into(),
+            know_hedge_top_hops4: r#"This is simply what is known in this city now, whoever said it first: %s"#.into(),
+            know_hedge_top_cold: r#"Old talk now, but you know how it went: %s"#.into(),
+            know_hedge_low_hops0_own: r#"First hand, in your own words: %s"#.into(),
+            know_hedge_low_hops0: r#"You saw this yourself: %s"#.into(),
+            know_hedge_low_hops1: r#"They say — and you have it from the one mouth only: %s"#.into(),
+            know_hedge_low_hops2: r#"You had it from somebody who had it from somebody, and it is trade-talk: %s"#.into(),
+            know_hedge_low_hops3: r#"Passed to you at a remove you cannot account for, the sort of small news that gets carried because there is nothing else to carry: %s"#.into(),
+            know_hedge_low_hops4: r#"Stall talk, handed along so often that its edges are gone, and you have never met anyone who was there: %s"#.into(),
+            know_hedge_low_cold: r#"Somebody mentioned it once, long since, and you would not swear to a word of it: %s"#.into(),
+            unknown_person_role: r#"a %s of %s (you don't know their name)"#.into(),
+            day_today: r#"today"#.into(),
+            day_yesterday: r#"yesterday"#.into(),
+            day_days_past: r#"%s days past"#.into(),
+            day_long_ago: r#"a long while back"#.into(),
+            place_unknown: r#"somewhere in the city"#.into(),
         }
     }
 
@@ -1919,9 +2286,69 @@ mod tests {
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nmarks_note = \"mm\"\nchalkable_note = \"cc\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nmarks_note = \"mm\"\nchalkable_note = \"cc\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\nknow_note = \"n\"\nknow_discipline = \"nd\"\nknow_hedge_default_hops0_own = \"%s\"\nknow_hedge_default_hops0 = \"%s\"\nknow_hedge_default_hops1 = \"%s\"\nknow_hedge_default_hops2 = \"%s\"\nknow_hedge_default_hops3 = \"%s\"\nknow_hedge_default_hops4 = \"%s\"\nknow_hedge_default_cold = \"%s\"\nknow_hedge_top_hops0_own = \"%s\"\nknow_hedge_top_hops0 = \"%s\"\nknow_hedge_top_hops1 = \"%s\"\nknow_hedge_top_hops2 = \"%s\"\nknow_hedge_top_hops3 = \"%s\"\nknow_hedge_top_hops4 = \"%s\"\nknow_hedge_top_cold = \"%s\"\nknow_hedge_low_hops0_own = \"%s\"\nknow_hedge_low_hops0 = \"%s\"\nknow_hedge_low_hops1 = \"%s\"\nknow_hedge_low_hops2 = \"%s\"\nknow_hedge_low_hops3 = \"%s\"\nknow_hedge_low_hops4 = \"%s\"\nknow_hedge_low_cold = \"%s\"\nunknown_person_role = \"a %s of %s\"\nday_today = \"today\"\nday_yesterday = \"yesterday\"\nday_days_past = \"%s days past\"\nday_long_ago = \"long ago\"\nplace_unknown = \"somewhere\"\n";
         let error = PromptEnv::new("x", "y", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
+    }
+
+    /// T32's sibling: each `%s`-count check names its own key, so a miscounted
+    /// hedge is reported as that hedge and not as "invalid prompt strings".
+    ///
+    /// The shipped values are round-tripped through `toml` and one key broken per
+    /// case — a hand-written literal would drift from the file the moment a key is
+    /// added, which is the trap D43 is about.
+    #[test]
+    fn each_placeholder_count_check_names_its_own_key() {
+        let broken = |edit: &dyn Fn(&mut PromptStrings)| {
+            let mut strings = strings();
+            edit(&mut strings);
+            let toml = toml::to_string(&strings).expect("the strings serialize");
+            PromptEnv::new("x", "y", &toml)
+                .expect_err("the broken key is rejected")
+                .message
+        };
+
+        // A rung with two tellings: the second would reach a sheet unfilled.
+        let message = broken(&|strings| {
+            strings.know_hedge_top_hops2 = "They say: %s, and also %s".into();
+        });
+        assert!(
+            message.contains("know_hedge_top_hops2") && message.contains("exactly one"),
+            "{message}"
+        );
+        // A rung with none swallows the telling silently.
+        let message = broken(&|strings| strings.know_hedge_low_cold = "Old talk.".into());
+        assert!(
+            message.contains("know_hedge_low_cold") && message.contains("exactly one"),
+            "{message}"
+        );
+        // The role phrasing takes the trade *and* the ward.
+        let message = broken(&|strings| strings.unknown_person_role = "a %s".into());
+        assert!(
+            message.contains("unknown_person_role") && message.contains("exactly two"),
+            "{message}"
+        );
+        // The day phrase's `%s` is the count in words.
+        let message = broken(&|strings| strings.day_days_past = "days past".into());
+        assert!(
+            message.contains("day_days_past") && message.contains("exactly one"),
+            "{message}"
+        );
+        // And the prose keys carry no placeholder at all.
+        let message = broken(&|strings| strings.know_note = "what you know of %s".into());
+        assert!(
+            message.contains("know_note") && message.contains("must not contain"),
+            "{message}"
+        );
+        let message = broken(&|strings| strings.place_unknown = "%s".into());
+        assert!(
+            message.contains("place_unknown") && message.contains("must not contain"),
+            "{message}"
+        );
+
+        // The shipped values themselves pass every one of those checks.
+        let toml = toml::to_string(&strings()).expect("the strings serialize");
+        assert!(PromptEnv::new("x", "y", &toml).is_ok());
     }
 
     #[test]
@@ -2006,6 +2433,7 @@ mod tests {
             },
             dogs_nearby: Vec::new(),
             marks_here: Vec::new(),
+            what_you_know: Vec::new(),
             you_could_chalk: Vec::new(),
             word_in_the_ward: Vec::new(),
             since_your_last_turn: Vec::new(),

@@ -1,0 +1,69 @@
+{
+  "name": "q2_holder_hops4_top_band",
+  "question": "Q2 (hedge ladder, top band)",
+  "what_it_tests": "A holder at FOUR hops of a top-band (Bed) fact, asked straight. The hedge-erosion table says a scandal loses its hedges: at four hops this should come out flat, as a thing that happened. Scored against q2_holder_hops4_low_band, which is the same distance from a low-band fact and should still be hedging. The pair is the whole erosion claim.",
+  "base_fixture": "conny_baseline.txt",
+  "what_you_know": [
+    {
+      "fact_id": "sedge.ferrant",
+      "said": "{subject} goes in at Doctor Ferrant's door after the Snuffing, and it is not for physic",
+      "topic": "Bed",
+      "subject": {
+        "name": "Rohese Sedge",
+        "known": true,
+        "trade": "ward officer",
+        "ward": "the Weigh Ward"
+      },
+      "hops": 4,
+      "heat": "warm",
+      "band": "top_band"
+    }
+  ],
+  "sheet": {
+    "you": "Averil Tarn, 24, female — Toll clerk (Revenue worker) of The Tallage. Home: a house in the Weigh Ward, near Bonded warehouse. Family: father Ewart Tarn (id fe2tn).",
+    "back_story": "The toll rolls of the Tallage are in your hand, not your father's: you rule them, you write them, you hold the day's figures in your head while three carters shout at you at once, and you are better at it than he ever was, which you will never say where he can hear. Ewart Tarn's eyes have failed and his pride will not let him admit it, so you stand at his elbow and read the beam back to him as if it were only the manner of the work, and you will go on doing that until he dies at that beam. You are quick, cheerful and entirely without ambition; you like the smell of the toll-house, wet rope and salt and oak-gall ink, you give the porters as good as you get, and you have never once wanted to be anywhere but here. What you want is Warin Underbridge, who drives a cart and whom your father has sworn will never sit at his table, and you mean to have him regardless; what you have not yet worked out is how to get those two men into one room without the whole square hearing it.",
+    "you_are": "In the bonded weighing yard, the beam at your back (x -122, z -15).",
+    "places_you_know": {
+      "items": [
+        "pl_6gvy Bonded weighing yard",
+        "pl_35z0 The Tallage",
+        "pl_5vy5 Bonded warehouse",
+        "pl_8so5 Tallage toll-house",
+        "pl_nve1 Gaunt Passage"
+      ],
+      "empty": "none"
+    },
+    "you_hold": {
+      "items": [
+        "ta11y tally stick"
+      ],
+      "empty": "nothing"
+    },
+    "you_see": {
+      "items": [
+        "id player: a stranger (you don't know their name), 2.5 m",
+        "id p000p: Colm Wren, 7.8 m"
+      ],
+      "empty": "nobody"
+    },
+    "stored_memories": {
+      "items": [
+        "The Tarn household keeps two beams and one of them reads light"
+      ],
+      "empty": "none"
+    },
+    "current_goal": "Finish the morning's weighings before the Waning",
+    "since_your_last_turn": {
+      "items": [
+        "A stranger (id player) said to you: \"What is between Rohese Sedge and Doctor Ferrant?\""
+      ],
+      "empty": "nothing"
+    },
+    "recent_history": {
+      "items": [
+        "[You heard a chain windlass turning.]"
+      ],
+      "empty": "nothing yet"
+    }
+  }
+}

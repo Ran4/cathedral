@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "_doc": "Authored facts (features/knowledge_and_rumor/). A fact is a proposition; who holds it at first hand is `seeded`; `said` and `own` are TEMPLATES with {subject}/{place}/{day} substituted per reader, because what a sentence says depends on whether the reader knows the person in it. `said` must never bake a cast name and never put {subject} in the possessive. A fact id's dot-separated segments are the words an asker will use, because relevance selection matches on them. Embedded with include_str! exactly as marks.json is. `source` is never rendered anywhere - not a prompt, not a projection, not a log line. Most of the city's facts are minted from events, not authored here.",
+
+  "_topic_doc": "One of bed, blood, law, omen, stranger, coin, bread, craft, talk. It decides how far the thing travels (assets/world/salience.json), how fast its hedges erode, and whose ear it catches. It is a classification with an external check, never an importance ranking: a promise is `talk` and travels almost nowhere, and that is the point of it.",
+
+  "facts": [
+    { "id": "ashe.salt.short",
+      "topic": "coin",
+      "said": "{subject} sold salt short of the measure at {place}, {day}",
+      "own": {
+        "fg2sh": "I gave good measure at the Shambles and the beam was wrong, not my hand",
+        "e9nan": "I saw the weigher put his thumb on it, and nobody said a word"
+      },
+      "subject": ["fg2sh"],
+      "seeded": ["fg2sh", "e9nan"],
+      "place": "shambles",
+      "day": 0,
+      "decays": true,
+      "garble": "place,day",
+      "source": "authored" },
+
+    { "id": "vell.stall.pitch",
+      "topic": "craft",
+      "said": "{subject} took the corner pitch at {place} that was not theirs to take, {day}",
+      "own": {
+        "dv8ll": "The corner has been mine since the Great Rains and I will not be moved off it",
+        "dclsk": "I watched her set her trestles over another woman's pitch, and nobody said a word"
+      },
+      "subject": ["dv8ll"],
+      "seeded": ["dv8ll", "p000x", "dclsk"],
+      "place": "wickmarket",
+      "day": 0,
+      "decays": true,
+      "garble": "subject,day",
+      "source": "authored" }
+  ]
+}

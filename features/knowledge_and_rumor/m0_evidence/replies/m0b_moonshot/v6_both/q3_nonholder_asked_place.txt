@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Grigor Ashe? Never heard the name, love. I wash linen, I don't take folk anywhere. If it's the watch took him, you'd want the ward post by the Tally Bridge — ask there."}

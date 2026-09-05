@@ -36,7 +36,8 @@ use crate::{
         StageConfig, WarmExchanges, on_stage,
     },
     character::{
-        BodySlot, Control, GutEntry, IntentTarget, PocketedUnit, StatusKind, TravelIntent,
+        BodySlot, Character, Control, GutEntry, IntentTarget, PocketedUnit, StatusKind,
+        TravelIntent,
     },
     clock::{Office, Weekday, WorldClock, stroke_times},
     custody,
@@ -297,6 +298,15 @@ pub struct EngineConfig {
     /// Multiplies elapsed time in the chalk decay. `1.0` in the game; a test
     /// or a drive run raises it to weather a wall in seconds instead of days.
     pub marks_decay_scale: f64,
+    /// Whether the knowledge layer is live (`features/knowledge_and_rumor/`).
+    /// Defaults to **on**, like the marks and for the same reason: it is inert
+    /// until something is seeded or minted. `CATHEDRAL_NO_KNOWLEDGE` turns it off.
+    pub knowledge_enabled: bool,
+    /// Extra authored fact packs, as JSON **text** — the sim never touches the
+    /// filesystem. Merged over the embedded catalog before seeding, in order; a
+    /// duplicate id is a startup diagnostic and the pack is dropped. This is the
+    /// seam a quest uses to plant its own facts without editing a shipped asset.
+    pub fact_packs: Vec<String>,
 }
 
 impl Default for EngineConfig {
@@ -337,6 +347,8 @@ impl Default for EngineConfig {
             marks_enabled: true,
             mark_kinds: crate::marks::MarkKindSwitches::default(),
             marks_decay_scale: 1.0,
+            knowledge_enabled: true,
+            fact_packs: Vec::new(),
         }
     }
 }
@@ -1108,6 +1120,32 @@ impl Engine {
         world.mark_kinds = config.mark_kinds;
         world.marks.decay_scale = config.marks_decay_scale;
 
+        // The knowledge layer (`features/knowledge_and_rumor/`). The catalog is
+        // embedded, so this is the switch, any host-supplied quest packs, and
+        // the one seeding pass. Facts whose cast this world does not have are
+        // skipped with a diagnostic, which is what keeps the demo seed, every
+        // hermetic test and the 22 frozen fixtures byte-identical.
+        world.knowledge_enabled = config.knowledge_enabled;
+        if config.knowledge_enabled {
+            let mut catalog = (*world.fact_catalog).clone();
+            for pack in &config.fact_packs {
+                match catalog.extend_from_json(pack) {
+                    Ok(added) => startup_diagnostics
+                        .push(format!("[knowledge] a fact pack added {added} rows")),
+                    Err(error) => startup_diagnostics
+                        .push(format!("[knowledge] a fact pack was refused: {error}")),
+                }
+            }
+            world.fact_catalog = Arc::new(catalog);
+            // `seed` borrows the catalog while it mutates the world, so the
+            // `Arc` is cloned first — a refcount bump, not a copy.
+            let catalog = Arc::clone(&world.fact_catalog);
+            startup_diagnostics.extend(catalog.seed(&mut world));
+            // The salience ears name occupation ids, and this is the one place
+            // the lore is in the room to check them (`03_assets.md` §2).
+            startup_diagnostics.extend(unknown_salience_occupations(&world));
+        }
+
         // The Night Office reads its bedtimes off the seeded round, so it is
         // built here and not a line earlier (M6). Off by default, and then this
         // is two map lookups and a `None`.
@@ -1602,6 +1640,60 @@ impl Engine {
     /// A one-line census of the cast's hunger for `--trace-food` (food & items M2).
     pub fn food_summary(&self) -> String {
         self.round.food_summary(&self.world)
+    }
+
+    /// One line per (holder, fact) for `--trace-knowledge`, in roster order then
+    /// `FactKey` order, each carrying the sentence **that holder** reads — so
+    /// one command shows the `own`/`said` split and the unknown-people rule
+    /// without a provider, a turn or a token.
+    ///
+    /// Reads the store and nothing else: no cooling, no pickup, no percept. The
+    /// tracer to extend rather than replace — M2's `--trace-pollen` sits beside
+    /// it, on `water_summary`'s idiom.
+    pub fn knowledge_lines(&self) -> Vec<String> {
+        let now = self.world.current_time.map(|time| time.game_days());
+        let mut lines = Vec::new();
+        let mut total = 0usize;
+        let mut holders = Vec::new();
+        for id in &self.world.roster {
+            let holdings = crate::knowledge::holdings_of(&self.world, id);
+            if holdings.is_empty() {
+                continue;
+            }
+            total += holdings.len();
+            let name = self
+                .world
+                .characters
+                .get(id)
+                .map_or("(unknown)", Character::name);
+            for (key, held) in holdings {
+                let Some(fact) = self.world.knowledge.fact(key) else {
+                    continue;
+                };
+                let fact_id = &fact.id;
+                // A subject with no `own` line holds the fact and is never told
+                // it: the line says so rather than printing an empty sentence.
+                let rendered = crate::knowledge::render_line(
+                    &self.world,
+                    id,
+                    key,
+                    &held,
+                    self.env.strings(),
+                    now,
+                )
+                .unwrap_or_else(|| "(nothing they would say of it)".to_string());
+                holders.push(format!(
+                    "[knowledge] {id} {name}  {fact_id} hops {}  \"{rendered}\"",
+                    held.hops
+                ));
+            }
+        }
+        lines.push(format!(
+            "[knowledge] {} facts live, {total} holdings",
+            self.world.knowledge.len()
+        ));
+        lines.extend(holders);
+        lines
     }
 
     /// Drain the economy's `[food]` trace: legacy restock, sales, road traffic,
@@ -4241,6 +4333,39 @@ impl Engine {
             }
         }
     }
+}
+
+/// Every occupation id a `salience.json` ear names that nobody in this world
+/// holds (`features/knowledge_and_rumor/`, `03_assets.md` §2).
+///
+/// `SalienceTable::from_json` cannot do this: the table must load in a world with
+/// no lore at all, and `Engine::new` is the one place the lore is in the room. So
+/// it is a startup diagnostic and never an error — a hermetic world legitimately
+/// has no occupations, and its whole ear list would then be "unknown".
+pub(crate) fn unknown_salience_occupations(world: &World) -> Vec<String> {
+    let held: BTreeSet<&str> = world
+        .characters
+        .values()
+        .filter_map(Character::lore)
+        .filter_map(|profile| profile.occupation_id.as_deref())
+        .collect();
+    if held.is_empty() {
+        return Vec::new();
+    }
+    let mut lines = Vec::new();
+    for topic in crate::knowledge::Topic::ALL {
+        let (occupations, _) = world.salience.ear_of(topic);
+        for occupation in occupations {
+            if !held.contains(occupation.as_str()) {
+                lines.push(format!(
+                    "salience.json: the {} ear names unknown occupation '{occupation}'; \
+                     the ear will match nobody",
+                    topic.as_str()
+                ));
+            }
+        }
+    }
+    lines
 }
 
 /// The world-event kinds that stop both parties like a targeted line. The

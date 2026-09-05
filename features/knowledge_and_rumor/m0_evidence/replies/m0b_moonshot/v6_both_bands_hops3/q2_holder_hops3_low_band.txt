@@ -1,0 +1,1 @@
+say {"target": "player", "text": "Short weight, that's what's wrong with it — and cut with bean meal besides, so I'm told. Sent to the Wickmarket bakehouse. Mind, it's come to me second-hand and I can't vouch for the mouth it came from, but where it came from I can vouch for: not my beam. Nothing leaves this yard short, and no man in thirty years has proved me a grain out."}

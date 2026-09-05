@@ -1,0 +1,1 @@
+say {"target":"player","text":"I don't know what lies between Rohese Sedge and Doctor Ferrant. The common word is that she goes in at his door after the Snuffing, and not for physic. Doctor Ferrant's door is where you'd ask."}

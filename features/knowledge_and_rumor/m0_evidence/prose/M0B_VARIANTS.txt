@@ -1,0 +1,167 @@
+M0b — the four candidate variants, their one axis each, and the wording provenance.
+Authored 2026-09-04. Fired, not scored: the replies are in ../replies/m0b_moonshot/
+and ../replies/m0b_openai/, and two independent scorers own the verdicts.
+
+M0 froze v2_structural and named three repairs it could not itself measure. Each
+variant below is a byte-for-byte copy of prose/v2_structural/ with exactly ONE
+axis moved, so a difference in the replies can be attributed to a cause.
+
+    variant        block_header  block_note  hedges.toml  ignorance_rule  unknown_person
+    v4_rungs       frozen        frozen      R1           frozen          frozen
+    v5_exemplar    frozen        frozen      frozen       R2              frozen
+    v6_both        frozen        frozen      R1           R2              frozen
+    v7_letitlie    frozen        R3          R1           R2              frozen
+
+v6_both is the shipping candidate; v7_letitlie is v6_both with one appended
+sentence and is the ONLY variant that touches the let-it-lie clause.
+
+-------------------------------------------------------------------- R1, hedges.toml
+
+WHAT: 5 rungs x 3 bands (15 keys) -> 7 rungs x 3 bands (21 keys). Unchanged, byte
+for byte: hops0_own, hops0, hops1 and cold in all three bands, plus
+top_band.hops2 ("They say: %s") and low_band.hops2 (the somebody-who-had-it-from-
+somebody line) — those two were already the right rung for two removes in their
+own band, and both were measured. NEW: default.hops2, and hops3 + hops4 in all
+three bands.
+
+    [default]
+    hops2 = "The one who told you was not there either — they had it from the one who was: %s"
+    hops3 = "It came to you down a line of mouths, and whoever at the end of it
+             actually saw anything is a stranger to you: %s"
+    hops4 = "This has been through a great many mouths before it reached yours,
+             worn smooth in the telling, and nobody can now say who started it: %s"
+    [top_band]
+    hops3 = "It is the common word now, and nobody bothers to say where they had it: %s"
+    hops4 = "This is simply what is known in this city now, whoever said it first: %s"
+    [low_band]
+    hops3 = "Passed to you at a remove you cannot account for, the sort of small news
+             that gets carried because there is nothing else to carry: %s"
+    hops4 = "Stall talk, handed along so often that its edges are gone, and you have
+             never met anyone who was there: %s"
+
+WHY: M0's ladder collapsed every telling at two removes or more into one rung, so
+of the eight q4_wick holders four (hops 2, 2, 3, 4) received a BYTE-IDENTICAL
+knowledge line and two more (hops 1, 1) received another — six of eight holders
+got one of two lines. The parroting numbers M0 measured are a floor on both
+providers for that reason. Under the new ladder the same eight sheets render SIX
+distinct lines instead of four (04 and 05 still share, because both are authored
+at hops 2 and the fixtures' hop values were not touched).
+
+Two constraints held from the frozen file:
+  * one placeholder per rung, and no count ever reaches the model. {hops} stays
+    unused as in v2, and no NEW rung says "second-hand", "third-hand" or
+    "fourth-hand" either: an ordinal of removes is the count in words, and it is
+    exactly the phrase v3_register got parroted back four times. (default.hops2's
+    frozen "Third-hand, mouth to mouth…" is the one wording R1 retires, and this
+    is the second reason for retiring it.)
+  * the erosion relationship of 02_rumor_pollen.md survives, and is now legible
+    across four rungs instead of two. Read the three hops4 rungs against each
+    other: "simply what is known in this city now" (top band, hedges shed),
+    "nobody can now say who started it" (default), "you have never met anyone who
+    was there" (low band, chain named out loud all the way out).
+
+Each rung is a different SHAPE, not the same shape with a stronger adjective —
+one names who was and was not there, one names the line the telling came down,
+one names what the telling has become. Shape is what has to differ, because the
+failure being defeated is a terse model with one sentence of room reciting the
+rendered line back.
+
+--------------------------------------------------------------- R2, ignorance_rule
+
+WHAT: two bracketed exemplars replaced by descriptions of the same two moves. The
+third bullet, and every other clause of the paragraph, is untouched.
+
+    -  - name the trade that would know ("ask a porter, they stand on that gate");
+    -  - name the post whose business it is ("that is the weigher's, not mine");
+    +  - name the trade that would know it, whoever handles that sort of thing all day;
+    +  - name the post whose business it is, or the officer who keeps such things;
+       - name where it happened, or who was standing there.
+
+WHY: the porter exemplar came back in 4 of v2's 22 moonshot replies, once
+byte-identical, and openai lifted the weigher one ("Ask the weigher at the Stone
+Gate") — confirmed on two providers. A city where every stranger sends you to the
+porters is the parroting risk wearing a different coat.
+
+This is the "move with no quotable half-line" option rather than the alternating-
+exemplar one, for two reasons. Alternation is not available: the prose is one
+static string in strings.toml, so "alternating" would mean two exemplars per
+bullet, which is more quotable half-lines and not fewer. And the replacement
+clauses are instructions to the reader, not utterances — nobody says "whoever
+handles that sort of thing all day" to a stranger in a market — so there is
+nothing left in the bullet that can be lifted verbatim into speech. The third
+bullet has never carried an exemplar and worked, which is the precedent.
+
+------------------------------------------------------------------ R3, block_note
+
+WHAT: one sentence appended to the end of the paragraph. Nothing else moves — the
+clause is appended rather than spliced after "nobody tells anything" precisely so
+that every existing line of the note stays byte-identical and the diff is only the
+new text.
+
+    + Even so, a thing you hold that bears on what is being asked of you right
+    + now, or on what you are about to refuse somebody, is not a thing to sit on:
+    + say that one.
+
+WHY, and the reason this is a RE-CHECK and not a repair: the frozen let-it-lie
+clause is the prime suspect for M0's single Q1 failure (a butcher refused credit
+off a two-year debt memory and never mentioned the arrest that justified the
+refusal) — but the same miss came out REPAIRED with not one byte changed when the
+paragraph was re-fired at its real shipping position. So the wording may be
+innocent, and M0's own note says to re-check before applying. v6_both carries the
+FROZEN clause and v7_letitlie the softened one, both at the shipping position, so
+the pair is the test. The appended sentence names the exact failure shape rather
+than the general one: a fact that explains a refusal you are about to make.
+
+--------------------------------------------------------------- what was NOT moved
+
+block_header.txt and unknown_person.txt are byte-identical to v2_structural in all
+four variants. So is every clause of ignorance_rule.txt outside the two bullets,
+and every sentence of block_note.txt outside v7's appended one. Comments inside
+hedges.toml are TOML comments, stripped by the loader, and never reach a sheet.
+
+------------------------------------------------------------------ the fixture bug
+
+scenarios/q4_wick_03_osanne_vell.json contradicted itself and was re-authored
+before this round. hops0_own renders the own line ALONE, so the model never saw
+the Wickmarket and three "invented place" scores against this sheet in M0 were the
+sheet, not the model.
+
+    own, before: "I was at my own door when they took {subject} — he did not say
+                  one word, and the sergeant had his arm up behind his back"
+    own, after:  "I was standing in my own doorway on the Wickmarket when they took
+                  {subject} — he did not say one word, and the sergeant had his arm
+                  up behind his back"
+
+Only the place was added. Everything else in the line, and every other field of
+the scenario, is unchanged. Consequence for anyone re-deriving M0's numbers:
+rebuilding sheets/v2_structural/ from the current scenarios reproduces 21 of 22
+sheets byte for byte, and q4_wick_03 is the twenty-second.
+
+---------------------------------------------------- v8_bare (added 2026-09-04, verdict step)
+
+A fifth variant, fired by the firing agent beyond the four above and left without
+a provenance note; recorded here by the M0b verdict so the replies under
+../replies/m0b_<provider>/v8_bare/ (19 sheets each: the 15-sheet diagnostic set
+plus the four band sheets) have an entry.
+
+    variant        block_header  block_note  hedges.toml  ignorance_rule  unknown_person
+    v8_bare        frozen        frozen      R1           R2-DROPPED      frozen
+
+WHAT: v6_both with R2 done the other way the brief allowed — the two bracketed
+exemplars DROPPED rather than described. `diff -r prose/v6_both prose/v8_bare`
+reports ignorance_rule.txt only:
+
+    -  - name the trade that would know it, whoever handles that sort of thing all day;
+    -  - name the post whose business it is, or the officer who keeps such things;
+    +  - name the trade that would know;
+    +  - name the post whose business it is;
+
+1301 B against v6_both's 1386. Sheets: ../sheets/v8_bare/ and ../sheets/v8_bare_turnj2/
+(copied in from the firing scratchpad, cmp-identical to the fired files; each
+differs from its v6_both twin in exactly the two bullet lines, verified on all 24).
+
+VERDICT (NOTES.md, "M0b — measured repairs"): the control that shows the
+descriptions earn their referral. 0 exemplar lifts (nothing to lift), but on
+openai the bare bullet's one noun becomes the ritual ("…is their business" in 4
+of 5 refusals, v6_both 1 of 5) and on moonshot asked_day returns to v1_spec's
+dead end (refuses, refers nobody: threshold 1 at 4/5). Not shipped.
