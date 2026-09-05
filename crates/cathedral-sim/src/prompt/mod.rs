@@ -246,6 +246,13 @@ pub struct PromptStrings {
     /// `{place}` when the area handle no longer resolves — a hermetic
     /// world, or a handle from another map. Unmeasured.
     pub place_unknown: String,
+    /// The immediate mouth, appended to a bullet at one remove or more, so "who
+    /// told you that?" is answered off the sheet instead of invented. One `%s`,
+    /// resolved through `knowledge::person_word` exactly as `{subject}` is — so
+    /// an unknown teller comes out as the role that is a lead and never as a name
+    /// the reader was not given. Never appended to the top band's one-remove rung
+    /// ("Flatly, as a thing that happened"). Unmeasured.
+    pub known_from: String,
 }
 
 impl PromptStrings {
@@ -362,10 +369,10 @@ impl PromptEnv {
             ("know_hedge_low_hops4", &strings.know_hedge_low_hops4),
             ("know_hedge_low_cold", &strings.know_hedge_low_cold),
         ];
-        for (key, value) in hedges
-            .into_iter()
-            .chain([("day_days_past", &strings.day_days_past)])
-        {
+        for (key, value) in hedges.into_iter().chain([
+            ("day_days_past", &strings.day_days_past),
+            ("known_from", &strings.known_from),
+        ]) {
             if value.matches("%s").count() != 1 {
                 return Err(PromptError::new(format!(
                     "prompt strings: {key} must contain exactly one '%s' (the telling)"
@@ -2273,6 +2280,7 @@ same quarter or the same afternoon, you still do not know."#.into(),
             day_days_past: r#"%s days past"#.into(),
             day_long_ago: r#"a long while back"#.into(),
             place_unknown: r#"somewhere in the city"#.into(),
+            known_from: r#" — you had it from %s"#.into(),
         }
     }
 
@@ -2286,7 +2294,7 @@ same quarter or the same afternoon, you still do not know."#.into(),
 
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
-        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nmarks_note = \"mm\"\nchalkable_note = \"cc\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\nknow_note = \"n\"\nknow_discipline = \"nd\"\nknow_hedge_default_hops0_own = \"%s\"\nknow_hedge_default_hops0 = \"%s\"\nknow_hedge_default_hops1 = \"%s\"\nknow_hedge_default_hops2 = \"%s\"\nknow_hedge_default_hops3 = \"%s\"\nknow_hedge_default_hops4 = \"%s\"\nknow_hedge_default_cold = \"%s\"\nknow_hedge_top_hops0_own = \"%s\"\nknow_hedge_top_hops0 = \"%s\"\nknow_hedge_top_hops1 = \"%s\"\nknow_hedge_top_hops2 = \"%s\"\nknow_hedge_top_hops3 = \"%s\"\nknow_hedge_top_hops4 = \"%s\"\nknow_hedge_top_cold = \"%s\"\nknow_hedge_low_hops0_own = \"%s\"\nknow_hedge_low_hops0 = \"%s\"\nknow_hedge_low_hops1 = \"%s\"\nknow_hedge_low_hops2 = \"%s\"\nknow_hedge_low_hops3 = \"%s\"\nknow_hedge_low_hops4 = \"%s\"\nknow_hedge_low_cold = \"%s\"\nunknown_person_role = \"a %s of %s\"\nday_today = \"today\"\nday_yesterday = \"yesterday\"\nday_days_past = \"%s days past\"\nday_long_ago = \"long ago\"\nplace_unknown = \"somewhere\"\n";
+        let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nmarks_note = \"mm\"\nchalkable_note = \"cc\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\nknow_note = \"n\"\nknow_discipline = \"nd\"\nknow_hedge_default_hops0_own = \"%s\"\nknow_hedge_default_hops0 = \"%s\"\nknow_hedge_default_hops1 = \"%s\"\nknow_hedge_default_hops2 = \"%s\"\nknow_hedge_default_hops3 = \"%s\"\nknow_hedge_default_hops4 = \"%s\"\nknow_hedge_default_cold = \"%s\"\nknow_hedge_top_hops0_own = \"%s\"\nknow_hedge_top_hops0 = \"%s\"\nknow_hedge_top_hops1 = \"%s\"\nknow_hedge_top_hops2 = \"%s\"\nknow_hedge_top_hops3 = \"%s\"\nknow_hedge_top_hops4 = \"%s\"\nknow_hedge_top_cold = \"%s\"\nknow_hedge_low_hops0_own = \"%s\"\nknow_hedge_low_hops0 = \"%s\"\nknow_hedge_low_hops1 = \"%s\"\nknow_hedge_low_hops2 = \"%s\"\nknow_hedge_low_hops3 = \"%s\"\nknow_hedge_low_hops4 = \"%s\"\nknow_hedge_low_cold = \"%s\"\nunknown_person_role = \"a %s of %s\"\nday_today = \"today\"\nday_yesterday = \"yesterday\"\nday_days_past = \"%s days past\"\nday_long_ago = \"long ago\"\nplace_unknown = \"somewhere\"\nknown_from = \" from %s\"\n";
         let error = PromptEnv::new("x", "y", toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }

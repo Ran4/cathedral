@@ -24,9 +24,9 @@ use crate::clock::WorldClock;
 use crate::ids::{ActorId, AreaKey, FactId, FactKey};
 use crate::knowledge::salience::{salience_for, salience_for_listener};
 use crate::knowledge::{
-    AIR_HALF_LIFE_GAME_HOURS, Fact, FactView, GARBLE_AREA_RADIUS_M, HEAT_GONE_BELOW, HOP_LOSS,
-    Held, Holding, PLAYER_CURIOSITY, STIRS_PER_GAME_HOUR, Telling, Topic, VOLUNTEER_HEAT,
-    WARD_CELL_M, heat_pct, may_carry, volunteers_with,
+    AIR_HALF_LIFE_GAME_HOURS, Fact, GARBLE_AREA_RADIUS_M, HEAT_GONE_BELOW, HOP_LOSS, Held, Holding,
+    PLAYER_CURIOSITY, STAGE_HOP_MAX_PAIRS, STAGE_HOP_RADIUS_M, STIRS_PER_GAME_HOUR, Telling, Topic,
+    VOLUNTEER_HEAT, WARD_CELL_M, heat_pct, may_carry, volunteers_with,
 };
 use crate::lore::PlanningWard;
 use crate::math::Vec3;
@@ -454,8 +454,10 @@ pub fn poll_person(world: &mut World, actor: &ActorId, game_days: f64) {
                 hops,
                 from: drift.via.clone(),
                 heat: drift.heat * HOP_LOSS,
-                // M3 replaces this with `garble::view_for(world, fact, actor, hops)`.
-                view: FactView::default(),
+                // M2 put `FactView::default()` here. This is the whole of M3 in
+                // the hot path: the telling arrives already wrong, at this
+                // carrier's own remove.
+                view: crate::knowledge::garble::view_for(world, fact, actor, hops),
             },
         ));
     }
@@ -480,6 +482,149 @@ pub fn poll_person(world: &mut World, actor: &ActorId, game_days: f64) {
 /// receipt (`player_learned`, the journal); M2 makes them a carrier.
 pub fn poll_player(world: &mut World, player_id: &ActorId, game_days: f64) {
     poll_person(world, player_id, game_days);
+}
+
+/// Layer 2: mouth to mouth where the player can see it, so the wave reads as a
+/// wave instead of turning up already known one ward over.
+///
+/// It runs its **own** scan rather than riding `attention::on_stage`'s, for two
+/// reasons that must not be optimised away: `night::stage_occupied` calls
+/// `on_stage` purely as an emptiness question, so a side-effecting version would
+/// double-fire; and `on_stage` is not called at all under the default
+/// `IdleCognitionMode::All`, which is most runs. The scan is O(N) —
+/// `world.rs`'s `neighbours_by_distance` has no spatial index — so the **caller**
+/// gates it to one pass per [`STAGE_HOP_SECONDS`](super::STAGE_HOP_SECONDS) and
+/// this function bounds what a pass may do: at most nine bodies, so at most
+/// 9 × 8 × [`HOLDINGS_MAX`](super::HOLDINGS_MAX) = 432 rolls, and at most
+/// [`STAGE_HOP_MAX_PAIRS`] hops.
+///
+/// The roll is keyed on the stir the air's own sweep bumps, so a pair standing
+/// together for a minute gets one chance per half game hour and not one per
+/// pass: idempotence inside a stir *is* the per-pair cooldown, and it needs no
+/// state to store.
+///
+/// Every body on the stage is resolved to a [`Listener`] **once per pass**, and
+/// the gate and the rate are then the same two expressions Layer 1 uses
+/// ([`volunteers_with`], [`pickup_chance_of`]) — never a second copy of either.
+pub fn hop_on_stage(world: &mut World, player_id: &ActorId, now: f64, game_days: f64) {
+    debug_assert!(now.is_finite());
+    if !world.knowledge_enabled || world.knowledge.is_empty() {
+        return;
+    }
+    if !world.is_present(player_id) {
+        return;
+    }
+    let Some(centre) = world.characters.get(player_id).map(Character::position_m) else {
+        return;
+    };
+
+    // Already ordered by distance then id, which is what makes "the nearest few
+    // mouths" a stable set. `+ 1` because the player sits at distance 0 and would
+    // otherwise consume one of the eight.
+    let mut stage = world.characters_within(centre, STAGE_HOP_RADIUS_M, None);
+    stage.truncate(STAGE_HOP_MAX_PAIRS + 1);
+    if stage.len() < 2 {
+        return;
+    }
+
+    let stir = stage_stir(game_days); // the air's own grid, in game time
+    let mut tellings: Vec<(ActorId, FactKey, Telling)> = Vec::new();
+    {
+        // One `characters.get` per body per pass, not one per (carrier, fact,
+        // listener) triple: `Listener::resolve` is what the roll and the deposit
+        // gate both read, so resolving it here is the only way the innermost loop
+        // pays nothing for it.
+        let bodies: Vec<Listener<'_>> = stage
+            .iter()
+            .map(|id| Listener::resolve(world, id))
+            .collect();
+        'pairs: for carrier in &bodies {
+            for (key, held) in crate::knowledge::holdings_of(world, carrier.id) {
+                let Some(fact) = world.knowledge.fact(key) else {
+                    continue;
+                };
+                let carried_heat = held.heat(Some(game_days));
+                if !volunteers_with(
+                    fact,
+                    carrier.id,
+                    carried_heat,
+                    salience_for_listener(world, fact, carrier),
+                ) {
+                    continue;
+                }
+                let hops = held.hops.saturating_add(1);
+                let heat = carried_heat * HOP_LOSS;
+                for listener in &bodies {
+                    if listener.id == carrier.id || !may_carry(fact, listener.id) {
+                        continue;
+                    }
+                    if tellings.len() == STAGE_HOP_MAX_PAIRS {
+                        break 'pairs;
+                    }
+                    if crate::knowledge::holds_key(world, listener.id, key)
+                        .is_some_and(|have| have.hops <= hops)
+                    {
+                        continue;
+                    }
+                    if !picks_up_from(
+                        fact,
+                        listener.id,
+                        carrier.id,
+                        stir,
+                        pickup_chance_of(world, fact, listener, carried_heat),
+                    ) {
+                        continue;
+                    }
+                    tellings.push((
+                        listener.id.clone(),
+                        key,
+                        Telling {
+                            hops,
+                            from: Some(carrier.id.clone()),
+                            heat,
+                            view: crate::knowledge::garble::view_for(
+                                world,
+                                fact,
+                                listener.id,
+                                hops,
+                            ),
+                        },
+                    ));
+                }
+            }
+        }
+    }
+    for (listener, key, telling) in tellings {
+        crate::knowledge::learn(world, &listener, key, telling, Some(game_days));
+    }
+}
+
+/// [`picks_up`], with the mouth in the hash.
+///
+/// Eight carriers beside one listener must be eight independent chances or the
+/// pair cap buys nothing, and a listener who failed the ward's roll this stir
+/// must still have their own chance from the person in front of them — which is
+/// the whole of Layer 2. Guards and shape from `custody::struggle_roll`.
+pub fn picks_up_from(
+    fact: &Fact,
+    listener: &ActorId,
+    carrier: &ActorId,
+    stir: u32,
+    chance: f64,
+) -> bool {
+    if chance.is_nan() || chance <= 0.0 {
+        return false;
+    }
+    if chance >= 1.0 {
+        return true;
+    }
+    let mut hasher = DefaultHasher::new();
+    "pollen_stage_hop".hash(&mut hasher);
+    fact.sequence.hash(&mut hasher);
+    listener.hash(&mut hasher);
+    carrier.hash(&mut hasher);
+    stir.hash(&mut hasher);
+    ((hasher.finish() >> 11) as f64 / (1u64 << 53) as f64) < chance
 }
 
 /// Cool the air, bump `stir`, evict what has gone, and hold each ward to

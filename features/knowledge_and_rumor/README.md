@@ -1,4 +1,4 @@
-Status: M0 measured (2026-09-03, GO — see m0_evidence/NOTES.md); M1 implemented (2026-09-05); M2 implemented (2026-09-05). M3–M5 pending.
+Status: M0 measured (2026-09-03, GO — see m0_evidence/NOTES.md); M1 and M2 implemented and reviewed (2026-09-05); **M3 implemented but NOT YET REVIEWED** (2026-09-05, and its Q4 re-measurement is deferred — see m0_evidence/NOTES.md). M4–M5 not started. **Picking this up: read CLAUDE.md's first section, then plan/README.md.**
 
 # Knowledge and rumour
 
@@ -249,7 +249,7 @@ Built end-to-end. M0 is a throwaway spike and it is the go/no-go.
 | **M0** | **The mouth test** (spike, thrown away) | No store, no propagation. Hand-write the `what_you_know` block, its instruction paragraph and the ignorance rule; hand-author ~20 sheets — holders and non-holders, asked and unasked, alone and in a ward — and fire them at a **live provider** with `cathedral-headless --one-shot FILE`. Four questions: does a holder volunteer it when it is relevant? does a holder answer when asked straight? does a **non-holder refuse to invent, and name someone instead**? do eight holders in one ward produce eight different sentences? And, fifth: **given an occasion, does a model reach for `raise_word` — and given none, does it stay quiet?** Iterate on the *prose*, which is the only unknown in this feature, then throw the harness away and keep the strings. |
 | **M1** | The fact store and the block | `knowledge.rs`: `Fact`, `FactId`, `Held`, `FactView`, `holds()` with `seeded` holders only. JSON loading (`assets/world/facts.json`, plus per-quest packs). The block for real, with M0's strings, relevance selection and the bounded render. Golden prompts re-blessed **once, here**, before any content exists. Headless: two characters hold an authored fact and discuss it; a third is asked and says who to ask instead. |
 | **M2** | Minting, the air, and the **band** | Mint at `World::emit` for two kinds (the custody commit, the knell). The ward air (`02_rumor_pollen.md`): deposit, pickup and cooling on the ladder poll; `heat × salience` gates volunteering, holding persists. **Salience base bands** in the pickup roll and `assets/world/salience.json` — they belong here, not later, because they change the roll the cadence is measured on. Carriers-per-ward per game hour printed headlessly **per topic**, the **cadence band** measured at both ends, and the flat-table identity asserted against the pre-salience run. |
-| **M3** | Garbling, provenance, the chain | Deterministic garble seeded per `(fact sequence, carrier id, hops)`, bounded to the fixed vocabulary — subject → another named actor of the same ward or trade, place → adjacent area, day ±1 — never inventing a person (`no-procedural-characters` holds). Hop-keyed hedging, **eroded by salience** (a scandal loses its hedges, a stall quarrel keeps them) — one column on a table that is being written here anyway. The **merge rule** (`01_facts.md`): fewer hops wins, and hearing it closer to the source corrects the view. **"Who told you that?"** — the `from` chain, answerable by an NPC and walkable by the player. Stage-local mouth-to-mouth hops on `attention.rs`'s existing scan, so the wave is visibly a wave where the player can see it. |
+| **M3** | Garbling, provenance, the chain — **implemented 2026-09-05** | Deterministic garble seeded per `(fact sequence, carrier id, hops)`, bounded to the fixed vocabulary — subject → another named actor of the same ward or trade, place → adjacent area, day ±1 — never inventing a person (`no-procedural-characters` holds). Hop-keyed hedging, **eroded by salience** (a scandal loses its hedges, a stall quarrel keeps them) — one column on a table that is being written here anyway. The **merge rule** (`01_facts.md`): fewer hops wins, and hearing it closer to the source corrects the view. **"Who told you that?"** — the `from` chain, answerable by an NPC and walkable by the player. Stage-local mouth-to-mouth hops on `attention.rs`'s existing scan, so the wave is visibly a wave where the player can see it. |
 | **M4** | The player's side | The player as a carrier; `player_learned: BTreeMap<FactId, LearnedHow>`; the **journal overlay** (J) on the inventory overlay's pattern; the standing HUD line while a clock is live. And the player as a **source**: `raise_word` (`01_facts.md`), so a hearer of player speech can coin a claim out of what you told them — including things that are not true — with the player at the head of a chain that can be walked back to them. This is the LLM mint path, its **occasion gate** (the verb is offered only when somebody asserted something you do not hold, or a percept minted nothing), its caps, and its guardrails: `FactSource::Claimed`, speaker-only `seeded`, forced `decays`, topic from the closed list with `Talk` as the fallback. Plus the sim-side **relevance re-heat**, which is how a cold fact comes back round without a verb. |
 | **M5** | Consequence, legibility and tuning | The full event whitelist; the per-sheet budget; **systemic readings** of held facts (a stallholder refuses credit, a household does not open, the hearsay rung in `notices.rs` raises a wrongful summons off a garbled subject); **bells re-heat** matching pollen within earshot; the wave made visible (ward heat on the map, "four mouths, two wards" in the journal). **Salience affinity** (topic × the listener's trade, including the no-trade quarter's flat ×1.4 — which is where "the poor carry it furthest" now lives) and **subject-side damping** (the subject's household hears it last). Tune against M2's cadence band. |
 
@@ -276,6 +276,21 @@ nothing perceptibly moves inside a play session. The slow end is a computation, 
 The headless carriers-per-ward-per-game-hour print, broken out per topic, is the measurement; it is a
 test, not an eyeball. The flat-table run — every band `1.0`, reproducing the pre-salience numbers
 exactly — is the regression guard on the whole of it.
+
+## Numbers
+
+Every constant's derivation is in `plan/02_numbers.md` §3; this section carries the ones a reader of
+the spec needs in front of them, added by the milestone that landed them. The measured cadence band
+itself is `plan/02_numbers.md` and `m2_measurements.md`.
+
+- **`GARBLE_SUBJECT_POOL_MAX = 24`** (M3) — how many candidates a garbled subject is drawn from. The
+  smallest lore ward is **Wallwright at 33 people**, so every subject with a lore ward has at least 32
+  cohort members and this cap **always binds**: the walk over `World::roster` stops inside the
+  authored prefix and never reaches the generated tail, whatever the crowd knob says. It is also a
+  design choice and not only a bound — a given subject is confused with a stable handful of people
+  rather than with the whole city, which is what makes a walked chain legible instead of merely wrong.
+  Measured on the shipped cast: 20 real subjects, 24 candidates each, byte-identical with 1,000
+  generated citizens in the world (`pollen_cadence.rs::the_subject_pool_holds_only_the_authored_cast`).
 
 ## Risks
 

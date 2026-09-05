@@ -1626,6 +1626,87 @@ fn the_cadence_pack_seeds_four_off_affinity_mouths() {
     assert!(knowledge::holds_key(world, subject, craft.key).is_none());
 }
 
+/// **T24 (M3). The garble never invents a person, at real cast scale.**
+///
+/// `cathedral-sim`'s own tests build a cohort by hand; only this crate has the 519
+/// authored bodies and the generated tail beside them. Over twenty real subjects:
+/// the pool is bounded by `GARBLE_SUBJECT_POOL_MAX`, every member is a **named,
+/// non-generated** body of the subject's own lore ward or trade, and the answer is
+/// **byte-identical with a thousand generated citizens in the world** — because the
+/// pool reads `LoreProfile`, which the crowd knob cannot reach.
+///
+/// That last equality is the whole of `no-procedural-characters` for this feature:
+/// a rumour that named a generated body would name nobody the city knows, and a
+/// pool that grew with the crowd would also make the walk unbounded.
+#[test]
+fn the_subject_pool_holds_only_the_authored_cast() {
+    let pools = |crowd: usize| -> BTreeMap<ActorId, Vec<ActorId>> {
+        let run = city(Levers::default(), SECONDS_PER_DAY, Vec::new(), crowd);
+        let world = run.engine.world();
+        // Twenty real subjects, in roster order, skipping the player (no profile)
+        // and the generated tail (six-character ids).
+        let subjects: Vec<ActorId> = world
+            .roster
+            .iter()
+            .filter(|id| {
+                world.characters[*id]
+                    .lore()
+                    .is_some_and(|lore| !lore.generated)
+            })
+            .take(20)
+            .cloned()
+            .collect();
+        assert_eq!(subjects.len(), 20, "the shipped cast is bigger than this");
+        subjects
+            .into_iter()
+            .map(|subject| {
+                let pool = knowledge::garble::same_ward_or_trade(world, &subject);
+                assert!(
+                    pool.len() <= knowledge::GARBLE_SUBJECT_POOL_MAX,
+                    "{subject}'s pool is {} candidates",
+                    pool.len()
+                );
+                assert!(!pool.is_empty(), "{subject} can be confused with nobody");
+                let ward = world.characters[&subject]
+                    .lore()
+                    .expect("a profile")
+                    .planning_ward;
+                let trade = world.characters[&subject]
+                    .lore()
+                    .expect("a profile")
+                    .occupation_id
+                    .clone();
+                for member in &pool {
+                    let lore = world.characters[member]
+                        .lore()
+                        .unwrap_or_else(|| panic!("{member} has no profile"));
+                    assert!(!lore.generated, "{member} is a generated body");
+                    assert_ne!(member, &subject, "the subject is in their own pool");
+                    assert!(
+                        lore.planning_ward == ward
+                            || (trade.is_some() && lore.occupation_id == trade),
+                        "{member} shares neither {subject}'s ward nor their trade"
+                    );
+                }
+                (subject, pool)
+            })
+            .collect()
+    };
+
+    let shipped = pools(0);
+    let crowded = pools(1_000);
+    assert_eq!(
+        shipped, crowded,
+        "a thousand generated citizens changed who a rumour can confuse somebody with"
+    );
+    println!(
+        "[pollen] subject pools: {} subjects, {} candidates each on average, cap {}",
+        shipped.len(),
+        shipped.values().map(Vec::len).sum::<usize>() / shipped.len().max(1),
+        knowledge::GARBLE_SUBJECT_POOL_MAX
+    );
+}
+
 // ---------------------------------------------------------------------------
 // The cost guard
 // ---------------------------------------------------------------------------

@@ -241,7 +241,11 @@ fn fact_source_reaches_no_projection() {
          "seeded": ["sv3n1"],
          "source": {"quest_phase": {"quest": "zzsentinel", "phase": 1}}},
         {"id": "test.held.row", "topic": "law", "said": "somebody is held",
-         "seeded": ["cb947"], "source": {"custody": "zzcustodian"}}]}"#;
+         "seeded": ["cb947"], "source": {"custody": "zzcustodian"}},
+        {"id": "test.garbled.row", "topic": "law",
+         "said": "something happened at {place} {day}", "seeded": ["sv3n1"],
+         "place": "ford_well", "day": 0, "garble": "place,day",
+         "source": {"quest_phase": {"quest": "zzsentinel", "phase": 2}}}]}"#;
 
     let mut engine = engine_with_config(EngineConfig {
         fact_packs: vec![SENTINEL_PACK.to_string()],
@@ -249,9 +253,59 @@ fn fact_source_reaches_no_projection() {
     });
     assert_eq!(
         engine.world().knowledge.len(),
-        2,
-        "both sentinel rows seeded"
+        3,
+        "every sentinel row seeded"
     );
+
+    // M3's extension: a **garbled** holding of a source-sealed fact, so the walk
+    // below covers a drifted bullet and `chain()`'s output as well as a pristine
+    // one. `k0fb1` is not seeded, so this is a carried row at three removes.
+    let garbled_key = engine
+        .world()
+        .knowledge
+        .key_of(&FactId::from_raw("test.garbled.row"))
+        .expect("the garbling row installed");
+    let garbled_holder;
+    {
+        let world = engine.world_mut();
+        let fact = world.knowledge.fact(garbled_key).expect("the fact").clone();
+        // Which of the two carriers drifts, and at which remove, is a fixture and
+        // not a draw: the seed is `(sequence, carrier, hops)` and all three are
+        // fixed here.
+        let (holder, hops, view) = ["cb947", "k0fb1"]
+            .into_iter()
+            .flat_map(|holder| (1u8..=6).map(move |hops| (holder, hops)))
+            .find_map(|(holder, hops)| {
+                let view = knowledge::garble::view_for(world, &fact, &actor(holder), hops);
+                (!view.is_pristine()).then_some((holder, hops, view))
+            })
+            .expect("some carrier at some remove is wrong about it");
+        assert_eq!(
+            knowledge::learn(
+                world,
+                &actor(holder),
+                garbled_key,
+                Telling {
+                    hops,
+                    from: Some(actor("sv3n1")),
+                    heat: 1.0,
+                    view,
+                },
+                Some(0.0),
+            ),
+            knowledge::Learned::Fresh
+        );
+        garbled_holder = holder;
+    }
+    // The chain is a projection too — and the one that names mouths out loud.
+    let walked = knowledge::chain(engine.world(), &actor(garbled_holder), garbled_key);
+    assert_eq!(walked, vec![actor("sv3n1")]);
+    for sentinel in SENTINELS {
+        assert!(
+            !format!("{walked:?}").contains(sentinel),
+            "{sentinel} reached a chain walk"
+        );
+    }
 
     // The world and the catalog it carries, through `Debug` — the authored
     // spelling lives on `World` for the whole run, so it is sealed like the
@@ -1116,6 +1170,9 @@ fn no_string_this_feature_adds_says_fact_hop_heat_or_salience() {
         strings.day_days_past.as_str(),
         strings.day_long_ago.as_str(),
         strings.place_unknown.as_str(),
+        // M3's one new string (D18's extension rule: every later milestone adds
+        // its own keys to this list).
+        strings.known_from.as_str(),
     ];
     for (band, _, _) in LADDER {
         for rung in [
@@ -2046,4 +2103,936 @@ fn the_store_footprint_is_bounded() {
         store_clone_full.as_secs_f64() / world_clone_full.as_secs_f64() * 100.0,
     );
     assert_eq!(whole.knowledge.len(), world.knowledge.len());
+}
+
+// ---------------------------------------------------------------------------
+// M3 — garbling, the chain, hedge provenance, Layer 2
+// ---------------------------------------------------------------------------
+
+/// A lore-bearing body, in a named ward, at a named point. The garble pool is
+/// **lore only**, so the whole of M3's subject half needs profiles.
+fn lore_body(id: &str, name: &str, ward: PlanningWard, at: Vec3, control: Control) -> Character {
+    Character::from_sheet(CharacterSheet {
+        pockets: Vec::new(),
+        frontbutt: None,
+        id: actor(id),
+        name: name.to_string(),
+        control,
+        back_story: String::new(),
+        location_description: String::new(),
+        appearance: Default::default(),
+        voice_key: None,
+        position_m: at,
+        facing_yaw: 0.0,
+        holds: Vec::new(),
+        goal: "None".into(),
+        memories: Vec::new(),
+        knows: Default::default(),
+        lore: Some(profile(Some("Market seller"), ward)),
+        presence: cathedral_sim::Presence::InCity,
+        presence_epoch: 0,
+        economic_class: cathedral_sim::EconomicClass::Resident,
+    })
+}
+
+/// The chain fixture: a `law` fact (the `default` band) whose mask lets all three
+/// fields move, its subject and a cohort to confuse them with, a witness, three
+/// intermediate mouths and a reader.
+///
+/// Every body is lore-bearing and in the Wick ward, which is what gives the
+/// substitution pool somebody to draw.
+const CHAIN_ROW: &str = r#"{"id": "test.chain.row", "topic": "law",
+    "said": "{subject} was seen at {place} {day}", "subject": ["subjct"],
+    "seeded": ["wit000"], "place": "wickmarket", "day": 0,
+    "garble": "subject,place,day"}"#;
+
+const CHAIN_MOUTHS: [&str; 4] = ["wit000", "linkk1", "linkk2", "linkk3"];
+
+fn chain_world() -> (World, cathedral_sim::FactKey) {
+    let mut world = block_world();
+    // Distinct names throughout, so "no real name reached the sheet" is a sharp
+    // negative and not an accident of two bodies sharing a name.
+    for (index, (id, name)) in [
+        ("subjct", "Osanne Vell"),
+        ("cohor1", "Sibbe Hobbe"),
+        ("cohor2", "Gile Skell"),
+        ("cohor3", "Rohese Crake"),
+        ("cohor4", "Havise Bram"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        world.add_character(lore_body(
+            id,
+            name,
+            PlanningWard::Wick,
+            Vec3::new(100.0 + index as f64, WALK_Y, 0.0),
+            Control::Llm,
+        ));
+    }
+    for (index, (id, name)) in [
+        ("wit000", "Jonet Kett"),
+        ("linkk1", "Tib Stott"),
+        ("linkk2", "Ede Kett"),
+        ("linkk3", "Petronel Clove"),
+        ("readr9", "Ide Reader"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        assert!(
+            CHAIN_MOUTHS.contains(&id) || id == "readr9",
+            "{id} is not on the chain"
+        );
+        world.add_character(lore_body(
+            id,
+            name,
+            PlanningWard::Wick,
+            Vec3::new(200.0 + index as f64, WALK_Y, 0.0),
+            Control::Llm,
+        ));
+    }
+    let diagnostics = seed_pack(&mut world, CHAIN_ROW);
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    let key = world
+        .knowledge
+        .key_of(&FactId::from_raw("test.chain.row"))
+        .expect("the chain row installed");
+    (world, key)
+}
+
+/// Walk the four-link chain into a world with `learn`, exactly as a pickup does:
+/// each mouth's view is `garble::view_for` at their own remove, and each records
+/// the mouth in front of them.
+fn walk_the_chain(world: &mut World, key: cathedral_sim::FactKey) {
+    let fact = world.knowledge.fact(key).expect("the fact").clone();
+    let holders = ["linkk1", "linkk2", "linkk3", "readr9"];
+    for (index, holder) in holders.into_iter().enumerate() {
+        let hops = index as u8 + 1;
+        let who = actor(holder);
+        let view = knowledge::garble::view_for(world, &fact, &who, hops);
+        let learned = knowledge::learn(
+            world,
+            &who,
+            key,
+            Telling {
+                hops,
+                from: Some(actor(CHAIN_MOUTHS[index])),
+                heat: 1.0,
+                view,
+            },
+            Some(0.0),
+        );
+        assert_eq!(learned, knowledge::Learned::Fresh, "{holder}");
+    }
+}
+
+/// T11. **A chain is a reconstruction, not a log.** Nothing about a link is stored
+/// beyond `(from, hops)`; a second world built from the same fixture with *no
+/// holdings at all* recomputes every link's view from `(sequence, carrier, hops)`
+/// and gets the same bytes.
+///
+/// That is the whole reason garbling had to be a pure function of the seed, and it
+/// is why `same_ward_or_trade` reads the **lore** ward and never where anybody is
+/// standing.
+#[test]
+fn a_chain_is_reconstructed_not_logged() {
+    let (mut a, key) = chain_world();
+    walk_the_chain(&mut a, key);
+    let (b, key_b) = chain_world();
+    assert_eq!(key, key_b, "the same fixture allocates the same handle");
+    let fact_b = b.knowledge.fact(key_b).expect("the fact").clone();
+    assert!(
+        b.knowledge.holdings_len(&actor("readr9")) == 0
+            && b.knowledge.holdings_len(&actor("linkk1")) == 0,
+        "world B must hold nothing — it is the reconstruction, not the record"
+    );
+
+    for (index, holder) in ["linkk1", "linkk2", "linkk3", "readr9"]
+        .into_iter()
+        .enumerate()
+    {
+        let hops = index as u8 + 1;
+        let held = knowledge::holds(&a, &actor(holder), &FactId::from_raw("test.chain.row"))
+            .expect("a stored link");
+        assert_eq!(held.hops, hops);
+        assert_eq!(
+            held.view,
+            knowledge::garble::view_for(&b, &fact_b, &actor(holder), hops),
+            "{holder}'s view at hops {hops} is not reconstructible"
+        );
+    }
+    // The witness is pristine in both worlds, which is the chain's honest far end.
+    let witness = knowledge::holds(&a, &actor("wit000"), &FactId::from_raw("test.chain.row"))
+        .expect("the witness holds it");
+    assert!(witness.view.is_pristine() && witness.from.is_none());
+
+    // Four mouths, newest first, and the reader is not among them.
+    assert_eq!(
+        knowledge::chain(&a, &actor("readr9"), key),
+        vec![
+            actor("linkk3"),
+            actor("linkk2"),
+            actor("linkk1"),
+            actor("wit000")
+        ]
+    );
+    // At least one link was actually wrong about something, or this test is
+    // asserting that nothing equals nothing.
+    let garbled = ["linkk1", "linkk2", "linkk3", "readr9"]
+        .into_iter()
+        .filter(|holder| {
+            knowledge::holds(&a, &actor(holder), &FactId::from_raw("test.chain.row"))
+                .is_some_and(|held| !held.view.is_pristine())
+        })
+        .count();
+    assert!(garbled > 0, "nothing drifted down a four-link chain");
+}
+
+/// T12. **Topic is invariant under garbling**, asserted over every hop of a walked
+/// chain: the fact is one fact, its topic is one topic, its band is one band, and
+/// every link renders in the rung that band selects at *that link's* removes.
+///
+/// `FactView` carries no topic field, so this is a property of the type as much as
+/// of the walk — garbling moves the subject, the place and the day, and nothing
+/// else.
+#[test]
+fn topic_is_invariant_over_a_walked_chain() {
+    let (mut world, key) = chain_world();
+    walk_the_chain(&mut world, key);
+    let env = prompt_env();
+    let strings = env.strings();
+
+    let fact = world.knowledge.fact(key).expect("the fact").clone();
+    let band = world.salience.hedge_band(fact.topic);
+    assert_eq!(fact.topic, knowledge::Topic::Law);
+    assert_eq!(band, cathedral_sim::knowledge::HedgeBand::Default);
+
+    for (index, holder) in ["linkk1", "linkk2", "linkk3", "readr9"]
+        .into_iter()
+        .enumerate()
+    {
+        let hops = index as u8 + 1;
+        // One fact, one key, one topic, one band, at every remove.
+        let held = knowledge::holds(&world, &actor(holder), &FactId::from_raw("test.chain.row"))
+            .expect("a stored link");
+        assert_eq!(held.hops, hops);
+        assert_eq!(
+            world.knowledge.key_of(&FactId::from_raw("test.chain.row")),
+            Some(key)
+        );
+        assert_eq!(
+            world.knowledge.fact(key).expect("the fact").topic,
+            fact.topic
+        );
+        assert_eq!(world.salience.hedge_band(fact.topic), band);
+
+        // …and the rung is the one the fact's band selects at this link's hops.
+        let rendered = bullets(&world, holder, &[], &env)
+            .unwrap_or_else(|| panic!("{holder} holds nothing on their sheet"));
+        assert_eq!(rendered.len(), 1, "{rendered:?}");
+        let expected = cell(strings, "default", &format!("hops{hops}"));
+        let prefix = expected.split("%s").next().expect("the rung's own prefix");
+        assert!(
+            rendered[0].starts_with(prefix),
+            "{holder} at hops {hops} rendered in the wrong rung: {}",
+            rendered[0]
+        );
+    }
+}
+
+/// T13. The walk stops honestly: a cycle ends at the repeat, and a chain longer
+/// than the cap ends at the cap — which is what keeps a merge bug that points two
+/// holdings at each other from becoming an infinite loop inside a prompt render.
+#[test]
+fn a_chain_stops_at_a_cycle_and_at_the_cap() {
+    // A cycle: two carriers each naming the other.
+    let (mut world, key) = chain_world();
+    for (holder, teller) in [("linkk1", "linkk2"), ("linkk2", "linkk1")] {
+        knowledge::learn(
+            &mut world,
+            &actor(holder),
+            key,
+            Telling {
+                hops: 2,
+                from: Some(actor(teller)),
+                heat: 1.0,
+                view: Default::default(),
+            },
+            Some(0.0),
+        );
+    }
+    let walked = knowledge::chain(&world, &actor("linkk1"), key);
+    assert!(walked.len() <= 2, "a cycle walked forever: {walked:?}");
+
+    // Twelve links, hand-built: the cap is what the walk returns.
+    let mut world = block_world();
+    for index in 0..13 {
+        world.add_character(character(&format!("m{index:05}"), "A Mouth", None, &[]));
+    }
+    let diagnostics = seed_pack(
+        &mut world,
+        r#"{"id": "test.long.row", "topic": "law", "said": "the beam was wrong",
+            "seeded": ["m00000"]}"#,
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    let key = world
+        .knowledge
+        .key_of(&FactId::from_raw("test.long.row"))
+        .expect("the long row installed");
+    for index in 1..13u8 {
+        knowledge::learn(
+            &mut world,
+            &actor(&format!("m{index:05}")),
+            key,
+            Telling {
+                hops: index,
+                from: Some(actor(&format!("m{:05}", index - 1))),
+                heat: 1.0,
+                view: Default::default(),
+            },
+            Some(0.0),
+        );
+    }
+    let walked = knowledge::chain(&world, &actor("m00012"), key);
+    assert_eq!(
+        walked.len(),
+        cathedral_sim::knowledge::CHAIN_MAX_LINKS,
+        "{walked:?}"
+    );
+    assert_eq!(walked[0], actor("m00011"), "newest mouth first");
+}
+
+/// T14. **The merge rule, all four rows, under real hops and real views.** The heat
+/// inputs are pinned exactly as M1's `the_merge_rule_all_four_rows` pins them, so
+/// the two tests cannot come to disagree about what `Warmed` means.
+///
+/// One deliberate departure from production: the equal-hops arrivals carry a view
+/// borrowed from *another* remove. In the real pass an equal-hops arrival
+/// recomputes the identical view (it is a function of listener and hops alone), so
+/// "the held view survives" would be unobservable — and unobservable is not the
+/// same as true.
+#[test]
+fn the_merge_rule_under_real_hops() {
+    let (mut world, key) = chain_world();
+    let fact = world.knowledge.fact(key).expect("the fact").clone();
+    let carrier = actor("readr9");
+    let now = Some(0.0);
+    // Every view this test uses, computed before the store is written: `view_for`
+    // needs `&World` and `learn` needs `&mut World`, which is the same two-phase
+    // shape the pickup arm has.
+    let view_at = |hops: u8| knowledge::garble::view_for(&world, &fact, &carrier, hops);
+    let far = view_at(4);
+    let near = view_at(2);
+    let other = view_at(6);
+    let witness_view = view_at(1);
+
+    // Nothing held: Fresh.
+    assert_eq!(
+        knowledge::learn(
+            &mut world,
+            &carrier,
+            key,
+            Telling {
+                hops: 4,
+                from: Some(actor("linkk3")),
+                heat: 0.5,
+                view: far.clone()
+            },
+            now
+        ),
+        knowledge::Learned::Fresh
+    );
+    let held = knowledge::holds_key(&world, &carrier, key).expect("stored");
+    assert_eq!((held.hops, held.view.clone()), (4, far));
+
+    // Fewer hops at equal heat: the view, the chain link and the count all move.
+    assert_eq!(
+        knowledge::learn(
+            &mut world,
+            &carrier,
+            key,
+            Telling {
+                hops: 2,
+                from: Some(actor("linkk1")),
+                heat: 0.5,
+                view: near.clone()
+            },
+            now
+        ),
+        knowledge::Learned::Corrected
+    );
+    let held = knowledge::holds_key(&world, &carrier, key).expect("stored");
+    assert_eq!(held.hops, 2);
+    assert_eq!(held.view, near);
+    assert_eq!(held.from, Some(actor("linkk1")));
+
+    // Equal hops, no warmer: nothing at all, and the view is kept.
+    assert_eq!(
+        knowledge::learn(
+            &mut world,
+            &carrier,
+            key,
+            Telling {
+                hops: 2,
+                from: Some(actor("linkk2")),
+                heat: 0.5,
+                view: other.clone()
+            },
+            now
+        ),
+        knowledge::Learned::Unchanged
+    );
+    let held = knowledge::holds_key(&world, &carrier, key).expect("stored");
+    assert_eq!(held.view, near, "an equal arrival rewrote the held view");
+    assert_eq!(held.from, Some(actor("linkk1")));
+
+    // Equal hops, warmer: the heat moves and the held view still survives.
+    assert_eq!(
+        knowledge::learn(
+            &mut world,
+            &carrier,
+            key,
+            Telling {
+                hops: 2,
+                from: Some(actor("linkk2")),
+                heat: 0.8,
+                view: other.clone()
+            },
+            now
+        ),
+        knowledge::Learned::Warmed
+    );
+    let held = knowledge::holds_key(&world, &carrier, key).expect("stored");
+    assert_eq!(held.view, near);
+    assert_eq!(cathedral_sim::knowledge::heat_pct(held.heat(now)), 80);
+
+    // Farther at higher heat: only the heat moves.
+    assert_eq!(
+        knowledge::learn(
+            &mut world,
+            &carrier,
+            key,
+            Telling {
+                hops: 5,
+                from: Some(actor("linkk3")),
+                heat: 0.9,
+                view: other
+            },
+            now
+        ),
+        knowledge::Learned::Warmed
+    );
+    let held = knowledge::holds_key(&world, &carrier, key).expect("stored");
+    assert_eq!((held.hops, held.view.clone()), (2, near));
+    assert_eq!(held.from, Some(actor("linkk1")));
+    assert_eq!(cathedral_sim::knowledge::heat_pct(held.heat(now)), 90);
+
+    // Row four: a witness cannot be talked out of what they saw.
+    let witness = actor("wit000");
+    let before = knowledge::holds_key(&world, &witness, key).expect("the witness holds it");
+    assert_eq!(
+        knowledge::learn(
+            &mut world,
+            &witness,
+            key,
+            Telling {
+                hops: 1,
+                from: Some(actor("linkk1")),
+                heat: 1.0,
+                view: witness_view
+            },
+            now
+        ),
+        knowledge::Learned::Refused
+    );
+    assert_eq!(
+        knowledge::holds_key(&world, &witness, key),
+        Some(before),
+        "a seeded holder moved"
+    );
+}
+
+/// T15. **You can beat your own garbled story to a ward.** Four holders four
+/// removes out, each with a view of their own, are all `Corrected` by one arrival a
+/// single remove from a witness: the hop count, the chain link and the view are
+/// replaced together, and at least one of them ends up with the story straight.
+#[test]
+fn walking_the_zero_hop_version_into_a_ward_corrects_it() {
+    let (mut world, key) = chain_world();
+    let fact = world.knowledge.fact(key).expect("the fact").clone();
+    const WARD: [&str; 4] = ["linkk1", "linkk2", "linkk3", "readr9"];
+
+    for holder in WARD {
+        let who = actor(holder);
+        let view = knowledge::garble::view_for(&world, &fact, &who, 4);
+        assert_eq!(
+            knowledge::learn(
+                &mut world,
+                &who,
+                key,
+                Telling {
+                    hops: 4,
+                    from: Some(actor("cohor1")),
+                    heat: 0.4,
+                    view,
+                },
+                Some(0.0),
+            ),
+            knowledge::Learned::Fresh
+        );
+    }
+    let drifted = WARD
+        .into_iter()
+        .filter(|holder| {
+            knowledge::holds_key(&world, &actor(holder), key)
+                .is_some_and(|held| !held.view.is_pristine())
+        })
+        .count();
+    assert!(
+        drifted > 0,
+        "a ward four removes out was wrong about nothing"
+    );
+
+    // The witness's own telling arrives, one remove out.
+    let witness = actor("wit000");
+    let mut pristine = 0;
+    for holder in WARD {
+        let who = actor(holder);
+        let view = knowledge::garble::view_for(&world, &fact, &who, 1);
+        assert_eq!(
+            knowledge::learn(
+                &mut world,
+                &who,
+                key,
+                Telling {
+                    hops: 1,
+                    from: Some(witness.clone()),
+                    heat: 1.0,
+                    view: view.clone(),
+                },
+                Some(0.0),
+            ),
+            knowledge::Learned::Corrected,
+            "{holder} refused the closer version"
+        );
+        let held = knowledge::holds_key(&world, &who, key).expect("stored");
+        assert_eq!(held.hops, 1);
+        assert_eq!(held.from, Some(witness.clone()));
+        assert_eq!(held.view, view);
+        if held.view.is_pristine() {
+            pristine += 1;
+        }
+    }
+    assert!(
+        pristine > 0,
+        "nobody in the ward ended up with the story straight"
+    );
+}
+
+/// The stage fixture: a player and `count` lore-less bodies at 3 m spacing, the
+/// first of them a witness to one `bed` fact.
+///
+/// Lore-less on purpose, exactly as `air_world` is: `curiosity_of` reads
+/// `CURIOSITY_WITHOUT_LORE` for a body with no sheet, so the pickup chance clamps
+/// to certainty and the test is about the *plumbing*. The roll itself is pinned in
+/// `pollen.rs`.
+fn stage_world(count: usize) -> (World, cathedral_sim::FactKey) {
+    stage_world_spaced(count, 3.0)
+}
+
+/// [`stage_world`] at a chosen spacing, so a crowd test can put thirty bodies
+/// **inside** earshot: at 3 m only the first six are within
+/// [`cathedral_sim::HEARING_RADIUS_M`], and a bounded-pass test whose bodies are
+/// mostly out of range would bound nothing.
+fn stage_world_spaced(count: usize, spacing: f64) -> (World, cathedral_sim::FactKey) {
+    let mut world = block_world();
+    world.add_character(lore_body(
+        "player",
+        "Player",
+        PlanningWard::Fabric,
+        IN_FABRIC,
+        Control::Player,
+    ));
+    world.add_character(character("subjct", "Osanne Vell", None, &[]));
+    stand(&mut world, "subjct", Vec3::new(0.0, WALK_Y, 500.0));
+    for index in 0..count {
+        let id = format!("mouth{index:03}");
+        world.add_character(character(&id, "A Mouth", None, &[]));
+        stand(
+            &mut world,
+            &id,
+            Vec3::new(spacing * (index as f64 + 1.0), WALK_Y, 0.0),
+        );
+    }
+    let diagnostics = seed_pack(
+        &mut world,
+        r#"{"id": "test.stage.row", "topic": "bed", "said": "{subject} was seen leaving",
+            "subject": ["subjct"], "seeded": ["mouth000"]}"#,
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    let key = world
+        .knowledge
+        .key_of(&FactId::from_raw("test.stage.row"))
+        .expect("the stage row installed");
+    (world, key)
+}
+
+/// Step Layer 2 across `stirs` successive stir windows — half a game hour each, in
+/// game time, which is the grid the air's own sweep bumps.
+fn hop_stirs(world: &mut World, stirs: u32) {
+    for stir in 0..stirs {
+        let game_days = f64::from(stir) / (24.0 * cathedral_sim::knowledge::STIRS_PER_GAME_HOUR);
+        knowledge::pollen::hop_on_stage(world, &actor("player"), f64::from(stir), game_days);
+    }
+}
+
+/// T16. **A stage hop moves a fact down a street.** Bodies within speaking distance
+/// hop mouth to mouth where the player can watch it, so the wave reads as a wave
+/// instead of turning up already known one ward over. Every carried row names the
+/// mouth beside it.
+#[test]
+fn a_stage_hop_moves_a_fact_down_a_street() {
+    let (mut world, key) = stage_world(3);
+    let id = FactId::from_raw("test.stage.row");
+    assert!(knowledge::holds(&world, &actor("mouth001"), &id).is_none());
+
+    hop_stirs(&mut world, 8);
+
+    let second =
+        knowledge::holds(&world, &actor("mouth001"), &id).expect("the second mouth has it");
+    assert_eq!(second.hops, 1, "one remove from the witness beside them");
+    assert_eq!(second.from, Some(actor("mouth000")));
+    let third = knowledge::holds(&world, &actor("mouth002"), &id).expect("the third mouth has it");
+    assert!(third.hops <= 2, "{}", third.hops);
+    let teller = third.from.expect("a stage hop always names its mouth");
+    assert!(
+        ["mouth000", "mouth001"].contains(&teller.as_str()),
+        "the third mouth had it from {teller}, who is not on the stage"
+    );
+    // The witness is untouched: `learn` refuses a hops-0 holder.
+    let witness = knowledge::holds(&world, &actor("mouth000"), &id).expect("still a witness");
+    assert!(witness.is_first_hand() && witness.from.is_none());
+    // And the chain walks back to them.
+    assert_eq!(
+        knowledge::chain(&world, &actor("mouth001"), key),
+        vec![actor("mouth000")]
+    );
+}
+
+/// T17. **A stage hop is not a percept.** `Novelty::admits_idle` short-circuits to
+/// `true` on a non-empty inbox, so one percept per hop would hold an idle turn open
+/// for everybody on a busy square.
+#[test]
+fn a_stage_hop_is_not_a_percept() {
+    let (mut world, _) = stage_world(3);
+    let ids: Vec<ActorId> = world.roster.clone();
+    let before: Vec<(usize, usize, usize)> = ids
+        .iter()
+        .map(|id| {
+            let body = &world.characters[id];
+            (
+                body.inbox().len(),
+                body.pending_history().len(),
+                body.recent_history().len(),
+            )
+        })
+        .collect();
+
+    hop_stirs(&mut world, 8);
+    assert!(
+        knowledge::holds(
+            &world,
+            &actor("mouth001"),
+            &FactId::from_raw("test.stage.row")
+        )
+        .is_some(),
+        "the test is only worth anything if something hopped"
+    );
+
+    for (id, was) in ids.iter().zip(before) {
+        let body = &world.characters[id];
+        assert_eq!(
+            (
+                body.inbox().len(),
+                body.pending_history().len(),
+                body.recent_history().len()
+            ),
+            was,
+            "{id} was handed a prompt by a rumour"
+        );
+    }
+}
+
+/// T18. Layer 2 reaches exactly as far as a voice does: a body a metre past earshot
+/// never hears anything, however long the two of them stand there.
+#[test]
+fn a_stage_hop_never_looks_past_earshot() {
+    let (mut world, _) = stage_world(3);
+    world.add_character(character("faraway", "Too Far", None, &[]));
+    stand(
+        &mut world,
+        "faraway",
+        Vec3::new(cathedral_sim::HEARING_RADIUS_M + 1.0, WALK_Y, 0.0),
+    );
+
+    hop_stirs(&mut world, 48);
+
+    let id = FactId::from_raw("test.stage.row");
+    assert!(
+        knowledge::holds(&world, &actor("mouth001"), &id).is_some(),
+        "the nearby mouths must have talked, or this test proves nothing"
+    );
+    assert!(
+        knowledge::holds(&world, &actor("faraway"), &id).is_none(),
+        "a body past earshot picked a word out of the air"
+    );
+}
+
+/// T19. One pass is bounded: thirty mouths in earshot, every roll certain, and a
+/// single pass may still only make `STAGE_HOP_MAX_PAIRS` new holdings. Risk 3's
+/// cost premise, asserted rather than assumed.
+#[test]
+fn the_stage_hop_is_bounded() {
+    // 0.6 m apart, so all thirty really are inside earshot and the truncation to
+    // nine bodies is exercised as well as the pair cap.
+    let (mut world, _) = stage_world_spaced(30, 0.6);
+    assert_eq!(
+        world
+            .characters_within(IN_FABRIC, cathedral_sim::HEARING_RADIUS_M, None)
+            .len(),
+        31,
+        "thirty mouths and the player must all be in earshot"
+    );
+    let holdings = |world: &World| -> usize {
+        world
+            .roster
+            .iter()
+            .map(|id| world.knowledge.holdings_len(id))
+            .sum()
+    };
+    let before = holdings(&world);
+    knowledge::pollen::hop_on_stage(&mut world, &actor("player"), 0.0, 0.0);
+    let made = holdings(&world) - before;
+    assert!(
+        made > 0 && made <= cathedral_sim::knowledge::STAGE_HOP_MAX_PAIRS,
+        "one pass made {made} holdings"
+    );
+}
+
+/// T22. `knowledge_enabled` gates writers as well as readers, so an ablation run is
+/// a real ablation.
+#[test]
+fn knowledge_disabled_makes_no_stage_hop() {
+    let (mut world, _) = stage_world(3);
+    world.knowledge_enabled = false;
+    let before = world.knowledge.clone();
+    hop_stirs(&mut world, 8);
+    assert_eq!(
+        world.knowledge, before,
+        "a stage hop wrote to the store with the layer off"
+    );
+}
+
+/// The teller fixture: one fact per band, a reader who does not know the mouth they
+/// had it from, and no garble mask — the sentence is held still so the only thing
+/// under test is the clause.
+fn teller_world() -> World {
+    let mut world = block_world();
+    world.add_character(lore_body(
+        "tellr1",
+        "Clemence Skep",
+        PlanningWard::Wick,
+        Vec3::new(0.0, WALK_Y, 300.0),
+        Control::Llm,
+    ));
+    world.add_character(character("subjct", "Osanne Vell", None, &[]));
+    for band in ["top", "default"] {
+        for hops in [1u8, 2] {
+            world.add_character(character(
+                &format!("{band}r{hops}"),
+                "Ide Reader",
+                None,
+                &["subjct"],
+            ));
+        }
+    }
+    world
+}
+
+/// T21. **"Who told you that?" is answerable off the sheet.** The immediate mouth
+/// is named at one remove or more, resolved through the reader's own `knows` exactly
+/// as `{subject}` is — so a teller the reader has never been told the name of comes
+/// out as the *role* that is a lead, never as a name.
+///
+/// And it is suppressed on exactly one rung: the top band's one-remove
+/// "Flatly, as a thing that happened", where citing a source is the one thing the
+/// rung means not to do.
+#[test]
+fn the_teller_is_named_on_the_sheet() {
+    let env = prompt_env();
+    let strings = env.strings();
+    let mut world = teller_world();
+    for (band, topic, id) in LADDER {
+        if band == "low" {
+            continue;
+        }
+        let diagnostics = seed_pack(
+            &mut world,
+            &format!(
+                r#"{{"id": "{id}", "topic": "{topic}",
+                     "said": "{{subject}} was seen at {{place}}, {{day}}",
+                     "subject": ["subjct"], "seeded": ["subjct"],
+                     "place": "wickmarket", "day": 0}}"#
+            ),
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        let key = world
+            .knowledge
+            .key_of(&FactId::from_raw(id))
+            .expect("the row installed");
+        for hops in [1u8, 2] {
+            let reader = actor(&format!("{band}r{hops}"));
+            assert_eq!(
+                knowledge::learn(
+                    &mut world,
+                    &reader,
+                    key,
+                    Telling {
+                        hops,
+                        from: Some(actor("tellr1")),
+                        heat: 1.0,
+                        view: Default::default(),
+                    },
+                    Some(0.0),
+                ),
+                knowledge::Learned::Fresh
+            );
+        }
+    }
+
+    // The clause's own text, without its placeholder, and the role the teller
+    // resolves to for a reader who was never told their name.
+    let clause = strings.known_from.replacen("%s", "", 1);
+    let role = strings
+        .unknown_person_role
+        .replacen("%s", "market seller", 1)
+        .replacen("%s", "the Wick Ward", 1);
+
+    let bullet = |world: &World, reader: &str| -> String {
+        let rendered = bullets(world, reader, &[], &env)
+            .unwrap_or_else(|| panic!("{reader} holds nothing on their sheet"));
+        assert_eq!(rendered.len(), 1, "{rendered:?}");
+        rendered.into_iter().next().expect("one bullet")
+    };
+
+    // A hops-2 default bullet ends with the teller, as a role.
+    let two = bullet(&world, "defaultr2");
+    assert!(two.contains(clause.as_str()), "{two}");
+    assert!(two.ends_with(role.as_str()), "{two}");
+    assert!(
+        !two.contains("Clemence Skep"),
+        "a name the reader was never given: {two}"
+    );
+    // …and so does a hops-1 default bullet: that rung already says the teller was
+    // there, and this names them.
+    let one = bullet(&world, "defaultr1");
+    assert!(one.contains(clause.as_str()), "{one}");
+    // The one suppression: the top band's one-remove rung.
+    let flat = bullet(&world, "topr1");
+    assert!(
+        flat.starts_with(
+            strings
+                .know_hedge_top_hops1
+                .split("%s")
+                .next()
+                .expect("the rung's prefix")
+        ),
+        "{flat}"
+    );
+    assert!(
+        !flat.contains(clause.as_str()),
+        "an assertion that cites its source is not flat: {flat}"
+    );
+    // But the same band at two removes does name them.
+    let top_two = bullet(&world, "topr2");
+    assert!(top_two.contains(clause.as_str()), "{top_two}");
+
+    // No mechanism, no handle, no digit — in any of them.
+    for reader in ["topr1", "topr2", "defaultr1", "defaultr2"] {
+        let line = bullet(&world, reader);
+        assert_no_mechanism_words(&[line.as_str()]);
+        for (_, _, id) in LADDER {
+            assert!(!line.contains(id), "a fact id reached a sheet: {line}");
+        }
+        assert!(
+            !line.chars().any(|character| character.is_ascii_digit()),
+            "a digit reached a sheet: {line}"
+        );
+    }
+}
+
+/// T20. A swapped subject the reader does not know renders as a **role**, not a
+/// name and not an id. A swap the reader cannot see is pointless and a swap that
+/// leaks a name is a bug, so both halves are asserted on the same bullet.
+#[test]
+fn a_swapped_subject_the_reader_does_not_know_renders_as_a_role() {
+    let env = prompt_env();
+    let strings = env.strings();
+    let (mut world, key) = chain_world();
+    let fact = world.knowledge.fact(key).expect("the fact").clone();
+
+    // Find a real garble — a holder and a remove at which `view_for` moves the
+    // subject. Deterministic: the seed is `(sequence, carrier, hops)` and all
+    // three are fixtures.
+    let (holder, hops, view) = ["linkk1", "linkk2", "linkk3", "readr9"]
+        .into_iter()
+        .flat_map(|holder| (1u8..=6).map(move |hops| (holder, hops)))
+        .find_map(|(holder, hops)| {
+            let view = knowledge::garble::view_for(&world, &fact, &actor(holder), hops);
+            view.subject.as_ref().map(|_| (holder, hops, view.clone()))
+        })
+        .expect("some holder at some remove is wrong about who it was");
+    let swapped = view.subject.clone().expect("a swapped subject");
+    let swapped_name = world.characters[&swapped].name().to_string();
+    assert_ne!(swapped, actor("subjct"), "the swap moved nobody");
+
+    assert_eq!(
+        knowledge::learn(
+            &mut world,
+            &actor(holder),
+            key,
+            Telling {
+                hops,
+                from: Some(actor("wit000")),
+                heat: 1.0,
+                view,
+            },
+            Some(0.0),
+        ),
+        knowledge::Learned::Fresh
+    );
+
+    let rendered = bullets(&world, holder, &[], &env).expect("a bullet");
+    assert_eq!(rendered.len(), 1, "{rendered:?}");
+    let bullet = &rendered[0];
+    let role = strings
+        .unknown_person_role
+        .replacen("%s", "market seller", 1)
+        .replacen("%s", "the Wick Ward", 1);
+    assert!(
+        bullet.contains(role.as_str()),
+        "the swapped subject did not render as a role: {bullet}"
+    );
+    // The reader was never told this person's name, and an id is never a word.
+    assert!(
+        !bullet.contains(swapped_name.as_str()),
+        "a name the reader was not given ({swapped_name}): {bullet}"
+    );
+    for id in world.roster.iter() {
+        assert!(
+            !bullet.contains(id.as_str()),
+            "an actor id reached a sheet: {bullet}"
+        );
+    }
 }

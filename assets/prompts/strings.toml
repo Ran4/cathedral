@@ -149,3 +149,14 @@ day_days_past = "%s days past"
 day_long_ago  = "a long while back"
 # `{place}` when the area key no longer resolves.
 place_unknown = "somewhere in the city"
+
+# ── the chain (features/knowledge_and_rumor/, M3) ─────────────────────────────
+# The immediate mouth, appended to a bullet at one remove or more, so "who told
+# you that?" is answered off the sheet instead of invented. `%s` goes through
+# the same resolution as a subject (person_word), so an unknown teller comes out
+# as the role that is a lead ("a porter of the Wick Ward (you don't know their
+# name)") and never as a name the reader was not given. Never appended to the
+# top band's one-remove rung ("Flatly, as a thing that happened"): an assertion
+# that cites its source is not flat. UNMEASURED — the one string M3 adds; the Q4
+# re-measurement (M3 Verification 11) fires it.
+known_from = " — you had it from %s"

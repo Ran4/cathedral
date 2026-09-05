@@ -35,6 +35,7 @@ use crate::prompt::PromptStrings;
 use crate::world::World;
 
 pub mod catalog;
+pub mod garble;
 pub mod mint;
 pub mod pollen;
 pub mod salience;
@@ -123,6 +124,18 @@ pub const DAY_OFFSET_MAX: i8 = 3;
 /// the swap is not always the same place, small enough that "an adjacent area"
 /// stays adjacent.
 pub const GARBLE_AREA_RADIUS_M: f64 = 120.0;
+
+/// How many candidates a garbled subject is drawn from, and the reason the walk
+/// that gathers them terminates early.
+///
+/// The smallest lore ward is Wallwright at 33 people (`02_numbers.md` §1), so
+/// every subject with a lore ward has at least 32 cohort members and this cap
+/// always binds: the walk over `World::roster` stops inside the authored prefix
+/// and never reaches the generated tail, whatever the crowd knob says. It is
+/// also a design choice and not only a bound — a given subject is confused with
+/// a stable handful of people rather than with the whole city, which is what
+/// makes a walked chain legible instead of merely wrong.
+pub const GARBLE_SUBJECT_POOL_MAX: usize = 24;
 
 /// A person is not a newspaper. Six rows are ~850 B per actor at the cap, so
 /// 17.4 MB at `--extra-ambient 20000`. Evicted coldest first, then most hops, then
@@ -1636,7 +1649,63 @@ pub fn render_line(
 
     // The rung is substituted last and exactly once, which is why the loader
     // refuses a template naming `%s`.
-    Some(hedge_of(strings, band, rung).replacen("%s", &sentence, 1))
+    let mut line = hedge_of(strings, band, rung).replacen("%s", &sentence, 1);
+
+    // The immediate mouth — "who told you that?" answered off the sheet instead
+    // of invented. Suppressed on the top band's one-remove rung ("Flatly, as a
+    // thing that happened"), where citing a source is the one thing the rung
+    // means not to do. The default and low one-remove rungs already say the
+    // teller was there and this names them; every deeper rung says the *origin*
+    // is unknown, which is a different claim and does not contradict knowing who
+    // spoke to you. A `Cold` bullet keeps the clause on purpose: a name is the
+    // last thing to go, and off a dead story it is the only lead the asker gets.
+    if held.hops > 0
+        && !(band == HedgeBand::Top && rung == Rung::Hops1)
+        && let Some(teller) = held.from.as_ref()
+    {
+        line.push_str(&strings.known_from.replacen(
+            "%s",
+            &person_word(world, reader, teller, strings),
+            1,
+        ));
+    }
+    Some(line)
+}
+
+/// Walk `Held::from` back, newest mouth first, and stop honestly.
+///
+/// A **reconstruction**, not a log: nothing about a link is stored beyond
+/// `(from, hops)`, and [`garble::view_for`] recomputes what that link had from the
+/// fact's own sequence. That is what makes "who told you that?" answerable for the
+/// player, for a sergeant and for a test, and it is why garbling had to be a pure
+/// function of the seed.
+///
+/// The reader is not in the list; these are the mouths behind them. The walk ends
+/// at a first-hand holder (`from: None`), at a mouth that no longer holds it —
+/// evicted or invalidated, so the chain is *genuinely* broken there and saying so
+/// beats guessing — at a repeat, and at [`CHAIN_MAX_LINKS`], which is what keeps a
+/// merge bug that points two holdings at each other from becoming an infinite
+/// loop inside a prompt render.
+///
+/// `Drift::via` is deliberately not read here. A pickup records the air's `via`
+/// as its own `from` at the moment it picks up (`pollen::poll_person`), so the
+/// store already holds the chain; reading a ward's *current* `via` during a walk
+/// would answer with whoever last deposited, who is not who told this person.
+pub fn chain(world: &World, actor: &ActorId, key: FactKey) -> Vec<ActorId> {
+    let mut links: Vec<ActorId> = Vec::new();
+    let mut here = actor.clone();
+    while links.len() < CHAIN_MAX_LINKS {
+        let Some(held) = holds_key(world, &here, key) else {
+            break;
+        };
+        let Some(teller) = held.from else { break };
+        if teller == *actor || links.contains(&teller) {
+            break;
+        }
+        links.push(teller.clone());
+        here = teller;
+    }
+    links
 }
 
 /// The one way an [`ActorId`] becomes a word on a sheet.

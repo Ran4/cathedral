@@ -951,8 +951,19 @@ fn a_reader_who_knows_the_subject_reads_the_name() {
     );
     let held = holds_key(&world, &reader, key).expect("a carried row");
     let line = render_line(&world, &reader, key, &held, &strings, Some(0.0)).expect("a line");
-    assert!(line.contains("Osanne Vell"), "{line}");
-    assert!(!line.contains("you don't know their name"), "{line}");
+    // M3 appends the immediate mouth, and this reader has **not** been told
+    // Clemence's name — so the role form is expected in that clause and the
+    // negative below belongs to the subject half of the bullet, which is what
+    // this test is about. Split on the clause's own frozen text rather than a
+    // literal, so a re-worded `known_from` moves this with it.
+    let clause = strings.known_from.replacen("%s", "", 1);
+    let (about, teller) = line.split_once(clause.as_str()).expect("the teller clause");
+    assert!(about.contains("Osanne Vell"), "{line}");
+    assert!(!about.contains("you don't know their name"), "{line}");
+    assert!(
+        teller.contains("you don't know their name"),
+        "the teller is a stranger and must render as a role: {line}"
+    );
 }
 
 /// A subject with no `own` line is never told about themselves in the third
@@ -1261,6 +1272,131 @@ fn the_rung_precedence_is_one_rule() {
     assert_eq!(rung_for(3, false, false), Rung::Hops3);
     assert_eq!(rung_for(4, false, false), Rung::Hops4);
     assert_eq!(rung_for(200, false, false), Rung::Hops4);
+}
+
+/// T9 (M3). The 21-cell lookup has **no band-shift**: every `(band, rung)` pair
+/// resolves to the key of its own name, byte for byte, and never to a neighbour's.
+/// A band-shifted layout would put a one-remove claim in front of a top-band
+/// telling at four removes, which is a provenance lie the prompt itself would be
+/// making.
+///
+/// Two spot values pin the table to the frozen file rather than to itself, and the
+/// three `hops4` cells read the erosion: the top band still asserts at four
+/// removes ("simply what is known"), the low band is stall talk.
+#[test]
+fn the_rung_table_has_no_band_shift() {
+    let strings = strings();
+    let cells: [(HedgeBand, Rung, &str); 21] = [
+        (
+            HedgeBand::Default,
+            Rung::Own,
+            &strings.know_hedge_default_hops0_own,
+        ),
+        (
+            HedgeBand::Default,
+            Rung::Hops0,
+            &strings.know_hedge_default_hops0,
+        ),
+        (
+            HedgeBand::Default,
+            Rung::Hops1,
+            &strings.know_hedge_default_hops1,
+        ),
+        (
+            HedgeBand::Default,
+            Rung::Hops2,
+            &strings.know_hedge_default_hops2,
+        ),
+        (
+            HedgeBand::Default,
+            Rung::Hops3,
+            &strings.know_hedge_default_hops3,
+        ),
+        (
+            HedgeBand::Default,
+            Rung::Hops4,
+            &strings.know_hedge_default_hops4,
+        ),
+        (
+            HedgeBand::Default,
+            Rung::Cold,
+            &strings.know_hedge_default_cold,
+        ),
+        (HedgeBand::Top, Rung::Own, &strings.know_hedge_top_hops0_own),
+        (HedgeBand::Top, Rung::Hops0, &strings.know_hedge_top_hops0),
+        (HedgeBand::Top, Rung::Hops1, &strings.know_hedge_top_hops1),
+        (HedgeBand::Top, Rung::Hops2, &strings.know_hedge_top_hops2),
+        (HedgeBand::Top, Rung::Hops3, &strings.know_hedge_top_hops3),
+        (HedgeBand::Top, Rung::Hops4, &strings.know_hedge_top_hops4),
+        (HedgeBand::Top, Rung::Cold, &strings.know_hedge_top_cold),
+        (HedgeBand::Low, Rung::Own, &strings.know_hedge_low_hops0_own),
+        (HedgeBand::Low, Rung::Hops0, &strings.know_hedge_low_hops0),
+        (HedgeBand::Low, Rung::Hops1, &strings.know_hedge_low_hops1),
+        (HedgeBand::Low, Rung::Hops2, &strings.know_hedge_low_hops2),
+        (HedgeBand::Low, Rung::Hops3, &strings.know_hedge_low_hops3),
+        (HedgeBand::Low, Rung::Hops4, &strings.know_hedge_low_hops4),
+        (HedgeBand::Low, Rung::Cold, &strings.know_hedge_low_cold),
+    ];
+    for (band, rung, frozen) in cells {
+        assert_eq!(
+            hedge_of(&strings, band, rung),
+            frozen,
+            "{band:?}/{rung:?} does not render its own key"
+        );
+    }
+    // Twenty-one *distinct* values: the seven rungs are not one ladder read three
+    // times, apart from the two rungs the rig measured as identical in all three
+    // bands (`hops0_own` and `hops0`, which say "you were there" and cannot vary
+    // by how much the ward cares).
+    let distinct: BTreeSet<&str> = cells.iter().map(|(_, _, text)| *text).collect();
+    assert_eq!(distinct.len(), 21 - 4, "{distinct:?}");
+
+    // Pinned to the file, not to itself.
+    assert_eq!(strings.know_hedge_top_hops2, "They say: %s");
+    assert!(
+        strings
+            .know_hedge_low_hops2
+            .starts_with("You had it from somebody"),
+        "{}",
+        strings.know_hedge_low_hops2
+    );
+    // The erosion, read across the three deepest cells.
+    assert!(
+        hedge_of(&strings, HedgeBand::Top, Rung::Hops4).contains("simply what is known"),
+        "the top band stopped asserting at four removes"
+    );
+    assert!(
+        hedge_of(&strings, HedgeBand::Low, Rung::Hops4).contains("Stall talk"),
+        "the low band stopped being stall talk at four removes"
+    );
+    assert!(
+        hedge_of(&strings, HedgeBand::Default, Rung::Hops4).contains("a great many mouths"),
+        "the default band's deepest rung moved"
+    );
+    // No rung names a count or an ordinal — the ladder is register, not arithmetic.
+    for (band, rung, text) in cells {
+        assert!(
+            !text.chars().any(|character| character.is_ascii_digit()),
+            "{band:?}/{rung:?} shows a digit: {text}"
+        );
+    }
+}
+
+/// T10 (M3). The one precedence rule, stated as the order it resolves in: own
+/// beats cold, cold beats every hop count including 0, and past four removes every
+/// depth is the same rung.
+///
+/// The cold/hops-0 order is **not** reversed — that reversal was proposed and
+/// rejected (D18): the measured rig checked cold first, and the merge rule's
+/// fourth row is about the store, not the register. D15 is the other half: a cold
+/// subject-witness with an `own` line is never rendered `said` about themselves.
+#[test]
+fn own_beats_cold_and_cold_beats_every_hop() {
+    assert_eq!(rung_for(0, true, true), Rung::Own);
+    assert_eq!(rung_for(0, true, false), Rung::Cold);
+    assert_eq!(rung_for(4, true, false), Rung::Cold);
+    assert_eq!(rung_for(3, false, false), Rung::Hops3);
+    assert_eq!(rung_for(9, false, false), Rung::Hops4);
 }
 
 /// An occupation display that begins with a vowel must not render "a anchoress".

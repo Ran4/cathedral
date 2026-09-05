@@ -1022,6 +1022,13 @@ pub struct Engine {
     /// `round.last_office_now`), so a coarser cadence changes when it runs, never
     /// how much time it accounts for.
     next_round_tick_at: f64,
+    /// The `now` at or after which Layer 2 may scan again
+    /// (`features/knowledge_and_rumor/`, M3). Real seconds and not game time on
+    /// purpose: it is a legibility cadence for what the player can watch, and the
+    /// scan it gates is O(N). What the roll *inside* it can change is game-timed
+    /// ([`crate::knowledge::pollen`]'s stir), so the number of chances a mouth
+    /// gets is the same at 1× and at the `T` key's 60×.
+    next_stage_hop_at: f64,
     /// The game-day at or after which the player takes their own turn at the
     /// ward's air (`features/knowledge_and_rumor/`, M2). Theirs is here and not in
     /// the round because `Round::seed` enrols only LLM-controlled bodies, and
@@ -1273,6 +1280,7 @@ impl Engine {
             // The first poll's `now` is >= this, so the round ticks on the first
             // poll exactly as it did every poll before the gate.
             next_round_tick_at: now,
+            next_stage_hop_at: now,
             next_player_pollen_game_days: f64::NEG_INFINITY,
             lamp_revision_sent: 0,
             dogs_published: false,
@@ -1380,6 +1388,21 @@ impl Engine {
                 &mut self.world,
                 &self.config.player_id,
                 player_pollen_game_days,
+            );
+        }
+        // Layer 2 (`features/knowledge_and_rumor/02_rumor_pollen.md`): the wave
+        // made granular where somebody can see it. Its own scan, deliberately —
+        // see `pollen::hop_on_stage`, and do not "optimise" it onto the `stage`
+        // local computed below: that is `None` under `IdleCognitionMode::All`
+        // and, under `Stage`, already decimated by `max_actors` and
+        // `Novelty::admits_idle` down to whoever is owed a prompt.
+        if now >= self.next_stage_hop_at {
+            self.next_stage_hop_at = now + crate::knowledge::STAGE_HOP_SECONDS;
+            crate::knowledge::pollen::hop_on_stage(
+                &mut self.world,
+                &self.config.player_id,
+                now,
+                self.clock.game_days(now),
             );
         }
         // …and the law's hands, whose every clock is a way custody ends: the

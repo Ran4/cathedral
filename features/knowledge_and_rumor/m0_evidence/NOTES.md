@@ -1023,3 +1023,48 @@ one-row `--facts` pack held at hops 4". **No M1 lever can produce that sheet.** 
 its first caller). So `NOTES.md`'s "What stays open" item 4 (3 of 4 moonshot top-band fires
 paraphrased a referral place the sheet never gave) is **still open and moves to M2**, which is the
 milestone that first makes a hops-4 holding reachable without hand-authoring a sheet.
+
+---
+
+## M3 — the Q4 re-measurement (2026-09-05): DEFERRED, and the reason
+
+**Not fired.** M3's Verification 11 wants the eight `q4_wick_*` sheets re-fired on **openai** with
+M3's garble applied per holder to the `said` text, plus the two band pairs
+`q2_holder_hops{3,4}_{top,low}_band` — 16–20 live calls — scored by M0's rule extended for garbling
+(two replies are also distinct if their spoken fact differs in a slot the player could notice:
+subject, place, day), with the lexical metric of "The re-measurement M3 owes" above as
+corroboration. **Pass: ≥ 6/8 on openai with no byte-identical pair. Baseline to beat, `v6_both` at
+this position: openai 3/8 and 0.42 / 0.81 / 5; moonshot 6/8 and 0.29 / 0.71 / 1.**
+
+The deferral reason is **not** "no provider key" — `prompt_playgound/.env` carries a live
+`OPENAI_API_KEY` and a live `MOONSHOT_API_KEY`. It is three things, in this order:
+
+1. **The garble seed has no canonical value for these personas.** `garble::view_for` is seeded on
+   `(fact.sequence, carrier id, hops)`. The eight `q4_wick_*` holders are **hand-authored M0
+   fixtures**, not the shipped cast: the scenario JSONs name them in prose and give no `carrier` id
+   for the holder, and `arrest.grigor.wickmarket` has no `sequence` because it was never minted.
+   Any garble fired at these sheets would therefore be *an* instance of M3's function under ids and a
+   sequence chosen by the person firing it — reproducible, but not the run's own. That has to be
+   decided and written down before the calls are spent, or the record cannot be re-derived.
+2. **The render path the Verification block names does not exist yet.** It asks for the sheets "dumped
+   from a `-v` run" with a one-row `--facts` pack "held at the scenario's hops by the scenario's
+   persona". A `--facts` pack can only seed `seeded`, which is hops 0 by definition — the same wall
+   `NOTES.md`'s M1 entry above hit. The lever that fixes it is **M4's** `seed-fact … -> <ward>` /
+   `pollen::debug_seed_air` (`plan/01_api.md`, M4 A17). Until then the only renderer for these
+   personas is the M0b harness (preserved at `scripts/m0b/`, restorable per its `README_M0B.txt`),
+   which is a **different** renderer from the game's and would make the comparison against `v6_both`
+   the only sound one.
+3. **Live provider spend was not authorised for this run.** M3's own file says the re-measurement
+   "blocks nothing else in M3", and its `Done when` admits a stated deferral. Everything M3 ships is
+   deterministic and offline-verified; this is the one item that is neither.
+
+**What is owed, and what it needs.** Either (a) fire it against `scripts/m0b/` with the garble
+computed by the real `garble::view_for` over stated ids and a stated `sequence`, comparing only
+against `v6_both`'s own openai run (3/8, 0.42/0.81/5) which came off the same renderer; or (b) wait
+for M4's `seed-fact` lever and fire it against the game's own sheets, which is the stronger reading
+and the one the plan wrote. **`know_hedge_low_hops3` therefore still ships at n = 1 per provider**
+(its second fire was to come from this run), and threshold 2 — the Q4 chorus on openai — **remains
+failed at 3/8**, handed on with the same next lever the plan names: if the re-measurement fails, a
+**sim-side seam for the mouth's own material** (an `own` line past hops 0, a memory seated by
+relevance — M5 design), not more prose. M3 added exactly one string (`known_from`, unmeasured) and
+**no rung**, so nothing measured moved underneath this.
