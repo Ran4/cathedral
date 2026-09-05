@@ -1,4 +1,4 @@
-Status: M0 measured (2026-09-03, GO — see m0_evidence/NOTES.md); M1 implemented (2026-09-05). M2–M5 pending.
+Status: M0 measured (2026-09-03, GO — see m0_evidence/NOTES.md); M1 implemented (2026-09-05); M2 implemented (2026-09-05). M3–M5 pending.
 
 # Knowledge and rumour
 

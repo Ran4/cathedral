@@ -583,7 +583,11 @@ pub const CURIOSITY_BASE: f64 = 0.082;
 /// past thirty times has spoken to you once, which reads as a broken NPC rather
 /// than a taciturn one. Rarely is a character; never is a bug.
 const CURIOSITY_FLOOR: f64 = 0.03;
-const CURIOSITY_CEILING: f64 = 0.60;
+/// `pub` for one reader outside this file: the knowledge layer's clamp bound
+/// (`pollen_cadence.rs`) asserts `CURIOSITY_CEILING × the widest salience ear
+/// < 1.0`, which is what keeps the pickup roll linear for every generated
+/// citizen, none of whom author a `curiosity` of their own.
+pub const CURIOSITY_CEILING: f64 = 0.60;
 
 /// So that the roll is not a re-reading of the context hash's own bits.
 const CURIOSITY_SALT: u64 = 0x_c0ff_ee15_600d_1dea;

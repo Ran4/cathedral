@@ -307,6 +307,15 @@ pub struct EngineConfig {
     /// duplicate id is a startup diagnostic and the pack is dropped. This is the
     /// seam a quest uses to plant its own facts without editing a shipped asset.
     pub fact_packs: Vec<String>,
+    /// Measurement lever: every salience band and multiplier at 1.0
+    /// ([`crate::knowledge::SalienceTable::flat`]). **Not a gameplay switch and
+    /// not in `config.ron`** — `cathedral-headless --pollen-flat`, and the identity
+    /// run the flat-table check is made of.
+    pub pollen_flat: bool,
+    /// Measurement lever: the salience factor deleted from the roll expression
+    /// entirely, which is the baseline [`Self::pollen_flat`] must reproduce field
+    /// for field (`02_numbers.md` §5). `cathedral-headless --pollen-no-salience`.
+    pub pollen_no_salience: bool,
 }
 
 impl Default for EngineConfig {
@@ -349,6 +358,8 @@ impl Default for EngineConfig {
             marks_decay_scale: 1.0,
             knowledge_enabled: true,
             fact_packs: Vec::new(),
+            pollen_flat: false,
+            pollen_no_salience: false,
         }
     }
 }
@@ -1011,6 +1022,13 @@ pub struct Engine {
     /// `round.last_office_now`), so a coarser cadence changes when it runs, never
     /// how much time it accounts for.
     next_round_tick_at: f64,
+    /// The game-day at or after which the player takes their own turn at the
+    /// ward's air (`features/knowledge_and_rumor/`, M2). Theirs is here and not in
+    /// the round because `Round::seed` enrols only LLM-controlled bodies, and
+    /// **game-days** for the reason every other knowledge deadline is: the `T`
+    /// key's 60× must not change anybody's roll count.
+    /// `f64::NEG_INFINITY` at construction, so the first poll is a poll.
+    next_player_pollen_game_days: f64,
     /// The round's lamp revision as of the last `Lamps` publish, so the set is
     /// resent exactly when something changed. 0 = never sent; the seed puts the
     /// round at 1, so the first poll always announces the posts.
@@ -1125,7 +1143,25 @@ impl Engine {
         // the one seeding pass. Facts whose cast this world does not have are
         // skipped with a diagnostic, which is what keeps the demo seed, every
         // hermetic test and the 22 frozen fixtures byte-identical.
+        // Publish the clock before anything reads it. `ring_offices` does this on
+        // every poll, but the first poll comes after seeding, and a decaying fact
+        // seeded into a clock-less world is news that never cools. A plain field
+        // write: it must **not** bump `world_revision`.
+        world.current_time = Some(config.clock.at(now));
         world.knowledge_enabled = config.knowledge_enabled;
+        // Which named areas a garbled place may become, off the **live** map — the
+        // catalog is an `include_str!` asset with one lifecycle and must not
+        // acquire a world-dependent one. Empty in every world with an empty
+        // `AreaMap`, so a place garble is a no-op in the frozen fixtures.
+        world.area_adjacency = Arc::new(crate::knowledge::AreaAdjacency::build(&world.area_map));
+        // The two measurement levers, and the only place either is read into the
+        // world. `pollen_flat` replaces the table; `pollen_no_salience` deletes the
+        // factor from the roll expression — and the second is the baseline the
+        // first must reproduce, so they are deliberately not one flag.
+        world.pollen_no_salience = config.pollen_no_salience;
+        if config.pollen_flat {
+            world.salience = Arc::new(crate::knowledge::SalienceTable::flat());
+        }
         if config.knowledge_enabled {
             let mut catalog = (*world.fact_catalog).clone();
             for pack in &config.fact_packs {
@@ -1237,6 +1273,7 @@ impl Engine {
             // The first poll's `now` is >= this, so the round ticks on the first
             // poll exactly as it did every poll before the gate.
             next_round_tick_at: now,
+            next_player_pollen_game_days: f64::NEG_INFINITY,
             lamp_revision_sent: 0,
             dogs_published: false,
             startup_diagnostics,
@@ -1324,6 +1361,26 @@ impl Engine {
         // snapshot chain.
         if crate::marks::sweep(&mut self.world, self.clock.game_days(now)) {
             self.world.touch_public_state();
+        }
+        // The ward's air, on the same clock and for the same reason: the sim
+        // itself has none (`features/knowledge_and_rumor/`, M2). Cooling is
+        // self-gated to the stir grid inside, so all but one of the ~60 polls a
+        // second costs a single `is_empty` check. It deliberately does **not**
+        // touch the public state — facts are prompt state, like notices.
+        crate::knowledge::pollen::sweep(&mut self.world, self.clock.game_days(now));
+        // The player is not in the round, so their seat at the air is here. Its
+        // deadline is game-days like everybody's, and their roll is
+        // `PLAYER_CURIOSITY` — never `curiosity_of`, which reads a body with no
+        // lore sheet as certain.
+        let player_pollen_game_days = self.clock.game_days(now);
+        if player_pollen_game_days >= self.next_player_pollen_game_days {
+            self.next_player_pollen_game_days =
+                player_pollen_game_days + crate::knowledge::PLAYER_POLL_GAME_MINUTES / 1440.0;
+            crate::knowledge::pollen::poll_player(
+                &mut self.world,
+                &self.config.player_id,
+                player_pollen_game_days,
+            );
         }
         // …and the law's hands, whose every clock is a way custody ends: the
         // dead-man timer, the station's four minutes, walking off, and the
@@ -1707,6 +1764,163 @@ impl Engine {
     /// A behavioural census of the enrolled cast for `--census-by-area`.
     pub fn round_census(&self, now: f64) -> Census {
         self.round.census(&self.world, &self.clock, now)
+    }
+
+    /// The pollen census for `--trace-pollen` — `round_census`'s idiom exactly: a
+    /// tracer computed where both the world and the clock are in hand, because
+    /// there is no public clock accessor.
+    pub fn pollen_census(&self, now: f64) -> crate::knowledge::pollen::PollenCensus {
+        crate::knowledge::pollen::census(&self.world, &self.clock, now)
+    }
+
+    /// Plant the measurement pack: one fact per topic at a named place, minted
+    /// **now**, all nine with one seeded set — because the spec's slow end is a
+    /// `Craft` fact "minted beside it, at the same hour, by the same mouth", and
+    /// nine facts with nine different mouths measure nine different cities.
+    ///
+    /// Not shipped content and not reachable from a verb: `--pollen-seed`, and the
+    /// cadence tests. Returns the planted keys and a human line naming the mouths,
+    /// or an error naming the place that did not resolve.
+    ///
+    /// The rule, stated once and fully determined (`02_numbers.md` §7, M2 step 18):
+    ///
+    /// 1. the first `nav` place whose name contains `place` case-insensitively, in
+    ///    graph order; `at` is that place's node point;
+    /// 2. `mouths` = every LLM body, ordered by distance from `at` then by id —
+    ///    `characters_within`'s own order. The radius is finite on purpose
+    ///    (`neighbours_by_distance` asserts it) and 1,200 m is past the
+    ///    727 × 828 m city's diagonal, so it is "everybody" without being infinity;
+    /// 3. `seeded` = the first [`PACK_MOUTHS`](crate::knowledge::mint::PACK_MOUTHS)
+    ///    of them. Fewer than that is an `Err`: a pack with two mouths measures a
+    ///    different city;
+    /// 4. `subject` = the first body **after** those whose trade none of the four
+    ///    holds (failing that, the first with no trade at all), which is what makes
+    ///    the `Craft` fact off-affinity for every seeded mouth and therefore what
+    ///    makes `s = 0.20 × 0.60 = 0.12` and the slow end's 0.057 reproduce.
+    ///
+    /// The subject stands in the mint ward and holds nothing: `may_carry` keeps them
+    /// from ever rolling on their own fact, under both measurement levers, which is
+    /// what makes the flat-table identity exact (D51).
+    pub fn seed_pollen_pack(
+        &mut self,
+        place: &str,
+        now: f64,
+    ) -> Result<(Vec<crate::ids::FactKey>, String), String> {
+        use crate::knowledge::mint::PACK_MOUTHS;
+
+        let nav = self
+            .world
+            .nav
+            .clone()
+            .ok_or_else(|| "--pollen-seed needs a navigation graph".to_string())?;
+        let needle = place.to_lowercase();
+        let found = nav
+            .places()
+            .iter()
+            .find(|candidate| candidate.name.to_lowercase().contains(&needle))
+            .ok_or_else(|| {
+                let mut names: Vec<&str> = nav
+                    .places()
+                    .iter()
+                    .map(|candidate| candidate.name.as_str())
+                    .collect();
+                names.sort_by_key(|name| name.len().abs_diff(place.len()));
+                names.truncate(3);
+                format!(
+                    "no nav place matches `{place}`; nearest names: {}",
+                    names.join(", ")
+                )
+            })?;
+        let at = nav.node_point(found.node);
+        let name = found.name.clone();
+
+        let mouths: Vec<ActorId> = self
+            .world
+            .characters_within(at, 1_200.0, None)
+            .into_iter()
+            .filter(|id| {
+                self.world
+                    .characters
+                    .get(id)
+                    .is_some_and(|body| body.control().is_llm())
+            })
+            .collect();
+        if mouths.len() < PACK_MOUTHS + 1 {
+            return Err(format!(
+                "`{name}` has {} LLM bodies within 1200 m; the pack needs {PACK_MOUTHS} mouths \
+                 and one off-trade subject",
+                mouths.len()
+            ));
+        }
+        let seeded: BTreeSet<ActorId> = mouths.iter().take(PACK_MOUTHS).cloned().collect();
+        let trades: BTreeSet<String> = seeded
+            .iter()
+            .filter_map(|id| self.world.characters.get(id))
+            .filter_map(|body| body.lore().and_then(|lore| lore.occupation_id.clone()))
+            .collect();
+        let trade_of = |id: &ActorId| -> Option<String> {
+            self.world
+                .characters
+                .get(id)
+                .and_then(Character::lore)
+                .and_then(|lore| lore.occupation_id.clone())
+        };
+        let rest = &mouths[PACK_MOUTHS..];
+        let subject = rest
+            .iter()
+            .find(|id| trade_of(id).is_some_and(|trade| !trades.contains(&trade)))
+            .or_else(|| rest.iter().find(|id| trade_of(id).is_none()))
+            .cloned()
+            .ok_or_else(|| {
+                format!("`{name}` has nobody past the {PACK_MOUTHS} mouths of an unheld trade")
+            })?;
+
+        let game_days = self.world.current_time.map(|time| time.game_days());
+        let mut planted = Vec::with_capacity(crate::knowledge::Topic::ALL.len());
+        for topic in crate::knowledge::Topic::ALL {
+            let said = format!(
+                "{{subject}} — a {} matter at {{place}} {{day}}",
+                topic.as_str()
+            );
+            let key = crate::knowledge::mint::plant_for_measurement(
+                &mut self.world,
+                crate::ids::FactId::from_raw(format!("pollen.{}", topic.as_str())),
+                topic,
+                said,
+                vec![subject.clone()],
+                seeded.clone(),
+                at,
+                crate::knowledge::GarbleMask::default_for(topic),
+                game_days,
+            );
+            match key {
+                Some(key) => planted.push(key),
+                None => return Err(format!("pollen.{} would not install", topic.as_str())),
+            }
+        }
+        let _ = now;
+        let named = |id: &ActorId| -> String {
+            let body = self.world.characters.get(id);
+            format!(
+                "{id} {}{}",
+                body.map_or("(unknown)", Character::name),
+                body.and_then(Character::lore)
+                    .and_then(|lore| lore.occupation_id.clone())
+                    .map_or_else(String::new, |trade| format!(" ({trade})")),
+            )
+        };
+        let line = format!(
+            "[pollen] planted {} facts at {name} ({:.3}, {:.3}), ward {}; mouths {}; subject {}",
+            planted.len(),
+            at.x,
+            at.z,
+            self.world
+                .ward_at(at)
+                .map_or("-", crate::lore::PlanningWard::as_str),
+            seeded.iter().map(named).collect::<Vec<_>>().join(", "),
+            named(&subject),
+        );
+        Ok((planted, line))
     }
 
     /// The microphone/voice state machines, for tests and diagnostics.
@@ -3902,6 +4116,29 @@ impl Engine {
             }
             self.scheduler
                 .prioritize(&self.world, &officer_id, false, now);
+        }
+
+        // The city talks about an arrest (`features/knowledge_and_rumor/`, M2).
+        // Here and not off the `"commit"` event below, which is `if gaol`-gated
+        // with empty `recipient_ids` and therefore misses every gate-arch
+        // commitment — the common case. The clock goes into a local first: an
+        // explicit `&mut self.world` argument followed by `self.world.current_time`
+        // in a later one is E0502.
+        let minted_game_days = self.world.current_time.map(|time| time.game_days());
+        if let Some(taken_at) = self
+            .world
+            .characters
+            .get(prisoner_id)
+            .map(|prisoner| prisoner.position_m())
+        {
+            crate::knowledge::mint::mint_commitment(
+                &mut self.world,
+                prisoner_id,
+                officer.as_ref(),
+                &station,
+                taken_at,
+                minted_game_days,
+            );
         }
 
         self.confiscate_the_taking(prisoner_id, notice_id, officer.as_ref());

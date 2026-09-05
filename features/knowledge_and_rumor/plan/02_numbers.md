@@ -479,3 +479,96 @@ never asserted:
 6. Whatever moves, the substitution — not just the result — is written into
    `features/knowledge_and_rumor/README.md`'s `## Numbers` section and appended to this file as
    `## Retunes taken`, so nobody re-derives it and nobody quotes a stale figure.
+
+---
+
+## Measured corrections (M2, 2026-09-05)
+
+Appended under §10.6's own rule — *nobody quotes a stale figure* — after M2's measurement and its
+review. These are corrections to this file's **predictions**; **no constant moved** and §10's
+division was not invoked, so there is no `## Retunes taken`. The record is `../m2_measurements.md`;
+the commands are §8's, on the release binary at the shipped clock.
+
+1. **§4's fast-end model is 5–10× slow, and the reason is the phase it was stated from.** It put
+   the first crossings at the HighWick bell ("the first office after a mint at the Dayspring bell
+   has no bell in it") and ≈ 21 holders walking out of Wick then. It forgot that the mint **is** at
+   the bell: everybody standing in Wick rolls coin 0 on their first poll, seconds after the mint,
+   and the ≈ 11 who pick it up are the Dayspring tide itself, already setting off for work in other
+   wards, depositing at their next poll wherever they then stand. Measured (`pollen.bed`, harness,
+   shipped clock): in **5** wards' air at 0.5 gh, 6 at 1.0, 7 at 1.5, **all eight at 2.0 gh** —
+   five real minutes; Weigh's air by 0.64 gh (the 384/day run: two wards by 0.26 gh). Carriers
+   15 / 50 / 109 / 156 at 0.5 / 1.0 / 1.5 / 2.0 gh, **307 at the HighWick bell** (the model said
+   ≈ 32 in Wick), 353 at 6.5, 392 at 9.5, **446 at 24 gh** (87% of the present cast; the closed
+   form's 0.955 at c̄, 0.893 as the population mean). Realised holder exits of Wick over the day
+   95–105 against "≈ 99", but as a wave that had saturated by 2 gh, not as a column at HighWick.
+   "The wave reaches Weigh at the next bell, 5 gh out" (the outrun paragraph) is wrong by a factor
+   of eight; a single witness with a leg to walk still beats the player there, so the sentence
+   about being first stands. `STIRS_PER_GAME_HOUR` cannot move a coin-0 pickup, so this is
+   **transport** (the commute, the walk speed, the clock) and not a density; §10.1 was not invoked.
+   The band is now **two-sided**: `wards_reached(bed) < 8` at the first sample ≥ 1.0 gh (measured
+   6) is asserted beside F1/F2, so a further speed-up cannot pass silently.
+
+2. **§1's `X` is a leg count; the tally's first version counted flicker.** A raw boundary count
+   read 3.79 / 8.21 / 12.21 crossings per person per game day at 12 / 48 / 192 samples a day —
+   bodies milling on their 10 m leash across a Voronoi line. The tally is now **debounced** (a
+   ward change is believed only after ≥ 50 m of displacement from where the body was last seen
+   settled, and only if it persists to the next sample), so it can only undercount: **1.40 / 4.20 /
+   6.75** city mean, **X_Wick 1.69 / 5.45 / 8.64**, at the same three cadences; the harness's 12 gh
+   from the Dayspring bell reads 5.85 (Wick 9.43) at two samples a game hour. It still rises with
+   the cadence, because the round is more than its legs — water and stall errands across a
+   boundary and back are real crossings a 0.5 gh gap cannot resolve — so `X_W` is stated **at the
+   harness cadence** (two samples a game hour) and every expectation divides by that. The
+   leg-derived 2.368 stays as what `rounds.json` alone predicts. The debounced count is also what
+   `run_band`'s `X ≥ 2.0` guard reads, and it now sees a starved commute: at `--pollen-step 3`
+   (13% of the walking realised) it reads 1.41 at 0 bodies where the raw count read 2.63.
+
+3. **§4's slow-end expectation, 0.057, is the right integrand over the wrong divisor.** The
+   instrument now integrates each holder's warm window in closed form (`τ·log₂(heat × s / VH)`
+   remaining, clamped to the sample gap), so it reads the model's own `4 × 0.145 = 0.58` warm
+   mouth-hours at **any** cadence — the first version counted at the gap's end and read zero for a
+   window shorter than a gap. Divided by the debounced `X_Wick` instead of 2.368:
+   `expected_crossings(craft)` **0.136** over a game day (harness) and **0.225** at nightfall,
+   `P(confined) = 0.799` against the computed 0.945. Still < 1 and > 0.5; the realised backstop
+   (`wards_reached == 1` at every sample of the day) is what carries the slow end. The warm
+   window itself: `volunteering` 4 at 0.13 gh and 0 at 0.19 gh at 384 samples a day, so
+   `t_warm ∈ (0.125, 0.1875)` against the solved 0.145.
+
+4. **§4's same-trade term, "≈ 2.1 crossings a day per witness", measured for the first time.**
+   Three `revenue_worker`s (the whole trade but the subject), all standing in Weigh, minted where
+   the nearest stands: the three mouths warm until the sample at **21.06 gh** (the table's 21.0),
+   **12 warm same-trade exits of any ward over a game day — 4.0 per witness**, five out of the
+   mint ward, and the fact in **6 wards' air with 128 carriers** after a day against the
+   off-affinity pack's one ward and nine. Reported, never asserted.
+
+5. **§6's footprint formula was right and the code's was not.** `footprint_bytes` omitted the
+   heap behind `Holding::from` (every carried row has one) and `view.subject`; both are counted
+   now at the air's own `len + 24`. Synthetic 20,519 bodies × 6 rows, every row with a `from`:
+   **16,131,082 bytes (15.4 MB)** (the first record's 11.9 MB left the term out; §6's estimate was 17.4 MB).
+   The real crowd at `--extra-ambient 20000`, saturated, after 6 gh at the coarse step:
+   10,822,762 bytes (10.3 MB) over 100,745 holdings — fewer bytes a row, because a row picked up off a saturated seed row (`via: None`) carries `from: None`. Both under 32 MB. The peak-RSS half cannot resolve a store this size
+   against a ~370 MB process (−0.5 MB at the filled caps, +9.1 MB in the game's shape, both noise); it is recorded, not relied on.
+
+6. **§6's CPU budget, measured in the game's own shape.** The 20,000 guard at the plan's 3 s step
+   is a **batched, cache-hot lower bound** — one `round::tick` per 3 s of sim time, 1/60th of the
+   game's 20 Hz, with ~2,500 person-polls per tick. Re-measured with ≥ 3 interleaved ON/OFF pairs
+   per row (medians, spread in `m2_measurements.md` §3): in the guard's coarse shape **+4.0% at 0 bodies and +11.7% at 1,000** (a 3 s step shrinks the pump's own work per game hour about sevenfold, so this ratio is the ceiling); in the game's shape **−1.6% and −0.8% at 2,000**; at 20,000 **−2.7% coarse (±4% spread), −5.5% in the game's shape and −4.4% over six game hours** — the layer inside the noise wherever the pump is large, under the 15% budget everywhere, so `seeded_by_actor` is not added. The per-tick term is
+   O(due) (`Round.pollen_due`), not the O(N) deadline walk the M2 steps wrote; the listener is
+   resolved once per poll (`Listener`), not per air row.
+
+7. **§3's `AIR_HALF_LIFE_GAME_HOURS` doc said 37.4 gh** for the top band's news life; at
+   `VOLUNTEER_HEAT = 0.119` it is `12·log₂(1/0.119) = 36.9`, the figure this file's table already
+   carries. The 37.4 was the 0.115 draft's; the doc comment now says 36.9.
+
+8. **§1's standing wards** at spawn (a Voronoi over `spawn_location`): the same city read by
+   `World::ward_at` after `Round::seed` is BellAndSluice 193, Weigh 63, Reed 63, Wick 53,
+   Fabric 45, Cloth 45, Wallwright 27, Cinder 26 — Wick, Fabric and Cinder to the body, the rest
+   within three; 7.4 : 1.
+
+Two readings the review settled, recorded here so they are not re-litigated: the household
+statistic is asserted **integrated over the run** and at the end, not pointwise (a four-body
+fraction moves in steps of 0.25, and the pointwise form — which passes today, 0 of 49 samples —
+can fail a sound model on one draw), with the draw-free complement asserted beside it (the kin's
+mean pickup chance against their ward-mates', 0.0101 vs 0.1423); and
+`the_roll_count_is_invariant_under_the_time_scale` compares the sample count and every shared
+row's `stir`, **not** `rolls_per_game_hour`, which is a formula over where bodies stand and cannot
+be clock-invariant (D22's addendum).

@@ -1151,6 +1151,31 @@ pub struct Round {
     /// (`nearest_open_stall`) has no `now`: pruned at the top of the tick,
     /// tested with a bare `contains_key`.
     chalk_refused_until: BTreeMap<ActorId, f64>,
+    /// A person's next turn at the ward's air, in **game-days** — never real
+    /// seconds (`features/knowledge_and_rumor/`, M2).
+    ///
+    /// A real-seconds deadline silently changes the roll count under the `T` key's
+    /// 60× and under `--watch-clock`, so the cadence figures the spec makes a test
+    /// would not be the cadence a played run produces and every constant would be
+    /// calibrated against the wrong run. [`update_weather_shelter_intents`] states
+    /// the same principle in its own words.
+    ///
+    /// Not pruned at the top of the tick, unlike the two real-clock maps beside
+    /// it: a stale entry costs one skipped poll for somebody who has left the
+    /// city, and [`tick_pollen`] skips anybody `World::is_present` says is gone
+    /// anyway — so there is nothing for a prune to fix and nothing to walk the
+    /// whole cast for.
+    next_pollen: BTreeMap<ActorId, f64>,
+    /// [`Self::next_pollen`] indexed by when it falls due, so a tick pops exactly
+    /// the people whose turn it is and walks nobody else — O(due) per tick, never
+    /// a probe of every one of 20,520 deadlines at 20 Hz. Keyed on the deadline's
+    /// bit pattern ([`pollen_due_key`]; non-negative finite game-days order by
+    /// their bits as they order by value) with the id second, for a total and
+    /// deterministic order. Armed together with `next_pollen` at enrolment and
+    /// re-armed together in [`tick_pollen`]; an entry whose deadline no longer
+    /// matches `next_pollen`'s (a re-enrolment re-armed that person) is stale and
+    /// is dropped on pop, so nobody is ever polled twice a gap.
+    pollen_due: BTreeSet<(u64, ActorId)>,
     /// Game-days at the last tick, so thirst decays by the game clock (and speeds
     /// up with the debug time-scale), not by wall-clock.
     last_game_days: f64,
@@ -2350,6 +2375,15 @@ impl Round {
                 excused: false,
             },
         );
+        self.arm_pollen(id);
+    }
+
+    /// Due at the ward's air on the next tick: the deadline and its index,
+    /// written together (`features/knowledge_and_rumor/`, M2). The one place
+    /// besides [`tick_pollen`] that writes either.
+    fn arm_pollen(&mut self, id: &ActorId) {
+        self.next_pollen.insert(id.clone(), 0.0);
+        self.pollen_due.insert((pollen_due_key(0.0), id.clone()));
     }
 
     /// The staffed water source nearest a point, ties broken by source index so
@@ -3350,6 +3384,28 @@ impl Round {
                 crate::custody::STONE_HOUSE_PLACE_NAME
             ));
         }
+
+        // The household register (`features/knowledge_and_rumor/`). Written here
+        // and nowhere else: `Fact::quiet_among` is frozen at mint, which is only
+        // sound while a door cannot move. Last in `seed`, after every branch that
+        // inserts a `Townsperson`. `enrol_left_behind` inserts gate carriers at
+        // runtime and every one of them carries `home: None`, so this register is
+        // complete for everybody who has a door.
+        world.household_doors = std::sync::Arc::new(
+            self.people
+                .iter()
+                .filter_map(|(id, person)| person.home.map(|home| (id.clone(), home)))
+                .collect(),
+        );
+
+        // Everybody enrolled is due at the ward's air on the first tick
+        // (`features/knowledge_and_rumor/`, M2) — the deadline map and its
+        // due-ordered index, armed together so the two cannot disagree.
+        let enrolled: Vec<ActorId> = self.people.keys().cloned().collect();
+        for id in &enrolled {
+            self.arm_pollen(id);
+        }
+
         diagnostics
     }
 }
@@ -5739,6 +5795,11 @@ pub fn tick(
     tick_food_economy(round, world, clock, now, &mut nudges);
     round.tick_road_parties(world, nav, clock.at(now), now, in_conversation);
     decay_needs(round, world, clock, now);
+    // The ward's air (`features/knowledge_and_rumor/`). After `decay_needs`
+    // because that is where the game-days anchor is already read, and before
+    // anything that moves anybody: a person deposits into the ward they are
+    // standing in when the tick begins.
+    tick_pollen(round, world, clock, now);
     tick_lamps(round, clock, now);
     resolve_arrivals(round, world);
     resolve_food_arrivals(round, world);
@@ -6328,6 +6389,100 @@ fn decay_needs(round: &mut Round, world: &mut World, clock: &WorldClock, now: f6
             *hunger = (*hunger + hearth_gain).min(HUNGER_MAX);
         }
     }
+}
+
+/// Deposit, pick up and cool for the whole cast, each on their own game-time
+/// deadline (`features/knowledge_and_rumor/`, M2).
+///
+/// A separate pass rather than a rung of [`run_ladder`] because `run_ladder`
+/// `continue`s past whole cohorts *before* its throttle — anyone with a live food
+/// errand, anyone the escort abandon touched — and after it, every
+/// non-`Idle`/non-`Travelling` well phase and every held conversation. That is the
+/// market crowd, the well queue and the people standing talking: the most
+/// gossip-shaped places in the city, all invisible from there.
+///
+/// It lives in `round.rs` because `Round::people` is private and `Round`'s only
+/// `pub(crate)` method is `abandon_bodily_errands`; a pass in `knowledge::` would
+/// need three new accessors on it. Shaped like [`decay_needs`], the proven
+/// whole-cast borrow, and it calls out to `knowledge::pollen` for everything but
+/// the iteration — exactly as this file already reaches
+/// `crate::marks::binding_mark_about`.
+fn tick_pollen(round: &mut Round, world: &mut World, clock: &WorldClock, now: f64) {
+    if !world.knowledge_enabled || world.knowledge.is_empty() {
+        return;
+    }
+    let game_days = clock.game_days(now);
+    let now_key = pollen_due_key(game_days);
+    // Disjoint field borrows: `people` immutably while the deadline map and its
+    // index are written. The index hands each due id back owned, so a re-arm
+    // moves it into the next entry and clones nothing.
+    let Round {
+        people,
+        next_pollen,
+        pollen_due,
+        ..
+    } = round;
+    while pollen_due.first().is_some_and(|(key, _)| *key <= now_key) {
+        let Some((key, id)) = pollen_due.pop_first() else {
+            break;
+        };
+        // A deadline that no longer matches is a stale index entry — a
+        // re-enrolment re-armed this person — and the live one will come round.
+        let Some(due) = next_pollen.get_mut(&id) else {
+            continue;
+        };
+        if pollen_due_key(*due) != key {
+            continue;
+        }
+        let Some(person) = people.get(&id) else {
+            continue;
+        };
+        // Away from the city: no turn at the air, but the deadline keeps its
+        // rhythm so they are on the grid again the tick after they are back.
+        if world.is_present(&id) {
+            crate::knowledge::pollen::poll_person(world, &id, game_days);
+        }
+        let next = game_days + poll_gap_game_days(&id, person.epoch);
+        *due = next;
+        pollen_due.insert((pollen_due_key(next), id));
+    }
+}
+
+/// The index key for a game-days deadline. A non-negative finite `f64` orders by
+/// its bit pattern exactly as it orders by value; a deadline at or before the
+/// world's first instant is `0`, so the first tick finds it due.
+fn pollen_due_key(game_days: f64) -> u64 {
+    if game_days > 0.0 {
+        game_days.to_bits()
+    } else {
+        0
+    }
+}
+
+/// A person's own gap at the air, [`POLLEN_POLL_GAME_MINUTES`](crate::knowledge::POLLEN_POLL_GAME_MINUTES)
+/// jittered ×0.5..1.5
+/// off their id — so pickups trickle across an office instead of arriving in a
+/// column, the way `crowd_leg_lag_share` already staggers their legs.
+///
+/// The maximum, [`POLLEN_POLL_MAX_GAME_MINUTES`](crate::knowledge::POLLEN_POLL_MAX_GAME_MINUTES)
+/// = 15, must stay under
+/// `60 / STIRS_PER_GAME_HOUR` = 30 or a person could skip a whole stir window and
+/// the effective roll rate would become a function of the jitter rather than the
+/// constant `S = 2.0` every closed form in `02_numbers.md` uses. Composed with the
+/// host's own step the worst cases are `15 + 7.2 = 22.2` game minutes
+/// (`--watch-clock`'s default `seconds_per_day / 200`, which is 7.2 game minutes at
+/// *any* clock), `15 + 0.16` (the 0.4 s cadence step at 3600 s/day) and
+/// `15 + 1.2` (one 20 Hz round tick under the `T` key's 60×) — all under 30.
+/// Asserted by `the_poll_gap_cannot_skip_a_stir`.
+///
+/// **Game-days out, and the epoch is the round's own**: [`crate::world::hash01`]
+/// is the crate's deterministic stand-in for an RNG and [`decision_jitter`] is the
+/// shape this copies. Salting on `Townsperson::epoch` means a person's gap
+/// re-draws when their ladder epoch does, so nobody is stuck on the same phase of
+/// the stir grid for a whole run.
+fn poll_gap_game_days(id: &ActorId, epoch: u64) -> f64 {
+    let unit = crate::world::hash01("pollen_poll", id, epoch);
+    (crate::knowledge::POLLEN_POLL_GAME_MINUTES * (0.5 + unit)) / 1440.0
 }
 
 /// Dispatch the retained Kindling restock and M5 household settlement exactly

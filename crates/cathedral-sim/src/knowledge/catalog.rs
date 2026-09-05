@@ -322,6 +322,9 @@ impl FactCatalog {
                 continue;
             }
 
+            // The two frozen salience inputs, from the one function that computes
+            // them — the authored path and both coded mints must not disagree.
+            let (quiet_among, craft_ear) = crate::knowledge::frozen_ears(world, &spec.subject);
             let (key, sequence) = world.knowledge.next_handles();
             let fact = Fact {
                 id: spec.id.clone(),
@@ -336,8 +339,18 @@ impl FactCatalog {
                 garble: spec.garble,
                 decays: spec.decays,
                 topic: spec.topic,
-                // `None` for every authored row: an authored fact was not minted.
-                minted_game_days: None,
+                // An authored `decays: true` row is news the world starts with, so
+                // it starts cooling when the world starts. Left unstamped it would
+                // be immortal news — heat 1.0 for the whole run, volunteered
+                // forever — which is the bug `HEAT_GONE_BELOW` refuses in the air
+                // and the same one in the store. `decays: false` stays unstamped
+                // on purpose: standing truth is answerable forever.
+                minted_game_days: spec
+                    .decays
+                    .then(|| world.current_time.map(|time| time.game_days()))
+                    .flatten(),
+                quiet_among,
+                craft_ear,
                 source,
             };
             if world.knowledge.install(fact).is_none() {

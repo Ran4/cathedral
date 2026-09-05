@@ -3143,6 +3143,12 @@ fn raise_notice(
         .expect("the raiser is in the world")
         .remember_percept(format!("You put the word in the ward: {line}"));
     world_event(world, "raise_notice", actor_id, accused, None, 1, carriers);
+    // The ward's word becomes a fact the ward can garble
+    // (`features/knowledge_and_rumor/`, M2). The notice already carries authored
+    // prose, a place and a clock stamp, so this is the cheapest second kind in the
+    // tree — and the mint computes its own earshot, so `carriers` being moved into
+    // the event above costs it nothing.
+    crate::knowledge::mint::mint_from_notice(world, notice_id, actor_id, raised_game_days);
     Ok(format!(
         "{} puts the word in the ward: {line}",
         world.characters[actor_id].name()

@@ -1360,3 +1360,690 @@ fn the_offline_mouth_says_back_the_bullet_the_sheet_gave_it() {
         "the ignorance rule is what answers for them instead"
     );
 }
+
+// ---------------------------------------------------------------------------
+// M2 step 9 — the witness cools, and standing truth does not
+// ---------------------------------------------------------------------------
+
+/// Set the clock forward by `game_hours` from day 0, so a holding can be read at an
+/// exact age.
+fn at_game_hours(world: &mut World, game_hours: f64) {
+    world.current_time = Some(WorldTime {
+        day: 0,
+        fraction: game_hours / 24.0,
+        office: Office::Dayspring,
+        weekday: Weekday::Bellday,
+    });
+}
+
+/// The mechanism the whole slow end of the cadence band rests on: an off-affinity
+/// `Craft` witness stops saying it inside ten game minutes.
+///
+/// `s = 0.20 × 0.60 = 0.12`, so their warm life is `12·log₂(0.12/0.119)` = 0.145
+/// game hours — about one poll. Before M2 a seeded holder had no learning stamp at
+/// all, sat at heat 1.0 for the whole run and deposited forever, and no choice of
+/// constants could have fixed it; only the clock does. Observed through the sheet,
+/// which is where the deposit gate is publicly visible: warm it is said unasked,
+/// cold it is off the sheet and comes back only when somebody asks.
+#[test]
+fn a_craft_witness_stops_volunteering_inside_ten_game_minutes() {
+    let env = prompt_env();
+    let strings = env.strings();
+    let mut world = block_world();
+    // The subject is a cooper; the witness is not, so the ×0.6 other-trade row is
+    // the one under test.
+    world.add_character(character("subjct", "Osanne Vell", None, &[]));
+    world.add_character(character(
+        "witnss",
+        "Jonet Kett",
+        Some(profile(Some("Civic officer"), PlanningWard::Wick)),
+        &["subjct"],
+    ));
+    let diagnostics = seed_pack(
+        &mut world,
+        r#"{"id": "test.craftrow.batch", "topic": "craft",
+            "said": "{subject} spoiled a batch at {place}, {day}",
+            "subject": ["subjct"], "seeded": ["subjct", "witnss"],
+            "place": "wickmarket", "day": 0}"#,
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    let id = FactId::from_raw("test.craftrow.batch");
+    let fact = world.knowledge.fact_by_id(&id).expect("installed");
+    assert_eq!(
+        fact.craft_ear.as_deref(),
+        None,
+        "the subject in this hermetic world has no lore, so every listener is the other trade"
+    );
+    assert_eq!(
+        fact.minted_game_days,
+        Some(0.0),
+        "news is stamped at the mint"
+    );
+
+    let line = cell(strings, "low", "hops0").replacen(
+        "%s",
+        "Osanne Vell spoiled a batch at The Wickmarket, today",
+        1,
+    );
+    at_game_hours(&mut world, 0.14);
+    assert_eq!(
+        bullets(&world, "witnss", &[], &env).expect("warm at 0.14 game hours"),
+        vec![line]
+    );
+    at_game_hours(&mut world, 0.15);
+    assert_eq!(
+        bullets(&world, "witnss", &[], &env),
+        None,
+        "past 0.145 game hours a spoiled batch dies in its own lane"
+    );
+    // Cold is a register, not a deletion: asked, it comes back faded.
+    assert!(
+        bullets(
+            &world,
+            "witnss",
+            &["A stranger asked you about the craftrow"],
+            &env
+        )
+        .is_some_and(|lines| lines[0].starts_with(
+            strings
+                .know_hedge_low_cold
+                .split("%s")
+                .next()
+                .expect("the cold cell has a prefix")
+        )),
+        "the fact is still held, in the cold register"
+    );
+    assert!(knowledge::holds(&world, &actor("witnss"), &id).is_some());
+}
+
+/// A standing fact is **answerable and never loud**: its seeded holders stay at heat
+/// 1.0 forever, `1.00 × 0.15 > VOLUNTEER_HEAT` keeps them able to answer, nothing
+/// puts it in a ward's air, and a carried row of it is stamped like news and cools.
+#[test]
+fn an_authored_standing_fact_never_cools_and_is_never_volunteered() {
+    let mut world = block_world();
+    world.add_character(character("subjct", "Renn Bale", None, &[]));
+    world.add_character(character("holdr1", "Ide Holder", None, &["subjct"]));
+    world.add_character(character("hearer", "Nan Hearer", None, &["subjct"]));
+    let diagnostics = seed_pack(
+        &mut world,
+        r#"{"id": "bale.promise.standing", "topic": "talk",
+            "said": "{subject} promised the ford would be mended",
+            "subject": ["subjct"], "seeded": ["subjct", "holdr1"], "decays": false}"#,
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    let id = FactId::from_raw("bale.promise.standing");
+    let key = world.knowledge.key_of(&id).expect("installed");
+    assert_eq!(
+        world.knowledge.fact(key).expect("live").minted_game_days,
+        None,
+        "standing truth carries no mint stamp, so nothing about it can age"
+    );
+
+    let holder = actor("holdr1");
+    let held = knowledge::holds(&world, &holder, &id).expect("a seeded holder");
+    assert_eq!(held.learned_on, None);
+    for at in [Some(0.0), Some(1.0), Some(100.0), None] {
+        assert_eq!(held.heat(at), 1.0, "a standing fact does not cool");
+    }
+    // The inequality that keeps the three holders answerable forever.
+    assert!(1.00 * 0.15 > f64::from(cathedral_sim::knowledge::VOLUNTEER_HEAT));
+    // And nothing put it in the air: it is asked for, never said unasked.
+    assert_eq!(world.knowledge.air_entries(), 0);
+
+    // A carried row of it is stamped like news — a standing fact reaches a
+    // non-seeded head only through a re-heat, and from there it cools, so the word
+    // stays in the ward it was asked in.
+    let learned = knowledge::learn(
+        &mut world,
+        &actor("hearer"),
+        key,
+        Telling {
+            hops: 1,
+            from: Some(holder.clone()),
+            heat: 0.1309,
+            view: Default::default(),
+        },
+        Some(3.0),
+    );
+    assert_eq!(learned, knowledge::Learned::Fresh);
+    let carried = knowledge::holds(&world, &actor("hearer"), &id).expect("a carried row");
+    assert_eq!(carried.learned_on, Some(3.0));
+    assert!(
+        carried.heat(Some(4.0)) < carried.heat(Some(3.0)),
+        "a carried row of standing truth cools like news"
+    );
+}
+
+/// An authored `decays: true` row is news the world starts with, so it starts
+/// cooling when the world starts — and a clock-less world stamps `None` on purpose,
+/// which is the tolerance every golden fixture rests on.
+#[test]
+fn an_authored_decaying_fact_is_stamped_when_the_world_has_a_clock() {
+    let row = r#"{"id": "test.bedrow.stamped", "topic": "bed",
+                  "said": "{subject} was seen at {place}, {day}",
+                  "subject": ["subjct"], "seeded": ["subjct", "witnss"], "day": 0}"#;
+
+    let mut clocked = block_world();
+    clocked.add_character(character("subjct", "Osanne Vell", None, &[]));
+    clocked.add_character(character("witnss", "Jonet Kett", None, &["subjct"]));
+    at_game_hours(&mut clocked, 6.0);
+    assert!(seed_pack(&mut clocked, row).is_empty());
+    let id = FactId::from_raw("test.bedrow.stamped");
+    assert_eq!(
+        clocked
+            .knowledge
+            .fact_by_id(&id)
+            .expect("installed")
+            .minted_game_days,
+        Some(0.25),
+        "the stamp is the clock the world was seeded on"
+    );
+    let held = knowledge::holds(&clocked, &actor("witnss"), &id).expect("a witness");
+    assert_eq!(held.learned_on, Some(0.25));
+    assert!(
+        held.heat(Some(0.25 + 20.0 / 24.0)) < 1.0,
+        "twenty game hours on, a witness of news has cooled"
+    );
+
+    let mut clockless = World::new();
+    clockless.area_map = areas();
+    clockless.add_character(character("subjct", "Osanne Vell", None, &[]));
+    clockless.add_character(character("witnss", "Jonet Kett", None, &["subjct"]));
+    assert!(clockless.current_time.is_none());
+    assert!(seed_pack(&mut clockless, row).is_empty());
+    assert_eq!(
+        clockless
+            .knowledge
+            .fact_by_id(&id)
+            .expect("installed")
+            .minted_game_days,
+        None
+    );
+    let held = knowledge::holds(&clockless, &actor("witnss"), &id).expect("a witness");
+    assert_eq!(held.learned_on, None);
+    assert_eq!(held.heat(Some(500.0)), 1.0, "no clock means nothing ages");
+}
+
+// ---------------------------------------------------------------------------
+// The ward's air, from outside: the pass, the pickup, the deposit, and the two
+// things that must stay true of both (M2 steps 13–16)
+// ---------------------------------------------------------------------------
+
+/// Two patches of real city paving in two different wards.
+///
+/// The ward grid is baked from the embedded `homes.json`, not from the world under
+/// test, so a hermetic world's bodies stand in real wards wherever a test sets them
+/// down — which is what lets these tests carry a word over a boundary with no nav
+/// graph and no round.
+const IN_FABRIC: Vec3 = Vec3::new(0.0, WALK_Y, 0.0);
+const IN_WEIGH: Vec3 = Vec3::new(-300.0, WALK_Y, 100.0);
+
+/// A world with a clock, one `bed` fact seeded to `witnss`, and `hearer` stood in
+/// the Fabric ward beside the origin. Neither body has lore, so
+/// `attention::curiosity_of` gives them `CURIOSITY_WITHOUT_LORE` and the pickup
+/// chance clamps to certainty — which is exactly what a test of the *plumbing*
+/// wants: the roll is pinned by `pollen.rs`'s own tests, and here it must not be
+/// what decides whether the test passes.
+fn air_world() -> (World, cathedral_sim::FactKey) {
+    let mut world = block_world();
+    world.add_character(character("subjct", "Osanne Vell", None, &[]));
+    world.add_character(character("witnss", "Jonet Kett", None, &[]));
+    world.add_character(character("hearer", "Tib Stott", None, &[]));
+    let key = seed_pack(
+        &mut world,
+        r#"{"id": "test.air.row", "topic": "bed", "said": "{subject} was seen leaving",
+            "subject": ["subjct"], "seeded": ["witnss"]}"#,
+    );
+    assert!(key.is_empty(), "{key:?}");
+    let key = world
+        .knowledge
+        .key_of(&FactId::from_raw("test.air.row"))
+        .expect("the row installed");
+    for id in ["subjct", "witnss", "hearer"] {
+        stand(&mut world, id, IN_FABRIC);
+    }
+    (world, key)
+}
+
+/// Put a body on a named patch of ground — `poll_person` reads the position and
+/// nothing else to decide which ward's air it is standing in.
+fn stand(world: &mut World, id: &str, at: Vec3) {
+    world
+        .characters
+        .get_mut(&actor(id))
+        .expect("the body is in the world")
+        .state
+        .position_m = at;
+}
+
+/// A pickup lands one hop past the air, takes the air's `via` as its chain link,
+/// and is charged the hop loss **once** — in the stored heat, never in the chance.
+///
+/// Getting those two the wrong way round makes every warm life and every closed
+/// form in `02_numbers.md` wrong, which is why the arithmetic is asserted here and
+/// not inferred from a cadence run.
+#[test]
+fn a_pickup_lands_one_hop_past_the_air_and_charges_the_loss_once() {
+    let (mut world, key) = air_world();
+    let ward = world.ward_at(IN_FABRIC).expect("the origin is in a ward");
+    assert_eq!(ward, PlanningWard::Fabric);
+    assert!(
+        world
+            .knowledge
+            .deposit(ward, key, 0, 1.0, &actor("witnss"), 0.0)
+    );
+
+    assert!(
+        knowledge::holds(&world, &actor("hearer"), &FactId::from_raw("test.air.row")).is_none()
+    );
+    knowledge::pollen::poll_person(&mut world, &actor("hearer"), 0.0);
+
+    let held = knowledge::holds(&world, &actor("hearer"), &FactId::from_raw("test.air.row"))
+        .expect("the air was warm and the roll was certain");
+    assert_eq!(held.hops, 1, "a pickup lands one hop past the air");
+    assert_eq!(
+        held.from,
+        Some(actor("witnss")),
+        "the air's own mouth is the chain link"
+    );
+    assert_eq!(
+        held.heat(Some(0.0)),
+        1.0 * cathedral_sim::knowledge::HOP_LOSS,
+        "the loss is charged once, at the hop"
+    );
+    assert_eq!(held.learned_on, Some(0.0));
+    assert!(held.view.is_pristine(), "M3 is what makes a view drift");
+    // The air is where it was: a pickup reads it and does not touch it.
+    let air = world.knowledge.drift(ward, key).expect("the row").clone();
+    assert_eq!((air.hops, air.via), (0, Some(actor("witnss"))));
+}
+
+/// **A pickup is not a percept.** `Novelty::admits_idle` short-circuits to `true`
+/// on a non-empty inbox, so one `notify_percept` per pickup would turn the pollen
+/// field into a city-wide prompt firehose at `extra_ambient_npcs: 1000` — a
+/// thousand people each holding an idle turn open because the ward is talking.
+#[test]
+fn a_pickup_is_not_a_percept() {
+    let (mut world, key) = air_world();
+    let ward = world.ward_at(IN_FABRIC).expect("a ward");
+    world
+        .knowledge
+        .deposit(ward, key, 0, 1.0, &actor("witnss"), 0.0);
+    let before = {
+        let hearer = &world.characters[&actor("hearer")];
+        (
+            hearer.inbox().len(),
+            hearer.pending_history().len(),
+            hearer.recent_history().len(),
+        )
+    };
+    knowledge::pollen::poll_person(&mut world, &actor("hearer"), 0.0);
+    assert!(
+        knowledge::holds(&world, &actor("hearer"), &FactId::from_raw("test.air.row")).is_some(),
+        "the test is only worth anything if something was picked up"
+    );
+    let hearer = &world.characters[&actor("hearer")];
+    assert_eq!(
+        (
+            hearer.inbox().len(),
+            hearer.pending_history().len(),
+            hearer.recent_history().len()
+        ),
+        before,
+        "a pickup wrote to an inbox or a history — that is a prompt, not a rumour"
+    );
+}
+
+/// Layer 1's deposit rule, through the pass that performs it: a carrier who is warm
+/// enough to be saying a thing lowers the ward's hop count to their own and becomes
+/// the mouth a later pickup records.
+#[test]
+fn a_deposit_lowers_the_hops_and_takes_the_via() {
+    let (mut world, key) = air_world();
+    let ward = world.ward_at(IN_FABRIC).expect("a ward");
+    // Somebody four removes out got there first…
+    world
+        .knowledge
+        .deposit(ward, key, 4, 0.20, &actor("subjct"), 0.0);
+    // …and a hops-1 carrier, warm enough to volunteer, is standing in it.
+    tell(&mut world, "hearer", key, 1, 0.85);
+    knowledge::pollen::poll_person(&mut world, &actor("hearer"), 0.0);
+
+    let air = world.knowledge.drift(ward, key).expect("the row").clone();
+    assert_eq!(air.hops, 1, "the closest mouth sets the ward's hop count");
+    assert_eq!(
+        air.via,
+        Some(actor("hearer")),
+        "and becomes the chain link a pickup records"
+    );
+    assert_eq!(
+        cathedral_sim::knowledge::heat_pct(air.heat),
+        85,
+        "heat takes the maximum of the air and the mouth"
+    );
+}
+
+/// The fiction, asserted: **the word crosses the city in mouths.** One holder walks
+/// from one ward to another and the second ward starts saying it; nobody there held
+/// it before, and nobody there had to be told by the first ward's air.
+#[test]
+fn the_air_carries_a_word_across_a_ward_boundary_in_a_mouth() {
+    let (mut world, key) = air_world();
+    let home = world.ward_at(IN_FABRIC).expect("a ward");
+    let abroad = world.ward_at(IN_WEIGH).expect("a ward");
+    assert_ne!(home, abroad, "the two patches must be in different wards");
+    assert_eq!(abroad, PlanningWard::Weigh);
+    stand(&mut world, "hearer", IN_WEIGH);
+
+    // Before the walk: the witness's own ward is saying it, and the far ward is not.
+    knowledge::pollen::poll_person(&mut world, &actor("witnss"), 0.0);
+    assert!(world.knowledge.drift(home, key).is_some());
+    assert!(world.knowledge.drift(abroad, key).is_none());
+    knowledge::pollen::poll_person(&mut world, &actor("hearer"), 0.0);
+    assert!(
+        knowledge::holds(&world, &actor("hearer"), &FactId::from_raw("test.air.row")).is_none(),
+        "a ward away is a ward away: the air does not seep"
+    );
+
+    // The witness walks there, still warm, and says it.
+    stand(&mut world, "witnss", IN_WEIGH);
+    knowledge::pollen::poll_person(&mut world, &actor("witnss"), 0.0);
+    let carried = world.knowledge.drift(abroad, key).expect("the far ward");
+    assert_eq!(
+        (carried.hops, carried.via.clone()),
+        (0, Some(actor("witnss")))
+    );
+
+    // And now the body standing there catches it.
+    knowledge::pollen::poll_person(&mut world, &actor("hearer"), 0.0);
+    let held = knowledge::holds(&world, &actor("hearer"), &FactId::from_raw("test.air.row"))
+        .expect("a mouth brought it");
+    assert_eq!(held.hops, 1);
+    assert_eq!(held.from, Some(actor("witnss")));
+}
+
+/// A world with no facts in it grows no air, however long it is polled and swept —
+/// which is the `extra_ambient_npcs: 0` byte-for-byte claim, and the reason the
+/// frozen fixtures could not have moved.
+#[test]
+fn a_factless_world_grows_no_air() {
+    let mut world = block_world();
+    world.add_character(character("hearer", "Tib Stott", None, &[]));
+    stand(&mut world, "hearer", IN_FABRIC);
+    assert!(world.knowledge.is_empty());
+    let revision = world.world_revision;
+
+    for step in 0..1_000 {
+        let game_days = step as f64 / 48.0;
+        knowledge::pollen::poll_person(&mut world, &actor("hearer"), game_days);
+        knowledge::pollen::sweep(&mut world, game_days);
+    }
+    assert_eq!(world.knowledge.air_entries(), 0);
+    assert!(world.knowledge.is_empty());
+    assert_eq!(knowledge::holdings_of(&world, &actor("hearer")).len(), 0);
+    assert_eq!(
+        world.world_revision, revision,
+        "the air is prompt state and must never touch the public revision"
+    );
+}
+
+/// The ablation is a real ablation: with the layer off nothing mints, no ward says
+/// anything, and a poll that would certainly have picked something up does nothing.
+#[test]
+fn knowledge_disabled_is_a_real_ablation() {
+    let (mut world, key) = air_world();
+    let ward = world.ward_at(IN_FABRIC).expect("a ward");
+    world
+        .knowledge
+        .deposit(ward, key, 0, 1.0, &actor("witnss"), 0.0);
+    world.knowledge_enabled = false;
+
+    assert_eq!(
+        knowledge::mint::mint(
+            &mut world,
+            FactId::from_raw("test.air.off"),
+            knowledge::Topic::Law,
+            "{subject} was taken in charge".into(),
+            vec![actor("subjct")],
+            IN_FABRIC,
+            knowledge::GarbleMask::ALL,
+            true,
+            knowledge::FactSource::authored(),
+            Some(0.0),
+        ),
+        None,
+        "a mint with the layer off installs nothing"
+    );
+    knowledge::pollen::poll_person(&mut world, &actor("hearer"), 0.0);
+    assert!(
+        knowledge::holds(&world, &actor("hearer"), &FactId::from_raw("test.air.row")).is_none(),
+        "poll_person must be a no-op with the layer off"
+    );
+    assert!(
+        !knowledge::pollen::sweep(&mut world, 1.0),
+        "and so must the sweep"
+    );
+}
+
+/// Nothing knowledge-shaped reaches the carriage state: nine mints and five hundred
+/// polls leave the public snapshot byte-identical and the world revision where it
+/// was.
+///
+/// Facts are prompt state, like notices. The snapshot is already at 137 KB of its
+/// 160 KiB bound, and a fact that reached it would also be a fact on the wire.
+#[test]
+fn nothing_knowledge_shaped_reaches_the_snapshot() {
+    // The demo world, so the snapshot under test is the real thing — a live player,
+    // the whole cast, positions, holdings — and not a three-body stub whose bytes
+    // could be identical for want of anything in them.
+    let mut world = seed_world();
+    let player = actor("player");
+    for id in ["sv3n1", "cb947"] {
+        stand(&mut world, id, IN_FABRIC);
+    }
+    assert!(
+        seed_pack(
+            &mut world,
+            r#"{"id": "test.snapshot.row", "topic": "bed", "said": "{subject} was seen leaving",
+                "subject": ["k0fb1"], "seeded": ["sv3n1"]}"#,
+        )
+        .is_empty()
+    );
+    let key = world
+        .knowledge
+        .key_of(&FactId::from_raw("test.snapshot.row"))
+        .expect("the row installed");
+    let before = serde_json::to_vec(&world.public_snapshot(&player)).expect("it serialises");
+    assert!(
+        before.len() > 1_000,
+        "a stub snapshot would make this test vacuous: {} bytes",
+        before.len()
+    );
+    let revision = world.world_revision;
+
+    for index in 0..9 {
+        assert!(
+            knowledge::mint::mint(
+                &mut world,
+                FactId::from_raw(format!("test.snapshot.mint.{index}")),
+                knowledge::Topic::ALL[index],
+                "{subject} did a thing at {place} {day}".into(),
+                vec![actor("k0fb1")],
+                IN_FABRIC,
+                knowledge::GarbleMask::ALL,
+                true,
+                knowledge::FactSource::authored(),
+                Some(0.0),
+            )
+            .is_some(),
+            "mint {index} refused"
+        );
+    }
+    let ward = world.ward_at(IN_FABRIC).expect("a ward");
+    world
+        .knowledge
+        .deposit(ward, key, 0, 1.0, &actor("sv3n1"), 0.0);
+    for step in 0..500 {
+        let game_days = step as f64 / 48.0;
+        knowledge::pollen::poll_person(&mut world, &actor("cb947"), game_days);
+        knowledge::pollen::poll_person(&mut world, &actor("sv3n1"), game_days);
+        knowledge::pollen::sweep(&mut world, game_days);
+    }
+    assert_eq!(world.knowledge.len(), 10);
+    assert!(
+        !knowledge::holdings_of(&world, &actor("cb947")).is_empty(),
+        "five hundred polls must actually have moved something"
+    );
+    assert_eq!(
+        serde_json::to_vec(&world.public_snapshot(&player)).expect("it serialises"),
+        before,
+        "something knowledge-shaped reached the public snapshot"
+    );
+    assert_eq!(
+        world.world_revision, revision,
+        "a mint or a pickup bumped the public revision"
+    );
+}
+
+/// **The store is bounded at the crowd knob's ceiling.** 20,519 synthetic bodies
+/// (the cast plus `--extra-ambient 20000`), every one of them at `HOLDINGS_MAX`,
+/// against `02_numbers.md` §6's 32 MB.
+///
+/// A **test**, not a number in a markdown file — but `footprint_bytes()` is
+/// `size_of` arithmetic and therefore asserts the formula against itself, which is
+/// why M2 step 20e also records the peak-RSS delta of a saturated
+/// `--extra-ambient 20000` run and checks the same bound against *that*.
+/// `size_of::<Holding>() <= 88`, the row this arithmetic rests on, is pinned by
+/// name in `knowledge/tests.rs` (`a_holding_stores_no_sentence`), which is the only
+/// place that type is in scope.
+///
+/// It also times one `World::clone()` at that size, which is what
+/// `World::market_sale` pays on **every** catalog sale: `holdings` and `air` are
+/// behind `Arc` and `live` is not, so the number here is what settles whether
+/// `live` needs one too (M1's note 14).
+#[test]
+fn the_store_footprint_is_bounded() {
+    const BODIES: usize = 20_519;
+    let mut world = World::new();
+    world.add_character(character("subjct", "Osanne Vell", None, &[]));
+    // Six facts, so every body can be filled to the cap and no arrival is ever its
+    // own eviction victim.
+    let mut keys = Vec::new();
+    for index in 0..cathedral_sim::knowledge::HOLDINGS_MAX {
+        assert!(
+            seed_pack(
+                &mut world,
+                &format!(
+                    r#"{{"id": "test.footprint.{index}", "topic": "bed",
+                        "said": "{{subject}} was seen leaving",
+                        "subject": ["subjct"], "seeded": ["subjct"]}}"#
+                ),
+            )
+            .is_empty()
+        );
+        keys.push(
+            world
+                .knowledge
+                .key_of(&FactId::from_raw(format!("test.footprint.{index}")))
+                .expect("the row installed"),
+        );
+    }
+
+    // Six-character ids, the generated crowd's own shape (`x00000`…), so the heap
+    // an `ActorId` costs is the heap the real crowd costs.
+    for index in 0..BODIES {
+        let id = format!("x{index:05}");
+        world.add_character(character(&id, &id, None, &[]));
+        let who = actor(&id);
+        for (hop, key) in keys.iter().enumerate() {
+            knowledge::learn(
+                &mut world,
+                &who,
+                *key,
+                Telling {
+                    hops: hop as u8 + 1,
+                    from: Some(actor("subjct")),
+                    heat: 0.9,
+                    view: Default::default(),
+                },
+                Some(0.0),
+            );
+        }
+    }
+
+    for index in 0..BODIES {
+        assert_eq!(
+            world
+                .knowledge
+                .holdings_len(&actor(&format!("x{index:05}"))),
+            cathedral_sim::knowledge::HOLDINGS_MAX,
+            "body {index} is not at the cap, so this measures the wrong store"
+        );
+    }
+    let bytes = world.knowledge.footprint_bytes();
+    println!(
+        "[pollen] store footprint at {BODIES} bodies × {} holdings: {bytes} bytes ({:.1} MB)",
+        cathedral_sim::knowledge::HOLDINGS_MAX,
+        bytes as f64 / (1024.0 * 1024.0),
+    );
+    assert!(
+        bytes <= 32 * 1024 * 1024,
+        "the store is {bytes} bytes at {BODIES} bodies, over 02_numbers.md §6's 32 MB bound"
+    );
+
+    // What the store itself adds to `World::clone()` — the only part of that clone
+    // this feature is answerable for. `holdings` and `air` are behind `Arc`, so all
+    // that is deep-copied is `live` and `by_id`.
+    let started = std::time::Instant::now();
+    let store = world.knowledge.clone();
+    let store_clone = started.elapsed();
+    let started = std::time::Instant::now();
+    let whole = world.clone();
+    let world_clone = started.elapsed();
+    println!(
+        "[pollen] Knowledge::clone() at {} live facts: {:.4} ms; the whole World::clone() \
+         (20,520 characters): {:.3} ms — the store is {:.2}% of what a catalog sale pays",
+        store.len(),
+        store_clone.as_secs_f64() * 1000.0,
+        world_clone.as_secs_f64() * 1000.0,
+        store_clone.as_secs_f64() / world_clone.as_secs_f64() * 100.0,
+    );
+    assert_eq!(whole.knowledge.len(), world.knowledge.len());
+
+    // And at the cap, which is where the number matters: `live` is deep-copied
+    // per clone, linearly in the facts, and 6 rows say nothing about 256.
+    for index in 0..(cathedral_sim::knowledge::FACTS_MAX_LIVE - world.knowledge.len()) {
+        assert!(
+            seed_pack(
+                &mut world,
+                &format!(
+                    r#"{{"id": "test.footprint.fill.{index}", "topic": "talk",
+                        "said": "{{subject}} said a filler thing",
+                        "subject": ["subjct"], "seeded": ["subjct"]}}"#
+                ),
+            )
+            .is_empty()
+        );
+    }
+    assert_eq!(
+        world.knowledge.len(),
+        cathedral_sim::knowledge::FACTS_MAX_LIVE,
+        "the store is at FACTS_MAX_LIVE"
+    );
+    let started = std::time::Instant::now();
+    let store = world.knowledge.clone();
+    let store_clone_full = started.elapsed();
+    let started = std::time::Instant::now();
+    let whole = world.clone();
+    let world_clone_full = started.elapsed();
+    println!(
+        "[pollen] Knowledge::clone() at {} live facts: {:.4} ms; the whole World::clone() \
+         (20,520 characters): {:.3} ms — the store is {:.2}% of what a catalog sale pays",
+        store.len(),
+        store_clone_full.as_secs_f64() * 1000.0,
+        world_clone_full.as_secs_f64() * 1000.0,
+        store_clone_full.as_secs_f64() / world_clone_full.as_secs_f64() * 100.0,
+    );
+    assert_eq!(whole.knowledge.len(), world.knowledge.len());
+}

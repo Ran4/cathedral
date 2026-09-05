@@ -8542,6 +8542,68 @@ fn a_generated_idler_past_the_leash_is_walked_back() {
     );
 }
 
+/// D38's checkable justification for freezing `Fact::quiet_among` at mint: the
+/// household register is written **once**, by [`Round::seed`], and a day of ticking
+/// does not move a byte of it.
+///
+/// If a feature ever moves somebody house, this is the test that fails first — and
+/// the fix is to recompute `quiet_among` for every live fact in the same call that
+/// moves the door.
+#[test]
+fn the_household_doors_are_written_once() {
+    let nav = nav();
+    let stands = crate::crowd::spread_over_walkable(&nav, 64);
+    let mut world = base_world();
+    for (index, (id, occupation)) in [("sv3n1", "mason"), ("a2gpk", "baker")].iter().enumerate() {
+        world.add_character(person(
+            id,
+            stands[index],
+            Some(occupation),
+            Significance::Ambient,
+        ));
+    }
+    for sheet in crate::crowd::extra_ambient_sheets(&nav, &stands[8..], 8) {
+        world.add_character(Character::from_sheet(sheet));
+    }
+    let clock = clock_at(Office::Dayspring);
+    let mut round = Round::new();
+    round.seed(&mut world, &nav, 0.0, &clock);
+
+    assert!(
+        !world.household_doors.is_empty(),
+        "a housed city publishes its doors"
+    );
+    // The register is exactly what the round enrolled: everybody with a bed, and
+    // nobody without one.
+    for (id, person) in &round.people {
+        assert_eq!(
+            world.household_doors.get(id).copied(),
+            person.home,
+            "{id}'s register entry disagrees with their enrolment"
+        );
+    }
+    assert_eq!(
+        world.household_doors.len(),
+        round
+            .people
+            .values()
+            .filter(|who| who.home.is_some())
+            .count()
+    );
+
+    let published = world.household_doors.clone();
+    let mut now = 0.0;
+    for _ in 0..400 {
+        now += 0.5;
+        world.step_movement(0.5, &nav, None);
+        tick_collect(&mut round, &mut world, &nav, &clock, now);
+    }
+    assert_eq!(
+        published, world.household_doors,
+        "a door moved after seeding; `Fact::quiet_among` is frozen and would now be wrong"
+    );
+}
+
 /// `features/implemented/give_the_crowd_somewhere_to_be.md` M4, the enrolment half: every
 /// generated citizen reaches [`Round::seed`] with a door on their profile, is
 /// enrolled at it, has it filed in the wayfinding registry as a place they hold

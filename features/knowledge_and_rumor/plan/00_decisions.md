@@ -339,6 +339,16 @@ a given `seconds_per_day`**, and:
 - an occasion's one-game-hour life is 2.5 real seconds at 60×, shorter than any provider turn, which
   is why an *offered* occasion survives until its reply lands (D34).
 
+**M2 review addendum (2026-09-05) — one more thing that is not clock-invariant, so no later test
+assumes it: the *phase* of a person's polls on the stir grid.** `poll_gap_game_days` is salted on
+`Townsperson::epoch` (as this file's M2 steps specify), and the epoch advances on ladder decisions
+timed in sim-seconds — about forty a game hour at 1×, about one under the `T` key's 60× — so the
+sequence of gaps a body draws, and therefore which coin a given deposit lands before, differs with
+the time scale even for a body that never moves. No coin is ever skipped by it (a gap is always under
+a stir window, `the_poll_gap_cannot_skip_a_stir`), so the roll *count* and every row's `stir` stay
+invariant, which is what `the_roll_count_is_invariant_under_the_time_scale` asserts; carriers and
+`rolls_per_game_hour` (a formula over where bodies stand) are not compared, and must not be.
+
 ### D23 — Position → ward has **one** definition, and it is exact
 `WardGrid` is an **accelerator, not an approximation**. Baked once per process into a
 `OnceLock<WardGrid>`: 8 m cells over x ∈ [-365.0, 361.8], z ∈ [-480.5, 347.8] (the walkable grid's

@@ -245,7 +245,6 @@ fn lodgings<'a>(
         .filter(|offset| !holds_no_trade(first_index + *offset as u32))
         .collect();
     let assignment = assign_doorsteps(doors, points, &seeking);
-    let wards = ward_map();
     points
         .iter()
         .enumerate()
@@ -254,7 +253,9 @@ fn lodgings<'a>(
                 ward: doors[door].ward,
                 door: Some(&doors[door]),
             }),
-            None => nearest_ward(&wards, *point).map(|ward| Lodging { ward, door: None }),
+            None => crate::knowledge::pollen::ward_grid()
+                .at(*point)
+                .map(|ward| Lodging { ward, door: None }),
         })
         .collect()
 }
@@ -277,15 +278,14 @@ fn holds_no_trade(index: u32) -> bool {
 /// Empty when the graph has no doors — every hand-built test nav — which simply
 /// leaves the crowd bedless exactly as it was before M4.
 fn doorsteps(nav: &NavData) -> Vec<Doorstep> {
-    let wards = ward_map();
-    if wards.is_empty() {
+    if crate::knowledge::pollen::ward_grid().is_empty() {
         return Vec::new();
     }
     nav.doors()
         .iter()
         .filter_map(|door| {
             let point = nav.node_point(door.node);
-            let ward = nearest_ward(&wards, point)?;
+            let ward = crate::knowledge::pollen::ward_grid().at(point)?;
             let landmark = nearest_place(nav, point);
             let place_description = match landmark {
                 Some((place, distance)) => format!(
@@ -359,25 +359,16 @@ fn assign_doorsteps(doors: &[Doorstep], points: &[Vec3], seeking: &[usize]) -> V
 /// belongs to, dropping the 92 in the "Outer wards", which are nobody's ward and
 /// are better left out than guessed at. See [`homes::ward_marks`] for why this
 /// is the best ward map the sim has and how well it agrees with the authored one.
-fn ward_map() -> Vec<([f64; 2], PlanningWard)> {
+///
+/// `pub(crate)` for one caller: [`crate::knowledge::pollen::WardGrid`] bakes the
+/// grid out of it and holds the exact nearest-mark search this module used to
+/// own, so there is one answer to "which ward is this point in" and housing and
+/// pollen cannot disagree.
+pub(crate) fn ward_map() -> Vec<([f64; 2], PlanningWard)> {
     homes::ward_marks()
         .iter()
         .filter_map(|(point, district)| Some((*point, ward_of_district(district)?)))
         .collect()
-}
-
-/// The ward whose nearest baked door this point falls closest to.
-fn nearest_ward(wards: &[([f64; 2], PlanningWard)], point: Vec3) -> Option<PlanningWard> {
-    let mut best: Option<(f64, PlanningWard)> = None;
-    for ([x, z], ward) in wards {
-        let dx = x - point.x;
-        let dz = z - point.z;
-        let distance = dx * dx + dz * dz;
-        if best.is_none_or(|(closest, _)| distance < closest) {
-            best = Some((distance, *ward));
-        }
-    }
-    best.map(|(_, ward)| ward)
 }
 
 /// The nearest named place on the graph, and how far off it is.

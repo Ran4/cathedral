@@ -30,14 +30,18 @@ use std::sync::Arc;
 
 use crate::character::Character;
 use crate::ids::{ActorId, AreaKey, FactId, FactKey};
+use crate::lore::PlanningWard;
 use crate::prompt::PromptStrings;
 use crate::world::World;
 
 pub mod catalog;
+pub mod mint;
+pub mod pollen;
 pub mod salience;
 pub mod source;
 
 pub use catalog::{FactCatalog, FactCatalogError, FactSourceSpec, FactSpec};
+pub use pollen::{AreaAdjacency, Drift, WardGrid};
 pub use salience::{HedgeBand, SalienceError, SalienceTable};
 pub use source::FactSource;
 
@@ -49,7 +53,7 @@ pub use source::FactSource;
 
 /// The ward's air halves every half game day. Chosen first, as the legible
 /// statement: it sets how long a top-band fact is news
-/// (`τ·log₂(1.00/VOLUNTEER_HEAT)` = 37.4 game hours, a game day and a half) and
+/// (`τ·log₂(1.00/VOLUNTEER_HEAT)` = 36.9 game hours, a game day and a half) and
 /// every warm life below it. The bracket for a news life of one to two game days
 /// is `τ ∈ [7.7, 15.4]`; 12 is the round number in it.
 pub const AIR_HALF_LIFE_GAME_HOURS: f64 = 12.0;
@@ -186,6 +190,13 @@ pub const STAGE_HOP_MAX_PAIRS: usize = 8;
 /// Layer 2 reaches exactly as far as a voice does.
 pub const STAGE_HOP_RADIUS_M: f64 = crate::HEARING_RADIUS_M;
 
+/// The ward grid's cell, in metres. 8 m over the walkable box's 727 × 828 m is
+/// 91 × 104 = 9,464 one-byte cells (9.2 KB), of which **5.4% are ambiguous**
+/// (measured) and fall through to the exact nearest-mark search — which is what
+/// makes the grid an accelerator and not an approximation. At 16 m the ambiguity
+/// is 10.7%; at 4 m it is 2.8% for 37 KB and four times the bake. 8 m is the knee.
+pub const WARD_CELL_M: f64 = 8.0;
+
 /// Whole-percent heat. One cooling step multiplies heat by ~0.944 — twelve orders
 /// of magnitude above `f32::EPSILON` — so a raw-`f32` comparison is true on every
 /// sweep and churns any change test forever. Every ordering, change test and
@@ -197,6 +208,48 @@ pub fn heat_pct(heat: f32) -> u8 {
         heat.clamp(0.0, 1.0)
     };
     (f64::from(clamped) * 100.0).round() as u8
+}
+
+/// The two frozen salience inputs, computed once wherever a [`Fact`] is born.
+///
+/// Called by `FactCatalog::seed` (the authored path) and by
+/// `mint::install_fact` (both coded mints), and by nothing else — a second
+/// caller is a second answer, and `quiet_among` is frozen precisely because
+/// there is one.
+///
+/// `household_doors` is walked once per subject, and a fact has one or two
+/// subjects and is born once: at 20,000 housed bodies that is ~40,000 distance
+/// tests **per mint**, never per poll. Stated so nobody moves it into the hot
+/// path.
+pub(crate) fn frozen_ears(
+    world: &World,
+    subject: &[ActorId],
+) -> (BTreeSet<ActorId>, Option<String>) {
+    let mut quiet: BTreeSet<ActorId> = subject.iter().cloned().collect();
+    for who in subject {
+        if let Some(lore) = world.characters.get(who).and_then(Character::lore) {
+            quiet.extend(lore.father.iter().cloned());
+            quiet.extend(lore.mother.iter().cloned());
+            quiet.extend(lore.children.iter().cloned());
+        }
+        // Anyone behind the same door. `HOUSEHOLD_EPSILON_M` is below the measured
+        // 1.2748 m minimum separation between any two of the 413 baked doors, so
+        // this can only ever fire for a generated citizen sharing one `nav::Door`
+        // under the occupancy cap — never for two of the cast.
+        if let Some(door) = world.household_doors.get(who) {
+            for (other, at) in world.household_doors.iter() {
+                if at.distance(*door) <= HOUSEHOLD_EPSILON_M {
+                    quiet.insert(other.clone());
+                }
+            }
+        }
+    }
+    let craft_ear = subject
+        .first()
+        .and_then(|who| world.characters.get(who))
+        .and_then(Character::lore)
+        .and_then(|lore| lore.occupation_id.clone());
+    (quiet, craft_ear)
 }
 
 /// `λ = 0.5^(1/AIR_HALF_LIFE_GAME_HOURS)` — the per-game-hour cooling factor.
@@ -415,6 +468,26 @@ pub struct Fact {
     pub decays: bool,
     pub topic: Topic,
     pub minted_game_days: Option<f64>,
+    /// The subject, their kin, and anyone behind the subject's own door.
+    ///
+    /// Frozen at mint, which is safe because **both inputs are seed-time facts in
+    /// this crate**: `LoreProfile::{father, mother, children}` is never written at
+    /// runtime (the only kin assignment in the tree is a test fixture in
+    /// `prompt/mod.rs`), and `Townsperson::home` is written once inside
+    /// `Round::seed` with no later `.home =` anywhere. Read off
+    /// [`World::household_doors`](crate::world::World::household_doors), which
+    /// `Round::seed` publishes once. **If a feature ever moves somebody house,
+    /// this field must be recomputed on that move** —
+    /// `the_household_doors_are_written_once` is the test that will fail first.
+    ///
+    /// One `BTreeSet::contains` in the innermost roll, instead of a per-listener
+    /// kin-and-door scan at 20,000 bodies.
+    pub quiet_among: BTreeSet<ActorId>,
+    /// The subject's own `occupation_id` at mint — `Craft`'s ×2.0 ear, and the
+    /// ×0.6 everybody else gets. `None` when the fact has no subject, when the
+    /// subject has no lore, or when they are of the no-trade quarter, in which
+    /// case every listener is `craft_other`.
+    pub craft_ear: Option<String>,
     source: FactSource,
 }
 
@@ -494,14 +567,27 @@ impl Held {
         self.hops == 0
     }
 
-    /// A hops-0 holder who was there: heat 1.0, no chain link, no drift, and no
-    /// learning stamp at all, so nothing about them can age. M2 gives this the
-    /// `&Fact` it needs to stamp news and leave standing truth alone.
-    fn seeded() -> Self {
+    /// A hops-0 holder who was there: heat 1.0, no chain link and no drift.
+    ///
+    /// **A witness's clock is the fact's own mint stamp** — they were there when it
+    /// happened, so that is when their telling starts cooling. An **authored
+    /// standing fact** (`decays: false`) has no stamp and its seeded rows never
+    /// cool: they stay answerable forever, and [`volunteers`] never says one
+    /// unasked, so `1.00 × 0.15 > VOLUNTEER_HEAT` keeps a promise's three holders
+    /// answerable and nothing about it loud.
+    ///
+    /// Left unstamped for news — which is what M1 shipped — a witness sits at heat
+    /// 1.0 for the whole run, deposits forever, and the slow end of the cadence band
+    /// is unreachable at any choice of constants. Only the clock fixes that.
+    fn seeded(fact: &Fact) -> Self {
         Self {
             hops: 0,
             from: None,
-            learned_on: None,
+            learned_on: if fact.decays {
+                fact.minted_game_days
+            } else {
+                None
+            },
             view: FactView::default(),
             heat_at_learn: 1.0,
         }
@@ -552,7 +638,7 @@ pub enum Learned {
 /// 81, and the 8-aligned `learned_on`/`from`/`view` round it up), so six of them
 /// are ~530 B rather than ~1.6 KB.
 #[derive(Debug, Clone, PartialEq)]
-struct Holding {
+pub(crate) struct Holding {
     key: FactKey,
     hops: u8,
     heat_at_learn: f32,
@@ -603,13 +689,37 @@ impl Holding {
 /// `holdings` is behind an [`Arc`] because `World::market_sale` does
 /// `let mut staged = self.clone()` on **every** catalog sale, so a bare map would
 /// deep-copy the whole store per transaction. Write through `Arc::make_mut`.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Knowledge {
     live: BTreeMap<FactKey, Fact>,
     by_id: BTreeMap<FactId, FactKey>,
     next_key: u32,
     next_sequence: i64,
     holdings: Arc<BTreeMap<ActorId, Vec<Holding>>>,
+    /// What each ward is saying. Behind an [`Arc`] for the same reason `holdings`
+    /// is: `World::market_sale` does `let mut staged = self.clone()` on **every**
+    /// catalog sale, and a bare map would deep-copy the city's whole gossip per
+    /// transaction. Write through `Arc::make_mut`.
+    ///
+    /// The key is `(PlanningWard, FactKey)` and both halves are `Copy + Ord`, so
+    /// one ward's air is a `BTreeMap::range` and not a filter.
+    air: Arc<BTreeMap<(PlanningWard, FactKey), Drift>>,
+    /// `f64::NEG_INFINITY` at [`Default`], so the first stir beat always fires.
+    last_sweep_game_days: f64,
+}
+
+impl Default for Knowledge {
+    fn default() -> Self {
+        Self {
+            live: BTreeMap::new(),
+            by_id: BTreeMap::new(),
+            next_key: 0,
+            next_sequence: 0,
+            holdings: Arc::new(BTreeMap::new()),
+            air: Arc::new(BTreeMap::new()),
+            last_sweep_game_days: f64::NEG_INFINITY,
+        }
+    }
 }
 
 impl Knowledge {
@@ -643,6 +753,33 @@ impl Knowledge {
         self.holdings.get(actor).map_or(0, Vec::len)
     }
 
+    /// What one ward is saying about one fact, if anything.
+    pub fn drift(&self, ward: PlanningWard, key: FactKey) -> Option<&Drift> {
+        self.air.get(&(ward, key))
+    }
+
+    /// One ward's air, ascending [`FactKey`] — a range, which is the whole reason
+    /// the key is `Copy`.
+    pub fn ward_air(&self, ward: PlanningWard) -> impl Iterator<Item = (FactKey, &Drift)> {
+        self.air
+            .range((ward, FactKey(u32::MIN))..=(ward, FactKey(u32::MAX)))
+            .map(|((_, key), drift)| (*key, drift))
+    }
+
+    pub fn air_entries(&self) -> usize {
+        self.air.len()
+    }
+
+    pub fn air_is_empty(&self) -> bool {
+        self.air.is_empty()
+    }
+
+    /// `pollen::sweep` reads this to charge the right number of game hours of
+    /// cooling — before it takes the beat, which is what overwrites it.
+    pub(crate) fn last_sweep_game_days(&self) -> f64 {
+        self.last_sweep_game_days
+    }
+
     /// The stored row for this actor, if any — the private-map read
     /// [`holds_key`] performs, named so the store-before-seeded order reads as
     /// one lookup.
@@ -652,6 +789,15 @@ impl Knowledge {
             .iter()
             .find(|row| row.key == key)
             .map(Holding::held)
+    }
+
+    /// One actor's stored rows, ascending [`FactKey`] — **one** map lookup for
+    /// the callers that walk every live fact against them ([`holdings_of`], the
+    /// pickup arm, the census), where a `holdings.get` per live fact was 256
+    /// probes of a 20,520-key map per poll at the cap. Empty when they hold
+    /// nothing; seeded rows are not here (they are derived from `Fact::seeded`).
+    pub(crate) fn rows_of(&self, actor: &ActorId) -> &[Holding] {
+        self.holdings.get(actor).map_or(&[], Vec::as_slice)
     }
 
     /// What the store actually costs, for the `--extra-ambient 20000` bound. An
@@ -690,12 +836,40 @@ impl Knowledge {
                 actor.as_str().len()
                     + 48
                     + std::mem::size_of::<Vec<Holding>>()
-                    + rows.len() * std::mem::size_of::<Holding>()
+                    + rows
+                        .iter()
+                        .map(|row| {
+                            // The row, plus the heap behind its two `String`-backed
+                            // ids: `from` (every carried row has one) and a garbled
+                            // `view.subject` (M3) — the same `len + 24` the air's
+                            // `via` is counted at below.
+                            std::mem::size_of::<Holding>()
+                                + row.from.as_ref().map_or(0, |from| from.as_str().len() + 24)
+                                + row
+                                    .view
+                                    .subject
+                                    .as_ref()
+                                    .map_or(0, |who| who.as_str().len() + 24)
+                        })
+                        .sum::<usize>()
+            })
+            .sum();
+        // One `Drift` plus its key and the node's share of the map, and the `via`
+        // id's heap where a mouth put it there.
+        let air_bytes: usize = self
+            .air
+            .values()
+            .map(|drift| {
+                std::mem::size_of::<(PlanningWard, FactKey)>()
+                    + std::mem::size_of::<Drift>()
+                    + 48
+                    + drift.via.as_ref().map_or(0, |via| via.as_str().len() + 24)
             })
             .sum();
         std::mem::size_of::<Self>()
             + fact_bytes
             + holding_bytes
+            + air_bytes
             + self
                 .by_id
                 .keys()
@@ -709,15 +883,20 @@ impl Knowledge {
     /// `by_id` kept pointing the old id at it), and `None` when the store is full
     /// at [`FACTS_MAX_LIVE`].
     ///
-    /// M1 evicts nothing: ranking `live` for eviction needs the ward heat, which
-    /// is M2's. M2 replaces the flat refusal with a ranking that never evicts a
-    /// standing fact.
+    /// At [`FACTS_MAX_LIVE`] it evicts the fact the city has most nearly finished
+    /// with: the lowest peak air heat (quantised through [`heat_pct`], so a
+    /// hundredth of a degree cannot decide it), then the lowest `sequence` — a
+    /// total order, because `sequence` is unique and monotone, so eviction is
+    /// reproducible run to run. A `decays: false` standing fact is **never** the
+    /// victim: it is authored truth, not news, and `None` comes back when every
+    /// live fact is one.
     pub fn install(&mut self, fact: Fact) -> Option<FactKey> {
         if self.by_id.contains_key(&fact.id) || self.live.contains_key(&fact.key) {
             return None;
         }
         if self.live.len() >= FACTS_MAX_LIVE {
-            return None;
+            let victim = self.coldest_decaying()?;
+            self.invalidate(victim);
         }
         let key = fact.key;
         self.by_id.insert(fact.id.clone(), key);
@@ -725,16 +904,234 @@ impl Knowledge {
         Some(key)
     }
 
-    /// Drops it from `live`, from `by_id` and from every holding.
+    /// Drops it from `live`, from `by_id`, from every holding and from every ward's
+    /// air — a fact the world stopped bearing out is not still being said.
     pub fn invalidate(&mut self, key: FactKey) -> Option<Fact> {
         let fact = self.live.remove(&key)?;
         self.by_id.remove(&fact.id);
+        if self.air.keys().any(|(_, row)| *row == key) {
+            Arc::make_mut(&mut self.air).retain(|(_, row), _| *row != key);
+        }
         let holdings = Arc::make_mut(&mut self.holdings);
         holdings.retain(|_, rows| {
             rows.retain(|row| row.key != key);
             !rows.is_empty()
         });
         Some(fact)
+    }
+
+    /// The fact the city is most nearly finished with, among the ones that are
+    /// news at all. `None` when every live fact is a standing one.
+    fn coldest_decaying(&self) -> Option<FactKey> {
+        self.live
+            .values()
+            .filter(|fact| fact.decays)
+            .min_by(|left, right| {
+                self.peak_heat_pct(left.key)
+                    .cmp(&self.peak_heat_pct(right.key))
+                    .then_with(|| left.sequence.cmp(&right.sequence))
+            })
+            .map(|fact| fact.key)
+    }
+
+    /// The loudest any ward is about this fact, quantised. `0` for a fact no
+    /// ward's air carries at all — which is exactly the fact to evict first.
+    fn peak_heat_pct(&self, key: FactKey) -> u8 {
+        self.air
+            .iter()
+            .filter(|((_, row), _)| *row == key)
+            .map(|(_, drift)| heat_pct(drift.heat))
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// One mouth's telling into one ward's air: raise the heat, lower the hops, and
+    /// take the `via` if this mouth is closer to the source than the air was —
+    /// which is what keeps walk-the-chain walkable.
+    ///
+    /// **Never bumps `stir`**, whatever heat it carries: `heat = max(heat,
+    /// held.heat)`, `hops = min`, `via` on a lowered `hops`, and nothing else, so
+    /// the roll rate stays exactly [`STIRS_PER_GAME_HOUR`] and the closed forms the
+    /// cadence band is solved from stay solvable. A row this creates takes
+    /// `stir = stage_stir(game_days)`, never 0, so a row evicted and later
+    /// re-deposited does not replay the same coins for everyone who was present the
+    /// first time. [`Self::stir_up`] is the one genuine re-heat.
+    ///
+    /// Returns whether the ward's air changed by a whole percent of heat, a hop, or
+    /// a row.
+    pub fn deposit(
+        &mut self,
+        ward: PlanningWard,
+        key: FactKey,
+        hops: u8,
+        heat: f32,
+        via: &ActorId,
+        game_days: f64,
+    ) -> bool {
+        if !self.live.contains_key(&key) {
+            return false;
+        }
+        let air = Arc::make_mut(&mut self.air);
+        match air.get_mut(&(ward, key)) {
+            Some(drift) => {
+                let before = (heat_pct(drift.heat), drift.hops);
+                // The write is the spec's `max(heat, held.heat)`, unquantised; only
+                // the *change test* below goes through `heat_pct` (D30). A NaN never
+                // wins a comparison, so a garbage heat leaves the row alone.
+                if heat > drift.heat {
+                    drift.heat = heat;
+                }
+                if hops < drift.hops {
+                    drift.hops = hops;
+                    drift.via = Some(via.clone());
+                }
+                (heat_pct(drift.heat), drift.hops) != before
+            }
+            None => {
+                air.insert(
+                    (ward, key),
+                    Drift {
+                        heat,
+                        hops,
+                        via: Some(via.clone()),
+                        stir: pollen::stage_stir(game_days),
+                    },
+                );
+                self.trim_air_to_cap();
+                true
+            }
+        }
+    }
+
+    /// Bring one ward's air back up to `to` and bump `stir` — the one path that is
+    /// a genuine re-heat, for `pollen::amplify` and `knowledge::reheat`. Creates the
+    /// row (`hops: 0`, `via: None`, `stir` from the grid) when the ward's air does
+    /// not hold it, which is how a standing fact enters the air at all.
+    ///
+    /// Returns whether the heat moved a whole percent or the row is new; the `stir`
+    /// bump is a coin, not a state anything reads back.
+    pub fn stir_up(&mut self, ward: PlanningWard, key: FactKey, to: f32, game_days: f64) -> bool {
+        if !self.live.contains_key(&key) {
+            return false;
+        }
+        let air = Arc::make_mut(&mut self.air);
+        match air.get_mut(&(ward, key)) {
+            Some(drift) => {
+                let before = heat_pct(drift.heat);
+                if heat_pct(to) > before {
+                    drift.heat = to;
+                }
+                drift.stir = drift.stir.wrapping_add(1);
+                heat_pct(drift.heat) != before
+            }
+            None => {
+                air.insert(
+                    (ward, key),
+                    Drift {
+                        heat: to,
+                        hops: 0,
+                        via: None,
+                        stir: pollen::stage_stir(game_days),
+                    },
+                );
+                self.trim_air_to_cap();
+                true
+            }
+        }
+    }
+
+    /// A fresh row at `heat`, hops 0, no `via`, `stir` from the grid — nobody told
+    /// the ward, it saw. Replaces nothing if the row already exists.
+    /// [`mint::install_fact`](crate::knowledge::mint::install_fact) is the
+    /// production caller: fresh news is in the air of the ward it happened in.
+    pub(crate) fn seed_air(&mut self, ward: PlanningWard, key: FactKey, heat: f32, game_days: f64) {
+        if !self.live.contains_key(&key) || self.air.contains_key(&(ward, key)) {
+            return;
+        }
+        Arc::make_mut(&mut self.air).insert(
+            (ward, key),
+            Drift {
+                heat,
+                hops: 0,
+                via: None,
+                stir: pollen::stage_stir(game_days),
+            },
+        );
+        self.trim_air_to_cap();
+    }
+
+    /// One `Arc::make_mut` for a whole pass, not one per row: a per-row `get_mut`
+    /// would deep-copy the map on every call while any staged `World` clone is
+    /// alive. [`pollen::sweep`] is the production caller.
+    pub(crate) fn air_mut(&mut self) -> &mut BTreeMap<(PlanningWard, FactKey), Drift> {
+        Arc::make_mut(&mut self.air)
+    }
+
+    /// Hold every ward to [`AIR_PER_WARD_MAX`], coldest out: `heat_pct` ascending,
+    /// then most hops, then highest [`FactKey`] — the same total order the holdings
+    /// cap evicts by, so there is one eviction rule in the feature and it is
+    /// reproducible.
+    pub(crate) fn trim_air_to_cap(&mut self) -> bool {
+        let mut over: Vec<PlanningWard> = Vec::new();
+        for ward in PlanningWard::ALL {
+            if self.ward_air(ward).count() > AIR_PER_WARD_MAX {
+                over.push(ward);
+            }
+        }
+        if over.is_empty() {
+            return false;
+        }
+        let air = Arc::make_mut(&mut self.air);
+        for ward in over {
+            loop {
+                let rows: Vec<(FactKey, u8, u8)> = air
+                    .range((ward, FactKey(u32::MIN))..=(ward, FactKey(u32::MAX)))
+                    .map(|((_, key), drift)| (*key, heat_pct(drift.heat), drift.hops))
+                    .collect();
+                if rows.len() <= AIR_PER_WARD_MAX {
+                    break;
+                }
+                let victim = rows
+                    .iter()
+                    .min_by(|left, right| {
+                        left.1
+                            .cmp(&right.1)
+                            .then_with(|| right.2.cmp(&left.2))
+                            .then_with(|| right.0.cmp(&left.0))
+                    })
+                    .map(|(key, _, _)| *key);
+                match victim {
+                    Some(key) => {
+                        air.remove(&(ward, key));
+                    }
+                    None => break,
+                }
+            }
+        }
+        true
+    }
+
+    /// `marks::sweep`'s self-gate, on the stir grid: `true` at most once per
+    /// `1/STIRS_PER_GAME_HOUR` game hours. **Keeps the clock current on the empty
+    /// early-out**, so the first fact deposited into a long-running world is not
+    /// charged for the whole run.
+    pub fn take_stir_beat(&mut self, game_days: f64) -> bool {
+        if self.air.is_empty() {
+            self.last_sweep_game_days = game_days;
+            return false;
+        }
+        let previous = self.last_sweep_game_days;
+        let beats = STIRS_PER_GAME_HOUR * 24.0;
+        if previous.is_finite() && (game_days * beats).floor() <= (previous * beats).floor() {
+            return false;
+        }
+        self.last_sweep_game_days = game_days;
+        true
+    }
+
+    #[doc(hidden)]
+    pub fn rewind_sweep_clock(&mut self, game_days: f64) {
+        self.last_sweep_game_days = game_days;
     }
 
     /// Allocates the next `(FactKey, sequence)` pair. The sequence is the garble
@@ -771,7 +1168,7 @@ pub fn holds(world: &World, actor: &ActorId, fact: &FactId) -> Option<Held> {
 pub fn holds_key(world: &World, actor: &ActorId, key: FactKey) -> Option<Held> {
     let fact = world.knowledge.fact(key)?;
     if fact.seeded.contains(actor) {
-        return Some(Held::seeded());
+        return Some(Held::seeded(fact));
     }
     world.knowledge.stored(actor, key)
 }
@@ -779,10 +1176,21 @@ pub fn holds_key(world: &World, actor: &ActorId, key: FactKey) -> Option<Held> {
 /// Everything this person has, seeded rows and carried rows together, ascending
 /// [`FactKey`].
 pub fn holdings_of(world: &World, actor: &ActorId) -> Vec<(FactKey, Held)> {
+    // Seeded first, then stored — [`holds_key`]'s own order — with the actor's
+    // rows fetched once and searched by key (they are kept ascending), instead
+    // of one `holdings.get` per live fact.
+    let rows = world.knowledge.rows_of(actor);
     world
         .knowledge
         .facts()
-        .filter_map(|(key, _)| holds_key(world, actor, key).map(|held| (key, held)))
+        .filter_map(|(key, fact)| {
+            if fact.seeded.contains(actor) {
+                return Some((key, Held::seeded(fact)));
+            }
+            rows.binary_search_by(|row| row.key.cmp(&key))
+                .ok()
+                .map(|at| (key, rows[at].held()))
+        })
         .collect()
 }
 
@@ -967,10 +1375,10 @@ pub(crate) fn may_carry(fact: &Fact, who: &ActorId) -> bool {
 /// on every poll, which is the opposite of "travels almost nowhere".
 ///
 /// One function, one home, three callers by M3 (Layer 1's deposit, Layer 2's
-/// carrier test, [`render_line`]'s cold row). M1 uses the topic's **base** band;
-/// M2 replaces `world.salience.base(fact.topic)` with
-/// `salience::salience_for(world, fact, holder)` at this one site and changes
-/// nothing else.
+/// carrier test, [`render_line`]'s cold row). The salience factor is the whole
+/// table through [`salience::salience_for`] — the ear, the craft rows, `no_trade`,
+/// `household` and the `--pollen-no-salience` lever — so a person's own reason for
+/// repeating a thing is the same number that decides who catches it from them.
 pub(crate) fn volunteers(
     world: &World,
     fact: &Fact,
@@ -981,7 +1389,24 @@ pub(crate) fn volunteers(
     if !fact.decays || !may_carry(fact, holder) {
         return false;
     }
-    f64::from(held.heat(game_days)) * world.salience.base(fact.topic) > f64::from(VOLUNTEER_HEAT)
+    volunteers_with(
+        fact,
+        holder,
+        held.heat(game_days),
+        salience::salience_for(world, fact, holder),
+    )
+}
+
+/// The deposit gate itself — `heat × salience > VOLUNTEER_HEAT`, behind the two
+/// rules — on inputs the caller already has. [`volunteers`] is this with the
+/// salience looked up per call; `pollen::poll_person` resolves its listener once
+/// per poll and hands the salience in, so the gate has **one** expression and
+/// two ways of reaching it, never two expressions.
+pub(crate) fn volunteers_with(fact: &Fact, holder: &ActorId, heat: f32, salience: f64) -> bool {
+    if !fact.decays || !may_carry(fact, holder) {
+        return false;
+    }
+    f64::from(heat) * salience > f64::from(VOLUNTEER_HEAT)
 }
 
 /// The relevance limb of sheet selection, on its own: the facts whose id segments,

@@ -276,6 +276,51 @@ struct Args {
     /// unknown-people rule where a holder has not been told the subject's name.
     #[arg(long)]
     trace_knowledge: bool,
+
+    /// print a `[pollen]` census per topic each sample: carriers per ward, wards
+    /// reached, crossings out of the mint ward, store bytes. The cadence band's
+    /// instrument (`features/knowledge_and_rumor/plan/02_numbers.md`).
+    #[arg(long)]
+    trace_pollen: bool,
+
+    /// how many `--trace-pollen` samples a watched game day takes (default 24)
+    ///
+    /// The crossing tally undercounts when somebody passes through a ward
+    /// between samples, so raise it to 48 — one per stir — for a cadence
+    /// measurement.
+    #[arg(long, default_value_t = 24.0)]
+    pollen_per_day: f64,
+
+    /// plant one authored fact per topic at a named place, so nine bands can be
+    /// measured in one run: `--pollen-seed "The Wickmarket"`
+    ///
+    /// The measurement pack, not shipped content. All nine share one seeded set
+    /// of four mouths and one clock stamp, because the slow end is a `Craft`
+    /// fact minted beside a `Bed` one at the same hour by the same mouth.
+    #[arg(long, value_name = "PLACE")]
+    pollen_seed: Option<String>,
+
+    /// after `--pollen-seed`, put the pack's nine rows into EVERY ward's air at
+    /// full heat, so the 20,000 cost guard measures a saturated roll load and
+    /// not two authored facts (`02_numbers.md` §6). Never for a band measurement.
+    #[arg(long)]
+    pollen_saturate: bool,
+
+    /// the watch-clock step, in real seconds, while `--trace-pollen` is on
+    /// (default 0.4 = `MAX_MOVEMENT_CATCHUP_SLICES` × `MOVEMENT_TICK_SECONDS`,
+    /// the most walking one poll can realise). The cost guard passes 3 — it does
+    /// not measure crossings, and 9,000 polls at 179 ms is 27 minutes.
+    #[arg(long, default_value_t = 0.4)]
+    pollen_step: f64,
+
+    /// run with every salience band and multiplier at 1.0 — the identity run
+    #[arg(long)]
+    pollen_flat: bool,
+
+    /// run with the salience factor removed from the roll expression entirely —
+    /// the baseline `--pollen-flat` must reproduce, field for field
+    #[arg(long)]
+    pollen_no_salience: bool,
 }
 
 fn main() -> ExitCode {
@@ -508,6 +553,11 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
             // second flag.
             knowledge_enabled: std::env::var_os("CATHEDRAL_NO_KNOWLEDGE").is_none(),
             fact_packs,
+            // The two cadence-measurement levers, and the only way to reach them:
+            // neither is a `config.ron` key, so the game host cannot run a
+            // measurement table by accident (`02_numbers.md` §5).
+            pollen_flat: args.pollen_flat,
+            pollen_no_salience: args.pollen_no_salience,
         },
         &assets.seed,
         assets.areas,
@@ -538,6 +588,10 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         census_by_area: args.census_by_area,
         census_per_day: args.census_per_day,
         trace_food: args.trace_food,
+        trace_pollen: args.trace_pollen,
+        pollen_per_day: args.pollen_per_day,
+        pollen_step: args.pollen_step,
+        tally: cathedral_sim::knowledge::pollen::CrossingTally::new(&[]),
     };
     // What the city knows, before anybody has taken a turn
     // (`features/knowledge_and_rumor/`). Deterministic and provider-free: the
@@ -554,6 +608,58 @@ fn run(args: &Args, config: BackendsConfig) -> Result<ExitCode, String> {
         runner.engine.world_mut().current_time = Some(clock.at(runner.now));
         for line in runner.engine.knowledge_lines() {
             println!("{line}");
+        }
+    }
+    // The cadence pack (`--pollen-seed`), planted before the first tick so the
+    // mint is *at* the starting bell — the phase `02_numbers.md` §4 states both
+    // ends of the band from.
+    //
+    // `current_time` is published by the first poll's `ring_offices`, and the pack
+    // needs it twice: `install_fact` stamps `minted_game_days` from it, and an
+    // unstamped fact never cools, which would make every warm life in the
+    // derivation infinite and the slow end unmeasurable. So publish exactly the
+    // value that first poll will (the same clock, at the same `now`), as
+    // `--trace-knowledge` does above; the poll overwrites it unconditionally.
+    if let Some(place) = args.pollen_seed.clone() {
+        runner.engine.world_mut().current_time = Some(clock.at(runner.now));
+        match runner.engine.seed_pollen_pack(&place, runner.now) {
+            Ok((keys, line)) => {
+                println!("{line}");
+                // Saturation is a **cost** lever, never a band one: nine rows in
+                // every ward's air is what makes the 20,000 guard measure a real
+                // roll load instead of two authored facts.
+                if args.pollen_saturate {
+                    let game_days = Some(clock.game_days(runner.now));
+                    let world = runner.engine.world_mut();
+                    for key in &keys {
+                        for ward in cathedral_sim::PlanningWard::ALL {
+                            cathedral_sim::knowledge::pollen::debug_seed_air(
+                                world, ward, *key, game_days,
+                            );
+                        }
+                    }
+                    // And `live` to its cap with standing filler rows nobody
+                    // holds, so the O(live) walk in the deposit phase runs at
+                    // the length it is bounded at (`02_numbers.md` §6) and not
+                    // at the eleven rows a pack and two authored facts make.
+                    let filled = cathedral_sim::knowledge::mint::fill_live_for_measurement(
+                        world,
+                        player_spawn,
+                        game_days,
+                    );
+                    println!(
+                        "[pollen] saturated: {} rows in every ward's air, {} filler facts \
+                         to a live store of {}",
+                        keys.len(),
+                        filled,
+                        world.knowledge.len()
+                    );
+                }
+                runner.tally = cathedral_sim::knowledge::pollen::CrossingTally::new(&keys);
+            }
+            // A place that does not resolve is a diagnostic and not a fault,
+            // exactly as `--owe` and `--status` already are.
+            Err(error) => eprintln!("warning: --pollen-seed: {error}"),
         }
     }
     // One player utterance before the run, so an offline cast can be poked into
@@ -634,6 +740,17 @@ struct Runner {
     census_per_day: f64,
     /// `--trace-food`: echo the M2 hunger census.
     trace_food: bool,
+    /// `--trace-pollen`: echo the knowledge layer's cadence census.
+    trace_pollen: bool,
+    /// `--pollen-per-day`: how many pollen samples a watched game day takes.
+    pollen_per_day: f64,
+    /// `--pollen-step`: the watch-clock step while `--trace-pollen` is on.
+    pollen_step: f64,
+    /// The one accumulator no instant can answer — ward crossings, and holder
+    /// exits of each planted fact's mint ward. Watches nothing until
+    /// `--pollen-seed` plants a pack, so a run without one pays for one ward
+    /// lookup per body per sample and nothing else.
+    tally: cathedral_sim::knowledge::pollen::CrossingTally,
 }
 
 impl Runner {
@@ -663,8 +780,24 @@ impl Runner {
             if self.trace_food {
                 println!("[food] {}", self.engine.food_summary());
             }
+            if self.trace_pollen {
+                self.print_pollen();
+            }
         }
         Ok(())
+    }
+
+    /// Sample the tally **first**, then print the census filled from that same
+    /// sample's snapshot — so one line carries the instant's air and the run's own
+    /// integrand, and a test can read any bell off one run.
+    fn print_pollen(&mut self) {
+        let game_days = self.engine.config().clock.game_days(self.now);
+        self.tally.sample(self.engine.world(), game_days);
+        let mut census = self.engine.pollen_census(self.now);
+        census.fill(&self.tally.snapshot());
+        for line in census.topic_lines() {
+            println!("{line}");
+        }
     }
 
     /// Watch the clock advance `game_days` days with no turns, so every office
@@ -676,14 +809,26 @@ impl Runner {
         // Small enough that even the closest two offices (the Kindling and
         // Dayspring, two game hours apart) never share a step, so no bell's line
         // is skipped. When tracing the water round the step must also stay under
-        // the mover accumulator's catch-up budget (3.2 s), or a coarse step snaps
-        // walkers forward and drops the walk — so cap it at a stride there.
+        // the mover accumulator's catch-up budget, or a coarse step snaps walkers
+        // forward and drops the walk — so cap it at a stride there.
         let mut step = (seconds_per_day / 200.0).max(0.05);
         // Tracing positions (water or the round census) needs the step under the
-        // mover accumulator's catch-up budget (3.2 s), or a coarse step snaps
-        // walkers forward and drops the walk — nobody would ever be seen to arrive.
+        // mover accumulator's catch-up budget, or a coarse step snaps walkers
+        // forward and drops the walk — nobody would ever be seen to arrive. That
+        // budget is `MAX_MOVEMENT_CATCHUP_SLICES` (8) × `MOVEMENT_TICK_SECONDS`
+        // (0.05) = **0.4 s** of walking per poll; the 3.0 s cap below is a stride
+        // and was never about completing a commute.
         if self.trace_water || self.census_by_area || self.trace_food {
             step = step.min(3.0);
+        }
+        // Pollen crosses wards in walking mouths, and a poll realises at most
+        // 0.4 s of walking, so any coarser step starves every commute and the
+        // band is unmeasurable (D22). `--pollen-step` overrides it for the cost
+        // guard, which measures no crossings. It is **not** needed for the roll
+        // rate: `poll_gap_game_days`' composed invariant covers that at any step
+        // this loop can take.
+        if self.trace_pollen {
+            step = step.min(self.pollen_step);
         }
         println!(
             "== watching {game_days} game day(s): {real_seconds:.0} s at {seconds_per_day:.0} s/day =="
@@ -696,9 +841,24 @@ impl Runner {
             16.0
         };
         let census_interval = (real_seconds / (samples * game_days).max(1.0)).max(step);
+        let pollen_samples = if self.pollen_per_day.is_finite() && self.pollen_per_day >= 1.0 {
+            self.pollen_per_day
+        } else {
+            24.0
+        };
+        let pollen_interval = (real_seconds / (pollen_samples * game_days).max(1.0)).max(step);
         let mut next_water = self.now;
         let mut next_census = self.now + census_interval;
         let mut next_food = self.now;
+        // The mint's own instant, sampled **before** the first step: it is the
+        // sample every warm life in `02_numbers.md` is measured from, and a
+        // sample after the first pump has already given the pack's four mouths
+        // their first stir — the cadence harness samples before stepping too, so
+        // the two instruments print the same first line.
+        let mut next_pollen_sample = self.now + pollen_interval;
+        if self.trace_pollen {
+            self.print_pollen();
+        }
         while self.now < end {
             self.now += step;
             // Non-blocking, and normally empty: `--watch-clock` takes no turns.
@@ -726,6 +886,10 @@ impl Runner {
             if self.trace_food && self.now >= next_food {
                 println!("[food] {}", self.engine.food_summary());
                 next_food = self.now + census_interval;
+            }
+            if self.trace_pollen && self.now >= next_pollen_sample {
+                self.print_pollen();
+                next_pollen_sample = self.now + pollen_interval;
             }
         }
         Ok(())
@@ -1492,6 +1656,10 @@ mod tests {
             census_by_area: false,
             census_per_day: 16.0,
             trace_food: false,
+            trace_pollen: false,
+            pollen_per_day: 24.0,
+            pollen_step: 0.4,
+            tally: cathedral_sim::knowledge::pollen::CrossingTally::new(&[]),
         };
 
         let started = std::time::Instant::now();

@@ -338,9 +338,18 @@ fn a_witness_cannot_be_talked_out_of_what_they_saw() {
     assert_eq!(world.knowledge.holdings_len(&witness), 0);
     let held = holds_key(&world, &witness, key).expect("the witness still holds it");
     assert_eq!(held.hops, 0);
-    assert_eq!(held.heat(Some(9.0)), 1.0);
     assert_eq!(held.from, None);
     assert!(held.view.is_pristine());
+    // What a witness cannot be talked out of is the *view*, the hop count and the
+    // chain — not the heat. Their telling cools on the fact's own mint stamp, which
+    // is what closes the deposit gate and keeps a spoiled batch in its own lane
+    // (`02_numbers.md` §4); it is only the merge that can never touch them.
+    assert_eq!(held.heat(Some(0.0)), 1.0);
+    assert!(
+        held.heat(Some(9.0)) < VOLUNTEER_HEAT,
+        "a witness of news cools like everybody else: {}",
+        held.heat(Some(9.0))
+    );
 }
 
 /// T6. `holds` answers `seeded` before the carrier store, and is pure.
@@ -663,6 +672,8 @@ fn install_refuses_a_duplicate_id_and_a_full_store() {
             decays: true,
             topic: Topic::Law,
             minted_game_days: None,
+            quiet_among: BTreeSet::new(),
+            craft_ear: None,
             source: FactSource::authored(),
         }
     };
@@ -702,9 +713,39 @@ fn install_refuses_a_duplicate_id_and_a_full_store() {
         );
     }
     assert_eq!(world.knowledge.len(), FACTS_MAX_LIVE);
+
+    // At the cap a decaying fact is evicted rather than the new one refused, and it
+    // is the coldest one — every row here is out of the air, so the tie falls to the
+    // lowest `sequence`, which is the first installed. Bounded either way: the count
+    // never grows past the cap.
     let overflow = make(&mut world, "test.overflow");
-    assert!(world.knowledge.install(overflow).is_none());
+    assert!(world.knowledge.install(overflow).is_some());
     assert_eq!(world.knowledge.len(), FACTS_MAX_LIVE);
+    assert!(
+        world
+            .knowledge
+            .key_of(&FactId::from_raw("test.dup"))
+            .is_none(),
+        "the coldest decaying fact, then the lowest sequence, is the victim"
+    );
+
+    // A store of nothing but standing facts refuses instead: authored truth is not
+    // news, and news must never push it out.
+    let mut standing = World::new();
+    standing.add_character(character("w1", "Witness", None, &[]));
+    for index in 0..FACTS_MAX_LIVE {
+        let fact = Fact {
+            decays: false,
+            ..make(&mut standing, &format!("test.standing.{index}"))
+        };
+        assert!(standing.knowledge.install(fact).is_some());
+    }
+    let overflow = make(&mut standing, "test.news");
+    assert!(
+        standing.knowledge.install(overflow).is_none(),
+        "there is nothing evictable, so the mint is refused"
+    );
+    assert_eq!(standing.knowledge.len(), FACTS_MAX_LIVE);
 }
 
 /// T11. Every topic round-trips through its snake_case name, and an unrecognised
@@ -1618,4 +1659,197 @@ fn the_holdings_map_is_shared_until_it_is_written() {
         holds_key(&world, &carrier, key).map(|held| held.hops),
         Some(2)
     );
+}
+
+// ---------------------------------------------------------------------------
+// The ward's air (M2 step 10): the deposit rule, the stir grid, the cap and
+// invalidation. The fixtures live here, which is why these sit beside the store's
+// other tests rather than in `pollen.rs` with the rolls.
+// ---------------------------------------------------------------------------
+
+/// `stir` is bumped by the cooling sweep on a fixed grid and by `stir_up`, and by
+/// **nothing else** — a deposit never bumps it, whatever heat it carries.
+///
+/// If a deposit bumped it, the effective roll rate would become a property of who
+/// happens to be warm, and every closed form the cadence band is solved from would
+/// stop being solvable. And a row starts on the current coin, never on coin 0, so a
+/// row evicted and later re-deposited does not replay the same coins for everybody
+/// who was present the first time.
+#[test]
+fn a_deposit_does_not_bump_the_stir() {
+    let (mut world, carrier, key) = merge_world();
+    let ward = PlanningWard::Wick;
+    world.knowledge.seed_air(ward, key, 0.40, 0.5);
+    let coin = crate::knowledge::pollen::stage_stir(0.5);
+    assert_eq!(coin, 24, "half a game day is 24 stirs");
+    assert_eq!(
+        world.knowledge.drift(ward, key).map(|air| air.stir),
+        Some(coin)
+    );
+
+    // A witness at heat 1.0 — warmer than the row — and a hops-2 carrier at a
+    // heat below it. Neither moves the coin.
+    for (hops, heat) in [(0u8, 1.0f32), (2, 0.10)] {
+        world
+            .knowledge
+            .deposit(ward, key, hops, heat, &carrier, 0.5);
+        assert_eq!(
+            world.knowledge.drift(ward, key).map(|air| air.stir),
+            Some(coin),
+            "a deposit at hops {hops}, heat {heat} bumped the stir"
+        );
+    }
+    // The deposit did its own job: the heat took the maximum, and the `via` stayed
+    // `None` because the hops did not come down — the ward saw this one at first
+    // hand and nobody had to tell it.
+    let air = world.knowledge.drift(ward, key).expect("the row").clone();
+    assert_eq!(air.hops, 0);
+    assert_eq!(air.via, None);
+    assert_eq!(heat_pct(air.heat), 100);
+
+    // Where the hops *do* come down, the closer mouth becomes the chain link — which
+    // is what keeps walk-the-chain walkable.
+    let far = PlanningWard::Cloth;
+    world
+        .knowledge
+        .deposit(far, key, 3, 0.30, &actor("c1"), 0.5);
+    assert_eq!(
+        world
+            .knowledge
+            .drift(far, key)
+            .map(|air| (air.hops, air.via.clone())),
+        Some((3, Some(actor("c1"))))
+    );
+    world.knowledge.deposit(far, key, 1, 0.20, &carrier, 0.5);
+    let air = world.knowledge.drift(far, key).expect("the row").clone();
+    assert_eq!((air.hops, air.via.clone()), (1, Some(carrier.clone())));
+    assert_eq!(
+        heat_pct(air.heat),
+        30,
+        "heat takes the maximum, never the last"
+    );
+    assert_eq!(air.stir, coin, "and still no stir from either deposit");
+
+    // `stir_up` is the one genuine re-heat, and it is the one path that bumps it.
+    world.knowledge.stir_up(ward, key, REHEAT_TO, 0.5);
+    assert_eq!(
+        world.knowledge.drift(ward, key).map(|air| air.stir),
+        Some(coin + 1)
+    );
+
+    // A row a first deposit creates starts on the grid too, never at 0.
+    let other = PlanningWard::Weigh;
+    world.knowledge.deposit(other, key, 1, 0.5, &carrier, 0.5);
+    assert_eq!(
+        world.knowledge.drift(other, key).map(|air| air.stir),
+        Some(coin)
+    );
+}
+
+/// `marks::sweep`'s trap, in the air: with nothing to cool the beat does not fire
+/// **and the clock still advances**, so the first fact deposited into a long-running
+/// world is not charged for the whole run.
+#[test]
+fn the_sweep_keeps_its_clock_on_an_empty_air() {
+    let (mut world, carrier, key) = merge_world();
+    assert!(world.knowledge.air_is_empty());
+    assert!(!world.knowledge.take_stir_beat(5.0));
+    assert_eq!(world.knowledge.last_sweep_game_days(), 5.0);
+
+    // Now there is air, and the beat is once per half game hour.
+    world
+        .knowledge
+        .deposit(PlanningWard::Wick, key, 0, 1.0, &carrier, 5.0);
+    assert!(
+        !world.knowledge.take_stir_beat(5.0),
+        "the same instant is the same beat"
+    );
+    assert!(
+        !world.knowledge.take_stir_beat(5.0 + 1.0 / 48.0 * 0.5),
+        "a quarter of a game hour is inside the window"
+    );
+    assert!(world.knowledge.take_stir_beat(5.0 + 1.0 / 48.0));
+}
+
+/// The air is bounded per ward, coldest out, and the survivors are the same
+/// survivors run to run.
+#[test]
+fn the_air_is_bounded_per_ward() {
+    let survivors = |seed: f64| -> Vec<(FactKey, u8)> {
+        let mut world = world_at_day(0);
+        world.add_character(character("w1", "Witness", None, &[]));
+        let mut keys = Vec::new();
+        for index in 0..40u32 {
+            let (key, sequence) = world.knowledge.next_handles();
+            let installed = world.knowledge.install(Fact {
+                id: FactId::from_raw(format!("test.air.{index}")),
+                key,
+                sequence,
+                subject: Vec::new(),
+                place: None,
+                day: None,
+                said: "a thing".into(),
+                own: BTreeMap::new(),
+                seeded: BTreeSet::from([actor("w1")]),
+                garble: GarbleMask::NONE,
+                decays: true,
+                topic: Topic::Law,
+                minted_game_days: Some(0.0),
+                quiet_among: BTreeSet::new(),
+                craft_ear: None,
+                source: FactSource::authored(),
+            });
+            keys.push(installed.expect("the row installs"));
+        }
+        // Forty rows into one ward, each a whole percent apart so the ordering is
+        // the ordering and not a rounding.
+        for (index, key) in keys.iter().enumerate() {
+            let heat = 0.10 + index as f32 * 0.02;
+            world
+                .knowledge
+                .seed_air(PlanningWard::Cinder, *key, heat, seed);
+        }
+        assert_eq!(world.knowledge.air_entries(), AIR_PER_WARD_MAX);
+        world
+            .knowledge
+            .ward_air(PlanningWard::Cinder)
+            .map(|(key, air)| (key, heat_pct(air.heat)))
+            .collect()
+    };
+    let first = survivors(0.5);
+    assert_eq!(first.len(), AIR_PER_WARD_MAX);
+    // The coldest sixteen are gone: the survivors are the hottest twenty-four.
+    assert!(
+        first
+            .iter()
+            .all(|(_, pct)| *pct >= heat_pct(0.10 + 16.0 * 0.02)),
+        "{first:?}"
+    );
+    assert_eq!(first, survivors(0.5), "eviction must be reproducible");
+    assert_eq!(
+        first,
+        survivors(3.25).into_iter().collect::<Vec<_>>(),
+        "the survivors are the heat's business, not the clock's"
+    );
+}
+
+/// A fact the world stopped bearing out is not still being said: dropping it
+/// empties the air of it in every ward, and every holding.
+#[test]
+fn invalidating_a_fact_clears_it_from_every_ward() {
+    let (mut world, carrier, key) = merge_world();
+    learn(&mut world, &carrier, key, telling(2, 0.5, None), Some(0.0));
+    for ward in PlanningWard::ALL {
+        world.knowledge.seed_air(ward, key, 0.5, 0.0);
+    }
+    assert_eq!(world.knowledge.air_entries(), 8);
+    assert_eq!(world.knowledge.holdings_len(&carrier), 1);
+
+    world.knowledge.invalidate(key);
+    assert!(world.knowledge.air_is_empty());
+    for ward in PlanningWard::ALL {
+        assert!(world.knowledge.drift(ward, key).is_none());
+    }
+    assert_eq!(world.knowledge.holdings_len(&carrier), 0);
+    assert!(holds_key(&world, &carrier, key).is_none());
 }

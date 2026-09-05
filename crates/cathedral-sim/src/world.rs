@@ -205,6 +205,22 @@ pub struct World {
     /// reads. `config.ron: smart_actors.knowledge.enabled`, and
     /// `CATHEDRAL_NO_KNOWLEDGE=1` for one run.
     pub knowledge_enabled: bool,
+    /// Which named areas a garbled place may become — `AreaMap::nearest_areas`
+    /// minus the area itself, precomputed once from the **live** map. Empty in
+    /// every world with an empty [`AreaMap`] (the goldens, every hermetic test),
+    /// so a place garble is a no-op there. M3's consumer; landed with the air so
+    /// this field list is edited once.
+    pub area_adjacency: Arc<crate::knowledge::AreaAdjacency>,
+    /// Every housed person's door, written **once** by `Round::seed` and by
+    /// nothing else — which is what lets [`crate::knowledge::Fact::quiet_among`]
+    /// be frozen at mint. Empty in every round-less world, where nobody has a
+    /// door at all.
+    pub household_doors: Arc<BTreeMap<ActorId, Vec3>>,
+    /// Measurement lever, not gameplay: run the pickup roll and the deposit gate
+    /// with the salience factor **deleted from the expression**, which is the
+    /// baseline `--pollen-flat` has to reproduce. Never in `config.ron`; set only
+    /// by `--pollen-no-salience` and by tests.
+    pub pollen_no_salience: bool,
     /// Who has spoken so far in the reply currently being applied, cleared by
     /// the scheduler before each one.
     ///
@@ -255,6 +271,9 @@ impl Default for World {
             fact_catalog: Arc::new(crate::knowledge::FactCatalog::default()),
             salience: Arc::new(crate::knowledge::SalienceTable::default()),
             knowledge_enabled: true,
+            area_adjacency: Arc::new(crate::knowledge::AreaAdjacency::default()),
+            household_doors: Arc::new(BTreeMap::new()),
+            pollen_no_salience: false,
             events: Vec::new(),
         }
     }
@@ -328,6 +347,25 @@ impl World {
         }
     }
 
+    /// Where this point stands, and **the only answer to that question anywhere
+    /// in the crate**.
+    ///
+    /// Exact: one array index for the 94.6% of the city where a grid cell and all
+    /// four of its corners agree, and the same nearest-mark search over the 321
+    /// ward-labelled baked doors everywhere else. `crowd.rs` is routed through
+    /// the same grid, so housing and pollen cannot disagree about anybody, and no
+    /// generated citizen's ward changed when this landed.
+    ///
+    /// `None` only when the ward map is empty — a hand-built test nav with no
+    /// `homes.json` — never for a point on real city ground.
+    ///
+    /// Do **not** substitute `LoreProfile::planning_ward`: that is the ward a
+    /// person is *of*, not where they are standing, so nobody would ever carry a
+    /// word across a boundary and the whole mechanic would vanish.
+    pub fn ward_at(&self, point: Vec3) -> Option<crate::lore::PlanningWard> {
+        crate::knowledge::pollen::ward_grid().at(point)
+    }
+
     /// The one physical-presence predicate used at every world-facing seam.
     pub fn is_present(&self, actor_id: &ActorId) -> bool {
         self.characters
@@ -344,6 +382,24 @@ impl World {
             .iter()
             .find(|(_, character)| character.control() == Control::Player)
             .map(|(id, _)| id)
+    }
+
+    /// [`Self::player_id`]'s question asked of **one** body: is this the one whose
+    /// feet the sim does not own?
+    ///
+    /// Same answer, read off that body's own `control` instead of searched for
+    /// across the roster — and that matters because [`Self::player_id`] is a linear
+    /// scan over `characters` (`neighbours_by_distance`' problem, in a
+    /// cheaper-looking place). The pollen roll asks this twice per (person, fact in
+    /// the ward's air) pair, and at `--extra-ambient 2000` the scan form was
+    /// **about half of the whole knowledge layer's cost**: one watched game day
+    /// measured 7.45–7.68 s against 7.16–7.25 s here, over a 7.02 s
+    /// `CATHEDRAL_NO_KNOWLEDGE=1` baseline (`features/knowledge_and_rumor/`, M2
+    /// step 13).
+    pub fn is_player(&self, actor_id: &ActorId) -> bool {
+        self.characters
+            .get(actor_id)
+            .is_some_and(|character| character.control() == Control::Player)
     }
 
     pub fn presence_epoch(&self, actor_id: &ActorId) -> Option<u64> {
