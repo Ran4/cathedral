@@ -59,7 +59,7 @@ pub struct Sound {
     /// Generator-only (ElevenLabs) prompt.
     pub sfx_prompt: String,
     pub duration_seconds: f64,
-    /// May an LLM choose this via `make_sound`?
+    /// May an actor make this freely via `make_sound`, without item or place checks?
     pub actor_emittable: bool,
 }
 
@@ -356,13 +356,13 @@ mod tests {
                 )
                 .unwrap(),
                 Sound::new(
-                    "glass_break",
-                    "impact",
-                    25.0,
-                    "[g]",
-                    Some("{actor} broke it.".into()),
-                    "p",
+                    "gulp",
+                    "body",
                     2.0,
+                    "[g]",
+                    Some("{actor} swallowed hard.".into()),
+                    "p",
+                    1.0,
                     true,
                 )
                 .unwrap(),
@@ -371,7 +371,7 @@ mod tests {
             vec![],
         )
         .unwrap();
-        assert_eq!(catalog.emittable_sound_ids(), ["fart", "glass_break"]);
+        assert_eq!(catalog.emittable_sound_ids(), ["fart", "gulp"]);
         assert!(catalog.get("town_bell").is_some());
         assert!(catalog.get("burp").is_none());
     }
@@ -430,6 +430,7 @@ mod tests {
         assert_eq!(glass.duration_seconds, 2.0);
         assert_eq!(glass.heard, "[You heard glass shatter nearby.]");
         assert_eq!(glass.seen.as_deref(), Some("{actor} broke a beer glass."));
+        assert!(!glass.actor_emittable);
 
         // Test 29: the bell is a world sound — never emittable, never attributed.
         let bell = catalog.get("town_bell").unwrap();
@@ -440,12 +441,8 @@ mod tests {
         assert_eq!(bell.seen, None);
         assert!(!bell.actor_emittable);
 
-        // M3 (the water round) made the water sounds attributable — a keeper
-        // works the curb, so a witness sees who drew. M5 (the sheet change that
-        // regenerated the golden fixtures) also flipped them `actor_emittable`,
-        // so a deliberate clatter is a make_sound verb choice; the round's own
-        // steady windlass still bypasses the flag (an unattributed world sound
-        // from code, nudge-free).
+        // Water sounds remain attributable, but need the actual work at a
+        // fixture. The round emits them directly, bypassing make_sound's flag.
         for water in [
             "draw_water",
             "chain_windlass",
@@ -454,23 +451,12 @@ mod tests {
         ] {
             let sound = catalog.get(water).unwrap();
             assert!(sound.seen.is_some(), "{water} attributes the drawer now");
-            assert!(sound.actor_emittable, "{water} is a make_sound verb since M5");
+            assert!(!sound.actor_emittable, "{water} requires the water fixture");
             assert!(sound.heard.starts_with("[You heard"));
         }
         assert_eq!(
             catalog.emittable_sound_ids(),
-            [
-                "fart",
-                "glass_break",
-                "draw_water",
-                "chain_windlass",
-                "pour_trough",
-                "pail_clatter",
-                "gulp",
-                "spit",
-                "gargle",
-                "soft_report",
-            ]
+            ["fart", "gulp", "spit", "soft_report"]
         );
 
         // Body pockets (extra_pockets.md M1/M3): the mouth and the lower slots.
@@ -480,7 +466,7 @@ mod tests {
         for body in ["gulp", "spit", "gargle", "soft_report"] {
             let sound = catalog.get(body).unwrap();
             assert_eq!(sound.sound_class, "body", "{body}");
-            assert!(sound.actor_emittable, "{body}");
+            assert_eq!(sound.actor_emittable, body != "gargle", "{body}");
             let seen = sound.seen.as_deref().unwrap_or_default();
             assert!(seen.starts_with("{actor} "), "{body}: {seen}");
             assert!(!seen.contains("themself"), "{body}: {seen}");

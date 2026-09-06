@@ -477,10 +477,17 @@ fn the_player_never_accumulates_recent_history() {
 fn an_unknown_or_non_emittable_sound_is_rejected_without_an_event() {
     let mut world = world();
     world.add_character(npc("actor", "Sven", (0.0, 0.0, 0.0)));
+    world.add_character(npc("witness", "Conny", (0.0, 0.0, 1.0)));
 
     for (value, needle) in [
         (json!("burp"), Some("burp")),
         (json!("town_bell"), Some("town_bell")),
+        (json!("glass_break"), Some("glass_break")),
+        (json!("draw_water"), Some("draw_water")),
+        (json!("chain_windlass"), Some("chain_windlass")),
+        (json!("pour_trough"), Some("pour_trough")),
+        (json!("pail_clatter"), Some("pail_clatter")),
+        (json!("gargle"), Some("gargle")),
         (Value::Null, None),
     ] {
         let error = apply_action(
@@ -500,6 +507,12 @@ fn an_unknown_or_non_emittable_sound_is_rejected_without_an_event() {
         }
     }
     assert!(world.drain_events().is_empty());
+    assert!(inbox(&world, "witness").is_empty());
+    assert!(
+        world.characters[&actor("actor")]
+            .recent_history()
+            .is_empty()
+    );
 }
 
 /// Test 41 (`test_sounds.py:290`): a sounds-disabled world refuses `make_sound`

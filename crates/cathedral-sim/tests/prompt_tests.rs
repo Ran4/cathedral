@@ -771,9 +771,14 @@ fn wait_rule_sound_exemption_and_example_track_sounds_enabled() {
     assert!(!compacted.contains("__SOUND_WAIT_EXEMPTION__"));
     assert!(!compacted.contains("__MAKE_SOUND_EXAMPLE__"));
     // The catalog's emittable ids, in catalog order.
-    assert!(rendered.contains(
-        r#"make_sound {"sound": "fart"}                         # Deliberately make a noise everyone within earshot perceives; sounds: fart, glass_break"#
-    ));
+    assert_eq!(
+        rendered
+            .lines()
+            .find(|line| line.starts_with("make_sound ")),
+        Some(
+            r#"make_sound {"sound": "fart"}                         # Deliberately make a bodily noise everyone within earshot perceives; sounds: fart, gulp, spit, soft_report"#
+        )
+    );
 
     world.sounds_enabled = false;
     let rendered = render_prompt(&world, &actor("sv3n1"), None, &env).unwrap();

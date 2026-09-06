@@ -6718,23 +6718,11 @@ mod tests {
     fn gargling_keeps_the_mouthful_and_refuses_anything_solid() {
         let mut world = pocket_world();
         let carrier = ActorId::from_raw("carry");
-        world.sound_catalog = SoundCatalog::new(
-            vec![
-                Sound::new(
-                    "gargle",
-                    "body",
-                    6.0,
-                    "[You heard someone gargling nearby.]",
-                    Some("{actor} gargled noisily.".into()),
-                    "prompt",
-                    2.0,
-                    true,
-                )
-                .unwrap(),
-            ],
-            Vec::new(),
-        )
-        .unwrap();
+        // The real action must still emit its sound even though make_sound
+        // cannot bypass the mouthful requirement with the same catalog row.
+        world.sound_catalog =
+            SoundCatalog::from_toml_str(include_str!("../../../assets/sounds/catalog.toml"))
+                .unwrap();
 
         apply_action(
             &mut world,

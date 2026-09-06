@@ -249,7 +249,7 @@ seize {"person": "4bfk4", "notice_id": 3}            # Law only: take someone wi
 release {"person": "4bfk4"}                          # Let someone you have in charge go free
 {% endif %}{% if has_custody %}grab {"person": "4bfk4"}                             # Take hold of someone you have in charge, so they cannot walk off
 {% endif %}{% if is_held %}struggle {}                                          # Try to pull free of whoever has hold of you
-{% endif %}{% if sounds_enabled %}make_sound {"sound": "fart"}                         # Deliberately make a noise everyone within earshot perceives; sounds: {{ emittable_sounds }}
+{% endif %}{% if sounds_enabled %}make_sound {"sound": "fart"}                         # Deliberately make a bodily noise everyone within earshot perceives; sounds: {{ emittable_sounds }}
 {% endif %}gesture {"kind": "wave|beckon|nod|shake_head|shrug|point|bow|dance", "to": "optional name"}  # Small body language others can see; use it instead of narrating gestures in say
 {% if has_raise_word %}raise_word {"topic": "bread", "said": "the Wickmarket had no rye at all by midday"}  # Start a word going about something you have just been told and did not know; topics: bed, blood, law, omen, stranger, coin, bread, craft, talk
 {% endif %}set_goal {"goal": "Eat fish"}

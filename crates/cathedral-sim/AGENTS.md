@@ -149,8 +149,10 @@ like `"fish"` is an error, never a fallback.
 - `eat {"item_id": "<id>"}` — consume one uncommitted unit of a held edible
   stack. Offers and transform reservations remain promises: if no unit is free,
   eating fails with `item_committed` until the offer is retracted or replaced.
-- `make_sound {"sound_id": "<id>"}` — emit a catalog sound
-  (`assets/sounds/catalog.toml`); only rows with `actor_emittable = true`.
+- `make_sound {"sound": "<id>"}` — freely make a bodily noise from
+  `assets/sounds/catalog.toml`; only rows with `actor_emittable = true`.
+  Sounds requiring objects or fixtures come from the simulation actions that
+  use them; gargling requires the `gargle` action with a mouthful of drink.
 - `go_to {"place_id": "<pl_…>"}` / `go_to {"person": "<id>"}` — set a travel
   *intent*; it moves nobody (M5, `features/implemented/movement/05_the_llm_seam.md`). The
   behaviour ladder (`round.rs`) walks it as a rung between thirsty and the
