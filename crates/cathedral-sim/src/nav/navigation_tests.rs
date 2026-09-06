@@ -62,6 +62,49 @@ fn navigation_loads_with_a_plausible_shape() {
     assert!(!nav.is_walkable(0.0, -800.0));
 }
 
+#[test]
+fn navigation_distance_cache_matches_routes_and_reuses_destination_tables() {
+    let cold = nav();
+    let nav = nav();
+    // A different origin reuses the same destination row, as does a clone.
+    let destination = nav.place("The Harne Gate").unwrap().node;
+    assert!(nav.distance_cache.0[destination].get().is_none());
+    for start in (0..nav.node_count()).step_by(97) {
+        let cached = nav.cached_distance_m(start, destination).unwrap();
+        let route = nav.route_nodes(start, destination).unwrap();
+        assert!((cached - route.length_m).abs() < 0.001);
+    }
+    let row = nav.distance_cache.0[destination].get().unwrap();
+    let cloned = nav.clone();
+    assert!(std::ptr::eq(
+        row.as_ptr(),
+        cloned.distance_cache.0[destination].get().unwrap().as_ptr()
+    ));
+    assert_eq!(
+        nav.distance_cache
+            .0
+            .iter()
+            .filter(|row| row.get().is_some())
+            .count(),
+        1
+    );
+    assert!(cold.distance_cache.0[destination].get().is_none());
+    assert_eq!(nav, cold, "cache warmth must not change graph equality");
+    assert_eq!(nav.cached_distance_m(usize::MAX, destination), None);
+    assert_eq!(nav.cached_distance_m(0, usize::MAX), None);
+
+    // Same node indices, changed topology: no stale values from the old graph.
+    let mut doc: Value = serde_json::from_str(NAV_JSON).unwrap();
+    doc["edges"] = serde_json::json!([]);
+    let disconnected = NavData::from_parts(&doc.to_string(), NAV_BIN).unwrap();
+    let other = (destination + 1) % nav.node_count();
+    assert_eq!(disconnected.cached_distance_m(other, destination), None);
+    assert_eq!(
+        disconnected.cached_distance_m(destination, destination),
+        Some(0.0)
+    );
+}
+
 /// The committed bitset must still match the manifest the JSON carries, so the
 /// two files cannot silently drift apart in a commit. A dependency-free FNV-1a
 /// stands in for the sha256 the crate cannot hash.

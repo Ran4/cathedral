@@ -1,0 +1,1 @@
+say {"target":"player","text":"The Harne Gate is about 1,330 meters. Ten and a half minutes on foot."}

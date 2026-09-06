@@ -54,6 +54,10 @@
     ],
     "finished": [
         {
+            "path": "features/implemented/npcs_know_how_far_their_workplace_is.md",
+            "when": "2026-09-06T1246"
+        },
+        {
             "path": "features/implemented/knowledge_and_rumor/",
             "when": "2026-09-06T0924"
         },

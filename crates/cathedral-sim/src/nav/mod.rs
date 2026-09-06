@@ -23,6 +23,7 @@
 use std::{
     cell::RefCell,
     collections::{BinaryHeap, HashMap},
+    sync::{Arc, OnceLock},
 };
 
 use serde::Deserialize;
@@ -222,6 +223,34 @@ pub struct NavData {
     /// Derived from `nodes` alone, so two `NavData` built from the same graph
     /// still compare equal.
     node_index: Option<NodeIndex>,
+    /// Derived lazily from this immutable graph; clones share the tables.
+    distance_cache: DistanceCache,
+}
+
+/// One lazily built distance table per destination node. The undirected graph
+/// lets a Dijkstra sweep FROM the destination answer every distance TO it.
+/// f32 is ample for spoken estimates and halves the full-city bound to ~60 MiB;
+/// only queried destinations allocate a row (shared home nodes share a row).
+#[derive(Clone)]
+struct DistanceCache(Arc<[OnceLock<Box<[f32]>>]>);
+
+impl std::fmt::Debug for DistanceCache {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DistanceCache")
+            .field(
+                "filled_rows",
+                &self.0.iter().filter(|row| row.get().is_some()).count(),
+            )
+            .finish()
+    }
+}
+
+impl PartialEq for DistanceCache {
+    fn eq(&self, _other: &Self) -> bool {
+        // Cache warmth is not world state. NavData compares the graph itself;
+        // any equal graph derives the same tables, regardless of query order.
+        true
+    }
 }
 
 impl NavData {
@@ -340,6 +369,7 @@ impl NavData {
             door_by_building,
             forecourt: doc.reference.forecourt,
             node_index,
+            distance_cache: DistanceCache((0..n).map(|_| OnceLock::new()).collect()),
         })
     }
 
@@ -466,6 +496,24 @@ impl NavData {
             }
         }
         dist
+    }
+
+    /// Approximate street distance for prompt estimates. The first query for
+    /// `goal` computes its table; subsequent origins and other NPCs just index
+    /// it. Movement still uses the exact route and its f64 length.
+    /// A new graph owns fresh tables, and invalid/unreachable nodes return None.
+    pub fn cached_distance_m(&self, start: usize, goal: usize) -> Option<f64> {
+        if start >= self.nodes.len() {
+            return None;
+        }
+        let row = self.distance_cache.0.get(goal)?.get_or_init(|| {
+            self.distances_from(goal)
+                .into_iter()
+                .map(|distance| distance.map_or(f32::INFINITY, |m| m as f32))
+                .collect()
+        });
+        let distance = row[start];
+        distance.is_finite().then_some(f64::from(distance))
     }
 
     /// Can you get from `start` to `goal` at all?

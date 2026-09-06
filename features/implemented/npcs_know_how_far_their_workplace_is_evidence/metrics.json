@@ -1,0 +1,14 @@
+{
+  "characters": 1520,
+  "cold_prompt_ms": 3.683932,
+  "known_places": 20,
+  "nav_nodes": 3972,
+  "new_places_bytes": 1157,
+  "new_prompt_bytes": 19183,
+  "old_places_bytes": 528,
+  "old_prompt_bytes": 16861,
+  "position_source": "archived x=323 z=117, rounded to whole metres",
+  "warm_distance_lookup_ns": 2.164584,
+  "warm_prompt_p50_us": 25.863999999999997,
+  "warm_prompt_p95_us": 28.704
+}

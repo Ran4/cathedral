@@ -25,6 +25,9 @@
 //! (`tests/golden_prompts.rs`), so the layout in this module is behavior.
 
 pub mod parse;
+mod places;
+
+use places::{PlaceRef, known_places, place_md};
 
 use minijinja::{AutoEscape, Environment, context};
 use serde::{Deserialize, Serialize};
@@ -82,6 +85,10 @@ pub struct PromptStrings {
     pub holding_nothing: String,
     /// The parenthesis after `**places_you_know**`.
     pub places_note: String,
+    /// The known-place row when already at the destination.
+    pub place_here: String,
+    /// The known-place row when no walk can be estimated.
+    pub place_walk_unavailable: String,
     /// The parenthesis after `**you_sell**` — a bound vendor's price list.
     pub sell_note: String,
     /// Introduces `you_are`'s clock phrase.
@@ -624,15 +631,6 @@ struct ItemRef<'a> {
 struct SellLine<'a> {
     name: &'a str,
     price_sparks: u32,
-}
-
-/// One `places_you_know` entry. The key is `place_id`, not `id`, so a place
-/// handle can never be conflated with a person handle even out of context
-/// (`features/implemented/movement/05_the_llm_seam.md` §3).
-#[derive(Serialize)]
-struct PlaceRef<'a> {
-    place_id: &'a PlaceId,
-    name: &'a str,
 }
 
 /// One `word_in_the_ward` entry. The number is carried, not implied by
@@ -1269,25 +1267,7 @@ fn build_sheet<'a>(
         }
     }
 
-    // The wayfinding whitelist, resolved against the world registry and sorted
-    // by name (then id) — a stable, human order, so the list reads the same to
-    // the model turn after turn. A held handle the registry no longer names is
-    // silently skipped, like a dangling item id.
-    let mut places_you_know: Vec<PlaceRef<'_>> = actor
-        .state
-        .places_known
-        .iter()
-        .filter_map(|place_id| world.places.get(place_id))
-        .map(|entry| PlaceRef {
-            place_id: &entry.id,
-            name: &entry.name,
-        })
-        .collect();
-    places_you_know.sort_by(|left, right| {
-        left.name
-            .cmp(right.name)
-            .then_with(|| left.place_id.cmp(right.place_id))
-    });
+    let places_you_know = known_places(world, actor);
 
     let events: &[String] = since.unwrap_or(actor.inbox());
     let since_your_last_turn = fallback(events, &strings.nothing);
@@ -1819,7 +1799,7 @@ fn sheet_markdown(sheet: &Sheet<'_>, strings: &PromptStrings) -> String {
         sheet
             .places_you_know
             .iter()
-            .map(|place| format!("{} {}", place.place_id, place.name)),
+            .map(|place| place_md(place, strings)),
         &strings.no_places,
     ));
     sections.push(bullet_section(
@@ -2264,6 +2244,8 @@ mod tests {
             no_places: "none".into(),
             holding_nothing: "nothing".into(),
             places_note: "go_to takes these place_ids".into(),
+            place_here: "right here".into(),
+            place_walk_unavailable: "walking estimate unavailable".into(),
             sell_note: "your stall's prices".into(),
             the_hour_label: "The hour:".into(),
             the_day_label: "The day:".into(),
@@ -2336,7 +2318,10 @@ same quarter or the same afternoon, you still do not know."#.into(),
     #[test]
     fn a_strings_file_without_the_placeholder_is_rejected() {
         let toml = "unknown_person_name = \"a\"\nyou_see_description = \"b\"\nnothing = \"c\"\nnothing_yet = \"d\"\noffer_to_anyone = \"e\"\nlanguages = \"f\"\naccept_with = \"no placeholder\"\nnobody = \"g\"\nno_memories = \"h\"\nno_places = \"i\"\nholding_nothing = \"j\"\nplaces_note = \"k\"\nsell_note = \"s\"\nthe_hour_label = \"l\"\nthe_day_label = \"p\"\nround_note = \"q\"\nnotices_note = \"t\"\nward_says_note = \"x\"\nward_people_note = \"y\"\nward_places_note = \"z\"\nwalking_to = \"to %s\"\nfollowing = \"after %s\"\ndogs_note = \"dd\"\nmarks_note = \"mm\"\nchalkable_note = \"cc\"\nfaction_role_label = \"r\"\nillegal_activity_label = \"m\"\nhome_label = \"n\"\nhome_place_label = \"o\"\npocket_mouth_note = \"u\"\npocket_butt_note = \"v\"\npocket_frontbutt_note = \"w\"\nknow_note = \"n\"\nknow_discipline = \"nd\"\nknow_hedge_default_hops0_own = \"%s\"\nknow_hedge_default_hops0 = \"%s\"\nknow_hedge_default_hops1 = \"%s\"\nknow_hedge_default_hops2 = \"%s\"\nknow_hedge_default_hops3 = \"%s\"\nknow_hedge_default_hops4 = \"%s\"\nknow_hedge_default_cold = \"%s\"\nknow_hedge_top_hops0_own = \"%s\"\nknow_hedge_top_hops0 = \"%s\"\nknow_hedge_top_hops1 = \"%s\"\nknow_hedge_top_hops2 = \"%s\"\nknow_hedge_top_hops3 = \"%s\"\nknow_hedge_top_hops4 = \"%s\"\nknow_hedge_top_cold = \"%s\"\nknow_hedge_low_hops0_own = \"%s\"\nknow_hedge_low_hops0 = \"%s\"\nknow_hedge_low_hops1 = \"%s\"\nknow_hedge_low_hops2 = \"%s\"\nknow_hedge_low_hops3 = \"%s\"\nknow_hedge_low_hops4 = \"%s\"\nknow_hedge_low_cold = \"%s\"\nunknown_person_role = \"a %s of %s\"\nday_today = \"today\"\nday_yesterday = \"yesterday\"\nday_days_past = \"%s days past\"\nday_long_ago = \"long ago\"\nplace_unknown = \"somewhere\"\nknown_from = \" from %s\"\n";
-        let error = PromptEnv::new("x", "y", toml).unwrap_err();
+        let toml = format!(
+            "{toml}place_here = \"right here\"\nplace_walk_unavailable = \"unavailable\"\n"
+        );
+        let error = PromptEnv::new("x", "y", &toml).unwrap_err();
         assert!(error.message.contains("%s"), "{}", error.message);
     }
 

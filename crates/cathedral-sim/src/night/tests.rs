@@ -1004,7 +1004,7 @@ fn the_night_prompt_numbers_the_round_and_offers_only_the_night_verbs() {
 
     assert!(prompt.contains("- leg 1 — at Dayspring: work at The Tallage"));
     assert!(prompt.contains("- leg 2 — at Lamplight: home to sleep"));
-    assert!(prompt.contains("pl_aaaa The Tallage"), "handles to name");
+    assert!(prompt.contains("pl_aaaa — The Tallage"), "handles to name");
     assert!(prompt.contains("set_round"));
     assert!(
         !prompt.contains(r#"say {"target""#),

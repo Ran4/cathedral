@@ -1,0 +1,1 @@
+say {"target":"player","text":"The Harne Gate. About thirteen hundred thirty meters. Ten and a half minutes on foot."}

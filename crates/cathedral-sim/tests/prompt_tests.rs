@@ -1014,7 +1014,7 @@ fn the_home_line_carries_its_wayfinding_handle_when_registered() {
         "{rendered}"
     );
     assert!(
-        rendered.contains(&format!("{home_id} Sven's house")),
+        rendered.contains(&format!("{home_id} — Sven's house")),
         "the Home handle must be the places_you_know house entry: {rendered}"
     );
 }
